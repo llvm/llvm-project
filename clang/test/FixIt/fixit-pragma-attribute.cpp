@@ -88,3 +88,6 @@
 int x;
 #pragma clang attribute push ([[noreturn (x))
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:42-[[@LINE-1]]:45}:""
+
+#pragma clang attribute push([[noreturn (x)]], apply_to = function)
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:41-[[@LINE-1]]:44}:""

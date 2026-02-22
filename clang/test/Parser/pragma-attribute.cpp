@@ -219,6 +219,8 @@ _Pragma("clang attribute pop");
 #pragma clang attribute push ([[clang::disable_tail_calls, noreturn]]) // expected-error {{expected ','}}
 
 int x;
+#pragma clang attribute push([[noreturn (x)]], apply_to = function) // expected-error {{attribute 'noreturn' cannot have an argument list}}
+
 #pragma clang attribute push ([[noreturn (x)) // expected-error {{attribute 'noreturn' cannot have an argument list}} \
                                               // expected-error {{expected ']'}} \
                                               // expected-error {{expected ']'}}
