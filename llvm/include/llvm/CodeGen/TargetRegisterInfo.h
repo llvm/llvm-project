@@ -430,6 +430,15 @@ public:
     return SubRegIndexLaneMasks[SubIdx];
   }
 
+  /// Return the subreg index whose LaneMask exactly equals \p Mask, or 0 if
+  /// no such subreg index exists.
+  unsigned getSubRegIndexForLaneMask(LaneBitmask Mask) const {
+    for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx)
+      if (getSubRegIndexLaneMask(Idx) == Mask)
+        return Idx;
+    return 0;
+  }
+
   /// Try to find one or more subregister indexes to cover \p LaneMask.
   ///
   /// If this is possible, returns true and appends the best matching set of
