@@ -82,8 +82,8 @@ class MatchesAnyListedRegexNameMatcher
 public:
   explicit MatchesAnyListedRegexNameMatcher(
       llvm::ArrayRef<StringRef> NameList) {
-    std::transform(
-        NameList.begin(), NameList.end(), std::back_inserter(NameMatchers),
+    llvm::transform(
+        NameList, std::back_inserter(NameMatchers),
         [](const llvm::StringRef Name) { return NameMatcher(Name); });
   }
 

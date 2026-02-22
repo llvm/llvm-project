@@ -762,14 +762,14 @@ void FormatStringConverter::applyFixes(DiagnosticBuilder &Diag,
     // First move the value argument to the right place. But if there's a
     // pending c_str() removal then we must do that at the same time.
     if (const auto CStrRemovalMatch =
-            std::find_if(ArgCStrRemovals.cbegin(), ArgCStrRemovals.cend(),
-                         [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
-                             const BoundNodes &Match) {
-                           // This c_str() removal corresponds to the argument
-                           // being moved if they start at the same location.
-                           const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
-                           return ArgStartPos == CStrArg->getBeginLoc();
-                         });
+            llvm::find_if(ArgCStrRemovals,
+                          [ArgStartPos = Args[ValueArgIndex]->getBeginLoc()](
+                              const BoundNodes &Match) {
+                            // This c_str() removal corresponds to the argument
+                            // being moved if they start at the same location.
+                            const Expr *CStrArg = Match.getNodeAs<Expr>("arg");
+                            return ArgStartPos == CStrArg->getBeginLoc();
+                          });
         CStrRemovalMatch != ArgCStrRemovals.end()) {
       const std::string ArgText =
           withoutCStrReplacement(*CStrRemovalMatch, *Context);
