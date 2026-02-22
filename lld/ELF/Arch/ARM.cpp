@@ -164,19 +164,6 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_ABS;
       break;
 
-    // Configurable relocations:
-    case R_ARM_TARGET1:
-      expr = ctx.arg.target1Rel ? R_PC : R_ABS;
-      break;
-    case R_ARM_TARGET2:
-      if (ctx.arg.target2 == Target2Policy::Rel)
-        expr = R_PC;
-      else if (ctx.arg.target2 == Target2Policy::Abs)
-        expr = R_ABS;
-      else
-        expr = R_GOT_PC;
-      break;
-
     // PC-relative relocations:
     case R_ARM_THM_JUMP8:
     case R_ARM_THM_JUMP11:
@@ -187,20 +174,7 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_ARM_THM_MOVT_PREL:
       rs.processR_PC(type, offset, addend, sym);
       continue;
-
-    // PLT-generating relocations:
-    case R_ARM_CALL:
-    case R_ARM_JUMP24:
-    case R_ARM_PC24:
-    case R_ARM_PLT32:
-    case R_ARM_PREL31:
-    case R_ARM_THM_JUMP19:
-    case R_ARM_THM_JUMP24:
-    case R_ARM_THM_CALL:
-      rs.processR_PLT_PC(type, offset, addend, sym);
-      continue;
-
-    // RE_ARM_PCA relocations:
+    // R_PC variant (place aligned down to 4-byte boundary):
     case R_ARM_ALU_PC_G0:
     case R_ARM_ALU_PC_G0_NC:
     case R_ARM_ALU_PC_G1:
@@ -217,6 +191,18 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_ARM_THM_PC12:
       expr = RE_ARM_PCA;
       break;
+
+    // PLT-generating relocations:
+    case R_ARM_CALL:
+    case R_ARM_JUMP24:
+    case R_ARM_PC24:
+    case R_ARM_PLT32:
+    case R_ARM_PREL31:
+    case R_ARM_THM_JUMP19:
+    case R_ARM_THM_JUMP24:
+    case R_ARM_THM_CALL:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
 
     // GOT relocations:
     case R_ARM_GOT_BREL:
@@ -243,6 +229,19 @@ void ARM::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_ARM_THM_MOVW_BREL:
     case R_ARM_THM_MOVT_BREL:
       expr = RE_ARM_SBREL;
+      break;
+
+    // Platform-specific relocations:
+    case R_ARM_TARGET1:
+      expr = ctx.arg.target1Rel ? R_PC : R_ABS;
+      break;
+    case R_ARM_TARGET2:
+      if (ctx.arg.target2 == Target2Policy::Rel)
+        expr = R_PC;
+      else if (ctx.arg.target2 == Target2Policy::Abs)
+        expr = R_ABS;
+      else
+        expr = R_GOT_PC;
       break;
 
     // TLS relocations (no optimization):
