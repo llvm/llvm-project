@@ -31,7 +31,7 @@ public:
                   std::function<std::unique_ptr<MLModelRunner>(
                       const std::vector<TensorSpec> &)>
                       GetModelRunner,
-                  std::function<bool(CallBase &)> GetDefaultAdvice);
+                  std::function<bool(CallBase &, bool)> GetDefaultAdvice);
 
   ~MLInlineAdvisor() override = default;
 
@@ -52,7 +52,8 @@ public:
   static const std::vector<TensorSpec> &getInitialFeatureMap();
 
 protected:
-  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
+  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB,
+                                              bool IsInlinedCall) override;
 
   std::unique_ptr<InlineAdvice> getMandatoryAdvice(CallBase &CB,
                                                    bool Advice) override;
@@ -68,7 +69,7 @@ protected:
   unsigned getInitialFunctionLevel(const Function &F) const;
 
   std::unique_ptr<MLModelRunner> ModelRunner;
-  std::function<bool(CallBase &)> GetDefaultAdvice;
+  std::function<bool(CallBase &, bool)> GetDefaultAdvice;
   std::vector<TensorSpec> FeatureMap;
 
 private:

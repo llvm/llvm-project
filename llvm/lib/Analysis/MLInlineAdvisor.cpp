@@ -72,9 +72,9 @@ using CompiledModelType = llvm::InlinerSizeModel;
 using CompiledModelType = NoopSavedModelImpl;
 #endif
 
-std::unique_ptr<InlineAdvisor>
-llvm::getReleaseModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
-                            std::function<bool(CallBase &)> GetDefaultAdvice) {
+std::unique_ptr<InlineAdvisor> llvm::getReleaseModeAdvisor(
+    Module &M, ModuleAnalysisManager &MAM,
+    std::function<bool(CallBase &, bool)> GetDefaultAdvice) {
   if (!llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() &&
       InteractiveChannelBaseName.empty())
     return nullptr;
@@ -149,7 +149,7 @@ MLInlineAdvisor::MLInlineAdvisor(
     std::function<
         std::unique_ptr<MLModelRunner>(const std::vector<TensorSpec> &)>
         GetModelRunner,
-    std::function<bool(CallBase &)> GetDefaultAdvice)
+    std::function<bool(CallBase &, bool)> GetDefaultAdvice)
     : InlineAdvisor(
           M, MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager()),
       GetDefaultAdvice(GetDefaultAdvice), FeatureMap(getInitialFeatureMap()),
@@ -381,7 +381,8 @@ FunctionPropertiesInfo &MLInlineAdvisor::getCachedFPI(Function &F) const {
   return InsertPair.first->second;
 }
 
-std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
+std::unique_ptr<InlineAdvice>
+MLInlineAdvisor::getAdviceImpl(CallBase &CB, bool IsInlinedCall) {
   if (auto Skip = getSkipAdviceIfUnreachableCallsite(CB))
     return Skip;
 
@@ -401,10 +402,11 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
       // from the other instances where we return a "default" InlineAdvice,
       // which happen at points we won't come back to the MLAdvisor for
       // decisions requiring that state.
-      return ForceStop ? std::make_unique<InlineAdvice>(this, CB, ORE,
-                                                        GetDefaultAdvice(CB))
-                       : std::make_unique<MLInlineAdvice>(this, CB, ORE,
-                                                          GetDefaultAdvice(CB));
+      return ForceStop
+                 ? std::make_unique<InlineAdvice>(
+                       this, CB, ORE, GetDefaultAdvice(CB, IsInlinedCall))
+                 : std::make_unique<MLInlineAdvice>(
+                       this, CB, ORE, GetDefaultAdvice(CB, IsInlinedCall));
     }
   }
   auto MandatoryKind = InlineAdvisor::getMandatoryKind(CB, FAM, ORE);
@@ -510,7 +512,7 @@ std::unique_ptr<InlineAdvice> MLInlineAdvisor::getAdviceImpl(CallBase &CB) {
   // This one would have been set up to be right at the end.
   if (!InteractiveChannelBaseName.empty() && InteractiveIncludeDefault)
     *ModelRunner->getTensor<int64_t>(getFeatureMap().size() - 1) =
-        GetDefaultAdvice(CB);
+        GetDefaultAdvice(CB, IsInlinedCall);
   return getAdviceFromModel(CB, ORE);
 }
 

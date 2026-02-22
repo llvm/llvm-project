@@ -359,7 +359,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       }
 
       std::unique_ptr<InlineAdvice> Advice =
-          Advisor.getAdvice(*CB, OnlyMandatory);
+          Advisor.getAdvice(*CB, OnlyMandatory, InlineHistoryID != -1);
 
       // Check whether we want to inline this callsite.
       if (!Advice)

@@ -34,7 +34,8 @@ public:
                        InlineParams Params, InlineContext IC)
       : InlineAdvisor(M, FAM, IC) {}
 
-  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override {
+  std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB,
+                                              bool IsInlinedCall) override {
     if (CB.getCalledFunction()->getName() == "foo")
       return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), true);
     return std::make_unique<InlineAdvice>(this, CB, getCallerORE(CB), false);
