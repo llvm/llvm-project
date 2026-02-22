@@ -45681,6 +45681,62 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     break;
   }
+  case X86ISD::BZHI: {
+    SDValue Op0 = Op.getOperand(0); // src
+    SDValue Op1 = Op.getOperand(1); // mask
+
+    // Rule 1: Only the bottom 8 bits of the mask are required.
+    // Track an upper bound on mask[7:0] so we can apply Rule 2.
+    uint64_t MaxMask8 = 255;
+
+    if (auto *Cst1 = dyn_cast<ConstantSDNode>(Op1)) {
+      // NOTE: SimplifyDemandedBits won't do this for constants.
+      uint64_t Val1 = Cst1->getZExtValue();
+      uint64_t MaskedVal1 = Val1 & 0xFF;
+
+      if (MaskedVal1 != Val1) {
+        SDLoc DL(Op);
+        EVT MaskVT = Op1.getValueType();
+        SDValue NewMask = TLO.DAG.getConstant(MaskedVal1, DL, MaskVT);
+        return TLO.CombineTo(
+            Op, TLO.DAG.getNode(X86ISD::BZHI, DL, VT, Op0, NewMask));
+      }
+
+      MaxMask8 = MaskedVal1;
+    } else {
+      APInt MaskDemand = APInt::getLowBitsSet(BitWidth, 8);
+
+      KnownBits Known1;
+      if (SimplifyDemandedBits(Op1, MaskDemand, Known1, TLO, Depth + 1))
+        return true;
+
+      // Compute an upper bound on mask[7:0].
+      KnownBits MaskBits = Known1.trunc(8);
+      MaxMask8 = MaskBits.getMaxValue().getZExtValue();
+    }
+
+    // Rule 2: If mask[7:0] is known to be < BitWidth, then bits at/above
+    // getMaxValue are always zero and thus not demanded; likewise src bits.
+    APInt SrcDemanded = OriginalDemandedBits;
+    if (MaxMask8 < BitWidth) {
+      unsigned Cut = (unsigned)MaxMask8;
+      SrcDemanded.clearBits(Cut, BitWidth);
+    }
+
+    KnownBits KnownSrc;
+    if (SimplifyDemandedBits(Op0, SrcDemanded, KnownSrc, TLO, Depth + 1))
+      return true;
+
+    Known.One.clearAllBits();
+    Known.Zero.clearAllBits();
+    if (MaxMask8 < BitWidth) {
+      unsigned Cut = (unsigned)MaxMask8;
+      Known.Zero.setBits(Cut, BitWidth);
+    }
+
+    break;
+  }
+
   case X86ISD::PDEP: {
     SDValue Op0 = Op.getOperand(0);
     SDValue Op1 = Op.getOperand(1);
