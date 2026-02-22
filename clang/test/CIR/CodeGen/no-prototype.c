@@ -11,7 +11,8 @@ int noProto0(x) int x; { return x; }
 int test0(int x) {
   // CHECK: cir.func {{.*}} @test0
   return noProto0(x); // We know the definition. Should be a direct call.
-  // CHECK: %{{.+}} = cir.call @noProto0(%{{.+}})
+  // CHECK: %{{.+}} = cir.get_global @noProto0
+  // CHECK: %{{.+}} = cir.call {{.*}}(%{{.+}})
 }
 
 // Declaration without prototype followed by its definition, then a correct call.
