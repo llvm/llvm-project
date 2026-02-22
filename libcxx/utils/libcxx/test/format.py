@@ -167,7 +167,7 @@ def parseScript(test, preamble):
         # The moduleCompileFlags are added to the %{compile_flags}, but
         # the modules need to be built without these flags. So expand the
         # %{compile_flags} eagerly and hardcode them in the build script.
-        compileFlags = config._getSubstitution("%{compile_flags}", test.config)
+        compileFlags = config._getSubstitution("%{compile_flags}", substitutions)
 
         # Building the modules needs to happen before the other script
         # commands are executed. Therefore the commands are added to the

@@ -365,8 +365,8 @@ def featureTestMacros(config, flags=""):
     }
 
 
-def _getSubstitution(substitution, config):
-  for (orig, replacement) in config.substitutions:
+def _getSubstitution(substitution, all_substitutions):
+  for (orig, replacement) in all_substitutions:
     if orig == substitution:
       return replacement
   raise ValueError('Substitution {} is not in the config.'.format(substitution))

@@ -7,10 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// In the modules build, adding another overload of `memmove` doesn't work.
-// UNSUPPORTED: clang-modules-build
+
 // GCC complains about "ambiguating" `__builtin_memmove`.
 // UNSUPPORTED: gcc
+
+// In the modules build, adding another overload of `memmove` doesn't work.
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // <algorithm>
 
