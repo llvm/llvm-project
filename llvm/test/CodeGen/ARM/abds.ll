@@ -1038,7 +1038,7 @@ define i32 @abd_subnsw_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_subnsw_i32:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    subs r0, r0, r1
-; CHECK-ARM-NEXT:    rsblt r0, r0, #0
+; CHECK-ARM-NEXT:    rsbmi r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_subnsw_i32:
@@ -1057,7 +1057,7 @@ define i32 @abd_subnsw_i32_undef(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_subnsw_i32_undef:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    subs r0, r0, r1
-; CHECK-ARM-NEXT:    rsblt r0, r0, #0
+; CHECK-ARM-NEXT:    rsbmi r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_subnsw_i32_undef:
