@@ -13,8 +13,8 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-ARM-NEXT:    lsl r1, r1, #24
 ; CHECK-ARM-NEXT:    asr r0, r0, #24
 ; CHECK-ARM-NEXT:    sub r0, r0, r1, asr #24
-; CHECK-ARM-NEXT:    eor r1, r0, r0, asr #31
-; CHECK-ARM-NEXT:    rsb r0, r1, r0, asr #31
+; CHECK-ARM-NEXT:    cmp r0, #0
+; CHECK-ARM-NEXT:    rsbpl r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i8:
@@ -42,8 +42,8 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ; CHECK-ARM-NEXT:    lsl r1, r1, #16
 ; CHECK-ARM-NEXT:    asr r0, r0, #24
 ; CHECK-ARM-NEXT:    sub r0, r0, r1, asr #16
-; CHECK-ARM-NEXT:    eor r1, r0, r0, asr #31
-; CHECK-ARM-NEXT:    rsb r0, r1, r0, asr #31
+; CHECK-ARM-NEXT:    cmp r0, #0
+; CHECK-ARM-NEXT:    rsbpl r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i8_i16:
@@ -71,8 +71,8 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ; CHECK-ARM-NEXT:    lsl r1, r1, #24
 ; CHECK-ARM-NEXT:    asr r0, r0, #24
 ; CHECK-ARM-NEXT:    sub r0, r0, r1, asr #24
-; CHECK-ARM-NEXT:    eor r1, r0, r0, asr #31
-; CHECK-ARM-NEXT:    rsb r0, r1, r0, asr #31
+; CHECK-ARM-NEXT:    cmp r0, #0
+; CHECK-ARM-NEXT:    rsbpl r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i8_undef:
@@ -100,8 +100,8 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-ARM-NEXT:    lsl r1, r1, #16
 ; CHECK-ARM-NEXT:    asr r0, r0, #16
 ; CHECK-ARM-NEXT:    sub r0, r0, r1, asr #16
-; CHECK-ARM-NEXT:    eor r1, r0, r0, asr #31
-; CHECK-ARM-NEXT:    rsb r0, r1, r0, asr #31
+; CHECK-ARM-NEXT:    cmp r0, #0
+; CHECK-ARM-NEXT:    rsbpl r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i16:
@@ -126,10 +126,8 @@ define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_ext_i16_i32:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    lsl r0, r0, #16
-; CHECK-ARM-NEXT:    sub r2, r1, r0, asr #16
-; CHECK-ARM-NEXT:    cmp r1, r0, asr #16
-; CHECK-ARM-NEXT:    rsblt r2, r1, r0, asr #16
-; CHECK-ARM-NEXT:    rsb r0, r2, #0
+; CHECK-ARM-NEXT:    rsbs r0, r1, r0, asr #16
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i16_i32:
@@ -158,8 +156,8 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 ; CHECK-ARM-NEXT:    lsl r1, r1, #16
 ; CHECK-ARM-NEXT:    asr r0, r0, #16
 ; CHECK-ARM-NEXT:    sub r0, r0, r1, asr #16
-; CHECK-ARM-NEXT:    eor r1, r0, r0, asr #31
-; CHECK-ARM-NEXT:    rsb r0, r1, r0, asr #31
+; CHECK-ARM-NEXT:    cmp r0, #0
+; CHECK-ARM-NEXT:    rsbpl r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i16_undef:
@@ -183,9 +181,8 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_ext_i32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    subs r2, r1, r0
-; CHECK-ARM-NEXT:    sublt r2, r0, r1
-; CHECK-ARM-NEXT:    rsb r0, r2, #0
+; CHECK-ARM-NEXT:    subs r0, r0, r1
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i32:
@@ -210,10 +207,8 @@ define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_ext_i32_i16:
 ; CHECK-ARM:       @ %bb.0:
 ; CHECK-ARM-NEXT:    lsl r1, r1, #16
-; CHECK-ARM-NEXT:    rsb r2, r0, r1, asr #16
-; CHECK-ARM-NEXT:    cmp r0, r1, asr #16
-; CHECK-ARM-NEXT:    subgt r2, r0, r1, asr #16
-; CHECK-ARM-NEXT:    rsb r0, r2, #0
+; CHECK-ARM-NEXT:    subs r0, r0, r1, asr #16
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i32_i16:
@@ -238,9 +233,8 @@ define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32_undef(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_ext_i32_undef:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    subs r2, r1, r0
-; CHECK-ARM-NEXT:    sublt r2, r0, r1
-; CHECK-ARM-NEXT:    rsb r0, r2, #0
+; CHECK-ARM-NEXT:    subs r0, r0, r1
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_ext_i32_undef:
@@ -552,15 +546,12 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 define i8 @abd_minmax_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_minmax_i8:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    lsl r1, r1, #24
 ; CHECK-ARM-NEXT:    lsl r0, r0, #24
-; CHECK-ARM-NEXT:    asr r2, r1, #24
-; CHECK-ARM-NEXT:    asr r3, r0, #24
-; CHECK-ARM-NEXT:    cmp r3, r1, asr #24
-; CHECK-ARM-NEXT:    mov r1, r2
-; CHECK-ARM-NEXT:    asrgt r1, r0, #24
-; CHECK-ARM-NEXT:    asrlt r2, r0, #24
-; CHECK-ARM-NEXT:    sub r0, r2, r1
+; CHECK-ARM-NEXT:    lsl r1, r1, #24
+; CHECK-ARM-NEXT:    asr r0, r0, #24
+; CHECK-ARM-NEXT:    sub r0, r0, r1, asr #24
+; CHECK-ARM-NEXT:    cmp r0, #0
+; CHECK-ARM-NEXT:    rsbpl r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_minmax_i8:
@@ -591,15 +582,12 @@ define i8 @abd_minmax_i8(i8 %a, i8 %b) nounwind {
 define i16 @abd_minmax_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_minmax_i16:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    lsl r1, r1, #16
 ; CHECK-ARM-NEXT:    lsl r0, r0, #16
-; CHECK-ARM-NEXT:    asr r2, r1, #16
-; CHECK-ARM-NEXT:    asr r3, r0, #16
-; CHECK-ARM-NEXT:    cmp r3, r1, asr #16
-; CHECK-ARM-NEXT:    mov r1, r2
-; CHECK-ARM-NEXT:    asrgt r1, r0, #16
-; CHECK-ARM-NEXT:    asrlt r2, r0, #16
-; CHECK-ARM-NEXT:    sub r0, r2, r1
+; CHECK-ARM-NEXT:    lsl r1, r1, #16
+; CHECK-ARM-NEXT:    asr r0, r0, #16
+; CHECK-ARM-NEXT:    sub r0, r0, r1, asr #16
+; CHECK-ARM-NEXT:    cmp r0, #0
+; CHECK-ARM-NEXT:    rsbpl r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_minmax_i16:
@@ -630,11 +618,8 @@ define i16 @abd_minmax_i16(i16 %a, i16 %b) nounwind {
 define i32 @abd_minmax_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_minmax_i32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    cmp r0, r1
-; CHECK-ARM-NEXT:    mov r2, r1
-; CHECK-ARM-NEXT:    movgt r2, r0
-; CHECK-ARM-NEXT:    movlt r1, r0
-; CHECK-ARM-NEXT:    sub r0, r1, r2
+; CHECK-ARM-NEXT:    subs r0, r0, r1
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_minmax_i32:
@@ -911,9 +896,8 @@ define i16 @abd_cmp_i16(i16 %a, i16 %b) nounwind {
 define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_cmp_i32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    subs r2, r0, r1
-; CHECK-ARM-NEXT:    subge r2, r1, r0
-; CHECK-ARM-NEXT:    mov r0, r2
+; CHECK-ARM-NEXT:    subs r0, r0, r1
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_cmp_i32:
@@ -1157,9 +1141,8 @@ define i16 @abd_subnsw_i16_undef(i16 %a, i16 %b) nounwind {
 define i32 @abd_subnsw_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_subnsw_i32:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    sub r0, r0, r1
-; CHECK-ARM-NEXT:    eor r1, r0, r0, asr #31
-; CHECK-ARM-NEXT:    rsb r0, r1, r0, asr #31
+; CHECK-ARM-NEXT:    subs r0, r0, r1
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_subnsw_i32:
@@ -1178,9 +1161,8 @@ define i32 @abd_subnsw_i32(i32 %a, i32 %b) nounwind {
 define i32 @abd_subnsw_i32_undef(i32 %a, i32 %b) nounwind {
 ; CHECK-ARM-LABEL: abd_subnsw_i32_undef:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    sub r0, r0, r1
-; CHECK-ARM-NEXT:    eor r1, r0, r0, asr #31
-; CHECK-ARM-NEXT:    rsb r0, r1, r0, asr #31
+; CHECK-ARM-NEXT:    subs r0, r0, r1
+; CHECK-ARM-NEXT:    rsbge r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: abd_subnsw_i32_undef:

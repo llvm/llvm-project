@@ -35,7 +35,7 @@ define i32 @test2(i32 %a, i32 %b) nounwind readnone ssp {
 ; CHECK-ARM-LABEL: test2:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    subs r0, r0, r1
-; CHECK-ARM-NEXT:    rsbmi r0, r0, #0
+; CHECK-ARM-NEXT:    rsblt r0, r0, #0
 ; CHECK-ARM-NEXT:    bx lr
 ;
 ; CHECK-THUMB-LABEL: test2:
