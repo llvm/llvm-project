@@ -110,6 +110,19 @@ namespace regression2 {
   }
   template void A<void>::f<long>();
 } // namespace regression2
+namespace regression3 {
+  template<int f>
+  void h();
+  template<int a>
+  struct b {
+      friend void h<1>(){} 
+      // expected-error@-1 {{friend function specialization cannot be defined}}
+  };
+  template struct b<5>;
+  void d(){
+    h<1>();
+  }
+} // namespace regression3
 
 namespace GH139226 {
 
