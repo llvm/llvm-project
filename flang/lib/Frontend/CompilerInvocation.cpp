@@ -1148,19 +1148,29 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
         Fortran::common::LanguageFeature::OpenACC);
   }
 
-  // -std=f2018
-  // TODO: Set proper options when more fortran standards
-  // are supported.
+  // -std=f20**
   if (args.hasArg(clang::options::OPT_std_EQ)) {
     auto standard = args.getLastArgValue(clang::options::OPT_std_EQ);
-    // We only allow f2018 as the given standard
     if (standard == "f2018") {
       res.setEnableConformanceChecks();
       res.getFrontendOpts().features.WarnOnAllNonstandard();
+      res.getLangOpts().setFortranStandard(
+          Fortran::common::LangOptions::Fortran2018);
+    } else if (standard == "f2023") {
+      res.setEnableConformanceChecks();
+      res.getFrontendOpts().features.WarnOnAllNonstandard();
+      res.getLangOpts().setFortranStandard(
+          Fortran::common::LangOptions::Fortran2023);
+    } else if (standard == "f202Y") {
+      res.setEnableConformanceChecks();
+      res.getFrontendOpts().features.WarnOnAllNonstandard();
+      res.getLangOpts().setFortranStandard(
+          Fortran::common::LangOptions::Fortran202Y);
     } else {
       const unsigned diagID =
           diags.getCustomDiagID(clang::DiagnosticsEngine::Error,
-                                "Only -std=f2018 is allowed currently.");
+                                "Only 'f2018', 'f2023', or 'f202Y' are "
+                                "accepted to -std= currently.");
       diags.Report(diagID);
     }
   }
