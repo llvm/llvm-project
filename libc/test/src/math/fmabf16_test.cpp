@@ -30,8 +30,8 @@ static constexpr uint16_t NEG_STOP = 0xff80U; //-inf
 TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 
   std::vector<bfloat16> z_val = {
-      FPBits(0x0000).get_val(),          FPBits(0x8000).get_val(),
-      FPBits(0x3f80).get_val(),          FPBits(0xbf80).get_val(),
+      FPBits(0x0000U).get_val(),          FPBits(0x8000U).get_val(),
+      FPBits(0x3f80U).get_val(),          FPBits(0xbf80U).get_val(),
       FPBits::min_subnormal().get_val(), FPBits::max_normal().get_val(),
       FPBits::inf().get_val(),           FPBits::quiet_nan().get_val()};
   for (bfloat16 z : z_val) {
@@ -53,8 +53,8 @@ TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
 
   std::vector<bfloat16> z_val = {
-      FPBits(0x0000).get_val(),          FPBits(0x8000).get_val(),
-      FPBits(0x3f80).get_val(),          FPBits(0xbf80).get_val(),
+      FPBits(0x0000U).get_val(),          FPBits(0x8000U).get_val(),
+      FPBits(0x3f80U).get_val(),          FPBits(0xbf80U).get_val(),
       FPBits::min_subnormal().get_val(), FPBits::max_normal().get_val(),
       FPBits::inf().get_val(),           FPBits::quiet_nan().get_val()};
   for (bfloat16 z : z_val) {
