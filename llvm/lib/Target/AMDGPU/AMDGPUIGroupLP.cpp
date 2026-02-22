@@ -115,6 +115,11 @@ public:
 
 using SUnitsToCandidateSGsMap = DenseMap<SUnit *, SmallVector<int, 4>>;
 
+/// Try to add and edge from SU \p A to SU \p B to the \p DAG.
+static bool tryAddEdge(ScheduleDAGInstrs *DAG, SUnit *A, SUnit *B) {
+  return A != B && DAG->addEdge(B, SDep(A, SDep::Artificial));
+}
+
 // Classify instructions into groups to enable fine tuned control over the
 // scheduler. These groups may be more specific than current SchedModel
 // instruction classes.
@@ -166,7 +171,7 @@ public:
   // Add DAG dependencies and track which edges are added, and the count of
   // missed edges
   int link(SUnit &SU, bool MakePred,
-           std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+           std::list<std::pair<SUnit *, SUnit *>> &AddedEdges);
 
   // Add DAG dependencies from all SUnits in this SchedGroup and this SU.
   // Use the predicate to determine whether SU should be a predecessor (P =
@@ -307,8 +312,7 @@ class PipelineSolver {
   // current information. One step in the greedy algorithm. Templated against
   // the SchedGroup iterator (either reverse or forward).
   template <typename T>
-  void greedyFind(std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I,
-                  T E);
+  void greedyFind(std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
   // Whether or not the current solution is optimal
   bool checkOptimal();
   // Populate the ready list, prioiritizing fewest missed edges first
@@ -324,15 +328,15 @@ class PipelineSolver {
   // Add the edges from the SU to the other SchedGroups in pipeline, and
   // return the number of edges missed.
   int addEdges(SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
-               std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+               std::list<std::pair<SUnit *, SUnit *>> &AddedEdges);
   /// Link the pipeline as if \p SU was in the SchedGroup with ID \p SGID. It
   /// returns the cost (in terms of missed pipeline edges), and tracks the edges
   /// added in \p AddedEdges
   template <typename T>
   int linkSUnit(SUnit *SU, int SGID,
-                std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
+                std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E);
   /// Remove the edges passed via \p AddedEdges
-  void removeEdges(const std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges);
+  void removeEdges(const std::list<std::pair<SUnit *, SUnit *>> &AddedEdges);
   // Convert the passed in maps to arrays for bidirectional iterators
   void convertSyncMapsToArrays();
 
@@ -456,7 +460,7 @@ void PipelineSolver::makePipeline() {
 
 template <typename T>
 int PipelineSolver::linkSUnit(
-    SUnit *SU, int SGID, std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges,
+    SUnit *SU, int SGID, std::list<std::pair<SUnit *, SUnit *>> &AddedEdges,
     T I, T E) {
   bool MakePred = false;
   int AddedCost = 0;
@@ -474,7 +478,7 @@ int PipelineSolver::linkSUnit(
 
 int PipelineSolver::addEdges(
     SmallVectorImpl<SchedGroup> &SyncPipeline, SUnit *SU, int SGID,
-    std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
+    std::list<std::pair<SUnit *, SUnit *>> &AddedEdges) {
 
   // For IsBottomUp, the first SchedGroup in SyncPipeline contains the
   // instructions that are the ultimate successors in the resultant mutation.
@@ -491,7 +495,7 @@ int PipelineSolver::addEdges(
 }
 
 void PipelineSolver::removeEdges(
-    const std::vector<std::pair<SUnit *, SUnit *>> &EdgesToRemove) {
+    const std::list<std::pair<SUnit *, SUnit *>> &EdgesToRemove) {
   // Only remove the edges that we have added when testing
   // the fit.
   for (auto &PredSuccPair : EdgesToRemove) {
@@ -570,7 +574,7 @@ void PipelineSolver::populateReadyList(
   assert(CurrSU.second.size() >= 1);
 
   for (; I != E; ++I) {
-    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+    std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
     SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
       return SG.getSGID() == CandSGID;
@@ -629,7 +633,7 @@ bool PipelineSolver::solveExact() {
 
     int CandSGID = I->first;
     int AddedCost = 0;
-    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+    std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
     auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
     SchedGroup *Match;
     for (auto &SG : SyncPipeline) {
@@ -696,12 +700,13 @@ bool PipelineSolver::solveExact() {
 
 template <typename T>
 void PipelineSolver::greedyFind(
-    std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
+    std::list<std::pair<SUnit *, SUnit *>> &AddedEdges, T I, T E) {
   SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
   int BestNodeCost = -1;
   int TempCost;
   SchedGroup *BestGroup = nullptr;
   int BestGroupID = -1;
+  std::list<std::pair<SUnit *, SUnit *>> BestEdges;
   auto &SyncPipeline = CurrPipeline[CurrSyncGroupIdx];
   LLVM_DEBUG(dbgs() << "Fitting SU(" << CurrSU.first->NodeNum
                     << ") in Pipeline # " << CurrSyncGroupIdx << "\n");
@@ -711,7 +716,6 @@ void PipelineSolver::greedyFind(
   // first. If we fail to do this for the greedy algorithm, the solution will
   // likely not be good in more complex cases.
   for (; I != E; ++I) {
-    std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
     int CandSGID = *I;
     SchedGroup *Match = llvm::find_if(SyncPipeline, [CandSGID](SchedGroup &SG) {
       return SG.getSGID() == CandSGID;
@@ -729,21 +733,38 @@ void PipelineSolver::greedyFind(
       LLVM_DEBUG(dbgs() << "SGID # " << CandSGID << " has conflicting rule\n");
       continue;
     }
-    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, AddedEdges);
+
+    std::list<std::pair<SUnit *, SUnit *>> TempEdges;
+    TempCost = addEdges(SyncPipeline, CurrSU.first, CandSGID, TempEdges);
     LLVM_DEBUG(dbgs() << "Cost of Group " << TempCost << "\n");
+
     if (TempCost < BestNodeCost || BestNodeCost == -1) {
+      BestEdges = TempEdges;
       BestGroup = Match;
       BestNodeCost = TempCost;
       BestGroupID = CandSGID;
+
+      if (BestNodeCost == 0)
+        break;
+
+      removeEdges(BestEdges);
     }
-    removeEdges(AddedEdges);
-    if (BestNodeCost == 0)
-      break;
+
+    removeEdges(TempEdges);
   }
 
   if (BestGroupID != -1) {
     BestGroup->add(*CurrSU.first);
-    addEdges(SyncPipeline, CurrSU.first, BestGroupID, AddedEdges);
+    if (AddedEdges.empty())
+      AddedEdges = BestEdges;
+    else
+      AddedEdges.splice(std::prev(AddedEdges.cend()), BestEdges);
+    std::for_each(BestEdges.begin(), BestEdges.end(),
+                  [this](std::pair<SUnit *, SUnit *> E) {
+                    if (!tryAddEdge(DAG, E.first, E.second))
+                      llvm_unreachable("Edges known to be insertable.");
+                  });
+
     LLVM_DEBUG(dbgs() << "Best Group has ID: " << BestGroupID << " and Mask"
                       << (int)BestGroup->getMask() << "\n");
     BestCost += TempCost;
@@ -755,7 +776,7 @@ void PipelineSolver::greedyFind(
 
 bool PipelineSolver::solveGreedy() {
   BestCost = 0;
-  std::vector<std::pair<SUnit *, SUnit *>> AddedEdges;
+  std::list<std::pair<SUnit *, SUnit *>> AddedEdges;
 
   while (static_cast<size_t>(CurrSyncGroupIdx) < PipelineInstrs.size()) {
     SUToCandSGsPair CurrSU = PipelineInstrs[CurrSyncGroupIdx][CurrConflInstNo];
@@ -2381,11 +2402,7 @@ public:
 unsigned SchedGroup::NumSchedGroups = 0;
 
 bool SchedGroup::tryAddEdge(SUnit *A, SUnit *B) {
-  if (A != B && DAG->canAddEdge(B, A)) {
-    DAG->addEdge(B, SDep(A, SDep::Artificial));
-    return true;
-  }
-  return false;
+  return ::tryAddEdge(DAG, A, B);
 }
 
 bool SchedGroup::canAddMI(const MachineInstr &MI) const {
@@ -2505,7 +2522,7 @@ bool SchedGroup::canAddMI(const MachineInstr &MI) const {
 }
 
 int SchedGroup::link(SUnit &SU, bool MakePred,
-                     std::vector<std::pair<SUnit *, SUnit *>> &AddedEdges) {
+                     std::list<std::pair<SUnit *, SUnit *>> &AddedEdges) {
   int MissedEdges = 0;
   for (auto *A : Collection) {
     SUnit *B = &SU;
