@@ -64,7 +64,8 @@ define <2 x i1> @pr6096() {
 ; https://alive2.llvm.org/ce/z/JxX5in
 define float @fdiv_nnan_ninf_by_zero_f32(float %x) {
 ; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_f32(
-; CHECK-NEXT:    ret float poison
+; CHECK:         %fdiv = fdiv nnan ninf float %x, 0.0
+; CHECK-NEXT:    ret float %fdiv
 ;
   %fdiv = fdiv nnan ninf float %x, 0.0
   ret float %fdiv
@@ -72,7 +73,8 @@ define float @fdiv_nnan_ninf_by_zero_f32(float %x) {
 
 define float @fdiv_nnan_ninf_by_negzero_f32(float %x) {
 ; CHECK-LABEL: @fdiv_nnan_ninf_by_negzero_f32(
-; CHECK-NEXT:    ret float poison
+; CHECK:         %fdiv = fdiv nnan ninf float %x, -0.0
+; CHECK-NEXT:    ret float %fdiv
 ;
   %fdiv = fdiv nnan ninf float %x, -0.0
   ret float %fdiv
@@ -80,7 +82,7 @@ define float @fdiv_nnan_ninf_by_negzero_f32(float %x) {
 
 define float @fdiv_nnan_ninf_by_undef_f32(float %x) {
 ; CHECK-LABEL: @fdiv_nnan_ninf_by_undef_f32(
-; CHECK-NEXT:    ret float poison
+; CHECK-NEXT:    ret float 0x7FF8000000000000
 ;
   %fdiv = fdiv nnan ninf float %x, undef
   ret float %fdiv
@@ -96,7 +98,8 @@ define float @fdiv_nnan_ninf_by_poison_f32(float %x) {
 
 define <2 x float> @fdiv_nnan_ninf_by_zero_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_v2f32(
-; CHECK-NEXT:    ret <2 x float> poison
+; CHECK:         %fdiv = fdiv nnan ninf <2 x float> %x, zeroinitializer
+; CHECK-NEXT:    ret <2 x float> %fdiv
 ;
   %fdiv = fdiv nnan ninf <2 x float> %x, zeroinitializer
   ret <2 x float> %fdiv
@@ -104,7 +107,7 @@ define <2 x float> @fdiv_nnan_ninf_by_zero_v2f32(<2 x float> %x) {
 
 define <2 x float> @fdiv_nnan_ninf_by_undef_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_ninf_by_undef_v2f32(
-; CHECK-NEXT:    ret <2 x float> poison
+; CHECK-NEXT:    ret <2 x float> splat (float 0x7FF8000000000000)
 ;
   %fdiv = fdiv nnan ninf <2 x float> %x, undef
   ret <2 x float> %fdiv
@@ -112,7 +115,8 @@ define <2 x float> @fdiv_nnan_ninf_by_undef_v2f32(<2 x float> %x) {
 
 define <2 x float> @fdiv_nnan_ninf_by_zero_poison_v2f32(<2 x float> %x) {
 ; CHECK-LABEL: @fdiv_nnan_ninf_by_zero_poison_v2f32(
-; CHECK-NEXT:    ret <2 x float> poison
+; CHECK:         %fdiv = fdiv nnan ninf <2 x float> %x, <float 0.000000e+00, float poison>
+; CHECK-NEXT:    ret <2 x float> %fdiv
 ;
   %fdiv = fdiv nnan ninf <2 x float> %x, <float 0.0, float poison>
   ret <2 x float> %fdiv
