@@ -615,11 +615,11 @@ protected:
   /// this contains the number of bits in the last unit that can be used for
   /// an adjacent bitfield if necessary.  The unit in question is usually
   /// a byte, but larger units are used if IsMsStruct.
-  unsigned char UnfilledBitsInLastUnit;
+  uint64_t UnfilledBitsInLastUnit;
 
   /// LastBitfieldStorageUnitSize - If IsMsStruct, represents the size of the
   /// storage unit of the previous field if it was a bitfield.
-  unsigned char LastBitfieldStorageUnitSize;
+  uint64_t LastBitfieldStorageUnitSize;
 
   /// MaxFieldAlignment - The maximum allowed field alignment. This is set by
   /// #pragma pack.
