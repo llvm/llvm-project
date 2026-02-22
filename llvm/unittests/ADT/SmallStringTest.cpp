@@ -115,7 +115,7 @@ TEST_F(SmallStringTest, AppendStringRefs) {
   EXPECT_STREQ("abcdefghijklmnopqrstu", theString.c_str());
 }
 
-TEST(SmallStringTest, StartsWith) {
+TEST_F(SmallStringTest, StartsWith) {
   SmallString<32> Str("hello");
   EXPECT_TRUE(Str.starts_with(""));
   EXPECT_TRUE(Str.starts_with("he"));
@@ -125,7 +125,7 @@ TEST(SmallStringTest, StartsWith) {
   EXPECT_FALSE(Str.starts_with('i'));
 }
 
-TEST(SmallStringTest, EndsWith) {
+TEST_F(SmallStringTest, EndsWith) {
   SmallString<32> Str("hello");
   EXPECT_TRUE(Str.ends_with(""));
   EXPECT_TRUE(Str.ends_with("lo"));
@@ -136,7 +136,7 @@ TEST(SmallStringTest, EndsWith) {
   EXPECT_FALSE(Str.ends_with('p'));
 }
 
-TEST(SmallStringTest, Contains) {
+TEST_F(SmallStringTest, Contains) {
   SmallString<32> Str("hello");
   EXPECT_TRUE(Str.contains(""));
   EXPECT_TRUE(Str.contains("ell"));
