@@ -1160,20 +1160,20 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
        type == R_LARCH_TLS_DESC_LD || type == R_LARCH_TLS_DESC_CALL ||
        type == R_LARCH_TLS_DESC_PCREL20_S2);
 
-  // ARM, LoongArch and RISC-V do not support GD/LD to IE/LE optimizations.
+  // LoongArch and RISC-V do not support GD/LD to IE/LE optimizations.
   // RISC-V supports TLSDESC to IE/LE optimizations.
   // For PPC64, if the file has missing R_PPC64_TLSGD/R_PPC64_TLSLD, disable
   // optimization as well.
   bool execOptimize =
-      !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
+      !ctx.arg.shared &&
       (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch) &&
       !(isRISCV && expr != R_TLSDESC_PC && expr != R_TLSDESC_CALL);
 
   // If we are producing an executable and the symbol is non-preemptable, it
   // must be defined and the code sequence can be optimized to use Local-Exec.
   //
-  // ARM and RISC-V do not support any relaxations for TLS relocations, however,
-  // we can omit the DTPMOD dynamic relocations and resolve them at link time
+  // RISC-V does not support any relaxations for TLS relocations, however, we
+  // can omit the DTPMOD dynamic relocations and resolve them at link time
   // because them are always 1. This may be necessary for static linking as
   // DTPMOD may not be expected at load time.
   bool isLocalInExecutable = !sym.isPreemptible && !ctx.arg.shared;
