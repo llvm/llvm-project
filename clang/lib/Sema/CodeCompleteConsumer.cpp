@@ -183,6 +183,7 @@ CodeCompletionString::Chunk::Chunk(ChunkKind Kind, const char *Text)
   case CK_Text:
   case CK_Placeholder:
   case CK_Informative:
+  case CK_FunctionQualifier:
   case CK_ResultType:
   case CK_CurrentParameter:
     this->Text = Text;
@@ -273,6 +274,12 @@ CodeCompletionString::Chunk::CreateInformative(const char *Informative) {
 }
 
 CodeCompletionString::Chunk
+CodeCompletionString::Chunk::CreateFunctionQualifier(
+    const char *FunctionQualifier) {
+  return Chunk(CK_FunctionQualifier, FunctionQualifier);
+}
+
+CodeCompletionString::Chunk
 CodeCompletionString::Chunk::CreateResultType(const char *ResultType) {
   return Chunk(CK_ResultType, ResultType);
 }
@@ -326,6 +333,7 @@ std::string CodeCompletionString::getAsString() const {
       OS << "<#" << C.Text << "#>";
       break;
     case CK_Informative:
+    case CK_FunctionQualifier:
     case CK_ResultType:
       OS << "[#" << C.Text << "#]";
       break;
@@ -459,6 +467,10 @@ void CodeCompletionBuilder::AddPlaceholderChunk(const char *Placeholder) {
 
 void CodeCompletionBuilder::AddInformativeChunk(const char *Text) {
   Chunks.push_back(Chunk::CreateInformative(Text));
+}
+
+void CodeCompletionBuilder::AddFunctionQualifierChunk(const char *Text) {
+  Chunks.push_back(Chunk::CreateFunctionQualifier(Text));
 }
 
 void CodeCompletionBuilder::AddResultTypeChunk(const char *ResultType) {
@@ -727,6 +739,7 @@ static std::string getOverloadAsString(const CodeCompletionString &CCS) {
   for (auto &C : CCS) {
     switch (C.Kind) {
     case CodeCompletionString::CK_Informative:
+    case CodeCompletionString::CK_FunctionQualifier:
     case CodeCompletionString::CK_ResultType:
       OS << "[#" << C.Text << "#]";
       break;
