@@ -197,3 +197,17 @@ namespace GH131342 {
   template <class T> using AA = A<T, val<T>>;
   AA a{0};
 } // namespace GH131342
+
+namespace GH178879 {
+
+template <typename T> struct A {
+  T i, j;
+};
+
+template <typename T> void foo() {
+  A a = {.i = 1, .j = 3};
+}
+
+template void foo<int>();
+
+}

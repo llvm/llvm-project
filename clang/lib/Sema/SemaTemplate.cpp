@@ -7150,8 +7150,9 @@ ExprResult Sema::CheckTemplateArgument(NamedDecl *Param, QualType ParamType,
       InitializationKind Kind = InitializationKind::CreateForInit(
           DeductionArg->getBeginLoc(), /*DirectInit*/false, DeductionArg);
       Expr *Inits[1] = {DeductionArg};
-      ParamType =
+      auto *DeducedTSI =
           DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind, Inits);
+      ParamType = DeducedTSI ? DeducedTSI->getType() : QualType();
       if (ParamType.isNull())
         return ExprError();
     } else {

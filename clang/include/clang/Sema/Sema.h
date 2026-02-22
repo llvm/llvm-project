@@ -9100,7 +9100,7 @@ public:
                                        bool TopLevelOfInitList = false,
                                        bool AllowExplicit = false);
 
-  QualType DeduceTemplateSpecializationFromInitializer(
+  TypeSourceInfo *DeduceTemplateSpecializationFromInitializer(
       TypeSourceInfo *TInfo, const InitializedEntity &Entity,
       const InitializationKind &Kind, MultiExprArg Init);
 

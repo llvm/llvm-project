@@ -171,13 +171,11 @@ TEST(WalkAST, ClassTemplates) {
     template struct Foo<int>;)cpp",
                        "^Foo<int> x;"),
               ElementsAre(Decl::CXXRecord));
-  // FIXME: This is broken due to
-  // https://github.com/llvm/llvm-project/issues/42259.
   EXPECT_THAT(testWalk(R"cpp(
-    template<typename T> struct $explicit^Foo { Foo(T); };
-    template<> struct Foo<int> { Foo(int); };)cpp",
+    template<typename T> struct Foo { Foo(T); };
+    template<> struct $explicit^Foo<int> { Foo(int); };)cpp",
                        "^Foo x(3);"),
-              ElementsAre(Decl::ClassTemplate));
+              ElementsAre(Decl::ClassTemplateSpecialization));
 }
 TEST(WalkAST, VarTemplates) {
   // Explicit instantiation and (partial) specialization references primary

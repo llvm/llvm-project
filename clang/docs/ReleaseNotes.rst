@@ -298,6 +298,7 @@ Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
+- Fixed a type deduction bug where CTAD didn't apply to designated initializers. (#GH178879)
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Fixed a bug where captured variables in non-mutable lambdas were incorrectly treated as mutable 
   when used inside decltype in the return type. (#GH180460)
