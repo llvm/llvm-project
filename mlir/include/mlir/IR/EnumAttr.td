@@ -750,4 +750,21 @@ class ConstantEnumCase<Attr attribute, string case>
     "attribute must be one of 'EnumAttr' or 'EnumInfo'";
 }
 
+/// Attribute constraint restricting the enum attribute to a subset of allowed
+/// cases. `enumAttr` is the `EnumAttr` attribute and `allowedCases` is a list
+/// of `EnumCase`s that are permitted.
+///
+/// Example:
+/// ```
+/// ConfinedAttr<MyEnumAttr, [EnumAttrIsOneOf<MyEnumAttr, [CaseA, CaseB]>]>
+/// ```
+class EnumAttrIsOneOf<EnumAttr enumAttr, list<EnumCase> allowedCases>
+  : AttrConstraint<
+      Or<!foreach(case, allowedCases,
+        CPred<"::llvm::cast<" # enumAttr.cppNamespace # "::"
+              # enumAttr.cppClassName # ">($_self).getValue() == "
+              # enumAttr.enum.cppType # "::" # case.symbol>)>,
+      "whose value is one of {"
+        # !interleave(!foreach(case, allowedCases, case.str), ", ") # "}">;
+
 #endif // ENUMATTR_TD

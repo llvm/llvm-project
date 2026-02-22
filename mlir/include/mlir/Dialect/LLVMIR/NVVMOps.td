@@ -1307,8 +1307,13 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   let assemblyFormat = "attr-dict";
 }
 
+defvar MemOrderAcquireOrRelease =
+  ConfinedAttr<MemOrderKindAttr,
+    [EnumAttrIsOneOf<MemOrderKindAttr,
+      [MemOrderKindAcquire, MemOrderKindRelease]>]>;
+
 def NVVM_FenceSyncRestrictOp : NVVM_Op<"fence.sync_restrict">,
-                               Arguments<(ins MemOrderKindAttr:$order)> {
+                               Arguments<(ins MemOrderAcquireOrRelease:$order)> {
   let summary = "Uni-directional thread fence operation";
   let description = [{
     The `nvvm.fence.sync_restrict` Op restricts the class of memory
@@ -1322,8 +1327,6 @@ def NVVM_FenceSyncRestrictOp : NVVM_Op<"fence.sync_restrict">,
   let llvmBuilder = [{
     createIntrinsicCall(builder, getFenceSyncRestrictID($order));
   }];
-
-  let hasVerifier = 1;
 }
 
 def NVVM_FenceMbarrierInitOp : NVVM_Op<"fence.mbarrier.init"> {
@@ -1439,7 +1442,7 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
 }
 
 def NVVM_FenceProxySyncRestrictOp : NVVM_Op<"fence.proxy.sync_restrict">,
-      Arguments<(ins MemOrderKindAttr:$order,
+      Arguments<(ins MemOrderAcquireOrRelease:$order,
                      DefaultValuedAttr<ProxyKindAttr, "ProxyKind::GENERIC">:$fromProxy,
                      DefaultValuedAttr<ProxyKindAttr, "ProxyKind::async">:$toProxy)> {
   let summary = "Uni-directional proxy fence operation with sync_restrict";
