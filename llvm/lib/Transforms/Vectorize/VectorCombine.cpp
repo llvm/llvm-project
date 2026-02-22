@@ -40,6 +40,7 @@
 #include <optional>
 #include <queue>
 #include <set>
+#include <tuple>
 
 #define DEBUG_TYPE "vector-combine"
 #include "llvm/Transforms/Utils/InstructionWorklist.h"
@@ -103,6 +104,19 @@ private:
   /// Next instruction to iterate. It will be updated when it is erased by
   /// RecursivelyDeleteTriviallyDeadInstructions.
   Instruction *NextInst;
+
+  /// Cache for deduplicating shuffle instructions with identical operands and
+  /// masks. Maps {operand0, operand1, mask} -> existing shuffle instruction,
+  /// prevents creating duplicate shuffles when merging parallel intrinsic
+  /// chains.
+  DenseMap<std::tuple<Value *, Value *, SmallVector<int>>, Value *>
+      ShuffleCache;
+
+  /// Get an existing shuffle or create a new one at the earliest safe insertion
+  /// point, deduplicates shuffles with identical operands and masks across the
+  /// function.
+  Value *getOrCreateShuffle(Value *V0, Value *V1, ArrayRef<int> Mask);
+  Instruction *findEarliestInsertionPoint(Value *V0, Value *V1);
 
   // TODO: Direct calls from the top-level "run" loop use a plain "Instruction"
   //       parameter. That should be updated to specific sub-classes because the
@@ -3323,25 +3337,15 @@ bool VectorCombine::foldShuffleOfIntrinsics(Instruction &I) {
     return false;
 
   SmallVector<Value *> NewArgs;
-  SmallDenseMap<std::pair<Value *, Value *>, Value *> ShuffleCache;
-  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I)
+  for (unsigned I = 0, E = II0->arg_size(); I != E; ++I) {
     if (isVectorIntrinsicWithScalarOpAtArg(IID, I, &TTI)) {
       NewArgs.push_back(II0->getArgOperand(I));
     } else {
-      std::pair<Value *, Value *> OperandPair =
-          std::make_pair(II0->getArgOperand(I), II1->getArgOperand(I));
-      auto It = ShuffleCache.find(OperandPair);
-      if (It != ShuffleCache.end()) {
-        // Reuse previously created shuffle for this operand pair.
-        NewArgs.push_back(It->second);
-        continue;
-      }
-      Value *Shuf = Builder.CreateShuffleVector(II0->getArgOperand(I),
-                                                II1->getArgOperand(I), OldMask);
-      ShuffleCache[OperandPair] = Shuf;
+      Value *Shuf = getOrCreateShuffle(II0->getArgOperand(I),
+                                       II1->getArgOperand(I), OldMask);
       NewArgs.push_back(Shuf);
-      Worklist.pushValue(Shuf);
     }
+  }
   Value *NewIntrinsic = Builder.CreateIntrinsic(ShuffleDstTy, IID, NewArgs);
 
   // Intersect flags from the old intrinsics.
@@ -5620,9 +5624,85 @@ bool VectorCombine::shrinkPhiOfShuffles(Instruction &I) {
   return true;
 }
 
+/// Find the earliest point where both V0 and V1 are available
+/// This ensures the created shuffle will dominate all its uses
+Instruction *VectorCombine::findEarliestInsertionPoint(Value *V0, Value *V1) {
+  Instruction *I0 = dyn_cast<Instruction>(V0);
+  Instruction *I1 = dyn_cast<Instruction>(V1);
+
+  // Not an instruction = available from entry
+  // (includes constants, arguments, globals, functions)
+  if (!I0 && !I1) {
+    return &*F.getEntryBlock().getFirstInsertionPt();
+  }
+
+  if (!I0) { // V0 is not instruction, V1 is instruction
+    BasicBlock::iterator It(I1);
+    return &*(++It);
+  }
+
+  if (!I1) { // V1 is not instruction, V0 is instruction
+    BasicBlock::iterator It(I0);
+    return &*(++It);
+  }
+
+  // Both are instructions, same block
+  if (I0->getParent() == I1->getParent()) {
+    Instruction *Later = I0->comesBefore(I1) ? I1 : I0;
+    BasicBlock::iterator It(Later);
+    return &*(++It);
+  }
+
+  // Different blocks, fallback to current insertion point
+  return &*Builder.GetInsertPoint();
+}
+
+Value *VectorCombine::getOrCreateShuffle(Value *V0, Value *V1,
+                                         ArrayRef<int> Mask) {
+  SmallVector<int, 8> MaskVec(Mask.begin(), Mask.end());
+  std::tuple<Value *, Value *, SmallVector<int>> Key =
+      std::make_tuple(V0, V1, MaskVec);
+  auto It = ShuffleCache.find(Key);
+  if (It != ShuffleCache.end()) {
+    Value *Cached = It->getSecond();
+    // Validate cached instruction still exists
+    if (auto *CachedInst = dyn_cast<Instruction>(Cached)) {
+      if (!CachedInst->getParent()) {
+        // Dead instruction, remove from cache
+        ShuffleCache.erase(It);
+      } else {
+        return Cached;
+      }
+    } else {
+      return Cached;
+    }
+  }
+
+  // Find earliest safe insertion point
+  Instruction *InsertPt = findEarliestInsertionPoint(V0, V1);
+
+  // Save and restore Builder insertion point
+  IRBuilder<>::InsertPointGuard Guard(Builder);
+  Builder.SetInsertPoint(InsertPt);
+
+  // Create shuffle at earliest position
+  Value *Shuf = Builder.CreateShuffleVector(V0, V1, Mask);
+
+  LLVM_DEBUG(dbgs() << "VectorCombine: Created shuffle: " << *Shuf << '\n');
+
+  // Cache and add to worklist
+  ShuffleCache[Key] = Shuf;
+  Worklist.pushValue(Shuf);
+
+  return Shuf;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
+  // Clear shuffle cache
+  ShuffleCache.clear();
+
   if (DisableVectorCombine)
     return false;
 
