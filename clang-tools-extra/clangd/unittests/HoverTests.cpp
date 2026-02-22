@@ -1016,6 +1016,26 @@ class Foo final {})cpp";
          HI.Parameters.emplace();
          HI.AccessSpecifier = "public";
        }},
+      {// Getter with comment
+       R"cpp(
+          struct X { 
+            // An int named Y
+            int Y;
+            float [[^y]]() { return Y; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "y";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "float y()";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial accessor for `Y`.\n\nAn int named Y";
+         HI.Type = "float ()";
+         HI.ReturnType = "float";
+         HI.Parameters.emplace();
+         HI.AccessSpecifier = "public";
+       }},
       {// Setter
        R"cpp(
           struct X { int Y; void [[^setY]](float v) { Y = v; } };
@@ -1066,6 +1086,29 @@ class Foo final {})cpp";
          HI.Definition = "void setY(float v)";
          HI.LocalScope = "X::";
          HI.Documentation = "Trivial setter for `Y`.";
+         HI.Type = "void (float)";
+         HI.ReturnType = "void";
+         HI.Parameters.emplace();
+         HI.Parameters->emplace_back();
+         HI.Parameters->back().Type = "float";
+         HI.Parameters->back().Name = "v";
+         HI.AccessSpecifier = "public";
+       }},
+      {// Setter with comment
+       R"cpp(
+          struct X {
+            // An int named Y
+            int Y; 
+            void [[^setY]](float v) { Y = v; }
+          };
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "setY";
+         HI.Kind = index::SymbolKind::InstanceMethod;
+         HI.NamespaceScope = "";
+         HI.Definition = "void setY(float v)";
+         HI.LocalScope = "X::";
+         HI.Documentation = "Trivial setter for `Y`.\n\nAn int named Y";
          HI.Type = "void (float)";
          HI.ReturnType = "void";
          HI.Parameters.emplace();
