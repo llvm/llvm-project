@@ -3488,6 +3488,12 @@ def fmodule_output : Flag<["-"], "fmodule-output">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, CC1Option]>,
   HelpText<"Save intermediate module file results when compiling a standard C++ module unit.">;
 
+def fimplicit_modules_lock_timeout_EQ : Joined<["-"], "fimplicit-modules-lock-timeout=">,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CLOption, CC1Option]>,
+  MetaVarName<"<seconds>">,
+  HelpText<"Time to wait on an implicit module lock before timing out">,
+  MarshallingInfoInt<FrontendOpts<"ImplicitModulesLockTimeoutSeconds">>;
+
 defm skip_odr_check_in_gmf : BoolOption<"f", "skip-odr-check-in-gmf",
   LangOpts<"SkipODRCheckInGMF">, DefaultFalse,
   PosFlag<SetTrue, [], [CC1Option],

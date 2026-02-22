@@ -491,6 +491,9 @@ public:
   /// The list of files to embed into the compiled module file.
   std::vector<std::string> ModulesEmbedFiles;
 
+  /// The time in seconds to wait on an implicit module lock before timing out.
+  unsigned ImplicitModulesLockTimeoutSeconds;
+
   /// The list of AST files to merge.
   std::vector<std::string> ASTMergeFiles;
 
@@ -552,8 +555,8 @@ public:
         EmitSymbolGraphSymbolLabelsForTesting(false),
         EmitPrettySymbolGraphs(false), GenReducedBMI(false),
         UseClangIRPipeline(false), ClangIRDisablePasses(false),
-        ClangIRDisableCIRVerifier(false), TimeTraceGranularity(500),
-        TimeTraceVerbose(false) {}
+        ClangIRDisableCIRVerifier(false), ImplicitModulesLockTimeoutSeconds(90),
+        TimeTraceGranularity(500), TimeTraceVerbose(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return Language::C.
