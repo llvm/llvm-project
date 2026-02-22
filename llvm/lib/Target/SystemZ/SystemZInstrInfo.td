@@ -666,14 +666,16 @@ let Predicates = [FeatureLoadStoreOnCond], Uses = [CC] in {
 //
 //===----------------------------------------------------------------------===//
 
-// 32-bit extensions from registers.
-def LBR : UnaryRRE<"lbr", 0xB926, sext8,  GR32, GR32>;
-def LHR : UnaryRRE<"lhr", 0xB927, sext16, GR32, GR32>;
+let isReMaterializable = 1 in {
+  // 32-bit extensions from registers.
+  def LBR : UnaryRRE<"lbr", 0xB926, sext8,  GR32, GR32>;
+  def LHR : UnaryRRE<"lhr", 0xB927, sext16, GR32, GR32>;
 
-// 64-bit extensions from registers.
-def LGBR : UnaryRRE<"lgbr", 0xB906, sext8,  GR64, GR64>;
-def LGHR : UnaryRRE<"lghr", 0xB907, sext16, GR64, GR64>;
-def LGFR : UnaryRRE<"lgfr", 0xB914, sext32, GR64, GR32>;
+  // 64-bit extensions from registers.
+  def LGBR : UnaryRRE<"lgbr", 0xB906, sext8,  GR64, GR64>;
+  def LGHR : UnaryRRE<"lghr", 0xB907, sext16, GR64, GR64>;
+  def LGFR : UnaryRRE<"lgfr", 0xB914, sext32, GR64, GR32>;
+}
 
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
   def LTGFR : UnaryRRE<"ltgfr", 0xB912, null_frag, GR64, GR32>;
@@ -683,29 +685,31 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
 def : Pat<(sext_inreg GR64:$src, i32),
           (LGFR (EXTRACT_SUBREG GR64:$src, subreg_l32))>;
 
-// 32-bit extensions from 8-bit memory.  LBMux expands to LB or LBH,
-// depending on the choice of register.
-def LBMux : UnaryRXYPseudo<"lb", z_asextloadi8, GRX32, 1>,
+let canFoldAsLoad = 1, isReMaterializable =1 in {
+  // 32-bit extensions from 8-bit memory.  LBMux expands to LB or LBH,
+  // depending on the choice of register.
+  def LBMux : UnaryRXYPseudo<"lb", z_asextloadi8, GRX32, 1>,
+              Requires<[FeatureHighWord]>;
+  def LB  : UnaryRXY<"lb", 0xE376, z_asextloadi8, GR32, 1>;
+  def LBH : UnaryRXY<"lbh", 0xE3C0, z_asextloadi8, GRH32, 1>,
             Requires<[FeatureHighWord]>;
-def LB  : UnaryRXY<"lb", 0xE376, z_asextloadi8, GR32, 1>;
-def LBH : UnaryRXY<"lbh", 0xE3C0, z_asextloadi8, GRH32, 1>,
-          Requires<[FeatureHighWord]>;
 
-// 32-bit extensions from 16-bit memory.  LHMux expands to LH or LHH,
-// depending on the choice of register.
-def LHMux : UnaryRXYPseudo<"lh", z_asextloadi16, GRX32, 2>,
-            Requires<[FeatureHighWord]>;
-defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, z_asextloadi16, GR32, 2>;
-def  LHH  : UnaryRXY<"lhh", 0xE3C4, z_asextloadi16, GRH32, 2>,
-            Requires<[FeatureHighWord]>;
-def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_z_asextloadi16, GR32>;
+  // 32-bit extensions from 16-bit memory.  LHMux expands to LH or LHH,
+  // depending on the choice of register.
+  def LHMux : UnaryRXYPseudo<"lh", z_asextloadi16, GRX32, 2>,
+              Requires<[FeatureHighWord]>;
+  defm LH   : UnaryRXPair<"lh", 0x48, 0xE378, z_asextloadi16, GR32, 2>;
+  def  LHH  : UnaryRXY<"lhh", 0xE3C4, z_asextloadi16, GRH32, 2>,
+              Requires<[FeatureHighWord]>;
+  def  LHRL : UnaryRILPC<"lhrl", 0xC45, aligned_z_asextloadi16, GR32>;
 
-// 64-bit extensions from memory.
-def LGB   : UnaryRXY<"lgb", 0xE377, z_asextloadi8,  GR64, 1>;
-def LGH   : UnaryRXY<"lgh", 0xE315, z_asextloadi16, GR64, 2>;
-def LGF   : UnaryRXY<"lgf", 0xE314, z_asextloadi32, GR64, 4>;
-def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_z_asextloadi16, GR64>;
-def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_z_asextloadi32, GR64>;
+  // 64-bit extensions from memory.
+  def LGB   : UnaryRXY<"lgb", 0xE377, z_asextloadi8,  GR64, 1>;
+  def LGH   : UnaryRXY<"lgh", 0xE315, z_asextloadi16, GR64, 2>;
+  def LGF   : UnaryRXY<"lgf", 0xE314, z_asextloadi32, GR64, 4>;
+  def LGHRL : UnaryRILPC<"lghrl", 0xC44, aligned_z_asextloadi16, GR64>;
+  def LGFRL : UnaryRILPC<"lgfrl", 0xC4C, aligned_z_asextloadi32, GR64>;
+}
 let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
   def LTGF : UnaryRXY<"ltgf", 0xE332, z_asextloadi32, GR64, 4>;
 
@@ -715,52 +719,60 @@ let Defs = [CC], CCValues = 0xE, CompareZeroCCMask = 0xE in
 
 // 32-bit extensions from registers.
 
-// Expands to LLCR or RISB[LH]G, depending on the choice of registers.
-def LLCRMux : UnaryRRPseudo<"llcr", zext8, GRX32, GRX32>,
-              Requires<[FeatureHighWord]>;
-def LLCR    : UnaryRRE<"llcr", 0xB994, zext8,  GR32, GR32>;
-// Expands to LLHR or RISB[LH]G, depending on the choice of registers.
-def LLHRMux : UnaryRRPseudo<"llhr", zext16, GRX32, GRX32>,
-              Requires<[FeatureHighWord]>;
-def LLHR    : UnaryRRE<"llhr", 0xB995, zext16, GR32, GR32>;
+let isReMaterializable = 1 in {
+  // Expands to LLCR or RISB[LH]G, depending on the choice of registers.
+  def LLCRMux : UnaryRRPseudo<"llcr", zext8, GRX32, GRX32>,
+                Requires<[FeatureHighWord]>;
+  def LLCR    : UnaryRRE<"llcr", 0xB994, zext8,  GR32, GR32>;
+  // Expands to LLHR or RISB[LH]G, depending on the choice of registers.
+  def LLHRMux : UnaryRRPseudo<"llhr", zext16, GRX32, GRX32>,
+                Requires<[FeatureHighWord]>;
+  def LLHR    : UnaryRRE<"llhr", 0xB995, zext16, GR32, GR32>;
 
-// 64-bit extensions from registers.
-def LLGCR : UnaryRRE<"llgcr", 0xB984, zext8,  GR64, GR64>;
-def LLGHR : UnaryRRE<"llghr", 0xB985, zext16, GR64, GR64>;
-def LLGFR : UnaryRRE<"llgfr", 0xB916, zext32, GR64, GR32>;
+  // 64-bit extensions from registers.
+  def LLGCR : UnaryRRE<"llgcr", 0xB984, zext8,  GR64, GR64>;
+  def LLGHR : UnaryRRE<"llghr", 0xB985, zext16, GR64, GR64>;
+  def LLGFR : UnaryRRE<"llgfr", 0xB916, zext32, GR64, GR32>;
+}
 
 // Match 32-to-64-bit zero extensions in which the source is already
 // in a 64-bit register.
 def : Pat<(and GR64:$src, 0xffffffff),
           (LLGFR (EXTRACT_SUBREG GR64:$src, subreg_l32))>;
 
-// 32-bit extensions from 8-bit memory.  LLCMux expands to LLC or LLCH,
-// depending on the choice of register.
-def LLCMux : UnaryRXYPseudo<"llc", z_azextloadi8, GRX32, 1>,
+let isReMaterializable = 1, canFoldAsLoad = 1 in {
+  // 32-bit extensions from 8-bit memory.  LLCMux expands to LLC or LLCH,
+  // depending on the choice of register.
+  def LLCMux : UnaryRXYPseudo<"llc", z_azextloadi8, GRX32, 1>,
+               Requires<[FeatureHighWord]>;
+  def LLC  : UnaryRXY<"llc", 0xE394, z_azextloadi8, GR32, 1>;
+  def LLCH : UnaryRXY<"llch", 0xE3C2, z_azextloadi8, GRH32, 1>,
              Requires<[FeatureHighWord]>;
-def LLC  : UnaryRXY<"llc", 0xE394, z_azextloadi8, GR32, 1>;
-def LLCH : UnaryRXY<"llch", 0xE3C2, z_azextloadi8, GRH32, 1>,
-           Requires<[FeatureHighWord]>;
 
-// 32-bit extensions from 16-bit memory.  LLHMux expands to LLH or LLHH,
-// depending on the choice of register.
-def LLHMux : UnaryRXYPseudo<"llh", z_azextloadi16, GRX32, 2>,
-             Requires<[FeatureHighWord]>;
-def LLH   : UnaryRXY<"llh", 0xE395, z_azextloadi16, GR32, 2>;
-def LLHH  : UnaryRXY<"llhh", 0xE3C6, z_azextloadi16, GRH32, 2>,
-            Requires<[FeatureHighWord]>;
-def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_z_azextloadi16, GR32>;
+  // 32-bit extensions from 16-bit memory.  LLHMux expands to LLH or LLHH,
+  // depending on the choice of register.
+  def LLHMux : UnaryRXYPseudo<"llh", z_azextloadi16, GRX32, 2>,
+               Requires<[FeatureHighWord]>;
+  def LLH   : UnaryRXY<"llh", 0xE395, z_azextloadi16, GR32, 2>;
+  def LLHH  : UnaryRXY<"llhh", 0xE3C6, z_azextloadi16, GRH32, 2>,
+              Requires<[FeatureHighWord]>;
+  def LLHRL : UnaryRILPC<"llhrl", 0xC42, aligned_z_azextloadi16, GR32>;
 
-// 64-bit extensions from memory.
-def LLGC   : UnaryRXY<"llgc", 0xE390, z_azextloadi8,  GR64, 1>;
-def LLGH   : UnaryRXY<"llgh", 0xE391, z_azextloadi16, GR64, 2>;
-def LLGF   : UnaryRXY<"llgf", 0xE316, z_azextloadi32, GR64, 4>;
-def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_z_azextloadi16, GR64>;
-def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_z_azextloadi32, GR64>;
+  // 64-bit extensions from memory.
+  def LLGC   : UnaryRXY<"llgc", 0xE390, z_azextloadi8,  GR64, 1>;
+  def LLGH   : UnaryRXY<"llgh", 0xE391, z_azextloadi16, GR64, 2>;
+  def LLGF   : UnaryRXY<"llgf", 0xE316, z_azextloadi32, GR64, 4>;
+  def LLGHRL : UnaryRILPC<"llghrl", 0xC46, aligned_z_azextloadi16, GR64>;
+  def LLGFRL : UnaryRILPC<"llgfrl", 0xC4E, aligned_z_azextloadi32, GR64>;
 
-// 31-to-64-bit zero extensions.
-def LLGTR : UnaryRRE<"llgtr", 0xB917, null_frag, GR64, GR64>;
-def LLGT  : UnaryRXY<"llgt",  0xE317, null_frag, GR64, 4>;
+  // 31-to-64-bit zero extensions.
+  def LLGT  : UnaryRXY<"llgt",  0xE317, null_frag, GR64, 4>;
+}
+
+let isReMaterializable = 1 in {
+  // 31-to-64-bit zero extensions.
+  def LLGTR : UnaryRRE<"llgtr", 0xB917, null_frag, GR64, GR64>;
+}
 def : Pat<(and GR64:$src, 0x7fffffff),
           (LLGTR GR64:$src)>;
 def : Pat<(and (i64 (z_azextloadi32 bdxaddr20only:$src)), 0x7fffffff),
