@@ -5,6 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+#include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Utils/DistributionUtils.h"
 #include "mlir/Dialect/Index/IR/IndexDialect.h"
@@ -1511,9 +1512,8 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
         // Case 1: source is lower-rank than result.
         bool isSliceOf = sourceLayout.isSliceOf(resultLayout);
         if (!isSliceOf)
-          return rewriter.notifyMatchFailure(
-              warpOp,
-              "Broadcast input layout must be a slice of result layout.");
+          broadcastOp.emitWarning()
+              << "Broadcast input layout must be a slice of result layout.";
       }
       // case 2: source and result have same rank
       if (rankDiff == 0) {
@@ -1989,6 +1989,77 @@ struct VectorTransposeDistribution final : public gpu::WarpDistributionPattern {
   }
 };
 
+/// Distribute a vector::StepOp with the sliced result layout.
+/// The sliced layout must have exactly 1 effective lane dimension.
+/// We completely resolve the vector::StepOp by computing the lane_data-sized
+/// subranges.
+struct VectorStepSliceDistribution final : public gpu::WarpDistributionPattern {
+  using gpu::WarpDistributionPattern::WarpDistributionPattern;
+  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
+                                PatternRewriter &rewriter) const override {
+    OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<vector::StepOp>);
+    if (!operand)
+      return rewriter.notifyMatchFailure(
+          warpOp, "warp result is not a vector::StepOp op");
+    auto stepOp = operand->get().getDefiningOp<vector::StepOp>();
+    unsigned operandIdx = operand->getOperandNumber();
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(stepOp->getResult(0));
+    if (!resultLayout)
+      return rewriter.notifyMatchFailure(
+          stepOp, "the result vector of the step op lacks layout "
+                  "attribute");
+    auto sliceLayout = dyn_cast<xegpu::SliceAttr>(resultLayout);
+    if (!sliceLayout)
+      return rewriter.notifyMatchFailure(
+          stepOp, "the result layout must be a slice layout");
+    if (sliceLayout.getEffectiveLaneLayoutAsInt().size() != 1)
+      return rewriter.notifyMatchFailure(
+          stepOp, "expecting 1 dim in the effective result layout");
+
+    rewriter.setInsertionPointAfter(warpOp);
+    auto loc = stepOp.getLoc();
+    auto stepResultVecTy = stepOp.getResult().getType();
+    Value distributedVal = warpOp.getResult(operandIdx);
+    VectorType newVecTy = cast<VectorType>(distributedVal.getType());
+
+    auto laneDataBlockCoords = resultLayout.computeDistributedCoords(
+        rewriter, loc, warpOp.getLaneid(), stepResultVecTy.getShape());
+    if (failed(laneDataBlockCoords))
+      return rewriter.notifyMatchFailure(
+          stepOp, "failed to compute lane data block coordinates");
+
+    auto laneDataBlockCoordsVec = laneDataBlockCoords.value();
+    auto laneDataBlockLength = resultLayout.getEffectiveLaneDataAsInt()[0];
+    assert(static_cast<int64_t>(laneDataBlockCoordsVec.size()) ==
+           newVecTy.getNumElements() / laneDataBlockLength);
+    SmallVector<Value> stepVals;
+    // For each lane_data block, reconstruct its sub-range
+    // from the range of SG-level vector.step. Example: vector.step
+    // {slice<layout<lane_layout=[2,4,2], lane_data=[1,2,1]>, dims=[0,2]>} :
+    // vector<16xindex>
+    // Each logical lane holds 4 elements as 2 blocks of 2 elements each.
+    // The blocks are round-robin distributed, so logical lane id 0
+    // holds values [0,1, 8,9].
+    for (auto &laneDataBlockCoords : laneDataBlockCoordsVec) {
+      auto laneDataBlockStartCoord = laneDataBlockCoords[0];
+      stepVals.push_back(laneDataBlockStartCoord);
+      for (int i = 1; i < laneDataBlockLength; ++i) {
+        auto offset = arith::ConstantIndexOp::create(rewriter, loc, i);
+        stepVals.push_back(arith::AddIOp::create(
+            rewriter, loc, laneDataBlockStartCoord, offset));
+      }
+    }
+    assert(static_cast<int64_t>(stepVals.size()) == newVecTy.getNumElements() &&
+           "Expecting the number of step values to match the number of "
+           "elements in the vector");
+    auto stepOpVal =
+        vector::FromElementsOp::create(rewriter, loc, newVecTy, stepVals);
+    rewriter.replaceAllUsesWith(distributedVal, stepOpVal);
+    return success();
+  }
+};
+
 } // namespace
 
 namespace {
@@ -2015,8 +2086,9 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
   patterns
       .add<VectorShapeCastDistribution, VectorExtractStridedSliceDistribution,
            VectorInsertStridedSliceDistribution, VectorBroadcastDistribution,
-           SinkUniformOps>(patterns.getContext(),
-                           /*pattern benefit=*/PatternHierarchy::AboveRegular);
+           VectorStepSliceDistribution, SinkUniformOps>(
+          patterns.getContext(),
+          /*pattern benefit=*/PatternHierarchy::AboveRegular);
 }
 
 void xegpu::populateXeGPUMoveFuncBodyToWarpOpPatterns(
