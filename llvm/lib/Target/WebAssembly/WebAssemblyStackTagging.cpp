@@ -214,9 +214,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     bool StandardLifetime =
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
-                                   3) &&
-        !SInfo.CallsReturnTwice;
+        memtag::isStandardLifetime(Info, DT, LI, 3) && !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
       bool combineStore{canCombineStore(Info, AI, DT)};
       Function *StoreTagDecl = nullptr;
