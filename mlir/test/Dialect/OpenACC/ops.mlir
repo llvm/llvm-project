@@ -2494,3 +2494,13 @@ func.func @test_kernel_environment_with_async(%arg0: memref<1024xf32>) {
 // CHECK:           gpu.launch
 // CHECK:             memref.store %{{.*}}, %[[CREATE]]
 // CHECK:         acc.copyout accPtr(%[[CREATE]] : memref<1024xf32>) async(%[[ASYNC]] : i32) to varPtr(%{{.*}} : memref<1024xf32>)
+
+// -----
+
+func.func @test_acc_reduction_combine(%arg0 : memref<i32>, %arg1 : memref<i32>) {
+  acc.reduction_combine %arg0 into %arg1 <add> : memref<i32>
+  return
+}
+
+// CHECK-LABEL: func @test_acc_reduction_combine
+// CHECK:       acc.reduction_combine %arg0 into %arg1 <add> : memref<i32>

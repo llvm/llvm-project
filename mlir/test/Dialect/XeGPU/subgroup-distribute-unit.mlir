@@ -1038,28 +1038,39 @@ gpu.func @vector_insert_strided_slice_unsupported_offset(%laneid: index) {
   gpu.return
 }
 
-// CHECK-LABEL: gpu.func @vector_broadcast_1d_to_2d_broadcast_within_lane
+// CHECK-LABEL: gpu.func @vector_broadcast_1d_to_2d_to_3d_broadcast_within_lane
 // CHECK-SAME: (%[[ARG0:.*]]: index) {
-// CHECK: %[[R:.*]]:2 = gpu.warp_execute_on_lane_0(%[[ARG0]])[16] -> (vector<16x1xf16>, vector<1xf16>)
-// CHECK: %[[DEF:.*]] = "some_def"()
-// CHECK: %[[BCAST_INNER:.*]] = vector.broadcast %[[DEF]]
-// CHECK: gpu.yield %[[BCAST_INNER]], %[[DEF]]
-// CHECK: %[[BCAST:.*]] = vector.broadcast %[[R]]#1 : vector<1xf16> to vector<16x1xf16>
-// CHECK: "some_use"(%[[BCAST]])
-gpu.func  @vector_broadcast_1d_to_2d_broadcast_within_lane(%laneid: index) {
+// CHECK: %[[R:.*]]:4 = gpu.warp_execute_on_lane_0(%[[ARG0]])[16] -> (vector<16x1xf16>, vector<1x16x1xf16>, vector<1xf16>, vector<16x1xf16>)
+// CHECK: %[[DEF0:.*]] = "some_def"() : () -> vector<16xf16>
+// CHECK: %[[DEF1:.*]] = "some_def"() : () -> vector<16x16xf16>
+// CHECK: %[[BCAST_INNER:.*]] = vector.broadcast %[[DEF0]]
+// CHECK: %[[CAST_INNER:.*]] = vector.shape_cast %[[DEF1]] : vector<16x16xf16> to vector<1x16x16xf16>
+// CHECK: gpu.yield %[[BCAST_INNER]], %[[CAST_INNER]], %[[DEF0]], %[[DEF1]]
+// CHECK: %[[CAST:.*]] = vector.shape_cast %[[R]]#3 : vector<16x1xf16> to vector<1x16x1xf16>
+// CHECK: %[[BCAST:.*]] = vector.broadcast %[[R]]#2 : vector<1xf16> to vector<16x1xf16>
+// CHECK: "some_use"(%[[BCAST]]) : (vector<16x1xf16>) -> ()
+// CHECK: "some_use"(%[[CAST]]) : (vector<1x16x1xf16>) -> ()
+gpu.func  @vector_broadcast_1d_to_2d_to_3d_broadcast_within_lane(%laneid: index) {
 
-  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<16x1xf16>) {
+  %r:2 = gpu.warp_execute_on_lane_0(%laneid)[16] -> (vector<16x1xf16>, vector<1x16x1xf16>) {
 
     %1 = "some_def"() : () -> vector<16xf16>
+    %3 = "some_def"() : () -> vector<16x16xf16>
 
     %2 = vector.broadcast %1 {
       layout_operand_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>, dims = [0]>,
       layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>
     } : vector<16xf16> to vector<16x16xf16>
 
-    gpu.yield %2 : vector<16x16xf16>
+    %4 = vector.broadcast %3 {
+      layout_operand_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>,
+      layout_result_0 = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+    } : vector<16x16xf16> to vector<1x16x16xf16>
+
+    gpu.yield %2, %4 : vector<16x16xf16>, vector<1x16x16xf16>
   }
-  "some_use"(%r) : (vector<16x1xf16>) -> ()
+  "some_use"(%r#0) : (vector<16x1xf16>) -> ()
+  "some_use"(%r#1) : (vector<1x16x1xf16>) -> ()
   gpu.return
 }
 
@@ -1118,6 +1129,63 @@ gpu.func
       gpu.yield %2 : vector<16x16xf16>
     }
     "some_use"(%0) : (vector<16x16xf16>) -> ()
+    gpu.return
+  }
+
+// CHECK-LABEL: gpu.func @vector_step_slice
+// CHECK:         (%[[LANE_ID:[0-9a-zA-Z]+]]: index) {
+// CHECK:         %[[LANE_ID_IN_SLICED_DIM:.*]] = arith.remui %[[LANE_ID]], %c16 : index
+// CHECK-NEXT:    %[[LANE_ID_IN_SLICED_DIM1:.*]] = arith.remui %[[LANE_ID_IN_SLICED_DIM]], %c16 : index
+// CHECK-NEXT:    %[[LANE_ID_IN_SLICED_DIM_VEC:.*]] = vector.broadcast %[[LANE_ID_IN_SLICED_DIM1]] : index to vector<1xindex>
+// CHECK-NEXT:    "some_use"(%[[LANE_ID_IN_SLICED_DIM_VEC]]) : (vector<1xindex>) -> ()
+  gpu.func @vector_step_slice(%arg0: index) {
+    %0 = gpu.warp_execute_on_lane_0(%arg0)[16] -> (vector<1xindex>) {
+      %5 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 2]>} : vector<16xindex>
+      gpu.yield %5 : vector<16xindex>
+    }
+    "some_use"(%0) : (vector<1xindex>) -> ()
+    gpu.return
+  }
+
+  // CHECK-LABEL: gpu.func @vector_step_slice_unit
+  // CHECK:         (%[[LANE_ID:[0-9a-zA-Z]+]]: index) {
+  // CHECK-NEXT:    %[[LANE_ID_IN_SLICED_DIM_VEC:.*]] = arith.constant dense<0> : vector<1xindex>
+  // CHECK-NEXT:    "some_use"(%[[LANE_ID_IN_SLICED_DIM_VEC]]) : (vector<1xindex>) -> ()
+  gpu.func @vector_step_slice_unit(%arg0: index) {
+    %0 = gpu.warp_execute_on_lane_0(%arg0)[16] -> (vector<1xindex>) {
+      %5 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [1, 1, 1, 16], lane_data = [1, 1, 1, 1]>, dims = [0, 1, 3]>} : vector<1xindex>
+      gpu.yield %5 : vector<1xindex>
+    }
+    "some_use"(%0) : (vector<1xindex>) -> ()
+    gpu.return
+  }
+
+  // CHECK-LABEL: gpu.func @vector_step_slice_multi_dist_unit
+  // CHECK:         (%[[LANE_ID:[0-9a-zA-Z]+]]: index) {
+  // CHECK-DAG:    %[[C1:.*]] = arith.constant 1 : index
+  // CHECK-DAG:    %[[DIST_UNIT_SIZE:.*]] = arith.constant 8 : index
+  // CHECK-DAG:    %[[SG_LEVEL_VECSIZE:.*]] = arith.constant 16 : index
+  // CHECK-DAG:    %[[LANE_LAYOUT:.*]] = arith.constant 4 : index
+  // CHECK-DAG:    %[[LANE_DATA:.*]] = arith.constant 2 : index
+  // CHECK-DAG:    %[[LANE_DIST_UNIT_START_IDX:.*]] = arith.divui %[[LANE_ID]], %[[LANE_DATA]] : index
+  // CHECK-DAG:    %[[DIST_UNIT_0_IDX:.*]] = arith.remui %[[LANE_DIST_UNIT_START_IDX]], %[[LANE_LAYOUT]] : index
+  // CHECK-DAG:    %[[DIST_UNIT_0_OFFSET:.*]] = arith.muli %[[DIST_UNIT_0_IDX]], %[[LANE_DATA]] : index
+  // CHECK-DAG:    %[[DIST_UNIT_0_SUBRANGE_START:.*]] = arith.remui %[[DIST_UNIT_0_OFFSET]], %[[SG_LEVEL_VECSIZE]] : index
+  // CHECK-DAG:    %[[DIST_UNIT_1_OFFSET:.*]] = arith.addi %[[DIST_UNIT_0_OFFSET]], %[[DIST_UNIT_SIZE]] : index
+  // CHECK-DAG:    %[[DIST_UNIT_1_SUBRANGE_START:.*]] = arith.remui %[[DIST_UNIT_1_OFFSET]], %[[SG_LEVEL_VECSIZE]] : index
+  // CHECK-DAG:    %[[V6:.*]] = arith.addi %[[DIST_UNIT_0_SUBRANGE_START]], %[[C1]] : index
+  // CHECK-DAG:    %[[V7:.*]] = arith.addi %[[DIST_UNIT_1_SUBRANGE_START]], %[[C1]] : index
+  // CHECK-DAG:    %[[VEC:.*]] = vector.from_elements
+  // CHECK-SAME:     %[[DIST_UNIT_0_SUBRANGE_START]], %[[V6]],
+  // CHECK-SAME:     %[[DIST_UNIT_1_SUBRANGE_START]], %[[V7]]
+  // CHECK-SAME:     : vector<4xindex>
+  // CHECK-NEXT:    "some_use"(%[[VEC]]) : (vector<4xindex>) -> ()
+  gpu.func @vector_step_slice_multi_dist_unit(%arg0: index) {
+    %0 = gpu.warp_execute_on_lane_0(%arg0)[4] -> (vector<4xindex>) {
+      %5 = vector.step {layout_result_0 = #xegpu.slice<#xegpu.layout<lane_layout = [2, 4, 2], lane_data = [1,2,1]>, dims = [0, 2]>} : vector<16xindex>
+      gpu.yield %5 : vector<16xindex>
+    }
+    "some_use"(%0) : (vector<4xindex>) -> ()
     gpu.return
   }
 
