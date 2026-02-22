@@ -12,6 +12,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "llvm/Support/CheckedArithmetic.h"
 
 using namespace mlir;
 
@@ -107,19 +108,29 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
 
   // Strides: iterate sizes in reverse order and multiply.
   int64_t stride = 1;
+  bool overflowed = false;
   Value runningStride = createIndexAttrConstant(rewriter, loc, indexType, 1);
   strides.resize(memRefType.getRank());
   for (auto i = memRefType.getRank(); i-- > 0;) {
-    strides[i] = runningStride;
+    strides[i] = overflowed ? LLVM::PoisonOp::create(rewriter, loc, indexType)
+                            : runningStride;
 
     int64_t staticSize = memRefType.getShape()[i];
     bool useSizeAsStride = stride == 1;
     if (staticSize == ShapedType::kDynamic)
       stride = ShapedType::kDynamic;
-    if (stride != ShapedType::kDynamic)
-      stride *= staticSize;
+    if (stride != ShapedType::kDynamic) {
+      std::optional<int64_t> res = llvm::checkedMul(stride, staticSize);
 
-    if (useSizeAsStride)
+      if (!res)
+        overflowed = true;
+      else
+        stride = res.value();
+    }
+
+    if (overflowed)
+      runningStride = LLVM::PoisonOp::create(rewriter, loc, indexType);
+    else if (useSizeAsStride)
       runningStride = sizes[i];
     else if (stride == ShapedType::kDynamic)
       runningStride =

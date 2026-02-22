@@ -830,3 +830,17 @@ func.func @alloca_unconvertable_memory_space() {
   %alloca = memref.alloca() : memref<1x32x33xi32, #spirv.storage_class<StorageBuffer>>
   func.return
 }
+
+// -----
+
+// CHECK-LABEL: func @alloca_huge(
+func.func @alloca_huge(%arg0 : index) {
+  // CHECK: %[[D0:.*]] = llvm.mlir.constant(9223372036854775807 : index) : i64
+  // CHECK: %[[D1:.*]] = llvm.mlir.constant(3 : index) : i64
+  // CHECK: %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
+  // CHECK: %[[NUMELTS:.*]] = llvm.mlir.poison : i64
+  // CHECK: llvm.alloca %[[NUMELTS]] x i32 : (i64) -> !llvm.ptr
+  %1 = memref.alloca() : memref<9223372036854775807x3xi32>
+
+  func.return
+}
