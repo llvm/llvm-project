@@ -782,14 +782,12 @@ arrangeFreeFunctionLikeCall(CIRGenTypes &cgt, CIRGenModule &cgm,
       required = RequiredArgs::getFromProtoWithExtraSlots(proto, 0);
     if (proto->hasExtParameterInfos())
       cgm.errorNYI("call to functions with extra parameter info");
-  } else if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(
-                 cast<FunctionNoProtoType>(fnType)))
-    cgm.errorNYI("call to function without a prototype");
+  }
 
   SmallVector<CanQualType, 16> argTypes;
+  argTypes.reserve(args.size());
   for (const CallArg &arg : args)
     argTypes.push_back(cgt.getASTContext().getCanonicalParamType(arg.ty));
-
   CanQualType retType = fnType->getReturnType()->getCanonicalTypeUnqualified();
 
   assert(!cir::MissingFeatures::opCallFnInfoOpts());
@@ -920,12 +918,26 @@ CIRGenTypes::arrangeFunctionDeclaration(const FunctionDecl *fd) {
   // TODO: setCUDAKernelCallingConvention
   assert(!cir::MissingFeatures::cudaSupport());
 
-  // When declaring a function without a prototype, always use a non-variadic
-  // type.
+  // Handle C89/gnu89 no-prototype functions (FunctionNoProtoType).
+  //
+  // In C89, a function declared without a prototype does not type-check
+  // arguments and may legally be called with additional arguments.
+  // If we model such functions as non-variadic, the first observed call-site
+  // would freeze the function signature to that arity, causing later calls
+  // with different argument counts to fail CIR verification.
+  //
+  // When the target ABI permits variadic no-proto calls, model the function
+  // as variadic with zero fixed parameters to preserve C semantics and keep
+  // the CIR function type stable across call sites.
   if (CanQual<FunctionNoProtoType> noProto =
           funcTy.getAs<FunctionNoProtoType>()) {
     assert(!cir::MissingFeatures::opCallCIRGenFuncInfoExtParamInfo());
     assert(!cir::MissingFeatures::opCallFnInfoOpts());
+
+    if (cgm.getTargetCIRGenInfo().isNoProtoCallVariadic(noProto.getTypePtr())) {
+      return arrangeCIRFunctionInfo(noProto->getReturnType(), {},
+                                    noProto->getExtInfo(), RequiredArgs(0));
+    }
     return arrangeCIRFunctionInfo(noProto->getReturnType(), {},
                                   noProto->getExtInfo(), RequiredArgs::All);
   }
@@ -1203,9 +1215,9 @@ void CIRGenFunction::emitCallArg(CallArgList &args, const clang::Expr *e,
 
   bool hasAggregateEvalKind = hasAggregateEvaluationKind(argType);
 
-  // In the Microsoft C++ ABI, aggregate arguments are destructed by the callee.
-  // However, we still have to push an EH-only cleanup in case we unwind before
-  // we make it to the call.
+  // In the Microsoft C++ ABI, aggregate arguments are destructed by the
+  // callee. However, we still have to push an EH-only cleanup in case we
+  // unwind before we make it to the call.
   if (argType->isRecordType() &&
       argType->castAsRecordDecl()->isParamDestroyedInCallee()) {
     assert(!cir::MissingFeatures::msabi());
@@ -1265,6 +1277,10 @@ void CIRGenFunction::emitCallArgs(
     assert(!cir::MissingFeatures::opCallCallConv());
     argTypes.assign(fpt->param_type_begin() + paramsToSkip,
                     fpt->param_type_end());
+  } else {
+    // No prototype (e.g. implicit/old-style): allow extra args.
+    // Treat as variadic so we use promoted vararg types for all arguments.
+    isVariadic = true;
   }
 
   // If we still have any arguments, emit them using the type of the argument.
@@ -1275,8 +1291,9 @@ void CIRGenFunction::emitCallArgs(
   // We must evaluate arguments from right to left in the MS C++ ABI, because
   // arguments are destroyed left to right in the callee. As a special case,
   // there are certain language constructs taht require left-to-right
-  // evaluation, and in those cases we consider the evaluation order requirement
-  // to trump the "destruction order is reverse construction order" guarantee.
+  // evaluation, and in those cases we consider the evaluation order
+  // requirement to trump the "destruction order is reverse construction
+  // order" guarantee.
   auto leftToRight = true;
   assert(!cir::MissingFeatures::msabi());
 
