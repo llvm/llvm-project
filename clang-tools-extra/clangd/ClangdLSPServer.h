@@ -308,6 +308,13 @@ private:
   /// Whether the client supports change annotations on text edits.
   bool SupportsChangeAnnotation = false;
 
+  /// Unique command names for this server instance, used to avoid conflicts
+  /// when multiple clangd instances run in the same editor (e.g., multi-root
+  /// workspaces).
+  std::string ApplyFixCommand;
+  std::string ApplyTweakCommand;
+  std::string ApplyRenameCommand;
+
   std::mutex BackgroundIndexProgressMutex;
   enum class BackgroundIndexProgress {
     // Client doesn't support reporting progress. No transitions possible.

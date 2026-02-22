@@ -153,7 +153,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: #include {{.*}}foo.h{{.*}}"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
@@ -197,7 +197,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: add all missing includes"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
@@ -267,7 +267,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: fix all includes"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
@@ -304,7 +304,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: remove #include directive"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
@@ -348,7 +348,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: remove all unused includes"
 # CHECK-NEXT:    },
 # CHECK-NEXT:    {
@@ -418,7 +418,7 @@
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
-# CHECK-NEXT:      "command": "clangd.applyFix",
+# CHECK-NEXT:      "command": "clangd.applyFix.{{[0-9A-F]+}}",
 # CHECK-NEXT:      "title": "Apply fix: fix all includes"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]

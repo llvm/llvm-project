@@ -41,9 +41,9 @@
 # CHECK-NEXT:      "documentSymbolProvider": true,
 # CHECK-NEXT:      "executeCommandProvider": {
 # CHECK-NEXT:        "commands": [
-# CHECK-NEXT:          "clangd.applyFix",
-# CHECK-NEXT:          "clangd.applyRename"
-# CHECK-NEXT:          "clangd.applyTweak"
+# CHECK-NEXT:          "clangd.applyFix.{{[0-9A-F]+}}",
+# CHECK-NEXT:          "clangd.applyRename.{{[0-9A-F]+}}",
+# CHECK-NEXT:          "clangd.applyTweak.{{[0-9A-F]+}}"
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },
 # CHECK-NEXT:      "foldingRangeProvider": true,
