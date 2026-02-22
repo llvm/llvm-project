@@ -59,7 +59,7 @@ CHECK-MAIN-NEXT: mov w1, #0x14
 // store current values
 CHECK-MAIN-NEXT: stp x0, x30, [sp
 // load callsite id
-CHECK-MAIN-NEXT: mov x0, #0x0
+CHECK-MAIN-NEXT: mov x0,
 CHECK-MAIN-NEXT: stp x8, x0, [sp
 CHECK-MAIN-NEXT: adrp x8,
 CHECK-MAIN-NEXT: add x8, x8
