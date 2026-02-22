@@ -46,6 +46,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -1079,6 +1080,8 @@ struct PragmaDebugHandler : public PragmaHandler {
         Crasher.setAnnotationRange(SourceRange(Tok.getLocation()));
         PP.EnterToken(Crasher, /*IsReinject*/ false);
       }
+    } else if (II->isStr("sleep")) {
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
     } else if (II->isStr("dump")) {
       Token DumpAnnot;
       DumpAnnot.startToken();

@@ -1498,9 +1498,9 @@ static bool compileModuleAndReadASTBehindLock(
     auto Lock = ModuleCache.getLock(ModuleFileName);
     bool Owned;
     if (llvm::Error Err = Lock->tryLock().moveInto(Owned)) {
-      // ModuleCache takes care of correctness and locks are only necessary for
-      // performance. Fallback to building the module in case of any lock
-      // related errors.
+      // InMemoryModuleCache takes care of correctness and locks are only
+      // necessary for performance. Fallback to building the module in case of
+      // any lock related errors.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
           << Module->Name << toString(std::move(Err));
       return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
@@ -1514,20 +1514,24 @@ static bool compileModuleAndReadASTBehindLock(
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Lock->waitForUnlockFor(std::chrono::seconds(90))) {
+    std::chrono::seconds Timeout(
+        ImportingInstance.getFrontendOpts().ImplicitModulesLockTimeoutSeconds);
+    switch (Lock->waitForUnlockFor(Timeout)) {
     case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
     case llvm::WaitForUnlockResult::OwnerDied:
-      continue; // try again to get the lock.
+      continue; // Try again to get the lock.
     case llvm::WaitForUnlockResult::Timeout:
-      // Since the InMemoryModuleCache takes care of correctness, we try waiting
-      // for someone else to complete the build so that it does not happen
-      // twice. In case of timeout, build it ourselves.
+      // Attempt to clear the lock file so that future invocations can make
+      // progress without waiting for the timeout.
+      Lock->unsafeMaybeUnlock();
+      // InMemoryModuleCache takes care of correctness and locks are only
+      // necessary for performance. Fallback to building the module in case of
+      // lock timeout.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
-      // Clear the lock file so that future invocations can make progress.
-      Lock->unsafeMaybeUnlock();
-      continue;
+      return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
+                                         ModuleNameLoc, Module, ModuleFileName);
     }
 
     // Read the module that was just written by someone else.
