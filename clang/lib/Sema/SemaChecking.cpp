@@ -14127,7 +14127,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
   };
 
   /// An object for which we can track unsequenced uses.
-  using Object = const NamedDecl *;
+  using Object = const ValueDecl *;
 
   /// Different flavors of object usage which we track. We only track the
   /// least-sequenced usage of each kind.
@@ -14145,6 +14145,8 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
 
     UK_Count = UK_ModAsSideEffect + 1
   };
+
+  enum WarningKind { WK_UseAndMod, WK_ModAndMod, WK_Volatile_UseAndUse };
 
   /// Bundle together a sequencing region and the expression corresponding
   /// to a specific usage. One Usage is stored for each usage kind in UsageInfo.
@@ -14291,7 +14293,7 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
   /// \p IsModMod is true when we are checking for a mod-mod unsequenced
   /// usage and false we are checking for a mod-use unsequenced usage.
   void checkUsage(Object O, UsageInfo &UI, const Expr *UsageExpr,
-                  UsageKind OtherKind, bool IsModMod) {
+                  UsageKind OtherKind, WarningKind WarnKind) {
     if (UI.Diagnosed)
       return;
 
@@ -14304,11 +14306,22 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
     if (OtherKind == UK_Use)
       std::swap(Mod, ModOrUse);
 
+    unsigned DiagID = 0;
+    switch (WarnKind) {
+    case WK_UseAndMod:
+      DiagID = diag::warn_unsequenced_mod_use;
+      break;
+    case WK_ModAndMod:
+      DiagID = diag::warn_unsequenced_mod_mod;
+      break;
+    case WK_Volatile_UseAndUse:
+      DiagID = diag::warn_unsequenced_use_use_volatile;
+      break;
+    }
+
     SemaRef.DiagRuntimeBehavior(
         Mod->getExprLoc(), {Mod, ModOrUse},
-        SemaRef.PDiag(IsModMod ? diag::warn_unsequenced_mod_mod
-                               : diag::warn_unsequenced_mod_use)
-            << O << SourceRange(ModOrUse->getExprLoc()));
+        SemaRef.PDiag(DiagID) << O << SourceRange(ModOrUse->getExprLoc()));
     UI.Diagnosed = true;
   }
 
@@ -14341,27 +14354,28 @@ class SequenceChecker : public ConstEvaluatedExprVisitor<SequenceChecker> {
   void notePreUse(Object O, const Expr *UseExpr) {
     UsageInfo &UI = UsageMap[O];
     // Uses conflict with other modifications.
-    checkUsage(O, UI, UseExpr, /*OtherKind=*/UK_ModAsValue, /*IsModMod=*/false);
+    checkUsage(O, UI, UseExpr, /*OtherKind=*/UK_ModAsValue, WK_UseAndMod);
+    // Volatile uses conflict with other uses.
+    if (O->getType().isVolatileQualified())
+      checkUsage(O, UI, UseExpr, /*OtherKind=*/UK_Use, WK_Volatile_UseAndUse);
   }
 
   void notePostUse(Object O, const Expr *UseExpr) {
     UsageInfo &UI = UsageMap[O];
-    checkUsage(O, UI, UseExpr, /*OtherKind=*/UK_ModAsSideEffect,
-               /*IsModMod=*/false);
+    checkUsage(O, UI, UseExpr, /*OtherKind=*/UK_ModAsSideEffect, WK_UseAndMod);
     addUsage(O, UI, UseExpr, /*UsageKind=*/UK_Use);
   }
 
   void notePreMod(Object O, const Expr *ModExpr) {
     UsageInfo &UI = UsageMap[O];
     // Modifications conflict with other modifications and with uses.
-    checkUsage(O, UI, ModExpr, /*OtherKind=*/UK_ModAsValue, /*IsModMod=*/true);
-    checkUsage(O, UI, ModExpr, /*OtherKind=*/UK_Use, /*IsModMod=*/false);
+    checkUsage(O, UI, ModExpr, /*OtherKind=*/UK_ModAsValue, WK_ModAndMod);
+    checkUsage(O, UI, ModExpr, /*OtherKind=*/UK_Use, WK_UseAndMod);
   }
 
   void notePostMod(Object O, const Expr *ModExpr, UsageKind UK) {
     UsageInfo &UI = UsageMap[O];
-    checkUsage(O, UI, ModExpr, /*OtherKind=*/UK_ModAsSideEffect,
-               /*IsModMod=*/true);
+    checkUsage(O, UI, ModExpr, /*OtherKind=*/UK_ModAsSideEffect, WK_ModAndMod);
     addUsage(O, UI, ModExpr, /*UsageKind=*/UK);
   }
 

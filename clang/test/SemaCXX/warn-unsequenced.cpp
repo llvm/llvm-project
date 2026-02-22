@@ -815,3 +815,29 @@ void test_var() {
 }
 
 } // namespace templates
+
+namespace muliple_read_volatile {
+  volatile int v1;
+  
+  void PositiveTest(){
+    int x = 0;
+    int y = 0;
+    x = v1 + v1;        // cxx11-warning {{unsequenced accesses to volatile qualified 'v1'}}
+                        // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
+    v1 = v1 * v1;       // cxx11-warning {{unsequenced accesses to volatile qualified 'v1'}}
+                        // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
+    x = v1 + (y++, v1); // cxx11-warning {{unsequenced accesses to volatile qualified 'v1'}}
+                        // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
+    x = v1 + v1 || y;   // cxx11-warning {{unsequenced accesses to volatile qualified 'v1'}}
+                        // cxx17-warning@-1 {{unsequenced accesses to volatile qualified 'v1'}}
+  }
+  
+  void NegativeTest(){
+    int x = 0;
+    int y = 0;
+    x = v1 + y;   // no-warning
+    v1 = v1 * y;  // no-warning
+    x = (v1, v1); // no-warning
+    x = v1 || v1; // no-warning
+  }
+} // namespace muliple_read_volatile

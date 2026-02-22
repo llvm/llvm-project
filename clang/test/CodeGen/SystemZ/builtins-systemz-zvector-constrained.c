@@ -2,11 +2,11 @@
 // RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -ffp-exception-behavior=strict \
-// RUN: -Wall -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
+// RUN: -Wall -Wno-sequence-point -Wno-unused -Werror -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -target-cpu z13 -triple s390x-linux-gnu \
 // RUN: -O2 -fzvector -flax-vector-conversions=none \
 // RUN: -ffp-exception-behavior=strict \
-// RUN: -Wall -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
+// RUN: -Wall -Wno-sequence-point -Wno-unused -Werror -S %s -o - | FileCheck %s --check-prefix=CHECK-ASM
 
 #include <vecintrin.h>
 
