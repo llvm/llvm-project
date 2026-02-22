@@ -107,8 +107,8 @@ class FileToRemoveList {
   std::atomic<FileToRemoveList *> Next = nullptr;
 
   FileToRemoveList() = default;
-  // Not signal-safe.
-  FileToRemoveList(const std::string &str) : Filename(strdup(str.c_str())) {}
+  // Takes ownership of \p filename.
+  FileToRemoveList(char *filename) : Filename(filename) {}
 
 public:
   // Not signal-safe.
@@ -122,13 +122,27 @@ public:
   // Not signal-safe.
   static void insert(std::atomic<FileToRemoveList *> &Head,
                      const std::string &Filename) {
-    // Insert the new file at the end of the list.
-    FileToRemoveList *NewHead = new FileToRemoveList(Filename);
+    // Reuse a node with a null filename (left behind by erase) if one exists.
+    // There are two cases where Filename can be null:
+    // - A node left behind by a previous file that we had to remove
+    // - A node whose file is actively being removed by a signal handler right
+    //   now, in which case, it's OK if this file doesn't get removed.
+    char *NewFilename = strdup(Filename.c_str());
     std::atomic<FileToRemoveList *> *InsertionPoint = &Head;
-    FileToRemoveList *OldHead = nullptr;
-    while (!InsertionPoint->compare_exchange_strong(OldHead, NewHead)) {
-      InsertionPoint = &OldHead->Next;
-      OldHead = nullptr;
+    for (FileToRemoveList *Current = Head.load(); Current;
+         Current = Current->Next.load()) {
+      char *NullFilename = nullptr;
+      if (Current->Filename.compare_exchange_strong(NullFilename, NewFilename))
+        return; // Reused a slot.
+      InsertionPoint = &Current->Next;
+    }
+
+    // Append the new node at the end; on CAS failure, advance to the new tail.
+    FileToRemoveList *NewNode = new FileToRemoveList(NewFilename);
+    FileToRemoveList *OldNext = nullptr;
+    while (!InsertionPoint->compare_exchange_strong(OldNext, NewNode)) {
+      InsertionPoint = &OldNext->Next;
+      OldNext = nullptr;
     }
   }
 
