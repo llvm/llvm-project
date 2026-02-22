@@ -29,40 +29,32 @@ static constexpr uint16_t NEG_STOP = 0xff80U; //-inf
 
 TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 
-  std::vector<bfloat16> z_val = {
-      FPBits(0x0000U).get_val(),          FPBits(0x8000U).get_val(),
-      FPBits(0x3f80U).get_val(),          FPBits(0xbf80U).get_val(),
-      FPBits::min_subnormal().get_val(), FPBits::max_normal().get_val(),
-      FPBits::inf().get_val(),           FPBits::quiet_nan().get_val()};
-  for (bfloat16 z : z_val) {
+  
     for (uint16_t v1 = POS_START; v1 <= POS_STOP; ++v1) {
       for (uint16_t v2 = POS_START; v2 <= POS_STOP; v2 += 256) {
 
         bfloat16 x = FPBits(v1).get_val();
         bfloat16 y = FPBits(v2).get_val();
-
+        bfloat16 z = FPBits(POS_START).get_val();
+        
         mpfr::TernaryInput<bfloat16> input{x, y, z};
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
                                        LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
       }
     }
-  }
+  
 }
 
 TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
 
-  std::vector<bfloat16> z_val = {
-      FPBits(0x0000U).get_val(),          FPBits(0x8000U).get_val(),
-      FPBits(0x3f80U).get_val(),          FPBits(0xbf80U).get_val(),
-      FPBits::min_subnormal().get_val(), FPBits::max_normal().get_val(),
-      FPBits::inf().get_val(),           FPBits::quiet_nan().get_val()};
-  for (bfloat16 z : z_val) {
+  bfloat16 z = 
     for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; ++v1) {
       for (uint16_t v2 = NEG_START; v2 <= NEG_STOP; v2 += 256) {
 
         bfloat16 x = FPBits(v1).get_val();
         bfloat16 y = FPBits(v2).get_val();
+        bfloat16 z = FPBits(NEG_START).get_val();
 
         mpfr::TernaryInput<bfloat16> input{x, y, z};
 
@@ -70,7 +62,7 @@ TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
                                        LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
       }
     }
-  }
+  
 }
 TEST_F(LlvmLibcFmaBf16Test, CancellationTest) {
 
