@@ -26260,7 +26260,10 @@ public:
               return RedValI && V.isDeleted(RedValI);
             }))
           break;
-        V.buildTree(VL, IgnoreList);
+        if (RK == ReductionKind::Ordered)
+          V.buildTree(VL);
+        else
+          V.buildTree(VL, IgnoreList);
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
                                                 ReductionKind::Unordered)) {
           if (!AdjustReducedVals())
