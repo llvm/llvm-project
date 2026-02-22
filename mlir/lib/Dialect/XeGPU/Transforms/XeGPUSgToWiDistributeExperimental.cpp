@@ -88,6 +88,39 @@ static LogicalResult verifyLayouts(Operation *root) {
   return walkResult.wasInterrupted() ? failure() : success();
 }
 
+/// A vector::MultiDimReductionOp at subgroup level in expected form if, it has
+/// exactly 1 reduction dimension, it had valid result layout attribute, and
+/// result type can be distributed to lanes using the layout.
+static bool isValidSubgroupMultiReductionOp(vector::MultiDimReductionOp op) {
+  auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+  // If no layout, not valid.
+  if (!resLayout || !resLayout.isForSubgroup())
+    return false;
+  VectorType resTy = dyn_cast<VectorType>(op.getType());
+  if (!resTy)
+    return false;
+  // Compute the distributed result vector type based on the layout.
+  FailureOr<VectorType> resDistTypeOrFailure =
+      getDistVecTypeBasedOnLaneLayout(resLayout, resTy);
+  if (failed(resDistTypeOrFailure))
+    return false;
+  return op.getReductionDims().size() == 1;
+}
+
+/// A vector::MultiDimReductionOp is doing lane-local reduction if each workitem
+/// is doing its own local reduction. In this case the result layout ensures
+/// that result vector is distributed to lanes, i.e. the result vector type is
+/// different from the distributed result vector type.
+static bool isReductionLaneLocal(vector::MultiDimReductionOp op) {
+  // Must be valid MultiDimReductionOp.
+  assert(isValidSubgroupMultiReductionOp(op) && "Expecting a valid subgroup "
+                                                "MultiDimReductionOp");
+  auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+  VectorType resTy = dyn_cast<VectorType>(op.getType());
+  auto resDistTypeOrFailure = getDistVecTypeBasedOnLaneLayout(resLayout, resTy);
+  return resTy != resDistTypeOrFailure.value();
+}
+
 /// Distributes a subgroup-level CreateNdDesc op to workitem-level CreateNdDesc
 /// op. This simply drops the layout attribute from the tensor descriptor type.
 struct SgToWiCreateNdDesc : public OpConversionPattern<xegpu::CreateNdDescOp> {
@@ -362,6 +395,133 @@ struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+/// This pattern distributes a subgroup-level vector.reduction op to
+/// workitem-level. This require shuffling the data across the workitems (using
+/// gpu::ShuffleOp) and reducing in stages until all workitems have the final
+/// result.
+struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
+  using OpConversionPattern<vector::ReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ReductionOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto layout = xegpu::getDistributeLayoutAttr(op.getVector());
+
+    // If no layout, nothing to do.
+    if (!layout || !layout.isForSubgroup())
+      return failure();
+
+    VectorType srcVecType = op.getSourceVectorType();
+    // Only rank 1 vectors supported.
+    if (srcVecType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "Only rank 1 reductions can be distributed.");
+    // Lane layout must have the same rank as the vector.
+    if (layout.getRank() != srcVecType.getRank())
+      return rewriter.notifyMatchFailure(
+          op, "Layout rank does not match vector rank.");
+
+    // Get the subgroup size from the layout.
+    int64_t sgSize = layout.getEffectiveLaneLayoutAsInt()[0];
+    const auto *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    if (!uArch)
+      return rewriter.notifyMatchFailure(
+          op, "xegpu::ReductionOp require target attribute attached to "
+              "determine subgroup size");
+
+    // Only subgroup-sized vectors supported.
+    if (sgSize != uArch->getSubgroupSize() ||
+        srcVecType.getShape()[0] % sgSize != 0)
+      return rewriter.notifyMatchFailure(op,
+                                         "Invalid layout or reduction vector "
+                                         "dimension must match subgroup size.");
+
+    if (!op.getType().isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          op, "Reduction distribution currently only supports floats and "
+              "integer types.");
+
+    // Get the distributed vector (per work-item portion).
+    Value laneValVec = adaptor.getVector();
+
+    // Distribute and reduce across work-items in the subgroup.
+    Value fullReduce = xegpu::subgroupReduction(
+        op.getLoc(), rewriter, laneValVec, op.getKind(), sgSize);
+
+    // If there's an accumulator, combine it with the reduced value.
+    if (adaptor.getAcc())
+      fullReduce = vector::makeArithReduction(
+          rewriter, op.getLoc(), op.getKind(), fullReduce, adaptor.getAcc());
+
+    rewriter.replaceOp(op, fullReduce);
+    return success();
+  }
+};
+
+/// This pattern distributes a subgroup-level vector.multi_reduction op to
+/// workitem-level only if the reduction is lane-local. This means that
+/// reduction dimension is not distributed to lanes and each lane does its own
+/// local reduction.
+struct SgToWiMultiDimReduction
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only lane-local reduction is handled here.
+    if (!isReductionLaneLocal(op))
+      return rewriter.notifyMatchFailure(
+          op, "Only lane-local reduction is supported, expected reduction "
+              "dimension to be "
+              "not distributed.");
+    auto resLayout = xegpu::getTemporaryLayout(op->getOpResult(0));
+    VectorType resVecTy = dyn_cast<VectorType>(op.getType());
+    auto resDistVecTyOrFailure =
+        getDistVecTypeBasedOnLaneLayout(resLayout, resVecTy);
+    // Simply create a new MultiDimReductionOp using adaptor operands and the
+    // new result type.
+    auto newOp = vector::MultiDimReductionOp::create(
+        rewriter, op.getLoc(), resDistVecTyOrFailure.value(), op.getKind(),
+        adaptor.getSource(), adaptor.getAcc(), op.getReductionDims());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+/// This pattern rewrites a subgroup-level vector.multi_reduction op to a series
+/// of vector.extract_strided_slice, vector.reduction and
+/// vector.insert_strided_slice ops. This is used when the reduction dimension
+/// is distributed to lanes and a naive (lane-local) distribution is not
+/// possible. Then later on, these partially lowered subgroup-level ops are
+/// further lowered to workitem-level by respective patterns.
+struct LowerVectorMultiReductionPattern
+    : public OpConversionPattern<vector::MultiDimReductionOp> {
+  using OpConversionPattern<vector::MultiDimReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::MultiDimReductionOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only non-lane-local reduction is handled here.
+    if (isReductionLaneLocal(op))
+      return rewriter.notifyMatchFailure(
+          op, "Reduction is lane-local, it does not require rewrite.");
+    ArrayRef<int64_t> reductionDims = op.getReductionDims();
+    assert(
+        reductionDims.size() == 1 &&
+        "Expecting single reduction dimension for subgroup multi reduction op");
+
+    // Rewrite MultiDimReductionOp into a sequence of ReductionOps.
+    Value result = xegpu::lowerToVectorReductions(
+        cast<TypedValue<VectorType>>(op.getSource()),
+        cast<TypedValue<VectorType>>(op.getAcc()), op.getKind(),
+        reductionDims[0], op.getLoc(), rewriter);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 struct XeGPUSgToWiDistributeExperimentalPass
     : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
           XeGPUSgToWiDistributeExperimentalPass> {
@@ -551,8 +711,44 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         }
         return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
       });
+  // vector::ReductionOp is legal only if its source has no distribute layout
+  // attribute.
+  target.addDynamicallyLegalOp<vector::ReductionOp>(
+      [=](vector::ReductionOp op) -> bool {
+        auto layout = xegpu::getDistributeLayoutAttr(op.getVector());
+        return !layout;
+      });
+  // vector::MultiDimReductionOp op legality.
+  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+      [=](vector::MultiDimReductionOp op) -> bool {
+        // Check common conditions for subgroup multi reduction op.
+        if (!isValidSubgroupMultiReductionOp(op))
+          return true;
+        // Lane local reductions are illegal at this point and must be lowered.
+        return !isReductionLaneLocal(op);
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
-               SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd>(
+               SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
+               SgToWiVectorReduction, SgToWiMultiDimReduction>(
       typeConverter, patterns.getContext());
+}
+
+void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
+    RewritePatternSet &patterns, ConversionTarget &target) {
+  // vector::MultiDimReductionOp legality.
+  target.addDynamicallyLegalOp<vector::MultiDimReductionOp>(
+      [&](vector::MultiDimReductionOp op) {
+        // Check common conditions for subgroup multi reduction op.
+        if (!isValidSubgroupMultiReductionOp(op))
+          return true;
+        // Lane local reductions are legal. We only rewrite non-lane-local
+        // reductions.
+        return isReductionLaneLocal(op);
+      });
+  // vector::ReductionOp is legal.
+  target.addDynamicallyLegalOp<vector::ReductionOp>(
+      [&](vector::ReductionOp op) { return true; });
+  target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
+  patterns.add<LowerVectorMultiReductionPattern>(patterns.getContext());
 }

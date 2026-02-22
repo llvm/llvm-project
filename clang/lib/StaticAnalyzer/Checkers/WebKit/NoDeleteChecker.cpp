@@ -65,42 +65,38 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
+  static bool hasNoDeleteAnnotation(const FunctionDecl *FD) {
+    if (llvm::any_of(FD->redecls(), isNoDeleteFunction))
+      return true;
+
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    if (!MD || !MD->isVirtual())
+      return false;
+
+    auto Overriders = llvm::to_vector(MD->overridden_methods());
+    while (!Overriders.empty()) {
+      const auto *Fn = Overriders.pop_back_val();
+      llvm::append_range(Overriders, Fn->overridden_methods());
+      if (isNoDeleteFunction(Fn))
+        return true;
+    }
+
+    return false;
+  }
+
   void visitFunctionDecl(const FunctionDecl *FD) const {
     if (!FD->doesThisDeclarationHaveABody())
       return;
 
-    bool HasNoDeleteAnnotation = isNoDeleteFunction(FD);
-    if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (auto *Cls = MD->getParent(); Cls && MD->isVirtual()) {
-        CXXBasePaths Paths;
-        Paths.setOrigin(Cls);
-
-        Cls->lookupInBases(
-            [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
-              const Type *T = Base->getType().getTypePtrOrNull();
-              if (!T)
-                return false;
-
-              const CXXRecordDecl *R = T->getAsCXXRecordDecl();
-              if (!R)
-                return false;
-
-              for (const CXXMethodDecl *BaseMD : R->methods()) {
-                if (BaseMD->getCorrespondingMethodInClass(Cls) == MD) {
-                  if (isNoDeleteFunction(FD)) {
-                    HasNoDeleteAnnotation = true;
-                    return false;
-                  }
-                }
-              }
-              return true;
-            },
-            Paths, /*LookupInDependent =*/true);
-      }
-    }
+    if (!hasNoDeleteAnnotation(FD))
+      return;
 
     auto Body = FD->getBody();
-    if (!Body || TFA.isTrivial(Body))
+    if (!Body)
+      return;
+
+    auto hasTrivialDtor = [&](VarDecl *D) { return TFA.hasTrivialDtor(D); };
+    if (llvm::all_of(FD->parameters(), hasTrivialDtor) && TFA.isTrivial(Body))
       return;
 
     SmallString<100> Buf;

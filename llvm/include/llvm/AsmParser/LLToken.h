@@ -130,6 +130,7 @@ enum Kind {
   kw_prefix,
   kw_prologue,
   kw_c,
+  kw_prefalign,
 
   kw_cc,
   kw_ccc,
@@ -221,6 +222,12 @@ enum Kind {
   kw_address_is_null,
   kw_provenance,
   kw_read_provenance,
+
+  // denormal_fpenv attribute:
+  kw_ieee,
+  kw_preservesign,
+  kw_positivezero,
+  kw_dynamic,
 
   // nofpclass attribute:
   kw_all,

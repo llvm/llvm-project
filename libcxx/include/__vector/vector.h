@@ -85,8 +85,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector {
-  template <class _Up, class _Alloc>
-  using __split_buffer _LIBCPP_NODEBUG = std::__split_buffer<_Up, _Alloc, __split_buffer_pointer_layout>;
+  using _SplitBuffer _LIBCPP_NODEBUG = std::__split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
 
 public:
   //
@@ -487,7 +486,7 @@ public:
       if (__len < __cap_ - __end_) {
         __construct_at_end(ranges::begin(__range), ranges::end(__range), __len);
       } else {
-        __split_buffer<value_type, allocator_type> __buffer(__recommend(size() + __len), size(), __alloc_);
+        _SplitBuffer __buffer(__recommend(size() + __len), size(), __alloc_);
         __buffer.__construct_at_end_with_size(ranges::begin(__range), __len);
         __swap_out_circular_buffer(__buffer);
       }
@@ -698,10 +697,9 @@ private:
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_out_circular_buffer(_SplitBuffer& __v);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
-  __swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v, pointer __p);
+  __swap_out_circular_buffer(_SplitBuffer& __v, pointer __p);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __move_range(pointer __from_s, pointer __from_e, pointer __to);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign(vector& __c, true_type)
@@ -808,7 +806,7 @@ private:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(vector&, false_type) _NOEXCEPT {}
 
   template <class _Ptr = pointer, __enable_if_t<is_pointer<_Ptr>::value, int> = 0>
-  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Ptr
   __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     if (!__libcpp_is_constant_evaluated()) {
       return static_cast<pointer>(__builtin_assume_aligned(__p, _LIBCPP_ALIGNOF(decltype(*__p))));
@@ -817,12 +815,12 @@ private:
   }
 
   template <class _Ptr = pointer, __enable_if_t<!is_pointer<_Ptr>::value, int> = 0>
-  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
+  static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI _Ptr
   __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     return __p;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(__split_buffer<_Tp, allocator_type>& __sb) {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __sb) {
     auto __vector_begin    = __begin_;
     auto __vector_sentinel = __end_;
     auto __vector_cap      = __cap_;
@@ -866,8 +864,7 @@ vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_
 // *this and __v. It is assumed that __v provides space for exactly (__end_ - __begin_) objects in the front. This
 // function has a strong exception guarantee.
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v) {
   __annotate_delete();
   auto __new_begin = __v.begin() - size();
   std::__uninitialized_allocator_relocate(
@@ -886,7 +883,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, a
 // function has a strong exception guarantee if __begin_ == __p || __end_ == __p.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
-vector<_Tp, _Allocator>::__swap_out_circular_buffer(__split_buffer<value_type, allocator_type>& __v, pointer __p) {
+vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v, pointer __p) {
   __annotate_delete();
   pointer __ret = __v.begin();
 
@@ -1051,9 +1048,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 vector<_Tp, _Allocator>::__assign_with_size(_Iterator __first, _Sentinel __last, difference_type __n) {
   size_type __new_size = static_cast<size_type>(__n);
   if (__new_size <= capacity()) {
-    if (__new_size > size()) {
-      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), size(), this->__begin_).first;
-      __construct_at_end(std::move(__mid), std::move(__last), __new_size - size());
+    auto const __size = size();
+    if (__new_size > __size) {
+      auto __mid = std::__copy_n<_AlgPolicy>(std::move(__first), __size, this->__begin_).first;
+      __construct_at_end(std::move(__mid), std::move(__last), __new_size - __size);
     } else {
       pointer __m = std::__copy(std::move(__first), __last, this->__begin_).second;
       this->__destruct_at_end(__m);
@@ -1086,7 +1084,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::reserve(size_type __
   if (__n > capacity()) {
     if (__n > max_size())
       this->__throw_length_error();
-    __split_buffer<value_type, allocator_type> __v(__n, size(), this->__alloc_);
+    _SplitBuffer __v(__n, size(), this->__alloc_);
     __swap_out_circular_buffer(__v);
   }
 }
@@ -1097,7 +1095,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::shrink_to_fit() _NOE
 #if _LIBCPP_HAS_EXCEPTIONS
     try {
 #endif // _LIBCPP_HAS_EXCEPTIONS
-      __split_buffer<value_type, allocator_type> __v(size(), size(), this->__alloc_);
+      _SplitBuffer __v(size(), size(), this->__alloc_);
       // The Standard mandates shrink_to_fit() does not increase the capacity.
       // With equal capacity keep the existing buffer. This avoids extra work
       // due to swapping the elements.
@@ -1114,7 +1112,7 @@ template <class _Tp, class _Allocator>
 template <class... _Args>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
 vector<_Tp, _Allocator>::__emplace_back_slow_path(_Args&&... __args) {
-  __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), size(), this->__alloc_);
+  _SplitBuffer __v(__recommend(size() + 1), size(), this->__alloc_);
   //    __v.emplace_back(std::forward<_Args>(__args)...);
   pointer __end = __v.end();
   __alloc_traits::construct(this->__alloc_, std::__to_address(__end), std::forward<_Args>(__args)...);
@@ -1217,7 +1215,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) 
       *__p = *__xr;
     }
   } else {
-    __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
+    _SplitBuffer __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
     __v.emplace_back(__x);
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1236,7 +1234,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
       *__p = std::move(__x);
     }
   } else {
-    __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
+    _SplitBuffer __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
     __v.emplace_back(std::move(__x));
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1257,7 +1255,7 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
       *__p = std::move(__tmp.get());
     }
   } else {
-    __split_buffer<value_type, allocator_type> __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
+    _SplitBuffer __v(__recommend(size() + 1), __p - this->__begin_, this->__alloc_);
     __v.emplace_back(std::forward<_Args>(__args)...);
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1285,7 +1283,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
         std::fill_n(__p, __n, *__xr);
       }
     } else {
-      __split_buffer<value_type, allocator_type> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
+      _SplitBuffer __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
       __v.__construct_at_end(__n, __x);
       __p = __swap_out_circular_buffer(__v, __p);
     }
@@ -1306,11 +1304,11 @@ vector<_Tp, _Allocator>::__insert_with_sentinel(const_iterator __position, _Inpu
   if (__first == __last)
     (void)std::rotate(__p, __old_last, this->__end_);
   else {
-    __split_buffer<value_type, allocator_type> __v(__alloc_);
+    _SplitBuffer __v(__alloc_);
     auto __guard = std::__make_exception_guard(
         _AllocatorDestroyRangeReverse<allocator_type, pointer>(__alloc_, __old_last, this->__end_));
     __v.__construct_at_end_with_sentinel(std::move(__first), std::move(__last));
-    __split_buffer<value_type, allocator_type> __merged(
+    _SplitBuffer __merged(
         __recommend(size() + __v.size()), __off, __alloc_); // has `__off` positions available at the front
     std::__uninitialized_allocator_relocate(
         __alloc_, std::__to_address(__old_last), std::__to_address(this->__end_), std::__to_address(__merged.end()));
@@ -1356,7 +1354,7 @@ vector<_Tp, _Allocator>::__insert_with_size(
         __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
       }
     } else {
-      __split_buffer<value_type, allocator_type> __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
+      _SplitBuffer __v(__recommend(size() + __n), __p - this->__begin_, this->__alloc_);
       __v.__construct_at_end_with_size(std::move(__first), __n);
       __p = __swap_out_circular_buffer(__v, __p);
     }
@@ -1371,7 +1369,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
     if (__new_size <= capacity()) {
       __construct_at_end(__new_size - __current_size);
     } else {
-      __split_buffer<value_type, allocator_type> __v(__recommend(__new_size), __current_size, __alloc_);
+      _SplitBuffer __v(__recommend(__new_size), __current_size, __alloc_);
       __v.__construct_at_end(__new_size - __current_size);
       __swap_out_circular_buffer(__v);
     }
@@ -1387,7 +1385,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::resize(size_type __n
     if (__new_size <= capacity())
       __construct_at_end(__new_size - __current_size, __x);
     else {
-      __split_buffer<value_type, allocator_type> __v(__recommend(__new_size), __current_size, __alloc_);
+      _SplitBuffer __v(__recommend(__new_size), __current_size, __alloc_);
       __v.__construct_at_end(__new_size - __current_size, __x);
       __swap_out_circular_buffer(__v);
     }

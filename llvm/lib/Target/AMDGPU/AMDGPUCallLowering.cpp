@@ -421,7 +421,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
   SmallVector<ArgInfo, 32> SplitArgs;
-  SmallVector<uint64_t> FieldOffsets;
+  SmallVector<TypeSize> FieldOffsets;
   splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv(), &FieldOffsets);
 
   unsigned Idx = 0;

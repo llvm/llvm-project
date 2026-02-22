@@ -25,6 +25,7 @@
 #include "min_allocator.h"
 #include "test_allocator.h"
 #include "test_iterators.h"
+#include "type_algorithms.h"
 
 template <class Allocator, class Range>
 constexpr void test_impl() {

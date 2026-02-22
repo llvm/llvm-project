@@ -117,10 +117,34 @@ class TestFrameVarDILCast(TestBase):
             substrs=["cannot convert 'ns::Foo' to 'int'"],
         )
 
+        # Test with typedefs and namespaces.
+        self.expect_var_path("(myint)1", type="myint", value="1")
+        self.expect_var_path("(myint)1LL", type="myint", value="1")
+        self.expect_var_path("(ns::myint)1", type="ns::myint", value="1")
+        self.expect_var_path("(::ns::myint)1", type="ns::myint", value="1")
+        self.expect_var_path("(::ns::myint)myint_", type="ns::myint", value="1")
+
         self.expect_var_path("(int)myint_", type="int", value="1")
         self.expect_var_path("(int)ns_myint_", type="int", value="2")
         self.expect_var_path("(long long)myint_", type="long long", value="1")
         self.expect_var_path("(long long)ns_myint_", type="long long", value="2")
+        self.expect_var_path("(::ns::myint)myint_", type="ns::myint", value="1")
+
+        self.expect_var_path(
+            "(ns::inner::mydouble)1", type="ns::inner::mydouble", value="1"
+        )
+        self.expect_var_path(
+            "(::ns::inner::mydouble)1.2", type="ns::inner::mydouble", value="1.2"
+        )
+        self.expect_var_path(
+            "(ns::inner::mydouble)myint_", type="ns::inner::mydouble", value="1"
+        )
+        self.expect_var_path(
+            "(::ns::inner::mydouble)ns_inner_mydouble_",
+            type="ns::inner::mydouble",
+            value="1.2",
+        )
+        self.expect_var_path("(myint)ns_inner_mydouble_", type="myint", value="1")
 
         # Test with pointers and arrays.
         self.expect_var_path("(long long)ap", type="long long")
@@ -180,6 +204,8 @@ class TestFrameVarDILCast(TestBase):
             error=True,
             substrs=["cannot cast from type 'double' to pointer type 'char *'"],
         )
+        self.expect_var_path("(ns::Foo*)ns_inner_foo_ptr_", type="ns::Foo *")
+        self.expect_var_path("(ns::inner::Foo*)ns_foo_ptr_", type="ns::inner::Foo *")
 
         self.expect_var_path("*(int*)(void*)ap", type="int", value="1")
 
@@ -233,3 +259,36 @@ class TestFrameVarDILCast(TestBase):
         self.expect_var_path("((int*)arr_2d)[1]", type="int", value="2")
         self.expect_var_path("((int*)arr_2d)[2]", type="int", value="3")
         self.expect_var_path("((int*)arr_2d[1])[1]", type="int", value="5")
+
+        # Test casting to user-defined type with same name as variable.
+
+        self.expect_var_path("myStruct", type="myName")
+        self.expect_var_path("myName", type="int", value="37")
+
+        self.expect_var_path("secondStruct", type="myGlobalName")
+        self.expect_var_path("myGlobalName", type="bool", value="true")
+
+        # Here 'myName' is treated as a variable, not a type, so '(myName)'
+        # is parsed as a variable expression and 'InnerFoo' is unexpected,
+        # and a type cast is not attempted.
+        self.expect(
+            "frame variable '(myName)InnerFoo'",
+            error=True,
+            substrs=["expected 'eof', got: <'InnerFoo' (identifier)>"],
+        )
+
+        # Here 'myGlobalName' is treated as a (global) variable, not a type,
+        # so '(myGlobalName)' is parsed as a variable expression and 'InnerFoo'
+        # is unexpected, and a type cast is not attempted.
+        self.expect(
+            "frame variable '(myGlobalName)InnerFoo'",
+            error=True,
+            substrs=["expected 'eof', got: <'InnerFoo' (identifier)>"],
+        )
+
+        # Check that casts are not allowed in both simple and legacy modes
+        frame = thread.GetFrameAtIndex(0)
+        simple = frame.GetValueForVariablePath("(char)a", lldb.eDILModeSimple)
+        legacy = frame.GetValueForVariablePath("(char)a", lldb.eDILModeLegacy)
+        self.assertFailure(simple.GetError())
+        self.assertFailure(legacy.GetError())

@@ -50,11 +50,14 @@
 #ifndef MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 #define MLIR_DIALECT_OPENACC_ANALYSIS_OPENACCSUPPORT_H
 
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/OpenACC/OpenACCUtils.h"
+#include "mlir/Dialect/OpenACC/OpenACCUtilsGPU.h"
 #include "mlir/IR/Remarks.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Pass/AnalysisManager.h"
 #include "llvm/ADT/StringRef.h"
+#include <functional>
 #include <memory>
 #include <string>
 
@@ -85,7 +88,7 @@ struct OpenACCSupportTraits {
     // emitted. When not provided, in the default implementation, the category
     // is "openacc".
     virtual remark::detail::InFlightRemark
-    emitRemark(Operation *op, const Twine &message,
+    emitRemark(Operation *op, std::function<std::string()> messageFn,
                llvm::StringRef category) = 0;
 
     /// Check if a symbol use is valid for use in an OpenACC region.
@@ -94,6 +97,10 @@ struct OpenACCSupportTraits {
 
     /// Check if a value use is legal in an OpenACC region.
     virtual bool isValidValueUse(Value v, mlir::Region &region) = 0;
+
+    /// Get or optionally create a GPU module in the given module.
+    virtual std::optional<gpu::GPUModuleOp>
+    getOrCreateGPUModule(ModuleOp mod, bool create, llvm::StringRef name) = 0;
   };
 
   /// SFINAE helpers to detect if implementation has optional methods
@@ -120,8 +127,19 @@ struct OpenACCSupportTraits {
       decltype(std::declval<ImplT>().emitRemark(std::declval<Args>()...));
 
   template <typename ImplT>
-  using has_emitRemark = llvm::is_detected<emitRemark_t, ImplT, Operation *,
-                                           const Twine &, llvm::StringRef>;
+  using has_emitRemark =
+      llvm::is_detected<emitRemark_t, ImplT, Operation *,
+                        std::function<std::string()>, llvm::StringRef>;
+
+  template <typename ImplT, typename... Args>
+  using getOrCreateGPUModule_t =
+      decltype(std::declval<ImplT>().getOrCreateGPUModule(
+          std::declval<Args>()...));
+
+  template <typename ImplT>
+  using has_getOrCreateGPUModule =
+      llvm::is_detected<getOrCreateGPUModule_t, ImplT, ModuleOp, bool,
+                        llvm::StringRef>;
 
   /// This class wraps a concrete OpenACCSupport implementation and forwards
   /// interface calls to it. This provides type erasure, allowing different
@@ -146,13 +164,13 @@ struct OpenACCSupportTraits {
       return impl.emitNYI(loc, message);
     }
 
-    remark::detail::InFlightRemark emitRemark(Operation *op,
-                                              const Twine &message,
-                                              llvm::StringRef category) final {
+    remark::detail::InFlightRemark
+    emitRemark(Operation *op, std::function<std::string()> messageFn,
+               llvm::StringRef category) final {
       if constexpr (has_emitRemark<ImplT>::value)
-        return impl.emitRemark(op, message, category);
+        return impl.emitRemark(op, std::move(messageFn), category);
       else
-        return acc::emitRemark(op, message, category);
+        return acc::emitRemark(op, messageFn(), category);
     }
 
     bool isValidSymbolUse(Operation *user, SymbolRefAttr symbol,
@@ -168,6 +186,15 @@ struct OpenACCSupportTraits {
         return impl.isValidValueUse(v, region);
       else
         return acc::isValidValueUse(v, region);
+    }
+
+    std::optional<gpu::GPUModuleOp>
+    getOrCreateGPUModule(ModuleOp mod, bool create,
+                         llvm::StringRef name) final {
+      if constexpr (has_getOrCreateGPUModule<ImplT>::value)
+        return impl.getOrCreateGPUModule(mod, create, name);
+      else
+        return acc::getOrCreateGPUModule(mod, create, name);
     }
 
   private:
@@ -222,6 +249,21 @@ public:
   ///         unsupported case.
   InFlightDiagnostic emitNYI(Location loc, const Twine &message);
 
+  /// Emit an OpenACC remark with lazy message generation.
+  ///
+  /// The messageFn is only invoked if remarks are enabled for the given
+  /// operation, allowing callers to avoid constructing expensive messages
+  /// when remarks are disabled.
+  ///
+  /// \param op The operation to emit the remark for.
+  /// \param messageFn A callable that returns the remark message.
+  /// \param category Optional category for the remark. Defaults to "openacc".
+  /// \return An in-flight remark object that can be used to append
+  ///         additional information to the remark.
+  remark::detail::InFlightRemark
+  emitRemark(Operation *op, std::function<std::string()> messageFn,
+             llvm::StringRef category = "openacc");
+
   /// Emit an OpenACC remark.
   ///
   /// \param op The operation to emit the remark for.
@@ -231,7 +273,12 @@ public:
   ///         additional information to the remark.
   remark::detail::InFlightRemark
   emitRemark(Operation *op, const Twine &message,
-             llvm::StringRef category = "openacc");
+             llvm::StringRef category = "openacc") {
+    return emitRemark(op, std::function<std::string()>([msg = message.str()]() {
+                        return msg;
+                      }),
+                      category);
+  }
 
   /// Check if a symbol use is valid for use in an OpenACC region.
   ///
@@ -247,6 +294,18 @@ public:
   /// \param v The MLIR value to check for legality.
   /// \param region The MLIR region in which the legality is checked.
   bool isValidValueUse(Value v, Region &region);
+
+  /// Get or optionally create a GPU module in the given module.
+  ///
+  /// \param mod The module to search or create the GPU module in.
+  /// \param create If true (default), create the GPU module if it doesn't
+  /// exist.
+  /// \param name The name for the GPU module. If empty, implementation uses its
+  ///        default name.
+  /// \return The GPU module if found or created, std::nullopt otherwise.
+  std::optional<gpu::GPUModuleOp>
+  getOrCreateGPUModule(ModuleOp mod, bool create = true,
+                       llvm::StringRef name = "");
 
   /// Signal that this analysis should always be preserved so that
   /// underlying implementation registration is not lost.

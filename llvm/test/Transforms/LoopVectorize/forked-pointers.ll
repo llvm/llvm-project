@@ -22,10 +22,10 @@ define dso_local void @forked_ptrs_different_base_same_offset(ptr nocapture read
 ; CHECK-NEXT:    [[DEST:%.*]] = freeze ptr [[DEST2:%.*]]
 ; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoint ptr [[DEST]] to i64
-; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoint ptr [[PREDS:%.*]] to i64
-; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoint ptr [[BASE2]] to i64
-; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoint ptr [[BASE1]] to i64
+; CHECK-NEXT:    [[DEST1:%.*]] = ptrtoaddr ptr [[DEST]] to i64
+; CHECK-NEXT:    [[PREDS2:%.*]] = ptrtoaddr ptr [[PREDS:%.*]] to i64
+; CHECK-NEXT:    [[BASE23:%.*]] = ptrtoaddr ptr [[BASE2]] to i64
+; CHECK-NEXT:    [[BASE15:%.*]] = ptrtoaddr ptr [[BASE1]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[DEST1]], [[PREDS2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 16
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 [[DEST1]], [[BASE23]]

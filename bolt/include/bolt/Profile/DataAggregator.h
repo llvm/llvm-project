@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Program.h"
+#include <limits>
 #include <unordered_map>
 
 namespace llvm {
@@ -108,10 +109,14 @@ private:
   ///   (FT_ONLY, FT_EXTERNAL_ORIGIN, or FT_EXTERNAL_RETURN).
   struct Trace {
     static constexpr const uint64_t EXTERNAL = 0ULL;
-    static constexpr const uint64_t BR_ONLY = -1ULL;
-    static constexpr const uint64_t FT_ONLY = -1ULL;
-    static constexpr const uint64_t FT_EXTERNAL_ORIGIN = -2ULL;
-    static constexpr const uint64_t FT_EXTERNAL_RETURN = -3ULL;
+    static constexpr const uint64_t BR_ONLY =
+        std::numeric_limits<uint64_t>::max();
+    static constexpr const uint64_t FT_ONLY =
+        std::numeric_limits<uint64_t>::max();
+    static constexpr const uint64_t FT_EXTERNAL_ORIGIN =
+        std::numeric_limits<uint64_t>::max() - 1;
+    static constexpr const uint64_t FT_EXTERNAL_RETURN =
+        std::numeric_limits<uint64_t>::max() - 2;
 
     uint64_t Branch;
     uint64_t From;
