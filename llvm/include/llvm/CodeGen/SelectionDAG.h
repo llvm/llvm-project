@@ -2396,6 +2396,7 @@ public:
   LLVM_ABI bool isKnownNeverZero(SDValue Op, unsigned Depth = 0) const;
 
   /// Test whether the given SDValue is known to contain non-zero value(s).
+  /// The DemandedElts argument limits the check to the requested vector elements.
   LLVM_ABI bool isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
                                  unsigned Depth = 0) const;
 

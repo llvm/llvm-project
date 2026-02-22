@@ -6186,7 +6186,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     break;
 
   case ISD::BUILD_VECTOR:
-    // Are all operands of a build vector constant powers of two or zero?
+    // Are all operands of a build vector constant non-zero?
     if (all_of(enumerate(Op->ops()), [&](auto P) {
           auto *C = dyn_cast<ConstantSDNode>(P.value());
           return !DemandedElts[P.index()] || (C && IsNeverZero(C));
@@ -6195,7 +6195,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     break;
 
   case ISD::SPLAT_VECTOR:
-    // Is the operand of a splat vector a constant power of two?
+    // Is the operand of a splat vector a constant non-zero?
     if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(0)))
       if (IsNeverZero(C))
         return true;
