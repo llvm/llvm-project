@@ -1195,11 +1195,12 @@ value llvm_const_xor(value LHS, value RHS) {
   return to_val(Value);
 }
 
-/* llvalue -> llvalue -> int -> llvalue */
-value llvm_const_ptradd(value ConstantVal, value ConstantOffset,
-                        value NoWrapFlags) {
-  LLVMValueRef Value = LLVMConstPtrAdd(
-      Value_val(ConstantVal), Value_val(ConstantOffset), Int_val(NoWrapFlags));
+/* DataLayout.t -> llvalue -> llvalue -> int -> llvalue */
+value llvm_const_ptradd(value DataLayout, value ConstantVal,
+                        value ConstantOffset, value NoWrapFlags) {
+  LLVMValueRef Value =
+      LLVMConstPtrAdd(DataLayout_val(DataLayout), Value_val(ConstantVal),
+                      Value_val(ConstantOffset), Int_val(NoWrapFlags));
   return to_val(Value);
 }
 

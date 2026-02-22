@@ -1502,8 +1502,8 @@ public:
                    Type *OnlyIfReducedTy = nullptr);
 
   /// Create a getelementptr constant expression in canonical ptradd form
-  /// (getelementptr i8) by converting GEP indices to offsets using the
-  /// provided data layout.
+  /// (getelementptr iN; N is the width of a byte) by converting GEP indices
+  /// to offsets using the provided data layout.
   ///
   /// Returns nullptr if the indices cannot be converted to ptradd form.
   LLVM_ABI static Constant *
@@ -1513,15 +1513,13 @@ public:
                    std::optional<ConstantRange> InRange = std::nullopt,
                    Type *OnlyIfReducedTy = nullptr);
 
-  /// Create a getelementptr i8, ptr, offset constant expression.
+  /// Create a getelementptr iN, ptr, offset constant expression,
+  /// where iN is a byte-sized integer type.
   static Constant *
-  getPtrAdd(Constant *Ptr, Constant *Offset,
+  getPtrAdd(const DataLayout &DL, Constant *Ptr, Constant *Offset,
             GEPNoWrapFlags NW = GEPNoWrapFlags::none(),
             std::optional<ConstantRange> InRange = std::nullopt,
-            Type *OnlyIfReduced = nullptr) {
-    return getGetElementPtr(Type::getInt8Ty(Ptr->getContext()), Ptr, Offset, NW,
-                            InRange, OnlyIfReduced);
-  }
+            Type *OnlyIfReduced = nullptr);
 
   /// Create an "inbounds" getelementptr. See the documentation for the
   /// "inbounds" flag in LangRef.html for details.
@@ -1546,9 +1544,11 @@ public:
 
   LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
-  /// Create a getelementptr inbounds i8, ptr, offset constant expression.
-  static Constant *getInBoundsPtrAdd(Constant *Ptr, Constant *Offset) {
-    return getPtrAdd(Ptr, Offset, GEPNoWrapFlags::inBounds());
+  /// Create a getelementptr inbounds iN, ptr, offset constant expression,
+  /// where iN is a byte-sized integer type.
+  static Constant *getInBoundsPtrAdd(const DataLayout &DL, Constant *Ptr,
+                                     Constant *Offset) {
+    return getPtrAdd(DL, Ptr, Offset, GEPNoWrapFlags::inBounds());
   }
 
   LLVM_ABI static Constant *getExtractElement(Constant *Vec, Constant *Idx,

@@ -168,8 +168,8 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
 
     auto *Begin = ConstantInt::get(getSizeTTy(M), BeginOffset);
     auto *Size = ConstantInt::get(getSizeTTy(M), EndOffset);
-    auto *ImageB = ConstantExpr::getPtrAdd(Image, Begin);
-    auto *ImageE = ConstantExpr::getPtrAdd(Image, Size);
+    auto *ImageB = ConstantExpr::getPtrAdd(M.getDataLayout(), Image, Begin);
+    auto *ImageE = ConstantExpr::getPtrAdd(M.getDataLayout(), Image, Size);
 
     ImagesInits.push_back(ConstantStruct::get(getDeviceImageTy(M), ImageB,
                                               ImageE, EntriesB, EntriesE));

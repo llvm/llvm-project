@@ -294,7 +294,7 @@ TEST(ConstantsTest, ReplaceWithConstantTest) {
 
   Constant *Global =
       M->getOrInsertGlobal("dummy", PointerType::getUnqual(Context));
-  Constant *GEP = ConstantExpr::getPtrAdd(Global, One);
+  Constant *GEP = ConstantExpr::getPtrAdd(M->getDataLayout(), Global, One);
   EXPECT_DEATH(Global->replaceAllUsesWith(GEP),
                "this->replaceAllUsesWith\\(expr\\(this\\)\\) is NOT valid!");
 }
@@ -361,7 +361,7 @@ TEST(ConstantsTest, GEPReplaceWithConstant) {
   auto *C1 = ConstantInt::get(IntTy, 1);
   auto *Placeholder = new GlobalVariable(
       *M, IntTy, false, GlobalValue::ExternalWeakLinkage, nullptr);
-  auto *GEP = ConstantExpr::getPtrAdd(Placeholder, C1);
+  auto *GEP = ConstantExpr::getPtrAdd(M->getDataLayout(), Placeholder, C1);
   ASSERT_EQ(GEP->getOperand(0), Placeholder);
 
   auto *Ref =
@@ -970,27 +970,27 @@ TEST(ConstantsTest, GetElementPtrDataLayout) {
 
   // No-op.
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I64_10),
-            ConstantExpr::getPtrAdd(Ptr, I64_10));
+            ConstantExpr::getPtrAdd(DL, Ptr, I64_10));
   // Index type is canonicalized.
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I32_10),
-            ConstantExpr::getPtrAdd(Ptr, I64_10));
+            ConstantExpr::getPtrAdd(DL, Ptr, I64_10));
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I8, Ptr, I128_10),
-            ConstantExpr::getPtrAdd(Ptr, I64_10));
+            ConstantExpr::getPtrAdd(DL, Ptr, I64_10));
   // Non-i8 base type.
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, I64_10),
-            ConstantExpr::getPtrAdd(Ptr, I64_40));
+            ConstantExpr::getPtrAdd(DL, Ptr, I64_40));
   // Multiple indices.
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, A4I32, Ptr, {I64_1, I64_10}),
-            ConstantExpr::getPtrAdd(Ptr, ConstantInt::get(I64, 56)));
+            ConstantExpr::getPtrAdd(DL, Ptr, ConstantInt::get(I64, 56)));
   // Vector base pointer, scalar index.
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, I64_10),
-            ConstantExpr::getPtrAdd(PtrVec, I64_40));
+            ConstantExpr::getPtrAdd(DL, PtrVec, I64_40));
   // Scalar base pointer, vector index
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, Ptr, V2I64_10),
-            ConstantExpr::getPtrAdd(Ptr, V2I64_40));
+            ConstantExpr::getPtrAdd(DL, Ptr, V2I64_40));
   // Vector base pointer, vector index.
   EXPECT_EQ(ConstantExpr::getGetElementPtr(DL, I32, PtrVec, V2I64_10),
-            ConstantExpr::getPtrAdd(PtrVec, V2I64_40));
+            ConstantExpr::getPtrAdd(DL, PtrVec, V2I64_40));
 
   // Can't represent scale * constexpr.
   EXPECT_EQ(nullptr, ConstantExpr::getGetElementPtr(DL, I32, Ptr, PtrToInt64));
@@ -1010,9 +1010,10 @@ TEST(ConstantsTest, PtrAddCAPI) {
   Constant *PtrToInt = ConstantExpr::getPtrToInt(Ptr, I64);
   Constant *I64_1 = ConstantInt::get(I64, 1);
 
-  EXPECT_EQ(
-      unwrap(LLVMConstPtrAdd(wrap(Ptr), wrap(I64_1), LLVMGEPFlagNUW)),
-      ConstantExpr::getPtrAdd(Ptr, I64_1, GEPNoWrapFlags::noUnsignedWrap()));
+  EXPECT_EQ(unwrap(LLVMConstPtrAdd(wrap(&DL), wrap(Ptr), wrap(I64_1),
+                                   LLVMGEPFlagNUW)),
+            ConstantExpr::getPtrAdd(DL, Ptr, I64_1,
+                                    GEPNoWrapFlags::noUnsignedWrap()));
 
   LLVMValueRef Indices[1] = {wrap(I64_1)};
   EXPECT_EQ(unwrap(LLVMConstPtrAddFromIndices(wrap(&DL), wrap(I32), wrap(Ptr),

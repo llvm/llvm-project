@@ -2800,7 +2800,8 @@ LLVM_C_ABI LLVM_ATTRIBUTE_C_DEPRECATED(
  *
  * @see llvm::ConstantExpr::getPtrAdd()
  */
-LLVM_C_ABI LLVMValueRef LLVMConstPtrAdd(LLVMValueRef ConstantVal,
+LLVM_C_ABI LLVMValueRef LLVMConstPtrAdd(LLVMTargetDataRef DataLayout,
+                                        LLVMValueRef ConstantVal,
                                         LLVMValueRef ConstantOffset,
                                         LLVMGEPNoWrapFlags NoWrapFlags);
 
