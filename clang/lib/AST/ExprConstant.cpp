@@ -3373,12 +3373,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
              "missing value for local variable");
       if (Info.checkingPotentialConstantExpression())
         return false;
-      // FIXME: This diagnostic is bogus; we do support captures. Is this code
-      // still reachable at all?
-      Info.FFDiag(E->getBeginLoc(),
-                  diag::note_unimplemented_constexpr_lambda_feature_ast)
-          << "captures not currently allowed";
-      return false;
+
+      llvm_unreachable(
+          "A variable in a frame should either be a local or a parameter");
     }
   }
 
