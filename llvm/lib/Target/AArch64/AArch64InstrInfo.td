@@ -10857,41 +10857,6 @@ def : Pat<(AArch64faddp (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 0))),
                         (v4f16 (extract_subvector (v8f16 FPR128:$Rn), (i64 4)))),
           (v4f16 (EXTRACT_SUBREG (FADDPv8f16 $Rn, $Rn), dsub))>;
 
-// add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
-def : Pat<(v2i64 (add (AArch64zip1 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)),
-                      (AArch64zip2 (v2i64 FPR128:$Rn), (v2i64 FPR128:$Rm)))),
-          (v2i64 (ADDPv2i64 $Rn, $Rm))>;
-def : Pat<(v2i32 (add (AArch64zip1 (v2i32 FPR64:$Rn), (v2i32 FPR64:$Rm)),
-                      (AArch64zip2 (v2i32 FPR64:$Rn), (v2i32 FPR64:$Rm)))),
-          (v2i32 (ADDPv2i32 $Rn, $Rm))>;
-def : Pat<(v4i32 (add (AArch64uzp1 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)),
-                      (AArch64uzp2 (v4i32 FPR128:$Rn), (v4i32 FPR128:$Rm)))),
-          (v4i32 (ADDPv4i32 $Rn, $Rm))>;
-def : Pat<(v4i16 (add (AArch64uzp1 (v4i16 FPR64:$Rn), (v4i16 FPR64:$Rm)),
-                      (AArch64uzp2 (v4i16 FPR64:$Rn), (v4i16 FPR64:$Rm)))),
-          (v4i16 (ADDPv4i16 $Rn, $Rm))>;
-def : Pat<(v8i16 (add (AArch64uzp1 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)),
-                      (AArch64uzp2 (v8i16 FPR128:$Rn), (v8i16 FPR128:$Rm)))),
-          (v8i16 (ADDPv8i16 $Rn, $Rm))>;
-def : Pat<(v8i8 (add (AArch64uzp1 (v8i8 FPR64:$Rn), (v8i8 FPR64:$Rm)),
-                     (AArch64uzp2 (v8i8 FPR64:$Rn), (v8i8 FPR64:$Rm)))),
-          (v8i8 (ADDPv8i8 $Rn, $Rm))>;
-def : Pat<(v16i8 (add (AArch64uzp1 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)),
-                      (AArch64uzp2 (v16i8 FPR128:$Rn), (v16i8 FPR128:$Rm)))),
-          (v16i8 (ADDPv16i8 $Rn, $Rm))>;
-
-def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
-                      (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
-                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
-          (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
-def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
-          (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
-def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
-                      (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
-          (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
-
 multiclass PairwiseUZPBinPat<SDPatternOperator Op, ValueType VT,
                             RegisterClass RC, Instruction Inst> {
   def : Pat<(VT (Op (AArch64uzp1 (VT RC:$Rn), (VT RC:$Rm)),
@@ -10905,6 +10870,27 @@ multiclass PairwiseZIPBinPat<SDPatternOperator Op, ValueType VT,
                    (AArch64zip2 (VT RC:$Rn), (VT RC:$Rm)))),
             (VT (Inst $Rn, $Rm))>;
 }
+
+// add(uzp1(X, Y), uzp2(X, Y)) -> addp(X, Y)
+defm : PairwiseZIPBinPat<add, v2i64, FPR128, ADDPv2i64>;
+defm : PairwiseZIPBinPat<add, v2i32, FPR64,  ADDPv2i32>;
+defm : PairwiseUZPBinPat<add, v4i32, FPR128, ADDPv4i32>;
+defm : PairwiseUZPBinPat<add, v4i16, FPR64,  ADDPv4i16>;
+defm : PairwiseUZPBinPat<add, v8i16, FPR128, ADDPv8i16>;
+defm : PairwiseUZPBinPat<add, v8i8,  FPR64,  ADDPv8i8>;
+defm : PairwiseUZPBinPat<add, v16i8, FPR128, ADDPv16i8>;
+
+def : Pat<(v2i32 (add (AArch64zip1 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))),
+                      (AArch64zip2 (extract_subvector (v4i32 FPR128:$Rn), (i64 0)),
+                                   (extract_subvector (v4i32 FPR128:$Rn), (i64 2))))),
+          (EXTRACT_SUBREG (ADDPv4i32 $Rn, $Rn), dsub)>;
+def : Pat<(v4i16 (add (trunc (v4i32 (bitconvert FPR128:$Rn))),
+                      (extract_subvector (AArch64uzp2 (v8i16 FPR128:$Rn), undef), (i64 0)))),
+          (EXTRACT_SUBREG (ADDPv8i16 $Rn, $Rn), dsub)>;
+def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
+                      (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
+          (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
 
 defm : PairwiseZIPBinPat<fadd, v2f64, FPR128, FADDPv2f64>;
 defm : PairwiseZIPBinPat<fadd, v2f32, FPR64,  FADDPv2f32>;
