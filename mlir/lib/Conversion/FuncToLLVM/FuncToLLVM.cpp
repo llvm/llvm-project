@@ -496,6 +496,9 @@ public:
     if (failed(newFuncOp))
       return rewriter.notifyMatchFailure(funcOp, "Could not convert funcop");
 
+    // Propagate noinline attribute
+    newFuncOp->setNoInline(funcOp.getNoInline());
+
     rewriter.eraseOp(funcOp);
     return success();
   }
