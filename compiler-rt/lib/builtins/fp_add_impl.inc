@@ -166,7 +166,5 @@ static __inline fp_t __addXf3__(fp_t a, fp_t b) {
   case CRT_FE_TOWARDZERO:
     break;
   }
-  if (roundGuardSticky)
-    __fe_raise_inexact();
   return fromRep(result);
 }
