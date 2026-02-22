@@ -882,13 +882,28 @@ private:
     }
   }
 
+  static bool argumentMatchesParamName(StringRef ArgName, StringRef ParamName) {
+    // Exact match.
+    if (ParamName == ArgName)
+      return true;
+
+    // Parameter name uses "a" prefix (e.g. "aParam").
+    if (ParamName.size() > 1 && ParamName[0] == 'a' &&
+        std::isupper(ParamName[1])) {
+      return ArgName.size() > 0 && ArgName[0] == std::tolower(ParamName[1]) &&
+             ArgName.drop_front() == ParamName.drop_front(2);
+    }
+
+    return false;
+  }
+
   bool shouldHintName(const Expr *Arg, StringRef ParamName) {
     if (ParamName.empty())
       return false;
 
     // If the argument expression is a single name and it matches the
     // parameter name exactly, omit the name hint.
-    if (ParamName == getSpelledIdentifier(Arg))
+    if (argumentMatchesParamName(getSpelledIdentifier(Arg), ParamName))
       return false;
 
     // Exclude argument expressions preceded by a /*paramName*/.
