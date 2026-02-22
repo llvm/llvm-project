@@ -1,7 +1,7 @@
 /* css for clang-doc mustache backend */
 @import "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap";
 
-*,*::before *::after {
+*,*::before, *::after {
     box-sizing:border-box
 }
 * {
@@ -88,6 +88,7 @@ html, body {
     margin: 0;
     padding: 0;
     width: 100%;
+    overflow-x: scroll;
 }
 
 .container {
@@ -177,6 +178,13 @@ header {
     margin-left:0;
     grid-column:2;
     justify-self:center
+}
+
+#themeToggle {
+    grid-column: 3;
+    justify-self: end;
+    color: var(--text1);
+    border: none;
 }
 
 @media(max-width:768px) {

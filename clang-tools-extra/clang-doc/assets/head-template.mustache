@@ -8,8 +8,54 @@
         <script src="{{.}}"></script>
     {{/Scripts}}
     {{! Highlight.js dependency for syntax highlighting }}
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" media="(prefers-color-scheme: light)">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" media="(prefers-color-scheme: dark)">
+    <link id="hljs-light-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/default.min.css" />
+    <link id="hljs-dark-theme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/dark.min.css" />
+    <script>
+      const root = document.documentElement;
+      const toggle = document.getElementById("theme-toggle");
+      const hlLight = document.getElementById("hljs-light-theme");
+      const hlDark = document.getElementById("hljs-dark-theme");
+
+      function changeHighlightJS(theme) {
+        if (theme === "dark") {
+          hlDark.disabled = false;
+          hlLight.disabled = true;
+        } else {
+          hlDark.disabled = true;
+          hlLight.disabled = false;
+        }
+      }
+
+      const savedTheme = localStorage.getItem("theme");
+      const themeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+      if (savedTheme !== null) {
+        root.setAttribute("color-scheme", savedTheme);
+        changeHighlightJS(savedTheme);
+      } else {
+        let initialTheme;
+        if (themeQuery.matches) {
+          initialTheme = "dark";
+        } else {
+          initialTheme = "light";
+        }
+        root.setAttribute("color-scheme", initialTheme);
+        changeHighlightJS(initialTheme);
+      }
+
+      // Listen to system theme changes.
+      // If the user manually toggles the theme, the theme wont change according
+      // to system changes.
+      themeQuery.addEventListener("change", (event) => {
+        if (savedTheme === null) {
+          return;
+        } else if (event.matches) {
+          changeHighlightJS("dark");
+        } else {
+          changeHighlightJS("light");
+        }
+      });
+    </script>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&icon_names=routine" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/cpp.min.js"></script>
 </head>
