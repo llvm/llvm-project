@@ -10661,15 +10661,24 @@ void Sema::CheckMemaccessArguments(const CallExpr *Call,
       bool NonTriviallyCopyableCXXRecord =
           getLangOpts().CPlusPlus && RD->isCompleteDefinition() &&
           !PointeeTy.isTriviallyCopyableType(Context);
+      // We don't warn about bzero or zero memsetting as these are an idiomatic
+      // mechanism for ensuring objects do not have stale data.
+      bool IsNonZeroInitMemcall = false;
+      if (BId == Builtin::BImemset) {
+        const Expr *Initializer = Call->getArg(1)->IgnoreImpCasts();
+        auto IntegerConstant = dyn_cast<IntegerLiteral>(Initializer);
+        IsNonZeroInitMemcall =
+            !IntegerConstant || IntegerConstant->getValue() != 0;
+      }
 
-      if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
+      if (IsNonZeroInitMemcall &&
           RD->isNonTrivialToPrimitiveDefaultInitialize()) {
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
                             PDiag(diag::warn_cstruct_memaccess)
                                 << ArgIdx << FnName << PointeeTy << 0);
         SearchNonTrivialToInitializeField::diag(PointeeTy, Dest, *this);
-      } else if ((BId == Builtin::BImemset || BId == Builtin::BIbzero) &&
-                 NonTriviallyCopyableCXXRecord && ArgIdx == 0) {
+      } else if (IsNonZeroInitMemcall && NonTriviallyCopyableCXXRecord &&
+                 ArgIdx == 0) {
         // FIXME: Limiting this warning to dest argument until we decide
         // whether it's valid for source argument too.
         DiagRuntimeBehavior(Dest->getExprLoc(), Dest,
