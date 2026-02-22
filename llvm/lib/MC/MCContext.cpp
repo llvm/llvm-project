@@ -71,11 +71,15 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
       MAI(mai), MRI(mri), MSTI(msti), Symbols(Allocator),
       InlineAsmUsedLabelNames(Allocator),
       CurrentDwarfLoc(0, 0, 0, DWARF2_FLAG_IS_STMT, 0, 0),
-      AutoReset(DoAutoReset), TargetOptions(TargetOpts) {
-  SaveTempLabels = TargetOptions && TargetOptions->MCSaveTempLabels;
+      AutoReset(DoAutoReset) {
+  assert(MAI && MAI->getTargetOptions() &&
+         "MCAsmInfo and MCTargetOptions must be available");
+  assert((!TargetOpts || TargetOpts == MAI->getTargetOptions()) &&
+         "MCTargetOptions, if specified, must match MCAsmInfo");
+  SaveTempLabels = getTargetOptions()->MCSaveTempLabels;
   if (SaveTempLabels)
     setUseNamesOnTempLabels(true);
-  SecureLogFile = TargetOptions ? TargetOptions->AsSecureLogFile : "";
+  SecureLogFile = getTargetOptions()->AsSecureLogFile;
 
   if (SrcMgr && SrcMgr->getNumBuffers())
     MainFileName = std::string(SrcMgr->getMemoryBuffer(SrcMgr->getMainFileID())
@@ -115,6 +119,10 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
     report_fatal_error("Cannot initialize MC for unknown object file format.");
     break;
   }
+}
+
+const MCTargetOptions *MCContext::getTargetOptions() const {
+  return MAI->getTargetOptions();
 }
 
 MCContext::~MCContext() {
@@ -984,15 +992,11 @@ void MCContext::RemapDebugPaths() {
 //===----------------------------------------------------------------------===//
 
 EmitDwarfUnwindType MCContext::emitDwarfUnwindInfo() const {
-  if (!TargetOptions)
-    return EmitDwarfUnwindType::Default;
-  return TargetOptions->EmitDwarfUnwind;
+  return getTargetOptions()->EmitDwarfUnwind;
 }
 
 bool MCContext::emitCompactUnwindNonCanonical() const {
-  if (TargetOptions)
-    return TargetOptions->EmitCompactUnwindNonCanonical;
-  return false;
+  return getTargetOptions()->EmitCompactUnwindNonCanonical;
 }
 
 void MCContext::setGenDwarfRootFile(StringRef InputFileName, StringRef Buffer) {
@@ -1127,9 +1131,9 @@ void MCContext::reportError(SMLoc Loc, const Twine &Msg) {
 }
 
 void MCContext::reportWarning(SMLoc Loc, const Twine &Msg) {
-  if (TargetOptions && TargetOptions->MCNoWarn)
+  if (getTargetOptions()->MCNoWarn)
     return;
-  if (TargetOptions && TargetOptions->MCFatalWarnings) {
+  if (getTargetOptions()->MCFatalWarnings) {
     reportError(Loc, Msg);
   } else {
     reportCommon(Loc, [&](SMDiagnostic &D, const SourceMgr *SMP) {

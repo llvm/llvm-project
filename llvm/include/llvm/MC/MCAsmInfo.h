@@ -434,6 +434,8 @@ protected:
   llvm::StringMap<uint32_t> NameToAtSpecifier;
   void initializeAtSpecifiers(ArrayRef<AtSpecifier>);
 
+  const MCTargetOptions *TargetOptions = nullptr;
+
 public:
   explicit MCAsmInfo();
   virtual ~MCAsmInfo();
@@ -441,6 +443,9 @@ public:
   // Explicitly non-copyable.
   MCAsmInfo(MCAsmInfo const &) = delete;
   MCAsmInfo &operator=(MCAsmInfo const &) = delete;
+
+  const MCTargetOptions *getTargetOptions() const { return TargetOptions; }
+  void setTargetOptions(const MCTargetOptions &TO) { TargetOptions = &TO; }
 
   /// Get the code pointer size in bytes.
   unsigned getCodePointerSize() const { return CodePointerSize; }

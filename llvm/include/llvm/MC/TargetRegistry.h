@@ -21,6 +21,7 @@
 #include "llvm-c/DisassemblerTypes.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Compiler.h"
@@ -410,7 +411,10 @@ public:
                              const MCTargetOptions &Options) const {
     if (!MCAsmInfoCtorFn)
       return nullptr;
-    return MCAsmInfoCtorFn(MRI, TheTriple, Options);
+    auto *MAI = MCAsmInfoCtorFn(MRI, TheTriple, Options);
+    if (MAI)
+      MAI->setTargetOptions(Options);
+    return MAI;
   }
 
   /// Create a MCObjectFileInfo implementation for the specified target

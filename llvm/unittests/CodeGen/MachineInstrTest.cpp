@@ -37,7 +37,10 @@ namespace {
 // Include helper functions to ease the manipulation of MachineFunctions.
 #include "MFCommon.inc"
 
+MCTargetOptions MCOptions;
+
 std::unique_ptr<MCContext> createMCContext(MCAsmInfo *AsmInfo) {
+  AsmInfo->setTargetOptions(MCOptions);
   Triple TheTriple(/*ArchStr=*/"", /*VendorStr=*/"", /*OSStr=*/"",
                    /*EnvironmentStr=*/"elf");
   return std::make_unique<MCContext>(TheTriple, AsmInfo, nullptr, nullptr,
