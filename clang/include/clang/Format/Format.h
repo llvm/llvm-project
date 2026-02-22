@@ -3395,7 +3395,7 @@ struct FormatStyle {
     }
   };
 
-  /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
+  /// Format integer literal separators (``'`` for C/C++ and ``_`` for C#, Java,
   /// and JavaScript).
   /// \version 16
   IntegerLiteralSeparatorStyle IntegerLiteralSeparator;
