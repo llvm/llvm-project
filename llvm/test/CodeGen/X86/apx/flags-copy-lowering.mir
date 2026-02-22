@@ -55,7 +55,7 @@ body:             |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr64 = COPY $rdi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[SUB64rr_ND:%[0-9]+]]:gr64 = SUB64rr_ND [[COPY]], [[COPY1]], implicit-def $eflags
-    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit $eflags
+    ; CHECK-NEXT: [[SETCCr:%[0-9]+]]:gr8 = SETCCr 2, implicit killed $eflags
     ; CHECK-NEXT: INLINEASM &nop, 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead $eflags
     ; CHECK-NEXT: dead [[ADD8ri_ND:%[0-9]+]]:gr8 = ADD8ri_ND [[SETCCr]], 255, implicit-def $eflags
     ; CHECK-NEXT: [[SBB64ri32_ND:%[0-9]+]]:gr64 = SBB64ri32_ND [[SUB64rr_ND]], 42, implicit-def $eflags, implicit killed $eflags
