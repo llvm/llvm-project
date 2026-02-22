@@ -258,6 +258,11 @@ Changes in existing checks
   positives on parameters used in dependent expressions (e.g. inside generic
   lambdas).
 
+- Improved :doc:`readability-redundant-preprocessor
+  <clang-tidy/checks/readability/redundant-preprocessor>` check by fixing a
+  false positive for nested ``#if`` directives using different builtin
+  expressions such as ``__has_builtin`` and ``__has_cpp_attribute``.
+
 - Improved :doc:`readability-simplify-boolean-expr
   <clang-tidy/checks/readability/simplify-boolean-expr>` check to provide valid
   fix suggestions for C23 and later by not using ``static_cast``.
