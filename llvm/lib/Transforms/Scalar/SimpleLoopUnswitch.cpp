@@ -927,7 +927,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // debug location of the old switch, because it semantically replace the old
   // one.
   auto *NewSI = SwitchInst::Create(LoopCond, NewPH, ExitCases.size(), OldPH);
-  NewSI->setDebugLoc(SIW->getDebugLoc());
+  NewSI->setDebugLoc((*SIW).getDebugLoc());
   SwitchInstProfUpdateWrapper NewSIW(*NewSI);
 
   // Rewrite the IR for the unswitched basic blocks. This requires two steps.
@@ -995,7 +995,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
   // If the default was unswitched, re-point it and add explicit cases for
   // entering the loop.
   if (DefaultExitBB) {
-    NewSIW->setDefaultDest(DefaultExitBB);
+    (*NewSIW).setDefaultDest(DefaultExitBB);
     NewSIW.setSuccessorWeight(0, DefaultCaseWeight);
 
     // We removed all the exit cases, so we just copy the cases to the
@@ -1038,7 +1038,7 @@ static bool unswitchTrivialSwitch(Loop &L, SwitchInst &SI, DominatorTree &DT,
     }
     // Now nuke the switch and replace it with a direct branch.
     Instruction *NewBI = BranchInst::Create(CommonSuccBB, BB);
-    NewBI->setDebugLoc(SIW->getDebugLoc());
+    NewBI->setDebugLoc((*SIW).getDebugLoc());
     SIW.eraseFromParent();
   } else if (DefaultExitBB) {
     assert(SI.getNumCases() > 0 &&
