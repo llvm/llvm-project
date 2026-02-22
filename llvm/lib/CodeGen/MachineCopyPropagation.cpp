@@ -563,6 +563,26 @@ void MachineCopyPropagation::readSuccessorLiveIns(
   }
 }
 
+// Conservatively detect a physical-register use in a successor block before
+// the register is redefined there. This guards against stale/incomplete
+// live-in information, which can otherwise make a required copy look
+// dead at block exit
+static bool hasUseBeforeDefInSuccessor(const MachineBasicBlock &MBB,
+                                       MCRegister Reg,
+                                       const TargetRegisterInfo &TRI) {
+  for (const MachineBasicBlock *Succ : MBB.successors()) {
+    for (const MachineInstr &MI : *Succ) {
+      if (MI.isPHI())
+        continue;
+      if (MI.readsRegister(Reg, &TRI))
+        return true;
+      if (MI.modifiesRegister(Reg, &TRI))
+        break;
+    }
+  }
+  return false;
+}
+
 /// Return true if \p PreviousCopy did copy register \p Src to register \p Def.
 /// This fact may have been obscured by sub register usage or may not be true at
 /// all even though Src and Def are subregisters of the registers used in
@@ -1047,9 +1067,6 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
   // use liveness information from successors to confirm they are really dead.
   if (MBB.succ_empty() || TracksLiveness) {
     for (MachineInstr *MaybeDead : MaybeDeadCopies) {
-      LLVM_DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
-                 MaybeDead->dump());
-
       std::optional<DestSourcePair> CopyOperands =
           isCopyInstr(*MaybeDead, *TII, UseCopyInstr);
       assert(CopyOperands);
@@ -1057,6 +1074,17 @@ void MachineCopyPropagation::ForwardCopyPropagateBlock(MachineBasicBlock &MBB) {
       Register SrcReg = CopyOperands->Source->getReg();
       Register DestReg = CopyOperands->Destination->getReg();
       assert(!MRI->isReserved(DestReg));
+
+      if (!MBB.succ_empty() && DestReg.isPhysical() &&
+          hasUseBeforeDefInSuccessor(MBB, DestReg.asMCReg(), *TRI)) {
+        LLVM_DEBUG(dbgs() << "MCP: Keeping copy due to successor use-before-"
+                             "def: ";
+                   MaybeDead->dump());
+        continue;
+      }
+
+      LLVM_DEBUG(dbgs() << "MCP: Removing copy due to no live-out succ: ";
+                 MaybeDead->dump());
 
       // Update matching debug values, if any.
       const auto &DbgUsers = CopyDbgUsers[MaybeDead];
