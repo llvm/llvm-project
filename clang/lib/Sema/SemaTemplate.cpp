@@ -3408,20 +3408,19 @@ static QualType checkBuiltinTemplateIdType(
     TemplateArgumentListInfo &TemplateArgs) {
   TemplateParameterList *Params = BTD->getTemplateParameters();
   unsigned RequiredArgs = Params->size();
-  if (Params->hasParameterPack()) {
-    if (Converted.size() < RequiredArgs)
-      return QualType();
-  } else {
-    if (Converted.size() != RequiredArgs)
-      return QualType();
+
+  if (Converted.size() != RequiredArgs) {
+    // If we have a different number of arguments than parameters, it's either
+    // an error or we have a dependent pack expansion that hasn't been expanded
+    // and partitioned yet. In either case, we can't proceed with instantiation,
+    // so we return an empty QualType (staying dependent or signaling an error).
+    return QualType();
   }
 
   ASTContext &Context = SemaRef.getASTContext();
 
   switch (BTD->getBuiltinTemplateKind()) {
   case BTK__make_integer_seq: {
-    if (Converted[2].isDependent())
-      return QualType();
     // Specializations of __make_integer_seq<S, T, N> are treated like
     // S<T, 0, ..., N-1>.
 
@@ -3435,6 +3434,9 @@ static QualType checkBuiltinTemplateIdType(
     }
 
     TemplateArgument NumArgsArg = Converted[2];
+    if (NumArgsArg.isDependent())
+      return QualType();
+
 
     TemplateArgumentListInfo SyntheticTemplateArgs;
     // The type argument, wrapped in substitution sugar, gets reused as the
@@ -5979,11 +5981,14 @@ bool Sema::CheckTemplateArgumentList(
           // CWG1430/CWG2686: we have a pack expansion as an argument to an
           // alias template or concept, and it's not part of a parameter pack.
           // This can't be canonicalized, so reject it now.
-          if (isa<TypeAliasTemplateDecl, ConceptDecl>(Template)) {
+          if (isa<TypeAliasTemplateDecl, ConceptDecl, BuiltinTemplateDecl>(
+                  Template)) {
+            unsigned DiagSelect = isa<ConceptDecl>(Template)           ? 1
+                                  : isa<BuiltinTemplateDecl>(Template) ? 2
+                                                                       : 0;
             Diag(ArgLoc.getLocation(),
                  diag::err_template_expansion_into_fixed_list)
-                << (isa<ConceptDecl>(Template) ? 1 : 0)
-                << ArgLoc.getSourceRange();
+                << DiagSelect << ArgLoc.getSourceRange();
             NoteTemplateParameterLocation(**Param);
             return true;
           }
