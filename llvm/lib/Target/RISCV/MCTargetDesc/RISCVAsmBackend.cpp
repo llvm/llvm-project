@@ -866,8 +866,9 @@ bool RISCVAsmBackend::addReloc(const MCFragment &F, const MCFixup &Fixup,
     }
     MCValue A = MCValue::get(Target.getAddSym(), nullptr, Target.getConstant());
     MCValue B = MCValue::get(Target.getSubSym());
-    auto FA = MCFixup::create(Fixup.getOffset(), nullptr, TA);
-    auto FB = MCFixup::create(Fixup.getOffset(), nullptr, TB);
+    const SMLoc Loc = Fixup.getLoc();
+    auto FA = MCFixup::create(Fixup.getOffset(), nullptr, TA, Loc);
+    auto FB = MCFixup::create(Fixup.getOffset(), nullptr, TB, Loc);
     Asm->getWriter().recordRelocation(F, FA, A, FixedValueA);
     Asm->getWriter().recordRelocation(F, FB, B, FixedValueB);
     FixedValue = FixedValueA - FixedValueB;
