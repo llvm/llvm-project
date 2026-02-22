@@ -20,6 +20,7 @@
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
+#include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCPseudoProbe.h"
 #include "llvm/MC/MCRegister.h"
@@ -95,6 +96,10 @@ MCStreamer::MCStreamer(MCContext &Ctx)
 }
 
 MCStreamer::~MCStreamer() = default;
+
+void MCStreamer::setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter) {
+  LFIRewriter = std::move(Rewriter);
+}
 
 void MCStreamer::reset() {
   DwarfFrameInfos.clear();
@@ -398,6 +403,9 @@ void MCStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
 
   Symbol->setFragment(&getCurrentSectionOnly()->getDummyFragment());
+
+  if (LFIRewriter)
+    LFIRewriter->onLabel(Symbol);
 
   MCTargetStreamer *TS = getTargetStreamer();
   if (TS)

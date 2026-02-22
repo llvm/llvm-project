@@ -195,6 +195,7 @@ LLVMInitializeHexagonTarget() {
   initializeHexagonEarlyIfConversionPass(PR);
   initializeHexagonGenMemAbsolutePass(PR);
   initializeHexagonGenMuxPass(PR);
+  initializeHexagonGlobalSchedulerPass(PR);
   initializeHexagonLiveVariablesPass(PR);
   initializeHexagonHardwareLoopsPass(PR);
   initializeHexagonLoopIdiomRecognizeLegacyPassPass(PR);
@@ -479,8 +480,12 @@ void HexagonPassConfig::addPreEmitPass() {
   // Packetization is mandatory: it handles gather/scatter at all opt levels.
   addPass(createHexagonPacketizer(NoOpt));
 
-  if (!NoOpt)
+  if (!NoOpt) {
+    // Global pull-up scheduler
+    addPass(createHexagonGlobalScheduler());
+
     addPass(createHexagonLoopAlign());
+  }
 
   if (EnableVectorPrint)
     addPass(createHexagonVectorPrint());

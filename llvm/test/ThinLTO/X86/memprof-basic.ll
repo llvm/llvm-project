@@ -47,7 +47,7 @@
 ; RUN:	-stats -pass-remarks=memprof-context-disambiguation -save-temps \
 ; RUN:	-o %t.out 2>&1 | FileCheck %s --check-prefix=DUMP --check-prefix=DUMP-SIZES \
 ; RUN:	--check-prefix=STATS --check-prefix=STATS-BE --check-prefix=REMARKS \
-; RUN:  --check-prefix=SIZES
+; RUN:  --check-prefix=SIZES --check-prefix=REMARK-LINK
 
 ; RUN:	cat %t.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
@@ -70,7 +70,7 @@
 ; RUN:	-memprof-report-hinted-sizes \
 ; RUN:	-stats -pass-remarks=memprof-context-disambiguation \
 ; RUN:	-o %t2.out 2>&1 | FileCheck %s --check-prefix=DUMP \
-; RUN:	--check-prefix=STATS --check-prefix=SIZES
+; RUN:	--check-prefix=STATS --check-prefix=SIZES --check-prefix=REMARK-LINK
 
 ; RUN:	cat %t2.ccg.postbuild.dot | FileCheck %s --check-prefix=DOT
 ;; We should have cloned bar, baz, and foo, for the cold memory allocation.
@@ -290,8 +290,11 @@ attributes #1 = { "memprof"="ambiguous" }
 ; DUMP:		Clone of [[BAR]]
 
 ; SIZES: NotCold full allocation context 123 with total size 100 is NotCold after cloning (context id 1)
+; REMARK-LINK: <unknown>:0:0: MemProf hinting: NotCold full allocation context 123 with total size 100 is NotCold after cloning (context id 1)
 ; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning (context id 2)
+; REMARK-LINK: <unknown>:0:0: MemProf hinting: Cold full allocation context 456 with total size 200 is Cold after cloning (context id 2)
 ; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning (context id 2)
+; REMARK-LINK: <unknown>:0:0: MemProf hinting: Cold full allocation context 789 with total size 300 is Cold after cloning (context id 2)
 
 ; REMARKS: call in clone main assigned to call function clone _Z3foov.memprof.1
 ; REMARKS: created clone _Z3barv.memprof.1

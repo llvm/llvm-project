@@ -1070,58 +1070,6 @@ void DependenceInfo::collectCommonLoops(const SCEV *Expression,
   }
 }
 
-void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
-
-  unsigned widestWidthSeen = 0;
-  Type *widestType;
-
-  // Go through each pair and find the widest bit to which we need
-  // to extend all of them.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = SrcTy->getBitWidth();
-      widestType = SrcTy;
-    }
-    if (DstTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = DstTy->getBitWidth();
-      widestType = DstTy;
-    }
-  }
-
-  assert(widestWidthSeen > 0);
-
-  // Now extend each pair to the widest seen.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() < widestWidthSeen)
-      // Sign-extend Src to widestType
-      Pair->Src = SE->getSignExtendExpr(Src, widestType);
-    if (DstTy->getBitWidth() < widestWidthSeen) {
-      // Sign-extend Dst to widestType
-      Pair->Dst = SE->getSignExtendExpr(Dst, widestType);
-    }
-  }
-}
-
 // Examine the scev and return true iff it's affine.
 // Collect any loops mentioned in the set of "Loops".
 bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
@@ -1186,8 +1134,7 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
     return Subscript::ZIV;
   if (N == 1)
     return Subscript::SIV;
-  if (N == 2 && (SrcLoops.count() == 0 || DstLoops.count() == 0 ||
-                 (SrcLoops.count() == 1 && DstLoops.count() == 1)))
+  if (N == 2 && SrcLoops.count() == 1 && DstLoops.count() == 1)
     return Subscript::RDIV;
   return Subscript::MIV;
 }
@@ -2456,18 +2403,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
 // so there's no point in making special versions of the Strong SIV test or
 // the Weak-crossing SIV test.
 //
-// With minor algebra, this test can also be used for things like
-// [c1 + a1*i + a2*j][c2].
-//
 // Return true if dependence disproved.
 bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
                               FullDependence &Result) const {
-  // we have 3 possible situations here:
-  //   1) [a*i + b] and [c*j + d]
-  //   2) [a*i + c*j + b] and [d]
-  //   3) [b] and [a*i + c*j + d]
-  // We need to find what we've got and get organized
-
   const SCEV *SrcConst, *DstConst;
   const SCEV *SrcCoeff, *DstCoeff;
   const Loop *SrcLoop, *DstLoop;
@@ -2483,28 +2421,6 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     DstConst = DstAddRec->getStart();
     DstCoeff = DstAddRec->getStepRecurrence(*SE);
     DstLoop = DstAddRec->getLoop();
-  } else if (SrcAddRec) {
-    if (const SCEVAddRecExpr *tmpAddRec =
-            dyn_cast<SCEVAddRecExpr>(SrcAddRec->getStart())) {
-      SrcConst = tmpAddRec->getStart();
-      SrcCoeff = tmpAddRec->getStepRecurrence(*SE);
-      SrcLoop = tmpAddRec->getLoop();
-      DstConst = Dst;
-      DstCoeff = SE->getNegativeSCEV(SrcAddRec->getStepRecurrence(*SE));
-      DstLoop = SrcAddRec->getLoop();
-    } else
-      llvm_unreachable("RDIV reached by surprising SCEVs");
-  } else if (DstAddRec) {
-    if (const SCEVAddRecExpr *tmpAddRec =
-            dyn_cast<SCEVAddRecExpr>(DstAddRec->getStart())) {
-      DstConst = tmpAddRec->getStart();
-      DstCoeff = tmpAddRec->getStepRecurrence(*SE);
-      DstLoop = tmpAddRec->getLoop();
-      SrcConst = Src;
-      SrcCoeff = SE->getNegativeSCEV(DstAddRec->getStepRecurrence(*SE));
-      SrcLoop = DstAddRec->getLoop();
-    } else
-      llvm_unreachable("RDIV reached by surprising SCEVs");
   } else
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
@@ -3263,7 +3179,9 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   for (int I = 0; I < Size; ++I) {
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
-    unifySubscriptType(&Pair[I]);
+
+    assert(Pair[I].Src->getType() == Pair[I].Dst->getType() &&
+           "Unexpected different types for the subscripts");
 
     if (EnableMonotonicityCheck) {
       if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())

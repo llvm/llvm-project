@@ -1045,9 +1045,10 @@ struct bind_const_intval_ty {
     const APInt *ConstInt;
     if (!ap_match<APInt>(ConstInt, /*AllowPoison=*/false).match(V))
       return false;
-    if (ConstInt->getActiveBits() > 64)
+    std::optional<uint64_t> ZExtVal = ConstInt->tryZExtValue();
+    if (!ZExtVal)
       return false;
-    VR = ConstInt->getZExtValue();
+    VR = *ZExtVal;
     return true;
   }
 };

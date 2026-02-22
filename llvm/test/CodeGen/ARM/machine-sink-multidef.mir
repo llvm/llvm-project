@@ -45,24 +45,29 @@ liveins:
 body:             |
   ; CHECK-LABEL: name: g
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
-  ; CHECK:   liveins: $r0, $r1
-  ; CHECK:   [[COPY:%[0-9]+]]:gpr = COPY $r1
-  ; CHECK:   [[COPY1:%[0-9]+]]:gprnopc = COPY $r0
-  ; CHECK:   [[LDR_PRE_REG:%[0-9]+]]:gpr, [[LDR_PRE_REG1:%[0-9]+]]:gpr = LDR_PRE_REG [[COPY]], killed [[COPY1]], 16387, 14 /* CC::al */, $noreg :: (load (s32) from %ir.c)
-  ; CHECK:   [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
-  ; CHECK:   CMPri [[MOVi]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   Bcc %bb.1, 0 /* CC::eq */, $cpsr
-  ; CHECK: bb.3:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   B %bb.2
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK: bb.2:
-  ; CHECK:   [[PHI:%[0-9]+]]:gpr = PHI [[LDR_PRE_REG]], %bb.3, [[MOVi]], %bb.1
-  ; CHECK:   CMPri [[MOVi]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
-  ; CHECK:   [[LDRi12_:%[0-9]+]]:gpr = LDRi12 killed [[LDR_PRE_REG1]], 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.d)
-  ; CHECK:   MOVPCLR 14 /* CC::al */, $noreg
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $r0, $r1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr = COPY $r1
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gprnopc = COPY $r0
+  ; CHECK-NEXT:   [[LDR_PRE_REG:%[0-9]+]]:gpr, [[LDR_PRE_REG1:%[0-9]+]]:gpr = LDR_PRE_REG [[COPY]], killed [[COPY1]], 16387, 14 /* CC::al */, $noreg :: (load (s32) from %ir.c)
+  ; CHECK-NEXT:   [[MOVi:%[0-9]+]]:gpr = MOVi 0, 14 /* CC::al */, $noreg, $noreg
+  ; CHECK-NEXT:   CMPri [[MOVi]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   Bcc %bb.1, 0 /* CC::eq */, $cpsr
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   B %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr = PHI [[LDR_PRE_REG]], %bb.3, [[MOVi]], %bb.1
+  ; CHECK-NEXT:   CMPri [[MOVi]], 0, 14 /* CC::al */, $noreg, implicit-def $cpsr
+  ; CHECK-NEXT:   [[LDRi12_:%[0-9]+]]:gpr = LDRi12 killed [[LDR_PRE_REG1]], 4, 14 /* CC::al */, $noreg :: (load (s32) from %ir.d)
+  ; CHECK-NEXT:   MOVPCLR 14 /* CC::al */, $noreg
   bb.0:
     liveins: $r0, $r1
     successors: %bb.1(0x40000000), %bb.2(0x40000000)

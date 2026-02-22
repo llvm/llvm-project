@@ -64,38 +64,20 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     return "-" + S.str();
   };
 
-  // Drop tiny core suffix for HVX version.
-  std::string HvxVer =
-      (Cpu.back() == 'T' || Cpu.back() == 't' ? Cpu.drop_back(1) : Cpu).str();
-  HasHVX = false;
-
-  // Handle -mhvx, -mhvx=, -mno-hvx. If versioned and versionless flags
-  // are both present, the last one wins.
-  Arg *HvxEnablingArg =
-      Args.getLastArg(options::OPT_mhexagon_hvx, options::OPT_mhexagon_hvx_EQ,
-                      options::OPT_mno_hexagon_hvx);
-  if (HvxEnablingArg) {
-    if (HvxEnablingArg->getOption().matches(options::OPT_mno_hexagon_hvx))
-      HvxEnablingArg = nullptr;
-  }
-
-  if (HvxEnablingArg) {
-    // If -mhvx[=] was given, it takes precedence.
-    if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx,
-                                 options::OPT_mhexagon_hvx_EQ)) {
-      // If the version was given, set HvxVer. Otherwise HvxVer
-      // will remain equal to the CPU version.
-      if (A->getOption().matches(options::OPT_mhexagon_hvx_EQ))
-        HvxVer = StringRef(A->getValue()).lower();
+  std::optional<std::string> HvxVer =
+      toolchains::HexagonToolChain::GetHVXVersion(Args);
+  HasHVX = HvxVer.has_value();
+  if (HasHVX)
+    Features.push_back(makeFeature(Twine("hvx") + *HvxVer, true));
+  else {
+    if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx)) {
+      // If there was an explicit -mno-hvx, add -hvx to target features.
+      Features.push_back(makeFeature(A->getOption().getName(), false));
     }
-    HasHVX = true;
-    Features.push_back(makeFeature(Twine("hvx") + HvxVer, true));
-  } else if (Arg *A = Args.getLastArg(options::OPT_mno_hexagon_hvx)) {
-    // If there was an explicit -mno-hvx, add -hvx to target features.
-    Features.push_back(makeFeature(A->getOption().getName(), false));
   }
 
-  StringRef HvxLen = getDefaultHvxLength(HvxVer);
+  StringRef HvxLen =
+      getDefaultHvxLength(HasHVX ? StringRef(*HvxVer) : StringRef(""));
 
   // Handle -mhvx-length=.
   if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_length_EQ)) {
@@ -111,10 +93,14 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     Features.push_back(L);
   }
 
-  unsigned HvxVerNum;
+  unsigned HvxVerNum = 0;
   // getAsInteger returns 'true' on error.
-  if (StringRef(HvxVer).drop_front(1).getAsInteger(10, HvxVerNum))
-    HvxVerNum = 0;
+  if (HasHVX) {
+    StringRef HvxVerRef(*HvxVer);
+    if (HvxVerRef.size() <= 1 ||
+        HvxVerRef.drop_front(1).getAsInteger(10, HvxVerNum))
+      HvxVerNum = 0;
+  }
 
   // Handle HVX floating point flags.
   auto checkFlagHvxVersion =
@@ -812,3 +798,29 @@ StringRef HexagonToolChain::GetTargetCPUVersion(const ArgList &Args) {
   CPU.consume_front("hexagon");
   return CPU;
 }
+
+std::optional<std::string>
+HexagonToolChain::GetHVXVersion(const ArgList &Args) {
+  // Handle -mh[v]x= and -mno-hvx. If versioned and versionless flags
+  // are both present, the last one wins.
+  Arg *HvxEnablingArg =
+      Args.getLastArg(options::OPT_mhexagon_hvx, options::OPT_mhexagon_hvx_EQ,
+                      options::OPT_mno_hexagon_hvx);
+  if (!HvxEnablingArg ||
+      HvxEnablingArg->getOption().matches(options::OPT_mno_hexagon_hvx))
+    return std::nullopt;
+
+  StringRef Cpu(toolchains::HexagonToolChain::GetTargetCPUVersion(Args));
+  std::string HvxVer;
+  if (!Cpu.empty() && (Cpu.back() == 'T' || Cpu.back() == 't'))
+    HvxVer = Cpu.drop_back(1).str();
+  else
+    HvxVer = Cpu.str();
+
+  if (HvxEnablingArg->getOption().matches(options::OPT_mhexagon_hvx_EQ))
+    HvxVer = StringRef(HvxEnablingArg->getValue()).lower();
+
+  return HvxVer;
+}
+
+// End Hexagon

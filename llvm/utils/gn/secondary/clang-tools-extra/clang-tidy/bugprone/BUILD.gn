@@ -116,6 +116,7 @@ static_library("bugprone") {
     "UnintendedCharOstreamOutputCheck.cpp",
     "UniquePtrArrayMismatchCheck.cpp",
     "UnsafeFunctionsCheck.cpp",
+    "UnsafeToAllowExceptionsCheck.cpp",
     "UnusedLocalNonTrivialVariableCheck.cpp",
     "UnusedRaiiCheck.cpp",
     "UnusedReturnValueCheck.cpp",

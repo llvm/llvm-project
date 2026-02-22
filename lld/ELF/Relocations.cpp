@@ -1155,18 +1155,18 @@ unsigned RelocScan::handleTlsRelocation(RelExpr expr, RelType type,
        type == R_LARCH_TLS_DESC_LD || type == R_LARCH_TLS_DESC_CALL ||
        type == R_LARCH_TLS_DESC_PCREL20_S2);
 
-  // ARM and LoongArch do not support GD/LD to IE/LE optimizations.
+  // LoongArch does not support GD/LD to IE/LE optimizations.
   bool execOptimize =
-      !ctx.arg.shared && ctx.arg.emachine != EM_ARM &&
+      !ctx.arg.shared &&
       (ctx.arg.emachine != EM_LOONGARCH || execOptimizeInLoongArch);
 
   // If we are producing an executable and the symbol is non-preemptable, it
   // must be defined and the code sequence can be optimized to use Local-Exec.
   //
-  // While ARM does not have TLS optimizations, we can omit the DTPMOD
-  // dynamic relocations and resolve them at link time because them are
-  // always 1. This may be necessary for static linking as DTPMOD may not be
-  // expected at load time.
+  // While some targets do not have TLS optimizations, we can omit the
+  // DTPMOD dynamic relocations and resolve them at link time because them
+  // are always 1. This may be necessary for static linking as DTPMOD may
+  // not be expected at load time.
   bool isLocalInExecutable = !sym.isPreemptible && !ctx.arg.shared;
 
   // Local Dynamic is for access to module local TLS variables, while still
