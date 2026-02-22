@@ -483,8 +483,11 @@ class TrivialFunctionAnalysisVisitor
   // Returns false if at least one child is non-trivial.
   bool VisitChildren(const Stmt *S) {
     for (const Stmt *Child : S->children()) {
-      if (Child && !Visit(Child))
+      if (Child && !Visit(Child)) {
+        if (OffendingStmt && !*OffendingStmt)
+          *OffendingStmt = Child;
         return false;
+      }
     }
 
     return true;
@@ -493,7 +496,7 @@ class TrivialFunctionAnalysisVisitor
   template <typename StmtOrDecl, typename CheckFunction>
   bool WithCachedResult(const StmtOrDecl *S, CheckFunction Function) {
     auto CacheIt = Cache.find(S);
-    if (CacheIt != Cache.end())
+    if (CacheIt != Cache.end() && !OffendingStmt)
       return CacheIt->second;
 
     // Treat a recursive statement to be trivial until proven otherwise.
@@ -554,10 +557,13 @@ class TrivialFunctionAnalysisVisitor
 public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
-  TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
+  TrivialFunctionAnalysisVisitor(CacheTy &Cache,
+                                 const Stmt **OffendingStmt = nullptr)
+      : Cache(Cache), OffendingStmt(OffendingStmt) {}
 
   bool IsFunctionTrivial(const Decl *D) {
-    return WithCachedResult(D, [&]() {
+    const Stmt **SavedOffendingStmt = std::exchange(OffendingStmt, nullptr);
+    auto Result = WithCachedResult(D, [&]() {
       if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
         if (isNoDeleteFunction(FnDecl))
           return true;
@@ -579,6 +585,8 @@ public:
         return false;
       return Visit(Body);
     });
+    OffendingStmt = SavedOffendingStmt;
+    return Result;
   }
 
   bool HasTrivialDestructor(const VarDecl *VD) {
@@ -904,17 +912,20 @@ public:
 private:
   CacheTy &Cache;
   CacheTy RecursiveFn;
+  const Stmt **OffendingStmt;
 };
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache) {
-  TrivialFunctionAnalysisVisitor V(Cache);
+    const Decl *D, TrivialFunctionAnalysis::CacheTy &Cache,
+    const Stmt **OffendingStmt) {
+  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
   return V.IsFunctionTrivial(D);
 }
 
 bool TrivialFunctionAnalysis::isTrivialImpl(
-    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
-  TrivialFunctionAnalysisVisitor V(Cache);
+    const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache,
+    const Stmt **OffendingStmt) {
+  TrivialFunctionAnalysisVisitor V(Cache, OffendingStmt);
   return V.IsStatementTrivial(S);
 }
 
