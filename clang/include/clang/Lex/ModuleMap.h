@@ -435,6 +435,18 @@ public:
   KnownHeader findModuleForHeader(FileEntryRef File, bool AllowTextual = false,
                                   bool AllowExcluded = false);
 
+  /// Find the FileEntry for an umbrella header in a module as if it was written
+  /// in the module map as a header decl.
+  ///
+  /// \param M The module in which we're resolving the header directive.
+  /// \param NameAsWritten The name of the header as written in the module map.
+  /// \param RelativePathName Filled in with the relative path name from the
+  ///        module to the resolved header.
+  /// \return The resolved file, if any.
+  OptionalFileEntryRef
+  findUmbrellaHeaderForModule(Module *M, std::string NameAsWritten,
+                              SmallVectorImpl<char> &RelativePathName);
+
   /// Retrieve all the modules that contain the given header file. Note that
   /// this does not implicitly load module maps, except for builtin headers,
   /// and does not consult the external source. (Those checks are the
@@ -717,6 +729,8 @@ public:
                           DirectoryEntryRef Dir, FileID ID = FileID(),
                           SourceLocation ExternModuleLoc = SourceLocation());
 
+  void loadAllParsedModules();
+
   /// Load the given module map file, and record any modules we
   /// encounter.
   ///
@@ -742,6 +756,15 @@ public:
                             DirectoryEntryRef HomeDir, FileID ID = FileID(),
                             unsigned *Offset = nullptr,
                             SourceLocation ExternModuleLoc = SourceLocation());
+
+  /// Get the ModuleMapFile for a FileEntry previously parsed with
+  /// parseModuleMapFile.
+  const modulemap::ModuleMapFile *getParsedModuleMap(FileEntryRef File) const {
+    auto It = ParsedModuleMap.find(File);
+    if (It == ParsedModuleMap.end())
+      return nullptr;
+    return It->second;
+  }
 
   /// Dump the contents of the module map, for debugging purposes.
   void dump();

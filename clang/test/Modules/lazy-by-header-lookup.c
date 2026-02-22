@@ -4,6 +4,10 @@
 // RUN:   -fmodules-cache-path=%t/cache %t/tu.c -fsyntax-only -Rmodule-map \
 // RUN:   -fmodules-lazy-load-module-maps -verify
 
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -I%t \
+// RUN:   -fmodules-cache-path=%t/cache %t/tu.c -fsyntax-only -Rmodule-map \
+// RUN:   -DEAGER -verify
+
 //--- module.modulemap
 
 module A {
@@ -12,20 +16,23 @@ module A {
 
 module B {
   header "B.h"
+  header "B2.h"
 }
 
 //--- A.h
 
 //--- B.h
 
+//--- B2.h
+
 //--- tu.c
 
-#pragma clang __debug module_lookup A // does module map search for A
-#pragma clang __debug module_map A // A is now in the ModuleMap,
-#pragma clang __debug module_map B // expected-warning{{unknown module 'B'}}
-                                   // but B isn't.
-#include <B.h> // Now load B via header search
+#include <B.h>
+#include <B2.h>
 
+#ifndef EAGER
 // expected-remark@*{{parsing modulemap}}
-// expected-remark@*{{loading parsed module 'A'}}
 // expected-remark@*{{loading parsed module 'B'}}
+#else
+// expected-remark@*{{loading modulemap}}
+#endif

@@ -334,11 +334,20 @@ class HeaderSearch {
 
   struct ModuleMapDirectoryState {
     OptionalFileEntryRef ModuleMapFile;
+    OptionalFileEntryRef PrivateModuleMapFile;
     enum {
       Parsed,
       Loaded,
       Invalid,
     } Status;
+
+    /// Relative header path -> list of module names
+    llvm::StringMap<llvm::SmallVector<StringRef, 1>> HeaderToModules{};
+    /// Relative dir path -> module name
+    llvm::SmallVector<std::pair<std::string, StringRef>, 2>
+        UmbrellaDirModules{};
+    /// List of module names with umbrella header decls
+    llvm::SmallVector<StringRef, 2> UmbrellaHeaderModules{};
   };
 
   /// Describes whether a given directory has a module map in it.
@@ -371,6 +380,13 @@ class HeaderSearch {
   /// Scan all of the header maps at the beginning of SearchDirs and
   /// map their keys to the SearchDir index of their header map.
   void indexInitialHeaderMaps();
+
+  /// Build the header to module cache for a directory's module map.
+  ///
+  /// This fills a ModuleMapDirectoryState with information from its directory's
+  /// module map.
+  void buildHeaderToModuleCache(DirectoryEntryRef Dir,
+                                ModuleMapDirectoryState &MMState);
 
 public:
   HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
@@ -953,7 +969,8 @@ private:
                                                 bool IsSystem,
                                                 DirectoryEntryRef Dir,
                                                 FileID ID = FileID(),
-                                                unsigned *Offset = nullptr);
+                                                unsigned *Offset = nullptr,
+                                                bool DiagnosePrivMMap = false);
 
   ModuleMapResult parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
                                          DirectoryEntryRef Dir,
