@@ -1,4 +1,4 @@
-//===-- Definition of macros from elf.h -----------------------------------===//
+//===-- Definition of macros from elf.h ------------------------ *- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,5 +31,11 @@
 #define ELF64_R_SYM(i) ((i) >> 32)
 #define ELF64_R_TYPE(i) ((i) & 0xffffffffL)
 #define ELF64_R_INFO(s, t) (((s) << 32) + ((t) & 0xffffffffL))
+
+// Architecture-specific IRELATIVE relocation types
+
+#define R_X86_64_IRELATIVE 37
+#define R_AARCH64_IRELATIVE 1032
+#define R_RISCV_IRELATIVE 58
 
 #endif // LLVM_LIBC_MACROS_ELF_MACROS_H
