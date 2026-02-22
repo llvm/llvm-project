@@ -383,6 +383,13 @@ private:
   /// Create INSTR_PROF_DATA variable for counters and bitmaps.
   void createDataVariable(InstrProfCntrInstBase *Inc);
 
+  /// Creates delayed initialiation function for data relative offsets
+  /// This is only relevant on NVPTX targets where circular constant structures
+  /// are not allowed
+  bool
+  emitDataDelayedInit(SmallVector<Function *> &Kernels,
+                      SmallVector<const InstrProfCntrInstBase *> &ValueSites);
+
   /// Get the counters for virtual table values, creating them if necessary.
   void getOrCreateVTableProfData(GlobalVariable *GV);
 
@@ -939,11 +946,18 @@ bool InstrLowerer::lower() {
   if (!ContainsProfiling && !CoverageNamesVar)
     return MadeChange;
 
+  // Cached info for generating delayed offset calculations
+  // This is only relevant on NVPTX targets
+  SmallVector<Function *> Kernels;
+  SmallVector<const InstrProfCntrInstBase *> ValueSites;
+
   // We did not know how many value sites there would be inside
   // the instrumented function. This is counting the number of instrumented
   // target value sites to enter it as field in the profile data variable.
   for (Function &F : M) {
     InstrProfCntrInstBase *FirstProfInst = nullptr;
+    if (F.getCallingConv() == CallingConv::PTX_Kernel)
+      Kernels.push_back(&F);
     for (BasicBlock &BB : F) {
       for (auto I = BB.begin(), E = BB.end(); I != E; I++) {
         if (auto *Ind = dyn_cast<InstrProfValueProfileInst>(I))
@@ -963,8 +977,11 @@ bool InstrLowerer::lower() {
     // Also create the data variable based on the MCDCParams.
     if (FirstProfInst != nullptr) {
       static_cast<void>(getOrCreateRegionCounters(FirstProfInst));
+      ValueSites.push_back(FirstProfInst);
     }
   }
+
+  MadeChange |= emitDataDelayedInit(Kernels, ValueSites);
 
   if (EnableVTableValueProfiling)
     for (GlobalVariable &GV : M.globals())
@@ -1723,6 +1740,13 @@ InstrLowerer::getOrCreateRegionCounters(InstrProfCntrInstBase *Inc) {
   return PD.RegionCounters;
 }
 
+// Calculates difference between two global variable addresses as an integer
+Constant *globalVarDiff(Module &M, GlobalVariable *A, GlobalVariable *B) {
+  auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  return ConstantExpr::getSub(ConstantExpr::getPtrToInt(A, IntPtrTy),
+                              ConstantExpr::getPtrToInt(B, IntPtrTy));
+}
+
 void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   // When debug information is correlated to profile data, a data variable
   // is not needed.
@@ -1843,13 +1867,12 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
     // Reference the counter variable with a label difference (link-time
     // constant).
     DataSectionKind = IPSK_data;
-    RelativeCounterPtr =
-        ConstantExpr::getSub(ConstantExpr::getPtrToInt(CounterPtr, IntPtrTy),
-                             ConstantExpr::getPtrToInt(Data, IntPtrTy));
+    const Triple T(M.getTargetTriple());
+    RelativeCounterPtr = T.isNVPTX() ? ConstantInt::get(IntPtrTy, 0)
+                                     : globalVarDiff(M, CounterPtr, Data);
     if (BitmapPtr != nullptr)
-      RelativeBitmapPtr =
-          ConstantExpr::getSub(ConstantExpr::getPtrToInt(BitmapPtr, IntPtrTy),
-                               ConstantExpr::getPtrToInt(Data, IntPtrTy));
+      RelativeBitmapPtr = T.isNVPTX() ? ConstantInt::get(IntPtrTy, 0)
+                                      : globalVarDiff(M, BitmapPtr, Data);
   }
 
   Constant *DataVals[] = {
@@ -1874,6 +1897,51 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
   NamePtr->setLinkage(GlobalValue::PrivateLinkage);
   // Collect the referenced names to be used by emitNameData.
   ReferencedNames.push_back(NamePtr);
+}
+
+bool InstrLowerer::emitDataDelayedInit(
+    SmallVector<Function *> &Kernels,
+    SmallVector<const InstrProfCntrInstBase *> &ValueSites) {
+  const Triple T(M.getTargetTriple());
+  if (!T.isNVPTX() || ProfileCorrelate == InstrProfCorrelator::BINARY ||
+      Kernels.empty() || ValueSites.empty()) {
+    return false;
+  }
+
+  auto *VoidTy = Type::getVoidTy(M.getContext());
+  auto *Int32Ty = Type::getInt32Ty(M.getContext());
+  auto *IntPtrTy = M.getDataLayout().getIntPtrType(M.getContext());
+  auto *DelayedInitFTy = FunctionType::get(VoidTy, false);
+  auto *DelayedInitF =
+      Function::Create(DelayedInitFTy, GlobalValue::InternalLinkage,
+                       getInstrProfDelayedInitFuncName(), M);
+
+  IRBuilder<> IRB(BasicBlock::Create(M.getContext(), "", DelayedInitF));
+
+  for (const auto *ValueSite : ValueSites) {
+    GlobalVariable *NamePtr = ValueSite->getName();
+    auto &PD = ProfileDataMap[NamePtr];
+    auto *RelativeCounter = globalVarDiff(M, PD.RegionCounters, PD.DataVar);
+    auto *RelativeCounterPtr =
+        IRB.CreateGEP(IntPtrTy, PD.DataVar, {ConstantInt::get(Int32Ty, 2)});
+    IRB.CreateStore(RelativeCounter, RelativeCounterPtr);
+    if (PD.RegionBitmaps != nullptr) {
+      auto *RelativeBitmap = globalVarDiff(M, PD.RegionBitmaps, PD.DataVar);
+      auto *RelativeBitmapPtr =
+          IRB.CreateGEP(IntPtrTy, PD.DataVar, {ConstantInt::get(Int32Ty, 3)});
+      IRB.CreateStore(RelativeBitmap, RelativeBitmapPtr);
+    }
+  }
+
+  IRB.CreateRetVoid();
+
+  for (auto *Kernel : Kernels) {
+    auto &KernelEntry = Kernel->getEntryBlock();
+    IRB.SetInsertPoint(KernelEntry.getFirstNonPHIIt());
+    IRB.CreateCall(DelayedInitF);
+  }
+
+  return true;
 }
 
 void InstrLowerer::emitVNodes() {
