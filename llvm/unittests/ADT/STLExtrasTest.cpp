@@ -1964,6 +1964,31 @@ TEST(STLExtrasTest, AdjacentFind) {
   EXPECT_EQ(*std::next(It13), 3);
 }
 
+template <typename T> struct SomeRangeBase {
+  std::vector<T> Data;
+
+  SomeRangeBase(std::initializer_list<T> Init) : Data{Init} {}
+};
+
+TEST(STLExtrasTest, IndexedAccessorIteratorDefaultConstructible) {
+  // Test that indexed_iterator can be default constructed
+  // Required by C++23 for STL containers
+  using BaseT = SomeRangeBase<int>;
+  using T = int;
+  using RangeBase = llvm::detail::indexed_accessor_range_base<BaseT, BaseT, T>;
+
+  // Default construction
+  typename RangeBase::iterator It;
+  (void)It;
+
+  // Verify the iterator can be used in standard containers
+  std::vector<typename RangeBase::iterator> IteratorVec;
+  IteratorVec.emplace_back();   // Requires default constructor
+  IteratorVec.emplace_back(It); // Requires copy constructor
+
+  EXPECT_EQ(IteratorVec.size(), 2u);
+}
+
 // Compile-time tests for llvm::is_sorted_constexpr
 // Check to ensure range based functions as expected
 static constexpr std::array<int, 5> CSorted{{1, 2, 2, 3, 5}};
