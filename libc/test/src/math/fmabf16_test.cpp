@@ -47,9 +47,7 @@ TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 }
 
 TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
-
-  bfloat16 z = 
-    for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; ++v1) {
+  for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; ++v1) {
       for (uint16_t v2 = NEG_START; v2 <= NEG_STOP; v2 += 256) {
 
         bfloat16 x = FPBits(v1).get_val();
