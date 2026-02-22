@@ -978,8 +978,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
 
   case Type::FunctionNoProto:
   case Type::FunctionProto:
-    cgm.errorNYI("VTableClassNameForType: __function_type_info");
-    break;
+    return "_ZTVN10__cxxabiv120__function_type_infoE";
 
   case Type::Enum:
     return "_ZTVN10__cxxabiv116__enum_type_infoE";
