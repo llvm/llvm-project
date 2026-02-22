@@ -473,8 +473,10 @@ struct VPlanTransforms {
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
 
-  /// Optimize FindLast reductions selecting IVs by converting them to FindIV
-  /// reductions, if their IV range excludes a suitable sentinel value.
+  /// Optimize FindLast reductions selecting IVs (or expressions of IVs) by
+  /// converting them to FindIV reductions, if their IV range excludes a
+  /// suitable sentinel value. For expressions of IVs, the expression is sunk
+  /// to the middle block.
   static void optimizeFindIVReductions(VPlan &Plan,
                                        PredicatedScalarEvolution &PSE, Loop &L);
 
