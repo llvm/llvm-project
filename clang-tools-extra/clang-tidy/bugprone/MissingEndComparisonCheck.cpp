@@ -44,6 +44,8 @@ AST_MATCHER(DeclStmt, isConditionVariableStatement) {
               .empty();
 }
 
+} // namespace
+
 static std::optional<std::string>
 getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
   const FunctionDecl *Callee = Call->getDirectCallee();
@@ -122,8 +124,6 @@ static const UnaryOperator *getLNotAncestor(const Expr *E,
   }
   return nullptr;
 }
-
-} // namespace
 
 void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
   const auto StdAlgoCall = callExpr(callee(functionDecl(
