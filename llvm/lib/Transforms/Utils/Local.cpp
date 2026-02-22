@@ -3128,6 +3128,8 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
   MDBuilder MDB(Dest.getContext());
   Type *NewType = Dest.getType();
   const DataLayout &DL = Source.getDataLayout();
+  LLVMContext &Ctx = Dest.getContext();
+
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
     MDNode *N = MDPair.second;
@@ -3180,6 +3182,14 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
         Dest.setMetadata(ID, N);
       break;
     }
+    // Extended last-use / nontemporal hint on AMD GPUs
+    if (ID == Ctx.getMDKindID("amdpu.last.use"))
+      Dest.setMetadata(ID, N);
+    // Currently only relevant to atomics
+    else if (ID == Ctx.getMDKindID("amdgpu.no.remote.memory"))
+      Dest.setMetadata(ID, N);
+    else if (ID == Ctx.getMDKindID("amdgpu.no.fine.grained.memory"))
+      Dest.setMetadata(ID, N);
   }
 }
 
