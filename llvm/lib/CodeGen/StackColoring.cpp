@@ -476,9 +476,6 @@ class StackColoring {
   /// Number of iterations taken during data flow analysis.
   unsigned NumIterations;
 
-  // Map between variable and its occupied slot.
-  SmallMapVector<StringRef, int, 16> NameToSlot;
-
 public:
   StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
   bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
@@ -717,7 +714,6 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
         }
         const AllocaInst *Allocation = MFI->getObjectAllocation(Slot);
         if (Allocation) {
-          NameToSlot.insert({Allocation->getName(), Slot});
           LLVM_DEBUG(dbgs() << "Found a lifetime ");
           LLVM_DEBUG(dbgs() << (MI.getOpcode() == TargetOpcode::LIFETIME_START
                                     ? "start"
@@ -771,10 +767,23 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
           if (MI.isDebugInstr())
             continue;
 
-          for (auto *MO : MI.memoperands()) {
-            if (!MO->isVolatile())
+          bool MarkVolatile = false;
+          for (auto *MMO : MI.memoperands()) {
+            if (!MMO->isVolatile())
               continue;
-            VolatileAfterSetjmp.set(NameToSlot.at(MO->getValue()->getName()));
+            MarkVolatile = true;
+          }
+
+          if (!MarkVolatile)
+            continue;
+
+          for (auto &MO : MI.operands()) {
+            if (!MO.isFI())
+              continue;
+            int Slot = MO.getIndex();
+            if (Slot < 0)
+              continue;
+            VolatileAfterSetjmp.set(Slot);
           }
         }
       }

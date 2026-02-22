@@ -7,6 +7,8 @@
 
 declare i32 @setjmp(ptr) returns_twice
 
+declare void @baz(ptr)
+
 ; CHECK-LABEL: volatile_after_setjmp
 ; CHECK: Volatile slots after setjmp : { {{.*}}1{{.*}} }
 ; CHECK: Merge 0 slots
@@ -17,6 +19,7 @@ entry:
   %bar = alloca [100 x i32], align 4
 
   call void @llvm.lifetime.start.p0(i64 4, ptr %foo)
+  call void @llvm.lifetime.start.p0(i64 400, ptr %bar)
 
   %setjmp_result = call i32 @setjmp(ptr %jump_buffer)
   %cmp = icmp eq i32 %setjmp_result, 0
@@ -27,8 +30,9 @@ after_setjmp:
   br label %exit
 
 continue:
+  store i32 100, ptr %bar, align 4
+  call void @baz(ptr %bar)
   call void @llvm.lifetime.end.p0(i64 4, ptr %foo)
-  call void @llvm.lifetime.start.p0(i64 400, ptr %bar)
   call void @llvm.lifetime.end.p0(i64 400, ptr %bar)
   br label %exit
 
