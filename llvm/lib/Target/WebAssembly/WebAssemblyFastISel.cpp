@@ -465,6 +465,8 @@ unsigned WebAssemblyFastISel::zeroExtendToI32(unsigned Reg, const Value *V,
     break;
   case MVT::i8:
   case MVT::i16:
+    if (isa_and_present<LoadInst>(V))
+      return copyValue(Reg);
     break;
   case MVT::i32:
     return copyValue(Reg);
