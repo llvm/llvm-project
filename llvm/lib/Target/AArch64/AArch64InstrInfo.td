@@ -10892,24 +10892,6 @@ def : Pat<(v8i8  (add (trunc (v8i16 (bitconvert FPR128:$Rn))),
                       (extract_subvector (AArch64uzp2 (v16i8 FPR128:$Rn), undef), (i64 0)))),
           (EXTRACT_SUBREG (ADDPv16i8 $Rn, $Rn), dsub)>;
 
-def : Pat<(v2f64 (fadd (AArch64zip1 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)),
-                       (AArch64zip2 (v2f64 FPR128:$Rn), (v2f64 FPR128:$Rm)))),
-          (v2f64 (FADDPv2f64 $Rn, $Rm))>;
-def : Pat<(v2f32 (fadd (AArch64zip1 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)),
-                       (AArch64zip2 (v2f32 FPR64:$Rn), (v2f32 FPR64:$Rm)))),
-          (v2f32 (FADDPv2f32 $Rn, $Rm))>;
-def : Pat<(v4f32 (fadd (AArch64uzp1 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)),
-                       (AArch64uzp2 (v4f32 FPR128:$Rn), (v4f32 FPR128:$Rm)))),
-          (v4f32 (FADDPv4f32 $Rn, $Rm))>;
-let Predicates = [HasFullFP16] in {
-def : Pat<(v4f16 (fadd (AArch64uzp1 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)),
-                       (AArch64uzp2 (v4f16 FPR64:$Rn), (v4f16 FPR64:$Rm)))),
-          (v4f16 (FADDPv4f16 $Rn, $Rm))>;
-def : Pat<(v8f16 (fadd (AArch64uzp1 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)),
-                       (AArch64uzp2 (v8f16 FPR128:$Rn), (v8f16 FPR128:$Rm)))),
-          (v8f16 (FADDPv8f16 $Rn, $Rm))>;
-}
-
 multiclass PairwiseUZPBinPat<SDPatternOperator Op, ValueType VT,
                             RegisterClass RC, Instruction Inst> {
   def : Pat<(VT (Op (AArch64uzp1 (VT RC:$Rn), (VT RC:$Rm)),
@@ -10922,6 +10904,14 @@ multiclass PairwiseZIPBinPat<SDPatternOperator Op, ValueType VT,
   def : Pat<(VT (Op (AArch64zip1 (VT RC:$Rn), (VT RC:$Rm)),
                    (AArch64zip2 (VT RC:$Rn), (VT RC:$Rm)))),
             (VT (Inst $Rn, $Rm))>;
+}
+
+defm : PairwiseZIPBinPat<fadd, v2f64, FPR128, FADDPv2f64>;
+defm : PairwiseZIPBinPat<fadd, v2f32, FPR64,  FADDPv2f32>;
+defm : PairwiseUZPBinPat<fadd, v4f32, FPR128, FADDPv4f32>;
+let Predicates = [HasFullFP16] in {
+  defm : PairwiseUZPBinPat<fadd, v4f16, FPR64,  FADDPv4f16>;
+  defm : PairwiseUZPBinPat<fadd, v8f16, FPR128, FADDPv8f16>;
 }
 
 defm : PairwiseZIPBinPat<umax, v2i32, FPR64,  UMAXPv2i32>;
