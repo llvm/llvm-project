@@ -842,7 +842,7 @@ bool Relocation::isIRelative(uint32_t Type) {
   case Triple::aarch64:
     return Type == ELF::R_AARCH64_IRELATIVE;
   case Triple::riscv64:
-    llvm_unreachable("not implemented");
+    return Type == ELF::R_RISCV_IRELATIVE;
   case Triple::x86_64:
     return Type == ELF::R_X86_64_IRELATIVE;
   }
@@ -955,6 +955,19 @@ uint32_t Relocation::getRelative() {
     llvm_unreachable("not implemented");
   case Triple::x86_64:
     return ELF::R_X86_64_RELATIVE;
+  }
+}
+
+uint64_t Relocation::getIRelative() {
+  switch (Arch) {
+  default:
+    llvm_unreachable("Unsupported architecture");
+  case Triple::aarch64:
+    return ELF::R_AARCH64_IRELATIVE;
+  case Triple::riscv64:
+    return ELF::R_RISCV_IRELATIVE;
+  case Triple::x86_64:
+    return ELF::R_X86_64_IRELATIVE;
   }
 }
 
