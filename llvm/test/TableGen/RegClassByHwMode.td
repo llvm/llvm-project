@@ -63,8 +63,23 @@ include "Common/RegClassByHwModeCommon.td"
 // INSTRINFO-NEXT:  },
 // INSTRINFO-NEXT: };
 
+// INSTRINFO: extern const MCPhysReg MyTargetImplicitRegByHwModeTables[4][1] = {
+// INSTRINFO-NEXT:   { // DefaultMode
+// INSTRINFO-NEXT:     MyTarget::X0, // MyImplicitReg
+// INSTRINFO-NEXT:   },
+// INSTRINFO-NEXT:   { // EvenMode
+// INSTRINFO-NEXT:     MyTarget::X1, // MyImplicitReg
+// INSTRINFO-NEXT:   },
+// INSTRINFO-NEXT:   { // OddMode
+// INSTRINFO-NEXT:     MyTarget::X0, // MyImplicitReg (default)
+// INSTRINFO-NEXT:   },
+// INSTRINFO-NEXT:   { // Ptr64
+// INSTRINFO-NEXT:     MyTarget::X0, // MyImplicitReg (default)
+// INSTRINFO-NEXT:   },
+// INSTRINFO-NEXT: };
+
 // INSTRINFO: static inline void InitMyTargetMCInstrInfo(
-// INSTRINFO-NEXT: II->InitMCInstrInfo(MyTargetDescs.Insts, MyTargetInstrNameIndices, MyTargetInstrNameData, nullptr, nullptr, {{[0-9]+}}, &MyTargetRegClassByHwModeTables[0][0], 3);
+// INSTRINFO-NEXT: II->InitMCInstrInfo({{.*}}, &MyTargetImplicitRegByHwModeTables[0][0], 1);
 
 // INSTRINFO: #ifdef GET_INSTRINFO_HEADER
 // INSTRINFO-NEXT: #undef GET_INSTRINFO_HEADER
@@ -76,6 +91,7 @@ include "Common/RegClassByHwModeCommon.td"
 // INSTRINFO-NEXT:   ~MyTargetGenInstrInfo() override = default;
 // INSTRINFO-NEXT: };
 // INSTRINFO-NEXT: extern const int16_t MyTargetRegClassByHwModeTables[4][3];
+// INSTRINFO-NEXT: extern const MCPhysReg MyTargetImplicitRegByHwModeTables[4][1];
 // INSTRINFO-EMPTY:
 // INSTRINFO-NEXT: } // namespace llvm
 // INSTRINFO: #endif // GET_INSTRINFO_HEADER
@@ -471,6 +487,18 @@ def : Pat<
 >;
 
 defm : RemapAllTargetPseudoPointerOperands<XRegs_EvenIfRequired>;
+
+// Test ImplicitRegByHwMode: X0 is used in DefaultMode, X1 in EvenMode.
+def MyImplicitReg : ImplicitRegByHwMode<[DefaultMode, EvenMode], [X0, X1]>;
+
+def IMPLICIT_REG_INSTR : TestInstruction {
+  let OutOperandList = (outs XRegs:$dst);
+  let InOperandList = (ins XRegs:$src);
+  let AsmString = "implicit_reg_instr $dst, $src";
+  let opcode = 7;
+  let Uses = [MyImplicitReg];
+  let Defs = [MyImplicitReg];
+}
 
 def MyTargetISA : InstrInfo;
 def MyTarget : Target { let InstructionSet = MyTargetISA; }

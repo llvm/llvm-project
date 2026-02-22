@@ -48,6 +48,11 @@ protected:
   const int16_t *RegClassByHwModeTables;
   int16_t NumRegClassByHwModes;
 
+  // Pointer to 2d array [NumHwModes][NumImplicitRegByHwModes].
+  // Row 0 (DefaultMode) stores the default-mode registers used as lookup keys.
+  const MCPhysReg *ImplicitRegByHwModeTables;
+  int16_t NumImplicitRegByHwModes;
+
 public:
   /// Initialize MCInstrInfo, called by TableGen auto-generated routines.
   /// *DO NOT USE*.
@@ -55,7 +60,9 @@ public:
                        const uint8_t *DF,
                        const ComplexDeprecationPredicate *CDI, unsigned NO,
                        const int16_t *RCHWTables = nullptr,
-                       int16_t NumRegClassByHwMode = 0) {
+                       int16_t NumRegClassByHwMode = 0,
+                       const MCPhysReg *IRBHWTables = nullptr,
+                       int16_t NumImplicitRegByHwMode = 0) {
     LastDesc = D + NO - 1;
     InstrNameIndices = NI;
     InstrNameData = ND;
@@ -64,6 +71,8 @@ public:
     NumOpcodes = NO;
     RegClassByHwModeTables = RCHWTables;
     NumRegClassByHwModes = NumRegClassByHwMode;
+    ImplicitRegByHwModeTables = IRBHWTables;
+    NumImplicitRegByHwModes = NumImplicitRegByHwMode;
   }
 
   unsigned getNumOpcodes() const { return NumOpcodes; }
@@ -83,6 +92,17 @@ public:
     if (OpInfo.isLookupRegClassByHwMode())
       RegClass = getRegClassByHwModeTable(HwModeId)[RegClass];
     return RegClass;
+  }
+
+  /// Resolve an implicit register to its HwMode-specific variant.
+  /// If the register has a RegisterByHwMode entry, returns the register for
+  /// the given HwModeId. Otherwise returns the input unchanged.
+  MCPhysReg resolveImplicitReg(MCPhysReg Reg, unsigned HwModeId) const {
+    for (int16_t I = 0; I < NumImplicitRegByHwModes; ++I)
+      if (ImplicitRegByHwModeTables[I] == Reg)
+        return ImplicitRegByHwModeTables[HwModeId * NumImplicitRegByHwModes +
+                                         I];
+    return Reg;
   }
 
   /// Return the machine instruction descriptor that corresponds to the

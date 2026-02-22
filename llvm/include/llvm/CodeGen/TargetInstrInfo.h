@@ -120,11 +120,18 @@ protected:
   /// MCOperandInfo's RegClass field for LookupRegClassByHwMode operands.
   const int16_t *const RegClassByHwMode;
 
+  /// Subtarget specific sub-array of MCInstrInfo's ImplicitRegByHwModeTables
+  /// (i.e. the row for the active HwMode). Used to resolve implicit operand
+  /// registers that vary by HwMode (e.g. VCC vs VCC_LO).
+  const MCPhysReg *ImplicitRegByHwModeResolved;
+
   TargetInstrInfo(const TargetRegisterInfo &TRI, unsigned CFSetupOpcode = ~0u,
                   unsigned CFDestroyOpcode = ~0u, unsigned CatchRetOpcode = ~0u,
                   unsigned ReturnOpcode = ~0u,
-                  const int16_t *const RegClassByHwModeTable = nullptr)
+                  const int16_t *const RegClassByHwModeTable = nullptr,
+                  const MCPhysReg *ImplicitRegByHwModeRow = nullptr)
       : TRI(TRI), RegClassByHwMode(RegClassByHwModeTable),
+        ImplicitRegByHwModeResolved(ImplicitRegByHwModeRow),
         CallFrameSetupOpcode(CFSetupOpcode),
         CallFrameDestroyOpcode(CFDestroyOpcode), CatchRetOpcode(CatchRetOpcode),
         ReturnOpcode(ReturnOpcode) {}
@@ -155,6 +162,17 @@ public:
     if (OpInfo.isLookupRegClassByHwMode())
       return RegClassByHwMode[OpInfo.RegClass];
     return OpInfo.RegClass;
+  }
+
+  /// Resolve an implicit register to its HwMode-specific variant.
+  /// Pre-indexed to the active subtarget's HwMode, so no HwModeId argument
+  /// is needed. Returns the input unchanged if no RegisterByHwMode entry
+  /// exists.
+  MCPhysReg resolveImplicitReg(MCPhysReg Reg) const {
+    for (int16_t I = 0; I < NumImplicitRegByHwModes; ++I)
+      if (ImplicitRegByHwModeTables[I] == Reg)
+        return ImplicitRegByHwModeResolved[I];
+    return Reg;
   }
 
   /// Given a machine instruction descriptor, returns the register

@@ -168,9 +168,14 @@ class RegAltNameIndex {
 }
 def NoRegAltName : RegAltNameIndex;
 
+/// Abstract base class common to Register and ImplicitRegByHwMode.
+/// This permits using ImplicitRegByHwMode in Instruction Uses/Defs
+/// lists alongside plain Register references.
+class RegisterLike;
+
 // Register - You should define one instance of this class for each register
 // in the target machine. String n will become the "name" of the register.
-class Register<string n, list<string> altNames = []> {
+class Register<string n, list<string> altNames = []> : RegisterLike {
   string Namespace = "";
   string AsmName = n;
   list<string> AltNames = altNames;
@@ -647,8 +652,8 @@ class Instruction : InstructionEncoding {
   // The follow state will eventually be inferred automatically from the
   // instruction pattern.
 
-  list<Register> Uses = []; // Default to using no non-operand registers
-  list<Register> Defs = []; // Default to modifying no non-operand registers
+  list<RegisterLike> Uses = []; // Default to using no non-operand registers
+  list<RegisterLike> Defs = []; // Default to modifying no non-operand registers
 
   // Predicates - List of predicates which will be turned into isel matching
   // code.
@@ -999,6 +1004,16 @@ class RegClassByHwMode<list<HwMode> Modes,
                        list<RegisterClass> RegClasses>
   : HwModeSelect<Modes, !size(RegClasses)>, RegisterClassLike {
   list<RegisterClass> Objects = RegClasses;
+}
+
+/// ImplicitRegByHwMode - Maps a register to different physical registers
+/// depending on the HwMode, for use in Instruction Uses/Defs lists.
+/// For example, on AMDGPU wave32 targets VCC (64-bit) is narrowed to
+/// VCC_LO (32-bit). This allows the MCInstrDesc implicit operands to
+/// resolve to the correct register per subtarget.
+class ImplicitRegByHwMode<list<HwMode> Modes, list<Register> Regs>
+    : HwModeSelect<Modes, !size(Regs)>, RegisterLike {
+  list<Register> Objects = Regs;
 }
 
 /// unknown definition - Mark this operand as being of unknown type, causing
