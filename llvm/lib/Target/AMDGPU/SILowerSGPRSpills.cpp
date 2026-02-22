@@ -582,7 +582,22 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
     MadeChange = true;
   }
 
-  if (SpilledToVirtVGPRLanes) {
+  // WWM_COPY instructions created before regalloc (e.g., for lane-packed
+  // inreg call-arg VGPRs) also need the reserved EXEC-copy SGPR for the
+  // bracketing sequence that SILowerWWMCopies emits.
+  bool HasWWMCopies = false;
+  for (const MachineBasicBlock &MBB : MF) {
+    for (const MachineInstr &MI : MBB) {
+      if (MI.getOpcode() == AMDGPU::WWM_COPY) {
+        HasWWMCopies = true;
+        break;
+      }
+    }
+    if (HasWWMCopies)
+      break;
+  }
+
+  if (SpilledToVirtVGPRLanes || HasWWMCopies) {
     const TargetRegisterClass *RC = TRI->getWaveMaskRegClass();
     // Shift back the reserved SGPR for EXEC copy into the lowest range.
     // This SGPR is reserved to handle the whole-wave spill/copy operations

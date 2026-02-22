@@ -15,6 +15,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPULanePackedABI.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "GCNSubtarget.h"
@@ -23,6 +24,7 @@
 #include "SIRegisterInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/UniformityAnalysis.h"
@@ -3450,8 +3452,14 @@ SDValue SITargetLowering::LowerFormalArguments(
   }
 
   if (!IsKernel) {
-    CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
-    CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
+    if (isInRegVGPRLanePackingEnabled() &&
+        (CallConv == CallingConv::C || CallConv == CallingConv::Fast ||
+         CallConv == CallingConv::Cold)) {
+      analyzeArgsWithLanePacking(CCInfo, Splits, Subtarget->isWave32());
+    } else {
+      CCAssignFn *AssignFn = CCAssignFnForCall(CallConv, isVarArg);
+      CCInfo.AnalyzeFormalArguments(Splits, AssignFn);
+    }
 
     // This assumes the registers are allocated by CCInfo in ascending order
     // with no gaps.
@@ -3634,6 +3642,30 @@ SDValue SITargetLowering::LowerFormalArguments(
     }
 
     assert(VA.isRegLoc() && "Parameter must be in a register!");
+
+    if (VA.needsCustom()) {
+      Register Reg = MF.addLiveIn(VA.getLocReg(), &AMDGPU::VGPR_32RegClass);
+      SDValue PackedVal = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i32);
+      unsigned Lane = getLaneIndexForPackedArg(ArgLocs, i);
+      SDValue Val = DAG.getNode(
+          ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+          DAG.getTargetConstant(Intrinsic::amdgcn_readlane, DL, MVT::i32),
+          PackedVal, DAG.getConstant(Lane, DL, MVT::i32));
+      // readlane returns i32; convert back to the original value type.
+      EVT ValVT = VA.getValVT();
+      if (ValVT == MVT::i32) {
+        // No conversion needed.
+      } else if (ValVT.getSizeInBits() == 32) {
+        Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
+      } else {
+        MVT IntVT = MVT::getIntegerVT(ValVT.getSizeInBits());
+        Val = DAG.getNode(ISD::TRUNCATE, DL, IntVT, Val);
+        if (ValVT != IntVT)
+          Val = DAG.getNode(ISD::BITCAST, DL, ValVT, Val);
+      }
+      InVals.push_back(Val);
+      continue;
+    }
 
     Register Reg = VA.getLocReg();
     const TargetRegisterClass *RC = nullptr;
@@ -4061,6 +4093,11 @@ bool SITargetLowering::isEligibleForTailCallOptimization(
   if (!AMDGPU::mayTailCallThisCC(CalleeCC))
     return false;
 
+  if (isInRegVGPRLanePackingEnabled() &&
+      (CalleeCC == CallingConv::C || CalleeCC == CallingConv::Fast ||
+       CalleeCC == CallingConv::Cold))
+    return false;
+
   // For a divergent call target, we need to do a waterfall loop over the
   // possible callees which precludes us from using a simple jump.
   if (Callee->isDivergent())
@@ -4313,7 +4350,13 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (!Subtarget->hasFlatScratchEnabled())
     CCInfo.AllocateReg(Info->getScratchRSrcReg());
 
-  CCInfo.AnalyzeCallOperands(Outs, AssignFn);
+  if (isInRegVGPRLanePackingEnabled() &&
+      (CallConv == CallingConv::C || CallConv == CallingConv::Fast ||
+       CallConv == CallingConv::Cold)) {
+    analyzeArgsWithLanePacking(CCInfo, Outs, Subtarget->isWave32());
+  } else {
+    CCInfo.AnalyzeCallOperands(Outs, AssignFn);
+  }
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = CCInfo.getStackSize();
@@ -4358,6 +4401,9 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   MVT PtrVT = MVT::i32;
 
+  MapVector<MCPhysReg, SmallVector<std::pair<unsigned, SDValue>, 4>>
+      LanePackGroups;
+
   // Walk the register/memloc assignments, inserting copies/loads.
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
     CCValAssign &VA = ArgLocs[i];
@@ -4384,6 +4430,25 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
       break;
     default:
       llvm_unreachable("Unknown loc info!");
+    }
+
+    if (VA.needsCustom() && VA.isRegLoc()) {
+      // writelane is an i32 operation; ensure Arg is i32.
+      EVT ArgVT = Arg.getValueType();
+      if (ArgVT != MVT::i32) {
+        if (ArgVT.getSizeInBits() < 32) {
+          if (!ArgVT.isInteger()) {
+            MVT IntVT = MVT::getIntegerVT(ArgVT.getSizeInBits());
+            Arg = DAG.getNode(ISD::BITCAST, DL, IntVT, Arg);
+          }
+          Arg = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Arg);
+        } else if (ArgVT.getSizeInBits() == 32) {
+          Arg = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Arg);
+        }
+      }
+      unsigned Lane = getLaneIndexForPackedArg(ArgLocs, i);
+      LanePackGroups[VA.getLocReg()].push_back({Lane, Arg});
+      continue;
     }
 
     if (VA.isRegLoc()) {
@@ -4452,6 +4517,37 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         MemOpChains.push_back(Store);
       }
     }
+  }
+
+  // Build writelane chains for lane-packed overflow inreg args. Route the
+  // packed result through a fresh WWM-flagged virtual register so the final
+  // physreg COPY (emitted by the glued-CopyToReg sequence below) reads from a
+  // WWM_REG source. finalizeLowering() then promotes that COPY to
+  // AMDGPU::WWM_COPY, and SILowerWWMCopies ultimately brackets the transfer
+  // with EXEC = -1 so every lane's payload survives a divergent caller.
+  //
+  // The CopyToReg/CopyFromReg pair must sit BEFORE the glued CopyToReg
+  // sequence below: the glued sequence requires its nodes to be scheduled
+  // back-to-back, and inserting a non-glued chain-carrying node in the middle
+  // creates an unresolvable scheduling constraint.
+  SDValue WritelaneID =
+      DAG.getTargetConstant(Intrinsic::amdgcn_writelane, DL, MVT::i32);
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  SIMachineFunctionInfo *MFInfo = MF.getInfo<SIMachineFunctionInfo>();
+  for (auto &[VGPR, Lanes] : LanePackGroups) {
+    SDValue Packed = DAG.getUNDEF(MVT::i32);
+    for (auto &[LaneIdx, ArgVal] : Lanes) {
+      Packed =
+          DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32, WritelaneID,
+                      ArgVal, DAG.getConstant(LaneIdx, DL, MVT::i32), Packed);
+    }
+
+    Register WWMVReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    MFInfo->setFlag(WWMVReg, AMDGPU::VirtRegFlag::WWM_REG);
+    Chain = DAG.getCopyToReg(Chain, DL, WWMVReg, Packed);
+    SDValue WWMVal = DAG.getCopyFromReg(Chain, DL, WWMVReg, MVT::i32);
+    Chain = WWMVal.getValue(1);
+    RegsToPass.push_back({VGPR, WWMVal});
   }
 
   if (!MemOpChains.empty())
@@ -19352,6 +19448,37 @@ void SITargetLowering::finalizeLowering(MachineFunction &MF) const {
     }
   }
 
+  // Promote physreg COPYs whose source is a WWM_REG-flagged virtual register
+  // to AMDGPU::WWM_COPY. ISD::CopyToReg lowers to a plain TargetOpcode::COPY
+  // that is EXEC-masked on VGPR destinations. Lane-packed overflow inreg call
+  // arguments go through a WWM-flagged vreg so we can recognize those COPYs
+  // here and tag them for SILowerWWMCopies, which will later bracket them
+  // with EXEC = -1. Coalescing still works: WWM_COPY is treated as a copy by
+  // SIInstrInfo::isCopyInstrImpl, so if register allocation can fold it away
+  // it will; if not, the WWM bracketing ensures every lane's payload survives
+  // a divergent caller.
+  if (Info->hasVRegFlags()) {
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : MBB) {
+        if (MI.getOpcode() != AMDGPU::COPY)
+          continue;
+        const MachineOperand &DstMO = MI.getOperand(0);
+        const MachineOperand &SrcMO = MI.getOperand(1);
+        if (!DstMO.isReg() || !SrcMO.isReg())
+          continue;
+        Register DstReg = DstMO.getReg();
+        Register SrcReg = SrcMO.getReg();
+        if (!DstReg.isPhysical() || !SrcReg.isVirtual())
+          continue;
+        if (!Info->checkFlag(SrcReg, AMDGPU::VirtRegFlag::WWM_REG))
+          continue;
+        if (!TRI->isVGPR(MRI, DstReg))
+          continue;
+        MI.setDesc(TII->get(AMDGPU::WWM_COPY));
+      }
+    }
+  }
+
   // FIXME: This is a hack to fixup AGPR classes to use the properly aligned
   // classes if required. Ideally the register class constraints would differ
   // per-subtarget, but there's no easy way to achieve that right now. This is
@@ -19710,6 +19837,14 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
 
     if (const Value *V = FLI->getValueFromVirtualReg(R->getReg()))
       return UA->isDivergent(V);
+
+    // Lane-packed inreg call arguments are routed through a WWM-flagged vreg
+    // that has no backing IR Value. These carry full-wave values and are
+    // always VGPRs, so they are treated as divergent.
+    const SIMachineFunctionInfo *MFI =
+        FLI->MF->getInfo<SIMachineFunctionInfo>();
+    if (MFI->checkFlag(Reg, AMDGPU::VirtRegFlag::WWM_REG))
+      return !TRI->isSGPRReg(MRI, Reg);
 
     assert(Reg == FLI->DemoteRegister || isCopyFromRegOfInlineAsm(N));
     return !TRI->isSGPRReg(MRI, Reg);
