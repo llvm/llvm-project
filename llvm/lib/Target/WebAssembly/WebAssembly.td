@@ -105,6 +105,7 @@ def FeatureWideArithmetic :
 //===----------------------------------------------------------------------===//
 
 include "WebAssemblyRegisterInfo.td"
+include "WebAssemblyRegisterBanks.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Descriptions

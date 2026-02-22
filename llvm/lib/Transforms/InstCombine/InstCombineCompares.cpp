@@ -2006,8 +2006,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   {
     Value *A;
     const APInt *Addend, *Msk;
-    if (match(And, m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
-                         m_LowBitMask(Msk))) &&
+    if (match(And, m_OneUse(m_And(m_OneUse(m_Add(m_Value(A), m_APInt(Addend))),
+                                  m_LowBitMask(Msk)))) &&
         C.ule(*Msk)) {
       APInt NewComperand = (C - *Addend) & *Msk;
       Value *MaskA = Builder.CreateAnd(A, ConstantInt::get(A->getType(), *Msk));
@@ -8905,7 +8905,9 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
   // Ignore signbit of bitcasted int when comparing equality to FP 0.0:
   // fcmp oeq/une (bitcast X), 0.0 --> (and X, SignMaskC) ==/!= 0
   if (match(Op1, m_PosZeroFP()) &&
-      match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X))))) {
+      match(Op0, m_OneUse(m_ElementWiseBitCast(m_Value(X)))) &&
+      !F.getDenormalMode(Op1->getType()->getScalarType()->getFltSemantics())
+           .inputsMayBeZero()) {
     ICmpInst::Predicate IntPred = ICmpInst::BAD_ICMP_PREDICATE;
     if (Pred == FCmpInst::FCMP_OEQ)
       IntPred = ICmpInst::ICMP_EQ;

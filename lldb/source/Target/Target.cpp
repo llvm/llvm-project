@@ -3726,47 +3726,45 @@ llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
   if (!descriptor.IsValid())
     return llvm::createStringError("invalid frame provider descriptor");
 
+  uint32_t descriptor_id = descriptor.GetID();
+
   llvm::StringRef name = descriptor.GetName();
   if (name.empty())
     return llvm::createStringError(
         "frame provider descriptor has no class name");
 
-  std::lock_guard<std::recursive_mutex> guard(
-      m_frame_provider_descriptors_mutex);
+  {
+    std::unique_lock<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    m_frame_provider_descriptors[descriptor_id] = descriptor;
+  }
 
-  uint32_t descriptor_id = descriptor.GetID();
-  m_frame_provider_descriptors[descriptor_id] = descriptor;
-
-  // Clear frame providers on existing threads so they reload with new config.
-  if (ProcessSP process_sp = GetProcessSP())
-    for (ThreadSP thread_sp : process_sp->Threads())
-      thread_sp->ClearScriptedFrameProvider();
+  InvalidateThreadFrameProviders();
 
   return descriptor_id;
 }
 
 bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
-  std::lock_guard<std::recursive_mutex> guard(
-      m_frame_provider_descriptors_mutex);
-  bool removed = m_frame_provider_descriptors.erase(id);
+  bool removed = false;
+  {
+    std::lock_guard<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    removed = m_frame_provider_descriptors.erase(id);
+  }
 
   if (removed)
-    if (ProcessSP process_sp = GetProcessSP())
-      for (ThreadSP thread_sp : process_sp->Threads())
-        thread_sp->ClearScriptedFrameProvider();
-
+    InvalidateThreadFrameProviders();
   return removed;
 }
 
 void Target::ClearScriptedFrameProviderDescriptors() {
-  std::lock_guard<std::recursive_mutex> guard(
-      m_frame_provider_descriptors_mutex);
+  {
+    std::lock_guard<std::recursive_mutex> guard(
+        m_frame_provider_descriptors_mutex);
+    m_frame_provider_descriptors.clear();
+  }
 
-  m_frame_provider_descriptors.clear();
-
-  if (ProcessSP process_sp = GetProcessSP())
-    for (ThreadSP thread_sp : process_sp->Threads())
-      thread_sp->ClearScriptedFrameProvider();
+  InvalidateThreadFrameProviders();
 }
 
 const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
@@ -3774,6 +3772,21 @@ Target::GetScriptedFrameProviderDescriptors() const {
   std::lock_guard<std::recursive_mutex> guard(
       m_frame_provider_descriptors_mutex);
   return m_frame_provider_descriptors;
+}
+
+void Target::InvalidateThreadFrameProviders() {
+  ProcessSP process_sp = GetProcessSP();
+  if (!process_sp)
+    return;
+  for (ThreadSP thread_sp : process_sp->Threads()) {
+    // Clear frame providers on existing threads so they reload with new config.
+    thread_sp->ClearScriptedFrameProvider();
+    // Notify threads that the stack traces might have changed.
+    if (thread_sp->EventTypeHasListeners(Thread::eBroadcastBitStackChanged)) {
+      auto data_sp = std::make_shared<Thread::ThreadEventData>(thread_sp);
+      thread_sp->BroadcastEvent(Thread::eBroadcastBitStackChanged, data_sp);
+    }
+  }
 }
 
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
@@ -4447,7 +4460,7 @@ public:
 TargetExperimentalProperties::TargetExperimentalProperties()
     : Properties(OptionValuePropertiesSP(
           new TargetExperimentalOptionValueProperties())) {
-  m_collection_sp->Initialize(g_target_experimental_properties);
+  m_collection_sp->Initialize(g_target_experimental_properties_def);
 }
 
 // TargetProperties
@@ -4496,7 +4509,7 @@ TargetProperties::TargetProperties(Target *target)
         true, m_experimental_properties_up->GetValueProperties());
   } else {
     m_collection_sp = std::make_shared<TargetOptionValueProperties>("target");
-    m_collection_sp->Initialize(g_target_properties);
+    m_collection_sp->Initialize(g_target_properties_def);
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
@@ -5367,13 +5380,13 @@ llvm::Error
 EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
                                                     bool value) {
   if (option_name.empty())
-    return llvm::createStringError("Can't set an option with an empty name.");
+    return llvm::createStringError("can't set an option with an empty name");
 
   if (StructuredData::ObjectSP existing_sp =
           GetLanguageOptions().GetValueForKey(option_name);
       existing_sp && existing_sp->GetType() != eStructuredDataTypeBoolean)
-    return llvm::createStringErrorV("Trying to override existing option '{0}' "
-                                    "of type '{1}' with a boolean value.",
+    return llvm::createStringErrorV("trying to override existing option '{0}' "
+                                    "of type '{1}' with a boolean value",
                                     option_name, existing_sp->GetType());
 
   GetLanguageOptions().AddBooleanItem(option_name, value);
@@ -5386,12 +5399,11 @@ llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
   const StructuredData::Dictionary &opts = GetLanguageOptions();
 
   if (!opts.HasKey(option_name))
-    return llvm::createStringErrorV("Option '{0}' does not exist.",
-                                    option_name);
+    return llvm::createStringErrorV("option '{0}' does not exist", option_name);
 
   bool result;
   if (!opts.GetValueForKeyAsBoolean(option_name, result))
-    return llvm::createStringErrorV("Failed to get option '{0}' as boolean.",
+    return llvm::createStringErrorV("failed to get option '{0}' as boolean",
                                     option_name);
 
   return result;

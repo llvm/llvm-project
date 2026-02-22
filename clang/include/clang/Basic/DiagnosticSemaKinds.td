@@ -4004,6 +4004,9 @@ def err_attribute_vecreturn_only_vector_member : Error<
   "the vecreturn attribute can only be used on a class or structure with one member, which must be a vector">;
 def err_attribute_vecreturn_only_pod_record : Error<
   "the vecreturn attribute can only be used on a POD (plain old data) class or structure (i.e. no virtual functions)">;
+def err_attribute_pointer_field_protection_experimental
+    : Error<"this attribute is experimental and must be explicitly enabled "
+            "with flag -fexperimental-allow-pointer-field-protection-attr">;
 def err_sme_attr_mismatch : Error<
   "function declared %0 was previously declared %1, which has different SME function attributes">;
 def err_sme_call_in_non_sme_target : Error<
@@ -4108,6 +4111,63 @@ def note_cannot_use_trivial_abi_reason : Note<
   "it has a base of a non-trivial class type|it has a virtual base|"
   "it has a __weak field|it has a field of a non-trivial class type|"
   "it has an address-discriminated '__ptrauth' field}1">;
+
+// OverflowBehavior attribute
+def err_overflow_behavior_unknown_ident
+    : Error<"'%0' is not a valid argument to attribute %1, only 'wrap' and "
+            "'trap' are supported">;
+def err_overflow_behavior_non_integer_type
+    : Error<"%0 %select{attribute|specifier}2 cannot be applied to "
+            "non-integer type '%1'">;
+def err_conflicting_overflow_behaviors
+    : Error<"conflicting %select{'overflow_behavior' attributes|overflow "
+            "behavior specification; specifier specifies '%1' but attribute "
+            "specifies "
+            "'%2'}0 on the same type">;
+def err_incompatible_obt_kinds_assignment
+    : Error<"assigning to %0 from %1 with incompatible overflow behavior types "
+            "('%2' and '%3')">;
+def warn_overflow_behavior_attribute_disabled
+    : Warning<"%0 attribute is ignored because it is not enabled; pass "
+              "-Xclang -fexperimental-overflow-behavior-types">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_overflow_behavior_keyword_disabled
+    : Warning<"'%0' specifier is ignored because overflow behavior types are "
+              "not enabled; pass -Xclang "
+              "-fexperimental-overflow-behavior-types">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_impcast_overflow_behavior
+    : Warning<"implicit conversion from %0 to %1 discards overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversion>,
+      DefaultIgnore;
+def warn_redundant_overflow_behaviors_mixed
+    : Warning<"redundant overflow behavior specification; both specifier and "
+              "attribute specify '%0'">,
+      InGroup<OverflowBehaviorAttributeIgnored>;
+def warn_impcast_overflow_behavior_assignment
+    : Warning<"implicit conversion from %0 to %1 during assignment discards "
+              "overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionAssignment>,
+      DefaultIgnore;
+def warn_impcast_overflow_behavior_assignment_pedantic
+    : Warning<"implicit conversion from %0 to %1 during assignment discards "
+              "overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionAssignmentPedantic>,
+      DefaultIgnore;
+def warn_impcast_overflow_behavior_pedantic
+    : Warning<"implicit conversion from %0 to %1 discards overflow behavior">,
+      InGroup<ImplicitOverflowBehaviorConversionPedantic>,
+      DefaultIgnore;
+def warn_obt_discarded_at_function_boundary
+    : Warning<"passing argument of type %0 to parameter of type %1 discards "
+              "overflow behavior at function boundary">,
+      InGroup<ImplicitOverflowBehaviorConversionAtFunctionBoundary>,
+      DefaultIgnore;
+def warn_obt_discarded_at_function_boundary_pedantic
+    : Warning<"passing argument of type %0 to parameter of type %1 discards "
+              "overflow behavior at function boundary">,
+      InGroup<ImplicitOverflowBehaviorConversionAtFunctionBoundaryPedantic>,
+      DefaultIgnore;
 
 // Availability attribute
 def warn_availability_unknown_platform : Warning<
@@ -6558,6 +6618,9 @@ def err_vm_func_decl : Error<
 def err_array_too_large : Error<
   "array is too large (%0 elements)">;
 
+def err_type_too_large_for_address_space : Error<
+  "%0 is too large for the address space (maximum allowed size of %1 bytes)">;
+
 def err_typecheck_negative_array_size : Error<"array size is negative">;
 def warn_typecheck_function_qualifiers_ignored : Warning<
   "'%0' qualifier on function type %1 has no effect">,
@@ -7961,24 +8024,31 @@ def warn_arith_conv_mixed_unicode_types
               "different Unicode character types %1 and %2">,
       InGroup<CharacterConversion>;
 
-def err_typecheck_assign_const : Error<
-  "%select{"
-  "cannot assign to return value because function %1 returns a const value|"
-  "cannot assign to variable %1 with const-qualified type %2|"
-  "cannot assign to %select{non-|}1static data member %2 "
-  "with const-qualified type %3|"
-  "cannot assign to non-static data member within const member function %1|"
-  "cannot assign to %select{variable %2|non-static data member %2|lvalue}1 "
-  "with %select{|nested }3const-qualified data member %4|"
-  "read-only variable is not assignable}0">;
+def err_typecheck_assign_const
+    : Error<"%select{"
+            "cannot assign to return value because function %1 returns a const "
+            "value|"
+            "cannot assign to variable %1 with const-qualified type %2|"
+            "cannot assign to %select{non-|}1static data member %2 "
+            "with const-qualified type %3|"
+            "cannot assign to %select{variable %2|non-static data member "
+            "%2|lvalue}1 "
+            "with %select{|nested }3const-qualified data member %4|"
+            "read-only variable is not assignable}0">;
 
-def note_typecheck_assign_const : Note<
-  "%select{"
-  "function %1 which returns const-qualified type %2 declared here|"
-  "variable %1 declared const here|"
-  "%select{non-|}1static data member %2 declared const here|"
-  "member function %q1 is declared const here|"
-  "%select{|nested }1data member %2 declared const here}0">;
+def note_typecheck_assign_const
+    : Note<"%select{"
+           "function %1 which returns const-qualified type %2 declared here|"
+           "variable %1 declared const here|"
+           "%select{non-|}1static data member %2 declared const here|"
+           "%select{|nested }1data member %2 declared const here}0">;
+
+def err_typecheck_assign_const_method
+    : Error<"cannot assign to non-static data member within const member "
+            "function %0">;
+
+def note_typecheck_assign_const_method
+    : Note<"member function %q0 is declared const here">;
 
 def warn_unsigned_always_true_comparison : Warning<
   "result of comparison of %select{%3|unsigned expression}0 %2 "
@@ -9206,6 +9276,21 @@ def ext_typecheck_convert_discards_qualifiers : ExtWarn<
   "|%diff{casting $ to type $|casting between types}0,1}2"
   " discards qualifiers">,
   InGroup<IncompatiblePointerTypesDiscardsQualifiers>;
+def ext_typecheck_convert_discards_overflow_behavior
+    : ExtWarn<
+          "%select{%diff{assigning to $ from $|assigning to different types}0,1"
+          "|%diff{passing $ to parameter of type $|"
+          "passing to parameter of different type}0,1"
+          "|%diff{returning $ from a function with result type $|"
+          "returning from function with different return type}0,1"
+          "|%diff{converting $ to type $|converting between types}0,1"
+          "|%diff{initializing $ with an expression of type $|"
+          "initializing with expression of different type}0,1"
+          "|%diff{sending $ to parameter of type $|"
+          "sending to parameter of different type}0,1"
+          "|%diff{casting $ to type $|casting between types}0,1}2"
+          " discards overflow behavior">,
+      InGroup<IncompatiblePointerTypesDiscardsOverflowBehavior>;
 def err_typecheck_convert_discards_qualifiers : Error<
   "%select{%diff{assigning to $ from $|assigning to different types}0,1"
   "|%diff{passing $ to parameter of type $|"
@@ -9367,6 +9452,8 @@ def err_typecheck_lvalue_casts_not_supported : Error<
 
 def err_typecheck_duplicate_vector_components_not_mlvalue : Error<
   "vector is not assignable (contains duplicate components)">;
+def err_typecheck_duplicate_matrix_components_not_mlvalue
+    : Error<"matrix is not assignable (contains duplicate components)">;
 def err_block_decl_ref_not_modifiable_lvalue : Error<
   "variable is not assignable (missing __block type specifier)">;
 def err_lambda_decl_ref_not_modifiable_lvalue : Error<
@@ -10816,24 +10903,43 @@ def warn_lifetime_safety_loan_expires_permissive : Warning<
 def warn_lifetime_safety_loan_expires_strict : Warning<
    "object whose reference is captured may not live long enough">,
    InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+def warn_lifetime_safety_loan_expires_moved_strict : Warning<
+   "object whose reference is captured may not live long enough. "
+   "This could be false positive as the storage may have been moved later">,
+   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
 
 def warn_lifetime_safety_return_stack_addr_permissive
     : Warning<"address of stack memory is returned later">,
       InGroup<LifetimeSafetyPermissive>,
       DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_strict
-    : Warning<"address of stack memory may be returned later">,
+def warn_lifetime_safety_return_stack_addr_moved_strict
+    : Warning<"address of stack memory may be returned later. "
+      "This could be false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
       InGroup<LifetimeSafetyStrict>,
+      DefaultIgnore;
+
+def warn_lifetime_safety_invalidation
+    : Warning<"%select{object whose reference is captured|parameter}0 is later invalidated">,
+      InGroup<LifetimeSafetyInvalidation>,
       DefaultIgnore;
 
 def warn_lifetime_safety_dangling_field
     : Warning<"address of stack memory escapes to a field">,
       InGroup<LifetimeSafetyDanglingField>,
       DefaultIgnore;
+def warn_lifetime_safety_dangling_field_moved
+    : Warning<"address of stack memory escapes to a field. "
+      "This could be a false positive as the storage may have been moved. "
+      "Consider moving first and then aliasing later to resolve the issue">,
+      InGroup<LifetimeSafetyDanglingFieldStrict>,
+      DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;
+def note_lifetime_safety_invalidated_here : Note<"invalidated here">;
 def note_lifetime_safety_destroyed_here : Note<"destroyed here">;
 def note_lifetime_safety_returned_here : Note<"returned here">;
+def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 
@@ -13144,6 +13250,8 @@ def err_builtin_matrix_stride_too_small: Error<
   "stride must be greater or equal to the number of rows">;
 def err_builtin_matrix_invalid_dimension: Error<
   "%0 dimension is outside the allowed range [1, %1]">;
+def err_builtin_matrix_invalid_member
+    : Error<"invalid matrix member '%0' expected %1">;
 
 def warn_mismatched_import : Warning<
   "import %select{module|name}0 (%1) does not match the import %select{module|name}0 (%2) of the "
@@ -13415,6 +13523,17 @@ def err_hlsl_builtin_scalar_vector_mismatch
           "%select{all|second and third}0 arguments to %1 must be of scalar or "
           "vector type with matching scalar element type%diff{: $ vs $|}2,3">;
 
+def err_hlsl_matrix_element_not_in_bounds
+    : Error<"matrix %select{row|column}0 element accessor is out of bounds of "
+            "%select{zero|one}1 based indexing">;
+
+def err_hlsl_matrix_index_out_of_bounds
+    : Error<"matrix %select{row|column}0 index %1 is out of bounds of "
+            "%select{rows|columns}0 size %2">;
+
+def err_hlsl_matrix_swizzle_invalid_length
+    : Error<"matrix swizzle length must be between 1 and 4 but is %0">;
+
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<VectorConversion>;
 
@@ -13472,6 +13591,9 @@ def err_hlsl_assign_to_global_resource: Error<
 
 def err_hlsl_push_constant_unique
     : Error<"cannot have more than one push constant block">;
+def err_hlsl_samplecmp_requires_float
+    : Error<"'SampleCmp' and 'SampleCmpLevelZero' require resource to contain "
+            "a floating point type">;
 
 // Layout randomization diagnostics.
 def err_non_designated_init_used : Error<
@@ -13893,6 +14015,13 @@ def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;
 def note_amdgcn_load_lds_size_valid_value : Note<"size must be %select{1, 2, or 4|1, 2, 4, 12 or 16}0">;
 
 def err_amdgcn_coop_atomic_invalid_as : Error<"cooperative atomic requires a global or generic pointer">;
+
+def warn_amdgpu_s_wait_event_mask_no_effect_target :
+  Warning<"event mask has no effect for target">,
+  InGroup<DiagGroup<"amdgpu-wait-event-mask">>;
+
+def note_amdgpu_s_wait_event_suggested_value :
+  Note<"value of 2 valid for export_ready for gfx11 and gfx12+">;
 
 def warn_comparison_in_enum_initializer : Warning<
   "comparison operator '%0' is potentially a typo for a shift operator '%1'">,

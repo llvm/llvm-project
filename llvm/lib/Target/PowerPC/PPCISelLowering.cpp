@@ -12046,31 +12046,15 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   }
 
   SDValue TF = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
-  SDValue Lo =
-      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[0], Loads[1]);
-  SDValue LoSub = DAG.getTargetConstant(PPC::sub_wacc_lo, dl, MVT::i32);
-  SDValue Hi =
-      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[2], Loads[3]);
-  SDValue HiSub = DAG.getTargetConstant(PPC::sub_wacc_hi, dl, MVT::i32);
-  SDValue RC = DAG.getTargetConstant(PPC::DMRRCRegClassID, dl, MVT::i32);
-  const SDValue Ops[] = {RC, Lo, LoSub, Hi, HiSub};
-
-  SDValue Value =
-      SDValue(DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Ops), 0);
+  SDValue Value = DMFInsert1024(Loads, dl, DAG);
 
   if (IsV1024i1) {
     return DAG.getMergeValues({Value, TF}, dl);
   }
 
   // Handle Loads for V2048i1 which represents a dmr pair.
-  SDValue DmrPValue;
-  SDValue Dmr1Lo =
-      DAG.getNode(PPCISD::INST512, dl, MVT::v512i1, Loads[4], Loads[5]);
-  SDValue Dmr1Hi =
-      DAG.getNode(PPCISD::INST512HI, dl, MVT::v512i1, Loads[6], Loads[7]);
-  const SDValue Dmr1Ops[] = {RC, Dmr1Lo, LoSub, Dmr1Hi, HiSub};
-  SDValue Dmr1Value = SDValue(
-      DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v1024i1, Dmr1Ops), 0);
+  SmallVector<SDValue, 4> MoreLoads{Loads[4], Loads[5], Loads[6], Loads[7]};
+  SDValue Dmr1Value = DMFInsert1024(MoreLoads, dl, DAG);
 
   SDValue Dmr0Sub = DAG.getTargetConstant(PPC::sub_dmr0, dl, MVT::i32);
   SDValue Dmr1Sub = DAG.getTargetConstant(PPC::sub_dmr1, dl, MVT::i32);
@@ -12078,7 +12062,7 @@ SDValue PPCTargetLowering::LowerDMFVectorLoad(SDValue Op,
   SDValue DmrPRC = DAG.getTargetConstant(PPC::DMRpRCRegClassID, dl, MVT::i32);
   const SDValue DmrPOps[] = {DmrPRC, Value, Dmr0Sub, Dmr1Value, Dmr1Sub};
 
-  DmrPValue = SDValue(
+  SDValue DmrPValue = SDValue(
       DAG.getMachineNode(PPC::REG_SEQUENCE, dl, MVT::v2048i1, DmrPOps), 0);
 
   return DAG.getMergeValues({DmrPValue, TF}, dl);
@@ -14723,17 +14707,18 @@ static int getEstimateRefinementSteps(EVT VT, const PPCSubtarget &Subtarget) {
 }
 
 SDValue PPCTargetLowering::getSqrtInputTest(SDValue Op, SelectionDAG &DAG,
-                                            const DenormalMode &Mode) const {
+                                            const DenormalMode &Mode,
+                                            SDNodeFlags Flags) const {
   // We only have VSX Vector Test for software Square Root.
   EVT VT = Op.getValueType();
   if (!isTypeLegal(MVT::i1) ||
       (VT != MVT::f64 &&
        ((VT != MVT::v2f64 && VT != MVT::v4f32) || !Subtarget.hasVSX())))
-    return TargetLowering::getSqrtInputTest(Op, DAG, Mode);
+    return TargetLowering::getSqrtInputTest(Op, DAG, Mode, Flags);
 
   SDLoc DL(Op);
   // The output register of FTSQRT is CR field.
-  SDValue FTSQRT = DAG.getNode(PPCISD::FTSQRT, DL, MVT::i32, Op);
+  SDValue FTSQRT = DAG.getNode(PPCISD::FTSQRT, DL, MVT::i32, Op, Flags);
   // ftsqrt BF,FRB
   // Let e_b be the unbiased exponent of the double-precision
   // floating-point operand in register FRB.

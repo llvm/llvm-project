@@ -960,6 +960,7 @@ const char *vTableClassNameForType(const CIRGenModule &cgm, const Type *ty) {
 
   case Type::Builtin:
   case Type::BitInt:
+  case Type::OverflowBehavior:
   // GCC treats vector and complex types as fundamental types.
   case Type::Vector:
   case Type::ExtVector:
@@ -1386,6 +1387,9 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::buildTypeInfo(
     break;
 
   case Type::BitInt:
+    break;
+
+  case Type::OverflowBehavior:
     break;
 
   case Type::ConstantArray:

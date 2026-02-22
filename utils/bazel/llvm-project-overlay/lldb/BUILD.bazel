@@ -136,6 +136,9 @@ expand_template(
         "#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H": "#define CURSES_HAVE_NCURSES_CURSES_H 0",
         "#cmakedefine01 LLDB_ENABLE_FBSDVMCORE": "#define LLDB_ENABLE_FBSDVMCORE 0",
 
+        # TODO: treesitter support
+        "#cmakedefine01 LLDB_ENABLE_TREESITTER": "#define LLDB_ENABLE_TREESITTER 0",
+
         # Defaults that could be configurable if needed
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
         "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
@@ -385,6 +388,7 @@ cc_library(
     name = "DataFormattersHeaders",
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
     includes = ["include"],
+    textual_hdrs = glob(["include/lldb/DataFormatters/**/*.def"]),
 )
 
 cc_library(

@@ -216,15 +216,11 @@ protected:
 };
 
 struct SpirvLoadGatherInstruction : public LoadGatherInstructionInterface {
-  int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const override {
-    return 16;
-  }
+  int32_t getMaxLaneLoadSize(int32_t bitWidth) const override { return 16; }
 };
 
 struct SpirvStoreScatterInstruction : public StoreScatterInstructionInterface {
-  int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const override {
-    return 16;
-  }
+  int32_t getMaxLaneStoreSize(int32_t bitWidth) const override { return 16; }
 };
 
 //===----------------------------------------------------------------------===//

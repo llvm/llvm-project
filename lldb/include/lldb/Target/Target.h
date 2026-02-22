@@ -800,6 +800,12 @@ public:
   const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
   GetScriptedFrameProviderDescriptors() const;
 
+protected:
+  /// Invalidate all potentially cached frame providers for all threads
+  /// and trigger a stack changed event for all threads.
+  void InvalidateThreadFrameProviders();
+
+public:
   // This part handles the breakpoints.
 
   BreakpointList &GetBreakpointList(bool internal = false);
