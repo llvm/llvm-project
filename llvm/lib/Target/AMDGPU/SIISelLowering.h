@@ -438,7 +438,7 @@ public:
     CallLoweringInfo &CLI,
     CCState &CCInfo,
     const SIMachineFunctionInfo &Info,
-    SmallVectorImpl<std::pair<unsigned, SDValue>> &RegsToPass,
+    SmallVectorImpl<std::pair<Register, SDValue>> &RegsToPass,
     SmallVectorImpl<SDValue> &MemOpChains,
     SDValue Chain) const;
 

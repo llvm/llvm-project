@@ -3337,6 +3337,96 @@ void SITargetLowering::insertCopiesSplitCSR(
   }
 }
 
+/// Classes for spilling inreg VGPR arguments.
+///
+/// When an argument marked inreg is pushed to a VGPR, it indicates that the
+/// available SGPRs for argument passing have been exhausted. In such cases, it
+/// is preferable to pack multiple inreg arguments into individual lanes of
+/// VGPRs instead of assigning each directly to separate VGPRs.
+///
+/// Spilling involves two parts: the caller-side (call site) and the
+/// callee-side. Both must follow the same method for selecting registers and
+/// lanes, ensuring that an argument written at the call site matches exactly
+/// with the one read at the callee.
+
+/// The spilling class for the caller-side that lowers packing of call site
+/// arguments.
+class InregVPGRSpillerCallee {
+  CCState &State;
+  SelectionDAG &DAG;
+  MachineFunction &MF;
+
+  Register SrcReg;
+  SDValue SrcVal;
+  unsigned CurLane = 0;
+
+public:
+  InregVPGRSpillerCallee(SelectionDAG &DAG, MachineFunction &MF, CCState &State)
+      : State(State), DAG(DAG), MF(MF) {}
+
+  SDValue readLane(SDValue Chain, const SDLoc &SL, Register &Reg, EVT VT) {
+    if (SrcVal) {
+      State.DeallocateReg(Reg);
+    } else {
+      Reg = MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
+      SrcReg = Reg;
+      SrcVal = DAG.getCopyFromReg(Chain, SL, Reg, VT);
+    }
+    // According to the calling convention, VGPR0-31 are used for passing
+    // function arguments, no matter they are regular arguments, or 'inreg'
+    // function arguments that get spilled into VGPRs. Therefore, there are at
+    // most 32 'inreg' arguments that can be spilled to VGPRs.
+    assert(CurLane < 32 && "more than expected VGPR inreg arguments");
+    SmallVector<SDValue, 4> Operands{
+        DAG.getTargetConstant(Intrinsic::amdgcn_readlane, SL, MVT::i32),
+        DAG.getRegister(SrcReg, VT),
+        DAG.getTargetConstant(CurLane++, SL, MVT::i32)};
+    return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, VT, Operands);
+  }
+};
+
+/// The spilling class for the caller-side that lowers packing of call site
+/// arguments.
+class InregVPGRSpillerCallSite {
+  Register DstReg;
+  SDValue LastWrite;
+  unsigned CurLane = 0;
+
+  SelectionDAG &DAG;
+  MachineFunction &MF;
+
+public:
+  InregVPGRSpillerCallSite(SelectionDAG &DAG, MachineFunction &MF)
+      : DAG(DAG), MF(MF) {}
+
+  void writeLane(const SDLoc &SL, Register &Reg, SDValue Val, EVT VT) {
+    if (DstReg.isValid())
+      Reg = DstReg;
+    else
+      DstReg = Reg;
+    // According to the calling convention, VGPR0-31 are used for passing
+    // function arguments, no matter they are regular arguments, or 'inreg'
+    // function arguments that get spilled into VGPRs. Therefore, there are at
+    // most 32 'inreg' arguments that can be spilled to VGPRs.
+    assert(CurLane < 32 && "more than expected VGPR inreg arguments");
+    SmallVector<SDValue, 4> Operands{
+        DAG.getTargetConstant(Intrinsic::amdgcn_writelane, SL, MVT::i32), Val,
+        DAG.getTargetConstant(CurLane++, SL, MVT::i32)};
+    if (!LastWrite) {
+      Register VReg = MF.getRegInfo().getLiveInVirtReg(DstReg);
+      LastWrite = DAG.getRegister(VReg, VT);
+    }
+    Operands.push_back(LastWrite);
+    LastWrite = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, SL, VT, Operands);
+  }
+
+  SDValue finalize(SDValue Chain, const SDLoc &SL, SDValue InGlue) {
+    if (!LastWrite)
+      return LastWrite;
+    return DAG.getCopyToReg(Chain, SL, DstReg, LastWrite, InGlue);
+  }
+};
+
 SDValue SITargetLowering::LowerFormalArguments(
     SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
@@ -3478,6 +3568,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   // FIXME: Alignment of explicit arguments totally broken with non-0 explicit
   // kern arg offset.
   const Align KernelArgBaseAlign = Align(16);
+  InregVPGRSpillerCallee Spiller(DAG, MF, CCInfo);
 
   for (unsigned i = IsWholeWaveFunc ? 1 : 0, e = Ins.size(), ArgIdx = 0; i != e;
        ++i) {
@@ -3644,8 +3735,17 @@ SDValue SITargetLowering::LowerFormalArguments(
     else
       llvm_unreachable("Unexpected register class in LowerFormalArguments!");
 
-    Reg = MF.addLiveIn(Reg, RC);
-    SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    SDValue Val;
+    // If an argument is marked inreg but gets pushed to a VGPR, it indicates
+    // we've run out of SGPRs for argument passing. In such cases, we'd prefer
+    // to start packing inreg arguments into individual lanes of VGPRs, rather
+    // than placing them directly into VGPRs.
+    if (RC == &AMDGPU::VGPR_32RegClass && Arg.Flags.isInReg()) {
+      Val = Spiller.readLane(Chain, DL, Reg, VT);
+    } else {
+      Reg = MF.addLiveIn(Reg, RC);
+      Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
+    }
 
     if (Arg.Flags.isSRet()) {
       // The return object should be reasonably addressable.
@@ -3876,7 +3976,7 @@ SDValue SITargetLowering::LowerCallResult(
 // from the explicit user arguments present in the IR.
 void SITargetLowering::passSpecialInputs(
     CallLoweringInfo &CLI, CCState &CCInfo, const SIMachineFunctionInfo &Info,
-    SmallVectorImpl<std::pair<unsigned, SDValue>> &RegsToPass,
+    SmallVectorImpl<std::pair<Register, SDValue>> &RegsToPass,
     SmallVectorImpl<SDValue> &MemOpChains, SDValue Chain) const {
   // If we don't have a call site, this was a call inserted by
   // legalization. These can never use special inputs.
@@ -4315,7 +4415,7 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   }
 
   const SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
-  SmallVector<std::pair<unsigned, SDValue>, 8> RegsToPass;
+  SmallVector<std::pair<Register, SDValue>, 8> RegsToPass;
   SmallVector<SDValue, 8> MemOpChains;
 
   // Analyze operands of the call, assigning locations to each operand.
@@ -4373,6 +4473,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   const unsigned NumSpecialInputs = RegsToPass.size();
 
   MVT PtrVT = MVT::i32;
+
+  InregVPGRSpillerCallSite Spiller(DAG, MF);
 
   // Walk the register/memloc assignments, inserting copies/loads.
   for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
@@ -4487,8 +4589,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
   SDValue InGlue;
 
   unsigned ArgIdx = 0;
-  for (auto [Reg, Val] : RegsToPass) {
-    if (ArgIdx++ >= NumSpecialInputs &&
+  for (auto &[Reg, Val] : RegsToPass) {
+    if (ArgIdx >= NumSpecialInputs &&
         (IsChainCallConv || !Val->isDivergent()) && TRI->isSGPRPhysReg(Reg)) {
       // For chain calls, the inreg arguments are required to be
       // uniform. Speculatively Insert a readfirstlane in case we cannot prove
@@ -4507,7 +4609,21 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
                         ReadfirstlaneArgs);
     }
 
-    Chain = DAG.getCopyToReg(Chain, DL, Reg, Val, InGlue);
+    if (ArgIdx >= NumSpecialInputs &&
+        Outs[ArgIdx - NumSpecialInputs].Flags.isInReg() &&
+        AMDGPU::VGPR_32RegClass.contains(Reg)) {
+      Spiller.writeLane(DL, Reg, Val,
+                    ArgLocs[ArgIdx - NumSpecialInputs].getLocVT());
+    } else {
+      Chain = DAG.getCopyToReg(Chain, DL, Reg, Val, InGlue);
+      InGlue = Chain.getValue(1);
+    }
+
+    ++ArgIdx;
+  }
+
+  if (SDValue R = Spiller.finalize(Chain, DL, InGlue)) {
+    Chain = R;
     InGlue = Chain.getValue(1);
   }
 
