@@ -1803,7 +1803,7 @@ void DevirtModule::applyUniqueRetValOpt(CallSiteInfo &CSInfo, StringRef FnName,
 }
 
 Constant *DevirtModule::getMemberAddr(const TypeMemberInfo *M) {
-  return ConstantExpr::getPtrAdd(M->Bits->GV,
+  return ConstantExpr::getPtrAdd(this->M.getDataLayout(), M->Bits->GV,
                                  ConstantInt::get(Int64Ty, M->Offset));
 }
 

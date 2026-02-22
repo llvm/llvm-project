@@ -2575,6 +2575,15 @@ Constant *ConstantExpr::getGetElementPtr(Type *Ty, Constant *C,
   return pImpl->ExprConstants.getOrCreate(ReqTy, Key);
 }
 
+Constant *ConstantExpr::getPtrAdd(const DataLayout &DL, Constant *Ptr,
+                                  Constant *Offset, GEPNoWrapFlags NW,
+                                  std::optional<ConstantRange> InRange,
+                                  Type *OnlyIfReduced) {
+  unsigned ByteWidth = DL.getByteWidth();
+  return getGetElementPtr(Type::getIntNTy(Ptr->getContext(), ByteWidth), Ptr,
+                          Offset, NW, InRange, OnlyIfReduced);
+}
+
 Constant *ConstantExpr::getExtractElement(Constant *Val, Constant *Idx,
                                           Type *OnlyIfReducedTy) {
   assert(Val->getType()->isVectorTy() &&

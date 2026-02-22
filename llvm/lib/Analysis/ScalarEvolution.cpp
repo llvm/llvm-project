@@ -9986,7 +9986,7 @@ const SCEV *ScalarEvolution::getSCEVAtScope(const SCEV *V, const Loop *L) {
 /// will return Constants for objects which aren't represented by a
 /// SCEVConstant, because SCEVConstant is restricted to ConstantInt.
 /// Returns NULL if the SCEV isn't representable as a Constant.
-static Constant *BuildConstantFromSCEV(const SCEV *V) {
+static Constant *BuildConstantFromSCEV(const SCEV *V, const DataLayout &DL) {
   switch (V->getSCEVType()) {
   case scCouldNotCompute:
   case scAddRecExpr:
@@ -9998,21 +9998,21 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
     return dyn_cast<Constant>(cast<SCEVUnknown>(V)->getValue());
   case scPtrToAddr: {
     const SCEVPtrToAddrExpr *P2I = cast<SCEVPtrToAddrExpr>(V);
-    if (Constant *CastOp = BuildConstantFromSCEV(P2I->getOperand()))
+    if (Constant *CastOp = BuildConstantFromSCEV(P2I->getOperand(), DL))
       return ConstantExpr::getPtrToAddr(CastOp, P2I->getType());
 
     return nullptr;
   }
   case scPtrToInt: {
     const SCEVPtrToIntExpr *P2I = cast<SCEVPtrToIntExpr>(V);
-    if (Constant *CastOp = BuildConstantFromSCEV(P2I->getOperand()))
+    if (Constant *CastOp = BuildConstantFromSCEV(P2I->getOperand(), DL))
       return ConstantExpr::getPtrToInt(CastOp, P2I->getType());
 
     return nullptr;
   }
   case scTruncate: {
     const SCEVTruncateExpr *ST = cast<SCEVTruncateExpr>(V);
-    if (Constant *CastOp = BuildConstantFromSCEV(ST->getOperand()))
+    if (Constant *CastOp = BuildConstantFromSCEV(ST->getOperand(), DL))
       return ConstantExpr::getTrunc(CastOp, ST->getType());
     return nullptr;
   }
@@ -10020,7 +10020,7 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
     const SCEVAddExpr *SA = cast<SCEVAddExpr>(V);
     Constant *C = nullptr;
     for (const SCEV *Op : SA->operands()) {
-      Constant *OpC = BuildConstantFromSCEV(Op);
+      Constant *OpC = BuildConstantFromSCEV(Op, DL);
       if (!OpC)
         return nullptr;
       if (!C) {
@@ -10030,9 +10030,9 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
       assert(!C->getType()->isPointerTy() &&
              "Can only have one pointer, and it must be last");
       if (OpC->getType()->isPointerTy()) {
-        // The offsets have been converted to bytes.  We can add bytes using
-        // an i8 GEP.
-        C = ConstantExpr::getPtrAdd(OpC, C);
+        // The offsets have been converted to bytes. We can add bytes using
+        // a ptradd.
+        C = ConstantExpr::getPtrAdd(DL, OpC, C);
       } else {
         C = ConstantExpr::getAdd(C, OpC);
       }
@@ -10265,7 +10265,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
       const SCEV *OpV = getSCEVAtScope(OrigV, L);
       MadeImprovement |= OrigV != OpV;
 
-      Constant *C = BuildConstantFromSCEV(OpV);
+      Constant *C = BuildConstantFromSCEV(OpV, DL);
       if (!C)
         return V;
       assert(C->getType() == Op->getType() && "Type mismatch");

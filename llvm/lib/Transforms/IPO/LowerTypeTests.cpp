@@ -645,7 +645,8 @@ void LowerTypeTestsModule::allocateByteArrays() {
   for (unsigned I = 0; I != ByteArrayInfos.size(); ++I) {
     ByteArrayInfo *BAI = &ByteArrayInfos[I];
     Constant *GEP = ConstantExpr::getInBoundsPtrAdd(
-        ByteArray, ConstantInt::get(IntPtrTy, ByteArrayOffsets[I]));
+        M.getDataLayout(), ByteArray,
+        ConstantInt::get(IntPtrTy, ByteArrayOffsets[I]));
 
     // Create an alias instead of RAUW'ing the gep directly. On x86 this ensures
     // that the pc-relative displacement is folded into the lea instead of the
@@ -1192,8 +1193,9 @@ void LowerTypeTestsModule::lowerTypeTestCalls(
 
     uint64_t GlobalOffset =
         BSI.ByteOffset + ((BSI.BitSize - 1) << BSI.AlignLog2);
-    TIL.OffsetedGlobal = ConstantExpr::getPtrAdd(
-        CombinedGlobalAddr, ConstantInt::get(IntPtrTy, GlobalOffset)),
+    TIL.OffsetedGlobal =
+        ConstantExpr::getPtrAdd(M.getDataLayout(), CombinedGlobalAddr,
+                                ConstantInt::get(IntPtrTy, GlobalOffset)),
     TIL.AlignLog2 = ConstantInt::get(IntPtrTy, BSI.AlignLog2);
     TIL.SizeM1 = ConstantInt::get(IntPtrTy, BSI.BitSize - 1);
     if (BSI.isAllOnes()) {

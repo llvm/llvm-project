@@ -984,7 +984,7 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // Otherwise canonicalize this to a single ptradd.
   LLVMContext &Ctx = Ptr->getContext();
-  return ConstantExpr::getPtrAdd(Ptr, ConstantInt::get(Ctx, Offset), NW,
+  return ConstantExpr::getPtrAdd(DL, Ptr, ConstantInt::get(Ctx, Offset), NW,
                                  InRange);
 }
 
