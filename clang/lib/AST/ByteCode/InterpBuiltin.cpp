@@ -4186,7 +4186,7 @@ static bool interp__builtin_x86_comi(InterpState &S, CodePtr OpPC,
 static bool interp__builtin_x86_cmp(InterpState &S, CodePtr OpPC,
                                     const InterpFrame *Frame,
                                     const CallExpr *Call, unsigned ID) {
-  const bool HasImmArg =
+  bool HasImmArg =
       ID == X86::BI__builtin_ia32_cmpps || ID == X86::BI__builtin_ia32_cmppd ||
       ID == X86::BI__builtin_ia32_cmpps256 ||
       ID == X86::BI__builtin_ia32_cmppd256 ||

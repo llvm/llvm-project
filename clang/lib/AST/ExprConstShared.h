@@ -31,13 +31,6 @@ class ASTContext;
 class CharUnits;
 class Expr;
 
-struct FPCompareFlags {
-  bool IsUnordered;
-  bool IsEq;
-  bool IsGt;
-  bool IsLt;
-};
-
 // SSE/AVX floating-point comparison immediates
 namespace X86CmpImm {
 constexpr uint32_t CMP_EQ_OQ = 0x00; // Equal (ordered, quiet)
@@ -82,8 +75,7 @@ constexpr uint32_t CMP_TRUE_US = 0x1F; // True (unordered, signaling)
 } // namespace X86CmpImm
 
 // Return true if immediate and the comparison flags are matching
-bool MatchesPredicate(const uint32_t Imm,
-                      const llvm::APFloatBase::cmpResult CompareResult);
+bool MatchesPredicate(uint32_t Imm, llvm::APFloatBase::cmpResult CompareResult);
 } // namespace clang
 
 using namespace clang;
