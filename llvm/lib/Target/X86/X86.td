@@ -145,6 +145,9 @@ def FeatureVBMI     : SubtargetFeature<"avx512vbmi", "HasVBMI", "true",
 def FeatureVBMI2    : SubtargetFeature<"avx512vbmi2", "HasVBMI2", "true",
                       "Enable AVX-512 further Vector Byte Manipulation Instructions",
                                       [FeatureBWI]>;
+def FeatureBMM      : SubtargetFeature<"avx512bmm", "HasBMM", "true",
+                      "Enable AVX512 Bit Matrix Multiply",
+                                      [FeatureBWI]>;
 def FeatureAVXIFMA    : SubtargetFeature<"avxifma", "HasAVXIFMA", "true",
                            "Enable AVX-IFMA",
                            [FeatureAVX2]>;
@@ -1636,7 +1639,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> ZN6AdditionalFeatures = [FeatureFP16,
                                                   FeatureAVXVNNIINT8,
                                                   FeatureAVXNECONVERT,
-                                                  FeatureAVXIFMA
+                                                  FeatureAVXIFMA,
+                                                  FeatureBMM
                                                   ];
   list<SubtargetFeature> ZN6Features =
     !listconcat(ZN5Features, ZN6AdditionalFeatures);

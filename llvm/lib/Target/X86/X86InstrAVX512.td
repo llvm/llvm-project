@@ -11320,6 +11320,41 @@ multiclass avx512_unary_rmb<bits<8> opc, string OpcodeStr, SDNode OpNode,
              Sched<[sched.Folded]>;
 }
 
+// Variant of avx512_unary_rm that requires aligned memory operands
+multiclass avx512_unary_rm_aligned<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                                   X86FoldableSchedWrite sched, X86VectorVTInfo _> {
+  let ExeDomain = _.ExeDomain in {
+  defm rr : AVX512_maskable<opc, MRMSrcReg, _, (outs _.RC:$dst),
+                    (ins _.RC:$src1), OpcodeStr,
+                    "$src1", "$src1",
+                    (_.VT (OpNode (_.VT _.RC:$src1)))>, EVEX, AVX5128IBase,
+                    Sched<[sched]>;
+
+  let mayLoad = 1 in
+  defm rm : AVX512_maskable<opc, MRMSrcMem, _, (outs _.RC:$dst),
+                  (ins _.MemOp:$src1), OpcodeStr,
+                  "$src1", "$src1",
+                  (_.VT (OpNode (_.VT (bitconvert (_.AlignedLdFrag addr:$src1)))))>,
+            EVEX, AVX5128IBase, EVEX_CD8<_.EltSize, CD8VF>,
+            Sched<[sched.Folded]>;
+  }
+}
+
+multiclass avx512_unary_rm_vl_aligned<bits<8> opc, string OpcodeStr, SDNode OpNode,
+                                      X86SchedWriteWidths sched,
+                                      AVX512VLVectorVTInfo VTInfo, Predicate prd> {
+  let Predicates = [prd] in
+    defm Z : avx512_unary_rm_aligned<opc, OpcodeStr, OpNode, sched.ZMM, VTInfo.info512>,
+                                     EVEX_V512;
+
+  let Predicates = [prd, HasVLX] in {
+    defm Z256 : avx512_unary_rm_aligned<opc, OpcodeStr, OpNode, sched.YMM, VTInfo.info256>,
+                                        EVEX_V256;
+    defm Z128 : avx512_unary_rm_aligned<opc, OpcodeStr, OpNode, sched.XMM, VTInfo.info128>,
+                                        EVEX_V128;
+  }
+}
+
 multiclass avx512_unary_rm_vl<bits<8> opc, string OpcodeStr, SDNode OpNode,
                               X86SchedWriteWidths sched,
                               AVX512VLVectorVTInfo VTInfo, Predicate prd> {
@@ -13764,3 +13799,29 @@ let Uses = [MXCSR] in {
   defm VFCMULCSHZ : avx512_cfmbinop_sh_common<0xD7, "vfcmulcsh", x86vfcmulcSh, x86vfcmulcShRnd, 0>,
                                     T_MAP6, XD, EVEX_CD8<32, CD8VT1>, EVEX_V128, VEX_LIG, EVEX, VVVV;
 }
+
+// VPBITREVB - BMM bit reverse instructions
+// Basic instruction patterns for BMM (Bit Matrix Multiply)
+defm VPBITREVB : avx512_unary_rm_vl<0x81, "vbitrevb", bitreverse, SchedWriteVecALU,
+                                    avx512vl_i8_info, HasBMM>, T_MAP6, PS;
+
+defm : avx512_unary_lowering<"VPBITREVB", bitreverse, avx512vl_i8_info, HasBMM>;
+
+// VBMACOR, VBMACXOR - BMM matrix multiplication instructions
+// VBMACOR: EVEX.256.NP.MAP6.W0 80 /r, EVEX.512.NP.MAP6.W0 80 /r
+let Predicates = [HasBMM, HasVLX] in
+defm VBMACORZ256 : VNNI_rmb<0x80, "vbmacor16x16x16", x86vbmacor, SchedWriteVecIMul.YMM, v16i16x_info, 0>,
+                   EVEX_V256, T_MAP6;
+
+let Predicates = [HasBMM] in
+defm VBMACORZ : VNNI_rmb<0x80, "vbmacor16x16x16", x86vbmacor, SchedWriteVecIMul.ZMM, v32i16_info, 0>,
+                EVEX_V512, T_MAP6;
+
+// VBMACXOR: EVEX.256.NP.MAP6.W1 80 /r, EVEX.512.NP.MAP6.W1 80 /r
+let Predicates = [HasBMM, HasVLX] in
+defm VBMACXORZ256 : VNNI_rmb<0x80, "vbmacxor16x16x16", x86vbmacxor, SchedWriteVecIMul.YMM, v16i16x_info, 0>,
+                    EVEX_V256, T_MAP6, REX_W;
+
+let Predicates = [HasBMM] in
+defm VBMACXORZ : VNNI_rmb<0x80, "vbmacxor16x16x16", x86vbmacxor, SchedWriteVecIMul.ZMM, v32i16_info, 0>,
+                 EVEX_V512, T_MAP6, REX_W;

@@ -2311,6 +2311,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       for (auto VT : { MVT::v16i8, MVT::v32i8, MVT::v8i16, MVT::v16i16 })
         setOperationAction(ISD::CTPOP, VT, Legal);
     }
+
+    if (Subtarget.hasBMM()) {
+      for (auto VT : {MVT::v16i8, MVT::v32i8, MVT::v64i8})
+        setOperationAction(ISD::BITREVERSE, VT, Legal);
+    }
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasFP16()) {
@@ -33250,6 +33255,11 @@ static SDValue LowerBITREVERSE(SDValue Op, const X86Subtarget &Subtarget,
 
   unsigned NumElts = VT.getVectorNumElements();
 
+  // If we have BMM, BITREVERSE on vXi8 is marked Legal and will be handled
+  // by TableGen pattern matching to VPBITREVB instruction. We should not
+  // reach here in that case.
+  assert(!Subtarget.hasBMM() && "BMM should use Legal operation action");
+
   // If we have GFNI, we can use GF2P8AFFINEQB to reverse the bits.
   if (Subtarget.hasGFNI()) {
     SDValue Matrix = getGFNICtrlMask(ISD::BITREVERSE, DAG, DL, VT);
@@ -36080,6 +36090,8 @@ const char *X86TargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(POP_FROM_X87_REG)
   NODE_NAME_CASE(TC_RETURN_GLOBALADDR)
   NODE_NAME_CASE(CALL_GLOBALADDR)
+  NODE_NAME_CASE(VBMACOR)
+  NODE_NAME_CASE(VBMACXOR)
   }
   return nullptr;
 #undef NODE_NAME_CASE
