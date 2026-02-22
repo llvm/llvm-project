@@ -132,14 +132,6 @@ option(MLIR_ENABLE_EXECUTION_ENGINE
        "Enable building the MLIR Execution Engine."
        ${MLIR_ENABLE_EXECUTION_ENGINE_default})
 
-# Build the ROCm conversions and run according tests if the AMDGPU backend
-# is available.
-if ("AMDGPU" IN_LIST LLVM_TARGETS_TO_BUILD)
-  set(MLIR_ENABLE_ROCM_CONVERSIONS 1)
-else()
-  set(MLIR_ENABLE_ROCM_CONVERSIONS 0)
-endif()
-
 # Build the XeVM conversions and run according tests if the SPIRV backend
 # is available.
 if ("SPIRV" IN_LIST LLVM_TARGETS_TO_BUILD)
