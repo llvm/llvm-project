@@ -1093,6 +1093,24 @@ bool WebAssemblyFastISel::selectZExt(const Instruction *I) {
   return true;
 }
 
+static bool isSignExtLoad(const MachineInstr *LI) {
+  switch (LI->getOpcode()) {
+  default:
+    return false;
+  case WebAssembly::LOAD8_S_I32_A32:
+  case WebAssembly::LOAD8_S_I32_A64:
+  case WebAssembly::LOAD16_S_I32_A32:
+  case WebAssembly::LOAD16_S_I32_A64:
+  case WebAssembly::LOAD8_S_I64_A32:
+  case WebAssembly::LOAD8_S_I64_A64:
+  case WebAssembly::LOAD16_S_I64_A32:
+  case WebAssembly::LOAD16_S_I64_A64:
+  case WebAssembly::LOAD32_S_I64_A32:
+  case WebAssembly::LOAD32_S_I64_A64:
+    return true;
+  }
+}
+
 bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   const auto *SExt = cast<SExtInst>(I);
 
@@ -1102,6 +1120,16 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   Register In = getRegForValue(Op);
   if (In == 0)
     return false;
+
+  MachineInstr *MI = MRI.getUniqueVRegDef(In);
+  if (MI && isSignExtLoad(MI)) {
+    // The load instruction has already been folded into a signed load
+    // by selectLoad, so we don't need to emit any extension instruction.
+    // Just map the result of this SExt to the signed load register.
+    updateValueMap(I, In);
+    return true;
+  }
+
   unsigned Reg = signExtend(In, Op, From, To);
   if (Reg == 0)
     return false;
@@ -1280,24 +1308,55 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
   if (!computeAddress(Load->getPointerOperand(), Addr))
     return false;
 
-  // TODO: Fold a following sign-/zero-extend into the load instruction.
+  // Fold sext(load)
+  const Value *Ext = nullptr;
+  MVT::SimpleValueType ExtVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
+  bool FoldExt = false;
+  if (Load->hasOneUse()) {
+    if ((Ext = dyn_cast<SExtInst>(*Load->user_begin()))) {
+      ExtVT = getSimpleType(Ext->getType());
+      FoldExt = true;
+    }
+  }
 
+  // TODO: Fold a following zero-extend into the load instruction.
   unsigned Opc;
   const TargetRegisterClass *RC;
   bool A64 = Subtarget->hasAddr64();
   switch (getSimpleType(Load->getType())) {
   case MVT::i1:
   case MVT::i8:
-    Opc = A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
-    RC = &WebAssembly::I32RegClass;
+    if (FoldExt && ExtVT == MVT::i64) {
+      Opc = A64 ? WebAssembly::LOAD8_S_I64_A64 : WebAssembly::LOAD8_S_I64_A32;
+      RC = &WebAssembly::I64RegClass;
+    } else if (FoldExt && ExtVT == MVT::i32) {
+      Opc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    } else {
+      Opc = A64 ? WebAssembly::LOAD8_U_I32_A64 : WebAssembly::LOAD8_U_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    }
     break;
   case MVT::i16:
-    Opc = A64 ? WebAssembly::LOAD16_U_I32_A64 : WebAssembly::LOAD16_U_I32_A32;
-    RC = &WebAssembly::I32RegClass;
+    if (FoldExt && ExtVT == MVT::i64) {
+      Opc = A64 ? WebAssembly::LOAD16_S_I64_A64 : WebAssembly::LOAD16_S_I64_A32;
+      RC = &WebAssembly::I64RegClass;
+    } else if (FoldExt && ExtVT == MVT::i32) {
+      Opc = A64 ? WebAssembly::LOAD16_S_I32_A64 : WebAssembly::LOAD16_S_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    } else {
+      Opc = A64 ? WebAssembly::LOAD16_U_I32_A64 : WebAssembly::LOAD16_U_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    }
     break;
   case MVT::i32:
-    Opc = A64 ? WebAssembly::LOAD_I32_A64 : WebAssembly::LOAD_I32_A32;
-    RC = &WebAssembly::I32RegClass;
+    if (FoldExt && ExtVT == MVT::i64) {
+      Opc = A64 ? WebAssembly::LOAD32_S_I64_A64 : WebAssembly::LOAD32_S_I64_A32;
+      RC = &WebAssembly::I64RegClass;
+    } else {
+      Opc = A64 ? WebAssembly::LOAD_I32_A64 : WebAssembly::LOAD_I32_A32;
+      RC = &WebAssembly::I32RegClass;
+    }
     break;
   case MVT::i64:
     Opc = A64 ? WebAssembly::LOAD_I64_A64 : WebAssembly::LOAD_I64_A32;
@@ -1323,6 +1382,18 @@ bool WebAssemblyFastISel::selectLoad(const Instruction *I) {
 
   addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(Load));
 
+  if (FoldExt) {
+    Register ExtReg = lookUpRegForValue(Ext);
+    if (ExtReg) {
+      if (MachineInstr *ExtMI = MRI.getUniqueVRegDef(ExtReg)) {
+        MRI.replaceRegWith(ExtReg, ResultReg);
+        MachineBasicBlock::iterator ExtIter = ExtMI->getIterator();
+        removeDeadCode(ExtIter, std::next(ExtIter));
+      }
+    }
+    updateValueMap(Ext, ResultReg);
+    return true;
+  }
   updateValueMap(Load, ResultReg);
   return true;
 }

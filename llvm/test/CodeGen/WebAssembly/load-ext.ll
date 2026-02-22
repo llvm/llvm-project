@@ -6,11 +6,8 @@
 ; Test that extending loads are assembled properly.
 
 ; CHECK-LABEL: sext_i8_i32:
-; DAG: i32.load8_s $push0=, 0($0){{$}}
-; DAG-NEXT: return $pop0{{$}}
-; FAST:      i32.load8_u   $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.extend8_s $push[[EXT:[0-9]+]]=, $pop[[L]]
-; FAST-NEXT: return        $pop[[EXT]]
+; CHECK: i32.load8_s $push0=, 0($0){{$}}
+; CHECK-NEXT: return $pop0{{$}}
 define i32 @sext_i8_i32(ptr %p) {
   %v = load i8, ptr %p
   %e = sext i8 %v to i32
@@ -31,11 +28,8 @@ define i32 @zext_i8_i32(ptr %p) {
 }
 
 ; CHECK-LABEL: sext_i16_i32:
-; DAG: i32.load16_s $push0=, 0($0){{$}}
-; DAG-NEXT: return $pop0{{$}}
-; FAST:      i32.load16_u   $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i32.extend16_s $push[[EXT:[0-9]+]]=, $pop[[L]]
-; FAST-NEXT: return         $pop[[EXT]]
+; CHECK: i32.load16_s $push0=, 0($0){{$}}
+; CHECK-NEXT: return $pop0{{$}}
 define i32 @sext_i16_i32(ptr %p) {
   %v = load i16, ptr %p
   %e = sext i16 %v to i32
@@ -56,12 +50,8 @@ define i32 @zext_i16_i32(ptr %p) {
 }
 
 ; CHECK-LABEL: sext_i8_i64:
-; DAG: i64.load8_s $push0=, 0($0){{$}}
-; DAG-NEXT: return $pop0{{$}}
-; FAST:      i32.load8_u      $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i64.extend_i32_u $push[[EXT32:[0-9]+]]=, $pop[[L]]
-; FAST-NEXT: i64.extend8_s    $push[[EXT8:[0-9]+]]=, $pop[[EXT32]]
-; FAST-NEXT: return           $pop[[EXT8]]
+; CHECK: i64.load8_s $push0=, 0($0){{$}}
+; CHECK-NEXT: return $pop0{{$}}
 define i64 @sext_i8_i64(ptr %p) {
   %v = load i8, ptr %p
   %e = sext i8 %v to i64
@@ -83,12 +73,8 @@ define i64 @zext_i8_i64(ptr %p) {
 }
 
 ; CHECK-LABEL: sext_i16_i64:
-; DAG: i64.load16_s $push0=, 0($0){{$}}
-; DAG-NEXT: return $pop0{{$}}
-; FAST:      i32.load16_u     $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i64.extend_i32_u $push[[EXT32:[0-9]+]]=, $pop[[L]]
-; FAST-NEXT: i64.extend16_s   $push[[EXT16:[0-9]+]]=, $pop[[EXT32]]
-; FAST-NEXT: return           $pop[[EXT16]]
+; CHECK: i64.load16_s $push0=, 0($0){{$}}
+; CHECK-NEXT: return $pop0{{$}}
 define i64 @sext_i16_i64(ptr %p) {
   %v = load i16, ptr %p
   %e = sext i16 %v to i64
@@ -110,11 +96,8 @@ define i64 @zext_i16_i64(ptr %p) {
 }
 
 ; CHECK-LABEL: sext_i32_i64:
-; DAG: i64.load32_s $push0=, 0($0){{$}}
-; DAG-NEXT: return $pop0{{$}}
-; FAST:      i32.load         $push[[L:[0-9]+]]=, 0($0)
-; FAST-NEXT: i64.extend_i32_s $push[[EXT:[0-9]+]]=, $pop[[L]]
-; FAST-NEXT: return           $pop[[EXT]]
+; CHECK: i64.load32_s $push0=, 0($0){{$}}
+; CHECK-NEXT: return $pop0{{$}}
 define i64 @sext_i32_i64(ptr %p) {
   %v = load i32, ptr %p
   %e = sext i32 %v to i64
