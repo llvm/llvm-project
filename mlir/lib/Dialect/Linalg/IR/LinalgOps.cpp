@@ -939,6 +939,36 @@ public:
   }
 };
 
+/// Fold tensor.extract_slice(linalg.fill(<input>)) into linalg.fill(<input>)
+struct FoldFillWithTensorExtractSlice
+    : public OpRewritePattern<tensor::ExtractSliceOp> {
+public:
+  using OpRewritePattern<tensor::ExtractSliceOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractSliceOp extractSliceOp,
+                                PatternRewriter &rewriter) const override {
+    // See if tensor input of tensor.extract_slice op is the result of a
+    // linalg.fill op.
+    auto fillOp = extractSliceOp.getSource().getDefiningOp<linalg::FillOp>();
+    if (!fillOp || !fillOp->hasOneUse())
+      return failure();
+
+    Value fillInput = fillOp.value();
+
+    Location loc = extractSliceOp.getLoc();
+    SmallVector<OpFoldResult> mixedSizes = extractSliceOp.getMixedSizes();
+    auto emptyOp = rewriter.create<tensor::EmptyOp>(
+        loc, mixedSizes, extractSliceOp.getType().getElementType());
+
+    // Replace tensor.extract_slice op with new linalg.fillOp (former's result
+    // type and shape).
+    rewriter.replaceOpWithNewOp<linalg::FillOp>(
+        extractSliceOp, extractSliceOp.getResultType(), ValueRange{fillInput},
+        ValueRange{emptyOp});
+    return success();
+  }
+};
+
 /// Folds pack(fill) into a single fill op if
 ///   1. The pack op does not have padding value, or
 ///   2. The filled value and padding value are the same.
@@ -1068,11 +1098,12 @@ struct FoldConcatsOfFill : public OpRewritePattern<tensor::ConcatOp> {
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
-  results.add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithTensorExtract,
-              FoldFillWithPack, FoldFillWithPad,
+  results.add<FoldConcatsOfFill, FoldFillWithCopy, FoldFillWithPack,
+              FoldFillWithPad, FoldFillWithTensorExtract,
+              FoldFillWithTensorExtractSlice,
               FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
               FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
-              FoldInsertPadIntoFill, FoldFillWithTranspose>(context);
+              FoldFillWithTranspose, FoldInsertPadIntoFill>(context);
 }
 
 //===----------------------------------------------------------------------===//
