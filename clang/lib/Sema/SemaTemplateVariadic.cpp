@@ -1215,7 +1215,7 @@ bool Sema::containsUnexpandedParameterPacks(Declarator &D) {
       break;
     case DeclaratorChunk::Function:
       for (unsigned i = 0, e = Chunk.Fun.NumParams; i != e; ++i) {
-        auto *Param = dyn_cast_or_null<ParmVarDecl>(Chunk.Fun.Params[i].Param);
+        ParmVarDecl *Param = cast_or_null<ParmVarDecl>(Chunk.Fun.Params[i].Param);
         if (!Param)
           continue;
         QualType ParamTy = Param->getType();
