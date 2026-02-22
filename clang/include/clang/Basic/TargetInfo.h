@@ -1776,6 +1776,8 @@ public:
       default:
         return CCCR_Warning;
       case CC_C:
+      case CC_Swift:
+      case CC_SwiftAsync:
         return CCCR_OK;
     }
   }
