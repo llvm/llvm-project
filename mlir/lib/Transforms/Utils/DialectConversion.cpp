@@ -2452,7 +2452,7 @@ public:
 
   /// Returns the most recently attempted conversion pattern on this operation
   /// that failed to match.
-  std::optional<StringRef> getLastFailurePattern(Operation *op) const;
+  const Pattern *getLastFailurePattern(Operation *op) const;
 
   /// Returns the conversion target in use by the legalizer.
   const ConversionTarget &getTarget() { return target; }
@@ -2532,7 +2532,7 @@ private:
   PatternApplicator applicator;
 
   /// The last conversion pattern that failed to match for a given op.
-  DenseMap<Operation *, std::string> failedPatternByOp;
+  DenseMap<Operation *, const Pattern *> failedPatternByOp;
 };
 } // namespace
 
@@ -2553,12 +2553,11 @@ bool OperationLegalizer::isIllegal(Operation *op) const {
   return target.isIllegal(op);
 }
 
-std::optional<StringRef>
-OperationLegalizer::getLastFailurePattern(Operation *op) const {
+const Pattern *OperationLegalizer::getLastFailurePattern(Operation *op) const {
   auto it = failedPatternByOp.find(op);
   if (it == failedPatternByOp.end())
-    return std::nullopt;
-  return StringRef(it->second);
+    return nullptr;
+  return it->second;
 }
 
 LogicalResult OperationLegalizer::legalize(Operation *op) {
@@ -2793,7 +2792,7 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
   RewriterState curState = rewriterImpl.getCurrentState();
   auto onFailure = [&](const Pattern &pattern) {
     assert(rewriterImpl.pendingRootUpdates.empty() && "dangling root updates");
-    failedPatternByOp[op] = formatPatternForDiagnostics(pattern);
+    failedPatternByOp[op] = &pattern;
     if (!rewriterImpl.config.allowPatternRollback) {
       // Erase all unresolved materializations.
       for (auto op : rewriterImpl.patternMaterializations) {
@@ -3348,9 +3347,9 @@ LogicalResult OperationConverter::convert(Operation *op,
 
     diag << "; operands (" << op->getOperandTypes() << "), results ("
          << op->getResultTypes() << ")";
-    if (std::optional<StringRef> pattern =
-            opLegalizer.getLastFailurePattern(op)) {
-      diag << "; rejected by conversion pattern '" << *pattern << "'";
+    if (const Pattern *pattern = opLegalizer.getLastFailurePattern(op)) {
+      diag << "; rejected by conversion pattern '"
+           << formatPatternForDiagnostics(*pattern) << "'";
     } else {
       diag << "; no conversion pattern matched";
     }

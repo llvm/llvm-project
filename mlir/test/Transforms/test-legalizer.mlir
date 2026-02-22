@@ -224,7 +224,7 @@ func.func @bounded_recursion() {
 builtin.module {
 
   func.func @fail_to_convert_illegal_op() -> i32 {
-    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'}}
+    // expected-error@+1 {{failed to legalize operation 'test.illegal_op_f'; operands (), results ('i32'); no conversion pattern matched}}
     %result = "test.illegal_op_f"() : () -> (i32)
     return %result : i32
   }
