@@ -3486,7 +3486,7 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorName(NameState *State) {
   if (const auto *Op = parseOperatorEncoding()) {
     if (Op->getKind() == OperatorInfo::CCast) {
       //              ::= cv <type>    # (cast)
-      ScopedOverride<bool> SaveTemplate(TryToParseTemplateArgs, false);
+      ScopedOverride<bool> SaveTemplate(TryToParseTemplateArgs, true);
       // If we're parsing an encoding, State != nullptr and the conversion
       // operators' <type> could have a <template-param> that refers to some
       // <template-arg>s further ahead in the mangled name.
