@@ -313,18 +313,93 @@ void testPPConditionals() {
 #endif
 }
 
-void testSwitchCaseWithoutInnerCompound(int i, bool b) {
+void testSwitchCases(int i, bool b, bool b2) {
+  // Case statement without braces.
   switch (i) {
   case 0:
     if (b) {
       return;
-    } else {
+    } else { // comment-18
       // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
-      // CHECK-FIXES: {{^}}    }
+      // CHECK-FIXES: {{^}}    } // comment-18
+      f(1);
+    }
+  }
+
+  // Fallthrough.
+  switch (i) {
+  case 0:
+  case 1:
+  case 2:
+    if (b)
+      return;
+    else // comment-19
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}} // comment-19
+      return;
+  }
+
+  switch (i) {
+  case 1:
+  case 2:
+    if (b)
       f(0);
+    else if (b2)
+      return;
+    else // comment-20
+      // CHECK-FIXES-NOT: {{^}}  // comment-20
+      f(1);
+  }
+
+  switch (i) {
+  case 0:
+    if (b) {
+      if (b2)
+        return;
+      else // comment-21
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}    // comment-21
+        f(0);
+    } else {
+      if (b && b2)
+        return;
+      else // comment-22
+        // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}    // comment-22
+        f(0);
+    }
+  }
+
+  // Nested switch.
+  switch (i) {
+  case 0:
+  case 1:
+    switch (3) {
+    case 0:
+      if (b) {
+        return;
+      } else { // comment-23
+        // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: do not use 'else' after 'return'
+        // CHECK-FIXES: {{^}}      } // comment-23
+        f(0);
+      }
+      break;
+    default:
+      break;
     }
     break;
   default:
     break;
   }
+}
+
+void testLabels(bool b) {
+  goto LABEL;
+LABEL:
+  if (b)
+    return;
+  else // comment-25
+    // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
+    // CHECK-FIXES: {{^}} // comment-25
+    return;
 }

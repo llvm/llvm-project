@@ -177,12 +177,17 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
              hasElse(stmt().bind("else")))
           .bind("if");
 
-  Finder->addMatcher(
-      compoundStmt(
-          forEach(stmt(anyOf(IfWithInterruptingThenElse,
-                             switchCase(has(IfWithInterruptingThenElse))))))
-          .bind("cs"),
-      this);
+  const auto SwitchCaseWithTargetIf = switchCase(anyOf(
+      switchCase(has(IfWithInterruptingThenElse)),
+      switchCase(hasDescendant(switchCase(has(IfWithInterruptingThenElse))))));
+
+  const auto LabelWithTargetIf = labelStmt(has(IfWithInterruptingThenElse));
+
+  Finder->addMatcher(compoundStmt(forEach(stmt(anyOf(IfWithInterruptingThenElse,
+                                                     SwitchCaseWithTargetIf,
+                                                     LabelWithTargetIf))))
+                         .bind("cs"),
+                     this);
 }
 
 static bool hasPreprocessorBranchEndBetweenLocations(
