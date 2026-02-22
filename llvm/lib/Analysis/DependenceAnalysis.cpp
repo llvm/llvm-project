@@ -1331,42 +1331,10 @@ bool DependenceInfo::strongSIVtest(const SCEVAddRecExpr *Src,
   assert(0 < Level && Level <= CommonLevels && "level out of range");
   Level--;
 
-  // Src: [a*0 + c1], [a*1 + c1], [a*2 + c1], ..., [a*BTC + c1]
-  // Dst: [a*0 + c2], [a*1 + c2], [a*2 + c2], ..., [a*BTC + c2]
-  //
-  // When 0 <=s a, we can prove independence if:
-  //
-  //   (a*BTC + c1 <s a*0 + c2) or (a*BTC + c2 <s a*0 + c1)
-  //
-  // When a <s 0, we can prove independence if:
-  //
-  //   (a*0 + c1 <s a*BTC + c2) or (a*0 + c2 <s a*BTC + c1)
-  //
-  // These can be combined by computing the smin and smax of the Src and Dst.
-  //
-  // FIXME: Currently the nowrap properties of Src and Dst are not checked.
-  // Therefore, evaluating them at the last iteration may produce incorrect
-  // results.
-  bool IsNoOverlap = [&] {
-    const SCEV *UpperBound = collectUpperBound(Src->getLoop(), Src->getType());
-    if (!UpperBound)
-      return false;
-    LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound);
-    LLVM_DEBUG(dbgs() << ", " << *UpperBound->getType() << "\n");
-
-    const SCEV *SrcBegin = SrcConst;
-    const SCEV *DstBegin = DstConst;
-    const SCEV *SrcEnd = Src->evaluateAtIteration(UpperBound, *SE);
-    const SCEV *DstEnd = Dst->evaluateAtIteration(UpperBound, *SE);
-    const SCEV *SrcMin = SE->getSMinExpr(SrcBegin, SrcEnd);
-    const SCEV *SrcMax = SE->getSMaxExpr(SrcBegin, SrcEnd);
-    const SCEV *DstMin = SE->getSMinExpr(DstBegin, DstEnd);
-    const SCEV *DstMax = SE->getSMaxExpr(DstBegin, DstEnd);
-    return SE->isKnownPredicate(ICmpInst::ICMP_SLT, SrcMax, DstMin) ||
-           SE->isKnownPredicate(ICmpInst::ICMP_SLT, DstMax, SrcMin);
-  }();
-  if (IsNoOverlap) {
-    // Distance greater than trip count - no dependence
+  // First try to prove independence based on the ranges of the two subscripts.
+  ConstantRange SrcRange = SE->getSignedRange(Src);
+  ConstantRange DstRange = SE->getSignedRange(Dst);
+  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
     ++StrongSIVindependence;
     ++StrongSIVsuccesses;
     return true;
