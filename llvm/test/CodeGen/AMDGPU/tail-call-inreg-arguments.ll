@@ -10,7 +10,6 @@ define void @tail_call_i32_inreg_uniform(i32 inreg %sgpr) {
 ; CHECK-NEXT:    s_getpc_b64 s[18:19]
 ; CHECK-NEXT:    s_add_u32 s18, s18, void_func_i32_inreg@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, void_func_i32_inreg@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s0, s16
 ; CHECK-NEXT:    s_setpc_b64 s[18:19]
   tail call void @void_func_i32_inreg(i32 inreg %sgpr)
   ret void
@@ -26,7 +25,6 @@ define void @indirect_tail_call_i32_inreg_uniform(i32 inreg %sgpr) {
 ; CHECK-NEXT:    s_add_u32 s18, s18, constant@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, constant@rel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[18:19], 0x0
-; CHECK-NEXT:    s_mov_b32 s0, s16
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[18:19]
   %fptr = load ptr, ptr addrspace(4) @constant, align 8
@@ -44,8 +42,6 @@ define void @tail_call_i64_inreg_uniform(i64 inreg %sgpr) {
 ; CHECK-NEXT:    s_add_u32 s18, s18, void_func_i64_inreg@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s19, s19, void_func_i64_inreg@gotpcrel32@hi+12
 ; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[18:19], 0x0
-; CHECK-NEXT:    s_mov_b32 s1, s17
-; CHECK-NEXT:    s_mov_b32 s0, s16
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[18:19]
   tail call void @void_func_i64_inreg(i64 inreg %sgpr)
@@ -61,11 +57,11 @@ define void @tail_call_i64_inreg_uniform_in_vgpr() {
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, void_func_i64_inreg@gotpcrel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, void_func_i64_inreg@gotpcrel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
-; CHECK-NEXT:    s_setpc_b64 s[16:17]
+; CHECK-NEXT:    v_readfirstlane_b32 s16, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s17, v1
+; CHECK-NEXT:    s_setpc_b64 s[18:19]
   %uniform.vgpr = load i64, ptr addrspace(3) zeroinitializer, align 8
   tail call void @void_func_i64_inreg(i64 inreg %uniform.vgpr)
   ret void

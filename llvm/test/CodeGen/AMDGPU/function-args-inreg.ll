@@ -1734,9 +1734,6 @@ define void @caller_void_func_i32_v2float_inreg(i32 inreg %arg0, <2 x float> inr
 ; GFX9-NEXT:    s_load_dwordx2 s[20:21], s[20:21], 0x0
 ; GFX9-NEXT:    v_writelane_b32 v40, s19, 2
 ; GFX9-NEXT:    v_writelane_b32 v40, s30, 0
-; GFX9-NEXT:    s_mov_b32 s2, s18
-; GFX9-NEXT:    s_mov_b32 s1, s17
-; GFX9-NEXT:    s_mov_b32 s0, s16
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[20:21]
