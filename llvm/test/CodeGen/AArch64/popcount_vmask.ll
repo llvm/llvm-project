@@ -318,20 +318,10 @@ define i32 @addv_icmp(<16 x i8> %0, i8 %1)  {
 ; CHECK-LABEL: addv_icmp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    dup v1.16b, w0
-; CHECK-NEXT:    adrp x9, .LCPI18_0
 ; CHECK-NEXT:    mov w8, wzr
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI18_0]
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
-; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    saddlv h0, v0.16b
 ; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    fmov s0, w9
-; CHECK-NEXT:    cnt v0.8b, v0.8b
-; CHECK-NEXT:    addv b0, v0.8b
-; CHECK-NEXT:    fmov w9, s0
-; CHECK-NEXT:    neg w9, w9
 ; CHECK-NEXT:    sub w0, w8, w9, uxtb
 ; CHECK-NEXT:    ret
   %3 = insertelement <16 x i8> poison, i8 %1, i64 0
