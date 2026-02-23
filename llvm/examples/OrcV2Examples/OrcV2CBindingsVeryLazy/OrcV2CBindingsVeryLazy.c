@@ -223,8 +223,8 @@ int main(int argc, const char *argv[]) {
                                                &Materialize, NULL, &Destroy);
 
     LLVMOrcJITDylibRef MainJD = LLVMOrcLLJITGetMainJITDylib(J);
-    LLVMOrcJITDylibDefine(MainJD, FooMU);
-    LLVMOrcJITDylibDefine(MainJD, BarMU);
+    (void)LLVMOrcJITDylibDefine(MainJD, FooMU);
+    (void)LLVMOrcJITDylibDefine(MainJD, BarMU);
   }
 
   // add lazy reexports
@@ -254,7 +254,7 @@ int main(int argc, const char *argv[]) {
     LLVMOrcJITDylibRef MainJD = LLVMOrcLLJITGetMainJITDylib(J);
     LLVMOrcMaterializationUnitRef MU =
         LLVMOrcLazyReexports(LCTM, ISM, MainJD, ReExports, 2);
-    LLVMOrcJITDylibDefine(MainJD, MU);
+    (void)LLVMOrcJITDylibDefine(MainJD, MU);
   }
 
   // Look up the address of our demo entry point.
