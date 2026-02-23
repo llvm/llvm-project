@@ -39,8 +39,7 @@ public:
   /// Links a TU summary into a LU summary.
   ///
   /// Deduplicates entities, patches entity ID references in the entity summary,
-  /// and merges them into a single data store. The provided TU summary is
-  /// consumed by this operation.
+  /// and merges them into a single data store.
   ///
   /// \param Summary The TU summary to link. Ownership is transferred.
   /// \returns Error if the TU namespace has already been linked, success
@@ -52,7 +51,7 @@ public:
   ///
   /// \returns LU summary containing all the deduplicated and patched entity
   /// summaries.
-  const LUSummaryEncoding &getOutput() const { return Output; }
+  LUSummaryEncoding &&getOutput() && { return std::move(Output); }
 
 private:
   /// Resolves a TU entity name to an LU entity name and ID.

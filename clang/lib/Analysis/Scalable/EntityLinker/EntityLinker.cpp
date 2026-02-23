@@ -151,9 +151,9 @@ EntityLinker::merge(TUSummaryEncoding &Summary,
               ErrorMessages::EntityLinkerFatalErrorPrefix, NewId, Linkage, SN);
         }
 
-        // Insertion is expected to fail for duplicate occurrences of `External`
-        // linkage entities. TODO - report these cases in a "debug" mode to help
-        // debug potential ODR violations.
+        // TODO: Insertion is expected to fail for duplicate occurrences of
+        // `External` linkage entities. Report these cases in a "debug" mode to
+        // help debug potential ODR violations.
       }
     }
   }

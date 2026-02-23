@@ -1,4 +1,4 @@
-//===- unittests/Analysis/Scalable/EntityLinkerTest.cpp ------------------===//
+//===- unittests/Analysis/Scalable/EntityLinkerTest.cpp -------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -25,6 +25,7 @@
 using namespace clang::ssaf;
 using namespace llvm;
 using ::testing::HasSubstr;
+using ::testing::Not;
 using ::testing::PrintToString;
 
 namespace {
@@ -195,7 +196,7 @@ TEST_F(EntityLinkerTest, CreatesEmptyLinker) {
 
   EntityLinker Linker(LUNamespace);
 
-  const auto &Output = Linker.getOutput();
+  const auto Output = std::move(Linker).getOutput();
   EXPECT_EQ(getIdTable(Output).count(), 0u);
   EXPECT_EQ(getLinkageTable(Output).size(), 0u);
   EXPECT_EQ(getData(Output).size(), 0u);
@@ -212,7 +213,7 @@ TEST_F(EntityLinkerTest, LinksEmptyTranslationUnit) {
 
   EXPECT_THAT_ERROR(Linker.link(std::move(TUEmpty)), llvm::Succeeded());
 
-  const auto &Output = Linker.getOutput();
+  const auto Output = std::move(Linker).getOutput();
   EXPECT_EQ(getIdTable(Output).count(), 0u);
   EXPECT_EQ(getLinkageTable(Output).size(), 0u);
   EXPECT_EQ(getData(Output).size(), 0u);
@@ -244,7 +245,7 @@ TEST_F(EntityLinkerTest, LinksOneTranslationUnit) {
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU)), llvm::Succeeded());
 
-  const auto &Output = Linker.getOutput();
+  const auto Output = std::move(Linker).getOutput();
   const auto &IdTable = getIdTable(Output);
   const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
@@ -397,6 +398,10 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
   const auto TU2_Q_Id = addEntity(*TU2, "Q", ExternalLinkage);
   const auto TU2_Q_S1_Data = addSummaryData(*TU2, TU2_Q_Id, "S1");
 
+  const auto TU2_R_Id = addEntity(*TU2, "R", ExternalLinkage);
+  const auto TU2_R_S1_Data = addSummaryData(*TU2, TU2_R_Id, "S1");
+  const auto TU2_R_S2_Data = addSummaryData(*TU2, TU2_R_Id, "S2");
+
   const auto TU2_S_Id = addEntity(*TU2, "S", ExternalLinkage);
   const auto TU2_S_S1_Data = addSummaryData(*TU2, TU2_S_Id, "S1");
   const auto TU2_S_S2_Data = addSummaryData(*TU2, TU2_S_Id, "S2");
@@ -405,7 +410,7 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
 
   ASSERT_THAT_ERROR(Linker.link(std::move(TU2)), llvm::Succeeded());
 
-  const auto &Output = Linker.getOutput();
+  const auto Output = std::move(Linker).getOutput();
   const auto &IdTable = getIdTable(Output);
   const auto &Entities = getEntities(IdTable);
   const auto &LinkageTable = getLinkageTable(Output);
@@ -524,7 +529,7 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
         {TU2_W_Id, LU_TU2_W_Id}, {TU2_A_Id, LU_TU2_A_Id},
         {TU2_B_Id, LU_TU2_B_Id}, {TU2_D_Id, LU_TU2_D_Id},
         {TU2_P_Id, LU_P_Id},     {TU2_Q_Id, LU_Q_Id},
-        {TU2_S_Id, LU_S_Id}};
+        {TU2_R_Id, LU_R_Id},     {TU2_S_Id, LU_S_Id}};
 
     // S1 Data Tests.
     {
@@ -560,6 +565,8 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
                   HasSummaryData(LU_TU2_D_Id, TU2_D_S1_Data, TU2Resolution));
       ASSERT_THAT(S1Data,
                   HasSummaryData(LU_Q_Id, TU2_Q_S1_Data, TU2Resolution));
+      ASSERT_THAT(S1Data,
+                  Not(HasSummaryData(LU_R_Id, TU2_R_S1_Data, TU2Resolution)));
       ASSERT_THAT(S1Data,
                   HasSummaryData(LU_S_Id, TU2_S_S1_Data, TU2Resolution));
     }
@@ -598,6 +605,8 @@ TEST_F(EntityLinkerTest, LinksTwoTranslationUnits) {
                   HasSummaryData(LU_TU2_D_Id, TU2_D_S2_Data, TU2Resolution));
       ASSERT_THAT(S2Data,
                   HasSummaryData(LU_P_Id, TU2_P_S2_Data, TU2Resolution));
+      ASSERT_THAT(S2Data,
+                  Not(HasSummaryData(LU_R_Id, TU2_R_S2_Data, TU2Resolution)));
       ASSERT_THAT(S2Data,
                   HasSummaryData(LU_S_Id, TU2_S_S2_Data, TU2Resolution));
     }

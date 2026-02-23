@@ -11,8 +11,7 @@
 namespace clang::ssaf {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityId &Id) {
-  OS << "EntityId(" << Id.Index << ")";
-  return OS;
+  return OS << "EntityId(" << Id.Index << ")";
 }
 
 } // namespace clang::ssaf

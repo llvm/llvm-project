@@ -11,8 +11,7 @@
 namespace clang::ssaf {
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SummaryName &SN) {
-  OS << "SummaryName(" << SN.str() << ")";
-  return OS;
+  return OS << "SummaryName(" << SN.str() << ")";
 }
 
 } // namespace clang::ssaf

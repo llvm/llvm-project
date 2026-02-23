@@ -15,22 +15,18 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               EntityLinkage::LinkageType Linkage) {
   switch (Linkage) {
   case EntityLinkage::LinkageType::None:
-    OS << "None";
-    break;
+    return OS << "None";
   case EntityLinkage::LinkageType::Internal:
-    OS << "Internal";
-    break;
+    return OS << "Internal";
   case EntityLinkage::LinkageType::External:
-    OS << "External";
-    break;
+    return OS << "External";
   }
-  return OS;
+  llvm_unreachable("Unhandled EntityLinkage::LinkageType variant");
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                               const EntityLinkage &Linkage) {
-  OS << "EntityLinkage(" << Linkage.getLinkage() << ")";
-  return OS;
+  return OS << "EntityLinkage(" << Linkage.getLinkage() << ")";
 }
 
 bool EntityLinkage::operator==(const EntityLinkage &Other) const {

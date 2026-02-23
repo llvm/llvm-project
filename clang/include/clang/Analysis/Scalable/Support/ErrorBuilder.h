@@ -30,11 +30,13 @@ namespace clang::ssaf {
 /// error message presents the context in reverse order (outermost first).
 ///
 /// Example usage:
+/// \code
 ///   return ErrorBuilder::create(std::errc::invalid_argument,
 ///                               "invalid value {0}", value)
 ///       .context("processing field '{0}'", fieldName)
 ///       .context("reading configuration")
 ///       .build();
+/// \endcode
 class ErrorBuilder {
   std::error_code Code;
   std::vector<std::string> ContextStack;
@@ -165,11 +167,11 @@ public:
   ///
   /// Example output:
   /// \code
-  ///   // ErrorBuilder::create(errc::invalid_argument, "value is 42")
-  ///   //     .context("processing field 'age'")
-  ///   //     .context("reading config")
-  ///   //     .build();
-  ///   //
+  ///      ErrorBuilder::create(errc::invalid_argument, "value is 42")
+  ///          .context("processing field 'age'")
+  ///          .context("reading config")
+  ///          .build();
+  ///
   ///   // Produces:
   ///   // "reading config
   ///   //  processing field 'age'
