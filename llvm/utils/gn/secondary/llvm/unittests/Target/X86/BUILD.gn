@@ -21,6 +21,6 @@ unittest("X86Tests") {
   sources = [
     "MachineSizeOptsTest.cpp",
     "TernlogTest.cpp",
-	"X86SelectionDAGTest.cpp",
+    "X86SelectionDAGTest.cpp",
   ]
 }
