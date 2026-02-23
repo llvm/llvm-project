@@ -267,14 +267,14 @@ def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
     "apply_patterns.vector.multi_reduction_unrolling",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that vector multi_reduction operations should be unrolled
+    Indicates that 2-D vector multi_reduction operations should be unrolled
     into either a sequence of vector.reduction ops (innerreduction) or
     element-wise arith ops (innerparallel).
 
     This populates the patterns from
     `populateVectorMultiReductionUnrollingPatterns`, i.e.:
     * `TwoDimMultiReductionToReduction` (innerreduction)
-    * `MultiReductionToArithOps` (innerparallel)
+    * `TwoDimMultiReductionToElementWise` (innerparallel)
   }];
 
   let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
@@ -286,16 +286,15 @@ def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
   }];
 }
 
-def ApplyUnrollMultiReductionInnerParallelPatternsOp: Op<Transform_Dialect,
-    "apply_patterns.vector.unroll_multi_reduction_inner_parallel",
+def ApplyUnrollMultiReductionRankReducingUnrollingPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.multi_reduction_rank_reducing_unrolling",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Indicates that vector multi_reduction operations with more than one
-    reduction dimension should be unrolled along the outermost reduction
-    dimension into a sequence of lower-rank vector.multi_reduction ops.
+    reduction dimension should be unrolled in a rank-reducing way.
 
-    This populates the patterns from
-    `populateVectorUnrollMultiReductionInnerParallelPatterns`, i.e.:
+    This populates the patterns:
+    * `MultiReductionToArithOps`
     * `UnrollMultiReductionInnerParallel`
   }];
 

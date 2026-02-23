@@ -150,9 +150,9 @@ void transform::ApplyMultiReductionUnrollingPatternsOp::populatePatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }
 
-void transform::ApplyUnrollMultiReductionInnerParallelPatternsOp::
+void transform::ApplyUnrollMultiReductionRankReducingUnrollingPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
-  vector::populateVectorUnrollMultiReductionInnerParallelPatterns(patterns);
+  vector::populateVectorMultiReductionRankReducingUnrollingPatterns(patterns);
 }
 
 void transform::ApplyLowerOuterProductPatternsOp::populatePatterns(
