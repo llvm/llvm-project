@@ -106,6 +106,10 @@ Changes to the AMDGPU Backend
 Changes to the ARM Backend
 --------------------------
 
+* The `r14` register can now be used as an alias for the link register `lr`
+  in inline assembly. Clang always canonicalizes the name to `lr`, but other
+  frontends may not.
+
 Changes to the AVR Backend
 --------------------------
 
@@ -212,6 +216,12 @@ Changes to LLDB
   from any platform.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
+* Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
+  when lldb is in the interactive mode (i.e. not in batch mode).
+
+### Linux
+
+* On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
 
 Changes to BOLT
 ---------------
