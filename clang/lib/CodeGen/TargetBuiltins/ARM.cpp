@@ -4526,6 +4526,12 @@ static void InsertExplicitUndefOperand(CGBuilderTy &Builder, llvm::Type *Ty,
   Ops.insert(Ops.begin(), SplatUndef);
 }
 
+static void InsertExplicitPoisonOperand(CGBuilderTy &Builder, llvm::Type *Ty,
+                                        SmallVectorImpl<Value *> &Ops) {
+  auto *SplatUndef = PoisonValue::get(Ty);
+  Ops.insert(Ops.begin(), SplatUndef);
+}
+
 SmallVector<llvm::Type *, 2>
 CodeGenFunction::getSVEOverloadTypes(const SVETypeFlags &TypeFlags,
                                      llvm::Type *ResultType,
@@ -4669,7 +4675,7 @@ Value *CodeGenFunction::EmitAArch64SVEBuiltinExpr(unsigned BuiltinID,
       InsertExplicitZeroOperand(Builder, Ty, Ops);
 
     if (TypeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
-      InsertExplicitUndefOperand(Builder, Ty, Ops);
+      InsertExplicitPoisonOperand(Builder, Ty, Ops);
 
     // Some ACLE builtins leave out the argument to specify the predicate
     // pattern, which is expected to be expanded to an SV_ALL pattern.
