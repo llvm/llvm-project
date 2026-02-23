@@ -64,12 +64,24 @@ void ProcessFreeBSDKernel::Terminate() {
   PluginManager::UnregisterPlugin(ProcessFreeBSDKernel::CreateInstance);
 }
 
-Status ProcessFreeBSDKernel::DoDestroy() { return Status(); }
-
 bool ProcessFreeBSDKernel::CanDebug(lldb::TargetSP target_sp,
                                     bool plugin_specified_by_name) {
   return true;
 }
+
+Status ProcessFreeBSDKernel::DoLoadCore() {
+  // The core is already loaded by CreateInstance().
+  return Status();
+}
+
+DynamicLoader *ProcessFreeBSDKernel::GetDynamicLoader() {
+  if (m_dyld_up.get() == nullptr)
+    m_dyld_up.reset(DynamicLoader::FindPlugin(
+        this, DynamicLoaderFreeBSDKernel::GetPluginNameStatic()));
+  return m_dyld_up.get();
+}
+
+Status ProcessFreeBSDKernel::DoDestroy() { return Status(); }
 
 void ProcessFreeBSDKernel::RefreshStateAfterStop() {
   if (!m_printed_unread_message) {
@@ -227,16 +239,16 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
   return new_thread_list.GetSize(false) > 0;
 }
 
-Status ProcessFreeBSDKernel::DoLoadCore() {
-  // The core is already loaded by CreateInstance().
-  return Status();
-}
-
-DynamicLoader *ProcessFreeBSDKernel::GetDynamicLoader() {
-  if (m_dyld_up.get() == nullptr)
-    m_dyld_up.reset(DynamicLoader::FindPlugin(
-        this, DynamicLoaderFreeBSDKernel::GetPluginNameStatic()));
-  return m_dyld_up.get();
+size_t ProcessFreeBSDKernel::DoReadMemory(lldb::addr_t addr, void *buf,
+                                          size_t size, Status &error) {
+  ssize_t rd = 0;
+  rd = kvm_read2(m_kvm, addr, buf, size);
+  if (rd < 0 || static_cast<size_t>(rd) != size) {
+    error = Status::FromErrorStringWithFormat("Reading memory failed: %s",
+                                              GetError());
+    return rd > 0 ? rd : 0;
+  }
+  return rd;
 }
 
 lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
@@ -390,18 +402,6 @@ void ProcessFreeBSDKernel::PrintUnreadMessage() {
 
   stream_sp->PutChar('\n');
   stream_sp->Flush();
-}
-
-size_t ProcessFreeBSDKernel::DoReadMemory(lldb::addr_t addr, void *buf,
-                                          size_t size, Status &error) {
-  ssize_t rd = 0;
-  rd = kvm_read2(m_kvm, addr, buf, size);
-  if (rd < 0 || static_cast<size_t>(rd) != size) {
-    error = Status::FromErrorStringWithFormat("Reading memory failed: %s",
-                                              GetError());
-    return rd > 0 ? rd : 0;
-  }
-  return rd;
 }
 
 const char *ProcessFreeBSDKernel::GetError() { return kvm_geterr(m_kvm); }

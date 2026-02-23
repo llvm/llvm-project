@@ -165,27 +165,22 @@
 
 // COMMON-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_off.bc"
 // COMMON-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_off.bc"
-// COMMON-DEFAULT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 
 // COMMON-FINITE-ONLY-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_off.bc"
 // COMMON-FINITE-ONLY-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_on.bc"
-// COMMON-FINITE-ONLY-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 
 // COMMON-CORRECT-SQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_off.bc"
 // COMMON-CORRECT-SQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_off.bc"
-// COMMON-CORRECT-SQRT-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_on.bc"
 
 
 // COMMON-FAST-RELAXED-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_on.bc"
 // COMMON-FAST-RELAXED-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_on.bc"
-// COMMON-FAST-RELAXED-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 
 // COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_unsafe_math_on.bc"
 // COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_finite_only_off.bc"
-// COMMON-UNSAFE-MATH-SAME: "-mlink-builtin-bitcode" "{{.*}}/amdgcn/bitcode/oclc_correctly_rounded_sqrt_off.bc"
 
 // ASAN-SAME: "-fsanitize=address"
 

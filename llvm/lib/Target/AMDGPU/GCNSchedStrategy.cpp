@@ -101,7 +101,7 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
 
 static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
-    cl::desc("Disable rewrie mfma rewrite scheduling stage"), cl::init(true));
+    cl::desc("Disable rewrite mfma rewrite scheduling stage"), cl::init(false));
 
 const unsigned ScheduleMetrics::ScaleFactor = 100;
 
@@ -1061,16 +1061,16 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       auto &Rgn = Regions[CurRegion];
       NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     }
-    RPTracker.advanceToNext();
     RPTracker.advanceBeforeNext();
+    RPTracker.advanceToNext();
   }
 
   if (OnlySucc) {
     if (I != MBB->end()) {
+      RPTracker.advanceBeforeNext();
       RPTracker.advanceToNext();
       RPTracker.advance(MBB->end());
     }
-    RPTracker.advanceBeforeNext();
     MBBLiveIns[OnlySucc] = RPTracker.moveLiveRegs();
   }
 }
