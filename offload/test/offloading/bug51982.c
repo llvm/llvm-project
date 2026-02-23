@@ -1,7 +1,8 @@
 // RUN: %libomptarget-compile-generic -O2 && %libomptarget-run-generic
 // -O2 to run openmp-opt
 // RUN: %libomptarget-compileopt-generic -O2 && %libomptarget-run-generic
-// XFAIL: intelgpu
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 int main(void) {
   long int aa = 0;

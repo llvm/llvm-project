@@ -84,40 +84,60 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)))
     return nullptr;
 
-  // The compare constant must be the identity constant for that binop.
-  // If this a floating-point compare with 0.0, any zero constant will do.
-  Type *Ty = BO->getType();
-  Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
-  if (IdC != C) {
-    if (!IdC || !CmpInst::isFPPredicate(Pred))
-      return nullptr;
-    if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
-      return nullptr;
-  }
+  // For absorbing values, we can fold to the compared value.
+  bool IsAbsorbingValue = false;
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
   if (BO->isCommutative()) {
-    if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
+    // Recognized 0 as an absorbing value for fmul, but we need to be careful
+    // about the sign. This could be more aggressive, by handling arbitrary sign
+    // bit operations as long as we know the fmul sign matches (and handling
+    // arbitrary opcodes).
+    if (match(BO, m_c_FMul(m_FAbs(m_Specific(X)), m_Value(Y))) &&
+        match(C, m_AnyZeroFP()) &&
+        IC.fmulByZeroIsZero(Y, BO->getFastMathFlags(), &Sel))
+      IsAbsorbingValue = true;
+    else if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
       return nullptr;
   } else {
     if (!match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
       return nullptr;
   }
 
-  // +0.0 compares equal to -0.0, and so it does not behave as required for this
-  // transform. Bail out if we can not exclude that possibility.
-  if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
-    if (!FPO->hasNoSignedZeros() &&
-        !cannotBeNegativeZero(Y,
-                              IC.getSimplifyQuery().getWithInstruction(&Sel)))
-      return nullptr;
+  // The compare constant must be the identity constant for that binop.
+  // If this a floating-point compare with 0.0, any zero constant will do.
+  Type *Ty = BO->getType();
+
+  Value *FoldedVal;
+  if (IsAbsorbingValue) {
+    FoldedVal = C;
+  } else {
+    Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
+    if (IdC != C) {
+      if (!IdC || !CmpInst::isFPPredicate(Pred))
+        return nullptr;
+
+      if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
+        return nullptr;
+    }
+
+    // +0.0 compares equal to -0.0, and so it does not behave as required for
+    // this transform. Bail out if we can not exclude that possibility.
+    if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
+      if (!FPO->hasNoSignedZeros() &&
+          !cannotBeNegativeZero(Y,
+                                IC.getSimplifyQuery().getWithInstruction(&Sel)))
+        return nullptr;
+
+    FoldedVal = Y;
+  }
 
   // BO = binop Y, X
   // S = { select (cmp eq X, C), BO, ? } or { select (cmp ne X, C), ?, BO }
   // =>
   // S = { select (cmp eq X, C),  Y, ? } or { select (cmp ne X, C), ?,  Y }
-  return IC.replaceOperand(Sel, IsEq ? 1 : 2, Y);
+  return IC.replaceOperand(Sel, IsEq ? 1 : 2, FoldedVal);
 }
 
 /// This folds:
@@ -2765,12 +2785,34 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   // to I. If such conditions are true, the helper returns the cmpxchg
   // instruction; otherwise, a nullptr is returned.
   auto isExtractFromCmpXchg = [](Value *V, unsigned I) -> AtomicCmpXchgInst * {
+    // When extracting the value loaded by a cmpxchg, allow peeking through a
+    // bitcast. These are inserted for floating-point cmpxchg, for example:
+    //   %bc = bitcast float %compare to i32
+    //   %cmpxchg = cmpxchg ptr %ptr, i32 %bc, i32 %new_value seq_cst seq_cst
+    //   %val = extractvalue { i32, i1 } %cmpxchg, 0
+    //   %success = extractvalue { i32, i1 } %cmpxchg, 1
+    //   %val.bc = bitcast i32 %val to float
+    //   %sel = select i1 %success, float %compare, float %val.bc
+    if (auto *BI = dyn_cast<BitCastInst>(V); BI && I == 0)
+      V = BI->getOperand(0);
     auto *Extract = dyn_cast<ExtractValueInst>(V);
     if (!Extract)
       return nullptr;
     if (Extract->getIndices()[0] != I)
       return nullptr;
     return dyn_cast<AtomicCmpXchgInst>(Extract->getAggregateOperand());
+  };
+
+  // Check if the compare value of a cmpxchg matches another value.
+  auto isCompareSameAsValue = [](Value *CmpVal, Value *SelVal) {
+    // The values match if they are the same or %CmpVal = bitcast %SelVal (see
+    // above).
+    if (CmpVal == SelVal || match(CmpVal, m_BitCast(m_Specific(SelVal))))
+      return true;
+    // For FP constants, the value may have been bitcast to Int directly.
+    auto *IntC = dyn_cast<ConstantInt>(CmpVal);
+    auto *FpC = dyn_cast<ConstantFP>(SelVal);
+    return IntC && FpC && IntC->getValue() == FpC->getValue().bitcastToAPInt();
   };
 
   // If the select has a single user, and this user is a select instruction that
@@ -2791,14 +2833,16 @@ static Value *foldSelectCmpXchg(SelectInst &SI) {
   // value of the same cmpxchg used by the condition, and the false value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getTrueValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getFalseValue())
+    if (X == CmpXchg &&
+        isCompareSameAsValue(X->getCompareOperand(), SI.getFalseValue()))
       return SI.getFalseValue();
 
   // Check the false value case: The false value of the select is the returned
   // value of the same cmpxchg used by the condition, and the true value is the
   // cmpxchg instruction's compare operand.
   if (auto *X = isExtractFromCmpXchg(SI.getFalseValue(), 0))
-    if (X == CmpXchg && X->getCompareOperand() == SI.getTrueValue())
+    if (X == CmpXchg &&
+        isCompareSameAsValue(X->getCompareOperand(), SI.getTrueValue()))
       return SI.getFalseValue();
 
   return nullptr;

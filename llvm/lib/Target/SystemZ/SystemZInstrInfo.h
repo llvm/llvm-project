@@ -159,8 +159,8 @@ enum FusedCompareType {
 } // end namespace SystemZII
 
 namespace SystemZ {
-int64_t getTwoOperandOpcode(uint32_t Opcode);
-int64_t getTargetMemOpcode(uint32_t Opcode);
+int32_t getTwoOperandOpcode(uint32_t Opcode);
+int32_t getTargetMemOpcode(uint32_t Opcode);
 
 // Return a version of comparison CC mask CCMask in which the LT and GT
 // actions are swapped.
