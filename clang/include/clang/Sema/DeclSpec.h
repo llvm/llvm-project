@@ -56,92 +56,8 @@ namespace clang {
   typedef SmallVector<Token, 4> CachedTokens;
 
   /// [class.mem]p1: "... the class is regarded as complete within
-  /// - function bodies
-  /// - default arguments
-  /// - exception-specifications (TODO: C++0x)
-  /// - and brace-or-equal-initializers for non-static data members
-  /// (including such things in nested classes)."
-  /// LateParsedDeclarations build the tree of those elements so they can
-  /// be parsed after parsing the top-level class.
-  class LateParsedDeclaration {
-  public:
-    virtual ~LateParsedDeclaration();
-
-    virtual void ParseLexedMethodDeclarations();
-    virtual void ParseLexedMemberInitializers();
-    virtual void ParseLexedMethodDefs();
-    virtual void ParseLexedAttributes();
-    virtual void ParseLexedTypeAttributes();
-    virtual void ParseLexedPragmas();
-  };
-
-  /// Contains the lexed tokens of an attribute with arguments that
-  /// may reference member variables and so need to be parsed at the
-  /// end of the class declaration after parsing all other member
-  /// member declarations.
-  /// FIXME: Perhaps we should change the name of LateParsedDeclaration to
-  /// LateParsedTokens.
-  struct LateParsedAttribute : public LateParsedDeclaration {
-
-    enum LPA_Kind {
-      LPA_Declaration,
-      LPA_Type,
-    };
-
-    Parser *Self;
-    CachedTokens Toks;
-    IdentifierInfo &AttrName;
-    IdentifierInfo *MacroII = nullptr;
-    SourceLocation AttrNameLoc;
-    SmallVector<Decl *, 2> Decls;
-
-  private:
-    LPA_Kind Kind;
-
-  public:
-    explicit LateParsedAttribute(Parser *P, IdentifierInfo &Name,
-                                 SourceLocation Loc,
-                                 LPA_Kind Kind = LPA_Declaration)
-        : Self(P), AttrName(Name), AttrNameLoc(Loc), Kind(Kind) {}
-
-    void ParseLexedAttributes() override;
-
-    void addDecl(Decl *D) { Decls.push_back(D); }
-
-    LPA_Kind getKind() const { return Kind; }
-
-    // LLVM-style RTTI support
-    static bool classof(const LateParsedAttribute *LA) {
-      // LateParsedAttribute matches both Declaration and Type kinds
-      return LA->getKind() == LPA_Declaration || LA->getKind() == LPA_Type;
-    }
-  };
-
-  /// Contains the lexed tokens of an attribute with arguments that
-  /// may reference member variables and so need to be parsed at the
-  /// end of the class declaration after parsing all other member
-  /// member declarations.
-  /// FIXME: Perhaps we should change the name of LateParsedDeclaration to
-  /// LateParsedTokens.
-  struct LateParsedTypeAttribute : public LateParsedAttribute {
-
-    explicit LateParsedTypeAttribute(Parser *P, IdentifierInfo &Name,
-                                     SourceLocation Loc)
-        : LateParsedAttribute(P, Name, Loc, LPA_Type) {}
-
-    void ParseLexedAttributes() override;
-    void ParseLexedTypeAttributes() override;
-
-    /// Parse this late-parsed type attribute and store results in OutAttrs.
-    /// This method can be called from Sema during type transformation to
-    /// parse the cached tokens and produce the final attribute.
-    void ParseInto(ParsedAttributes &OutAttrs);
-
-    // LLVM-style RTTI support
-    static bool classof(const LateParsedAttribute *LA) {
-      return LA->getKind() == LPA_Type;
-    }
-  };
+  // Forward declaration - full definition in Parser.h
+  struct LateParsedAttribute;
 
   // A list of late-parsed attributes.  Used by ParseGNUAttributes.
   class LateParsedAttrList : public SmallVector<LateParsedAttribute *, 2> {
@@ -161,10 +77,6 @@ namespace clang {
     }
 
     bool lateAttrParseTypeAttrOnly() { return LateAttrParseTypeAttrOnly; }
-
-    /// Moves all LateParsedTypeAttribute pointers from \p Other to this list,
-    /// removing them from \p Other. Non-type attributes remain in \p Other.
-    void takeTypeAttrsAppendingFrom(LateParsedAttrList &Other);
 
   private:
     bool ParseSoon; // Are we planning to parse these shortly after creation?
@@ -1013,10 +925,6 @@ public:
     Attrs.takeAllAppendingFrom(attrs);
   }
 
-  void takeLateTypeAttributesAppendingingFrom(LateParsedAttrList &lateAttrs) {
-    LateParsedAttrs.takeTypeAttrsAppendingFrom(lateAttrs);
-  }
-
   /// Finish - This does final analysis of the declspec, issuing diagnostics for
   /// things like "_Complex" (lacking an FP type).  After calling this method,
   /// DeclSpec is guaranteed self-consistent, even if an error occurred.
@@ -1386,7 +1294,7 @@ public:
 ///
 /// This is intended to be a small value object.
 struct DeclaratorChunk {
-  DeclaratorChunk() : LateAttrList(true, true, true) {};
+  DeclaratorChunk() : LateAttrList(true, true, true){};
 
   enum {
     Pointer, Reference, Array, Function, BlockPointer, MemberPointer, Paren, Pipe
@@ -2849,10 +2757,6 @@ public:
   LateParsedAttrList &getLateAttributes() { return LateParsedAttrs; }
   const LateParsedAttrList &getLateAttributes() const {
     return LateParsedAttrs;
-  }
-
-  void takeLateTypeAttributesAppending(LateParsedAttrList &lateAttrs) {
-    LateParsedAttrs.takeTypeAttrsAppendingFrom(lateAttrs);
   }
 
   /// hasAttributes - do we contain any attributes?

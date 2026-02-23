@@ -19762,9 +19762,11 @@ static QualType handleCountedByAttrField(Sema &S, QualType T, Decl *D,
 struct RebuildTypeWithLateParsedAttr
     : TreeTransform<RebuildTypeWithLateParsedAttr> {
   FieldDecl *FD;
+  Sema::ParseLateParsedTypeAttributeCB *ParseCallback;
 
-  RebuildTypeWithLateParsedAttr(Sema &SemaRef, FieldDecl *FD)
-      : TreeTransform(SemaRef), FD(FD) {}
+  RebuildTypeWithLateParsedAttr(Sema &SemaRef, FieldDecl *FD,
+                                Sema::ParseLateParsedTypeAttributeCB *ParseCB)
+      : TreeTransform(SemaRef), FD(FD), ParseCallback(ParseCB) {}
 
   // Helper to check and diagnose if a type is CountAttributedType
   bool diagnoseCountAttributedType(QualType Ty, SourceLocation Loc) {
@@ -19783,20 +19785,16 @@ struct RebuildTypeWithLateParsedAttr
     auto *LTA = LPA->getLateParsedAttribute();
 
     // The LateParsedTypeAttribute contains a pointer to the Parser that
-    // created it, along with the cached tokens. Call ParseInto() to parse
+    // created it, along with the cached tokens. Call ParseAndConsume to parse
     // those tokens now and get the resulting attribute.
     assert(LTA && "LateParsedAttrType must have a LateParsedTypeAttribute");
 
     AttributeFactory AF{};
     ParsedAttributes Attrs(AF);
 
-    // Parse the cached attribute tokens
-    LTA->ParseInto(Attrs);
-    // LateParsedTypeAttribute is no longer needed so delete it. Ideally,
-    // LateParsedAttrType would own this object, but LateParsedTypeAttribute
-    // is intentionally forward declared to avoid making the AST depend on
-    // Sema/Parser components.
-    delete LTA;
+    // Parse the cached attribute tokens and delete the LateParsedTypeAttribute
+    assert(!!ParseCallback);
+    ParseCallback(LTA, &Attrs);
 
     // Invalid argument
     if (Attrs.empty())
@@ -20019,7 +20017,8 @@ struct RebuildTypeWithLateParsedAttr
   }
 };
 
-void Sema::ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl) {
+void Sema::ProcessLateParsedTypeAttributes(
+    RecordDecl *EnclosingDecl, ParseLateParsedTypeAttributeCB *ParseCB) {
   for (auto *I : EnclosingDecl->decls()) {
     FieldDecl *FD = dyn_cast<FieldDecl>(I);
     IndirectFieldDecl *IFD = dyn_cast<IndirectFieldDecl>(I);
@@ -20029,7 +20028,7 @@ void Sema::ProcessLateParsedTypeAttributes(RecordDecl *EnclosingDecl) {
     if (!FD || FD->getType()->isRecordType())
       continue;
 
-    RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD);
+    RebuildTypeWithLateParsedAttr RebuildFieldType(*this, FD, ParseCB);
     auto *OldTSI = FD->getTypeSourceInfo();
     auto *TSI = RebuildFieldType.TransformType(FD->getTypeSourceInfo());
     if (TSI && TSI != OldTSI) {

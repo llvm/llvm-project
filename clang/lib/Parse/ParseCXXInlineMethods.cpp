@@ -273,7 +273,6 @@ void LateParsedDeclaration::ParseLexedMethodDeclarations() {}
 void LateParsedDeclaration::ParseLexedMemberInitializers() {}
 void LateParsedDeclaration::ParseLexedMethodDefs() {}
 void LateParsedDeclaration::ParseLexedAttributes() {}
-void LateParsedDeclaration::ParseLexedTypeAttributes() {}
 void LateParsedDeclaration::ParseLexedPragmas() {}
 
 Parser::LateParsedClass::LateParsedClass(Parser *P, ParsingClass *C)
@@ -320,8 +319,6 @@ void LateParsedAttribute::ParseLexedAttributes() {
 }
 
 void LateParsedTypeAttribute::ParseLexedAttributes() {}
-
-void LateParsedTypeAttribute::ParseLexedTypeAttributes() {}
 
 void Parser::LateParsedPragma::ParseLexedPragmas() {
   Self->ParseLexedPragma(*this);

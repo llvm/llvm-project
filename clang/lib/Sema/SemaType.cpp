@@ -401,6 +401,13 @@ enum TypeAttrLocation {
   TAL_DeclName
 };
 
+static void fillAttrNameLocForLateParsedAttrTypeLoc(Sema &S,
+                                                    LateParsedAttrTypeLoc TL) {
+  if (auto *LateAttr = TL.getLateParsedAttribute())
+    if (S.GetLateParsedAttributeLocationCallback)
+      TL.setAttrNameLoc(S.GetLateParsedAttributeLocationCallback(LateAttr));
+}
+
 static void
 processTypeAttrs(TypeProcessingState &state, QualType &type,
                  TypeAttrLocation TAL, const ParsedAttributesView &attrs,
@@ -5967,8 +5974,7 @@ namespace {
     }
     void VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
       Visit(TL.getInnerLoc());
-      if (auto *LateAttr = TL.getLateParsedAttribute())
-        TL.setAttrNameLoc(LateAttr->AttrNameLoc);
+      fillAttrNameLocForLateParsedAttrTypeLoc(SemaRef, TL);
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       Visit(TL.getWrappedLoc());
@@ -6259,8 +6265,7 @@ namespace {
       // nothing
     }
     void VisitLateParsedAttrTypeLoc(LateParsedAttrTypeLoc TL) {
-      if (auto *LateAttr = TL.getLateParsedAttribute())
-        TL.setAttrNameLoc(LateAttr->AttrNameLoc);
+      fillAttrNameLocForLateParsedAttrTypeLoc(State.getSema(), TL);
     }
     void VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
       // nothing
@@ -6431,9 +6436,7 @@ GetTypeSourceInfoForDeclarator(TypeProcessingState &State,
 
       case TypeLoc::LateParsedAttr: {
         auto TL = CurrTL.castAs<LateParsedAttrTypeLoc>();
-        if (auto *LateAttr = TL.getLateParsedAttribute()) {
-          TL.setAttrNameLoc(LateAttr->AttrNameLoc);
-        }
+        fillAttrNameLocForLateParsedAttrTypeLoc(S, TL);
         CurrTL = TL.getNextTypeLoc().getUnqualifiedLoc();
         break;
       }
@@ -9215,6 +9218,18 @@ static void HandleCountedByAttrOnType(TypeProcessingState &State,
                                                      CountInBytes, OrNull);
 }
 
+bool Sema::ActOnLateParsedTypeAttr(ParsedAttr::Kind AttrKind,
+                                   SourceLocation AttrNameLoc, QualType &type,
+                                   unsigned pointerNestLevel,
+                                   LateParsedTypeAttribute *LTA) {
+  bool CountInBytes, OrNull;
+  if (!validateCountedByAttrType(*this, type, AttrKind, AttrNameLoc,
+                                 pointerNestLevel, CountInBytes, OrNull))
+    return false;
+  type = getASTContext().getLateParsedAttrType(type, LTA);
+  return true;
+}
+
 static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
                                  const LateParsedAttrList &LateAttrs,
                                  unsigned chunkIndex) {
@@ -9223,22 +9238,14 @@ static bool processLateTypeAttrs(TypeProcessingState &state, QualType &type,
     return true;
 
   Sema &S = state.getSema();
-
-  // For late type attributes, the check will be done separately.
   unsigned pointerNestLevel = 0;
 
-  for (auto *LA : LateAttrs) {
-    ParsedAttr::Kind AttrKind = ParsedAttr::getParsedKind(
-        &LA->AttrName, nullptr, ParsedAttr::Form::GNU().getSyntax());
+  assert(S.ProcessLateParsedTypeAttrCallback);
 
-    bool CountInBytes, OrNull;
-    if (!validateCountedByAttrType(S, type, AttrKind, LA->AttrNameLoc,
-                                   pointerNestLevel, CountInBytes, OrNull))
+  for (auto *LA : LateAttrs)
+    if (!S.ProcessLateParsedTypeAttrCallback(LA, type, pointerNestLevel))
       return false;
 
-    type = S.getASTContext().getLateParsedAttrType(
-        type, dyn_cast<LateParsedTypeAttribute>(LA));
-  }
   return true;
 }
 
