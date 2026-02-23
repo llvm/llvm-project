@@ -27764,6 +27764,9 @@ bytes, the intrinsic returns ``poison`` and the bytes are not considered accesse
 for the purpose of data races or ``noalias`` constraints. At least the first
 byte must be accessible; otherwise the behavior is undefined.
 
+The behavior is undefined if program execution depends on any byte in the
+result that may not be accessible.
+
 The behavior is undefined if this intrinsic is used to load from a pointer
 for which ``llvm.can.load.speculatively`` would return false.
 
