@@ -49,6 +49,11 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Fixed incorrect struct layout for ``_BitInt`` bitfields wider than 255 bits
+  on MSVC targets. Internal bitfield tracking fields were changed from
+  ``unsigned char`` to ``uint64_t`` to prevent overflow. This might be an ABI
+  break for such structs compared to earlier Clang versions.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
