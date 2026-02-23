@@ -1,7 +1,4 @@
 // RUN: mlir-opt --transform-interpreter --split-input-file %s | FileCheck %s
-// Test the same patterns on generic convolution ops by first generalizing the
-// named ops. This avoids duplicating lit tests for linalg.generic conv ops.
-// RUN: mlir-opt --linalg-generalize-named-ops --transform-interpreter --split-input-file %s | FileCheck %s
 
 // Expected indexing maps for batchless conv_1d_nwc_wcf.
 // CHECK-DAG:  #[[$CONV_I:.+]] = affine_map<(d0, d1, d2, d3) -> (d0 + d2, d3)>
@@ -18,6 +15,11 @@
 
 // CHECK-DAG:  #[[$MAP:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
 // CHECK-DAG:  #[[$MAP1:.+]] = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// Expected indexing maps for 1D conv (cross-conv after downscale from generic).
+// CHECK-DAG:  #[[$CROSS_1D_I:.+]] = affine_map<(d0, d1) -> (d0 + d1)>
+// CHECK-DAG:  #[[$CROSS_1D_F:.+]] = affine_map<(d0, d1) -> (d1)>
+// CHECK-DAG:  #[[$CROSS_1D_O:.+]] = affine_map<(d0, d1) -> (d0)>
 
 // CHECK-LABEL: @conv_2d_nhwc_hwcf
 // CHECK-SAME: %[[ARG0:.+]]: tensor<?x1x?x?xf32>,
@@ -341,7 +343,9 @@ func.func @cross_conv_nonstandard_loop_order(%input: tensor<1x15xf32>, %filter: 
   // CHECK:       %[[SLICE0:.+]] = tensor.extract_slice %[[ARG0]]
   // CHECK:       %[[SLICE1:.+]] = tensor.extract_slice %[[ARG1]]
   // CHECK:       %[[SLICE2:.+]] = tensor.extract_slice %[[ARG2]]
-  // CHECK:       %[[SLICERES:.+]] = linalg.conv_1d
+  // CHECK:       %[[SLICERES:.+]] = linalg.generic
+  // CHECK-SAME:    indexing_maps = [#[[$CROSS_1D_I]], #[[$CROSS_1D_F]], #[[$CROSS_1D_O]]]
+  // CHECK-SAME:    iterator_types = ["parallel", "reduction"]
   // CHECK:       %[[RES:.+]] = tensor.insert_slice %[[SLICERES]] into %[[ARG2]]
   // CHECK:       return %[[RES]]
   %0 = linalg.generic {

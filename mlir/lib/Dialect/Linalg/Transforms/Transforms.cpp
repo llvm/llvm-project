@@ -1614,11 +1614,14 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
                                 mapping.lookup(yield.getOperand(0)));
       });
 
-  // Try to specialize the generic back to a named op if possible.
+  // Try to specialize the generic back to a named op only if the input was
+  // already a specialized (named) op.
   LinalgOp resultOp = newOp;
-  FailureOr<LinalgOp> specializedOp = specializeGenericOp(rewriter, newOp);
-  if (succeeded(specializedOp))
-    resultOp = *specializedOp;
+  if (!isa<GenericOp>(op)) {
+    FailureOr<LinalgOp> specializedOp = specializeGenericOp(rewriter, newOp);
+    if (succeeded(specializedOp))
+      resultOp = *specializedOp;
+  }
 
   // Insert result back into original shape.
   Value result = tensor::createCanonicalRankReducingInsertSliceOp(
