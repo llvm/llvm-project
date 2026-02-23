@@ -20258,9 +20258,7 @@ static void DoMarkVarDeclReferenced(
       Var->mightBeUsableInConstantExpressions(SemaRef.Context);
 
   // We skip static data members because they have external linkage.
-  // TODO: static data members in anonymous namespaces have internal linkage and
-  // should be diagnosed.
-  if ((Var->isLocalVarDeclOrParm() || Var->hasInternalLinkageFileVar()) &&
+  if ((Var->isLocalVarDeclOrParm() || Var->isInternalLinkageFileVar()) &&
       !Var->hasExternalStorage()) {
     RefsMinusAssignments.insert({Var, 0}).first->getSecond()++;
   }

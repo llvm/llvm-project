@@ -1608,17 +1608,16 @@ void Sema::ActOnEndOfTranslationUnit() {
       // Only diagnose internal linkage file vars defined in the main file to
       // match -Wunused-variable behavior and avoid false positives from
       // headers.
-      if (VD->hasInternalLinkageFileVar() &&
-          SourceMgr.isInMainFile(VD->getLocation()))
+      if (VD->isInternalLinkageFileVar() && isMainFileLoc(VD->getLocation()))
         DiagnoseUnusedButSetDecl(VD, addDiag);
     }
 
     llvm::sort(DeclDiags,
-              [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
-                // Sorting purely for determinism; matches behavior in
-                // Sema::ActOnPopScope.
-                return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
-              });
+               [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
+                 // Sorting purely for determinism; matches behavior in
+                 // Sema::ActOnPopScope.
+                 return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
+               });
     for (const LocAndDiag &D : DeclDiags)
       Diag(D.Loc, D.PD);
   }
