@@ -55,36 +55,33 @@ inline _LIBCPP_HIDE_FROM_ABI double tgamma(_A1 __x) _NOEXCEPT {
   return __builtin_tgamma((double)__x);
 }
 
-} // namespace __math
-
 // __lgamma_r
+//
+// POSIX systems provide a function named lgamma_r which is a reentrant version of lgamma. Use that
+// whenever possible. However, we avoid re-declaring the actual function since different platforms
+// declare it differently in the first place: instead use `asm` to get the compiler to call the right
+// function.
 
-struct __lgamma_result {
-  double __result;
-  int __sign;
-};
+#if defined(_LIBCPP_MSVCRT_LIKE) // reentrant version is not available on Windows
 
-#if _LIBCPP_AVAILABILITY_HAS_THREAD_SAFE_LGAMMA
-_LIBCPP_EXPORTED_FROM_ABI __lgamma_result __lgamma_thread_safe_impl(double) _NOEXCEPT;
+inline _LIBCPP_HIDE_FROM_ABI double __lgamma_r(double __d) _NOEXCEPT { return __builtin_lgamma(__d); }
 
-inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _NOEXCEPT {
-  return std::__lgamma_thread_safe_impl(__d);
-}
 #else
-// When deploying to older targets, call `lgamma_r` directly but avoid declaring the actual
-// function since different platforms declare the function slightly differently.
+
 #  if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
 double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("_lgamma_r");
 #  else
 double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("lgamma_r");
 #  endif
 
-inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI double __lgamma_r(double __d) _NOEXCEPT {
   int __sign;
-  double __res = std::__lgamma_r_shim(__d, &__sign);
-  return __lgamma_result{__res, __sign};
+  return __math::__lgamma_r_shim(__d, &__sign);
 }
+
 #endif
+
+} // namespace __math
 
 _LIBCPP_END_NAMESPACE_STD
 
