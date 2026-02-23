@@ -46,7 +46,7 @@ namespace {
 ///   i24.  This isn't always possible because i24 has storage size of 32 bit
 ///   and if it is possible to use that extra byte of padding we must use [i8 x
 ///   3] instead of i24. This is computed when accumulating bitfields in
-///   accumulateBitfields.
+///   accumulateBitFields.
 ///   C++ examples that require clipping:
 ///   struct { int a : 24; char b; }; // a must be clipped, b goes at offset 3
 ///   struct A { int a : 24; ~A(); }; // a must be clipped because:
@@ -483,12 +483,13 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
   // to keep access-units naturally aligned, to avoid similar bit
   // manipulation synthesizing larger unaligned accesses.
 
-  CharUnits RegSize =
-      bitsToCharUnits(Context.getTargetInfo().getRegisterWidth());
   unsigned CharBits = Context.getCharWidth();
 
+  // ---- Pass 1: Walk the fields, grouping bitfields into "spans".
   // A span is a maximal run of bitfields where each successive field starts
-  // mid-byte (sharing a byte with the previous one).
+  // mid-byte (sharing a byte with the previous one). A new span starts
+  // whenever a field begins at a byte boundary. Zero-width bitfields and
+  // non-bitfields act as barriers that prevent merging across spans.
   struct BitFieldSpan {
     RecordDecl::field_iterator Begin;
     RecordDecl::field_iterator End;
@@ -500,13 +501,7 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
     // merging with the next span).
     bool Barrier;
   };
-
-  // ---- Pass 1: Walk the fields, grouping bitfields into "spans".
-  // A span is a maximal run of bitfields where each successive field starts
-  // mid-byte (sharing a byte with the previous one). A new span starts
-  // whenever a field begins at a byte boundary. Zero-width bitfields and
-  // non-bitfields act as barriers that prevent merging across spans.
-  SmallVector<BitFieldSpan, 16> Spans;
+  SmallVector<BitFieldSpan, 4> Spans;
   {
     RecordDecl::field_iterator SpanBegin = FieldEnd;
     CharUnits SpanOffset;
@@ -577,6 +572,8 @@ CGRecordLowering::accumulateBitFields(bool isNonVirtualBaseType,
   // the access unit by incorporating subsequent non-barrier spans, subject to
   // register-width, alignment, and available-padding constraints. Emit the best
   // access unit found and advance past its spans.
+  const CharUnits RegSize =
+      bitsToCharUnits(Context.getTargetInfo().getRegisterWidth());
   for (unsigned I = 0, Size = Spans.size(); I != Size;) {
     CharUnits BeginOffset = Spans[I].Offset;
     // We keep track of the best access unit seen so far, and use that when we
