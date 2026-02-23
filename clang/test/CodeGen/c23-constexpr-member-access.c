@@ -12,14 +12,14 @@ static constexpr struct S V = {
 extern void f(int *);
 
 // CHECK-LABEL: define{{.*}} void @t1()
-// CHECK: %arr = alloca [10 x i32], align 4
+// CHECK: %arr = alloca [10 x i32], align 16
 void t1(void) {
     int arr[10];
     f(arr);
 }
 
 // CHECK-LABEL: define{{.*}} void @t2()
-// CHECK: %arr = alloca [512 x i32], align 4
+// CHECK: %arr = alloca [512 x i32], align 16
 void t2(void) {
     int arr[V.e];
     f(arr);
