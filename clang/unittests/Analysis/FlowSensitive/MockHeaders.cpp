@@ -2424,6 +2424,24 @@ namespace std {
 }
 )cc";
 
+constexpr const char TaskHeader[] = R"cc(
+#include "std_coroutine.h"
+
+  template<typename T>
+  struct Task {
+    struct promise_type {
+        Task get_return_object();
+        std::suspend_never initial_suspend() noexcept;
+        std::suspend_always final_suspend() noexcept;
+        void return_value(T v);
+        void unhandled_exception();
+    };
+    bool await_ready() const noexcept;
+    T await_resume() noexcept;
+    void await_suspend(std::coroutine_handle<> handle) noexcept;
+  };
+)cc";
+
 std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   std::vector<std::pair<std::string, std::string>> Headers;
   Headers.emplace_back("cstddef.h", CStdDefHeader);
@@ -2443,6 +2461,8 @@ std::vector<std::pair<std::string, std::string>> getMockHeaders() {
   Headers.emplace_back("absl_log.h", AbslLogHeader);
   Headers.emplace_back("testing_defs.h", TestingDefsHeader);
   Headers.emplace_back("std_unique_ptr.h", StdUniquePtrHeader);
+  Headers.emplace_back("task.h", TaskHeader);
+
   return Headers;
 }
 

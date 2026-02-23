@@ -41,6 +41,7 @@
 #ifdef LLVM_ON_UNIX
 #include <pwd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 using namespace llvm;
@@ -838,7 +839,7 @@ TEST_F(FileSystemTest, RemoveDirectoriesNoExePerm) {
   // It's expected that the directory exists, but some environments appear to
   // allow the removal despite missing the 'x' permission, so be flexible.
   if (fs::exists(Twine(TestDirectory) + "/noexeperm")) {
-    fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_perms);
+    fs::setPermissions(Twine(TestDirectory) + "/noexeperm", fs::all_all);
     ASSERT_NO_ERROR(fs::remove_directories(Twine(TestDirectory) + "/noexeperm",
                                            /*IgnoreErrors=*/false));
   }
@@ -2216,6 +2217,21 @@ TEST_F(FileSystemTest, permissions) {
   SmallString<64> TempPath;
   ASSERT_NO_ERROR(fs::createTemporaryFile("prefix", "temp", FD, TempPath));
   FileRemover Cleanup(TempPath);
+
+  // BSD semantics (also available on Linux via mount -o bsdgroups/grpid) are
+  // for the group ID to be inherited, rather than only if the directory's
+  // set-group-ID bit is set, and so if the temporary file is created in a
+  // directory whose group is one the current user is not in (e.g. /tmp,
+  // typically root:wheel, i.e. 0:0, for a non-admin user) we will be unable to
+  // test setting the set-group-ID bit on it. Force the group to the effective
+  // group ID, i.e. the default Linux semantics, so we can perform tests
+  // setting the set-group-ID bit below. Note getegid() has no reserved return
+  // value to signify an error, it always succeeds.
+#ifdef LLVM_ON_UNIX
+  fs::file_status Status;
+  ASSERT_NO_ERROR(fs::status(FD, Status));
+  ASSERT_NO_ERROR(fs::changeFileOwnership(FD, Status.getUser(), getegid()));
+#endif
 
   // Make sure it exists.
   ASSERT_TRUE(fs::exists(Twine(TempPath)));
