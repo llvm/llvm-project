@@ -1306,19 +1306,35 @@ public:
     CIRGenFunction::ConditionalEvaluation eval(cgf);
 
     mlir::Value lhsCondV = cgf.evaluateExprAsBool(e->getLHS());
+    bool hasCleanupScopeParent =
+        mlir::isa<cir::CleanupScopeOp>(builder.getBlock()->getParentOp());
+
     auto resOp = cir::TernaryOp::create(
         builder, loc, lhsCondV, /*trueBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
+
+          mlir::Value cleanupScopeTmpAlloca;
+          if (hasCleanupScopeParent) {
+            cleanupScopeTmpAlloca = builder.createAlloca(
+                loc, builder.getPointerTo(builder.getBoolTy()),
+                builder.getBoolTy(), "cleanup.scope.tmp",
+                clang::CharUnits::One());
+          }
+
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+
+          if (hasCleanupScopeParent)
+            cir::StoreOp::create(builder, loc, res, cleanupScopeTmpAlloca,
+                                 false, {}, {}, {});
+
           lexScope.forceCleanup();
+
+          if (hasCleanupScopeParent)
+            res = cir::LoadOp::create(builder, loc, cleanupScopeTmpAlloca);
           cir::YieldOp::create(b, loc, res);
-          if (res.getParentBlock() != builder.getInsertionBlock())
-            cgf.cgm.errorNYI(
-                e->getSourceRange(),
-                "ScalarExprEmitter: VisitBinLAnd ternary with cleanup");
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1355,6 +1371,9 @@ public:
     CIRGenFunction::ConditionalEvaluation eval(cgf);
 
     mlir::Value lhsCondV = cgf.evaluateExprAsBool(e->getLHS());
+    bool hasCleanupScopeParent =
+        mlir::isa<cir::CleanupScopeOp>(builder.getBlock()->getParentOp());
+
     auto resOp = cir::TernaryOp::create(
         builder, loc, lhsCondV, /*trueBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1369,13 +1388,25 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
+          mlir::Value cleanupScopeTmpAlloca;
+          if (hasCleanupScopeParent) {
+            cleanupScopeTmpAlloca = builder.createAlloca(
+                loc, builder.getPointerTo(builder.getBoolTy()),
+                builder.getBoolTy(), "cleanup.scope.tmp",
+                clang::CharUnits::One());
+          }
+
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
+
+          if (hasCleanupScopeParent)
+            cir::StoreOp::create(builder, loc, res, cleanupScopeTmpAlloca,
+                                 false, {}, {}, {});
+
           lexScope.forceCleanup();
+
+          if (hasCleanupScopeParent)
+            res = cir::LoadOp::create(builder, loc, cleanupScopeTmpAlloca);
           cir::YieldOp::create(b, loc, res);
-          if (res.getParentBlock() != builder.getInsertionBlock())
-            cgf.cgm.errorNYI(
-                e->getSourceRange(),
-                "ScalarExprEmitter: VisitBinLOr ternary with cleanup");
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);

@@ -1,11 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -mconstructor-aliases -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
 
-// XFAIL: *
+// TODO(cir): Reenable lowering to LLVM after nested EH cleanup scope flattening is not yet implemented.
 
 struct A {
   ~A();
@@ -17,7 +15,12 @@ void test_temporary_dtor() {
 
 // CIR: cir.func {{.*}} @_Z19test_temporary_dtorv()
 // CIR:   %[[ALLOCA:.*]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["agg.tmp.ensured"]
-// CIR:   cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A> {{.*}}) -> ()
+// CIR:   cir.cleanup.scope {
+// CIR:     cir.yield
+// CIR:   } cleanup normal {
+// CIR:     cir.call @_ZN1AD1Ev(%[[ALLOCA]]) nothrow : (!cir.ptr<!rec_A> {{.*}}) -> ()
+// CIR:     cir.yield
+// CIR:   }
 
 // LLVM: define dso_local void @_Z19test_temporary_dtorv(){{.*}}
 // LLVM:   %[[ALLOCA:.*]] = alloca %struct.A, i64 1, align 1
@@ -41,20 +44,33 @@ bool test_temp_or() { return make_temp(1) || make_temp(2); }
 // CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:     cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
-// CIR:     %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
-// CIR:     %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
-// CIR:       %[[TRUE:.*]] = cir.const #true
-// CIR:       cir.yield %[[TRUE]] : !cir.bool
-// CIR:     }, false {
-// CIR:       %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
-// CIR:       %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]])
-// CIR:       cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
-// CIR:       cir.yield %[[MAKE_TEMP1]] : !cir.bool
-// CIR:     })
-// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RETVAL:.*]]
-// CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
+// CIR:       %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
+// CIR:         %[[TRUE:.*]] = cir.const #true
+// CIR:         cir.yield %[[TRUE]] : !cir.bool
+// CIR:       }, false {
+// CIR:         %[[CLEANUP_SCOPE_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.scope.tmp"]
+// CIR:         %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
+// CIR:         %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:         cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
+// CIR:         cir.cleanup.scope {
+// CIR:           %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]])
+// CIR:           cir.store %[[MAKE_TEMP1]], %[[CLEANUP_SCOPE_TMP]] : !cir.bool, !cir.ptr<!cir.bool> loc(#loc33)
+// CIR:           cir.yield
+// CIR:         } cleanup normal {
+// CIR:           cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
+// CIR:           cir.yield
+// CIR:         }
+// CIR:         %[[RESULT:.*]] = cir.load %[[CLEANUP_SCOPE_TMP]] : !cir.ptr<!cir.bool>, !cir.bool 
+// CIR:         cir.yield %[[RESULT]] : !cir.bool
+// CIR:       })
+// CIR:       cir.store{{.*}} %[[TERNARY]], %[[RETVAL:.*]]
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
+// CIR:       cir.yield
+// CIR:     }
 // CIR:   }
 
 // LLVM: define{{.*}} i1 @_Z12test_temp_orv(){{.*}} {
@@ -111,20 +127,33 @@ bool test_temp_and() { return make_temp(1) && make_temp(2); }
 // CIR:     %[[REF_TMP0:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp0"]
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1>
 // CIR:     cir.call @_ZN1BC2Ei(%[[REF_TMP0]], %[[ONE]])
-// CIR:     %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
-// CIR:     %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
-// CIR:       %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
-// CIR:       %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:       cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
-// CIR:       %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]])
-// CIR:       cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
-// CIR:       cir.yield %[[MAKE_TEMP1]] : !cir.bool
-// CIR:     }, false {
-// CIR:       %[[FALSE:.*]] = cir.const #false
-// CIR:       cir.yield %[[FALSE]] : !cir.bool
-// CIR:     })
-// CIR:     cir.store{{.*}} %[[TERNARY]], %[[RETVAL:.*]]
-// CIR:     cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
+// CIR:     cir.cleanup.scope {
+// CIR:       %[[MAKE_TEMP0:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP0]])
+// CIR:       %[[TERNARY:.*]] = cir.ternary(%[[MAKE_TEMP0]], true {
+// CIR:         %[[CLEANUP_SCOPE_TMP:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["cleanup.scope.tmp"] 
+// CIR:         %[[REF_TMP1:.*]] = cir.alloca !rec_B, !cir.ptr<!rec_B>, ["ref.tmp1"]
+// CIR:         %[[TWO:.*]] = cir.const #cir.int<2>
+// CIR:         cir.call @_ZN1BC2Ei(%[[REF_TMP1]], %[[TWO]])
+// CIR:         cir.cleanup.scope {
+// CIR:           %[[MAKE_TEMP1:.*]] = cir.call @_Z9make_tempRK1B(%[[REF_TMP1]])
+// CIR:           cir.store %[[MAKE_TEMP1]], %[[CLEANUP_SCOPE_TMP]] : !cir.bool, !cir.ptr<!cir.bool>
+// CIR:           cir.yield
+// CIR:         } cleanup normal {
+// CIR:           cir.call @_ZN1BD2Ev(%[[REF_TMP1]])
+// CIR:           cir.yield
+// CIR:         }
+// CIR:         %[[RESULT:.*]] = cir.load %[[CLEANUP_SCOPE_TMP]] : !cir.ptr<!cir.bool>, !cir.bool
+// CIR:         cir.yield %[[RESULT]] : !cir.bool
+// CIR:       }, false {
+// CIR:         %[[FALSE:.*]] = cir.const #false
+// CIR:         cir.yield %[[FALSE]] : !cir.bool
+// CIR:       })
+// CIR:       cir.store{{.*}} %[[TERNARY]], %[[RETVAL:.*]]
+// CIR:       cir.yield
+// CIR:     } cleanup normal {
+// CIR:       cir.call @_ZN1BD2Ev(%[[REF_TMP0]])
+// CIR:       cir.yield
+// CIR:     }
 // CIR:   }
 
 // LLVM: define{{.*}} i1 @_Z13test_temp_andv(){{.*}} {
