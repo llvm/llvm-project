@@ -427,12 +427,6 @@ def note_constexpr_unscoped_enum_out_of_range : Note<
   "integer value %0 is outside the valid range of values [%1, %2] for the "
   "enumeration type %3">;
 
-// This is a temporary diagnostic, and shall be removed once our
-// implementation is complete, and like the preceding constexpr notes belongs
-// in Sema.
-def note_unimplemented_constexpr_lambda_feature_ast : Note<
-    "unimplemented constexpr lambda feature: %0 (coming soon!)">;
-
 def warn_is_constant_evaluated_always_true_constexpr : Warning<
   "'%0' will always evaluate to 'true' in a manifestly constant-evaluated expression">,
   InGroup<DiagGroup<"constant-evaluated">>;
