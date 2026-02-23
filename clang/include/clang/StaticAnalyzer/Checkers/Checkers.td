@@ -247,10 +247,6 @@ def ConversionChecker : Checker<"Conversion">,
   HelpText<"Loss of sign/precision in implicit conversions">,
   Documentation<HasDocumentation>;
 
-def FixedAddressChecker : Checker<"FixedAddr">,
-  HelpText<"Check for assignment of a fixed address to a pointer">,
-  Documentation<HasDocumentation>;
-
 def PointerArithChecker : Checker<"PointerArithm">,
   HelpText<"Check for pointer arithmetic on locations other than array "
            "elements">,

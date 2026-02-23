@@ -2847,8 +2847,10 @@ define void @cond_freeze_multipleuses(i8 %x, i8 %y) {
 define i32 @select_freeze_icmp_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @select_freeze_icmp_eq(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    ret i32 [[Y_FR]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C_FR]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %c = icmp eq i32 %x, %y
   %c.fr = freeze i1 %c
@@ -2859,8 +2861,10 @@ define i32 @select_freeze_icmp_eq(i32 %x, i32 %y) {
 define i32 @select_freeze_icmp_ne(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @select_freeze_icmp_ne(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    ret i32 [[X_FR]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C_FR]], i32 [[X]], i32 [[Y]]
+; CHECK-NEXT:    ret i32 [[V]]
 ;
   %c = icmp ne i32 %x, %y
   %c.fr = freeze i1 %c
@@ -2871,9 +2875,9 @@ define i32 @select_freeze_icmp_ne(i32 %x, i32 %y) {
 define i32 @select_freeze_icmp_else(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @select_freeze_icmp_else(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    [[V:%.*]] = call i32 @llvm.umin.i32(i32 [[X_FR]], i32 [[Y_FR]])
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C_FR]], i32 [[X]], i32 [[Y]]
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   %c = icmp ult i32 %x, %y
@@ -2887,9 +2891,9 @@ declare void @use_i1_i32(i1, i32)
 define void @select_freeze_icmp_multuses(i32 %x, i32 %y) {
 ; CHECK-LABEL: define void @select_freeze_icmp_multuses(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[Y_FR:%.*]] = freeze i32 [[Y]]
-; CHECK-NEXT:    [[V:%.*]] = freeze i32 [[X]]
-; CHECK-NEXT:    [[C_FR:%.*]] = icmp ne i32 [[V]], [[Y_FR]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[C_FR:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    [[V:%.*]] = select i1 [[C_FR]], i32 [[X]], i32 [[Y]]
 ; CHECK-NEXT:    call void @use_i1_i32(i1 [[C_FR]], i32 [[V]])
 ; CHECK-NEXT:    ret void
 ;
