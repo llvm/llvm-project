@@ -71,23 +71,6 @@ func.func @multi_reduction_to_arith_ops(%arg0: vector<4x2xf32>, %acc: vector<2xf
     return %0 : vector<2xf32>
 }
 
-// ALL-LABEL: func @unroll_multi_reduction_inner_parallel
-// ALL-SAME:    %[[INPUT:.+]]: vector<4x2x3xf32>, %[[ACC:.+]]: vector<2xf32>
-func.func @unroll_multi_reduction_inner_parallel(%arg0: vector<4x2x3xf32>, %acc: vector<2xf32>) -> vector<2xf32> {
-    // INNER_PARALLEL: %[[V0:.+]] = vector.extract %[[INPUT]][0] : vector<2x3xf32> from vector<4x2x3xf32>
-    // INNER_PARALLEL: %[[V1:.+]] = vector.extract %[[INPUT]][1] : vector<2x3xf32> from vector<4x2x3xf32>
-    // INNER_PARALLEL: %[[V2:.+]] = vector.extract %[[INPUT]][2] : vector<2x3xf32> from vector<4x2x3xf32>
-    // INNER_PARALLEL: %[[V3:.+]] = vector.extract %[[INPUT]][3] : vector<2x3xf32> from vector<4x2x3xf32>
-    // INNER_PARALLEL: %[[RV0:.+]] = vector.multi_reduction <mul>, %[[V0]], %[[ACC]] [1] : vector<2x3xf32>
-    // INNER_PARALLEL: %[[RV1:.+]] = vector.multi_reduction <mul>, %[[V1]], %[[RV0]] [1] : vector<2x3xf32>
-    // INNER_PARALLEL: %[[RV2:.+]] = vector.multi_reduction <mul>, %[[V2]], %[[RV1]] [1] : vector<2x3xf32>
-    // INNER_PARALLEL: %[[RESULT:.+]] = vector.multi_reduction <mul>, %[[V3]], %[[RV2]] [1] : vector<2x3xf32>
-    // INNER_REDUCTION: %[[RESULT:.+]] = vector.multi_reduction <mul>, %[[INPUT]], %[[ACC]] [0, 2]
-    %0 = vector.multi_reduction <mul>, %arg0, %acc [0, 2] : vector<4x2x3xf32> to vector<2xf32>
-    // ALL:             return %[[RESULT]]
-    return %0 : vector<2xf32>
-}
-
 // ALL-LABEL: func @multi_reduction_to_arith_ops_masked
 // ALL-SAME:    %[[INPUT:.+]]: vector<4x2xf32>, %[[ACC:.+]]: vector<2xf32>, %[[MASK:.+]]: vector<4x2xi1>
 func.func @multi_reduction_to_arith_ops_masked(%arg0: vector<4x2xf32>, %acc: vector<2xf32>, %mask: vector<4x2xi1>) -> vector<2xf32> {
