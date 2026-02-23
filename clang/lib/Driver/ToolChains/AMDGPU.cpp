@@ -1033,17 +1033,18 @@ RocmInstallationDetector::getCommonBitcodeLibs(
       BCLibs.emplace_back(BCLib);
     }
   };
-  auto AddSanBCLibs = [&]() {
-    if (Pref.GPUSan)
-      AddBCLib(getAsanRTLPath());
-  };
 
-  AddSanBCLibs();
+  // For OpenMP, openmp-devicertl(libompdevice.a) already contains ASan GPU
+  // runtime and Ockl functions (via POST_BUILD). Don't add it again at driver
+  // level to avoid duplicates as most of the symbols have USED attribute and
+  // duplicates entries in llvm.compiler.used & llvm.used makes their
+  // duplicate definitions persist even with internalization enabled
+  if (Pref.GPUSan && !Pref.IsOpenMP)
+    // Add Gpu Sanitizer RTL bitcode lib required for AMDGPU Sanitizer
+    AddBCLib(getAsanRTLPath());
   AddBCLib(getOCMLPath());
   if (!Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
-  else if (Pref.GPUSan && Pref.IsOpenMP)
-    AddBCLib(getOCKLPath(), false);
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
   AddBCLib(getWavefrontSize64Path(Pref.Wave64));
