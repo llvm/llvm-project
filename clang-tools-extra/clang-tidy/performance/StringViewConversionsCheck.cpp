@@ -59,7 +59,7 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
   // is first converted to std::string unnecessarily.
   Finder->addMatcher(
       cxxMemberCallExpr(
-          callee(memberExpr(member(hasName("operator basic_string_view")),
+          callee(memberExpr(member(cxxConversionDecl(returns(IsStdStringView))),
                             has(ignoringImplicit(RedundantTemporaryString.bind(
                                 "redundantExpr"))))))
           .bind("stringView"),
