@@ -13,11 +13,14 @@
 #ifndef CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H
 
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Registry.h"
+
+#include <set>
 
 namespace clang::ssaf {
 
@@ -68,6 +71,20 @@ private:
 
   llvm::Expected<BuildNamespaceKind>
   buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) const;
+
+  llvm::Expected<EntityLinkage>
+  entityLinkageFromJSON(const Object &EntityLinkageObject) const;
+  Object entityLinkageToJSON(const EntityLinkage &EL) const;
+
+  llvm::Expected<std::pair<EntityId, EntityLinkage>>
+  linkageTableEntryFromJSON(const Object &LinkageTableEntryObject) const;
+  Object linkageTableEntryToJSON(EntityId EI, const EntityLinkage &EL) const;
+
+  llvm::Expected<std::map<EntityId, EntityLinkage>>
+  linkageTableFromJSON(const Array &LinkageTableArray,
+                       std::set<EntityId> EntityIds) const;
+  Array linkageTableToJSON(
+      const std::map<EntityId, EntityLinkage> &LinkageTable) const;
 
   llvm::Expected<BuildNamespace>
   buildNamespaceFromJSON(const Object &BuildNamespaceObject) const;
