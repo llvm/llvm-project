@@ -1586,18 +1586,19 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
                               MachineInstrBuilder &MIB,
                               MachineIRBuilder &MIRBuilder,
                               SPIRVGlobalRegistry &GR) {
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
   if (MemOp->isVolatile())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
   if (MemOp->isNonTemporal())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Nontemporal);
-  if (MemOp->getAlign().value())
+  // Aligned memory operand requires the Kernel capability.
+  if (!ST->isShader() && MemOp->getAlign().value())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned);
 
   [[maybe_unused]] MachineInstr *AliasList = nullptr;
   [[maybe_unused]] MachineInstr *NoAliasList = nullptr;
-  const SPIRVSubtarget *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
     if (auto *MD = MemOp->getAAInfo().Scope) {
       AliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
