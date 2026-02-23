@@ -22,6 +22,8 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/Support/KnownBits.h"
 
+#include <type_traits>
+
 namespace llvm {
 namespace SDPatternMatch {
 
@@ -1160,39 +1162,35 @@ struct ConstantInt_match {
   }
 };
 
-struct ConstantUnsigned64_match {
-  uint64_t &BindVal;
+template <typename T> struct Constant64_match {
+  T &BindVal;
 
-  explicit ConstantUnsigned64_match(uint64_t &V) : BindVal(V) {}
-
-  template <typename MatchContext>
-  bool match(const MatchContext &Ctx, SDValue N) {
-    APInt V;
-    if (!ConstantInt_match(&V).match(Ctx, N))
-      return false;
-    if (V.getActiveBits() > 64)
-      return false;
-
-    BindVal = V.getZExtValue();
-    return true;
-  }
-};
-
-struct ConstantSigned64_match {
-  int64_t &BindVal;
-
-  explicit ConstantSigned64_match(int64_t &V) : BindVal(V) {}
+  explicit Constant64_match(T &V) : BindVal(V) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
+    if constexpr (sizeof(T) != 8)
+      return false;
+
     APInt V;
     if (!ConstantInt_match(&V).match(Ctx, N))
       return false;
-    if (V.getActiveBits() > 64)
-      return false;
 
-    BindVal = V.getSExtValue();
-    return true;
+    if constexpr (std::is_signed_v<T>) {
+      if (std::optional<int64_t> TrySExt = V.trySExtValue()) {
+        BindVal = *TrySExt;
+        return true;
+      }
+    }
+
+    if constexpr (std::is_unsigned_v<T>) {
+      if (std::optional<uint64_t> TryZExt = V.tryZExtValue()) {
+        BindVal = *TryZExt;
+        return true;
+      }
+    }
+
+    return false;
   }
 };
 
@@ -1204,14 +1202,14 @@ inline ConstantInt_match m_ConstInt(APInt &V) { return ConstantInt_match(&V); }
 /// Match any integer constants or splat of an integer constant that can fit in
 /// 64 bits; return the specific constant or constant splat value, zero-extended
 /// to 64 bits.
-inline ConstantUnsigned64_match m_ConstInt(uint64_t &V) {
-  return ConstantUnsigned64_match(V);
+inline Constant64_match<uint64_t> m_ConstInt(uint64_t &V) {
+  return Constant64_match<uint64_t>(V);
 }
 /// Match any integer constants or splat of an integer constant that can fit in
 /// 64 bits; return the specific constant or constant splat value, sign-extended
 /// to 64 bits.
-inline ConstantSigned64_match m_ConstInt(int64_t &V) {
-  return ConstantSigned64_match(V);
+inline Constant64_match<int64_t> m_ConstInt(int64_t &V) {
+  return Constant64_match<int64_t>(V);
 }
 
 struct SpecificInt_match {
