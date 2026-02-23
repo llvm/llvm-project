@@ -1,7 +1,6 @@
 ; RUN: not llc -O0 -mtriple=spirv-vulkan-compute %s -o - 2>&1 | FileCheck %s
 
 ; CHECK: Gather operations with offset are not supported for Cube images.
-; ERR-3D: Gather operations are only supported for 2D, Cube, and Rect images.
 
 @.str = private unnamed_addr constant [4 x i8] c"img\00", align 1
 @.str.1 = private unnamed_addr constant [5 x i8] c"samp\00", align 1
