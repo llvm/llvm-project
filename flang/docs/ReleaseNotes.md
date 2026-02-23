@@ -35,15 +35,15 @@ page](https://llvm.org/releases/).
 
 ### `do concurrent` mapping to OpenMP
 
-Flang has now better support for `do concurrent` parallelization on the CPU and
+Flang now has better support for `do concurrent` parallelization on the CPU and
 GPU. On the CPU, we validated the feature using
 [FIATS'](https://github.com/BerkeleyLab/fiats) inference and training codes. On
 the GPU, we have basic support that is still in progress; we have offload tests
-for 1D and 2D saxpy and also validated using codes that do not use extensive
+for 1D and 2D saxpy. We also validated using codes that do not use extensive
 user-defined types and/or allocatables.
 
 To use the feature, use `-fdo-concurrent-to-openmp=[none|host|device]`. OpenMP
-must be enabled as well, for example: `-fopenm [--offload-arch=<target_arch>]`.
+must be enabled as well, for example: `-fopenmp [--offload-arch=<target_arch>]`.
 
 ## Bug Fixes
 
