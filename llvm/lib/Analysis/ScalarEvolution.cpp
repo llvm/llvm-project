@@ -2813,79 +2813,80 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<const SCEV *> &Ops,
     }
   }
 
+  // Given a SCEVMulExpr and an operand index, return the product of all
+  // operands except the one at OpIdx.
+  auto StripFactor = [&](const SCEVMulExpr *M, unsigned OpIdx) -> const SCEV * {
+    if (M->getNumOperands() == 2)
+      return M->getOperand(OpIdx == 0);
+    SmallVector<const SCEV *, 4> Remaining(M->operands().take_front(OpIdx));
+    append_range(Remaining, M->operands().drop_front(OpIdx + 1));
+    return getMulExpr(Remaining, SCEV::FlagAnyWrap, Depth + 1);
+  };
+
   // If we are adding something to a multiply expression, make sure the
   // something is not already an operand of the multiply.  If so, merge it into
   // the multiply.
   for (; Idx < Ops.size() && isa<SCEVMulExpr>(Ops[Idx]); ++Idx) {
     const SCEVMulExpr *Mul = cast<SCEVMulExpr>(Ops[Idx]);
     for (unsigned MulOp = 0, e = Mul->getNumOperands(); MulOp != e; ++MulOp) {
+      // Scan all terms to find every occurrence of common factor MulOpSCEV
+      // and fold them in one shot:
+      //   A1*X + A2*X + ... + An*X  -->  X * (A1 + A2 + ... + An)
       const SCEV *MulOpSCEV = Mul->getOperand(MulOp);
       if (isa<SCEVConstant>(MulOpSCEV))
         continue;
-      for (unsigned AddOp = 0, e = Ops.size(); AddOp != e; ++AddOp)
+
+      // Cofactors: 1 for bare addends matching MulOpSCEV, or the
+      // remaining product for multiply terms containing MulOpSCEV.
+      SmallVector<const SCEV *, 4> Cofactors;
+      SmallVector<unsigned, 4> DeadIndices;
+      for (unsigned AddOp = 0, e = Ops.size(); AddOp != e; ++AddOp) {
         if (MulOpSCEV == Ops[AddOp]) {
-          // Fold W + X + (X * Y * Z)  -->  W + (X * ((Y*Z)+1))
-          const SCEV *InnerMul = Mul->getOperand(MulOp == 0);
-          if (Mul->getNumOperands() != 2) {
-            // If the multiply has more than two operands, we must get the
-            // Y*Z term.
-            SmallVector<const SCEV *, 4> MulOps(
-                Mul->operands().take_front(MulOp));
-            append_range(MulOps, Mul->operands().drop_front(MulOp + 1));
-            InnerMul = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
-          }
-          SmallVector<const SCEV *, 2> TwoOps = {getOne(Ty), InnerMul};
-          const SCEV *AddOne = getAddExpr(TwoOps, SCEV::FlagAnyWrap, Depth + 1);
-          const SCEV *OuterMul = getMulExpr(AddOne, MulOpSCEV,
-                                            SCEV::FlagAnyWrap, Depth + 1);
-          if (Ops.size() == 2) return OuterMul;
-          if (AddOp < Idx) {
-            Ops.erase(Ops.begin()+AddOp);
-            Ops.erase(Ops.begin()+Idx-1);
-          } else {
-            Ops.erase(Ops.begin()+Idx);
-            Ops.erase(Ops.begin()+AddOp-1);
-          }
-          Ops.push_back(OuterMul);
-          return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+          // W + X + (X * Y * Z)  -->  W + (X * ((Y*Z)+1))
+          Cofactors.push_back(getOne(Ty));
+          DeadIndices.push_back(AddOp);
+          continue;
         }
 
-      // Check this multiply against other multiplies being added together.
-      for (unsigned OtherMulIdx = Idx+1;
-           OtherMulIdx < Ops.size() && isa<SCEVMulExpr>(Ops[OtherMulIdx]);
-           ++OtherMulIdx) {
-        const SCEVMulExpr *OtherMul = cast<SCEVMulExpr>(Ops[OtherMulIdx]);
-        // If MulOp occurs in OtherMul, we can fold the two multiplies
-        // together.
-        for (unsigned OMulOp = 0, e = OtherMul->getNumOperands();
-             OMulOp != e; ++OMulOp)
+        if (AddOp == Idx || !isa<SCEVMulExpr>(Ops[AddOp]))
+          continue;
+
+        const SCEVMulExpr *OtherMul = cast<SCEVMulExpr>(Ops[AddOp]);
+        for (unsigned OMulOp = 0, oe = OtherMul->getNumOperands(); OMulOp != oe;
+             ++OMulOp) {
           if (OtherMul->getOperand(OMulOp) == MulOpSCEV) {
-            // Fold X + (A*B*C) + (A*D*E) --> X + (A*(B*C+D*E))
-            const SCEV *InnerMul1 = Mul->getOperand(MulOp == 0);
-            if (Mul->getNumOperands() != 2) {
-              SmallVector<const SCEV *, 4> MulOps(
-                  Mul->operands().take_front(MulOp));
-              append_range(MulOps, Mul->operands().drop_front(MulOp+1));
-              InnerMul1 = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
-            }
-            const SCEV *InnerMul2 = OtherMul->getOperand(OMulOp == 0);
-            if (OtherMul->getNumOperands() != 2) {
-              SmallVector<const SCEV *, 4> MulOps(
-                  OtherMul->operands().take_front(OMulOp));
-              append_range(MulOps, OtherMul->operands().drop_front(OMulOp+1));
-              InnerMul2 = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
-            }
-            SmallVector<const SCEV *, 2> TwoOps = {InnerMul1, InnerMul2};
-            const SCEV *InnerMulSum =
-                getAddExpr(TwoOps, SCEV::FlagAnyWrap, Depth + 1);
-            const SCEV *OuterMul = getMulExpr(MulOpSCEV, InnerMulSum,
-                                              SCEV::FlagAnyWrap, Depth + 1);
-            if (Ops.size() == 2) return OuterMul;
-            Ops.erase(Ops.begin()+Idx);
-            Ops.erase(Ops.begin()+OtherMulIdx-1);
-            Ops.push_back(OuterMul);
-            return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
+            // (A*B*C) + (A*D*E)  -->  A * (B*C + D*E)
+            Cofactors.push_back(StripFactor(OtherMul, OMulOp));
+            DeadIndices.push_back(AddOp);
+            break;
           }
+        }
+      }
+
+      // Fold all collected cofactors with the anchor multiply's cofactor:
+      //   MulOpSCEV * (Cofactor_1 + ... + Cofactor_n + AnchorCofactor)
+      if (!Cofactors.empty()) {
+        Cofactors.push_back(StripFactor(Mul, MulOp));
+
+        const SCEV *InnerSum =
+            getAddExpr(Cofactors, SCEV::FlagAnyWrap, Depth + 1);
+        const SCEV *OuterMul =
+            getMulExpr(MulOpSCEV, InnerSum, SCEV::FlagAnyWrap, Depth + 1);
+
+        // DeadIndices does not include Idx (the anchor), hence +1.
+        if (Ops.size() == DeadIndices.size() + 1)
+          return OuterMul;
+
+        // Erase Ops[Idx] first, then erase DeadIndices in reverse order.
+        // The -1 adjustment accounts for the shift from removing Idx;
+        // reverse order means each erasure only shifts later positions,
+        // which have already been processed.
+        Ops.erase(Ops.begin() + Idx);
+        for (unsigned Dead : reverse(DeadIndices))
+          Ops.erase(Ops.begin() + (Dead > Idx ? Dead - 1 : Dead));
+
+        Ops.push_back(OuterMul);
+        return getAddExpr(Ops, SCEV::FlagAnyWrap, Depth + 1);
       }
     }
   }
