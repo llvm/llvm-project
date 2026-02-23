@@ -86,15 +86,14 @@ static constexpr auto globalOpenACCCompilerDirective{
 // Consequently, a program unit END statement should be the last statement
 // on its line.  We parse those END statements via unterminatedStatement()
 // and then skip over the end of the line here.
-TYPE_PARSER(
-    construct<Program>(extension<LanguageFeature::EmptySourceFile>(
-                           "nonstandard usage: empty source file"_port_en_US,
-                           skipStuffBeforeStatement >> consumedAllInput >>
-                               pure<std::list<ProgramUnit>>()) ||
+TYPE_PARSER(construct<Program>(skipStuffBeforeStatement >>
+    (extension<LanguageFeature::EmptySourceFile>(
+         "nonstandard usage: empty source file"_port_en_US,
+         consumedAllInput >> pure<std::list<ProgramUnit>>()) ||
         some(skipStuffBeforeStatement >> (globalCompilerDirective ||
                                              globalOpenACCCompilerDirective ||
                                              normalProgramUnit)) /
-            skipStuffBeforeStatement))
+            skipStuffBeforeStatement)))
 
 // R507 declaration-construct ->
 //        specification-construct | data-stmt | format-stmt |
