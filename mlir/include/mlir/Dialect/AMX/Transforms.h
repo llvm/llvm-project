@@ -28,6 +28,13 @@ void configureAMXLegalizeForExportTarget(LLVMConversionTarget &target);
 /// Register LLVM conversion interface for AMX dialect.
 void registerConvertAMXToLLVMInterface(DialectRegistry &registry);
 
+namespace amx {
+
+void populateVectorContractToPackedTypeTiledDotProductPatterns(
+    RewritePatternSet &patterns);
+
+}
+
 } // namespace mlir
 
 #endif // MLIR_DIALECT_AMX_TRANSFORMS_H
