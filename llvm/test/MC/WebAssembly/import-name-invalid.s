@@ -11,3 +11,6 @@
 
 # CHECK: [[#@LINE+1]]:22: error: Expected EOL, instead got: ,
 .import_name foo, bar,
+
+# CHECK: [[#@LINE+1]]:19: error: Expected string or identifier, got: "bar
+.import_name foo, "bar

@@ -8,7 +8,14 @@ foo:
     .export_name foo, bar
     end_function
 
+square:
+    .globl square
+    .functype square () -> ()
+    .export_name square, "[square]"
+    end_function
+
 # CHECK: .export_name foo, bar
+# CHECK: .export_name square, "[square]"
 
 # CHECK-OBJ:        - Type:            EXPORT
 # CHECK-OBJ-NEXT:     Exports:
