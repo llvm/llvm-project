@@ -17203,17 +17203,17 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     case ISD::SETEQ: {
       const std::optional<bool> KnownEq =
           KnownBits::eq(LHSKnownLo32, RHSKnownLo32);
-      if (KnownEq) {
+      if (KnownEq)
         NewCC = *KnownEq ? ISD::SETEQ : ISD::SETFALSE;
-      }
+
       break;
     }
     case ISD::SETNE: {
       const std::optional<bool> KnownEq =
           KnownBits::eq(LHSKnownLo32, RHSKnownLo32);
-      if (KnownEq) {
+      if (KnownEq)
         NewCC = *KnownEq ? ISD::SETNE : ISD::SETTRUE;
-      }
+
       break;
     }
     case ISD::SETULT:
