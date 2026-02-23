@@ -31,7 +31,6 @@ namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
   VPTypeAnalysis &TypeInfo;
-  bool VerifyLate;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -62,9 +61,8 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo,
-                bool VerifyLate)
-      : VPDT(VPDT), TypeInfo(TypeInfo), VerifyLate(VerifyLate) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
+      : VPDT(VPDT), TypeInfo(TypeInfo) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -119,7 +117,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     RecipeI++;
   }
 
-  if (!VerifyLate && NumActiveLaneMaskPhiRecipes > 1) {
+  if (!VPBB->getPlan()->isUnrolled() && NumActiveLaneMaskPhiRecipes > 1) {
     errs() << "There should be no more than one VPActiveLaneMaskPHIRecipe";
     return false;
   }
@@ -456,9 +454,9 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   return true;
 }
 
-bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool VerifyLate) {
+bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo, VerifyLate);
+  VPlanVerifier Verifier(VPDT, TypeInfo);
   return Verifier.verify(Plan);
 }
