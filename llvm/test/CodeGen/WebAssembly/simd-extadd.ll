@@ -65,6 +65,22 @@ define <4 x i32> @test_extadd_pairwise_i16x8_u(<8 x i16> %v) {
   ret <4 x i32> %result
 }
 
+; Extend first, then shuffle.
+define <4 x i32> @extend_shuffle(<8 x i16> %a) {
+; CHECK-LABEL: extend_shuffle:
+; CHECK:         .functype extend_shuffle (v128) -> (v128)
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i32x4.extadd_pairwise_i16x8_s
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %1 = sext <8 x i16> %a to <8 x i32>
+  %2 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %3 = shufflevector <8 x i32> %1, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %4 = add nsw <4 x i32> %2, %3
+  ret <4 x i32> %4
+}
+
 ; Negative test: shuffling mask doesn't fit pattern
 define <4 x i32> @negative_test_extadd_pairwise_i16x8_u(<8 x i16> %v) {
 ; CHECK-LABEL: negative_test_extadd_pairwise_i16x8_u:
