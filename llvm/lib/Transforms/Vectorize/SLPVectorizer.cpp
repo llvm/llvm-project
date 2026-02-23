@@ -3021,12 +3021,14 @@ public:
                 dyn_cast<Instruction>(OpIsCopyable ? Op : OpLastLane);
             if (I && Instruction::isBinaryOp(I->getOpcode())) {
               Value *IOp0 = I->getOperand(0);
-              ScoreLoadOrOpcode(OpIsCopyable ? IOp0 : Op,
-                                OpIsCopyable ? OpLastLane : IOp0);
+              Value *NewOp = OpIsCopyable ? IOp0 : Op;
+              Value *NewOpLastLane = OpIsCopyable ? OpLastLane : IOp0;
+              ScoreLoadOrOpcode(NewOp, NewOpLastLane);
               if (I->isCommutative()) {
                 Value *IOp1 = I->getOperand(1);
-                ScoreLoadOrOpcode(OpIsCopyable ? IOp1 : Op,
-                                  OpIsCopyable ? OpLastLane : IOp1);
+                NewOp = OpIsCopyable ? IOp1 : Op;
+                NewOpLastLane = OpIsCopyable ? OpLastLane : IOp1;
+                ScoreLoadOrOpcode(NewOp, NewOpLastLane);
               }
             }
           }
