@@ -468,6 +468,11 @@ public:
       return;
     }
 
+    if (auto *CAE = dyn_cast<CoawaitExpr>(E)) {
+      PropagateResultObject(CAE->getOperand(), Loc);
+      return;
+    }
+
     // All other expression nodes that propagate a record prvalue should have
     // exactly one child.
     SmallVector<Stmt *, 1> Children(E->child_begin(), E->child_end());
