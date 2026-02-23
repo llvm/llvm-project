@@ -205,7 +205,7 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn) {
 }
 
 void MemAllocatorTy::MemPoolTy::printUsage() {
-  ODBG_OS([&](llvm::raw_ostream &Os) {
+  ODBG_OS(OLDT_Alloc, [&](llvm::raw_ostream &Os) {
     auto PrintNum = [&](uint64_t Num) {
       if (Num > 1e9)
         Os << llvm::format("%.2e", float(Num));
@@ -254,7 +254,7 @@ Error MemAllocatorTy::MemPoolTy::deinit() {
   printUsage();
   for (auto &Bucket : Buckets) {
     for (auto *Block : Bucket) {
-      ODBG_IF([&]() { Allocator->log(0, Block->Size, AllocKind); });
+      ODBG_IF(OLDT_Alloc, [&]() { Allocator->log(0, Block->Size, AllocKind); });
       auto Err =
           Allocator->deallocFromL0(reinterpret_cast<void *>(Block->Base));
       delete Block;
@@ -466,7 +466,7 @@ Error MemAllocatorTy::deinit() {
     CounterPool.reset(nullptr);
   }
   // Report memory usage if requested.
-  ODBG_OS([&](llvm::raw_ostream &Os) {
+  ODBG_OS(OLDT_Alloc, [&](llvm::raw_ostream &Os) {
     for (size_t Kind = 0; Kind < MaxMemKind; Kind++) {
       auto &Stat = Stats[Kind];
       Os << "Memory usage for " << allocKindToStr(Kind) << ", device " << Device
