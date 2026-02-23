@@ -857,11 +857,10 @@ void PyDynamicType::bindDerived(ClassTy &c) {
         std::string typeName = fullTypeName.substr(dotPos + 1);
         PyDialects dialects(context->getRef());
         MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
-        if (!mlirDialectIsAExtensibleDialect(dialect)) {
+        if (!mlirDialectIsAExtensibleDialect(dialect))
           throw nb::value_error(
               ("Dialect '" + dialectName + "' is not an extensible dialect.")
                   .c_str());
-        }
 
         MlirDynamicTypeDefinition typeDef =
             mlirExtensibleDialectLookupTypeDefinition(
