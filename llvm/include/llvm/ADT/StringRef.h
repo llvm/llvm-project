@@ -346,7 +346,7 @@ namespace llvm {
     /// End, or npos if not found.
     [[nodiscard]] size_t rfind_if_not(function_ref<bool(char)> F,
                                       size_t End = npos) const {
-      return rfind_if([F](char C) { return !F(C); }, End);
+      return rfind_if(std::not_fn(F), End);
     }
 
     /// Search for the first string \p Str in the string.
