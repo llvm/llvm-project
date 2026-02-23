@@ -9337,8 +9337,10 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
         LinkerArgs.emplace_back("-lompdevice");
 
       // For SPIR-V some functions will be defined by the runtime so allow
-      // unresolved symbols.
-      if (TC->getTriple().isSPIRV())
+      // unresolved symbols in `spirv-link`. `spirv-link` isn't called in LTO
+      // mode so restrict this flag to normal compilation.
+      if (TC->getTriple().isSPIRV() && !C.getDriver().isUsingLTO() &&
+          !C.getDriver().isUsingOffloadLTO())
         LinkerArgs.emplace_back("--allow-partial-linkage");
 
       // Forward all of these to the appropriate toolchain.
