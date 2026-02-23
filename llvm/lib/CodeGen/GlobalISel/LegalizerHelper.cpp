@@ -4602,8 +4602,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
         ResTy.changeElementType(LLT::buildInteger(ResTy.getScalarSizeInBits()));
     Register CastedSubByReg = SubByReg;
 
-    if (!(SubByRegTy.getScalarType().isAnyScalar() ||
-          SubByRegTy.getScalarType().isInteger())) {
+    if (!SubByRegTy.getScalarType().isAnyScalar() &&
+        !SubByRegTy.getScalarType().isInteger()) {
       auto BitcastDst = SubByRegTy.changeElementType(
           LLT::buildInteger(SubByRegTy.getScalarSizeInBits()));
       CastedSubByReg = MIRBuilder.buildBitcast(BitcastDst, SubByReg).getReg(0);

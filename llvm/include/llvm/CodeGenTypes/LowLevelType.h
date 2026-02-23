@@ -155,6 +155,7 @@ public:
     return LLT{Info, EC, ScalarTy.getSizeInBits().getFixedValue()};
   }
 
+  // FIXME: Remove this builder
   static constexpr LLT floatIEEE(unsigned SizeInBits) {
     switch (SizeInBits) {
     default:
@@ -309,6 +310,7 @@ public:
   constexpr bool isFloat(FpSemantics Sem) const {
     return isFloat() && getFpSemantics() == Sem;
   }
+  // FIXME: Remove or rework this predicate
   constexpr bool isFloatIEEE() const {
     return isFloat(APFloatBase::S_IEEEhalf) ||
            isFloat(APFloatBase::S_IEEEsingle) ||

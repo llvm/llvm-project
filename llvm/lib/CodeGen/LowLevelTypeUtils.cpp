@@ -111,6 +111,7 @@ const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
          "Expected a any scalar or float type.");
 
   // Any scalar type always matches IEEE format
+  // FIXME: Remove this handling
   if (Ty.isAnyScalar()) {
     switch (Ty.getSizeInBits()) {
     default:
