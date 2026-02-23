@@ -548,13 +548,10 @@ static std::string getNameFromParts(ArrayRef<StringRef> Parts,
     StringRef First = Parts[0];
     StringRef Second = Parts[1];
 
-    // Find the first non-digit from the end. Note that the first character of
-    // each part is a non-digit, so `Index` will never underflow.
-    uint64_t Index = Parts[0].size() - 1;
-    for (; isDigit(First[Index]); --Index)
-      ;
-
-    if (Index == First.size() - 1)
+    // Find the first non-digit from the end. If not found or there is no digit
+    // at the end, fall back to regular concatenation.
+    size_t Index = First.rfind_if_not(isDigit);
+    if (Index == First.size() - 1 || Index == StringRef::npos)
       return std::nullopt;
     size_t PrefixSize = Index + 1;
     StringRef Prefix = First.take_front(PrefixSize);
@@ -633,19 +630,18 @@ struct TupleExpander : SetTheory::Expander {
     // Zip them up.
     RecordKeeper &RK = Def->getRecords();
     for (unsigned n = 0; n != Length; ++n) {
-      SmallVector<StringRef> NameParts;
-
-      const Record *Proto = Lists[0][n];
-      std::vector<Init *> Tuple;
+      SmallVector<StringRef> NameParts(Dim);
+      std::vector<Init *> Tuple(Dim);
       for (unsigned i = 0; i != Dim; ++i) {
         const Record *Reg = Lists[i][n];
-        NameParts.push_back(Reg->getName());
-        Tuple.push_back(Reg->getDefInit());
+        NameParts[i] = Reg->getName();
+        Tuple[i] = Reg->getDefInit();
       }
 
       std::string Name = getNameFromParts(NameParts, CompactNames);
 
       // Take the cost list of the first register in the tuple.
+      const Record *Proto = Lists[0][n];
       const ListInit *CostList = Proto->getValueAsListInit("CostPerUse");
       SmallVector<const Init *, 2> CostPerUse(CostList->getElements());
 
@@ -1415,11 +1411,11 @@ CodeGenSubRegIndex *CodeGenRegBank::getConcatSubRegIndex(
     return Idx;
 
   // None exists, synthesize one.
-  SmallVector<StringRef> NameParts;
+  SmallVector<StringRef> NameParts(Parts.size());
   const unsigned UnknownSize = (uint16_t)-1;
 
-  for (const CodeGenSubRegIndex *Part : Parts)
-    NameParts.push_back(Part->getName());
+  for (const auto &[Idx, Part] : enumerate(Parts))
+    NameParts[Idx] = Part->getName();
 
   std::string Name = getNameFromParts(NameParts, CompactRegisterNames);
 
