@@ -24,6 +24,7 @@
 #include "UsingDeclarationsSorter.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringSet.h"
 #include <limits>
 
 #define DEBUG_TYPE "format-formatter"
@@ -1762,7 +1763,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IndentRequiresClause = true;
   LLVMStyle.IndentWidth = 2;
   LLVMStyle.IndentWrappedFunctionNames = false;
-  LLVMStyle.InheritsParentConfig = false;
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
@@ -2207,6 +2207,8 @@ FormatStyle getNoStyle() {
 
 bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
                         FormatStyle *Style) {
+  constexpr StringRef Prefix("inheritparentconfig=");
+
   if (Name.equals_insensitive("llvm"))
     *Style = getLLVMStyle(Language);
   else if (Name.equals_insensitive("chromium"))
@@ -2225,8 +2227,10 @@ bool getPredefinedStyle(StringRef Name, FormatStyle::LanguageKind Language,
     *Style = getClangFormatStyle();
   else if (Name.equals_insensitive("none"))
     *Style = getNoStyle();
-  else if (Name.equals_insensitive("inheritparentconfig"))
-    Style->InheritsParentConfig = true;
+  else if (Name.equals_insensitive(Prefix.drop_back()))
+    Style->InheritConfig = "..";
+  else if (Name.size() > Prefix.size() && Name.starts_with_insensitive(Prefix))
+    Style->InheritConfig = Name.substr(Prefix.size());
   else
     return false;
 
@@ -4424,7 +4428,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       return make_string_error("Error parsing -style: " + ec.message());
     }
 
-    if (!Style.InheritsParentConfig)
+    if (Style.InheritConfig.empty())
       return Style;
 
     ChildFormatTextToApply.emplace_back(
@@ -4438,7 +4442,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   const bool IsDotHFile = FileName.ends_with(".h");
 
   // User provided clang-format file using -style=file:path/to/format/file.
-  if (!Style.InheritsParentConfig &&
+  if (Style.InheritConfig.empty() &&
       StyleName.starts_with_insensitive("file:")) {
     auto ConfigFile = StyleName.substr(5);
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Text =
@@ -4452,7 +4456,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     LLVM_DEBUG(llvm::dbgs()
                << "Using configuration file " << ConfigFile << "\n");
 
-    if (!Style.InheritsParentConfig)
+    if (Style.InheritConfig.empty())
       return Style;
 
     // Search for parent configs starting from the parent directory of
@@ -4464,10 +4468,10 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   // If the style inherits the parent configuration it is a command line
   // configuration, which wants to inherit, so we have to skip the check of the
   // StyleName.
-  if (!Style.InheritsParentConfig && !StyleName.equals_insensitive("file")) {
+  if (Style.InheritConfig.empty() && !StyleName.equals_insensitive("file")) {
     if (!getPredefinedStyle(StyleName, Style.Language, &Style))
       return make_string_error("Invalid value for -style");
-    if (!Style.InheritsParentConfig)
+    if (Style.InheritConfig.empty())
       return Style;
   }
 
@@ -4476,7 +4480,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
     return make_string_error(EC.message());
 
   // Reset possible inheritance
-  Style.InheritsParentConfig = false;
+  Style.InheritConfig.clear();
 
   auto dropDiagnosticHandler = [](const llvm::SMDiagnostic &, void *) {};
 
@@ -4496,9 +4500,12 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
   FilesToLookFor.push_back(".clang-format");
   FilesToLookFor.push_back("_clang-format");
 
-  SmallString<128> UnsuitableConfigFiles;
+  llvm::StringSet<> Directories; // Inherited directories.
+  bool Redirected = false;
+  llvm::SmallString<128> Dir, UnsuitableConfigFiles;
   for (StringRef Directory = Path; !Directory.empty();
-       Directory = llvm::sys::path::parent_path(Directory)) {
+       Directory = Redirected ? Dir.str()
+                              : llvm::sys::path::parent_path(Directory)) {
     auto Status = FS->status(Directory);
     if (!Status ||
         Status->getType() != llvm::sys::fs::file_type::directory_file) {
@@ -4534,7 +4541,7 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       LLVM_DEBUG(llvm::dbgs()
                  << "Using configuration file " << ConfigFile << "\n");
 
-      if (!Style.InheritsParentConfig) {
+      if (Style.InheritConfig.empty()) {
         if (!ChildFormatTextToApply.empty()) {
           LLVM_DEBUG(llvm::dbgs() << "Applying child configurations\n");
           applyChildFormatTexts(&Style);
@@ -4542,10 +4549,35 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
         return Style;
       }
 
+      if (!Directories.insert(Directory).second) {
+        return make_string_error(
+            "Loop detected when inheriting configuration file in " + Directory);
+      }
+
       LLVM_DEBUG(llvm::dbgs() << "Inherits parent configuration\n");
 
+      if (Style.InheritConfig == "..") {
+        Redirected = false;
+      } else {
+        Redirected = true;
+        switch (Style.InheritConfig[0]) {
+        case '/':
+          Dir = Style.InheritConfig;
+          break;
+        case '~':
+          llvm::sys::fs::expand_tilde(Style.InheritConfig, Dir);
+          break;
+        default: {
+          Dir = Directory;
+          Dir.append("/");
+          Dir.append(Style.InheritConfig);
+        }
+        }
+        llvm::sys::fs::make_absolute(Dir);
+      }
+
       // Reset inheritance of style
-      Style.InheritsParentConfig = false;
+      Style.InheritConfig.clear();
 
       ChildFormatTextToApply.emplace_back(std::move(*Text));
 
