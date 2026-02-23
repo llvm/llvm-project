@@ -34,9 +34,24 @@ static constexpr uint16_t SUBNORM_NEG_STOP = 0x807FU;
 
 
 TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
-  const bfloat16 z_values[] = {zero, neg_zero, min_normal};
-  const bfloat16 x_values[] = {zero, neg_zero, min_normal};
-  const bfloat16 y_values[] = {zero, neg_zero, min_normal};
+  const bfloat16 z_values[] = {zero,
+                               neg_zero,
+                               inf,
+                               neg_inf,
+                               min_normal,
+                               max_normal};
+  const bfloat16 x_values[] = {zero,
+                               neg_zero,
+                               inf,
+                               neg_inf,
+                               min_normal,
+                               max_normal};
+  const bfloat16 y_values[] = {zero,
+                               neg_zero,
+                               inf,
+                               neg_inf,
+                               min_normal,
+                               max_normal};
 
   for (bfloat16 x : x_values) {
     for (bfloat16 y : y_values) {
@@ -46,6 +61,10 @@ TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
                                        LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
       }
+      mpfr::TernaryInput<bfloat16> input{x, y, -x * y};
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
+                                     LIBC_NAMESPACE::fmabf16(x, y, -x * y),
+                                     0.5);
     }
   }
 }
