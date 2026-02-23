@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This defines checkers which detect usage of uninitialized va_list values
+// This defines a checker which detects usage of uninitialized va_list values
 // and va_start calls with no matching va_end.
 //
 //===----------------------------------------------------------------------===//

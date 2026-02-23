@@ -903,6 +903,49 @@ reported.
 Do not use the :ref:`address_space <langext-address_space_documentation>`
 attribute to suppress the reports - it just happens so that the checker also doesn't raise issues if the attribute is present.
 
+.. _optin-core-UnconditionalVAArg:
+
+optin.core.UnconditionalVAArg (C, C++)
+""""""""""""""""""""""""""""""""""""""
+Check for variadic functions that unconditionally use ``va_arg()``. It is
+possible to use such functions safely (as long as they always receive at least
+one variadic argument), but their careless use can lead to undefined behavior
+(trying to access a variadic argument when there isn't any), so it is better to
+avoid them.
+
+**Note:** This checker only inspects the *definition* of the variadic functions
+and reports those that *would* fail if they were called with no variadic
+arguments -- even if there is no such call in the codebase.
+
+This design rule is dictated by the SEI CERT rule `EXP47-C
+<https://wiki.sei.cmu.edu/confluence/display/c/EXP47-C.+Do+not+call+va_arg+with+an+argument+of+the+incorrect+type>`_,
+which describes several issues related to the use of ``va_arg()``. (The problem
+reported by this checker is shown in the second code example; the first,
+unrelated code example is covered by the clang diagnostic `-Wvarargs
+<https://clang.llvm.org/docs/DiagnosticsReference.html#wvarargs>`_.)
+
+.. code-block:: cpp
+
+  // This function expects a list of variadic arguments terminated by a NULL pointer.
+  void log_message(const char *msg, ...) {
+    va_list va;
+    const char *arg;
+    printf("%s\n", msg);
+    va_start(va, msg);
+    while ((arg = va_arg(va, const char *))) {
+      // warn: calls to 'log_message' always reach this va_arg() expression
+      printf(" * %s\n", arg);
+    }
+    va_end(va);
+  }
+
+Instead of this bugprone pattern, the SEI-CERT coding standard suggests
+approaches where the number of variadic arguments can be specified in a
+different manner -- for example, it can be encoded in the initial parameter
+like ``void foo(size_t num_varargs, ...)``. Those approaches are still not
+foolproof (e.g. ``foo(3, "a")`` will be undefined behavior), but they reduce
+the chances of an accidental mistake.
+
 .. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
