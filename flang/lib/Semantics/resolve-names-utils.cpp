@@ -293,7 +293,7 @@ static bool checkAndRewriteExplicitShapeSpecListToExplicitBounds(
     
     // Create the ExplicitShapeBoundsSpec and replace the variant
     parser::ExplicitShapeBoundsSpec boundsSpec{
-        std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
+      std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
     mutableArraySpec.u = std::move(boundsSpec);
     
     return true;
@@ -303,24 +303,18 @@ static bool checkAndRewriteExplicitShapeSpecListToExplicitBounds(
 }
 
 ArraySpec ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x) {
-  printf("Called ArraySpecAnalyzer::Analyze(const parser::ArraySpec &x)\n");
-  if(std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u) && 
-     checkAndRewriteExplicitShapeSpecListToExplicitBounds(context_, x)) {
-    printf("TODO: return value\n");
-    return arraySpec_;
+  if(std::get_if<std::list<parser::ExplicitShapeSpec>>(&x.u)) {
+    checkAndRewriteExplicitShapeSpecListToExplicitBounds(context_, x);
   }
   common::visit(common::visitors{
                     [&](const parser::AssumedSizeSpec &y) {
-                      printf("in ArraySpec, called lambda for AssumedSizeSpec &y\n");
                       Analyze(
                           std::get<std::list<parser::ExplicitShapeSpec>>(y.t));
                       Analyze(std::get<parser::AssumedImpliedSpec>(y.t));
                     },
                     [&](const parser::ImpliedShapeSpec &y) { 
-                      printf("in ArraySpec, called lambda for ImpliedShapeSpec &y\n");
                       Analyze(y.v); },
                     [&](const auto &y) { 
-                      printf("in ArraySpec, called lambda for auto &y\n");  
                       Analyze(y); 
                     },
                 },
@@ -357,9 +351,72 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
       std::get<parser::SpecificationExpr>(x.t));
 }
+
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
-  
+  const auto &lowerBoundOpt{std::get<0>(x.t)};
+  const auto &upperBound{std::get<1>(x.t)};
+
+  // Helper lambda to extract int64 values from a folded array expression
+  auto extractValues = [&](SomeExpr &folded) -> std::vector<std::int64_t> {
+    std::vector<std::int64_t> values;
+    if (auto scalar{evaluate::ToInt64(folded)}) {
+      printf("this is a scalar, %d\n", scalar);
+      values.push_back(*scalar);
+    } else if (const auto *someInt{
+                   evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeInteger>>(
+                       folded)}) {
+      common::visit(
+          [&](const auto &kindExpr) {
+            using T = std::decay_t<decltype(kindExpr)>;
+            if (const auto *constArray{
+                    evaluate::UnwrapExpr<evaluate::Constant<typename T::Result>>(
+                        kindExpr)}) {
+              printf("this is a rank-1 array, ");
+              for (auto it{constArray->values().begin()};
+                   it != constArray->values().end(); ++it) {
+                printf("%d ", it->ToInt64());
+                values.push_back(it->ToInt64());
+              }
+              printf("\n");
+            }
+          },
+          someInt->u);
+    }
+    return values;
+  };
+
+  // Fold the upper bound array expression
+  MaybeExpr ubArrayExpr{AnalyzeExpr(context_, upperBound.thing)};
+  if (!ubArrayExpr) {
+    return;
+  }
+  auto ubFolded{evaluate::Fold(context_.foldingContext(), std::move(*ubArrayExpr))};
+  auto ubValues{extractValues(ubFolded)};
+  if (ubValues.empty()) {
+    return;
+  }
+
+  // Fold the lower bound array expression if present
+  std::vector<std::int64_t> lbValues;
+  if (lowerBoundOpt) {
+    MaybeExpr lbArrayExpr{AnalyzeExpr(context_, lowerBoundOpt->thing)};
+    if (lbArrayExpr) {
+      auto lbFolded{evaluate::Fold(context_.foldingContext(), std::move(*lbArrayExpr))};
+      lbValues = extractValues(lbFolded);
+    }
+  }
+
+  // Create one ShapeSpec per element
+  for (std::size_t i{0}; i < ubValues.size(); ++i) {
+    Bound lb{1};
+    if (i < lbValues.size()) {
+      lb = Bound{common::Clone(evaluate::ExtentExpr{lbValues[i]})};
+    }
+    Bound ub{common::Clone(evaluate::ExtentExpr{ubValues[i]})};
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(std::move(lb), std::move(ub)));
+  }
 }
+
 void ArraySpecAnalyzer::Analyze(const parser::AssumedImpliedSpec &x) {
   MakeImplied(x.v);
 }

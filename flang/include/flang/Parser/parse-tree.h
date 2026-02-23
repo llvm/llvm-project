@@ -1337,8 +1337,6 @@ EMPTY_CLASS(AssumedRankSpec);
 // or implied-shape-spec
 // or implied-shape-or-assumed-size-spec
 // or assumed-rank-spec
-// Combine first two rules:
-// eplicit-shape-spec-list-or-array
 using ExplicitBoundsExpr = IntExpr;
 
 struct ExplicitShapeBoundsSpec {
