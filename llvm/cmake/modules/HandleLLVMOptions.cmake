@@ -758,7 +758,6 @@ if (MSVC)
       -wd4127 # Suppress 'conditional expression is constant'
       -wd4512 # Suppress 'assignment operator could not be generated'
       -wd4505 # Suppress 'unreferenced local function has been removed'
-      -wd4510 # Suppress 'default constructor could not be generated'
       -wd4702 # Suppress 'unreachable code'
       -wd4245 # Suppress ''conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch'
       -wd4310 # Suppress 'cast truncates constant value'
