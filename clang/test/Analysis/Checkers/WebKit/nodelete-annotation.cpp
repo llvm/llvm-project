@@ -14,6 +14,13 @@ void [[clang::annotate_type("webkit.nodelete")]] callsUnsafe() {
   someFunction();
 }
 
+#define EXPORT_IMPORT __attribute__((visibility("default")))
+EXPORT_IMPORT unsigned [[clang::annotate_type("webkit.nodelete")]] safeFunctionWithAttr();
+
+void [[clang::annotate_type("webkit.nodelete")]] callsSafeWithAttribute() {
+  unsigned r = safeFunctionWithAttr();
+}
+
 void [[clang::annotate_type("webkit.nodelete")]] callsSafe() {
   safeFunction();
 }
