@@ -83,6 +83,9 @@ Options
 
    - Iterator-based algorithms. These should follow the standard iterator
      pattern: ``func(Iter, Iter, ...)``.
+
    - Range-based algorithms. These are heuristically detected if they take
      exactly two arguments and the first argument is a container or range.
      The fix will insert ``std::end(Container)``.
+
+   Default is an empty string.

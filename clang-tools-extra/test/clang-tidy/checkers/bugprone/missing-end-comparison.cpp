@@ -224,4 +224,14 @@ void test_condition_variable_suppression() {
   int arr[] = {1, 2, 3};
   if (int* it2 = std::find(arr, arr + 3, 2)) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+
+  while (int* it3 = std::find(arr, arr + 3, 2)) { break; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+
+  for (; int* it4 = std::find(arr, arr + 3, 2); ) { break; }
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
+
+  std::vector<int> v;
+  if (auto it5 = std::ranges::find(v, 2)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]
 }
