@@ -1880,15 +1880,15 @@ static enum CXChildVisitResult PrintBinOps(CXCursor C, CXCursor p,
 static enum CXChildVisitResult PrintUnOps(CXCursor C, CXCursor p,
                                           CXClientData d) {
   enum CXCursorKind ck = clang_getCursorKind(C);
-  enum CXUnaryOperatorKind bok;
+  enum CXUnaryOperatorKind uok;
   CXString opstr;
   if (ck != CXCursor_UnaryOperator && ck != CXCursor_CallExpr)
     return CXChildVisit_Recurse;
 
   PrintCursor(C, NULL);
-  bok = clang_getCursorUnaryOperatorKind(C);
-  opstr = clang_getUnaryOperatorKindSpelling(bok);
-  printf(" UnOp=%s %d\n", clang_getCString(opstr), bok);
+  uok = clang_getCursorUnaryOperatorKind(C);
+  opstr = clang_getUnaryOperatorKindSpelling(uok);
+  printf(" UnOp=%s %d\n", clang_getCString(opstr), uok);
   clang_disposeString(opstr);
   return CXChildVisit_Recurse;
 }

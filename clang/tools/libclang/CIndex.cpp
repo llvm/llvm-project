@@ -10203,7 +10203,7 @@ enum CXBinaryOperatorKind clang_getCursorBinaryOperatorKind(CXCursor cursor) {
     return static_cast<CXBinaryOperatorKind>(op->getOpcode() + 1);
 
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(expr)) {
-    const OverloadedOperatorKind Kind = OCE->getOperator();
+    OverloadedOperatorKind Kind = OCE->getOperator();
     bool isPostfixOp = (OCE->getNumArgs() == 2 &&
                         (Kind == OO_PlusPlus || Kind == OO_MinusMinus));
     if (OCE->getNumArgs() == 2 && !isPostfixOp) {
@@ -10223,21 +10223,18 @@ CXString clang_getUnaryOperatorKindSpelling(enum CXUnaryOperatorKind kind) {
 }
 
 enum CXUnaryOperatorKind clang_getCursorUnaryOperatorKind(CXCursor cursor) {
-  if (!clang_isExpression(cursor.kind)) {
+  if (!clang_isExpression(cursor.kind))
     return CXUnaryOperator_Invalid;
-  }
 
   const Expr *expr = getCursorExpr(cursor);
-  if (!expr) {
+  if (!expr)
     return CXUnaryOperator_Invalid;
-  }
 
-  if (const auto *op = dyn_cast<UnaryOperator>(expr)) {
+  if (const auto *op = dyn_cast<UnaryOperator>(expr))
     return static_cast<CXUnaryOperatorKind>(op->getOpcode() + 1);
-  }
 
   if (const auto *OCE = dyn_cast<CXXOperatorCallExpr>(expr)) {
-    const OverloadedOperatorKind Kind = OCE->getOperator();
+    OverloadedOperatorKind Kind = OCE->getOperator();
     bool isPostfixOp = (OCE->getNumArgs() == 2 &&
                         (Kind == OO_PlusPlus || Kind == OO_MinusMinus));
     if (OCE->getNumArgs() == 1 || isPostfixOp) {
