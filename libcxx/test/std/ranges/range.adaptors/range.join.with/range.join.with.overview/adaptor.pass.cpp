@@ -14,6 +14,7 @@
 
 #include <ranges>
 
+#include <cassert>
 #include <memory>
 #include <span>
 #include <string_view>

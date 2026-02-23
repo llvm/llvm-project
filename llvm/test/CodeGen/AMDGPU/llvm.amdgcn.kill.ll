@@ -63,14 +63,14 @@ define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
 ; SI-NEXT:  ; %bb.1:
 ; SI-NEXT:    s_andn2_b64 exec, exec, vcc
 ; SI-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
-; SI-NEXT:    exp mrt1 v0, v0, v0, v0 done vm
+; SI-NEXT:    exp mrt1, v0, v0, v0, v0 done vm
 ; SI-NEXT:    s_mov_b32 m0, 0
 ; SI-NEXT:    s_nop 0
 ; SI-NEXT:    s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB1_2:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: vcc_implicit_def:
@@ -84,11 +84,11 @@ define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
 ; GFX10-NEXT:    s_mov_b32 m0, 0
 ; GFX10-NEXT:    s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
-; GFX10-NEXT:    exp mrt1 v0, v0, v0, v0 done vm
+; GFX10-NEXT:    exp mrt1, v0, v0, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB1_2:
 ; GFX10-NEXT:    s_mov_b64 exec, 0
-; GFX10-NEXT:    exp null off, off, off, off done vm
+; GFX10-NEXT:    exp null, off, off, off, off done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: vcc_implicit_def:
@@ -102,11 +102,11 @@ define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s[0:1]
 ; GFX11-NEXT:    s_mov_b32 m0, 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX11-NEXT:    exp mrt1 v0, v0, v0, v0 done
+; GFX11-NEXT:    exp mrt1, v0, v0, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB1_2:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
-; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    exp mrt0, off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: vcc_implicit_def:
@@ -122,11 +122,11 @@ define amdgpu_ps void @vcc_implicit_def(float %arg13, float %arg14) {
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, vcc
 ; GFX12-NEXT:    s_mov_b32 m0, 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
-; GFX12-NEXT:    export mrt1 v0, v0, v0, v0 done
+; GFX12-NEXT:    export mrt1, v0, v0, v0, v0 done
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB1_2:
 ; GFX12-NEXT:    s_mov_b64 exec, 0
-; GFX12-NEXT:    export mrt0 off, off, off, off done
+; GFX12-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-NEXT:    s_endpgm
   %tmp0 = fcmp olt float %arg13, 0.000000e+00
   %c1 = fcmp oge float %arg14, 0.0
@@ -1164,7 +1164,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB21_1:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: fcmp_x2:
@@ -1177,7 +1177,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB21_1:
 ; GFX10-NEXT:    s_mov_b64 exec, 0
-; GFX10-NEXT:    exp null off, off, off, off done vm
+; GFX10-NEXT:    exp null, off, off, off, off done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: fcmp_x2:
@@ -1191,7 +1191,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB21_1:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
-; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    exp mrt0, off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: fcmp_x2:
@@ -1205,7 +1205,7 @@ define amdgpu_ps void @fcmp_x2(float %a) #0 {
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB21_1:
 ; GFX12-NEXT:    s_mov_b64 exec, 0
-; GFX12-NEXT:    export mrt0 off, off, off, off done
+; GFX12-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-NEXT:    s_endpgm
   %ogt = fcmp nsz ogt float %a, 2.500000e-01
   %k = select i1 %ogt, float -1.000000e+00, float 0.000000e+00
@@ -1230,7 +1230,7 @@ define amdgpu_ps float @wqm(float %a) {
 ; SI-NEXT:    s_branch .LBB22_3
 ; SI-NEXT:  .LBB22_2:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB22_3:
 ;
@@ -1248,7 +1248,7 @@ define amdgpu_ps float @wqm(float %a) {
 ; GFX10-NEXT:    s_branch .LBB22_3
 ; GFX10-NEXT:  .LBB22_2:
 ; GFX10-NEXT:    s_mov_b64 exec, 0
-; GFX10-NEXT:    exp null off, off, off, off done vm
+; GFX10-NEXT:    exp null, off, off, off, off done vm
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB22_3:
 ;
@@ -1266,7 +1266,7 @@ define amdgpu_ps float @wqm(float %a) {
 ; GFX11-NEXT:    s_branch .LBB22_3
 ; GFX11-NEXT:  .LBB22_2:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
-; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    exp mrt0, off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB22_3:
 ;
@@ -1284,7 +1284,7 @@ define amdgpu_ps float @wqm(float %a) {
 ; GFX12-NEXT:    s_branch .LBB22_3
 ; GFX12-NEXT:  .LBB22_2:
 ; GFX12-NEXT:    s_mov_b64 exec, 0
-; GFX12-NEXT:    export mrt0 off, off, off, off done
+; GFX12-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB22_3:
   %c1 = fcmp une float %a, 0.0
@@ -1303,7 +1303,7 @@ define amdgpu_ps void @test_sgpr(float inreg %a) #0 {
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB23_1:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: test_sgpr:
@@ -1314,7 +1314,7 @@ define amdgpu_ps void @test_sgpr(float inreg %a) #0 {
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB23_1:
 ; GFX10-NEXT:    s_mov_b64 exec, 0
-; GFX10-NEXT:    exp null off, off, off, off done vm
+; GFX10-NEXT:    exp null, off, off, off, off done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_sgpr:
@@ -1325,7 +1325,7 @@ define amdgpu_ps void @test_sgpr(float inreg %a) #0 {
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB23_1:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
-; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    exp mrt0, off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: test_sgpr:
@@ -1338,7 +1338,7 @@ define amdgpu_ps void @test_sgpr(float inreg %a) #0 {
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB23_1:
 ; GFX12-NEXT:    s_mov_b64 exec, 0
-; GFX12-NEXT:    export mrt0 off, off, off, off done
+; GFX12-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-NEXT:    s_endpgm
   %c = fcmp ole float %a, 1.000000e+00
   call void @llvm.amdgcn.kill(i1 %c) #1
@@ -1356,7 +1356,7 @@ define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB24_1:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: test_non_inline_imm_sgpr:
@@ -1368,7 +1368,7 @@ define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB24_1:
 ; GFX10-NEXT:    s_mov_b64 exec, 0
-; GFX10-NEXT:    exp null off, off, off, off done vm
+; GFX10-NEXT:    exp null, off, off, off, off done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_non_inline_imm_sgpr:
@@ -1380,7 +1380,7 @@ define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB24_1:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
-; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    exp mrt0, off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: test_non_inline_imm_sgpr:
@@ -1393,7 +1393,7 @@ define amdgpu_ps void @test_non_inline_imm_sgpr(float inreg %a) #0 {
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB24_1:
 ; GFX12-NEXT:    s_mov_b64 exec, 0
-; GFX12-NEXT:    export mrt0 off, off, off, off done
+; GFX12-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-NEXT:    s_endpgm
   %c = fcmp ole float %a, 1.500000e+00
   call void @llvm.amdgcn.kill(i1 %c) #1
@@ -1423,7 +1423,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB25_4:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: test_scc_liveness:
@@ -1448,7 +1448,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB25_4:
 ; GFX10-NEXT:    s_mov_b64 exec, 0
-; GFX10-NEXT:    exp null off, off, off, off done vm
+; GFX10-NEXT:    exp null, off, off, off, off done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: test_scc_liveness:
@@ -1473,7 +1473,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB25_4:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
-; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    exp mrt0, off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: test_scc_liveness:
@@ -1498,7 +1498,7 @@ define amdgpu_ps void @test_scc_liveness() #0 {
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB25_4:
 ; GFX12-NEXT:    s_mov_b64 exec, 0
-; GFX12-NEXT:    export mrt0 off, off, off, off done
+; GFX12-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   br label %loop3
@@ -1543,11 +1543,11 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; SI-NEXT:  ; %bb.4: ; %bb33
 ; SI-NEXT:    s_mov_b64 exec, 0
 ; SI-NEXT:  .LBB26_5: ; %bb35
-; SI-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
+; SI-NEXT:    exp mrt0, v0, v0, v0, v0 done vm
 ; SI-NEXT:    s_endpgm
 ; SI-NEXT:  .LBB26_6:
 ; SI-NEXT:    s_mov_b64 exec, 0
-; SI-NEXT:    exp null off, off, off, off done vm
+; SI-NEXT:    exp null, off, off, off, off done vm
 ; SI-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: kill_with_loop_exit:
@@ -1575,11 +1575,11 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX10-NEXT:  ; %bb.4: ; %bb33
 ; GFX10-NEXT:    s_mov_b64 exec, 0
 ; GFX10-NEXT:  .LBB26_5: ; %bb35
-; GFX10-NEXT:    exp mrt0 v0, v0, v0, v0 done vm
+; GFX10-NEXT:    exp mrt0, v0, v0, v0, v0 done vm
 ; GFX10-NEXT:    s_endpgm
 ; GFX10-NEXT:  .LBB26_6:
 ; GFX10-NEXT:    s_mov_b64 exec, 0
-; GFX10-NEXT:    exp null off, off, off, off done vm
+; GFX10-NEXT:    exp null, off, off, off, off done vm
 ; GFX10-NEXT:    s_endpgm
 ;
 ; GFX11-LABEL: kill_with_loop_exit:
@@ -1608,11 +1608,11 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX11-NEXT:  ; %bb.4: ; %bb33
 ; GFX11-NEXT:    s_mov_b64 exec, 0
 ; GFX11-NEXT:  .LBB26_5: ; %bb35
-; GFX11-NEXT:    exp mrt0 v0, v0, v0, v0 done
+; GFX11-NEXT:    exp mrt0, v0, v0, v0, v0 done
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB26_6:
 ; GFX11-NEXT:    s_mov_b64 exec, 0
-; GFX11-NEXT:    exp mrt0 off, off, off, off done
+; GFX11-NEXT:    exp mrt0, off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 ;
 ; GFX12-LABEL: kill_with_loop_exit:
@@ -1644,11 +1644,11 @@ define amdgpu_ps void @kill_with_loop_exit(float inreg %inp0, float inreg %inp1,
 ; GFX12-NEXT:    s_mov_b64 exec, 0
 ; GFX12-NEXT:  .LBB26_5: ; %bb35
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s4
-; GFX12-NEXT:    export mrt0 v0, v0, v0, v0 done
+; GFX12-NEXT:    export mrt0, v0, v0, v0, v0 done
 ; GFX12-NEXT:    s_endpgm
 ; GFX12-NEXT:  .LBB26_6:
 ; GFX12-NEXT:    s_mov_b64 exec, 0
-; GFX12-NEXT:    export mrt0 off, off, off, off done
+; GFX12-NEXT:    export mrt0, off, off, off, off done
 ; GFX12-NEXT:    s_endpgm
 .entry:
   %tmp24 = fcmp olt float %inp0, 1.280000e+02
