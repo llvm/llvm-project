@@ -78,9 +78,8 @@ protected:
 };
 
 TEST_F(GDBRemoteCommunicationClientTest, vCont_c) {
-  std::future<bool> write_result = std::async(std::launch::async, [&] {
-    return client.GetVContSupported("c");
-  });
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
   HandlePacket(server, "vCont?", "$vCont;c#16");
   ASSERT_TRUE(write_result.get());
   ASSERT_FALSE(client.GetVContSupported("C"));
@@ -92,9 +91,8 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_c) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, vCont_C) {
-  std::future<bool> write_result = std::async(std::launch::async, [&] {
-    return client.GetVContSupported("c");
-  });
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
   HandlePacket(server, "vCont?", "$vCont;C#16");
   ASSERT_FALSE(write_result.get());
   ASSERT_TRUE(client.GetVContSupported("C"));
@@ -106,9 +104,8 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_C) {
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, vCont_cC) {
-  std::future<bool> write_result = std::async(std::launch::async, [&] {
-    return client.GetVContSupported("c");
-  });
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
   HandlePacket(server, "vCont?", "$vCont;c;C#16");
   ASSERT_TRUE(write_result.get());
   ASSERT_TRUE(client.GetVContSupported("C"));
