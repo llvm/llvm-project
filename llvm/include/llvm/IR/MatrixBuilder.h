@@ -229,13 +229,19 @@ public:
 
   /// Create a shuffle vector that reorders elements from row-major to
   /// column-major order for a matrix with \p NumRows rows and \p NumColumns
-  /// columns.
+  /// columns. This is effectively the same as a matrix transpose but does not
+  /// use the llvm.matrix.transpose intrinsic because this is not meant to
+  /// explicitly be a matrix transpose operation, but rather just a change in
+  /// representation.
   Value *CreateRowMajorToColumnMajorShuffle(Value *Vec, unsigned NumRows,
                                             unsigned NumColumns,
                                             const Twine &Name = "") {
     SmallVector<int, 16> Mask;
-    for (unsigned I = 0, N = NumRows * NumColumns; I < N; ++I)
-      Mask.push_back((I % NumRows) * NumColumns + (I / NumRows));
+    for (unsigned I = 0, N = NumRows * NumColumns; I < N; ++I) {
+      unsigned ColumnMajorIdx =
+          CreateConstantColumnMajorIndex(I, NumRows, NumColumns);
+      Mask.push_back(ColumnMajorIdx);
+    }
     return B.CreateShuffleVector(Vec, Mask, Name);
   }
 
@@ -282,6 +288,40 @@ private:
   Value *CreateRowMajorIndex(Value *RowIdx, Value *ColumnIdx, Value *NumColsV,
                              Twine const &Name) {
     return B.CreateAdd(B.CreateMul(RowIdx, NumColsV), ColumnIdx);
+  }
+
+  /// Map a linear \p Index from row-major order to column-major order for a
+  /// matrix with \p NumRows rows and \p NumColumns columns. The row-major
+  /// element at (Index / NumColumns, Index % NumColumns) is mapped to its
+  /// column-major linear position: (Index % NumRows) * NumColumns +
+  /// (Index / NumRows).
+  unsigned CreateConstantColumnMajorIndex(unsigned Index, unsigned NumRows,
+                                          unsigned NumColumns) {
+    assert(NumRows != 0 && NumColumns != 0 && "Invalid matrix dimensions");
+    return (Index % NumRows) * NumColumns + (Index / NumRows);
+  }
+
+  /// Map a linear \p Index from column-major order to row-major order for a
+  /// matrix with \p NumRows rows and \p NumColumns columns. The column-major
+  /// element at (Index % NumRows, Index / NumRows) is mapped to its row-major
+  /// linear position: (Index % NumColumns) * NumRows + (Index / NumColumns).
+  unsigned CreateConstantRowMajorIndex(unsigned Index, unsigned NumRows,
+                                       unsigned NumColumns) {
+    assert(NumRows != 0 && NumColumns != 0 && "Invalid matrix dimensions");
+    return (Index % NumColumns) * NumRows + (Index / NumColumns);
+  }
+
+  /// Map a linear \p Index between row-major and column-major order for a
+  /// matrix with \p NumRows rows and \p NumColumns columns. When
+  /// \p IsMatrixRowMajor is true, maps from column-major to row-major;
+  /// otherwise maps from row-major to column-major.
+  unsigned CreateConstantIndex(unsigned Index, unsigned NumRows,
+                               unsigned NumColumns,
+                               bool IsMatrixRowMajor = false) {
+    if (IsMatrixRowMajor)
+      return CreateConstantRowMajorIndex(Index, NumRows, NumColumns);
+
+    return CreateConstantColumnMajorIndex(Index, NumRows, NumColumns);
   }
 };
 
