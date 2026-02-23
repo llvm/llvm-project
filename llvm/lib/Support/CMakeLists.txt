@@ -135,7 +135,6 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 add_subdirectory(BLAKE3)
-add_subdirectory(LSP)
 
 add_llvm_component_library(LLVMSupport
   ABIBreak.cpp
@@ -324,6 +323,9 @@ add_llvm_component_library(LLVMSupport
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/Support
   ${Backtrace_INCLUDE_DIRS}
 
+  PRECOMPILE_HEADERS
+  [["llvm/Support/pch.h"]]
+
   LINK_LIBS
   ${system_libs} ${imported_libs} ${delayload_flags}
 
@@ -398,3 +400,6 @@ target_include_directories(LLVMSupport
   PRIVATE
   ${LLVM_THIRD_PARTY_DIR}/siphash/include
 )
+
+# SupportLSP depends on Support and therefore must be included afterwards.
+add_subdirectory(LSP)
