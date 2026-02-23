@@ -19,7 +19,9 @@ namespace clang {
 namespace driver {
 class Driver;
 class Compilation;
+class JobList;
 } // namespace driver
+class DiagnosticOptions;
 class DiagnosticsEngine;
 class DiagnosticConsumer;
 } // namespace clang
@@ -30,10 +32,19 @@ class AdvisorConfig;
 struct CompilationUnitInfo;
 
 struct DriverContext {
+  std::unique_ptr<clang::DiagnosticOptions> DiagnosticsOptions;
+  std::unique_ptr<clang::DiagnosticConsumer> Client;
+  std::unique_ptr<clang::DiagnosticsEngine> Diagnostics;
   std::unique_ptr<clang::driver::Driver> Driver;
   std::unique_ptr<clang::driver::Compilation> Compilation;
-  std::shared_ptr<clang::DiagnosticsEngine> Diagnostics;
-  std::unique_ptr<clang::DiagnosticConsumer> Client;
+
+  DriverContext();
+  DriverContext(DriverContext &&) noexcept;
+  auto operator=(DriverContext &&) noexcept -> DriverContext &;
+  ~DriverContext();
+
+  DriverContext(const DriverContext &) = delete;
+  auto operator=(const DriverContext &) -> DriverContext & = delete;
 };
 
 std::unique_ptr<DriverContext>

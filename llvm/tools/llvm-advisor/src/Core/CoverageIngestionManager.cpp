@@ -101,8 +101,8 @@ bool CoverageIngestionManager::processSite(WatchEntry &Entry) {
             Entry.Site.instrumentedBinary, Entry.Site.indexedProfile,
             Entry.Site.reportPath)) {
       errs() << "llvm-advisor: failed to export coverage for '"
-             << Entry.Site.instrumentedBinary << "': "
-             << toString(std::move(Err)) << "\n";
+             << Entry.Site.instrumentedBinary
+             << "': " << toString(std::move(Err)) << "\n";
     }
   }
 

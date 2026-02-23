@@ -10,18 +10,18 @@
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
-#include "llvm/Support/Format.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/tools/llvm-cov/CoverageExporterJson.h"
-#include "llvm/tools/llvm-cov/CoverageFilters.h"
-#include "llvm/tools/llvm-cov/CoverageViewOptions.h"
+#include "CoverageExporterJson.h"
+#include "CoverageFilters.h"
+#include "CoverageViewOptions.h"
 #include <vector>
 
 using namespace llvm;
@@ -72,23 +72,21 @@ Error CoverageProcessor::mergeRawProfile(StringRef RawProfile,
     return E;
 
   std::vector<std::string> Warnings;
-  auto Warn = [&](Error E) {
-    Warnings.push_back(toString(std::move(E)));
-  };
+  auto Warn = [&](Error E) { Warnings.push_back(toString(std::move(E))); };
 
   for (auto &Record : *Reader) {
-    Writer.addRecord(std::move(Record), /*Weight=*/1, [&](Error E) {
-      Warn(std::move(E));
-    });
+    Writer.addRecord(std::move(Record), /*Weight=*/1,
+                     [&](Error E) { Warn(std::move(E)); });
   }
 
   if (Reader->hasError())
-    return Reader->takeError();
+    return Reader->getError();
 
   std::error_code EC;
   raw_fd_ostream OS(IndexedProfile, EC, sys::fs::OF_None);
   if (EC)
-    return createStringError(EC, "failed to open %s", IndexedProfile.str().c_str());
+    return createStringError(EC, "failed to open %s",
+                             IndexedProfile.str().c_str());
 
   if (Error E = Writer.write(OS))
     return E;
@@ -121,9 +119,9 @@ Error CoverageProcessor::exportCoverageReport(StringRef InstrumentedBinary,
     return createStringError(EC, "failed to open %s", ReportPath.str().c_str());
 
   CoverageFiltersMatchAll IgnoreFilters;
-CoverageExporterJson Exporter(*Coverage, ViewOpts, OS);
-Exporter.renderRoot(IgnoreFilters);
-return Error::success();
+  CoverageExporterJson Exporter(*Coverage, ViewOpts, OS);
+  Exporter.renderRoot(IgnoreFilters);
+  return Error::success();
 }
 
 Error CoverageProcessor::summarizeProfile(StringRef IndexedProfile,

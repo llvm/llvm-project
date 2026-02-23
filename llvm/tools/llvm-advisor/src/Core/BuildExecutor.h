@@ -26,6 +26,7 @@
 namespace clang {
 class DiagnosticConsumer;
 class DiagnosticsEngine;
+class DiagnosticOptions;
 namespace driver {
 class Driver;
 class Compilation;
@@ -41,11 +42,20 @@ public:
   struct PreparedBuild {
     std::string CompilerPath;
     llvm::SmallVector<std::string, 16> InstrumentedArgs;
+    std::unique_ptr<clang::DiagnosticOptions> DiagnosticsOptions;
+    std::unique_ptr<clang::DiagnosticConsumer> DiagnosticClient;
+    std::unique_ptr<clang::DiagnosticsEngine> Diagnostics;
     std::unique_ptr<clang::driver::Driver> Driver;
     std::unique_ptr<clang::driver::Compilation> Compilation;
-    std::shared_ptr<clang::DiagnosticsEngine> Diagnostics;
-    std::unique_ptr<clang::DiagnosticConsumer> DiagnosticClient;
     bool UsesDriver = false;
+
+    PreparedBuild();
+    PreparedBuild(PreparedBuild &&) noexcept;
+    auto operator=(PreparedBuild &&) noexcept -> PreparedBuild &;
+    ~PreparedBuild();
+
+    PreparedBuild(const PreparedBuild &) = delete;
+    auto operator=(const PreparedBuild &) -> PreparedBuild & = delete;
   };
 
   auto execute(llvm::StringRef Compiler,

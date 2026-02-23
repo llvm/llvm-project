@@ -13,6 +13,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include <atomic>
 #include <chrono>
+#include <mutex>
 #include <optional>
 #include <thread>
 #include <vector>
