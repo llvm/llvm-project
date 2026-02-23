@@ -23,13 +23,7 @@
 #include "llvm/Analysis/StaticDataProfileInfo.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/DwarfStringPoolEntry.h"
-#include "llvm/CodeGen/MachineDominators.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/IR/InlineAsm.h"
@@ -186,6 +180,7 @@ public:
   std::function<void(Module &)> BeginGCAssembly;
   std::function<void(Module &)> FinishGCAssembly;
   std::function<void(Module &)> EmitStackMaps;
+  std::function<void()> AssertDebugEHFinalized;
 
 private:
   MCSymbol *CurrentFnEnd = nullptr;
@@ -1009,65 +1004,12 @@ protected:
   }
 };
 
-inline MachineFunctionAnalysisManager &
-getMFAM(Module &M, ModuleAnalysisManager &MAM, MachineFunction &MF) {
-  FunctionAnalysisManager &FAM =
-      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  MachineFunctionAnalysisManager &MFAM =
-      FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(
-             MF.getFunction())
-          .getManager();
-  return MFAM;
-}
-
-template <typename AsmPrinterT>
 void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
-                           AsmPrinterT &AsmPrinter) {
-  MachineModuleInfo &MMI = MAM.getResult<MachineModuleAnalysis>(M).getMMI();
-  AsmPrinter.GetMMI = [&MMI]() { return &MMI; };
-  AsmPrinter.MMI = &MMI;
-  AsmPrinter.GetORE = [&MAM, &M](MachineFunction &MF) {
-    return &getMFAM(M, MAM, MF)
-                .getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
-  };
-  AsmPrinter.GetMDT = [&MAM, &M](MachineFunction &MF) {
-    return &getMFAM(M, MAM, MF).getResult<MachineDominatorTreeAnalysis>(MF);
-  };
-  AsmPrinter.GetMLI = [&MAM, &M](MachineFunction &MF) {
-    return &getMFAM(M, MAM, MF).getResult<MachineLoopAnalysis>(MF);
-  };
-  // TODO(boomanaiden154): Get GC working with the new pass manager.
-  AsmPrinter.BeginGCAssembly = [](Module &M) {};
-  AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
-}
+                           AsmPrinter &AsmPrinter);
 
-template <typename AsmPrinterT>
 void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
                                     MachineFunction &MF,
-                                    AsmPrinterT &AsmPrinter) {
-  const ModuleAnalysisManagerMachineFunctionProxy::Result &MAMProxy =
-      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF);
-  MachineModuleInfo &MMI =
-      MAMProxy
-          .getCachedResult<MachineModuleAnalysis>(*MF.getFunction().getParent())
-          ->getMMI();
-  AsmPrinter.GetMMI = [&MMI]() { return &MMI; };
-  AsmPrinter.MMI = &MMI;
-  AsmPrinter.GetORE = [&MFAM](MachineFunction &MF) {
-    return &MFAM.getResult<MachineOptimizationRemarkEmitterAnalysis>(MF);
-  };
-  AsmPrinter.GetMDT = [&MFAM](MachineFunction &MF) {
-    return &MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
-  };
-  AsmPrinter.GetMLI = [&MFAM](MachineFunction &MF) {
-    return &MFAM.getResult<MachineLoopAnalysis>(MF);
-  };
-  // TODO(boomanaiden154): Get GC working with the new pass manager.
-  AsmPrinter.BeginGCAssembly = [](Module &M) {};
-  AsmPrinter.FinishGCAssembly = [](Module &M) {};
-  AsmPrinter.EmitStackMaps = [](Module &M) {};
-}
+                                    AsmPrinter &AsmPrinter);
 
 } // end namespace llvm
 

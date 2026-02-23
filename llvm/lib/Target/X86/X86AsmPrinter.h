@@ -217,19 +217,7 @@ public:
   X86AsmPrinterBeginPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
       : TM(TM), CreateStreamer(CreateStreamer) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
-    Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-    if (!Streamer)
-      reportFatalInternalError("Failed to create MCStreamer");
-    X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
-    AsmPrinter.GetPSI = [&MAM](Module &M) {
-      return &MAM.getResult<ProfileSummaryAnalysis>(M);
-    };
-    AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
-    setupModuleAsmPrinter(M, MAM, AsmPrinter);
-    AsmPrinter.doInitialization(M);
-    return PreservedAnalyses::all();
-  }
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   TargetMachine &TM;
@@ -242,20 +230,7 @@ public:
       : TM(TM), CreateStreamer(CreateStreamer) {}
 
   PreservedAnalyses run(MachineFunction &MF,
-                        MachineFunctionAnalysisManager &MFAM) {
-    Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-    if (!Streamer)
-      reportFatalInternalError("Failed to create MCStreamer");
-    X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
-    AsmPrinter.GetPSI = [&MFAM, &MF](Module &M) {
-      return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
-          .getCachedResult<ProfileSummaryAnalysis>(M);
-    };
-    AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
-    setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
-    AsmPrinter.runOnMachineFunction(MF);
-    return PreservedAnalyses::all();
-  }
+                        MachineFunctionAnalysisManager &MFAM);
 
 private:
   TargetMachine &TM;
@@ -267,19 +242,7 @@ public:
   X86AsmPrinterEndPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
       : TM(TM), CreateStreamer(CreateStreamer) {}
 
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
-    Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
-    if (!Streamer)
-      reportFatalInternalError("Failed to create MCStreamer");
-    X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
-    AsmPrinter.GetPSI = [&MAM](Module &M) {
-      return &MAM.getResult<ProfileSummaryAnalysis>(M);
-    };
-    AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
-    setupModuleAsmPrinter(M, MAM, AsmPrinter);
-    AsmPrinter.doFinalization(M);
-    return PreservedAnalyses::all();
-  }
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 
 private:
   TargetMachine &TM;

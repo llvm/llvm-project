@@ -491,17 +491,17 @@ protected:
   void addPostBBSections(PassManagerWrapper &PMW) const {}
 
   void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                           CreateMCStreamer CreateStreamer) const {
+                          CreateMCStreamer CreateStreamer) const {
     llvm_unreachable("addAsmPrinterBegin is not overriden");
   }
 
   void addAsmPrinter(PassManagerWrapper &PMW,
-                      CreateMCStreamer CreateStreamer) const {
+                     CreateMCStreamer CreateStreamer) const {
     llvm_unreachable("addAsmPrinter is not overridden");
   }
 
   void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                         CreateMCStreamer CreateStreamer) const {
+                        CreateMCStreamer CreateStreamer) const {
     llvm_unreachable("addAsmPrinterEnd is not overriden");
   }
 
