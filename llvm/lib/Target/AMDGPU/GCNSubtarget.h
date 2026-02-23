@@ -473,16 +473,6 @@ public:
   /// \returns true if the subtarget has the v_permlane64_b32 instruction.
   bool hasPermLane64() const { return getGeneration() >= GFX11; }
 
-  bool hasDPPRowShare() const {
-    return HasDPP && (HasGFX90AInsts || getGeneration() >= GFX10);
-  }
-
-  bool hasDPPRowXMask() const { return HasDPP && getGeneration() >= GFX10; }
-
-  bool hasDPPRowMirror() const { return HasDPP; }
-
-  bool hasDPPRowHalfMirror() const { return HasDPP; }
-
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }
 
