@@ -227,6 +227,18 @@ public:
                : (IsUnsigned ? B.CreateUDiv(LHS, RHS) : B.CreateSDiv(LHS, RHS));
   }
 
+  /// Create a shuffle vector that reorders elements from row-major to
+  /// column-major order for a matrix with \p NumRows rows and \p NumColumns
+  /// columns.
+  Value *CreateRowMajorToColumnMajorShuffle(Value *Vec, unsigned NumRows,
+                                            unsigned NumColumns,
+                                            const Twine &Name = "") {
+    SmallVector<int, 16> Mask;
+    for (unsigned I = 0, N = NumRows * NumColumns; I < N; ++I)
+      Mask.push_back((I % NumRows) * NumColumns + (I / NumRows));
+    return B.CreateShuffleVector(Vec, Mask, Name);
+  }
+
   /// Create an assumption that \p Idx is less than \p NumElements.
   void CreateIndexAssumption(Value *Idx, unsigned NumElements,
                              Twine const &Name = "") {
