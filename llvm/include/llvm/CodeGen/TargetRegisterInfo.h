@@ -667,7 +667,7 @@ public:
   /// remove pseudo-registers that should be ignored).
   virtual void adjustStackMapLiveOutMask(uint32_t *Mask) const {}
 
-  /// Return a super-register of the register \p Reg so its sub-register of
+  /// Return a super-register of register \p Reg such that its sub-register of
   /// index \p SubIdx is \p Reg.
   MCRegister getMatchingSuperReg(MCRegister Reg, unsigned SubIdx,
                                  const TargetRegisterClass *RC) const {
@@ -675,8 +675,8 @@ public:
   }
 
   /// Return a subclass of the register class \p A so that each register in it
-  /// has a sub-register of the sub-register index \p Idx which is in the
-  /// register class \p B.
+  /// has a sub-register of sub-register index \p Idx which is in the register
+  /// class \p B.
   ///
   /// TableGen will synthesize missing A sub-classes.
   virtual const TargetRegisterClass *
@@ -709,8 +709,8 @@ public:
     return findCommonRegClass(DefRC, DefSubReg, SrcRC, SrcSubReg) != nullptr;
   }
 
-  /// Returns the largest legal sub-class of RC that
-  /// supports the sub-register index Idx.
+  /// Returns the largest legal sub-class of \p RC that supports the
+  /// sub-register index \p Idx.
   /// If no such sub-class exists, return NULL.
   /// If all registers in RC already have an Idx sub-register, return RC.
   ///
@@ -727,8 +727,13 @@ public:
     return RC;
   }
 
-  /// Return a register class that can be used for a subregister copy from/into
-  /// \p SuperRC at \p SubRegIdx.
+  /// Returns the register class of all sub-registers of \p SuperRC obtained by
+  /// applying the sub-register index \p SubRegIdx.
+  ///
+  /// TableGen *may not* synthesize the missing sub-register classes, so this
+  /// function may return null even if SubRegIdx can be applied to all registers
+  /// in SuperRC, i.e., even if
+  /// isSubRegValidForRegClass(SuperRC, SubRegIdx) is true.
   virtual const TargetRegisterClass *
   getSubRegisterClass(const TargetRegisterClass *SuperRC,
                       unsigned SubRegIdx) const {

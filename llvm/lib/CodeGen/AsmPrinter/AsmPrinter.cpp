@@ -1000,7 +1000,7 @@ void AsmPrinter::emitFunctionHeader() {
 
   emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment())
-    emitAlignment(MF->getAlignment(), &F);
+    emitAlignment(MF->getPreferredAlignment(), &F);
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
