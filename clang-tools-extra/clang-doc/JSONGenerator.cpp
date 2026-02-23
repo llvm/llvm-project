@@ -458,7 +458,8 @@ serializeArray(const Container &Records, Object &Obj, const std::string &Key,
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
-  Obj["VerticalDisplay"] = Records.size() > 2;
+  if (Key == "Params")
+    Obj["VerticalDisplay"] = Records.size() > 2;
 }
 
 static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
