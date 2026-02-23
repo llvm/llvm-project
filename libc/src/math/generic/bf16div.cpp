@@ -7,9 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/bf16div.h"
-#include "src/__support/FPUtil/bfloat16.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/math/bf16div.h"
 
 namespace LIBC_NAMESPACE_DECL {
