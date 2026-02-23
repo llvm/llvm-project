@@ -677,3 +677,137 @@ module attributes {transform.with_named_sequence} {
 // CHECK:             memref.store %[[VAL]], %[[DEST]][%[[K]], %[[C]]] : memref<128x256xf32>
 // CHECK:           }
 // CHECK:         }
+
+// -----
+
+func.func @KCRSsr_to_KCRS_static(%arg0: memref<1x1x128x64xf32>, %arg1: memref<1x1x4x8x8x32xf32>) {
+  linalg.unpack %arg1 inner_dims_pos = [3, 2] inner_tiles = [8, 32] into %arg0
+    : memref<1x1x4x8x8x32xf32> -> memref<1x1x128x64xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["linalg.unpack"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %unpack
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-DAG:   #[[$MAP_FLOORK:.*]] = affine_map<(d0) -> (d0 floordiv 32)>
+// CHECK-DAG:   #[[$MAP_MODK:.*]] = affine_map<(d0) -> (d0 mod 32)>
+// CHECK-DAG:   #[[$MAP_FLOORL:.*]] = affine_map<(d0) -> (d0 floordiv 8)>
+// CHECK-DAG:   #[[$MAP_MODL:.*]] = affine_map<(d0) -> (d0 mod 8)>
+// CHECK-LABEL: func @KCRSsr_to_KCRS_static(
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]: memref<1x1x128x64xf32>
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]: memref<1x1x4x8x8x32xf32>
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C64:.*]] = arith.constant 64 : index
+// CHECK-DAG:     %[[C128:.*]] = arith.constant 128 : index
+// CHECK:         scf.for %[[K:.*]] = %[[C0]] to %[[C128]] step %[[C1]] {
+// CHECK:           scf.for %[[L:.*]] = %[[C0]] to %[[C64]] step %[[C1]] {
+// CHECK-DAG:         %[[FLOORK:.*]] = affine.apply #[[$MAP_FLOORK]](%[[K]])
+// CHECK-DAG:         %[[FLOORL:.*]] = affine.apply #[[$MAP_FLOORL]](%[[L]])
+// CHECK-DAG:         %[[MODK:.*]] = affine.apply #[[$MAP_MODK]](%[[K]])
+// CHECK-DAG:         %[[MODL:.*]] = affine.apply #[[$MAP_MODL]](%[[L]])
+// CHECK:             %[[VAL:.*]] = memref.load %[[SRC]][%[[C0]], %[[C0]], %[[FLOORK]], %[[FLOORL]], %[[MODL]], %[[MODK]]] : memref<1x1x4x8x8x32xf32>
+// CHECK:             memref.store %[[VAL]], %[[DEST]][%[[C0]], %[[C0]], %[[K]], %[[L]]] : memref<1x1x128x64xf32>
+// CHECK:           }
+// CHECK:         }
+
+// -----
+
+func.func @KCRSsr_to_KCRS_dynamic_with_static_inner_tiles(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?x8x32xf32>) {
+  linalg.unpack %arg1 inner_dims_pos = [3, 2] inner_tiles = [8, 32] into %arg0
+    : memref<?x?x?x?x8x32xf32> -> memref<?x?x?x?xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["linalg.unpack"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %unpack
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-DAG:   #[[$MAP_FLOORK:.*]] = affine_map<(d0) -> (d0 floordiv 32)>
+// CHECK-DAG:   #[[$MAP_MODK:.*]] = affine_map<(d0) -> (d0 mod 32)>
+// CHECK-DAG:   #[[$MAP_FLOORL:.*]] = affine_map<(d0) -> (d0 floordiv 8)>
+// CHECK-DAG:   #[[$MAP_MODL:.*]] = affine_map<(d0) -> (d0 mod 8)>
+// CHECK-LABEL: func @KCRSsr_to_KCRS_dynamic_with_static_inner_tiles(
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32>
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]: memref<?x?x?x?x8x32xf32>
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:     %[[UBI:.*]] = memref.dim %[[DEST]], %[[C0]] : memref<?x?x?x?xf32>
+// CHECK-DAG:     %[[UBJ:.*]] = memref.dim %[[DEST]], %[[C1]] : memref<?x?x?x?xf32>
+// CHECK-DAG:     %[[UBK:.*]] = memref.dim %[[DEST]], %[[C2]] : memref<?x?x?x?xf32>
+// CHECK-DAG:     %[[UBL:.*]] = memref.dim %[[DEST]], %[[C3]] : memref<?x?x?x?xf32>
+// CHECK:         scf.for %[[I:.*]] = %[[C0]] to %[[UBI]] step %[[C1]] {
+// CHECK:           scf.for %[[J:.*]] = %[[C0]] to %[[UBJ]] step %[[C1]] {
+// CHECK:             scf.for %[[K:.*]] = %[[C0]] to %[[UBK]] step %[[C1]] {
+// CHECK:               scf.for %[[L:.*]] = %[[C0]] to %[[UBL]] step %[[C1]] {
+// CHECK-DAG:             %[[FLOORK:.*]] = affine.apply #[[$MAP_FLOORK]](%[[K]])
+// CHECK-DAG:             %[[FLOORL:.*]] = affine.apply #[[$MAP_FLOORL]](%[[L]])
+// CHECK-DAG:             %[[MODK:.*]] = affine.apply #[[$MAP_MODK]](%[[K]])
+// CHECK-DAG:             %[[MODL:.*]] = affine.apply #[[$MAP_MODL]](%[[L]])
+// CHECK:                 %[[VAL:.*]] = memref.load %[[SRC]][%[[I]], %[[J]], %[[FLOORK]], %[[FLOORL]], %[[MODL]], %[[MODK]]] : memref<?x?x?x?x8x32xf32>
+// CHECK:                 memref.store %[[VAL]], %[[DEST]][%[[I]], %[[J]], %[[K]], %[[L]]] : memref<?x?x?x?xf32>
+// CHECK:               }
+// CHECK:             }
+// CHECK:           }
+// CHECK:         }
+
+// -----
+
+func.func @KCRSsr_to_KCRS_dynamic_with_dynamic_inner_tiles(%arg0: memref<?x?x?x?xf32>, %arg1: memref<?x?x?x?x8x?xf32>, %block : index) {
+  linalg.unpack %arg1 inner_dims_pos = [3, 2] inner_tiles = [8, %block] into %arg0
+    : memref<?x?x?x?x8x?xf32> -> memref<?x?x?x?xf32>
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg1 : !transform.any_op {transform.readonly}) {
+    %unpack = transform.structured.match ops{["linalg.unpack"]} in %arg1
+      : (!transform.any_op) -> !transform.any_op
+    %0 = transform.structured.convert_to_loops %unpack
+      : (!transform.any_op) -> (!transform.any_op)
+    transform.yield
+  }
+}
+// CHECK-DAG:   #[[$MAP_FLOORK:.*]] = affine_map<(d0)[s0] -> (d0 floordiv s0)>
+// CHECK-DAG:   #[[$MAP_MODK:.*]] = affine_map<(d0)[s0] -> (d0 mod s0)>
+// CHECK-DAG:   #[[$MAP_FLOORL:.*]] = affine_map<(d0) -> (d0 floordiv 8)>
+// CHECK-DAG:   #[[$MAP_MODL:.*]] = affine_map<(d0) -> (d0 mod 8)>
+// CHECK-LABEL: func @KCRSsr_to_KCRS_dynamic_with_dynamic_inner_tiles(
+// CHECK-SAME:    %[[DEST:[a-zA-Z0-9]+]]: memref<?x?x?x?xf32>
+// CHECK-SAME:    %[[SRC:[a-zA-Z0-9]+]]: memref<?x?x?x?x8x?xf32>
+// CHECK-SAME:    %[[TILE:[a-zA-Z0-9]+]]: index
+// CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:     %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:     %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:     %[[C3:.*]] = arith.constant 3 : index
+// CHECK-DAG:     %[[UBI:.*]] = memref.dim %[[DEST]], %[[C0]] : memref<?x?x?x?xf32>
+// CHECK-DAG:     %[[UBJ:.*]] = memref.dim %[[DEST]], %[[C1]] : memref<?x?x?x?xf32>
+// CHECK-DAG:     %[[UBK:.*]] = memref.dim %[[DEST]], %[[C2]] : memref<?x?x?x?xf32>
+// CHECK-DAG:     %[[UBL:.*]] = memref.dim %[[DEST]], %[[C3]] : memref<?x?x?x?xf32>
+// CHECK:         scf.for %[[I:.*]] = %[[C0]] to %[[UBI]] step %[[C1]] {
+// CHECK:           scf.for %[[J:.*]] = %[[C0]] to %[[UBJ]] step %[[C1]] {
+// CHECK:             scf.for %[[K:.*]] = %[[C0]] to %[[UBK]] step %[[C1]] {
+// CHECK:               scf.for %[[L:.*]] = %[[C0]] to %[[UBL]] step %[[C1]] {
+// CHECK-DAG:             %[[FLOORK:.*]] = affine.apply #[[$MAP_FLOORK]](%[[K]])[%[[TILE]]]
+// CHECK-DAG:             %[[FLOORL:.*]] = affine.apply #[[$MAP_FLOORL]](%[[L]])
+// CHECK-DAG:             %[[MODK:.*]] = affine.apply #[[$MAP_MODK]](%[[K]])[%[[TILE]]]
+// CHECK-DAG:             %[[MODL:.*]] = affine.apply #[[$MAP_MODL]](%[[L]])
+// CHECK:                 %[[VAL:.*]] = memref.load %[[SRC]][%[[I]], %[[J]], %[[FLOORK]], %[[FLOORL]], %[[MODL]], %[[MODK]]] : memref<?x?x?x?x8x?xf32>
+// CHECK:                 memref.store %[[VAL]], %[[DEST]][%[[I]], %[[J]], %[[K]], %[[L]]] : memref<?x?x?x?xf32>
+// CHECK:               }
+// CHECK:             }
+// CHECK:           }
+// CHECK:         }

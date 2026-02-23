@@ -5041,10 +5041,9 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
-  for (auto dim : llvm::seq<int64_t>(0, destRank)) {
+  for (auto dim : llvm::seq<int64_t>(0, destRank))
     reifiedReturnShapes[0][dim] =
         createFoldedDimOp(builder, op.getLoc(), op.getDest(), dim);
-  }
   return success();
 }
 

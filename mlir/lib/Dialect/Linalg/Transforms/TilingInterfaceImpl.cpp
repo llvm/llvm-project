@@ -772,8 +772,18 @@ computeInterchangeFromDimPos(ArrayRef<int64_t> dimsPos, int64_t rank) {
   return interchangeVector;
 }
 
-/// Returns a vector that interchanges `elements` starting at offset `offset`
-/// based on the indexes in `interchangeVector`.
+/// Permute the elements of `vec` starting at position `offset` according to
+/// `interchangeVector`. The permutation maps position `i` in the permuted range
+/// to position `interchangeVector[i]` in the original range. Elements before
+/// `offset` are unchanged.
+///
+/// Example: interchange([a, b, c, d, e], [2, 0, 1], offset=2)
+///          returns [a, b, e, c, d] (permutes the suffix [c, d, e])
+///
+/// Note: This is similar to `applyPermutationToVector` but supports an offset
+/// for permuting a suffix of the vector. It is only used for pack/unpack scalar
+/// implementation where we need to permute inner tile dimensions which are
+/// stored at the end of the index vector.
 template <typename T>
 static SmallVector<T> interchange(ArrayRef<T> elements,
                                   ArrayRef<int64_t> interchangeVector,
@@ -810,15 +820,13 @@ static void generatePackOpScalarImplementationBody(PackOp packOp,
     interchangedIvs =
         interchange<Value>(interchangedIvs, interchangeVector, /*offset=*/0);
   }
-
-  SmallVector<OpFoldResult> tiles = packOp.getMixedTiles();
   DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
       packOp.getDimAndTileMapping();
   SmallVector<OpFoldResult> sourceIndices;
   size_t pointLoopsOffset = 0;
   int64_t sourceRank = packOp.getSourceRank();
   for (auto dim : llvm::seq<int64_t>(0, sourceRank)) {
-    if (dimAndTileMapping.count(dim)) {
+    if (dimAndTileMapping.contains(dim)) {
       AffineExpr i, j, tile;
       bindDims(builder.getContext(), i, j);
       bindSymbols(builder.getContext(), tile);
@@ -1032,7 +1040,7 @@ struct PackOpTiling
     OpBuilder::InsertionGuard g(builder);
     // The `ivs` already represent the position into the output tensor for the
     // non data-tile dimensions.
-    SmallVector<Value> ivVec = llvm::to_vector(ivs);
+    SmallVector<Value> ivVec(ivs);
 
     // Get output shape - for memrefs, get dimensions from dest directly.
     SmallVector<OpFoldResult> outputShape;
@@ -1498,14 +1506,14 @@ struct UnPackOpTiling
     assert(inputIvsPointLoops.size() + inputIvs.size() ==
                unpackOp.getSourceRank() &&
            "expect same number of induction variables equals to input rank");
-    // interchange the point loops induction variables based on `inner_dim_pos`.
+    // Interchange the point loops induction variables based on `inner_dim_pos`.
     ArrayRef<int64_t> innerDims = unpackOp.getInnerDimsPos();
     SmallVector<int64_t> interchangeVector =
         computeInterchangeFromDimPos(innerDims, unpackOp.getDestRank());
     SmallVector<Value> interchangedInputIvsPointLoops = inputIvsPointLoops;
     interchangedInputIvsPointLoops = interchange<Value>(
         interchangedInputIvsPointLoops, interchangeVector, /*offset=*/0);
-    // interchange the tiled loops induction variables based on
+    // Interchange the tiled loops induction variables based on
     // `outer_dims_perm`.
     ArrayRef<int64_t> outerDims = unpackOp.getOuterDimsPerm();
     if (!outerDims.empty())
