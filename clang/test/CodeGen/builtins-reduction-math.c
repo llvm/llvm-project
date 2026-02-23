@@ -164,7 +164,7 @@ void test_builtin_reduce_minimum(float4 vf1) {
   const double r4 = __builtin_reduce_minimum(vf1_as_one);
 }
 
-void test_builtin_reduce_addf(float4 vf1, half8 vf2) {
+void test_builtin_reduce_addf(float4 vf1, half8 vf2, float start) {
   // CHECK-LABEL: define void @test_builtin_reduce_addf(
 
   // CHECK:      [[V0:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
@@ -183,6 +183,16 @@ void test_builtin_reduce_addf(float4 vf1, half8 vf2) {
   // CHECK-NEXT: [[RDX:%.+]] = call half @llvm.vector.reduce.fadd.v8f16(half 0xH8000, <8 x half> [[V3]])
   // CHECK-NEXT: fpext half [[RDX]] to float
   float r4 = __builtin_reduce_in_order_fadd(vf2, -0.0f);
+
+  // CHECK:      [[V4:%.+]] = load <4 x float>, ptr %vf1.addr, align 16
+  // CHECK:      [[START0:%.+]] = load float, ptr %start.addr, align 4
+  // CHECK-NEXT: call float @llvm.vector.reduce.fadd.v4f32(float [[START0]], <4 x float> [[V4]])
+  float r5 = __builtin_reduce_in_order_fadd(vf1, start);
+
+  // CHECK:      [[V5:%.+]] = load <8 x half>, ptr %vf2.addr, align 16
+  // CHECK:      [[START1:%.+]] = fptrunc float %{{.*}} to half
+  // CHECK-NEXT: call reassoc half @llvm.vector.reduce.fadd.v8f16(half [[START1]], <8 x half> [[V5:%.+]])
+  _Float16 r7 = __builtin_reduce_assoc_fadd(vf2, start);
 }
 
 #if defined(__ARM_FEATURE_SVE)
