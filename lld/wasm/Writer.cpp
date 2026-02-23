@@ -1037,7 +1037,7 @@ OutputSegment *Writer::createOutputSegment(StringRef name) {
   // by the main thread and then shared with other threads. In the non-shared memory case, we use
   // passive segments only for TLS segments, so that they can be reused, and for .bss segments, which
   // don't need to be included in the binary at all. 
-  bool passiveForCMTC = ctx.componentModelThreadContext && (s->isTLS() || s->name.startswith(".bss"));
+  bool passiveForCMTC = ctx.componentModelThreadContext && (s->isTLS() || s->name.starts_with(".bss"));
   if (ctx.arg.sharedMemory || passiveForCMTC)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
