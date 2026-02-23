@@ -3,8 +3,7 @@
 
 define i32 @cttz_elts_v4i1() {
 ; CHECK-LABEL: @cttz_elts_v4i1(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> <i1 false, i1 false, i1 false, i1 true>, i1 false)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 3
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i1(<4 x i1> <i1 false, i1 false, i1 false, i1 true>, i1 false)
   ret i32 %res
@@ -12,8 +11,7 @@ define i32 @cttz_elts_v4i1() {
 
 define i32 @cttz_elts_v4i32() {
 ; CHECK-LABEL: @cttz_elts_v4i32(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, i1 false)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 1
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 1, i32 2, i32 3>, i1 false)
   ret i32 %res
@@ -21,8 +19,7 @@ define i32 @cttz_elts_v4i32() {
 
 define i32 @cttz_elts_v4i32_unused_lane_undef() {
 ; CHECK-LABEL: @cttz_elts_v4i32_unused_lane_undef(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 1, i32 undef, i32 3>, i1 false)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 1
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 1, i32 undef, i32 3>, i1 false)
   ret i32 %res
@@ -30,8 +27,7 @@ define i32 @cttz_elts_v4i32_unused_lane_undef() {
 
 define i32 @cttz_elts_v4i32_used_lane_undef() {
 ; CHECK-LABEL: @cttz_elts_v4i32_used_lane_undef(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 0, i32 undef, i32 3>, i1 false)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 undef
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 0, i32 undef, i32 3>, i1 false)
   ret i32 %res
@@ -39,8 +35,7 @@ define i32 @cttz_elts_v4i32_used_lane_undef() {
 
 define i32 @cttz_elts_v4i32_unused_lane_poison() {
 ; CHECK-LABEL: @cttz_elts_v4i32_unused_lane_poison(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 1, i32 poison, i32 3>, i1 false)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 1
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 1, i32 poison, i32 3>, i1 false)
   ret i32 %res
@@ -48,8 +43,7 @@ define i32 @cttz_elts_v4i32_unused_lane_poison() {
 
 define i32 @cttz_elts_v4i32_used_lane_poison() {
 ; CHECK-LABEL: @cttz_elts_v4i32_used_lane_poison(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 0, i32 poison, i32 3>, i1 false)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 0, i32 poison, i32 3>, i1 false)
   ret i32 %res
@@ -57,8 +51,7 @@ define i32 @cttz_elts_v4i32_used_lane_poison() {
 
 define i32 @cttz_elts_v4i32_all_zeros() {
 ; CHECK-LABEL: @cttz_elts_v4i32_all_zeros(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> zeroinitializer, i1 false)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 4
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, i1 false)
   ret i32 %res
@@ -66,8 +59,7 @@ define i32 @cttz_elts_v4i32_all_zeros() {
 
 define i32 @cttz_elts_v4i32_all_zeros_iszeropoison() {
 ; CHECK-LABEL: @cttz_elts_v4i32_all_zeros_iszeropoison(
-; CHECK-NEXT:    [[RES:%.*]] = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> zeroinitializer, i1 true)
-; CHECK-NEXT:    ret i32 [[RES]]
+; CHECK-NEXT:    ret i32 poison
 ;
   %res = call i32 @llvm.experimental.cttz.elts.i32.v4i32(<4 x i32> <i32 0, i32 0, i32 0, i32 0>, i1 true)
   ret i32 %res

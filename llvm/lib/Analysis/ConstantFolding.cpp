@@ -1966,6 +1966,8 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::experimental_constrained_rint:
   case Intrinsic::experimental_constrained_fcmp:
   case Intrinsic::experimental_constrained_fcmps:
+
+  case Intrinsic::experimental_cttz_elts:
     return true;
   default:
     return false;
@@ -3792,6 +3794,27 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
                                            /*IsSigned*/false);
       break;
     }
+  }
+
+  if (IntrinsicID == Intrinsic::experimental_cttz_elts) {
+    auto *FVTy = dyn_cast<FixedVectorType>(Operands[0]->getType());
+    auto *Op2 = dyn_cast<ConstantInt>(Operands[1]);
+    if (!FVTy)
+      return nullptr;
+    for (unsigned I = 0; I < FVTy->getNumElements(); ++I) {
+      Constant *Elt = Operands[0]->getAggregateElement(I);
+      if (!Elt)
+        return nullptr;
+      if (isa<PoisonValue>(Elt))
+        return PoisonValue::get(Ty);
+      if (isa<UndefValue>(Elt))
+        return UndefValue::get(Ty);
+      if (!Elt->isNullValue())
+        return ConstantInt::get(Ty, I);
+    }
+    if (Op2->isOne())
+      return PoisonValue::get(Ty);
+    return ConstantInt::get(Ty, FVTy->getNumElements());
   }
   return nullptr;
 }
