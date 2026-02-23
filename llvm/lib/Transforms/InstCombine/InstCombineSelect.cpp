@@ -84,40 +84,60 @@ static Instruction *foldSelectBinOpIdentity(SelectInst &Sel,
   if (!match(Sel.getOperand(IsEq ? 1 : 2), m_BinOp(BO)))
     return nullptr;
 
-  // The compare constant must be the identity constant for that binop.
-  // If this a floating-point compare with 0.0, any zero constant will do.
-  Type *Ty = BO->getType();
-  Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
-  if (IdC != C) {
-    if (!IdC || !CmpInst::isFPPredicate(Pred))
-      return nullptr;
-    if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
-      return nullptr;
-  }
+  // For absorbing values, we can fold to the compared value.
+  bool IsAbsorbingValue = false;
 
   // Last, match the compare variable operand with a binop operand.
   Value *Y;
   if (BO->isCommutative()) {
-    if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
+    // Recognized 0 as an absorbing value for fmul, but we need to be careful
+    // about the sign. This could be more aggressive, by handling arbitrary sign
+    // bit operations as long as we know the fmul sign matches (and handling
+    // arbitrary opcodes).
+    if (match(BO, m_c_FMul(m_FAbs(m_Specific(X)), m_Value(Y))) &&
+        match(C, m_AnyZeroFP()) &&
+        IC.fmulByZeroIsZero(Y, BO->getFastMathFlags(), &Sel))
+      IsAbsorbingValue = true;
+    else if (!match(BO, m_c_BinOp(m_Value(Y), m_Specific(X))))
       return nullptr;
   } else {
     if (!match(BO, m_BinOp(m_Value(Y), m_Specific(X))))
       return nullptr;
   }
 
-  // +0.0 compares equal to -0.0, and so it does not behave as required for this
-  // transform. Bail out if we can not exclude that possibility.
-  if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
-    if (!FPO->hasNoSignedZeros() &&
-        !cannotBeNegativeZero(Y,
-                              IC.getSimplifyQuery().getWithInstruction(&Sel)))
-      return nullptr;
+  // The compare constant must be the identity constant for that binop.
+  // If this a floating-point compare with 0.0, any zero constant will do.
+  Type *Ty = BO->getType();
+
+  Value *FoldedVal;
+  if (IsAbsorbingValue) {
+    FoldedVal = C;
+  } else {
+    Constant *IdC = ConstantExpr::getBinOpIdentity(BO->getOpcode(), Ty, true);
+    if (IdC != C) {
+      if (!IdC || !CmpInst::isFPPredicate(Pred))
+        return nullptr;
+
+      if (!match(IdC, m_AnyZeroFP()) || !match(C, m_AnyZeroFP()))
+        return nullptr;
+    }
+
+    // +0.0 compares equal to -0.0, and so it does not behave as required for
+    // this transform. Bail out if we can not exclude that possibility.
+    if (const auto *FPO = dyn_cast<FPMathOperator>(BO))
+      if (!FPO->hasNoSignedZeros() &&
+          !cannotBeNegativeZero(Y,
+                                IC.getSimplifyQuery().getWithInstruction(&Sel)))
+        return nullptr;
+
+    FoldedVal = Y;
+  }
 
   // BO = binop Y, X
   // S = { select (cmp eq X, C), BO, ? } or { select (cmp ne X, C), ?, BO }
   // =>
   // S = { select (cmp eq X, C),  Y, ? } or { select (cmp ne X, C), ?,  Y }
-  return IC.replaceOperand(Sel, IsEq ? 1 : 2, Y);
+  return IC.replaceOperand(Sel, IsEq ? 1 : 2, FoldedVal);
 }
 
 /// This folds:
