@@ -1399,6 +1399,11 @@ bool AMDGPUCallLowering::lowerTailCall(
       return false;
   }
 
+  // Mark the scratch resource descriptor as allocated so the CC analysis
+  // does not assign user arguments to these registers, matching the callee.
+  if (!ST.hasFlatScratchEnabled())
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
+
   OutgoingValueAssigner Assigner(AssignFnFixed, AssignFnVarArg);
 
   if (!determineAssignments(Assigner, OutArgs, CCInfo))
@@ -1596,6 +1601,13 @@ bool AMDGPUCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     // With a fixed ABI, allocate fixed registers before user arguments.
     if (!passSpecialInputs(MIRBuilder, CCInfo, ImplicitArgRegs, Info))
       return false;
+  }
+
+  // Mark the scratch resource descriptor as allocated so the CC analysis
+  // does not assign user arguments to these registers, matching the callee.
+  if (!ST.hasFlatScratchEnabled()) {
+    const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
+    CCInfo.AllocateReg(FuncInfo->getScratchRSrcReg());
   }
 
   // Do the actual argument marshalling.
