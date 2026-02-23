@@ -947,6 +947,21 @@ static KnownBits computeForSatAddSub(bool Add, bool Signed,
   return Res;
 }
 
+KnownBits KnownBits::makeInclusiveRange(const APInt &Lower,
+                                        const APInt &Upper) {
+  assert(Lower.getBitWidth() == Upper.getBitWidth() && "Bitwidth mismatch");
+  assert(Lower.ule(Upper) && "Constant range mismatch");
+
+  KnownBits Known = KnownBits::makeConstant(Lower);
+  if (std::optional<unsigned> DifferentBit =
+          APIntOps::GetMostSignificantDifferentBit(Lower, Upper)) {
+    Known.Zero.clearLowBits(*DifferentBit + 1);
+    Known.One.clearLowBits(*DifferentBit + 1);
+  }
+
+  return Known;
+}
+
 KnownBits KnownBits::sadd_sat(const KnownBits &LHS, const KnownBits &RHS) {
   return computeForSatAddSub(/*Add*/ true, /*Signed*/ true, LHS, RHS);
 }

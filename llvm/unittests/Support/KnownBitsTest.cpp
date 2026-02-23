@@ -703,6 +703,23 @@ TEST(KnownBitsTest, ICmpExhaustive) {
   });
 }
 
+TEST(KnownBitsTest, InclusiveRange) {
+  unsigned Bits = 4;
+  unsigned MaxValue = (1U << Bits) - 1;
+  for (unsigned Lo = 0; Lo <= MaxValue; ++Lo) {
+    const APInt LoInt(Bits, Lo);
+    for (unsigned Hi = Lo; Hi <= MaxValue; ++Hi) {
+      KnownBits Ref = KnownBits::makeConstant(LoInt);
+      for (unsigned I = Lo + 1; I <= Hi; ++I)
+        Ref = Ref.intersectWith(KnownBits::makeConstant(APInt(Bits, I)));
+
+      KnownBits Known = KnownBits::makeInclusiveRange(LoInt, APInt(Bits, Hi));
+      EXPECT_EQ(Ref.Zero, Known.Zero);
+      EXPECT_EQ(Ref.One, Known.One);
+    }
+  }
+}
+
 TEST(KnownBitsTest, GetMinMaxVal) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known) {
