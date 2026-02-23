@@ -19,6 +19,10 @@ on:
         type: string
       test_labels:
         type: string
+      test_retry_count:
+        type: number
+        default: 2                  #It will perform one additional try if failed
+        required: false
   workflow_call:
     inputs:
       artifact_group:
@@ -37,6 +41,11 @@ on:
         type: string
       test_labels:
         type: string
+      test_retry_count:
+        type: number
+        default: 2
+        required: false
+          
   push:
     branches:
       - ADHOCBUILD
@@ -89,8 +98,13 @@ jobs:
           AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
           TEST_TYPE: ${{ inputs.test_type }}
           TEST_LABELS: ${{ inputs.test_labels }}
-          PROJECTS_TO_TEST: 'rocblas,rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,rocthrust,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
-        run: python ./build_tools/github_actions/fetch_test_configurations.py
+        run: |
+          if [[ "${TEST_TYPE:-}" == "smoke" ]]; then
+              PROJECTS_TO_TEST='rocblas,rocroller,hipblas,hipblaslt,hipsolver,rocsolver,rocprim,hipcub,rocthrust,hipsparse,rocsparse,rocrand,hiprand,rocfft,hipfft,rocwmma'
+              export PROJECTS_TO_TEST
+              echo "PROJECTS_TO_TEST=$PROJECTS_TO_TEST" >> "$GITHUB_ENV"
+          fi
+          python ./build_tools/github_actions/fetch_test_configurations.py
 
   test_sanity_check:
     name: 'Test Sanity Check'
@@ -117,6 +131,7 @@ jobs:
       artifact_run_id: ${{ inputs.artifact_run_id }}
       artifact_group: ${{ inputs.artifact_group }}
       amdgpu_families: ${{ inputs.amdgpu_families }}
+      test_retry_count: ${{ inputs.test_retry_count }}
       # If the test requires a multi GPU, use the multi GPU test runner
       # Otherwise, use the standard test runner
       test_runs_on: >-

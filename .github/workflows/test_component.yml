@@ -16,6 +16,8 @@ on:
         type: string
       component:
         type: string
+      test_retry_count:
+        type: number
 
 permissions:
   contents: read
@@ -115,7 +117,28 @@ jobs:
           TOTAL_SHARDS: ${{ fromJSON(inputs.component).total_shards }}
           TEST_TYPE: ${{ fromJSON(inputs.component).test_type }}
         run: |
+          cat > run_test_script.sh <<EOF
           ${{ fromJSON(inputs.component).test_script }}
+          EOF
+          chmod +x run_test_script.sh
+          attempts_count=${{ inputs.test_retry_count }}
+          exit_code=0
+          for attempt in $(seq 1 "$attempts_count"); do
+            echo "Running test (attempt ${attempt}/${attempts_count}) for shard ${SHARD_INDEX}/${TOTAL_SHARDS} (${TEST_TYPE})"
+
+            if ./run_test_script.sh; then
+              exit_code=0
+              break
+            else
+              exit_code=$?
+              if [ "$attempt" -lt "$attempts_count" ]; then
+                echo "Attempt ${attempt} failed with exit code ${exit_code}. Retrying in 20 sec…"
+                sleep 20
+              fi
+            fi
+          done
+          rm -f run_test_script.sh
+          exit "$exit_code"
 
       # GitHub's 'Complete job' step is unaware of launched executables
       # and will fail to clean up orphan processes.
