@@ -805,8 +805,9 @@ static Error serializeIndex(const ClangDocContext &CDCtx, StringRef RootDir) {
 
   if (IndexCopy.Children.empty()) {
     // If the index is empty, default to displaying the global namespace.
-    IndexCopy.Children.try_emplace(toStringRef(GlobalNamespaceID), GlobalNamespaceID, "",
-                                    InfoType::IT_namespace, "GlobalNamespace");
+    IndexCopy.Children.try_emplace(toStringRef(GlobalNamespaceID),
+                                   GlobalNamespaceID, "",
+                                   InfoType::IT_namespace, "GlobalNamespace");
   } else {
     IndexArrayRef.reserve(CDCtx.Idx.Children.size());
   }

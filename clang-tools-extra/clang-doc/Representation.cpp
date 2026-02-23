@@ -473,7 +473,7 @@ bool Index::operator<(const Index &Other) const {
 }
 
 void Index::sort() {
-  for (auto &[_,C] : Children)
+  for (auto &[_, C] : Children)
     C.sort();
 }
 

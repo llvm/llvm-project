@@ -314,7 +314,8 @@ static void genMarkdown(const ClangDocContext &CDCtx, const TypedefInfo &I,
   // TODO support typedefs in markdown.
 }
 
-static void serializeReference(llvm::raw_fd_ostream &OS, const Index &I, int Level) {
+static void serializeReference(llvm::raw_fd_ostream &OS, const Index &I,
+                               int Level) {
   // Write out the heading level starting at ##
   OS << "##" << std::string(Level, '#') << " ";
   writeNameLink("", I, OS);

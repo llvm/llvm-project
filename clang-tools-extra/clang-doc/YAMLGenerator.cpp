@@ -111,13 +111,11 @@ template <unsigned U> struct ScalarTraits<SmallString<U>> {
 
 template <> struct ScalarTraits<SymbolID> {
 
-  static void output(const SymbolID &S, void *,
-                     llvm::raw_ostream &OS) {
+  static void output(const SymbolID &S, void *, llvm::raw_ostream &OS) {
     OS << toHex(toStringRef(S));
   }
 
-  static StringRef input(StringRef Scalar, void *,
-                         SymbolID &Value) {
+  static StringRef input(StringRef Scalar, void *, SymbolID &Value) {
     if (Scalar.size() != 40)
       return "Error: Incorrect scalar size for USR.";
     Value = stringToSymbol(Scalar);
