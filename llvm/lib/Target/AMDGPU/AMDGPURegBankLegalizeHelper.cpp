@@ -1061,6 +1061,8 @@ bool RegBankLegalizeHelper::lower(MachineInstr &MI,
     MI.eraseFromParent();
     return true;
   }
+  case ApplyINTRIN_IMAGE:
+    return applyRegisterBanksINTRIN_IMAGE(MI);
   }
 
   if (!WFI.SgprWaterfallOperandRegs.empty()) {
@@ -1750,4 +1752,71 @@ void RegBankLegalizeHelper::applyMappingTrivial(MachineInstr &MI) {
       }
     }
   }
+}
+
+bool RegBankLegalizeHelper::applyRegisterBanksINTRIN_IMAGE(MachineInstr &MI) {
+  const AMDGPU::RsrcIntrinsic *RSrcIntrin =
+      AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
+  assert(RSrcIntrin && RSrcIntrin->IsImage);
+
+  unsigned RsrcIdx = RSrcIntrin->RsrcArg;
+  const unsigned NumDefs = MI.getNumExplicitDefs();
+
+  // The reported argument index is relative to the IR intrinsic call arguments,
+  // so we need to shift by the number of defs and the intrinsic ID.
+  RsrcIdx += NumDefs + 1;
+
+  MachineBasicBlock *MBB = MI.getParent();
+  B.setInsertPt(*MBB, MBB->SkipPHIsAndLabels(std::next(MI.getIterator())));
+
+  // Defs(for image loads with return) are vgpr.
+  for (unsigned i = 0; i < NumDefs; ++i) {
+    const RegisterBank *RB = MRI.getRegBank(MI.getOperand(i).getReg());
+    if (RB == VgprRB)
+      continue;
+
+    Register Reg = MI.getOperand(i).getReg();
+    Register NewVgprDst = MRI.createVirtualRegister({VgprRB, MRI.getType(Reg)});
+    MI.getOperand(i).setReg(NewVgprDst);
+    buildReadAnyLane(B, Reg, NewVgprDst, RBI);
+  }
+
+  B.setInstrAndDebugLoc(MI);
+
+  // Register uses(before RsrcIdx) are vgpr.
+  for (unsigned i = 1; i < RsrcIdx; ++i) {
+    MachineOperand &Op = MI.getOperand(i);
+    if (!Op.isReg())
+      continue;
+
+    Register Reg = Op.getReg();
+    if (!Reg.isVirtual())
+      continue;
+
+    if (MRI.getRegBank(Reg) == VgprRB)
+      continue;
+
+    auto Copy = B.buildCopy({VgprRB, MRI.getType(Reg)}, Reg);
+    Op.setReg(Copy.getReg(0));
+  }
+
+  SmallSet<Register, 4> OpsToWaterfall;
+
+  // Register use RsrcIdx(and RsrcIdx+1 in some cases) is sgpr.
+  for (unsigned i = RsrcIdx; i < MI.getNumOperands(); ++i) {
+    MachineOperand &Op = MI.getOperand(i);
+    if (!Op.isReg())
+      continue;
+
+    Register Reg = Op.getReg();
+    if (MRI.getRegBank(Reg) != SgprRB)
+      OpsToWaterfall.insert(Reg);
+  }
+
+  if (!OpsToWaterfall.empty()) {
+    MachineBasicBlock::iterator MII = MI.getIterator();
+    executeInWaterfallLoop(B, {OpsToWaterfall, MII, std::next(MII)});
+  }
+
+  return true;
 }
