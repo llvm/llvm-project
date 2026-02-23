@@ -374,6 +374,10 @@ function(add_libclc_builtin_set)
     return()
   endif()
 
+  if (NOT DEFINED ARG_PARENT_TARGET OR ARG_PARENT_TARGET STREQUAL "")
+    message(FATAL_ERROR "PARENT_TARGET parameter is required and must be non-empty.")
+  endif()
+
   if (NOT DEFINED ARG_OUTPUT_FILENAME OR ARG_OUTPUT_FILENAME STREQUAL "")
     message(FATAL_ERROR "OUTPUT_FILENAME parameter is required and must be non-empty.")
   endif()
@@ -439,6 +443,7 @@ function(add_libclc_builtin_set)
   install(
     FILES ${libclc_builtins_lib}
     DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}
+    COMPONENT ${ARG_PARENT_TARGET}
   )
 
   # SPIR-V targets can exit early here
@@ -490,6 +495,7 @@ function(add_libclc_builtin_set)
     install(
       FILES ${libclc_alias_lib}
       DESTINATION ${LIBCLC_INSTALL_DIR}/${ARG_TRIPLE}/${a}
+      COMPONENT ${ARG_PARENT_TARGET}
     )
   endforeach( a )
 endfunction(add_libclc_builtin_set)

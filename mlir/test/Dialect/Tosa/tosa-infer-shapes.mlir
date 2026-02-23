@@ -1542,8 +1542,8 @@ func.func @test_multiple_non_inferrable_consumers(%arg0: tensor<1x2x8xf32>) {
 
   // CHECK: tensor.expand_shape %[[TENSOR_CAST]]
   // CHECK: tensor.expand_shape %[[TENSOR_CAST]]
-  %expanded_0 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%dim, 1, 4, 8] : tensor<?x2x8xf32> into tensor<?x1x2x8xf32>
-  %expanded_1 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%dim, 1, 4, 8] : tensor<?x2x8xf32> into tensor<?x1x2x8xf32>
+  %expanded_0 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%dim, 1, 2, 8] : tensor<?x2x8xf32> into tensor<?x1x2x8xf32>
+  %expanded_1 = tensor.expand_shape %0 [[0], [1, 2], [3]] output_shape [%dim, 1, 2, 8] : tensor<?x2x8xf32> into tensor<?x1x2x8xf32>
   return
 }
 
