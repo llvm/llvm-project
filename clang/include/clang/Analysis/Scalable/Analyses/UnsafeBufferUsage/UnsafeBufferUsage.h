@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGE_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGE_H
 
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
@@ -26,7 +26,7 @@ namespace clang::ssaf {
 /// *' of 'p'.
 ///
 /// An EntityPointerLevel can be identified by an EntityId and an unsigned
-/// integer indicating the pointer level: '(EntityId, PointerLevel)'.  A
+/// integer indicating the pointer level: '(EntityId, PointerLevel)'.  An
 /// EntityPointerLevel 'P' is valid iff
 ///   - 'P.EntityId' has a pointer type with at least 'P.PointerLevel' levels
 ///     (This implies 'P.PointerLevel > 0');
@@ -117,4 +117,4 @@ public:
 };
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGE_H

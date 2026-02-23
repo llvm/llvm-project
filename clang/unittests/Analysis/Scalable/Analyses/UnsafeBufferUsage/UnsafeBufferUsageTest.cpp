@@ -95,6 +95,11 @@ protected:
   }
 };
 
+constexpr inline auto buildEntityPointerLevel =
+    UnsafeBufferUsageTUSummaryBuilder::buildEntityPointerLevel;
+constexpr inline auto buildUnsafeBufferUsageEntitySummary =
+    UnsafeBufferUsageTUSummaryBuilder::buildUnsafeBufferUsageEntitySummary;
+
 //////////////////////////////////////////////////////////////
 //                   Data Structure Tests                   //
 //////////////////////////////////////////////////////////////

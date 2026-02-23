@@ -848,7 +848,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       for (unsigned i = 0; i < I.getNumDefs(); ++i)
         MRI->setType(I.getOperand(i).getReg(), LLT::scalar(64));
     GR.invalidateMachineInstr(&I);
-    I.removeFromParent();
+    I.eraseFromParent();
     return true;
   }
   return false;
@@ -3140,7 +3140,7 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
     // OpKill must be the last operation of any basic block.
     if (MachineInstr *NextI = I.getNextNode()) {
       GR.invalidateMachineInstr(NextI);
-      NextI->removeFromParent();
+      NextI->eraseFromParent();
     }
   }
 
@@ -3780,7 +3780,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // the duplicated definition.
     if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
       GR.invalidateMachineInstr(MI);
-      MI->removeFromParent();
+      MI->eraseFromParent();
     }
     return true;
   }

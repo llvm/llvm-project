@@ -451,18 +451,6 @@ public:
 
   uint32_t GetMachOCPUSubType() const;
 
-  /// Architecture data byte width accessor
-  ///
-  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
-  /// from the Architecture's data bus
-  uint32_t GetDataByteSize() const;
-
-  /// Architecture code byte width accessor
-  ///
-  /// \return the size in 8-bit (host) bytes of a minimum addressable unit
-  /// from the Architecture's code bus
-  uint32_t GetCodeByteSize() const;
-
   /// Architecture triple accessor.
   ///
   /// \return A triple describing this ArchSpec.

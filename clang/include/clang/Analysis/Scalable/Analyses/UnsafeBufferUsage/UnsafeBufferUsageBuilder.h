@@ -5,11 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_BUILDER_H
-#define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_BUILDER_H
+#ifndef LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGEBUILDER_H
+#define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGEBUILDER_H
 
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
-#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryBuilder.h"
 #include <memory>
 
@@ -32,4 +31,4 @@ public:
 };
 } // namespace clang::ssaf
 
-#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_BUILDER_H
+#endif // LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_UNSAFEBUFFERUSAGEBUILDER_H
