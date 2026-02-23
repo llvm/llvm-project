@@ -48,26 +48,15 @@ func.func @main() {
 }
 
 module attributes {transform.with_named_sequence} {
-
-  transform.named_sequence @multi_reduction_lowering(%func_op: !transform.op<"func.func"> {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims lowering_strategy = "innerparallel"
-      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerparallel"
-    } : !transform.op<"func.func">
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerparallel"
-    } : !transform.op<"func.func">
-    transform.yield
-  }
-
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
     %func_op = transform.get_parent_op %0 : (!transform.any_op) -> !transform.op<"func.func">
     transform.structured.vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
-
-    transform.include @multi_reduction_lowering failures(propagate) (%func_op)
-      : (!transform.op<"func.func">) -> ()
-
+    transform.apply_patterns to %func_op {
+      transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerreduction"
+    } : !transform.op<"func.func">
     transform.yield
   }
 }

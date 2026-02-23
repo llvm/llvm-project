@@ -132,19 +132,6 @@ func.func @generic_reduce_1d_f32() {
 }
 
 module attributes {transform.with_named_sequence} {
-
-  transform.named_sequence @multi_reduction_lowering(%func_op: !transform.any_op {transform.readonly}) {
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_masked_transfers
-      transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims lowering_strategy = "innerparallel"
-      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerparallel"
-    } : !transform.any_op
-    transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerparallel"
-    } : !transform.any_op
-    transform.yield
-  }
-
   // A sequence that will tile and vectorise a Reduce Op
   transform.named_sequence @tile_and_vectorize_reduce(%func
     : !transform.op<"func.func"> {transform.readonly}) {
@@ -161,8 +148,12 @@ module attributes {transform.with_named_sequence} {
     transform.structured.vectorize %tiled_reduce vector_sizes [[4]] : !transform.any_op
 
     // Step 3: Lower vector.multi_reduction
-    transform.include @multi_reduction_lowering failures(propagate) (%func)
-      : (!transform.any_op) -> ()
+    transform.apply_patterns to %func {
+      transform.apply_patterns.vector.lower_masked_transfers
+      transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerreduction"
+    } : !transform.op<"func.func">
 
     transform.yield
   }
