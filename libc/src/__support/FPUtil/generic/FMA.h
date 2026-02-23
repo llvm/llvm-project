@@ -196,14 +196,15 @@ fma(InType x, InType y, InType z) {
   y_exp += y_bits.get_biased_exponent();
   z_exp += z_bits.get_biased_exponent();
 
-  if (LIBC_UNLIKELY(x_exp != InFPBits::MAX_BIASED_EXPONENT &&
-                    y_exp != InFPBits::MAX_BIASED_EXPONENT && z_bits.is_inf()))
-    return cast<OutType>(z);
-
   if (LIBC_UNLIKELY(x_exp == InFPBits::MAX_BIASED_EXPONENT ||
                     y_exp == InFPBits::MAX_BIASED_EXPONENT ||
-                    z_exp == InFPBits::MAX_BIASED_EXPONENT))
+                    z_exp == InFPBits::MAX_BIASED_EXPONENT)) {
+    if (LIBC_UNLIKELY(x_exp != InFPBits::MAX_BIASED_EXPONENT &&
+                      y_exp != InFPBits::MAX_BIASED_EXPONENT &&
+                      z_bits.is_inf()))
+      return cast<OutType>(z);
     return cast<OutType>(x * y + z);
+  }
 
   // Extract mantissa and append hidden leading bits.
   InStorageType x_mant = x_bits.get_explicit_mantissa();
