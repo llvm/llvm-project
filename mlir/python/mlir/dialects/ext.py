@@ -27,15 +27,20 @@ ir = _cext.ir
 
 __all__ = [
     "Dialect",
+    "Operation",
     "Operand",
     "Result",
     "Region",
-    "Operation",
+    "register_dialect",
+    "register_operation",
 ]
 
 Operand = ir.Value
 Result = ir.OpResult
 Region = ir.Region
+
+register_dialect = _cext.register_dialect
+register_operation = _cext.register_operation
 
 
 class ConstraintLoweringContext:
@@ -199,12 +204,31 @@ class Operation(ir.OpView):
     """
     Base class of Python-defined operation.
 
-    NOTE: Usually you don't need to use it directly.
-    Use `Dialect` and `.Operation` of `Dialect` subclasses instead.
+    The following example shows two ways to define operations via this class:
+    ```python
+    class MyOp(MyDialect.Operation, name=..):
+      ...
+
+    class MyOp(Operation, dialect=MyDialect, name=..):
+      ...
+    ```
     """
 
+    def __init__(*args, **kwargs):
+        raise TypeError(
+            "This class is a template and cannot be instantiated directly. "
+            "Please use a subclass that defines the operation."
+        )
+
     @classmethod
-    def __init_subclass__(cls, *, name: str = None, **kwargs):
+    def __init_subclass__(
+        cls,
+        *,
+        name: str | None = None,
+        traits: list[type] | None = None,
+        dialect: type | None = None,
+        **kwargs,
+    ):
         """
         This method is to perform all magic to make a `Operation` subclass works like a dataclass, like:
         - generate the method to emit IRDL operations,
@@ -225,19 +249,35 @@ class Operation(ir.OpView):
 
         cls._fields = fields
 
+        traits = traits or []
+
+        for base in cls.__bases__:
+            if hasattr(base, "_traits"):
+                traits = base._traits + traits
+
+        cls._traits = traits
+
+        if dialect:
+            if hasattr(cls, "_dialect_obj"):
+                raise RuntimeError(
+                    f"This operation has already been attached to dialect '{cls._dialect_obj.DIALECT_NAMESPACE}'."
+                )
+            cls._dialect_obj = dialect
+
         # for subclasses without "name" parameter,
         # just treat them as normal classes
         if not name:
             return
 
-        if not hasattr(cls, "_dialect_name") or not hasattr(cls, "_dialect_obj"):
+        if not hasattr(cls, "_dialect_obj"):
             raise RuntimeError(
-                "Operation subclasses must inherit from a Dialect's Operation subclass"
+                "Operation subclasses must either inherit from a Dialect's Operation subclass "
+                "or provide the dialect as a class keyword argument."
             )
 
         op_name = name
         cls._op_name = op_name
-        dialect_name = cls._dialect_name
+        dialect_name = cls._dialect_obj.DIALECT_NAMESPACE
         dialect_obj = cls._dialect_obj
 
         cls._generate_class_attributes(dialect_name, op_name, fields)
@@ -257,7 +297,7 @@ class Operation(ir.OpView):
     @staticmethod
     def _generate_segments(
         operands_or_results: List[Union[OperandDef, ResultDef]],
-    ) -> List[int]:
+    ) -> List[int] | None:
         if any(i.variadicity != Variadicity.single for i in operands_or_results):
             return [
                 Operation._variadicity_to_segment(i.variadicity)
@@ -408,6 +448,16 @@ class Operation(ir.OpView):
                 setattr(cls, result.name, property(lambda self, i=i: self.results[i]))
 
     @classmethod
+    def _attach_traits(cls) -> None:
+        for trait in cls._traits:
+            trait.attach(cls.OPERATION_NAME)
+
+        if hasattr(cls, "verify_invariants") or hasattr(
+            cls, "verify_region_invariants"
+        ):
+            ir.DynamicOpTrait.attach(cls.OPERATION_NAME, cls)
+
+    @classmethod
     def _emit_operation(cls) -> None:
         ctx = ConstraintLoweringContext()
         operands, attrs, results, regions = partition_fields(cls._fields)
@@ -468,7 +518,8 @@ class Dialect(ir.Dialect):
         cls.Operation = type(
             "Operation",
             (Operation,),
-            {"_dialect_obj": cls, "_dialect_name": name},
+            dict(),
+            dialect=cls,
         )
 
     @classmethod
@@ -487,21 +538,23 @@ class Dialect(ir.Dialect):
         return m
 
     @classmethod
-    def load(cls) -> None:
-        if hasattr(cls, "_mlir_module"):
-            raise RuntimeError(f"Dialect {cls.name} is already loaded.")
+    def load(cls, register=True, reload=False) -> None:
+        if hasattr(cls, "_mlir_module") and not reload:
+            return
 
-        mlir_module = cls._emit_module()
-
+        cls._mlir_module = cls._emit_module()
         pm = PassManager()
         pm.add("canonicalize, cse")
-        pm.run(mlir_module.operation)
+        pm.run(cls._mlir_module.operation)
 
-        irdl.load_dialects(mlir_module)
-
-        _cext.register_dialect(cls)
+        irdl.load_dialects(cls._mlir_module)
 
         for op in cls.operations:
-            _cext.register_operation(cls)(op)
+            op._attach_traits()
 
-        cls._mlir_module = mlir_module
+        if register:
+            register_dialect(cls)
+
+            register_dialect_operation = register_operation(cls)
+            for op in cls.operations:
+                register_dialect_operation(op)

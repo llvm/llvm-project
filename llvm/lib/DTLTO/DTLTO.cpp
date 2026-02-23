@@ -8,7 +8,7 @@
 //
 // \file
 // This file implements support functions for Distributed ThinLTO, focusing on
-// archive file handling.
+// preparing input files for distribution.
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,6 +27,9 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
 
 #include <string>
 
@@ -34,31 +37,54 @@ using namespace llvm;
 
 namespace {
 
-// Writes the content of a memory buffer into a file.
-llvm::Error saveBuffer(StringRef FileBuffer, StringRef FilePath) {
+// Saves the content of Buffer to Path overwriting any existing file.
+Error save(StringRef Buffer, StringRef Path) {
   std::error_code EC;
-  raw_fd_ostream OS(FilePath.str(), EC, sys::fs::OpenFlags::OF_None);
-  if (EC) {
+  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::OF_None);
+  if (EC)
     return createStringError(inconvertibleErrorCode(),
-                             "Failed to create file %s: %s", FilePath.data(),
+                             "Failed to create file %s: %s", Path.data(),
                              EC.message().c_str());
-  }
-  OS.write(FileBuffer.data(), FileBuffer.size());
-  if (OS.has_error()) {
+  OS.write(Buffer.data(), Buffer.size());
+  if (OS.has_error())
     return createStringError(inconvertibleErrorCode(),
-                             "Failed writing to file %s", FilePath.data());
-  }
+                             "Failed writing to file %s", Path.data());
   return Error::success();
+}
+
+// Saves the content of Input to Path overwriting any existing file.
+Error save(lto::InputFile *Input, StringRef Path) {
+  MemoryBufferRef MB = Input->getFileBuffer();
+  return save(MB.getBuffer(), Path);
+}
+
+// Normalize and save a path. Aside from expanding Windows 8.3 short paths,
+// no other normalization is currently required here. These paths are
+// machine-local and break distribution systems; other normalization is
+// handled by the DTLTO distributors.
+Expected<StringRef> normalizePath(StringRef Path, StringSaver &Saver) {
+#if defined(_WIN32)
+  if (Path.empty())
+    return Path;
+  SmallString<256> Expanded;
+  if (std::error_code EC = llvm::sys::windows::makeLongFormPath(Path, Expanded))
+    return createStringError(inconvertibleErrorCode(),
+                             "Normalization failed for path %s: %s",
+                             Path.str().c_str(), EC.message().c_str());
+  return Saver.save(Expanded.str());
+#else
+  return Saver.save(Path);
+#endif
 }
 
 // Compute the file path for a thin archive member.
 //
 // For thin archives, an archive member name is typically a file path relative
 // to the archive file's directory. This function resolves that path.
-SmallString<64> computeThinArchiveMemberPath(const StringRef ArchivePath,
-                                             const StringRef MemberName) {
+SmallString<256> computeThinArchiveMemberPath(StringRef ArchivePath,
+                                              StringRef MemberName) {
   assert(!ArchivePath.empty() && "An archive file path must be non empty.");
-  SmallString<64> MemberPath;
+  SmallString<256> MemberPath;
   if (sys::path::is_relative(MemberName)) {
     MemberPath = sys::path::parent_path(ArchivePath);
     sys::path::append(MemberPath, MemberName);
@@ -77,12 +103,11 @@ SmallString<64> computeThinArchiveMemberPath(const StringRef ArchivePath,
 // the archive type.
 Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
   // Return cached result if available.
-  auto Cached = ArchiveFiles.find(ArchivePath);
-  if (Cached != ArchiveFiles.end())
+  auto Cached = ArchiveIsThinCache.find(ArchivePath);
+  if (Cached != ArchiveIsThinCache.end())
     return Cached->second;
 
   uint64_t FileSize = -1;
-  bool IsThin = false;
   std::error_code EC = sys::fs::file_size(ArchivePath, FileSize);
   if (EC)
     return createStringError(inconvertibleErrorCode(),
@@ -94,126 +119,134 @@ Expected<bool> lto::DTLTO::isThinArchive(const StringRef ArchivePath) {
                              ArchivePath.data());
 
   // Read only the first few bytes containing the magic signature.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MemBufferOrError =
-      MemoryBuffer::getFileSlice(ArchivePath, sizeof(object::ThinArchiveMagic),
-                                 0);
-
-  if ((EC = MemBufferOrError.getError()))
+  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFileSlice(
+      ArchivePath, sizeof(object::ThinArchiveMagic), 0);
+  if ((EC = MBOrErr.getError()))
     return createStringError(inconvertibleErrorCode(),
                              "Failed to read from archive %s: %s",
                              ArchivePath.data(), EC.message().c_str());
 
-  StringRef MemBuf = (*MemBufferOrError.get()).getBuffer();
-  if (file_magic::archive != identify_magic(MemBuf))
+  StringRef Buf = (*MBOrErr)->getBuffer();
+  if (file_magic::archive != identify_magic(Buf))
     return createStringError(inconvertibleErrorCode(),
                              "Unknown format for archive %s",
                              ArchivePath.data());
 
-  IsThin = MemBuf.starts_with(object::ThinArchiveMagic);
+  bool IsThin = Buf.starts_with(object::ThinArchiveMagic);
 
-  // Cache the result
-  ArchiveFiles[ArchivePath] = IsThin;
+  // Cache the result.
+  ArchiveIsThinCache[ArchivePath] = IsThin;
+
   return IsThin;
 }
 
+// Add an input file and prepare it for distribution.
+//
 // This function performs the following tasks:
-// 1. Adds the input file to the LTO object's list of input files.
-// 2. For thin archive members, generates a new module ID which is a path to a
-// thin archive member file.
-// 3. For regular archive members, generates a new unique module ID.
-// 4. Updates the bitcode module's identifier.
+// 1. Add the input file to the LTO object's list of input files.
+// 2. For individual bitcode file inputs on Windows only, overwrite the module
+//    ID with a normalized path to remove short 8.3 form components.
+// 3. For thin archive members, overwrite the module ID with the path
+//    (normalized on Windows) to the member file on disk.
+// 4. For archive members and FatLTO objects, overwrite the module ID with a
+//    unique path (normalized on Windows) naming a file that will contain the
+//    member content. The file is created and populated later (see
+//    serializeInputs()).
 Expected<std::shared_ptr<lto::InputFile>>
-lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
+lto::DTLTO::addInput(std::unique_ptr<InputFile> InputPtr) {
   TimeTraceScope TimeScope("Add input for DTLTO");
 
   // Add the input file to the LTO object.
   InputFiles.emplace_back(InputPtr.release());
-  std::shared_ptr<lto::InputFile> &Input = InputFiles.back();
+  auto &Input = InputFiles.back();
+  BitcodeModule &BM = Input->getPrimaryBitcodeModule();
 
-  StringRef ModuleId = Input->getName();
+  auto setIdFromPath = [&](StringRef Path) -> Error {
+    auto N = normalizePath(Path, Saver);
+    if (!N)
+      return N.takeError();
+    BM.setModuleIdentifier(*N);
+    return Error::success();
+  };
+
   StringRef ArchivePath = Input->getArchivePath();
 
   // In most cases, the module ID already points to an individual bitcode file
-  // on disk, so no further preparation for distribution is required.
-  if (ArchivePath.empty() && !Input->isFatLTOObject())
+  // on disk, so no further preparation for distribution is required. However,
+  // on Windows we overwite the module ID to expand Windows 8.3 short form
+  // paths. These paths are machine-local and break distribution systems; other
+  // normalization is handled by the DTLTO distributors.
+  if (ArchivePath.empty() && !Input->isFatLTOObject()) {
+#if defined(_WIN32)
+    if (Error E = setIdFromPath(Input->getName()))
+      return std::move(E);
+#endif
     return Input;
-
-  SmallString<64> NewModuleId;
-  BitcodeModule &BM = Input->getPrimaryBitcodeModule();
+  }
 
   // For a member of a thin archive that is not a FatLTO object, there is an
   // existing file on disk that can be used, so we can avoid having to
-  // materialize.
+  // serialize.
   Expected<bool> UseThinMember =
       Input->isFatLTOObject() ? false : isThinArchive(ArchivePath);
   if (!UseThinMember)
     return UseThinMember.takeError();
-
   if (*UseThinMember) {
-    // For thin archives, use the path to the actual file.
-    NewModuleId =
+    // For thin archives, use the path to the actual member file on disk.
+    auto MemberPath =
         computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
-  } else {
-    // For regular archives and FatLTO objects, generate a unique name.
-    Input->setSerializeForDistribution(true);
-
-    // Create unique identifier using process ID and sequence number.
-    std::string PID = utohexstr(sys::Process::getProcessId());
-    std::string Seq = std::to_string(InputFiles.size());
-
-    NewModuleId = sys::path::parent_path(LinkerOutputFile);
-    sys::path::append(NewModuleId, sys::path::filename(ModuleId) + "." + Seq +
-                                       "." + PID + ".o");
+    if (Error E = setIdFromPath(MemberPath))
+      return std::move(E);
+    return Input;
   }
 
-  // Update the module identifier and save it.
-  BM.setModuleIdentifier(Saver.save(NewModuleId.str()));
+  // A new file on disk will be needed for archive members and FatLTO objects.
+  Input->setSerializeForDistribution(true);
 
+  // Get the normalized output directory, if we haven't already.
+  if (LinkerOutputDir.empty()) {
+    auto N = normalizePath(sys::path::parent_path(LinkerOutputFile), Saver);
+    if (!N)
+      return N.takeError();
+    LinkerOutputDir = *N;
+  }
+
+  // Create a unique path by including the process ID and sequence number in the
+  // filename.
+  SmallString<256> Id(LinkerOutputDir);
+  sys::path::append(Id,
+                    Twine(sys::path::filename(Input->getName())) + "." +
+                        std::to_string(InputFiles.size()) /*Sequence number*/ +
+                        "." + utohexstr(sys::Process::getProcessId()) + ".o");
+  BM.setModuleIdentifier(Saver.save(Id.str()));
   return Input;
 }
 
-// Write the archive member content to a file named after the module ID.
-// If a file with that name already exists, it's likely a leftover from a
-// previously terminated linker process and can be safely overwritten.
-Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
-  StringRef ModuleId = Input->getName();
-  if (Input->getSerializeForDistribution()) {
+// Save the contents of ThinLTO-enabled input files that must be serialized for
+// distribution, such as archive members and FatLTO objects, to individual
+// bitcode files named after the module ID.
+//
+// Must be called after all input files are added but before optimization
+// begins. If a file with that name already exists, it is likely a leftover from
+// a previously terminated linker process and can be safely overwritten.
+llvm::Error lto::DTLTO::serializeInputsForDistribution() {
+  for (auto &Input : InputFiles) {
+    if (!Input->isThinLTO() || !Input->getSerializeForDistribution())
+      continue;
+    // Save the content of the input file to a file named after the module ID.
+    StringRef ModuleId = Input->getName();
     TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
     // Cleanup this file on abnormal process exit.
     if (!SaveTemps)
       llvm::sys::RemoveFileOnSignal(ModuleId);
-    MemoryBufferRef MemoryBufferRef = Input->getFileBuffer();
-    if (Error EC = saveBuffer(MemoryBufferRef.getBuffer(), ModuleId))
+    if (Error EC = save(Input.get(), ModuleId))
       return EC;
   }
+
   return Error::success();
 }
 
-// Iterates through all ThinLTO-enabled input files and saves their content
-// to separate files if they are regular archive members.
-Error lto::DTLTO::saveInputArchiveMembers() {
-  for (auto &Input : InputFiles) {
-    if (!Input->isThinLTO())
-      continue;
-    if (Error EC = saveInputArchiveMember(Input.get()))
-      return EC;
-  }
-  return Error::success();
-}
-
-// Entry point for DTLTO archives support.
-//
-// Sets up the temporary file remover and processes archive members.
-// Must be called after all inputs are added but before optimization begins.
-llvm::Error lto::DTLTO::handleArchiveInputs() {
-
-  // Process and save archive members to separate files if needed.
-  if (Error EC = saveInputArchiveMembers())
-    return EC;
-  return Error::success();
-}
-
-// Remove temporary archive member files created to enable distribution.
+// Remove serialized inputs created to enable distribution.
 void lto::DTLTO::cleanup() {
   if (!SaveTemps) {
     TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");

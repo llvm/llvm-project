@@ -116,6 +116,8 @@ public:
   mlir::Attribute tryEmitPrivateForMemory(const APValue &value,
                                           QualType destTy);
 
+  mlir::Attribute tryEmitAbstract(const Expr *e, QualType destType);
+
 private:
 #ifndef NDEBUG
   void initializeNonAbstract() {

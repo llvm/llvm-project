@@ -639,6 +639,14 @@ defm DPPSrc1SGPR : AMDGPUSubtargetFeature<"dpp-src1-sgpr",
   /*GenPredicate=*/0
 >;
 
+defm DPPWavefrontShifts : AMDGPUSubtargetFeature<"dpp-wavefront-shifts",
+  "Support DPP wave_shl/wave_rol/wave_shr/wave_ror"
+>;
+
+defm DPPBroadcasts : AMDGPUSubtargetFeature<"dpp-row-bcast",
+  "Support DPP row_bcast15/row_bcast31"
+>;
+
 defm PackedFP32Ops : AMDGPUSubtargetFeature<"packed-fp32-ops",
   "Support packed fp32 instructions"
 >;
@@ -773,6 +781,14 @@ defm CvtFP8VOP1Bug : AMDGPUSubtargetFeature<"cvt-fp8-vop1-bug",
   /*GenPredicate=*/1,
   /*GenAssemblerPredicate=*/0,
   [FeatureFP8ConversionInsts]
+>;
+
+defm WMMA256bInsts : AMDGPUSubtargetFeature<"wmma-256b-insts",
+  "Has WMMA instructions where A and B matrices have duplicated data"
+>;
+
+defm WMMA128bInsts : AMDGPUSubtargetFeature<"wmma-128b-insts",
+  "Has WMMA instructions where A and B matrices do not have duplicated data"
 >;
 
 defm PkFmacF16Inst : AMDGPUSubtargetFeature<"pk-fmac-f16-inst",
@@ -1266,8 +1282,7 @@ defm PkAddMinMaxInsts : AMDGPUSubtargetFeature<"pk-add-min-max-insts",
 
 defm VMemToLDSLoad : AMDGPUSubtargetFeature<"vmem-to-lds-load-insts",
   "The platform has memory to lds instructions (global_load w/lds bit set, buffer_load"
-  "w/lds bit set or global_load_lds. This does not include scratch_load_lds.",
-  /*GenPredicate=*/0
+  "w/lds bit set or global_load_lds. This does not include scratch_load_lds."
 >;
 
 defm LdsBarrierArriveAtomic : AMDGPUSubtargetFeature<"lds-barrier-arrive-atomic",
@@ -1340,6 +1355,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
+   FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
@@ -1357,8 +1373,8 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3PInsts, FeatureVGPRIndexMode,
-   FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
-   FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
+   FeatureFastFMAF32, FeatureDPP, FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
+   FeatureIntClamp, FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
    FeatureScalarFlatScratchInsts, FeatureScalarAtomics, FeatureR128A16,
@@ -1800,7 +1816,6 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureBackOffBarrier,
    FeatureLDSBankCount32,
    FeatureDLInsts,
-   FeatureDot5Insts,
    FeatureDot7Insts,
    FeatureDot8Insts,
    FeatureDot9Insts,
@@ -1821,9 +1836,9 @@ def FeatureISAVersion11_Common : FeatureSet<
    FeatureD16Writes32BitVgpr,
 ]>;
 
-// There are few workarounds that need to be
-// added to all targets. This pessimizes codegen
-// a bit on the generic GFX11 target.
+// There are few workarounds that need to be added to all targets. This
+// pessimizes codegen a bit on the generic GFX11 target. This generic target
+// does not include GFX1170 due to incompatible changes.
 def FeatureISAVersion11_Generic: FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
@@ -1832,14 +1847,18 @@ def FeatureISAVersion11_Generic: FeatureSet<
      FeatureMADIntraFwdBug,
      FeaturePrivEnabledTrap2NopBug,
      FeatureRequiresCOV6,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeatureDot5Insts,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureMSAALoadDstSelBug,
      FeatureVALUTransUseHazard,
      FeatureMADIntraFwdBug,
-     FeaturePrivEnabledTrap2NopBug])>;
+     FeaturePrivEnabledTrap2NopBug,
+     FeatureDot5Insts,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_0_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_0_Common.Features,
@@ -1862,7 +1881,9 @@ def FeatureISAVersion11_5_Common : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeatureDot5Insts,
+     FeatureWMMA256bInsts])>;
 
 def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
@@ -1880,6 +1901,14 @@ def FeatureISAVersion11_5_2 : FeatureSet<
 def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_5_Common.Features,
     [])>;
+
+def FeatureISAVersion11_7_0 : FeatureSet<
+  !listconcat(FeatureISAVersion11_Common.Features,
+    [FeatureSALUFloatInsts,
+     FeatureDPPSrc1SGPR,
+     FeatureFP8ConversionInsts,
+     FeatureDot11Insts,
+     FeatureWMMA128bInsts])>;
 
 def FeatureISAVersion12 : FeatureSet<
   [FeatureGFX12,
@@ -1909,6 +1938,7 @@ def FeatureISAVersion12 : FeatureSet<
    FeatureImageInsts,
    FeatureExtendedImageInsts,
    FeatureFP8ConversionInsts,
+   FeatureWMMA128bInsts,
    FeatureIEEEMinimumMaximumInsts,
    FeaturePackedTID,
    FeatureVcmpxPermlaneHazard,
@@ -1935,6 +1965,7 @@ def FeatureISAVersion12 : FeatureSet<
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
    FeatureGFX1250Insts,
+   FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
    FeatureCuMode,
    Feature1024AddressableVGPRs,
@@ -2005,25 +2036,32 @@ def FeatureISAVersion12_50_Common : FeatureSet<
    FeatureXNACK,
    FeatureClusters,
    FeatureD16Writes32BitVgpr,
-   FeatureCubeInsts,
-   FeatureLerpInst,
-   FeatureSadInsts,
-   FeatureQsadInsts,
-   FeatureCvtNormInsts,
-   FeatureCvtPkNormVOP2Insts,
-   FeatureCvtPkNormVOP3Insts,
    FeatureMcastLoadInsts
 ]>;
 
 def FeatureISAVersion12_50 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
-   FeatureSetregVGPRMSBFixup])>;
+   FeatureSetregVGPRMSBFixup,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
   !listconcat(FeatureISAVersion12_50_Common.Features,
   [FeatureAddressableLocalMemorySize327680,
-   FeatureDPALU_DPP])>;
+   FeatureDPALU_DPP,
+   FeatureCubeInsts,
+   FeatureLerpInst,
+   FeatureSadInsts,
+   FeatureQsadInsts,
+   FeatureCvtNormInsts,
+   FeatureCvtPkNormVOP2Insts,
+   FeatureCvtPkNormVOP3Insts])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
   !listconcat(FeatureISAVersion12.Features,
@@ -2375,6 +2413,11 @@ def isGFX11Only :
 def isGFX11Plus :
   Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11">,
   AssemblerPredicate<(all_of FeatureGFX11Insts)>;
+
+def isGFX11PlusNot12_50 :
+  Predicate<"Subtarget->getGeneration() >= AMDGPUSubtarget::GFX11 &&"
+            "(Subtarget->getGeneration() >= AMDGPUSubtarget::GFX13 || !Subtarget->hasGFX1250Insts())">,
+  AssemblerPredicate<(all_of FeatureGFX11Insts, (any_of FeatureGFX13Insts, (not FeatureGFX1250Insts)))>;
 
 def isGFX12Only :
   Predicate<"Subtarget->getGeneration() == AMDGPUSubtarget::GFX12">,

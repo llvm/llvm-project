@@ -21,7 +21,7 @@
 template <typename T>
 struct TestDeduction {
   void operator()() const {
-    T x(T(0));
+    alignas(std::atomic_ref<T>::required_alignment) T x(T(0));
     std::atomic_ref a(x);
     ASSERT_SAME_TYPE(decltype(a), std::atomic_ref<T>);
   }

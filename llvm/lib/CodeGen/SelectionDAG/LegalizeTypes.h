@@ -374,6 +374,7 @@ private:
   SDValue PromoteIntOp_BUILD_PAIR(SDNode *N);
   SDValue PromoteIntOp_BR_CC(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_BRCOND(SDNode *N, unsigned OpNo);
+  SDValue PromoteIntOp_COND_LOOP(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_BUILD_VECTOR(SDNode *N);
   SDValue PromoteIntOp_INSERT_VECTOR_ELT(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_EXTRACT_VECTOR_ELT(SDNode *N);
@@ -446,6 +447,7 @@ private:
   void ExpandIntRes_ABS               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_ABD               (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTLZ              (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_CTLS              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTPOP             (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_CTTZ              (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_LOAD          (LoadSDNode *N, SDValue &Lo, SDValue &Hi);
@@ -874,6 +876,7 @@ private:
   SDValue ScalarizeVecOp_VECREDUCE_SEQ(SDNode *N);
   SDValue ScalarizeVecOp_CMP(SDNode *N);
   SDValue ScalarizeVecOp_FAKE_USE(SDNode *N);
+  SDValue ScalarizeVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Splitting Support: LegalizeVectorTypes.cpp
@@ -983,6 +986,7 @@ private:
   SDValue SplitVecOp_VP_CttzElements(SDNode *N);
   SDValue SplitVecOp_VECTOR_HISTOGRAM(SDNode *N);
   SDValue SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N);
+  SDValue SplitVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   //===--------------------------------------------------------------------===//
   // Vector Widening Support: LegalizeVectorTypes.cpp

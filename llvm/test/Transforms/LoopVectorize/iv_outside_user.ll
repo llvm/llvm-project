@@ -222,7 +222,8 @@ define ptr @both(ptr %p, i32 %k)  {
 ; INTERLEAVE-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    [[OFFSET_IDX:%.*]] = mul i64 [[INDEX]], 4
-; INTERLEAVE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[OFFSET_IDX]]
+; INTERLEAVE-NEXT:    [[TMP9:%.*]] = add i64 [[OFFSET_IDX]], 4
+; INTERLEAVE-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[BASE]], i64 [[TMP9]]
 ; INTERLEAVE-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[TMP2]], [[N_VEC]]
 ; INTERLEAVE-NEXT:    [[IND_ESCAPE:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i64 -4
 ; INTERLEAVE-NEXT:    br i1 [[CMP_N]], label %[[FOR_END:.*]], label %[[SCALAR_PH]]
@@ -1129,7 +1130,6 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; VEC-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 2>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; VEC-NEXT:    [[OFFSET_IDX:%.*]] = mul i32 [[INDEX]], 2
 ; VEC-NEXT:    [[TMP0:%.*]] = add i32 [[OFFSET_IDX]], 0
 ; VEC-NEXT:    [[TMP1:%.*]] = add i32 [[OFFSET_IDX]], 2
@@ -1138,16 +1138,12 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; VEC-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; VEC-NEXT:    store i16 0, ptr [[TMP3]], align 2
 ; VEC-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; VEC-NEXT:    [[VEC_IND_NEXT]] = add <2 x i32> [[VEC_IND]], splat (i32 4)
 ; VEC-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; VEC-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; VEC:       [[MIDDLE_BLOCK]]:
-; VEC-NEXT:    [[TMP8:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 1)
-; VEC-NEXT:    [[TMP5:%.*]] = add <2 x i32> splat (i32 1), [[TMP8]]
-; VEC-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP5]], i32 1
 ; VEC-NEXT:    br label %[[E_EXIT:.*]]
 ; VEC:       [[E_EXIT]]:
-; VEC-NEXT:    ret i32 [[TMP7]]
+; VEC-NEXT:    ret i32 8
 ;
 ; INTERLEAVE-LABEL: define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(
 ; INTERLEAVE-SAME: ptr [[DST:%.*]]) {
@@ -1165,15 +1161,13 @@ define i32 @test_iv_uniform_with_outside_use_scev_simplification_2(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i16, ptr [[DST]], i32 [[TMP1]]
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP2]], align 2
 ; INTERLEAVE-NEXT:    store i16 0, ptr [[TMP3]], align 2
-; INTERLEAVE-NEXT:    [[TMP4:%.*]] = add i32 [[TMP1]], 1
-; INTERLEAVE-NEXT:    [[TMP5:%.*]] = add i32 1, [[TMP4]]
 ; INTERLEAVE-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; INTERLEAVE-NEXT:    [[TMP6:%.*]] = icmp eq i32 [[INDEX_NEXT]], 4
 ; INTERLEAVE-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], {{!llvm.loop ![0-9]+}}
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[E_EXIT:.*]]
 ; INTERLEAVE:       [[E_EXIT]]:
-; INTERLEAVE-NEXT:    ret i32 [[TMP5]]
+; INTERLEAVE-NEXT:    ret i32 8
 ;
 entry:
   %step.1 = sext i8 0 to i32
@@ -1289,16 +1283,13 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; VEC-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; VEC:       [[VECTOR_BODY]]:
 ; VEC-NEXT:    [[TMP0:%.*]] = getelementptr i16, ptr [[DST]], i64 3
-; VEC-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[TMP0]], i64 0
-; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP1]], i64 -1
+; VEC-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[TMP0]], i64 -1
 ; VEC-NEXT:    store <2 x i16> splat (i16 1), ptr [[TMP2]], align 2
-; VEC-NEXT:    [[TMP5:%.*]] = add i64 1, -1
-; VEC-NEXT:    [[IV_1_NEXT_LCSSA1:%.*]] = add i64 [[TMP5]], 1
+; VEC-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; VEC:       [[MIDDLE_BLOCK]]:
 ; VEC-NEXT:    br label %[[EXIT:.*]]
 ; VEC:       [[EXIT]]:
-; VEC-NEXT:    br label %[[EXIT1:.*]]
-; VEC:       [[EXIT1]]:
-; VEC-NEXT:    ret i64 [[IV_1_NEXT_LCSSA1]]
+; VEC-NEXT:    ret i64 1
 ;
 ; INTERLEAVE-LABEL: define i64 @test_iv_increment_incremented(
 ; INTERLEAVE-SAME: ptr [[DST:%.*]]) {
@@ -1311,13 +1302,11 @@ define i64 @test_iv_increment_incremented(ptr %dst) {
 ; INTERLEAVE-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[DST]], i64 2
 ; INTERLEAVE-NEXT:    store i16 1, ptr [[TMP0]], align 2
 ; INTERLEAVE-NEXT:    store i16 1, ptr [[TMP1]], align 2
-; INTERLEAVE-NEXT:    [[TMP2:%.*]] = add i64 1, -1
-; INTERLEAVE-NEXT:    [[IV_1_NEXT_LCSSA1:%.*]] = add i64 [[TMP2]], 1
 ; INTERLEAVE-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; INTERLEAVE:       [[MIDDLE_BLOCK]]:
 ; INTERLEAVE-NEXT:    br label %[[EXIT:.*]]
 ; INTERLEAVE:       [[EXIT]]:
-; INTERLEAVE-NEXT:    ret i64 [[IV_1_NEXT_LCSSA1]]
+; INTERLEAVE-NEXT:    ret i64 1
 ;
 entry:
   br label %loop

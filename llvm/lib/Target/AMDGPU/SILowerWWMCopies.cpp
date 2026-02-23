@@ -53,9 +53,7 @@ class SILowerWWMCopiesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SILowerWWMCopiesLegacy() : MachineFunctionPass(ID) {
-    initializeSILowerWWMCopiesLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  SILowerWWMCopiesLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
