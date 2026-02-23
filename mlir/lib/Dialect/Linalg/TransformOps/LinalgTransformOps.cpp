@@ -246,6 +246,11 @@ void transform::ApplyFoldUnitExtentDimsViaSlicesPatternsOp::populatePatterns(
   linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
 }
 
+void transform::ApplyLinalgCanonicalizationPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  linalg::populateLinalgCanonicalizationPatterns(patterns);
+}
+
 void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   linalg::populateLinalgTilingCanonicalizationPatterns(patterns);

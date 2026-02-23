@@ -1925,10 +1925,12 @@ private:
 // Populate functions.
 //===----------------------------------------------------------------------===//
 
+/// Canonicalization patterns for Linalg operations only.
+void populateLinalgCanonicalizationPatterns(RewritePatternSet &patterns);
+
 /// Canonicalization patterns relevant to apply after tiling patterns. These
 /// are applied automatically by the tiling pass but need to be applied
 /// manually when tiling is called programmatically.
-RewritePatternSet getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
 /// Linalg generalization patterns

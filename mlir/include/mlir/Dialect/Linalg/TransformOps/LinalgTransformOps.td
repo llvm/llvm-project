@@ -80,6 +80,16 @@ def ApplyFoldUnitExtentDimsViaSlicesPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyLinalgCanonicalizationPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.linalg.canonicalization",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collects linalg dialect and operation canonicalization patterns.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyTilingCanonicalizationPatternsOp : Op<Transform_Dialect,
     "apply_patterns.linalg.tiling_canonicalization",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
