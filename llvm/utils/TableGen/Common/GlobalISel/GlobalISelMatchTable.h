@@ -991,7 +991,7 @@ public:
                             RuleMatcher &Rule) const override;
 };
 
-/// Generates code to check that the size of an MMO is exactly N bytes.
+/// Generates code to check that the element count & element sizes are the same.
 class LLTOperandShapeMatcher : public LLTOperandMatcher {
   static ElementCount getShapeElementCount(const LLT &Ty) {
     return Ty.isVector() ? Ty.getElementCount() : ElementCount::getFixed(1);
