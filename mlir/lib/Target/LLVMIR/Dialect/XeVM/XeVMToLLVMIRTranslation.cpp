@@ -70,14 +70,18 @@ buildCacheControlPayloads(llvm::ArrayRef<mlir::Attribute> attrs) {
       continue;
 
     auto vals = arr.getValue();
-    // Assert that the attribute has exactly 3 integer values: [SPIR-V token, L1
-    // value, L3 value].
-    assert(vals.size() == 3 &&
-           "Expected 3 integer values in cache control attribute.");
+    // Assert that the attribute has at most 4 integer values: [SPIR-V token, L1
+    // value, L3 value, optional extra value].
+    assert(vals.size() <= 4 &&
+           "Expected at most 4 integer values in cache control attribute.");
 
-    auto firstAttr = mlir::dyn_cast<mlir::IntegerAttr>(vals[0]);
-    auto secondAttr = mlir::dyn_cast<mlir::IntegerAttr>(vals[1]);
-    auto thirdAttr = mlir::dyn_cast<mlir::IntegerAttr>(vals[2]);
+    //  Although the caching value is allowed for 3 levels (L1, L2, L3), current
+    //  Intel GPUs only have L1, and L3. So we only use L1 and L3 values. The L2
+    //  value is ignored.
+    auto firstAttr = mlir::dyn_cast<mlir::IntegerAttr>(vals[0]); // Token number
+    auto secondAttr = mlir::dyn_cast<mlir::IntegerAttr>(vals[1]); // L1 value
+    // L2 value is ignored: vals[2]
+    auto thirdAttr = mlir::dyn_cast<mlir::IntegerAttr>(vals[3]); // L3 value
 
     if (!firstAttr || !secondAttr || !thirdAttr)
       continue;
