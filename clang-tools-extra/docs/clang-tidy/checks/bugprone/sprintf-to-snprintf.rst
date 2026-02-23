@@ -25,3 +25,4 @@ Becomes:
     char buff[80];
     snprintf(buff, sizeof(buff), "Hello, %s!\n", "world");
   }
+  
