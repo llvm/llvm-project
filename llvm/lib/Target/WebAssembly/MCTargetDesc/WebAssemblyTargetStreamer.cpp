@@ -22,6 +22,15 @@
 #include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
+static bool shouldQuoteName(StringRef Name) {
+  // Wasm export/import names and import module names can contain characters
+  // that are not allowed in identifiers, so we need to quote them.
+  auto isValidStartChar = [](char C) { return isalpha(C) || C == '_' || C == '.'; };
+  auto isValidChar = [&](char C) { return isValidStartChar(C) || isdigit(C); };
+  return !(Name.size() > 0 && isValidStartChar(Name.front())) || 
+        llvm::any_of(Name, [&](char C) { return !isValidChar(C); });
+}
+
 WebAssemblyTargetStreamer::WebAssemblyTargetStreamer(MCStreamer &S)
     : MCTargetStreamer(S) {}
 
@@ -94,22 +103,32 @@ void WebAssemblyTargetAsmStreamer::emitTagType(const MCSymbolWasm *Sym) {
   OS << "\n";
 }
 
+static void emitNameWithQuoting(formatted_raw_ostream &OS, StringRef Name) {
+  if (shouldQuoteName(Name))
+    OS << '"' << Name << '"';
+  else
+    OS << Name;
+}
+
 void WebAssemblyTargetAsmStreamer::emitImportModule(const MCSymbolWasm *Sym,
                                                     StringRef ImportModule) {
-  OS << "\t.import_module\t" << Sym->getName() << ", "
-                             << ImportModule << '\n';
+  OS << "\t.import_module\t" << Sym->getName() << ", ";
+  emitNameWithQuoting(OS, ImportModule);
+  OS << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitImportName(const MCSymbolWasm *Sym,
                                                   StringRef ImportName) {
-  OS << "\t.import_name\t" << Sym->getName() << ", "
-                           << ImportName << '\n';
+  OS << "\t.import_name\t" << Sym->getName() << ", ";
+  emitNameWithQuoting(OS, ImportName);
+  OS << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitExportName(const MCSymbolWasm *Sym,
                                                   StringRef ExportName) {
-  OS << "\t.export_name\t" << Sym->getName() << ", "
-                           << ExportName << '\n';
+  OS << "\t.export_name\t" << Sym->getName() << ", ";
+  emitNameWithQuoting(OS, ExportName);
+  OS << '\n';
 }
 
 void WebAssemblyTargetAsmStreamer::emitIndIdx(const MCExpr *Value) {
