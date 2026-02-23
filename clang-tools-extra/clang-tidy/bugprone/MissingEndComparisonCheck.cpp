@@ -34,6 +34,20 @@ constexpr llvm::StringRef RangeAlgorithms[] = {
     "::std::ranges::upper_bound",   "::std::ranges::min_element",
     "::std::ranges::max_element",   "::std::ranges::find_first_of",
     "::std::ranges::adjacent_find", "::std::ranges::is_sorted_until"};
+} // namespace
+
+MissingEndComparisonCheck::MissingEndComparisonCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      ExtraAlgorithms(
+          utils::options::parseStringList(Options.get("ExtraAlgorithms", ""))) {
+}
+
+void MissingEndComparisonCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ExtraAlgorithms",
+                utils::options::serializeStringList(ExtraAlgorithms));
+}
 
 static bool isConditionVar(const DeclStmt *S, ASTContext &Ctx) {
   const auto &Parents = Ctx.getParents(*S);
@@ -52,21 +66,6 @@ static bool isConditionVar(const DeclStmt *S, ASTContext &Ctx) {
     return For->getConditionVariableDeclStmt() == S;
 
   return false;
-}
-
-} // namespace
-
-MissingEndComparisonCheck::MissingEndComparisonCheck(StringRef Name,
-                                                     ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
-      ExtraAlgorithms(
-          utils::options::parseStringList(Options.get("ExtraAlgorithms", ""))) {
-}
-
-void MissingEndComparisonCheck::storeOptions(
-    ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "ExtraAlgorithms",
-                utils::options::serializeStringList(ExtraAlgorithms));
 }
 
 static std::optional<std::string>
@@ -113,8 +112,8 @@ getStandardEndText(const MatchFinder::MatchResult &Result,
   if (Call->getNumArgs() == 2) {
     const Expr *Arg0 = Call->getArg(0);
     const Expr *Arg1 = Call->getArg(1);
-    QualType T0 = Arg0->getType().getCanonicalType();
-    QualType T1 = Arg1->getType().getCanonicalType();
+    const QualType T0 = Arg0->getType().getCanonicalType();
+    const QualType T1 = Arg1->getType().getCanonicalType();
 
     if (T0.getNonReferenceType() != T1.getNonReferenceType() &&
         T0.getNonReferenceType()->isRecordType()) {
