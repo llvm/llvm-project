@@ -21,12 +21,8 @@ static constexpr uint16_t SUBNORM_NEG_START = 0x8001U;
 static constexpr uint16_t SUBNORM_NEG_STOP = 0x807FU;
 
 TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
-  const bfloat16 z_values[] = {zero,
-                               neg_zero,
-                               inf,
-                               neg_inf,
-                               min_normal,
-                               max_normal};
+  const bfloat16 z_values[] = {zero,    neg_zero,   inf,
+                               neg_inf, min_normal, max_normal};
   for (uint16_t v1 = SUBNORM_NEG_START; v1 <= SUBNORM_NEG_STOP; v1++) {
     for (uint16_t v2 = SUBNORM_NEG_START; v2 <= SUBNORM_NEG_STOP; v2++) {
 
@@ -49,24 +45,12 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
 
 
 TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
-  const bfloat16 z_values[] = {zero,
-                               neg_zero,
-                               inf,
-                               neg_inf,
-                               min_normal,
-                               max_normal};
-  const bfloat16 x_values[] = {zero,
-                               neg_zero,
-                               inf,
-                               neg_inf,
-                               min_normal,
-                               max_normal};
-  const bfloat16 y_values[] = {zero,
-                               neg_zero,
-                               inf,
-                               neg_inf,
-                               min_normal,
-                               max_normal};
+  const bfloat16 z_values[] = {zero,    neg_zero,   inf,
+                               neg_inf, min_normal, max_normal};
+  const bfloat16 x_values[] = {zero,    neg_zero,   inf,
+                               neg_inf, min_normal, max_normal};
+  const bfloat16 y_values[] = {zero,    neg_zero,   inf,
+                               neg_inf, min_normal, max_normal};
 
   for (bfloat16 x : x_values) {
     for (bfloat16 y : y_values) {

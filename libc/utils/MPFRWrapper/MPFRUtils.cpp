@@ -764,10 +764,9 @@ compare_ternary_operation_one_output(Operation,
                                      double, RoundingMode);
 #endif
 
-template bool compare_ternary_operation_one_output(Operation,
-                                                   const TernaryInput<bfloat16> &,
-                                                   bfloat16, double,
-                                                   RoundingMode);
+template bool
+compare_ternary_operation_one_output(Operation, const TernaryInput<bfloat16> &,
+                                     bfloat16, double, RoundingMode);
 template bool compare_ternary_operation_one_output(Operation,
                                                    const TernaryInput<float> &,
                                                    bfloat16, double,
