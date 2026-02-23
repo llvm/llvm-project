@@ -8,6 +8,8 @@ func.func @test_simple_shape_expression(%arg0: tensor<7x12xi32>, %arg1: tensor<8
   // CHECK-NOT: tosa.dim
   // CHECK-NOT: tosa.add_shape
   // CHECK: %[[SHAPE:.+]] = tosa.const_shape {values = dense<84> : tensor<1xindex>} : () -> !tosa.shape<1>
+  // CHECK-NOT: tosa.const_shape {values = dense<4> : tensor<1xindex>} : () -> !tosa.shape<1>
+  // CHECK-NOT: tosa.const_shape {values = dense<80> : tensor<1xindex>} : () -> !tosa.shape<1>
   // CHECK: %[[RESHAPE:.+]] = tosa.reshape %arg0, %[[SHAPE]] : (tensor<7x12xi32>, !tosa.shape<1>) -> tensor<84xi32>
   // CHECK: %[[TILE:.+]] = tosa.tile %[[RESHAPE]], %[[SHAPE]] : (tensor<84xi32>, !tosa.shape<1>) -> tensor<7056xi32>
   // DEFAULT: %[[CAST:.+]] = tensor.cast %[[TILE]] : tensor<7056xi32> to tensor<?xi32>

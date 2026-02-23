@@ -315,7 +315,14 @@ private:
 
         if (foldShapeExpressions &&
             op.hasTrait<OpTrait::tosa::TosaShapeOperator>()) {
-          (void)folder.tryToFold(&op);
+          const LogicalResult foldResult = folder.tryToFold(&op);
+          if (succeeded(foldResult))
+            // Clean up any dead const_shape ops as a result of folding.
+            llvm::for_each(op.getOperands(), [](Value operand) {
+              Operation *definingOp = operand.getDefiningOp();
+              if (definingOp && isOpTriviallyDead(definingOp))
+                definingOp->erase();
+            });
           continue;
         }
 
