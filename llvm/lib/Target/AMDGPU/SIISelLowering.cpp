@@ -4299,6 +4299,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     passSpecialInputs(CLI, CCInfo, *Info, RegsToPass, MemOpChains, Chain);
   }
 
+  // Mark the scratch resource descriptor as allocated so the CC analysis
+  // does not assign user arguments to these registers, matching the callee.
+  if (!Subtarget->hasFlatScratchEnabled())
+    CCInfo.AllocateReg(Info->getScratchRSrcReg());
+
   CCInfo.AnalyzeCallOperands(Outs, AssignFn);
 
   // Get a count of how many bytes are to be pushed on the stack.
