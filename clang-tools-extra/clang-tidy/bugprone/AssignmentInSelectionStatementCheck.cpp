@@ -26,7 +26,7 @@ public:
     if (BO->isCommaOp())
       ExprToProcess.push_back(BO->getRHS()->IgnoreParenImpCasts());
   }
-  void VisitConditionalOperator(const ConditionalOperator *CO) {
+  void VisitAbstractConditionalOperator(const AbstractConditionalOperator *CO) {
     ExprToProcess.push_back(CO->getFalseExpr()->IgnoreParenImpCasts());
     ExprToProcess.push_back(CO->getTrueExpr()->IgnoreParenImpCasts());
   }
@@ -57,10 +57,6 @@ AST_MATCHER_P(Expr, ignoringImplicitAsWritten,
       Expr *ExprNode = C->getImplicitObjectArgument();
       if (ExprNode->getSourceRange() == E->getSourceRange())
         return ExprNode;
-      if (auto *PE = dyn_cast<ParenExpr>(ExprNode)) {
-        if (PE->getSourceRange() == C->getSourceRange())
-          return cast<Expr>(PE);
-      }
       ExprNode = ExprNode->IgnoreParenImpCasts();
       if (ExprNode->getSourceRange() == E->getSourceRange())
         return ExprNode;
@@ -100,7 +96,8 @@ void AssignmentInSelectionStatementCheck::registerMatchers(
   // In these cases "single primary expression" is not possible because the
   // assignment is already part of a bigger expression.
   auto FoundConditionalOperator =
-      conditionalOperator(hasCondition(OpCondExprWithAssign));
+      mapAnyOf(conditionalOperator, binaryConditionalOperator)
+          .with(hasCondition(OpCondExprWithAssign));
   auto FoundLogicalOp = binaryOperator(
       hasAnyOperatorName("&&", "||"),
       eachOf(hasLHS(OpCondExprWithAssign), hasRHS(OpCondExprWithAssign)));
@@ -118,21 +115,20 @@ void AssignmentInSelectionStatementCheck::check(
   assert(FoundAssignment);
 
   const auto *ParentStmt = Result.Nodes.getNodeAs<Stmt>("parent");
-  StringRef CondStr =
+  const StringRef CondStr =
       llvm::TypeSwitch<const Stmt *, const char *>(ParentStmt)
-          .Case<IfStmt>(
-              [](const IfStmt *) { return "condition of 'if' statement"; })
+          .Case([](const IfStmt *) { return "condition of 'if' statement"; })
           .Case<WhileStmt, DoStmt, ForStmt>(
               [](const Stmt *) { return "condition of a loop"; })
-          .Case<ConditionalOperator>([](const ConditionalOperator *) {
+          .Case([](const ConditionalOperator *) {
             return "condition of a ternary operator";
           })
-          .Case<BinaryOperator>([](const BinaryOperator *) {
+          .Case([](const BinaryOperator *) {
             return "operand of a logical operator";
           })
           .DefaultUnreachable();
 
-  SourceLocation OpLoc =
+  const SourceLocation OpLoc =
       llvm::TypeSwitch<const Stmt *, SourceLocation>(FoundAssignment)
           .Case<BinaryOperator, CXXOperatorCallExpr>(
               [](const auto *Op) { return Op->getOperatorLoc(); })

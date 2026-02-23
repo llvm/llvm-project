@@ -12,6 +12,10 @@ void test_if(int a, int b, int c, int d) {
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: assignment within condition of 'if' statement may indicate programmer error
   if (a = c, b = c) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: assignment within condition of 'if' statement may indicate programmer error
+  if ((b > 0) ?: (a = b)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: assignment within condition of 'if' statement may indicate programmer error
+  if ((b = c) ?: (a > b)) {}
+  // FIXME: why is this not found?
 }
 
 void test_while(int a, int b, int c) {
