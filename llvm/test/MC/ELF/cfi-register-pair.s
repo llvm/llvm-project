@@ -22,7 +22,7 @@ f:
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     Address: 0x0
 // CHECK-NEXT:     Offset: 0x48
-// CHECK-NEXT:     Size: 64
+// CHECK-NEXT:     Size: 56
 // CHECK-NEXT:     Link: 0
 // CHECK-NEXT:     Info: 0
 // CHECK-NEXT:     AddressAlignment: 8
@@ -30,10 +30,10 @@ f:
 // CHECK-NEXT:     Relocations [
 // CHECK-NEXT:     ]
 // CHECK-NEXT:     SectionData (
-// CHECK-NEXT:       0000: 18000000 00000000 017A525B 6C6C766D  |.........zR[llvm|
-// CHECK-NEXT:       0010: 3A76302E 305D0004 0410011B 20000000  |:v0.0]...... ...|
-// CHECK-NEXT:       0020: 20000000 00000000 08000000 00411010  | ............A..|
-// CHECK-NEXT:       0030: 08903E93 04903F93 04000000 00000000  |..>...?.........|
+// CHECK-NEXT:       0000: 10000000 00000000 017A5200 04041001  |.........zR.....|
+// CHECK-NEXT:       0010: 1B000000 20000000 18000000 00000000  |.... ...........|
+// CHECK-NEXT:       0020: 08000000 00411010 08903E93 04903F93  |.....A....>...?.|
+// CHECK-NEXT:       0030: 04000000 00000000                    |........|
 // CHECK-NEXT:     )
 // CHECK-NEXT:   }
 // CHECK-NEXT:   Section {
@@ -51,6 +51,6 @@ f:
 // CHECK-NEXT:     AddressAlignment: 8
 // CHECK-NEXT:     EntrySize: 24
 // CHECK-NEXT:     Relocations [
-// CHECK-NEXT:       0x24 R_AMDGPU_REL32 .text
+// CHECK-NEXT:       0x1C R_AMDGPU_REL32 .text
 // CHECK-NEXT:     ]
 // CHECK:        }

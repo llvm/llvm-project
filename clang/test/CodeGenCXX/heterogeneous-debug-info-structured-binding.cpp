@@ -85,15 +85,9 @@ int g() {
 }
 //.
 // CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-<<<<<<< HEAD
-// CHECK: [[META1]] = !DIFile(filename: {{.*}}clang/test/CodeGenCXX/<stdin>", directory: "")
-// CHECK: [[DBG6]] = distinct !DISubprogram(name: "f", linkageName: "_Z1fv", scope: [[META7:![0-9]+]], file: [[META7]], line: 41, type: [[META8:![0-9]+]], scopeLine: 41, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META11:![0-9]+]])
-// CHECK: [[META7]] = !DIFile(filename: {{.*}}clang/test/CodeGenCXX/heterogeneous-debug-info-structured-binding.cpp", directory: "")
-=======
 // CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: "")
 // CHECK: [[DBG6]] = distinct !DISubprogram(name: "f", linkageName: "_Z1fv", scope: [[META7:![0-9]+]], file: [[META7]], line: 41, type: [[META8:![0-9]+]], scopeLine: 41, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META11:![0-9]+]])
 // CHECK: [[META7]] = !DIFile(filename: "{{.*}}heterogeneous-debug-info-structured-binding.cpp", directory: "")
->>>>>>> 4df921fb240afd156c70e148159be7c6e5e2c417
 // CHECK: [[META8]] = !DISubroutineType(types: [[META9:![0-9]+]])
 // CHECK: [[META9]] = !{[[META10:![0-9]+]]}
 // CHECK: [[META10]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
