@@ -866,9 +866,8 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
-               SgToWiVectorReduction, SgToWiMultiDimReduction,
-               SgToWiLoadMatrix, SgToWiStoreMatrix>(typeConverter,
-                                                    patterns.getContext());
+               SgToWiVectorReduction, SgToWiMultiDimReduction, SgToWiLoadMatrix,
+               SgToWiStoreMatrix>(typeConverter, patterns.getContext());
 }
 
 void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
