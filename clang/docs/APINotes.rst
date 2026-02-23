@@ -516,7 +516,7 @@ declaration kind), all of which are optional:
 
 :Lifetimebound:
   
-  Used for methods and functions (excluding ``this``). Parameters are identified by a 0-based
+  Used for methods and functions. Parameters are identified by a 0-based
   'Position'. Equivalent to ``[[clang::lifetimebound]]``.
 
   ::
