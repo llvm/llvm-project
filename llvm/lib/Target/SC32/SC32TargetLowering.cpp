@@ -3,6 +3,7 @@
 #include "SC32RegisterInfo.h"
 #include "SC32SelectionDAGInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
@@ -42,9 +43,21 @@ SDValue SC32TargetLowering::LowerFormalArguments(
   CCInfo.AnalyzeFormalArguments(Ins, CC_SC32);
 
   for (size_t I = 0; I < ArgLocs.size(); I++) {
-    Register VReg = RI.createVirtualRegister(&SC32::GPRegClass);
-    RI.addLiveIn(ArgLocs[I].getLocReg(), VReg);
-    InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32));
+    assert(ArgLocs[I].getLocInfo() != CCValAssign::Indirect);
+    if (ArgLocs[I].isRegLoc()) {
+      Register VReg = RI.createVirtualRegister(&SC32::GPRegClass);
+      RI.addLiveIn(ArgLocs[I].getLocReg(), VReg);
+      InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32));
+    } else {
+      // MemLoc
+      signed Offset = ArgLocs[I].getLocMemOffset() - CCInfo.getStackSize();
+      int FI = MF.getFrameInfo().CreateFixedObject(4, Offset, true);
+      SDValue FIPtr = DAG.getFrameIndex(FI, MVT::i32);
+      SDValue Load = DAG.getLoad(ArgLocs[I].getLocVT(), DL, Chain, FIPtr,
+                                 MachinePointerInfo::getFixedStack(MF, FI));
+      InVals.push_back(Load);
+      continue;
+    }
   }
 
   return Chain;
@@ -107,10 +120,24 @@ SDValue SC32TargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCInfo.AnalyzeCallOperands(CLI.Outs, CC_SC32);
 
   for (size_t I = 0; I < ArgLocs.size(); I++) {
-    Register Reg = ArgLocs[I].getLocReg();
-    Chain = DAG.getCopyToReg(Chain, DL, Reg, CLI.OutVals[I], Glue);
-    Glue = Chain.getValue(1);
-    Ops.push_back(DAG.getRegister(Reg, MVT::i32));
+    if (ArgLocs[I].isMemLoc()) {
+      int Offset = ArgLocs[I].getLocMemOffset() - CCInfo.getStackSize() - 8;
+      SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, SC32::GP29, MVT::i32);
+      Chain = StackPtr.getValue(1);
+      SDValue PtrOff = DAG.getSignedConstant(-Offset, DL, MVT::i32);
+      PtrOff = DAG.getNode(ISD::SUB, DL, MVT::i32, StackPtr, PtrOff);
+      Chain =
+          DAG.getStore(Chain, DL, CLI.OutVals[I], PtrOff, MachinePointerInfo());
+    }
+  }
+
+  for (size_t I = 0; I < ArgLocs.size(); I++) {
+    if (ArgLocs[I].isRegLoc()) {
+      Register Reg = ArgLocs[I].getLocReg();
+      Chain = DAG.getCopyToReg(Chain, DL, Reg, CLI.OutVals[I], Glue);
+      Glue = Chain.getValue(1);
+      Ops.push_back(DAG.getRegister(Reg, MVT::i32));
+    }
   }
 
   Ops[0] = Chain;

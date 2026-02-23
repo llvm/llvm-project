@@ -41,7 +41,7 @@ let Namespace = "SC32" in {
 def GP : RegisterClass<"SC32", [i32], 32, (sequence "GP%u", 0, 31)>;
 def AUX : RegisterClass<"SC32", [i32], 32, (add AUX0)>;
 
-def CC_SC32 : CallingConv<[CCAssignToReg<[GP23, GP24, GP25, GP26]>]>;
+def CC_SC32 : CallingConv<[CCAssignToReg<[GP23, GP24, GP25, GP26]>, CCAssignToStack<4,4>]>;
 def RetCC_SC32 : CallingConv<[CCAssignToReg<[GP28]>]>;
 
 def CSR : CalleeSavedRegs<(add)>;
@@ -68,6 +68,10 @@ def LO20 : SDNodeXForm<imm, [{
 
 def HI20 : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(N->getZExtValue() >> 12, SDLoc(N), MVT::i32);
+}]>;
+
+def MemOffset : PatLeaf<(imm), [{
+    return isInt<15>(N->getSExtValue());
 }]>;
 
 def LLIimm : PatLeaf<(imm), [{
@@ -277,11 +281,19 @@ def : Pat<(i32 LUIimm:$val), (LUI (HI20 imm:$val))>;
 def : Pat<(i32 imm:$val), (ORI (LUI (HI20 imm:$val)), (LO20 imm:$val))>;
 
 def : Pat<(store i32:$val, i32:$addr), (ST i32:$val, i32:$addr, (i32 0))>;
+def : Pat<(store i32:$val, (add GP:$base, MemOffset:$offset)), (ST i32:$val, GP:$base, imm:$offset)>;
+
 def : Pat<(truncstorei8 i32:$val, i32:$addr), (STB i32:$val, i32:$addr, (i32 0))>;
+def : Pat<(truncstorei8 i32:$val, (add GP:$base, MemOffset:$offset)), (STB i32:$val, GP:$base, imm:$offset)>;
 
 def : Pat<(load i32:$addr), (LD i32:$addr, (i32 0))>;
+def : Pat<(load (add GP:$base, MemOffset:$offset)), (LD GP:$base, imm:$offset)>;
+
 def : Pat<(zextloadi8 i32:$addr), (LDB i32:$addr, (i32 0))>;
+def : Pat<(zextloadi8 (add GP:$base, MemOffset:$offset)), (LDB GP:$base, imm:$offset)>;
+
 def : Pat<(extloadi8 i32:$addr), (LDB i32:$addr, (i32 0))>;
+def : Pat<(extloadi8 (add GP:$base, MemOffset:$offset)), (LDB GP:$base, imm:$offset)>;
 
 def SC32InstrInfo : InstrInfo;
 
