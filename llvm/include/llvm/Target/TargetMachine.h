@@ -485,10 +485,12 @@ public:
     return nullptr;
   }
 
-  virtual Error buildCodeGenPipeline(ModulePassManager &, raw_pwrite_stream &,
-                                     raw_pwrite_stream *, CodeGenFileType,
-                                     const CGPassBuilderOption &,
-                                     PassInstrumentationCallbacks *) {
+  virtual Error buildCodeGenPipeline(ModulePassManager &MPM,
+                                     raw_pwrite_stream &Out,
+                                     raw_pwrite_stream *DwoOut,
+                                     CodeGenFileType FileType,
+                                     const CGPassBuilderOption &Opt,
+                                     PassInstrumentationCallbacks *PIC) {
     return make_error<StringError>("buildCodeGenPipeline is not overridden",
                                    inconvertibleErrorCode());
   }
