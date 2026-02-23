@@ -644,6 +644,12 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
     patterns.add<MultiReductionToArithOps>(patterns.getContext(), benefit);
 }
 
+void mlir::vector::populateVectorUnrollMultiReductionInnerParallelPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  patterns.add<UnrollMultiReductionInnerParallel>(patterns.getContext(),
+                                                  benefit);
+}
+
 std::unique_ptr<Pass> vector::createLowerVectorMultiReductionPass(
     vector::VectorMultiReductionLowering option) {
   return std::make_unique<LowerVectorMultiReductionPass>(option);

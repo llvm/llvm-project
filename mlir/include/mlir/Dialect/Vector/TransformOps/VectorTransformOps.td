@@ -286,6 +286,22 @@ def ApplyMultiReductionUnrollingPatternsOp: Op<Transform_Dialect,
   }];
 }
 
+def ApplyUnrollMultiReductionInnerParallelPatternsOp: Op<Transform_Dialect,
+    "apply_patterns.vector.unroll_multi_reduction_inner_parallel",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that vector multi_reduction operations with more than one
+    reduction dimension should be unrolled along the outermost reduction
+    dimension into a sequence of lower-rank vector.multi_reduction ops.
+
+    This populates the patterns from
+    `populateVectorUnrollMultiReductionInnerParallelPatterns`, i.e.:
+    * `UnrollMultiReductionInnerParallel`
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyLowerOuterProductPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_outerproduct",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
