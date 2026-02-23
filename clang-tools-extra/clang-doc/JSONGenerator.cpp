@@ -34,10 +34,10 @@ static void serializeInfo(const RecordInfo &I, Object &Obj,
 static void serializeReference(const Reference &Ref, Object &ReferenceObj);
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo,
-                           const std::string &EndKey = "End");
+static void
+serializeArray(const Container &Records, Object &Obj, const StringRef Key,
+               SerializationFunc SerializeInfo, const StringRef EndKey = "End",
+               void (*Customizer)(Object &Obj, size_t Size) = nullptr);
 
 // Convenience lambda to pass to serializeArray.
 // If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
@@ -442,10 +442,14 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
   }
 }
 
+static void customize(Object &Obj, size_t Size) {
+  Obj["VerticalDisplay"] = Size > 2;
+}
+
 template <typename Container, typename SerializationFunc>
-static void
-serializeArray(const Container &Records, Object &Obj, const std::string &Key,
-               SerializationFunc SerializeInfo, const std::string &EndKey) {
+static void serializeArray(const Container &Records, Object &Obj, StringRef Key,
+                           SerializationFunc SerializeInfo, StringRef EndKey,
+                           void (*Customize)(Object &Obj, size_t Size)) {
   json::Value RecordsArray = Array();
   auto &RecordsArrayRef = *RecordsArray.getAsArray();
   RecordsArrayRef.reserve(Records.size());
@@ -458,8 +462,8 @@ serializeArray(const Container &Records, Object &Obj, const std::string &Key,
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
-  if (Key == "Params")
-    Obj["VerticalDisplay"] = Records.size() > 2;
+  if (Customize)
+    Customize(Obj, Records.size());
 }
 
 static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
@@ -482,7 +486,7 @@ static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
     ParamsArrayRef.push_back(ParamObjVal);
   }
   Obj["Parameters"] = ParamsArray;
-  Obj["VerticalDisplay"] = Params.size() > 2;
+  customize(Obj, Params.size());
 }
 
 static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
@@ -546,7 +550,8 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   Obj["ReturnType"] = std::move(ReturnTypeObj);
 
   if (!F.Params.empty())
-    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda, "ParamEnd");
+    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda, "ParamEnd",
+                   customize);
 
   if (F.Template)
     serializeInfo(F.Template.value(), Obj);

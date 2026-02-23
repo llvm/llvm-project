@@ -142,8 +142,7 @@ private:
 // CHECK-NEXT:          ],
 // CHECK-NEXT:          "VerticalDisplay": false
 // CHECK-NEXT:        }
-// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000",
-// CHECK-NEXT:        "VerticalDisplay": false
+// CHECK-NEXT:        "USR": "0000000000000000000000000000000000000000"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      {
 // CHECK-NEXT:        "Description": {
