@@ -4004,6 +4004,9 @@ def err_attribute_vecreturn_only_vector_member : Error<
   "the vecreturn attribute can only be used on a class or structure with one member, which must be a vector">;
 def err_attribute_vecreturn_only_pod_record : Error<
   "the vecreturn attribute can only be used on a POD (plain old data) class or structure (i.e. no virtual functions)">;
+def err_attribute_pointer_field_protection_experimental
+    : Error<"this attribute is experimental and must be explicitly enabled "
+            "with flag -fexperimental-allow-pointer-field-protection-attr">;
 def err_sme_attr_mismatch : Error<
   "function declared %0 was previously declared %1, which has different SME function attributes">;
 def err_sme_call_in_non_sme_target : Error<
@@ -10894,26 +10897,23 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "the full-expression">, InGroup<DanglingCapture>;
 
 // Diagnostics based on the Lifetime safety analysis.
-def warn_lifetime_safety_loan_expires_permissive : Warning<
+def warn_lifetime_safety_use_after_scope : Warning<
    "object whose reference is captured does not live long enough">,
-   InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_strict : Warning<
-   "object whose reference is captured may not live long enough">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_moved_strict : Warning<
+   InGroup<LifetimeSafetyUseAfterScope>, DefaultIgnore;
+def warn_lifetime_safety_use_after_scope_moved : Warning<
    "object whose reference is captured may not live long enough. "
    "This could be false positive as the storage may have been moved later">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+   InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
-def warn_lifetime_safety_return_stack_addr_permissive
+def warn_lifetime_safety_return_stack_addr
     : Warning<"address of stack memory is returned later">,
-      InGroup<LifetimeSafetyPermissive>,
+      InGroup<LifetimeSafetyReturnStackAddr>,
       DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_moved_strict
+def warn_lifetime_safety_return_stack_addr_moved
     : Warning<"address of stack memory may be returned later. "
       "This could be false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyStrict>,
+      InGroup<LifetimeSafetyReturnStackAddrMoved>,
       DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
@@ -10929,7 +10929,7 @@ def warn_lifetime_safety_dangling_field_moved
     : Warning<"address of stack memory escapes to a field. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyDanglingFieldStrict>,
+      InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;

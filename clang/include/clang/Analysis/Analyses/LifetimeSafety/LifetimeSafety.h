@@ -33,6 +33,8 @@
 
 namespace clang::lifetimes {
 
+// TODO: Deprecate and remove Confidence as this is no more used as a
+// differentiator between strict and permissive warnings.
 /// Enum to track the confidence level of a potential error.
 enum class Confidence : uint8_t {
   None,
