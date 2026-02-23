@@ -4693,6 +4693,7 @@ of elements; vscale is a positive integer that is unknown at compile time
 and the same hardware-dependent constant for all scalable vectors at run
 time. The size of a specific scalable vector type is thus constant within
 IR, even if the exact size in bytes cannot be determined until run time.
+vscale can be at most 2^31-1.
 
 :Examples:
 
@@ -31513,7 +31514,7 @@ Semantics:
 """"""""""
 
 ``vscale`` is a positive value that is constant throughout program
-execution, but is unknown at compile time.
+execution, but is unknown at compile time. The returned value can be at most 2^31-1.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
 
