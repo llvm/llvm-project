@@ -972,7 +972,9 @@ an optional ``unnamed_addr`` attribute, a return type, an optional
 name, a (possibly empty) argument list (each with optional :ref:`parameter
 attributes <paramattrs>`), optional :ref:`function attributes <fnattrs>`,
 an optional address space, an optional section, an optional partition,
-an optional alignment, an optional :ref:`comdat <langref_comdats>`,
+an optional minimum alignment,
+an optional preferred alignment,
+an optional :ref:`comdat <langref_comdats>`,
 an optional :ref:`garbage collector name <gc>`, an optional :ref:`prefix <prefixdata>`,
 an optional :ref:`prologue <prologuedata>`,
 an optional :ref:`personality <personalityfn>`,
@@ -986,8 +988,8 @@ Syntax::
            <ResultType> @<FunctionName> ([argument list])
            [(unnamed_addr|local_unnamed_addr)] [AddrSpace] [fn Attrs]
            [section "name"] [partition "name"] [comdat [($name)]] [align N]
-           [gc] [prefix Constant] [prologue Constant] [personality Constant]
-           (!name !N)* { ... }
+           [prefalign(N)] [gc] [prefix Constant] [prologue Constant]
+           [personality Constant] (!name !N)* { ... }
 
 The argument list is a comma-separated sequence of arguments where each
 argument is of the following form:
@@ -1037,11 +1039,20 @@ LLVM allows an explicit section to be specified for functions. If the
 target supports it, it will emit functions to the section specified.
 Additionally, the function can be placed in a COMDAT.
 
-An explicit alignment may be specified for a function. If not present,
-or if the alignment is set to zero, the alignment of the function is set
-by the target to whatever it feels convenient. If an explicit alignment
-is specified, the function is forced to have at least that much
-alignment. All alignments must be a power of 2.
+An explicit minimum alignment (``align``) may be specified for a
+function. If not present, or if the alignment is set to zero, the
+alignment of the function is set according to the preferred alignment
+rules described below. If an explicit minimum alignment is specified, the
+function is forced to have at least that much alignment. All alignments
+must be a power of 2.
+
+An explicit preferred alignment (``prefalign``) may also be specified for
+a function (definitions only, and must be a power of 2). If a function
+does not have a preferred alignment attribute, the preferred alignment
+is determined in a target-specific way. The preferred alignment, if
+provided, is treated as a hint; the final alignment of the function will
+generally be set to a value somewhere between the minimum alignment and
+the preferred alignment.
 
 If the ``unnamed_addr`` attribute is given, the address is known to not
 be significant and two identical functions can be merged.
@@ -2766,7 +2777,7 @@ For example:
     to signify an unbounded maximum. The syntax `vscale_range(<val>)` can be
     used to set both `min` and `max` to the same value. Functions that don't
     include this attribute make no assumptions about the value of `vscale`.
-``"nooutline"``
+``nooutline``
     This attribute indicates that outlining passes should not modify the
     function.
 ``nocreateundeforpoison``
@@ -32294,3 +32305,25 @@ itself. Specifically, the first byte of the instruction will be between
 0x70 and 0x7F, and the second byte will be 0xFE.
 
 There are currently no guarantees about instructions used by other backends.
+
+'``llvm.looptrap``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare void @llvm.looptrap() cold noreturn nounwind
+
+Overview:
+"""""""""
+
+The '``llvm.looptrap``' intrinsic is equivalent to
+``llvm.cond.loop(true)``, but is also considered to be ``noreturn``,
+which enables certain optimizations by allowing the optimizer to
+assume that a branch leading to a call to this intrinsic was not
+taken. A late optimization pass will convert this intrinsic to either
+``llvm.cond.loop(true)`` or ``llvm.cond.loop(pred)``, where ``pred``
+is a predicate for a conditional branch leading to the intrinsic call,
+if possible.

@@ -379,6 +379,15 @@
   ; CHECK-NEXT:    v_mul_f32_e64 v0, v0, v0
     ret void;
   }
+
+  define void @trans64() {
+  ; CHECK-LABEL: trans64:
+  ; CHECK:       ; %bb.0:
+  ; CHECK-NEXT:    v_rcp_f64_e32 v[0:1], v[0:1]
+  ; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+  ; CHECK-NEXT:    v_add_f64 v[0:1], v[0:1], v[0:1]
+    ret void;
+  }
 ...
 
 ---
@@ -762,3 +771,11 @@ body: |
     $vgpr0 = V_MUL_F32_e64 0, $vgpr0, 0, $vgpr0, 0, 0, implicit $mode, implicit $exec
 ...
 
+# Check that F64 TRANS instructions are treated as VALU.
+---
+name: trans64
+body: |
+  bb.0:
+    $vgpr0_vgpr1 = V_RCP_F64_e32 $vgpr0_vgpr1, implicit $exec, implicit $mode
+    $vgpr0_vgpr1 = V_ADD_F64_e64 0, $vgpr0_vgpr1, 0, $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $mode
+...

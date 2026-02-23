@@ -111,6 +111,7 @@ public:
   Instruction *visitSDiv(BinaryOperator &I);
   Instruction *visitFDiv(BinaryOperator &I);
   Value *simplifyRangeCheck(ICmpInst *Cmp0, ICmpInst *Cmp1, bool Inverted);
+  Instruction *FoldOrOfLogicalAnds(Value *Op0, Value *Op1);
   Instruction *visitAnd(BinaryOperator &I);
   Instruction *visitOr(BinaryOperator &I);
   bool sinkNotIntoLogicalOp(Instruction &I);

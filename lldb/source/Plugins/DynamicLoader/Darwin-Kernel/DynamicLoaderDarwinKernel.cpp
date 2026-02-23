@@ -106,7 +106,7 @@ public:
 
   DynamicLoaderDarwinKernelProperties() : Properties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_dynamicloaderdarwinkernel_properties);
+    m_collection_sp->Initialize(g_dynamicloaderdarwinkernel_properties_def);
   }
 
   ~DynamicLoaderDarwinKernelProperties() override = default;

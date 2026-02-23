@@ -14,9 +14,9 @@ package(
 licenses(["notice"])
 
 cc_library(
-    name = "PluginClangCommon",
-    srcs = glob(["Language/ClangCommon/*.cpp"]),
-    hdrs = glob(["Language/ClangCommon/*.h"]),
+    name = "PluginClangHighlighter",
+    srcs = glob(["Highlighter/Clang/*.cpp"]),
+    hdrs = glob(["Highlighter/Clang/*.h"]),
     includes = [".."],
     deps = [
         "//clang:basic",
@@ -34,7 +34,7 @@ cc_library(
     hdrs = glob(["Language/ObjC/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
         "//lldb:CoreHeaders",
     ],
@@ -782,7 +782,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginCPPRuntime",
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginTypeSystemClang",
         "//lldb:Core",
         "//lldb:DataFormatters",
@@ -868,7 +868,7 @@ cc_library(
     hdrs = glob(["Language/ObjCPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         "//lldb:Core",
         "//lldb:Headers",
         "//lldb:Target",
@@ -894,7 +894,7 @@ cc_library(
     hdrs = glob(["Language/CPlusPlus/*.h"]),
     includes = [".."],
     deps = [
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
         "//lldb:CoreHeaders",
     ],
@@ -908,7 +908,7 @@ cc_library(
         ":LanguageCPlusPlusProperties",
         ":PluginCPPRuntime",
         ":PluginCPlusPlusLanguageHeaders",
-        ":PluginClangCommon",
+        ":PluginClangHighlighter",
         ":PluginExpressionParserClangHeaders",
         ":PluginTypeSystemClang",
         ":PluginTypeSystemClangHeaders",
@@ -1342,6 +1342,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -1358,6 +1359,7 @@ cc_library(
         "//lldb:TargetHeaders",
         "//lldb:Utility",
         "//lldb:UtilityPrivateHeaders",
+        "//llvm:Support",
     ],
 )
 
@@ -1372,6 +1374,7 @@ cc_library(
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2075,6 +2078,7 @@ cc_library(
         "//llvm:BinaryFormat",
         "//llvm:Object",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 

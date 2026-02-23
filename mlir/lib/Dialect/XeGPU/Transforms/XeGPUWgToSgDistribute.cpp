@@ -602,44 +602,110 @@ struct WgToSgElementwiseOp : public ConversionPattern {
 struct WgToSgConvertLayoutOp
     : public OpConversionPattern<xegpu::ConvertLayoutOp> {
   using OpConversionPattern<xegpu::ConvertLayoutOp>::OpConversionPattern;
+
   LogicalResult
   matchAndRewrite(xegpu::ConvertLayoutOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
 
-    auto input = op.getInputLayout();
-    auto target = op.getTargetLayout();
+    VectorType resultType = op.getResult().getType();
+    ArrayRef<int64_t> wgShape = resultType.getShape();
+    auto inputLayout = op.getInputLayout();
+    auto targetLayout = op.getTargetLayout();
 
-    if (!input || !target || !input.isForWorkgroup() ||
-        !target.isForWorkgroup())
+    if (!inputLayout || !targetLayout || !inputLayout.isForWorkgroup() ||
+        !targetLayout.isForWorkgroup())
       return rewriter.notifyMatchFailure(
           op, "Input and target layouts must have subgroup layout");
 
-    SmallVector<int64_t> inputSgLayout = input.getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> inputSgData = input.getEffectiveSgDataAsInt();
-    DenseI32ArrayAttr inputOrder = input.getOrder();
-    SmallVector<int64_t> targetSgLayout = target.getEffectiveSgLayoutAsInt();
-    SmallVector<int64_t> targetSgData = target.getEffectiveSgDataAsInt();
-    DenseI32ArrayAttr targetOrder = target.getOrder();
+    SmallVector<int64_t> inputSgLayout =
+        inputLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> inputSgData = inputLayout.getEffectiveSgDataAsInt();
+    SmallVector<int64_t> targetSgLayout =
+        targetLayout.getEffectiveSgLayoutAsInt();
+    SmallVector<int64_t> targetSgData = targetLayout.getEffectiveSgDataAsInt();
 
-    // TODO: currently we only support for optimal case, where input and
-    // output has the same sg_layout and sg_data, so SLM is not involved.
-    if (inputSgLayout != targetSgLayout || inputSgData != targetSgData ||
-        inputOrder != targetOrder)
+    // Fast path: if sg_layout and sg_data are identical, no SLM needed
+    if (inputLayout.isCompatibleWith(targetLayout,
+                                     xegpu::LayoutKind::Subgroup)) {
+      inputLayout = inputLayout.dropSgLayoutAndData();
+      targetLayout = targetLayout.dropSgLayoutAndData();
+
+      SmallVector<Value> newOps(adaptor.getSource());
+      if (inputLayout && targetLayout) {
+        for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
+          auto newOp = xegpu::ConvertLayoutOp::create(
+              rewriter, loc, src.getType(), src, inputLayout, targetLayout);
+          newOps[i] = newOp;
+        }
+      }
+      rewriter.replaceOpWithMultiple(op, {newOps});
+      return success();
+    }
+
+    // SLM path: layouts differ, need cross-subgroup data redistribution
+    Type elemTy = cast<VectorType>(op.getSource().getType()).getElementType();
+
+    SmallVector<int64_t> slmShape = llvm::to_vector(wgShape);
+
+    // Calculate SLM size requirements
+    auto bitWidth = elemTy.getIntOrFloatBitWidth();
+    auto bytesPerElement = bitWidth / 8;
+    auto slmSize = computeProduct(slmShape) * bytesPerElement;
+
+    // Allocate SLM
+    auto slmTy = MemRefType::get({slmSize}, rewriter.getI8Type(), {}, 3);
+    auto slm = memref::AllocaOp::create(rewriter, loc, slmTy);
+
+    auto memDescType = xegpu::MemDescType::get(rewriter.getContext(), slmShape,
+                                               elemTy, nullptr);
+    auto memDesc =
+        xegpu::CreateMemDescOp::create(rewriter, loc, memDescType, slm);
+
+    auto sgId = gpu::SubgroupIdOp::create(rewriter, loc,
+                                          rewriter.getIndexType(), nullptr);
+
+    // STORE PHASE: Each subgroup stores in SLM using input layout
+    auto storeCoords = inputLayout.computeDistributedCoords(
+        rewriter, loc, sgId.getResult(), wgShape);
+    if (failed(storeCoords))
       return failure();
 
-    input = input.dropSgLayoutAndData();
-    target = target.dropSgLayoutAndData();
-
-    SmallVector<Value> newOps(adaptor.getSource());
-    if (input && target) {
-      // keep the ConvertLayoutOp for rest fields, e.g., inst_data.
-      for (auto [i, src] : llvm::enumerate(adaptor.getSource())) {
-        auto newOp = xegpu::ConvertLayoutOp::create(
-            rewriter, op.getLoc(), src.getType(), src, input, target);
-        newOps[i] = newOp;
+    // Store to SLM
+    for (auto [src, coords] : llvm::zip(adaptor.getSource(), *storeCoords)) {
+      SmallVector<OpFoldResult> storeMatrixOffsets;
+      for (Value coord : coords) {
+        storeMatrixOffsets.push_back(coord);
       }
+      xegpu::StoreMatrixOp::create(rewriter, loc, src, memDesc.getResult(),
+                                   storeMatrixOffsets, nullptr /*layout*/);
     }
-    rewriter.replaceOpWithMultiple(op, {newOps});
+
+    gpu::BarrierOp::create(rewriter, loc);
+
+    // LOAD PHASE: Each target subgroup loads from SLM using target layout
+    auto loadCoords = targetLayout.computeDistributedCoords(
+        rewriter, loc, sgId.getResult(), wgShape);
+    if (failed(loadCoords))
+      return failure();
+
+    VectorType loadType = VectorType::get(targetSgData, elemTy);
+
+    // Load vectors from SLM
+    SmallVector<Value> finalResults;
+    for (auto coords : *loadCoords) {
+      SmallVector<OpFoldResult> loadMatrixOffsets;
+      for (Value coord : coords) {
+        loadMatrixOffsets.push_back(coord);
+      }
+      auto loadOp = xegpu::LoadMatrixOp::create(
+          rewriter, loc, loadType, memDesc.getResult(), loadMatrixOffsets,
+          targetLayout.dropSgLayoutAndData());
+
+      finalResults.push_back(loadOp.getResult());
+    }
+
+    rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
   }
 };
@@ -1847,4 +1913,18 @@ void XeGPUWgToSgDistributePass::runOnOperation() {
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
     return signalPassFailure();
+
+  // Remove layout attributes from SCF ops
+  getOperation()->walk([](Operation *op) {
+    if (!isa<RegionBranchOpInterface, RegionBranchTerminatorOpInterface>(op))
+      return;
+
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : op->getDiscardableAttrs()) {
+      if (isa<xegpu::DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
+    }
+    for (auto attrName : attrsToRemove)
+      op->removeDiscardableAttr(attrName);
+  });
 }
