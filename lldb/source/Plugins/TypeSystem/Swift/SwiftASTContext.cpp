@@ -4695,10 +4695,10 @@ llvm::Error SwiftASTContext::LoadModule(swift::ModuleDecl &swift_module,
                    framework_path.c_str());
 
         return;
-      } else
-        all_dlopen_errors.Printf("Looking for \"%s\", error: %s\n",
-                                 framework_path.c_str(),
-                                 load_image_error.AsCString());
+      }
+      all_dlopen_errors.Printf("Looking for \"%s\", error: %s\n",
+                               framework_path.c_str(),
+                               load_image_error.AsCString());
 
       // And then in the various framework search paths.
       std::unordered_set<std::string> seen_paths;
@@ -4737,13 +4737,14 @@ llvm::Error SwiftASTContext::LoadModule(swift::ModuleDecl &swift_module,
                    framework_path.c_str());
 
         return;
-      } else {
-        all_dlopen_errors.Printf("Failed to find framework for \"%s\" looking"
-                                 " along paths:\n",
-                                 library_name.c_str());
-        for (const std::string &path : uniqued_paths)
-          all_dlopen_errors.Printf("  %s\n", path.c_str());
       }
+      all_dlopen_errors.Printf("Failed to find framework for \"%s\" looking"
+                               " along paths:\n",
+                               library_name.c_str());
+      if (error.Fail())
+        all_dlopen_errors.Printf("%s\n", error.AsCString());
+      for (const std::string &path : uniqued_paths)
+        all_dlopen_errors.Printf("  %s\n", path.c_str());
 
       // Maybe we were told to add a link library that exists in the
       // system.  I tried just specifying Foo.framework/Foo and
@@ -4758,10 +4759,9 @@ llvm::Error SwiftASTContext::LoadModule(swift::ModuleDecl &swift_module,
       framework_spec.SetFile(system_path.c_str(), FileSpec::Style::native);
       if (LoadOneImage(process, framework_spec, load_image_error))
         return;
-      else
-        all_dlopen_errors.Printf("Looking for \"%s\"\n,    error: %s\n",
-                                 framework_path.c_str(),
-                                 load_image_error.AsCString());
+      all_dlopen_errors.Printf("Looking for \"%s\"\n,    error: %s\n",
+                               framework_path.c_str(),
+                               load_image_error.AsCString());
     } break;
     case swift::LibraryKind::Library: {
       std::vector<std::string> search_paths =
@@ -4876,12 +4876,14 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
     LOG_PRINTF(GetLog(LLDBLog::Types), "Found library at: %s.",
                found_library.GetPath().c_str());
     return true;
-  } else {
-    all_dlopen_errors.Printf("Failed to find \"%s\" in paths:\n",
-                             library_fullname.c_str());
-    for (const std::string &search_dir : uniqued_paths)
-      all_dlopen_errors.Printf("  %s\n", search_dir.c_str());
   }
+  all_dlopen_errors.Printf("Failed to find \"%s\" in paths:\n",
+                           library_fullname.c_str());
+  if (error.Fail())
+    all_dlopen_errors.Printf("%s\n", error.AsCString());
+
+  for (const std::string &search_dir : uniqued_paths)
+    all_dlopen_errors.Printf("  %s\n", search_dir.c_str());
 
   if (check_rpath) {
     // Let our RPATH help us out when finding the right library.
@@ -4894,10 +4896,10 @@ bool SwiftASTContext::LoadLibraryUsingPaths(
       LOG_PRINTF(GetLog(LLDBLog::Types), "Found library using RPATH at: %s.",
                  library_path.c_str());
       return true;
-    } else
-      all_dlopen_errors.Printf("Failed to find \"%s\" on RPATH, error: %s\n",
-                               library_fullname.c_str(),
-                               load_image_error.AsCString());
+    }
+    all_dlopen_errors.Printf("Failed to find \"%s\" on RPATH, error: %s\n",
+                             library_fullname.c_str(),
+                             load_image_error.AsCString());
   }
 
   // Remember that this failed library failed to load so we don't try again.
