@@ -1513,7 +1513,9 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         .addUse(PointerVReg)
         .constrainAllUses(TII, TRI, RBI);
     return true;
-  } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+  }
+
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     // GLSL.std.450 has no combined sincos; emit separate Sin and Cos.
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
@@ -1531,6 +1533,7 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         .constrainAllUses(TII, TRI, RBI);
     return true;
   }
+
   return false;
 }
 
@@ -3252,6 +3255,7 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
   if (STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std)) {
     return selectExtInst(ResVReg, ResType, I, CL::exp10);
   }
+
   if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     /// There is no exp10 in GLSL. Use exp10(x) = exp2(x * log2(10)) instead
     /// log2(10) ~= 3.3219280948874
@@ -3277,9 +3281,12 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
     if (!selectOpWithSrcs(ArgReg, ResType, I,
                           {ConstReg, I.getOperand(1).getReg()}, Opcode))
       return false;
-    return selectExtInstWithSrcs(
+    if (!selectExtInstWithSrcs(
         ResVReg, ResType, I, std::vector<Register>({ArgReg}),
-        {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}});
+        {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}}))
+      return false;
+
+    return true;
   }
 
   return false;
@@ -5344,46 +5351,50 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::log10);
   }
 
-  // There is no log10 instruction in the GLSL Extended Instruction set, so it
-  // is implemented as:
-  // log10(x) = log2(x) * (1 / log2(10))
-  //          = log2(x) * 0.30103
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+    // There is no log10 instruction in the GLSL Extended Instruction set, so it
+    // is implemented as:
+    // log10(x) = log2(x) * (1 / log2(10))
+    //          = log2(x) * 0.30103
 
-  MachineIRBuilder MIRBuilder(I);
-  MachineBasicBlock &BB = *I.getParent();
+    MachineIRBuilder MIRBuilder(I);
+    MachineBasicBlock &BB = *I.getParent();
 
-  // Build log2(x).
-  Register VarReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-      .addDef(VarReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-      .addImm(GL::Log2)
-      .add(I.getOperand(1))
-      .constrainAllUses(TII, TRI, RBI);
+    // Build log2(x).
+    Register VarReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+        .addDef(VarReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+        .addImm(GL::Log2)
+        .add(I.getOperand(1))
+        .constrainAllUses(TII, TRI, RBI);
 
-  // Build 0.30103.
-  assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
-         ResType->getOpcode() == SPIRV::OpTypeFloat);
-  // TODO: Add matrix implementation once supported by the HLSL frontend.
-  SPIRVTypeInst SpirvScalarType = ResType->getOpcode() == SPIRV::OpTypeVector
-                                      ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
-                                            ResType->getOperand(1).getReg()))
-                                      : ResType;
-  Register ScaleReg =
-      GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
+    // Build 0.30103.
+    assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
+          ResType->getOpcode() == SPIRV::OpTypeFloat);
+    // TODO: Add matrix implementation once supported by the HLSL frontend.
+    SPIRVTypeInst SpirvScalarType = ResType->getOpcode() == SPIRV::OpTypeVector
+                                        ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
+                                              ResType->getOperand(1).getReg()))
+                                        : ResType;
+    Register ScaleReg =
+        GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
 
-  // Multiply log2(x) by 0.30103 to get log10(x) result.
-  auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
-                    ? SPIRV::OpVectorTimesScalar
-                    : SPIRV::OpFMulS;
-  BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(VarReg)
-      .addUse(ScaleReg)
-      .constrainAllUses(TII, TRI, RBI);
-  return true;
+    // Multiply log2(x) by 0.30103 to get log10(x) result.
+    auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
+                      ? SPIRV::OpVectorTimesScalar
+                      : SPIRV::OpFMulS;
+    BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+        .addDef(ResVReg)
+        .addUse(GR.getSPIRVTypeID(ResType))
+        .addUse(VarReg)
+        .addUse(ScaleReg)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
+
+  return false;
 }
 
 bool SPIRVInstructionSelector::selectModf(Register ResVReg,
@@ -5455,11 +5466,14 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
 
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
-  } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+  }
+
+  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     assert(false && "GLSL::Modf is deprecated.");
     // FIXME: GL::Modf is deprecated, use Modfstruct instead.
     return false;
   }
+
   return false;
 }
 
