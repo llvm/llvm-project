@@ -59,11 +59,11 @@ public:
 
   void addPreISel(PassManagerWrapper &PMW) const;
   void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                           CreateMCStreamer CreateStreamer) const;
+                          CreateMCStreamer CreateStreamer) const;
   void addAsmPrinter(PassManagerWrapper &PMW,
-                      CreateMCStreamer CreateStreamer) const;
+                     CreateMCStreamer CreateStreamer) const;
   void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                         CreateMCStreamer CreateStreamer) const;
+                        CreateMCStreamer CreateStreamer) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
 };
 

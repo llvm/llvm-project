@@ -56,11 +56,11 @@ public:
   // TODO(boomanaiden154): We need to add addRegAssignAndRewriteOptimized here
   // once it is available to support AMX.
   void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                           CreateMCStreamer CreateStreamer) const;
+                          CreateMCStreamer CreateStreamer) const;
   void addAsmPrinter(PassManagerWrapper &PMW,
-                      CreateMCStreamer CreateStreamer) const;
+                     CreateMCStreamer CreateStreamer) const;
   void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                         CreateMCStreamer CreateStreamer) const;
+                        CreateMCStreamer CreateStreamer) const;
 };
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) const {
@@ -261,7 +261,7 @@ void X86CodeGenPassBuilder::addAsmPrinterBegin(
 }
 
 void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
-                                           CreateMCStreamer) const {
+                                          CreateMCStreamer) const {
   // TODO: Add AsmPrinter
 }
 

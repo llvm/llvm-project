@@ -463,12 +463,13 @@ AsmPrinter::AsmPrinter(TargetMachine &tm, std::unique_ptr<MCStreamer> Streamer,
     if (NeedsDefault)
       SM.serializeToStackMapSection();
   };
+  AssertDebugEHFinalized = [this]() {
+    assert(!DD && Handlers.size() == NumUserHandlers &&
+           "Debug/EH info didn't get finalized");
+  };
 }
 
-AsmPrinter::~AsmPrinter() {
-  assert(!DD && Handlers.size() == NumUserHandlers &&
-         "Debug/EH info didn't get finalized");
-}
+AsmPrinter::~AsmPrinter() { AssertDebugEHFinalized(); }
 
 bool AsmPrinter::isPositionIndependent() const {
   return TM.isPositionIndependent();
