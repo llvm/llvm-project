@@ -11,7 +11,12 @@
 #include "llvm/CAS/CASID.h"
 #include "llvm/CAS/ObjectStore.h"
 #include "llvm/CASObjectFormats/Encoding.h"
+#include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/Support/raw_ostream.h"
+#if __has_include(<sys/xattr.h>) && defined(__APPLE__)
+#include <sys/xattr.h>
+#endif
 
 using namespace llvm;
 using namespace llvm::cas;
@@ -45,4 +50,33 @@ void cas::writeCASIDBuffer(const CASID &ID, llvm::raw_ostream &OS) {
   SmallString<2> SizeBuf;
   encoding::writeVBR8(CASIDStr.size(), SizeBuf);
   OS << SizeBuf << CASIDStr;
+}
+
+Error cas::writeCASHashXAttr(const CASID &ID, const llvm::Twine &Path) {
+#if __has_include(<sys/xattr.h>) && defined(__APPLE__)
+  SmallString<64> Buffer;
+  raw_svector_ostream OS(Buffer);
+  // Null-terminated hash schema identifier.
+  OS << ID.getContext().getHashSchemaIdentifier() << '\0';
+  // Hash size, little-endian, 4 bytes.
+  support::endian::write(OS, static_cast<uint32_t>(ID.getHash().size()),
+                         endianness::little);
+  // Hash bytes.
+  OS.write((const char *)ID.getHash().data(), ID.getHash().size());
+
+  SmallString<128> PathStorage;
+  StringRef PathRef = Path.toNullTerminatedStringRef(PathStorage);
+
+  int RC =
+      setxattr(PathRef.begin(), "com.apple.clang.cas_output_hash",
+               Buffer.data(), Buffer.size(), /*Position=*/0, /*Options=*/0);
+
+  if (RC)
+    return createFileError(Path, make_error<StringError>(errnoAsErrorCode(),
+                                                         "failed to setxattr"));
+  return Error::success();
+#else
+  return createStringError(std::errc::not_supported,
+                           "Platform does not support setxattr");
+#endif
 }

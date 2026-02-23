@@ -25,6 +25,16 @@ Expected<CASID> readCASIDBuffer(cas::ObjectStore &CAS,
 
 void writeCASIDBuffer(const CASID &ID, llvm::raw_ostream &OS);
 
+/// Writes an extended attribute to \p Path containing the hash from \p ID
+/// along with information about the hash schema.
+///
+/// The xattr name is `com.apple.clang.cas_output_hash`.
+/// The data format is:
+/// * Null-terminated hash schema name, e.g. llvm.builtin.v2[BLAKE3]
+/// * Hash length (4 bytes little-endian, e.g. 32)
+/// * Hash bytes
+Error writeCASHashXAttr(const CASID &ID, const llvm::Twine &Path);
+
 } // namespace cas
 
 namespace casobjectformats {

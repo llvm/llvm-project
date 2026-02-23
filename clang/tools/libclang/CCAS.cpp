@@ -576,9 +576,12 @@ CXCASReplayResult clang_experimental_cas_replayCompilation(
 
   SmallString<256> DiagText;
   std::optional<int> Ret;
+  bool WriteOutputAsCASID = Invok->getFrontendOpts().WriteOutputAsCASID;
+  bool WriteOutputHashXAttr = Invok->getFrontendOpts().WriteOutputHashXAttr;
   if (Error E = CompileJobCache::replayCachedResult(
                     std::move(Invok), WorkingDirectory, WComp.CacheKey,
-                    WComp.CachedResult, DiagText)
+                    WComp.CachedResult, DiagText, WriteOutputAsCASID,
+                    WriteOutputHashXAttr)
                     .moveInto(Ret)) {
     passAsCXError(std::move(E), OutError);
     return nullptr;

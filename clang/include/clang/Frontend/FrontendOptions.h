@@ -431,6 +431,11 @@ public:
   /// FIXME: Add clang tests for this functionality.
   unsigned WriteOutputAsCASID : 1;
 
+  /// When using CacheCompileJob, write the output file's hash (as determined by
+  /// the CAS hashing schema) as a file extended attribute (xattr).
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned WriteOutputHashXAttr : 1;
+
   /// Output (and read) PCM files regardless of compiler errors.
   LLVM_PREFERRED_TYPE(bool)
   unsigned AllowPCMWithCompilerErrors : 1;
@@ -628,7 +633,8 @@ public:
         UseTemporary(true), CacheCompileJob(false), ForIncludeTreeScan(false),
         DisableCachedCompileJobReplay(false), IncludeTreePreservePCHPath(false),
         MayEmitDiagnosticsAfterProcessingSourceFiles(false),
-        WriteOutputAsCASID(false), AllowPCMWithCompilerErrors(false),
+        WriteOutputAsCASID(false), WriteOutputHashXAttr(false),
+        AllowPCMWithCompilerErrors(false),
         ModulesShareFileManager(true), EmitSymbolGraph(false),
         EmitExtensionSymbolGraphs(false),
         EmitSymbolGraphSymbolLabelsForTesting(false),
