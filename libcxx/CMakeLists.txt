@@ -506,7 +506,7 @@ function(cxx_add_basic_build_flags target)
 
   # Use C++26 for all targets. Note that we don't use CXX_STANDARD or cxx_std_foo
   # since that requires a newer CMake than is available.
-  target_compile_options(${target} PRIVATE -std=c++26)
+  target_compile_options(${target} PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/std:c++26,-std=c++26>)
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
