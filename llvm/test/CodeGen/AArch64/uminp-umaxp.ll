@@ -3,7 +3,7 @@
 
 define <8 x i8> @manual_uminp_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: manual_uminp_v8i8:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uminp v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %e = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -14,7 +14,7 @@ define <8 x i8> @manual_uminp_v8i8(<8 x i8> %a, <8 x i8> %b) {
 
 define <16 x i8> @manual_uminp_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: manual_uminp_v16i8:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uminp v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %e = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -25,7 +25,7 @@ define <16 x i8> @manual_uminp_v16i8(<16 x i8> %a, <16 x i8> %b) {
 
 define <4 x i16> @manual_uminp_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: manual_uminp_v4i16:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uminp v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %e = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -36,7 +36,7 @@ define <4 x i16> @manual_uminp_v4i16(<4 x i16> %a, <4 x i16> %b) {
 
 define <8 x i16> @manual_uminp_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: manual_uminp_v8i16:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uminp v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %e = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -47,7 +47,7 @@ define <8 x i16> @manual_uminp_v8i16(<8 x i16> %a, <8 x i16> %b) {
 
 define <2 x i32> @manual_uminp_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: manual_uminp_v2i32:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uminp v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %e = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
@@ -58,7 +58,7 @@ define <2 x i32> @manual_uminp_v2i32(<2 x i32> %a, <2 x i32> %b) {
 
 define <4 x i32> @manual_uminp_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: manual_uminp_v4i32:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    uminp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -69,7 +69,7 @@ define <4 x i32> @manual_uminp_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define <8 x i8> @manual_umaxp_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: manual_umaxp_v8i8:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umaxp v0.8b, v0.8b, v1.8b
 ; CHECK-NEXT:    ret
   %e = shufflevector <8 x i8> %a, <8 x i8> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -80,7 +80,7 @@ define <8 x i8> @manual_umaxp_v8i8(<8 x i8> %a, <8 x i8> %b) {
 
 define <16 x i8> @manual_umaxp_v16i8(<16 x i8> %a, <16 x i8> %b) {
 ; CHECK-LABEL: manual_umaxp_v16i8:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umaxp v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %e = shufflevector <16 x i8> %a, <16 x i8> %b, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
@@ -91,7 +91,7 @@ define <16 x i8> @manual_umaxp_v16i8(<16 x i8> %a, <16 x i8> %b) {
 
 define <4 x i16> @manual_umaxp_v4i16(<4 x i16> %a, <4 x i16> %b) {
 ; CHECK-LABEL: manual_umaxp_v4i16:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umaxp v0.4h, v0.4h, v1.4h
 ; CHECK-NEXT:    ret
   %e = shufflevector <4 x i16> %a, <4 x i16> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
@@ -102,7 +102,7 @@ define <4 x i16> @manual_umaxp_v4i16(<4 x i16> %a, <4 x i16> %b) {
 
 define <8 x i16> @manual_umaxp_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: manual_umaxp_v8i16:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umaxp v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    ret
   %e = shufflevector <8 x i16> %a, <8 x i16> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
@@ -113,7 +113,7 @@ define <8 x i16> @manual_umaxp_v8i16(<8 x i16> %a, <8 x i16> %b) {
 
 define <2 x i32> @manual_umaxp_v2i32(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: manual_umaxp_v2i32:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umaxp v0.2s, v0.2s, v1.2s
 ; CHECK-NEXT:    ret
   %e = shufflevector <2 x i32> %a, <2 x i32> %b, <2 x i32> <i32 0, i32 2>
@@ -124,7 +124,7 @@ define <2 x i32> @manual_umaxp_v2i32(<2 x i32> %a, <2 x i32> %b) {
 
 define <4 x i32> @manual_umaxp_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: manual_umaxp_v4i32:
-; CHECK:       // %bb.0: // %entry
+; CHECK:       // %bb.0:
 ; CHECK-NEXT:    umaxp v0.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    ret
   %e = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
