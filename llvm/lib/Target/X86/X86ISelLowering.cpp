@@ -18267,6 +18267,12 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
                                                        Mask, Subtarget, DAG))
       return V;
 
+    // VBMI can use VPERMV/VPERMV3 byte shuffles more efficiently than
+    // OR(PSHUFB,PSHUFB).
+    if (Subtarget.hasVBMI())
+      return lowerShuffleWithPERMV(DL, MVT::v64i8, Mask, V1, V2, Subtarget,
+                                   DAG);
+
     // If we can't directly blend but can use PSHUFB, that will be better as it
     // can both shuffle and set up the inefficient blend.
     bool V1InUse, V2InUse;

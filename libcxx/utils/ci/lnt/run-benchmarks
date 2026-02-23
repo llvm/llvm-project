@@ -76,8 +76,9 @@ def main(argv):
         help='The name of the test suite for reporting LNT results.')
     parser.add_argument('--lnt-url', type=str, required=True,
         help='The URL of the LNT instance to submit results to.')
-    parser.add_argument('--disable-microbenchmarks', action='store_true',
-        help="Do not run the microbenchmarks, only run SPEC (if possible).")
+    parser.add_argument('--filter', type=str, required=False,
+        help="Optional test filter to pass to lit when running the benchmarks. This allows "
+             "running only a subset of the benchmarks.")
     parser.add_argument('--spec-dir', type=pathlib.Path, required=False,
         help='Optional path to a SPEC installation to use for benchmarking.')
     parser.add_argument('--git-repo', type=directory_path, default=os.getcwd(),
@@ -92,11 +93,6 @@ def main(argv):
         logging.basicConfig(level=logging.INFO)
     elif args.verbose >= 1:
         logging.basicConfig(level=logging.DEBUG)
-
-    do_spec = args.spec_dir is not None
-    do_micro = not args.disable_microbenchmarks
-    if not (do_spec or do_micro):
-        raise ValueError("You must run at least the microbenchmarks or SPEC")
 
     def run(command, *posargs, enforce_success=True, **kwargs):
         command = [str(c) for c in command]
@@ -137,30 +133,10 @@ def main(argv):
                         '--commit', args.benchmark_commit,
                         '--', '-DCMAKE_BUILD_TYPE=RelWithDebInfo', f'-DCMAKE_CXX_COMPILER={args.compiler}'])
 
-        if do_spec:
-            logging.info(f'Running SPEC benchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
-            run([args.git_repo / 'libcxx/utils/test-at-commit',
-                        '--git-repo', args.git_repo,
-                        '--build-dir', build_dir / 'spec',
-                        '--test-suite-commit', args.test_suite_commit,
-                        '--libcxx-installation', build_dir / 'install',
-                        '--',
-                        '-j1', '--time-tests',
-                        '--param', f'compiler={args.compiler}',
-                        '--param', 'optimization=speed',
-                        '--param', 'std=c++17',
-                        '--param', f'spec_dir={args.spec_dir}',
-                        build_dir / 'spec/libcxx/test',
-                        '--filter', 'benchmarks/spec.gen.py'],
-                        enforce_success=False)
-            with open(build_dir / 'benchmarks.lnt', 'a') as f:
-                run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'spec'], stdout=f)
-
-        if do_micro:
-            logging.info(f'Running microbenchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
-            run([args.git_repo / 'libcxx/utils/test-at-commit',
+        logging.info(f'Running benchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
+        cmd = [args.git_repo / 'libcxx/utils/test-at-commit',
                             '--git-repo', args.git_repo,
-                            '--build-dir', build_dir / 'micro',
+                            '--build-dir', build_dir / 'bench',
                             '--test-suite-commit', args.test_suite_commit,
                             '--libcxx-installation', build_dir / 'install',
                             '--',
@@ -168,10 +144,14 @@ def main(argv):
                             '--param', f'compiler={args.compiler}',
                             '--param', 'optimization=speed',
                             '--param', 'std=c++26',
-                            build_dir / 'micro/libcxx/test/benchmarks'],
-                            enforce_success=False)
-            with open(build_dir / 'benchmarks.lnt', 'a') as f:
-                run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'micro'], stdout=f)
+                            build_dir / 'bench/libcxx/test/benchmarks']
+        if args.spec_dir is not None:
+            cmd += ['--param', f'spec_dir={args.spec_dir}']
+        if args.filter is not None:
+            cmd += ['--filter', args.filter]
+        run(cmd, enforce_success=False) # some benchmarks may fail to build/run at some commits, and that's okay
+        with open(build_dir / 'benchmarks.lnt', 'w') as f:
+            run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'bench'], stdout=f)
 
         logging.info('Creating JSON report for LNT')
         order = len(subprocess.check_output(['git', '-C', args.git_repo, 'rev-list', args.benchmark_commit]).splitlines())
