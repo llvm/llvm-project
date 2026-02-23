@@ -81,10 +81,8 @@ static inline uint32_t lane_count(uint64_t lane_mask, uint32_t id) {
 // Obtain an initial value to seed a random number generator. We use the rounded
 // multiples of the golden ratio from xorshift* as additional spreading.
 static inline uint32_t entropy() {
-  return (static_cast<uint32_t>(gpu::processor_clock()) ^
-          (gpu::get_thread_id_x() * 0x632be59b) ^
-          (gpu::get_block_id_x() * 0x85157af5)) *
-         0x9e3779bb;
+  return (static_cast<uint32_t>(gpu::processor_clock() | 1u) ^
+          gpu::get_thread_id_x() ^ (gpu::get_block_id_x() * 0x9e3779b9u));
 }
 
 // Generate a random number and update the state using the xorshift32* PRNG.
@@ -304,46 +302,50 @@ struct Slab {
     // Try to find the empty bit in the bitfield to finish the allocation. We
     // start at the number of allocations as this is guaranteed to be available
     // until the user starts freeing memory.
-    uint64_t lane_mask = uniform;
-    uint32_t start =
-        gpu::shuffle(lane_mask, cpp::countr_zero(lane_mask), reserved);
-    for (;;) {
-      // Each lane tries to claim one bit in a single contiguous mask.
-      uint32_t id = impl::lane_count(uniform & lane_mask, gpu::get_lane_id());
-      uint32_t index = (start + id) % usable_bits(chunk_size);
-      uint32_t slot = index / BITS_IN_WORD;
-      uint32_t bit = index % BITS_IN_WORD;
+    uint32_t start = gpu::shuffle(uniform, cpp::countr_zero(uniform), reserved);
+    void *result = nullptr;
+    for (uint64_t lane_mask = uniform; lane_mask;
+         lane_mask = gpu::ballot(uniform, !result)) {
+      if (!result) {
+        // Each lane tries to claim one bit in a single contiguous mask.
+        uint32_t id = impl::lane_count(uniform & lane_mask, gpu::get_lane_id());
+        uint32_t index = (start + id) % usable_bits(chunk_size);
+        uint32_t slot = index / BITS_IN_WORD;
+        uint32_t bit = index % BITS_IN_WORD;
 
-      // Get the mask of bits destined for the same slot and coalesce it.
-      uint32_t leader = impl::get_leader_id(
-          uniform & gpu::ballot(lane_mask, !id || index % BITS_IN_WORD == 0),
-          gpu::get_lane_id());
-      uint32_t length = cpp::popcount(uniform & lane_mask) -
-                        impl::lane_count(uniform & lane_mask, leader);
-      uint32_t bitmask =
-          static_cast<uint32_t>(
-              (uint64_t(1) << cpp::min(length, BITS_IN_WORD)) - 1)
-          << bit;
+        // Get the mask of bits destined for the same slot and coalesce it.
+        uint32_t leader = impl::get_leader_id(
+            uniform & gpu::ballot(lane_mask, !id || index % BITS_IN_WORD == 0),
+            gpu::get_lane_id());
+        uint32_t length = cpp::popcount(uniform & lane_mask) -
+                          impl::lane_count(uniform & lane_mask, leader);
+        uint32_t bitmask =
+            static_cast<uint32_t>(
+                (uint64_t(1) << cpp::min(length, BITS_IN_WORD)) - 1)
+            << bit;
 
-      uint32_t before = 0;
-      if (gpu::get_lane_id() == leader)
-        before = cpp::AtomicRef(get_bitfield()[slot])
-                     .fetch_or(bitmask, cpp::MemoryOrder::RELAXED);
-      before = gpu::shuffle(lane_mask, leader, before);
-      if (~before & (1 << bit))
-        return ptr_from_index(index, chunk_size);
+        uint32_t before = 0;
+        if (gpu::get_lane_id() == leader)
+          before = cpp::AtomicRef(get_bitfield()[slot])
+                       .fetch_or(bitmask, cpp::MemoryOrder::RELAXED);
+        before = gpu::shuffle(lane_mask, leader, before);
+        if (~before & (1u << bit))
+          result = ptr_from_index(index, chunk_size);
 
-      // If the previous operation found an empty bit we move there, otherwise
-      // we generate new random index to start at.
-      uint32_t after = before | bitmask;
-      lane_mask = gpu::get_lane_mask();
-      start = gpu::shuffle(
-          lane_mask, cpp::countr_zero(uniform & lane_mask),
-          ~after ? __builtin_align_down(index, BITS_IN_WORD) +
-                       cpp::countr_zero(~after)
-                 : __builtin_align_down(impl::xorshift32(state), BITS_IN_WORD));
-      sleep_briefly();
+        uint32_t after = before | bitmask;
+        uint64_t waiting = gpu::ballot(lane_mask, !result);
+        if (!result)
+          start =
+              gpu::shuffle(waiting, cpp::countr_zero(waiting),
+                           ~after ? __builtin_align_down(index, BITS_IN_WORD) +
+                                        cpp::countr_zero(~after)
+                                  : __builtin_align_down(
+                                        impl::xorshift32(state), BITS_IN_WORD));
+        if (!result)
+          sleep_briefly();
+      }
     }
+    return result;
   }
 
   // Deallocates memory by resetting its corresponding bit in the bitfield.
@@ -444,8 +446,10 @@ private:
         return cached->reset(cpp::forward<Args>(args)...);
 
       void *raw = impl::rpc_allocate(sizeof(Slab));
-      if (!raw)
+      if (!raw) {
+        ptr.store(nullptr, cpp::MemoryOrder::RELAXED);
         return nullptr;
+      }
       return new (raw) Slab(cpp::forward<Args>(args)...);
     }
 
@@ -497,6 +501,7 @@ public:
     // multiple lanes to initialize it and release it for use.
     if (impl::is_sentinel(count)) {
       result->initialize(uniform);
+      gpu::sync_lane(uniform);
       if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(uniform)))
         finalize(result, cpp::popcount(uniform), count);
       count = gpu::shuffle(uniform, cpp::countr_zero(uniform), count);
@@ -509,7 +514,7 @@ public:
   }
 
   // Release the associated lock on the pointer, potentially destroying it.
-  void unlock(uint64_t lane_mask, uint64_t mask) {
+  void unlock(uint64_t mask) {
     cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
     if (gpu::get_lane_id() == uint32_t(cpp::countr_zero(mask)) &&
         ref.release(cpp::popcount(mask))) {
@@ -521,7 +526,6 @@ public:
       cpp::atomic_thread_fence(cpp::MemoryOrder::RELEASE);
       ptr.store(nullptr, cpp::MemoryOrder::RELAXED);
     }
-    gpu::sync_lane(lane_mask);
   }
 
   // Get the current value of the reference counter.
@@ -561,7 +565,7 @@ static Slab *find_slab(uint32_t chunk_size, uint64_t lane_mask,
 
     bool available = !offset || slots[index].use_count() <
                                     Slab::available_chunks(chunk_size);
-    uint64_t slab_mask = gpu::ballot(uniform, !result && available);
+    uint64_t slab_mask = gpu::ballot(lane_mask, !result && available);
     if (slab_mask & impl::id_in_mask()) {
       Slab *slab = slots[index].try_lock(slab_mask, uniform & slab_mask,
                                          reserved, chunk_size, index);
@@ -581,7 +585,7 @@ static Slab *find_slab(uint32_t chunk_size, uint64_t lane_mask,
         uniform = uniform & locked_mask;
         result = slab;
       } else if (failed_mask & impl::id_in_mask()) {
-        slots[index].unlock(failed_mask, failed_mask & uniform);
+        slots[index].unlock(failed_mask & uniform);
       } else if (!slab && impl::is_sentinel(reserved)) {
         result =
             reinterpret_cast<Slab *>(cpp::numeric_limits<uintptr_t>::max());
@@ -633,7 +637,7 @@ void deallocate(void *ptr) {
   // Release the lock associated with the slab.
   uint32_t index = slab->get_global_index();
   uint64_t uniform = gpu::match_any(lane_mask, index);
-  slots[index].unlock(lane_mask, uniform);
+  slots[index].unlock(uniform);
 }
 
 void *reallocate(void *ptr, uint64_t size) {
@@ -652,6 +656,9 @@ void *reallocate(void *ptr, uint64_t size) {
 
   // If we need a new chunk we reallocate and copy it over.
   void *new_ptr = gpu::allocate(size);
+  if (!new_ptr)
+    return nullptr;
+
   inline_memcpy(new_ptr, ptr, slab->get_chunk_size());
   gpu::deallocate(ptr);
   return new_ptr;

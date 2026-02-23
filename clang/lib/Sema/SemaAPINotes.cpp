@@ -409,6 +409,12 @@ void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
                                           property->getType(), Type)) {
           property->setType(Type, TypeInfo);
         }
+      } else if (auto field = dyn_cast<FieldDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, field->getLocation(),
+                                          field->getType(), Type)) {
+          field->setType(Type);
+          field->setTypeSourceInfo(TypeInfo);
+        }
       } else {
         llvm_unreachable("API notes allowed a type on an unknown declaration");
       }
