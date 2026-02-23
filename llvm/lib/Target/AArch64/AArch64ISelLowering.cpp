@@ -12638,7 +12638,8 @@ SDValue AArch64TargetLowering::LowerSELECT(SDValue Op,
     // for the moment we can't deal with fixed i1 vector types properly, so
     // instead extend the predicate to a result type sized integer vector.
     MVT SplatValVT = MVT::getIntegerVT(Ty.getScalarSizeInBits());
-    MVT PredVT = MVT::getVectorVT(SplatValVT, Ty.getVectorElementCount());
+    MVT PredVT =
+        SplatValVT.changeVectorElementCount(Ty.getVectorElementCount());
     SDValue SplatVal = DAG.getSExtOrTrunc(CCVal, DL, SplatValVT);
     SDValue SplatPred = DAG.getNode(ISD::SPLAT_VECTOR, DL, PredVT, SplatVal);
     return DAG.getNode(ISD::VSELECT, DL, Ty, SplatPred, TVal, FVal);
