@@ -11,6 +11,7 @@
 #include "mlir/Dialect/SCF/IR/SCF.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
+#include "mlir/Dialect/X86Vector/Utils/X86VectorUtils.h"
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Dominance.h"
@@ -25,85 +26,6 @@ using namespace mlir::vector;
 using namespace mlir::amx;
 
 namespace {
-
-static Operation *traceToVectorReadLikeParentOperation(Value v) {
-  while (true) {
-    // Case 1: Value defined by an operation
-    if (Operation *defOp = v.getDefiningOp()) {
-      if (isa<vector::TransferReadOp, vector::LoadOp>(defOp)) {
-        return defOp;
-      }
-
-      if (isa<vector::ShapeCastOp, vector::ShuffleOp>(defOp)) {
-        return nullptr;
-      }
-
-      return nullptr;
-    }
-
-    // Case 2: BlockArgument (scf.for iter_arg)
-    if (auto barg = dyn_cast<BlockArgument>(v)) {
-      auto *parentOp = barg.getOwner()->getParentOp();
-
-      if (auto forOp = dyn_cast<scf::ForOp>(parentOp)) {
-        unsigned argNum = barg.getArgNumber();
-
-        // arg0 = induction variable (not an iter_arg)
-        if (argNum == 0)
-          return nullptr;
-
-        unsigned iterIdx = argNum - 1;
-        v = forOp.getInitArgs()[iterIdx];
-        continue;
-      }
-
-      return nullptr;
-    }
-
-    return nullptr;
-  }
-}
-
-static Operation *traceToVectorWriteLikeUserOperation(Value v) {
-  for (OpOperand &use : v.getUses()) {
-    Operation *user = use.getOwner();
-
-    // --- TERMINAL OPS ---
-    if (isa<vector::TransferWriteOp>(user) || isa<vector::StoreOp>(user)) {
-      return user;
-    }
-
-    if (isa<vector::ShapeCastOp, vector::ShuffleOp>(user)) {
-      return nullptr;
-    }
-
-    // --- SCF YIELD ---
-    if (auto yield = dyn_cast<scf::YieldOp>(user)) {
-      Operation *parent = yield->getParentOp();
-      unsigned idx = use.getOperandNumber();
-      if (auto *res =
-              traceToVectorWriteLikeUserOperation(parent->getResult(idx)))
-        return res;
-      continue;
-    }
-
-    // --- SCF FOR ---
-    if (auto forOp = dyn_cast<scf::ForOp>(user)) {
-      unsigned idx = use.getOperandNumber();
-      if (auto *res = traceToVectorWriteLikeUserOperation(forOp.getResult(idx)))
-        return res;
-      continue;
-    }
-
-    // --- GENERIC CASE ---
-    for (Value res : user->getResults()) {
-      if (auto *found = traceToVectorWriteLikeUserOperation(res))
-        return found;
-    }
-  }
-
-  return nullptr;
-}
 
 static Value collapseInnerDims(OpBuilder &builder, mlir::Location loc,
                                Value input, int64_t firstDimToCollapse) {
@@ -297,13 +219,6 @@ static SmallVector<Value> createTileZeros(OpBuilder &rewriter, Location loc,
   return loopItrArgs;
 }
 
-//   vector.contract <1x1xf32>, <1x16xf32> into <1x16xf32>
-// ```
-// to
-// ```
-//   vector.broadcast %lhs to <16xf32>
-//   vector.fma vector<16xf32>
-// ```
 struct VectorContractToPackedTypeTiledDotProduct
     : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
@@ -316,10 +231,10 @@ struct VectorContractToPackedTypeTiledDotProduct
                                          "Expects add combining kind.");
 
     Operation *accReadOp =
-        traceToVectorReadLikeParentOperation(contractOp.getAcc());
+        x86vector::traceToVectorReadLikeParentOperation(contractOp.getAcc());
 
     Operation *resultWriteOp =
-        traceToVectorWriteLikeUserOperation(contractOp.getResult());
+        x86vector::traceToVectorWriteLikeUserOperation(contractOp.getResult());
 
     if (!accReadOp || !resultWriteOp)
       return failure();
@@ -510,7 +425,7 @@ struct VectorContractToPackedTypeTiledDotProduct
     for (size_t i = 0; i < ops.size(); i++) {
       vector::ContractionOp contOp = ops[i];
       Operation *resultWriteOp =
-          traceToVectorWriteLikeUserOperation(contOp.getResult());
+          x86vector::traceToVectorWriteLikeUserOperation(contOp.getResult());
       rewriter.setInsertionPoint(resultWriteOp);
 
       Value indexOp_0 =
@@ -533,7 +448,8 @@ struct VectorContractToPackedTypeTiledDotProduct
                                                bBuffer, ValueRange{iv, c0});
 
             Operation *readOp1 =
-                traceToVectorReadLikeParentOperation(ops[i].getAcc());
+                x86vector::traceToVectorReadLikeParentOperation(
+                    ops[i].getAcc());
 
             Value srcBuff;
             SmallVector<OpFoldResult> indexVals;
