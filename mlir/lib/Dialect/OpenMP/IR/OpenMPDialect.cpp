@@ -4411,17 +4411,34 @@ LogicalResult ScanOp::verify() {
 }
 
 /// Verifies align clause in allocate directive
+LogicalResult verifyAlignment(Operation &op,
+                              std::optional<uint64_t> alignment) {
+  if (alignment.has_value()) {
+    if ((alignment.value() != 0) && !llvm::has_single_bit(alignment.value()))
+      return op.emitError()
+             << "ALIGN value : " << alignment.value() << " must be power of 2";
+  }
+  return success();
+}
 
 LogicalResult AllocateDirOp::verify() {
-  std::optional<uint64_t> align = this->getAlign();
+  return verifyAlignment(*getOperation(), getAlign());
+}
 
-  if (align.has_value()) {
-    if ((align.value() > 0) && !llvm::has_single_bit(align.value()))
-      return emitError() << "ALIGN value : " << align.value()
-                         << " must be power of 2";
-  }
+//===----------------------------------------------------------------------===//
+// AllocSharedMemOp
+//===----------------------------------------------------------------------===//
 
-  return success();
+LogicalResult AllocSharedMemOp::verify() {
+  return verifyAlignment(*getOperation(), getMemAlignment());
+}
+
+//===----------------------------------------------------------------------===//
+// FreeSharedMemOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult FreeSharedMemOp::verify() {
+  return verifyAlignment(*getOperation(), getMemAlignment());
 }
 
 //===----------------------------------------------------------------------===//

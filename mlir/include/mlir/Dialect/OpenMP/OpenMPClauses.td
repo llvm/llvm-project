@@ -909,6 +909,43 @@ class OpenMP_MapClauseSkip<
 def OpenMP_MapClause : OpenMP_MapClauseSkip<>;
 
 //===----------------------------------------------------------------------===//
+// Not in the spec: Clause-like structure to memory allocation information.
+//===----------------------------------------------------------------------===//
+
+class OpenMP_MemAllocationSizeClauseSkip<
+    bit traits = false, bit arguments = false, bit assemblyFormat = false,
+    bit description = false, bit extraClassDeclaration = false
+  > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
+                    extraClassDeclaration> {
+
+  let arguments = (ins
+    TypeAttr:$mem_elem_type,
+    AnySignlessInteger:$mem_array_size,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntPositive]>:$mem_alignment
+  );
+
+  let reqAssemblyFormat = [{
+    $mem_array_size `x` $mem_elem_type `:` `(` type($mem_array_size) `)`
+  }];
+
+  let optAssemblyFormat = [{
+    `align` `(` $mem_alignment `)`
+  }];
+
+  let description = [{
+    The `mem_elem_type` is the type of the object the memory allocation refers
+    to. It is used to calculate the size of the allocation.
+
+    The `mem_array_size` is the number of objects.
+
+    The optional `mem_alignment` is used to specify the alignment for each
+    element. If not set, the `DataLayout` defaults will be used instead.
+  }];
+}
+
+def OpenMP_MemAllocationSizeClause : OpenMP_MemAllocationSizeClauseSkip<>;
+
+//===----------------------------------------------------------------------===//
 // V5.2: [15.8.1] `memory-order` clause set
 //===----------------------------------------------------------------------===//
 

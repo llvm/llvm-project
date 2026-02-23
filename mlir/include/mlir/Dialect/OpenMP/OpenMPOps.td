@@ -2236,6 +2236,76 @@ def TargetFreeMemOp : OpenMP_Op<"target_freemem",
 }
 
 //===----------------------------------------------------------------------===//
+// AllocSharedMemOp
+//===----------------------------------------------------------------------===//
+
+def AllocSharedMemOp : OpenMP_Op<"alloc_shared_mem", traits = [
+    MemoryEffects<[MemAlloc<DefaultResource>]>
+  ], clauses = [
+    OpenMP_MemAllocationSizeClause
+  ]> {
+  let summary = "allocate storage on shared memory for objects of a given type";
+
+  let description = [{
+    Allocates memory shared across threads of a team for an object of the given
+    type. Returns a pointer representing the allocated memory. The memory is
+    uninitialized after allocation. Operations must be paired with
+    `omp.free_shared` to avoid memory leaks.
+
+    ```mlir
+      // Allocate an i32 vector with %size elements and aligned to 8 bytes.
+      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) align(8) -> !llvm.ptr
+      // ...
+      omp.free_shared_mem [%size x i32 : (i64) align(8)] %ptr_shared : !llvm.ptr
+    ```
+  }] # clausesDescription;
+
+  let results = (outs OpenMP_PointerLikeType);
+  let assemblyFormat = clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `->` type(results) attr-dict";
+
+  let extraClassDeclaration = [{
+    mlir::Type getAllocatedType() { return getMemElemTypeAttr().getValue(); }
+  }];
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// FreeSharedMemOp
+//===----------------------------------------------------------------------===//
+
+def FreeSharedMemOp : OpenMP_Op<"free_shared_mem", traits = [
+    MemoryEffects<[MemFree]>
+  ], clauses = [
+    OpenMP_MemAllocationSizeClause
+  ]> {
+  let summary = "free shared memory";
+
+  let description = [{
+    Deallocates shared memory that was previously allocated by an
+    `omp.alloc_shared_mem` operation. After this operation, the deallocated
+    memory is in an undefined state and should not be accessed.
+
+    ```mlir
+      // Example of allocating and freeing shared memory.
+      %ptr_shared = omp.alloc_shared_mem %size x i32 : (i64) -> !llvm.ptr
+      // ...
+      omp.free_shared_mem [%size x i32 : (i64)] %ptr_shared : !llvm.ptr
+    ```
+
+    The `heapref` operand represents the pointer to shared memory to be
+    deallocated, previously returned by `omp.alloc_shared_mem`.
+  }] # clausesDescription;
+
+  let arguments = !con(clausesArgs, (ins
+    Arg<OpenMP_PointerLikeType, "", [MemFree]>:$heapref
+  ));
+  let assemblyFormat = "` ` `[`" # clausesReqAssemblyFormat # " oilist(" #
+    clausesOptAssemblyFormat # ") `]` $heapref `:` type($heapref) attr-dict";
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // workdistribute Construct
 //===----------------------------------------------------------------------===//
 
