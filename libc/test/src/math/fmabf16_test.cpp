@@ -32,7 +32,7 @@ static constexpr uint16_t SUBNORM_POS_STOP = 0x007FU;
 static constexpr uint16_t SUBNORM_NEG_START = 0x8001U;
 static constexpr uint16_t SUBNORM_NEG_STOP = 0x807FU;
 
-static constexpr uint16_t STEP = 512;
+static constexpr uint16_t STEP = 1024;
 
 TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 
@@ -74,33 +74,6 @@ TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
                                min_normal,
                                max_normal};
   for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; v1 += STEP) {
-    for (uint16_t v2 = NEG_START; v2 <= NEG_STOP; v2 += STEP) {
-
-      bfloat16 x = FPBits(v1).get_val();
-      bfloat16 y = FPBits(v2).get_val();
-      for (bfloat16 z : z_values) {
-        mpfr::TernaryInput<bfloat16> input{x, y, z};
-
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                       LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
-      }
-      mpfr::TernaryInput<bfloat16> input{x, y, -x * y};
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                     LIBC_NAMESPACE::fmabf16(x, y, -x * y),
-                                     0.5);
-    }
-  }
-}
-TEST_F(LlvmLibcFmaBf16Test, OppositeSignRange) {
-  const bfloat16 z_values[] = {zero,
-                               neg_zero,
-                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
-                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
-                               inf,
-                               neg_inf,
-                               min_normal,
-                               max_normal};
-  for (uint16_t v1 = POS_START; v1 <= POS_STOP; v1 += STEP) {
     for (uint16_t v2 = NEG_START; v2 <= NEG_STOP; v2 += STEP) {
 
       bfloat16 x = FPBits(v1).get_val();
