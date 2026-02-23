@@ -24,7 +24,8 @@ using namespace llvm;
 STATISTIC(TotalInsts, "Number of instructions (of all types)");
 STATISTIC(TotalBlocks, "Number of basic blocks");
 STATISTIC(TotalFuncs, "Number of non-external functions");
-STATISTIC(LargestFunctionSize, "Largest number of instructions in a single function");
+STATISTIC(LargestFunctionSize,
+          "Largest number of instructions in a single function");
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");
