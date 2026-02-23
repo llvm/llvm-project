@@ -84,7 +84,7 @@ struct SDVTList {
 
 namespace ISD {
 
-  /// Node predicates
+/// Node predicates
 
 /// If N is a BUILD_VECTOR or SPLAT_VECTOR node whose elements are all the
 /// same constant or undefined, return true and return the constant value in
@@ -168,19 +168,13 @@ public:
   bool operator==(const SDValue &O) const {
     return Node == O.Node && ResNo == O.ResNo;
   }
-  bool operator!=(const SDValue &O) const {
-    return !operator==(O);
-  }
+  bool operator!=(const SDValue &O) const { return !operator==(O); }
   bool operator<(const SDValue &O) const {
     return std::tie(Node, ResNo) < std::tie(O.Node, O.ResNo);
   }
-  explicit operator bool() const {
-    return Node != nullptr;
-  }
+  explicit operator bool() const { return Node != nullptr; }
 
-  SDValue getValue(unsigned R) const {
-    return SDValue(Node, R);
-  }
+  SDValue getValue(unsigned R) const { return SDValue(Node, R); }
 
   /// Return true if the referenced return value is an operand of N.
   LLVM_ABI bool isOperandOf(const SDNode *N) const;
@@ -189,18 +183,14 @@ public:
   inline EVT getValueType() const;
 
   /// Return the simple ValueType of the referenced return value.
-  MVT getSimpleValueType() const {
-    return getValueType().getSimpleVT();
-  }
+  MVT getSimpleValueType() const { return getValueType().getSimpleVT(); }
 
   /// Returns the size of the value in bits.
   ///
   /// If the value type is a scalable vector type, the scalable property will
   /// be set and the runtime size will be a positive integer multiple of the
   /// base size.
-  TypeSize getValueSizeInBits() const {
-    return getValueType().getSizeInBits();
-  }
+  TypeSize getValueSizeInBits() const { return getValueType().getSizeInBits(); }
 
   uint64_t getScalarValueSizeInBits() const {
     return getValueType().getScalarType().getFixedSizeInBits();
@@ -238,7 +228,7 @@ public:
   inline bool hasOneUse() const;
 };
 
-template<> struct DenseMapInfo<SDValue> {
+template <> struct DenseMapInfo<SDValue> {
   static inline SDValue getEmptyKey() {
     SDValue V;
     V.ResNo = -1U;
@@ -253,7 +243,8 @@ template<> struct DenseMapInfo<SDValue> {
 
   static unsigned getHashValue(const SDValue &Val) {
     return ((unsigned)((uintptr_t)Val.getNode() >> 4) ^
-            (unsigned)((uintptr_t)Val.getNode() >> 9)) + Val.getResNo();
+            (unsigned)((uintptr_t)Val.getNode() >> 9)) +
+           Val.getResNo();
   }
 
   static bool isEqual(const SDValue &LHS, const SDValue &RHS) {
@@ -263,14 +254,12 @@ template<> struct DenseMapInfo<SDValue> {
 
 /// Allow casting operators to work directly on
 /// SDValues as if they were SDNode*'s.
-template<> struct simplify_type<SDValue> {
+template <> struct simplify_type<SDValue> {
   using SimpleType = SDNode *;
 
-  static SimpleType getSimplifiedValue(SDValue &Val) {
-    return Val.getNode();
-  }
+  static SimpleType getSimplifiedValue(SDValue &Val) { return Val.getNode(); }
 };
-template<> struct simplify_type<const SDValue> {
+template <> struct simplify_type<const SDValue> {
   using SimpleType = /*const*/ SDNode *;
 
   static SimpleType getSimplifiedValue(const SDValue &Val) {
@@ -299,7 +288,7 @@ public:
   SDUse &operator=(const SDUse &) = delete;
 
   /// Normally SDUse will just implicitly convert to an SDValue that it holds.
-  operator const SDValue&() const { return Val; }
+  operator const SDValue &() const { return Val; }
 
   /// If implicit conversion to SDValue doesn't work, the get() method returns
   /// the SDValue.
@@ -323,19 +312,13 @@ public:
   EVT getValueType() const { return Val.getValueType(); }
 
   /// Convenience function for get().operator==
-  bool operator==(const SDValue &V) const {
-    return Val == V;
-  }
+  bool operator==(const SDValue &V) const { return Val == V; }
 
   /// Convenience function for get().operator!=
-  bool operator!=(const SDValue &V) const {
-    return Val != V;
-  }
+  bool operator!=(const SDValue &V) const { return Val != V; }
 
   /// Convenience function for get().operator<
-  bool operator<(const SDValue &V) const {
-    return Val < V;
-  }
+  bool operator<(const SDValue &V) const { return Val < V; }
 
 private:
   friend class SelectionDAG;
@@ -357,25 +340,25 @@ private:
 
   void addToList(SDUse **List) {
     Next = *List;
-    if (Next) Next->Prev = &Next;
+    if (Next)
+      Next->Prev = &Next;
     Prev = List;
     *List = this;
   }
 
   void removeFromList() {
     *Prev = Next;
-    if (Next) Next->Prev = Prev;
+    if (Next)
+      Next->Prev = Prev;
   }
 };
 
 /// simplify_type specializations - Allow casting operators to work directly on
 /// SDValues as if they were SDNode*'s.
-template<> struct simplify_type<SDUse> {
+template <> struct simplify_type<SDUse> {
   using SimpleType = SDNode *;
 
-  static SimpleType getSimplifiedValue(SDUse &Val) {
-    return Val.getNode();
-  }
+  static SimpleType getSimplifiedValue(SDUse &Val) { return Val.getNode(); }
 };
 
 /// These are IR-level optimization flags that may be propagated to SDNodes.
@@ -536,7 +519,7 @@ protected:
 #define END_TWO_BYTE_PACK()
 #endif
 
-BEGIN_TWO_BYTE_PACK()
+  BEGIN_TWO_BYTE_PACK()
   class SDNodeBitfields {
     friend class SDNode;
     friend class MemIntrinsicSDNode;
@@ -632,7 +615,7 @@ BEGIN_TWO_BYTE_PACK()
     LoadSDNodeBitfields LoadSDNodeBits;
     StoreSDNodeBitfields StoreSDNodeBits;
   };
-END_TWO_BYTE_PACK()
+  END_TWO_BYTE_PACK()
 #undef BEGIN_TWO_BYTE_PACK
 #undef END_TWO_BYTE_PACK
 
@@ -705,7 +688,7 @@ public:
   /// pre-isel nodes (those for which isMachineOpcode returns false), these
   /// are the opcode values in the ISD and <target>ISD namespaces. For
   /// post-isel opcodes, see getMachineOpcode.
-  unsigned getOpcode()  const { return (unsigned)NodeType; }
+  unsigned getOpcode() const { return (unsigned)NodeType; }
 
   /// Test if this node has a target-specific opcode (in the
   /// \<target\>ISD namespace).
@@ -727,16 +710,16 @@ public:
   /// Test if this node is a strict floating point pseudo-op.
   bool isStrictFPOpcode() {
     switch (NodeType) {
-      default:
-        return false;
-      case ISD::STRICT_FP16_TO_FP:
-      case ISD::STRICT_FP_TO_FP16:
-      case ISD::STRICT_BF16_TO_FP:
-      case ISD::STRICT_FP_TO_BF16:
+    default:
+      return false;
+    case ISD::STRICT_FP16_TO_FP:
+    case ISD::STRICT_FP_TO_FP16:
+    case ISD::STRICT_BF16_TO_FP:
+    case ISD::STRICT_FP_TO_BF16:
 #define DAG_INSTRUCTION(NAME, NARG, ROUND_MODE, INTRINSIC, DAGN)               \
-      case ISD::STRICT_##DAGN:
+  case ISD::STRICT_##DAGN:
 #include "llvm/IR/ConstrainedOps.def"
-        return true;
+      return true;
     }
   }
 
@@ -829,19 +812,19 @@ public:
     use_iterator &operator=(const use_iterator &) = default;
 
     bool operator==(const use_iterator &x) const { return Op == x.Op; }
-    bool operator!=(const use_iterator &x) const {
-      return !operator==(x);
-    }
+    bool operator!=(const use_iterator &x) const { return !operator==(x); }
 
     // Iterator traversal: forward iteration only.
-    use_iterator &operator++() {          // Preincrement
+    use_iterator &operator++() { // Preincrement
       assert(Op && "Cannot increment end iterator!");
       Op = Op->getNext();
       return *this;
     }
 
-    use_iterator operator++(int) {        // Postincrement
-      use_iterator tmp = *this; ++*this; return tmp;
+    use_iterator operator++(int) { // Postincrement
+      use_iterator tmp = *this;
+      ++*this;
+      return tmp;
     }
 
     /// Retrieve a pointer to the current user node.
@@ -891,9 +874,7 @@ public:
   };
 
   /// Provide iteration support to walk over all uses of an SDNode.
-  use_iterator use_begin() const {
-    return use_iterator(UseList);
-  }
+  use_iterator use_begin() const { return use_iterator(UseList); }
 
   static use_iterator use_end() { return use_iterator(nullptr); }
 
@@ -1055,17 +1036,15 @@ public:
   using op_iterator = SDUse *;
 
   op_iterator op_begin() const { return OperandList; }
-  op_iterator op_end() const { return OperandList+NumOperands; }
+  op_iterator op_end() const { return OperandList + NumOperands; }
   ArrayRef<SDUse> ops() const { return ArrayRef(op_begin(), op_end()); }
 
   /// Iterator for directly iterating over the operand SDValue's.
   struct value_op_iterator
-      : iterator_adaptor_base<value_op_iterator, op_iterator,
-                              std::random_access_iterator_tag, SDValue,
-                              ptrdiff_t, value_op_iterator *,
-                              value_op_iterator *> {
-    explicit value_op_iterator(SDUse *U = nullptr)
-      : iterator_adaptor_base(U) {}
+      : iterator_adaptor_base<
+            value_op_iterator, op_iterator, std::random_access_iterator_tag,
+            SDValue, ptrdiff_t, value_op_iterator *, value_op_iterator *> {
+    explicit value_op_iterator(SDUse *U = nullptr) : iterator_adaptor_base(U) {}
 
     const SDValue &operator*() const { return I->get(); }
   };
@@ -1076,7 +1055,7 @@ public:
   }
 
   SDVTList getVTList() const {
-    SDVTList X = { ValueList, NumValues };
+    SDVTList X = {ValueList, NumValues};
     return X;
   }
 
@@ -1084,8 +1063,8 @@ public:
   /// to which the glue operand points. Otherwise return NULL.
   SDNode *getGluedNode() const {
     if (getNumOperands() != 0 &&
-        getOperand(getNumOperands()-1).getValueType() == MVT::Glue)
-      return getOperand(getNumOperands()-1).getNode();
+        getOperand(getNumOperands() - 1).getValueType() == MVT::Glue)
+      return getOperand(getNumOperands() - 1).getNode();
     return nullptr;
   }
 
@@ -1139,7 +1118,7 @@ public:
   using value_iterator = const EVT *;
 
   value_iterator value_begin() const { return ValueList; }
-  value_iterator value_end() const { return ValueList+NumValues; }
+  value_iterator value_end() const { return ValueList + NumValues; }
   iterator_range<value_iterator> values() const {
     return llvm::make_range(value_begin(), value_end());
   }
@@ -1208,7 +1187,7 @@ public:
 
 protected:
   static SDVTList getSDVTList(MVT VT) {
-    SDVTList Ret = { getValueTypeList(VT), 1 };
+    SDVTList Ret = {getValueTypeList(VT), 1};
     return Ret;
   }
 
@@ -1269,13 +1248,9 @@ inline SDValue::SDValue(SDNode *node, unsigned resno)
   assert(ResNo < -2U && "Cannot use result numbers reserved for DenseMaps.");
 }
 
-inline unsigned SDValue::getOpcode() const {
-  return Node->getOpcode();
-}
+inline unsigned SDValue::getOpcode() const { return Node->getOpcode(); }
 
-inline EVT SDValue::getValueType() const {
-  return Node->getValueType(ResNo);
-}
+inline EVT SDValue::getValueType() const { return Node->getValueType(ResNo); }
 
 inline unsigned SDValue::getNumOperands() const {
   return Node->getNumOperands();
@@ -1293,21 +1268,15 @@ inline const APInt &SDValue::getConstantOperandAPInt(unsigned i) const {
   return Node->getConstantOperandAPInt(i);
 }
 
-inline bool SDValue::isTargetOpcode() const {
-  return Node->isTargetOpcode();
-}
+inline bool SDValue::isTargetOpcode() const { return Node->isTargetOpcode(); }
 
-inline bool SDValue::isMachineOpcode() const {
-  return Node->isMachineOpcode();
-}
+inline bool SDValue::isMachineOpcode() const { return Node->isMachineOpcode(); }
 
 inline unsigned SDValue::getMachineOpcode() const {
   return Node->getMachineOpcode();
 }
 
-inline bool SDValue::isUndef() const {
-  return Node->isUndef();
-}
+inline bool SDValue::isUndef() const { return Node->isUndef(); }
 
 inline bool SDValue::isAnyAdd() const { return Node->isAnyAdd(); }
 
@@ -1323,17 +1292,11 @@ inline const DebugLoc &SDValue::getDebugLoc() const {
   return Node->getDebugLoc();
 }
 
-inline void SDValue::dump() const {
-  return Node->dump();
-}
+inline void SDValue::dump() const { return Node->dump(); }
 
-inline void SDValue::dump(const SelectionDAG *G) const {
-  return Node->dump(G);
-}
+inline void SDValue::dump(const SelectionDAG *G) const { return Node->dump(G); }
 
-inline void SDValue::dumpr() const {
-  return Node->dumpr();
-}
+inline void SDValue::dumpr() const { return Node->dumpr(); }
 
 inline void SDValue::dumpr(const SelectionDAG *G) const {
   return Node->dumpr(G);
@@ -1345,7 +1308,8 @@ inline unsigned SDUse::getOperandNo() const {
 }
 
 inline void SDUse::set(const SDValue &V) {
-  if (Val.getNode()) removeFromList();
+  if (Val.getNode())
+    removeFromList();
   Val = V;
   if (V.getNode())
     V->addUse(*this);
@@ -1357,9 +1321,11 @@ inline void SDUse::setInitial(const SDValue &V) {
 }
 
 inline void SDUse::setNode(SDNode *N) {
-  if (Val.getNode()) removeFromList();
+  if (Val.getNode())
+    removeFromList();
   Val.setNode(N);
-  if (N) N->addUse(*this);
+  if (N)
+    N->addUse(*this);
 }
 
 /// This class is used to form a handle around another node that
@@ -1371,7 +1337,7 @@ class HandleSDNode : public SDNode {
 
 public:
   explicit HandleSDNode(SDValue X)
-    : SDNode(ISD::HANDLENODE, 0, DebugLoc(), getSDVTList(MVT::Other)) {
+      : SDNode(ISD::HANDLENODE, 0, DebugLoc(), getSDVTList(MVT::Other)) {
     // HandleSDNodes are never inserted into the DAG, so they won't be
     // auto-numbered. Use ID 65535 as a sentinel.
     PersistentId = 0xffff;
@@ -1537,9 +1503,7 @@ public:
   }
 
   /// Return the address space for the associated pointer
-  unsigned getAddressSpace() const {
-    return getPointerInfo().getAddrSpace();
-  }
+  unsigned getAddressSpace() const { return getPointerInfo().getAddrSpace(); }
 
   /// Update this MemSDNode's MachineMemOperand information
   /// to reflect the alignment of NewMMOs, if they have greater alignment.
@@ -1653,7 +1617,8 @@ public:
                EVT MemVT, MachineMemOperand *MMO, ISD::LoadExtType ETy)
       : MemSDNode(Opc, Order, dl, VTL, MemVT, MMO) {
     assert(((Opc != ISD::ATOMIC_LOAD && Opc != ISD::ATOMIC_STORE) ||
-            MMO->isAtomic()) && "then why are we using an AtomicSDNode?");
+            MMO->isAtomic()) &&
+           "then why are we using an AtomicSDNode?");
     assert((Opc == ISD::ATOMIC_LOAD || ETy == ISD::NON_EXTLOAD) &&
            "Only atomic load uses ExtTy");
     LoadSDNodeBits.ExtTy = ETy;
@@ -1875,7 +1840,7 @@ class ConstantFPSDNode : public SDNode {
   }
 
 public:
-  const APFloat& getValueAPF() const { return Value->getValueAPF(); }
+  const APFloat &getValueAPF() const { return Value->getValueAPF(); }
   const ConstantFP *getConstantFPValue() const { return Value; }
 
   /// Return true if the value is positive or negative zero.
@@ -2173,7 +2138,7 @@ class ConstantPoolSDNode : public SDNode {
     const Constant *ConstVal;
     MachineConstantPoolValue *MachineCPVal;
   } Val;
-  int Offset;  // It's a MachineConstantPoolValue if top bit is set.
+  int Offset;      // It's a MachineConstantPoolValue if top bit is set.
   Align Alignment; // Minimum alignment requirement of CP.
   unsigned TargetFlags;
 
@@ -2193,13 +2158,11 @@ class ConstantPoolSDNode : public SDNode {
         Offset(o), Alignment(Alignment), TargetFlags(TF) {
     assert(Offset >= 0 && "Offset is too large");
     Val.MachineCPVal = v;
-    Offset |= 1 << (sizeof(unsigned)*CHAR_BIT-1);
+    Offset |= 1 << (sizeof(unsigned) * CHAR_BIT - 1);
   }
 
 public:
-  bool isMachineConstantPoolEntry() const {
-    return Offset < 0;
-  }
+  bool isMachineConstantPoolEntry() const { return Offset < 0; }
 
   const Constant *getConstVal() const {
     assert(!isMachineConstantPoolEntry() && "Wrong constantpool type");
@@ -2212,7 +2175,7 @@ public:
   }
 
   int getOffset() const {
-    return Offset & ~(1 << (sizeof(unsigned)*CHAR_BIT-1));
+    return Offset & ~(1 << (sizeof(unsigned) * CHAR_BIT - 1));
   }
 
   // Return the alignment of this constant pool object, which is either 0 (for
@@ -2259,8 +2222,8 @@ class BasicBlockSDNode : public SDNode {
   /// blocks out of order when they're jumped to, which makes it a bit
   /// harder.  Let's see if we need it first.
   explicit BasicBlockSDNode(MachineBasicBlock *mbb)
-    : SDNode(ISD::BasicBlock, 0, DebugLoc(), getSDVTList(MVT::Other)), MBB(mbb)
-  {}
+      : SDNode(ISD::BasicBlock, 0, DebugLoc(), getSDVTList(MVT::Other)),
+        MBB(mbb) {}
 
 public:
   MachineBasicBlock *getBasicBlock() const { return MBB; }
@@ -2420,7 +2383,7 @@ class SrcValueSDNode : public SDNode {
 
   /// Create a SrcValue for a general value.
   explicit SrcValueSDNode(const Value *v)
-    : SDNode(ISD::SRCVALUE, 0, DebugLoc(), getSDVTList(MVT::Other)), V(v) {}
+      : SDNode(ISD::SRCVALUE, 0, DebugLoc(), getSDVTList(MVT::Other)), V(v) {}
 
 public:
   /// Return the contained Value.
@@ -2437,8 +2400,8 @@ class MDNodeSDNode : public SDNode {
   const MDNode *MD;
 
   explicit MDNodeSDNode(const MDNode *md)
-  : SDNode(ISD::MDNODE_SDNODE, 0, DebugLoc(), getSDVTList(MVT::Other)), MD(md)
-  {}
+      : SDNode(ISD::MDNODE_SDNODE, 0, DebugLoc(), getSDVTList(MVT::Other)),
+        MD(md) {}
 
 public:
   const MDNode *getMD() const { return MD; }
@@ -2471,8 +2434,8 @@ class RegisterMaskSDNode : public SDNode {
   const uint32_t *RegMask;
 
   RegisterMaskSDNode(const uint32_t *mask)
-    : SDNode(ISD::RegisterMask, 0, DebugLoc(), getSDVTList(MVT::Untyped)),
-      RegMask(mask) {}
+      : SDNode(ISD::RegisterMask, 0, DebugLoc(), getSDVTList(MVT::Untyped)),
+        RegMask(mask) {}
 
 public:
   const uint32_t *getRegMask() const { return RegMask; }
@@ -2568,8 +2531,8 @@ class CondCodeSDNode : public SDNode {
   ISD::CondCode Condition;
 
   explicit CondCodeSDNode(ISD::CondCode Cond)
-    : SDNode(ISD::CONDCODE, 0, DebugLoc(), getSDVTList(MVT::Other)),
-      Condition(Cond) {}
+      : SDNode(ISD::CONDCODE, 0, DebugLoc(), getSDVTList(MVT::Other)),
+        Condition(Cond) {}
 
 public:
   ISD::CondCode get() const { return Condition; }
@@ -2587,8 +2550,8 @@ class VTSDNode : public SDNode {
   EVT ValueType;
 
   explicit VTSDNode(EVT VT)
-    : SDNode(ISD::VALUETYPE, 0, DebugLoc(), getSDVTList(MVT::Other)),
-      ValueType(VT) {}
+      : SDNode(ISD::VALUETYPE, 0, DebugLoc(), getSDVTList(MVT::Other)),
+        ValueType(VT) {}
 
 public:
   EVT getVT() const { return ValueType; }
@@ -2626,8 +2589,7 @@ public:
   bool isUnindexed() const { return getAddressingMode() == ISD::UNINDEXED; }
 
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::LOAD ||
-           N->getOpcode() == ISD::STORE;
+    return N->getOpcode() == ISD::LOAD || N->getOpcode() == ISD::STORE;
   }
 };
 
@@ -2654,9 +2616,7 @@ public:
   const SDValue &getBasePtr() const { return getOperand(1); }
   const SDValue &getOffset() const { return getOperand(2); }
 
-  static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::LOAD;
-  }
+  static bool classof(const SDNode *N) { return N->getOpcode() == ISD::LOAD; }
 };
 
 /// This class is used to represent ISD::STORE nodes.
@@ -2682,9 +2642,7 @@ public:
   const SDValue &getBasePtr() const { return getOperand(2); }
   const SDValue &getOffset() const { return getOperand(3); }
 
-  static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::STORE;
-  }
+  static bool classof(const SDNode *N) { return N->getOpcode() == ISD::STORE; }
 };
 
 /// This base class is used to represent VP_LOAD, VP_STORE,
@@ -2933,8 +2891,7 @@ public:
   bool isUnindexed() const { return getAddressingMode() == ISD::UNINDEXED; }
 
   static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::MLOAD ||
-           N->getOpcode() == ISD::MSTORE;
+    return N->getOpcode() == ISD::MLOAD || N->getOpcode() == ISD::MSTORE;
   }
 };
 
@@ -2960,9 +2917,7 @@ public:
   const SDValue &getMask() const { return getOperand(3); }
   const SDValue &getPassThru() const { return getOperand(4); }
 
-  static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::MLOAD;
-  }
+  static bool classof(const SDNode *N) { return N->getOpcode() == ISD::MLOAD; }
 
   bool isExpandingLoad() const { return LoadSDNodeBits.IsExpanding; }
 };
@@ -2996,9 +2951,7 @@ public:
   const SDValue &getOffset() const { return getOperand(3); }
   const SDValue &getMask() const { return getOperand(4); }
 
-  static bool classof(const SDNode *N) {
-    return N->getOpcode() == ISD::MSTORE;
-  }
+  static bool classof(const SDNode *N) { return N->getOpcode() == ISD::MSTORE; }
 };
 
 /// This is a base class used to represent
@@ -3114,9 +3067,9 @@ public:
   // MaskedScatterSDNode (Chain, value, mask, base, index, scale)
   // Mask is a vector of i1 elements
   const SDValue &getBasePtr() const { return getOperand(3); }
-  const SDValue &getIndex()   const { return getOperand(4); }
-  const SDValue &getMask()    const { return getOperand(2); }
-  const SDValue &getScale()   const { return getOperand(5); }
+  const SDValue &getIndex() const { return getOperand(4); }
+  const SDValue &getMask() const { return getOperand(2); }
+  const SDValue &getScale() const { return getOperand(5); }
 
   static bool classof(const SDNode *N) {
     return N->getOpcode() == ISD::MGATHER || N->getOpcode() == ISD::MSCATTER ||
@@ -3294,9 +3247,7 @@ public:
     NumMemRefs = 0;
   }
 
-  static bool classof(const SDNode *N) {
-    return N->isMachineOpcode();
-  }
+  static bool classof(const SDNode *N) { return N->isMachineOpcode(); }
 };
 
 /// An SDNode that records if a register contains a value that is guaranteed to
@@ -3328,22 +3279,22 @@ public:
   using pointer = value_type *;
   using reference = value_type &;
 
-  bool operator==(const SDNodeIterator& x) const {
+  bool operator==(const SDNodeIterator &x) const {
     return Operand == x.Operand;
   }
-  bool operator!=(const SDNodeIterator& x) const { return !operator==(x); }
+  bool operator!=(const SDNodeIterator &x) const { return !operator==(x); }
 
-  pointer operator*() const {
-    return Node->getOperand(Operand).getNode();
-  }
+  pointer operator*() const { return Node->getOperand(Operand).getNode(); }
   pointer operator->() const { return operator*(); }
 
-  SDNodeIterator& operator++() {                // Preincrement
+  SDNodeIterator &operator++() { // Preincrement
     ++Operand;
     return *this;
   }
   SDNodeIterator operator++(int) { // Postincrement
-    SDNodeIterator tmp = *this; ++*this; return tmp;
+    SDNodeIterator tmp = *this;
+    ++*this;
+    return tmp;
   }
   size_t operator-(SDNodeIterator Other) const {
     assert(Node == Other.Node &&
@@ -3352,7 +3303,7 @@ public:
   }
 
   static SDNodeIterator begin(const SDNode *N) { return SDNodeIterator(N, 0); }
-  static SDNodeIterator end  (const SDNode *N) {
+  static SDNodeIterator end(const SDNode *N) {
     return SDNodeIterator(N, N->getNumOperands());
   }
 
@@ -3360,7 +3311,7 @@ public:
   const SDNode *getNode() const { return Node; }
 };
 
-template <> struct GraphTraits<SDNode*> {
+template <> struct GraphTraits<SDNode *> {
   using NodeRef = SDNode *;
   using ChildIteratorType = SDNodeIterator;
 
@@ -3379,126 +3330,138 @@ template <> struct GraphTraits<SDNode*> {
 ///
 /// This needs to be a union because the largest node differs on 32 bit systems
 /// with 4 and 8 byte pointer alignment, respectively.
-using LargestSDNode = AlignedCharArrayUnion<AtomicSDNode, TargetIndexSDNode,
-                                            BlockAddressSDNode,
-                                            GlobalAddressSDNode,
-                                            PseudoProbeSDNode>;
+using LargestSDNode =
+    AlignedCharArrayUnion<AtomicSDNode, TargetIndexSDNode, BlockAddressSDNode,
+                          GlobalAddressSDNode, PseudoProbeSDNode>;
 
 /// The SDNode class with the greatest alignment requirement.
 using MostAlignedSDNode = GlobalAddressSDNode;
 
 namespace ISD {
 
-  /// Returns true if the specified node is a non-extending and unindexed load.
-  inline bool isNormalLoad(const SDNode *N) {
-    auto *Ld = dyn_cast<LoadSDNode>(N);
-    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-           Ld->getAddressingMode() == ISD::UNINDEXED;
-  }
+/// Returns true if the specified node is a non-extending and unindexed load.
+inline bool isNormalLoad(const SDNode *N) {
+  auto *Ld = dyn_cast<LoadSDNode>(N);
+  return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
+         Ld->getAddressingMode() == ISD::UNINDEXED;
+}
 
-  /// Returns true if the specified node is a non-extending load.
-  inline bool isNON_EXTLoad(const SDNode *N) {
-    auto *Ld = dyn_cast<LoadSDNode>(N);
-    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD;
-  }
+/// Returns true if the specified node is a non-extending load.
+inline bool isNON_EXTLoad(const SDNode *N) {
+  auto *Ld = dyn_cast<LoadSDNode>(N);
+  return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD;
+}
 
-  /// Returns true if the specified node is a EXTLOAD.
-  inline bool isEXTLoad(const SDNode *N) {
-    auto *Ld = dyn_cast<LoadSDNode>(N);
-    return Ld && Ld->getExtensionType() == ISD::EXTLOAD;
-  }
+/// Returns true if the specified node is a EXTLOAD.
+inline bool isEXTLoad(const SDNode *N) {
+  auto *Ld = dyn_cast<LoadSDNode>(N);
+  return Ld && Ld->getExtensionType() == ISD::EXTLOAD;
+}
 
-  /// Returns true if the specified node is a SEXTLOAD.
-  inline bool isSEXTLoad(const SDNode *N) {
-    auto *Ld = dyn_cast<LoadSDNode>(N);
-    return Ld && Ld->getExtensionType() == ISD::SEXTLOAD;
-  }
+/// Returns true if the specified node is a SEXTLOAD.
+inline bool isSEXTLoad(const SDNode *N) {
+  auto *Ld = dyn_cast<LoadSDNode>(N);
+  return Ld && Ld->getExtensionType() == ISD::SEXTLOAD;
+}
 
-  /// Returns true if the specified node is a ZEXTLOAD.
-  inline bool isZEXTLoad(const SDNode *N) {
-    auto *Ld = dyn_cast<LoadSDNode>(N);
-    return Ld && Ld->getExtensionType() == ISD::ZEXTLOAD;
-  }
+/// Returns true if the specified node is a ZEXTLOAD.
+inline bool isZEXTLoad(const SDNode *N) {
+  auto *Ld = dyn_cast<LoadSDNode>(N);
+  return Ld && Ld->getExtensionType() == ISD::ZEXTLOAD;
+}
 
-  /// Returns true if the specified node is an unindexed load.
-  inline bool isUNINDEXEDLoad(const SDNode *N) {
-    auto *Ld = dyn_cast<LoadSDNode>(N);
-    return Ld && Ld->getAddressingMode() == ISD::UNINDEXED;
-  }
+/// Returns true if the specified node is an unindexed load.
+inline bool isUNINDEXEDLoad(const SDNode *N) {
+  auto *Ld = dyn_cast<LoadSDNode>(N);
+  return Ld && Ld->getAddressingMode() == ISD::UNINDEXED;
+}
 
-  /// Returns true if the specified node is a non-truncating
-  /// and unindexed store.
-  inline bool isNormalStore(const SDNode *N) {
-    auto *St = dyn_cast<StoreSDNode>(N);
-    return St && !St->isTruncatingStore() &&
-           St->getAddressingMode() == ISD::UNINDEXED;
-  }
+/// Returns true if the specified node is a non-truncating
+/// and unindexed store.
+inline bool isNormalStore(const SDNode *N) {
+  auto *St = dyn_cast<StoreSDNode>(N);
+  return St && !St->isTruncatingStore() &&
+         St->getAddressingMode() == ISD::UNINDEXED;
+}
 
-  /// Returns true if the specified node is an unindexed store.
-  inline bool isUNINDEXEDStore(const SDNode *N) {
-    auto *St = dyn_cast<StoreSDNode>(N);
-    return St && St->getAddressingMode() == ISD::UNINDEXED;
-  }
+/// Returns true if the specified node is an unindexed store.
+inline bool isUNINDEXEDStore(const SDNode *N) {
+  auto *St = dyn_cast<StoreSDNode>(N);
+  return St && St->getAddressingMode() == ISD::UNINDEXED;
+}
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked load.
-  inline bool isNormalMaskedLoad(const SDNode *N) {
-    auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
-    return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
-           Ld->getAddressingMode() == ISD::UNINDEXED;
-  }
+/// Returns true if the specified node is a non-extending and unindexed
+/// masked load.
+inline bool isNormalMaskedLoad(const SDNode *N) {
+  auto *Ld = dyn_cast<MaskedLoadSDNode>(N);
+  return Ld && Ld->getExtensionType() == ISD::NON_EXTLOAD &&
+         Ld->getAddressingMode() == ISD::UNINDEXED;
+}
 
-  /// Returns true if the specified node is a non-extending and unindexed
-  /// masked store.
-  inline bool isNormalMaskedStore(const SDNode *N) {
-    auto *St = dyn_cast<MaskedStoreSDNode>(N);
-    return St && !St->isTruncatingStore() &&
-           St->getAddressingMode() == ISD::UNINDEXED;
-  }
+/// Returns true if the specified node is a non-extending and unindexed
+/// masked store.
+inline bool isNormalMaskedStore(const SDNode *N) {
+  auto *St = dyn_cast<MaskedStoreSDNode>(N);
+  return St && !St->isTruncatingStore() &&
+         St->getAddressingMode() == ISD::UNINDEXED;
+}
 
-  /// Attempt to match a unary predicate against a scalar/splat constant or
-  /// every element of a constant BUILD_VECTOR.
-  /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
-  template <typename ConstNodeType>
-  bool matchUnaryPredicateImpl(SDValue Op,
-                               std::function<bool(ConstNodeType *)> Match,
-                               bool AllowUndefs = false,
-                               bool AllowTruncation = false);
+/// Attempt to match a unary predicate against a scalar/splat constant or
+/// every element of a constant BUILD_VECTOR.
+/// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
+template <typename ConstNodeType>
+bool matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
+                             std::function<bool(ConstNodeType *)> Match,
+                             bool AllowUndefs = false,
+                             bool AllowTruncation = false);
 
-  /// Hook for matching ConstantSDNode predicate
-  inline bool matchUnaryPredicate(SDValue Op,
-                                  std::function<bool(ConstantSDNode *)> Match,
-                                  bool AllowUndefs = false,
-                                  bool AllowTruncation = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, Match, AllowUndefs,
-                                                   AllowTruncation);
-  }
+inline bool matchUnaryPredicate(SDValue Op,
+                                std::function<bool(ConstantSDNode *)> Match,
+                                bool AllowUndefs = false,
+                                bool AllowTruncation = false) {
+  return matchUnaryPredicate(Op, APInt(1, 1), Match, AllowUndefs,
+                             AllowTruncation);
+}
+/// Hook for matching ConstantSDNode predicate
+inline bool matchUnaryPredicate(SDValue Op, const APInt &DemandedElts,
+                                std::function<bool(ConstantSDNode *)> Match,
+                                bool AllowUndefs = false,
+                                bool AllowTruncation = false) {
+  return matchUnaryPredicateImpl<ConstantSDNode>(Op, DemandedElts, Match,
+                                                 AllowUndefs, AllowTruncation);
+}
 
-  /// Hook for matching ConstantFPSDNode predicate
-  inline bool
-  matchUnaryFpPredicate(SDValue Op,
-                        std::function<bool(ConstantFPSDNode *)> Match,
-                        bool AllowUndefs = false) {
-    return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, Match, AllowUndefs);
-  }
+inline bool matchUnaryFpPredicate(SDValue Op,
+                                  std::function<bool(ConstantFPSDNode *)> Match,
+                                  bool AllowUndefs = false) {
+  return matchUnaryFpPredicate(Op, APInt(1, 1), Match, AllowUndefs);
+}
 
-  /// Attempt to match a binary predicate against a pair of scalar/splat
-  /// constants or every element of a pair of constant BUILD_VECTORs.
-  /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
-  /// If AllowTypeMismatch is true then RetType + ArgTypes don't need to match.
-  LLVM_ABI bool matchBinaryPredicate(
-      SDValue LHS, SDValue RHS,
-      std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
-      bool AllowUndefs = false, bool AllowTypeMismatch = false);
+/// Hook for matching ConstantFPSDNode predicate
+inline bool matchUnaryFpPredicate(SDValue Op, const APInt &DemandedElts,
+                                  std::function<bool(ConstantFPSDNode *)> Match,
+                                  bool AllowUndefs = false) {
+  return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, DemandedElts, Match,
+                                                   AllowUndefs);
+}
 
-  /// Returns true if the specified value is the overflow result from one
-  /// of the overflow intrinsic nodes.
-  inline bool isOverflowIntrOpRes(SDValue Op) {
-    unsigned Opc = Op.getOpcode();
-    return (Op.getResNo() == 1 &&
-            (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
-             Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO));
-  }
+/// Attempt to match a binary predicate against a pair of scalar/splat
+/// constants or every element of a pair of constant BUILD_VECTORs.
+/// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
+/// If AllowTypeMismatch is true then RetType + ArgTypes don't need to match.
+LLVM_ABI bool matchBinaryPredicate(
+    SDValue LHS, SDValue RHS,
+    std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
+    bool AllowUndefs = false, bool AllowTypeMismatch = false);
+
+/// Returns true if the specified value is the overflow result from one
+/// of the overflow intrinsic nodes.
+inline bool isOverflowIntrOpRes(SDValue Op) {
+  unsigned Opc = Op.getOpcode();
+  return (Op.getResNo() == 1 &&
+          (Opc == ISD::SADDO || Opc == ISD::UADDO || Opc == ISD::SSUBO ||
+           Opc == ISD::USUBO || Opc == ISD::SMULO || Opc == ISD::UMULO));
+}
 
 } // end namespace ISD
 
