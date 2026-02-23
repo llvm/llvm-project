@@ -466,17 +466,17 @@ struct MultiReductionToArithOps
     auto srcRank = multiReductionOp.getSourceVectorType().getRank();
     if (srcRank < 2)
       return rewriter.notifyMatchFailure(multiReductionOp,
-                                         "expected source rank >= 2.");
+                                         "expected source rank >= 2");
 
     if (!multiReductionOp.isReducedDim(0))
       return rewriter.notifyMatchFailure(
           multiReductionOp,
-          "expected outermost dimension to be reduced dimension.");
+          "expected outermost dimension to be reduced dimension");
 
     ArrayRef<int64_t> reductionDims = multiReductionOp.getReductionDims();
     if (reductionDims.size() > 1)
       return rewriter.notifyMatchFailure(
-          multiReductionOp, "expected only one reduction dimension.");
+          multiReductionOp, "expected only one reduction dimension");
 
     Location loc = multiReductionOp.getLoc();
     Value source = multiReductionOp.getSource();
