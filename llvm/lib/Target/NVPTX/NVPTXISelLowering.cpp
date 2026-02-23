@@ -2564,7 +2564,12 @@ static SDValue LowerVectorArith(SDValue Op, SelectionDAG &DAG) {
   return V;
 }
 
-static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG) {
+static SDValue lowerTcgen05St(SDValue Op, SelectionDAG &DAG,
+                              bool hasOffset = false) {
+  // skip lowering if the vector operand is already legalized
+  if (!Op->getOperand(hasOffset ? 4 : 3).getValueType().isVector())
+    return Op;
+
   SDNode *N = Op.getNode();
   SDLoc DL(N);
   SmallVector<SDValue, 32> Ops;
@@ -2822,7 +2827,6 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   switch (IntrinNo) {
   default:
     break;
-  case Intrinsic::nvvm_tcgen05_st_16x64b_x1:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x2:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x4:
   case Intrinsic::nvvm_tcgen05_st_16x64b_x8:
@@ -2842,15 +2846,6 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_16x256b_x8:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x16:
   case Intrinsic::nvvm_tcgen05_st_16x256b_x32:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x1:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
-  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
-  case Intrinsic::nvvm_tcgen05_st_32x32b_x1:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x2:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x4:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x8:
@@ -2860,6 +2855,14 @@ static SDValue lowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   case Intrinsic::nvvm_tcgen05_st_32x32b_x64:
   case Intrinsic::nvvm_tcgen05_st_32x32b_x128:
     return lowerTcgen05St(Op, DAG);
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x2:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x4:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x8:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x16:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x32:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x64:
+  case Intrinsic::nvvm_tcgen05_st_16x32bx2_x128:
+    return lowerTcgen05St(Op, DAG, /* hasOffset */ true);
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg1:
   case Intrinsic::nvvm_tcgen05_mma_shared_disable_output_lane_cg2:
   case Intrinsic::nvvm_tcgen05_mma_shared_scale_d_disable_output_lane_cg1:
