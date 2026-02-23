@@ -27,7 +27,7 @@ class LowerTypes;
 class ABIInfo {
 protected:
   LowerTypes &lt;
-  llvm::CallingConv::ID RuntimeCC;
+  llvm::CallingConv::ID runtimeCC;
 
 public:
   ABIInfo(LowerTypes &lt) : lt(lt), RuntimeCC(llvm::CallingConv::C) {}

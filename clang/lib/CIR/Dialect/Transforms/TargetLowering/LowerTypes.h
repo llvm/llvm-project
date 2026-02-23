@@ -34,7 +34,7 @@ private:
   LowerModule &lm;
   CIRLowerContext &context;
   const clang::TargetInfo &target;
-  CIRCXXABI &CXXABI;
+  CIRCXXABI &cxxabi;
 
   // This should not be moved earlier, since its initialization depends on some
   // of the previous reference members being already initialized
