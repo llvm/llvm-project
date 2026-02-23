@@ -140,13 +140,14 @@ public:
     propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
   }
 
-  const auto &getTransitiveUserFunctions(const GlobalVariable &GV) const {
+  using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
+  const FunctionSetType &
+  getTransitiveUserFunctions(const GlobalVariable &GV) const {
     auto It = GlobalIsUsedByFun.find(&GV);
     if (It != GlobalIsUsedByFun.end())
       return It->second;
 
-    using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
-    const static FunctionSetType Empty;
+    static const FunctionSetType Empty{};
     return Empty;
   }
 };
