@@ -20,7 +20,7 @@ entry:
   ; CHECK: %[[#ptr_elem:]] = OpInBoundsAccessChain %[[#ptr_sb_int]] %[[#buffer]] %[[#]] %[[#]]
 
   %2 = load i32, ptr addrspace(11) %1, align 4
-  ; CHECK: %[[#val:]] = OpLoad %[[#int]] %[[#ptr_elem]] Aligned 4
+  ; CHECK: %[[#val:]] = OpLoad %[[#int]] %[[#ptr_elem]]
 
   ret i32 %2
 }

@@ -53,7 +53,7 @@ entry:
   %cbufferidx.i = getelementptr <{ <3 x float>, target("spirv.Padding", 4) }>, ptr addrspace(12) @myArray, i64 %idxprom.i
 
 ; CHECK: %[[PTR_FIELD:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[PTR_ELEM]] {{.*}}
-; CHECK: %[[VAL_VEC3:[0-9]+]] = OpLoad %[[VEC3]] %[[PTR_FIELD]] Aligned 16
+; CHECK: %[[VAL_VEC3:[0-9]+]] = OpLoad %[[VEC3]] %[[PTR_FIELD]]
   %2 = load <3 x float>, ptr addrspace(12) %cbufferidx.i, align 16
 
   %3 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v3f32_12_1t(target("spirv.VulkanBuffer", [0 x <3 x float>], 12, 1) %0, i32 %1)

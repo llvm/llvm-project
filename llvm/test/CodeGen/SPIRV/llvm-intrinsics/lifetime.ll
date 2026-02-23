@@ -5,7 +5,7 @@
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - | FileCheck %s --check-prefixes=VK
-; FIXME(135165) Alignment capability emitted for Vulkan.
+; FIXME(182779) ByVal attribute emitted for Vulkan.
 ; FIXME: %if spirv-tools %{ llc -O0 -mtriple=spirv-unknown-vulkan1.3-compute %s -o - -filetype=obj | spirv-val %}
 
 ; CL-DAG: %[[#Char:]] = OpTypeInt 8 0

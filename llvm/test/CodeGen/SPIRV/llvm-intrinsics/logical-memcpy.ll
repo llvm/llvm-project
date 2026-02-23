@@ -20,7 +20,7 @@
 ; Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(readwrite, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 define void @main() local_unnamed_addr #0 {
 entry:
-; CHECK: OpCopyMemory %[[dst_var]] %[[src_var]] Aligned 4
+; CHECK: OpCopyMemory %[[dst_var]] %[[src_var]]
   call void @llvm.memcpy.p0.p0.i64(ptr addrspace(1) align 4 @dst, ptr addrspace(1) align 4 @src, i64 20, i1 false)
   ret void
 ; CHECK: OpReturn

@@ -18,7 +18,7 @@ entry:
   ; CHECK: %[[#ptr_elem:]] = OpInBoundsAccessChain %[[#ptr_int]] %[[#arr_var]] %[[#idx_var]]
 
   %2 = load i32, ptr %1, align 4
-  ; CHECK: %[[#val:]] = OpLoad %[[#int]] %[[#ptr_elem]] Aligned 4
+  ; CHECK: %[[#val:]] = OpLoad %[[#int]] %[[#ptr_elem]]
 
   ret i32 %2
   ; CHECK: OpReturnValue %[[#val]]
@@ -34,7 +34,7 @@ entry:
   ; CHECK: %[[#ptr_elem2:]] = OpInBoundsAccessChain %[[#ptr_int]] %[[#arr_var2]] %[[#idx_var2]]
 
   %2 = load i32, ptr %1, align 4
-  ; CHECK: %[[#val2:]] = OpLoad %[[#int]] %[[#ptr_elem2]] Aligned 4
+  ; CHECK: %[[#val2:]] = OpLoad %[[#int]] %[[#ptr_elem2]]
 
   ret i32 %2
   ; CHECK: OpReturnValue %[[#val2]]

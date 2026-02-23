@@ -23,7 +23,7 @@ entry:
   ; CHECK: %[[#ptr_elem:]] = OpInBoundsAccessChain %[[#ptr_float]] %[[#obj_var]] %[[#]] %[[#]] %[[#]] %[[#]]
 
   %2 = load float, ptr %1, align 4
-  ; CHECK: %[[#val:]] = OpLoad %[[#float]] %[[#ptr_elem]] Aligned 4
+  ; CHECK: %[[#val:]] = OpLoad %[[#float]] %[[#ptr_elem]]
 
   ret float %2
 }
