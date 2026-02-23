@@ -633,6 +633,11 @@ raw_fd_ostream::raw_fd_ostream(int fd, bool shouldClose, bool unbuffered,
   // Check if this is a console device. This is not equivalent to isatty.
   IsWindowsConsole =
       ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
+
+  // If this isn't a console device, don't try to use the API to set the color.
+  // Switch to ANSI escape codes instead.
+  if (!IsWindowsConsole)
+    llvm::sys::Process::UseANSIEscapeCodes(true);
 #endif
 
   // Get the starting position.
