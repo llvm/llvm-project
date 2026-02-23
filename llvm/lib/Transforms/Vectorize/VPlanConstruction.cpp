@@ -1015,6 +1015,11 @@ void VPlanTransforms::splitLatch(VPlan &Plan) {
   for (VPRecipeBase &R : HeaderVPBB->phis())
     if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(R))
       NeedsPhi[cast<VPHeaderPHIRecipe>(R).getBackedgeValue()].push_back(&R);
+  for (VPBasicBlock *VPBB : Plan.getExitBlocks())
+    for (VPRecipeBase &R : VPBB->phis())
+      for (auto [V, InVPBB] : cast<VPIRPhi>(R).incoming_values_and_blocks())
+        if (InVPBB != MiddleVPBB)
+          NeedsPhi[V].push_back(&R);
   VPValue *V;
   for (VPRecipeBase &R : *MiddleVPBB)
     if (match(&R, m_CombineOr(m_VPInstruction<VPInstruction::ExitingIVValue>(
