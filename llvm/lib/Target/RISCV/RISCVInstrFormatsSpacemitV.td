@@ -76,6 +76,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Inst{6-0} = OPC_CUSTOM_1.Value;
     let Constraints =
         !if(EarlyClobber, "@earlyclobber $vd_wb, $vd = $vd_wb", "$vd = $vd_wb");
+    let UseNamedOperandTable = true;
   }
 
   // Sliding-window vector dot product format.
@@ -96,6 +97,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
     let Inst{6-0} = OPC_CUSTOM_1.Value;
     let Constraints =
         !if(EarlyClobber, "@earlyclobber $vd_wb, $vd = $vd_wb", "$vd = $vd_wb");
+    let UseNamedOperandTable = true;
   }
 }
 

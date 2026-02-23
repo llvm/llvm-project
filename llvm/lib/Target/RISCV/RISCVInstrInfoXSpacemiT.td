@@ -14,7 +14,7 @@ include "RISCVInstrFormatsSpacemitV.td"
 
 let DecoderNamespace = "XSMT" in {
   let Predicates = [HasVendorXSMTVDot, IsRV64], ElementsDependOn = EltDepsNone,
-      RVVConstraint = WidenV, DestEEW = EEWSEWx4 in {
+      VS1VS2Constraint = WidenV, DestEEW = EEWSEWx4 in {
     // Base vector dot product (no slide) instructions
     // NOTE: Destination registers (vd) MUST be even-numbered (v0, v2, ..., v30)
     //       due to the number of elements processed requires a pair of register operations.
@@ -46,4 +46,4 @@ let DecoderNamespace = "XSMT" in {
         def SMT_VMADOT#!toupper(a.Name)#!toupper(b.Name) :
             SMTVMADotSlide<a.Encoding, b.Encoding, "smt.vmadot"#a.Name#b.Name>, Sched<[]>;
   }
-}
+} // DecoderNamespace = "XSMT"
