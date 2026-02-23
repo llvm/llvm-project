@@ -740,6 +740,22 @@ bool TargetInfo::isValidGCCRegisterName(StringRef Name) const {
   return false;
 }
 
+bool TargetInfo::isValidSystemRegisterName(StringRef Name) const {
+  if (Name.empty())
+    return false;
+
+  ArrayRef<const char *> Names = getSystemRegNames();
+
+  if (Names.empty())
+    return true;
+
+  // Check register names.
+  if (llvm::is_contained(Names, Name.upper()))
+    return true;
+
+  return false;
+}
+
 StringRef TargetInfo::getNormalizedGCCRegisterName(StringRef Name,
                                                    bool ReturnCanonical) const {
   assert(isValidGCCRegisterName(Name) && "Invalid register passed in");
