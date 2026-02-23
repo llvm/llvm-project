@@ -91,6 +91,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
 
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::ceilf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::fmaxf16(0.0f16, 0.0f16));
+  float16 getpayloadf16_x = 0.0f16;
+  EXPECT_FP_EQ(-0x1p+0f16,
+               LIBC_NAMESPACE::shared::getpayloadf16(&getpayloadf16_x));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -156,6 +159,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
 
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::ceilf(0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::fmaxf(0.0f, 0.0f));
+  float getpayloadf_x = 0.0f;
+  EXPECT_FP_EQ(-0x1p+0f, LIBC_NAMESPACE::shared::getpayloadf(&getpayloadf_x));
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -197,6 +202,8 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
   EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::ceil(0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fadd(0.0, 0.0));
   EXPECT_FP_EQ(0.0, LIBC_NAMESPACE::shared::fmax(0.0, 0.0));
+  double getpayload_x = 0.0;
+  EXPECT_FP_EQ(-1.0, LIBC_NAMESPACE::shared::getpayload(&getpayload_x));
 }
 
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
@@ -217,6 +224,8 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::ceill(0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::faddl(0.0L, 0.0L));
   EXPECT_FP_EQ(0x0p+0L, LIBC_NAMESPACE::shared::fmaxl(0.0L, 0.0L));
+  long double getpayloadl_x = 0.0L;
+  EXPECT_FP_EQ(-0x1p+0L, LIBC_NAMESPACE::shared::getpayloadl(&getpayloadl_x));
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
@@ -260,6 +269,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
                LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::fmaxf128(float128(0.0), float128(0.0)));
+
+  float128 getpayloadf128_x = float128(0.0);
+  EXPECT_FP_EQ(float128(-1.0),
+               LIBC_NAMESPACE::shared::getpayloadf128(&getpayloadf128_x));
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -283,4 +296,8 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::ceilbf16(bfloat16(0.0)));
   EXPECT_FP_EQ(bfloat16(0.0),
                LIBC_NAMESPACE::shared::fmaxbf16(bfloat16(0.0), bfloat16(0.0)));
+
+  bfloat16 getpayloadbf16_x = bfloat16(0.0);
+  EXPECT_FP_EQ(bfloat16(-1.0),
+               LIBC_NAMESPACE::shared::getpayloadbf16(&getpayloadbf16_x));
 }

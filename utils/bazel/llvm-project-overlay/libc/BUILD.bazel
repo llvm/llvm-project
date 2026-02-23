@@ -3316,6 +3316,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_getpayload",
+    hdrs = ["src/__support/math/getpayload.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_getpayloadbf16",
+    hdrs = ["src/__support/math/getpayloadbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_getpayloadf",
+    hdrs = ["src/__support/math/getpayloadf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_getpayloadf128",
+    hdrs = ["src/__support/math/getpayloadf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_getpayloadf16",
+    hdrs = ["src/__support/math/getpayloadf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_getpayloadl",
+    hdrs = ["src/__support/math/getpayloadl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_inv_trigf_utils",
     hdrs = ["src/__support/math/inv_trigf_utils.h"],
     deps = [
@@ -5476,15 +5533,40 @@ libc_math_function(name = "fsubl")
 
 libc_math_function(name = "fsubf128")
 
-libc_math_function(name = "getpayload")
+libc_math_function(
+    name = "getpayload",
+    additional_deps = [
+        ":__support_math_getpayload",
+    ],
+)
 
-libc_math_function(name = "getpayloadf")
+libc_math_function(
+    name = "getpayloadf",
+    additional_deps = [
+        ":__support_math_getpayloadf",
+    ],
+)
 
-libc_math_function(name = "getpayloadl")
+libc_math_function(
+    name = "getpayloadl",
+    additional_deps = [
+        ":__support_math_getpayloadl",
+    ],
+)
 
-libc_math_function(name = "getpayloadf128")
+libc_math_function(
+    name = "getpayloadf128",
+    additional_deps = [
+        ":__support_math_getpayloadf128",
+    ],
+)
 
-libc_math_function(name = "getpayloadf16")
+libc_math_function(
+    name = "getpayloadf16",
+    additional_deps = [
+        ":__support_math_getpayloadf16",
+    ],
+)
 
 libc_math_function(name = "hypot")
 
