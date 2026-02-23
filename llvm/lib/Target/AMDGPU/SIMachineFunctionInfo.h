@@ -262,6 +262,56 @@ template <> struct MappingTraits<SIMode> {
   }
 };
 
+struct IGLPSmallGemmSingleWaveCacheEntry {
+  unsigned MBBNum = 0;
+  unsigned StrategyId = 0;
+  unsigned DSWCount = 0;
+  unsigned DSWWithPermCount = 0;
+  unsigned DSWWithSharedVMEMCount = 0;
+};
+
+template <> struct MappingTraits<IGLPSmallGemmSingleWaveCacheEntry> {
+  static void mapping(IO &YamlIO, IGLPSmallGemmSingleWaveCacheEntry &E) {
+    YamlIO.mapRequired("mbb", E.MBBNum);
+    YamlIO.mapRequired("strategyId", E.StrategyId);
+    YamlIO.mapRequired("dswCount", E.DSWCount);
+    YamlIO.mapRequired("dswWithPermCount", E.DSWWithPermCount);
+    YamlIO.mapRequired("dswWithSharedVMEMCount", E.DSWWithSharedVMEMCount);
+  }
+};
+
+struct IGLPExpInterleaveCacheEntry {
+  unsigned MBBNum = 0;
+  unsigned StrategyId = 0;
+  unsigned TransPipeCount = 0;
+  unsigned MFMAPipeCount = 0;
+  unsigned AddPipeCount = 0;
+  unsigned MFMAEnablement = 0;
+  unsigned ExpRequirement = 0;
+  unsigned MFMAChains = 0;
+  unsigned MFMAChainLength = 0;
+  bool HasCvt = false;
+  bool HasChainBetweenCvt = false;
+  bool AnalysisResult = false;
+};
+
+template <> struct MappingTraits<IGLPExpInterleaveCacheEntry> {
+  static void mapping(IO &YamlIO, IGLPExpInterleaveCacheEntry &E) {
+    YamlIO.mapRequired("mbb", E.MBBNum);
+    YamlIO.mapRequired("strategyId", E.StrategyId);
+    YamlIO.mapRequired("transPipeCount", E.TransPipeCount);
+    YamlIO.mapRequired("mfmaPipeCount", E.MFMAPipeCount);
+    YamlIO.mapRequired("addPipeCount", E.AddPipeCount);
+    YamlIO.mapRequired("mfmaEnablement", E.MFMAEnablement);
+    YamlIO.mapRequired("expRequirement", E.ExpRequirement);
+    YamlIO.mapRequired("mfmaChains", E.MFMAChains);
+    YamlIO.mapRequired("mfmaChainLength", E.MFMAChainLength);
+    YamlIO.mapRequired("hasCvt", E.HasCvt);
+    YamlIO.mapRequired("hasChainBetweenCvt", E.HasChainBetweenCvt);
+    YamlIO.mapRequired("analysisResult", E.AnalysisResult);
+  }
+};
+
 struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   uint64_t ExplicitKernArgSize = 0;
   Align MaxKernArgAlign;
@@ -306,6 +356,9 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 
   bool HasInitWholeWave = false;
   bool IsWholeWaveFunction = false;
+
+  SmallVector<IGLPSmallGemmSingleWaveCacheEntry> IGLPSmallGemmSingleWaveCaches;
+  SmallVector<IGLPExpInterleaveCacheEntry> IGLPExpInterleaveCaches;
 
   unsigned DynamicVGPRBlockSize = 0;
   unsigned ScratchReservedForDynamicVGPRs = 0;
@@ -365,6 +418,9 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("longBranchReservedReg", MFI.LongBranchReservedReg,
                        StringValue());
     YamlIO.mapOptional("hasInitWholeWave", MFI.HasInitWholeWave, false);
+    YamlIO.mapOptional("iglpSmallGemmSingleWaveCaches",
+                       MFI.IGLPSmallGemmSingleWaveCaches);
+    YamlIO.mapOptional("iglpExpInterleaveCaches", MFI.IGLPExpInterleaveCaches);
     YamlIO.mapOptional("dynamicVGPRBlockSize", MFI.DynamicVGPRBlockSize, false);
     YamlIO.mapOptional("scratchReservedForDynamicVGPRs",
                        MFI.ScratchReservedForDynamicVGPRs, 0);
@@ -562,8 +618,6 @@ public:
   };
 
   struct MFMAExpInterleaveCache {
-    SmallVector<const MachineInstr *, 4> MFMAChainSeedInstrs;
-    const MachineInstr *FirstPipeDSRInstr = nullptr;
     unsigned TransPipeCount = 0;
     unsigned MFMAPipeCount = 0;
     unsigned AddPipeCount = 0;
@@ -664,31 +718,37 @@ public:
 
   const MFMASmallGemmSingleWaveCache *
   getMFMASmallGemmSingleWaveCache(const MachineInstr *MI) const {
-    if (!MI)
-      return nullptr;
-    auto It = MFMASmallGemmSingleWaveCaches.find(MI);
+    DenseMap<const MachineInstr *, MFMASmallGemmSingleWaveCache>::const_iterator
+        It = MFMASmallGemmSingleWaveCaches.find(MI);
     return It == MFMASmallGemmSingleWaveCaches.end() ? nullptr : &It->second;
   }
 
   void
   setMFMASmallGemmSingleWaveCache(const MachineInstr *MI,
                                   const MFMASmallGemmSingleWaveCache &Cache) {
-    assert(MI && "MachineInstr pointer must not be null");
     MFMASmallGemmSingleWaveCaches[MI] = Cache;
   }
 
   const MFMAExpInterleaveCache *
   getMFMAExpInterleaveCache(const MachineInstr *MI) const {
-    if (!MI)
-      return nullptr;
-    auto It = MFMAExpInterleaveCaches.find(MI);
+    DenseMap<const MachineInstr *, MFMAExpInterleaveCache>::const_iterator It =
+        MFMAExpInterleaveCaches.find(MI);
     return It == MFMAExpInterleaveCaches.end() ? nullptr : &It->second;
   }
 
   void setMFMAExpInterleaveCache(const MachineInstr *MI,
                                  const MFMAExpInterleaveCache &Cache) {
-    assert(MI && "MachineInstr pointer must not be null");
     MFMAExpInterleaveCaches[MI] = Cache;
+  }
+
+  const DenseMap<const MachineInstr *, MFMASmallGemmSingleWaveCache> &
+  getMFMASmallGemmSingleWaveCaches() const {
+    return MFMASmallGemmSingleWaveCaches;
+  }
+
+  const DenseMap<const MachineInstr *, MFMAExpInterleaveCache> &
+  getMFMAExpInterleaveCaches() const {
+    return MFMAExpInterleaveCaches;
   }
 
   bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) const;
@@ -1286,5 +1346,8 @@ public:
 };
 
 } // end namespace llvm
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::IGLPSmallGemmSingleWaveCacheEntry)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::IGLPExpInterleaveCacheEntry)
 
 #endif // LLVM_LIB_TARGET_AMDGPU_SIMACHINEFUNCTIONINFO_H

@@ -783,6 +783,41 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
   auto SFI = MFI.getOptionalScavengeFI();
   if (SFI)
     ScavengeFI = yaml::FrameIndex(*SFI, MF.getFrameInfo());
+
+  const DenseMap<const MachineInstr *,
+                 llvm::SIMachineFunctionInfo::MFMASmallGemmSingleWaveCache>
+      &SmallGemmCaches = MFI.getMFMASmallGemmSingleWaveCaches();
+  for (DenseMap<const MachineInstr *,
+                llvm::SIMachineFunctionInfo::MFMASmallGemmSingleWaveCache>::
+           const_iterator It = SmallGemmCaches.begin(),
+                          E = SmallGemmCaches.end();
+       It != E; ++It) {
+    const MachineInstr *MI = It->first;
+    IGLPSmallGemmSingleWaveCaches.push_back(
+        {static_cast<unsigned>(MI->getParent()->getNumber()),
+         static_cast<unsigned>(MI->getOperand(0).getImm()), It->second.DSWCount,
+         It->second.DSWWithPermCount, It->second.DSWWithSharedVMEMCount});
+  }
+
+  const DenseMap<const MachineInstr *,
+                 llvm::SIMachineFunctionInfo::MFMAExpInterleaveCache>
+      &ExpInterleaveCaches = MFI.getMFMAExpInterleaveCaches();
+  for (DenseMap<
+           const MachineInstr *,
+           llvm::SIMachineFunctionInfo::MFMAExpInterleaveCache>::const_iterator
+           It = ExpInterleaveCaches.begin(),
+           E = ExpInterleaveCaches.end();
+       It != E; ++It) {
+    const MachineInstr *MI = It->first;
+    IGLPExpInterleaveCaches.push_back(
+        {static_cast<unsigned>(MI->getParent()->getNumber()),
+         static_cast<unsigned>(MI->getOperand(0).getImm()),
+         It->second.TransPipeCount, It->second.MFMAPipeCount,
+         It->second.AddPipeCount, It->second.MFMAEnablement,
+         It->second.ExpRequirement, It->second.MFMAChains,
+         It->second.MFMAChainLength, It->second.HasCvt,
+         It->second.HasChainBetweenCvt, It->second.AnalysisResult});
+  }
 }
 
 void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
@@ -833,6 +868,48 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   } else {
     ScavengeFI = std::nullopt;
   }
+
+  if (!YamlMFI.IGLPSmallGemmSingleWaveCaches.empty() ||
+      !YamlMFI.IGLPExpInterleaveCaches.empty()) {
+    for (const MachineBasicBlock &MBB : MF) {
+      for (const MachineInstr &MI : MBB) {
+        if (MI.getOpcode() != AMDGPU::IGLP_OPT)
+          continue;
+        unsigned MBBNum = MBB.getNumber();
+        unsigned StrategyId = static_cast<unsigned>(MI.getOperand(0).getImm());
+
+        for (const yaml::IGLPSmallGemmSingleWaveCacheEntry &E :
+             YamlMFI.IGLPSmallGemmSingleWaveCaches) {
+          if (E.MBBNum == MBBNum && E.StrategyId == StrategyId) {
+            MFMASmallGemmSingleWaveCache Cache = {
+                E.DSWCount, E.DSWWithPermCount, E.DSWWithSharedVMEMCount};
+            MFMASmallGemmSingleWaveCaches[&MI] = Cache;
+            break;
+          }
+        }
+
+        for (const yaml::IGLPExpInterleaveCacheEntry &E :
+             YamlMFI.IGLPExpInterleaveCaches) {
+          if (E.MBBNum == MBBNum && E.StrategyId == StrategyId) {
+            MFMAExpInterleaveCache Cache;
+            Cache.TransPipeCount = E.TransPipeCount;
+            Cache.MFMAPipeCount = E.MFMAPipeCount;
+            Cache.AddPipeCount = E.AddPipeCount;
+            Cache.MFMAEnablement = E.MFMAEnablement;
+            Cache.ExpRequirement = E.ExpRequirement;
+            Cache.MFMAChains = E.MFMAChains;
+            Cache.MFMAChainLength = E.MFMAChainLength;
+            Cache.HasCvt = E.HasCvt;
+            Cache.HasChainBetweenCvt = E.HasChainBetweenCvt;
+            Cache.AnalysisResult = E.AnalysisResult;
+            MFMAExpInterleaveCaches[&MI] = Cache;
+            break;
+          }
+        }
+      }
+    }
+  }
+
   return false;
 }
 

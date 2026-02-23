@@ -1,0 +1,85 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=none -o - %s | FileCheck -check-prefix=ROUNDTRIP %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -run-pass=postmisched -o - %s | FileCheck -check-prefix=POSTRA %s
+
+# Test that IGLP cache data serializes/deserializes through MIR and is
+# available for PostRA scheduling.
+
+# Verify round-trip of the serialized cache fields.
+# ROUNDTRIP: iglpSmallGemmSingleWaveCaches:
+# ROUNDTRIP-NEXT: - mbb:             1
+# ROUNDTRIP-NEXT:   strategyId:      1
+# ROUNDTRIP-NEXT:   dswCount:        6
+# ROUNDTRIP-NEXT:   dswWithPermCount: 2
+# ROUNDTRIP-NEXT:   dswWithSharedVMEMCount: 0
+# ROUNDTRIP: iglpExpInterleaveCaches:
+# ROUNDTRIP-NEXT: - mbb:             0
+# ROUNDTRIP-NEXT:   strategyId:      2
+# ROUNDTRIP-NEXT:   transPipeCount:  32
+# ROUNDTRIP-NEXT:   mfmaPipeCount:   40
+# ROUNDTRIP-NEXT:   addPipeCount:    33
+# ROUNDTRIP-NEXT:   mfmaEnablement:  2
+# ROUNDTRIP-NEXT:   expRequirement:  4
+# ROUNDTRIP-NEXT:   mfmaChains:      2
+# ROUNDTRIP-NEXT:   mfmaChainLength: 20
+# ROUNDTRIP-NEXT:   hasCvt:          true
+# ROUNDTRIP-NEXT:   hasChainBetweenCvt: false
+# ROUNDTRIP-NEXT:   analysisResult:  true
+
+# Verify PostRA scheduling doesn't crash and passes through the IGLP_OPTs.
+# POSTRA: IGLP_OPT 2
+# POSTRA: V_MFMA
+# POSTRA: IGLP_OPT 1
+--- |
+  define amdgpu_kernel void @iglp_cache_test() #0 { ret void }
+
+  attributes #0 = { "amdgpu-flat-work-group-size"="256,256" }
+...
+---
+name:            iglp_cache_test
+alignment:       1
+tracksRegLiveness: true
+noPhis:          true
+isSSA:           false
+noVRegs:         true
+machineFunctionInfo:
+  isEntryFunction: false
+  occupancy:     5
+  iglpExpInterleaveCaches:
+    - mbb:             0
+      strategyId:      2
+      transPipeCount:  32
+      mfmaPipeCount:   40
+      addPipeCount:    33
+      mfmaEnablement:  2
+      expRequirement:  4
+      mfmaChains:      2
+      mfmaChainLength: 20
+      hasCvt:          true
+      hasChainBetweenCvt: false
+      analysisResult:  true
+  iglpSmallGemmSingleWaveCaches:
+    - mbb:             1
+      strategyId:      1
+      dswCount:        6
+      dswWithPermCount: 2
+      dswWithSharedVMEMCount: 0
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr36_vgpr37, $vgpr40_vgpr41, $vgpr44_vgpr45, $vgpr38_vgpr39, $vgpr42_vgpr43
+
+    IGLP_OPT 2
+    $vgpr50 = V_EXP_F32_e32 $vgpr0, implicit $mode, implicit $exec
+    $vgpr51 = V_EXP_F32_e32 $vgpr1, implicit $mode, implicit $exec
+    $vgpr52 = V_ADD_F32_e32 $vgpr2, $vgpr3, implicit $mode, implicit $exec
+    early-clobber $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = contract V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr36_vgpr37, $vgpr40_vgpr41, 0, 0, 0, 0, implicit $mode, implicit $exec
+    early-clobber $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = contract V_MFMA_F32_32X32X8F16_vgprcd_e64 $vgpr44_vgpr45, $vgpr40_vgpr41, 0, 0, 0, 0, implicit $mode, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    liveins: $vgpr0, $vgpr1
+
+    IGLP_OPT 1
+    $vgpr0 = V_ADD_F32_e32 $vgpr0, $vgpr1, implicit $mode, implicit $exec
+    S_ENDPGM 0
+
+...

@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUIGroupLP.h"
+#include "GCNSchedStrategy.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
@@ -913,13 +914,13 @@ private:
   std::optional<unsigned> FirstPipeDSR = std::nullopt;
   // The MFMAPipe SUs with no MFMA predecessors
   SmallVector<SUnit *, 4> MFMAChainSeeds;
-  // Compute the heuristics for the pipeline, returning whether or not the DAG
-  // is well formatted for the mutation
   bool analyzeDAG(const SIInstrInfo *TII, AMDGPU::SchedulingPhase Phase);
   bool computeDAGAnalysis(const SIInstrInfo *TII,
                           SIMachineFunctionInfo::MFMAExpInterleaveCache &Cache);
-  void initializeFromCache(
+  void initializeScalarsFromCache(
       const SIMachineFunctionInfo::MFMAExpInterleaveCache &Cache);
+  void initializePointersFromCache(
+      const GCNScheduleDAGMILive::IGLPExpInterleavePointerCache &PtrCache);
   bool AnalysisResult;
 
   /// Whether or not the instruction is a transitive predecessor of an MFMA
@@ -1515,7 +1516,6 @@ bool MFMAExpInterleaveOpt::computeDAGAnalysis(
 
   ExpRequirement *= PackPredCount;
 
-  // Cache the results for later scheduling phases.
   Cache.TransPipeCount = TransPipeCount;
   Cache.MFMAPipeCount = MFMAPipeCount;
   Cache.AddPipeCount = AddPipeCount;
@@ -1525,17 +1525,20 @@ bool MFMAExpInterleaveOpt::computeDAGAnalysis(
   Cache.MFMAChainLength = MFMAChainLength;
   Cache.HasCvt = HasCvt;
   Cache.HasChainBetweenCvt = HasChainBetweenCvt;
-  Cache.FirstPipeDSRInstr = FirstPipeDSRInstr;
-  Cache.MFMAChainSeedInstrs.clear();
-  Cache.MFMAChainSeedInstrs.reserve(MFMAChainSeeds.size());
-  for (SUnit *Seed : MFMAChainSeeds)
-    Cache.MFMAChainSeedInstrs.push_back(Seed->getInstr());
   Cache.AnalysisResult = true;
+
+  GCNScheduleDAGMILive *GCNDAG = static_cast<GCNScheduleDAGMILive *>(DAG);
+  GCNScheduleDAGMILive::IGLPExpInterleavePointerCache PtrCache;
+  PtrCache.FirstPipeDSRInstr = FirstPipeDSRInstr;
+  PtrCache.MFMAChainSeedInstrs.reserve(MFMAChainSeeds.size());
+  for (SUnit *Seed : MFMAChainSeeds)
+    PtrCache.MFMAChainSeedInstrs.push_back(Seed->getInstr());
+  GCNDAG->setIGLPExpInterleavePointerCache(IGLPOptMI, PtrCache);
 
   return true;
 }
 
-void MFMAExpInterleaveOpt::initializeFromCache(
+void MFMAExpInterleaveOpt::initializeScalarsFromCache(
     const SIMachineFunctionInfo::MFMAExpInterleaveCache &Cache) {
   TransPipeCount = Cache.TransPipeCount;
   MFMAPipeCount = Cache.MFMAPipeCount;
@@ -1546,31 +1549,46 @@ void MFMAExpInterleaveOpt::initializeFromCache(
   MFMAChainLength = Cache.MFMAChainLength;
   HasCvt = Cache.HasCvt;
   HasChainBetweenCvt = Cache.HasChainBetweenCvt;
-  SUnit *SU =
-      DAG->getSUnit(const_cast<MachineInstr *>(Cache.FirstPipeDSRInstr));
-  assert(SU && "FirstPipeDSRInstr instruction not found in DAG");
-  FirstPipeDSR = SU->NodeNum;
+  AnalysisResult = Cache.AnalysisResult;
+}
+
+void MFMAExpInterleaveOpt::initializePointersFromCache(
+    const GCNScheduleDAGMILive::IGLPExpInterleavePointerCache &PtrCache) {
+  if (PtrCache.FirstPipeDSRInstr) {
+    SUnit *SU =
+        DAG->getSUnit(const_cast<MachineInstr *>(PtrCache.FirstPipeDSRInstr));
+    assert(SU && "FirstPipeDSRInstr instruction not found in DAG");
+    FirstPipeDSR = SU->NodeNum;
+  }
   MFMAChainSeeds.clear();
-  for (const MachineInstr *MI : Cache.MFMAChainSeedInstrs) {
+  for (const MachineInstr *MI : PtrCache.MFMAChainSeedInstrs) {
     SUnit *SeedSU = DAG->getSUnit(const_cast<MachineInstr *>(MI));
     assert(SeedSU && "MFMAChainSeed instruction not found in DAG");
     MFMAChainSeeds.push_back(SeedSU);
   }
-  AnalysisResult = Cache.AnalysisResult;
 }
 
 bool MFMAExpInterleaveOpt::analyzeDAG(const SIInstrInfo *TII,
                                       AMDGPU::SchedulingPhase Phase) {
   SIMachineFunctionInfo &MFI = *DAG->MF.getInfo<SIMachineFunctionInfo>();
+  bool IsPostRA = Phase == AMDGPU::SchedulingPhase::PostRA;
 
   if (const SIMachineFunctionInfo::MFMAExpInterleaveCache *Cache =
           MFI.getMFMAExpInterleaveCache(IGLPOptMI)) {
-    initializeFromCache(*Cache);
+    initializeScalarsFromCache(*Cache);
+
+    if (!IsPostRA) {
+      GCNScheduleDAGMILive *GCNDAG = static_cast<GCNScheduleDAGMILive *>(DAG);
+      const GCNScheduleDAGMILive::IGLPExpInterleavePointerCache *PtrCache =
+          GCNDAG->getIGLPExpInterleavePointerCache(IGLPOptMI);
+      assert(PtrCache &&
+             "Pre-RA phase expected pointer cache in GCNScheduleDAGMILive");
+      initializePointersFromCache(*PtrCache);
+    }
     return AnalysisResult;
   }
 
-  assert(Phase != AMDGPU::SchedulingPhase::PostRA &&
-         "PostRA phase not expected to require analyzing DAG");
+  assert(!IsPostRA && "PostRA phase not expected to require analyzing DAG");
   SIMachineFunctionInfo::MFMAExpInterleaveCache Cache;
   AnalysisResult = computeDAGAnalysis(TII, Cache);
   if (AnalysisResult)
