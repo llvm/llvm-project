@@ -382,8 +382,8 @@ static bool isLegalFPImm(const MachineInstr &MI, const MachineRegisterInfo &MRI,
 
 // Some of the instructions in applyMappingImpl attempt to anyext small values.
 // It may be that these values come from a G_CONSTANT that has been expanded to
-// 32 bits and then truncated. If this is the case, we shouldn't insert an any
-// ext and should instead make use of the G_CONSTANT directly, deleting the
+// 32 bits and then truncated. If this is the case, we shouldn't insert an anyext
+// and should instead make use of the G_CONSTANT directly, deleting the
 // trunc if possible.
 static bool foldTruncOfI32Constant(MachineInstr &MI, unsigned OpIdx,
                                    MachineRegisterInfo &MRI,
@@ -509,7 +509,9 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     if (foldTruncOfI32Constant(MI, 1, MRI, *this))
       return applyDefaultMapping(OpdMapper);
 
-    // Extend smaller gpr to 32-bits.
+    // Extend smaller gpr to 32-bits
+    assert(MRI.getType(MI.getOperand(1).getReg()).getSizeInBits() < 32 &&
+           "Expected sources smaller than 32-bits");
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
 
     Register ConstReg =
