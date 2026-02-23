@@ -70,6 +70,9 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Now also provides include files without extension, if they are in a directory
+  only called ``include``.
+
 Code actions
 ^^^^^^^^^^^^
 

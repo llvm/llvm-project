@@ -16,7 +16,6 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/StreamString.h"
 
-#include "../../../source/Plugins/Disassembler/LLVMC/DisassemblerLLVMC.cpp"
 #include "Plugins/Disassembler/LLVMC/DisassemblerLLVMC.h"
 
 using namespace lldb;
@@ -29,12 +28,11 @@ public:
   static void TearDownTestCase();
 
 protected:
-  // Helper wrapper to call the UpdateSubtargetFeatures function under test
+  // Helper wrapper to call the UpdateSubtargetFeatures function under test.
   void CheckFeatures(llvm::StringRef defaults, std::string user_input,
                      llvm::StringRef expected) {
     std::string features = user_input;
-    llvm::SubtargetFeatures defaults_target_feature(defaults);
-    UpdateSubtargetFeatures(defaults_target_feature, features);
+    DisassemblerLLVMC::UpdateSubtargetFeatures(defaults, features);
     EXPECT_EQ(features, expected.str());
   }
 };
@@ -159,14 +157,13 @@ TEST_F(TestMCDisasmInstanceRISCV, IgnoresInvalidFlagsWithoutStopping) {
 }
 
 TEST_F(TestMCDisasmInstanceRISCV, IgnoresShortFlags) {
-  // "+" is too short. "+a" is valid.
+  // "+" is too short.
+  // "+a" is valid.
   CheckFeatures("", "+, +a", "+a");
 }
 
 TEST_F(TestMCDisasmInstanceRISCV, KeepsValidOverridesAmidstGarbage) {
-  // Defaults: +m
-  // User: garbage (ignored), -m (valid disable), +c (valid enable)
-  // Result: -m,+c  (default +m is removed by user -m)
+  // garbage (ignored), -m (valid disable), +c (valid enable)
   CheckFeatures("+m", "garbage,-m,+c", "-m,+c");
 }
 
@@ -176,12 +173,10 @@ TEST_F(TestMCDisasmInstanceRISCV, MergesDefaults) {
 }
 
 TEST_F(TestMCDisasmInstanceRISCV, UpdateFeatureString_AddSingle) {
-  // Should keep valid flags
   CheckFeatures("", "+a,-b", "+a,-b");
 
-  // Should drop invalid flags (no sign, too short, non-alpha)
-  CheckFeatures("", "a,+,+123,-,good",
-                ""); // "good" has no sign, others invalid
+  // Should remove invalid flags.
+  CheckFeatures("", "a,+,+123,-,good", "");
 }
 
 TEST_F(TestMCDisasmInstanceRISCV, FiltersGarbageUserFlags) {

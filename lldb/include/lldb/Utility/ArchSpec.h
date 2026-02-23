@@ -531,7 +531,7 @@ public:
 
   void SetFlags(const std::string &elf_abi);
 
-  /// Returns the sub target feature used by the disassembler to decode
+  /// Returns the subtarget feature used by the disassembler to decode
   /// instructions based on target specific features.
   const llvm::SubtargetFeatures &GetSubtargetFeatures() const {
     return m_subtarget_features;
@@ -554,7 +554,7 @@ protected:
   // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
 
-  /// Feature string containing architecture specific ISA(Instruction set
+  /// Feature string containing architecture specific ISA (Instruction set
   /// architecture) extensions present in the binary (e.g. "xqci" in RISCV).
   /// This string is passed to the disassembler to enable accurate instruction
   /// decoding based on the binary's supported ISA features.
