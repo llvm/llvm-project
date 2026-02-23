@@ -424,10 +424,34 @@ bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
   return (UnifiedRF && Excess.VGPR) || Excess.ArchVGPR;
 }
 
-bool GCNRPTarget::satisfied() const {
-  if (RP.getSGPRNum() > MaxSGPRs || RP.getVGPRNum(false) > MaxVGPRs)
+unsigned GCNRPTarget::getNumRegsBenefit(const GCNRegPressure &SaveRP) const {
+  RegExcess Excess(MF, RP, *this);
+  unsigned NumRegsSaved = 0;
+  unsigned NumVGPRAboveAddrLimit = 0;
+
+  if (Excess.SGPR)
+    NumRegsSaved += std::min(Excess.SGPR, SaveRP.getSGPRNum());
+  if (Excess.ArchVGPR)
+    NumVGPRAboveAddrLimit += std::min(Excess.ArchVGPR, SaveRP.getArchVGPRNum());
+  if (Excess.AGPR)
+    NumVGPRAboveAddrLimit += std::min(Excess.AGPR, SaveRP.getAGPRNum());
+  NumRegsSaved += NumVGPRAboveAddrLimit;
+
+  if (UnifiedRF && Excess.VGPR) {
+    // Do not double-count VGPRs that are both above the addressable limit in
+    // their respective class and contribute to an overall excess in VGPR.
+    const unsigned VGPRSave = SaveRP.getVGPRNum(true);
+    if (NumVGPRAboveAddrLimit < VGPRSave)
+      NumRegsSaved += std::min(Excess.VGPR, VGPRSave - NumVGPRAboveAddrLimit);
+  }
+
+  return NumRegsSaved;
+}
+
+bool GCNRPTarget::satisfied(const GCNRegPressure &TestRP) const {
+  if (TestRP.getSGPRNum() > MaxSGPRs || TestRP.getVGPRNum(false) > MaxVGPRs)
     return false;
-  if (UnifiedRF && RP.getVGPRNum(true) > MaxUnifiedVGPRs)
+  if (UnifiedRF && TestRP.getVGPRNum(true) > MaxUnifiedVGPRs)
     return false;
   return true;
 }
