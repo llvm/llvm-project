@@ -23,10 +23,11 @@ OPTIONS
  Specify the desired type of accelerator table. Valid options are 'Apple',
  'Dwarf', 'Default' and 'None'.
 
-.. option:: --allowed-debug-map-objects <path>
+.. option:: --allow <path>
 
- Only process debug map objects listed in <path> (one object path per line;
- exact match; only filters N_OSO entries).
+ Only process debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
 
 .. option:: --arch <arch>
 
@@ -44,6 +45,12 @@ OPTIONS
  slightly differently. The most common build variants are 'debug' and
  'profile'. Setting the DYLD_IMAGE_SUFFIX environment variable will
  cause dyld to load the specified variant at runtime.
+
+.. option:: --disallow <path>
+
+ Exclude debug map objects listed in the YAML file at <path>. Only filters
+ N_OSO entries. If `--oso-prepend-path` is specified, the path prefix applies,
+ i.e. paths in the file should exact match that of N_OSO entries.
 
 .. option:: --dump-debug-map
 

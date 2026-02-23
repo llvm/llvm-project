@@ -44,6 +44,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/thread.h"
 #include "llvm/TargetParser/Triple.h"
@@ -57,6 +58,33 @@ using namespace llvm;
 using namespace llvm::dsymutil;
 using namespace object;
 using namespace llvm::dwarf_linker;
+
+/// YAML structure for --allow / --disallow object list files.
+struct ObjectFileEntry {
+  std::string Filename;
+};
+
+struct ObjectFileList {
+  std::vector<ObjectFileEntry> Objects;
+};
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(ObjectFileEntry)
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<ObjectFileEntry> {
+  static void mapping(IO &IO, ObjectFileEntry &Entry) {
+    IO.mapRequired("filename", Entry.Filename);
+  }
+};
+
+template <> struct MappingTraits<ObjectFileList> {
+  static void mapping(IO &IO, ObjectFileList &List) {
+    IO.mapOptional("objects", List.Objects);
+  }
+};
+} // namespace yaml
+} // namespace llvm
 
 namespace {
 enum ID {
@@ -116,7 +144,8 @@ struct DsymutilOptions {
   std::string OutputFile;
   std::string Toolchain;
   std::string ReproducerPath;
-  std::string AllowedDebugMapObjectsFile;
+  std::string AllowFile;
+  std::string DisallowFile;
   std::vector<std::string> Archs;
   std::vector<std::string> InputFiles;
   unsigned NumThreads;
@@ -204,9 +233,9 @@ static Error verifyOptions(const DsymutilOptions &Options) {
         errc::invalid_argument);
 
   if (Options.InputIsYAMLDebugMap &&
-      !Options.AllowedDebugMapObjectsFile.empty())
+      (!Options.AllowFile.empty() || !Options.DisallowFile.empty()))
     return make_error<StringError>(
-        "-y and --allowed-debug-map-objects cannot be specified together",
+        "-y and --allow/--disallow cannot be specified together",
         errc::invalid_argument);
 
   return Error::success();
@@ -411,8 +440,11 @@ static Expected<DsymutilOptions> getOptions(opt::InputArgList &Args) {
   for (auto *SearchPath : Args.filtered(OPT_dsym_search_path))
     Options.LinkOpts.DSYMSearchPaths.push_back(SearchPath->getValue());
 
-  if (opt::Arg *AllowedObjs = Args.getLastArg(OPT_allowed_debug_map_objects))
-    Options.AllowedDebugMapObjectsFile = AllowedObjs->getValue();
+  if (opt::Arg *AllowArg = Args.getLastArg(OPT_allow))
+    Options.AllowFile = AllowArg->getValue();
+
+  if (opt::Arg *DisallowArg = Args.getLastArg(OPT_disallow))
+    Options.DisallowFile = DisallowArg->getValue();
 
   if (Error E = verifyOptions(Options))
     return std::move(E);
@@ -700,32 +732,61 @@ int dsymutil_main(int argc, char **argv, const llvm::ToolContext &) {
       continue;
     }
 
-    // Read the allowed debug map objects file if specified.
-    std::optional<StringSet<>> AllowedDebugMapObjects;
-    if (!Options.AllowedDebugMapObjectsFile.empty()) {
-      auto BufOrErr = MemoryBuffer::getFile(Options.AllowedDebugMapObjectsFile);
-      if (!BufOrErr) {
-        WithColor::error() << "cannot open allowed debug map objects file '"
-                           << Options.AllowedDebugMapObjectsFile
-                           << "': " << BufOrErr.getError().message() << '\n';
+    // Parse allow/disallow object list YAML files if specified.
+    std::optional<StringSet<>> AllowedObjects;
+    std::optional<StringSet<>> DisallowedObjects;
+
+    auto ParseAllowDisallowFile =
+        [&](const std::string &FilePath) -> Expected<StringSet<>> {
+      auto BufOrErr = MemoryBuffer::getFile(FilePath);
+      if (!BufOrErr)
+        return make_error<StringError>(
+            Twine("cannot open allow/disallow file '") + FilePath +
+                "': " + BufOrErr.getError().message(),
+            BufOrErr.getError());
+
+      StringSet<> Result;
+      StringRef Content = (*BufOrErr)->getBuffer();
+      if (!Content.trim().empty()) {
+        yaml::Input YAMLIn(Content);
+        ObjectFileList ObjList;
+        YAMLIn >> ObjList;
+        if (YAMLIn.error())
+          return make_error<StringError>(
+              Twine("cannot parse allow/disallow file '") + FilePath + "'",
+              YAMLIn.error());
+        for (const auto &Entry : ObjList.Objects) {
+          SmallString<80> Path(Options.LinkOpts.PrependPath);
+          sys::path::append(Path, Entry.Filename);
+          Result.insert(Path);
+        }
+      }
+      return Result;
+    };
+
+    if (!Options.AllowFile.empty()) {
+      auto AllowedOrErr = ParseAllowDisallowFile(Options.AllowFile);
+      if (!AllowedOrErr) {
+        WithColor::error() << toString(AllowedOrErr.takeError()) << '\n';
         return EXIT_FAILURE;
       }
-      AllowedDebugMapObjects.emplace();
-      StringRef Content = (*BufOrErr)->getBuffer();
-      SmallVector<StringRef, 0> Lines;
-      Content.split(Lines, '\n');
-      for (StringRef Line : Lines) {
-        Line = Line.trim();
-        if (!Line.empty())
-          AllowedDebugMapObjects->insert(Line);
+      AllowedObjects = std::move(*AllowedOrErr);
+    }
+
+    if (!Options.DisallowFile.empty()) {
+      auto DisallowedOrErr = ParseAllowDisallowFile(Options.DisallowFile);
+      if (!DisallowedOrErr) {
+        WithColor::error() << toString(DisallowedOrErr.takeError()) << '\n';
+        return EXIT_FAILURE;
       }
+      DisallowedObjects = std::move(*DisallowedOrErr);
     }
 
     auto DebugMapPtrsOrErr = parseDebugMap(
         BinHolder, InputFile, Options.Archs, Options.LinkOpts.DSYMSearchPaths,
         Options.LinkOpts.PrependPath, Options.LinkOpts.BuildVariantSuffix,
-        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap,
-        AllowedDebugMapObjects);
+        Options.LinkOpts.Verbose, Options.InputIsYAMLDebugMap, AllowedObjects,
+        DisallowedObjects);
 
     if (auto EC = DebugMapPtrsOrErr.getError()) {
       WithColor::error() << "cannot parse the debug map for '" << InputFile

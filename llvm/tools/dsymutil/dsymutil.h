@@ -39,7 +39,8 @@ ErrorOr<std::vector<std::unique_ptr<DebugMap>>> parseDebugMap(
     BinaryHolder &BinHolder, StringRef InputFile, ArrayRef<std::string> Archs,
     ArrayRef<std::string> DSYMSearchPaths, StringRef PrependPath,
     StringRef VariantSuffix, bool Verbose, bool InputIsYAML,
-    const std::optional<StringSet<>> &AllowedDebugMapObjects = std::nullopt);
+    const std::optional<StringSet<>> &AllowedObjects = std::nullopt,
+    const std::optional<StringSet<>> &DisallowedObjects = std::nullopt);
 
 /// Dump the symbol table.
 bool dumpStab(BinaryHolder &BinHolder, StringRef InputFile,

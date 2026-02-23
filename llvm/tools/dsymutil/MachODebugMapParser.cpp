@@ -33,12 +33,13 @@ public:
       ArrayRef<std::string> Archs, ArrayRef<std::string> DSYMSearchPaths,
       StringRef PathPrefix = "", StringRef VariantSuffix = "",
       bool Verbose = false,
-      const std::optional<StringSet<>> &AllowedDebugMapObjects = std::nullopt)
+      const std::optional<StringSet<>> &AllowedObjects = std::nullopt,
+      const std::optional<StringSet<>> &DisallowedObjects = std::nullopt)
       : BinaryPath(std::string(BinaryPath)), Archs(Archs),
         DSYMSearchPaths(DSYMSearchPaths), PathPrefix(std::string(PathPrefix)),
         VariantSuffix(std::string(VariantSuffix)), BinHolder(BinHolder),
         CurrentDebugMapObject(nullptr), SkipDebugMapObject(false),
-        AllowedDebugMapObjects(AllowedDebugMapObjects) {}
+        AllowedObjects(AllowedObjects), DisallowedObjects(DisallowedObjects) {}
 
   /// Parses and returns the DebugMaps of the input binary. The binary contains
   /// multiple maps in case it is a universal binary.
@@ -85,7 +86,11 @@ private:
 
   /// Optional set of allowed debug map object paths. If set, only objects
   /// whose path is in this set will be included.
-  const std::optional<StringSet<>> &AllowedDebugMapObjects;
+  const std::optional<StringSet<>> &AllowedObjects;
+
+  /// Optional set of disallowed debug map object paths. If set, objects
+  /// whose path is in this set will be excluded.
+  const std::optional<StringSet<>> &DisallowedObjects;
 
   /// Holds function info while function scope processing.
   const char *CurrentFunctionName;
@@ -127,11 +132,14 @@ private:
 
   void addCommonSymbols();
 
-  /// Check if a debug map object should be included based on the allowed list.
+  /// Check if a debug map object should be included based on the
+  /// allow/disallow lists.
   bool shouldIncludeObject(StringRef Path) const {
-    if (!AllowedDebugMapObjects.has_value())
-      return true;
-    return AllowedDebugMapObjects->contains(Path);
+    if (AllowedObjects.has_value() && !AllowedObjects->contains(Path))
+      return false;
+    if (DisallowedObjects.has_value() && DisallowedObjects->contains(Path))
+      return false;
+    return true;
   }
 
   /// Dump the symbol table output header.
@@ -877,14 +885,15 @@ parseDebugMap(BinaryHolder &BinHolder, StringRef InputFile,
               ArrayRef<std::string> Archs,
               ArrayRef<std::string> DSYMSearchPaths, StringRef PrependPath,
               StringRef VariantSuffix, bool Verbose, bool InputIsYAML,
-              const std::optional<StringSet<>> &AllowedDebugMapObjects) {
+              const std::optional<StringSet<>> &AllowedObjects,
+              const std::optional<StringSet<>> &DisallowedObjects) {
   if (InputIsYAML)
     return DebugMap::parseYAMLDebugMap(BinHolder, InputFile, PrependPath,
                                        Verbose);
 
   MachODebugMapParser Parser(BinHolder, InputFile, Archs, DSYMSearchPaths,
                              PrependPath, VariantSuffix, Verbose,
-                             AllowedDebugMapObjects);
+                             AllowedObjects, DisallowedObjects);
 
   return Parser.parse();
 }
