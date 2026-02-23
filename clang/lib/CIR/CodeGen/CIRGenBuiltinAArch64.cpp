@@ -249,8 +249,8 @@ static unsigned getSVEMinEltCount(clang::SVETypeFlags::EltType sveType) {
 static bool hasExtraNeonArgument(unsigned builtinID) {
   // Required by the headers included below, but not in this particular
   // function.
-  int PtrArgNum = -1;
-  bool HasConstPtr = false;
+  [[maybe_unused]] int PtrArgNum = -1;
+  [[maybe_unused]] bool HasConstPtr = false;
 
   // The mask encodes the type. We don't care about the actual value. Instead,
   // we just check whether its been set.
