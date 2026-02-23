@@ -25354,37 +25354,38 @@ class HorizontalReduction {
   }
 
   /// Checks if instruction is associative and can be vectorized.
-  enum class ReductionKind { Unordered, Ordered, None };
-  ReductionKind RK = ReductionKind::None;
-  static ReductionKind isVectorizable(RecurKind Kind, Instruction *I,
-                                      bool TwoElementReduction = false) {
+  enum class ReductionOrdering { Unordered, Ordered, None };
+  ReductionOrdering RK = ReductionOrdering::None;
+  static ReductionOrdering isVectorizable(RecurKind Kind, Instruction *I,
+                                          bool TwoElementReduction = false) {
     if (Kind == RecurKind::None)
-      return ReductionKind::None;
+      return ReductionOrdering::None;
 
     // Integer ops that map to select instructions or intrinsics are fine.
     if (RecurrenceDescriptor::isIntMinMaxRecurrenceKind(Kind) ||
         isBoolLogicOp(I))
-      return ReductionKind::Unordered;
+      return ReductionOrdering::Unordered;
 
     // No need to check for associativity, if 2 reduced values.
     if (TwoElementReduction)
-      return ReductionKind::Unordered;
+      return ReductionOrdering::Unordered;
 
     if (Kind == RecurKind::FMax || Kind == RecurKind::FMin) {
       // FP min/max are associative except for NaN and -0.0. We do not
       // have to rule out -0.0 here because the intrinsic semantics do not
       // specify a fixed result for it.
-      return I->getFastMathFlags().noNaNs() ? ReductionKind::Unordered
-                                            : ReductionKind::Ordered;
+      return I->getFastMathFlags().noNaNs() ? ReductionOrdering::Unordered
+                                            : ReductionOrdering::Ordered;
     }
 
     if (Kind == RecurKind::FMaximum || Kind == RecurKind::FMinimum)
-      return ReductionKind::Unordered;
+      return ReductionOrdering::Unordered;
 
     if (I->isAssociative())
-      return ReductionKind::Unordered;
+      return ReductionOrdering::Unordered;
 
-    return ::isCommutative(I) ? ReductionKind::Ordered : ReductionKind::None;
+    return ::isCommutative(I) ? ReductionOrdering::Ordered
+                              : ReductionOrdering::None;
   }
 
   static Value *getRdxOperand(Instruction *I, unsigned Index) {
@@ -25690,7 +25691,7 @@ public:
                         all_of(ReducedVals, [](ArrayRef<Value *> Ops) {
                           return Ops.size() == 2;
                         }));
-    return RK != ReductionKind::None;
+    return RK != ReductionOrdering::None;
   }
 
   /// Try to find a reduction tree.
@@ -25699,7 +25700,7 @@ public:
                                  const TargetLibraryInfo &TLI) {
     RdxKind = HorizontalReduction::getRdxKind(Root);
     RK = isVectorizable(RdxKind, Root);
-    if (RK == ReductionKind::None)
+    if (RK == ReductionOrdering::None)
       return false;
 
     // Analyze "regular" integer/FP types for reductions - no target-specific
@@ -25712,7 +25713,7 @@ public:
     // have only single use.
     if (auto *Sel = dyn_cast<SelectInst>(Root))
       if (!Sel->getCondition()->hasOneUse())
-        RK = ReductionKind::Ordered;
+        RK = ReductionOrdering::Ordered;
 
     ReductionRoot = Root;
 
@@ -25742,25 +25743,25 @@ public:
         bool IsReducedVal = !EdgeInst || Level > RecursionMaxDepth ||
                             getRdxKind(EdgeInst) != RdxKind ||
                             IsCmpSelMinMax != isCmpSelMinMax(EdgeInst);
-        ReductionKind CurrentRK = IsReducedVal
-                                      ? ReductionKind::None
-                                      : isVectorizable(RdxKind, EdgeInst);
-        if (!IsReducedVal && CurrentRK == ReductionKind::Unordered &&
-            RK == ReductionKind::Unordered &&
+        ReductionOrdering CurrentRK = IsReducedVal
+                                          ? ReductionOrdering::None
+                                          : isVectorizable(RdxKind, EdgeInst);
+        if (!IsReducedVal && CurrentRK == ReductionOrdering::Unordered &&
+            RK == ReductionOrdering::Unordered &&
             !hasRequiredNumberOfUses(IsCmpSelMinMax, EdgeInst)) {
           IsReducedVal = true;
-          CurrentRK = ReductionKind::None;
+          CurrentRK = ReductionOrdering::None;
           if (PossibleReducedVals.size() < ReductionLimit)
             PossibleOrderedReductionOps.emplace_back(EdgeInst, Level);
         }
-        if (CurrentRK == ReductionKind::None ||
+        if (CurrentRK == ReductionOrdering::None ||
             (R.isAnalyzedReductionRoot(EdgeInst) &&
              all_of(EdgeInst->operands(), IsaPred<Constant>))) {
           PossibleReducedVals.push_back(EdgeVal);
           continue;
         }
-        if (CurrentRK == ReductionKind::Ordered)
-          RK = ReductionKind::Ordered;
+        if (CurrentRK == ReductionOrdering::Ordered)
+          RK = ReductionOrdering::Ordered;
         ReductionOps.push_back(EdgeInst);
       }
     };
@@ -25825,8 +25826,8 @@ public:
       // to the worklist.
       if (Worklist.empty() && ReducedValsCandidates.size() < ReductionLimit &&
           !PossibleOrderedReductionOps.empty() &&
-          RK == ReductionKind::Unordered) {
-        RK = ReductionKind::Ordered;
+          RK == ReductionOrdering::Unordered) {
+        RK = ReductionOrdering::Ordered;
         SmallPtrSet<const Instruction *, 4> Ops;
         for (const auto &P : PossibleOrderedReductionOps)
           Ops.insert(P.first);
@@ -25989,7 +25990,7 @@ public:
         RdxFMF &= FPMO->getFastMathFlags();
     // For ordered reductions here we need to generate extractelement
     // instructions, so clear IgnoreList.
-    if (RK == ReductionKind::Ordered)
+    if (RK == ReductionOrdering::Ordered)
       IgnoreList.clear();
     bool IsCmpSelMinMax = isCmpSelMinMax(cast<Instruction>(ReductionRoot));
 
@@ -26102,7 +26103,7 @@ public:
 
       // Emit code for constant values.
       if (Candidates.size() > 1 && allConstant(Candidates)) {
-        if (RK == ReductionKind::Ordered)
+        if (RK == ReductionOrdering::Ordered)
           continue;
         Value *Res = Candidates.front();
         Value *OrigV = TrackedToOrig.at(Candidates.front());
@@ -26126,7 +26127,7 @@ public:
       // Check if we support repeated scalar values processing (optimization of
       // original scalar identity operations on matched horizontal reductions).
       IsSupportedHorRdxIdentityOp =
-          RK == ReductionKind::Unordered && RdxKind != RecurKind::Mul &&
+          RK == ReductionOrdering::Unordered && RdxKind != RecurKind::Mul &&
           RdxKind != RecurKind::FMul && RdxKind != RecurKind::FMulAdd;
       // Gather same values.
       SmallMapVector<Value *, unsigned, 16> SameValuesCounter;
@@ -26212,8 +26213,9 @@ public:
       unsigned PrevReduxWidth = ReduxWidth;
       bool CheckForReusedReductionOpsLocal = false;
       auto AdjustReducedVals = [&](bool IgnoreVL = false) {
-        bool IsAnyRedOpGathered = !IgnoreVL && (RK == ReductionKind::Ordered ||
-                                                V.isAnyGathered(IgnoreList));
+        bool IsAnyRedOpGathered =
+            !IgnoreVL &&
+            (RK == ReductionOrdering::Ordered || V.isAnyGathered(IgnoreList));
         if (!CheckForReusedReductionOpsLocal && PrevReduxWidth == ReduxWidth) {
           // Check if any of the reduction ops are gathered. If so, worth
           // trying again with less number of reduction ops.
@@ -26260,12 +26262,12 @@ public:
               return RedValI && V.isDeleted(RedValI);
             }))
           break;
-        if (RK == ReductionKind::Ordered)
+        if (RK == ReductionOrdering::Ordered)
           V.buildTree(VL);
         else
           V.buildTree(VL, IgnoreList);
         if (V.isTreeTinyAndNotFullyVectorizable(RK ==
-                                                ReductionKind::Unordered)) {
+                                                ReductionOrdering::Unordered)) {
           if (!AdjustReducedVals())
             V.analyzedReductionVals(VL);
           continue;
@@ -26275,7 +26277,7 @@ public:
         V.reorderBottomToTop(/*IgnoreReorder=*/RdxFMF.allowReassoc() ||
                              VL.front()->getType()->isIntOrIntVectorTy() ||
                              ReductionLimit > 2 ||
-                             RK == ReductionKind::Ordered);
+                             RK == ReductionOrdering::Ordered);
         // Keep extracted other reduction values, if they are used in the
         // vectorization trees.
         BoUpSLP::ExtraValueToDebugLocsMap LocalExternallyUsedValues(
@@ -26340,7 +26342,7 @@ public:
 
         // Estimate cost.
         InstructionCost ReductionCost;
-        if (RK == ReductionKind::Ordered || V.isReducedBitcastRoot() ||
+        if (RK == ReductionOrdering::Ordered || V.isReducedBitcastRoot() ||
             V.isReducedCmpBitcastRoot())
           ReductionCost = 0;
         else
@@ -26403,7 +26405,7 @@ public:
         // Vectorize a tree.
         Value *VectorizedRoot = V.vectorizeTree(
             LocalExternallyUsedValues, InsertPt, VectorValuesAndScales);
-        if (RK == ReductionKind::Ordered) {
+        if (RK == ReductionOrdering::Ordered) {
           // No need to generate reduction here, emit extractelements instead in
           // the tree vectorizer.
           assert(VectorizedRoot && "Expected vectorized tree");
@@ -26486,7 +26488,7 @@ public:
     }
     // Early exit for the ordered reductions.
     // No need to do anything else here, so we can just exit.
-    if (RK == ReductionKind::Ordered)
+    if (RK == ReductionOrdering::Ordered)
       return VectorizedTree;
 
     if (!VectorValuesAndScales.empty())
