@@ -313,3 +313,35 @@ define i32 @non_vmask_popcount_2(<8 x i16> %a) {
   %t3 = zext i16 %t2 to i32
   ret i32 %t3
 }
+
+define i32 @addv_icmp(<16 x i8> %0, i8 %1)  {
+; CHECK-LABEL: addv_icmp:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dup v1.16b, w0
+; CHECK-NEXT:    adrp x9, .LCPI18_0
+; CHECK-NEXT:    mov w8, wzr
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI18_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    zip1 v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    fmov s0, w9
+; CHECK-NEXT:    cnt v0.8b, v0.8b
+; CHECK-NEXT:    addv b0, v0.8b
+; CHECK-NEXT:    fmov w9, s0
+; CHECK-NEXT:    neg w9, w9
+; CHECK-NEXT:    sub w0, w8, w9, uxtb
+; CHECK-NEXT:    ret
+  %3 = insertelement <16 x i8> poison, i8 %1, i64 0
+  %4 = shufflevector <16 x i8> %3, <16 x i8> poison, <16 x i32> zeroinitializer
+  %5 = icmp eq <16 x i8> %0, %4
+  %6 = bitcast <16 x i1> %5 to i16
+  %7 = tail call range(i16 0, 17) i16 @llvm.ctpop.i16(i16 %6)
+  %8 = sub nsw i16 0, %7
+  %9 = and i16 %8, 255
+  %10 = zext nneg i16 %9 to i32
+  %11 = sub nsw i32 0, %10
+  ret i32 %11
+}
