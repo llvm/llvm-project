@@ -14,6 +14,7 @@ void test1(size_t n, float * C, float * A, float * B) {
   // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
@@ -81,11 +82,8 @@ void test1(size_t n, float * C, float * A, float * B) {
   // We are in the masked region (case where the number of iteration is not a multiple of the parallel region),
   //   hence we compute the UB as-if we executed the loop sequentially (to get the real UB and not the next multiple of the parallel step),
   //   i.e., IV = LB + Step * NumIter
-  // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
-  // CHECK-NEXT: [[NumLoopIters:%.*]] = load i{{[0-9]+}}, ptr %ripple.loop.iters
-  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} [[NumLoopIters]], 1
-  // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
-  // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
+  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
@@ -114,6 +112,7 @@ void test2(size_t n, float * C, float * A, float * B) {
   // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
@@ -157,11 +156,8 @@ void test2(size_t n, float * C, float * A, float * B) {
   // Scalar precondition of the masked section
   // CHECK: for.end:
   // Update IV to the UB
-  // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
-  // CHECK: [[NumLoopIters:%.*]] = load i{{[0-9]+}}, ptr %ripple.loop.iters
-  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} [[NumLoopIters]], 2
-  // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
-  // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
+  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
@@ -190,17 +186,15 @@ void test3(size_t n, float * C, float * A, float * B) {
   // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK-NOT: i = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin
 
   // CHECK: for.end:
   // Update IV to the UB
-  // CHECK: [[ORIGIN_LB:%.*]] = load i{{[0-9]+}}, ptr %ripple.par.origin.LB
-  // CHECK: [[NumLoopIters:%.*]] = load i{{[0-9]+}}, ptr %ripple.loop.iters
-  // CHECK-NEXT: %[[TotalStride:[A-Za-z0-9_]+]] = mul i{{[0-9]+}} [[NumLoopIters]], 1
-  // CHECK-NEXT: %[[UpperBound:[A-Za-z0-9_]+]] = add i{{[0-9]+}} [[ORIGIN_LB]], %[[TotalStride]]
-  // CHECK-NEXT: store i{{[0-9]+}} %[[UpperBound]], ptr %i
+  // CHECK:      [[SeqExitValue:%.*]] = load i{{[0-9]+}}, ptr %ripple.iv.seq.exit.val
+  // CHECK-NEXT: store i{{[0-9]+}} [[SeqExitValue]], ptr %i
   // CHECK-NEXT: br label %ripple.par.for.end
 
   // CHECK: ripple.par.for.end:
@@ -232,6 +226,7 @@ void test4(size_t n, float * C, float * A, float * B) {
   // CHECK-NEXT: ripple.par.loop.iters = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.init = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.step = alloca i{{[0-9]+}}
+  // CHECK-NEXT: ripple.iv.seq.exit.val = alloca i{{[0-9]+}}
   // CHECK-NEXT: ripple.par.iv = alloca i{{[0-9]+}}
   // CHECK-NOT: i = alloca i{{[0-9]+}}
   // CHECK: br label %ripple.par.for.begin

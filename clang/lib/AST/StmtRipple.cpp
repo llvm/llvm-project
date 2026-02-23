@@ -24,13 +24,13 @@ RippleComputeConstruct *RippleComputeConstruct::Create(
     const ASTContext &C, SourceRange PragmaLoc, SourceRange BlockShapeLoc,
     SourceRange DimsLoc, ValueDecl *BlockShape, ArrayRef<uint64_t> Dims,
     Stmt *AssociatedStatement, bool NoRemainder, bool MaskPostlude,
-    bool IsThread, ValueDecl *ThreadChunk,
+    ThreadScheduleKind ThreadKind, ValueDecl *ThreadChunk,
     std::optional<uint64_t> ThreadChunkVal) {
   void *Mem = C.Allocate(
       RippleComputeConstruct::totalSizeToAlloc<uint64_t>(Dims.size()));
   auto *Inst = new (Mem) RippleComputeConstruct(
       PragmaLoc, BlockShapeLoc, DimsLoc, BlockShape, Dims, AssociatedStatement,
-      NoRemainder, MaskPostlude, IsThread, ThreadChunk, ThreadChunkVal);
+      NoRemainder, MaskPostlude, ThreadKind, ThreadChunk, ThreadChunkVal);
   return Inst;
 }
 
@@ -90,13 +90,21 @@ void RippleComputeConstruct::print(raw_ostream &OS) const {
 ForStmt *RippleComputeConstruct::getInnerThreadLoop() const {
   if (!threadCodegen() || !getRippleLoopStmt())
     return nullptr;
-  return cast<ForStmt>(*std::next(
-      cast<CompoundStmt>(getRippleLoopStmt()->getBody())->body_begin()));
+  auto OuterLoopBody = cast<CompoundStmt>(getRippleLoopStmt()->getBody());
+  auto Res = llvm::find_if(OuterLoopBody->body(),
+                           [](auto *Stmt) { return isa<ForStmt>(Stmt); });
+  if (Res != OuterLoopBody->body_end())
+    return cast<ForStmt>(*Res);
+  return nullptr;
 }
 
 void RippleComputeConstruct::setInnerThreadLoop(Stmt *NewInnerStmt) {
   if (!threadCodegen() || !getRippleLoopStmt())
     return;
-  *std::next(cast<CompoundStmt>(getRippleLoopStmt()->getBody())->body_begin()) =
-      NewInnerStmt;
+  auto OuterLoopBody = cast<CompoundStmt>(getRippleLoopStmt()->getBody());
+  auto Res = llvm::find_if(OuterLoopBody->body(),
+                           [](auto *Stmt) { return isa<ForStmt>(Stmt); });
+  if (Res == OuterLoopBody->body_end())
+    llvm_unreachable("ripple thread loop expects a nested 'chunk' loop");
+  *Res = NewInnerStmt;
 }

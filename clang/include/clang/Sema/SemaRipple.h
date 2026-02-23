@@ -44,8 +44,22 @@ public:
   StmtResult CreateRippleParallelComputeStmt(
       SourceRange PragmaLoc, SourceRange PELoc, SourceRange DimsLoc,
       ValueDecl *BlockShape, ArrayRef<uint64_t> Dims, Stmt *AssociatedStatement,
-      bool NoRemainder, bool MaskPostlude, bool IsThread,
+      bool NoRemainder, bool MaskPostlude,
+      RippleComputeConstruct::ThreadScheduleKind ThreadSchedule,
       ValueDecl *ThreadChunk, std::optional<uint64_t> ThreadChunkVal);
+
+  /// Convenience constructor that takes its options from @p Base
+  StmtResult CreateRippleParallelComputeStmt(const RippleComputeConstruct &Base,
+                                             ValueDecl *BlockShape,
+                                             Stmt *AssociatedStatement,
+                                             ValueDecl *ThreadChunk) {
+    return CreateRippleParallelComputeStmt(
+        Base.getPragmaRange(), Base.getProcessingElementRange(),
+        Base.getDimsRange(), BlockShape, Base.getDimensionIds(),
+        AssociatedStatement, !Base.generateRemainder(),
+        Base.generateMaskedPostlude(), Base.getThreadScheduleKind(),
+        ThreadChunk, Base.getChunkVal());
+  }
 
   // Checks that dimension indices are uniq
   void ActOnDuplicateDimensionIndex(const RippleComputeConstruct &S);
@@ -63,7 +77,8 @@ public:
     bool IgnoreNullStatements = false;
     bool NoRemainder = false;
     bool MaskPostlude = true;
-    bool IsThread = false;
+    RippleComputeConstruct::ThreadScheduleKind ThreadSched =
+        RippleComputeConstruct::ThreadScheduleKind::NotThread;
     UnqualifiedId ThreadChunkID;
     std::optional<uint64_t> ThreadChunkVal = std::nullopt;
   };

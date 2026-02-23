@@ -14174,6 +14174,8 @@ def err_ripple_invalid_nesting_vector_thread
     : Error<"invalid use of a ripple parallel vector on top of a ripple parallel thread">;
 def err_ripple_non_matching_nested_options
     : Error<"non matching options of consecutive ripple parallel vector">;
+def err_ripple_thd_function_not_found
+    : Error<"'%0' function declaration not found; include <ripple/thread.h>">;
 
 // AMDGCN builtins diagnostics
 def err_amdgcn_load_lds_size_invalid_value : Error<"invalid size value">;

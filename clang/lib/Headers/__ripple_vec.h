@@ -31,7 +31,9 @@ typedef struct ripple_block_shape *ripple_block_t;
  * A descriptive loop annotation to split a loop across the "dim"-th dimension
  * work-items.
  */
+#ifndef RIPPLE_PARALLEL_STRINGIFY
 #define RIPPLE_PARALLEL_STRINGIFY(x) #x
+#endif
 #define ripple_parallel(BlockShape, ...)                                       \
   _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape)          \
                                         Dims(__VA_ARGS__) IgnoreNullStmts))
@@ -55,23 +57,6 @@ typedef struct ripple_block_shape *ripple_block_t;
 #define ripple_parallel_peel(BlockShape, ...)                                  \
   _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
       __VA_ARGS__) IgnoreNullStmts BlockIndependent))
-
-/**
- * A descriptive loop annotation to split a loop across the specified
- * thread dimension(s) work-items.
- */
-#define ripple_parallel_thread(BlockShape, ...)                                \
-  _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
-      __VA_ARGS__) IgnoreNullStmts Thread))
-
-/**
- * A descriptive loop annotation to split a loop across the specified
- * thread dimension(s) work-items. The minimum amount of work to distribute to
- * each thread is specified using Chunk (integer literal or variable).
- */
-#define ripple_parallel_thread_chunk(BlockShape, Chunk, ...)                   \
-  _Pragma(RIPPLE_PARALLEL_STRINGIFY(ripple parallel Block(BlockShape) Dims(    \
-      __VA_ARGS__) IgnoreNullStmts ThreadChunk(Chunk)))
 
 /**
  * Request the index of the block being processed by an enclosing ripple

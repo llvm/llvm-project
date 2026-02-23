@@ -53,7 +53,16 @@ class RippleComputeConstruct final
   size_t NumDimensionIds;
   bool NoRemainder = false;
   bool MaskPostlude = false;
-  bool GenForThread = false;
+
+public:
+  enum ThreadScheduleKind {
+    NotThread,
+    Static,
+    Dynamic,
+  };
+
+private:
+  ThreadScheduleKind ThreadSchedule = NotThread;
 
   /// Children of this AST node.
   enum {
@@ -67,6 +76,7 @@ class RippleComputeConstruct final
     DISTANCE_RIPPLE_FULL_BLOCK,
     LB_INIT_RIPPLE,
     STEP_RIPPLE,
+    LOOP_IV_SEQ_EXIT_VAL,
     LOOP_INIT_RIPPLE,
     LOOP_IV_UPDATE,
     RIPPLE_LOOP_STMT,
@@ -88,14 +98,15 @@ class RippleComputeConstruct final
   RippleComputeConstruct(SourceRange PragmaRange, SourceRange PERange,
                          SourceRange DimsRange, ValueDecl *BlockShape,
                          ArrayRef<uint64_t> Dims, Stmt *AssociatedStatement,
-                         bool NoRemainder, bool MaskPostlude, bool IsThread,
+                         bool NoRemainder, bool MaskPostlude,
+                         ThreadScheduleKind ThreadKind,
                          ValueDecl *ThreadChunk = nullptr,
                          std::optional<uint64_t> ThreadChunkVal = std::nullopt)
       : Stmt(RippleComputeConstructClass), Range(PragmaRange), PERange(PERange),
         DimsRange(DimsRange), BlockShape(BlockShape),
         ThreadChunkDecl(ThreadChunk), ThreadChunkVal(ThreadChunkVal),
         NumDimensionIds(Dims.size()), NoRemainder(NoRemainder),
-        MaskPostlude(MaskPostlude), GenForThread(IsThread) {
+        MaskPostlude(MaskPostlude), ThreadSchedule(ThreadKind) {
     if (auto *Loop = dyn_cast<ForStmt>(AssociatedStatement))
       setAssociatedForStmt(Loop);
     else if (auto *AS = dyn_cast<RippleComputeConstruct>(AssociatedStatement))
@@ -119,7 +130,7 @@ public:
   Create(const ASTContext &C, SourceRange PragmaLoc, SourceRange PELoc,
          SourceRange DimsLoc, ValueDecl *BlockShape, ArrayRef<uint64_t> Dims,
          Stmt *AssociatedStatement, bool NoRemainder, bool MaskPostlude,
-         bool IsThread, ValueDecl *ThreadChunk = nullptr,
+         ThreadScheduleKind ThreadKind, ValueDecl *ThreadChunk = nullptr,
          std::optional<uint64_t> ThreadChunkVal = std::nullopt);
   static RippleComputeConstruct *CreateEmpty(const ASTContext &C,
                                              uint64_t NumDims);
@@ -237,6 +248,16 @@ public:
     SubStmts[LOOP_INIT_RIPPLE] = cast_if_present<Stmt>(E);
   }
 
+  /// DeclRefExpr pointing to a variable holding the value the loop induction
+  /// variable has when the loop exits normally (no early break), i.e. the
+  /// lexicographically last (sequential) value of the IV.
+  Expr *getLoopIVSeqExitVal() const {
+    return cast_if_present<Expr>(SubStmts[LOOP_IV_SEQ_EXIT_VAL]);
+  }
+  void setLoopIVSeqExitVal(Expr *E) {
+    SubStmts[LOOP_IV_SEQ_EXIT_VAL] = cast_if_present<Stmt>(E);
+  }
+
   /// The associated for statement's induction variable update
   /// LoopIV = RippleIndex + LoopInit +- (LoopStep * RippleSize) * RippleIV
   Expr *getLoopIVUpdate() const {
@@ -296,7 +317,10 @@ public:
 
   bool vectorCodegen() const { return !threadCodegen(); }
   /// Thread specific queries
-  bool threadCodegen() const { return GenForThread; }
+  bool threadCodegen() const { return ThreadSchedule != NotThread; }
+  bool staticThreadDispatch() const { return ThreadSchedule == Static; }
+  bool dynamicThreadDispatch() const { return ThreadSchedule == Dynamic; }
+  ThreadScheduleKind getThreadScheduleKind() const { return ThreadSchedule; }
   ValueDecl *getChunkDecl() const { return ThreadChunkDecl; }
   std::optional<uint64_t> getChunkVal() const { return ThreadChunkVal; }
   ForStmt *getInnerThreadLoop() const;

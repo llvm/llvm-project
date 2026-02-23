@@ -4,32 +4,34 @@
 // RUN: %clang -ffreestanding -S -Xclang -disable-llvm-passes -emit-llvm -fenable-ripple %s -o %t.out 2> %t.err; FileCheck %s --input-file=%t.err
 
 #include <ripple.h>
+#include <ripple/thread.h>
 
 void check(int Chunk, int64_t N, int32_t start, int64_t end, float x[restrict N],
            float y[restrict N], float xpy[restrict N]) {
-  ripple_block_t BST = ripple_set_block_shape(0, 32);
+  ripple_thd_block_t ThreadBlockT = ripple_thd_init(0, NULL);
   ripple_block_t BSV = ripple_set_block_shape(33, 4, 4);
   #ifdef USING_PRAGMA
-  #pragma ripple parallel Block(BST) Dims(0)
-  #pragma ripple parallel Block(BSV) Dims(1) ThreadChunk(Chunk)
+  #pragma ripple parallel Block(BSV) Dims(1)
+  #pragma ripple parallel Block(ThreadBlockT) Dims(0) ThreadChunk(Chunk)
   #else
-  ripple_parallel(BST, 0);
-  ripple_parallel_thread_chunk(BSV, Chunk, 1);
+  ripple_parallel(BSV, 1);
+  ripple_parallel_thd_chunk(ThreadBlockT, Chunk, 0);
   #endif
   for (int i = start; i < end; ++i)
     xpy[i] = x[i] + y[i];
+  ripple_thd_exit(ThreadBlockT);
 }
 
-// CHECK-PRAGMA:      vector-thread-nesting-invalid.c:13:3: error: invalid use of a ripple parallel vector on top of a ripple parallel thread
-// CHECK-PRAGMA-NEXT:    13 |   #pragma ripple parallel Block(BST) Dims(0)
+// CHECK-PRAGMA:      vector-thread-nesting-invalid.c:14:3: error: invalid use of a ripple parallel vector on top of a ripple parallel thread
+// CHECK-PRAGMA-NEXT:    14 |   #pragma ripple parallel Block(BSV) Dims(1)
 // CHECK-PRAGMA-NEXT:       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// CHECK-PRAGMA-NEXT: vector-thread-nesting-invalid.c:14:3: note: previous use is here
-// CHECK-PRAGMA-NEXT:    14 |   #pragma ripple parallel Block(BSV) Dims(1) ThreadChunk(Chunk)
-// CHECK-PRAGMA-NEXT:       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK-PRAGMA-NEXT: vector-thread-nesting-invalid.c:15:3: note: previous use is here
+// CHECK-PRAGMA-NEXT:    15 |   #pragma ripple parallel Block(ThreadBlockT) Dims(0) ThreadChunk(Chunk)
+// CHECK-PRAGMA-NEXT:       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-// CHECK:      vector-thread-nesting-invalid.c:16:3: error: invalid use of a ripple parallel vector on top of a ripple parallel thread
-// CHECK-NEXT:    16 |   ripple_parallel(BST, 0);
+// CHECK:      vector-thread-nesting-invalid.c:17:3: error: invalid use of a ripple parallel vector on top of a ripple parallel thread
+// CHECK-NEXT:    17 |   ripple_parallel(BSV, 1);
 // CHECK-NEXT:       |   ^~~~~~~~~~~~~~~~~~~~~~~
-// CHECK:      vector-thread-nesting-invalid.c:17:3: note: previous use is here
-// CHECK-NEXT:    17 |   ripple_parallel_thread_chunk(BSV, Chunk, 1);
-// CHECK-NEXT:       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+// CHECK:      vector-thread-nesting-invalid.c:18:3: note: previous use is here
+// CHECK-NEXT:    18 |   ripple_parallel_thd_chunk(ThreadBlockT, Chunk, 0);
+// CHECK-NEXT:       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -87,7 +87,6 @@ set(hip_files
   __clang_hip_runtime_wrapper.h
   )
 
-
 set(ripple_files
   ripple.h
   ripple_hvx.h
@@ -97,6 +96,7 @@ set(ripple_files
 
 set(ripple_extra_headers
   ripple/zip.h
+  ripple/thread.h
   )
 
 set(hlsl_h

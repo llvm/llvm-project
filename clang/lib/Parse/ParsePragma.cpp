@@ -4325,10 +4325,12 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
 }
 
 // '#pragma ripple parallel [IgnoreEmptyStmts]? [NoRemainder]?
-// [BlockIndependent]? [Thread]? [ThreadChunk(<ChunkRef> | integer_literal)]?'
+// [BlockIndependent]? [ThreadChunk(<ChunkRef> | integer_literal)]?
+// [Schedule(static|dynamic)]'
 void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
                                        PragmaIntroducer Introducer,
                                        Token &FirstToken) {
+  using ThreadScheduleKind = RippleComputeConstruct::ThreadScheduleKind;
   Token Tok;
   auto parseCstInt = [&](uint64_t &ParsedVal, StringRef S,
                          bool Diagnose = true) -> bool {
@@ -4403,6 +4405,47 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
       auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
       PP.Diag(WarnLoc, diag::warn_pragma_expected_rparen)
           << RippleDims << FixItHint::CreateInsertion(WarnLoc, ")");
+      return true;
+    }
+    return false;
+  };
+
+  auto ParseThreadSchedule =
+      [&](SemaRipple::AnnotationData &AnnotData) -> bool {
+    constexpr StringRef RippleSchedule("ripple parallel Schedule(...)");
+    auto LastToKLoc = Tok.getLocation();
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_lparen)
+          << RippleSchedule << FixItHint::CreateInsertion(WarnLoc, "(");
+      return true;
+    }
+    PP.Lex(Tok);
+    LastToKLoc = Tok.getLocation();
+    const IdentifierInfo *Arg = Tok.getIdentifierInfo();
+    if (Arg && Arg->isStr("static")) {
+      AnnotData.ThreadSched = ThreadScheduleKind::Static;
+    } else if (Arg && Arg->isStr("dynamic")) {
+      AnnotData.ThreadSched = ThreadScheduleKind::Dynamic;
+    } else {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      if (Tok.is(tok::r_paren))
+        PP.Diag(WarnLoc, diag::warn_pragma_missing_argument)
+            << RippleSchedule << 1 << "'static' or 'dynamic'";
+      else
+        PP.Diag(WarnLoc, diag::warn_pragma_invalid_argument)
+            << Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                        Tok.getLocation(), Tok.getEndLoc()),
+                                    PP.getSourceManager(), PP.getLangOpts())
+            << RippleSchedule << 1 << "'static' or 'dynamic'";
+      return true;
+    }
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::r_paren)) {
+      auto WarnLoc = PP.getLocForEndOfToken(LastToKLoc, 0);
+      PP.Diag(WarnLoc, diag::warn_pragma_expected_rparen)
+          << RippleSchedule << FixItHint::CreateInsertion(WarnLoc, ")");
       return true;
     }
     return false;
@@ -4502,12 +4545,14 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
     } else if (Arg && Arg->isStr("BlockIndependent")) {
       AnnotData->MaskPostlude = false;
       HasVectorOptions = true;
-    } else if (Arg && Arg->isStr("Thread")) {
-      AnnotData->IsThread = true;
     } else if (Arg && Arg->isStr("ThreadChunk")) {
       if (ParseThreadChunk(*AnnotData))
         return;
-      AnnotData->IsThread = true;
+      if (AnnotData->ThreadSched == ThreadScheduleKind::NotThread)
+        AnnotData->ThreadSched = ThreadScheduleKind::Static;
+    } else if (Arg && Arg->isStr("Schedule")) {
+      if (ParseThreadSchedule(*AnnotData))
+        return;
     } else if (Arg) {
       // IgnoreNullStmts is only for backward compatibility w/ the
       // ripple_parallel(); interface so don't advertise it!
@@ -4533,7 +4578,8 @@ void PragmaRippleHandler::HandlePragma(Preprocessor &PP,
         << Tok.getLocation();
   }
 
-  if (AnnotData->IsThread && HasVectorOptions)
+  if (AnnotData->ThreadSched != ThreadScheduleKind::NotThread &&
+      HasVectorOptions)
     PP.Diag(FirstToken.getLocation(),
             diag::err_pragma_ripple_mixed_thread_vector)
         << Tok.getLocation();
