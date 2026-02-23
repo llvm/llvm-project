@@ -1061,16 +1061,16 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
       auto &Rgn = Regions[CurRegion];
       NonDbgMI = &*skipDebugInstructionsForward(Rgn.first, Rgn.second);
     }
-    RPTracker.advanceToNext();
     RPTracker.advanceBeforeNext();
+    RPTracker.advanceToNext();
   }
 
   if (OnlySucc) {
     if (I != MBB->end()) {
+      RPTracker.advanceBeforeNext();
       RPTracker.advanceToNext();
       RPTracker.advance(MBB->end());
     }
-    RPTracker.advanceBeforeNext();
     MBBLiveIns[OnlySucc] = RPTracker.moveLiveRegs();
   }
 }
