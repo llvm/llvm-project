@@ -52,13 +52,13 @@ class ExplorerEndpoint(BaseEndpoint):
     ) -> Dict[str, Any]:
         """GET /api/explorer/files - Get available source files and their artifacts"""
         try:
-            parsed_data = self.get_parsed_data()
-
             # Check if unit parameter is provided
             unit_filter = query_params.get("unit", [None])[0]
 
             if not unit_filter:
                 return APIResponse.invalid_request("Unit parameter is required")
+
+            parsed_data = self.get_parsed_data(unit_name=unit_filter)
 
             # Only process the specified unit
             if unit_filter not in parsed_data:
@@ -68,9 +68,6 @@ class ExplorerEndpoint(BaseEndpoint):
             files_info = []
 
             print(f"Processing files for unit: {unit_filter}")
-
-            # Get available artifact types for this unit
-            available_types = set(unit_artifacts.keys())
 
             # PRIORITY: Get source files from collected sources (timestamped)
             source_files = set()

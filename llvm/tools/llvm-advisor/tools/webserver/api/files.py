@@ -39,7 +39,7 @@ class FileContentEndpoint(BaseEndpoint):
         except ValueError:
             return APIResponse.invalid_request(f"Invalid file type: {file_type_str}")
 
-        parsed_data = self.get_parsed_data()
+        parsed_data = self.get_parsed_data(unit_name=unit_name)
 
         # Validate unit exists
         if unit_name not in parsed_data:

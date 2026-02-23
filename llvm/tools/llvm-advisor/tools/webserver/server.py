@@ -13,7 +13,7 @@ import sys
 import json
 import argparse
 import mimetypes
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs
 from pathlib import Path
 
@@ -23,6 +23,7 @@ tools_dir = current_dir.parent
 sys.path.insert(0, str(tools_dir))
 
 from common.collector import ArtifactCollector
+from common.data_store import AdvisorDataStore
 from common.models import FileType
 
 # Import API endpoints
@@ -38,9 +39,10 @@ from api.specialized_router import SpecializedRouter, SPECIALIZED_ENDPOINTS_DOCS
 class APIHandler(BaseHTTPRequestHandler):
     """API handler"""
 
-    def __init__(self, data_dir, *args, **kwargs):
+    def __init__(self, data_dir, collector, data_store, *args, **kwargs):
         self.data_dir = data_dir
-        self.collector = ArtifactCollector()
+        self.collector = collector
+        self.data_store = data_store
 
         # Set up frontend paths
         current_dir = Path(__file__).parent
@@ -50,18 +52,24 @@ class APIHandler(BaseHTTPRequestHandler):
 
         # Initialize endpoints
         self.endpoints = {
-            "health": HealthEndpoint(data_dir, self.collector),
-            "units": UnitsEndpoint(data_dir, self.collector),
-            "unit_detail": UnitDetailEndpoint(data_dir, self.collector),
-            "summary": SummaryEndpoint(data_dir, self.collector),
-            "files": FileContentEndpoint(data_dir, self.collector),
-            "artifacts": ArtifactsEndpoint(data_dir, self.collector),
-            "artifact_types": ArtifactTypesEndpoint(data_dir, self.collector),
-            "explorer": ExplorerEndpoint(data_dir, self.collector),
+            "health": HealthEndpoint(data_dir, self.collector, self.data_store),
+            "units": UnitsEndpoint(data_dir, self.collector, self.data_store),
+            "unit_detail": UnitDetailEndpoint(
+                data_dir, self.collector, self.data_store
+            ),
+            "summary": SummaryEndpoint(data_dir, self.collector, self.data_store),
+            "files": FileContentEndpoint(data_dir, self.collector, self.data_store),
+            "artifacts": ArtifactsEndpoint(data_dir, self.collector, self.data_store),
+            "artifact_types": ArtifactTypesEndpoint(
+                data_dir, self.collector, self.data_store
+            ),
+            "explorer": ExplorerEndpoint(data_dir, self.collector, self.data_store),
         }
 
         # Initialize specialized router
-        self.specialized_router = SpecializedRouter(data_dir, self.collector)
+        self.specialized_router = SpecializedRouter(
+            data_dir, self.collector, self.data_store
+        )
 
         super().__init__(*args, **kwargs)
 
@@ -293,11 +301,11 @@ class APIHandler(BaseHTTPRequestHandler):
         }
 
 
-def create_handler(data_dir):
+def create_handler(data_dir, collector, data_store):
     """Factory function to create handler with data directory"""
 
     def handler(*args, **kwargs):
-        return APIHandler(data_dir, *args, **kwargs)
+        return APIHandler(data_dir, collector, data_store, *args, **kwargs)
 
     return handler
 
@@ -317,11 +325,13 @@ def main():
         print(f"Error: Data directory does not exist: {args.data_dir}")
         sys.exit(1)
 
-    # Create handler with data directory
-    handler_class = create_handler(args.data_dir)
+    # Create shared collector and datastore for all requests.
+    collector = ArtifactCollector()
+    data_store = AdvisorDataStore(args.data_dir, collector)
+    handler_class = create_handler(args.data_dir, collector, data_store)
 
     # Start server
-    server = HTTPServer((args.host, args.port), handler_class)
+    server = ThreadingHTTPServer((args.host, args.port), handler_class)
 
     print(f"LLVM Advisor Web Interface")
     print(f"==========================")

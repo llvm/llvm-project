@@ -30,18 +30,21 @@ from .specialized.binary_size_api import BinarySizeEndpoint
 class SpecializedRouter:
     """Router for specialized file-type specific endpoints"""
 
-    def __init__(self, data_dir: str, collector: ArtifactCollector):
+    def __init__(self, data_dir: str, collector: ArtifactCollector, data_store=None):
         self.data_dir = data_dir
         self.collector = collector
+        self.data_store = data_store
 
         # Initialize specialized endpoints
         self.endpoints = {
-            "remarks": RemarksEndpoint(data_dir, collector),
-            "diagnostics": DiagnosticsEndpoint(data_dir, collector),
-            "compilation-phases": CompilationPhasesEndpoint(data_dir, collector),
-            "time-trace": TimeTraceEndpoint(data_dir, collector),
-            "runtime-trace": RuntimeTraceEndpoint(data_dir, collector),
-            "binary-size": BinarySizeEndpoint(data_dir, collector),
+            "remarks": RemarksEndpoint(data_dir, collector, data_store),
+            "diagnostics": DiagnosticsEndpoint(data_dir, collector, data_store),
+            "compilation-phases": CompilationPhasesEndpoint(
+                data_dir, collector, data_store
+            ),
+            "time-trace": TimeTraceEndpoint(data_dir, collector, data_store),
+            "runtime-trace": RuntimeTraceEndpoint(data_dir, collector, data_store),
+            "binary-size": BinarySizeEndpoint(data_dir, collector, data_store),
         }
 
     def route_request(

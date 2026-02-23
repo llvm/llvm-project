@@ -95,7 +95,7 @@ class UnitDetailEndpoint(BaseEndpoint):
             return APIResponse.invalid_request("Unit name required")
 
         unit_name = path_parts[2]
-        parsed_data = self.get_parsed_data()
+        parsed_data = self.get_parsed_data(unit_name=unit_name)
 
         if unit_name not in parsed_data:
             return APIResponse.not_found(f"Compilation unit '{unit_name}'")
