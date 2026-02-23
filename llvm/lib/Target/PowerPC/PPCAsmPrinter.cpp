@@ -3046,58 +3046,80 @@ void PPCAIXAsmPrinter::emitGCOVRefs() {
 }
 
 void PPCAIXAsmPrinter::emitEndOfAsmFile(Module &M) {
-  // If there are no functions and there are no toc-data definitions in this
-  // module, we will never need to reference the TOC base.
-  if (M.empty() && TOCDataGlobalVars.empty())
-    return;
 
   emitPGORefs(M);
   emitGCOVRefs();
 
-  // Switch to section to emit TOC base.
-  OutStreamer->switchSection(getObjFileLowering().getTOCBaseSection());
+  // If there are no functions and there are no toc-data definitions in this
+  // module, we will never need to reference the TOC base.
+  if (!M.empty() || !TOCDataGlobalVars.empty()) {
+    // Switch to section to emit TOC base.
+    OutStreamer->switchSection(getObjFileLowering().getTOCBaseSection());
 
-  PPCTargetStreamer *TS =
-      static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
+    PPCTargetStreamer *TS =
+        static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
 
-  for (auto &I : TOC) {
-    MCSectionXCOFF *TCEntry;
-    // Setup the csect for the current TC entry. If the variant kind is
-    // VK_AIX_TLSGDM the entry represents the region handle, we create a
-    // new symbol to prefix the name with a dot.
-    // If TLS model opt is turned on, create a new symbol to prefix the name
-    // with a dot.
-    if (I.first.second == PPC::S_AIX_TLSGDM ||
-        (Subtarget->hasAIXShLibTLSModelOpt() &&
-         I.first.second == PPC::S_AIX_TLSLD)) {
-      SmallString<128> Name;
-      StringRef Prefix = ".";
-      Name += Prefix;
-      Name += static_cast<const MCSymbolXCOFF *>(I.first.first)
-                  ->getSymbolTableName();
-      MCSymbol *S = OutContext.getOrCreateSymbol(Name);
-      TCEntry = static_cast<MCSectionXCOFF *>(
-          getObjFileLowering().getSectionForTOCEntry(S, TM));
-    } else {
-      TCEntry = static_cast<MCSectionXCOFF *>(
-          getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
+    for (auto &I : TOC) {
+      MCSectionXCOFF *TCEntry;
+      // Setup the csect for the current TC entry. If the variant kind is
+      // VK_AIX_TLSGDM the entry represents the region handle, we create a
+      // new symbol to prefix the name with a dot.
+      // If TLS model opt is turned on, create a new symbol to prefix the name
+      // with a dot.
+      if (I.first.second == PPC::S_AIX_TLSGDM ||
+          (Subtarget->hasAIXShLibTLSModelOpt() &&
+           I.first.second == PPC::S_AIX_TLSLD)) {
+        SmallString<128> Name;
+        StringRef Prefix = ".";
+        Name += Prefix;
+        Name += static_cast<const MCSymbolXCOFF *>(I.first.first)
+                    ->getSymbolTableName();
+        MCSymbol *S = OutContext.getOrCreateSymbol(Name);
+        TCEntry = static_cast<MCSectionXCOFF *>(
+            getObjFileLowering().getSectionForTOCEntry(S, TM));
+      } else {
+        TCEntry = static_cast<MCSectionXCOFF *>(
+            getObjFileLowering().getSectionForTOCEntry(I.first.first, TM));
+      }
+      OutStreamer->switchSection(TCEntry);
+
+      OutStreamer->emitLabel(I.second);
+      TS->emitTCEntry(*I.first.first, I.first.second);
     }
-    OutStreamer->switchSection(TCEntry);
 
-    OutStreamer->emitLabel(I.second);
-    TS->emitTCEntry(*I.first.first, I.first.second);
+    // Traverse the list of global variables twice, emitting all of the
+    // non-common global variables before the common ones, as emitting a
+    // .comm directive changes the scope from .toc to the common symbol.
+    for (const auto *GV : TOCDataGlobalVars) {
+      if (!GV->hasCommonLinkage())
+        emitGlobalVariableHelper(GV);
+    }
+    for (const auto *GV : TOCDataGlobalVars) {
+      if (GV->hasCommonLinkage())
+        emitGlobalVariableHelper(GV);
+    }
   }
 
-  // Traverse the list of global variables twice, emitting all of the
-  // non-common global variables before the common ones, as emitting a
-  // .comm directive changes the scope from .toc to the common symbol.
-  for (const auto *GV : TOCDataGlobalVars) {
-    if (!GV->hasCommonLinkage())
-      emitGlobalVariableHelper(GV);
-  }
-  for (const auto *GV : TOCDataGlobalVars) {
-    if (GV->hasCommonLinkage())
-      emitGlobalVariableHelper(GV);
+  // Renames only take effect when function sections is enabled.
+  if (!TM.getFunctionSections())
+    return;
+
+  for (const GlobalVariable &GV : M.globals()) {
+    if (GV.hasMetadata(LLVMContext::MD_rename)) {
+      // Get orginal csect.
+      SectionKind GVKind = getObjFileLowering().getKindForGlobal(&GV, TM);
+      auto *CSect = static_cast<MCSectionXCOFF *>(
+          getObjFileLowering().SectionForGlobal(&GV, GVKind, TM));
+
+      // Get the section to rename to.
+      if (!GV.hasSection())
+        reportFatalInternalError(
+            "rename.key metadata used without a section attribute");
+
+      StringRef SectionName = GV.getSection();
+      OutStreamer->emitXCOFFRenameDirective(CSect->getQualNameSymbol(),
+                                            SectionName);
+    }
   }
 }
 

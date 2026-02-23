@@ -8785,6 +8785,29 @@ Example:
     !1 = !{ptr @b}
 
 
+'``rename``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^
+The rename key may be attached to a global variable definition that has an
+explicit section attribute. It is used as a flag so the associated node
+must be empty. It only takes effect when function sections is enabled, and
+only on XCOFF targets. The metadata will cause the global to be emitted to a
+control section (CSECT) with a name that is an amalgamation of both the section
+attribute and the global variables identifier. After the control section is
+defined it will be renamed to match the name of the section attribute. This
+allows the linker to aggressively garbage collect the symbol if unreferenced,
+while directing the linker to merge any control sections with the same name
+that remain after garbage collecting into the same CSECT in the output binary.
+Commonly used where there is a feature that uses a runtime to walk over a
+section using the linker-defined encapsulation symbols
+``__start_<section_name>`` and ``__stop_<section_name>``.
+
+Example:
+
+.. code-block:: llvm
+
+    @a = global i32 1, section "abc", !rename !0
+    !0 = !{}
+
 Module Flags Metadata
 =====================
 
