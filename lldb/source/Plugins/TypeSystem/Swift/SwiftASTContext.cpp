@@ -2952,10 +2952,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   if (cu)
     if (auto platform_sp = Platform::GetHostPlatform()) {
       auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*cu);
-      if (!sdk_or_err) {
+      if (!sdk_or_err)
         Debugger::ReportError("Error while parsing SDK path from debug info: " +
                               toString(sdk_or_err.takeError()));
-      } else {
+      else {
         sdk = *sdk_or_err;
         LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
                    sdk->GetString().str().c_str());
