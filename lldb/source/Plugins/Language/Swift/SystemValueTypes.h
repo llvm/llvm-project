@@ -21,6 +21,9 @@ namespace formatters {
 namespace swift {
 bool FilePath_SummaryProvider(ValueObject &valobj, Stream &stream,
                               const TypeSummaryOptions &options);
+
+bool SystemString_SummaryProvider(ValueObject &valobj, Stream &stream,
+                                  const TypeSummaryOptions &options);
 }
 }
 }
