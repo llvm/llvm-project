@@ -26,26 +26,25 @@
 namespace llvm {
 namespace advisor {
 
-CompilationUnit::CompilationUnit(const CompilationUnitInfo &info,
-                                 const std::string &workDir)
-    : info(info), workDir(workDir) {
+CompilationUnit::CompilationUnit(const CompilationUnitInfo &Info,
+                                 const std::string &WorkDir)
+    : info(Info), workDir(WorkDir) {
   // Create unit-specific data directory
-  llvm::SmallString<128> dataDir;
-  llvm::sys::path::append(dataDir, workDir, "units", info.name);
-  llvm::sys::fs::create_directories(dataDir);
+  llvm::SmallString<128> DataDir;
+  llvm::sys::path::append(DataDir, WorkDir, "units", Info.name);
+  llvm::sys::fs::create_directories(DataDir);
 }
 
 std::string CompilationUnit::getPrimarySource() const {
-  if (info.sources.empty()) {
+  if (info.sources.empty())
     return "";
-  }
   return info.sources[0].path;
 }
 
 std::string CompilationUnit::getDataDir() const {
-  llvm::SmallString<128> dataDir;
-  llvm::sys::path::append(dataDir, workDir, "units", info.name);
-  return std::string(dataDir.str());
+  llvm::SmallString<128> DataDir;
+  llvm::sys::path::append(DataDir, workDir, "units", info.name);
+  return std::string(DataDir.str());
 }
 
 std::string CompilationUnit::getExecutablePath() const {
@@ -53,36 +52,34 @@ std::string CompilationUnit::getExecutablePath() const {
 }
 
 std::string CompilationUnit::getScratchDir() const {
-  llvm::SmallString<128> scratchDir;
-  llvm::sys::path::append(scratchDir, workDir, "units", info.name, "scratch");
-  llvm::sys::fs::create_directories(scratchDir);
-  return std::string(scratchDir.str());
+  llvm::SmallString<128> ScratchDir;
+  llvm::sys::path::append(ScratchDir, workDir, "units", info.name, "scratch");
+  llvm::sys::fs::create_directories(ScratchDir);
+  return std::string(ScratchDir.str());
 }
 
-void CompilationUnit::addGeneratedFile(llvm::StringRef type,
-                                       llvm::StringRef path) {
-  generatedFiles[type.str()].push_back(path.str());
+void CompilationUnit::addGeneratedFile(llvm::StringRef Type,
+                                       llvm::StringRef Path) {
+  generatedFiles[Type.str()].push_back(Path.str());
 }
 
-bool CompilationUnit::hasGeneratedFiles(llvm::StringRef type) const {
-  if (type.empty()) {
+bool CompilationUnit::hasGeneratedFiles(llvm::StringRef Type) const {
+  if (Type.empty())
     return !generatedFiles.empty();
-  }
-  auto it = generatedFiles.find(type.str());
-  return it != generatedFiles.end() && !it->second.empty();
+  auto It = generatedFiles.find(Type.str());
+  return It != generatedFiles.end() && !It->second.empty();
 }
 
 llvm::SmallVector<std::string, 8>
-CompilationUnit::getGeneratedFiles(llvm::StringRef type) const {
-  if (type.empty()) {
-    llvm::SmallVector<std::string, 8> allFiles;
-    for (const auto &pair : generatedFiles) {
-      allFiles.append(pair.second.begin(), pair.second.end());
-    }
-    return allFiles;
+CompilationUnit::getGeneratedFiles(llvm::StringRef Type) const {
+  if (Type.empty()) {
+    llvm::SmallVector<std::string, 8> AllFiles;
+    for (const auto &Pair : generatedFiles)
+      AllFiles.append(Pair.second.begin(), Pair.second.end());
+    return AllFiles;
   }
-  auto it = generatedFiles.find(type.str());
-  return it != generatedFiles.end() ? it->second
+  auto It = generatedFiles.find(Type.str());
+  return It != generatedFiles.end() ? It->second
                                     : llvm::SmallVector<std::string, 8>();
 }
 
@@ -91,31 +88,31 @@ CompilationUnit::getAllGeneratedFiles() const {
   return generatedFiles;
 }
 
-std::string CompilationUnit::buildCategoryDir(llvm::StringRef category) const {
-  llvm::SmallString<128> dir;
-  llvm::sys::path::append(dir, workDir, "units", info.name, category);
-  llvm::sys::fs::create_directories(dir);
-  return std::string(dir.str());
+std::string CompilationUnit::buildCategoryDir(llvm::StringRef Category) const {
+  llvm::SmallString<128> Dir;
+  llvm::sys::path::append(Dir, workDir, "units", info.name, Category);
+  llvm::sys::fs::create_directories(Dir);
+  return std::string(Dir.str());
 }
 
-std::string CompilationUnit::makeUniqueStem(llvm::StringRef sourcePath) const {
-  llvm::hash_code hash = llvm::hash_value(sourcePath);
-  std::string hashSuffix =
-      llvm::formatv("{0:x}", static_cast<uint64_t>(hash)).str();
-  return (llvm::Twine(llvm::sys::path::stem(sourcePath)) + "_" + hashSuffix)
+std::string CompilationUnit::makeUniqueStem(llvm::StringRef SourcePath) const {
+  llvm::hash_code Hash = llvm::hash_value(SourcePath);
+  std::string HashSuffix =
+      llvm::formatv("{0:x}", static_cast<uint64_t>(Hash)).str();
+  return (llvm::Twine(llvm::sys::path::stem(SourcePath)) + "_" + HashSuffix)
       .str();
 }
 
-std::string CompilationUnit::makeArtifactPath(llvm::StringRef category,
-                                              llvm::StringRef sourcePath,
-                                              llvm::StringRef extension) const {
-  std::string categoryDir = buildCategoryDir(category);
-  llvm::SmallString<128> filePath(categoryDir);
-  std::string stem = makeUniqueStem(sourcePath);
-  llvm::SmallString<32> fileName(stem);
-  fileName += extension;
-  llvm::sys::path::append(filePath, fileName);
-  return std::string(filePath.str());
+std::string CompilationUnit::makeArtifactPath(llvm::StringRef Category,
+                                              llvm::StringRef SourcePath,
+                                              llvm::StringRef Extension) const {
+  std::string CategoryDir = buildCategoryDir(Category);
+  llvm::SmallString<128> FilePath(CategoryDir);
+  std::string Stem = makeUniqueStem(SourcePath);
+  llvm::SmallString<32> FileName(Stem);
+  FileName += Extension;
+  llvm::sys::path::append(FilePath, FileName);
+  return std::string(FilePath.str());
 }
 
 } // namespace advisor

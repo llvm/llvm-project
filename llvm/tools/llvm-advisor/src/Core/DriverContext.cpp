@@ -27,8 +27,8 @@ namespace llvm::advisor {
 
 DriverContext::DriverContext() = default;
 DriverContext::DriverContext(DriverContext &&) noexcept = default;
-auto DriverContext::operator=(DriverContext &&) noexcept -> DriverContext & =
-    default;
+auto DriverContext::operator=(DriverContext &&) noexcept
+    -> DriverContext & = default;
 DriverContext::~DriverContext() = default;
 
 namespace {
@@ -56,7 +56,7 @@ std::unique_ptr<DriverContext> buildContext(StringRef CompilerPath,
   for (const auto &Source : Sources)
     Argv.push_back(Source.path.c_str());
 
-  auto Compilation = Driver->BuildCompilation(Argv);
+  auto *Compilation = Driver->BuildCompilation(Argv);
   if (!Compilation)
     return nullptr;
 

@@ -80,7 +80,7 @@ buildDriverInvocation(llvm::StringRef Compiler,
   for (const auto &Arg : Args)
     Argv.push_back(Arg.c_str());
 
-  auto Compilation = Driver->BuildCompilation(Argv);
+  auto *Compilation = Driver->BuildCompilation(Argv);
   if (!Compilation)
     return nullptr;
 
@@ -92,7 +92,7 @@ buildDriverInvocation(llvm::StringRef Compiler,
 
 } // namespace
 
-UnitDetector::UnitDetector(const AdvisorConfig &config) : config(config) {}
+UnitDetector::UnitDetector(const AdvisorConfig &Config) : config(Config) {}
 
 static bool isSourceExtension(llvm::StringRef Extension) {
   return Extension == ".c" || Extension == ".C" || Extension == ".cc" ||
@@ -103,17 +103,17 @@ static bool isSourceExtension(llvm::StringRef Extension) {
 ///   - source files (already tracked via CompilationUnitInfo::sources)
 ///   - object files, archives and other linker inputs that must not be
 ///     replayed when re-invoking the compiler for data extraction
-static void captureCompileFlags(const llvm::SmallVectorImpl<std::string> &args,
-                                CompilationUnitInfo &unit) {
+static void captureCompileFlags(const llvm::SmallVectorImpl<std::string> &Args,
+                                CompilationUnitInfo &Unit) {
   // Extensions that identify linker/archiver inputs rather than compiler flags.
-  auto isLinkerInput = [](llvm::StringRef Ext) -> bool {
+  auto IsLinkerInput = [](llvm::StringRef Ext) -> bool {
     return Ext == ".o" || Ext == ".O" || Ext == ".obj" || Ext == ".OBJ" ||
            Ext == ".a" || Ext == ".so" || Ext == ".dylib" || Ext == ".lib" ||
            Ext == ".dll";
   };
 
-  for (size_t I = 0; I < args.size(); ++I) {
-    llvm::StringRef Arg(args[I]);
+  for (size_t I = 0; I < Args.size(); ++I) {
+    llvm::StringRef Arg(Args[I]);
 
     if (Arg.empty())
       continue;
@@ -128,20 +128,20 @@ static void captureCompileFlags(const llvm::SmallVectorImpl<std::string> &args,
            Arg == "-isystem" || Arg == "-isysroot" || Arg == "-iprefix" ||
            Arg == "-iwithprefix" || Arg == "-iwithprefixbefore" ||
            Arg == "-idirafter") &&
-          I + 1 < args.size()) {
+          I + 1 < Args.size()) {
         // Consume flag + value but do NOT push them; output paths and dep-file
         // paths are irrelevant when replaying compilation for extraction.
         ++I;
         continue;
       }
-      unit.compileFlags.push_back(args[I]);
+      Unit.compileFlags.push_back(Args[I]);
       continue;
     }
 
     // Positional argument: keep only if it is a source file that is not
     // already tracked, and drop linker inputs / output file names.
     llvm::StringRef Ext = llvm::sys::path::extension(Arg);
-    if (isSourceExtension(Ext) || isLinkerInput(Ext))
+    if (isSourceExtension(Ext) || IsLinkerInput(Ext))
       continue; // source files live in 'sources'; linker inputs are noise
 
     // Bare positional values that are not recognisable file extensions
@@ -156,16 +156,16 @@ static bool isClangCompileCommand(const clang::driver::Command &Cmd) {
 }
 
 llvm::Expected<llvm::SmallVector<CompilationUnitInfo, 4>>
-UnitDetector::detectUnits(llvm::StringRef compiler,
-                          const llvm::SmallVectorImpl<std::string> &args,
+UnitDetector::detectUnits(llvm::StringRef Compiler,
+                          const llvm::SmallVectorImpl<std::string> &Args,
                           const clang::driver::Compilation *DriverCompilation) {
-  std::string ResolvedCompiler = compiler.str();
-  if (auto CompilerPath = llvm::sys::findProgramByName(compiler))
+  std::string ResolvedCompiler = Compiler.str();
+  if (auto CompilerPath = llvm::sys::findProgramByName(Compiler))
     ResolvedCompiler = *CompilerPath;
 
   std::unique_ptr<DriverInvocation> LocalInvocation;
   if (!DriverCompilation) {
-    LocalInvocation = buildDriverInvocation(compiler, args);
+    LocalInvocation = buildDriverInvocation(Compiler, Args);
     if (LocalInvocation)
       DriverCompilation = LocalInvocation->Compilation.get();
   }
@@ -208,104 +208,102 @@ UnitDetector::detectUnits(llvm::StringRef compiler,
 
       Unit.targetArch =
           DriverCompilation->getDefaultToolChain().getTripleString();
-      captureCompileFlags(args, Unit);
+      captureCompileFlags(Args, Unit);
       Units.push_back(std::move(Unit));
     }
 
     if (!Units.empty()) {
       for (auto &Unit : Units)
-        extractBuildInfo(args, Unit);
+        extractBuildInfo(Args, Unit);
       return Units;
     }
   }
 
-  auto sources = findSourceFiles(args);
-  if (sources.empty()) {
+  auto Sources = findSourceFiles(Args);
+  if (Sources.empty()) {
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
         "No source files found");
   }
 
-  CompilationUnitInfo unit;
-  unit.name = generateUnitName(sources);
-  unit.compilerPath = ResolvedCompiler;
-  unit.sources = sources;
+  CompilationUnitInfo Unit;
+  Unit.name = generateUnitName(Sources);
+  Unit.compilerPath = ResolvedCompiler;
+  Unit.sources = Sources;
 
-  captureCompileFlags(args, unit);
+  captureCompileFlags(Args, Unit);
 
-  extractBuildInfo(args, unit);
+  extractBuildInfo(Args, Unit);
 
-  return llvm::SmallVector<CompilationUnitInfo, 4>{unit};
+  return llvm::SmallVector<CompilationUnitInfo, 4>{Unit};
 }
 
 llvm::SmallVector<SourceFile, 4> UnitDetector::findSourceFiles(
-    const llvm::SmallVectorImpl<std::string> &args) const {
-  llvm::SmallVector<SourceFile, 4> sources;
+    const llvm::SmallVectorImpl<std::string> &Args) const {
+  llvm::SmallVector<SourceFile, 4> Sources;
 
-  for (const auto &arg : args) {
-    if (arg.empty() || arg[0] == '-')
+  for (const auto &Arg : Args) {
+    if (Arg.empty() || Arg[0] == '-')
       continue;
 
-    llvm::StringRef extension = llvm::sys::path::extension(arg);
-    if (extension == ".c" || extension == ".cpp" || extension == ".cc" ||
-        extension == ".cxx" || extension == ".C") {
+    llvm::StringRef Extension = llvm::sys::path::extension(Arg);
+    if (Extension == ".c" || Extension == ".cpp" || Extension == ".cc" ||
+        Extension == ".cxx" || Extension == ".C") {
 
-      SourceFile source;
-      source.path = arg;
-      source.language = classifier.getLanguage(arg);
-      source.isHeader = false;
-      sources.push_back(source);
+      SourceFile Source;
+      Source.path = Arg;
+      Source.language = classifier.getLanguage(Arg);
+      Source.isHeader = false;
+      Sources.push_back(Source);
     }
   }
 
-  return sources;
+  return Sources;
 }
 
 void UnitDetector::extractBuildInfo(
-    const llvm::SmallVectorImpl<std::string> &args, CompilationUnitInfo &unit) {
-  for (size_t i = 0; i < args.size(); ++i) {
-    const auto &arg = args[i];
+    const llvm::SmallVectorImpl<std::string> &Args, CompilationUnitInfo &Unit) {
+  for (size_t I = 0; I < Args.size(); ++I) {
+    const auto &Arg = Args[I];
 
-    if (arg == "-o" && i + 1 < args.size()) {
-      llvm::StringRef output = args[i + 1];
-      llvm::StringRef ext = llvm::sys::path::extension(output);
-      if (ext == ".o")
-        unit.outputObject = args[i + 1];
+    if (Arg == "-o" && I + 1 < Args.size()) {
+      llvm::StringRef Output = Args[I + 1];
+      llvm::StringRef Ext = llvm::sys::path::extension(Output);
+      if (Ext == ".o")
+        Unit.outputObject = Args[I + 1];
       else
-        unit.outputExecutable = args[i + 1];
+        Unit.outputExecutable = Args[I + 1];
     }
 
-    llvm::StringRef argRef(arg);
-    if (argRef.contains("openmp") || argRef.contains("offload") ||
-        argRef.contains("cuda")) {
-      unit.hasOffloading = true;
+    llvm::StringRef ArgRef(Arg);
+    if (ArgRef.contains("openmp") || ArgRef.contains("offload") ||
+        ArgRef.contains("cuda")) {
+      Unit.hasOffloading = true;
     }
 
-    if (llvm::StringRef(arg).starts_with("-march=")) {
-      unit.targetArch = arg.substr(7);
-    }
+    if (llvm::StringRef(Arg).starts_with("-march="))
+      Unit.targetArch = Arg.substr(7);
   }
 }
 
 std::string UnitDetector::generateUnitName(
-    const llvm::SmallVectorImpl<SourceFile> &sources) const {
-  if (sources.empty())
+    const llvm::SmallVectorImpl<SourceFile> &Sources) const {
+  if (Sources.empty())
     return "unknown";
 
   // Use first source file name as base
-  std::string baseName = llvm::sys::path::stem(sources[0].path).str();
+  std::string BaseName = llvm::sys::path::stem(Sources[0].path).str();
 
   // Add hash for uniqueness when multiple sources
-  if (sources.size() > 1) {
-    std::string combined;
-    for (const auto &source : sources) {
-      combined += source.path;
-    }
-    auto hash = llvm::hash_value(combined);
-    baseName += "_" + std::to_string(static_cast<size_t>(hash) % 10000);
+  if (Sources.size() > 1) {
+    std::string Combined;
+    for (const auto &Source : Sources)
+      Combined += Source.path;
+    auto Hash = llvm::hash_value(Combined);
+    BaseName += "_" + std::to_string(static_cast<size_t>(Hash) % 10000);
   }
 
-  return baseName;
+  return BaseName;
 }
 
 } // namespace advisor

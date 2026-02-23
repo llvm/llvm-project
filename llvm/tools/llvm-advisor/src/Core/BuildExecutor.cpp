@@ -30,8 +30,8 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/TargetParser/Host.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace advisor {
@@ -96,7 +96,7 @@ buildDriverCompilation(llvm::StringRef CompilerPath,
   for (const auto &Arg : Args)
     Argv.push_back(Arg.c_str());
 
-  auto Compilation = Driver->BuildCompilation(Argv);
+  auto *Compilation = Driver->BuildCompilation(Argv);
   if (!Compilation)
     return llvm::createStringError(
         std::make_error_code(std::errc::invalid_argument),
@@ -117,7 +117,7 @@ auto BuildExecutor::PreparedBuild::operator=(PreparedBuild &&) noexcept
     -> PreparedBuild & = default;
 BuildExecutor::PreparedBuild::~PreparedBuild() = default;
 
-BuildExecutor::BuildExecutor(const AdvisorConfig &config) : config(config) {}
+BuildExecutor::BuildExecutor(const AdvisorConfig &Config) : config(Config) {}
 
 llvm::Expected<int>
 BuildExecutor::execute(llvm::StringRef Compiler,
@@ -193,7 +193,7 @@ BuildExecutor::instrumentCompilerArgs(
     llvm::StringRef TempDir, llvm::StringRef ArtifactRoot) {
   std::string OutputRoot =
       ArtifactRoot.empty() ? std::string(TempDir) : std::string(ArtifactRoot);
-  auto registerExpectedFile = [&](llvm::StringRef Path) {
+  auto RegisterExpectedFile = [&](llvm::StringRef Path) {
     if (!Path.empty())
       BuildCtx.expectedGeneratedFiles.push_back(Path.str());
   };
@@ -228,7 +228,7 @@ BuildExecutor::instrumentCompilerArgs(
       llvm::StringRef FileName = llvm::sys::path::filename(Requested);
       std::string NewPath = (llvm::Twine(OutputRoot) + "/" + FileName).str();
       Arg = (llvm::Twine("-foptimization-record-file=") + NewPath).str();
-      registerExpectedFile(NewPath);
+      RegisterExpectedFile(NewPath);
     }
 
     if (ArgRef == "-fprofile-instr-generate" ||
@@ -262,22 +262,26 @@ BuildExecutor::instrumentCompilerArgs(
   }
 
   if (!HasRemarksFile) {
-    std::string RemarksPath = (llvm::Twine(OutputRoot) + "/remarks.opt.yaml").str();
-    Result.push_back((llvm::Twine("-foptimization-record-file=") + RemarksPath).str());
-    registerExpectedFile(RemarksPath);
+    std::string RemarksPath =
+        (llvm::Twine(OutputRoot) + "/remarks.opt.yaml").str();
+    Result.push_back(
+        (llvm::Twine("-foptimization-record-file=") + RemarksPath).str());
+    RegisterExpectedFile(RemarksPath);
   }
 
   if (config.getRunProfiler() && !HasProfile) {
     std::string Profraw = (llvm::Twine(OutputRoot) + "/profile.profraw").str();
-    Result.push_back((llvm::Twine("-fprofile-instr-generate=") + Profraw).str());
+    Result.push_back(
+        (llvm::Twine("-fprofile-instr-generate=") + Profraw).str());
     if (!HasCoverage)
       Result.push_back("-fcoverage-mapping");
-    registerExpectedFile(Profraw);
+    RegisterExpectedFile(Profraw);
 
-    std::string Profdata = (llvm::Twine(OutputRoot) + "/profile.profdata").str();
+    std::string Profdata =
+        (llvm::Twine(OutputRoot) + "/profile.profdata").str();
     std::string Report = (llvm::Twine(OutputRoot) + "/coverage.json").str();
-    registerExpectedFile(Profdata);
-    registerExpectedFile(Report);
+    RegisterExpectedFile(Profdata);
+    RegisterExpectedFile(Report);
 
     CoverageProfileSite Site;
     Site.rawProfile = Profraw;

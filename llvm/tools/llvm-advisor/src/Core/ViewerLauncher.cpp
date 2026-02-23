@@ -17,12 +17,11 @@ using namespace llvm;
 using namespace llvm::advisor;
 
 Expected<std::string> ViewerLauncher::findPythonExecutable() {
-  std::vector<std::string> candidates = {"python3", "python"};
+  std::vector<std::string> Candidates = {"python3", "python"};
 
-  for (const auto &candidate : candidates) {
-    if (auto path = sys::findProgramByName(candidate)) {
-      return *path;
-    }
+  for (const auto &Candidate : Candidates) {
+    if (auto Path = sys::findProgramByName(Candidate))
+      return *Path;
   }
 
   return createStringError(
@@ -31,51 +30,48 @@ Expected<std::string> ViewerLauncher::findPythonExecutable() {
 }
 
 Expected<std::string> ViewerLauncher::getViewerScript() {
-  SmallString<256> scriptPath;
+  SmallString<256> ScriptPath;
 
   // Try to find the server script relative to the executable
-  auto mainExecutable = sys::fs::getMainExecutable(nullptr, nullptr);
-  if (mainExecutable.empty()) {
+  auto MainExecutable = sys::fs::getMainExecutable(nullptr, nullptr);
+  if (MainExecutable.empty()) {
     return createStringError(
         std::make_error_code(std::errc::no_such_file_or_directory),
         "Cannot determine executable path");
   }
 
   // Try: relative to binary (development/build tree)
-  sys::path::append(scriptPath, sys::path::parent_path(mainExecutable));
-  sys::path::append(scriptPath, "..");
-  sys::path::append(scriptPath, "tools");
-  sys::path::append(scriptPath, "webserver");
-  sys::path::append(scriptPath, "server.py");
+  sys::path::append(ScriptPath, sys::path::parent_path(MainExecutable));
+  sys::path::append(ScriptPath, "..");
+  sys::path::append(ScriptPath, "tools");
+  sys::path::append(ScriptPath, "webserver");
+  sys::path::append(ScriptPath, "server.py");
 
-  if (sys::fs::exists(scriptPath)) {
-    return std::string(scriptPath.str());
-  }
+  if (sys::fs::exists(ScriptPath))
+    return std::string(ScriptPath.str());
 
   // Try: relative to binary (same directory as executable)
-  scriptPath.clear();
-  sys::path::append(scriptPath, sys::path::parent_path(mainExecutable));
-  sys::path::append(scriptPath, "tools");
-  sys::path::append(scriptPath, "webserver");
-  sys::path::append(scriptPath, "server.py");
+  ScriptPath.clear();
+  sys::path::append(ScriptPath, sys::path::parent_path(MainExecutable));
+  sys::path::append(ScriptPath, "tools");
+  sys::path::append(ScriptPath, "webserver");
+  sys::path::append(ScriptPath, "server.py");
 
-  if (sys::fs::exists(scriptPath)) {
-    return std::string(scriptPath.str());
-  }
+  if (sys::fs::exists(ScriptPath))
+    return std::string(ScriptPath.str());
 
   // Try: installed location
-  scriptPath.clear();
-  sys::path::append(scriptPath, sys::path::parent_path(mainExecutable));
-  sys::path::append(scriptPath, "..");
-  sys::path::append(scriptPath, "share");
-  sys::path::append(scriptPath, "llvm-advisor");
-  sys::path::append(scriptPath, "tools");
-  sys::path::append(scriptPath, "webserver");
-  sys::path::append(scriptPath, "server.py");
+  ScriptPath.clear();
+  sys::path::append(ScriptPath, sys::path::parent_path(MainExecutable));
+  sys::path::append(ScriptPath, "..");
+  sys::path::append(ScriptPath, "share");
+  sys::path::append(ScriptPath, "llvm-advisor");
+  sys::path::append(ScriptPath, "tools");
+  sys::path::append(ScriptPath, "webserver");
+  sys::path::append(ScriptPath, "server.py");
 
-  if (sys::fs::exists(scriptPath)) {
-    return std::string(scriptPath.str());
-  }
+  if (sys::fs::exists(ScriptPath))
+    return std::string(ScriptPath.str());
 
   return createStringError(
       std::make_error_code(std::errc::no_such_file_or_directory),
@@ -83,36 +79,36 @@ Expected<std::string> ViewerLauncher::getViewerScript() {
       "exists.");
 }
 
-Expected<int> ViewerLauncher::launch(const std::string &outputDir, int port) {
-  auto pythonOrErr = findPythonExecutable();
-  if (!pythonOrErr)
-    return pythonOrErr.takeError();
+Expected<int> ViewerLauncher::launch(const std::string &OutputDir, int Port) {
+  auto PythonOrErr = findPythonExecutable();
+  if (!PythonOrErr)
+    return PythonOrErr.takeError();
 
-  auto scriptOrErr = getViewerScript();
-  if (!scriptOrErr)
-    return scriptOrErr.takeError();
+  auto ScriptOrErr = getViewerScript();
+  if (!ScriptOrErr)
+    return ScriptOrErr.takeError();
 
   // Verify output directory exists and has data
-  if (!sys::fs::exists(outputDir))
+  if (!sys::fs::exists(OutputDir))
     return createStringError(
         std::make_error_code(std::errc::no_such_file_or_directory),
-        "Output directory does not exist: " + outputDir);
+        "Output directory does not exist: " + OutputDir);
 
-  std::vector<std::string> ownedArgs = {*pythonOrErr, *scriptOrErr,
-                                        "--data-dir", outputDir,
-                                        "--port",     std::to_string(port)};
-  llvm::SmallVector<StringRef, 8> args;
-  args.reserve(ownedArgs.size());
-  for (const auto &arg : ownedArgs)
-    args.push_back(arg);
+  std::vector<std::string> OwnedArgs = {*PythonOrErr, *ScriptOrErr,
+                                        "--data-dir", OutputDir,
+                                        "--port",     std::to_string(Port)};
+  llvm::SmallVector<StringRef, 8> Args;
+  Args.reserve(OwnedArgs.size());
+  for (const auto &Arg : OwnedArgs)
+    Args.push_back(Arg);
 
   // Execute the Python web server
-  int result = sys::ExecuteAndWait(*pythonOrErr, args);
+  int Result = sys::ExecuteAndWait(*PythonOrErr, Args);
 
-  if (result != 0)
+  if (Result != 0)
     return createStringError(std::make_error_code(std::errc::io_error),
                              "Web server failed with exit code: " +
-                                 std::to_string(result));
+                                 std::to_string(Result));
 
-  return result;
+  return Result;
 }

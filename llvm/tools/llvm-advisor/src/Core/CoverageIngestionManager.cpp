@@ -24,7 +24,7 @@ CoverageIngestionManager::~CoverageIngestionManager() { stopWatching(); }
 
 void CoverageIngestionManager::registerSites(
     ArrayRef<CoverageProfileSite> Sites) {
-  std::scoped_lock Guard(Mutex);
+  std::scoped_lock<std::mutex> Guard(Mutex);
   for (const auto &Site : Sites) {
     if (Site.rawProfile.empty())
       continue;
@@ -38,13 +38,13 @@ void CoverageIngestionManager::registerSites(
 }
 
 void CoverageIngestionManager::processOnce() {
-  std::scoped_lock Guard(Mutex);
+  std::scoped_lock<std::mutex> Guard(Mutex);
   for (auto &Entry : Watches)
     processSite(Entry);
 }
 
 void CoverageIngestionManager::startWatching() {
-  std::scoped_lock Guard(Mutex);
+  std::scoped_lock<std::mutex> Guard(Mutex);
   if (Watching || Watches.empty())
     return;
   StopRequested = false;
@@ -64,7 +64,7 @@ void CoverageIngestionManager::stopWatching() {
 void CoverageIngestionManager::runWatcher() {
   while (!StopRequested.load()) {
     {
-      std::scoped_lock Guard(Mutex);
+      std::scoped_lock<std::mutex> Guard(Mutex);
       for (auto &Entry : Watches)
         processSite(Entry);
     }

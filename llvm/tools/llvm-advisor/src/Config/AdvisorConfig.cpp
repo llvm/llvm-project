@@ -23,8 +23,8 @@ namespace advisor {
 
 AdvisorConfig::AdvisorConfig() { outputDir = ".llvm-advisor"; }
 
-Expected<bool> AdvisorConfig::loadFromFile(llvm::StringRef path) {
-  auto BufferOrError = MemoryBuffer::getFile(path);
+Expected<bool> AdvisorConfig::loadFromFile(llvm::StringRef Path) {
+  auto BufferOrError = MemoryBuffer::getFile(Path);
   if (!BufferOrError)
     return createStringError(BufferOrError.getError(),
                              "Cannot read config file");
@@ -67,18 +67,18 @@ Expected<bool> AdvisorConfig::loadFromFile(llvm::StringRef path) {
   return true;
 }
 
-std::string AdvisorConfig::getToolPath(llvm::StringRef tool) const {
+std::string AdvisorConfig::getToolPath(llvm::StringRef Tool) const {
   // First consult any explicit override from the configuration file.
-  auto It = toolPaths.find(tool.str());
+  auto It = toolPaths.find(Tool.str());
   if (It != toolPaths.end())
     return It->second;
 
   // Otherwise try to find the program in PATH.
-  if (auto P = llvm::sys::findProgramByName(tool))
+  if (auto P = llvm::sys::findProgramByName(Tool))
     return *P;
 
   // Fall back to the given tool name (let the OS PATH lookup handle it).
-  return tool.str();
+  return Tool.str();
 }
 
 } // namespace advisor

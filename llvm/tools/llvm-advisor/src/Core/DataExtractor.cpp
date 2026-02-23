@@ -18,9 +18,9 @@
 #include "CoverageProcessor.h"
 #include "DriverContext.h"
 #include "clang/AST/ASTConsumer.h"
-#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/Version.h"
 #include "clang/CodeGen/CodeGenAction.h"
 #include "clang/Driver/Compilation.h"
@@ -46,8 +46,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
@@ -167,9 +167,8 @@ public:
   void InclusionDirective(clang::SourceLocation HashLoc, const clang::Token &,
                           llvm::StringRef FileName, bool,
                           clang::CharSourceRange,
-                          clang::OptionalFileEntryRef File,
-                          llvm::StringRef, llvm::StringRef,
-                          const clang::Module *, bool,
+                          clang::OptionalFileEntryRef File, llvm::StringRef,
+                          llvm::StringRef, const clang::Module *, bool,
                           clang::SrcMgr::CharacteristicKind) override {
     OS.indent(Depth * 2);
     if (File)
@@ -224,17 +223,16 @@ openObjectFile(StringRef Path) {
 
 static bool hasRegisteredCodegenTarget() {
   std::string Error;
-  return llvm::TargetRegistry::lookupTarget(llvm::sys::getDefaultTargetTriple(),
-                                            Error) != nullptr;
+  llvm::Triple DefaultTarget(llvm::sys::getDefaultTargetTriple());
+  return llvm::TargetRegistry::lookupTarget(DefaultTarget, Error) != nullptr;
 }
 
 DataExtractor::DataExtractor(const AdvisorConfig &Config) : Config(Config) {}
 
 Error DataExtractor::extractAllData(CompilationUnit &Unit,
                                     llvm::StringRef TempDir) {
-  if (Config.getVerbose()) {
+  if (Config.getVerbose())
     outs() << "Extracting data for unit: " << Unit.getName() << "\n";
-  }
 
   const bool HasCodegenTarget = hasRegisteredCodegenTarget();
   if (!HasCodegenTarget && Config.getVerbose()) {
@@ -292,7 +290,7 @@ Error DataExtractor::extractAllData(CompilationUnit &Unit,
     return Err;
 
   // Run additional extractors
-  auto requiresCodegenTarget = [&](ExtractorMethod Method) {
+  auto RequiresCodegenTarget = [&](ExtractorMethod Method) {
     return Method == &DataExtractor::extractCoverage ||
            Method == &DataExtractor::extractTimeTrace ||
            Method == &DataExtractor::extractBinarySize ||
@@ -302,13 +300,13 @@ Error DataExtractor::extractAllData(CompilationUnit &Unit,
            Method == &DataExtractor::extractOptDot;
   };
 
-  for (size_t i = 0; i < numExtractors; ++i) {
-    const auto &extractor = extractors[i];
-    if (!HasCodegenTarget && requiresCodegenTarget(extractor.method))
+  for (size_t I = 0; I < numExtractors; ++I) {
+    const auto &Extractor = extractors[I];
+    if (!HasCodegenTarget && RequiresCodegenTarget(Extractor.method))
       continue;
-    if (auto Err = (this->*extractor.method)(Unit, TempDir)) {
+    if (auto Err = (this->*Extractor.method)(Unit, TempDir)) {
       if (Config.getVerbose()) {
-        errs() << extractor.name
+        errs() << Extractor.name
                << " extraction failed: " << toString(std::move(Err)) << "\n";
       }
     }
@@ -423,8 +421,8 @@ Error DataExtractor::runFrontendAction(
 
   auto DiagOpts = std::make_unique<clang::DiagnosticOptions>();
   llvm::raw_ostream &DiagStream = DiagOS ? *DiagOS : llvm::errs();
-  auto DiagPrinter = std::make_unique<clang::TextDiagnosticPrinter>(
-      DiagStream, *DiagOpts);
+  auto DiagPrinter =
+      std::make_unique<clang::TextDiagnosticPrinter>(DiagStream, *DiagOpts);
   llvm::IntrusiveRefCntPtr<clang::DiagnosticIDs> DiagIDs(
       new clang::DiagnosticIDs());
   clang::DiagnosticsEngine Diags(DiagIDs, *DiagOpts, DiagPrinter.get(),
@@ -623,12 +621,12 @@ Error DataExtractor::extractPreprocessed(CompilationUnit &Unit,
 
 Error DataExtractor::extractIncludeTree(CompilationUnit &Unit,
                                         llvm::StringRef TempDir) {
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
     std::string OutputFile = std::string(TempDir) + "/include-tree/" +
-                             sys::path::stem(source.path).str() +
+                             sys::path::stem(Source.path).str() +
                              ".include.txt";
 
     std::error_code EC;
@@ -640,7 +638,7 @@ Error DataExtractor::extractIncludeTree(CompilationUnit &Unit,
     }
 
     if (auto Err = runFrontendAction(
-            Unit.getInfo(), source.path, "", {"-fsyntax-only"},
+            Unit.getInfo(), Source.path, "", {"-fsyntax-only"},
             [&]() -> std::unique_ptr<clang::FrontendAction> {
               return std::make_unique<IncludeTreeAction>(OS);
             })) {
@@ -657,12 +655,12 @@ Error DataExtractor::extractIncludeTree(CompilationUnit &Unit,
 
 Error DataExtractor::extractDependencies(CompilationUnit &Unit,
                                          llvm::StringRef TempDir) {
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
     std::string OutputFile = std::string(TempDir) + "/dependencies/" +
-                             sys::path::stem(source.path).str() + ".deps.txt";
+                             sys::path::stem(Source.path).str() + ".deps.txt";
 
     llvm::StringSet<> Files;
     auto Collector = std::make_shared<DependencyRecorder>(Files);
@@ -671,7 +669,7 @@ Error DataExtractor::extractDependencies(CompilationUnit &Unit,
     };
 
     auto Err = runFrontendAction(
-        Unit.getInfo(), source.path, "", {"-E"},
+        Unit.getInfo(), Source.path, "", {"-E"},
         []() -> std::unique_ptr<clang::FrontendAction> {
           return std::make_unique<clang::PreprocessOnlyAction>();
         },
@@ -699,18 +697,18 @@ Error DataExtractor::extractDependencies(CompilationUnit &Unit,
 
 Error DataExtractor::extractDebugInfo(CompilationUnit &Unit,
                                       llvm::StringRef TempDir) {
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
     std::string OutputFile = std::string(TempDir) + "/debug/" +
-                             sys::path::stem(source.path).str() + ".debug.txt";
+                             sys::path::stem(Source.path).str() + ".debug.txt";
     std::string ObjectFile = std::string(TempDir) + "/debug/" +
-                             sys::path::stem(source.path).str() + ".o";
+                             sys::path::stem(Source.path).str() + ".o";
 
     llvm::SmallVector<std::string, 8> ExtraArgs = {"-c", "-g"};
     auto Err =
-        runFrontendAction(Unit.getInfo(), source.path, ObjectFile, ExtraArgs,
+        runFrontendAction(Unit.getInfo(), Source.path, ObjectFile, ExtraArgs,
                           []() -> std::unique_ptr<clang::FrontendAction> {
                             return std::make_unique<clang::EmitObjAction>();
                           });
@@ -745,12 +743,12 @@ Error DataExtractor::extractDebugInfo(CompilationUnit &Unit,
 
 Error DataExtractor::extractStaticAnalysis(CompilationUnit &Unit,
                                            llvm::StringRef TempDir) {
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
     std::string OutputFile = std::string(TempDir) + "/static-analyzer/" +
-                             sys::path::stem(source.path).str() +
+                             sys::path::stem(Source.path).str() +
                              ".analysis.txt";
 
     std::error_code EC;
@@ -762,7 +760,7 @@ Error DataExtractor::extractStaticAnalysis(CompilationUnit &Unit,
     }
 
     if (auto Err = runFrontendAction(
-            Unit.getInfo(), source.path, "",
+            Unit.getInfo(), Source.path, "",
             {"-Xclang", "-analyzer-output=text"},
             []() -> std::unique_ptr<clang::FrontendAction> {
               return std::make_unique<clang::ento::AnalysisAction>();
@@ -814,23 +812,23 @@ Error DataExtractor::extractCompilationPhases(CompilationUnit &Unit,
   if (!DriverCtx)
     return Error::success();
 
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
-    std::string outputFile =
-        (TempDir + "/debug/" + sys::path::stem(source.path).str() +
+    std::string OutputFile =
+        (TempDir + "/debug/" + sys::path::stem(Source.path).str() +
          ".phases.txt")
             .str();
-    std::string bindingsFile =
-        (TempDir + "/debug/" + sys::path::stem(source.path).str() +
+    std::string BindingsFile =
+        (TempDir + "/debug/" + sys::path::stem(Source.path).str() +
          ".bindings.txt")
             .str();
 
     std::error_code BindEC;
-    raw_fd_ostream BindOS(bindingsFile, BindEC);
+    raw_fd_ostream BindOS(BindingsFile, BindEC);
     if (!BindEC) {
-      BindOS << "Driver job bindings for: " << source.path << "\n\n";
+      BindOS << "Driver job bindings for: " << Source.path << "\n\n";
       for (const auto &Cmd : DriverCtx->Compilation->getJobs()) {
         const auto *JA =
             llvm::dyn_cast<clang::driver::JobAction>(&Cmd.getSource());
@@ -848,13 +846,13 @@ Error DataExtractor::extractCompilationPhases(CompilationUnit &Unit,
           BindOS << " " << Out;
         BindOS << "\n\n";
       }
-      Unit.addGeneratedFile("compilation-phases", bindingsFile);
+      Unit.addGeneratedFile("compilation-phases", BindingsFile);
     }
 
     std::error_code VerbEC;
-    raw_fd_ostream VerbOS(outputFile, VerbEC);
+    raw_fd_ostream VerbOS(OutputFile, VerbEC);
     if (!VerbEC) {
-      VerbOS << "Verbose compilation breakdown for: " << source.path << "\n";
+      VerbOS << "Verbose compilation breakdown for: " << Source.path << "\n";
       VerbOS << "Target triple: "
              << DriverCtx->Compilation->getDefaultToolChain().getTripleString()
              << "\n\n";
@@ -864,7 +862,7 @@ Error DataExtractor::extractCompilationPhases(CompilationUnit &Unit,
           VerbOS << ' ' << Arg;
         VerbOS << "\n";
       }
-      Unit.addGeneratedFile("compilation-phases", outputFile);
+      Unit.addGeneratedFile("compilation-phases", OutputFile);
     }
   }
   return Error::success();
@@ -872,19 +870,19 @@ Error DataExtractor::extractCompilationPhases(CompilationUnit &Unit,
 
 Error DataExtractor::extractFTimeReport(CompilationUnit &Unit,
                                         llvm::StringRef TempDir) {
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
-    std::string outputFile = std::string(TempDir) + "/ftime-report/" +
-                             sys::path::stem(source.path).str() + ".ftime.txt";
+    std::string OutputFile = std::string(TempDir) + "/ftime-report/" +
+                             sys::path::stem(Source.path).str() + ".ftime.txt";
 
     std::string ReportBuffer;
     llvm::raw_string_ostream ReportStream(ReportBuffer);
     llvm::SmallVector<std::string, 8> ExtraArgs = {"-fsyntax-only",
                                                    "-ftime-report"};
     auto Err = runFrontendAction(
-        Unit.getInfo(), source.path, "", ExtraArgs,
+        Unit.getInfo(), Source.path, "", ExtraArgs,
         []() -> std::unique_ptr<clang::FrontendAction> {
           return std::make_unique<clang::SyntaxOnlyAction>();
         },
@@ -897,12 +895,12 @@ Error DataExtractor::extractFTimeReport(CompilationUnit &Unit,
     }
 
     std::error_code EC;
-    raw_fd_ostream OS(outputFile, EC);
+    raw_fd_ostream OS(OutputFile, EC);
     if (!EC) {
       OS << "FTIME REPORT:\n" << ReportBuffer;
-      Unit.addGeneratedFile("ftime-report", outputFile);
+      Unit.addGeneratedFile("ftime-report", OutputFile);
       if (Config.getVerbose())
-        outs() << "FTime Report: " << outputFile << "\n";
+        outs() << "FTime Report: " << OutputFile << "\n";
     }
   }
   return Error::success();
@@ -983,7 +981,7 @@ Error DataExtractor::extractDiagnostics(CompilationUnit &Unit,
     }
 
     OS << "Diagnostics for: " << Source.path << "\n";
-    auto runDiag = [&](llvm::ArrayRef<std::string> ExtraArgs,
+    auto RunDiag = [&](llvm::ArrayRef<std::string> ExtraArgs,
                        llvm::StringRef Title) -> Error {
       llvm::SmallString<4096> Buffer;
       llvm::raw_svector_ostream Stream(Buffer);
@@ -1001,7 +999,7 @@ Error DataExtractor::extractDiagnostics(CompilationUnit &Unit,
     llvm::SmallVector<std::string, 8> PrimaryArgs = {
         "-fdiagnostics-parseable-fixits", "-fdiagnostics-absolute-paths",
         "-Wall", "-Wextra", "-fsyntax-only"};
-    if (auto Err = runDiag(PrimaryArgs, "Primary diagnostics"))
+    if (auto Err = RunDiag(PrimaryArgs, "Primary diagnostics"))
       if (Config.getVerbose())
         errs() << "Primary diagnostics failed for " << Source.path << ": "
                << toString(std::move(Err)) << "\n";
@@ -1009,7 +1007,7 @@ Error DataExtractor::extractDiagnostics(CompilationUnit &Unit,
     llvm::SmallVector<std::string, 8> Extra = {
         "-Weverything", "-Wno-c++98-compat", "-Wno-c++98-compat-pedantic",
         "-fsyntax-only"};
-    if (auto Err = runDiag(Extra, "Extended diagnostics"))
+    if (auto Err = RunDiag(Extra, "Extended diagnostics"))
       if (Config.getVerbose())
         errs() << "Extended diagnostics failed for " << Source.path << ": "
                << toString(std::move(Err)) << "\n";
@@ -1021,7 +1019,7 @@ Error DataExtractor::extractDiagnostics(CompilationUnit &Unit,
 
 Error DataExtractor::extractCoverage(CompilationUnit &Unit,
                                      llvm::StringRef TempDir) {
-  auto processExistingProfiles = [&](const SourceFile &Source) {
+  auto ProcessExistingProfiles = [&](const SourceFile &Source) {
     CoveragePaths Paths = computeCoverageArtifacts(Unit, Source);
     if (auto Err = emitCoverageReport(Config, Paths)) {
       if (Config.getVerbose())
@@ -1035,15 +1033,15 @@ Error DataExtractor::extractCoverage(CompilationUnit &Unit,
       Unit.addGeneratedFile("coverage", Paths.Report);
   };
 
-  for (const auto &source : Unit.getInfo().sources)
-    processExistingProfiles(source);
+  for (const auto &Source : Unit.getInfo().sources)
+    ProcessExistingProfiles(Source);
 
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
-    CoveragePaths Paths = computeCoverageArtifacts(Unit, source);
-    std::string SourceStem = sys::path::stem(source.path).str();
+    CoveragePaths Paths = computeCoverageArtifacts(Unit, Source);
+    std::string SourceStem = sys::path::stem(Source.path).str();
     // Produce an instrumented *object* file; linking a single TU into an
     // executable would fail for the vast majority of real translation units
     // (no main function). The object file is sufficient for coverage-map
@@ -1052,7 +1050,7 @@ Error DataExtractor::extractCoverage(CompilationUnit &Unit,
         std::string(TempDir) + "/" + SourceStem + "_cov.o";
 
     if (auto CompileErr = runFrontendAction(
-            Unit.getInfo(), source.path, InstrumentedObj,
+            Unit.getInfo(), Source.path, InstrumentedObj,
             {"-fprofile-instr-generate", "-fcoverage-mapping", "-c"},
             []() -> std::unique_ptr<clang::FrontendAction> {
               return std::make_unique<clang::EmitObjAction>();
@@ -1124,11 +1122,11 @@ Error DataExtractor::extractCoverage(CompilationUnit &Unit,
 
 Error DataExtractor::extractTimeTrace(CompilationUnit &Unit,
                                       llvm::StringRef TempDir) {
-  for (const auto &source : Unit.getInfo().sources) {
-    if (source.isHeader)
+  for (const auto &Source : Unit.getInfo().sources) {
+    if (Source.isHeader)
       continue;
 
-    std::string SourceStem = sys::path::stem(source.path).str();
+    std::string SourceStem = sys::path::stem(Source.path).str();
     std::string TraceFile =
         std::string(TempDir) + "/time-trace/" + SourceStem + ".trace.json";
     std::string TempObject =
@@ -1140,7 +1138,7 @@ Error DataExtractor::extractTimeTrace(CompilationUnit &Unit,
     };
 
     auto TraceErr = runFrontendAction(
-        Unit.getInfo(), source.path, TempObject, {"-c", "-ftime-trace"},
+        Unit.getInfo(), Source.path, TempObject, {"-c", "-ftime-trace"},
         []() -> std::unique_ptr<clang::FrontendAction> {
           return std::make_unique<clang::EmitObjAction>();
         },
@@ -1150,7 +1148,7 @@ Error DataExtractor::extractTimeTrace(CompilationUnit &Unit,
 
     if (TraceErr) {
       if (Config.getVerbose())
-        errs() << "Time trace failed for " << source.path << ": "
+        errs() << "Time trace failed for " << Source.path << ": "
                << toString(std::move(TraceErr)) << "\n";
       continue;
     }
@@ -1160,7 +1158,7 @@ Error DataExtractor::extractTimeTrace(CompilationUnit &Unit,
       if (Config.getVerbose())
         outs() << "Time trace: " << TraceFile << "\n";
     } else if (Config.getVerbose()) {
-      errs() << "Time trace file not generated for " << source.path << "\n";
+      errs() << "Time trace file not generated for " << Source.path << "\n";
     }
   }
   return Error::success();
@@ -1232,10 +1230,10 @@ Error DataExtractor::extractRuntimeTrace(CompilationUnit &Unit,
   // Create a trace directory
   SmallString<256> TraceDir;
   sys::path::append(TraceDir, TempDir, "runtime-trace");
-  if (auto ec = sys::fs::create_directories(TraceDir, true)) {
+  if (auto Ec = sys::fs::create_directories(TraceDir, true)) {
     if (Config.getVerbose())
       outs() << "Warning: Failed to create runtime trace directory: "
-             << ec.message() << "\n";
+             << Ec.message() << "\n";
   }
 
   // Prepare trace file
@@ -1304,13 +1302,12 @@ Error DataExtractor::extractSARIF(CompilationUnit &Unit,
     std::string SarifFile =
         (TempDir + "/static-analyzer/" + SourceStem + ".sarif").str();
 
-    if (auto Err =
-            runFrontendAction(Unit.getInfo(), Source.path, SarifFile,
-                              {"-Xclang", "-analyzer-output=sarif"},
-                              []() -> std::unique_ptr<clang::FrontendAction> {
-                                return std::make_unique<
-                                    clang::ento::AnalysisAction>();
-                              })) {
+    if (auto Err = runFrontendAction(
+            Unit.getInfo(), Source.path, SarifFile,
+            {"-Xclang", "-analyzer-output=sarif"},
+            []() -> std::unique_ptr<clang::FrontendAction> {
+              return std::make_unique<clang::ento::AnalysisAction>();
+            })) {
       if (Config.getVerbose())
         errs() << "Failed to extract SARIF static analysis for " << Source.path
                << ": " << toString(std::move(Err)) << "\n";
@@ -1398,37 +1395,37 @@ Error DataExtractor::extractBinarySize(CompilationUnit &Unit,
 Error DataExtractor::extractPGO(CompilationUnit &Unit,
                                 llvm::StringRef TempDir) {
   // Look for existing profile raw data file from compilation
-  std::string profrawFile = std::string(TempDir) + "/profile.profraw";
+  std::string ProfrawFile = std::string(TempDir) + "/profile.profraw";
 
-  if (sys::fs::exists(profrawFile)) {
-    std::string profileFile = (TempDir + "/pgo/merged.profdata").str();
-    std::string profileText = (TempDir + "/pgo/profile.txt").str();
-    std::string profileJson = (TempDir + "/pgo/profile.json").str();
+  if (sys::fs::exists(ProfrawFile)) {
+    std::string ProfileFile = (TempDir + "/pgo/merged.profdata").str();
+    std::string ProfileText = (TempDir + "/pgo/profile.txt").str();
+    std::string ProfileJson = (TempDir + "/pgo/profile.json").str();
 
     sys::fs::create_directories((llvm::Twine(TempDir) + "/pgo").str());
 
     if (auto Err =
-            CoverageProcessor::mergeRawProfile(profrawFile, profileFile)) {
+            CoverageProcessor::mergeRawProfile(ProfrawFile, ProfileFile)) {
       if (Config.getVerbose())
         errs() << "Failed to merge PGO profile data: "
                << toString(std::move(Err)) << "\n";
       return Error::success();
     }
 
-    if (auto Err = CoverageProcessor::summarizeProfile(profileFile, profileText,
-                                                       profileJson)) {
+    if (auto Err = CoverageProcessor::summarizeProfile(ProfileFile, ProfileText,
+                                                       ProfileJson)) {
       if (Config.getVerbose())
         errs() << "Failed to summarize PGO profile: "
                << toString(std::move(Err)) << "\n";
     } else {
-      Unit.addGeneratedFile("pgo-profile", profileText);
-      Unit.addGeneratedFile("pgo-profile-json", profileJson);
+      Unit.addGeneratedFile("pgo-profile", ProfileText);
+      Unit.addGeneratedFile("pgo-profile-json", ProfileJson);
       if (Config.getVerbose()) {
-        outs() << "PGO profile data extracted: " << profileText << "\n";
-        outs() << "PGO profile JSON extracted: " << profileJson << "\n";
+        outs() << "PGO profile data extracted: " << ProfileText << "\n";
+        outs() << "PGO profile JSON extracted: " << ProfileJson << "\n";
       }
     }
-    sys::fs::remove(profileFile);
+    sys::fs::remove(ProfileFile);
   } else if (Config.getVerbose()) {
     outs() << "No PGO profile data found to extract\n";
   }
@@ -1717,9 +1714,8 @@ Error DataExtractor::extractOptDot(CompilationUnit &Unit,
 
 Error DataExtractor::extractSources(CompilationUnit &Unit,
                                     llvm::StringRef TempDir) {
-  if (Config.getVerbose()) {
+  if (Config.getVerbose())
     outs() << "Extracting source files based on dependencies...\n";
-  }
 
   // Create sources directory
   SmallString<256> SourcesDir;
@@ -1733,80 +1729,77 @@ Error DataExtractor::extractSources(CompilationUnit &Unit,
   }
 
   // Find and parse dependencies files
-  SmallString<256> depsDir;
-  sys::path::append(depsDir, TempDir, "dependencies");
+  SmallString<256> DepsDir;
+  sys::path::append(DepsDir, TempDir, "dependencies");
 
-  if (!sys::fs::exists(depsDir)) {
-    if (Config.getVerbose()) {
+  if (!sys::fs::exists(DepsDir)) {
+    if (Config.getVerbose())
       outs() << "No dependencies directory found, skipping source extraction\n";
-    }
     return Error::success();
   }
 
   std::error_code EC;
-  for (sys::fs::directory_iterator I(depsDir, EC), E; I != E && !EC;
+  for (sys::fs::directory_iterator I(DepsDir, EC), E; I != E && !EC;
        I.increment(EC)) {
-    StringRef filePath = I->path();
-    if (!filePath.ends_with(".deps.txt")) {
+    StringRef FilePath = I->path();
+    if (!FilePath.ends_with(".deps.txt"))
       continue;
-    }
 
-    if (Config.getVerbose()) {
-      outs() << "Processing dependencies file: " << filePath << "\n";
-    }
+    if (Config.getVerbose())
+      outs() << "Processing dependencies file: " << FilePath << "\n";
 
     // Read and parse dependencies file
-    auto bufferOrErr = MemoryBuffer::getFile(filePath);
-    if (!bufferOrErr) {
+    auto BufferOrErr = MemoryBuffer::getFile(FilePath);
+    if (!BufferOrErr) {
       if (Config.getVerbose()) {
-        outs() << "Warning: Failed to read dependencies file: " << filePath
+        outs() << "Warning: Failed to read dependencies file: " << FilePath
                << "\n";
       }
       continue;
     }
 
-    StringRef content = bufferOrErr.get()->getBuffer();
-    SmallVector<StringRef, 16> lines;
-    content.split(lines, '\n');
+    StringRef Content = BufferOrErr.get()->getBuffer();
+    SmallVector<StringRef, 16> Lines;
+    Content.split(Lines, '\n');
 
-    for (StringRef line : lines) {
-      line = line.trim();
-      if (line.empty())
+    for (StringRef Line : Lines) {
+      Line = Line.trim();
+      if (Line.empty())
         continue;
 
       // Each line written by extractDependencies is a single file path.
-      StringRef sourceFile = line;
+      StringRef SourceFile = Line;
 
       // Convert relative paths to absolute paths.
-      SmallString<256> absoluteSourcePath;
-      if (sys::path::is_absolute(sourceFile)) {
-        absoluteSourcePath = sourceFile;
+      SmallString<256> AbsoluteSourcePath;
+      if (sys::path::is_absolute(SourceFile)) {
+        AbsoluteSourcePath = SourceFile;
       } else {
-        SmallString<256> currentDir;
-        sys::fs::current_path(currentDir);
-        absoluteSourcePath = currentDir;
-        sys::path::append(absoluteSourcePath, sourceFile);
+        SmallString<256> CurrentDir;
+        sys::fs::current_path(CurrentDir);
+        AbsoluteSourcePath = CurrentDir;
+        sys::path::append(AbsoluteSourcePath, SourceFile);
       }
 
-      if (!sys::fs::exists(absoluteSourcePath)) {
+      if (!sys::fs::exists(AbsoluteSourcePath)) {
         if (Config.getVerbose())
-          outs() << "Warning: Source file not found: " << absoluteSourcePath
+          outs() << "Warning: Source file not found: " << AbsoluteSourcePath
                  << "\n";
         continue;
       }
 
-      SmallString<256> destPath;
-      sys::path::append(destPath, SourcesDir, sys::path::filename(sourceFile));
+      SmallString<256> DestPath;
+      sys::path::append(DestPath, SourcesDir, sys::path::filename(SourceFile));
 
-      if (auto copyErr =
-              FileManager::copyFile(absoluteSourcePath.str(), destPath.str())) {
+      if (auto CopyErr =
+              FileManager::copyFile(AbsoluteSourcePath.str(), DestPath.str())) {
         if (Config.getVerbose())
-          outs() << "Warning: Failed to copy source file " << absoluteSourcePath
-                 << " to " << destPath.str() << "\n";
+          outs() << "Warning: Failed to copy source file " << AbsoluteSourcePath
+                 << " to " << DestPath.str() << "\n";
       } else {
-        Unit.addGeneratedFile("sources", destPath.str());
+        Unit.addGeneratedFile("sources", DestPath.str());
         if (Config.getVerbose())
-          outs() << "Copied source: " << sourceFile << " -> " << destPath.str()
+          outs() << "Copied source: " << SourceFile << " -> " << DestPath.str()
                  << "\n";
       }
     }

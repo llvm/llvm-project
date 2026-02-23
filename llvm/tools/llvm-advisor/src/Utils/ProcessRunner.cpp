@@ -28,75 +28,75 @@ namespace advisor {
 /// with \p envOverride (pass std::nullopt to inherit the parent environment).
 /// stdout and stderr are captured into the returned ProcessResult.
 static llvm::Expected<ProcessRunner::ProcessResult>
-runImpl(llvm::StringRef program, const llvm::SmallVector<std::string, 8> &args,
-        std::optional<llvm::ArrayRef<llvm::StringRef>> envOverride,
-        int timeoutSeconds) {
-  auto programPath = llvm::sys::findProgramByName(program);
-  if (!programPath)
-    return llvm::createStringError(programPath.getError(),
-                                   "Tool not found: " + program.str());
+runImpl(llvm::StringRef Program, const llvm::SmallVector<std::string, 8> &Args,
+        std::optional<llvm::ArrayRef<llvm::StringRef>> EnvOverride,
+        int TimeoutSeconds) {
+  auto ProgramPath = llvm::sys::findProgramByName(Program);
+  if (!ProgramPath)
+    return llvm::createStringError(ProgramPath.getError(),
+                                   "Tool not found: " + Program.str());
 
   // argv[0] is the resolved executable path; remaining entries are the args.
-  llvm::SmallVector<llvm::StringRef, 16> execArgs;
-  execArgs.push_back(*programPath);
-  for (const auto &arg : args)
-    execArgs.push_back(arg);
+  llvm::SmallVector<llvm::StringRef, 16> ExecArgs;
+  ExecArgs.push_back(*ProgramPath);
+  for (const auto &Arg : Args)
+    ExecArgs.push_back(Arg);
 
-  llvm::SmallString<128> stdoutPath, stderrPath;
+  llvm::SmallString<128> StdoutPath, StderrPath;
   if (auto EC =
-          llvm::sys::fs::createTemporaryFile("advisor-out", "tmp", stdoutPath))
+          llvm::sys::fs::createTemporaryFile("advisor-out", "tmp", StdoutPath))
     return llvm::createStringError(EC,
                                    "Failed to create temporary stdout file");
   if (auto EC =
-          llvm::sys::fs::createTemporaryFile("advisor-err", "tmp", stderrPath))
+          llvm::sys::fs::createTemporaryFile("advisor-err", "tmp", StderrPath))
     return llvm::createStringError(EC,
                                    "Failed to create temporary stderr file");
 
-  std::optional<llvm::StringRef> redirects[] = {
+  std::optional<llvm::StringRef> Redirects[] = {
       std::nullopt,                // stdin  — inherit
-      llvm::StringRef(stdoutPath), // stdout — captured
-      llvm::StringRef(stderrPath)  // stderr — captured
+      llvm::StringRef(StdoutPath), // stdout — captured
+      llvm::StringRef(StderrPath)  // stderr — captured
   };
 
-  int exitCode =
-      llvm::sys::ExecuteAndWait(*programPath, execArgs, envOverride, redirects,
-                                static_cast<unsigned>(timeoutSeconds));
+  int ExitCode =
+      llvm::sys::ExecuteAndWait(*ProgramPath, ExecArgs, EnvOverride, Redirects,
+                                static_cast<unsigned>(TimeoutSeconds));
 
-  ProcessRunner::ProcessResult result;
-  result.exitCode = exitCode;
-  result.executionTime = 0.0;
+  ProcessRunner::ProcessResult Result;
+  Result.exitCode = ExitCode;
+  Result.executionTime = 0.0;
 
-  if (auto buf = llvm::MemoryBuffer::getFile(stdoutPath))
-    result.stdout = (*buf)->getBuffer().str();
-  if (auto buf = llvm::MemoryBuffer::getFile(stderrPath))
-    result.stderr = (*buf)->getBuffer().str();
+  if (auto Buf = llvm::MemoryBuffer::getFile(StdoutPath))
+    Result.stdout = (*Buf)->getBuffer().str();
+  if (auto Buf = llvm::MemoryBuffer::getFile(StderrPath))
+    Result.stderr = (*Buf)->getBuffer().str();
 
-  llvm::sys::fs::remove(stdoutPath);
-  llvm::sys::fs::remove(stderrPath);
+  llvm::sys::fs::remove(StdoutPath);
+  llvm::sys::fs::remove(StderrPath);
 
-  return result;
+  return Result;
 }
 
 Expected<ProcessRunner::ProcessResult>
-ProcessRunner::run(llvm::StringRef program,
-                   const llvm::SmallVector<std::string, 8> &args,
-                   int timeoutSeconds) {
-  return runImpl(program, args, /*envOverride=*/std::nullopt, timeoutSeconds);
+ProcessRunner::run(llvm::StringRef Program,
+                   const llvm::SmallVector<std::string, 8> &Args,
+                   int TimeoutSeconds) {
+  return runImpl(Program, Args, /*envOverride=*/std::nullopt, TimeoutSeconds);
 }
 
 Expected<ProcessRunner::ProcessResult> ProcessRunner::runWithEnv(
-    llvm::StringRef program, const llvm::SmallVector<std::string, 8> &args,
-    const llvm::SmallVector<std::string, 8> &env, int timeoutSeconds) {
+    llvm::StringRef Program, const llvm::SmallVector<std::string, 8> &Args,
+    const llvm::SmallVector<std::string, 8> &Env, int TimeoutSeconds) {
   // Convert the environment strings to StringRef so we can pass them directly
   // to ExecuteAndWait.  This sets the *child* environment without touching the
   // parent process, which is the correct and thread-safe approach.
-  llvm::SmallVector<llvm::StringRef, 16> envRefs;
-  envRefs.reserve(env.size());
-  for (const auto &e : env)
-    envRefs.push_back(e);
+  llvm::SmallVector<llvm::StringRef, 16> EnvRefs;
+  EnvRefs.reserve(Env.size());
+  for (const auto &E : Env)
+    EnvRefs.push_back(E);
 
-  return runImpl(program, args, llvm::ArrayRef<llvm::StringRef>(envRefs),
-                 timeoutSeconds);
+  return runImpl(Program, Args, llvm::ArrayRef<llvm::StringRef>(EnvRefs),
+                 TimeoutSeconds);
 }
 
 } // namespace advisor

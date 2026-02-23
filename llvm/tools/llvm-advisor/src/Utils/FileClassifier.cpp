@@ -20,128 +20,128 @@ namespace llvm {
 namespace advisor {
 
 FileClassification
-FileClassifier::classifyFile(llvm::StringRef filePath) const {
-  StringRef filename = sys::path::filename(filePath);
-  StringRef extension = sys::path::extension(filePath);
+FileClassifier::classifyFile(llvm::StringRef FilePath) const {
+  StringRef Filename = sys::path::filename(FilePath);
+  StringRef Extension = sys::path::extension(FilePath);
 
-  FileClassification classification;
-  classification.isGenerated = true;
-  classification.isTemporary = false;
+  FileClassification Classification;
+  Classification.isGenerated = true;
+  Classification.isTemporary = false;
 
   // LLVM IR files
-  if (extension == ".ll") {
-    classification.category = "ir";
-    classification.description = "LLVM IR text";
-    return classification;
+  if (Extension == ".ll") {
+    Classification.category = "ir";
+    Classification.description = "LLVM IR text";
+    return Classification;
   }
 
   // Assembly files
-  if (extension == ".s" || extension == ".S") {
-    classification.category = "assembly";
-    classification.description = "Assembly";
-    return classification;
+  if (Extension == ".s" || Extension == ".S") {
+    Classification.category = "assembly";
+    Classification.description = "Assembly";
+    return Classification;
   }
 
   // Optimization remarks
-  if (filename.ends_with(".opt.yaml") || filename.ends_with(".opt.yml")) {
-    classification.category = "remarks";
-    classification.description = "Optimization remarks";
-    return classification;
+  if (Filename.ends_with(".opt.yaml") || Filename.ends_with(".opt.yml")) {
+    Classification.category = "remarks";
+    Classification.description = "Optimization remarks";
+    return Classification;
   }
 
   // Preprocessed files
-  if (extension == ".i" || extension == ".ii") {
-    classification.category = "preprocessed";
-    classification.description = "Preprocessed source";
-    return classification;
+  if (Extension == ".i" || Extension == ".ii") {
+    Classification.category = "preprocessed";
+    Classification.description = "Preprocessed source";
+    return Classification;
   }
 
   // AST dumps
-  if (extension == ".ast" || filename.contains("ast-dump")) {
-    classification.category = "ast";
-    classification.description = "AST dump";
-    return classification;
+  if (Extension == ".ast" || Filename.contains("ast-dump")) {
+    Classification.category = "ast";
+    Classification.description = "AST dump";
+    return Classification;
   }
 
   // Profile data
-  if (extension == ".profraw" || extension == ".profdata") {
-    classification.category = "profile";
-    classification.description = "Profile data";
-    return classification;
+  if (Extension == ".profraw" || Extension == ".profdata") {
+    Classification.category = "profile";
+    Classification.description = "Profile data";
+    return Classification;
   }
 
   // Include trees
-  if (filename.contains(".include.") || filename.contains("include-tree")) {
-    classification.category = "include-tree";
-    classification.description = "Include tree";
-    return classification;
+  if (Filename.contains(".include.") || Filename.contains("include-tree")) {
+    Classification.category = "include-tree";
+    Classification.description = "Include tree";
+    return Classification;
   }
 
   // Debug info
-  if (filename.contains("debug") || filename.contains("dwarf")) {
-    classification.category = "debug";
-    classification.description = "Debug information";
-    return classification;
+  if (Filename.contains("debug") || Filename.contains("dwarf")) {
+    Classification.category = "debug";
+    Classification.description = "Debug information";
+    return Classification;
   }
 
   // Static analyzer output
-  if (filename.contains("analysis") || filename.contains("analyzer")) {
-    classification.category = "static-analyzer";
-    classification.description = "Static analyzer output";
-    return classification;
+  if (Filename.contains("analysis") || Filename.contains("analyzer")) {
+    Classification.category = "static-analyzer";
+    Classification.description = "Static analyzer output";
+    return Classification;
   }
 
   // Macro expansion
-  if (filename.contains("macro-expanded")) {
-    classification.category = "macro-expansion";
-    classification.description = "Macro expansion";
-    return classification;
+  if (Filename.contains("macro-expanded")) {
+    Classification.category = "macro-expansion";
+    Classification.description = "Macro expansion";
+    return Classification;
   }
 
   // Compilation phases
-  if (filename.contains("phases")) {
-    classification.category = "compilation-phases";
-    classification.description = "Compilation phases";
-    return classification;
+  if (Filename.contains("phases")) {
+    Classification.category = "compilation-phases";
+    Classification.description = "Compilation phases";
+    return Classification;
   }
 
   // Control flow graph
-  if (extension == ".dot" || filename.contains("cfg")) {
-    classification.category = "cfg";
-    classification.description = "Control flow graph";
-    return classification;
+  if (Extension == ".dot" || Filename.contains("cfg")) {
+    Classification.category = "cfg";
+    Classification.description = "Control flow graph";
+    return Classification;
   }
 
   // Template instantiation
-  if (filename.contains("template") || filename.contains("instantiation")) {
-    classification.category = "template-instantiation";
-    classification.description = "Template instantiation";
-    return classification;
+  if (Filename.contains("template") || Filename.contains("instantiation")) {
+    Classification.category = "template-instantiation";
+    Classification.description = "Template instantiation";
+    return Classification;
   }
 
   // Default for unknown files
-  classification.category = "unknown";
-  classification.description = "Unknown file type";
-  classification.isGenerated = false;
-  return classification;
+  Classification.category = "unknown";
+  Classification.description = "Unknown file type";
+  Classification.isGenerated = false;
+  return Classification;
 }
 
-bool FileClassifier::shouldCollect(llvm::StringRef filePath) const {
-  auto classification = classifyFile(filePath);
-  return classification.category != "unknown" && classification.isGenerated &&
-         !classification.isTemporary;
+bool FileClassifier::shouldCollect(llvm::StringRef FilePath) const {
+  auto Classification = classifyFile(FilePath);
+  return Classification.category != "unknown" && Classification.isGenerated &&
+         !Classification.isTemporary;
 }
 
-std::string FileClassifier::getLanguage(llvm::StringRef filePath) const {
-  StringRef extension = sys::path::extension(filePath);
+std::string FileClassifier::getLanguage(llvm::StringRef FilePath) const {
+  StringRef Extension = sys::path::extension(FilePath);
 
-  if (extension == ".c")
+  if (Extension == ".c")
     return "C";
-  if (extension == ".cpp" || extension == ".cc" || extension == ".cxx" ||
-      extension == ".C")
+  if (Extension == ".cpp" || Extension == ".cc" || Extension == ".cxx" ||
+      Extension == ".C")
     return "C++";
-  if (extension == ".h" || extension == ".hpp" || extension == ".hh" ||
-      extension == ".hxx")
+  if (Extension == ".h" || Extension == ".hpp" || Extension == ".hh" ||
+      Extension == ".hxx")
     return "Header";
 
   return "Unknown";

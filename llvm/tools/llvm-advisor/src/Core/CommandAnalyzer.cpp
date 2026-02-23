@@ -23,9 +23,9 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/TargetParser/Host.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/TargetParser/Host.h"
 #include <memory>
 
 namespace llvm {
@@ -53,8 +53,7 @@ BuildPhase phaseFromAction(clang::driver::Action::ActionClass Kind) {
 BuildPhase detectPhaseFromCompilation(const clang::driver::Compilation &C) {
   BuildPhase Detected = BuildPhase::Unknown;
   for (const auto &Cmd : C.getJobs()) {
-    const auto *JA =
-        llvm::dyn_cast<clang::driver::JobAction>(&Cmd.getSource());
+    const auto *JA = llvm::dyn_cast<clang::driver::JobAction>(&Cmd.getSource());
     if (!JA)
       continue;
     BuildPhase Phase = phaseFromAction(JA->getKind());
@@ -74,8 +73,7 @@ void collectFilesFromCompilation(const clang::driver::Compilation &C,
   llvm::DenseSet<llvm::StringRef> SeenInputs;
   llvm::DenseSet<llvm::StringRef> SeenOutputs;
   for (const auto &Cmd : C.getJobs()) {
-    const auto *JA =
-        llvm::dyn_cast<clang::driver::JobAction>(&Cmd.getSource());
+    const auto *JA = llvm::dyn_cast<clang::driver::JobAction>(&Cmd.getSource());
     if (!JA)
       continue;
 
@@ -117,49 +115,49 @@ void detectFeaturesFromArgs(llvm::ArrayRef<const char *> Argv,
 
 } // namespace
 
-CommandAnalyzer::CommandAnalyzer(llvm::StringRef command,
-                                 const llvm::SmallVectorImpl<std::string> &args)
-    : command(command.str()), args(args.data(), args.data() + args.size()) {}
+CommandAnalyzer::CommandAnalyzer(llvm::StringRef Command,
+                                 const llvm::SmallVectorImpl<std::string> &Args)
+    : command(Command.str()), args(Args.data(), Args.data() + Args.size()) {}
 
 BuildContext CommandAnalyzer::analyze() const {
-  BuildContext context;
-  llvm::SmallString<256> cwd;
-  llvm::sys::fs::current_path(cwd);
-  context.workingDirectory = std::string(cwd.str());
+  BuildContext Context;
+  llvm::SmallString<256> Cwd;
+  llvm::sys::fs::current_path(Cwd);
+  Context.workingDirectory = std::string(Cwd.str());
 
-  context.tool = detectBuildTool();
-  context.phase = detectBuildPhase(context.tool);
-  context.inputFiles = extractInputFiles();
-  context.outputFiles = extractOutputFiles();
-  detectBuildFeatures(context);
+  Context.tool = detectBuildTool();
+  Context.phase = detectBuildPhase(Context.tool);
+  Context.inputFiles = extractInputFiles();
+  Context.outputFiles = extractOutputFiles();
+  detectBuildFeatures(Context);
 
-  return context;
+  return Context;
 }
 
 void CommandAnalyzer::refineWithCompilation(
-    BuildContext &context,
+    BuildContext &Context,
     const clang::driver::Compilation *DriverCompilation) const {
   if (!DriverCompilation)
     return;
-  context.tool = BuildTool::Clang;
+  Context.tool = BuildTool::Clang;
   BuildPhase Phase = detectPhaseFromCompilation(*DriverCompilation);
   if (Phase != BuildPhase::Unknown)
-    context.phase = Phase;
+    Context.phase = Phase;
 
-  if (context.inputFiles.empty() || context.outputFiles.empty()) {
+  if (Context.inputFiles.empty() || Context.outputFiles.empty()) {
     llvm::SmallVector<std::string, 8> Inputs;
     llvm::SmallVector<std::string, 8> Outputs;
     collectFilesFromCompilation(*DriverCompilation, Inputs, Outputs);
-    if (context.inputFiles.empty())
-      context.inputFiles = Inputs;
-    if (context.outputFiles.empty())
-      context.outputFiles = Outputs;
+    if (Context.inputFiles.empty())
+      Context.inputFiles = Inputs;
+    if (Context.outputFiles.empty())
+      Context.outputFiles = Outputs;
   }
 
   llvm::SmallVector<const char *, 32> ArgPointers;
   for (const auto &Arg : args)
     ArgPointers.push_back(Arg.c_str());
-  detectFeaturesFromArgs(ArgPointers, context);
+  detectFeaturesFromArgs(ArgPointers, Context);
 }
 
 BuildTool CommandAnalyzer::detectBuildTool() const {
@@ -178,44 +176,44 @@ BuildTool CommandAnalyzer::detectBuildTool() const {
       .Default(BuildTool::Unknown);
 }
 
-BuildPhase CommandAnalyzer::detectBuildPhase(BuildTool tool) const {
-  if (tool == BuildTool::CMake) {
-    for (const auto &arg : args) {
-      if (arg == "--build")
+BuildPhase CommandAnalyzer::detectBuildPhase(BuildTool Tool) const {
+  if (Tool == BuildTool::CMake) {
+    for (const auto &Arg : args) {
+      if (Arg == "--build")
         return BuildPhase::CMakeBuild;
     }
     return BuildPhase::CMakeConfigure;
   }
 
-  if (tool == BuildTool::Make || tool == BuildTool::Ninja)
+  if (Tool == BuildTool::Make || Tool == BuildTool::Ninja)
     return BuildPhase::MakefileBuild;
 
-  if (tool == BuildTool::Linker)
+  if (Tool == BuildTool::Linker)
     return BuildPhase::Linking;
 
-  if (tool == BuildTool::Archiver)
+  if (Tool == BuildTool::Archiver)
     return BuildPhase::Archiving;
 
-  if (tool == BuildTool::Clang || tool == BuildTool::GCC) {
-    for (const auto &arg : args) {
-      if (arg == "-E")
+  if (Tool == BuildTool::Clang || Tool == BuildTool::GCC) {
+    for (const auto &Arg : args) {
+      if (Arg == "-E")
         return BuildPhase::Preprocessing;
-      if (arg == "-S")
+      if (Arg == "-S")
         return BuildPhase::Assembly;
-      if (arg == "-c")
+      if (Arg == "-c")
         return BuildPhase::Compilation;
     }
 
-    bool hasObjectFile = false;
+    bool HasObjectFile = false;
     for (const auto &Arg : args) {
-      llvm::StringRef argRef(Arg);
-      if (argRef.ends_with(".o") || argRef.ends_with(".O") ||
-          argRef.ends_with(".obj") || argRef.ends_with(".OBJ")) {
-        hasObjectFile = true;
+      llvm::StringRef ArgRef(Arg);
+      if (ArgRef.ends_with(".o") || ArgRef.ends_with(".O") ||
+          ArgRef.ends_with(".obj") || ArgRef.ends_with(".OBJ")) {
+        HasObjectFile = true;
         break;
       }
     }
-    if (hasObjectFile)
+    if (HasObjectFile)
       return BuildPhase::Linking;
 
     // No explicit stop-flag (-c/-S/-E) was found.  If the command has source
@@ -226,74 +224,73 @@ BuildPhase CommandAnalyzer::detectBuildPhase(BuildTool tool) const {
     // Note: hasObjectFile was already checked above and returned Linking, so
     // at this point hasObjectFile is always false; we only need to check for
     // source files here.
-    bool hasSourceFile = false;
+    bool HasSourceFile = false;
     for (const auto &Arg : args) {
-      llvm::StringRef argRef(Arg);
-      if (argRef.ends_with(".c") || argRef.ends_with(".C") ||
-          argRef.ends_with(".cpp") || argRef.ends_with(".CPP") ||
-          argRef.ends_with(".cc") || argRef.ends_with(".CC") ||
-          argRef.ends_with(".cxx") || argRef.ends_with(".CXX")) {
-        hasSourceFile = true;
+      llvm::StringRef ArgRef(Arg);
+      if (ArgRef.ends_with(".c") || ArgRef.ends_with(".C") ||
+          ArgRef.ends_with(".cpp") || ArgRef.ends_with(".CPP") ||
+          ArgRef.ends_with(".cc") || ArgRef.ends_with(".CC") ||
+          ArgRef.ends_with(".cxx") || ArgRef.ends_with(".CXX")) {
+        HasSourceFile = true;
         break;
       }
     }
     // A bare "clang foo.c -o foo" (no -c) drives both compilation and linking.
     // Classify as Linking so the invocation is forwarded without modification.
-    if (hasSourceFile)
+    if (HasSourceFile)
       return BuildPhase::Linking;
   }
 
   return BuildPhase::Unknown;
 }
 
-void CommandAnalyzer::detectBuildFeatures(BuildContext &context) const {
-  for (const auto &arg : args) {
-    if (arg == "-g" || llvm::StringRef(arg).starts_with("-g"))
-      context.hasDebugInfo = true;
+void CommandAnalyzer::detectBuildFeatures(BuildContext &Context) const {
+  for (const auto &Arg : args) {
+    if (Arg == "-g" || llvm::StringRef(Arg).starts_with("-g"))
+      Context.hasDebugInfo = true;
 
-    if (llvm::StringRef(arg).starts_with("-O") && arg.length() > 2)
-      context.hasOptimization = true;
+    if (llvm::StringRef(Arg).starts_with("-O") && Arg.length() > 2)
+      Context.hasOptimization = true;
 
-    llvm::StringRef argRef(arg);
-    if (argRef.contains("openmp") || argRef.contains("openacc") ||
-        argRef.contains("cuda") || argRef.contains("offload"))
-      context.hasOffloading = true;
+    llvm::StringRef ArgRef(Arg);
+    if (ArgRef.contains("openmp") || ArgRef.contains("openacc") ||
+        ArgRef.contains("cuda") || ArgRef.contains("offload"))
+      Context.hasOffloading = true;
 
-    if (llvm::StringRef(arg).starts_with("-march="))
-      context.metadata["target_arch"] = arg.substr(7);
-    if (llvm::StringRef(arg).starts_with("-mtune="))
-      context.metadata["tune"] = arg.substr(7);
-    if (llvm::StringRef(arg).starts_with("--offload-arch="))
-      context.metadata["offload_arch"] = arg.substr(15);
+    if (llvm::StringRef(Arg).starts_with("-march="))
+      Context.metadata["target_arch"] = Arg.substr(7);
+    if (llvm::StringRef(Arg).starts_with("-mtune="))
+      Context.metadata["tune"] = Arg.substr(7);
+    if (llvm::StringRef(Arg).starts_with("--offload-arch="))
+      Context.metadata["offload_arch"] = Arg.substr(15);
   }
 }
 
 llvm::SmallVector<std::string, 8> CommandAnalyzer::extractInputFiles() const {
-  llvm::SmallVector<std::string, 8> inputs;
-  for (size_t i = 0; i < args.size(); ++i) {
-    const auto &arg = args[i];
-    if (llvm::StringRef(arg).starts_with("-")) {
-      if (arg == "-o" || arg == "-I" || arg == "-L" || arg == "-D")
-        i++;
+  llvm::SmallVector<std::string, 8> Inputs;
+  for (size_t I = 0; I < args.size(); ++I) {
+    const auto &Arg = args[I];
+    if (llvm::StringRef(Arg).starts_with("-")) {
+      if (Arg == "-o" || Arg == "-I" || Arg == "-L" || Arg == "-D")
+        I++;
       continue;
     }
-    if (llvm::sys::fs::exists(arg)) {
-      inputs.push_back(arg);
-    }
+    if (llvm::sys::fs::exists(Arg))
+      Inputs.push_back(Arg);
   }
-  return inputs;
+  return Inputs;
 }
 
 llvm::SmallVector<std::string, 8> CommandAnalyzer::extractOutputFiles() const {
-  llvm::SmallVector<std::string, 8> outputs;
-  for (size_t i = 0; i < args.size(); ++i) {
-    const auto &arg = args[i];
-    if (arg == "-o" && i + 1 < args.size()) {
-      outputs.push_back(args[i + 1]);
-      i++;
+  llvm::SmallVector<std::string, 8> Outputs;
+  for (size_t I = 0; I < args.size(); ++I) {
+    const auto &Arg = args[I];
+    if (Arg == "-o" && I + 1 < args.size()) {
+      Outputs.push_back(args[I + 1]);
+      I++;
     }
   }
-  return outputs;
+  return Outputs;
 }
 
 } // namespace advisor

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "CoverageProcessor.h"
+#include "CoverageExporterJson.h"
+#include "CoverageFilters.h"
+#include "CoverageViewOptions.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/ProfileData/InstrProfWriter.h"
@@ -19,9 +22,6 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include "CoverageExporterJson.h"
-#include "CoverageFilters.h"
-#include "CoverageViewOptions.h"
 #include <vector>
 
 using namespace llvm;

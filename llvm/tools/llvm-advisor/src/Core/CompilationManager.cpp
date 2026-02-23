@@ -32,47 +32,47 @@
 namespace llvm {
 namespace advisor {
 
-CompilationManager::CompilationManager(const AdvisorConfig &config)
-    : config(config), buildExecutor(config) {
+CompilationManager::CompilationManager(const AdvisorConfig &Config)
+    : config(Config), buildExecutor(Config) {
 
   // Get current working directory first
-  llvm::SmallString<256> currentDir;
-  llvm::sys::fs::current_path(currentDir);
-  initialWorkingDir = std::string(currentDir.str());
+  llvm::SmallString<256> CurrentDir;
+  llvm::sys::fs::current_path(CurrentDir);
+  initialWorkingDir = std::string(CurrentDir.str());
 
   // Create temp directory with proper error handling
-  llvm::SmallString<128> tempDirPath;
+  llvm::SmallString<128> TempDirPath;
   if (auto EC =
-          llvm::sys::fs::createUniqueDirectory("llvm-advisor", tempDirPath)) {
+          llvm::sys::fs::createUniqueDirectory("llvm-advisor", TempDirPath)) {
     // Use timestamp for temp folder naming
-    auto now = std::chrono::system_clock::now();
-    auto timestamp =
-        std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch())
+    auto Now = std::chrono::system_clock::now();
+    auto Timestamp =
+        std::chrono::duration_cast<std::chrono::seconds>(Now.time_since_epoch())
             .count();
-    tempDir = "/tmp/llvm-advisor-" + std::to_string(timestamp);
+    tempDir = "/tmp/llvm-advisor-" + std::to_string(Timestamp);
     llvm::sys::fs::create_directories(tempDir);
   } else
-    tempDir = std::string(tempDirPath.str());
+    tempDir = std::string(TempDirPath.str());
 
   // Ensure the directory actually exists
   if (!llvm::sys::fs::exists(tempDir))
     llvm::sys::fs::create_directories(tempDir);
 
-  if (config.getVerbose())
+  if (Config.getVerbose())
     llvm::outs() << "Using temporary directory: " << tempDir << "\n";
 
   // Initialize unit metadata tracking
-  llvm::SmallString<256> outputDirPath;
-  if (llvm::sys::path::is_absolute(config.getOutputDir())) {
-    outputDirPath = config.getOutputDir();
+  llvm::SmallString<256> OutputDirPath;
+  if (llvm::sys::path::is_absolute(Config.getOutputDir())) {
+    OutputDirPath = Config.getOutputDir();
   } else {
-    outputDirPath = initialWorkingDir;
-    llvm::sys::path::append(outputDirPath, config.getOutputDir());
+    OutputDirPath = initialWorkingDir;
+    llvm::sys::path::append(OutputDirPath, Config.getOutputDir());
   }
 
-  unitMetadata = std::make_unique<utils::UnitMetadata>(outputDirPath.str());
+  unitMetadata = std::make_unique<utils::UnitMetadata>(OutputDirPath.str());
   if (auto Err = unitMetadata->loadMetadata()) {
-    if (config.getVerbose()) {
+    if (Config.getVerbose()) {
       llvm::errs() << "Failed to load metadata: "
                    << llvm::toString(std::move(Err)) << "\n";
     }
@@ -85,26 +85,26 @@ CompilationManager::~CompilationManager() {
 }
 
 llvm::Expected<int> CompilationManager::executeWithDataCollection(
-    const std::string &compiler,
-    const llvm::SmallVectorImpl<std::string> &args) {
+    const std::string &Compiler,
+    const llvm::SmallVectorImpl<std::string> &Args) {
 
   // Analyze the build command
-  CommandAnalyzer Analyzer(compiler, args);
-  BuildContext buildContext = Analyzer.analyze();
+  CommandAnalyzer Analyzer(Compiler, Args);
+  BuildContext BuildContext = Analyzer.analyze();
 
   if (config.getVerbose())
-    llvm::outs() << "Build phase: " << static_cast<int>(buildContext.phase)
+    llvm::outs() << "Build phase: " << static_cast<int>(BuildContext.phase)
                  << "\n";
 
   // Skip data collection for linking/archiving phases
-  if (buildContext.phase == BuildPhase::Linking ||
-      buildContext.phase == BuildPhase::Archiving)
-    return buildExecutor.execute(compiler, args, buildContext, tempDir);
+  if (BuildContext.phase == BuildPhase::Linking ||
+      BuildContext.phase == BuildPhase::Archiving)
+    return buildExecutor.execute(Compiler, Args, BuildContext, tempDir);
 
   std::string ArtifactRoot = tempDir;
 
   auto PreparedBuildOrErr = buildExecutor.prepareBuild(
-      compiler, args, buildContext, tempDir, ArtifactRoot);
+      Compiler, Args, BuildContext, tempDir, ArtifactRoot);
   if (!PreparedBuildOrErr)
     return PreparedBuildOrErr.takeError();
 
@@ -117,7 +117,7 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
   // never be executed.
   std::optional<BuildExecutor::PreparedBuild> OriginalBuild;
   {
-    auto OrErr = buildExecutor.buildOriginalCompilation(compiler, args);
+    auto OrErr = buildExecutor.buildOriginalCompilation(Compiler, Args);
     if (OrErr)
       OriginalBuild = std::move(*OrErr);
     else
@@ -128,79 +128,77 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
           ? OriginalBuild->Compilation.get()
           : nullptr;
 
-  Analyzer.refineWithCompilation(buildContext, OriginalCompilation);
-  if (!buildContext.outputFiles.empty()) {
-    const std::string &PrimaryOutput = buildContext.outputFiles.front();
-    for (auto &Site : buildContext.coverageSites)
+  Analyzer.refineWithCompilation(BuildContext, OriginalCompilation);
+  if (!BuildContext.outputFiles.empty()) {
+    const std::string &PrimaryOutput = BuildContext.outputFiles.front();
+    for (auto &Site : BuildContext.coverageSites)
       if (Site.instrumentedBinary.empty())
         Site.instrumentedBinary = PrimaryOutput;
   }
-  if (!buildContext.coverageSites.empty())
-    coverageIngestion.registerSites(buildContext.coverageSites);
+  if (!BuildContext.coverageSites.empty())
+    coverageIngestion.registerSites(BuildContext.coverageSites);
 
-  UnitDetector detector(config);
-  auto detectedUnits =
-      detector.detectUnits(compiler, args, OriginalCompilation);
+  UnitDetector Detector(config);
+  auto DetectedUnits =
+      Detector.detectUnits(Compiler, Args, OriginalCompilation);
 
   // The original compilation is no longer needed — release it before executing
   // the (potentially large) instrumented build.
   OriginalBuild.reset();
 
-  if (!detectedUnits)
-    return detectedUnits.takeError();
+  if (!DetectedUnits)
+    return DetectedUnits.takeError();
 
-  llvm::SmallVector<std::unique_ptr<CompilationUnit>, 4> units;
-  for (auto &unitInfo : *detectedUnits) {
-    units.push_back(std::make_unique<CompilationUnit>(unitInfo, tempDir));
+  llvm::SmallVector<std::unique_ptr<CompilationUnit>, 4> Units;
+  for (auto &UnitInfo : *DetectedUnits) {
+    Units.push_back(std::make_unique<CompilationUnit>(UnitInfo, tempDir));
 
-    unitMetadata->registerUnit(unitInfo.name);
+    unitMetadata->registerUnit(UnitInfo.name);
   }
 
-  auto execResult = buildExecutor.executePreparedBuild(PreparedBuild);
-  if (!execResult)
-    return execResult;
-  int exitCode = *execResult;
+  auto ExecResult = buildExecutor.executePreparedBuild(PreparedBuild);
+  if (!ExecResult)
+    return ExecResult;
+  int ExitCode = *ExecResult;
 
   coverageIngestion.processOnce();
   coverageIngestion.startWatching();
 
-  registerBuildArtifacts(buildContext, units);
+  registerBuildArtifacts(BuildContext, Units);
 
   // Extract additional data
-  DataExtractor extractor(config);
-  for (auto &unit : units) {
-    if (auto Err = extractor.extractAllData(*unit, tempDir)) {
+  DataExtractor Extractor(config);
+  for (auto &Unit : Units) {
+    if (auto Err = Extractor.extractAllData(*Unit, tempDir)) {
       if (config.getVerbose())
         llvm::errs() << "Data extraction failed: "
                      << llvm::toString(std::move(Err)) << "\n";
       // Mark unit as failed if data extraction fails
-      unitMetadata->updateUnitStatus(unit->getName(), "failed");
+      unitMetadata->updateUnitStatus(Unit->getName(), "failed");
     } else {
       // Update unit metadata with file counts and artifact types
-      const auto &generatedFiles = unit->getAllGeneratedFiles();
-      size_t totalFiles = 0;
-      for (const auto &category : generatedFiles) {
-        totalFiles += category.second.size();
-        unitMetadata->addArtifactType(unit->getName(), category.first);
+      const auto &GeneratedFiles = Unit->getAllGeneratedFiles();
+      size_t TotalFiles = 0;
+      for (const auto &Category : GeneratedFiles) {
+        TotalFiles += Category.second.size();
+        unitMetadata->addArtifactType(Unit->getName(), Category.first);
       }
-      unitMetadata->updateUnitFileCount(unit->getName(), totalFiles);
+      unitMetadata->updateUnitFileCount(Unit->getName(), TotalFiles);
     }
   }
 
   // Organize output
-  if (auto Err = organizeOutput(units)) {
+  if (auto Err = organizeOutput(Units)) {
     if (config.getVerbose())
       llvm::errs() << "Output organization failed: "
                    << llvm::toString(std::move(Err)) << "\n";
     // Mark units as failed if output organization fails
-    for (auto &unit : units) {
-      unitMetadata->updateUnitStatus(unit->getName(), "failed");
-    }
+    for (auto &Unit : Units)
+      unitMetadata->updateUnitStatus(Unit->getName(), "failed");
   } else {
     // Mark units as completed on successful organization
-    for (auto &unit : units) {
-      unitMetadata->updateUnitStatus(unit->getName(), "completed");
-    }
+    for (auto &Unit : Units)
+      unitMetadata->updateUnitStatus(Unit->getName(), "completed");
   }
 
   // Save metadata to disk
@@ -213,88 +211,86 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
   // Clean up leaked files from source directory
   cleanupLeakedFiles();
 
-  return exitCode;
+  return ExitCode;
 }
 
 void CompilationManager::registerBuildArtifacts(
     const BuildContext &Ctx,
-    llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units) {
-  if (units.empty())
+    llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &Units) {
+  if (Units.empty())
     return;
 
-  FileClassifier classifier;
-  auto *unit = units.front().get();
+  FileClassifier Classifier;
+  auto *Unit = Units.front().get();
 
-  for (const auto &path : Ctx.expectedGeneratedFiles) {
-    if (!llvm::sys::fs::exists(path))
+  for (const auto &Path : Ctx.expectedGeneratedFiles) {
+    if (!llvm::sys::fs::exists(Path))
       continue;
-    if (!classifier.shouldCollect(path))
+    if (!Classifier.shouldCollect(Path))
       continue;
 
-    auto classification = classifier.classifyFile(path);
-    unit->addGeneratedFile(classification.category, path);
+    auto Classification = Classifier.classifyFile(Path);
+    Unit->addGeneratedFile(Classification.category, Path);
   }
 }
 
 llvm::Error CompilationManager::organizeOutput(
-    const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units) {
+    const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &Units) {
   // Resolve output directory as absolute path from initial working directory
-  llvm::SmallString<256> outputDirPath;
+  llvm::SmallString<256> OutputDirPath;
   if (llvm::sys::path::is_absolute(config.getOutputDir())) {
-    outputDirPath = config.getOutputDir();
+    OutputDirPath = config.getOutputDir();
   } else {
-    outputDirPath = initialWorkingDir;
-    llvm::sys::path::append(outputDirPath, config.getOutputDir());
+    OutputDirPath = initialWorkingDir;
+    llvm::sys::path::append(OutputDirPath, config.getOutputDir());
   }
 
-  std::string outputDir = std::string(outputDirPath.str());
+  std::string OutputDir = std::string(OutputDirPath.str());
 
-  if (config.getVerbose()) {
-    llvm::outs() << "Output directory: " << outputDir << "\n";
-  }
+  if (config.getVerbose())
+    llvm::outs() << "Output directory: " << OutputDir << "\n";
 
   // Generate timestamp for this compilation run
-  auto now = std::chrono::system_clock::now();
-  auto time_t = std::chrono::system_clock::to_time_t(now);
-  auto tm = *std::localtime(&time_t);
+  auto Now = std::chrono::system_clock::now();
+  auto TimeT = std::chrono::system_clock::to_time_t(Now);
+  auto Tm = *std::localtime(&TimeT);
 
-  char timestampStr[20];
-  std::strftime(timestampStr, sizeof(timestampStr), "%Y%m%d_%H%M%S", &tm);
+  char TimestampStr[20];
+  std::strftime(TimestampStr, sizeof(TimestampStr), "%Y%m%d_%H%M%S", &Tm);
 
   // Move collected files to organized structure
-  for (const auto &unit : units) {
+  for (const auto &Unit : Units) {
     // Create base unit directory if it doesn't exist
-    std::string baseUnitDir = outputDir + "/" + unit->getName();
-    llvm::sys::fs::create_directories(baseUnitDir);
+    std::string BaseUnitDir = OutputDir + "/" + Unit->getName();
+    llvm::sys::fs::create_directories(BaseUnitDir);
 
     // Create timestamped run directory
-    std::string runDirName = unit->getName() + "_" + std::string(timestampStr);
-    std::string unitDir = baseUnitDir + "/" + runDirName;
+    std::string RunDirName = Unit->getName() + "_" + std::string(TimestampStr);
+    std::string UnitDir = BaseUnitDir + "/" + RunDirName;
 
-    if (config.getVerbose()) {
-      llvm::outs() << "Creating run directory: " << unitDir << "\n";
-    }
+    if (config.getVerbose())
+      llvm::outs() << "Creating run directory: " << UnitDir << "\n";
 
     // Create timestamped run directory
-    if (auto EC = llvm::sys::fs::create_directories(unitDir)) {
+    if (auto EC = llvm::sys::fs::create_directories(UnitDir)) {
       if (config.getVerbose()) {
-        llvm::errs() << "Warning: Could not create run directory: " << unitDir
+        llvm::errs() << "Warning: Could not create run directory: " << UnitDir
                      << "\n";
       }
       continue; // Skip if we can't create the directory
     }
 
-    const auto &generatedFiles = unit->getAllGeneratedFiles();
-    for (const auto &category : generatedFiles) {
-      std::string categoryDir = unitDir + "/" + category.first;
-      llvm::sys::fs::create_directories(categoryDir);
+    const auto &GeneratedFiles = Unit->getAllGeneratedFiles();
+    for (const auto &Category : GeneratedFiles) {
+      std::string CategoryDir = UnitDir + "/" + Category.first;
+      llvm::sys::fs::create_directories(CategoryDir);
 
-      for (const auto &file : category.second) {
-        std::string destFile =
-            categoryDir + "/" + llvm::sys::path::filename(file).str();
-        if (auto Err = FileManager::copyFile(file, destFile)) {
+      for (const auto &File : Category.second) {
+        std::string DestFile =
+            CategoryDir + "/" + llvm::sys::path::filename(File).str();
+        if (auto Err = FileManager::copyFile(File, DestFile)) {
           if (config.getVerbose()) {
-            llvm::errs() << "Failed to copy " << file << " to " << destFile
+            llvm::errs() << "Failed to copy " << File << " to " << DestFile
                          << "\n";
           }
         }
@@ -312,9 +308,9 @@ void CompilationManager::cleanupLeakedFiles() {
     if (I->type() != llvm::sys::fs::file_type::regular_file)
       continue;
 
-    llvm::StringRef filename = llvm::sys::path::filename(I->path());
-    if (filename.ends_with(".opt.yaml") || filename.ends_with(".opt.yml") ||
-        filename.ends_with(".profraw") || filename.ends_with(".profdata")) {
+    llvm::StringRef Filename = llvm::sys::path::filename(I->path());
+    if (Filename.ends_with(".opt.yaml") || Filename.ends_with(".opt.yml") ||
+        Filename.ends_with(".profraw") || Filename.ends_with(".profdata")) {
       llvm::sys::fs::remove(I->path());
       if (config.getVerbose())
         llvm::outs() << "Cleaned up leaked file: " << I->path() << "\n";
