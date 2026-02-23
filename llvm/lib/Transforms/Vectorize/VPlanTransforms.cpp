@@ -42,6 +42,7 @@
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -6251,4 +6252,79 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
   for (auto &[Phi, Chains] : ChainsByPhi)
     for (const VPPartialReductionChain &Chain : Chains)
       transformToPartialReduction(Chain, CostCtx.Types, Plan, Phi);
+}
+
+void VPlanTransforms::makeMemOpWideningDecisions(
+    VPlan &Plan, VFRange &Range, VPRecipeBuilder &RecipeBuilder,
+    VPCostContext &CostCtx, LoopVectorizationLegality &Legal) {
+  // Filter out scalar VPlan.
+  if (LoopVectorizationPlanner::getDecisionAndClampRange(
+          [](ElementCount VF) { return VF.isScalar(); }, Range))
+    return;
+
+  // Scan the body of the loop in a topological order to visit each basic block
+  // after having visited its predecessor basic blocks.
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
+      HeaderVPBB);
+
+  // Collect all loads/stores first. We will start with ones having simpler
+  // decisions followed by more complex ones that are potentially
+  // guided/dependent on the simpler ones.
+  SmallVector<VPInstruction *> MemOps;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : *VPBB) {
+      auto *VPI = dyn_cast<VPInstruction>(&R);
+      if (VPI && VPI->getUnderlyingValue() &&
+          is_contained({Instruction::Load, Instruction::Store},
+                       VPI->getOpcode()))
+        MemOps.push_back(VPI);
+    }
+  }
+
+  auto *MiddleVPBB = Plan.getMiddleBlock();
+  VPBasicBlock::iterator MBIP = MiddleVPBB->getFirstNonPhi();
+
+  for (VPInstruction *VPI : MemOps) {
+    Instruction *Instr = cast<Instruction>(VPI->getUnderlyingValue());
+    RecipeBuilder.getVPBuilder().setInsertPoint(VPI);
+
+    auto ReplaceWith = [&](VPRecipeBase *New) {
+      RecipeBuilder.setRecipe(Instr, New);
+      RecipeBuilder.getVPBuilder().insert(New);
+      if (VPI->getOpcode() == Instruction::Load)
+        VPI->replaceAllUsesWith(New->getVPSingleValue());
+      VPI->eraseFromParent();
+    };
+
+    // The stores with invariant address inside the loop will be deleted, and
+    // in the exit block, a uniform store recipe will be created for the final
+    // invariant store of the reduction.
+    StoreInst *SI;
+    if ((SI = dyn_cast<StoreInst>(Instr)) &&
+        Legal.isInvariantAddressOfReduction(SI->getPointerOperand())) {
+      // Only create recipe for the final invariant store of the reduction.
+      if (Legal.isInvariantStoreOfReduction(SI)) {
+        auto *Recipe = new VPReplicateRecipe(
+            SI, VPI->operandsWithoutMask(), true /* IsUniform */,
+            nullptr /*Mask*/, *VPI, *VPI, VPI->getDebugLoc());
+        Recipe->insertBefore(*MiddleVPBB, MBIP);
+      }
+      VPI->eraseFromParent();
+      continue;
+    }
+
+    if (VPI->getOpcode() == Instruction::Store)
+      if (auto HistInfo = Legal.getHistogramInfo(cast<StoreInst>(Instr))) {
+        ReplaceWith(RecipeBuilder.tryToWidenHistogram(*HistInfo, VPI));
+        continue;
+      }
+
+    VPRecipeBase *Recipe = RecipeBuilder.tryToWidenMemory(VPI, Range);
+    if (!Recipe)
+      Recipe = RecipeBuilder.handleReplication(cast<VPInstruction>(VPI), Range);
+
+    ReplaceWith(Recipe);
+  }
 }
