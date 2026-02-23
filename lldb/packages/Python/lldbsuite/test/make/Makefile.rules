@@ -730,7 +730,7 @@ clean::
 ifeq "$(findstring lldb-test-build.noindex, $(BUILDDIR))" ""
 	$(error Trying to invoke the clean rule, but not using the default build tree layout)
 else
-	$(RM) -r $(wildcard $(BUILDDIR)/*)
+	$(call RM_RF,$(wildcard $(BUILDDIR)/*))
 endif
 
 #----------------------------------------------------------------------

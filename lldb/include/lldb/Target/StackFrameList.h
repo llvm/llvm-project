@@ -50,6 +50,23 @@ public:
   /// Resets the selected frame index of this object.
   void ClearSelectedFrameIndex();
 
+  /// Returns \p true if the next frame is hidden.
+  bool IsNextFrameHidden(lldb_private::StackFrame &frame);
+
+  /// Returns \p true if the previous frame is hidden.
+  bool IsPreviousFrameHidden(lldb_private::StackFrame &frame);
+
+  /// Returns the stack frame marker depending on if \p frame_sp:
+  /// @li is selected: *
+  /// @li is the first non hidden frame: ﹍
+  /// @li is the last non hidden frame: ﹉
+  ///
+  /// If the terminal does not support Unicode rendering, the hidden frame
+  /// markers are replaced with whitespaces.
+  std::string GetFrameMarker(lldb::StackFrameSP frame_sp,
+                             lldb::StackFrameSP selected_frame_sp,
+                             bool show_hidden_marker);
+
   /// Get the currently selected frame index.
   /// We should only call SelectMostRelevantFrame if (a) the user hasn't already
   /// selected a frame, and (b) if this really is a user facing
@@ -97,7 +114,8 @@ public:
   size_t GetStatus(Stream &strm, uint32_t first_frame, uint32_t num_frames,
                    bool show_frame_info, uint32_t num_frames_with_source,
                    bool show_unique = false, bool show_hidden = false,
-                   const char *frame_marker = nullptr);
+                   bool show_hidden_marker = true,
+                   bool show_selected_frame = false);
 
   /// Returns whether we have currently fetched all the frames of a stack.
   bool WereAllFramesFetched() const;

@@ -1249,12 +1249,14 @@ struct ScriptInterpreterInstance
     : public PluginInstance<ScriptInterpreterCreateInstance> {
   ScriptInterpreterInstance(llvm::StringRef name, llvm::StringRef description,
                             CallbackType create_callback,
-                            lldb::ScriptLanguage language)
+                            lldb::ScriptLanguage language,
+                            ScriptInterpreterGetPath get_path_callback)
       : PluginInstance<ScriptInterpreterCreateInstance>(name, description,
                                                         create_callback),
-        language(language) {}
+        language(language), get_path_callback(get_path_callback) {}
 
   lldb::ScriptLanguage language = lldb::eScriptLanguageNone;
+  ScriptInterpreterGetPath get_path_callback = nullptr;
 };
 
 typedef PluginInstances<ScriptInterpreterInstance> ScriptInterpreterInstances;
@@ -1267,9 +1269,10 @@ static ScriptInterpreterInstances &GetScriptInterpreterInstances() {
 bool PluginManager::RegisterPlugin(
     llvm::StringRef name, llvm::StringRef description,
     lldb::ScriptLanguage script_language,
-    ScriptInterpreterCreateInstance create_callback) {
+    ScriptInterpreterCreateInstance create_callback,
+    ScriptInterpreterGetPath get_path_callback) {
   return GetScriptInterpreterInstances().RegisterPlugin(
-      name, description, create_callback, script_language);
+      name, description, create_callback, script_language, get_path_callback);
 }
 
 bool PluginManager::UnregisterPlugin(
@@ -1298,6 +1301,16 @@ PluginManager::GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
   // If we didn't find one, return the ScriptInterpreter for the null language.
   assert(none_instance != nullptr);
   return none_instance(debugger);
+}
+
+FileSpec PluginManager::GetScriptInterpreterLibraryPath(
+    lldb::ScriptLanguage script_lang) {
+  const auto instances = GetScriptInterpreterInstances().GetSnapshot();
+  for (const auto &instance : instances) {
+    if (instance.language == script_lang && instance.get_path_callback)
+      return instance.get_path_callback();
+  }
+  return FileSpec();
 }
 
 #pragma mark SyntheticFrameProvider
@@ -1983,6 +1996,39 @@ LanguageSet PluginManager::GetREPLAllTypeSystemSupportedLanguages() {
   for (unsigned i = 0; i < instances.size(); ++i)
     all.bitvector |= instances[i].supported_languages.bitvector;
   return all;
+}
+
+#pragma mark Highlighter
+
+struct HighlighterInstance : public PluginInstance<HighlighterCreateInstance> {
+  HighlighterInstance(llvm::StringRef name, llvm::StringRef description,
+                      CallbackType create_callback)
+      : PluginInstance<HighlighterCreateInstance>(name, description,
+                                                  create_callback) {}
+};
+
+typedef PluginInstances<HighlighterInstance> HighlighterInstances;
+
+static HighlighterInstances &GetHighlighterInstances() {
+  static HighlighterInstances g_instances;
+  return g_instances;
+}
+
+bool PluginManager::RegisterPlugin(llvm::StringRef name,
+                                   llvm::StringRef description,
+                                   HighlighterCreateInstance create_callback) {
+  return GetHighlighterInstances().RegisterPlugin(name, description,
+                                                  create_callback);
+}
+
+bool PluginManager::UnregisterPlugin(
+    HighlighterCreateInstance create_callback) {
+  return GetHighlighterInstances().UnregisterPlugin(create_callback);
+}
+
+HighlighterCreateInstance
+PluginManager::GetHighlighterCreateCallbackAtIndex(uint32_t idx) {
+  return GetHighlighterInstances().GetCallbackAtIndex(idx);
 }
 
 #pragma mark PluginManager

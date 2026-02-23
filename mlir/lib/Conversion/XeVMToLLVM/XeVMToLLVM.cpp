@@ -99,26 +99,22 @@ std::string mangle(StringRef baseName, ArrayRef<Type> types,
 static int32_t getL1CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2UC_L3C:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3C:
-    control = 1;
-    break;
   case LoadCacheControl::L1C_L2UC_L3UC:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3UC:
   case LoadCacheControl::L1C_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::L1S_L2UC_L3UC:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3UC:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 3;
+    control = 2;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -127,16 +123,15 @@ static int32_t getL1CacheControl(LoadCacheControl cc) {
 static int32_t getL1CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2UC_L3WB:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3WB:
-    control = 1;
-    break;
   case StoreCacheControl::L1WT_L2UC_L3UC:
   case StoreCacheControl::L1WT_L2UC_L3WB:
   case StoreCacheControl::L1WT_L2WB_L3UC:
   case StoreCacheControl::L1WT_L2WB_L3WB:
+    control = 1;
+    break;
+  case StoreCacheControl::L1WB_L2UC_L3UC:
+  case StoreCacheControl::L1WB_L2WB_L3UC:
+  case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
     break;
   case StoreCacheControl::L1S_L2UC_L3UC:
@@ -145,10 +140,7 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
     control = 3;
     break;
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3WB:
-    control = 4;
+  default:
     break;
   }
   return control;
@@ -157,24 +149,18 @@ static int32_t getL1CacheControl(StoreCacheControl cc) {
 static int32_t getL3CacheControl(LoadCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case LoadCacheControl::L1UC_L2UC_L3UC:
-  case LoadCacheControl::L1UC_L2C_L3UC:
-  case LoadCacheControl::L1C_L2UC_L3UC:
-  case LoadCacheControl::L1C_L2C_L3UC:
-  case LoadCacheControl::L1S_L2UC_L3UC:
-  case LoadCacheControl::L1S_L2C_L3UC:
-    control = 1;
-    break;
   case LoadCacheControl::L1UC_L2UC_L3C:
   case LoadCacheControl::L1UC_L2C_L3C:
   case LoadCacheControl::L1C_L2UC_L3C:
   case LoadCacheControl::L1C_L2C_L3C:
   case LoadCacheControl::L1S_L2UC_L3C:
   case LoadCacheControl::L1S_L2C_L3C:
-    control = 2;
+    control = 1;
     break;
   case LoadCacheControl::INVALIDATE_READ:
-    control = 4;
+    control = 3;
+    break;
+  default:
     break;
   }
   return control;
@@ -183,16 +169,6 @@ static int32_t getL3CacheControl(LoadCacheControl cc) {
 static int32_t getL3CacheControl(StoreCacheControl cc) {
   int32_t control = 0;
   switch (cc) {
-  case StoreCacheControl::L1UC_L2UC_L3UC:
-  case StoreCacheControl::L1UC_L2WB_L3UC:
-  case StoreCacheControl::L1WT_L2UC_L3UC:
-  case StoreCacheControl::L1WT_L2WB_L3UC:
-  case StoreCacheControl::L1S_L2UC_L3UC:
-  case StoreCacheControl::L1S_L2WB_L3UC:
-  case StoreCacheControl::L1WB_L2UC_L3UC:
-  case StoreCacheControl::L1WB_L2WB_L3UC:
-    control = 1;
-    break;
   case StoreCacheControl::L1UC_L2UC_L3WB:
   case StoreCacheControl::L1UC_L2WB_L3WB:
   case StoreCacheControl::L1WT_L2UC_L3WB:
@@ -201,6 +177,8 @@ static int32_t getL3CacheControl(StoreCacheControl cc) {
   case StoreCacheControl::L1S_L2WB_L3WB:
   case StoreCacheControl::L1WB_L2UC_L3WB:
     control = 2;
+    break;
+  default:
     break;
   }
   return control;
@@ -265,7 +243,7 @@ static std::optional<ArrayAttr>
 getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
   if (!getCacheControl(op))
     return {};
-  constexpr int32_t decorationCacheControlArity{4};
+  constexpr int32_t decorationCacheControlArity{3};
   constexpr int32_t loadCacheControlKey{6442};
   constexpr int32_t storeCacheControlKey{6443};
   constexpr bool isLoad = std::is_same_v<OpType, BlockLoad2dOp> ||
@@ -275,9 +253,9 @@ getCacheControlMetadata(ConversionPatternRewriter &rewriter, OpType op) {
                           std::is_same_v<OpType, PrefetchOp>;
   const int32_t controlKey{isLoad ? loadCacheControlKey : storeCacheControlKey};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL1{
-      controlKey, 0, getL1CacheControl<OpType>(op), 0};
+      controlKey, 0, getL1CacheControl<OpType>(op)};
   SmallVector<int32_t, decorationCacheControlArity> decorationsL3{
-      controlKey, 1, getL3CacheControl<OpType>(op), 0};
+      controlKey, 1, getL3CacheControl<OpType>(op)};
   auto arrayAttrL1 = rewriter.getI32ArrayAttr(decorationsL1);
   auto arrayAttrL3 = rewriter.getI32ArrayAttr(decorationsL3);
 

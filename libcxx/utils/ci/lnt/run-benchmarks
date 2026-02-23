@@ -45,7 +45,9 @@ def gather_run_information(args):
     Gather the run information to upload to LNT as part of the submission.
     """
     info = {}
-    info['commit_info'] = subprocess.check_output(['git', '-C', args.git_repo, 'show', args.benchmark_commit, '--no-patch']).decode()
+    # TODO: For now, we don't include commit information. This happens to be a long string and
+    #       production instances of LNT dont't accept those as part of submissions for the time being.
+    # info['commit_info'] = subprocess.check_output(['git', '-C', args.git_repo, 'show', args.benchmark_commit, '--no-patch']).decode()
     info['git_sha'] = subprocess.check_output(['git', '-C', args.git_repo, 'rev-parse', args.benchmark_commit]).decode().strip()
     return info
 
@@ -154,8 +156,6 @@ def main(argv):
             with open(build_dir / 'benchmarks.lnt', 'a') as f:
                 run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'spec'], stdout=f)
 
-        # TODO: For now, we run only a subset of the benchmarks because running the whole test suite is too slow.
-        #       Run the whole test suite once https://github.com/llvm/llvm-project/issues/173032 is resolved.
         if do_micro:
             logging.info(f'Running microbenchmarks from {args.test_suite_commit} against libc++ {args.benchmark_commit}')
             run([args.git_repo / 'libcxx/utils/test-at-commit',
@@ -168,8 +168,7 @@ def main(argv):
                             '--param', f'compiler={args.compiler}',
                             '--param', 'optimization=speed',
                             '--param', 'std=c++26',
-                            build_dir / 'micro/libcxx/test',
-                            '--filter', 'benchmarks/(algorithms|containers|iterators|locale|memory|streams|numeric|utility)'],
+                            build_dir / 'micro/libcxx/test/benchmarks'],
                             enforce_success=False)
             with open(build_dir / 'benchmarks.lnt', 'a') as f:
                 run([args.git_repo / 'libcxx/utils/consolidate-benchmarks', build_dir / 'micro'], stdout=f)
