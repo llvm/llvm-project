@@ -12025,7 +12025,8 @@ SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
     return DAG.getNode(ISD::SRL, DL, VT, X, Y);
 
   // fold bitreverse(clmul(bitreverse(x), bitreverse(y))) -> clmulr(x, y)
-  if (sd_match(N0, m_Clmul(m_BitReverse(m_Value(X)), m_BitReverse(m_Value(Y)))))
+  if ((!LegalOperations || TLI.isOperationLegalOrCustom(ISD::CLMULR, VT)) &&
+      sd_match(N0, m_Clmul(m_BitReverse(m_Value(X)), m_BitReverse(m_Value(Y)))))
     return DAG.getNode(ISD::CLMULR, DL, VT, X, Y);
 
   return SDValue();

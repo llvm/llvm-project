@@ -1317,6 +1317,10 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup();
           cir::YieldOp::create(b, loc, res);
+          if (res.getParentBlock() != builder.getInsertionBlock())
+            cgf.cgm.errorNYI(
+                e->getSourceRange(),
+                "ScalarExprEmitter: VisitBinLAnd ternary with cleanup");
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1370,6 +1374,10 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup();
           cir::YieldOp::create(b, loc, res);
+          if (res.getParentBlock() != builder.getInsertionBlock())
+            cgf.cgm.errorNYI(
+                e->getSourceRange(),
+                "ScalarExprEmitter: VisitBinLOr ternary with cleanup");
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
