@@ -3915,14 +3915,6 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     AL.setInvalid();
     return;
   }
-  QualType T = cast<VarDecl>(D)->getType();
-  if (S.Context.getAsArrayType(T))
-    T = S.Context.getBaseElementType(T);
-  if (!T->isRecordType()) {
-    S.Diag(AL.getLoc(), diag::err_init_priority_object_attr);
-    AL.setInvalid();
-    return;
-  }
 
   Expr *E = AL.getArgAsExpr(0);
   uint32_t prioritynum;
@@ -10292,5 +10284,15 @@ void Sema::ActOnCleanupAttr(Decl *D, const Attr *A) {
         << NI.getName() << ParamTy << Ty;
     D->dropAttr<CleanupAttr>();
     return;
+  }
+}
+
+void Sema::ActOnInitPriorityAttr(Decl *D, const Attr *A) {
+  QualType T = cast<VarDecl>(D)->getType();
+  if (this->Context.getAsArrayType(T))
+    T = this->Context.getBaseElementType(T);
+  if (!T->isRecordType()) {
+    this->Diag(A->getLoc(), diag::err_init_priority_object_attr);
+    D->dropAttr<InitPriorityAttr>();
   }
 }
