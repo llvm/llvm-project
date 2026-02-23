@@ -2276,6 +2276,7 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
+#ifdef __APPLE__ // Other platforms do not support XcodeSDK.
   auto platform_sp = Platform::GetHostPlatform();
   if (!platform_sp)
     return {};
@@ -2296,6 +2297,9 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
         module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
 
   return GetSDKPath(m_description, std::move(sdk));
+#else
+  return {};
+#endif
 }
 
 static std::vector<llvm::StringRef>
@@ -2943,20 +2947,21 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   }
 
   // Get the precise SDK from the symbol context.
-  std::optional<XcodeSDK> sdk;
+  [[maybe_unused]] std::optional<XcodeSDK> sdk;
+#ifdef __APPLE__  // Other platforms do not support XcodeSDK.
   if (cu)
     if (auto platform_sp = Platform::GetHostPlatform()) {
       auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*cu);
-      if (!sdk_or_err)
+      if (!sdk_or_err) {
         Debugger::ReportError("Error while parsing SDK path from debug info: " +
                               toString(sdk_or_err.takeError()));
-      else {
+      } else {
         sdk = *sdk_or_err;
         LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
                    sdk->GetString().str().c_str());
       }
     }
-
+#endif
   // Derive the triple next.
 
   // First, prime the compiler with the options from the main executable:
