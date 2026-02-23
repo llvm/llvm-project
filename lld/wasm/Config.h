@@ -135,8 +135,6 @@ struct Config {
   llvm::SmallVector<uint8_t, 0> buildIdVector;
 };
 
-enum class ThreadContextAbi { Undetermined, Globals, ComponentModelBuiltins };
-
 // The Ctx object hold all other (non-configuration) global state.
 struct Ctx {
   Config arg;
