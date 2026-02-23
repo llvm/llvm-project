@@ -3,6 +3,7 @@
 #include "SC32RegisterInfo.h"
 #include "SC32SelectionDAGInfo.h"
 #include "llvm/CodeGen/CallingConvLower.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 
 using namespace llvm;
@@ -34,17 +35,54 @@ SDValue SC32TargetLowering::LowerFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
+
   MachineRegisterInfo &RI = MF.getRegInfo();
 
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CallConv, IsVarArg, DAG.getMachineFunction(), ArgLocs,
                  *DAG.getContext());
   CCInfo.AnalyzeFormalArguments(Ins, CC_SC32);
 
-  for (size_t I = 0; I < ArgLocs.size(); I++) {
-    Register VReg = RI.createVirtualRegister(&SC32::GPRegClass);
-    RI.addLiveIn(ArgLocs[I].getLocReg(), VReg);
-    InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32));
+  unsigned IndirectIdx = 0;
+  for (size_t I = 0; I < ArgLocs.size(); I++, ++IndirectIdx) {
+    if (ArgLocs[I].isRegLoc()) {
+      Register VReg = RI.createVirtualRegister(&SC32::GPRegClass);
+      RI.addLiveIn(ArgLocs[I].getLocReg(), VReg);
+      InVals.push_back(DAG.getCopyFromReg(Chain, DL, VReg, MVT::i32));
+    } else {
+      // MemLoc
+      unsigned Offset = ArgLocs[I].getLocMemOffset();
+      int FI = MF.getFrameInfo().CreateFixedObject(4, Offset, true);
+      SDValue FIPtr = DAG.getFrameIndex(FI, PtrVT);
+      SDValue Load = DAG.getLoad(ArgLocs[I].getLocVT(), DL, Chain, FIPtr,
+                                 MachinePointerInfo::getFixedStack(MF, FI));
+      if (ArgLocs[I].getLocInfo() != CCValAssign::Indirect) {
+        // Direct load
+        InVals.push_back(Load);
+        continue;
+      }
+      assert(ArgLocs[I].getLocInfo() == CCValAssign::Indirect);
+      // Indrect load
+      SDValue ArgValue = DAG.getLoad(ArgLocs[I].getValVT(), DL, Chain, Load,
+                                     MachinePointerInfo());
+      InVals.push_back(ArgValue);
+
+      unsigned ArgIndex = Ins[IndirectIdx].OrigArgIndex;
+      assert(Ins[IndirectIdx].PartOffset == 0);
+
+      while (I + 1 != ArgLocs.size() &&
+             Ins[IndirectIdx + 1].OrigArgIndex == ArgIndex) {
+        CCValAssign &PartVA = ArgLocs[I + 1];
+        unsigned PartOffset = Ins[IndirectIdx + 1].PartOffset;
+        SDValue Address = DAG.getMemBasePlusOffset(
+            ArgValue, TypeSize::getFixed(PartOffset), DL);
+        InVals.push_back(DAG.getLoad(PartVA.getValVT(), DL, Chain, Address,
+                                     MachinePointerInfo()));
+        ++I;
+        ++IndirectIdx;
+      }
+    }
   }
 
   return Chain;
@@ -99,6 +137,7 @@ SDValue SC32TargetLowering::LowerCall(CallLoweringInfo &CLI,
   else if (ExternalSymbolSDNode *E = dyn_cast<ExternalSymbolSDNode>(Callee))
     Callee = DAG.getTargetExternalSymbol(E->getSymbol(), MVT::i32);
 
+  SmallVector<SDValue, 8> MemOpChains;
   SmallVector<SDValue, 8> Ops = {SDValue(), Callee};
   SDValue Glue;
 
@@ -107,10 +146,19 @@ SDValue SC32TargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCInfo.AnalyzeCallOperands(CLI.Outs, CC_SC32);
 
   for (size_t I = 0; I < ArgLocs.size(); I++) {
-    Register Reg = ArgLocs[I].getLocReg();
-    Chain = DAG.getCopyToReg(Chain, DL, Reg, CLI.OutVals[I], Glue);
-    Glue = Chain.getValue(1);
-    Ops.push_back(DAG.getRegister(Reg, MVT::i32));
+    if (ArgLocs[I].isRegLoc()) {
+      Register Reg = ArgLocs[I].getLocReg();
+      Chain = DAG.getCopyToReg(Chain, DL, Reg, CLI.OutVals[I], Glue);
+      Glue = Chain.getValue(1);
+      Ops.push_back(DAG.getRegister(Reg, MVT::i32));
+    } else {
+      unsigned Offset = ArgLocs[I].getLocMemOffset();
+      SDValue StackPtr = DAG.getRegister(SC32::GP29, MVT::i32);
+      SDValue PtrOff = DAG.getIntPtrConstant(Offset, DL);
+      PtrOff = DAG.getNode(ISD::ADD, DL, MVT::i32, StackPtr, PtrOff);
+      MemOpChains.push_back(DAG.getStore(Chain, DL, CLI.OutVals[I], PtrOff,
+                                         MachinePointerInfo()));
+    }
   }
 
   Ops[0] = Chain;
@@ -131,6 +179,9 @@ SDValue SC32TargetLowering::LowerCall(CallLoweringInfo &CLI,
   CCState RVInfo(CallConv, IsVarArg, MF, RVLocs, Context);
   RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_SC32);
 
+  if (!MemOpChains.empty()) {
+    Chain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, MemOpChains);
+  }
   for (size_t I = 0; I < RVLocs.size(); I++) {
     Register Reg = RVLocs[I].getLocReg();
     Chain = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i32, Glue).getValue(1);
