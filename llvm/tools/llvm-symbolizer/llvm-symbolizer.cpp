@@ -47,10 +47,16 @@
 #include <cstdio>
 #include <cstring>
 #include <iostream>
+#include <map>
 #include <string>
 
 using namespace llvm;
 using namespace symbolize;
+
+// Cache for XCOFF section base addresses to avoid re-opening binaries.
+// Key: (ModulePath, SectionTypeFlag), Value: SectionBaseAddress
+static std::map<std::pair<std::string, XCOFF::SectionTypeFlags>, uint64_t>
+    XCOFFSectionBaseCache;
 
 namespace {
 enum ID {
@@ -220,7 +226,17 @@ static Expected<uint64_t> validateSectionType(StringRef ModulePath,
   if (!ModuleOrErr)
     return ModuleOrErr.takeError();
 
-  // TODO: Consider caching the binary to avoid re-opening for each address.
+  // Check cache for section base address.
+  std::pair<std::string, XCOFF::SectionTypeFlags> CacheKey =
+      std::make_pair(ModulePath.str(), *SectionTypeFlag);
+  std::map<std::pair<std::string, XCOFF::SectionTypeFlags>,
+           uint64_t>::iterator CacheIt = XCOFFSectionBaseCache.find(CacheKey);
+  if (CacheIt != XCOFFSectionBaseCache.end()) {
+    Offset = CacheIt->second + Offset;
+    return object::SectionedAddress::UndefSection;
+  }
+
+  // Not in cache - open binary and compute section base.
   Expected<object::OwningBinary<object::Binary>> BinaryOrErr =
       object::createBinary(ModulePath);
   if (!BinaryOrErr)
@@ -240,11 +256,13 @@ static Expected<uint64_t> validateSectionType(StringRef ModulePath,
     return SectionBaseOrErr.takeError();
 
   uint64_t SectionBase = *SectionBaseOrErr;
-  uint64_t SectionRelativeOffset = Offset;
+
+  // Cache the section base for future lookups.
+  XCOFFSectionBaseCache[CacheKey] = SectionBase;
 
   // Convert section-relative offset to absolute VMA
   // VMA = section_base + offset
-  Offset = SectionBase + SectionRelativeOffset;
+  Offset = SectionBase + Offset;
 
   // Return UndefSection - XCOFF symbolizer doesn't support SectionedAddress,
   // so we use absolute VMA addressing instead.
