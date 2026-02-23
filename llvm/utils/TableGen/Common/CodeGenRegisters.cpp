@@ -174,10 +174,6 @@ void CodeGenRegister::buildObjectGraph(CodeGenRegBank &RegBank) {
       TheDef->getValueAsListOfDefs("SubRegIndices");
   std::vector<const Record *> SRs = TheDef->getValueAsListOfDefs("SubRegs");
 
-  if (SRIs.size() != SRs.size())
-    PrintFatalError(TheDef->getLoc(),
-                    "SubRegs and SubRegIndices must have the same size");
-
   for (const auto &[SRI, SR] : zip_equal(SRIs, SRs)) {
     ExplicitSubRegIndices.push_back(RegBank.getSubRegIdx(SRI));
     ExplicitSubRegs.push_back(RegBank.getReg(SR));
@@ -555,11 +551,6 @@ struct TupleExpander : SetTheory::Expander {
         Def->getValueAsListOfDefs("SubRegIndices");
     unsigned Dim = Indices.size();
     const ListInit *SubRegs = Def->getValueAsListInit("SubRegs");
-    if (Dim != SubRegs->size())
-      PrintFatalError(Def->getLoc(), "SubRegIndices and SubRegs size mismatch");
-    if (Dim < 2)
-      PrintFatalError(Def->getLoc(),
-                      "Tuples must have at least 2 sub-registers");
 
     // Evaluate the sub-register lists to be zipped.
     unsigned Length = ~0u;
@@ -684,16 +675,8 @@ CodeGenRegisterClass::CodeGenRegisterClass(CodeGenRegBank &RegBank,
       RegsWithSuperRegsTopoSigs(RegBank.getNumTopoSigs()), EnumValue(-1),
       TSFlags(0) {
   GeneratePressureSet = R->getValueAsBit("GeneratePressureSet");
-  std::vector<const Record *> TypeList = R->getValueAsListOfDefs("RegTypes");
-  if (TypeList.empty())
-    PrintFatalError(R->getLoc(), "RegTypes list must not be empty!");
-  for (const Record *Type : TypeList) {
-    if (!Type->isSubClassOf("ValueType"))
-      PrintFatalError(R->getLoc(),
-                      "RegTypes list member '" + Type->getName() +
-                          "' does not derive from the ValueType class!");
+  for (const Record *Type : R->getValueAsListOfDefs("RegTypes"))
     VTs.push_back(getValueTypeByHwMode(Type, RegBank.getHwModes()));
-  }
 
   // Allocation order 0 is the full set. AltOrders provides others.
   const SetTheory::RecVec *Elements = RegBank.getSets().expand(R);
