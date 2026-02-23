@@ -1,6 +1,6 @@
-// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ 0
-237=1b5b313b324637=1b5b313b3246/ RUN:   -fsanitize=address \
-6/ RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx900:xnack+ \
+// RUN:   -fsanitize=address \
+// RUN:   -nogpuinc --rocm-path=%S/Inputs/rocm \
 // RUN:   %s 2>&1 | FileCheck -check-prefixes=NORDC %s
 
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu --offload-arch=gfx1250,gfx1251 \
@@ -102,7 +102,7 @@
 // CHECK-NOT: {{"[^"]*lld(\.exe){0,1}".* ".*hip.bc"}}
 // CHECK: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
-// NORDC: {{"[^"]*clang[^"]*".* "-emit-obj".* "-fcuda-is-device".* .* "-mlink-builtin-bitcode" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.o]]"
+// NORDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* .* "-mlink-builtin-bitcode" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
 // NORDC: {{"[^"]*clang[^"]*".* "-triple" "x86_64-unknown-linux-gnu".* "-fsanitize=address"}}
 
 // RDC: {{"[^"]*clang[^"]*".* "-emit-llvm-bc".* "-fcuda-is-device".* "-mlink-builtin-bitcode" ".*asanrtl.bc".* "-fsanitize=address".*}} "-o" "[[OUT:[^"]*.bc]]"
