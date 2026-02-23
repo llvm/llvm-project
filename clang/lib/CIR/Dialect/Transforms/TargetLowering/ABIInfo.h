@@ -30,7 +30,7 @@ protected:
   llvm::CallingConv::ID runtimeCC;
 
 public:
-  ABIInfo(LowerTypes &lt) : lt(lt), RuntimeCC(llvm::CallingConv::C) {}
+  ABIInfo(LowerTypes &lt) : lt(lt), runtimeCC(llvm::CallingConv::C) {}
   virtual ~ABIInfo();
 };
 
