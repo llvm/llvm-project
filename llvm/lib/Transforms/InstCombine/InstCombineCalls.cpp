@@ -3910,6 +3910,17 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return replaceOperand(CI, 0, InsertTuple);
     }
 
+    ConstantInt *ALMIdx;
+    if (match(Vec, m_Intrinsic<Intrinsic::get_active_lane_mask>(
+                       m_Zero(), m_ConstantInt(ALMIdx)))) {
+      const auto &Attrs = II->getFunction()->getAttributes().getFnAttrs();
+      unsigned VScaleMin = Attrs.getVScaleRangeMin();
+      if (!ALMIdx->isNegative() &&
+          ExtractIdx * VScaleMin >= ALMIdx->getZExtValue())
+        return replaceInstUsesWith(CI,
+                                   ConstantVector::getNullValue(ReturnType));
+    }
+
     auto *DstTy = dyn_cast<VectorType>(ReturnType);
     auto *VecTy = dyn_cast<VectorType>(Vec->getType());
 
