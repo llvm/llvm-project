@@ -653,8 +653,6 @@ public:
                        MachineBasicBlock::instr_iterator It,
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
                        MachineInstr *OldWaitcntInstr);
-  /// \returns all events that correspond to \p Inst.
-  WaitEventSet getEventsFor(const MachineInstr &Inst) const;
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
@@ -2807,113 +2805,120 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
   return Result;
 }
 
-WaitEventSet SIInsertWaitcnts::getEventsFor(const MachineInstr &Inst) const {
-  WaitEventSet Events;
+void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
+                                               WaitcntBrackets *ScoreBrackets) {
+  // Now look at the instruction opcode. If it is a memory access
+  // instruction, update the upper-bound of the appropriate counter's
+  // bracket and the destination operand scores.
+  // For architectures with X_CNT, mark the source address operands
+  // with the appropriate counter values.
+  // TODO: Use the (TSFlags & SIInstrFlags::DS_CNT) property everywhere.
+
+  bool IsVMEMAccess = false;
+  bool IsSMEMAccess = false;
+
   if (IsExpertMode) {
     if (const auto ET = getExpertSchedulingEventType(Inst))
-      Events.insert(*ET);
+      ScoreBrackets->updateByEvent(*ET, Inst);
   }
 
   if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
     if (TII->isAlwaysGDS(Inst.getOpcode()) ||
         TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
-      Events.insert(GDS_ACCESS);
-      Events.insert(GDS_GPR_LOCK);
+      ScoreBrackets->updateByEvent(GDS_ACCESS, Inst);
+      ScoreBrackets->updateByEvent(GDS_GPR_LOCK, Inst);
+      ScoreBrackets->setPendingGDS();
     } else {
-      Events.insert(LDS_ACCESS);
+      ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
     }
   } else if (TII->isFLAT(Inst)) {
     if (SIInstrInfo::isGFX12CacheInvOrWBInst(Inst.getOpcode())) {
-      Events.insert(getVmemWaitEventType(Inst));
-    } else {
-      assert(Inst.mayLoadOrStore());
-      if (TII->mayAccessVMEMThroughFlat(Inst)) {
-        if (ST->hasWaitXcnt())
-          Events.insert(VMEM_GROUP);
-        Events.insert(getVmemWaitEventType(Inst));
-      }
-      if (TII->mayAccessLDSThroughFlat(Inst))
-        Events.insert(LDS_ACCESS);
+      ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
+      return;
     }
+
+    assert(Inst.mayLoadOrStore());
+
+    int FlatASCount = 0;
+
+    if (TII->mayAccessVMEMThroughFlat(Inst)) {
+      ++FlatASCount;
+      IsVMEMAccess = true;
+      ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
+    }
+
+    if (TII->mayAccessLDSThroughFlat(Inst)) {
+      ++FlatASCount;
+      ScoreBrackets->updateByEvent(LDS_ACCESS, Inst);
+    }
+
+    // Async/LDSDMA operations have FLAT encoding but do not actually use flat
+    // pointers. They do have two operands that each access global and LDS, thus
+    // making it appear at this point that they are using a flat pointer. Filter
+    // them out, and for the rest, generate a dependency on flat pointers so
+    // that both VM and LGKM counters are flushed.
+    if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
+      ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
              (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
               Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
     // BUFFER_WBL2 is included here because unlike invalidates, has to be
     // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
     // completed.
-    if (ST->hasWaitXcnt())
-      Events.insert(VMEM_GROUP);
-    Events.insert(getVmemWaitEventType(Inst));
+    IsVMEMAccess = true;
+    ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
+
     if (ST->vmemWriteNeedsExpWaitcnt() &&
         (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst))) {
-      Events.insert(VMW_GPR_LOCK);
+      ScoreBrackets->updateByEvent(VMW_GPR_LOCK, Inst);
     }
   } else if (TII->isSMRD(Inst)) {
-    if (ST->hasWaitXcnt())
-      Events.insert(SMEM_GROUP);
-    Events.insert(SMEM_ACCESS);
+    IsSMEMAccess = true;
+    ScoreBrackets->updateByEvent(SMEM_ACCESS, Inst);
+  } else if (Inst.isCall()) {
+    // Act as a wait on everything
+    ScoreBrackets->applyWaitcnt(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
+    ScoreBrackets->setStateOnFunctionEntryOrReturn();
   } else if (SIInstrInfo::isLDSDIR(Inst)) {
-    Events.insert(EXP_LDS_ACCESS);
+    ScoreBrackets->updateByEvent(EXP_LDS_ACCESS, Inst);
+  } else if (TII->isVINTERP(Inst)) {
+    int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
+    ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
   } else if (SIInstrInfo::isEXP(Inst)) {
     unsigned Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::tgt)->getImm();
     if (Imm >= AMDGPU::Exp::ET_PARAM0 && Imm <= AMDGPU::Exp::ET_PARAM31)
-      Events.insert(EXP_PARAM_ACCESS);
+      ScoreBrackets->updateByEvent(EXP_PARAM_ACCESS, Inst);
     else if (Imm >= AMDGPU::Exp::ET_POS0 && Imm <= AMDGPU::Exp::ET_POS_LAST)
-      Events.insert(EXP_POS_ACCESS);
+      ScoreBrackets->updateByEvent(EXP_POS_ACCESS, Inst);
     else
-      Events.insert(EXP_GPR_LOCK);
+      ScoreBrackets->updateByEvent(EXP_GPR_LOCK, Inst);
   } else if (SIInstrInfo::isSBarrierSCCWrite(Inst.getOpcode())) {
-    Events.insert(SCC_WRITE);
+    ScoreBrackets->updateByEvent(SCC_WRITE, Inst);
   } else {
     switch (Inst.getOpcode()) {
     case AMDGPU::S_SENDMSG:
     case AMDGPU::S_SENDMSG_RTN_B32:
     case AMDGPU::S_SENDMSG_RTN_B64:
     case AMDGPU::S_SENDMSGHALT:
-      Events.insert(SQ_MESSAGE);
+      ScoreBrackets->updateByEvent(SQ_MESSAGE, Inst);
       break;
     case AMDGPU::S_MEMTIME:
     case AMDGPU::S_MEMREALTIME:
     case AMDGPU::S_GET_BARRIER_STATE_M0:
     case AMDGPU::S_GET_BARRIER_STATE_IMM:
-      Events.insert(SMEM_ACCESS);
+      ScoreBrackets->updateByEvent(SMEM_ACCESS, Inst);
       break;
     }
   }
-  return Events;
-}
 
-void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
-                                               WaitcntBrackets *ScoreBrackets) {
+  if (!ST->hasWaitXcnt())
+    return;
 
-  WaitEventSet InstEvents = getEventsFor(Inst);
-  for (WaitEventType E : wait_events()) {
-    if (InstEvents.contains(E))
-      ScoreBrackets->updateByEvent(E, Inst);
-  }
+  if (IsVMEMAccess)
+    ScoreBrackets->updateByEvent(VMEM_GROUP, Inst);
 
-  if (TII->isDS(Inst) && TII->usesLGKM_CNT(Inst)) {
-    if (TII->isAlwaysGDS(Inst.getOpcode()) ||
-        TII->hasModifiersSet(Inst, AMDGPU::OpName::gds)) {
-      ScoreBrackets->setPendingGDS();
-    }
-  } else if (TII->isFLAT(Inst)) {
-    if (Inst.mayLoadOrStore() && TII->mayAccessVMEMThroughFlat(Inst) &&
-        TII->mayAccessLDSThroughFlat(Inst) && !SIInstrInfo::isLDSDMA(Inst))
-      // Async/LDSDMA operations have FLAT encoding but do not actually use flat
-      // pointers. They do have two operands that each access global and LDS,
-      // thus making it appear at this point that they are using a flat pointer.
-      // Filter them out, and for the rest, generate a dependency on flat
-      // pointers so that both VM and LGKM counters are flushed.
-      ScoreBrackets->setPendingFlat();
-  } else if (Inst.isCall()) {
-    // Act as a wait on everything
-    ScoreBrackets->applyWaitcnt(WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false));
-    ScoreBrackets->setStateOnFunctionEntryOrReturn();
-  } else if (TII->isVINTERP(Inst)) {
-    int64_t Imm = TII->getNamedOperand(Inst, AMDGPU::OpName::waitexp)->getImm();
-    ScoreBrackets->applyWaitcnt(EXP_CNT, Imm);
-  }
+  if (IsSMEMAccess)
+    ScoreBrackets->updateByEvent(SMEM_GROUP, Inst);
 }
 
 bool WaitcntBrackets::mergeScore(const MergeInfo &M, unsigned &Score,
