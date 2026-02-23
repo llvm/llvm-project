@@ -24,6 +24,7 @@ PROJECT_DEPENDENCIES = {
     "clang-tools-extra": {"clang", "llvm"},
     "compiler-rt": {"clang", "lld"},
     "libc": {"clang", "lld"},
+    "openmp": {"clang", "lld"},
     "flang": {"llvm", "clang"},
     "flang-rt": {"flang"},
     "lldb": {"llvm", "clang"},
@@ -31,7 +32,6 @@ PROJECT_DEPENDENCIES = {
     "lld": {"llvm"},
     "mlir": {"llvm"},
     "polly": {"llvm"},
-    "openmp": {"clang", "lld"},
     "offload": {"clang", "lld", "flang"},
 }
 
@@ -72,11 +72,7 @@ DEPENDENTS_TO_TEST = {
 # but not necessarily run for testing. The only case of this currently is lldb
 # which needs some runtimes enabled for tests.
 DEPENDENT_RUNTIMES_TO_BUILD = {
-    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"},
-    "clang": {"openmp", "offload"},
-    "llvm": {"openmp", "offload"},
-    "lld": {"openmp", "offload"},
-    ".ci": {"openmp", "offload"},
+    "lldb": {"libcxx", "libcxxabi", "libunwind", "compiler-rt"}
 }
 
 # This mapping describes runtimes that should be tested when the key project is
