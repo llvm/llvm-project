@@ -871,12 +871,15 @@ public:
            "convertBF16 expects a floating-point scalar promotion type");
     typeIdx(TypeIdx);
     const LLT BF16Ty = LLT::bfloat16();
-    return widenScalarIf(
+    return actionIf(
+        LegalizeAction::WidenScalar,
         [=](const LegalityQuery &Query) {
           if (TypeIdx >= Query.Types.size())
             return false;
           const LLT Ty = Query.Types[TypeIdx];
           if (!Ty.isValid())
+            return false;
+          if (Ty.isAnyScalar() || Ty.isAnyVector())
             return false;
           if (Ty == BF16Ty)
             return true;
