@@ -136,7 +136,7 @@ is expected to have been built from the same Git commit as OpenMP. It will,
 however, use the compiler detected by CMake, usually gcc.
 To also make it use Clang, add
 `-DCMAKE_C_COMPILER=../build/bin/clang -DCMAKE_C_COMPILER=../build/bin/clang++`.
-It will use Clang from `LLVM_BINARY_DIR` for running the regression tests, if Clang is included in that build.
+Clang/Flang from `LLVM_BINARY_DIR` will be used for testing if available, otherwise `CMAKE_C_COMPILER`/`CMAKE_CXX_COMPILER`/`CMAKE_Fortran_COMPILER`. Tests are also only expected to work with Clang/Flang built from the same Git commit, so `OPENMP_TEST_C_COMPILER`/`OPENMP_TEST_CXX_COMPILER`/`OPENMP_TEST_Fortran_COMPILER` can be used to explicitly set the test compilers.
 `LLVM_BINARY_DIR` can also be omitted in which case testing
 (`ninja check-openmp`) is disabled.
 

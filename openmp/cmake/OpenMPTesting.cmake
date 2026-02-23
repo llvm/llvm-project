@@ -127,7 +127,7 @@ function(add_openmp_testsuite target comment)
     set_property(GLOBAL APPEND PROPERTY OPENMP_LIT_DEPENDS ${ARG_DEPENDS})
   endif()
 
-  unset(EXTRA_CHECK_DEPENDS)
+  set(EXTRA_CHECK_DEPENDS "")
   if (TARGET "clang")
     list(APPEND EXTRA_CHECK_DEPENDS clang)
   endif()
