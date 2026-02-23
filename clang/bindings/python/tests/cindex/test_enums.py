@@ -8,6 +8,7 @@ from clang.cindex import (
     CompletionChunkKind,
     CompletionString,
     CursorKind,
+    ErrorCode,
     ExceptionSpecificationKind,
     LanguageKind,
     LinkageKind,
@@ -48,6 +49,7 @@ class TestEnums(unittest.TestCase):
             "CXBinaryOperatorKind": BinaryOperator,
             "CXCompletionChunkKind": CompletionChunkKind,
             "CXCursorKind": CursorKind,
+            "CXErrorCode": ErrorCode,
             "CXCursor_ExceptionSpecificationKind": ExceptionSpecificationKind,
             "CXLanguageKind": LanguageKind,
             "CXLinkageKind": LinkageKind,
@@ -59,23 +61,26 @@ class TestEnums(unittest.TestCase):
             "CXTypeKind": TypeKind,
         }
 
-        indexheader = (
-            Path(__file__).parent.parent.parent.parent.parent
-            / "include/clang-c/Index.h"
-        )
-        # FIXME: Index.h is a C file, but we read it as a C++ file because we
-        # don't get ENUM_CONSTANT_DECL cursors otherwise, which we need here
-        # See bug report: https://github.com/llvm/llvm-project/issues/159075
-        tu = TranslationUnit.from_source(indexheader, ["-x", "c++"])
-
+        include_path = Path(__file__).parent.parent.parent.parent.parent
+        indexheaders = [
+            include_path / "include/clang-c/Index.h",
+            include_path / "include/clang-c/CXErrorCode.h",
+        ]
         enum_variant_map = {}
-        # For all enums in self.enums, extract all enum variants defined in Index.h
-        for cursor in tu.cursor.walk_preorder():
-            if cursor.kind == CursorKind.ENUM_CONSTANT_DECL:
-                python_enum = cenum_to_pythonenum.get(cursor.type.spelling)
-                if python_enum not in enum_variant_map:
-                    enum_variant_map[python_enum] = dict()
-                enum_variant_map[python_enum][cursor.enum_value] = cursor.spelling
+
+        for indexheader in indexheaders:
+            # FIXME: The headers are C files, but we read it as a C++ file because we
+            # don't get ENUM_CONSTANT_DECL cursors otherwise, which we need here
+            # See bug report: https://github.com/llvm/llvm-project/issues/159075
+            tu = TranslationUnit.from_source(str(indexheader), ["-x", "c++"])
+
+            # For all enums in self.enums, extract all enum variants defined in Index.h
+            for cursor in tu.cursor.walk_preorder():
+                if cursor.kind == CursorKind.ENUM_CONSTANT_DECL:
+                    python_enum = cenum_to_pythonenum.get(cursor.type.spelling)
+                    if python_enum not in enum_variant_map:
+                        enum_variant_map[python_enum] = dict()
+                    enum_variant_map[python_enum][cursor.enum_value] = cursor.spelling
 
         for enum in self.enums:
             with self.subTest(enum):

@@ -182,10 +182,28 @@ class TranslationUnitLoadError(Exception):
     This is raised in the case where a TranslationUnit could not be
     instantiated due to failure in the libclang library.
 
-    FIXME: Make libclang expose additional error information in this scenario.
     """
 
-    pass
+    def __init__(self, message: str, err_code: Optional[ErrorCode] = None):
+        assert isinstance(err_code, ErrorCode)
+        if err_code is None:
+            err_code = ErrorCode.FAILURE
+        assert err_code != ErrorCode.SUCCESS
+
+        def get_error_info(err_code: ErrorCode) -> str:
+            if err_code == ErrorCode.FAILURE:
+                return "\nA generic error code, no further details are available."
+            if err_code == ErrorCode.CRASHED:
+                return "\nlibclang crashed while performing the requested operation."
+            if err_code == ErrorCode.INVALID_ARGUMENTS:
+                return "\nThe function detected that the arguments violate the function contract"
+            if err_code == ErrorCode.AST_READ_ERROR:
+                return "\nAn AST deserialization error has occurred."
+            return ""
+
+        err_info = get_error_info(err_code)
+
+        Exception.__init__(self, f"error {err_code.name}: {message}{err_info}")
 
 
 class TranslationUnitSaveError(Exception):
@@ -1609,6 +1627,23 @@ class ExceptionSpecificationKind(BaseEnumeration):
     UNINSTANTIATED = 7
     UNPARSED = 8
     NOTHROW = 9
+
+
+### ErrorCode ###
+class ErrorCode(BaseEnumeration):
+    """
+    Error codes returned by libclang routines.
+
+    `ErrorCode.Success` is the only error code indicating success.  Other
+    error codes. indicate errors.
+    """
+
+    SUCCESS = 0
+    FAILURE = 1
+    CRASHED = 2
+    INVALID_ARGUMENTS = 3
+    AST_READ_ERROR = 4
+
 
 ### Cursors ###
 
@@ -3528,20 +3563,24 @@ class TranslationUnit(ClangObject):
 
         unsaved_array = cls.process_unsaved_files(unsaved_files)
 
-        ptr = conf.lib.clang_parseTranslationUnit(
-            index,
-            os.fspath(filename) if filename is not None else None,
-            args_array,
-            len(args),
-            unsaved_array,
-            len(unsaved_files),
-            options,
+        tu_ptr = c_object_p()
+        err_code: ErrorCode = ErrorCode.from_id(
+            conf.lib.clang_parseTranslationUnit2(
+                index,
+                os.fspath(filename) if filename is not None else None,
+                args_array,
+                len(args),
+                unsaved_array,
+                len(unsaved_files),
+                options,
+                byref(tu_ptr),
+            )
         )
 
-        if not ptr:
-            raise TranslationUnitLoadError("Error parsing translation unit.")
+        if err_code != ErrorCode.SUCCESS:
+            raise TranslationUnitLoadError("Error parsing translation unit.", err_code)
 
-        return cls(ptr, index=index)
+        return cls(tu_ptr, index=index)
 
     @classmethod
     def from_ast_file(cls, filename, index=None):
@@ -3561,11 +3600,16 @@ class TranslationUnit(ClangObject):
         if index is None:
             index = Index.create()
 
-        ptr = conf.lib.clang_createTranslationUnit(index, os.fspath(filename))
-        if not ptr:
-            raise TranslationUnitLoadError(filename)
+        tu_ptr = c_object_p()
+        err_id = conf.lib.clang_createTranslationUnit2(
+            index, os.fspath(filename), tu_ptr
+        )
+        err_code: ErrorCode = ErrorCode.from_id(err_id)
 
-        return cls(ptr=ptr, index=index)
+        if err_code != ErrorCode.SUCCESS:
+            raise TranslationUnitLoadError(filename, err_code)
+
+        return cls(ptr=tu_ptr, index=index)
 
     def __init__(self, ptr, index):
         """Create a TranslationUnit instance.
@@ -4238,6 +4282,11 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_codeCompleteGetNumDiagnostics", [CodeCompletionResults], c_int),
     ("clang_createIndex", [c_int, c_int], c_object_p),
     ("clang_createTranslationUnit", [Index, c_interop_string], c_object_p),
+    (
+        "clang_createTranslationUnit2",
+        [Index, c_interop_string, POINTER(c_object_p)],
+        c_int,
+    ),
     ("clang_CXRewriter_create", [TranslationUnit], c_object_p),
     ("clang_CXRewriter_dispose", [Rewriter]),
     ("clang_CXRewriter_insertTextBefore", [Rewriter, SourceLocation, c_interop_string]),
@@ -4410,6 +4459,20 @@ FUNCTION_LIST: list[LibFunc] = [
         "clang_parseTranslationUnit",
         [Index, c_interop_string, c_void_p, c_int, c_void_p, c_int, c_int],
         c_object_p,
+    ),
+    (
+        "clang_parseTranslationUnit2",
+        [
+            Index,
+            c_interop_string,
+            c_void_p,
+            c_int,
+            c_void_p,
+            c_int,
+            c_int,
+            POINTER(c_object_p),  # TranslationUnit,
+        ],
+        c_int,
     ),
     ("clang_reparseTranslationUnit", [TranslationUnit, c_int, c_void_p, c_int], c_int),
     ("clang_saveTranslationUnit", [TranslationUnit, c_interop_string, c_uint], c_int),
@@ -4609,6 +4672,7 @@ __all__ = [
     "CursorKind",
     "Cursor",
     "Diagnostic",
+    "ErrorCode",
     "ExceptionSpecificationKind",
     "File",
     "FixIt",
