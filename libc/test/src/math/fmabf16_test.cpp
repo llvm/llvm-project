@@ -43,7 +43,6 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
   }
 }
 
-
 TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
   const bfloat16 z_values[] = {zero,    neg_zero,   inf,
                                neg_inf, min_normal, max_normal};
