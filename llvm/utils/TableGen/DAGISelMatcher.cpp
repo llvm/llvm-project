@@ -261,26 +261,19 @@ void MorphNodeToMatcher::anchor() {}
 
 // isContradictoryImpl Implementations.
 
-static bool TypesAreContradictory(const ValueTypeByHwMode &VT1,
-                                  const ValueTypeByHwMode &VT2) {
-  // If the two types are the same, then they are the same, so they don't
-  // contradict.
-  if (VT1 == VT2)
+// Check if two simple MVT types are contradictory.
+static bool TypesAreContradictory(MVT T1, MVT T2) {
+  // If the two types are the same, then they don't contradict.
+  if (T1 == T2)
     return false;
-
-  if (!VT1.isSimple() || !VT2.isSimple())
-    return false;
-
-  MVT T1 = VT1.getSimple();
-  MVT T2 = VT2.getSimple();
 
   if (T1 == MVT::pAny)
-    return TypesAreContradictory(MVT(MVT::iPTR), T2) &&
-           TypesAreContradictory(MVT(MVT::cPTR), T2);
+    return TypesAreContradictory(MVT::iPTR, T2) &&
+           TypesAreContradictory(MVT::cPTR, T2);
 
   if (T2 == MVT::pAny)
-    return TypesAreContradictory(T1, MVT(MVT::iPTR)) &&
-           TypesAreContradictory(T1, MVT(MVT::cPTR));
+    return TypesAreContradictory(T1, MVT::iPTR) &&
+           TypesAreContradictory(T1, MVT::cPTR);
 
   // If either type is about iPtr, then they don't conflict unless the other
   // one is not a scalar integer type.
@@ -297,6 +290,43 @@ static bool TypesAreContradictory(const ValueTypeByHwMode &VT1,
     return !T1.isCheriCapability() || T1.isVector();
 
   // Otherwise, they are two different non-iPTR/cPTR types, they conflict.
+  return true;
+}
+
+static bool TypesAreContradictory(const ValueTypeByHwMode &VT1,
+                                  const ValueTypeByHwMode &VT2) {
+  // If the two types are the same, then they are the same, so they don't
+  // contradict.
+  if (VT1 == VT2)
+    return false;
+
+  // For simple types, use the simple comparison.
+  if (VT1.isSimple() && VT2.isSimple())
+    return TypesAreContradictory(VT1.getSimple(), VT2.getSimple());
+
+  // For non-simple types, we need to check all hardware modes.
+  // The types are contradictory only if they contradict for ALL modes.
+  // If they can be compatible for at least one mode, they don't contradict.
+
+  SmallVector<unsigned, 4> Modes;
+  union_modes(VT1, VT2, Modes);
+
+  for (unsigned Mode : Modes) {
+    // get() asserts if the mode doesn't exist and there's no default.
+    // If either type can't provide a value for this mode, be conservative
+    // and assume they don't contradict.
+    if (!VT1.hasMode(Mode) && !VT1.hasDefault())
+      return false;
+    if (!VT2.hasMode(Mode) && !VT2.hasDefault())
+      return false;
+
+    MVT T1 = VT1.get(Mode);
+    MVT T2 = VT2.get(Mode);
+    if (!TypesAreContradictory(T1, T2))
+      return false;
+  }
+
+  // All modes have contradictory types.
   return true;
 }
 

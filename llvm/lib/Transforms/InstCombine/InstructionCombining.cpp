@@ -3464,8 +3464,9 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
 
   bool SeenNonZeroIndex = false;
   for (auto [IdxNum, Idx] : enumerate(Indices)) {
+    // Ignore one leading zero index.
     auto *C = dyn_cast<Constant>(Idx);
-    if (C && C->isNullValue())
+    if (C && C->isNullValue() && IdxNum == 0)
       continue;
 
     if (!SeenNonZeroIndex) {
