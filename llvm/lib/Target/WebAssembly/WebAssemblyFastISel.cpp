@@ -1104,24 +1104,6 @@ bool WebAssemblyFastISel::selectZExt(const Instruction *I) {
   return true;
 }
 
-static bool isSignedExtLoad(unsigned Opc) {
-  switch (Opc) {
-  default:
-    return false;
-  case WebAssembly::LOAD8_S_I32_A32:
-  case WebAssembly::LOAD8_S_I32_A64:
-  case WebAssembly::LOAD16_S_I32_A32:
-  case WebAssembly::LOAD16_S_I32_A64:
-  case WebAssembly::LOAD8_S_I64_A32:
-  case WebAssembly::LOAD8_S_I64_A64:
-  case WebAssembly::LOAD16_S_I64_A32:
-  case WebAssembly::LOAD16_S_I64_A64:
-  case WebAssembly::LOAD32_S_I64_A32:
-  case WebAssembly::LOAD32_S_I64_A64:
-    return true;
-  }
-}
-
 bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   const auto *SExt = cast<SExtInst>(I);
 
@@ -1131,15 +1113,6 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   Register In = getRegForValue(Op);
   if (In == 0)
     return false;
-
-  MachineInstr *MI = MRI.getUniqueVRegDef(In);
-  if (MI && isSignedExtLoad(MI->getOpcode())) {
-    // The load instruction has already been folded into a signed load
-    // by selectLoad, so we don't need to emit any extension instruction.
-    // Just map the result of this SExt to the signed load register.
-    updateValueMap(I, In);
-    return true;
-  }
 
   unsigned Reg = signExtend(In, Op, From, To);
   if (Reg == 0)
