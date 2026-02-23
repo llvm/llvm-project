@@ -1725,7 +1725,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Handle case when index is zero.
       Constant *CIndex = dyn_cast<Constant>(Index);
-      if (CIndex && CIndex->isZeroValue())
+      if (CIndex && CIndex->isNullValue())
         continue;
 
       if (StructType *STy = GTI.getStructTypeOrNull()) {
@@ -5362,7 +5362,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                        ExponentKnownBits, Q, Depth + 1);
 
       KnownFPClass KnownSrc;
-      if (!ExponentKnownBits.isEven()) {
+      if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven()) {
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
                             KnownSrc, Q, Depth + 1);
       }
