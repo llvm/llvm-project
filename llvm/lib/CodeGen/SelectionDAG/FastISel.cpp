@@ -2176,7 +2176,8 @@ Register FastISel::fastEmitInst_extractsubreg(MVT RetVT, Register Op0,
   const TargetRegisterClass *RC = MRI.getRegClass(Op0);
   MRI.constrainRegClass(Op0, TRI.getSubClassWithSubReg(RC, Idx));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
-          ResultReg).addReg(Op0, 0, Idx);
+          ResultReg)
+      .addReg(Op0, {}, Idx);
   return ResultReg;
 }
 

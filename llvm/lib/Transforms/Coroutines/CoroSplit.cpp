@@ -815,9 +815,11 @@ static void updateScopeLine(Instruction *ActiveSuspend,
   BasicBlock::iterator Successor = ActiveSuspend->getNextNode()->getIterator();
   // Corosplit splits the BB around ActiveSuspend, so the meaningful
   // instructions are not in the same BB.
-  if (auto *Branch = dyn_cast_or_null<BranchInst>(Successor);
-      Branch && Branch->isUnconditional())
+  while (auto *Branch = dyn_cast_or_null<BranchInst>(Successor)) {
+    if (!Branch->isUnconditional())
+      break;
     Successor = Branch->getSuccessor(0)->getFirstNonPHIOrDbg();
+  }
 
   // Find the first successor of ActiveSuspend with a non-zero line location.
   // If that matches the file of ActiveSuspend, use it.

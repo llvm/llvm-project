@@ -211,7 +211,8 @@ public:
         }
         const StringRef Code = Buffer.get()->getBuffer();
         auto Style = format::getStyle(
-            *Context.getOptionsForFile(File).FormatStyle, File, "none");
+            Context.getOptionsForFile(File).FormatStyle.value_or("none"), File,
+            "none");
         if (!Style) {
           llvm::errs() << llvm::toString(Style.takeError()) << "\n";
           continue;
@@ -638,13 +639,14 @@ runClangTidy(clang::tidy::ClangTidyContext &Context,
     class Action : public ASTFrontendAction {
     public:
       Action(ClangTidyASTConsumerFactory *Factory) : Factory(Factory) {}
+
+    private:
+      ClangTidyASTConsumerFactory *Factory;
+
       std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &Compiler,
                                                      StringRef File) override {
         return Factory->createASTConsumer(Compiler, File);
       }
-
-    private:
-      ClangTidyASTConsumerFactory *Factory;
     };
 
     ClangTidyASTConsumerFactory ConsumerFactory;

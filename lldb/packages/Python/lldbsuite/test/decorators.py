@@ -442,6 +442,39 @@ def add_test_categories(cat):
     return impl
 
 
+def unicode_test(func):
+    """Decorate the item as a test which requires Unicode to be enabled.
+
+    lldb checks the value of the `LANG` environment variable for the substring "utf-8"
+    to determine if the terminal supports Unicode (except on Windows, where we assume
+    it's always supported).
+    This decorator sets LANG to `utf-8` before running the test and resets it to its
+    previous value afterwards.
+    """
+
+    if sys.platform == "win32":
+        # Unicode support on Windows is flaky in CI.
+        return expectedFailureWindows
+
+    def unicode_wrapped(*args, **kwargs):
+        import os
+
+        previous_lang = os.environ.get("LANG", None)
+        os.environ["LANG"] = "en_US.UTF-8"
+        try:
+            func(*args, **kwargs)
+        except Exception as err:
+            raise err
+        finally:
+            # Reset the value, whether the test failed or not.
+            if previous_lang is not None:
+                os.environ["LANG"] = previous_lang
+            else:
+                del os.environ["LANG"]
+
+    return unicode_wrapped
+
+
 def no_debug_info_test(func):
     """Decorate the item as a test what don't use any debug info. If this annotation is specified
     then the test runner won't generate a separate test for each debug info format."""
@@ -814,13 +847,6 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
-def skipIfWindowsWithoutConPTY(func: Callable):
-    """Decorator to skip tests on Windows without ConPTY support.
-    see https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/
-    """
-    return skipIfWindows(func=func, windows_version=["<", "10.0.17763"])
-
-
 def skipIfWindowsAndNonEnglish(func):
     """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
 
@@ -1046,36 +1072,18 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
                 outputf,
             ):
                 return "Compiler cannot compile with -fsanitize=undefined"
+            if not outputf.path:
+                return "Cannot create Temp file path."
+
+            nm_bin = configuration.get_nm_path()
+            if not nm_bin:
+                return "No llvm-nm or nm binary."
 
             # Check that we actually see ubsan instrumentation in the binary.
-            cmd = "nm %s" % outputf.path
-            with os.popen(cmd) as nm_output:
-                if "___ubsan_handle_divrem_overflow" not in nm_output.read():
-                    return "Division by zero instrumentation is missing"
+            nm_output = subprocess.check_output([nm_bin, outputf.path], text=True)
+            if "__ubsan_handle_divrem_overflow" not in nm_output:
+                return "Division by zero instrumentation is missing"
 
-        # Find the ubsan dylib.
-        # FIXME: This check should go away once compiler-rt gains support for __ubsan_on_report.
-        cmd = (
-            "%s -fsanitize=undefined -x c - -o - -### 2>&1"
-            % lldbplatformutil.getCompiler()
-        )
-        with os.popen(cmd) as cc_output:
-            driver_jobs = cc_output.read()
-            m = re.search(r'"([^"]+libclang_rt.ubsan_osx_dynamic.dylib)"', driver_jobs)
-            if not m:
-                return "Could not find the ubsan dylib used by the driver"
-            ubsan_dylib = m.group(1)
-
-        # Check that the ubsan dylib has special monitor hooks.
-        cmd = "nm -gU %s" % ubsan_dylib
-        with os.popen(cmd) as nm_output:
-            syms = nm_output.read()
-            if "___ubsan_on_report" not in syms:
-                return "Missing ___ubsan_on_report"
-            if "___ubsan_get_current_report_data" not in syms:
-                return "Missing ___ubsan_get_current_report_data"
-
-        # OK, this dylib + compiler works for us.
         return None
 
     return skipTestIfFn(is_compiler_clang_with_ubsan)(func)

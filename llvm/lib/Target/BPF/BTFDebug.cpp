@@ -1125,7 +1125,7 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
     for (line_iterator I(*Buf, false), E; I != E; ++I)
       Content.push_back(std::string(*I));
 
-  FileContent[FileName] = Content;
+  FileContent[FileName] = std::move(Content);
   return FileName;
 }
 
@@ -1615,7 +1615,7 @@ void BTFDebug::processGlobals(bool ProcessingMapDef) {
 
     // Calculate symbol size
     const DataLayout &DL = Global.getDataLayout();
-    uint32_t Size = DL.getTypeAllocSize(Global.getValueType());
+    uint32_t Size = Global.getGlobalSize(DL);
 
     It->second->addDataSecEntry(VarId, Asm->getSymbol(&Global), Size);
 

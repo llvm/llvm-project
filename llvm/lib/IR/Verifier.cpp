@@ -529,6 +529,7 @@ private:
   void verifyRangeLikeMetadata(const Value &V, const MDNode *Range, Type *Ty,
                                RangeLikeMetadataKind Kind);
   void visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty);
+  void visitNoFPClassMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range, Type *Ty);
   void visitDereferenceableMetadata(Instruction &I, MDNode *MD);
   void visitNofreeMetadata(Instruction &I, MDNode *MD);
@@ -952,6 +953,15 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   // used as a global.
   Check(!GVType->containsNonGlobalTargetExtType(),
         "Global @" + GV.getName() + " has illegal target extension type",
+        GVType);
+
+  // Check that the the address space can hold all bits of the type, recognized
+  // by an access in the address space being able to reach all bytes of the
+  // type.
+  Check(!GVType->isSized() ||
+            isUIntN(DL.getAddressSizeInBits(GV.getAddressSpace()),
+                    GV.getGlobalSize(DL)),
+        "Global variable is too large to fit into the address space", &GV,
         GVType);
 
   if (!GV.hasInitializer()) {
@@ -1622,11 +1632,11 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
 
       auto True = [](const Metadata *) { return true; };
       auto False = [](const Metadata *) { return false; };
-      bool IsTypeCorrect =
-          DISubprogram::visitRetainedNode<bool>(Op, True, True, True, False);
+      bool IsTypeCorrect = DISubprogram::visitRetainedNode<bool>(
+          Op, True, True, True, True, False);
       CheckDI(IsTypeCorrect,
-              "invalid retained nodes, expected DILocalVariable, DILabel or "
-              "DIImportedEntity",
+              "invalid retained nodes, expected DILocalVariable, DILabel, "
+              "DIImportedEntity or DIType",
               &N, Node, Op);
 
       auto *RetainedNode = cast<DINode>(Op);
@@ -1635,10 +1645,15 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
       CheckDI(RetainedNodeScope,
               "invalid retained nodes, retained node is not local", &N, Node,
               RetainedNode);
+
+      DISubprogram *RetainedNodeSP = RetainedNodeScope->getSubprogram();
+      DICompileUnit *RetainedNodeUnit =
+          RetainedNodeSP ? RetainedNodeSP->getUnit() : nullptr;
       CheckDI(
-          RetainedNodeScope->getSubprogram() == &N,
+          RetainedNodeSP == &N,
           "invalid retained nodes, retained node does not belong to subprogram",
-          &N, Node, RetainedNode, RetainedNodeScope);
+          &N, Node, RetainedNode, RetainedNodeScope, RetainedNodeSP,
+          RetainedNodeUnit);
     }
   }
   CheckDI(!hasConflictingReferenceFlags(N.getFlags()),
@@ -2617,19 +2632,6 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
     const std::optional<VFInfo> Info = VFABI::tryDemangleForVFABI(S, FT);
     if (!Info)
       CheckFailed("invalid name for a VFABI variant: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("denormal-fp-math"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (!parseDenormalFPAttribute(S).isValid())
-      CheckFailed("invalid value for 'denormal-fp-math' attribute: " + S, V);
-  }
-
-  if (auto A = Attrs.getFnAttr("denormal-fp-math-f32"); A.isValid()) {
-    StringRef S = A.getValueAsString();
-    if (!parseDenormalFPAttribute(S).isValid())
-      CheckFailed("invalid value for 'denormal-fp-math-f32' attribute: " + S,
-                  V);
   }
 
   if (auto A = Attrs.getFnAttr("modular-format"); A.isValid()) {
@@ -3904,6 +3906,9 @@ void Verifier::visitCallBase(CallBase &Call) {
           "llvm.call.preallocated.arg");
   }
 
+  Check(!Attrs.hasFnAttr(Attribute::DenormalFPEnv),
+        "denormal_fpenv attribute may not apply to call sites", Call);
+
   // Verify call attributes.
   verifyFunctionAttrs(FTy, Attrs, &Call, IsIntrinsic, Call.isInlineAsm());
 
@@ -4568,6 +4573,25 @@ void Verifier::visitRangeMetadata(Instruction &I, MDNode *Range, Type *Ty) {
   assert(Range && Range == I.getMetadata(LLVMContext::MD_range) &&
          "precondition violation");
   verifyRangeLikeMetadata(I, Range, Ty, RangeLikeMetadataKind::Range);
+}
+
+void Verifier::visitNoFPClassMetadata(Instruction &I, MDNode *NoFPClass,
+                                      Type *Ty) {
+  Check(AttributeFuncs::isNoFPClassCompatibleType(Ty),
+        "nofpclass only applies to floating-point typed loads", I);
+
+  Check(NoFPClass->getNumOperands() == 1,
+        "nofpclass must have exactly one entry", NoFPClass);
+  ConstantInt *MaskVal =
+      mdconst::dyn_extract<ConstantInt>(NoFPClass->getOperand(0));
+  Check(MaskVal && MaskVal->getType()->isIntegerTy(32),
+        "nofpclass entry must be a constant i32", NoFPClass);
+  uint32_t Val = MaskVal->getZExtValue();
+  Check(Val != 0, "'nofpclass' must have at least one test bit set", NoFPClass,
+        I);
+
+  Check((Val & ~static_cast<unsigned>(fcAllFlags)) == 0,
+        "Invalid value for 'nofpclass' test mask", NoFPClass, I);
 }
 
 void Verifier::visitNoaliasAddrspaceMetadata(Instruction &I, MDNode *Range,
@@ -5690,6 +5714,11 @@ void Verifier::visitInstruction(Instruction &I) {
     Check(isa<LoadInst>(I) || isa<CallInst>(I) || isa<InvokeInst>(I),
           "Ranges are only for loads, calls and invokes!", &I);
     visitRangeMetadata(I, Range, I.getType());
+  }
+
+  if (MDNode *MD = I.getMetadata(LLVMContext::MD_nofpclass)) {
+    Check(isa<LoadInst>(I), "nofpclass is only for loads", &I);
+    visitNoFPClassMetadata(I, MD, I.getType());
   }
 
   if (MDNode *Range = I.getMetadata(LLVMContext::MD_noalias_addrspace)) {
@@ -7182,6 +7211,13 @@ void Verifier::visitIntrinsicCall(Intrinsic::ID ID, CallBase &Call) {
           &Call);
     break;
   }
+  case Intrinsic::sponentry: {
+    const unsigned StackAS = DL.getAllocaAddrSpace();
+    const Type *RetTy = Call.getFunctionType()->getReturnType();
+    Check(RetTy->getPointerAddressSpace() == StackAS,
+          "llvm.sponentry must return a pointer to the stack", &Call);
+    break;
+  }
   };
 
   // Verify that there aren't any unmediated control transfers between funclets.
@@ -7882,14 +7918,9 @@ struct VerifierLegacyPass : public FunctionPass {
   std::unique_ptr<Verifier> V;
   bool FatalErrors = true;
 
-  VerifierLegacyPass() : FunctionPass(ID) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  VerifierLegacyPass() : FunctionPass(ID) {}
   explicit VerifierLegacyPass(bool FatalErrors)
-      : FunctionPass(ID),
-        FatalErrors(FatalErrors) {
-    initializeVerifierLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+      : FunctionPass(ID), FatalErrors(FatalErrors) {}
 
   bool doInitialization(Module &M) override {
     V = std::make_unique<Verifier>(

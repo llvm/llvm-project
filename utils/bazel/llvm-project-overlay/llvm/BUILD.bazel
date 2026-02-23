@@ -2,9 +2,12 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//lib:selects.bzl", "selects")
 load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
-load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
+load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
+load("@rules_cc//cc:cc_library.bzl", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load("@rules_shell//shell:sh_binary.bzl", "sh_binary")
 load("//mlir:tblgen.bzl", "gentbl_cc_library", "gentbl_filegroup", "td_library")
@@ -208,18 +211,70 @@ cc_library(
     deps = [":config"],
 )
 
-genrule(
+write_file(
     name = "generate_vcs_revision",
-    outs = ["include/llvm/Support/VCSRevision.h"],
-    cmd = "echo '#undef LLVM_REVISION' >> $@\n" +
-          "echo '#undef LLVM_REPOSITORY' >> $@\n",
+    out = "include/llvm/Support/VCSRevision.h",
+    content = [
+        "#undef LLVM_REVISION",
+        "#undef LLVM_REPOSITORY",
+    ],
 )
 
-genrule(
+write_file(
     name = "generate_static_extension_registry",
-    outs = ["include/llvm/Support/Extension.def"],
-    cmd = "echo -e '// extension handlers' >> $@\n" +
-          "echo -e '#undef HANDLE_EXTENSION' >> $@\n",
+    out = "include/llvm/Support/Extension.def",
+    content = [
+        "// extension handlers",
+        "#undef HANDLE_EXTENSION",
+    ],
+)
+
+config_setting(
+    name = "is_windows_clang_mingw",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+config_setting(
+    name = "is_windows_clang_cl",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang-cl"},
+)
+
+config_setting(
+    name = "is_windows_msvc",
+    constraint_values = ["@platforms//os:windows"],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "msvc-cl"},
+)
+
+config_setting(
+    name = "is_x86_64_windows_clang_mingw",
+    constraint_values = [
+        "@platforms//cpu:x86_64",
+        "@platforms//os:windows",
+    ],
+    flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
+)
+
+BLAKE3_x86_64_ASM_SOURCE_PATTERNS = [
+    "lib/Support/BLAKE3/blake3_avx2_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_avx512_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_sse2_x86-64_%s.S",
+    "lib/Support/BLAKE3/blake3_sse41_x86-64_%s.S",
+]
+
+filegroup(
+    name = "blake3_x86_64_asm",
+    srcs = select({
+        ":is_x86_64_windows_clang_mingw": [
+            pattern % "windows_gnu"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+        "//conditions:default": [
+            pattern % "unix"
+            for pattern in BLAKE3_x86_64_ASM_SOURCE_PATTERNS
+        ],
+    }),
 )
 
 cc_library(
@@ -250,12 +305,7 @@ cc_library(
         "@platforms//cpu:aarch64": [
             "lib/Support/BLAKE3/blake3_neon.c",
         ],
-        "@platforms//cpu:x86_64": [
-            "lib/Support/BLAKE3/blake3_avx2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_avx512_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse2_x86-64_unix.S",
-            "lib/Support/BLAKE3/blake3_sse41_x86-64_unix.S",
-        ],
+        "@platforms//cpu:x86_64": [":blake3_x86_64_asm"],
         "//conditions:default": [
         ],
     }),
@@ -282,9 +332,7 @@ cc_library(
     defines = select({
         "@platforms//cpu:aarch64": [
         ],
-        "//conditions:default": [
-            "BLAKE3_USE_NEON=0",
-        ],
+        "//conditions:default": ["BLAKE3_USE_NEON=0"],
     }) + select({
         "@platforms//cpu:x86_64": [
         ],
@@ -297,7 +345,21 @@ cc_library(
     }),
     includes = ["include"],
     linkopts = select({
-        "@platforms//os:windows": [
+        ":is_windows_clang_mingw": [
+            "-lole32",
+            "-luuid",
+            "-lws2_32",
+            "-lntdll",
+        ],
+        ":is_windows_clang_cl": [
+            "ole32.lib",
+            "uuid.lib",
+            "ws2_32.lib",
+            "ntdll.lib",
+        ],
+        ":is_windows_msvc": [
+            "ole32.lib",
+            "uuid.lib",
             "ws2_32.lib",
             "ntdll.lib",
         ],
@@ -397,9 +459,7 @@ cc_library(
             "include/llvm/*.h",
             "include/llvm/IR/*.h",
         ],
-        exclude = [
-            "include/llvm/LinkAllPasses.h",
-        ],
+        exclude = ["include/llvm/LinkAllPasses.h"],
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
@@ -409,13 +469,28 @@ cc_library(
 )
 
 cc_library(
+    name = "BinaryFormatELF",
+    srcs = [
+        "include/llvm/TargetParser/Triple.h",
+        "lib/BinaryFormat/ELF.cpp",
+    ],
+    hdrs = ["include/llvm/BinaryFormat/ELF.h"],
+    copts = llvm_copts,
+    includes = ["include"],
+    textual_hdrs = glob([
+        "include/llvm/BinaryFormat/*.def",
+        "include/llvm/BinaryFormat/ELFRelocs/*.def",
+    ]),
+    deps = [":Support"],
+)
+
+cc_library(
     name = "BinaryFormat",
-    srcs = glob([
-        "lib/BinaryFormat/*.cpp",
-    ]),
-    hdrs = glob([
-        "include/llvm/BinaryFormat/*.h",
-    ]),
+    srcs = glob(
+        include = ["lib/BinaryFormat/*.cpp"],
+        exclude = ["lib/BinaryFormat/ELF.cpp"],
+    ),
+    hdrs = glob(["include/llvm/BinaryFormat/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = glob([
@@ -423,6 +498,7 @@ cc_library(
         "include/llvm/BinaryFormat/ELFRelocs/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
         ":PPCTargetParser",
         ":Support",
         ":TargetParser",
@@ -715,9 +791,7 @@ cc_binary(
 
 cc_library(
     name = "TableGenGlobalISel",
-    srcs = [
-        "utils/TableGen/Common/GlobalISel/CodeExpander.cpp",
-    ],
+    srcs = ["utils/TableGen/Common/GlobalISel/CodeExpander.cpp"],
     hdrs = [
         # We have to include these headers here as well as in the `hdrs` below
         # to allow the `.cpp` files to use file-relative-inclusion to find
@@ -765,9 +839,7 @@ cc_binary(
             "utils/TableGen/Common/GlobalISel/CodeExpander.cpp",
             "utils/TableGen/llvm-min-tblgen.cpp",
         ],
-    ) + [
-        "include/llvm/TargetParser/SubtargetFeature.h",
-    ],
+    ) + ["include/llvm/TargetParser/SubtargetFeature.h"],
     copts = llvm_copts,
     includes = ["utils/TableGen"],
     stamp = 0,
@@ -938,9 +1010,7 @@ cc_library(
         "include/llvm/Bitstream/BitstreamReader.h",
     ],
     copts = llvm_copts,
-    deps = [
-        ":Support",
-    ],
+    deps = [":Support"],
 )
 
 cc_library(
@@ -951,9 +1021,7 @@ cc_library(
         "include/llvm/Bitstream/BitstreamWriter.h",
     ],
     copts = llvm_copts,
-    deps = [
-        ":Support",
-    ],
+    deps = [":Support"],
 )
 
 cc_library(
@@ -1012,9 +1080,7 @@ cc_library(
             "include/llvm/*.h",
             "include/llvm/IR/*.h",
         ],
-        exclude = [
-            "include/llvm/LinkAllPasses.h",
-        ],
+        exclude = ["include/llvm/LinkAllPasses.h"],
     ) + [
         "include/llvm-c/Comdat.h",
         "include/llvm-c/DebugInfo.h",
@@ -1246,18 +1312,14 @@ cc_library(
 cc_library(
     name = "Analysis",
     srcs = glob(
-        [
-            "lib/Analysis/*.cpp",
-        ],
+        ["lib/Analysis/*.cpp"],
     ),
     hdrs = glob(
         [
             "include/llvm/Analysis/*.h",
             "include/llvm/Analysis/Utils/*.h",
         ],
-    ) + [
-        "include/llvm-c/Analysis.h",
-    ],
+    ) + ["include/llvm-c/Analysis.h"],
     copts = llvm_copts + ["-ftrapping-math"],
     textual_hdrs = glob([
         "include/llvm/Analysis/*.def",
@@ -1415,6 +1477,13 @@ td_library(
     ]),
 )
 
+td_library(
+    name = "WebAssemblyTargetTdFiles",
+    srcs = glob([
+        "lib/Target/WebAssembly/**/*.td",
+    ]),
+)
+
 gentbl_cc_library(
     name = "RISCVTargetParserDefGen",
     tbl_outs = {"include/llvm/TargetParser/RISCVTargetParserDef.inc": ["-gen-riscv-target-def"]},
@@ -1453,9 +1522,7 @@ cc_library(
 cc_library(
     name = "TargetParser",
     srcs = glob(
-        [
-            "lib/TargetParser/*.cpp",
-        ],
+        include = ["lib/TargetParser/*.cpp"],
         exclude = ["lib/TargetParser/PPCTargetParser.cpp"],
     ) + select({
         "@platforms//os:windows": glob([
@@ -1465,9 +1532,7 @@ cc_library(
             "lib/TargetParser/Unix/*.inc",
         ]),
     }),
-    hdrs = glob([
-        "include/llvm/TargetParser/*.h",
-    ]),
+    hdrs = glob(["include/llvm/TargetParser/*.h"]),
     copts = llvm_copts,
     includes = ["include"],
     textual_hdrs = [
@@ -1480,6 +1545,7 @@ cc_library(
         "include/llvm/TargetParser/*.def",
     ]),
     deps = [
+        ":BinaryFormatELF",
         ":Support",
         ":config",
     ],
@@ -3230,6 +3296,10 @@ llvm_target_lib_list = [lib for lib in [
         "short_name": "WebAssembly",
         "tbl_outs": [
             (
+                ["-gen-register-bank"],
+                "lib/Target/WebAssembly/WebAssemblyGenRegisterBank.inc",
+            ),
+            (
                 ["-gen-disassembler"],
                 "lib/Target/WebAssembly/WebAssemblyGenDisassemblerTables.inc",
             ),
@@ -3275,6 +3345,9 @@ llvm_target_lib_list = [lib for lib in [
                 ["-gen-sd-node-info"],
                 "lib/Target/WebAssembly/WebAssemblyGenSDNodeInfo.inc",
             ),
+        ],
+        "tbl_deps": [
+            ":webassembly_isel_target_gen",
         ],
     },
     {
@@ -3336,6 +3409,13 @@ llvm_target_lib_list = [lib for lib in [
                     "-combiners=X86PreLegalizerCombiner",
                 ],
                 "lib/Target/X86/X86GenPreLegalizeGICombiner.inc",
+            ),
+            (
+                [
+                    "-gen-global-isel-combiner",
+                    "-combiners=X86PostLegalizerCombiner",
+                ],
+                "lib/Target/X86/X86GenPostLegalizeGICombiner.inc",
             ),
             (
                 ["-gen-callingconv"],
@@ -3572,6 +3652,28 @@ gentbl_cc_library(
     deps = [
         ":CommonTargetTdFiles",
         ":RISCVTargetTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "webassembly_isel_target_gen",
+    strip_include_prefix = "lib/Target/WebAssembly",
+    tbl_outs = {
+        "lib/Target/WebAssembly/WebAssemblyGenGlobalISel.inc": ["-gen-global-isel"],
+        "lib/Target/WebAssembly/WebAssemblyGenPreLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPreLegalizerCombiner",
+        ],
+        "lib/Target/WebAssembly/WebAssemblyGenPostLegalizeGICombiner.inc": [
+            "-gen-global-isel-combiner",
+            "-combiners=WebAssemblyPostLegalizerCombiner",
+        ],
+    },
+    tblgen = ":llvm-tblgen",
+    td_file = "lib/Target/WebAssembly/WebAssemblyGISel.td",
+    deps = [
+        ":CommonTargetTdFiles",
+        ":WebAssemblyTargetTdFiles",
     ],
 )
 
@@ -3991,9 +4093,7 @@ cc_library(
             "include/llvm/ExecutionEngine/MCJIT*.h",
             "include/llvm/ExecutionEngine/OProfileWrapper.h",
         ],
-    ) + [
-        "include/llvm-c/ExecutionEngine.h",
-    ],
+    ) + ["include/llvm-c/ExecutionEngine.h"],
     copts = llvm_copts,
     deps = [
         ":BinaryFormat",
@@ -4103,9 +4203,7 @@ cc_library(
         "@platforms//os:windows": [],
         "@platforms//os:freebsd": [],
         "@platforms//os:macos": [],
-        "//conditions:default": [
-            "-lrt",
-        ],
+        "//conditions:default": ["-lrt"],
     }),
     deps = [
         ":Analysis",
@@ -4541,6 +4639,13 @@ cc_library(
         "tools/dsymutil/*.h",
     ]),
     copts = llvm_copts,
+    linkopts = select({
+        "@platforms//os:macos": [
+            "-framework",
+            "CoreFoundation",
+        ],
+        "//conditions:default": [],
+    }),
     deps = [
         ":AllTargetsCodeGens",
         ":BinaryFormat",
@@ -4648,6 +4753,23 @@ cc_binary(
         ":OrcTargetProcess",
         ":Support",
         ":TargetParser",
+        ":config",
+    ],
+)
+
+cc_binary(
+    name = "llubi",
+    srcs = glob([
+        "tools/llubi/*.cpp",
+        "tools/llubi/lib/*.cpp",
+        "tools/llubi/lib/*.h",
+    ]),
+    stamp = 0,
+    deps = [
+        ":Analysis",
+        ":Core",
+        ":IRReader",
+        ":Support",
         ":config",
     ],
 )
@@ -5359,9 +5481,7 @@ cc_binary(
 
 cc_binary(
     name = "llvm-mca",
-    srcs = [
-        "tools/llvm-mca/llvm-mca.cpp",
-    ],
+    srcs = ["tools/llvm-mca/llvm-mca.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -5768,6 +5888,7 @@ cc_binary(
         ":AllTargetsDisassemblers",
         ":Core",
         ":DebugInfoDWARF",
+        ":DebugInfoPDB",
         ":Demangle",
         ":IPO",
         ":MC",
@@ -6632,9 +6753,7 @@ cc_binary(
             "tools/llvm-ir2vec/**/*.cpp",
             "tools/llvm-ir2vec/lib/*.h",
         ],
-        exclude = [
-            "tools/llvm-ir2vec/Bindings/*.cpp",
-        ],
+        exclude = ["tools/llvm-ir2vec/Bindings/*.cpp"],
     ),
     copts = llvm_copts,
     includes = ["tools/llvm-ir2vec/lib"],

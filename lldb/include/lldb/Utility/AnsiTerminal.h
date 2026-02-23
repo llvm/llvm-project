@@ -99,6 +99,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Locale.h"
 
+#include "lldb/Utility/Stream.h"
+
 #include <string>
 
 namespace lldb_private {
@@ -285,6 +287,72 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
 inline size_t ColumnWidth(llvm::StringRef str) {
   std::string stripped = ansi::StripAnsiTerminalCodes(str);
   return llvm::sys::locale::columnWidth(stripped);
+}
+
+// Output text that may contain ANSI codes, word wrapped (wrapped at whitespace)
+// to the given stream. The indent level of the stream is counted towards the
+// output line length.
+// FIXME: This contains several bugs and does not handle unicode.
+inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
+                                   uint32_t output_max_columns) {
+  // We will indent using the stream, so leading whitespace is not significant.
+  text = text.ltrim();
+  if (text.size() == 0)
+    return;
+
+  const size_t visible_length = ansi::ColumnWidth(text);
+
+  // Will it all fit on one line, or is it a single word that we must not break?
+  if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
+          output_max_columns ||
+      text.find_first_of(" \t\n") == llvm::StringRef::npos) {
+    // Output it as a single line.
+    strm.Indent(text);
+    strm.EOL();
+    return;
+  }
+
+  // We need to break it up into multiple lines. We can do this based on the
+  // formatted text because we know that:
+  // * We only break lines on whitespace, therefore we will not break in the
+  //   middle of a Unicode character or escape code.
+  // * Escape codes are so far not applied to multiple words, so there is no
+  //   risk of breaking up a phrase and the escape code being incorrectly
+  //   applied to the indent too.
+
+  const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
+  int start = 0;
+  int end = start;
+  const int final_end = visible_length;
+
+  while (end < final_end) {
+    // Don't start the 'text' on a space, since we're already outputting the
+    // indentation.
+    while ((start < final_end) && (text[start] == ' '))
+      start++;
+
+    end = start + max_text_width;
+    if (end > final_end)
+      end = final_end;
+
+    if (end != final_end) {
+      // If we're not at the end of the text, make sure we break the line on
+      // white space.
+      while (end > start && text[end] != ' ' && text[end] != '\t' &&
+             text[end] != '\n')
+        end--;
+    }
+
+    const int sub_len = end - start;
+    if (start != 0)
+      strm.EOL();
+    strm.Indent();
+    assert(start < final_end);
+    assert(start + sub_len <= final_end);
+    strm << text.substr(start, sub_len);
+    start = end + 1;
+  }
+  strm.EOL();
 }
 
 } // namespace ansi

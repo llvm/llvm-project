@@ -17242,17 +17242,6 @@ uint64_t test_vceqd_u64(uint64_t a, uint64_t b) {
   return (int64_t)vceqd_u64(a, b);
 }
 
-// CHECK-LABEL: define dso_local i64 @test_vceqzd_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[A]], 0
-// CHECK-NEXT:    [[VCEQZ_I:%.*]] = sext i1 [[TMP0]] to i64
-// CHECK-NEXT:    ret i64 [[VCEQZ_I]]
-//
-uint64_t test_vceqzd_s64(int64_t a) {
-  return (uint64_t)vceqzd_s64(a);
-}
-
 // CHECK-LABEL: define dso_local i64 @test_vceqzd_u64(
 // CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
@@ -17472,16 +17461,6 @@ int32_t test_vqabss_s32(int32_t a) {
 //
 int64_t test_vqabsd_s64(int64_t a) {
   return (int64_t)vqabsd_s64(a);
-}
-
-// CHECK-LABEL: define dso_local i64 @test_vnegd_s64(
-// CHECK-SAME: i64 noundef [[A:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[VNEGD_I:%.*]] = sub i64 0, [[A]]
-// CHECK-NEXT:    ret i64 [[VNEGD_I]]
-//
-int64_t test_vnegd_s64(int64_t a) {
-  return (int64_t)vnegd_s64(a);
 }
 
 // CHECK-LABEL: define dso_local i8 @test_vqnegb_s8(

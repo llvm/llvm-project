@@ -52,6 +52,8 @@ using namespace llvm;
 STATISTIC(FilledSlots, "Number of delay slots filled");
 STATISTIC(UsefulSlots, "Number of delay slots filled with instructions that"
                        " are not NOP.");
+STATISTIC(R5900ShortLoopNops, "Number of delay slots left as NOP for R5900 "
+                              "short loop fix");
 
 static cl::opt<bool> DisableDelaySlotFiller(
   "disable-mips-delay-filler",
@@ -276,6 +278,77 @@ char MipsDelaySlotFiller::ID = 0;
 
 static bool hasUnoccupiedSlot(const MachineInstr *MI) {
   return MI->hasDelaySlot() && !MI->isBundledWithSucc();
+}
+
+/// Check if a branch is a short backward loop that triggers the R5900 erratum.
+/// Quote from binutils-gdb/gas/config/tc-mips.c:
+///
+/// On the R5900 short loops need to be fixed by inserting a NOP in the
+/// branch delay slot.
+///
+/// The short loop bug under certain conditions causes loops to execute
+/// only once or twice.  We must ensure that the assembler never
+/// generates loops that satisfy all of the following conditions:
+///
+/// - a loop consists of less than or equal to six instructions
+///   (including the branch delay slot);
+/// - a loop contains only one conditional branch instruction at the end
+///   of the loop;
+/// - a loop does not contain any other branch or jump instructions;
+/// - a branch delay slot of the loop is not NOP (EE 2.9 or later).
+///
+/// We need to do this because of a hardware bug in the R5900 chip.
+static bool isR5900ShortLoopBranch(const MachineInstr *MI,
+                                   const MachineBasicBlock &MBB) {
+  // Must be a conditional branch (not jump or indirect branch)
+  if (!MI->isBranch() || MI->isIndirectBranch())
+    return false;
+
+  // Check if this is a conditional branch by looking for an MBB operand
+  const MachineBasicBlock *TargetMBB = nullptr;
+  for (const MachineOperand &MO : MI->operands()) {
+    if (MO.isMBB()) {
+      TargetMBB = MO.getMBB();
+      break;
+    }
+  }
+
+  // Must have a target and must target the same basic block (backward branch)
+  if (!TargetMBB || TargetMBB != &MBB)
+    return false;
+
+  // Count instructions from the beginning of the block to the branch
+  // A short loop is 6 instructions or fewer (including branch + delay slot)
+  // The delay slot adds 1 more, so we check if instructions before branch <= 5
+  unsigned InstrCount = 0;
+  bool HasOtherBranch = false;
+
+  for (const MachineInstr &Instr : MBB) {
+    if (&Instr == MI)
+      break;
+
+    // Skip debug and pseudo instructions
+    if (Instr.isDebugInstr() || Instr.isTransient())
+      continue;
+
+    ++InstrCount;
+
+    // If there's another branch in the loop, the erratum doesn't apply
+    if (Instr.isBranch() || Instr.isCall()) {
+      HasOtherBranch = true;
+      break;
+    }
+  }
+
+  // If there's another branch/call in the loop, erratum doesn't apply
+  if (HasOtherBranch)
+    return false;
+
+  // Add 1 for the branch itself, +1 for delay slot = InstrCount + 2
+  // Erratum triggers when total <= 6, so InstrCount + 2 <= 6 => InstrCount <= 4
+  // But we're conservative: if InstrCount <= 5 (total <= 7), skip filling
+  // to match the exact condition from r5900check: offset -5 to -1 (2-6 instrs)
+  return InstrCount <= 5;
 }
 
 INITIALIZE_PASS(MipsDelaySlotFiller, DEBUG_TYPE,
@@ -587,10 +660,22 @@ bool MipsDelaySlotFiller::runOnMachineBasicBlock(MachineBasicBlock &MBB) {
     if (!hasUnoccupiedSlot(&*I))
       continue;
 
-    // Delay slot filling is disabled at -O0, or in microMIPS32R6.
+    // R5900 short loop erratum fix: skip delay slot filling for short backward
+    // loops to avoid triggering a hardware bug where short loops may exit
+    // early. The fix can be controlled with -mfix-r5900 / -mno-fix-r5900.
+    bool SkipForFixR5900 = false;
+    if (STI.fixR5900() && isR5900ShortLoopBranch(&*I, MBB)) {
+      LLVM_DEBUG(dbgs() << DEBUG_TYPE ": skipping delay slot fill for R5900 "
+                                      "short loop branch.\n");
+      ++R5900ShortLoopNops;
+      SkipForFixR5900 = true;
+    }
+
+    // Delay slot filling is disabled at -O0, in microMIPS32R6, or for R5900
+    // short loop branches.
     if (!DisableDelaySlotFiller &&
         (TM->getOptLevel() != CodeGenOptLevel::None) &&
-        !(InMicroMipsMode && STI.hasMips32r6())) {
+        !(InMicroMipsMode && STI.hasMips32r6()) && !SkipForFixR5900) {
 
       bool Filled = false;
 

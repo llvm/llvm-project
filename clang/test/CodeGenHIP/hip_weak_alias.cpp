@@ -9,6 +9,9 @@
 
 extern "C" {
 //.
+// HOST: @__HostVar = global i32 1, align 4
+// HOST: @__hip_cuid_ = global i8 0
+// HOST: @llvm.compiler.used = appending global [1 x ptr] [ptr @__hip_cuid_], section "llvm.metadata"
 // HOST: @HostFunc = weak alias i32 (), ptr @__HostFunc
 // HOST: @HostFunc_ = alias i32 (), ptr @__HostFunc
 // HOST: @HostVar = weak alias i32, ptr @__HostVar
@@ -20,6 +23,8 @@ extern "C" {
 // HOST: @_Z4Fourv = weak alias i32 (), ptr @_Z6__Fourv
 // HOST: @_Z4Fourf = weak alias float (float), ptr @_Z6__Fourf
 //.
+// DEVICE: @__hip_cuid_ = addrspace(1) global i8 0
+// DEVICE: @llvm.compiler.used = appending addrspace(1) global [1 x ptr] [ptr addrspacecast (ptr addrspace(1) @__hip_cuid_ to ptr)], section "llvm.metadata"
 // DEVICE: @One = weak alias i32 (), ptr @__One
 // DEVICE: @One_ = alias i32 (), ptr @__One
 // DEVICE: @Two = weak alias i32 (), ptr @__Two
@@ -44,8 +49,6 @@ extern int __attribute__((alias("__HostVar"))) HostVar_;
 // DEVICE-LABEL: define dso_local i32 @__One(
 // DEVICE-SAME: ) #[[ATTR0:[0-9]+]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 1
 //
 __device__ int __One(void) { return 1; }
@@ -60,8 +63,6 @@ __device__ int One_(void) __attribute__((alias("__One")));
 // DEVICE-LABEL: define dso_local i32 @__Two(
 // DEVICE-SAME: ) #[[ATTR0]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 2
 //
 __host__ __device__ int __Two(void) { return 2; }
@@ -77,8 +78,6 @@ __host__ __device__ int Two_(void) __attribute__((alias("__Two")));
 // DEVICE-LABEL: define linkonce_odr noundef i32 @_Z7__Threev(
 // DEVICE-SAME: ) #[[ATTR0]] comdat {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 5
 //
 __host__ __device__ constexpr int __Three(void) { return 5; }
@@ -94,8 +93,6 @@ __host__ __device__ int Three_(void) __attribute__((alias("_Z7__Threev")));
 // DEVICE-LABEL: define dso_local noundef i32 @_Z6__Fourv(
 // DEVICE-SAME: ) #[[ATTR0]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    ret i32 2
 //
 __host__ __device__ int __Four(void) { return 2; }
@@ -111,9 +108,7 @@ __host__ __device__ int __Four(void) { return 2; }
 // DEVICE-LABEL: define dso_local noundef float @_Z6__Fourf(
 // DEVICE-SAME: float noundef [[F:%.*]]) #[[ATTR0]] {
 // DEVICE-NEXT:  [[ENTRY:.*:]]
-// DEVICE-NEXT:    [[RETVAL:%.*]] = alloca float, align 4, addrspace(5)
 // DEVICE-NEXT:    [[F_ADDR:%.*]] = alloca float, align 4, addrspace(5)
-// DEVICE-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // DEVICE-NEXT:    [[F_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[F_ADDR]] to ptr
 // DEVICE-NEXT:    store float [[F]], ptr [[F_ADDR_ASCAST]], align 4
 // DEVICE-NEXT:    [[TMP0:%.*]] = load float, ptr [[F_ADDR_ASCAST]], align 4
@@ -123,3 +118,16 @@ __host__ __device__ int __Four(void) { return 2; }
 __host__ __device__ float __Four(float f) { return 2.0f * f; }
 __host__ __device__ int Four(void) __attribute__((weak, alias("_Z6__Fourv")));
 __host__ __device__ float Four(float f) __attribute__((weak, alias("_Z6__Fourf")));
+//.
+// HOST: attributes #[[ATTR0]] = { mustprogress noinline nounwind optnone "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+//.
+// DEVICE: attributes #[[ATTR0]] = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+//.
+// HOST: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// HOST: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.
+// DEVICE: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
+// DEVICE: [[META1:![0-9]+]] = !{i32 1, !"amdgpu_printf_kind", !"hostcall"}
+// DEVICE: [[META2:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
+// DEVICE: [[META3:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}
+//.

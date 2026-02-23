@@ -269,6 +269,10 @@ protected:
   AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
              char &ID = AsmPrinter::ID);
 
+  /// Create the DwarfDebug handler. Targets can override this to provide
+  /// custom debug information handling.
+  virtual DwarfDebug *createDwarfDebug();
+
 public:
   ~AsmPrinter() override;
 
@@ -975,7 +979,7 @@ private:
   virtual void emitModuleCommandLines(Module &M);
 
   GCMetadataPrinter *getOrCreateGCPrinter(GCStrategy &S);
-  void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
+  virtual void emitGlobalIFunc(Module &M, const GlobalIFunc &GI);
 
   /// This method decides whether the specified basic block requires a label.
   bool shouldEmitLabelForBasicBlock(const MachineBasicBlock &MBB) const;

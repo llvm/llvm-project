@@ -72,19 +72,22 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSa
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_DECL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
+// CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestCommutableFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestFirstSameRegFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
 // CHECK-PREDICATOR-NEXT:  bool isTestSingleFusion(const TargetInstrInfo &, const TargetSubtargetInfo &, const MachineInstr *, const MachineInstr &);
-// CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
-// CHECK-PREDICATOR-NEXT:  #endif
+// CHECK-PREDICATOR-NEXT:  } // namespace llvm
+// CHECK-PREDICATOR-EMPTY:
+// CHECK-PREDICATOR-NEXT:  #endif // GET_Test_MACRO_FUSION_PRED_DECL
 
 // CHECK-PREDICATOR:       #ifdef GET_Test_MACRO_FUSION_PRED_IMPL
 // CHECK-PREDICATOR-NEXT:  #undef GET_Test_MACRO_FUSION_PRED_IMPL
 // CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  namespace llvm {
+// CHECK-PREDICATOR-EMPTY:
 // CHECK-PREDICATOR-NEXT:  bool isTestBothFusionPredicate(
 // CHECK-PREDICATOR-NEXT:      const TargetInstrInfo &TII,
 // CHECK-PREDICATOR-NEXT:      const TargetSubtargetInfo &STI,
@@ -256,9 +259,10 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSa
 // CHECK-PREDICATOR-NEXT:    }
 // CHECK-PREDICATOR-NEXT:    return true;
 // CHECK-PREDICATOR-NEXT:  }
-// CHECK-PREDICATOR-NEXT:  } // end namespace llvm
 // CHECK-PREDICATOR-EMPTY:
-// CHECK-PREDICATOR-NEXT:  #endif
+// CHECK-PREDICATOR-NEXT:  } // namespace llvm
+// CHECK-PREDICATOR-EMPTY:
+// CHECK-PREDICATOR-NEXT:  #endif // GET_Test_MACRO_FUSION_PRED_IMPL
 
 // Check that we have generated target subfeature.
 // CHECK-SUBTARGET: { "test-both-fusion-predicate", "Test BothFusionPredicate", Test::TestBothFusionPredicate
@@ -268,7 +272,7 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSa
 // CHECK-SUBTARGET: { "test-single-fusion", "Test SingleFusion", Test::TestSingleFusion
 
 // Check that we have generated `getMacroFusions()` function.
-// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const override;
+// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const final;
 
 // CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> TestGenSubtargetInfo::getMacroFusions() const {
 // CHECK-SUBTARGET-NEXT:   std::vector<MacroFusionPredTy> Fusions;

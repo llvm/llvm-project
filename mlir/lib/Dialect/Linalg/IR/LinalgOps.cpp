@@ -41,6 +41,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -63,10 +64,10 @@ static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
 
   return getAsOpFoldResult(
       TypeSwitch<Type, Value>(v.getType())
-          .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+          .Case([&](RankedTensorType t) -> Value {
             return tensor::DimOp::create(builder, loc, v, dim);
           })
-          .Case<MemRefType>([&](MemRefType t) -> Value {
+          .Case([&](MemRefType t) -> Value {
             return memref::DimOp::create(builder, loc, v, dim);
           }));
 }
@@ -78,11 +79,11 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                            ArrayRef<OpFoldResult> sizes,
                            ArrayRef<OpFoldResult> strides) {
   return TypeSwitch<Type, Operation *>(source.getType())
-      .Case<RankedTensorType>([&](RankedTensorType t) -> Operation * {
+      .Case([&](RankedTensorType t) -> Operation * {
         return tensor::ExtractSliceOp::create(b, loc, source, offsets, sizes,
                                               strides);
       })
-      .Case<MemRefType>([&](MemRefType type) -> Operation * {
+      .Case([&](MemRefType type) -> Operation * {
         return memref::SubViewOp::create(b, loc, source, offsets, sizes,
                                          strides);
       })
@@ -1130,11 +1131,11 @@ void GenericOp::build(
     ArrayRef<NamedAttribute> attributes) {
   build(builder, result, resultTensorTypes, inputs, outputs,
         builder.getAffineMapArrayAttr(indexingMaps),
-        builder.getArrayAttr(llvm::to_vector(llvm::map_range(
+        builder.getArrayAttr(llvm::map_to_vector(
             iteratorTypes,
             [&](utils::IteratorType iter) -> mlir::Attribute {
               return IteratorTypeAttr::get(builder.getContext(), iter);
-            }))),
+            })),
         doc.empty() ? StringAttr() : builder.getStringAttr(doc),
         libraryCall.empty() ? StringAttr() : builder.getStringAttr(libraryCall),
         bodyBuild, attributes);
@@ -1192,11 +1193,10 @@ void GenericOp::print(OpAsmPrinter &p) {
       // needed, because tests still use the old format when 'iterator_types'
       // attribute is represented as an array of strings.
       // TODO: Remove this conversion once tests are fixed.
-      SmallVector<Attribute> iteratorTypeNames =
-          llvm::to_vector(llvm::map_range(
-              iteratorTypes, [&](utils::IteratorType t) -> Attribute {
-                return StringAttr::get(getContext(), stringifyIteratorType(t));
-              }));
+      SmallVector<Attribute> iteratorTypeNames = llvm::map_to_vector(
+          iteratorTypes, [&](utils::IteratorType t) -> Attribute {
+            return StringAttr::get(getContext(), stringifyIteratorType(t));
+          });
 
       genericAttrs.emplace_back(
           getIteratorTypesAttrName(),
@@ -3774,6 +3774,7 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
   case WinogradConv2DFmr::F_2_5:
     return {2, 5};
   }
+  llvm_unreachable("Unkown WinogradConv2DFmr");
 }
 
 //===----------------------------------------------------------------------===//
@@ -3876,7 +3877,7 @@ void MatmulOp::regionBuilder(ImplicitLocOpBuilder &b, Block &block,
   Value value2 = helper.buildTypeFn(castVal, block.getArgument(2).getType(),
                                     block.getArgument(1));
   Value value3 = helper.buildBinaryFn(BinaryFn::mul, value1, value2, emitError);
-  if (!value3)
+  if (!value1 || !value2 || !value3)
     return;
   Value value4 = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
                                       value3, emitError);
@@ -4647,9 +4648,14 @@ void BatchMatmulOp::regionBuilder(
   auto toType = block.getArgument(2).getType();
   Value castValA = helper.buildTypeFn(castVal, toType, block.getArgument(0));
   Value castValB = helper.buildTypeFn(castVal, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
-  Value addVal =
-      helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!castValA || !castValB || !mulVal)
+    return;
+  Value addVal = helper.buildBinaryFn(BinaryFn::add, block.getArgument(2),
+                                      mulVal, emitError);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }
@@ -6393,8 +6399,10 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
   RankedTensorType unpackedTypeAfterFold = sliceOp.getResultType();
   SmallVector<int64_t> outerShapeWithoutTranspose =
       getPackedOuterShapeWithoutTransposition(*this);
+  SmallVector<bool> areOuterDimsTiled(outerShapeWithoutTranspose.size(), false);
   for (auto [pos, tileSize] :
        llvm::zip_equal(this->getInnerDimsPos(), this->getStaticInnerTiles())) {
+    areOuterDimsTiled[pos] = true;
     if (unpackedTypeAfterFold.isDynamicDim(pos))
       return false;
     if (ShapedType::isDynamic(outerShapeWithoutTranspose[pos]))
@@ -6404,6 +6412,16 @@ bool UnPackOp::canFoldSliceOp(tensor::ExtractSliceOp sliceOp) {
     int64_t paddingSize = outerShapeWithoutTranspose[pos] * tileSize -
                           unpackedTypeAfterFold.getDimSize(pos);
     if (paddingSize >= tileSize)
+      return false;
+  }
+  // extract_slice must not affect dimensions that are not being unpacked
+  for (int64_t pos = 0, e = outerShapeWithoutTranspose.size(); pos < e; ++pos) {
+    if (areOuterDimsTiled[pos])
+      continue;
+    int64_t dim = outerShapeWithoutTranspose[pos];
+    if (ShapedType::isDynamic(dim))
+      return false;
+    if (dim != unpackedTypeAfterFold.getDimSize(pos))
       return false;
   }
   return true;
@@ -6585,9 +6603,14 @@ void BatchReduceMatmulOp::regionBuilder(
       helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(0));
   Value castValB =
       helper.buildTypeFn(TypeFn::cast_signed, toType, block.getArgument(1));
-  Value mulVal = helper.buildBinaryFn(BinaryFn::mul, castValA, castValB);
+  Value mulVal =
+      helper.buildBinaryFn(BinaryFn::mul, castValA, castValB, emitError);
+  if (!castValA || !castValB || !mulVal)
+    return;
   Value addVal =
       helper.buildBinaryFn(BinaryFn::add, block.getArgument(2), mulVal);
+  if (!addVal)
+    return;
   yields.push_back(addVal);
   helper.yieldOutputs(yields);
 }

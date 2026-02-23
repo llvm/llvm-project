@@ -461,6 +461,7 @@ types:
   - type_name: Elf32_Verneed
   - type_name: Elf32_Versym
   - type_name: Elf32_Word
+  - type_name: Elf32_Xword
   - type_name: Elf64_Addr
   - type_name: Elf64_Chdr
   - type_name: Elf64_Dyn
