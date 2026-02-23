@@ -409,6 +409,12 @@ void Sema::ApplyAPINotesType(Decl *D, StringRef TypeString) {
                                           property->getType(), Type)) {
           property->setType(Type, TypeInfo);
         }
+      } else if (auto field = dyn_cast<FieldDecl>(D)) {
+        if (!checkAPINotesReplacementType(*this, field->getLocation(),
+                                          field->getType(), Type)) {
+          field->setType(Type);
+          field->setTypeSourceInfo(TypeInfo);
+        }
       } else {
         llvm_unreachable("API notes allowed a type on an unknown declaration");
       }
@@ -987,8 +993,8 @@ void Sema::ProcessAPINotes(Decl *D) {
 
   auto *DC = D->getDeclContext();
   // Globals.
-  if (DC->isFileContext() || DC->isNamespace() || DC->isExternCContext() ||
-      DC->isExternCXXContext()) {
+  if (DC->isFileContext() || DC->isNamespace() ||
+      DC->getDeclKind() == Decl::LinkageSpec) {
     std::optional<api_notes::Context> APINotesContext =
         UnwindNamespaceContext(DC, APINotes);
     // Global variables.
@@ -1191,12 +1197,18 @@ void Sema::ProcessAPINotes(Decl *D) {
     if (auto CXXMethod = dyn_cast<CXXMethodDecl>(D)) {
       if (!isa<CXXConstructorDecl>(CXXMethod) &&
           !isa<CXXDestructorDecl>(CXXMethod) &&
-          !isa<CXXConversionDecl>(CXXMethod) &&
-          !CXXMethod->isOverloadedOperator()) {
+          !isa<CXXConversionDecl>(CXXMethod)) {
         for (auto Reader : APINotes.findAPINotes(D->getLocation())) {
           if (auto Context = UnwindTagContext(TagContext, APINotes)) {
-            auto Info =
-                Reader->lookupCXXMethod(Context->id, CXXMethod->getName());
+            std::string MethodName;
+            if (CXXMethod->isOverloadedOperator())
+              MethodName =
+                  std::string("operator") +
+                  getOperatorSpelling(CXXMethod->getOverloadedOperator());
+            else
+              MethodName = CXXMethod->getName();
+
+            auto Info = Reader->lookupCXXMethod(Context->id, MethodName);
             ProcessVersionedAPINotes(*this, CXXMethod, Info);
           }
         }

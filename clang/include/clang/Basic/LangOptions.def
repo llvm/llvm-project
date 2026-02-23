@@ -47,6 +47,7 @@ LANGOPT(MSVCCompat        , 1, 0, NotCompatible, "Microsoft Visual C++ full comp
 LANGOPT(Kernel            , 1, 0, NotCompatible, "Kernel mode")
 LANGOPT(MicrosoftExt      , 1, 0, NotCompatible, "Microsoft C++ extensions")
 LANGOPT(ZOSExt            , 1, 0, NotCompatible, "z/OS extensions")
+LANGOPT(MSAnonymousStructs, 1, 0, NotCompatible, "Microsoft anonymous struct and union extension")
 LANGOPT(AsmBlocks         , 1, 0, NotCompatible, "Microsoft inline asm blocks")
 LANGOPT(Borland           , 1, 0, NotCompatible, "Borland extensions")
 LANGOPT(CPlusPlus         , 1, 0, NotCompatible, "C++")
@@ -248,6 +249,7 @@ LANGOPT(HLSLStrictAvailability, 1, 0, NotCompatible,
         "Strict availability diagnostic mode for HLSL built-in functions.")
 LANGOPT(HLSLSpvUseUnknownImageFormat, 1, 0, NotCompatible, "For storage images and texel buffers, sets the default format to 'Unknown' when not specified via the `vk::image_format` attribute. If this option is not used, the format is inferred from the resource's data type.")
 LANGOPT(HLSLSpvEnableMaximalReconvergence, 1, 0, NotCompatible, "Enables the MaximallyReconvergesKHR execution mode for this module. This ensures that control flow reconverges at well-defined merge points as defined by the Vulkan spec.")
+LANGOPT(EmitStructuredGEP, 1, 0, NotCompatible, "Emit structured GEP intrinsics instead of GEP instructions")
 
 LANGOPT(CUDAIsDevice      , 1, 0, NotCompatible, "compiling for CUDA device")
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, NotCompatible, "treating unattributed constexpr functions as __host__ __device__")
@@ -430,6 +432,8 @@ LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0, NotCompatible,
         "unsigned fixed point types having one extra padding bit")
 
+LANGOPT(OverflowBehaviorTypes, 1, 0, NotCompatible, "overflow behavior types")
+
 ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
              RegisterStaticDestructorsKind::All, NotCompatible,
              "Register C++ static destructors")
@@ -466,6 +470,13 @@ LANGOPT(RelativeCXXABIVTables, 1, 0, NotCompatible,
 LANGOPT(OmitVTableRTTI, 1, 0, NotCompatible,
         "Use an ABI-incompatible v-table layout that omits the RTTI component")
 
+LANGOPT(PointerFieldProtectionAttr, 1, 0, NotCompatible,
+        "Allow the use of the experimental [[clang::pointer_field_protection]] attribute")
+LANGOPT(PointerFieldProtectionABI, 1, 0, NotCompatible,
+        "Enable pointer field protection by default for all non-standard-layout types")
+LANGOPT(PointerFieldProtectionTagged, 1, 0, NotCompatible,
+        "Use pointer identity (tag) to discriminate pointers of non-trivially-copyable types")
+
 LANGOPT(VScaleMin, 32, 0, NotCompatible, "Minimum vscale value")
 LANGOPT(VScaleMax, 32, 0, NotCompatible, "Maximum vscale value")
 
@@ -501,11 +512,17 @@ LANGOPT(CheckConstexprFunctionBodies, 1, 1, Benign,
 
 LANGOPT(BoundsSafety, 1, 0, NotCompatible, "Bounds safety extension for C")
 
-LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Experimental lifetime safety analysis for C++")
+LANGOPT(EnableLifetimeSafety, 1, 0, NotCompatible, "Lifetime safety analysis for C++")
 
-LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Experimental lifetime safety inference analysis for C++")
+LANGOPT(LifetimeSafetyMaxCFGBlocks, 32, 0, NotCompatible, "Skip LifetimeSafety analysis for functions with CFG block count exceeding this threshold. Specify 0 for no limit")
+
+LANGOPT(EnableLifetimeSafetyInference, 1, 0, NotCompatible, "Lifetime safety inference analysis for C++")
+
+// TODO: Remove flag and default to end-of-TU analysis for lifetime safety after performance validation.
+LANGOPT(EnableLifetimeSafetyTUAnalysis, 1, 0, NotCompatible, "Lifetime safety at translation-unit end, analyzing functions in call graph post-order for C++")
 
 LANGOPT(PreserveVec3Type, 1, 0, NotCompatible, "Preserve 3-component vector type")
+LANGOPT(Reflection      , 1, 0, NotCompatible, "C++26 Reflection")
 
 #undef LANGOPT
 #undef ENUM_LANGOPT

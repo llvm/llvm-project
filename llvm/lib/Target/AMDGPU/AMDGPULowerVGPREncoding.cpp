@@ -43,10 +43,8 @@
 #include "AMDGPULowerVGPREncoding.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
-#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIDefines.h"
 #include "SIInstrInfo.h"
-#include "llvm/ADT/PackedVector.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -60,26 +58,56 @@ class AMDGPULowerVGPREncoding {
   static constexpr unsigned OpNum = 4;
   static constexpr unsigned BitsPerField = 2;
   static constexpr unsigned NumFields = 4;
-  static constexpr unsigned FieldMask = (1 << BitsPerField) - 1;
   static constexpr unsigned ModeWidth = NumFields * BitsPerField;
   static constexpr unsigned ModeMask = (1 << ModeWidth) - 1;
-  using ModeType = PackedVector<unsigned, BitsPerField,
-                                std::bitset<BitsPerField * NumFields>>;
-
   static constexpr unsigned VGPRMSBShift =
       llvm::countr_zero_constexpr<unsigned>(AMDGPU::Hwreg::DST_VGPR_MSB);
 
-  class ModeTy : public ModeType {
-  public:
-    // bitset constructor will set all bits to zero
-    ModeTy() : ModeType(0) {}
+  struct OpMode {
+    // No MSBs set means they are not required to be of a particular value.
+    std::optional<unsigned> MSBits;
 
-    operator int64_t() const { return raw_bits().to_ulong(); }
+    bool update(const OpMode &New, bool &Rewritten) {
+      bool Updated = false;
+      if (New.MSBits) {
+        if (*New.MSBits != MSBits.value_or(0)) {
+          Updated = true;
+          Rewritten |= MSBits.has_value();
+        }
+        MSBits = New.MSBits;
+      }
+      return Updated;
+    }
+  };
 
-    static ModeTy fullMask() {
-      ModeTy M;
-      M.raw_bits().flip();
-      return M;
+  struct ModeTy {
+    OpMode Ops[OpNum];
+
+    bool update(const ModeTy &New, bool &Rewritten) {
+      bool Updated = false;
+      for (unsigned I : seq(OpNum))
+        Updated |= Ops[I].update(New.Ops[I], Rewritten);
+      return Updated;
+    }
+
+    unsigned encode() const {
+      // Layout: [src0 msb, src1 msb, src2 msb, dst msb].
+      unsigned V = 0;
+      for (const auto &[I, Op] : enumerate(Ops))
+        V |= Op.MSBits.value_or(0) << (I * 2);
+      return V;
+    }
+
+    // Check if this mode is compatible with required \p NewMode without
+    // modification.
+    bool isCompatible(const ModeTy NewMode) const {
+      for (unsigned I : seq(OpNum)) {
+        if (!NewMode.Ops[I].MSBits.has_value())
+          continue;
+        if (Ops[I].MSBits.value_or(0) != NewMode.Ops[I].MSBits.value_or(0))
+          return false;
+      }
+      return true;
     }
   };
 
@@ -99,10 +127,6 @@ private:
   /// Current mode bits.
   ModeTy CurrentMode;
 
-  /// Current mask of mode bits that instructions since MostRecentModeSet care
-  /// about.
-  ModeTy CurrentMask;
-
   /// Number of current hard clause instructions.
   unsigned ClauseLen;
 
@@ -116,12 +140,14 @@ private:
   MachineInstr *Clause;
 
   /// Insert mode change before \p I. \returns true if mode was changed.
-  bool setMode(ModeTy NewMode, ModeTy Mask,
-               MachineBasicBlock::instr_iterator I);
+  bool setMode(ModeTy NewMode, MachineBasicBlock::instr_iterator I);
 
   /// Reset mode to default.
   void resetMode(MachineBasicBlock::instr_iterator I) {
-    setMode(ModeTy(), ModeTy::fullMask(), I);
+    ModeTy Mode;
+    for (OpMode &Op : Mode.Ops)
+      Op.MSBits = 0;
+    setMode(Mode, I);
   }
 
   /// If \p MO references VGPRs, return the MSBs. Otherwise, return nullopt.
@@ -130,11 +156,11 @@ private:
   /// Handle single \p MI. \return true if changed.
   bool runOnMachineInstr(MachineInstr &MI);
 
-  /// Compute the mode and mode mask for a single \p MI given \p Ops operands
+  /// Compute the mode for a single \p MI given \p Ops operands
   /// bit mapping. Optionally takes second array \p Ops2 for VOPD.
   /// If provided and an operand from \p Ops is not a VGPR, then \p Ops2
   /// is checked.
-  void computeMode(ModeTy &NewMode, ModeTy &Mask, MachineInstr &MI,
+  void computeMode(ModeTy &NewMode, const MachineInstr &MI,
                    const AMDGPU::OpName Ops[OpNum],
                    const AMDGPU::OpName *Ops2 = nullptr);
 
@@ -161,47 +187,38 @@ private:
   bool updateSetregModeImm(MachineInstr &MI, int64_t ModeValue);
 };
 
-bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode, ModeTy Mask,
+bool AMDGPULowerVGPREncoding::setMode(ModeTy NewMode,
                                       MachineBasicBlock::instr_iterator I) {
-  assert((NewMode.raw_bits() & ~Mask.raw_bits()).none());
+  // Record previous mode into high 8 bits of the immediate.
+  int64_t OldModeBits = CurrentMode.encode() << ModeWidth;
 
-  auto Delta = NewMode.raw_bits() ^ CurrentMode.raw_bits();
-
-  if ((Delta & Mask.raw_bits()).none()) {
-    CurrentMask |= Mask;
+  bool Rewritten = false;
+  if (!CurrentMode.update(NewMode, Rewritten))
     return false;
-  }
 
-  if (MostRecentModeSet && (Delta & CurrentMask.raw_bits()).none()) {
-    CurrentMode |= NewMode;
-    CurrentMask |= Mask;
-
+  if (MostRecentModeSet && !Rewritten) {
     // Update MostRecentModeSet with the new mode. It can be either
     // S_SET_VGPR_MSB or S_SETREG_IMM32_B32 (with Size <= 12).
     if (MostRecentModeSet->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
       MachineOperand &Op = MostRecentModeSet->getOperand(0);
       // Carry old mode bits from the existing instruction.
       int64_t OldModeBits = Op.getImm() & (ModeMask << ModeWidth);
-      Op.setImm(CurrentMode | OldModeBits);
+      Op.setImm(CurrentMode.encode() | OldModeBits);
     } else {
       assert(MostRecentModeSet->getOpcode() == AMDGPU::S_SETREG_IMM32_B32 &&
              "unexpected MostRecentModeSet opcode");
-      updateSetregModeImm(*MostRecentModeSet, CurrentMode);
+      updateSetregModeImm(*MostRecentModeSet, CurrentMode.encode());
     }
 
     return true;
   }
 
-  // Record previous mode into high 8 bits of the immediate.
-  int64_t OldModeBits = CurrentMode << ModeWidth;
-
   I = handleClause(I);
   I = handleCoissue(I);
   MostRecentModeSet = BuildMI(*MBB, I, {}, TII->get(AMDGPU::S_SET_VGPR_MSB))
-                          .addImm(NewMode | OldModeBits);
+                          .addImm(NewMode.encode() | OldModeBits);
 
   CurrentMode = NewMode;
-  CurrentMask = Mask;
   return true;
 }
 
@@ -219,15 +236,14 @@ AMDGPULowerVGPREncoding::getMSBs(const MachineOperand &MO) const {
   return Idx >> 8;
 }
 
-void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
-                                          MachineInstr &MI,
+void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode,
+                                          const MachineInstr &MI,
                                           const AMDGPU::OpName Ops[OpNum],
                                           const AMDGPU::OpName *Ops2) {
   NewMode = {};
-  Mask = {};
 
   for (unsigned I = 0; I < OpNum; ++I) {
-    MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
+    const MachineOperand *Op = TII->getNamedOperand(MI, Ops[I]);
 
     std::optional<unsigned> MSBits;
     if (Op)
@@ -235,7 +251,7 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
 
 #if !defined(NDEBUG)
     if (MSBits.has_value() && Ops2) {
-      auto Op2 = TII->getNamedOperand(MI, Ops2[I]);
+      const MachineOperand *Op2 = TII->getNamedOperand(MI, Ops2[I]);
       if (Op2) {
         std::optional<unsigned> MSBits2;
         MSBits2 = getMSBs(*Op2);
@@ -263,17 +279,26 @@ void AMDGPULowerVGPREncoding::computeMode(ModeTy &NewMode, ModeTy &Mask,
           TII->hasVALU32BitEncoding(MI.getOpcode()))))
       continue;
 
-    NewMode[I] = MSBits.value();
-    Mask[I] = FieldMask;
+    NewMode.Ops[I].MSBits = MSBits.value();
   }
 }
 
 bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
   auto Ops = AMDGPU::getVGPRLoweringOperandTables(MI.getDesc());
   if (Ops.first) {
-    ModeTy NewMode, Mask;
-    computeMode(NewMode, Mask, MI, Ops.first, Ops.second);
-    return setMode(NewMode, Mask, MI.getIterator());
+    ModeTy NewMode;
+    computeMode(NewMode, MI, Ops.first, Ops.second);
+    if (!CurrentMode.isCompatible(NewMode) && MI.isCommutable() &&
+        TII->commuteInstruction(MI)) {
+      ModeTy NewModeCommuted;
+      computeMode(NewModeCommuted, MI, Ops.first, Ops.second);
+      if (CurrentMode.isCompatible(NewModeCommuted))
+        return false;
+      // Commute back.
+      if (!TII->commuteInstruction(MI))
+        llvm_unreachable("Failed to restore commuted instruction.");
+    }
+    return setMode(NewMode, MI.getIterator());
   }
   assert(!TII->hasVGPRUses(MI) || MI.isMetaInstruction() || MI.isPseudo());
 
@@ -318,24 +343,23 @@ AMDGPULowerVGPREncoding::handleCoissue(MachineBasicBlock::instr_iterator I) {
   if (I.isEnd())
     return I;
 
-  if (I == I->getParent()->begin())
-    return I;
-
-  MachineBasicBlock::instr_iterator Prev = std::prev(I);
-  auto isProgramStateSALU = [this](MachineInstr *MI) {
-    return TII->isBarrier(MI->getOpcode()) ||
-           TII->isWaitcnt(MI || (SIInstrInfo::isProgramStateSALU(*MI) &&
-                                 MI->getOpcode() != AMDGPU::S_SET_VGPR_MSB));
+  // "Program State instructions" are instructions which are used to control
+  // operation of the GPU rather than performing arithmetic. Such instructions
+  // have different coissuing rules w.r.t s_set_vgpr_msb.
+  auto isProgramStateInstr = [this](MachineInstr *MI) {
+    unsigned Opc = MI->getOpcode();
+    return TII->isBarrier(Opc) || TII->isWaitcnt(Opc) ||
+           Opc == AMDGPU::S_DELAY_ALU;
   };
 
-  if (!isProgramStateSALU(&*Prev))
-    return I;
-
-  while (!Prev.isEnd() && (Prev != Prev->getParent()->begin()) &&
-         isProgramStateSALU(&*Prev)) {
-    --Prev;
+  while (!I.isEnd() && I != I->getParent()->begin()) {
+    auto Prev = std::prev(I);
+    if (!isProgramStateInstr(&*Prev))
+      return I;
+    I = Prev;
   }
-  return Prev;
+
+  return I;
 }
 
 /// Convert mode value from S_SET_VGPR_MSB format to MODE register format.
@@ -376,7 +400,7 @@ bool AMDGPULowerVGPREncoding::handleSetregMode(MachineInstr &MI) {
   if (HwRegId != ID_MODE)
     return false;
 
-  int64_t ModeValue = static_cast<int64_t>(CurrentMode);
+  int64_t ModeValue = CurrentMode.encode();
 
   // Case 1: Size <= 12 - the original instruction uses imm32[0:Size-1], so
   // imm32[12:19] is unused. Safe to set imm32[12:19] to the correct VGPR
@@ -424,8 +448,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
 
   bool Changed = false;
   ClauseLen = ClauseRemaining = 0;
-  CurrentMode.reset();
-  CurrentMask.reset();
+  CurrentMode = {};
   for (auto &MBB : MF) {
     MostRecentModeSet = nullptr;
     this->MBB = &MBB;
@@ -437,7 +460,7 @@ bool AMDGPULowerVGPREncoding::run(MachineFunction &MF) {
       if (MI.isTerminator() || MI.isCall()) {
         if (MI.getOpcode() == AMDGPU::S_ENDPGM ||
             MI.getOpcode() == AMDGPU::S_ENDPGM_SAVED)
-          CurrentMode.reset();
+          CurrentMode = {};
         else
           resetMode(MI.getIterator());
         continue;

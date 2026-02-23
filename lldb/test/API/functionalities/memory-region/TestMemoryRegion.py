@@ -54,7 +54,7 @@ class MemoryCommandRegion(TestBase):
         self.assertFalse(result.Succeeded())
         self.assertEqual(
             result.GetError(),
-            "error: 'memory region' takes one argument or \"--all\" option:\n"
+            'error: No next region address set: one address expression argument or "--all" option required:\n'
             "Usage: memory region <address-expression> (or --all)\n",
         )
 

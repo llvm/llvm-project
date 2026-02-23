@@ -545,10 +545,30 @@ LValue CIRGenFunction::emitLValueForFieldInitialization(
   return makeAddrLValue(v, fieldType, fieldBaseInfo);
 }
 
+/// Converts a scalar value from its primary IR type (as returned
+/// by ConvertType) to its load/store type.
 mlir::Value CIRGenFunction::emitToMemory(mlir::Value value, QualType ty) {
-  // Bool has a different representation in memory than in registers,
-  // but in ClangIR, it is simply represented as a cir.bool value.
-  // This function is here as a placeholder for possible future changes.
+  if (auto *atomicTy = ty->getAs<AtomicType>())
+    ty = atomicTy->getValueType();
+
+  if (ty->isExtVectorBoolType()) {
+    cgm.errorNYI("emitToMemory: extVectorBoolType");
+  }
+
+  // Unlike in classic codegen CIR, bools are kept as `cir.bool` and BitInts are
+  // kept as `cir.int<N>` until further lowering
+
+  return value;
+}
+
+mlir::Value CIRGenFunction::emitFromMemory(mlir::Value value, QualType ty) {
+  if (auto *atomicTy = ty->getAs<AtomicType>())
+    ty = atomicTy->getValueType();
+
+  if (ty->isPackedVectorBoolType(getContext())) {
+    cgm.errorNYI("emitFromMemory: PackedVectorBoolType");
+  }
+
   return value;
 }
 
@@ -863,8 +883,26 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
     if (e->isNonOdrUse() == NOUR_Constant &&
         (vd->getType()->isReferenceType() ||
          !canEmitSpuriousReferenceToVariable(*this, e, vd))) {
-      cgm.errorNYI(e->getSourceRange(), "emitDeclRefLValue: NonOdrUse");
-      return LValue();
+      vd->getAnyInitializer(vd);
+      mlir::Attribute val = ConstantEmitter(*this).emitAbstract(
+          e->getLocation(), *vd->evaluateValue(), vd->getType());
+      assert(val && "failed to emit constant expression");
+
+      Address addr = Address::invalid();
+      if (!vd->getType()->isReferenceType()) {
+        // Spill the constant value to a global.
+        addr = cgm.createUnnamedGlobalFrom(*vd, val,
+                                           getContext().getDeclAlign(vd));
+        mlir::Type varTy = getTypes().convertTypeForMem(vd->getType());
+        auto ptrTy = mlir::cast<cir::PointerType>(addr.getPointer().getType());
+        if (ptrTy.getPointee() != varTy) {
+          addr = addr.withElementType(builder, varTy);
+        }
+      } else {
+        cgm.errorNYI(e->getSourceRange(),
+                     "emitDeclRefLValue: non-odr reference type");
+      }
+      return makeAddrLValue(addr, ty, AlignmentSource::Decl);
     }
 
     // Check for captured variables.
@@ -1426,8 +1464,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
           "emitCastLValue: address space conversion from unknown address "
           "space");
 
-    mlir::Value v = getTargetHooks().performAddrSpaceCast(
-        *this, lv.getPointer(), srcAS, convertType(destTy));
+    mlir::Value v = performAddrSpaceCast(lv.getPointer(), convertType(destTy));
 
     return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
                                   lv.getAddress().getAlignment()),
@@ -1896,8 +1933,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
     bool isPredefinedLibFunction =
         cgm.getASTContext().BuiltinInfo.isPredefinedLibFunction(builtinID);
-    // Assume nobuiltins everywhere until we actually read the attributes.
-    bool hasAttributeNoBuiltin = true;
+    // TODO: Read no-builtin function attribute and set this accordingly.
+    // Using false here matches OGCG's default behavior - builtins are called
+    // as builtins unless explicitly disabled. The previous value of true was
+    // overly conservative and caused functions to be marked as no_inline when
+    // they shouldn't be.
+    bool hasAttributeNoBuiltin = false;
     assert(!cir::MissingFeatures::attributeNoBuiltin());
 
     // When directing calling an inline builtin, call it through it's mangled
@@ -2330,11 +2371,8 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
                                              ReturnValueSlot returnValue) {
   const Expr *callee = ce->getCallee()->IgnoreParens();
 
-  if (isa<BinaryOperator>(callee)) {
-    cgm.errorNYI(ce->getSourceRange(),
-                 "emitCXXMemberCallExpr: C++ binary operator");
-    return RValue::get(nullptr);
-  }
+  if (isa<BinaryOperator>(callee))
+    return emitCXXMemberPointerCallExpr(ce, returnValue);
 
   const auto *me = cast<MemberExpr>(callee);
   const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
@@ -2469,20 +2507,13 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
 
-  LangAS allocaAS = alloca.getAddressSpace()
-                        ? clang::getLangASFromTargetAS(
-                              alloca.getAddressSpace().getValue().getUInt())
-                        : clang::LangAS::Default;
-  LangAS dstTyAS = clang::LangAS::Default;
-  if (getCIRAllocaAddressSpace()) {
-    dstTyAS = clang::getLangASFromTargetAS(
-        getCIRAllocaAddressSpace().getValue().getUInt());
-  }
+  cir::PointerType dstTy;
+  if (getCIRAllocaAddressSpace())
+    dstTy = builder.getPointerTo(ty, getCIRAllocaAddressSpace());
+  else
+    dstTy = builder.getPointerTo(ty, clang::LangAS::Default);
+  v = performAddrSpaceCast(v, dstTy);
 
-  if (dstTyAS != allocaAS) {
-    getTargetHooks().performAddrSpaceCast(*this, v, getCIRAllocaAddressSpace(),
-                                          builder.getPointerTo(ty, dstTyAS));
-  }
   return Address(v, ty, align);
 }
 

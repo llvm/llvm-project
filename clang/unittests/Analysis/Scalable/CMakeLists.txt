@@ -1,10 +1,21 @@
 add_distinct_clang_unittest(ClangScalableAnalysisTests
+  Analyses/UnsafeBufferUsage/UnsafeBufferUsageTest.cpp
   ASTEntityMappingTest.cpp
   BuildNamespaceTest.cpp
   EntityIdTest.cpp
   EntityIdTableTest.cpp
+  EntityLinkageTest.cpp
   EntityNameTest.cpp
+  Registries/FancyAnalysisData.cpp
+  Registries/MockSerializationFormat.cpp
+  Registries/MockSummaryExtractor1.cpp
+  Registries/MockSummaryExtractor2.cpp
+  Registries/SerializationFormatRegistryTest.cpp
+  Registries/SummaryExtractorRegistryTest.cpp
+  Serialization/JSONFormatTest/TUSummaryTest.cpp
   SummaryNameTest.cpp
+  TestFixture.cpp
+  TUSummaryBuilderTest.cpp
 
   CLANG_LIBS
   clangAnalysisScalable

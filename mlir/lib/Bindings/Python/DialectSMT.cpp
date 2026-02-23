@@ -29,6 +29,8 @@ namespace MLIR_BINDINGS_PYTHON_DOMAIN {
 namespace smt {
 struct BoolType : PyConcreteType<BoolType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABool;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirSMTBoolTypeGetTypeID;
   static constexpr const char *pyClassName = "BoolType";
   static inline const MlirStringRef name = mlirSMTBoolTypeGetName();
   using Base::Base;
@@ -46,6 +48,8 @@ struct BoolType : PyConcreteType<BoolType> {
 
 struct BitVectorType : PyConcreteType<BitVectorType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsABitVector;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirSMTBitVectorTypeGetTypeID;
   static constexpr const char *pyClassName = "BitVectorType";
   static inline const MlirStringRef name = mlirSMTBitVectorTypeGetName();
   using Base::Base;
@@ -64,6 +68,8 @@ struct BitVectorType : PyConcreteType<BitVectorType> {
 
 struct IntType : PyConcreteType<IntType> {
   static constexpr IsAFunctionTy isaFunction = mlirSMTTypeIsAInt;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirSMTIntTypeGetTypeID;
   static constexpr const char *pyClassName = "IntType";
   static inline const MlirStringRef name = mlirSMTIntTypeGetName();
   using Base::Base;

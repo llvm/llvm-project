@@ -919,7 +919,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
 }
 
 std::optional<unsigned>
-DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
+DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeArray Args) {
   // Args[0] is the return type.
   std::optional<unsigned> ObjectPointerIndex;
   for (unsigned i = 1, N = Args.size(); i < N; ++i) {
@@ -1398,7 +1398,7 @@ bool DwarfUnit::applySubprogramDefinitionAttributes(const DISubprogram *SP,
   StringRef DeclLinkageName;
   if (auto *SPDecl = SP->getDeclaration()) {
     if (!Minimal) {
-      DITypeRefArray DeclArgs, DefinitionArgs;
+      DITypeArray DeclArgs, DefinitionArgs;
       DeclArgs = SPDecl->getType()->getTypeArray();
       DefinitionArgs = SP->getType()->getTypeArray();
 
@@ -1475,7 +1475,7 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
     addFlag(SPDie, dwarf::DW_AT_APPLE_objc_direct);
 
   unsigned CC = 0;
-  DITypeRefArray Args;
+  DITypeArray Args;
   if (const DISubroutineType *SPTy = SP->getType()) {
     Args = SPTy->getTypeArray();
     CC = SPTy->getCC();

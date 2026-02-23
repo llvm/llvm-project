@@ -27,6 +27,7 @@ def isPS : RuntimeLibcallPredicate<"TT.isPS()">;
 def isMacOSX : RuntimeLibcallPredicate<[{TT.isMacOSX()}]>;
 def isNotOSWindowsOrIsCygwinMinGW
   : RuntimeLibcallPredicate<"!TT.isOSWindows() || TT.isOSCygMing()">;
+
 def isWindowsMSVCEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment()}]>;
 
@@ -47,6 +48,8 @@ def hasStackChkFail : RuntimeLibcallPredicate<
 
 def isWindowsMSVCOrItaniumEnvironment : RuntimeLibcallPredicate<
   [{TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment()}]>;
+
+def isAndroid : RuntimeLibcallPredicate<"TT.isAndroid()">;
 
 def isGNUEnvironment : RuntimeLibcallPredicate<"TT.isGNUEnvironment()">;
 def darwinHasSinCosStret : RuntimeLibcallPredicate<"darwinHasSinCosStret(TT)">;
@@ -480,6 +483,9 @@ def STACK_SMASH_HANDLER : RuntimeLibcall;
 // Safe stack
 def SAFESTACK_POINTER_ADDRESS : RuntimeLibcall;
 
+// Really a global variable, not a function
+def SAFESTACK_UNSAFE_STACK_PTR : RuntimeLibcall;
+
 def STACK_PROBE : RuntimeLibcall;
 def SECURITY_CHECK_COOKIE : RuntimeLibcall;
 
@@ -540,6 +546,10 @@ def AEABI_MEMSET8 : RuntimeLibcall;
 def AEABI_MEMCLR : RuntimeLibcall;
 def AEABI_MEMCLR4 : RuntimeLibcall;
 def AEABI_MEMCLR8 : RuntimeLibcall;
+def AEABI_UREAD4 : RuntimeLibcall;
+def AEABI_UREAD8 : RuntimeLibcall;
+def AEABI_UWRITE4 : RuntimeLibcall;
+def AEABI_UWRITE8 : RuntimeLibcall;
 
 // Hexagon calls
 def HEXAGON_MEMCPY_LIKELY_ALIGNED_MIN32BYTES_MULT8BYTES : RuntimeLibcall;
@@ -1138,6 +1148,7 @@ foreach lc = LibCalls__atomic in {
 
 // Safe stack.
 def __safestack_pointer_address : RuntimeLibcallImpl<SAFESTACK_POINTER_ADDRESS>;
+def __safestack_unsafe_stack_ptr : RuntimeLibcallImpl<SAFESTACK_UNSAFE_STACK_PTR>;
 
 // Deoptimization
 def __llvm_deoptimize : RuntimeLibcallImpl<DEOPTIMIZE>;
@@ -2051,6 +2062,14 @@ defvar has___guard_local = LibcallImpls<(add __guard_local), isOSOpenBSD>;
 defvar DefaultStackProtector = (add has__stack_chk_fail, has__stack_chk_guard,
     has__stack_smash_handler, has___guard_local);
 
+defvar LibcSafestackPointerAddress =
+    LibcallImpls<(add __safestack_pointer_address), isAndroid>;
+
+// compiler-rt sources suggest this is only available if
+// (TT.isOSLinux() || TT.isOSFreeBSD() || TT.isOSNetBSD() ||
+// TT.isOSSolaris()), but tests exist for other os targets.
+defvar DefaultSafeStackGlobals = (add __safestack_unsafe_stack_ptr);
+
 //===----------------------------------------------------------------------===//
 // Objective-C Runtime Libcalls
 //===----------------------------------------------------------------------===//
@@ -2161,7 +2180,8 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibcallImpls<(add __chkstk), isOSWindows>,
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
-       SMEABI_LibCalls_PreserveMost_From_X2)
+       SMEABI_LibCalls_PreserveMost_From_X2,
+       LibcSafestackPointerAddress)
 >;
 
 // Prepend a # to every name
@@ -2295,6 +2315,13 @@ def __aeabi_dadd : RuntimeLibcallImpl<ADD_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_ddiv : RuntimeLibcallImpl<DIV_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dmul : RuntimeLibcallImpl<MUL_F64>; // CallingConv::ARM_AAPCS
 def __aeabi_dsub : RuntimeLibcallImpl<SUB_F64>; // CallingConv::ARM_AAPCS
+
+// Unaligned memory access helper functions
+// RTABI chapter 5.3.3
+def __aeabi_uread4  : RuntimeLibcallImpl<AEABI_UREAD4>;  // CallingConv::ARM_AAPCS
+def __aeabi_uread8  : RuntimeLibcallImpl<AEABI_UREAD8>;  // CallingConv::ARM_AAPCS
+def __aeabi_uwrite4 : RuntimeLibcallImpl<AEABI_UWRITE4>; // CallingConv::ARM_AAPCS
+def __aeabi_uwrite8 : RuntimeLibcallImpl<AEABI_UWRITE8>; // CallingConv::ARM_AAPCS
 
 defvar AEABIOverrides = [
   __eqsf2, __eqdf2,
@@ -2463,8 +2490,8 @@ def __gnu_h2f_ieee : RuntimeLibcallImpl<FPEXT_F16_F32>;
 // non-watchos platforms, but are needed for some targets which use a
 // hard-float calling convention by default.
 def ARMHalfConvertLibcallCallingConv : LibcallCallingConv<
-  [{TT.isWatchABI() ? DefaultCC :
-    (isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
+  [{TT.isWatchABI() ? static_cast<CallingConv::ID>(DefaultCC) :
+    static_cast<CallingConv::ID>(isAAPCS_ABI(TT, ABIName) ? CallingConv::ARM_AAPCS : CallingConv::ARM_APCS)}]
 >;
 
 def ARMLibgccHalfConvertCalls :
@@ -2610,6 +2637,15 @@ def AEABI45MemCalls : LibcallImpls<
   let CallingConv = ARM_AAPCS;
 }
 
+// Unaligned Memory read/write operations
+// RTABI chapter 5.3.3
+def AEABIUnalignedMemCalls : LibcallImpls<
+  (add __aeabi_uread4,  __aeabi_uread8,
+       __aeabi_uwrite4, __aeabi_uwrite8),
+  RuntimeLibcallPredicate<[{hasAEABILibcalls(TT) && isAAPCS_ABI(TT, ABIName)}]>> {
+  let CallingConv = ARM_AAPCS;
+}
+
 def isARMOrThumb : RuntimeLibcallPredicate<"TT.isARM() || TT.isThumb()">;
 
 def ARMSystemLibrary
@@ -2629,9 +2665,11 @@ def ARMSystemLibrary
            DarwinSinCosStret, DarwinExp10, DarwinMemsetPattern,
            LibmHasSinCosF32, LibmHasSinCosF64, LibmHasSinCosF128,
            DefaultLibmExp10,
+           LibcSafestackPointerAddress,
 
            AEABICalls,
            AEABI45MemCalls,
+           AEABIUnalignedMemCalls,
            ARMLibgccHalfConvertCalls,
            EABIHalfConvertCalls,
            GNUEABIHalfConvertCalls,
@@ -2646,7 +2684,8 @@ def ARMSystemLibrary
            LibcallImpls<(add __divmodsi4, __udivmodsi4),
                         RuntimeLibcallPredicate<[{TT.isOSBinFormatMachO() &&
                                                   (!TT.isiOS() || !TT.isOSVersionLT(5, 0))}]>>,
-           DefaultStackProtector)> {
+           DefaultStackProtector,
+           DefaultSafeStackGlobals)> {
   let DefaultLibcallCallingConv = LibcallCallingConv<[{
      TT.isOSDarwin() ? CallingConv::C :
         (FloatABI == FloatABI::Hard ? CallingConv::ARM_AAPCS_VFP
@@ -3125,6 +3164,7 @@ defset list<RuntimeLibcallImpl> PPC64AIXCallList = {
   def ___memmove64 : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset64 : RuntimeLibcallImpl<MEMSET>;
   def ___bzero64 : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp64 : RuntimeLibcallImpl<STRCMP>;
   def ___strcpy64 : RuntimeLibcallImpl<STRCPY>;
   def ___strlen64 : RuntimeLibcallImpl<STRLEN>;
   def ___strstr64 : RuntimeLibcallImpl<STRSTR>;
@@ -3135,6 +3175,7 @@ defset list<RuntimeLibcallImpl> PPC32AIXCallList = {
   def ___memmove : RuntimeLibcallImpl<MEMMOVE>;
   def ___memset : RuntimeLibcallImpl<MEMSET>;
   def ___bzero : RuntimeLibcallImpl<BZERO>;
+  def ___strcmp : RuntimeLibcallImpl<STRCMP>;
   def ___strcpy : RuntimeLibcallImpl<STRCPY>;
   def ___strlen : RuntimeLibcallImpl<STRLEN>;
   def ___strstr : RuntimeLibcallImpl<STRSTR>;
@@ -3193,7 +3234,8 @@ def RISCVSystemLibrary
            exp10f, exp10, exp10l_f128,
            __riscv_flush_icache,
            LibcallImpls<(add Int128RTLibcalls), isRISCV64>,
-           DefaultStackProtector)>;
+           DefaultStackProtector,
+           DefaultSafeStackGlobals)>;
 
 //===----------------------------------------------------------------------===//
 // SPARC Runtime Libcalls
@@ -3348,11 +3390,13 @@ defvar X86CommonLibcalls =
        // hack for one test relying on it.
        __powitf2_f128,
        DefaultStackProtector,
+       DefaultSafeStackGlobals,
        LibcallImpls<(add MemChkLibcalls), isNotPS>,
        LibcallImpls<(add ___chkstk_ms), isCygwinMinGW64>,
        LibcallImpls<(add __chkstk), isWin64NotCygMing>,
        LibcallImpls<(add _alloca), isCygwinMinGW32>,
-       LibcallImpls<(add _chkstk), isWin32NotCygMing>
+       LibcallImpls<(add _chkstk), isWin32NotCygMing>,
+       LibcSafestackPointerAddress
 );
 
 defvar Windows32DivRemMulCalls =
@@ -3532,7 +3576,7 @@ def LegacyDefaultSystemLibrary
          exp10f, exp10, exp10l_f128,
          __powisf2, __powidf2, __powitf2_f128,
          LibcallImpls<(add Int128RTLibcalls), isArch64Bit>,
-         DefaultStackProtector
+         DefaultStackProtector, DefaultSafeStackGlobals
 )>;
 
 //===----------------------------------------------------------------------===//

@@ -131,7 +131,7 @@ def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
 
 // 64-bit vector move instruction. This is mainly used by the
 // SIFoldOperands pass to enable folding of inline immediates.
-def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64_AlignTarget:$vdst),
+def V_MOV_B64_PSEUDO : VPseudoInstSI <(outs VReg_64:$vdst),
                                       (ins VSrc_b64:$src0)> {
   let isReMaterializable = 1;
   let isAsCheapAsAMove = 1;
@@ -328,7 +328,7 @@ def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
 
 multiclass
     AMDGPUWaveReducePseudoGenerator<string Op, string DataType, ValueType ty, RegisterClass RetReg, SrcRegOrImm9 Reg> {
-  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, UseNamedOperandTable = 1, Uses = [EXEC] in {
     def !toupper(Op) #"_PSEUDO_" #DataType
         : VPseudoInstSI<(outs RetReg : $sdst),
                         (ins Reg : $src, VSrc_b32 : $strategy),
@@ -373,9 +373,13 @@ defvar Operations = [
   WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
 
   WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_b64>,
 ];
 
 foreach Op = Operations in {
@@ -926,6 +930,7 @@ multiclass si_cs_chain_tc_dvgpr_patterns<
 
 defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
 
+let Defs = [SCC] in {
 def ADJCALLSTACKUP : SPseudoInstSI<
   (outs), (ins i32imm:$amt0, i32imm:$amt1),
   [(callseq_start timm:$amt0, timm:$amt1)],
@@ -935,7 +940,6 @@ def ADJCALLSTACKUP : SPseudoInstSI<
   let hasSideEffects = 1;
   let usesCustomInserter = 1;
   let SchedRW = [WriteSALU];
-  let Defs = [SCC];
 }
 
 def ADJCALLSTACKDOWN : SPseudoInstSI<
@@ -946,8 +950,15 @@ def ADJCALLSTACKDOWN : SPseudoInstSI<
   let hasSideEffects = 1;
   let usesCustomInserter = 1;
   let SchedRW = [WriteSALU];
-  let Defs = [SCC];
 }
+
+// Get the offset of the base of the stack, skipping any reserved areas.
+def GET_STACK_BASE : SPseudoInstSI<(outs SGPR_32:$dst), (ins),
+  [(set p5:$dst, (sponentry))]> {
+  let Size = 16; // Worst case (s_getreg, s_cmp, s_cselect + constant).
+  let SchedRW = [WriteSALU];
+}
+} // End Defs = [SCC]
 
 let Defs = [M0, EXEC, SCC],
   UseNamedOperandTable = 1 in {
@@ -3576,10 +3587,7 @@ def : GCNPat<
 // If fcanonicalize's operand is implicitly canonicalized, we only need a copy.
 let AddedComplexity = 8 in {
 foreach vt = [f16, v2f16, f32, v2f32, f64] in {
-  def : GCNPat<
-    (fcanonicalize (vt is_canonicalized:$src)),
-    (COPY vt:$src)
-  >;
+  def : GCNPat<(fcanonicalize_canonicalized vt:$src), (COPY vt:$src)>;
 }
 }
 
@@ -3756,8 +3764,6 @@ def : GCNPat <
                   SRCMODS.NONE, $src2)
 >;
 
-// COPY is workaround tablegen bug from multiple outputs
-// from S_LSHL_B32's multiple outputs from implicit scc def.
 let AddedComplexity = 1 in {
 def : GCNPat <
   (v2i16 (UniformBinFrag<build_vector> (i16 0), (i16 SReg_32:$src1))),
@@ -3776,7 +3782,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 fpimm_pos_zero))),
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 }
@@ -3787,7 +3793,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 fpimm_pos_zero))),
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), SReg_32:$src1)
 >;
 
@@ -4827,6 +4833,23 @@ def G_AMDGPU_READANYLANE : AMDGPUGenericInstruction {
   let InOperandList = (ins type0:$src0);
   let hasSideEffects = 0;
 }
+
+// llvm.sponentry
+def G_AMDGPU_SPONENTRY : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = 0;
+}
+
+class LoadMonitorInstruction : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins ptype1:$ptr);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+def G_AMDGPU_FLAT_LOAD_MONITOR   : LoadMonitorInstruction;
+def G_AMDGPU_GLOBAL_LOAD_MONITOR : LoadMonitorInstruction;
 
 //============================================================================//
 // Dummy Instructions

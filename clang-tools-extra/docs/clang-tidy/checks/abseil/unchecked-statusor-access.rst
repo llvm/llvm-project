@@ -24,7 +24,7 @@ ok (e.g. by passing a value to its constructor).
 Below we list some examples of safe and unsafe ``StatusOr<T>`` access
 patterns.
 
-Note: If the check isn’t behaving as you would have expected on a code
+Note: If the check isn't behaving as you would have expected on a code
 snippet, please `report it <http://github.com/llvm/llvm-project/issues/new>`__.
 
 False negatives
@@ -68,9 +68,9 @@ example:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor) {
-     if (sor.ok()) {
-       use(*sor);
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
+       use(*x);
      }
    }
 
@@ -83,26 +83,66 @@ known to have ok status. For example:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor1) {
-     if (sor1.ok()) {
-       absl::optional<int> sor2 = sor1;
-       use(*sor2);
+   void f(absl::StatusOr<int> x1) {
+     if (x1.ok()) {
+       absl::optional<int> x2 = x1;
+       use(*x2);
      }
    }
 
 Ensuring that the status is ok using common macros
 --------------------------------------------------
 
-The check is aware of common macros like ``ABSL_CHECK`` and ``ASSERT_THAT``.
+The check is aware of common macros like ``ABSL_CHECK`` or ``ABSL_CHECK_OK``.
 Those can be used to ensure that the status of a ``StatusOr<T>`` object
 is ok. For example:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor) {
-     ABSL_DCHECK_OK(sor);
-     use(*sor);
+   void f(absl::StatusOr<int> x) {
+     ABSL_CHECK_OK(x);
+     use(*x);
    }
+
+Ensuring that the status is ok using googletest macros
+------------------------------------------------------
+
+The check is aware of ``googletest`` (or ``gtest``) macros and matchers.
+Accessing the value of a ``StatusOr<T>`` object is considered safe if it
+is preceded by an ``ASSERT_`` macro that ensures the status is ok.
+For example:
+
+.. code:: cpp
+
+   TEST(MySuite, MyTest) {
+     absl::StatusOr<int> x = foo();
+     ASSERT_OK(x);
+     use(*x);
+   }
+
+   TEST(MySuite, MyOtherTest) {
+     absl::StatusOr<int> x = foo();
+     ASSERT_THAT(x, absl_testing::IsOk());
+     use(*x);
+   }
+
+The following ``googletest`` macros are supported:
+
+- ``ASSERT_OK(...)``
+- ``ASSERT_TRUE(...)``
+- ``ASSERT_FALSE(...)``
+- ``ASSERT_THAT(...)``
+
+The following matchers are supported:
+
+- ``IsOk()``
+- ``StatusIs(...)``
+- ``IsOkAndHolds(...)``
+- ``CanonicalStatusIs(...)``
+
+**Note**: ``EXPECT_`` macros (like ``EXPECT_OK`` or ``EXPECT_TRUE(x.ok())``)
+do **not** make subsequent accesses safe because they do not terminate the
+test execution.
 
 Ensuring that the status is ok, then accessing the value in a correlated branch
 -------------------------------------------------------------------------------
@@ -113,14 +153,14 @@ execution paths that lead to an access. For example:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor) {
+   void f(absl::StatusOr<int> x) {
      bool safe = false;
-     if (sor.ok() && SomeOtherCondition()) {
+     if (x.ok() && SomeOtherCondition()) {
        safe = true;
      }
      // ... more code...
      if (safe) {
-       use(*sor);
+       use(*x);
      }
    }
 
@@ -132,16 +172,16 @@ status check:
 
 .. code:: cpp
 
-   void f1(absl::StatusOr<int> sor) {
-     use(*sor); // unsafe: it is unclear whether the status of `sor` is ok.
+   void f1(absl::StatusOr<int> x) {
+     use(*x); // unsafe: it is unclear whether the status of `x` is ok.
    }
 
-   void f2(absl::StatusOr<MyStruct> sor) {
-     use(sor->member); // unsafe: it is unclear whether the status of `sor` is ok.
+   void f2(absl::StatusOr<MyStruct> x) {
+     use(x->member); // unsafe: it is unclear whether the status of `x` is ok.
    }
 
-   void f3(absl::StatusOr<int> sor) {
-     use(sor.value()); // unsafe: it is unclear whether the status of `sor` is ok.
+   void f3(absl::StatusOr<int> x) {
+     use(x.value()); // unsafe: it is unclear whether the status of `x` is ok.
    }
 
 Use ``ABSL_CHECK_OK`` to signal that you knowingly want to crash on
@@ -159,10 +199,10 @@ branches of the code. For example:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor) {
-     if (sor.ok()) {
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
      } else {
-       use(*sor); // unsafe: it is clear that the status of `sor` is *not* ok.
+       use(*x); // unsafe: it is clear that the status of `x` is *not* ok.
      }
    }
 
@@ -178,8 +218,8 @@ For example:
 .. code:: cpp
 
    void f(Foo foo) {
-     if (foo.sor().ok()) {
-       use(*foo.sor()); // unsafe: it is unclear whether the status of `foo.sor()` is ok.
+     if (foo.x().ok()) {
+       use(*foo.x()); // unsafe: it is unclear whether the status of `foo.x()` is ok.
      }
    }
 
@@ -189,8 +229,8 @@ local variable and use it to access the value. For example:
 .. code:: cpp
 
    void f(Foo foo) {
-     if (const auto& foo_sor = foo.sor(); foo_sor.ok()) {
-       use(*foo_sor);
+     if (const auto& x = foo.x(); x.ok()) {
+       use(*x);
      }
    }
 
@@ -225,7 +265,7 @@ assumes the return value of the accessor was mutated.
    void f(Foo foo) {
      if (foo.get().ok()) {
        foo.mutate();
-       use(*foo.get()); // unsafe: mutate might have changed the state of the object
+       use(*foo.get()); // unsafe: `mutate()` might have changed the state of the object
      }
    }
 
@@ -257,8 +297,8 @@ In such cases it is best to check explicitly that the status of the
 
 .. _crossfunction:
 
-Checking if the status is ok, then passing the ``StatusOr<T>`` to another function
-----------------------------------------------------------------------------------
+Checking if the ``StatusOr<T>`` is ok, then passing it to another function
+--------------------------------------------------------------------------
 
 The check relies on local reasoning. The check and value access must
 both happen in the same function. An access is considered unsafe even if
@@ -267,13 +307,13 @@ of the ``StatusOr<T>`` is ok. For example:
 
 .. code:: cpp
 
-   void g(absl::StatusOr<int> sor) {
-     use(*sor); // unsafe: it is unclear whether the status of `sor` is ok.
+   void g(absl::StatusOr<int> x) {
+     use(*x); // unsafe: it is unclear whether the status of `x` is ok.
    }
 
-   void f(absl::StatusOr<int> sor) {
-     if (sor.ok()) {
-       g(sor);
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
+       g(x);
      }
    }
 
@@ -287,9 +327,9 @@ local scope of the callee. For example:
      use(val);
    }
 
-   void f(absl::StatusOr<int> sor) {
-     if (sor.ok()) {
-       g(*sor);
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
+       g(*x);
      }
    }
 
@@ -303,8 +343,8 @@ via ``using`` declarations. For example:
 
    using StatusOrInt = absl::StatusOr<int>;
 
-   void f(StatusOrInt sor) {
-     use(*sor); // unsafe: it is unclear whether the status of `sor` is ok.
+   void f(StatusOrInt x) {
+     use(*x); // unsafe: it is unclear whether the status of `x` is ok.
    }
 
 Containers
@@ -317,9 +357,9 @@ example:
 
 .. code:: cpp
 
-   void f(std::vector<absl::StatusOr<int>> sors) {
-     if (sors[0].ok()) {
-       use(*sors[0]); // unsafe: it is unclear whether the status of `sors[0]` is ok.
+   void f(std::vector<absl::StatusOr<int>> x) {
+     if (x[0].ok()) {
+       use(*x[0]); // unsafe: it is unclear whether the status of `x[0]` is ok.
      }
    }
 
@@ -328,10 +368,10 @@ instead:
 
 .. code:: cpp
 
-   void f(std::vector<absl::StatusOr<int>> sors) {
-     absl::StatusOr<int>& sor0 = sors[0];
-     if (sor0.ok()) {
-       use(*sor0);
+   void f(std::vector<absl::StatusOr<int>> x) {
+     absl::StatusOr<int>& x0 = x[0];
+     if (x0.ok()) {
+       use(*x0);
      }
    }
 
@@ -348,24 +388,24 @@ pattern will be reported as an unsafe access:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor) {
-     if (sor.ok()) {
-       [&sor]() {
-         use(*sor); // unsafe: it is unclear whether the status of `sor` is ok.
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
+       [&x]() {
+         use(*x); // unsafe: it is unclear whether the status of `x` is ok.
        }
      }
    }
 
-To avoid the issue, you should grab a reference to the contained object
-and capture that instead
+To avoid the issue, you should instead capture the contained object,
+either by value or by reference. An init-capture is useful for this,
+here capturing by reference:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor) {
-     if (sor.ok()) {
-       auto& s = *sor;
-       [&s]() {
-         use(s);
+   void f(absl::StatusOr<int> x) {
+     if (x.ok()) {
+       [&x = *x]() {
+         use(x);
        }
      }
    }
@@ -375,10 +415,28 @@ accessed:
 
 .. code:: cpp
 
-   void f(absl::StatusOr<int> sor) {
-     [&sor]() {
-       if (sor.ok()) {
-         use(*sor);
+   void f(absl::StatusOr<int> x) {
+     [&x]() {
+       if (x.ok()) {
+         use(*x);
        }
      }
    }
+
+Reasoning about integers
+------------------------
+
+Because it uses a simple SAT solver, the check cannot reason about integer
+inequalities. For instance, the following will result in a false positive:
+
+.. code:: cpp
+
+   void f(int n, absl::StatusOr<int> x) {
+      if (n > 0)
+        CHECK_OK(x);
+      if (n > 1)
+        return *x;  // false positive
+      return 0;
+   }
+
+In fact, currently this is also the case if the two conditions are identical.

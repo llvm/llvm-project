@@ -17,48 +17,10 @@ using namespace llvm;
 
 void Matcher::anchor() {}
 
-void Matcher::dump() const { print(errs()); }
+void Matcher::dump() const { printOne(errs()); }
 
-void Matcher::print(raw_ostream &OS, indent Indent) const {
-  printImpl(OS, Indent);
-  if (Next)
-    return Next->print(OS, Indent);
-}
-
-void Matcher::printOne(raw_ostream &OS) const { printImpl(OS, indent(0)); }
-
-/// unlinkNode - Unlink the specified node from this chain.  If Other == this,
-/// we unlink the next pointer and return it.  Otherwise we unlink Other from
-/// the list and return this.
-Matcher *Matcher::unlinkNode(Matcher *Other) {
-  if (this == Other)
-    return takeNext();
-
-  // Scan until we find the predecessor of Other.
-  Matcher *Cur = this;
-  for (; Cur && Cur->getNext() != Other; Cur = Cur->getNext())
-    /*empty*/;
-
-  if (!Cur)
-    return nullptr;
-  Cur->takeNext();
-  Cur->setNext(Other->takeNext());
-  return this;
-}
-
-/// canMoveBefore - Return true if this matcher is the same as Other, or if
-/// we can move this matcher past all of the nodes in-between Other and this
-/// node.  Other must be equal to or before this.
-bool Matcher::canMoveBefore(const Matcher *Other) const {
-  for (;; Other = Other->getNext()) {
-    assert(Other && "Other didn't come before 'this'?");
-    if (this == Other)
-      return true;
-
-    // We have to be able to move this node across the Other node.
-    if (!canMoveBeforeNode(Other))
-      return false;
-  }
+void Matcher::printOne(raw_ostream &OS, indent Indent) const {
+  printImpl(OS, indent(0));
 }
 
 /// canMoveBeforeNode - Return true if it is safe to move the current matcher
@@ -74,21 +36,6 @@ bool Matcher::canMoveBeforeNode(const Matcher *Other) const {
 
   // We can't move record nodes across each other etc.
   return false;
-}
-
-ScopeMatcher::~ScopeMatcher() {
-  for (Matcher *C : Children)
-    delete C;
-}
-
-SwitchOpcodeMatcher::~SwitchOpcodeMatcher() {
-  for (auto &C : Cases)
-    delete C.second;
-}
-
-SwitchTypeMatcher::~SwitchTypeMatcher() {
-  for (auto &C : Cases)
-    delete C.second;
 }
 
 CheckPredicateMatcher::CheckPredicateMatcher(const TreePredicateFn &pred,
@@ -113,11 +60,11 @@ unsigned CheckPredicateMatcher::getOperandNo(unsigned i) const {
 
 void ScopeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "Scope\n";
-  for (const Matcher *C : Children) {
-    if (!C)
+  for (const MatcherList &C : Children) {
+    if (C.empty())
       OS << Indent + 1 << "NULL POINTER\n";
     else
-      C->print(OS, Indent + 2);
+      C.print(OS, Indent + 2);
   }
 }
 
@@ -154,7 +101,7 @@ void CheckSameMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 }
 
 void CheckChildSameMatcher::printImpl(raw_ostream &OS, indent Indent) const {
-  OS << Indent << "CheckChild" << ChildNo << "Same\n";
+  OS << Indent << "CheckChildSame " << ChildNo << ' ' << MatchNumber << '\n';
 }
 
 void CheckPatternPredicateMatcher::printImpl(raw_ostream &OS,
@@ -174,7 +121,7 @@ void SwitchOpcodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "SwitchOpcode: {\n";
   for (const auto &C : Cases) {
     OS << Indent << "case " << C.first->getEnumName() << ":\n";
-    C.second->print(OS, Indent + 2);
+    C.second.print(OS, Indent + 2);
   }
   OS << Indent << "}\n";
 }
@@ -187,7 +134,7 @@ void SwitchTypeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "SwitchType: {\n";
   for (const auto &C : Cases) {
     OS << Indent << "case " << getEnumName(C.first) << ":\n";
-    C.second->print(OS, Indent + 2);
+    C.second.print(OS, Indent + 2);
   }
   OS << Indent << "}\n";
 }
@@ -378,8 +325,14 @@ bool CheckOpcodeMatcher::isContradictoryImpl(const Matcher *M) const {
 }
 
 bool CheckTypeMatcher::isContradictoryImpl(const Matcher *M) const {
-  if (const CheckTypeMatcher *CT = dyn_cast<CheckTypeMatcher>(M))
+  if (const CheckTypeMatcher *CT = dyn_cast<CheckTypeMatcher>(M)) {
+    // If the two checks are about different results, we don't know if they
+    // conflict!
+    if (getResNo() != CT->getResNo())
+      return false;
+
     return TypesAreContradictory(getType(), CT->getType());
+  }
   return false;
 }
 
@@ -441,3 +394,10 @@ bool CheckChild2CondCodeMatcher::isContradictoryImpl(const Matcher *M) const {
     return CCCCM->getCondCodeName() != getCondCodeName();
   return false;
 }
+
+void MatcherList::print(raw_ostream &OS, indent Indent) const {
+  for (const Matcher *M : *this)
+    M->printOne(OS, Indent);
+}
+
+void MatcherList::dump() const { print(errs()); }

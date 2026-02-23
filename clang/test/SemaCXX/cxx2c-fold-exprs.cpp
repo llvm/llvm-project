@@ -491,4 +491,20 @@ void test() {
 
 }
 
+namespace GH177245 {
+
+template <class _Fun, class... _As>
+concept __callable = requires (_Fun __fun, _As...) { __fun(); };
+
+template <class... _Args>
+struct __mdispatch {
+  template <class... _Ts>
+    requires (__callable<_Args, _Ts...> && ...)
+  void operator()();
+};
+
+static_assert(!__callable<__mdispatch<int>>);
+
+}
+
 }

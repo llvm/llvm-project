@@ -24,14 +24,8 @@ Lead Maintainer
 
 clang-tidy
 ----------
-| Congcong Cai
-| congcongcai0907@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)
-
 | Julian Schmidt
 | git.julian.schmidt@gmail.com (email), 5chmidti (GitHub), 5chmidti (Discourse), 5chmidti (Discord)
-
-| Piotr Zegar
-| me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)
 
 | Victor Baranov
 | bar.victor.2002@gmail.com (email), vbvictor (GitHub), vbvictor (Discourse), vbvictor  (Discord)
@@ -57,12 +51,6 @@ clangd
 | Nathan Ridge
 | zeratul976@hotmail.com (email), HighCommander4 (GitHub), HighCommander4 (Discourse), nridge (Discord)
 
-| Chris Bieneman
-| chris.bieneman@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)
-
-| Kadir Çetinkaya
-| kadircet@google.com (email), kadircet (GitHub) kadircet (Discourse), kadircet (Discord)
-
 
 Inactive Maintainers
 ====================
@@ -81,3 +69,7 @@ Inactive component maintainers
 | Julie Hockett (juliehockett@google.com) -- clang-doc
 | Sam McCall (sammccall@google.com (email), sam-mccall (GitHub, Discourse, Discord)) -- clangd
 | Peter Chou (peterchou411@gmail.com (email), PeterChou1 (GitHub, Discourse), .peterchou (Discord)) -- clang-doc
+| Piotr Zegar (me@piotrzegar.pl (email), PiotrZSL (GitHub), PiotrZSL (Discourse), PiotrZSL (Discord)) -- clang-tidy
+| Kadir Çetinkaya (kadircet@google.com (email), kadircet (GitHub) kadircet (Discourse), kadircet (Discord)) -- clangd
+| Chris Bieneman (chris.bieneman@gmail.com (email), llvm-beanz (GitHub), beanz (Discord), beanz (Discourse)) -- clangd
+| Congcong Cai (congcongcai0907@163.com (email), HerrCai0907 (GitHub), HerrCai0907 (Discourse)) -- clang-tidy

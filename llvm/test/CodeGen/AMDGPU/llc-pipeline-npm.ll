@@ -11,6 +11,7 @@
 ; GCN-O0-NEXT: require<profile-summary>
 ; GCN-O0-NEXT: require<collector-metadata>
 ; GCN-O0-NEXT: require<runtime-libcall-info>
+; GCN-O0-NEXT: require<libcall-lowering-info>
 ; GCN-O0-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O0-NEXT: function(expand-ir-insts<O0>)
 ; GCN-O0-NEXT: amdgpu-remove-incompatible-functions
@@ -35,9 +36,8 @@
 ; GCN-O0-NEXT: amdgpu-lower-intrinsics
 ; GCN-O0-NEXT: cgscc(function(lower-switch
 ; GCN-O0-NEXT: lower-invoke
-; GCN-O0-NEXT: unreachableblockelim))
-; GCN-O0-NEXT: require<amdgpu-argument-usage>
-; GCN-O0-NEXT: cgscc(function(amdgpu-unify-divergent-exit-nodes
+; GCN-O0-NEXT: unreachableblockelim
+; GCN-O0-NEXT: amdgpu-unify-divergent-exit-nodes
 ; GCN-O0-NEXT: fix-irreducible
 ; GCN-O0-NEXT: unify-loop-exits
 ; GCN-O0-NEXT: StructurizeCFGPass
@@ -46,7 +46,7 @@
 ; GCN-O0-NEXT: amdgpu-rewrite-undef-for-phi
 ; GCN-O0-NEXT: lcssa
 ; GCN-O0-NEXT: require<uniformity>
-; GCN-O0-NEXT: callbr-prepare
+; GCN-O0-NEXT: inline-asm-prepare
 ; GCN-O0-NEXT: safe-stack
 ; GCN-O0-NEXT: stack-protector
 ; GCN-O0-NEXT: verify))
@@ -58,8 +58,17 @@
 ; GCN-O0-NEXT: require<reg-usage>
 ; GCN-O0-NEXT: cgscc(function(machine-function(reg-usage-propagation
 ; GCN-O0-NEXT: phi-node-elimination
+; GCN-O0-NEXT: si-lower-control-flow
 ; GCN-O0-NEXT: two-address-instruction
-; GCN-O0-NEXT: regallocfast
+; GCN-O0-NEXT: si-wqm
+; GCN-O0-NEXT: amdgpu-pre-ra-long-branch-reg
+; GCN-O0-NEXT: regallocfast<filter=sgpr;no-clear-vregs>
+; GCN-O0-NEXT: si-lower-sgpr-spills
+; GCN-O0-NEXT: si-pre-allocate-wwm-regs
+; GCN-O0-NEXT: regallocfast<filter=wwm;no-clear-vregs>
+; GCN-O0-NEXT: si-lower-wwm-copies
+; GCN-O0-NEXT: amdgpu-reserve-wwm-regs
+; GCN-O0-NEXT: regallocfast<filter=vgpr>
 ; GCN-O0-NEXT: si-fix-vgpr-copies
 ; GCN-O0-NEXT: remove-redundant-debug-values
 ; GCN-O0-NEXT: fixup-statepoint-caller-saved
@@ -75,9 +84,8 @@
 ; GCN-O0-NEXT: post-RA-hazard-rec
 ; GCN-O0-NEXT: amdgpu-wait-sgpr-hazards
 ; GCN-O0-NEXT: amdgpu-lower-vgpr-encoding
-; GCN-O0-NEXT: branch-relaxation)))
-; GCN-O0-NEXT: require<reg-usage>
-; GCN-O0-NEXT: cgscc(function(machine-function(reg-usage-collector
+; GCN-O0-NEXT: branch-relaxation
+; GCN-O0-NEXT: reg-usage-collector
 ; GCN-O0-NEXT: remove-loads-into-fake-uses
 ; GCN-O0-NEXT: live-debug-values
 ; GCN-O0-NEXT: machine-sanmd
@@ -90,6 +98,7 @@
 ; GCN-O2-NEXT: require<profile-summary>
 ; GCN-O2-NEXT: require<collector-metadata>
 ; GCN-O2-NEXT: require<runtime-libcall-info>
+; GCN-O2-NEXT: require<libcall-lowering-info>
 ; GCN-O2-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O2-NEXT: function(expand-ir-insts<O2>)
 ; GCN-O2-NEXT: amdgpu-remove-incompatible-functions
@@ -115,7 +124,7 @@
 ; GCN-O2-NEXT: amdgpu-codegenprepare
 ; GCN-O2-NEXT: loop-mssa(licm<allowspeculation>)
 ; GCN-O2-NEXT: verify
-; GCN-O2-NEXT: loop-mssa(canon-freeze
+; GCN-O2-NEXT: loop(canon-freeze
 ; GCN-O2-NEXT: loop-reduce)
 ; GCN-O2-NEXT: mergeicmps
 ; GCN-O2-NEXT: expand-memcmp
@@ -135,9 +144,8 @@
 ; GCN-O2-NEXT: amdgpu-lower-intrinsics
 ; GCN-O2-NEXT: cgscc(function(lower-switch
 ; GCN-O2-NEXT: lower-invoke
-; GCN-O2-NEXT: unreachableblockelim))
-; GCN-O2-NEXT: require<amdgpu-argument-usage>
-; GCN-O2-NEXT: cgscc(function(flatten-cfg
+; GCN-O2-NEXT: unreachableblockelim
+; GCN-O2-NEXT: flatten-cfg
 ; GCN-O2-NEXT: sink
 ; GCN-O2-NEXT: amdgpu-late-codegenprepare
 ; GCN-O2-NEXT: amdgpu-unify-divergent-exit-nodes
@@ -151,7 +159,7 @@
 ; GCN-O2-NEXT: amdgpu-perf-hint
 ; GCN-O2-NEXT: cgscc(function(require<uniformity>
 ; GCN-O2-NEXT: objc-arc-contract
-; GCN-O2-NEXT: callbr-prepare
+; GCN-O2-NEXT: inline-asm-prepare
 ; GCN-O2-NEXT: safe-stack
 ; GCN-O2-NEXT: stack-protector
 ; GCN-O2-NEXT: verify))
@@ -212,6 +220,7 @@
 ; GCN-O2-NEXT: amdgpu-reserve-wwm-regs
 ; GCN-O2-NEXT: greedy<vgpr>
 ; GCN-O2-NEXT: amdgpu-nsa-reassign
+; GCN-O2-NEXT: amdgpu-rewrite-agpr-copy-mfma
 ; GCN-O2-NEXT: virt-reg-rewriter
 ; GCN-O2-NEXT: amdgpu-mark-last-scratch-load
 ; GCN-O2-NEXT: stack-slot-coloring
@@ -246,9 +255,8 @@
 ; GCN-O2-NEXT: amdgpu-wait-sgpr-hazards
 ; GCN-O2-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O2-NEXT: amdgpu-insert-delay-alu
-; GCN-O2-NEXT: branch-relaxation)))
-; GCN-O2-NEXT: require<reg-usage>
-; GCN-O2-NEXT: cgscc(function(machine-function(reg-usage-collector
+; GCN-O2-NEXT: branch-relaxation
+; GCN-O2-NEXT: reg-usage-collector
 ; GCN-O2-NEXT: remove-loads-into-fake-uses
 ; GCN-O2-NEXT: live-debug-values
 ; GCN-O2-NEXT: machine-sanmd
@@ -261,6 +269,7 @@
 ; GCN-O3-NEXT: require<profile-summary>
 ; GCN-O3-NEXT: require<collector-metadata>
 ; GCN-O3-NEXT: require<runtime-libcall-info>
+; GCN-O3-NEXT: require<libcall-lowering-info>
 ; GCN-O3-NEXT: pre-isel-intrinsic-lowering
 ; GCN-O3-NEXT: function(expand-ir-insts<O3>)
 ; GCN-O3-NEXT: amdgpu-remove-incompatible-functions
@@ -286,7 +295,7 @@
 ; GCN-O3-NEXT: amdgpu-codegenprepare
 ; GCN-O3-NEXT: loop-mssa(licm<allowspeculation>)
 ; GCN-O3-NEXT: verify
-; GCN-O3-NEXT: loop-mssa(canon-freeze
+; GCN-O3-NEXT: loop(canon-freeze
 ; GCN-O3-NEXT: loop-reduce)
 ; GCN-O3-NEXT: mergeicmps
 ; GCN-O3-NEXT: expand-memcmp
@@ -306,9 +315,8 @@
 ; GCN-O3-NEXT: amdgpu-lower-intrinsics
 ; GCN-O3-NEXT: cgscc(function(lower-switch
 ; GCN-O3-NEXT: lower-invoke
-; GCN-O3-NEXT: unreachableblockelim))
-; GCN-O3-NEXT: require<amdgpu-argument-usage>
-; GCN-O3-NEXT: cgscc(function(flatten-cfg
+; GCN-O3-NEXT: unreachableblockelim
+; GCN-O3-NEXT: flatten-cfg
 ; GCN-O3-NEXT: sink
 ; GCN-O3-NEXT: amdgpu-late-codegenprepare
 ; GCN-O3-NEXT: amdgpu-unify-divergent-exit-nodes
@@ -322,7 +330,7 @@
 ; GCN-O3-NEXT: amdgpu-perf-hint
 ; GCN-O3-NEXT: cgscc(function(require<uniformity>
 ; GCN-O3-NEXT: objc-arc-contract
-; GCN-O3-NEXT: callbr-prepare
+; GCN-O3-NEXT: inline-asm-prepare
 ; GCN-O3-NEXT: safe-stack
 ; GCN-O3-NEXT: stack-protector
 ; GCN-O3-NEXT: verify))
@@ -383,6 +391,7 @@
 ; GCN-O3-NEXT: amdgpu-reserve-wwm-regs
 ; GCN-O3-NEXT: greedy<vgpr>
 ; GCN-O3-NEXT: amdgpu-nsa-reassign
+; GCN-O3-NEXT: amdgpu-rewrite-agpr-copy-mfma
 ; GCN-O3-NEXT: virt-reg-rewriter
 ; GCN-O3-NEXT: amdgpu-mark-last-scratch-load
 ; GCN-O3-NEXT: stack-slot-coloring
@@ -417,9 +426,8 @@
 ; GCN-O3-NEXT: amdgpu-wait-sgpr-hazards
 ; GCN-O3-NEXT: amdgpu-lower-vgpr-encoding
 ; GCN-O3-NEXT: amdgpu-insert-delay-alu
-; GCN-O3-NEXT: branch-relaxation)))
-; GCN-O3-NEXT: require<reg-usage>
-; GCN-O3-NEXT: cgscc(function(machine-function(reg-usage-collector
+; GCN-O3-NEXT: branch-relaxation
+; GCN-O3-NEXT: reg-usage-collector
 ; GCN-O3-NEXT: remove-loads-into-fake-uses
 ; GCN-O3-NEXT: live-debug-values
 ; GCN-O3-NEXT: machine-sanmd

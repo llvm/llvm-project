@@ -417,3 +417,25 @@ void callReturnsComplex(void) {
   _Complex double c;
   c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
+
+int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
+
+int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
+
+
+
+int i = 0;
+void intPtrCmp1(void) { &i + 1 == 2; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}
+void intPtrCmp2(void) { 2 == &i + 1; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}
+
+/// evaluateStrlen on a non-block pointer.
+char *strcpy(char *restrict s1, const char *restrict s2);
+void strcpy_fn(char *x) {
+  strcpy(x, (char*)&strcpy_fn);
+}

@@ -229,7 +229,7 @@ void SimpleNativeMemoryMap::detach(ResourceManager::OnCompleteFn OnComplete) {
 }
 
 void SimpleNativeMemoryMap::shutdown(ResourceManager::OnCompleteFn OnComplete) {
-  // TODO: Establish a clear order to run dealloca actions across slabs,
+  // TODO: Establish a clear order to run deallocate actions across slabs,
   // object boundaries.
 
   // Collect slab base addresses for removal.

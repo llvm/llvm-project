@@ -305,6 +305,18 @@ DataMemberAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // MethodAttr definitions
 //===----------------------------------------------------------------------===//
 
+LogicalResult MethodAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                                 cir::MethodType type,
+                                 std::optional<FlatSymbolRefAttr> symbol,
+                                 std::optional<uint64_t> vtable_offset) {
+  if (symbol.has_value() && vtable_offset.has_value())
+    return emitError()
+           << "at most one of symbol and vtable_offset can be present "
+              "in #cir.method";
+
+  return success();
+}
+
 Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
   auto ty = mlir::cast<cir::MethodType>(odsType);
 
@@ -331,15 +343,30 @@ Attribute MethodAttr::parse(AsmParser &parser, Type odsType) {
     return get(ty, symbol);
   }
 
-  return {};
+  // Parse a uint64 that represents the vtable offset.
+  std::uint64_t vtableOffset = 0;
+  if (parser.parseKeyword("vtable_offset"))
+    return {};
+  if (parser.parseEqual())
+    return {};
+  if (parser.parseInteger(vtableOffset))
+    return {};
+
+  if (parser.parseGreater())
+    return {};
+
+  return get(ty, vtableOffset);
 }
 
 void MethodAttr::print(AsmPrinter &printer) const {
   auto symbol = getSymbol();
+  auto vtableOffset = getVtableOffset();
 
   printer << '<';
   if (symbol.has_value()) {
     printer << *symbol;
+  } else if (vtableOffset.has_value()) {
+    printer << "vtable_offset = " << *vtableOffset;
   } else {
     printer << "null";
   }

@@ -267,6 +267,8 @@ macros:
     macro_value: '0x70000000'
   - macro_name: PT_HIPROC
     macro_value: '0x7fffffff'
+  - macro_name: PT_GNU_PROPERTY
+    macro_value: '0x6474e553'
   - macro_name: PF_X
     macro_value: '0x1'
   - macro_name: PF_W
@@ -433,6 +435,11 @@ macros:
     macro_value: '0xff00'
   - macro_name: VER_NDX_ELIMINATE
     macro_value: '0xff01'
+  # Values used in the .note.gnu.property section.
+  - macro_name: GNU_PROPERTY_X86_FEATURE_1_AND
+    macro_value: '0xc0000002'
+  - macro_name: GNU_PROPERTY_X86_FEATURE_1_SHSTK
+    macro_value: '0x00000002'
 types:
   - type_name: Elf32_Addr
   - type_name: Elf32_Chdr
@@ -454,6 +461,7 @@ types:
   - type_name: Elf32_Verneed
   - type_name: Elf32_Versym
   - type_name: Elf32_Word
+  - type_name: Elf32_Xword
   - type_name: Elf64_Addr
   - type_name: Elf64_Chdr
   - type_name: Elf64_Dyn

@@ -26,7 +26,10 @@
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineExpr.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -54,7 +57,7 @@ using namespace mlir::linalg;
 SmallVector<Value> mlir::linalg::peelLoop(RewriterBase &rewriter,
                                           Operation *op) {
   return llvm::TypeSwitch<Operation *, SmallVector<Value, 4>>(op)
-      .Case<scf::ForOp>([&](scf::ForOp forOp) {
+      .Case([&](scf::ForOp forOp) {
         scf::ForOp partialIteration;
         if (succeeded(scf::peelForLoopAndSimplifyBounds(rewriter, forOp,
                                                         partialIteration)))
@@ -218,6 +221,10 @@ private:
 FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
                                              linalg::PackOp packOp,
                                              bool lowerPadLikeWithInsertSlice) {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   // 1. Filter out NYI cases.
   auto packedTensorType =
       cast<RankedTensorType>(packOp->getResultTypes().front());
@@ -345,11 +352,15 @@ FailureOr<LowerPackResult> linalg::lowerPack(RewriterBase &rewriter,
 FailureOr<LowerUnPackOpResult>
 linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
                     bool lowerUnpadLikeWithExtractSlice) {
+  // TODO: Support Memref UnPackOp. Temporarily return failure.
+  if (!unPackOp.hasPureTensorSemantics())
+    return failure();
+
   Location loc = unPackOp->getLoc();
   OpBuilder::InsertionGuard g(rewriter);
   rewriter.setInsertionPoint(unPackOp);
 
-  RankedTensorType packedTensorType = unPackOp.getSourceType();
+  auto packedTensorType = cast<RankedTensorType>(unPackOp.getSourceType());
   int64_t packedRank = packedTensorType.getRank();
 
   OpFoldResult zero = rewriter.getIndexAttr(0), one = rewriter.getIndexAttr(1);
@@ -549,7 +560,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
         packOps.push_back(linalg::PackOp::create(
             rewriter, loc, operand, dest, innerPos, innerPackSizes, zero));
       }
-      inputsAndInits.push_back(packOps.back());
+      inputsAndInits.push_back(packOps.back().getResult());
     }
   }
 
@@ -576,7 +587,7 @@ FailureOr<PackResult> linalg::pack(RewriterBase &rewriter,
     unPackOps.push_back(linalg::UnPackOp::create(
         rewriter, packedLinalgOp->getLoc(), result, maybePackedInit.getSource(),
         maybePackedInit.getInnerDimsPos(), maybePackedInit.getMixedTiles()));
-    results.push_back(unPackOps.back());
+    results.push_back(unPackOps.back().getResult());
   }
 
   // Step 5. Replace `linalgOp`.
@@ -624,8 +635,8 @@ static LinalgOp transposeOneLinalgOperandAndReplace(
 
   // Compute the transposed indexing map.
   // Sigh unsigned pollution.
-  SmallVector<unsigned> tmpTransposition = llvm::to_vector(
-      llvm::map_range(permutation, [](int64_t i) -> unsigned { return i; }));
+  SmallVector<unsigned> tmpTransposition =
+      llvm::map_to_vector(permutation, [](int64_t i) -> unsigned { return i; });
   AffineMap permutationMap =
       AffineMap::getPermutationMap(tmpTransposition, rewriter.getContext());
   AffineMap transposedMap =
@@ -666,7 +677,7 @@ linalg::packTranspose(RewriterBase &rewriter, linalg::PackOp packOp,
   linalg::PackOp transposedPackOp =
       packOp.createTransposedClone(rewriter, loc, innerPerm, outerPerm);
 
-  if (!packOp.getResult().hasOneUse())
+  if (packOp.hasPureBufferSemantics() || !packOp.getResult().hasOneUse())
     return rewriter.notifyMatchFailure(linalgOp, "expect single pack use");
 
   OpOperand &packUse = *packOp->getUses().begin();
@@ -727,7 +738,10 @@ linalg::packTranspose(RewriterBase &rewriter, linalg::PackOp packOp,
   }
 
   // Step 4. Finally, replace packOp now that we don't need it anymore.
-  rewriter.replaceOp(packOp, transposedPackOp->getResults());
+  if (packOp.hasPureTensorSemantics())
+    rewriter.replaceOp(packOp, transposedPackOp->getResults());
+  else
+    rewriter.eraseOp(packOp);
 
   return PackTransposeResult{transposedPackOp, transposedLinalgOp,
                              transposedUnPackOp};
@@ -883,10 +897,10 @@ mlir::linalg::LinalgTilingOptions::setTileSizes(ArrayRef<int64_t> ts) {
     OpBuilder::InsertionGuard guard(b);
     b.setInsertionPointToStart(
         &op->getParentOfType<func::FuncOp>().getBody().front());
-    return llvm::to_vector<4>(map_range(tileSizes, [&](int64_t s) {
+    return llvm::map_to_vector<4>(tileSizes, [&](int64_t s) {
       Value v = arith::ConstantIndexOp::create(b, op->getLoc(), s);
       return v;
-    }));
+    });
   };
   return *this;
 }
@@ -1019,6 +1033,10 @@ LogicalResult ExtractSliceOfPadTensorSwapPattern::matchAndRewrite(
 static Value getPackOpSourceOrPaddedSource(OpBuilder &builder,
                                            linalg::PackOp packOp) {
   Value input = packOp.getSource();
+  // TODO: Support Memref PackOp. Temporarily return just Op Source.
+  if (!packOp.hasPureTensorSemantics())
+    return input;
+
   if (!packOp.getPaddingValue()) {
     return input;
   }
@@ -1135,6 +1153,10 @@ getPackUnpackRankReducedPerm(ArrayRef<int64_t> shape,
 
 LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
     linalg::PackOp packOp, PatternRewriter &rewriter) const {
+  // TODO: Support Memref PackOp. Temporarily return failure.
+  if (!packOp.hasPureTensorSemantics())
+    return failure();
+
   if (llvm::any_of(packOp.getTiledOuterDims(),
                    [](int64_t dim) { return dim != 1; })) {
     return rewriter.notifyMatchFailure(
@@ -1156,8 +1178,8 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
         // Check whether this dim has been permuted. Permuting unit dims is fine
         // as that's effectively a no-op.
-        if (dim < prev && (packOp.getType().getShape()[prev] != 1 ||
-                           packOp.getType().getShape()[dim] != 1))
+        if (dim < prev && (packOp.getResult().getType().getShape()[prev] != 1 ||
+                           packOp.getResult().getType().getShape()[dim] != 1))
           return false;
 
         prev = dim;
@@ -1274,6 +1296,9 @@ LogicalResult DecomposeOuterUnitDimsPackOpPattern::matchAndRewrite(
 
 LogicalResult DecomposeOuterUnitDimsUnPackOpPattern::matchAndRewrite(
     linalg::UnPackOp unpackOp, PatternRewriter &rewriter) const {
+  if (!unpackOp.hasPureTensorSemantics())
+    return failure();
+
   int64_t destRank = unpackOp.getDestRank();
   ArrayRef<int64_t> srcShape = unpackOp.getSourceType().getShape();
   ArrayRef<int64_t> innerDimsPos = unpackOp.getInnerDimsPos();

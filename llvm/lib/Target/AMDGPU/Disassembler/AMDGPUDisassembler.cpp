@@ -528,12 +528,26 @@ void AMDGPUDisassembler::decodeImmOperands(MCInst &MI,
         break;
       case AMDGPU::OPERAND_REG_IMM_FP16:
       case AMDGPU::OPERAND_REG_IMM_INT16:
-      case AMDGPU::OPERAND_REG_IMM_V2FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_INT16:
+        Imm = getInlineImmValF16(Imm);
+        break;
+      case AMDGPU::OPERAND_REG_IMM_V2FP16:
       case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
         Imm = getInlineImmValF16(Imm);
         break;
+      case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT: {
+        // V_PK_FMAC_F16 on GFX11+ duplicates the f16 inline constant to both
+        // halves, so we need to produce the duplicated value for correct
+        // round-trip.
+        if (isGFX11Plus()) {
+          int64_t F16Val = getInlineImmValF16(Imm);
+          Imm = (F16Val << 16) | (F16Val & 0xFFFF);
+        } else {
+          Imm = getInlineImmValF16(Imm);
+        }
+        break;
+      }
       case AMDGPU::OPERAND_REG_IMM_FP64:
       case AMDGPU::OPERAND_REG_IMM_INT64:
       case AMDGPU::OPERAND_REG_INLINE_AC_FP64:
@@ -566,7 +580,7 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
     // Try to decode DPP and SDWA first to solve conflict with VOP1 and VOP2
     // encodings
-    if (isGFX1250() && Bytes.size() >= 16) {
+    if (isGFX1250Plus() && Bytes.size() >= 16) {
       std::bitset<128> DecW = eat16Bytes(Bytes);
       if (tryDecodeInst(DecoderTableGFX1250128, MI, DecW, Address, CS))
         break;
@@ -593,6 +607,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
+        break;
+
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1396, DecoderTableGFX13_FAKE1696, MI,
+                        DecW, Address, CS))
         break;
 
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
@@ -667,9 +686,17 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         Address, CS))
         break;
 
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX117064, MI, QW, Address, CS))
+        break;
+
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
                         Address, CS))
+        break;
+
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX1170W6464, MI, QW, Address, CS))
         break;
 
       if (isGFX11() &&
@@ -678,6 +705,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
+        break;
+
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1364, DecoderTableGFX13_FAKE1664, MI, QW,
+                        Address, CS))
         break;
 
       // Reinitialize Bytes
@@ -725,6 +757,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
+                        Address, CS))
+        break;
+
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1332, DecoderTableGFX13_FAKE1632, MI, DW,
                         Address, CS))
         break;
     }
@@ -1597,6 +1634,9 @@ AMDGPUDisassembler::decodeLiteralConstant(const MCInstrDesc &Desc,
   case AMDGPU::OPERAND_REG_IMM_V2FP16:
     UseLit = AMDGPU::isInlinableLiteralV2F16(Val);
     break;
+  case AMDGPU::OPERAND_REG_IMM_V2FP16_SPLAT:
+    UseLit = AMDGPU::isPKFMACF16InlineConstant(Val, isGFX11Plus());
+    break;
   case AMDGPU::OPERAND_REG_IMM_NOINLINE_V2FP16:
     break;
   case AMDGPU::OPERAND_REG_IMM_INT16:
@@ -2215,6 +2255,8 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
   return AMDGPU::isGFX11Plus(STI);
 }
 
+bool AMDGPUDisassembler::isGFX1170() const { return AMDGPU::isGFX1170(STI); }
+
 bool AMDGPUDisassembler::isGFX12() const {
   return STI.hasFeature(AMDGPU::FeatureGFX12);
 }
@@ -2224,6 +2266,16 @@ bool AMDGPUDisassembler::isGFX12Plus() const {
 }
 
 bool AMDGPUDisassembler::isGFX1250() const { return AMDGPU::isGFX1250(STI); }
+
+bool AMDGPUDisassembler::isGFX1250Plus() const {
+  return AMDGPU::isGFX1250Plus(STI);
+}
+
+bool AMDGPUDisassembler::isGFX13() const { return AMDGPU::isGFX13(STI); }
+
+bool AMDGPUDisassembler::isGFX13Plus() const {
+  return AMDGPU::isGFX13Plus(STI);
+}
 
 bool AMDGPUDisassembler::hasArchitectedFlatScratch() const {
   return STI.hasFeature(AMDGPU::FeatureArchitectedFlatScratch);
@@ -2381,7 +2433,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   }
 
   // Bits [27].
-  if (isGFX1250()) {
+  if (isGFX1250Plus()) {
     PRINT_PSEUDO_DIRECTIVE_COMMENT("FLAT_SCRATCH_IS_NV",
                                    COMPUTE_PGM_RSRC1_GFX125_FLAT_SCRATCH_IS_NV);
   } else {
@@ -2395,7 +2447,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC1(
   // Bits [29-31].
   if (isGFX10Plus()) {
     // WGP_MODE is not available on GFX1250.
-    if (!isGFX1250()) {
+    if (!isGFX1250Plus()) {
       PRINT_DIRECTIVE(".amdhsa_workgroup_processor_mode",
                       COMPUTE_PGM_RSRC1_GFX10_PLUS_WGP_MODE);
     }
@@ -2526,7 +2578,7 @@ Expected<bool> AMDGPUDisassembler::decodeCOMPUTE_PGM_RSRC3(
     }
 
     // Bits [14-21].
-    if (isGFX1250()) {
+    if (isGFX1250Plus()) {
       PRINT_DIRECTIVE(".amdhsa_named_barrier_count",
                       COMPUTE_PGM_RSRC3_GFX125_NAMED_BAR_CNT);
       PRINT_PSEUDO_DIRECTIVE_COMMENT(
@@ -2632,8 +2684,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED0_OFFSET:
     // 4 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
-    for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED0_OFFSET, 4);
     }
     return true;
@@ -2648,8 +2700,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED1_OFFSET:
     // 20 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 20);
-    for (int I = 0; I < 20; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED1_OFFSET, 20);
     }
     return true;
@@ -2731,8 +2783,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED3_OFFSET:
     // 4 bytes from here are reserved, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
-    for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED3_OFFSET, 4);
     }
     return true;
