@@ -101,6 +101,18 @@ MLIR_CAPI_EXPORTED intptr_t mlirDynamicTypeGetNumParams(MlirType type);
 MLIR_CAPI_EXPORTED MlirAttribute mlirDynamicTypeGetParam(MlirType type,
                                                          intptr_t index);
 
+/// Get the type definition of the given dynamic type.
+MLIR_CAPI_EXPORTED MlirDynamicTypeDefinition
+mlirDynamicTypeGetTypeDef(MlirType type);
+
+/// Get the name of the given dynamic type definition.
+MLIR_CAPI_EXPORTED MlirStringRef
+mlirDynamicTypeDefinitionGetName(MlirDynamicTypeDefinition typeDef);
+
+/// Get the dialect that the given dynamic type definition belongs to.
+MLIR_CAPI_EXPORTED MlirDialect
+mlirDynamicTypeDefinitionGetDialect(MlirDynamicTypeDefinition typeDef);
+
 #ifdef __cplusplus
 }
 #endif

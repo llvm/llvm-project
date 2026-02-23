@@ -895,6 +895,14 @@ void PyDynamicType::bindDerived(ClassTy &c) {
         return params;
       },
       "Returns the parameters of the dynamic type as a list of attributes.");
+  c.def_prop_ro("type_name", [](PyDynamicType &self) {
+    MlirDynamicTypeDefinition typeDef = mlirDynamicTypeGetTypeDef(self);
+    MlirStringRef name = mlirDynamicTypeDefinitionGetName(typeDef);
+    MlirDialect dialect = mlirDynamicTypeDefinitionGetDialect(typeDef);
+    MlirStringRef dialectNamespace = mlirDialectGetNamespace(dialect);
+    return std::string(dialectNamespace.data, dialectNamespace.length) + "." +
+           std::string(name.data, name.length);
+  });
 }
 
 void populateIRTypes(nb::module_ &m) {

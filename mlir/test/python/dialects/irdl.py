@@ -113,6 +113,8 @@ def testIRDLTypes():
         t1 = DynamicType.get("irdl_type_test.type1", [IntegerAttr.get(i32, 42)])
         # CHECK: !irdl_type_test.type1<42 : i32>
         t1.dump()
+        # CHECK: irdl_type_test.type1
+        print(t1.type_name, file=sys.stderr)
         # CHECK: 1
         print(len(t1.params), file=sys.stderr)
         # CHECK: 42 : i32
@@ -122,6 +124,8 @@ def testIRDLTypes():
         )
         # CHECK: !irdl_type_test.type2<33 : i32, unit>
         t2.dump()
+        # CHECK: irdl_type_test.type2
+        print(t2.type_name, file=sys.stderr)
         # CHECK: 2
         print(len(t2.params), file=sys.stderr)
         # CHECK: 33 : i32

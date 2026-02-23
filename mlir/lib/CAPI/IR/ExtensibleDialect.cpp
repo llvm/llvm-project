@@ -123,3 +123,17 @@ intptr_t mlirDynamicTypeGetNumParams(MlirType type) {
 MlirAttribute mlirDynamicTypeGetParam(MlirType type, intptr_t index) {
   return wrap(llvm::cast<mlir::DynamicType>(unwrap(type)).getParams()[index]);
 }
+
+MlirDynamicTypeDefinition mlirDynamicTypeGetTypeDef(MlirType type) {
+  return wrap(llvm::cast<mlir::DynamicType>(unwrap(type)).getTypeDef());
+}
+
+MlirStringRef
+mlirDynamicTypeDefinitionGetName(MlirDynamicTypeDefinition typeDef) {
+  return wrap(unwrap(typeDef)->getName());
+}
+
+MlirDialect
+mlirDynamicTypeDefinitionGetDialect(MlirDynamicTypeDefinition typeDef) {
+  return wrap(unwrap(typeDef)->getDialect());
+}
