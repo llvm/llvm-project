@@ -590,4 +590,5 @@ def testExtDialectWithType():
         # CHECK: %0 = "ext_type.make_array"() : () -> !ext_type.array<i32, 4 : i32>
         # CHECK: %1 = "ext_type.make_array"() : () -> !ext_type.array<i64, 6 : i32>
         # CHECK: %2 = "ext_type.make_array3"() : () -> !ext_type.array<i32, 3 : i32>
+        assert module.operation.verify()
         print(module)

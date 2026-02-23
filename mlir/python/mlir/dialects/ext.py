@@ -568,7 +568,8 @@ class Type(ir.DynamicType):
     @classmethod
     def get(cls, *args, context=None):
         args = [
-            ir.TypeAttr.get(arg) if isinstance(arg, ir.Type) else arg for arg in args
+            ir.TypeAttr.get(arg, context) if isinstance(arg, ir.Type) else arg
+            for arg in args
         ]
         return cls(ir.DynamicType.get(cls.type_name, args, context=context))
 
