@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // clang-format off
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/IRTypes.h"
 // clang-format on
@@ -841,6 +842,68 @@ void PyOpaqueType::bindDerived(ClassTy &c) {
       "Returns the data for the Opaque type as a string.");
 }
 
+void PyDynamicType::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::string &fullTypeName, const std::vector<PyAttribute> &attrs,
+         DefaultingPyMlirContext context) {
+        size_t dotPos = fullTypeName.find('.');
+        if (dotPos == std::string::npos) {
+          throw nb::value_error("Expected full type name to be in the format "
+                                "'<dialectName>.<typeName>'.");
+        }
+
+        std::string dialectName = fullTypeName.substr(0, dotPos);
+        std::string typeName = fullTypeName.substr(dotPos + 1);
+        PyDialects dialects(context->getRef());
+        MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
+        if (!mlirDialectIsAExtensibleDialect(dialect))
+          throw nb::value_error(
+              ("Dialect '" + dialectName + "' is not an extensible dialect.")
+                  .c_str());
+
+        MlirDynamicTypeDefinition typeDef =
+            mlirExtensibleDialectLookupTypeDefinition(
+                dialect, toMlirStringRef(typeName));
+        if (typeDef.ptr == nullptr) {
+          throw nb::value_error(("Dialect '" + dialectName +
+                                 "' does not contain a type named '" +
+                                 typeName + "'.")
+                                    .c_str());
+        }
+
+        std::vector<MlirAttribute> mlirAttrs;
+        mlirAttrs.reserve(attrs.size());
+        for (const auto &attr : attrs)
+          mlirAttrs.push_back(attr.get());
+        MlirType t =
+            mlirDynamicTypeGet(typeDef, mlirAttrs.data(), mlirAttrs.size());
+        return PyDynamicType(context->getRef(), t);
+      },
+      nb::arg("full_type_name"), nb::arg("attributes"),
+      nb::arg("context") = nb::none(), "Create a dynamic type.");
+  c.def_prop_ro(
+      "params",
+      [](PyDynamicType &self) {
+        size_t numParams = mlirDynamicTypeGetNumParams(self);
+        std::vector<PyAttribute> params;
+        params.reserve(numParams);
+        for (size_t i = 0; i < numParams; ++i)
+          params.emplace_back(self.getContext(),
+                              mlirDynamicTypeGetParam(self, i));
+        return params;
+      },
+      "Returns the parameters of the dynamic type as a list of attributes.");
+  c.def_prop_ro("type_name", [](PyDynamicType &self) {
+    MlirDynamicTypeDefinition typeDef = mlirDynamicTypeGetTypeDef(self);
+    MlirStringRef name = mlirDynamicTypeDefinitionGetName(typeDef);
+    MlirDialect dialect = mlirDynamicTypeDefinitionGetDialect(typeDef);
+    MlirStringRef dialectNamespace = mlirDialectGetNamespace(dialect);
+    return std::string(dialectNamespace.data, dialectNamespace.length) + "." +
+           std::string(name.data, name.length);
+  });
+}
+
 void populateIRTypes(nb::module_ &m) {
   PyIntegerType::bind(m);
   PyFloatType::bind(m);
@@ -872,6 +935,7 @@ void populateIRTypes(nb::module_ &m) {
   PyTupleType::bind(m);
   PyFunctionType::bind(m);
   PyOpaqueType::bind(m);
+  PyDynamicType::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
