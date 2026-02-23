@@ -328,7 +328,7 @@ namespace llvm {
     /// Search for the last character satisfying the predicate \p F
     ///
     /// \returns The index of the last character satisfying \p F before \p End,
-    /// or npos is not found.
+    /// or npos if not found.
     [[nodiscard]] size_t rfind_if(function_ref<bool(char)> F,
                                   size_t End = npos) const {
       size_t I = std::min(End, size());
@@ -343,7 +343,7 @@ namespace llvm {
     /// Search for the last character not satisfying the predicate \p F
     ///
     /// \returns The index of the last character not satisfying \p F before \p
-    /// End, or npos is not found.
+    /// End, or npos if not found.
     [[nodiscard]] size_t rfind_if_not(function_ref<bool(char)> F,
                                       size_t End = npos) const {
       return rfind_if([F](char C) { return !F(C); }, End);
