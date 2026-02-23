@@ -1,4 +1,4 @@
-//===----------------------------------------------------------------------===//
+//===--- SprintfToSnprintfCheck.cpp - clang-tidy --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,22 +7,23 @@
 //===----------------------------------------------------------------------===//
 
 #include "SprintfToSnprintfCheck.h"
+#include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Lex/Lexer.h"
 
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
 void SprintfToSnprintfCheck::registerMatchers(MatchFinder *Finder) {
+  // Match either ::sprintf or ::std::sprintf where the first argument is a
+  // constant array.
   Finder->addMatcher(
-      callExpr(
-          callee(functionDecl(hasName("::sprintf"))),
-          hasArgument(
-              0, ignoringParenImpCasts(declRefExpr(to(
-                     varDecl(hasType(constantArrayType())).bind("buffer")
-                 )).bind("arg0"))
-          )
-      ).bind("call"),
+      callExpr(callee(functionDecl(hasAnyName("::sprintf", "::std::sprintf"))),
+               hasArgument(0, ignoringParenImpCasts(declRefExpr(to(
+                                  varDecl(hasType(constantArrayType()))
+                                      .bind("buffer"))).bind("arg0"))))
+          .bind("call"),
       this);
 }
 
@@ -35,7 +36,9 @@ void SprintfToSnprintfCheck::check(const MatchFinder::MatchResult &Result) {
 
   StringRef BufferName = Buffer->getName();
 
-  auto Diag = diag(Call->getBeginLoc(), "use 'snprintf' instead of 'sprintf' for fixed-size character arrays");
+  auto Diag = diag(Call->getBeginLoc(),
+                   "use 'snprintf' instead of 'sprintf' for fixed-size "
+                   "character arrays");
 
   SourceLocation FuncNameLoc = Call->getExprLoc();
   Diag << FixItHint::CreateReplacement(FuncNameLoc, "snprintf");
