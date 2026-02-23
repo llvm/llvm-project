@@ -115,6 +115,9 @@ private:
   /// `noundef` on a return is possible.
   bool hasStrictReturn(QualType retTy, const Decl *targetDecl);
 
+  llvm::DenseMap<const Expr *, mlir::Operation *>
+      materializedGlobalTemporaryMap;
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }

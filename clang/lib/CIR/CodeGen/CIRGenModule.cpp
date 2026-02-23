@@ -2901,7 +2901,9 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   CharUnits align = getASTContext().getTypeAlignInChars(materializedType);
 
-  assert(!cir::MissingFeatures::materializedGlobalTempCache());
+  auto insertResult = materializedGlobalTemporaryMap.insert({mte, nullptr});
+  if (!insertResult.second)
+    errorNYI(mte->getSourceRange(), "duplicate materialized temporaries");
 
   // FIXME: If an externally-visible declaration extends multiple temporaries,
   // we need to give each temporary the same name in every translation unit (and
@@ -2964,8 +2966,8 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
       linkage = cir::GlobalLinkageKind::InternalLinkage;
     }
   }
-  auto loc = getLoc(mte->getSourceRange());
-  auto gv = createGlobalOp(*this, loc, name, type, isConstant);
+  mlir::Location loc = getLoc(mte->getSourceRange());
+  cir::GlobalOp gv = createGlobalOp(*this, loc, name, type, isConstant);
   gv.setInitialValueAttr(initialValue);
 
   if (emitter)
@@ -2987,7 +2989,14 @@ CIRGenModule::getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
 
   assert(!cir::MissingFeatures::addressSpace());
 
-  assert(!cir::MissingFeatures::materializedGlobalTempCache());
+  // Update the map with the new temporary. If we created a placeholder above,
+  // replace it with the new global now.
+  mlir::Operation *&entry = materializedGlobalTemporaryMap[mte];
+  if (entry) {
+    entry->replaceAllUsesWith(cv);
+    entry->erase();
+  }
+  entry = cv;
 
   return cv;
 }
