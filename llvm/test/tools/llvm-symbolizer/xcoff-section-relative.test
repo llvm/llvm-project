@@ -1,0 +1,91 @@
+## Test section-relative address syntax for XCOFF.
+## The syntax (SECTION_TYPE)(+offset) represents: offset from section base.
+## Only TEXT and DATA section types are supported.
+
+# REQUIRES: system-aix
+
+## Create XCOFF object with TEXT section at address 0x100 and DATA at 0x200.
+# RUN: yaml2obj %s --docnum=1 -o %t.xcoff
+
+## Test 1: Symbolize function using TEXT section-relative offset.
+## foo is at 0x100 (TEXT base) + 0x0 offset.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x0)' | FileCheck %s --check-prefix=TEXT-FOO
+
+# TEXT-FOO: foo
+# TEXT-FOO-NEXT: ??:0:0
+
+## Test 2: Symbolize function at offset within TEXT section.
+## bar is at 0x100 (TEXT base) + 0x4 offset = 0x104.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+0x4)' | FileCheck %s --check-prefix=TEXT-BAR
+
+# TEXT-BAR: bar
+# TEXT-BAR-NEXT: ??:0:0
+
+## Test 3: Symbolize global variable using DATA section-relative offset.
+## global_var is at 0x200 (DATA base) + 0x0 offset.
+# RUN: llvm-symbolizer --obj=%t.xcoff 'DATA (DATA)(+0x0)' | FileCheck %s --check-prefix=DATA-VAR
+
+# DATA-VAR: global_var
+
+## Test 4: Verify decimal offset works.
+# RUN: llvm-symbolizer --obj=%t.xcoff '(TEXT)(+4)' | FileCheck %s --check-prefix=TEXT-BAR
+
+## XCOFF object with TEXT section at 0x100 and DATA section at 0x200.
+--- !XCOFF
+FileHeader:
+  MagicNumber: 0x1DF
+Sections:
+  - Name:            .text
+    Address:         0x100
+    Flags:           [ STYP_TEXT ]
+    SectionData:     "4E8000204E800020"  # Two blr instructions (4 bytes each)
+  - Name:            .data
+    Address:         0x200
+    Flags:           [ STYP_DATA ]
+    SectionData:     "0000002A"  # 32-bit value 42
+Symbols:
+  - Name:            .foo
+    Value:           0x100
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_LD
+        StorageMappingClass:  XMC_PR
+  - Name:            foo
+    Value:           0x100
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_PR
+  - Name:            .bar
+    Value:           0x104
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_LD
+        StorageMappingClass:  XMC_PR
+  - Name:            bar
+    Value:           0x104
+    Section:         .text
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_PR
+  - Name:            global_var
+    Value:           0x200
+    Section:         .data
+    StorageClass:    C_EXT
+    NumberOfAuxEntries: 1
+    AuxEntries:
+      - Type:                 AUX_CSECT
+        SymbolType:           XTY_SD
+        StorageMappingClass:  XMC_RW
