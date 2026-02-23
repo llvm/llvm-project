@@ -18,7 +18,7 @@
 #include "src/__support/FPUtil/dyadic_float.h"
 #include "src/__support/FPUtil/rounding_mode.h"
 #include "src/__support/big_int.h"
-#include "src/__support/macros/attributes.h"   // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
@@ -197,8 +197,7 @@ fma(InType x, InType y, InType z) {
   z_exp += z_bits.get_biased_exponent();
 
   if (LIBC_UNLIKELY(x_exp != InFPBits::MAX_BIASED_EXPONENT &&
-                    y_exp != InFPBits::MAX_BIASED_EXPONENT &&
-                    z_bits.is_inf()))
+                    y_exp != InFPBits::MAX_BIASED_EXPONENT && z_bits.is_inf()))
     return cast<OutType>(z);
 
   if (LIBC_UNLIKELY(x_exp == InFPBits::MAX_BIASED_EXPONENT ||
