@@ -41,7 +41,7 @@ let SchedModel = C1NanoModel in {
 // C1-Nano is in-order.
 let BufferSize = 0 in {
   def C1NanoUnitALU0   : ProcResource<1>;    // Int ALU0
-  def C1NanoUnitALU1   : ProcResource<2>;    // Int ALU1: models two integer ALU pipelines
+  def C1NanoUnitALU1   : ProcResource<1>;    // Int ALU1
   def C1NanoUnitMAC    : ProcResource<1>;    // Int MAC, 64-bit wide
   def C1NanoUnitDiv    : ProcResource<1>;    // Int Division, not pipelined
   // There are 2 LS pipes, 1 for Load/Store; 1 for Load only
