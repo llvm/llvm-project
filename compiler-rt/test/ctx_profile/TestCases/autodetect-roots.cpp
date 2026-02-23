@@ -13,7 +13,11 @@
 // RUN:   -mllvm -profile-context-root="<autodetect>" -g -Wl,-export-dynamic
 //
 // Run the binary, and observe the profile fetch handler's output.
-// RUN %t.bin | FileCheck %s
+// RUN: %t.bin > %t.log
+// The check is split because the root order is non-deterministic.
+// RUN: cat %t.log | FileCheck %s
+// RUN: cat %t.log | FileCheck %s --check-prefix=CHECK-ROOT1
+// RUN: cat %t.log | FileCheck %s --check-prefix=CHECK-ROOT2
 
 #include "CtxInstrContextNode.h"
 #include <atomic>
@@ -110,40 +114,43 @@ class TestProfileWriter : public ProfileWriter {
 // discern (with the current autodetection mechanism) if theRoot
 // (Guid:8657661246551306189) is ever re-entered.
 //
-// CHECK:      Entered Context Section
-// CHECK-NEXT: Entering Root 6759619411192316602 with total entry count 12463157
-// CHECK-NEXT: Guid: 6759619411192316602
-// CHECK-NEXT:  Entries: 5391142
-// CHECK-NEXT:  2 counters and 3 callsites
-// CHECK-NEXT:  Counter values: 5391142 1832357
-// CHECK-NEXT:  At Index 0:
-// CHECK-NEXT:   Guid: 434762725428799310
-// CHECK-NEXT:   Entries: 3558785
-// CHECK-NEXT:   1 counters and 0 callsites
-// CHECK-NEXT:   Counter values: 3558785
-// CHECK-NEXT:  At Index 1:
-// CHECK-NEXT:   Guid: 5578595117440393467
-// CHECK-NEXT:   Entries: 1832357
-// CHECK-NEXT:   1 counters and 0 callsites
-// CHECK-NEXT:   Counter values: 1832357
-// CHECK-NEXT:  At Index 2:
-// CHECK-NEXT:   Guid: 3950394326069683896
-// CHECK-NEXT:   Entries: 5391142
-// CHECK-NEXT:   1 counters and 0 callsites
-// CHECK-NEXT:   Counter values: 5391142
-// CHECK-NEXT: Entering Root 3950394326069683896 with total entry count 11226401
-// CHECK-NEXT:  Guid: 3950394326069683896
-// CHECK-NEXT:  Entries: 10767423
-// CHECK-NEXT:  1 counters and 0 callsites
-// CHECK-NEXT:  Counter values: 10767423
-// CHECK-NEXT: Exited Context Section
+// CHECK: Entered Context Section
+// CHECK: Entering Root
+// CHECK: Entering Root
+// CHECK-NOT: Entering Root
+// CHECK-ROOT1: Entering Root 6759619411192316602 with total entry count {{[0-9]+}}
+// CHECK-ROOT1-NEXT: Guid: 6759619411192316602
+// CHECK-ROOT1-NEXT:  Entries: [[ROOT1_COUNTER1:[0-9]+]]
+// CHECK-ROOT1-NEXT:  2 counters and 3 callsites
+// CHECK-ROOT1-NEXT:  Counter values: [[ROOT1_COUNTER1]] [[ROOT1_COUNTER2:[0-9]+]]
+// CHECK-ROOT1-NEXT:  At Index 0:
+// CHECK-ROOT1-NEXT:   Guid: 434762725428799310
+// CHECK-ROOT1-NEXT:   Entries: [[ROOT1_COUNTER3:[0-9]+]]
+// CHECK-ROOT1-NEXT:   1 counters and 0 callsites
+// CHECK-ROOT1-NEXT:   Counter values: [[ROOT1_COUNTER3]]
+// CHECK-ROOT1-NEXT:  At Index 1:
+// CHECK-ROOT1-NEXT:   Guid: 5578595117440393467
+// CHECK-ROOT1-NEXT:   Entries: [[ROOT1_COUNTER2]]
+// CHECK-ROOT1-NEXT:   1 counters and 0 callsites
+// CHECK-ROOT1-NEXT:   Counter values: [[ROOT1_COUNTER2]]
+// CHECK-ROOT1-NEXT:  At Index 2:
+// CHECK-ROOT1-NEXT:   Guid: 3950394326069683896
+// CHECK-ROOT1-NEXT:   Entries: [[ROOT1_COUNTER1]]
+// CHECK-ROOT1-NEXT:   1 counters and 0 callsites
+// CHECK-ROOT1-NEXT:   Counter values: [[ROOT1_COUNTER1]]
+// CHECK-ROOT2: Entering Root 3950394326069683896 with total entry count {{[0-9]+}}
+// CHECK-ROOT2-NEXT:  Guid: 3950394326069683896
+// CHECK-ROOT2-NEXT:  Entries: [[ROOT2_COUNTER:[0-9]+]]
+// CHECK-ROOT2-NEXT:  1 counters and 0 callsites
+// CHECK-ROOT2-NEXT:  Counter values: [[ROOT2_COUNTER]]
+// CHECK: Exited Context Section
 // CHECK-NEXT: Entered Flat Section
-// CHECK-NEXT: Flat: 2597020043743142491 1
-// CHECK-NEXT: Flat: 4321328481998485159 1
-// CHECK-NEXT: Flat: 8657661246551306189 9114175,18099613
-// CHECK-NEXT: Flat: 434762725428799310 10574815
-// CHECK-NEXT: Flat: 5578595117440393467 5265754
-// CHECK-NEXT: Flat: 12566320182004153844 1
+// CHECK-DAG: Flat: 434762725428799310 {{[0-9]+}}
+// CHECK-DAG: Flat: 5578595117440393467 {{[0-9]+}}
+// CHECK-DAG: Flat: 8657661246551306189 {{[0-9]+}},{{[0-9]+}}
+// CHECK-DAG: Flat: {{[0-9]+}} 1
+// CHECK-DAG: Flat: {{[0-9]+}} 1
+// CHECK-DAG: Flat: {{[0-9]+}} 1
 // CHECK-NEXT: Exited Flat Section
 
 bool profileWriter() {

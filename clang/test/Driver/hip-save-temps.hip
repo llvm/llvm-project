@@ -24,9 +24,9 @@
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,NOUT %s
 
 // -fgpu-rdc with -o
-// UN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// UN:   -nogpuinc -o executable -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
-// UN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,WOUT %s
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   -nogpuinc -o executable -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
+// RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,WOUT %s
 
 // -fgpu-rdc host object path
 // RDCL: "{{.*clang.*}}" "-cc1" {{.*}} "-E" {{.*}} "-o" "hip-save-temps-host-x86_64-unknown-linux-gnu.hipi"
