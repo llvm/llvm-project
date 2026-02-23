@@ -36,13 +36,15 @@ void SprintfToSnprintfCheck::check(const MatchFinder::MatchResult &Result) {
 
   StringRef BufferName = Buffer->getName();
 
-  auto Diag = diag(Call->getBeginLoc(),
-                   "use 'snprintf' instead of 'sprintf' for fixed-size "
-                   "character arrays");
+  auto Diag = diag(
+      Call->getBeginLoc(),
+      "use 'snprintf' instead of 'sprintf' for fixed-size character arrays");
 
+  // 1. Fix-it: replace 'sprintf' with 'snprintf'
   SourceLocation FuncNameLoc = Call->getExprLoc();
   Diag << FixItHint::CreateReplacement(FuncNameLoc, "snprintf");
 
+  // 2. Fix-it: insert 'sizeof(buffer_name), ' as the new second argument
   SourceLocation InsertLoc = Call->getArg(1)->getBeginLoc();
   std::string SizeArg = "sizeof(" + BufferName.str() + "), ";
   Diag << FixItHint::CreateInsertion(InsertLoc, SizeArg);

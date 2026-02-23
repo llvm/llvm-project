@@ -13,8 +13,9 @@
 
 namespace clang::tidy::bugprone {
 
-/// Finds calls to sprintf where the destination is a fixed-size character 
+/// Finds calls to sprintf where the destination is a fixed-size character
 /// array and replaces them with the safer snprintf.
+///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/sprintf-to-snprintf.html
 class SprintfToSnprintfCheck : public ClangTidyCheck {
