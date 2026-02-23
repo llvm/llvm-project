@@ -49,81 +49,6 @@ cl::opt<AMDGPUNextUseAnalysis::CompatibilityMode> CompatModeOpt(
                           "compute", "TBD")));
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-// String helpers
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-template <typename T> inline std::string printToString(T &X) {
-  std::string S;
-  raw_string_ostream OS(S);
-  X.print(OS);
-  return StringRef(OS.str()).trim().str();
-}
-
-template <typename T> inline std::string printToString(T *X) {
-  return X ? printToString(*X) : "null";
-}
-
-inline std::string printToString(const MachineInstr &MI,
-                                 ModuleSlotTracker &MST) {
-  std::string S;
-  raw_string_ostream OS(S);
-  MI.print(OS, MST,
-           /* IsStandalone    */ false,
-           /* SkipOpers       */ false,
-           /* SkipDebugLoc    */ false,
-           /* AddNewLine      */ false,
-           /* TargetInstrInfo */ nullptr);
-  return StringRef(OS.str()).trim().str();
-}
-
-std::string printRegToString(Register Reg, unsigned SubRegIdx,
-                             const MachineRegisterInfo *MRI,
-                             const SIRegisterInfo *TRI) {
-  std::string S;
-  raw_string_ostream OS(S);
-  OS << printReg(Reg, TRI, SubRegIdx, MRI);
-  return OS.str();
-}
-
-std::string printRegToString(Register Reg, LaneBitmask LaneMask,
-                             const MachineRegisterInfo *MRI,
-                             const SIRegisterInfo *TRI) {
-  unsigned SubRegIdx = 0;
-  if (!Reg.isVirtual() || LaneMask != MRI->getMaxLaneMaskForVReg(Reg))
-    SubRegIdx = TRI->getSubRegIndexForLaneMask(LaneMask);
-  return printRegToString(Reg, SubRegIdx, MRI, TRI);
-}
-
-std::string nameForMBB(const MachineBasicBlock &BB, ModuleSlotTracker &MST) {
-  std::string S;
-  raw_string_ostream OS(S);
-  BB.printName(OS, MachineBasicBlock::PrintNameIr, &MST);
-  return OS.str();
-}
-
-struct InstructionInfo {
-  std::string MIStr; // Backing storage for StringRefs
-  StringRef DefName;
-  StringRef DefType;
-  StringRef Instr;
-};
-
-InstructionInfo parseInstructionString(const MachineInstr &MI,
-                                       ModuleSlotTracker &MST) {
-  InstructionInfo Info;
-  Info.MIStr = printToString(MI, MST);
-  StringRef MIRef(Info.MIStr);
-  StringRef Def;
-  std::tie(Def, Info.Instr) = MIRef.split('=');
-  if (Info.Instr.empty()) {
-    Def = "%void:void";
-    Info.Instr = MIRef;
-  }
-  Info.Instr = Info.Instr.trim();
-  std::tie(Info.DefName, Info.DefType) = Def.trim().split(":");
-  return Info;
-}
-
-//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /// MBBDistPair - Represents a distance to a machine basic block.
 /// Used for returning both the distance and the target block together.
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -151,15 +76,10 @@ struct LiveRegUse {
   LiveRegUse() = default;
   LiveRegUse(const MachineOperand *Use, double Dist) : Use(Use), Dist(Dist) {}
 
-  std::string toString() const {
-    if (!valid())
-      return "<invalid>";
-    return std::to_string(Dist) + "@" + printToString(Use) + "*" +
-           printToString(Use->getParent());
-  }
   bool valid() const { return Use; }
 
   Register getReg() const { return Use->getReg(); }
+  unsigned getSubReg() const { return Use->getSubReg(); }
   LaneBitmask getLaneMask(const SIRegisterInfo *TRI) const {
     return TRI->getSubRegIndexLaneMask(Use->getSubReg());
   }
@@ -189,7 +109,7 @@ struct LiveRegUse {
         return true;
     }
 
-    // Ensure deterministic results (that match v1)
+    // Ensure deterministic results
     return Other.getReg() < getReg();
   }
 };
@@ -207,9 +127,10 @@ class llvm::AMDGPUNextUseAnalysisImpl {
   const MachineLoopInfo *MLI = nullptr;
   const MachineDominatorTree *DT = nullptr;
   const MachineRegisterInfo *MRI = nullptr;
-  ModuleSlotTracker *MST = nullptr;
 
-  DenseMap<const MachineInstr *, double> InstrToId;
+  using InstrIdTy = unsigned;
+  using InstrToIdMap = DenseMap<const MachineInstr *, InstrIdTy>;
+  InstrToIdMap InstrToId;
   CompatibilityMode CompatMode;
 
   void initializeTables() {
@@ -235,8 +156,8 @@ class llvm::AMDGPUNextUseAnalysisImpl {
   //----------------------------------------------------------------------------
 private:
   void calcInstrIds(const MachineBasicBlock *BB,
-                    DenseMap<const MachineInstr *, double> &InstrToId) const {
-    double Id = 0.0;
+                    InstrToIdMap &InstrToId) const {
+    InstrIdTy Id = 0;
     for (auto &MI : BB->instrs()) {
       InstrToId[&MI] = Id;
       if (!computeMode() || !MI.isPHI())
@@ -246,39 +167,36 @@ private:
 
   /// Returns MI's instruction Id. It renumbers (part of) the BB if MI is not
   /// found in the map.
-  double getInstrId(const MachineInstr *MI) const {
+  InstrIdTy getInstrId(const MachineInstr *MI) const {
     auto It = InstrToId.find(MI);
     if (It != InstrToId.end())
       return It->second;
 
     // Renumber the MBB.
     // TODO: Renumber from MI onwards.
-    auto MutInstrToId =
-        const_cast<DenseMap<const MachineInstr *, double> &>(InstrToId);
+    auto MutInstrToId = const_cast<InstrToIdMap &>(InstrToId);
     calcInstrIds(MI->getParent(), MutInstrToId);
     return InstrToId.find(MI)->second;
-  }
-  double getInstrId(MachineBasicBlock::const_instr_iterator I) const {
-    return getInstrId(&*I);
   }
 
   // Length of the segment from MI (inclusive) to the first instruction of the
   // basic block.
-  double getHeadLen(const MachineInstr *MI) const {
+  InstrIdTy getHeadLen(const MachineInstr *MI) const {
     const MachineBasicBlock *MBB = MI->getParent();
     return getInstrId(MI) + getInstrId(&MBB->instr_front()) + 1;
   }
 
   // Length of the segment from MI (exclusive) to the last instruction of the
   // basic block.
-  double getTailLen(const MachineInstr *MI) const {
+  InstrIdTy getTailLen(const MachineInstr *MI) const {
     const MachineBasicBlock *MBB = MI->getParent();
     return getInstrId(&MBB->instr_back()) - getInstrId(MI);
   }
 
   // Length of the segment from 'From' to 'To' (exclusive). Both instructions
   // must in the same basic block.
-  double getDistance(const MachineInstr *From, const MachineInstr *To) const {
+  InstrIdTy getDistance(const MachineInstr *From,
+                        const MachineInstr *To) const {
     assert(From->getParent() == To->getParent());
     return getInstrId(To) - getInstrId(From);
   }
@@ -287,9 +205,9 @@ private:
   // RegUses
   //----------------------------------------------------------------------------
 private:
-  DenseMap<unsigned, SmallVector<const MachineOperand *>> RegUseMap;
+  DenseMap<Register, SmallVector<const MachineOperand *>> RegUseMap;
 
-  const SmallVector<const MachineOperand *> &getRegisterUses(unsigned Reg) {
+  const SmallVector<const MachineOperand *> &getRegisterUses(Register Reg) {
     auto I = RegUseMap.find(Reg);
     if (I != RegUseMap.end())
       return I->second;
@@ -308,13 +226,12 @@ private:
 private:
   class Path {
   private:
-    const MachineBasicBlock *Src;
-    const MachineBasicBlock *Dst;
+    const MachineBasicBlock *Src = nullptr;
+    const MachineBasicBlock *Dst = nullptr;
 
   public:
     Path(const MachineBasicBlock *Src, const MachineBasicBlock *Dst)
         : Src(Src), Dst(Dst) {}
-    Path() : Src(nullptr), Dst(nullptr) {}
     Path(const Path &Other) = default;
     Path &operator=(const Path &Other) = default;
 
@@ -354,7 +271,7 @@ private:
     double LoopWeight;
     std::optional<double> ShortestDistance;
     std::optional<double> ShortestUnweightedDistance;
-    double Size;
+    InstrIdTy Size;
 
     bool isBackedge() const { return EK == EdgeKind::Back; }
   };
@@ -371,47 +288,45 @@ private:
       Slot.ForwardReachable = 0 < EK;
 
     Slot.LoopWeight = calcLoopWeight(P.src(), P.dst());
-    Slot.Size = P.src() == P.dst() ? calcSize(P.src())
-                                   : std::numeric_limits<double>::max();
+    Slot.Size = P.src() == P.dst() ? calcSize(P.src()) : 0;
   }
 
   void initializePathsFromMF() {
     Paths.clear();
 
-    int TS = 0;
-    struct Timestamps {
+    int LastOrdinal = 0;
+    struct Ordinals {
       int Discovered;
       int Visited;
       int Finished;
     };
-    DenseMap<const MachineBasicBlock *, Timestamps> Time;
+    DenseMap<const MachineBasicBlock *, Ordinals> OrdFor;
 
-    SmallVector<const MachineBasicBlock *> Work;
-    Work.emplace_back(&MF->front());
-    Time[&MF->front()].Discovered = ++TS;
+    SmallVector<const MachineBasicBlock *> Work{&MF->front()};
+    OrdFor[&MF->front()].Discovered = ++LastOrdinal;
 
     while (!Work.empty()) {
 
       const MachineBasicBlock *Src = Work.back();
-      Timestamps &SrcTime = Time[Src];
+      Ordinals &SrcOrd = OrdFor[Src];
 
-      if (SrcTime.Visited) {
+      if (SrcOrd.Visited) {
         Work.pop_back();
-        SrcTime.Finished = ++TS;
+        SrcOrd.Finished = ++LastOrdinal;
         continue;
       }
 
-      SrcTime.Visited = ++TS;
+      SrcOrd.Visited = ++LastOrdinal;
       for (const MachineBasicBlock *Dst : Src->successors()) {
         EdgeKind EK = EdgeKind::None;
-        Timestamps &DstTime = Time[Dst];
-        if (!DstTime.Discovered) {
+        Ordinals &DstOrd = OrdFor[Dst];
+        if (!DstOrd.Discovered) {
           EK = EdgeKind::Tree;
           Work.emplace_back(Dst);
-          DstTime.Discovered = ++TS;
-        } else if (DstTime.Visited && !DstTime.Finished) {
+          DstOrd.Discovered = ++LastOrdinal;
+        } else if (DstOrd.Visited && !DstOrd.Finished) {
           EK = EdgeKind::Back;
-        } else if (SrcTime.Discovered < DstTime.Discovered) {
+        } else if (SrcOrd.Discovered < DstOrd.Discovered) {
           EK = EdgeKind::Forward;
         } else {
           EK = EdgeKind::Cross;
@@ -428,13 +343,12 @@ private:
   PathInfo &mutPathInfoFor(const MachineBasicBlock *From,
                            const MachineBasicBlock *To) const {
     auto &MutPaths = const_cast<AMDGPUNextUseAnalysisImpl *>(this)->Paths;
-    Path P(From, To);
-    auto I = MutPaths.find(P);
-    if (I != MutPaths.end())
-      return I->second;
 
-    PathInfo &Slot = MutPaths[P];
-    initializePathInfo(Slot, P, EdgeKind::None);
+    Path P(From, To);
+    auto [I, Inserted] = MutPaths.try_emplace(P);
+    PathInfo &Slot = I->second;
+    if (Inserted)
+      initializePathInfo(Slot, P, EdgeKind::None);
     return Slot;
   }
 
@@ -447,8 +361,8 @@ private:
   // Calculate features
   //----------------------------------------------------------------------------
 private:
-  double calcSize(const MachineBasicBlock *BB) const {
-    double Size = BB->size();
+  InstrIdTy calcSize(const MachineBasicBlock *BB) const {
+    InstrIdTy Size = BB->size();
     if (computeMode())
       Size -= std::distance(BB->begin(), BB->getFirstNonPHI());
     return Size;
@@ -504,11 +418,8 @@ private:
   bool calcIsReachable(const MachineBasicBlock *From,
                        const MachineBasicBlock *To,
                        bool ForwardOnly = false) const {
-    SmallVector<const MachineBasicBlock *> Work;
-    DenseSet<const MachineBasicBlock *> Visited;
-
-    Work.push_back(From);
-    Visited.insert(From);
+    SmallVector<const MachineBasicBlock *> Work{From};
+    DenseSet<const MachineBasicBlock *> Visited{From};
 
     while (!Work.empty()) {
       const MachineBasicBlock *Current = Work.pop_back_val();
@@ -606,21 +517,21 @@ private:
     const MachineBasicBlock *CurMBB = CurMI->getParent();
     const MachineBasicBlock *UseMBB = UseMI->getParent();
 
-    static auto check = [](double D) {
-      assert(D >= 0);
-      return D;
-    };
+    if (CurMBB == UseMBB) {
+      double RV = getDistance(CurMI, UseMI);
+      assert(RV >= 0 && "unexpected negative distance from getDistance");
+      return RV;
+    }
 
-    if (CurMBB == UseMBB)
-      return check(getDistance(CurMI, UseMI));
-
-    double CurMITailLen = getTailLen(CurMI);
-    double UseHeadLen = getHeadLen(UseMI);
+    InstrIdTy CurMITailLen = getTailLen(CurMI);
+    InstrIdTy UseHeadLen = getHeadLen(UseMI);
     double Dst = getShortestPath(CurMBB, UseMBB);
     assert(Dst != std::numeric_limits<double>::max() &&
            "calcShortestDistance called for instructions in non-reachable"
            " basic blocks!");
-    return check(CurMITailLen + Dst + UseHeadLen);
+    double RV = CurMITailLen + Dst + UseHeadLen;
+    assert(RV >= 0 && "unexpected negative distance");
+    return RV;
   }
 
   double calcShortestUnweightedDistance(const MachineInstr *CurMI,
@@ -631,8 +542,8 @@ private:
     if (CurMBB == UseMBB)
       return getDistance(CurMI, UseMI);
 
-    double CurMITailLen = getTailLen(CurMI);
-    double UseHeadLen = getHeadLen(UseMI);
+    InstrIdTy CurMITailLen = getTailLen(CurMI);
+    InstrIdTy UseHeadLen = getHeadLen(UseMI);
     double Dst = getShortestUnweightedPath(CurMBB, UseMBB);
     assert(Dst != std::numeric_limits<double>::max() &&
            "calcShortestUnweightedDistance called for instructions in"
@@ -644,7 +555,7 @@ private:
   // Feature getters. Use cached results if available. If not calculate.
   //----------------------------------------------------------------------------
 private:
-  double getSize(const MachineBasicBlock *BB) const {
+  InstrIdTy getSize(const MachineBasicBlock *BB) const {
     return pathInfoFor(BB, BB).Size;
   }
 
@@ -764,8 +675,10 @@ private:
     return Loop->getOutermostLoop()->getLoopPreheader();
   }
 
-  static const MachineBasicBlock *mbbForPhiOp(const MachineOperand *MO) {
-    return MO->getParent()->getOperand(MO->getOperandNo() + 1).getMBB();
+  static const MachineBasicBlock *mbbForPhiOp(const MachineInstr *MI,
+                                              const MachineOperand *MO) {
+    return MI->isPHI() ? MI->getOperand(MO->getOperandNo() + 1).getMBB()
+                       : nullptr;
   }
 
   //----------------------------------------------------------------------------
@@ -799,7 +712,7 @@ private:
 
     // This is a hot spot. Check it before doing anything else.
     if (CurLoop->getNumBlocks() == 1)
-      return {getSize(CurMBB), CurMBB};
+      return {double(getSize(CurMBB)), CurMBB};
 
     MachineBasicBlock *LoopHeader = CurLoop->getHeader();
     MBBDistPair LD{0.0, nullptr};
@@ -986,8 +899,8 @@ private:
                               MachineLoop *UseLoop) const {
 
     assert(UseLoop && "There is no backedge.");
-    double CurMITailLen = getTailLen(CurMI);
-    double UseHeadLen = getHeadLen(UseMI);
+    InstrIdTy CurMITailLen = getTailLen(CurMI);
+    InstrIdTy UseHeadLen = getHeadLen(UseMI);
 
     if (!CurLoop)
       return CurMITailLen + getShortestPath(CurMBB, UseMBB) + UseHeadLen;
@@ -1020,13 +933,12 @@ private:
                               MachineLoop *CurLoop,
                               const MachineInstr *UseMI) const {
     // use is in the next loop iteration
-    double CurTailLen = getTailLen(CurMI);
-    double UseHeadLen = getHeadLen(UseMI);
+    InstrIdTy CurTailLen = getTailLen(CurMI);
+    InstrIdTy UseHeadLen = getHeadLen(UseMI);
     MBBDistPair LD = calcShortestDistanceToLatch(CurMBB, CurLoop);
     const MachineBasicBlock *HdrMBB = CurLoop->getHeader();
-    double HdrSize = getSize(HdrMBB);
     double Dst = CurMBB == HdrMBB ? 0.0 : getShortestPath(HdrMBB, CurMBB);
-    return CurTailLen + LD.Distance + HdrSize + Dst + UseHeadLen;
+    return CurTailLen + LD.Distance + getSize(HdrMBB) + Dst + UseHeadLen;
   }
 
   // Return the distance from CurMI inside of a loop to UseMI outside of that
@@ -1045,7 +957,7 @@ private:
     if (isUseInParentLoop(UseLoop, CurLoop)) {
       assert(MLI->getLoopDepth(UseMBB) < MLI->getLoopDepth(CurMBB) &&
              "The loop depth of the current instruction must be bigger than "
-             "these.\n");
+             "these.");
       if (isIncomingValFromBackedge(LiveReg, LiveLaneMask, CurMI, UseMI))
         return calcBackedgeDistance(CurMI, CurMBB, CurLoop, UseMI, UseMBB,
                                     UseLoop);
@@ -1168,8 +1080,7 @@ private:
                            const MachineOperand *UseMO) const {
 
     const MachineInstr *UseMI = UseMO->getParent();
-    const MachineBasicBlock *PhiUseEdge =
-        UseMI->isPHI() ? mbbForPhiOp(UseMO) : nullptr;
+    const MachineBasicBlock *PhiUseEdge = mbbForPhiOp(UseMI, UseMO);
     return calcDistanceToUse(LiveReg, LiveLaneMask, CurMI, UseMI, PhiUseEdge);
   }
 
@@ -1189,8 +1100,7 @@ private:
 
     // PHI uses are considered part of the incoming BB. Check for reachability
     // at the edge.
-    if (UseMI->isPHI()) {
-      const MachineBasicBlock *EdgeMBB = mbbForPhiOp(UseMO);
+    if (const MachineBasicBlock *EdgeMBB = mbbForPhiOp(UseMI, UseMO)) {
       if (!isReachableOrSame(MBB, EdgeMBB))
         return false;
     }
@@ -1244,8 +1154,9 @@ private:
       const MachineBasicBlock *From = P.first.src();
       const MachineBasicBlock *To = P.first.dst();
       std::optional<double> Dist = P.second.ShortestDistance;
-      errs() << "From: " << From->getName() << "-> To:" << To->getName()
-             << " = " << Dist.value_or(-1.0) << "\n";
+      dbgs() << "From: " << printMBBReference(*From)
+             << "-> To:" << printMBBReference(*To) << " = "
+             << Dist.value_or(-1.0) << "\n";
     }
   }
 
@@ -1384,30 +1295,36 @@ private:
     }
   }
 
-  static std::string Quote(StringRef S) { return "\"" + S.str() + "\""; }
   static std::string Sep(bool Final) { return std::string(Final ? "" : ","); }
   static format_object<double> Fmt(double Dist) { return format("%.1f", Dist); }
+  static format_object<unsigned> Fmt(unsigned Id) { return format("%u", Id); }
+  static void printInstr(raw_ostream &OS, ModuleSlotTracker &MST,
+                         const MachineInstr &MI) {
+    MI.print(OS, MST,
+             /* IsStandalone    */ false,
+             /* SkipOpers       */ false,
+             /* SkipDebugLoc    */ false,
+             /* AddNewLine ---> */ false,
+             /* TargetInstrInfo */ nullptr);
+  }
 
-  void printInstructionHeader(raw_ostream &OS, const MachineInstr &MI,
-                              ModuleSlotTracker &MST) const {
-    InstructionInfo Info = parseInstructionString(MI, MST);
+  void printInstructionHeader(raw_ostream &OS, ModuleSlotTracker &MST,
+                              const MachineInstr &MI) const {
     OS << "    {\n";
-    OS << "      " << Quote("name") << ": " << Quote(Info.DefName) << ",\n";
-    OS << "      " << Quote("type") << ": " << Quote(Info.DefType) << ",\n";
-    OS << "      " << Quote("instr") << ": " << Quote(Info.Instr) << ",\n";
+    OS << "      \"instr\": \"";
+    printInstr(OS, MST, MI);
+    OS << "\",\n";
     if (DumpNextUseDistanceVerbose) {
-      OS << "      " << Quote("id") << ": " << Fmt(getInstrId(&MI)) << ",\n";
-      OS << "      " << Quote("head-len") << ": " << Fmt(getHeadLen(&MI))
-         << ",\n";
-      OS << "      " << Quote("tail-len") << ": " << Fmt(getTailLen(&MI))
-         << ",\n";
+      OS << "      \"id\": " << Fmt(getInstrId(&MI)) << ",\n";
+      OS << "      \"head-len\": " << Fmt(getHeadLen(&MI)) << ",\n";
+      OS << "      \"tail-len\": " << Fmt(getTailLen(&MI)) << ",\n";
     }
   }
 
   void printDistances(
-      raw_ostream &OS,
+      raw_ostream &OS, ModuleSlotTracker &MST,
       const DenseMap<const MachineOperand *, LiveRegUse> &Uses) const {
-    OS << "      " << Quote("distances") << ": {\n";
+    OS << "      \"distances\": {\n";
 
     // Sorting isn't necessary for the purposes of JSON, but it reduces
     // FileCheck differences.
@@ -1423,40 +1340,39 @@ private:
     for (const MachineOperand *K : Keys) {
       const bool FinalUse = --rem == 0;
       const LiveRegUse &U = Uses.at(K);
-      std::string RegStr =
-          printRegToString(U.getReg(), U.getLaneMask(TRI), MRI, TRI);
-      OS << "        ";
-      OS << Quote(RegStr) << ": " << Fmt(U.Dist) << Sep(FinalUse) << "\n";
+      OS << "        \"" << printReg(U.getReg(), TRI, U.getSubReg(), MRI)
+         << "\": " << Fmt(U.Dist) << Sep(FinalUse) << "\n";
     }
     OS << "      },\n";
   }
 
-  void printFurthestUse(raw_ostream &OS, const LiveRegUse &Furthest,
-                        bool Subreg = false, bool Last = false) const {
-    OS << "      " << Quote(Subreg ? "furthest-subreg" : "furthest") << ": {\n";
-    if (Furthest.Use) {
-      std::string RegStr = printRegToString(
-          Furthest.getReg(),
-          Subreg ? Furthest.getLaneMask(TRI) : LaneBitmask::getAll(), MRI, TRI);
-      OS << "        " << Quote("register") << ": " << Quote(RegStr) << ",\n";
+  void printFurthestUse(raw_ostream &OS, ModuleSlotTracker &MST,
+                        const LiveRegUse &F, bool Subreg = false,
+                        bool Last = false) const {
+    OS << "      \"" << (Subreg ? "furthest-subreg" : "furthest") << "\": {\n";
+    if (F.Use) {
+      OS << "        \"register\": \""
+         << printReg(F.getReg(), TRI, Subreg ? F.getSubReg() : 0, MRI)
+         << "\",\n";
+
       if (DumpNextUseDistanceVerbose) {
-        std::string UseStr = printToString(Furthest.Use);
-        std::string UseMIStr = printToString(Furthest.Use->getParent());
-        OS << "        " << Quote("use") << ": " << Quote(UseStr) << ",\n";
-        OS << "        " << Quote("use-mi") << ": " << Quote(UseMIStr) << ",\n";
+        OS << "        \"use\": \"";
+        F.Use->print(OS);
+        OS << "\",\n";
+
+        OS << "        \"use-mi\": \"";
+        printInstr(OS, MST, *F.Use->getParent());
+        OS << "\",\n";
       }
-      OS << "        " << Quote("distance") << ": " << Fmt(Furthest.Dist)
-         << "\n";
+      OS << "        \"distance\": " << Fmt(F.Dist) << "\n";
     }
     OS << "      }" << (Last ? "\n" : ",\n");
   }
 
 public:
-  AMDGPUNextUseAnalysisImpl() = default;
+  AMDGPUNextUseAnalysisImpl(const MachineFunction *, const MachineLoopInfo *,
+                            const MachineDominatorTree *);
   ~AMDGPUNextUseAnalysisImpl() { clearTables(); }
-
-  void initialize(const MachineFunction *, const MachineLoopInfo *,
-                  const MachineDominatorTree *);
 
   CompatibilityMode getCompatibilityMode() { return CompatMode; }
   void setCompatibilityMode(CompatibilityMode Mode) {
@@ -1482,25 +1398,19 @@ public:
                               Distances, UseOut);
   }
 
-  void getUses(unsigned Register, LaneBitmask LaneMask, const MachineInstr &MI,
+  void getUses(Register Register, LaneBitmask LaneMask, const MachineInstr &MI,
                SmallVector<const MachineOperand *> &Uses);
 
   void printFurthestDistancesAsJson(raw_ostream &OS, const LiveIntervals *LIS);
 };
 
-void AMDGPUNextUseAnalysisImpl::initialize(const MachineFunction *MF,
-                                           const MachineLoopInfo *ML,
-                                           const MachineDominatorTree *DT) {
+AMDGPUNextUseAnalysisImpl::AMDGPUNextUseAnalysisImpl(
+    const MachineFunction *MF, const MachineLoopInfo *ML,
+    const MachineDominatorTree *DT) {
 
   this->MF = MF;
   this->MLI = ML;
   this->DT = DT;
-
-  const Function *F = &MF->getFunction();
-  const Module *M = F->getParent();
-  ModuleSlotTracker MST(M);
-  MST.incorporateFunction(*F);
-  this->MST = &MST;
 
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
@@ -1521,7 +1431,6 @@ void AMDGPUNextUseAnalysisImpl::initialize(const MachineFunction *MF,
     MF->print(errs());
     printAllDistances();
   }
-  this->MST = nullptr;
 }
 
 std::optional<double> AMDGPUNextUseAnalysisImpl::getNextUseDistance(
@@ -1555,7 +1464,7 @@ std::optional<double> AMDGPUNextUseAnalysisImpl::getNextUseDistance(
 }
 
 void AMDGPUNextUseAnalysisImpl::getUses(
-    unsigned Reg, LaneBitmask LaneMask, const MachineInstr &MI,
+    Register Reg, LaneBitmask LaneMask, const MachineInstr &MI,
     SmallVector<const MachineOperand *> &Uses) {
 
   const bool CheckMask = LaneMask != LaneBitmask::getAll() &&
@@ -1597,9 +1506,9 @@ void AMDGPUNextUseAnalysisImpl::printFurthestDistancesAsJson(
   OS << "{\n";
   for (const MachineBasicBlock &MBB : *MF) {
     const bool FinalMBB = &MBB == &MF->back();
-    std::string MBBName = nameForMBB(MBB, MST);
-
-    OS << "  " << Quote(MBBName) << ": [\n";
+    OS << "  \"";
+    MBB.printName(OS, MachineBasicBlock::PrintNameIr, &MST);
+    OS << "\": [\n";
     const MachineInstr *PrevMI = nullptr;
     for (const MachineInstr &MI : MBB) {
       const bool FinalMI = &MI == &MBB.back();
@@ -1619,10 +1528,10 @@ void AMDGPUNextUseAnalysisImpl::printFurthestDistancesAsJson(
                          Furthest, &FurthestSubreg);
 
       // Print instruction JSON
-      printInstructionHeader(OS, MI, MST);
-      printDistances(OS, RelevantUses);
-      printFurthestUse(OS, Furthest);
-      printFurthestUse(OS, FurthestSubreg, /*Subreg*/ true, /*Last*/ true);
+      printInstructionHeader(OS, MST, MI);
+      printDistances(OS, MST, RelevantUses);
+      printFurthestUse(OS, MST, Furthest);
+      printFurthestUse(OS, MST, FurthestSubreg, /*Subreg*/ true, /*Last*/ true);
 
       OS << "    }" << Sep(FinalMI) << "\n";
       PrevMI = &MI;
@@ -1635,11 +1544,10 @@ void AMDGPUNextUseAnalysisImpl::printFurthestDistancesAsJson(
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 // AMDGPUNextUseAnalysis
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-void AMDGPUNextUseAnalysis::initialize(const MachineFunction *MF,
-                                       const MachineLoopInfo *MLI,
-                                       const MachineDominatorTree *DT) {
-  Impl = std::make_unique<AMDGPUNextUseAnalysisImpl>();
-  Impl->initialize(MF, MLI, DT);
+AMDGPUNextUseAnalysis::AMDGPUNextUseAnalysis(const MachineFunction *MF,
+                                             const MachineLoopInfo *MLI,
+                                             const MachineDominatorTree *DT) {
+  Impl = std::make_unique<AMDGPUNextUseAnalysisImpl>(MF, MLI, DT);
 }
 
 AMDGPUNextUseAnalysis::CompatibilityMode
@@ -1679,8 +1587,7 @@ bool AMDGPUNextUseAnalysisPass::runOnMachineFunction(MachineFunction &MF) {
   const MachineDominatorTree *DT =
       &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
-  NUA = std::make_unique<AMDGPUNextUseAnalysis>();
-  NUA->initialize(&MF, MLI, DT);
+  NUA.reset(new AMDGPUNextUseAnalysis(&MF, MLI, DT));
 
   if (DumpNextUseDistanceAsJson.getNumOccurrences()) {
     const LiveIntervals *LIS =

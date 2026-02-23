@@ -2,100 +2,50 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
 # RUN:     -run-pass=amdgpu-next-use-analysis \
 # RUN:     -amdgpu-next-use-analysis-compatibility-mode=graphics \
-# RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
+# RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=%t.json \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
-# RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-GX-JSON %s
+# RUN:     -filetype=null \
+# RUN:     %s && FileCheck --input-file=%t.json --check-prefix=CHECK-GX-JSON %s
 
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
 # RUN:     -run-pass=amdgpu-next-use-analysis \
 # RUN:     -amdgpu-next-use-analysis-compatibility-mode=compute \
-# RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
+# RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=%t.json \
 # RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
-# RUN:     -o /dev/null \
-# RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-ML-JSON %s
+# RUN:     -filetype=null \
+# RUN:     %s && FileCheck --input-file=%t.json --check-prefix=CHECK-ML-JSON %s
 # 
 # MIR CFG:
 #
-#                     bb.0.entry
+#                     bb.0
 #                         |
-#                 bb.1.loop1.header<-------+
+#                 bb.1.header<-------+
 #                         |                |
-#                 bb.2.loop2.header<---+   |
+#                 bb.2.header<---+   |
 #                         |            |   |
-#                     bb.3.loop3<--+   |   |
+#                     bb.3<--+   |   |
 #                         |        |   |   |
 #                         +--------+   |   |
 #                         |            |   |
-#                 bb.4.loop2.latch-----+   |
+#                 bb.4.latch-----+   |
 #                         |                |
-#                 bb.5.loop1.latch---------+
+#                 bb.5.latch---------+
 #                         |
-#                     bb.6.exit
+#                     bb.6
 #
 
 
 
 
 --- |
-  define amdgpu_ps i32 @test9(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, i32 %TC1, i32 %TC2, i32 %TC3) {
-  0:
-  %ld1 = load i32, ptr addrspace(1) %p1, align 1
-  br label %1
-  1:
-  %phi.inc1 = phi i32 [ 0, %0 ], [ %inc1, %5 ]
-  %phi1 = phi i32 [ %ld1, %0 ], [ %sub, %5 ]
-  %add1 = add i32 %ld1, %phi.inc1
-  br label %2
-  2:
-  %phi.inc2 = phi i32 [ 0, %1 ], [ %inc2, %4 ]
-  %phi2 = phi i32 [ 13, %1 ], [ %mul, %4 ]
-  %ld2 = load i32, ptr addrspace(1) %p2, align 1
-  %add2 = add i32 %ld2, %phi.inc2
-  store i32 %add2, ptr addrspace(1) %p4, align 1
-  br label %3
-  3:
-  %phi.inc3 = phi i32 [ 0, %2 ], [ %inc3, %3 ]
-  %inc3 = add i32 %phi.inc3, 3
-  %sub = sub i32 %ld2, %inc3
-  %ld3 = load i32, ptr addrspace(1) %p3, align 1
-  %add3 = add i32 %ld3, %inc3
-  store i32 %add3, ptr addrspace(1) %p5, align 1
-  %cond3 = icmp ult i32 %inc3, %TC1
-  br i1 %cond3, label %3, label %4
-  4:
-  %mul = mul i32 %phi1, %add3
-  %inc2 = add i32 %phi.inc2, 2
-  %cond2 = icmp ult i32 %inc2, %TC2
-  br i1 %cond2, label %2, label %5
-  5:
-  %add4 = add i32 %phi2, %phi1
-  %add5 = add i32 %add3, %add4
-  %inc1 = add i32 %phi.inc1, 1
-  %cond1 = icmp ult i32 %inc1, %TC1
-  br i1 %cond1, label %1, label %6
-  6:
-  %add6 = add i32 %add3, %mul
-  %add7 = add i32 %add6, %add5
-  %add8 = add i32 %add7, %phi2
-  %add9 = add i32 %add8, %add1
-  ret i32 %add9
+  define amdgpu_ps i32 @test9(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5) {
+  ret i32 0
   }
 ...
 
 ---
 name:            test9
-alignment:       1
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-failedISel:      false
 tracksRegLiveness: true
-hasWinCFI:       false
-noPhis:          false
-isSSA:           true
-machineFunctionInfo: {}
 body:             |
   bb.0:
     successors: %bb.1(0x80000000)
@@ -226,9 +176,7 @@ body:             |
 # CHECK-GX-JSON: {
 # CHECK-GX-JSON-NEXT:  "bb.0": [
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%0",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr11",
+# CHECK-GX-JSON-NEXT:      "instr": "%0:vgpr_32 = COPY $vgpr11",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -240,9 +188,7 @@ body:             |
 # CHECK-GX-JSON-NEXT:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%1",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr10",
+# CHECK-GX-JSON-NEXT:      "instr": "%1:vgpr_32 = COPY $vgpr10",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -263,9 +209,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%2",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr9",
+# CHECK-GX-JSON-NEXT:      "instr": "%2:vgpr_32 = COPY $vgpr9",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -287,9 +231,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%3",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr8",
+# CHECK-GX-JSON-NEXT:      "instr": "%3:vgpr_32 = COPY $vgpr8",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -312,9 +254,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%4",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr7",
+# CHECK-GX-JSON-NEXT:      "instr": "%4:vgpr_32 = COPY $vgpr7",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -338,9 +278,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%5",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr6",
+# CHECK-GX-JSON-NEXT:      "instr": "%5:vgpr_32 = COPY $vgpr6",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -365,9 +303,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%6",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr5",
+# CHECK-GX-JSON-NEXT:      "instr": "%6:vgpr_32 = COPY $vgpr5",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -393,9 +329,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%7",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr4",
+# CHECK-GX-JSON-NEXT:      "instr": "%7:vgpr_32 = COPY $vgpr4",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -422,9 +356,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%8",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr3",
+# CHECK-GX-JSON-NEXT:      "instr": "%8:vgpr_32 = COPY $vgpr3",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -452,9 +384,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%9",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr2",
+# CHECK-GX-JSON-NEXT:      "instr": "%9:vgpr_32 = COPY $vgpr2",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -483,9 +413,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%10",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr1",
+# CHECK-GX-JSON-NEXT:      "instr": "%10:vgpr_32 = COPY $vgpr1",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -515,9 +443,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%11",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr0",
+# CHECK-GX-JSON-NEXT:      "instr": "%11:vgpr_32 = COPY $vgpr0",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -548,9 +474,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%12",
-# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
-# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "instr": "%12:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -582,9 +506,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%13",
-# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
-# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %5, %subreg.sub0, %4, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "instr": "%13:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %4, %subreg.sub1",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -615,9 +537,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%14",
-# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
-# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %7, %subreg.sub0, %6, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "instr": "%14:vreg_64 = REG_SEQUENCE %7, %subreg.sub0, %6, %subreg.sub1",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -647,9 +567,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%15",
-# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
-# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %9, %subreg.sub0, %8, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "instr": "%15:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %8, %subreg.sub1",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -678,9 +596,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%16",
-# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
-# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "instr": "%16:vreg_64 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -708,9 +624,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%17",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%17:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -737,9 +651,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%18",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%18:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -767,9 +679,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%19",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %18, 8, %17, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%19:vgpr_32 = V_LSHL_OR_B32_e64 %18, 8, %17, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -798,9 +708,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%20",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%20:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -828,9 +736,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%21",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%21:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -859,9 +765,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%22",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %21, 8, %20, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%22:vgpr_32 = V_LSHL_OR_B32_e64 %21, 8, %20, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -890,9 +794,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%23",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %22, 16, %19, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%23:vgpr_32 = V_LSHL_OR_B32_e64 %22, 16, %19, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -920,9 +822,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%24",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "S_MOV_B32 0",
+# CHECK-GX-JSON-NEXT:      "instr": "%24:sreg_32 = S_MOV_B32 0",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -951,9 +851,7 @@ body:             |
 # CHECK-GX-JSON-NEXT:  ],
 # CHECK-GX-JSON-NEXT:  "bb.1": [
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%25",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %24, %bb.0, %26, %bb.5",
+# CHECK-GX-JSON-NEXT:      "instr": "%25:sreg_32 = PHI %24, %bb.0, %26, %bb.5",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -981,9 +879,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%27",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %24, %bb.0, %28, %bb.5",
+# CHECK-GX-JSON-NEXT:      "instr": "%27:sreg_32 = PHI %24, %bb.0, %28, %bb.5",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1012,9 +908,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%29",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %23, %bb.0, %30, %bb.5",
+# CHECK-GX-JSON-NEXT:      "instr": "%29:vgpr_32 = PHI %23, %bb.0, %30, %bb.5",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1044,9 +938,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%31",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_MOV_B32_e32 13, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%31:vgpr_32 = V_MOV_B32_e32 13, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1079,9 +971,7 @@ body:             |
 # CHECK-GX-JSON-NEXT:  ],
 # CHECK-GX-JSON-NEXT:  "bb.2": [
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%32",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %24, %bb.1, %33, %bb.4",
+# CHECK-GX-JSON-NEXT:      "instr": "%32:sreg_32 = PHI %24, %bb.1, %33, %bb.4",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1112,9 +1002,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%34",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %24, %bb.1, %35, %bb.4",
+# CHECK-GX-JSON-NEXT:      "instr": "%34:sreg_32 = PHI %24, %bb.1, %35, %bb.4",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1146,9 +1034,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%36",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %31, %bb.1, %37, %bb.4",
+# CHECK-GX-JSON-NEXT:      "instr": "%36:vgpr_32 = PHI %31, %bb.1, %37, %bb.4",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1180,9 +1066,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%38",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 0, 0, implicit $exec :: (load (s8) from %ir.p2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%38:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 0, 0, implicit $exec :: (load (s8) from %ir.p2, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1215,9 +1099,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%39",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 1, 0, implicit $exec :: (load (s8) from %ir.p2 + 1, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%39:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 1, 0, implicit $exec :: (load (s8) from %ir.p2 + 1, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1251,9 +1133,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%40",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %39, 8, %38, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%40:vgpr_32 = V_LSHL_OR_B32_e64 %39, 8, %38, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1288,9 +1168,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%41",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 2, 0, implicit $exec :: (load (s8) from %ir.p2 + 2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%41:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 2, 0, implicit $exec :: (load (s8) from %ir.p2 + 2, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1324,9 +1202,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%42",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 3, 0, implicit $exec :: (load (s8) from %ir.p2 + 3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%42:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 3, 0, implicit $exec :: (load (s8) from %ir.p2 + 3, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1361,9 +1237,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%43",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %42, 8, %41, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%43:vgpr_32 = V_LSHL_OR_B32_e64 %42, 8, %41, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1398,9 +1272,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%44",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %43, 16, %40, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%44:vgpr_32 = V_LSHL_OR_B32_e64 %43, 16, %40, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1434,9 +1306,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%45",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_U32_e64 %34, %44, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%45:vgpr_32 = V_ADD_U32_e64 %34, %44, 0, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1469,8 +1339,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE_D16_HI %13, %45, 2, 0, implicit $exec :: (store (s8) into %ir.p4 + 2, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -1505,8 +1373,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %13, %45, 0, 0, implicit $exec :: (store (s8) into %ir.p4, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -1541,9 +1407,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%46",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 24, %45, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%46:vgpr_32 = V_LSHRREV_B32_e64 24, %45, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1577,8 +1441,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %13, %46, 3, 0, implicit $exec :: (store (s8) into %ir.p4 + 3, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -1614,9 +1476,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%47",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 8, %45, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%47:vgpr_32 = V_LSHRREV_B32_e64 8, %45, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1650,8 +1510,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %13, %47, 1, 0, implicit $exec :: (store (s8) into %ir.p4 + 1, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -1686,9 +1544,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%48",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "S_MOV_B32 0",
+# CHECK-GX-JSON-NEXT:      "instr": "%48:sreg_32 = S_MOV_B32 0",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1722,9 +1578,7 @@ body:             |
 # CHECK-GX-JSON-NEXT:  ],
 # CHECK-GX-JSON-NEXT:  "bb.3": [
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%49",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %48, %bb.2, %50, %bb.3",
+# CHECK-GX-JSON-NEXT:      "instr": "%49:sreg_32 = PHI %48, %bb.2, %50, %bb.3",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1756,9 +1610,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%51",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "PHI %48, %bb.2, %52, %bb.3",
+# CHECK-GX-JSON-NEXT:      "instr": "%51:sreg_32 = PHI %48, %bb.2, %52, %bb.3",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1791,9 +1643,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%52",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "S_ADD_I32 %51, 3, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "instr": "%52:sreg_32 = S_ADD_I32 %51, 3, implicit-def dead $scc",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1827,9 +1677,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%53",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 0, 0, implicit $exec :: (load (s8) from %ir.p3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%53:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 0, 0, implicit $exec :: (load (s8) from %ir.p3, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1863,9 +1711,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%54",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 1, 0, implicit $exec :: (load (s8) from %ir.p3 + 1, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%54:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 1, 0, implicit $exec :: (load (s8) from %ir.p3 + 1, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1900,9 +1746,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%55",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %54, 8, %53, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%55:vgpr_32 = V_LSHL_OR_B32_e64 %54, 8, %53, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1938,9 +1782,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%56",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 2, 0, implicit $exec :: (load (s8) from %ir.p3 + 2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%56:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 2, 0, implicit $exec :: (load (s8) from %ir.p3 + 2, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -1975,9 +1817,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%57",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 3, 0, implicit $exec :: (load (s8) from %ir.p3 + 3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "instr": "%57:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 3, 0, implicit $exec :: (load (s8) from %ir.p3 + 3, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2013,9 +1853,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%58",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %57, 8, %56, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%58:vgpr_32 = V_LSHL_OR_B32_e64 %57, 8, %56, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2051,9 +1889,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%59",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %58, 16, %55, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%59:vgpr_32 = V_LSHL_OR_B32_e64 %58, 16, %55, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2088,9 +1924,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%60",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_U32_e64 %52, %59, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%60:vgpr_32 = V_ADD_U32_e64 %52, %59, 0, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2124,8 +1958,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE_D16_HI %12, %60, 2, 0, implicit $exec :: (store (s8) into %ir.p5 + 2, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2161,8 +1993,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %12, %60, 0, 0, implicit $exec :: (store (s8) into %ir.p5, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2198,9 +2028,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%61",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 24, %60, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%61:vgpr_32 = V_LSHRREV_B32_e64 24, %60, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2235,8 +2063,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %12, %61, 3, 0, implicit $exec :: (store (s8) into %ir.p5 + 3, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2273,9 +2099,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%62",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 8, %60, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%62:vgpr_32 = V_LSHRREV_B32_e64 8, %60, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2310,8 +2134,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %12, %62, 1, 0, implicit $exec :: (store (s8) into %ir.p5 + 1, addrspace 1)",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2347,9 +2169,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%63",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %52, %1, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%63:sreg_32 = V_CMP_GE_U32_e64 %52, %1, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2382,9 +2202,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%50",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "SI_IF_BREAK %63, %49, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "instr": "%50:sreg_32 = SI_IF_BREAK %63, %49, implicit-def dead $scc",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2418,9 +2236,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%64",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY %52, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%64:vgpr_32 = COPY %52, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2453,8 +2269,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "SI_LOOP %50, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2488,8 +2302,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "S_BRANCH %bb.4",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2525,8 +2337,6 @@ body:             |
 # CHECK-GX-JSON-NEXT:  ],
 # CHECK-GX-JSON-NEXT:  "bb.4": [
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "SI_END_CF %50, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2560,9 +2370,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%65",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_U32_e64 %59, %64, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%65:vgpr_32 = V_ADD_U32_e64 %59, %64, 0, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2594,9 +2402,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%37",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_MUL_LO_U32_e64 %29, %65, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%37:vgpr_32 = V_MUL_LO_U32_e64 %29, %65, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2628,9 +2434,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%35",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "S_ADD_I32 %34, 2, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "instr": "%35:sreg_32 = S_ADD_I32 %34, 2, implicit-def dead $scc",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2663,9 +2467,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%66",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %35, %0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%66:sreg_32 = V_CMP_GE_U32_e64 %35, %0, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2698,9 +2500,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%33",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "SI_IF_BREAK %66, %32, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "instr": "%33:sreg_32 = SI_IF_BREAK %66, %32, implicit-def dead $scc",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2732,8 +2532,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "SI_LOOP %33, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2765,8 +2563,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "S_BRANCH %bb.5",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2800,8 +2596,6 @@ body:             |
 # CHECK-GX-JSON-NEXT:  ],
 # CHECK-GX-JSON-NEXT:  "bb.5": [
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "SI_END_CF %33, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2833,9 +2627,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%30",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_SUB_U32_e64 %44, %64, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%30:vgpr_32 = V_SUB_U32_e64 %44, %64, 0, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2865,9 +2657,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%28",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "S_ADD_I32 %27, 1, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "instr": "%28:sreg_32 = S_ADD_I32 %27, 1, implicit-def dead $scc",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2895,9 +2685,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%67",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %28, %1, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%67:sreg_32 = V_CMP_GE_U32_e64 %28, %1, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2925,9 +2713,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%26",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
-# CHECK-GX-JSON-NEXT:      "instr": "SI_IF_BREAK %67, %25, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "instr": "%26:sreg_32 = SI_IF_BREAK %67, %25, implicit-def dead $scc",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -2955,8 +2741,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "SI_LOOP %26, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -2984,8 +2768,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "S_BRANCH %bb.6",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -3015,8 +2797,6 @@ body:             |
 # CHECK-GX-JSON-NEXT:  ],
 # CHECK-GX-JSON-NEXT:  "bb.6": [
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "SI_END_CF %26, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -3044,9 +2824,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%68",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_MAX_U32_e64 1, %1, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%68:vgpr_32 = V_MAX_U32_e64 1, %1, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3072,9 +2850,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%69",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_U32_e64 %68, %23, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%69:vgpr_32 = V_ADD_U32_e64 %68, %23, 0, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3100,9 +2876,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%70",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD3_U32_e64 %36, %29, %65, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%70:vgpr_32 = V_ADD3_U32_e64 %36, %29, %65, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3127,9 +2901,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%71",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_U32_e64 %65, %37, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%71:vgpr_32 = V_ADD_U32_e64 %65, %37, 0, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3154,9 +2926,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%72",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD3_U32_e64 %71, %70, %36, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%72:vgpr_32 = V_ADD3_U32_e64 %71, %70, %36, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3180,9 +2950,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%73",
-# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-GX-JSON-NEXT:      "instr": "V_ADD3_U32_e64 %69, %72, -1, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%73:vgpr_32 = V_ADD3_U32_e64 %69, %72, -1, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3204,9 +2972,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%74",
-# CHECK-GX-JSON-NEXT:      "type": "sreg_32_xm0",
-# CHECK-GX-JSON-NEXT:      "instr": "V_READFIRSTLANE_B32 %73, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "instr": "%74:sreg_32_xm0 = V_READFIRSTLANE_B32 %73, implicit $exec",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3227,9 +2993,7 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "$sgpr0",
-# CHECK-GX-JSON-NEXT:      "type": "",
-# CHECK-GX-JSON-NEXT:      "instr": "COPY %74",
+# CHECK-GX-JSON-NEXT:      "instr": "$sgpr0 = COPY %74",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3250,8 +3014,6 @@ body:             |
 # CHECK-GX-JSON:      }
 # CHECK-GX-JSON-NEXT:    },
 # CHECK-GX-JSON-NEXT:    {
-# CHECK-GX-JSON-NEXT:      "name": "%void",
-# CHECK-GX-JSON-NEXT:      "type": "void",
 # CHECK-GX-JSON-NEXT:      "instr": "SI_RETURN_TO_EPILOG killed $sgpr0",
 # CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -3265,16 +3027,13 @@ body:             |
 # CHECK-GX-JSON-NEXT:    }
 # CHECK-GX-JSON-NEXT:  ]
 # CHECK-GX-JSON-NEXT:}
-
 # NOTE: Assertions auto-generated by generate_filecheck.py
 # This file checks the structure and key values of Next Use Analysis JSON output.
 
 # CHECK-ML-JSON: {
 # CHECK-ML-JSON-NEXT:  "bb.0": [
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%0",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr11",
+# CHECK-ML-JSON-NEXT:      "instr": "%0:vgpr_32 = COPY $vgpr11",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3286,9 +3045,7 @@ body:             |
 # CHECK-ML-JSON-NEXT:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%1",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr10",
+# CHECK-ML-JSON-NEXT:      "instr": "%1:vgpr_32 = COPY $vgpr10",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3309,9 +3066,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%2",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr9",
+# CHECK-ML-JSON-NEXT:      "instr": "%2:vgpr_32 = COPY $vgpr9",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3333,9 +3088,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%3",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr8",
+# CHECK-ML-JSON-NEXT:      "instr": "%3:vgpr_32 = COPY $vgpr8",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3358,9 +3111,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%4",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr7",
+# CHECK-ML-JSON-NEXT:      "instr": "%4:vgpr_32 = COPY $vgpr7",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3384,9 +3135,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%5",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr6",
+# CHECK-ML-JSON-NEXT:      "instr": "%5:vgpr_32 = COPY $vgpr6",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3411,9 +3160,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%6",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr5",
+# CHECK-ML-JSON-NEXT:      "instr": "%6:vgpr_32 = COPY $vgpr5",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3439,9 +3186,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%7",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr4",
+# CHECK-ML-JSON-NEXT:      "instr": "%7:vgpr_32 = COPY $vgpr4",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3468,9 +3213,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%8",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr3",
+# CHECK-ML-JSON-NEXT:      "instr": "%8:vgpr_32 = COPY $vgpr3",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3498,9 +3241,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%9",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr2",
+# CHECK-ML-JSON-NEXT:      "instr": "%9:vgpr_32 = COPY $vgpr2",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3529,9 +3270,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%10",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr1",
+# CHECK-ML-JSON-NEXT:      "instr": "%10:vgpr_32 = COPY $vgpr1",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3561,9 +3300,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%11",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr0",
+# CHECK-ML-JSON-NEXT:      "instr": "%11:vgpr_32 = COPY $vgpr0",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3594,9 +3331,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%12",
-# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
-# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "instr": "%12:vreg_64 = REG_SEQUENCE %3, %subreg.sub0, %2, %subreg.sub1",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3628,9 +3363,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%13",
-# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
-# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %5, %subreg.sub0, %4, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "instr": "%13:vreg_64 = REG_SEQUENCE %5, %subreg.sub0, %4, %subreg.sub1",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3661,9 +3394,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%14",
-# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
-# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %7, %subreg.sub0, %6, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "instr": "%14:vreg_64 = REG_SEQUENCE %7, %subreg.sub0, %6, %subreg.sub1",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3693,9 +3424,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%15",
-# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
-# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %9, %subreg.sub0, %8, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "instr": "%15:vreg_64 = REG_SEQUENCE %9, %subreg.sub0, %8, %subreg.sub1",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3724,9 +3453,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%16",
-# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
-# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "instr": "%16:vreg_64 = REG_SEQUENCE %11, %subreg.sub0, %10, %subreg.sub1",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3754,9 +3481,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%17",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%17:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 0, 0, implicit $exec :: (load (s8) from %ir.p1, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3783,9 +3508,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%18",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%18:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 1, 0, implicit $exec :: (load (s8) from %ir.p1 + 1, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3813,9 +3536,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%19",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %18, 8, %17, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%19:vgpr_32 = V_LSHL_OR_B32_e64 %18, 8, %17, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3844,9 +3565,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%20",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%20:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 2, 0, implicit $exec :: (load (s8) from %ir.p1 + 2, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3874,9 +3593,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%21",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %16, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%21:vgpr_32 = GLOBAL_LOAD_UBYTE %16, 3, 0, implicit $exec :: (load (s8) from %ir.p1 + 3, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3905,9 +3622,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%22",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %21, 8, %20, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%22:vgpr_32 = V_LSHL_OR_B32_e64 %21, 8, %20, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3936,9 +3651,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%23",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %22, 16, %19, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%23:vgpr_32 = V_LSHL_OR_B32_e64 %22, 16, %19, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3966,9 +3679,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%24",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "S_MOV_B32 0",
+# CHECK-ML-JSON-NEXT:      "instr": "%24:sreg_32 = S_MOV_B32 0",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -3997,9 +3708,7 @@ body:             |
 # CHECK-ML-JSON-NEXT:  ],
 # CHECK-ML-JSON-NEXT:  "bb.1": [
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%25",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %24, %bb.0, %26, %bb.5",
+# CHECK-ML-JSON-NEXT:      "instr": "%25:sreg_32 = PHI %24, %bb.0, %26, %bb.5",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4027,9 +3736,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%27",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %24, %bb.0, %28, %bb.5",
+# CHECK-ML-JSON-NEXT:      "instr": "%27:sreg_32 = PHI %24, %bb.0, %28, %bb.5",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4058,9 +3765,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%29",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %23, %bb.0, %30, %bb.5",
+# CHECK-ML-JSON-NEXT:      "instr": "%29:vgpr_32 = PHI %23, %bb.0, %30, %bb.5",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4090,9 +3795,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%31",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_MOV_B32_e32 13, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%31:vgpr_32 = V_MOV_B32_e32 13, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4125,9 +3828,7 @@ body:             |
 # CHECK-ML-JSON-NEXT:  ],
 # CHECK-ML-JSON-NEXT:  "bb.2": [
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%32",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %24, %bb.1, %33, %bb.4",
+# CHECK-ML-JSON-NEXT:      "instr": "%32:sreg_32 = PHI %24, %bb.1, %33, %bb.4",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4158,9 +3859,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%34",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %24, %bb.1, %35, %bb.4",
+# CHECK-ML-JSON-NEXT:      "instr": "%34:sreg_32 = PHI %24, %bb.1, %35, %bb.4",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4192,9 +3891,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%36",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %31, %bb.1, %37, %bb.4",
+# CHECK-ML-JSON-NEXT:      "instr": "%36:vgpr_32 = PHI %31, %bb.1, %37, %bb.4",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4227,9 +3924,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%38",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 0, 0, implicit $exec :: (load (s8) from %ir.p2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%38:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 0, 0, implicit $exec :: (load (s8) from %ir.p2, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4263,9 +3958,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%39",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 1, 0, implicit $exec :: (load (s8) from %ir.p2 + 1, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%39:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 1, 0, implicit $exec :: (load (s8) from %ir.p2 + 1, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4300,9 +3993,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%40",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %39, 8, %38, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%40:vgpr_32 = V_LSHL_OR_B32_e64 %39, 8, %38, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4338,9 +4029,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%41",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 2, 0, implicit $exec :: (load (s8) from %ir.p2 + 2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%41:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 2, 0, implicit $exec :: (load (s8) from %ir.p2 + 2, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4375,9 +4064,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%42",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %15, 3, 0, implicit $exec :: (load (s8) from %ir.p2 + 3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%42:vgpr_32 = GLOBAL_LOAD_UBYTE %15, 3, 0, implicit $exec :: (load (s8) from %ir.p2 + 3, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4413,9 +4100,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%43",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %42, 8, %41, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%43:vgpr_32 = V_LSHL_OR_B32_e64 %42, 8, %41, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4452,9 +4137,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%44",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %43, 16, %40, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%44:vgpr_32 = V_LSHL_OR_B32_e64 %43, 16, %40, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4490,9 +4173,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%45",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_U32_e64 %34, %44, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%45:vgpr_32 = V_ADD_U32_e64 %34, %44, 0, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4527,8 +4208,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE_D16_HI %13, %45, 2, 0, implicit $exec :: (store (s8) into %ir.p4 + 2, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -4565,8 +4244,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %13, %45, 0, 0, implicit $exec :: (store (s8) into %ir.p4, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -4603,9 +4280,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%46",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 24, %45, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%46:vgpr_32 = V_LSHRREV_B32_e64 24, %45, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4641,8 +4316,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %13, %46, 3, 0, implicit $exec :: (store (s8) into %ir.p4 + 3, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -4680,9 +4353,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%47",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 8, %45, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%47:vgpr_32 = V_LSHRREV_B32_e64 8, %45, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4718,8 +4389,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %13, %47, 1, 0, implicit $exec :: (store (s8) into %ir.p4 + 1, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -4756,9 +4425,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%48",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "S_MOV_B32 0",
+# CHECK-ML-JSON-NEXT:      "instr": "%48:sreg_32 = S_MOV_B32 0",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4795,9 +4462,7 @@ body:             |
 # CHECK-ML-JSON-NEXT:  ],
 # CHECK-ML-JSON-NEXT:  "bb.3": [
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%49",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %48, %bb.2, %50, %bb.3",
+# CHECK-ML-JSON-NEXT:      "instr": "%49:sreg_32 = PHI %48, %bb.2, %50, %bb.3",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4832,9 +4497,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%51",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "PHI %48, %bb.2, %52, %bb.3",
+# CHECK-ML-JSON-NEXT:      "instr": "%51:sreg_32 = PHI %48, %bb.2, %52, %bb.3",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4870,9 +4533,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%52",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "S_ADD_I32 %51, 3, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "instr": "%52:sreg_32 = S_ADD_I32 %51, 3, implicit-def dead $scc",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4909,9 +4570,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%53",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 0, 0, implicit $exec :: (load (s8) from %ir.p3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%53:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 0, 0, implicit $exec :: (load (s8) from %ir.p3, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4948,9 +4607,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%54",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 1, 0, implicit $exec :: (load (s8) from %ir.p3 + 1, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%54:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 1, 0, implicit $exec :: (load (s8) from %ir.p3 + 1, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -4988,9 +4645,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%55",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %54, 8, %53, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%55:vgpr_32 = V_LSHL_OR_B32_e64 %54, 8, %53, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5029,9 +4684,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%56",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 2, 0, implicit $exec :: (load (s8) from %ir.p3 + 2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%56:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 2, 0, implicit $exec :: (load (s8) from %ir.p3 + 2, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5069,9 +4722,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%57",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %14, 3, 0, implicit $exec :: (load (s8) from %ir.p3 + 3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "instr": "%57:vgpr_32 = GLOBAL_LOAD_UBYTE %14, 3, 0, implicit $exec :: (load (s8) from %ir.p3 + 3, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5110,9 +4761,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%58",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %57, 8, %56, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%58:vgpr_32 = V_LSHL_OR_B32_e64 %57, 8, %56, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5152,9 +4801,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%59",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %58, 16, %55, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%59:vgpr_32 = V_LSHL_OR_B32_e64 %58, 16, %55, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5193,9 +4840,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%60",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_U32_e64 %52, %59, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%60:vgpr_32 = V_ADD_U32_e64 %52, %59, 0, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5233,8 +4878,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE_D16_HI %12, %60, 2, 0, implicit $exec :: (store (s8) into %ir.p5 + 2, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5274,8 +4917,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %12, %60, 0, 0, implicit $exec :: (store (s8) into %ir.p5, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5315,9 +4956,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%61",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 24, %60, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%61:vgpr_32 = V_LSHRREV_B32_e64 24, %60, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5356,8 +4995,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %12, %61, 3, 0, implicit $exec :: (store (s8) into %ir.p5 + 3, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5398,9 +5035,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%62",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_LSHRREV_B32_e64 8, %60, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%62:vgpr_32 = V_LSHRREV_B32_e64 8, %60, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5439,8 +5074,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_BYTE %12, %62, 1, 0, implicit $exec :: (store (s8) into %ir.p5 + 1, addrspace 1)",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5480,9 +5113,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%63",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %52, %1, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%63:sreg_32 = V_CMP_GE_U32_e64 %52, %1, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5520,9 +5151,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%50",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "SI_IF_BREAK %63, %49, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "instr": "%50:sreg_32 = SI_IF_BREAK %63, %49, implicit-def dead $scc",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5561,9 +5190,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%64",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY %52, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%64:vgpr_32 = COPY %52, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5601,8 +5228,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "SI_LOOP %50, %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5642,8 +5267,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "S_BRANCH %bb.4",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5685,8 +5308,6 @@ body:             |
 # CHECK-ML-JSON-NEXT:  ],
 # CHECK-ML-JSON-NEXT:  "bb.4": [
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "SI_END_CF %50, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5725,9 +5346,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%65",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_U32_e64 %59, %64, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%65:vgpr_32 = V_ADD_U32_e64 %59, %64, 0, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5764,9 +5383,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%37",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_MUL_LO_U32_e64 %29, %65, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%37:vgpr_32 = V_MUL_LO_U32_e64 %29, %65, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5803,9 +5420,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%35",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "S_ADD_I32 %34, 2, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "instr": "%35:sreg_32 = S_ADD_I32 %34, 2, implicit-def dead $scc",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5843,9 +5458,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%66",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %35, %0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%66:sreg_32 = V_CMP_GE_U32_e64 %35, %0, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5883,9 +5496,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%33",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "SI_IF_BREAK %66, %32, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "instr": "%33:sreg_32 = SI_IF_BREAK %66, %32, implicit-def dead $scc",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -5924,8 +5535,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "SI_LOOP %33, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -5964,8 +5573,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "S_BRANCH %bb.5",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -6006,8 +5613,6 @@ body:             |
 # CHECK-ML-JSON-NEXT:  ],
 # CHECK-ML-JSON-NEXT:  "bb.5": [
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "SI_END_CF %33, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -6045,9 +5650,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%30",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_SUB_U32_e64 %44, %64, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%30:vgpr_32 = V_SUB_U32_e64 %44, %64, 0, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6083,9 +5686,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%28",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "S_ADD_I32 %27, 1, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "instr": "%28:sreg_32 = S_ADD_I32 %27, 1, implicit-def dead $scc",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6120,9 +5721,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%67",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %28, %1, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%67:sreg_32 = V_CMP_GE_U32_e64 %28, %1, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6157,9 +5756,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%26",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
-# CHECK-ML-JSON-NEXT:      "instr": "SI_IF_BREAK %67, %25, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "instr": "%26:sreg_32 = SI_IF_BREAK %67, %25, implicit-def dead $scc",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6195,8 +5792,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "SI_LOOP %26, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -6232,8 +5827,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "S_BRANCH %bb.6",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -6271,8 +5864,6 @@ body:             |
 # CHECK-ML-JSON-NEXT:  ],
 # CHECK-ML-JSON-NEXT:  "bb.6": [
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "SI_END_CF %26, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
@@ -6300,9 +5891,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%68",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_MAX_U32_e64 1, %1, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%68:vgpr_32 = V_MAX_U32_e64 1, %1, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6328,9 +5917,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%69",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_U32_e64 %68, %23, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%69:vgpr_32 = V_ADD_U32_e64 %68, %23, 0, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6356,9 +5943,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%70",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD3_U32_e64 %36, %29, %65, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%70:vgpr_32 = V_ADD3_U32_e64 %36, %29, %65, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6383,9 +5968,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%71",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_U32_e64 %65, %37, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%71:vgpr_32 = V_ADD_U32_e64 %65, %37, 0, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6410,9 +5993,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%72",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD3_U32_e64 %71, %70, %36, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%72:vgpr_32 = V_ADD3_U32_e64 %71, %70, %36, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6436,9 +6017,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%73",
-# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
-# CHECK-ML-JSON-NEXT:      "instr": "V_ADD3_U32_e64 %69, %72, -1, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%73:vgpr_32 = V_ADD3_U32_e64 %69, %72, -1, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6460,9 +6039,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%74",
-# CHECK-ML-JSON-NEXT:      "type": "sreg_32_xm0",
-# CHECK-ML-JSON-NEXT:      "instr": "V_READFIRSTLANE_B32 %73, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "instr": "%74:sreg_32_xm0 = V_READFIRSTLANE_B32 %73, implicit $exec",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6483,9 +6060,7 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "$sgpr0",
-# CHECK-ML-JSON-NEXT:      "type": "",
-# CHECK-ML-JSON-NEXT:      "instr": "COPY %74",
+# CHECK-ML-JSON-NEXT:      "instr": "$sgpr0 = COPY %74",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
@@ -6506,8 +6081,6 @@ body:             |
 # CHECK-ML-JSON:      }
 # CHECK-ML-JSON-NEXT:    },
 # CHECK-ML-JSON-NEXT:    {
-# CHECK-ML-JSON-NEXT:      "name": "%void",
-# CHECK-ML-JSON-NEXT:      "type": "void",
 # CHECK-ML-JSON-NEXT:      "instr": "SI_RETURN_TO_EPILOG killed $sgpr0",
 # CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
 # CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},

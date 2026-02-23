@@ -40,8 +40,8 @@ class AMDGPUNextUseAnalysis {
 
   std::unique_ptr<AMDGPUNextUseAnalysisImpl> Impl;
 
-  void initialize(const MachineFunction *, const MachineLoopInfo *,
-                  const MachineDominatorTree *);
+  AMDGPUNextUseAnalysis(const MachineFunction *, const MachineLoopInfo *,
+                        const MachineDominatorTree *);
 
 public:
   enum CompatibilityMode { Compute, Graphics };
