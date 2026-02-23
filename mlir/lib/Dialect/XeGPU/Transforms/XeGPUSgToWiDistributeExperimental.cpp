@@ -511,10 +511,7 @@ static SmallVector<Value> computeDistributedCoordsForMatrixOp(
   return llvm::map_to_vector(ofrVec, llvm::CastTo<Value>);
 }
 
-/// Distributes a subgroup-level LoadMatrix op to workitem-level.
-/// The layout is used to compute the distributed vector type and coordinates.
-/// When subgroup_block_io is set, coordinates are passed through unchanged.
-/// Otherwise, distributed coordinates are computed from the lane ID.
+/// This pattern distributes a subgroup-level LoadMatrix op to workitem-level.
 struct SgToWiLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
   using OpConversionPattern<xegpu::LoadMatrixOp>::OpConversionPattern;
 
@@ -568,8 +565,7 @@ struct SgToWiLoadMatrix : public OpConversionPattern<xegpu::LoadMatrixOp> {
   }
 };
 
-/// Distributes a subgroup-level StoreMatrix op to workitem-level.
-/// Same coordinate computation logic as LoadMatrix.
+/// This pattern distributes a subgroup-level StoreMatrix op to workitem-level.
 struct SgToWiStoreMatrix : public OpConversionPattern<xegpu::StoreMatrixOp> {
   using OpConversionPattern<xegpu::StoreMatrixOp>::OpConversionPattern;
 
