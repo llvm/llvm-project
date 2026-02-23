@@ -9,6 +9,9 @@
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYLINKAGE_H
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYLINKAGE_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+
 namespace clang::ssaf {
 
 /// Represents the linkage properties of an entity in the program model.
@@ -27,13 +30,23 @@ public:
     External  ///< globally visible across translation units
   };
 
-  explicit EntityLinkage(LinkageType L) : Linkage(L) {}
+  constexpr explicit EntityLinkage(LinkageType L) : Linkage(L) {}
 
   LinkageType getLinkage() const { return Linkage; }
+
+  bool operator==(const EntityLinkage &Other) const;
+  bool operator!=(const EntityLinkage &Other) const;
 
 private:
   LinkageType Linkage;
 };
+
+/// Returns a string representation of the linkage type.
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              EntityLinkage::LinkageType Linkage);
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const EntityLinkage &Linkage);
 
 } // namespace clang::ssaf
 

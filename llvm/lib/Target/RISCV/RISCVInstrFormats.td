@@ -196,8 +196,8 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
   let TSFlags{4-0} = Format.Value;
 
   // Indicates when Vd and Vs1/Vs2 cannot be the same register.
-  RISCVVConstraint RVVConstraint = NoConstraint;
-  let TSFlags{6-5} = RVVConstraint.Value;
+  RISCVVConstraint VS1VS2Constraint = NoConstraint;
+  let TSFlags{6-5} = VS1VS2Constraint.Value;
 
   // Indicates that the destination and the VM operand cannot both be V0.
   bit VMConstraint = 0;
