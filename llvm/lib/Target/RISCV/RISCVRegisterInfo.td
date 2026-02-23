@@ -368,6 +368,9 @@ def GPRC : GPRRegisterClass<(add (sequence "X%u", 10, 15),
   let DecoderMethod = "DecodeSimpleRegisterClass<RISCV::X8, 8>";
 }
 
+// The list of GPR registers not using with compressed instructions
+def GPRNoGPRC : GPRRegisterClass<(sub GPR, GPRC)>;
+
 // For indirect tail calls, we can't use callee-saved registers, as they are
 // restored to the saved value before the tail call, which would clobber a call
 // address. We shouldn't use x5 since that is a hint for to pop the return
