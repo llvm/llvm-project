@@ -937,7 +937,7 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 
 class SFBNDS_BFO
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$bcc, GPR:$falsev, GPR:$rs1,
                   uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
       Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU,
              ReadSFBALU]> {
