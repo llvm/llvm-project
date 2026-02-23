@@ -52,8 +52,8 @@ void ParamPackFunction(T... args);
 // JSON:           "Name": "ParamPackFunction",
 // JSON-NEXT:      "Params": [
 // JSON-NEXT:        {
-// JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "args",
+// JSON-NEXT:          "ParamEnd": true,
 // JSON-NEXT:          "Type": {
 // JSON-NEXT:            "Name": "T...",
 // JSON-NEXT:            "QualName": "T...",
@@ -74,10 +74,11 @@ void ParamPackFunction(T... args);
 // JSON-NEXT:            "End": true, 
 // JSON-NEXT:            "Param": "class... T"
 // JSON-NEXT:          }
-// JSON-NEXT:        ]
+// JSON-NEXT:        ],
+// JSON-NEXT:        "VerticalDisplay": false
 // JSON-NEXT:      },
 
-// HTML:        <pre><code class="language-cpp code-clang-doc">template &lt;class... T&gt;</code></pre>
+// HTML:        <pre><code class="language-cpp code-clang-doc">template &lt;class... T</code><code class="language-cpp code-clang-doc">&gt;</code></pre>
 // HTML-NEXT:   <pre><code class="language-cpp code-clang-doc">void ParamPackFunction (T... args)</code></pre>
 
 template <typename T, int U = 1>
@@ -109,8 +110,8 @@ void function(T x) {}
 // JSON:           "Name": "function",
 // JSON-NEXT:      "Params": [
 // JSON-NEXT:        {
-// JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "x",
+// JSON-NEXT:          "ParamEnd": true,
 // JSON-NEXT:          "Type": {
 // JSON-NEXT:            "Name": "T",
 // JSON-NEXT:            "QualName": "T",
@@ -134,12 +135,13 @@ void function(T x) {}
 // JSON-NEXT:            "End": true, 
 // JSON-NEXT:            "Param": "int U = 1"
 // JSON-NEXT:          }
-// JSON-NEXT:        ]
+// JSON-NEXT:        ],
+// JSON-NEXT:        "VerticalDisplay": false
 // JSON-NEXT:      }
 
-// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;typename T, int U = 1&gt;</code></pre>
+// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;typename T, int U = 1</code><code class="language-cpp code-clang-doc">&gt;</code></pre>
 // HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void function (T x)</code></pre>
-// HTML-NEXT:      <p>Defined at line [[# @LINE - 58]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:      <p>Defined at line [[# @LINE - 59]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
 
 
@@ -174,8 +176,8 @@ void function<bool, 0>(bool x) {}
 // JSON:           "Name": "function",
 // JSON-NEXT:      "Params": [
 // JSON-NEXT:        {
-// JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "x",
+// JSON-NEXT:          "ParamEnd": true,
 // JSON-NEXT:          "Type": {
 // JSON-NEXT:            "Name": "bool",
 // JSON-NEXT:            "QualName": "bool",
@@ -201,13 +203,14 @@ void function<bool, 0>(bool x) {}
 // JSON-NEXT:              "Param": "0"
 // JSON-NEXT:            }
 // JSON-NEXT:          ],
-// JSON-NEXT:          "SpecializationOf": "{{([0-9A-F]{40})}}"
+// JSON-NEXT:          "SpecializationOf": "{{([0-9A-F]{40})}}",
+// JSON-NEXT:          "VerticalDisplay": false
 // JSON-NEXT:        }
 // JSON-NEXT:      },
 
-// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;&gt;</code></pre>
+// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;</code><code class="language-cpp code-clang-doc">&gt;</code></pre>
 // HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void function&lt;bool, 0&gt; (bool x)</code></pre>
-// HTML-NEXT:      <p>Defined at line [[# @LINE - 64]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:      <p>Defined at line [[# @LINE - 65]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
 
 /// A Tuple type
@@ -286,8 +289,8 @@ tuple<int, int, bool> func_with_tuple_param(tuple<int, int, bool> t) { return t;
 // JSON:           "Name": "func_with_tuple_param",
 // JSON-NEXT:      "Params": [
 // JSON-NEXT:        {
-// JSON-NEXT:          "End": true,
 // JSON-NEXT:          "Name": "t",
+// JSON-NEXT:          "ParamEnd": true,
 // JSON-NEXT:          "Type": {
 // JSON-NEXT:            "Name": "tuple",
 // JSON-NEXT:            "Path": "GlobalNamespace",
