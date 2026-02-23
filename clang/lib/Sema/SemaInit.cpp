@@ -1915,10 +1915,11 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
 
   while (Index < IList->getNumInits()) {
     // Not a sublist: just consume directly.
-    unsigned ColMajorIndex = (Index % MT->getNumRows()) * MT->getNumColumns() +
-                             (Index / MT->getNumRows());
-    ElemEnt.setElementIndex(ColMajorIndex);
-    CheckSubElementType(ElemEnt, IList, ElemTy, ColMajorIndex, StructuredList,
+    // Note: In HLSL, elements of the InitListExpr are in row-major order, so no
+    // change is needed to the Index.
+    unsigned RowMajorIdx = Index;
+    ElemEnt.setElementIndex(RowMajorIdx);
+    CheckSubElementType(ElemEnt, IList, ElemTy, RowMajorIdx, StructuredList,
                         StructuredIndex);
     ++Index;
   }

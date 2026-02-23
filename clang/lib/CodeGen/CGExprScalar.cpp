@@ -2450,6 +2450,23 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
     llvm::Value *Init = llvm::Constant::getNullValue(EltTy);
     V = Builder.CreateInsertElement(V, Init, Idx, "vecinit");
   }
+
+  // Matrix initializer lists are in row-major order but the memory layout for
+  // codegen is determined by the -fmatrix-memory-layout flag (default:
+  // column-major). When the memory layout is column-major, we need to shuffle
+  // the elements from row-major to column-major order.
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>()) {
+    if (CGF.getLangOpts().getDefaultMatrixMemoryLayout() !=
+        LangOptions::MatrixMemoryLayout::MatrixRowMajor) {
+      unsigned NumRows = MT->getNumRows();
+      unsigned NumCols = MT->getNumColumns();
+      SmallVector<int, 16> Mask;
+      for (unsigned I = 0, N = NumRows * NumCols; I < N; ++I)
+        Mask.push_back((I % NumRows) * NumCols + (I / NumRows));
+      V = Builder.CreateShuffleVector(V, Mask, "matrix.rowmajor2colmajor");
+    }
+  }
+
   return V;
 }
 
