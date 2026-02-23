@@ -319,44 +319,50 @@ public:
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
-    const var_ref_t var_ref = args.variablesReference;
+    const bool format_hex = args.format ? args.format->hex : false;
     const uint64_t count = args.count;
-    const uint64_t start = args.start;
-    const bool hex = args.format ? args.format->hex : false;
-
-    // We are expanding a variable that has children, so we will return its
-    // children.
+    const uint32_t start_idx = 0;
+    const uint32_t num_children = m_value_list.GetSize();
+    const uint32_t end_idx = start_idx + ((count == 0) ? num_children : count);
     std::vector<Variable> variables;
-    const bool is_permanent = var_ref.Kind() == eReferenceKindPermanent;
-    auto addChild = [&](lldb::SBValue child,
-                        std::optional<llvm::StringRef> custom_name = {}) {
-      if (!child.IsValid())
-        return;
 
-      const var_ref_t child_var_ref = storage.Insert(child, is_permanent);
-      if (LLVM_UNLIKELY(child_var_ref.AsUInt32() ==
+    // We first find out which variable names are duplicated.
+    std::map<llvm::StringRef, uint32_t> variable_name_counts;
+    for (auto i = start_idx; i < end_idx; ++i) {
+      lldb::SBValue variable = m_value_list.GetValueAtIndex(i);
+      if (!variable.IsValid())
+        break;
+      variable_name_counts[GetNonNullVariableName(variable)]++;
+    }
+
+    // Now we construct the result with unique display variable names.
+    for (auto i = start_idx; i < end_idx; ++i) {
+      lldb::SBValue variable = m_value_list.GetValueAtIndex(i);
+
+      if (!variable.IsValid() || !variable.IsInScope())
+        continue;
+
+      const var_ref_t frame_var_ref =
+          storage.Insert(variable, /*is_permanent=*/true);
+      if (LLVM_UNLIKELY(frame_var_ref.AsUInt32() >=
                         var_ref_t::k_variables_reference_threshold)) {
         DAP_LOG(storage.log,
-                "warning: {} variablesReference threshold reached. "
+                "warning: scopes variablesReference threshold reached. "
                 "current: {} threshold: {}, maximum {}.",
-                (is_permanent ? "permanent" : "temporary"),
-                child_var_ref.AsUInt32(),
+                frame_var_ref.AsUInt32(),
                 var_ref_t::k_variables_reference_threshold,
                 var_ref_t::k_max_variables_references);
       }
 
+      if (LLVM_UNLIKELY(frame_var_ref.Kind() == eReferenceKindInvalid))
+        break;
+
       variables.emplace_back(CreateVariable(
-          child, child_var_ref, hex, config.enableAutoVariableSummaries,
+          variable, frame_var_ref, format_hex,
+          config.enableAutoVariableSummaries,
           config.enableSyntheticChildDebugging,
-          /*is_name_duplicated=*/false, custom_name));
-    };
-
-    const uint32_t num_children = m_value_list.GetSize();
-    const uint32_t end_idx = start + ((count == 0) ? num_children : count);
-    uint32_t i = start;
-    for (; i < end_idx && i < num_children; ++i)
-      addChild(m_value_list.GetValueAtIndex(i));
-
+          variable_name_counts[GetNonNullVariableName(variable)] > 1));
+    }
     return variables;
   }
 
