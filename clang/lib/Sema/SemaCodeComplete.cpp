@@ -7026,7 +7026,7 @@ void SemaCodeCompletion::CodeCompleteQualifiedId(
                                /*IncludeDependentBases=*/true,
                                CodeCompleter->loadExternal());
   }
-  SavedContext->pop();
+  SavedContext.reset();
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
                             Results.getCompletionContext(), Results.data(),
                             Results.size());
