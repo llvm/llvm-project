@@ -60,38 +60,3 @@ TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
     }
   
 }
-TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
-
-  
-    for (uint16_t v1 = POS_START; v1 <= POS_STOP; ++v1) {
-      for (uint16_t v2 = POS_START; v2 <= POS_STOP; v2 += 256) {
-
-        bfloat16 x = FPBits(v1).get_val();
-        bfloat16 y = FPBits(v2).get_val();
-        bfloat16 z = -(x * y);
-        
-        mpfr::TernaryInput<bfloat16> input{x, y, z};
-
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                       LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
-      }
-    }
-  
-}
-
-TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
-  for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; ++v1) {
-      for (uint16_t v2 = NEG_START; v2 <= NEG_STOP; v2 += 256) {
-
-        bfloat16 x = FPBits(v1).get_val();
-        bfloat16 y = FPBits(v2).get_val();
-        bfloat16 z = -(x * y);
-
-        mpfr::TernaryInput<bfloat16> input{x, y, z};
-
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                       LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
-      }
-    }
-  
-}
