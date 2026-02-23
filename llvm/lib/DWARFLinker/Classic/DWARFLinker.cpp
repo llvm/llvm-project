@@ -1311,7 +1311,7 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
       Unit.noteForwardReference(
           NewRefDie, RefUnit, RefInfo.Ctxt,
           Die.addValue(DIEAlloc, dwarf::Attribute(AttrSpec.Attr),
-                       dwarf::DW_FORM_ref_addr, DIEInteger(0)));
+                       dwarf::DW_FORM_ref_addr, DIEInteger(UINT64_MAX)));
     }
     return U.getRefAddrByteSize();
   }
