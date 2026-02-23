@@ -104,8 +104,7 @@ define i1 @multiuse(<4 x i16> %v) {
 ; CHECK-LABEL: define i1 @multiuse(
 ; CHECK-SAME: <4 x i16> [[V:%.*]]) {
 ; CHECK-NEXT:    [[RED:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[V]])
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[V]] to i64
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[TMP1]], 0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[RED]], 0
 ; CHECK-NEXT:    [[USE:%.*]] = trunc i16 [[RED]] to i1
 ; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP]], [[USE]]
 ; CHECK-NEXT:    ret i1 [[RET]]

@@ -7540,9 +7540,11 @@ static Instruction *foldICmpOfVectorReduce(ICmpInst &I, const DataLayout &DL,
   // with a bitcast.
   Value *Vec;
   if ((match(Const, m_ZeroInt()) &&
-       match(Op, m_Intrinsic<Intrinsic::vector_reduce_or>(m_Value(Vec)))) ||
+       match(Op, m_OneUse(m_Intrinsic<Intrinsic::vector_reduce_or>(
+                     m_Value(Vec))))) ||
       (match(Const, m_AllOnes()) &&
-       match(Op, m_Intrinsic<Intrinsic::vector_reduce_and>(m_Value(Vec))))) {
+       match(Op, m_OneUse(m_Intrinsic<Intrinsic::vector_reduce_and>(
+                     m_Value(Vec)))))) {
     auto *VecTy = dyn_cast<FixedVectorType>(Vec->getType());
     if (!VecTy)
       return nullptr;
