@@ -2774,7 +2774,7 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
 
   APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
   Result = Value.trunc(LHS.getBitWidth());
-  if (Result.extend(BitWidth) != Value) {
+  if (Result.extend(BitWidth) != Value && !E->getType().isWrapType()) {
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
@@ -15386,6 +15386,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::Pipe:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     // Classify all other types that don't fit into the regular
     // classification the same way.
     return GCCTypeClass::None;
@@ -18511,6 +18512,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 }
 
 bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
+  Info.Ctx.recordOffsetOfEvaluation(OOE);
   CharUnits Result;
   unsigned n = OOE->getNumComponents();
   if (n == 0)
@@ -18595,7 +18597,8 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
-    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
+    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow() &&
+        !E->getType().isWrapType()) {
       if (Info.checkingForUndefinedBehavior())
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)

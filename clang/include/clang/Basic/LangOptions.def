@@ -249,6 +249,7 @@ LANGOPT(HLSLStrictAvailability, 1, 0, NotCompatible,
         "Strict availability diagnostic mode for HLSL built-in functions.")
 LANGOPT(HLSLSpvUseUnknownImageFormat, 1, 0, NotCompatible, "For storage images and texel buffers, sets the default format to 'Unknown' when not specified via the `vk::image_format` attribute. If this option is not used, the format is inferred from the resource's data type.")
 LANGOPT(HLSLSpvEnableMaximalReconvergence, 1, 0, NotCompatible, "Enables the MaximallyReconvergesKHR execution mode for this module. This ensures that control flow reconverges at well-defined merge points as defined by the Vulkan spec.")
+LANGOPT(EmitStructuredGEP, 1, 0, NotCompatible, "Emit structured GEP intrinsics instead of GEP instructions")
 
 LANGOPT(CUDAIsDevice      , 1, 0, NotCompatible, "compiling for CUDA device")
 LANGOPT(CUDAHostDeviceConstexpr, 1, 1, NotCompatible, "treating unattributed constexpr functions as __host__ __device__")
@@ -431,6 +432,8 @@ LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")
 LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0, NotCompatible,
         "unsigned fixed point types having one extra padding bit")
 
+LANGOPT(OverflowBehaviorTypes, 1, 0, NotCompatible, "overflow behavior types")
+
 ENUM_LANGOPT(RegisterStaticDestructors, RegisterStaticDestructorsKind, 2,
              RegisterStaticDestructorsKind::All, NotCompatible,
              "Register C++ static destructors")
@@ -466,6 +469,13 @@ LANGOPT(RelativeCXXABIVTables, 1, 0, NotCompatible,
 
 LANGOPT(OmitVTableRTTI, 1, 0, NotCompatible,
         "Use an ABI-incompatible v-table layout that omits the RTTI component")
+
+LANGOPT(PointerFieldProtectionAttr, 1, 0, NotCompatible,
+        "Allow the use of the experimental [[clang::pointer_field_protection]] attribute")
+LANGOPT(PointerFieldProtectionABI, 1, 0, NotCompatible,
+        "Enable pointer field protection by default for all non-standard-layout types")
+LANGOPT(PointerFieldProtectionTagged, 1, 0, NotCompatible,
+        "Use pointer identity (tag) to discriminate pointers of non-trivially-copyable types")
 
 LANGOPT(VScaleMin, 32, 0, NotCompatible, "Minimum vscale value")
 LANGOPT(VScaleMax, 32, 0, NotCompatible, "Maximum vscale value")

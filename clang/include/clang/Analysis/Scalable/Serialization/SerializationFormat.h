@@ -56,6 +56,7 @@ template <class SerializerFn, class DeserializerFn> struct FormatInfoEntry {
                   DeserializerFn Deserialize)
       : ForSummary(ForSummary), Serialize(Serialize), Deserialize(Deserialize) {
   }
+  virtual ~FormatInfoEntry() = default;
 
   SummaryName ForSummary;
   SerializerFn Serialize;
