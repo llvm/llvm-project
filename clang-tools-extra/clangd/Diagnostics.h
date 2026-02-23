@@ -173,8 +173,8 @@ private:
   std::vector<Diag> Output;
   std::optional<LangOptions> LangOpts;
   std::optional<Diag> LastDiag;
-  std::optional<FullSourceLoc> LastDiagLoc;  // Valid only when LastDiag is set.
-  bool LastDiagOriginallyError = false;      // Valid only when LastDiag is set.
+  std::optional<FullSourceLoc> LastDiagLoc; // Valid only when LastDiag is set.
+  bool LastDiagOriginallyError = false;     // Valid only when LastDiag is set.
   SourceManager *OrigSrcMgr = nullptr;
 
   llvm::DenseSet<std::pair<unsigned, unsigned>> IncludedErrorLocations;
@@ -183,7 +183,7 @@ private:
 /// Determine whether a (non-clang-tidy) diagnostic is suppressed by config.
 bool isDiagnosticSuppressed(const clang::Diagnostic &Diag,
                             const llvm::StringSet<> &Suppressed,
-                            const LangOptions &);
+                            const std::optional<LangOptions> &);
 /// Take a user-specified diagnostic code, and convert it to a normalized form
 /// stored in the config and consumed by isDiagnosticsSuppressed.
 ///
