@@ -591,18 +591,10 @@ private:
       // FusionCandidates.
       bool FoundAdjacent = false;
       for (auto &CurrCandList : FusionCandidates) {
-        if (isStrictlyAdjacent(CurrCand, CurrCandList.front())) {
-          CurrCandList.push_front(CurrCand);
-          FoundAdjacent = true;
-#ifndef NDEBUG
-          if (VerboseFusionDebugging)
-            LLVM_DEBUG(dbgs() << "Adding " << CurrCand
-                              << " to existing candidate list\n");
-#endif
-          break;
-        } else if (isStrictlyAdjacent(CurrCandList.back(), CurrCand)) {
+        if (isStrictlyAdjacent(CurrCandList.back(), CurrCand)) {
           CurrCandList.push_back(CurrCand);
           FoundAdjacent = true;
+          NumFusionCandidates++;
 #ifndef NDEBUG
           if (VerboseFusionDebugging)
             LLVM_DEBUG(dbgs() << "Adding " << CurrCand
@@ -621,7 +613,6 @@ private:
         NewCandList.push_back(CurrCand);
         FusionCandidates.push_back(NewCandList);
       }
-      NumFusionCandidates++;
     }
   }
 

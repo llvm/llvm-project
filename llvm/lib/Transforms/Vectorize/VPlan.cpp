@@ -67,6 +67,8 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
 
 extern cl::opt<unsigned> ForceTargetInstructionCost;
 
+extern cl::opt<unsigned> NumberOfStoresToPredicate;
+
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
     cl::desc("Use dot format instead of plain text when dumping VPlans"));
@@ -344,7 +346,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
           ->shouldEmitDebugInfoForProfiling() &&
       !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
-    unsigned UF = Plan->getUF();
+    unsigned UF = Plan->getConcreteUF();
     auto NewDIL =
         DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
     if (NewDIL)
@@ -934,7 +936,7 @@ void VPlan::execute(VPTransformState *State) {
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
-                    << ", UF=" << getUF() << '\n');
+                    << ", UF=" << getConcreteUF() << '\n');
   setName("Final VPlan");
   // TODO: RUN_VPLAN_PASS/VPlanTransforms::runPass should automatically dump
   // VPlans after some specific stages when "-debug" is specified, but that
@@ -1051,6 +1053,12 @@ void VPlan::printLiveIns(raw_ostream &O) const {
     O << "\nLive-in ";
     VF.printAsOperand(O, SlotTracker);
     O << " = VF";
+  }
+
+  if (UF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    UF.printAsOperand(O, SlotTracker);
+    O << " = UF";
   }
 
   if (VFxUF.getNumUsers() > 0) {
@@ -1193,6 +1201,7 @@ VPlan *VPlan::duplicate() {
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
+  Old2NewVPValues[&UF] = &NewPlan->UF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPSymbolicValue();
@@ -1482,6 +1491,8 @@ void VPSlotTracker::assignName(const VPValue *V) {
 void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (Plan.VF.getNumUsers() > 0)
     assignName(&Plan.VF);
+  if (Plan.UF.getNumUsers() > 0)
+    assignName(&Plan.UF);
   if (Plan.VFxUF.getNumUsers() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
@@ -1802,4 +1813,44 @@ InstructionCost VPCostContext::getScalarizationOverhead(
   }
   return ScalarizationCost +
          TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
+}
+
+bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
+                                              ElementCount VF) {
+  const Instruction *UI = R->getUnderlyingInstr();
+  if (isa<LoadInst>(UI))
+    return true;
+  assert(isa<StoreInst>(UI) && "R must either be a load or store");
+
+  if (!NumPredStores) {
+    // Count the number of predicated stores in the VPlan, caching the result.
+    // Only stores where scatter is not legal are counted, matching the legacy
+    // cost model behavior.
+    const VPlan &Plan = *R->getParent()->getPlan();
+    NumPredStores = 0;
+    for (const VPRegionBlock *VPRB :
+         VPBlockUtils::blocksOnly<const VPRegionBlock>(
+             vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+      assert(VPRB->isReplicator() && "must only contain replicate regions");
+      for (const VPBasicBlock *VPBB :
+           VPBlockUtils::blocksOnly<const VPBasicBlock>(
+               vp_depth_first_shallow(VPRB->getEntry()))) {
+        for (const VPRecipeBase &Recipe : *VPBB) {
+          auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
+          if (!RepR)
+            continue;
+          if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
+            continue;
+          // Check if scatter is legal for this store. If so, don't count it.
+          Type *Ty = Types.inferScalarType(RepR->getOperand(0));
+          auto *VTy = VectorType::get(Ty, VF);
+          const Align Alignment =
+              getLoadStoreAlignment(RepR->getUnderlyingInstr());
+          if (!TTI.isLegalMaskedScatter(VTy, Alignment))
+            ++(*NumPredStores);
+        }
+      }
+    }
+  }
+  return *NumPredStores > NumberOfStoresToPredicate;
 }

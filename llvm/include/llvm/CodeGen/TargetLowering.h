@@ -5610,6 +5610,12 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandVPCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand CTLS (count leading sign bits) nodes.
+  /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
+  /// \param N Node to expand
+  /// \returns The expansion result or SDValue() if it fails.
+  SDValue expandCTLS(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand CTTZ via Table Lookup.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.

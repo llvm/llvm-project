@@ -2774,7 +2774,7 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
 
   APSInt Value(Op(LHS.extend(BitWidth), RHS.extend(BitWidth)), false);
   Result = Value.trunc(LHS.getBitWidth());
-  if (Result.extend(BitWidth) != Value) {
+  if (Result.extend(BitWidth) != Value && !E->getType().isWrapType()) {
     if (Info.checkingForUndefinedBehavior())
       Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                        diag::warn_integer_constant_overflow)
@@ -3373,12 +3373,9 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
              "missing value for local variable");
       if (Info.checkingPotentialConstantExpression())
         return false;
-      // FIXME: This diagnostic is bogus; we do support captures. Is this code
-      // still reachable at all?
-      Info.FFDiag(E->getBeginLoc(),
-                  diag::note_unimplemented_constexpr_lambda_feature_ast)
-          << "captures not currently allowed";
-      return false;
+
+      llvm_unreachable(
+          "A variable in a frame should either be a local or a parameter");
     }
   }
 
@@ -3597,6 +3594,13 @@ static void expandArray(APValue &Array, unsigned Index) {
   if (NewValue.hasArrayFiller())
     NewValue.getArrayFiller() = Array.getArrayFiller();
   Array.swap(NewValue);
+}
+
+// Expand an indeterminate vector to materialize all elements.
+static void expandVector(APValue &Vec, unsigned NumElements) {
+  assert(Vec.isIndeterminate());
+  SmallVector<APValue, 4> Elts(NumElements, APValue::IndeterminateValue());
+  Vec = APValue(Elts.data(), Elts.size());
 }
 
 /// Determine whether a type would actually be read by an lvalue-to-rvalue
@@ -4291,6 +4295,15 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
 
       ObjType = VT->getElementType();
       assert(I == N - 1 && "extracting subobject of scalar?");
+
+      if (O->isIndeterminate()) {
+        if (isRead(handler.AccessKind)) {
+          Info.FFDiag(E);
+          return handler.failed();
+        }
+        expandVector(*O, NumElements);
+      }
+      assert(O->isVector() && "unexpected object during vector element access");
       return handler.found(O->getVectorElt(Index), ObjType);
     } else if (const FieldDecl *Field = getAsField(Sub.Entries[I])) {
       if (Field->isMutable() &&
@@ -15370,6 +15383,7 @@ GCCTypeClass EvaluateBuiltinClassifyType(QualType T,
   case Type::Pipe:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
+  case Type::OverflowBehavior:
     // Classify all other types that don't fit into the regular
     // classification the same way.
     return GCCTypeClass::None;
@@ -18495,6 +18509,7 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
 }
 
 bool IntExprEvaluator::VisitOffsetOfExpr(const OffsetOfExpr *OOE) {
+  Info.Ctx.recordOffsetOfEvaluation(OOE);
   CharUnits Result;
   unsigned n = OOE->getNumComponents();
   if (n == 0)
@@ -18579,7 +18594,8 @@ bool IntExprEvaluator::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     if (!Result.isInt()) return Error(E);
     const APSInt &Value = Result.getInt();
-    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow()) {
+    if (Value.isSigned() && Value.isMinSignedValue() && E->canOverflow() &&
+        !E->getType().isWrapType()) {
       if (Info.checkingForUndefinedBehavior())
         Info.Ctx.getDiagnostics().Report(E->getExprLoc(),
                                          diag::warn_integer_constant_overflow)
