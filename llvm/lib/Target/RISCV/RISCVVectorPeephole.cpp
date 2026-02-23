@@ -743,7 +743,8 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   // Collect chain of COPYs on True's result for later cleanup.
   SmallVector<MachineInstr *, 4> TrueCopies;
   Register PassthruReg = lookThruCopies(MI.getOperand(1).getReg());
-  Register FalseReg = lookThruCopies(MI.getOperand(2).getReg());
+  const MachineOperand &FalseOp = MI.getOperand(2);
+  Register FalseReg = lookThruCopies(FalseOp.getReg());
   Register TrueReg = lookThruCopies(MI.getOperand(3).getReg(),
                                     /*OneUseOnly=*/true, &TrueCopies);
   if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
@@ -773,10 +774,11 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
 
   // If True has a passthru operand then it needs to be the same as vmerge's
   // False, since False will be used for the result's passthru operand.
-  Register TruePassthru =
-      lookThruCopies(True.getOperand(True.getNumExplicitDefs()).getReg());
-  if (RISCVII::isFirstDefTiedToFirstUse(True.getDesc()) && TruePassthru &&
-      !(TruePassthru.isVirtual() && TruePassthru == FalseReg)) {
+  Register TruePassthru;
+  if (RISCVII::isFirstDefTiedToFirstUse(True.getDesc()))
+    TruePassthru =
+        lookThruCopies(True.getOperand(True.getNumExplicitDefs()).getReg());
+  if (TruePassthru && !(TruePassthru.isVirtual() && TruePassthru == FalseReg)) {
     // If True's passthru != False, check if it uses False in another operand
     // and try to commute it.
     int OtherIdx = True.findRegisterUseOperandIdx(FalseReg, TRI);
@@ -804,6 +806,9 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
     MinVL = TrueVL;
   else if (RISCV::isVLKnownLE(VMergeVL, TrueVL))
     MinVL = VMergeVL;
+  else if (!TruePassthru && !True.mayLoadOrStore())
+    // If True's passthru is undef, we can use vmerge's vl.
+    MinVL = VMergeVL;
   else
     return false;
 
@@ -828,10 +833,15 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
          "Foldable unmasked pseudo should have a policy op already");
 
-  // Make sure the mask dominates True and its copies, otherwise move down True
-  // so it does. VL will always dominate since if it's a register they need to
-  // be the same.
-  if (!ensureDominates(MaskOp, True))
+  // Make sure both mask and false dominate True and its copies, otherwise move
+  // down True so it does. VL will always dominate since if it's a register they
+  // need to be the same.
+  const MachineOperand *DomOp = &MaskOp;
+  MachineInstr *False = MRI->getUniqueVRegDef(FalseReg);
+  if (False && False->getParent() == Mask->getParent() &&
+      dominates(Mask, False))
+    DomOp = &FalseOp;
+  if (!ensureDominates(*DomOp, True))
     return false;
 
   if (NeedsCommute) {

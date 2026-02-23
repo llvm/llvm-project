@@ -98,7 +98,7 @@ struct GcnBufferFormatInfo {
 };
 
 struct MAIInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_dgemm;
   bool is_gfx940_xdl;
 };
@@ -121,7 +121,7 @@ struct True16D16Info {
 };
 
 struct WMMAInstInfo {
-  uint16_t Opcode;
+  uint32_t Opcode;
   bool is_wmma_xdl;
 };
 
@@ -416,7 +416,7 @@ inline bool hasNamedOperand(uint64_t Opcode, OpName NamedIdx) {
 }
 
 LLVM_READONLY
-int getSOPPWithRelaxation(uint16_t Opcode);
+int32_t getSOPPWithRelaxation(uint32_t Opcode);
 
 struct MIMGBaseOpcodeInfo {
   MIMGBaseOpcode BaseOpcode;
@@ -522,8 +522,8 @@ unsigned getAddrSizeMIMGOp(const MIMGBaseOpcodeInfo *BaseOpcode,
                            bool IsG16Supported);
 
 struct MIMGInfo {
-  uint16_t Opcode;
-  uint16_t BaseOpcode;
+  uint32_t Opcode;
+  uint32_t BaseOpcode;
   uint8_t MIMGEncoding;
   uint8_t VDataDwords;
   uint8_t VAddrDwords;
@@ -646,7 +646,7 @@ const GcnBufferFormatInfo *getGcnBufferFormatInfo(uint8_t Format,
                                                   const MCSubtargetInfo &STI);
 
 LLVM_READONLY
-int getMCOpcode(uint16_t Opcode, unsigned Gen);
+int32_t getMCOpcode(uint32_t Opcode, unsigned Gen);
 
 LLVM_READONLY
 unsigned getVOPDOpcode(unsigned Opc, bool VOPD3);
@@ -1076,6 +1076,37 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
+enum InstCounterType {
+  LOAD_CNT = 0, // VMcnt prior to gfx12.
+  DS_CNT,       // LKGMcnt prior to gfx12.
+  EXP_CNT,      //
+  STORE_CNT,    // VScnt in gfx10/gfx11.
+  NUM_NORMAL_INST_CNTS,
+  SAMPLE_CNT = NUM_NORMAL_INST_CNTS, // gfx12+ only.
+  BVH_CNT,                           // gfx12+ only.
+  KM_CNT,                            // gfx12+ only.
+  X_CNT,                             // gfx1250.
+  NUM_EXTENDED_INST_CNTS,
+  VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
+  VM_VSRC,                          // gfx12+ expert mode only.
+  NUM_EXPERT_INST_CNTS,
+  NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
+};
+
+// Return an iterator over all counters between LOAD_CNT (the first counter)
+// and \c MaxCounter (exclusive, default value yields an enumeration over
+// all counters).
+iota_range<InstCounterType>
+inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS);
+
+} // namespace AMDGPU
+
+template <> struct enum_iteration_traits<AMDGPU::InstCounterType> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace AMDGPU {
+
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
@@ -1091,6 +1122,69 @@ struct Waitcnt {
   unsigned XCnt = ~0u;      // gfx1250.
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
+
+  unsigned get(InstCounterType T) const {
+    switch (T) {
+    case LOAD_CNT:
+      return LoadCnt;
+    case EXP_CNT:
+      return ExpCnt;
+    case DS_CNT:
+      return DsCnt;
+    case STORE_CNT:
+      return StoreCnt;
+    case SAMPLE_CNT:
+      return SampleCnt;
+    case BVH_CNT:
+      return BvhCnt;
+    case KM_CNT:
+      return KmCnt;
+    case X_CNT:
+      return XCnt;
+    case VA_VDST:
+      return VaVdst;
+    case VM_VSRC:
+      return VmVsrc;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+  }
+  void set(InstCounterType T, unsigned Val) {
+    switch (T) {
+    case LOAD_CNT:
+      LoadCnt = Val;
+      break;
+    case EXP_CNT:
+      ExpCnt = Val;
+      break;
+    case DS_CNT:
+      DsCnt = Val;
+      break;
+    case STORE_CNT:
+      StoreCnt = Val;
+      break;
+    case SAMPLE_CNT:
+      SampleCnt = Val;
+      break;
+    case BVH_CNT:
+      BvhCnt = Val;
+      break;
+    case KM_CNT:
+      KmCnt = Val;
+      break;
+    case X_CNT:
+      XCnt = Val;
+      break;
+    case VA_VDST:
+      VaVdst = Val;
+      break;
+    case VM_VSRC:
+      VmVsrc = Val;
+      break;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+  }
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
@@ -1311,8 +1405,23 @@ bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
 /// \returns Maximum VaVdst value that can be encoded.
 unsigned getVaVdstBitMask();
 
+/// \returns Maximum VaSdst value that can be encoded.
+unsigned getVaSdstBitMask();
+
+/// \returns Maximum VaSsrc value that can be encoded.
+unsigned getVaSsrcBitMask();
+
+/// \returns Maximum HoldCnt value that can be encoded.
+unsigned getHoldCntBitMask(const IsaVersion &Version);
+
 /// \returns Maximum VmVsrc value that can be encoded.
 unsigned getVmVsrcBitMask();
+
+/// \returns Maximum VaVcc value that can be encoded.
+unsigned getVaVccBitMask();
+
+/// \returns Maximum SaSdst value that can be encoded.
+unsigned getSaSdstBitMask();
 
 /// \returns Decoded VaVdst from given immediate \p Encoded.
 unsigned decodeFieldVaVdst(unsigned Encoded);
@@ -1333,7 +1442,7 @@ unsigned decodeFieldVaVcc(unsigned Encoded);
 unsigned decodeFieldVaSsrc(unsigned Encoded);
 
 /// \returns Decoded HoldCnt from given immediate \p Encoded.
-unsigned decodeFieldHoldCnt(unsigned Encoded);
+unsigned decodeFieldHoldCnt(unsigned Encoded, const IsaVersion &Version);
 
 /// \returns \p VmVsrc as an encoded Depctr immediate.
 unsigned encodeFieldVmVsrc(unsigned VmVsrc, const MCSubtargetInfo &STI);
@@ -1369,7 +1478,8 @@ unsigned encodeFieldVaVcc(unsigned Encoded, unsigned VaVcc);
 unsigned encodeFieldHoldCnt(unsigned HoldCnt, const MCSubtargetInfo &STI);
 
 /// \returns \p Encoded combined with encoded \p HoldCnt.
-unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt);
+unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt,
+                            const IsaVersion &Version);
 
 /// \returns \p VaSsrc as an encoded Depctr immediate.
 unsigned encodeFieldVaSsrc(unsigned VaSsrc, const MCSubtargetInfo &STI);
@@ -1595,6 +1705,7 @@ bool isGFX10Plus(const MCSubtargetInfo &STI);
 bool isNotGFX10Plus(const MCSubtargetInfo &STI);
 bool isGFX10Before1030(const MCSubtargetInfo &STI);
 bool isGFX11(const MCSubtargetInfo &STI);
+bool isGFX1170(const MCSubtargetInfo &STI);
 bool isGFX11Plus(const MCSubtargetInfo &STI);
 bool isGFX12(const MCSubtargetInfo &STI);
 bool isGFX12Plus(const MCSubtargetInfo &STI);
@@ -1916,7 +2027,7 @@ private:
   Kind AttrKind = Kind::Unknown;
 };
 
-} // end namespace AMDGPU
+} // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
                         const AMDGPU::IsaInfo::TargetIDSetting S);
