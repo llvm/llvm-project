@@ -637,14 +637,12 @@ void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
 void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
-  if (options == VectorMultiReductionLowering ::InnerReduction) {
+  if (options == VectorMultiReductionLowering ::InnerReduction)
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);
-  } else {
-    patterns.add<MultiReductionToArithOps,
-                 UnrollMultiReductionInnerParallel>(
+  else
+    patterns.add<MultiReductionToArithOps, UnrollMultiReductionInnerParallel>(
         patterns.getContext(), benefit);
-  }
 }
 
 std::unique_ptr<Pass> vector::createLowerVectorMultiReductionPass(
