@@ -353,6 +353,16 @@ add_header_library(
 )
 
 add_header_library(
+  bf16addl
+  HDRS
+    bf16addl.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   bf16addf128
   HDRS
     bf16addf128.h
@@ -377,6 +387,16 @@ add_header_library(
   HDRS
     bf16fmaf.h
   DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+add_header_library(
+  bf16fmaf128
+  HDRS
+    bf16fmaf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
@@ -809,7 +829,7 @@ add_header_library(
 )
 
 add_header_library(
-  f16addl   
+  f16addl
   HDRS
     f16addl.h
   DEPENDS
@@ -983,6 +1003,63 @@ add_header_library(
     fsqrtl.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
+  getpayload
+  HDRS
+    getpayload.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadbf16
+  HDRS
+    getpayloadbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadf
+  HDRS
+    getpayloadf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadf128
+  HDRS
+    getpayloadf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadf16
+  HDRS
+    getpayloadf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadl
+  HDRS
+    getpayloadl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
 )
 
 add_header_library(

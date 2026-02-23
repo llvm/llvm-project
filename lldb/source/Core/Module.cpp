@@ -929,7 +929,7 @@ void Module::FindFunctions(const RegularExpression &regex,
                 if (pos == end)
                   sc_list.Append(sc);
                 else
-                  sc_list[pos->second].symbol = sc.symbol;
+                  sc_list.SetSymbolAtIndex(pos->second, sc.symbol);
               }
             }
           }

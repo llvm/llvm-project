@@ -4548,7 +4548,7 @@ add_entrypoint_object(
   HDRS
     ../getpayload.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.getpayload
 )
 
 add_entrypoint_object(
@@ -4558,7 +4558,7 @@ add_entrypoint_object(
   HDRS
     ../getpayloadf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.getpayloadf
 )
 
 add_entrypoint_object(
@@ -4568,7 +4568,7 @@ add_entrypoint_object(
   HDRS
     ../getpayloadl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.getpayloadl
 )
 
 add_entrypoint_object(
@@ -4578,8 +4578,7 @@ add_entrypoint_object(
   HDRS
     ../getpayloadf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.getpayloadf16
 )
 
 add_entrypoint_object(
@@ -4589,8 +4588,7 @@ add_entrypoint_object(
   HDRS
     ../getpayloadf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.getpayloadf128
 )
 
 add_entrypoint_object(
@@ -4600,11 +4598,7 @@ add_entrypoint_object(
   HDRS
     ../getpayloadbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.getpayloadbf16
 )
 
 add_entrypoint_object(
@@ -5092,11 +5086,7 @@ add_entrypoint_object(
   HDRS
     ../bf16addl.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.generic.add_sub
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16addl
 )
 
 add_entrypoint_object(
@@ -5198,11 +5188,7 @@ add_entrypoint_object(
   HDRS
     ../bf16fmaf128.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.bf16fmaf128
 )
 
 add_entrypoint_object(

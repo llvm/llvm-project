@@ -939,8 +939,7 @@ class SFBNDS_BFO
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
                   uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU,
-             ReadSFBALU]> {
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;

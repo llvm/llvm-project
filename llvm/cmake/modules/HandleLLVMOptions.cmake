@@ -1299,6 +1299,11 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
 endif()
 
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if(LLVM_ENABLE_MODULES)
+    # PCH with modules is difficult to get right and modules should make PCH
+    # obsolete from a compile-time perspective anyway (at least, in principle).
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
   if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     # PCH is working in principle on AIX, but due to transitive includes,
     # sys/mode.h ends up in the LLVMSupport PCH, which happens to define macros
