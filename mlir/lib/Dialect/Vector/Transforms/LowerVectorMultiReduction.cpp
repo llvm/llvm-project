@@ -455,7 +455,7 @@ struct OneDimMultiReductionToTwoDim
 /// ...
 /// %res = arith.addf %Nminus1, %resNminus2 : vector<Mx...xf32>
 /// ```
-struct UnrollMultiReductionInnerParallelBaseCase
+struct MultiReductionToArithOps
     : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
@@ -527,7 +527,7 @@ struct UnrollMultiReductionInnerParallelBaseCase
 /// %res = vector.multi_reduction %Nminus1, %redNminus2 [ [[REDUCTION_DIMS]] ] :
 /// vector<Mx...xf32> to vector<Ix...xf32>
 /// ```
-struct UnrollMultiReductionInnerParallelGeneralCase
+struct UnrollMultiReductionInnerParallel
     : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
 
@@ -641,8 +641,8 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);
   } else {
-    patterns.add<UnrollMultiReductionInnerParallelBaseCase,
-                 UnrollMultiReductionInnerParallelGeneralCase>(
+    patterns.add<MultiReductionToArithOps,
+                 UnrollMultiReductionInnerParallel>(
         patterns.getContext(), benefit);
   }
 }
