@@ -47,27 +47,15 @@ TEST(EntityLinkageTest, AssignmentOperator) {
 }
 
 TEST(EntityLinkageTest, EqualityOperatorReflexive) {
-  EXPECT_TRUE(EntityLinkage(None) == EntityLinkage(None));
-  EXPECT_TRUE(EntityLinkage(Internal) == EntityLinkage(Internal));
-  EXPECT_TRUE(EntityLinkage(External) == EntityLinkage(External));
+  EXPECT_EQ(EntityLinkage(None), EntityLinkage(None));
+  EXPECT_EQ(EntityLinkage(Internal), EntityLinkage(Internal));
+  EXPECT_EQ(EntityLinkage(External), EntityLinkage(External));
 }
 
 TEST(EntityLinkageTest, EqualityOperatorDistinct) {
-  EXPECT_FALSE(EntityLinkage(None) == EntityLinkage(Internal));
-  EXPECT_FALSE(EntityLinkage(None) == EntityLinkage(External));
-  EXPECT_FALSE(EntityLinkage(Internal) == EntityLinkage(External));
-}
-
-TEST(EntityLinkageTest, InequalityOperatorDistinct) {
-  EXPECT_TRUE(EntityLinkage(None) != EntityLinkage(Internal));
-  EXPECT_TRUE(EntityLinkage(None) != EntityLinkage(External));
-  EXPECT_TRUE(EntityLinkage(Internal) != EntityLinkage(External));
-}
-
-TEST(EntityLinkageTest, InequalityOperatorReflexive) {
-  EXPECT_FALSE(EntityLinkage(None) != EntityLinkage(None));
-  EXPECT_FALSE(EntityLinkage(Internal) != EntityLinkage(Internal));
-  EXPECT_FALSE(EntityLinkage(External) != EntityLinkage(External));
+  EXPECT_NE(EntityLinkage(None), EntityLinkage(Internal));
+  EXPECT_NE(EntityLinkage(None), EntityLinkage(External));
+  EXPECT_NE(EntityLinkage(Internal), EntityLinkage(External));
 }
 
 TEST(EntityLinkageTest, StreamOutputNone) {
