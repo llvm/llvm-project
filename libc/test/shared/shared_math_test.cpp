@@ -252,6 +252,9 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::canonicalizef128(&canonicalizef128_cx,
                                                         &canonicalizef128_x));
   EXPECT_FP_EQ(float128(0.0), canonicalizef128_cx);
+
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::bf16fmaf128(
+                                  float128(0.0), float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(float128(0.0), LIBC_NAMESPACE::shared::ceilf128(float128(0.0)));
   EXPECT_FP_EQ(float128(0.0),
                LIBC_NAMESPACE::shared::faddf128(float128(0.0), float128(0.0)));
