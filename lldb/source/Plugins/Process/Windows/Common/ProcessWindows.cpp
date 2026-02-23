@@ -24,7 +24,7 @@
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/PseudoTerminal.h"
-#include "lldb/Host/windows/ConnectionGenericFileWindows.h"
+#include "lldb/Host/windows/ConnectionConPTYWindows.h"
 #include "lldb/Host/windows/HostThreadWindows.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/DynamicLoader.h"
@@ -214,7 +214,7 @@ Status ProcessWindows::DoLaunch(Module *exe_module,
   error = LaunchProcess(launch_info, delegate);
   if (error.Success())
     SetID(launch_info.GetProcessID());
-  m_pty = launch_info.GetPTYSP();
+  m_pty = launch_info.TakePTY();
   return error;
 }
 
@@ -651,8 +651,11 @@ void ProcessWindows::OnExitProcess(uint32_t exit_code) {
   Log *log = GetLog(WindowsLog::Process);
   LLDB_LOG(log, "Process {0} exited with code {1}", GetID(), exit_code);
 
-  if (m_pty)
+  if (m_pty) {
+    m_pty->SetStopping(true);
+    m_stdio_communication.InterruptRead();
     m_pty->Close();
+  }
 
   TargetSP target = CalculateTarget();
   if (target) {
@@ -1130,10 +1133,11 @@ private:
   bool m_is_running = false;
 };
 
-void ProcessWindows::SetPseudoConsoleHandle(
-    const std::shared_ptr<PseudoConsole> &pty) {
+void ProcessWindows::SetPseudoConsoleHandle() {
+  if (m_pty == nullptr)
+    return;
   m_stdio_communication.SetConnection(
-      std::make_unique<ConnectionGenericFile>(pty->GetSTDOUTHandle(), false));
+      std::make_unique<ConnectionConPTY>(m_pty));
   if (m_stdio_communication.IsConnected()) {
     m_stdio_communication.SetReadThreadBytesReceivedCallback(
         STDIOReadThreadBytesReceived, this);
@@ -1144,7 +1148,7 @@ void ProcessWindows::SetPseudoConsoleHandle(
       std::lock_guard<std::mutex> guard(m_process_input_reader_mutex);
       if (!m_process_input_reader)
         m_process_input_reader = std::make_shared<IOHandlerProcessSTDIOWindows>(
-            this, pty->GetSTDINHandle());
+            this, m_pty->GetSTDINHandle());
     }
   }
 }

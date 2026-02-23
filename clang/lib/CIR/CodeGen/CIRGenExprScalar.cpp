@@ -870,12 +870,21 @@ public:
     return {};
   }
   mlir::Value VisitTypeTraitExpr(const TypeTraitExpr *e) {
+    // We diverge slightly from classic codegen here because CIR has stricter
+    // typing. In LLVM IR, constant folding covers up some potential type
+    // mismatches such as bool-to-int conversions that would fail the verifier
+    // in CIR. To make things work, we need to be sure we only emit a bool value
+    // if the expression type is bool.
     mlir::Location loc = cgf.getLoc(e->getExprLoc());
-    if (e->isStoredAsBoolean())
-      return builder.getBool(e->getBoolValue(), loc);
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: TypeTraitExpr stored as int");
-    return {};
+    if (e->isStoredAsBoolean()) {
+      if (e->getType()->isBooleanType())
+        return builder.getBool(e->getBoolValue(), loc);
+      assert(e->getType()->isIntegerType() &&
+             "Expected int type for TypeTraitExpr");
+      return builder.getConstInt(loc, cgf.convertType(e->getType()),
+                                 (uint64_t)e->getBoolValue());
+    }
+    return builder.getConstInt(loc, e->getAPValue().getInt());
   }
   mlir::Value
   VisitConceptSpecializationExpr(const ConceptSpecializationExpr *e) {
@@ -1278,10 +1287,8 @@ public:
   mlir::Value VisitBinLAnd(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      auto vecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      mlir::Value zeroValue = builder.getNullValue(vecTy.getElementType(), loc);
-      SmallVector<mlir::Value, 16> elements(vecTy.getSize(), zeroValue);
-      auto zeroVec = cir::VecCreateOp::create(builder, loc, vecTy, elements);
+      mlir::Type vecTy = cgf.convertType(e->getType());
+      mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
@@ -1309,6 +1316,10 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup();
           cir::YieldOp::create(b, loc, res);
+          if (res.getParentBlock() != builder.getInsertionBlock())
+            cgf.cgm.errorNYI(
+                e->getSourceRange(),
+                "ScalarExprEmitter: VisitBinLAnd ternary with cleanup");
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1324,10 +1335,8 @@ public:
   mlir::Value VisitBinLOr(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      auto vecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      mlir::Value zeroValue = builder.getNullValue(vecTy.getElementType(), loc);
-      SmallVector<mlir::Value, 16> elements(vecTy.getSize(), zeroValue);
-      auto zeroVec = cir::VecCreateOp::create(builder, loc, vecTy, elements);
+      mlir::Type vecTy = cgf.convertType(e->getType());
+      mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
@@ -1363,6 +1372,10 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup();
           cir::YieldOp::create(b, loc, res);
+          if (res.getParentBlock() != builder.getInsertionBlock())
+            cgf.cgm.errorNYI(
+                e->getSourceRange(),
+                "ScalarExprEmitter: VisitBinLOr ternary with cleanup");
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);
