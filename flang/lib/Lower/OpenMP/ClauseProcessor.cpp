@@ -1328,16 +1328,10 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
         mlir::Location currentLocation = converter.getCurrentLocation();
-        if (ty.isInteger()) {
-          mlir::Value operand =
-              firOpBuilder.createIntegerConstant(currentLocation, ty, 1);
-          result.linearStepVars.append(objects.size(), operand);
-        } else {
-          // Default to I32 type
-          mlir::Value operand = firOpBuilder.createIntegerConstant(
-              currentLocation, firOpBuilder.getI32Type(), 1);
-          result.linearStepVars.append(objects.size(), operand);
-        }
+        mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
+        mlir::Value operand =
+            firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
+        result.linearStepVars.append(objects.size(), operand);
       }
     }
     result.linearVarTypes =
