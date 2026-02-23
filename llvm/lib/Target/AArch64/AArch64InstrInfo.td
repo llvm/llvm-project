@@ -10936,13 +10936,18 @@ defm : PairwiseUZPBinOp<smin, v8i16, FPR128, SMINPv8i16>;
 defm : PairwiseUZPBinOp<smin, v8i8,  FPR64,  SMINPv8i8>;
 defm : PairwiseUZPBinOp<smin, v16i8, FPR128, SMINPv16i8>;
 
+
 defm : PairwiseZIPBinOp<any_fmaximum, v2f64, FPR128, FMAXPv2f64>;
-defm : PairwiseZIPBinOp<any_fmaximum, v2f32, FPR64, FMAXPv2f32>;
+defm : PairwiseZIPBinOp<any_fmaximum, v2f32, FPR64,  FMAXPv2f32>;
 defm : PairwiseUZPBinOp<any_fmaximum, v4f32, FPR128, FMAXPv4f32>;
+defm : PairwiseUZPBinOp<any_fmaximum, v4f16, FPR64,  FMAXPv4f16>;
+defm : PairwiseUZPBinOp<any_fmaximum, v8f16, FPR128, FMAXPv8f16>;
 
 defm : PairwiseZIPBinOp<any_fminimum, v2f64, FPR128, FMINPv2f64>;
-defm : PairwiseZIPBinOp<any_fminimum, v2f32, FPR64, FMINPv2f32>;
+defm : PairwiseZIPBinOp<any_fminimum, v2f32, FPR64,  FMINPv2f32>;
 defm : PairwiseUZPBinOp<any_fminimum, v4f32, FPR128, FMINPv4f32>;
+defm : PairwiseUZPBinOp<any_fminimum, v4f16, FPR64,  FMINPv4f16>;
+defm : PairwiseUZPBinOp<any_fminimum, v8f16, FPR128, FMINPv8f16>;
 
 // Scalar 64-bit shifts in FPR64 registers.
 def : Pat<(i64 (int_aarch64_neon_sshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),

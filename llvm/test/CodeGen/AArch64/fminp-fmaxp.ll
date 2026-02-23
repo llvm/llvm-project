@@ -67,9 +67,46 @@ define <4 x float> @manual_fminp_v4f32(<4 x float> %a, <4 x float> %b) {
   ret <4 x float> %r
 }
 
-declare <2 x double> @llvm.maximum.v2f64(<2 x double>, <2 x double>)
-declare <2 x double> @llvm.minimum.v2f64(<2 x double>, <2 x double>)
-declare <2 x float> @llvm.maximum.v2f32(<2 x float>, <2 x float>)
-declare <2 x float> @llvm.minimum.v2f32(<2 x float>, <2 x float>)
-declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
-declare <4 x float> @llvm.minimum.v4f32(<4 x float>, <4 x float>)
+define <4 x half> @manual_fmaxp_v4f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: manual_fmaxp_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmaxp v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %e = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %o = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %r = call <4 x half> @llvm.maximum.v4f16(<4 x half> %e, <4 x half> %o)
+  ret <4 x half> %r
+}
+
+define <4 x half> @manual_fminp_v4f16(<4 x half> %a, <4 x half> %b) {
+; CHECK-LABEL: manual_fminp_v4f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminp v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    ret
+  %e = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %o = shufflevector <4 x half> %a, <4 x half> %b, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %r = call <4 x half> @llvm.minimum.v4f16(<4 x half> %e, <4 x half> %o)
+  ret <4 x half> %r
+}
+
+define <8 x half> @manual_fmaxp_v8f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: manual_fmaxp_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmaxp v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %e = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %o = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %r = call <8 x half> @llvm.maximum.v8f16(<8 x half> %e, <8 x half> %o)
+  ret <8 x half> %r
+}
+
+define <8 x half> @manual_fminp_v8f16(<8 x half> %a, <8 x half> %b) {
+; CHECK-LABEL: manual_fminp_v8f16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminp v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    ret
+  %e = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %o = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+  %r = call <8 x half> @llvm.minimum.v8f16(<8 x half> %e, <8 x half> %o)
+  ret <8 x half> %r
+}
