@@ -9982,7 +9982,7 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
                                                  VPCostContext &CostCtx) {
   // Filter out scalar VPlan.
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
-          [&](ElementCount VF) { return VF.isScalar(); }, Range))
+          [](ElementCount VF) { return VF.isScalar(); }, Range))
     return;
 
   // Scan the body of the loop in a topological order to visit each basic block
