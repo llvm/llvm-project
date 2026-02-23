@@ -16,9 +16,9 @@
 subroutine simple_linear
     implicit none
     integer :: x, y, i
-    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
+    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, i32) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, %[[I]]#0 = %{{.*}} : !fir.ref<i32>) {{.*}}
+    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, i32, %[[I]]#0 = %{{.*}} : !fir.ref<i32>, i32) {{.*}}
     !$omp simd linear(x)
     do i = 1, 10
     end do
@@ -39,9 +39,9 @@ subroutine linear_step
     implicit none
     integer :: x, y, i
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
-    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
+    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, i32) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, %[[I]]#0 = %{{.*}} : !fir.ref<i32>) {{.*}}
+    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, i32, %[[I]]#0 = %{{.*}} : !fir.ref<i32>, i32) {{.*}}
     !$omp simd linear(x:4)
     do i = 1, 10
     end do
@@ -71,9 +71,9 @@ subroutine linear_expr
     !IMPLICIT: %[[const:.*]] = arith.constant 4 : i32
     !IMPLICIT: %[[LINEAR_EXPR:.*]] = arith.addi %[[LOAD_A]], %[[const]] : i32
 
-    !CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>) {{.*}}
+    !CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>, i32) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>, %[[I]]#0 = {{.*}} : !fir.ref<i32>) {{.*}}
+    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>, i32, %[[I]]#0 = {{.*}} : !fir.ref<i32>, i32) {{.*}}
     !$omp simd linear(x:a+4)
     do i = 1, 10
     end do
@@ -90,7 +90,7 @@ subroutine simple_linear_i8
   ! CHECK-DAG: %[[X_ALLOC:.*]] = fir.alloca i64 {bindc_name = "x"
   ! CHECK: %[[C1_I32:.*]] = arith.constant 1 : i32
 
-  ! CHECK: omp.simd linear(%[[X_DECL:.*]]#0 = %[[C1_I32]] : !fir.ref<i64>) {{.*}}
+  ! CHECK: omp.simd linear(%[[X_DECL:.*]]#0 = %[[C1_I32]] : !fir.ref<i64>, i32) {{.*}}
 
   !$omp simd linear(x)
   do i = 1_8, 10_8

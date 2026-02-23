@@ -40,7 +40,7 @@ func.func @nowait_not_allowed(%n : memref<i32>) {
 
 func.func @linear_not_allowed(%data_var : memref<i32>, %linear_var : i32) {
   // expected-error@+1 {{expected '{' to begin a region}}
-  omp.parallel linear(%data_var = %linear_var : memref<i32>)  {}
+  omp.parallel linear(%data_var = %linear_var : memref<i32> : i32)  {}
   return
 }
 
@@ -1552,7 +1552,7 @@ func.func @omp_sections() {
 
 func.func @omp_sections(%data_var : memref<i32>, %linear_var : i32) {
   // expected-error @below {{expected '{' to begin a region}}
-  omp.sections linear(%data_var = %linear_var : memref<i32>) {
+  omp.sections linear(%data_var = %linear_var : memref<i32> : i32) {
     omp.terminator
   }
   return

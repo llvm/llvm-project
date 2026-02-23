@@ -429,13 +429,16 @@ static ParseResult parseLinearClause(
     OpAsmParser::UnresolvedOperand var;
     Type type;
     OpAsmParser::UnresolvedOperand stepVar;
+    Type stepType;
     if (parser.parseOperand(var) || parser.parseEqual() ||
-        parser.parseOperand(stepVar) || parser.parseColonType(type))
+        parser.parseOperand(stepVar) || parser.parseColonType(type) ||
+        parser.parseComma() || parser.parseType(stepType))
       return failure();
 
     linearVars.push_back(var);
     linearTypes.push_back(type);
     linearStepVars.push_back(stepVar);
+    linearStepTypes.push_back(stepType);
     return success();
   });
 }
@@ -451,7 +454,10 @@ static void printLinearClause(OpAsmPrinter &p, Operation *op,
     p << linearVars[i];
     if (linearStepVars.size() > i)
       p << " = " << linearStepVars[i];
-    p << " : " << linearVars[i].getType() << separator;
+    p << " : " << linearVars[i].getType() << ", ";
+    if (linearStepTypes.size() > i)
+      p << linearStepTypes[i];
+    p << separator;
   }
 }
 
