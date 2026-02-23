@@ -67,3 +67,19 @@ TEST_F(LlvmLibcBfloat16ConversionTest, FromInteger) {
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
   }
 }
+
+TEST_F(LlvmLibcBfloat16ConversionTest, MultiplyAssign) {
+  for(uint16_t i = POS_START; i<=POS_STOP; i++){
+    for(uint16_t j = POS_START; j<=POS_STOP; j++){
+      BFloat16 a{i}, b{j};
+      MPFRNumber mpfr_a{a}, mpfr_b{j};
+      MPFRNumber mpfr_c = mpfr_a;
+      mpfr_c.mul(mpfr_b);
+      BFloat16 mpfr_bfloat = mpfr_c.as<BFloat16>();
+      a *= b;
+      BFloat16 libc_bfloat = a;
+      EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
+
+    }
+  }
+}
