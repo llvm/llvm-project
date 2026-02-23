@@ -7,7 +7,7 @@
 ; RUN: opt -stats -O3 -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: opt -stats -O0 -disable-output < %s 2>&1 | FileCheck %s
 
-; CHECK-DAG: 18 instcount - Instruction size of biggest function
+; CHECK-DAG: 18 instcount - Largest number of instructions in a single function
 ; CHECK-DAG: 2 instcount - Number of non-external functions
 
 define void @foo(i32 %i, i32 %j, i32 %n) {
