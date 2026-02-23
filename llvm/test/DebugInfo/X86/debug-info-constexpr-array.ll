@@ -28,10 +28,6 @@
 @_ZN4Test4NUMSE = linkonce_odr constant [3 x i32] [i32 1, i32 2, i32 3], align 4, !dbg !5
 @_ZN4Test5BYTESE = linkonce_odr constant [2 x i8] c"\DE\AD", align 1, !dbg !28
 
-define dso_local void @_Z3usev() !dbg !33 {
-  ret void, !dbg !36
-}
-
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!30, !31}
 
@@ -67,7 +63,3 @@ define dso_local void @_Z3usev() !dbg !33 {
 !29 = distinct !DIGlobalVariable(name: "BYTES", linkageName: "_ZN4Test5BYTESE", scope: !2, file: !7, line: 7, type: !23, isLocal: false, isDefinition: true, declaration: !22)
 !30 = !{i32 2, !"Debug Info Version", i32 3}
 !31 = !{i32 1, !"wchar_size", i32 4}
-!33 = distinct !DISubprogram(name: "use", linkageName: "_Z3usev", scope: !7, file: !7, line: 10, type: !34, scopeLine: 10, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !2)
-!34 = !DISubroutineType(types: !35)
-!35 = !{null}
-!36 = !DILocation(line: 14, column: 1, scope: !33)
