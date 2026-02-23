@@ -1259,92 +1259,6 @@ static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
   return nullptr;
 }
 
-static xegpu::DistributeLayoutAttr
-getExpectedLayoutAt(OpOperand &operand,
-                    xegpu::DistributeLayoutAttr currLayout) {
-  Operation *op = operand.getOwner();
-  unsigned idx = operand.getOperandNumber();
-
-  // For vector::BroadcastOp, infer the source layout from the result layout.
-  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
-    auto resLayout = xegpu::getDistributeLayoutAttr(broadcast->getResult(0));
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
-    if (!srcTy)
-      return xegpu::DistributeLayoutAttr();
-    return xegpu::inferBroadcastSourceLayout(
-        resLayout, broadcast.getResultVectorType().getShape(),
-        srcTy.getShape());
-  }
-
-  // For vector::MultiDimReductionOp, infer source layout from result layout
-  // using reduction dims. Acc operand is expected to have the same layout as
-  // the result.
-  if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
-    auto resLayout = xegpu::getDistributeLayoutAttr(reduction->getResult(0));
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    if (idx == 0) {
-      SmallVector<int64_t> reductionDims(reduction.getReductionDims());
-      return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
-    }
-    if (idx == 1)
-      return resLayout;
-  }
-
-  // For vector::BitCastOp, infer source layout from result layout using
-  // element type bitwidths.
-  if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
-    auto resLayout = xegpu::getDistributeLayoutAttr(bitcast->getResult(0));
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    int resElemBitWidth =
-        bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
-    int srcElemBitWidth =
-        bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
-    return xegpu::inferBitCastSourceLayout(resLayout, resElemBitWidth,
-                                           srcElemBitWidth);
-  }
-
-  // For vector::ShapeCastOp, infer source layout from result layout using
-  // shapes.
-  if (auto shapeCast = dyn_cast<vector::ShapeCastOp>(op)) {
-    auto resLayout = xegpu::getDistributeLayoutAttr(shapeCast->getResult(0));
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    return xegpu::inferShapeCastSourceLayout(
-        resLayout, shapeCast.getResultVectorType().getShape(),
-        shapeCast.getSourceVectorType().getShape());
-  }
-
-  // For vector::InsertStridedSliceOp, infer source layout from result layout.
-  // Dest vector must have the same layout as the result.
-  if (auto insertSlice = dyn_cast<vector::InsertStridedSliceOp>(op)) {
-    auto resLayout = xegpu::getDistributeLayoutAttr(insertSlice->getResult(0));
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    if (idx == 0)
-      return xegpu::inferInsertStridedSliceSourceLayout(
-          resLayout, insertSlice.getDestVectorType().getShape(),
-          insertSlice.getSourceVectorType().getShape());
-    if (idx == 1)
-      return resLayout;
-  }
-  // For elementwise operations, all operands must have the same layout as the
-  // result.
-  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
-    auto resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
-    if (!resLayout)
-      return xegpu::DistributeLayoutAttr();
-    return resLayout;
-  }
-  // TODO: Handle more cases as needed here.
-  // Fallback to currently assigned layout for all other cases. This assumes no
-  // conflicts.
-  return currLayout;
-}
-
 struct ResolveLayoutConflicts {
   ResolveLayoutConflicts(Operation *parentOp)
       : parentOp(parentOp), builder(parentOp->getContext()) {}
@@ -1395,28 +1309,25 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   Value vectorValue = operand.get();
   Operation *consumerOp = operand.getOwner();
   // Get the current layout of the vector value.
-  auto currLayout = xegpu::getDistributeLayoutAttr(vectorValue);
-  if (!currLayout) {
-    consumerOp->emitError("Vector operand has no layout assigned.");
-    return failure();
-  }
+  auto producerLayout = xegpu::getDistributeLayoutAttr(vectorValue);
+  if (!producerLayout)
+    return consumerOp->emitError("Vector operand has no layout assigned.");
 
-  // Get the expected layout at this operand.
-  auto expectedLayout = getExpectedLayoutAt(operand, currLayout);
-  if (!expectedLayout) {
-    consumerOp->emitError("No expected layout found for vector operand.");
-    return failure();
-  }
+  // Get the consumer expected layout at this operand.
+  auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
+  if (!consumerLayout)
+    return consumerOp->emitError(
+        "No consumer layout found for vector operand.");
 
   // If layouts are same, no conflict exists, return success.
-  if (expectedLayout.isEqualTo(currLayout))
+  if (consumerLayout.isEqualTo(producerLayout))
     return success();
 
   // Insert a convert_layout op to resolve the conflict.
   builder.setInsertionPointAfterValue(vectorValue);
   auto convertOp = xegpu::ConvertLayoutOp::create(
       builder, consumerOp->getLoc(), vectorValue.getType(), vectorValue,
-      currLayout, expectedLayout);
+      producerLayout, consumerLayout);
 
   // Update the operand to use the converted value.
   operand.set(convertOp.getResult());

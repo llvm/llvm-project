@@ -210,4 +210,34 @@ func.func @conflict_inside_loop() -> vector<16x16xf16> {
   } {layout_result_0 = #inst_data_8x16}
   return %0 : vector<16x16xf16>
 }
+
+// CHECK-LABEL: func.func @conflict_postop
+// CHECK-DAG:     %[[CST:.*]] = arith.constant {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>}
+// CHECK-SAME:      dense<0.000000e+00> : vector<16x16xf16>
+// CHECK:         %[[FOR:.*]] = scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%[[ACC:.*]] = %[[CST]]) -> (vector<16x16xf16>) {
+// CHECK:           %[[V1:.*]] = "some_op"() {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : () -> vector<16x16xf16>
+// CHECK:           %[[ADD:.*]] = arith.addf %[[ACC]], %[[V1]]
+// CHECK-SAME:        {layout_result_0 = #xegpu.layout<inst_data = [16, 16]>} : vector<16x16xf16>
+// CHECK:           scf.yield %[[ADD]] : vector<16x16xf16>
+// CHECK:         }
+// CHECK:         %[[CVT:.*]] = xegpu.convert_layout %[[FOR]]
+// CHECK-SAME:      <{input_layout = #xegpu.layout<inst_data = [16, 16]>, target_layout = #xegpu.layout<inst_data = [8, 16]>}>
+// CHECK-SAME:      : vector<16x16xf16>
+// CHECK:         %[[EXP:.*]] = math.exp %[[CVT]]
+// CHECK-SAME:      {layout_result_0 = #xegpu.layout<inst_data = [8, 16]>} : vector<16x16xf16>
+// CHECK:         return %[[EXP]] : vector<16x16xf16>
+func.func @conflict_postop() -> vector<16x16xf16> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %cst = arith.constant {layout_result_0 = #inst_data_16x16} dense<0.0> : vector<16x16xf16>
+  %0 = scf.for %i = %c0 to %c4 step %c1 iter_args(%acc = %cst) -> vector<16x16xf16> {
+    %1 = "some_op"() {layout_result_0 = #inst_data_16x16} : () -> vector<16x16xf16>
+    %2 = arith.addf %acc, %1 {layout_result_0 = #inst_data_16x16} : vector<16x16xf16>
+    scf.yield %2 : vector<16x16xf16>
+  } {layout_result_0 = #inst_data_16x16}
+  %1 = math.exp %0 {layout_result_0 = #inst_data_8x16} : vector<16x16xf16>
+  return %1 : vector<16x16xf16>
+}
+
 }
