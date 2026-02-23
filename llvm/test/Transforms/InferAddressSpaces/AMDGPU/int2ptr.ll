@@ -3,8 +3,10 @@
 
 ; Test that address space inference works correctly for inttoptr/ptrtoint
 ; patterns when the pointer manipulation is within the preserved mask.
-; AMDGPU uses 2^32-aligned apertures for local memory, so modifications
-; to the lower 32 bits are safe.
+; For local memory, AMDGPU uses 2^32-aligned apertures, so only the lower
+; 32 bits are safe to modify.
+; For global memory, flat and global addresses are identical, so all 64
+; bits are preserved.
 
 ; Local (shared) memory tests - addrspace(3)
 
@@ -165,20 +167,41 @@ define void @test_xor_global_max32bit(ptr addrspace(1) %sp) {
   ret void
 }
 
-define void @test_xor_global_fail_bit33(ptr addrspace(1) %sp) {
-; CHECK-LABEL: define void @test_xor_global_fail_bit33(
+define void @test_xor_global_bit33(ptr addrspace(1) %sp) {
+; CHECK-LABEL: define void @test_xor_global_bit33(
 ; CHECK-SAME: ptr addrspace(1) [[SP:%.*]]) {
 ; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(1) [[SP]] to ptr
 ; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
 ; CHECK-NEXT:    [[B:%.*]] = xor i64 [[A]], 4294967296
 ; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
-; CHECK-NEXT:    store i16 0, ptr [[GP2]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(1)
+; CHECK-NEXT:    store i16 0, ptr addrspace(1) [[TMP1]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %gp = addrspacecast ptr addrspace(1) %sp to ptr
   %a = ptrtoint ptr %gp to i64
-  ; 0x100000000 - bit 32 set, should NOT be optimized
+  ; 0x100000000 - bit 32 set, should be optimized for global (all 64 bits preserved)
   %b = xor i64 %a, 4294967296
+  %gp2 = inttoptr i64 %b to ptr
+  store i16 0, ptr %gp2, align 2
+  ret void
+}
+
+define void @test_xor_global_high_bits(ptr addrspace(1) %sp) {
+; CHECK-LABEL: define void @test_xor_global_high_bits(
+; CHECK-SAME: ptr addrspace(1) [[SP:%.*]]) {
+; CHECK-NEXT:    [[GP:%.*]] = addrspacecast ptr addrspace(1) [[SP]] to ptr
+; CHECK-NEXT:    [[A:%.*]] = ptrtoint ptr [[GP]] to i64
+; CHECK-NEXT:    [[B:%.*]] = xor i64 [[A]], -9223372036854775808
+; CHECK-NEXT:    [[GP2:%.*]] = inttoptr i64 [[B]] to ptr
+; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[GP2]] to ptr addrspace(1)
+; CHECK-NEXT:    store i16 0, ptr addrspace(1) [[TMP1]], align 2
+; CHECK-NEXT:    ret void
+;
+  %gp = addrspacecast ptr addrspace(1) %sp to ptr
+  %a = ptrtoint ptr %gp to i64
+  ; 0x8000000000000000 - bit 63 set, should be optimized for global
+  %b = xor i64 %a, -9223372036854775808
   %gp2 = inttoptr i64 %b to ptr
   store i16 0, ptr %gp2, align 2
   ret void
