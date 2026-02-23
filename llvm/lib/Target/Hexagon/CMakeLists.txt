@@ -76,6 +76,7 @@ add_llvm_target(HexagonCodeGen
   HexagonVExtract.cpp
   HexagonVLIWPacketizer.cpp
   RDFCopy.cpp
+  AggressiveRDFCopy.cpp
   RDFDeadCode.cpp
 
   LINK_COMPONENTS
