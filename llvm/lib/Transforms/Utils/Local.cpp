@@ -487,6 +487,10 @@ bool llvm::wouldInstructionBeTriviallyDead(const Instruction *I,
 
     if (II->isLifetimeStartOrEnd()) {
       auto *Arg = II->getArgOperand(0);
+      // As per spec, the argument is either a pointer to an alloca instruction
+      // or a poison value.
+      assert((isa<AllocaInst>(Arg) || isa<PoisonValue>(Arg)) &&
+             "Expected alloca instruction or poison value.");
       if (isa<PoisonValue>(Arg))
         return true;
 
