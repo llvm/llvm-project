@@ -230,8 +230,8 @@ def expand_glob(arg, cwd):
 
 
 def expand_glob_expressions(args, cwd):
-    result = [args[0]]
-    for arg in args[1:]:
+    result = []
+    for arg in args:
         result.extend(expand_glob(arg, cwd))
     return result
 
@@ -865,8 +865,8 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # FIXME: Standardize on the builtin echo implementation. We can use a
         # temporary file to sidestep blocking pipe write issues.
 
-        # Ensure args[0] is hashable.
-        args[0] = expand_glob(args[0], cmd_shenv.cwd)[0]
+        # Expand all glob expressions
+        args = expand_glob_expressions(args, cmd_shenv.cwd)
 
         inproc_builtin = inproc_builtins.get(args[0], None)
         if inproc_builtin and (args[0] != "echo" or len(cmd.commands) == 1):
@@ -966,9 +966,6 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     f.close()
                     named_temp_files.append(f.name)
                     args[i] = arg.replace(kDevNull, f.name)
-
-        # Expand all glob expressions
-        args = expand_glob_expressions(args, cmd_shenv.cwd)
 
         # On Windows, do our own command line quoting for better compatibility
         # with some core utility distributions.
