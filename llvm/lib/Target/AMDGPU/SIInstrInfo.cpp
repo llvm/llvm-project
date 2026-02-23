@@ -4553,14 +4553,10 @@ bool SIInstrInfo::mayAccessScratch(const MachineInstr &MI) const {
 bool SIInstrInfo::mayAccessVMEMThroughFlat(const MachineInstr &MI) const {
   assert(isFLAT(MI));
 
-  // All flat instructions use the VMEM counter except prefetch.
-  if (!usesVM_CNT(MI))
-    return false;
-
   // If there are no memory operands then conservatively assume the flat
-  // operation may access VMEM.
+  // operation may access VMEM if it loads or stores at all.
   if (MI.memoperands_empty())
-    return true;
+    return MI.mayLoadOrStore();
 
   // See if any memory operand specifies an address space that involves VMEM.
   // Flat operations only supported FLAT, LOCAL (LDS), or address spaces
