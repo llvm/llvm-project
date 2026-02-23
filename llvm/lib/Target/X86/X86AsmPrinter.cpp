@@ -55,7 +55,19 @@ using namespace llvm;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {}
+    : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {
+  GetPSI = [this](Module &M) -> ProfileSummaryInfo * {
+    if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+      return &PSIW->getPSI();
+    return nullptr;
+  };
+  GetSDPI = [this](Module &M) -> StaticDataProfileInfo * {
+    if (auto *SDPIW =
+            getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+      return &SDPIW->getStaticDataProfileInfo();
+    return nullptr;
+  };
+}
 
 //===----------------------------------------------------------------------===//
 // Primitive Helper Functions.
@@ -64,10 +76,8 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 /// runOnMachineFunction - Emit the function body.
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
-  if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
-    PSI = &PSIW->getPSI();
-  if (auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
-    SDPI = &SDPIW->getStaticDataProfileInfo();
+  PSI = GetPSI(*MF.getFunction().getParent());
+  SDPI = GetSDPI(*MF.getFunction().getParent());
 
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 

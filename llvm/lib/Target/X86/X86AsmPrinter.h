@@ -9,9 +9,17 @@
 #ifndef LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 #define LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 
+#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
+#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/StackMaps.h"
+#include "llvm/IR/Analysis.h"
+#include "llvm/IR/PassManager.h"
+#include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/Passes/CodeGenPassBuilder.h"
+#include "llvm/Support/ErrorHandling.h"
 
 // Implemented in X86MCInstLower.cpp
 namespace {
@@ -199,6 +207,83 @@ public:
   bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
+
+  std::function<ProfileSummaryInfo *(Module &)> GetPSI;
+  std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
+};
+
+class X86AsmPrinterBeginPass : public PassInfoMixin<X86AsmPrinterBeginPass> {
+public:
+  X86AsmPrinterBeginPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
+      : TM(TM), CreateStreamer(CreateStreamer) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+    if (!Streamer)
+      reportFatalInternalError("Failed to create MCStreamer");
+    X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+    AsmPrinter.GetPSI = [&MAM](Module &M) {
+      return &MAM.getResult<ProfileSummaryAnalysis>(M);
+    };
+    AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+    setupModuleAsmPrinter(M, MAM, AsmPrinter);
+    AsmPrinter.doInitialization(M);
+    return PreservedAnalyses::all();
+  }
+
+private:
+  TargetMachine &TM;
+  CreateMCStreamer CreateStreamer;
+};
+
+class X86AsmPrinterPass : public PassInfoMixin<X86AsmPrinterPass> {
+public:
+  X86AsmPrinterPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
+      : TM(TM), CreateStreamer(CreateStreamer) {}
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM) {
+    Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+    if (!Streamer)
+      reportFatalInternalError("Failed to create MCStreamer");
+    X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+    AsmPrinter.GetPSI = [&MFAM, &MF](Module &M) {
+      return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<ProfileSummaryAnalysis>(M);
+    };
+    AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+    setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+    AsmPrinter.runOnMachineFunction(MF);
+    return PreservedAnalyses::all();
+  }
+
+private:
+  TargetMachine &TM;
+  CreateMCStreamer CreateStreamer;
+};
+
+class X86AsmPrinterEndPass : public PassInfoMixin<X86AsmPrinterEndPass> {
+public:
+  X86AsmPrinterEndPass(TargetMachine &TM, CreateMCStreamer CreateStreamer)
+      : TM(TM), CreateStreamer(CreateStreamer) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM) {
+    Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+    if (!Streamer)
+      reportFatalInternalError("Failed to create MCStreamer");
+    X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+    AsmPrinter.GetPSI = [&MAM](Module &M) {
+      return &MAM.getResult<ProfileSummaryAnalysis>(M);
+    };
+    AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+    setupModuleAsmPrinter(M, MAM, AsmPrinter);
+    AsmPrinter.doFinalization(M);
+    return PreservedAnalyses::all();
+  }
+
+private:
+  TargetMachine &TM;
+  CreateMCStreamer CreateStreamer;
 };
 
 } // end namespace llvm
