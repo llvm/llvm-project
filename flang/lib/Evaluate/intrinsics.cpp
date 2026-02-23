@@ -929,6 +929,7 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
             {"order", AnyInt, Rank::vector, Optionality::optional}},
         SameType, Rank::shaped, IntrinsicClass::transformationalFunction},
     {"rrspacing", {{"x", SameReal}}, SameReal},
+    {"rtc", {}, TypePattern{RealType, KindCode::exactKind, 8}, Rank::scalar},
     {"same_type_as",
         {{"a", ExtensibleDerived, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::In, {ArgFlag::canBeMoldNull}},

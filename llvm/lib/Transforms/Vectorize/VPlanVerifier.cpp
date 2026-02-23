@@ -40,11 +40,6 @@ class VPlanVerifier {
   // VPHeaderPHIRecipes.
   bool verifyPhiRecipes(const VPBasicBlock *VPBB);
 
-  /// Verify that \p EVL is used correctly. The user must be either in
-  /// EVL-based recipes as a last operand or VPInstruction::Add which is
-  /// incoming value into EVL's recipe.
-  bool verifyEVLRecipe(const VPInstruction &EVL) const;
-
   /// Verify that \p LastActiveLane's operand is guaranteed to be a prefix-mask.
   bool verifyLastActiveLaneRecipe(const VPInstruction &LastActiveLane) const;
 
@@ -144,108 +139,6 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     RecipeI++;
   }
   return true;
-}
-
-bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
-  if (EVL.getOpcode() != VPInstruction::ExplicitVectorLength) {
-    errs() << "verifyEVLRecipe should only be called on "
-              "VPInstruction::ExplicitVectorLength\n";
-    return false;
-  }
-  auto VerifyEVLUse = [&](const VPRecipeBase &R,
-                          const unsigned ExpectedIdx) -> bool {
-    SmallVector<const VPValue *> Ops(R.operands());
-    unsigned UseCount = count(Ops, &EVL);
-    if (UseCount != 1 || Ops[ExpectedIdx] != &EVL) {
-      errs() << "EVL is used as non-last operand in EVL-based recipe\n";
-      return false;
-    }
-    return true;
-  };
-  auto VerifyEVLUseInVecEndPtr = [&EVL](auto &VEPRs) {
-    if (all_of(VEPRs, [&EVL](VPUser *U) {
-          auto *VEPR = cast<VPVectorEndPointerRecipe>(U);
-          return match(VEPR->getOffset(),
-                       m_c_Mul(m_SpecificSInt(VEPR->getStride()),
-                               m_Sub(m_Specific(&EVL), m_One())));
-        }))
-      return true;
-    errs() << "Expected VectorEndPointer with EVL operand\n";
-    return false;
-  };
-  return all_of(EVL.users(), [&](VPUser *U) {
-    return TypeSwitch<const VPUser *, bool>(U)
-        .Case([&](const VPWidenIntrinsicRecipe *S) {
-          return VerifyEVLUse(*S, S->getNumOperands() - 1);
-        })
-        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
-              VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
-            [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case([&](const VPScalarIVStepsRecipe *R) {
-          if (R->getNumOperands() != 3) {
-            errs() << "Unrolling with EVL tail folding not yet supported\n";
-            return false;
-          }
-          return VerifyEVLUse(*R, 2);
-        })
-        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe,
-              VPInterleaveEVLRecipe>(
-            [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case(
-            [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
-        .Case([&](const VPInstruction *I) {
-          if (I->getOpcode() == Instruction::PHI ||
-              I->getOpcode() == Instruction::ICmp)
-            return VerifyEVLUse(*I, 1);
-          if (I->getOpcode() == Instruction::Sub) {
-            // If Sub has a single user that's a SingleDefRecipe (which is
-            // expected to be a Mul), filter its users, in turn, to get
-            // VectorEndPointerRecipes, and verify that all the offsets match
-            // (EVL - 1) * Stride.
-            if (auto *Def = dyn_cast_if_present<VPSingleDefRecipe>(
-                    I->getSingleUser())) {
-              auto VEPRs = make_filter_range(Def->users(),
-                                             IsaPred<VPVectorEndPointerRecipe>);
-              if (!VEPRs.empty())
-                return VerifyEVLUseInVecEndPtr(VEPRs);
-            }
-            return VerifyEVLUse(*I, 1);
-          }
-          switch (I->getOpcode()) {
-          case Instruction::Add:
-            break;
-          case Instruction::UIToFP:
-          case Instruction::Trunc:
-          case Instruction::ZExt:
-          case Instruction::Mul:
-          case Instruction::Shl:
-          case Instruction::FMul:
-          case VPInstruction::Broadcast:
-          case VPInstruction::PtrAdd:
-            // Opcodes above can only use EVL after wide inductions have been
-            // expanded.
-            if (!VerifyLate) {
-              errs() << "EVL used by unexpected VPInstruction\n";
-              return false;
-            }
-            break;
-          default:
-            errs() << "EVL used by unexpected VPInstruction\n";
-            return false;
-          }
-          if (!VerifyLate &&
-              !isa<VPCurrentIterationPHIRecipe>(*I->users().begin())) {
-            errs() << "Result of VPInstruction::Add with EVL operand is "
-                      "not used by VPCurrentIterationPHIRecipe\n";
-            return false;
-          }
-          return true;
-        })
-        .Default([&](const VPUser *U) {
-          errs() << "EVL has unexpected user\n";
-          return false;
-        });
-  });
 }
 
 bool VPlanVerifier::verifyLastActiveLaneRecipe(
@@ -372,12 +265,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     }
     if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
       switch (VPI->getOpcode()) {
-      case VPInstruction::ExplicitVectorLength:
-        if (!verifyEVLRecipe(*VPI)) {
-          errs() << "EVL VPValue is not used correctly\n";
-          return false;
-        }
-        break;
       case VPInstruction::LastActiveLane:
         if (!verifyLastActiveLaneRecipe(*VPI))
           return false;
