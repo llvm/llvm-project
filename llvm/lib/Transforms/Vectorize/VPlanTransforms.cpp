@@ -4100,12 +4100,12 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
 
       // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
       // the correct block mask.
-      VPBuilder EarlyExitBuilder(EarlyExitingVPBB->getTerminator());
-      auto *CondToEarlyExit = EarlyExitBuilder.createNaryOp(
+      VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
+      auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
           VPInstruction::MaskedCond,
           TrueSucc == ExitBlock
               ? CondOfEarlyExitingVPBB
-              : EarlyExitBuilder.createNot(CondOfEarlyExitingVPBB));
+              : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
       assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
               !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
               VPDT.properlyDominates(
