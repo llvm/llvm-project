@@ -115,8 +115,8 @@ struct BFloat16 {
   }
 
   LIBC_INLINE BFloat16 &operator*=(const BFloat16 &other) {
-  *this = *this * other;
-  return *this;
+    *this = *this * other;
+    return *this;
   }
 }; // struct BFloat16
 
