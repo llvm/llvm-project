@@ -6,9 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Symbol/Type.h"
 #include "lldb/Target/DynamicLoader.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
 #include "ProcessFreeBSDKernel.h"
@@ -65,7 +71,12 @@ bool ProcessFreeBSDKernel::CanDebug(lldb::TargetSP target_sp,
   return true;
 }
 
-void ProcessFreeBSDKernel::RefreshStateAfterStop() {}
+void ProcessFreeBSDKernel::RefreshStateAfterStop() {
+  if (!m_printed_unread_message) {
+    PrintUnreadMessage();
+    m_printed_unread_message = true;
+  }
+}
 
 bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
                                               ThreadList &new_thread_list) {
@@ -232,6 +243,153 @@ lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
   ModuleSP mod_sp = GetTarget().GetExecutableModule();
   const Symbol *sym = mod_sp->FindFirstSymbolWithNameAndType(ConstString(name));
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
+}
+
+void ProcessFreeBSDKernel::PrintUnreadMessage() {
+  Target &target = GetTarget();
+  Debugger &debugger = target.GetDebugger();
+
+  if (!debugger.GetCommandInterpreter().IsInteractive())
+    return;
+
+  Status error;
+
+  // Find msgbufp symbol (pointer to message buffer)
+  lldb::addr_t msgbufp_addr = FindSymbol("msgbufp");
+  if (msgbufp_addr == LLDB_INVALID_ADDRESS)
+    return;
+
+  // Read the pointer value
+  lldb::addr_t msgbufp = ReadPointerFromMemory(msgbufp_addr, error);
+  if (!error.Success() || msgbufp == LLDB_INVALID_ADDRESS)
+    return;
+
+  // Get the type information for struct msgbuf from DWARF
+  TypeQuery query("msgbuf");
+  TypeResults results;
+  target.GetImages().FindTypes(nullptr, query, results);
+
+  uint64_t offset_msg_ptr = 0;
+  uint64_t offset_msg_size = 0;
+  uint64_t offset_msg_wseq = 0;
+  uint64_t offset_msg_rseq = 0;
+
+  if (results.GetTypeMap().GetSize() > 0) {
+    // Found type info - use it to get field offsets
+    CompilerType msgbuf_type =
+        results.GetTypeMap().GetTypeAtIndex(0)->GetForwardCompilerType();
+
+    uint32_t num_fields = msgbuf_type.GetNumFields();
+    int field_found = 0;
+    for (uint32_t i = 0; i < num_fields; i++) {
+      std::string field_name;
+      uint64_t field_offset = 0;
+
+      msgbuf_type.GetFieldAtIndex(i, field_name, &field_offset, nullptr,
+                                  nullptr);
+
+      if (field_name == "msg_ptr") {
+        offset_msg_ptr = field_offset / 8; // Convert bits to bytes
+        field_found++;
+      } else if (field_name == "msg_size") {
+        offset_msg_size = field_offset / 8;
+        field_found++;
+      } else if (field_name == "msg_wseq") {
+        offset_msg_wseq = field_offset / 8;
+        field_found++;
+      } else if (field_name == "msg_rseq") {
+        offset_msg_rseq = field_offset / 8;
+        field_found++;
+      }
+    }
+
+    if (field_found != 4) {
+      LLDB_LOGF(GetLog(LLDBLog::Object),
+                "FreeBSDKernel: Could not find all required fields for msgbuf");
+      return;
+    }
+  } else {
+    // Fallback: use hardcoded offsets based on struct layout
+    // struct msgbuf layout (from sys/sys/msgbuf.h):
+    //   char *msg_ptr;      - offset 0
+    //   u_int msg_magic;    - offset ptr_size
+    //   u_int msg_size;     - offset ptr_size + 4
+    //   u_int msg_wseq;     - offset ptr_size + 8
+    //   u_int msg_rseq;     - offset ptr_size + 12
+    uint32_t ptr_size = GetAddressByteSize();
+    offset_msg_ptr = 0;
+    offset_msg_size = ptr_size + 4;
+    offset_msg_wseq = ptr_size + 8;
+    offset_msg_rseq = ptr_size + 12;
+  }
+
+  // Read struct msgbuf fields
+  lldb::addr_t bufp = ReadPointerFromMemory(msgbufp + offset_msg_ptr, error);
+  if (!error.Success() || bufp == LLDB_INVALID_ADDRESS)
+    return;
+
+  uint32_t size =
+      ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_size, 4, 0, error);
+  if (!error.Success() || size == 0)
+    return;
+
+  uint32_t wseq =
+      ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_wseq, 4, 0, error);
+  if (!error.Success())
+    return;
+
+  uint32_t rseq =
+      ReadUnsignedIntegerFromMemory(msgbufp + offset_msg_rseq, 4, 0, error);
+  if (!error.Success())
+    return;
+
+  // Convert sequences to positions
+  // MSGBUF_SEQ_TO_POS macro in FreeBSD: ((seq) % (size))
+  uint32_t rseq_pos = rseq % size;
+  uint32_t wseq_pos = wseq % size;
+
+  if (rseq_pos == wseq_pos)
+    return;
+
+  // Print crash info at once using stream
+  lldb::StreamSP stream_sp = debugger.GetAsyncOutputStream();
+  if (!stream_sp)
+    return;
+
+  stream_sp->PutCString("\nUnread portion of the kernel message buffer:\n");
+
+  // Read ring buffer in at most two chunks
+  if (rseq_pos < wseq_pos) {
+    // No wrap: read from rseq_pos to wseq_pos
+    size_t len = wseq_pos - rseq_pos;
+    std::string buf(len, '\0');
+    size_t bytes_read = ReadMemory(bufp + rseq_pos, &buf[0], len, error);
+    if (error.Success() && bytes_read > 0) {
+      buf.resize(bytes_read);
+      *stream_sp << buf;
+    }
+  } else {
+    // Wrap around: read from rseq_pos to end, then from start to wseq_pos
+    size_t len1 = size - rseq_pos;
+    std::string buf1(len1, '\0');
+    size_t bytes_read1 = ReadMemory(bufp + rseq_pos, &buf1[0], len1, error);
+    if (error.Success() && bytes_read1 > 0) {
+      buf1.resize(bytes_read1);
+      *stream_sp << buf1;
+    }
+
+    if (wseq_pos > 0) {
+      std::string buf2(wseq_pos, '\0');
+      size_t bytes_read2 = ReadMemory(bufp, &buf2[0], wseq_pos, error);
+      if (error.Success() && bytes_read2 > 0) {
+        buf2.resize(bytes_read2);
+        *stream_sp << buf2;
+      }
+    }
+  }
+
+  stream_sp->PutChar('\n');
+  stream_sp->Flush();
 }
 
 size_t ProcessFreeBSDKernel::DoReadMemory(lldb::addr_t addr, void *buf,
