@@ -4044,6 +4044,12 @@ public:
     return getNumOperands() == 4 ? getOperand(3) : nullptr;
   }
 
+  /// Set the StartIndex.
+  void setStartIndex(VPValue *StartIndex) {
+    assert(getNumOperands() == 4 && "must have a StartIndex operand");
+    setOperand(3, StartIndex);
+  }
+
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool usesFirstLaneOnly(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&

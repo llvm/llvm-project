@@ -53,9 +53,6 @@ class UnrollState {
   /// Unroll replicate region \p VPR by cloning the region UF - 1 times.
   void unrollReplicateRegionByUF(VPRegionBlock *VPR);
 
-  /// Add a start index operand to \p Steps for \p Part.
-  void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps, unsigned Part);
-
   /// Unroll recipe \p R by cloning it UF - 1 times, unless it is uniform across
   /// all parts.
   void unrollRecipeByUF(VPRecipeBase &R);
@@ -129,13 +126,13 @@ public:
 static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
                                         unsigned Part, VPlan &Plan,
                                         VPTypeAnalysis &TypeInfo) {
-  Type *BaseIVTy = TypeInfo.inferScalarType(Steps->getOperand(0));
-  Type *IntStepTy =
-      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
   if (Part == 0)
     return;
 
   VPBuilder Builder(Steps);
+  Type *BaseIVTy = TypeInfo.inferScalarType(Steps->getOperand(0));
+  Type *IntStepTy =
+      IntegerType::get(BaseIVTy->getContext(), BaseIVTy->getScalarSizeInBits());
   VPValue *StartIndex = Steps->getVFValue();
   if (Part > 1) {
     StartIndex = Builder.createOverflowingOp(
@@ -154,11 +151,6 @@ static void addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
   Steps->addOperand(StartIndex);
 }
 
-void UnrollState::addStartIndexForScalarSteps(VPScalarIVStepsRecipe *Steps,
-                                              unsigned Part) {
-  return ::addStartIndexForScalarSteps(Steps, Part, Plan, TypeInfo);
-}
-
 void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
   VPBlockBase *InsertPt = VPR->getSingleSuccessor();
   for (unsigned Part = 1; Part != UF; ++Part) {
@@ -173,7 +165,7 @@ void UnrollState::unrollReplicateRegionByUF(VPRegionBlock *VPR) {
       for (const auto &[PartIR, Part0R] : zip(*PartIVPBB, *Part0VPBB)) {
         remapOperands(&PartIR, Part);
         if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(&PartIR))
-          addStartIndexForScalarSteps(Steps, Part);
+          addStartIndexForScalarSteps(Steps, Part, Plan, TypeInfo);
 
         addRecipeForPart(&Part0R, &PartIR, Part);
       }
@@ -376,7 +368,7 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
     remapOperands(Copy, Part);
 
     if (auto *ScalarIVSteps = dyn_cast<VPScalarIVStepsRecipe>(Copy))
-      addStartIndexForScalarSteps(ScalarIVSteps, Part);
+      addStartIndexForScalarSteps(ScalarIVSteps, Part, Plan, TypeInfo);
 
     // Add operand indicating the part to generate code for, to recipes still
     // requiring it.
@@ -532,9 +524,9 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   VPlanTransforms::removeDeadRecipes(Plan);
 }
 
-/// Create a single-scalar clone of \p DefR (must be a VPReplicateRecipe or
-/// VPInstruction) for lane \p Lane. Use \p Def2LaneDefs to look up scalar
-/// definitions for operands of \DefR.
+/// Create a single-scalar clone of \p DefR (must be a VPReplicateRecipe,
+/// VPInstruction or VPScalarIVStepsRecipe) for lane \p Lane. Use \p
+/// Def2LaneDefs to look up scalar definitions for operands of \DefR.
 static VPValue *
 cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
              VPSingleDefRecipe *DefR, VPLane Lane,
@@ -596,7 +588,8 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
                                 *RepR, *RepR, RepR->getDebugLoc());
   } else {
     assert((isa<VPInstruction, VPScalarIVStepsRecipe>(DefR)) &&
-           "DefR must be a VPReplicateRecipe or VPInstruction");
+           "DefR must be a VPReplicateRecipe, VPInstruction or "
+           "VPScalarIVStepsRecipe");
     New = DefR->clone();
     for (const auto &[Idx, Op] : enumerate(NewOps)) {
       New->setOperand(Idx, Op);
@@ -605,15 +598,13 @@ cloneForLane(VPlan &Plan, VPBuilder &Builder, Type *IdxTy,
       if (Lane.getKnownLane() != 0) {
         VPTypeAnalysis TypeInfo(Plan);
         Type *BaseIVTy = TypeInfo.inferScalarType(DefR->getOperand(0));
-        Type *IntStepTy = IntegerType::get(BaseIVTy->getContext(),
-                                           BaseIVTy->getScalarSizeInBits());
-        VPBuilder Builder(DefR);
-        VPValue *LaneOffset = Plan.getConstantInt(IdxTy, Lane.getKnownLane());
-        LaneOffset = Builder.createScalarSExtOrTrunc(
-            LaneOffset, IntStepTy, IdxTy, DebugLoc::getUnknown());
+        VPValue *LaneOffset = Plan.getConstantInt(
+            APInt(IdxTy->getScalarSizeInBits(), Lane.getKnownLane())
+                .sextOrTrunc(BaseIVTy->getScalarSizeInBits()));
 
         if (VPValue *StartIndex = Steps->getStartIndex()) {
           // Add lane offset to the existing start index.
+          VPBuilder Builder(DefR);
           Steps->setOperand(3, Builder.createAdd(StartIndex, LaneOffset));
         } else {
           // No start index yet, add lane offset as the start index.
@@ -656,9 +647,6 @@ void VPlanTransforms::replicateByVF(VPlan &Plan, ElementCount VF) {
           (isa<VPInstruction>(&R) &&
            !cast<VPInstruction>(&R)->doesGeneratePerAllLanes() &&
            cast<VPInstruction>(&R)->getOpcode() != VPInstruction::Unpack))
-        continue;
-
-      if (isa<VPScalarIVStepsRecipe>(&R) && Plan.hasScalarVFOnly())
         continue;
 
       auto *DefR = cast<VPSingleDefRecipe>(&R);
