@@ -2083,23 +2083,6 @@ def TENSOR_LOAD_TO_LDS_D2    : VIMAGE_TENSOR_Pseudo<"tensor_load_to_lds", 1>;
 def TENSOR_STORE_FROM_LDS_D2 : VIMAGE_TENSOR_Pseudo<"tensor_store_from_lds", 1>;
 } // End SubtargetPredicate = isGFX125xOnly.
 
-class TensorPat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node v4i32:$vaddr0, v8i32:$vaddr1, v4i32:$vaddr2, v4i32:$vaddr3, (i32 timm:$cpol)),
-  (inst $vaddr0, $vaddr1, $vaddr2, $vaddr3, 0, $cpol)
->;
-
-class TensorD2Pat <VIMAGE_TENSOR_Pseudo inst, SDPatternOperator node> : GCNPat <
-  (node v4i32:$vaddr0, v8i32:$vaddr1, (i32 timm:$cpol)),
-  (inst $vaddr0, $vaddr1, 0, $cpol)
->;
-
-let SubtargetPredicate = isGFX125xOnly in {
-def : TensorPat   <TENSOR_LOAD_TO_LDS, int_amdgcn_tensor_load_to_lds>;
-def : TensorPat   <TENSOR_STORE_FROM_LDS, int_amdgcn_tensor_store_from_lds>;
-def : TensorD2Pat <TENSOR_LOAD_TO_LDS_D2, int_amdgcn_tensor_load_to_lds_d2>;
-def : TensorD2Pat <TENSOR_STORE_FROM_LDS_D2, int_amdgcn_tensor_store_from_lds_d2>;
-} // End SubtargetPredicate = isGFX125xOnly.
-
 class VIMAGE_TENSOR_Real <bits<8> op, VIMAGE_TENSOR_Pseudo ps, string opName = ps.Mnemonic> :
   InstSI <ps.OutOperandList, ps.InOperandList, opName # ps.AsmOperands, []>,
   VIMAGEe<op> {

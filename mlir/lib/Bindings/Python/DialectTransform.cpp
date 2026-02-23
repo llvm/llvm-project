@@ -8,12 +8,12 @@
 
 #include <string>
 
-#include "IRInterfaces.h"
 #include "Rewrite.h"
 #include "mlir-c/Dialect/Transform.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/IRCore.h"
+#include "mlir/Bindings/Python/IRInterfaces.h"
 #include "nanobind/nanobind.h"
 #include <nanobind/trampoline.h>
 
@@ -227,7 +227,8 @@ public:
 
     // Attach a FallbackModel, which calls into Python, to the named operation.
     mlirTransformOpInterfaceAttachFallbackModel(
-        ctx->get(), wrap(StringRef(opName.c_str())), callbacks);
+        ctx->get(), mlirStringRefCreate(opName.c_str(), opName.size()),
+        callbacks);
   }
 
   static void bindDerived(ClassTy &cls) {

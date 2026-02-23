@@ -2043,6 +2043,22 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
     defm vclmul  : RVVInt64BinBuiltinSet;
     defm vclmulh : RVVInt64BinBuiltinSet;
   }
+
+  // zvabd
+  let RequiredFeatures = ["zvabd"] in {
+    defm vabs : RVVOutBuiltinSet<"vabs", "csil", [["v", "Uv", "Uvv"]]>;
+    defm vabd : RVVOutBuiltinSet<"vabd", "cs", [["vv", "Uv", "Uvvv"]]>;
+    defm vabdu : RVVOutBuiltinSet<"vabdu", "cs", [["vv", "Uv", "UvUvUv"]]>;
+  }
+}
+
+let UnMaskedPolicyScheme = HasPolicyOperand, HasMaskedOffOperand = false in {
+  let RequiredFeatures = ["zvabd"] in {
+    defm vwabda : RVVOutOp1Op2BuiltinSet<"vwabda", "cs",
+                                         [["vv", "Uw", "UwUwvv"]]>;
+    defm vwabdau : RVVOutOp1Op2BuiltinSet<"vwabdau", "cs",
+                                          [["vv", "Uw", "UwUwUvUv"]]>;
+  }
 }
 
 let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {

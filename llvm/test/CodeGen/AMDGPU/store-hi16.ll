@@ -494,7 +494,7 @@ entry:
   ; FIXME: ABI for pre-gfx9
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
-  store volatile i16 %hi, ptr addrspace(5) null
+  store volatile i16 %hi, ptr addrspace(5) zeroinitializer
   ret void
 }
 
@@ -516,7 +516,7 @@ entry:
   %value = bitcast i32 %arg to <2 x i16>
   %hi = extractelement <2 x i16> %value, i32 1
   %trunc = trunc i16 %hi to i8
-  store volatile i8 %trunc, ptr addrspace(5) null
+  store volatile i8 %trunc, ptr addrspace(5) zeroinitializer
   ret void
 }
 
