@@ -38,9 +38,7 @@ class InstCount : public InstVisitor<InstCount> {
 
   void visitFunction(Function &F) {
     ++TotalFuncs;
-    unsigned NumInsts = F.getInstructionCount();
-    if (NumInsts > LargestFunctionSize)
-      LargestFunctionSize = NumInsts;
+    LargestFunctionSize.updateMax(F.getInstructionCount());
   }
   void visitBasicBlock(BasicBlock &BB) { ++TotalBlocks; }
 
