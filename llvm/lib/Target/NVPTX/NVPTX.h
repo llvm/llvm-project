@@ -15,16 +15,22 @@
 #define LLVM_LIB_TARGET_NVPTX_NVPTX_H
 
 #include "llvm/CodeGen/ISDOpcodes.h"
+
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
+
 namespace llvm {
+class Function;
 class FunctionPass;
+class MachineMemOperand;
 class MachineFunctionPass;
 class NVPTXTargetMachine;
 class PassRegistry;
+class Value;
 
 namespace NVPTXCC {
 enum CondCodes {
@@ -195,6 +201,73 @@ enum AddressSpace : AddressSpaceUnderlyingType {
   Param = 101
 };
 
+// Cache hint enums for !mem.cache_hint metadata
+// These correspond to PTX cache control qualifiers
+
+// L1 Eviction Policy - maps to PTX L1::evict_* qualifiers
+enum class L1Eviction : uint8_t {
+  Normal = 0,     // Default behavior (no qualifier)
+  Unchanged = 1,  // L1::evict_unchanged
+  First = 2,      // L1::evict_first
+  Last = 3,       // L1::evict_last
+  NoAllocate = 4, // L1::no_allocate
+};
+
+// L2 Eviction Policy - maps to PTX L2::evict_* qualifiers
+enum class L2Eviction : uint8_t {
+  Normal = 0, // Default behavior (no qualifier)
+  First = 1,  // L2::evict_first
+  Last = 2,   // L2::evict_last
+};
+
+// L2 Prefetch Size - maps to PTX L2::*B qualifiers
+enum class L2Prefetch : uint8_t {
+  None = 0,     // No prefetch hint
+  Bytes64 = 1,  // L2::64B
+  Bytes128 = 2, // L2::128B
+  Bytes256 = 3, // L2::256B
+};
+
+// Bitfield layout for encoded cache control hints (stored in unsigned):
+// Bits 0-2:  L1 Eviction (3 bits, 5 values)
+// Bits 3-4:  L2 Eviction (2 bits, 3 values)
+// Bits 5-6:  L2 Prefetch (2 bits, 4 values)
+// Bit 7:    L2::cache_hint mode flag (when set, use CachePolicy operand)
+// Bits 8-31: Reserved
+//
+// Using llvm::Bitfield for type-safe access with compile-time validation.
+using L1EvictionBits =
+    Bitfield::Element<L1Eviction, 0, 3, L1Eviction::NoAllocate>;
+using L2EvictionBits = Bitfield::Element<L2Eviction, 3, 2, L2Eviction::Last>;
+using L2PrefetchBits =
+    Bitfield::Element<L2Prefetch, 5, 2, L2Prefetch::Bytes256>;
+using L2CacheHintBit = Bitfield::Element<bool, 7, 1>;
+
+inline unsigned encodeCacheControlHint(L1Eviction L1, L2Eviction L2,
+                                       L2Prefetch P) {
+  unsigned Hint = 0;
+  Bitfield::set<L1EvictionBits>(Hint, L1);
+  Bitfield::set<L2EvictionBits>(Hint, L2);
+  Bitfield::set<L2PrefetchBits>(Hint, P);
+  return Hint;
+}
+
+inline L1Eviction decodeL1Eviction(unsigned Hint) {
+  return Bitfield::get<L1EvictionBits>(Hint);
+}
+
+inline L2Eviction decodeL2Eviction(unsigned Hint) {
+  return Bitfield::get<L2EvictionBits>(Hint);
+}
+
+inline L2Prefetch decodeL2Prefetch(unsigned Hint) {
+  return Bitfield::get<L2PrefetchBits>(Hint);
+}
+
+inline bool isL2CacheHintMode(unsigned Hint) {
+  return Bitfield::get<L2CacheHintBit>(Hint);
+}
+
 namespace PTXLdStInstCode {
 enum FromType { Unsigned = 0, Signed, Float, Untyped };
 } // namespace PTXLdStInstCode
@@ -273,6 +346,11 @@ void initializeNVPTXDAGToDAGISelLegacyPass(PassRegistry &);
 // Defines symbolic names for the NVPTX instructions.
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_MC_HELPER_DECLS
+#include "NVPTXGenInstrInfo.inc"
+
+// Pull in OpName enum and getNamedOperandIdx() for LD/ST instructions.
+// Generated from UseNamedOperandTable=1 in NVPTXInstrInfo.td.
+#define GET_INSTRINFO_OPERAND_ENUM
 #include "NVPTXGenInstrInfo.inc"
 
 #endif

@@ -40,9 +40,9 @@ registers:
   - { id: 7, class: b32 }
 body: |
   bb.0.entry:
-    %0 = LD_i32 0, 0, 4, 2, 32, -1, &test_param_0, 0
+    %0 = LD_i32 0, 0, 4, 2, 32, -1, 0, &test_param_0, 0, $noreg
     %1 = CVT_f64_f32 %0, 0
-    %2 = LD_i32 0, 0, 4, 0, 32, -1, &test_param_1, 0
+    %2 = LD_i32 0, 0, 4, 0, 32, -1, 0, &test_param_1, 0, $noreg
   ; CHECK: %3:b64 = FADD_rnf64ri %1, double 3.250000e+00
     %3 = FADD_rnf64ri %1, double 3.250000e+00
     %4 = CVT_f32_f64 %3, 5
@@ -50,7 +50,7 @@ body: |
   ; CHECK: %6:b32 = FADD_rnf32ri %5, float 6.250000e+00
     %6 = FADD_rnf32ri %5, float 6.250000e+00, 0
     %7 = FMUL_rnf32rr %6, %4, 0
-    ST_i32 %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
+    ST_i32 %7, 0, 0, 101, 32, 0, &func_retval0, 0, $noreg :: (store (s32), addrspace 101)
     Return
 ...
 ---
@@ -66,9 +66,9 @@ registers:
   - { id: 7, class: b32 }
 body: |
   bb.0.entry:
-    %0 = LD_i32 0, 0, 4, 2, 32, -1, &test2_param_0, 0
+    %0 = LD_i32 0, 0, 4, 2, 32, -1, 0, &test2_param_0, 0, $noreg
     %1 = CVT_f64_f32 %0, 0
-    %2 = LD_i32 0, 0, 4, 0, 32, -1, &test2_param_1, 0
+    %2 = LD_i32 0, 0, 4, 0, 32, -1, 0, &test2_param_1, 0, $noreg
   ; CHECK: %3:b64 = FADD_rnf64ri %1, double 0x7FF8000000000000
     %3 = FADD_rnf64ri %1, double 0x7FF8000000000000
     %4 = CVT_f32_f64 %3, 5
@@ -76,6 +76,6 @@ body: |
   ; CHECK: %6:b32 = FADD_rnf32ri %5, float 0x7FF8000000000000
     %6 = FADD_rnf32ri %5, float 0x7FF8000000000000, 0
     %7 = FMUL_rnf32rr %6, %4, 0
-    ST_i32 %7, 0, 0, 101, 32, &func_retval0, 0 :: (store (s32), addrspace 101)
+    ST_i32 %7, 0, 0, 101, 32, 0, &func_retval0, 0, $noreg :: (store (s32), addrspace 101)
     Return
 ...

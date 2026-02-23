@@ -172,6 +172,20 @@ public:
     return AtomicExpansionKind::None;
   }
 
+  /// Return target-specific MachineMemOperand flags for load/store
+  /// instructions. This is used to propagate !mem.cache_hint metadata.
+  MachineMemOperand::Flags
+  getTargetMMOFlags(const Instruction &I) const override;
+
+  /// Record cache policy info for a MachineMemOperand.
+  /// Called by SelectionDAGBuilder after creating an MMO from an IR
+  /// instruction. Stores policy/hints in MachineFunctionInfo for lookup during
+  /// instruction selection. OperandNo specifies which memory operand (for
+  /// memcpy: 0=dest, 1=src).
+  void recordTargetMMOInfo(MachineFunction &MF, MachineMemOperand *MMO,
+                           const Instruction &I,
+                           unsigned OperandNo) const override;
+
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 

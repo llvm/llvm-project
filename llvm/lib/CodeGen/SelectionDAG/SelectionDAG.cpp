@@ -8824,11 +8824,19 @@ static void chainLoadsAndStoresForMemcpy(SelectionDAG &DAG, const SDLoc &dl,
   }
 }
 
-static SDValue getMemcpyLoadsAndStores(
-    SelectionDAG &DAG, const SDLoc &dl, SDValue Chain, SDValue Dst, SDValue Src,
-    uint64_t Size, Align Alignment, bool isVol, bool AlwaysInline,
-    MachinePointerInfo DstPtrInfo, MachinePointerInfo SrcPtrInfo,
-    const AAMDNodes &AAInfo, BatchAAResults *BatchAA) {
+// Forward declaration - defined later in this file. Default argument is on
+// the definition.
+static MachinePointerInfo InferPointerInfo(const MachinePointerInfo &Info,
+                                           SelectionDAG &DAG, SDValue Ptr,
+                                           int64_t Offset);
+
+static SDValue
+getMemcpyLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                        SDValue Dst, SDValue Src, uint64_t Size,
+                        Align Alignment, bool isVol, bool AlwaysInline,
+                        MachinePointerInfo DstPtrInfo,
+                        MachinePointerInfo SrcPtrInfo, const AAMDNodes &AAInfo,
+                        BatchAAResults *BatchAA, const CallInst *CI = nullptr) {
   // Turn a memcpy of undef to nop.
   // FIXME: We need to honor volatile even is Src is undef.
   if (Src.isUndef())
@@ -8936,10 +8944,24 @@ static SDValue getMemcpyLoadsAndStores(
       }
       Value = getMemsetStringVal(VT, dl, DAG, TLI, SubSlice);
       if (Value.getNode()) {
-        Store = DAG.getStore(
-            Chain, dl, Value,
-            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-            DstPtrInfo.getWithOffset(DstOff), Alignment, MMOFlags, NewAAInfo);
+        SDValue DstPtrOff =
+            DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff));
+
+        // Infer pointer info from DAG if not provided (e.g., for stack slots).
+        MachinePointerInfo DstPI = DstPtrInfo.getWithOffset(DstOff);
+        if (DstPI.V.isNull())
+          DstPI = InferPointerInfo(DstPI, DAG, DstPtrOff, 0);
+
+        // Create store MMO explicitly to allow targets to record cache hints.
+        MachineMemOperand *StoreMMO = MF.getMachineMemOperand(
+            DstPI, MMOFlags | MachineMemOperand::MOStore, VTSize, Alignment,
+            NewAAInfo);
+        // Call hook for target-specific cache hint recording (operand 0 =
+        // dest).
+        if (CI)
+          TLI.recordTargetMMOInfo(MF, StoreMMO, *CI, /*OperandNo=*/0);
+
+        Store = DAG.getStore(Chain, dl, Value, DstPtrOff, StoreMMO);
         OutChains.push_back(Store);
       }
     }
@@ -8961,17 +8983,41 @@ static SDValue getMemcpyLoadsAndStores(
       if (isConstant)
         SrcMMOFlags |= MachineMemOperand::MOInvariant;
 
-      Value = DAG.getExtLoad(
-          ISD::EXTLOAD, dl, NVT, Chain,
-          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff)),
-          SrcPtrInfo.getWithOffset(SrcOff), VT,
-          commonAlignment(*SrcAlign, SrcOff), SrcMMOFlags, NewAAInfo);
+      // Compute pointer offsets for this iteration.
+      SDValue SrcPtrOff =
+          DAG.getObjectPtrOffset(dl, Src, TypeSize::getFixed(SrcOff));
+      SDValue DstPtrOff =
+          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff));
+
+      // Infer pointer info from DAG if not provided (e.g., for stack slots).
+      MachinePointerInfo SrcPI = SrcPtrInfo.getWithOffset(SrcOff);
+      if (SrcPI.V.isNull())
+        SrcPI = InferPointerInfo(SrcPI, DAG, SrcPtrOff, 0);
+      MachinePointerInfo DstPI = DstPtrInfo.getWithOffset(DstOff);
+      if (DstPI.V.isNull())
+        DstPI = InferPointerInfo(DstPI, DAG, DstPtrOff, 0);
+
+      // Create load MMO explicitly to allow targets to record cache hints.
+      MachineMemOperand *LoadMMO = MF.getMachineMemOperand(
+          SrcPI, SrcMMOFlags | MachineMemOperand::MOLoad, VTSize,
+          commonAlignment(*SrcAlign, SrcOff), NewAAInfo);
+      // Call hook for target-specific cache hint recording (operand 1 = src).
+      if (CI)
+        TLI.recordTargetMMOInfo(MF, LoadMMO, *CI, /*OperandNo=*/1);
+
+      Value =
+          DAG.getExtLoad(ISD::EXTLOAD, dl, NVT, Chain, SrcPtrOff, VT, LoadMMO);
       OutLoadChains.push_back(Value.getValue(1));
 
-      Store = DAG.getTruncStore(
-          Chain, dl, Value,
-          DAG.getObjectPtrOffset(dl, Dst, TypeSize::getFixed(DstOff)),
-          DstPtrInfo.getWithOffset(DstOff), VT, Alignment, MMOFlags, NewAAInfo);
+      // Create store MMO explicitly to allow targets to record cache hints.
+      MachineMemOperand *StoreMMO =
+          MF.getMachineMemOperand(DstPI, MMOFlags | MachineMemOperand::MOStore,
+                                  VTSize, Alignment, NewAAInfo);
+      // Call hook for target-specific cache hint recording (operand 0 = dest).
+      if (CI)
+        TLI.recordTargetMMOInfo(MF, StoreMMO, *CI, /*OperandNo=*/0);
+
+      Store = DAG.getTruncStore(Chain, dl, Value, DstPtrOff, VT, StoreMMO);
       OutStoreChains.push_back(Store);
     }
     SrcOff += VTSize;
@@ -9452,7 +9498,7 @@ SDValue SelectionDAG::getMemcpy(
 
     SDValue Result = getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), Alignment,
-        isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        isVol, false, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA, CI);
     if (Result.getNode())
       return Result;
   }
@@ -9473,7 +9519,7 @@ SDValue SelectionDAG::getMemcpy(
     assert(ConstantSize && "AlwaysInline requires a constant size!");
     return getMemcpyLoadsAndStores(
         *this, dl, Chain, Dst, Src, ConstantSize->getZExtValue(), Alignment,
-        isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA);
+        isVol, true, DstPtrInfo, SrcPtrInfo, AAInfo, BatchAA, CI);
   }
 
   checkAddrSpaceIsValidForLibcall(TLI, DstPtrInfo.getAddrSpace());

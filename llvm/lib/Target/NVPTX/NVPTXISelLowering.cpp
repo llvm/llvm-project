@@ -15,6 +15,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXISelDAGToDAG.h"
+#include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXSelectionDAGInfo.h"
 #include "NVPTXSubtarget.h"
 #include "NVPTXTargetMachine.h"
@@ -7346,6 +7347,46 @@ void NVPTXTargetLowering::ReplaceNodeResults(
     replaceAtomicSwap128(N, DAG, STI, Results);
     return;
   }
+}
+
+MachineMemOperand::Flags
+NVPTXTargetLowering::getTargetMMOFlags(const Instruction &I) const {
+  // Cache policy info is now stored via recordTargetMMOInfo hook.
+  // This function is kept for compatibility but doesn't need to return
+  // anything special - the actual cache hints are stored per-MMO.
+  return MachineMemOperand::MONone;
+}
+
+void NVPTXTargetLowering::recordTargetMMOInfo(MachineFunction &MF,
+                                              MachineMemOperand *MMO,
+                                              const Instruction &I,
+                                              unsigned OperandNo) const {
+  // Check for !mem.cache_hint metadata on memory-accessing instructions.
+  // Supported: LoadInst, StoreInst, and memory intrinsics like memcpy.
+  if (!I.mayReadOrWriteMemory())
+    return;
+
+  // Get cache control hint from metadata using the specified operand number.
+  // For load/store: operand_no = 0
+  // For memcpy: operand_no = 0 (dest/store), operand_no = 1 (src/load)
+  unsigned CacheControlHint =
+      NVPTX::getCacheControlHintFromMetadata(&I, OperandNo);
+
+  // Check for cache policy (L2::cache_hint mode)
+  uint64_t CachePolicy = 0;
+  if (auto Policy = NVPTX::getCachePolicyFromMetadata(&I, OperandNo)) {
+    CachePolicy = *Policy;
+    // Set the L2CacheHintBit to indicate policy mode
+    Bitfield::set<NVPTX::L2CacheHintBit>(CacheControlHint, true);
+  }
+
+  // If no cache hints, nothing to store
+  if (CacheControlHint == 0 && CachePolicy == 0)
+    return;
+
+  // Store in MachineFunctionInfo keyed by MMO pointer
+  auto *MFI = MF.getInfo<NVPTXMachineFunctionInfo>();
+  MFI->setCachePolicyData(MMO, CachePolicy, CacheControlHint);
 }
 
 NVPTXTargetLowering::AtomicExpansionKind

@@ -42,6 +42,9 @@ public:
                     StringRef Modifier = {});
   void printAtomicCode(const MCInst *MI, int OpNum, raw_ostream &O,
                        StringRef Modifier = {});
+  void printCacheControlHint(const MCInst *MI, int OpNum, raw_ostream &O,
+                             StringRef Modifier = {});
+  void printCachePolicy(const MCInst *MI, int OpNum, raw_ostream &O);
   void printMmaCode(const MCInst *MI, int OpNum, raw_ostream &O,
                     StringRef Modifier = {});
   void printMemOperand(const MCInst *MI, int OpNum, raw_ostream &O,

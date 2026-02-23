@@ -13,6 +13,7 @@
 #ifndef LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 #define LLVM_LIB_TARGET_NVPTX_NVPTXTARGETMACHINE_H
 
+#include "NVPTX.h"
 #include "NVPTXSubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include <optional>

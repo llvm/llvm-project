@@ -16,10 +16,12 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSwitch.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/ModRef.h"
@@ -376,5 +378,135 @@ bool shouldEmitPTXNoReturn(const Value *V, const TargetMachine &TM) {
          F->getFunctionType()->getReturnType()->isVoidTy() &&
          !isKernelFunction(*F);
 }
+
+namespace NVPTX {
+
+// Helper to parse L1 eviction policy from metadata string
+static std::optional<L1Eviction> parseL1Eviction(StringRef Str) {
+  return StringSwitch<std::optional<L1Eviction>>(Str)
+      .Case("normal", L1Eviction::Normal)
+      .Case("unchanged", L1Eviction::Unchanged)
+      .Case("first", L1Eviction::First)
+      .Case("last", L1Eviction::Last)
+      .Case("no_allocate", L1Eviction::NoAllocate)
+      .Default(std::nullopt);
+}
+
+// Helper to parse L2 eviction policy from metadata string
+static std::optional<L2Eviction> parseL2Eviction(StringRef Str) {
+  return StringSwitch<std::optional<L2Eviction>>(Str)
+      .Case("normal", L2Eviction::Normal)
+      .Case("first", L2Eviction::First)
+      .Case("last", L2Eviction::Last)
+      .Default(std::nullopt);
+}
+
+// Helper to parse L2 prefetch size from metadata string
+static std::optional<L2Prefetch> parseL2Prefetch(StringRef Str) {
+  return StringSwitch<std::optional<L2Prefetch>>(Str)
+      .Case("64B", L2Prefetch::Bytes64)
+      .Case("128B", L2Prefetch::Bytes128)
+      .Case("256B", L2Prefetch::Bytes256)
+      .Default(std::nullopt);
+}
+
+// Helper to find the hint node matching a specific operand number.
+// The metadata structure is:
+// !mem.cache_hint = !{ i32 opno0, !hints0, i32 opno1, !hints1, ... }
+// !hintsN = !{ !"nvvm.key1", value1, ... }
+// Returns the matching hints MDNode or nullptr if not found.
+static const MDNode *findCacheControlHintNode(const MDNode *MD,
+                                              unsigned OperandNo) {
+  if (!MD)
+    return nullptr;
+
+  unsigned NumOps = MD->getNumOperands();
+  if (NumOps % 2 != 0)
+    return nullptr;
+
+  for (unsigned i = 0; i + 1 < NumOps; i += 2) {
+    const auto *OpNoCI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(i));
+    const auto *Node = dyn_cast<MDNode>(MD->getOperand(i + 1));
+    if (!OpNoCI || !Node || OpNoCI->getValue().isNegative())
+      continue;
+
+    if (OpNoCI->getZExtValue() == OperandNo)
+      return Node;
+  }
+
+  return nullptr;
+}
+
+unsigned getCacheControlHintFromMetadata(const Instruction *I,
+                                         unsigned OperandNo) {
+  if (!I)
+    return 0;
+
+  const MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
+  const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
+  if (!Node)
+    return 0;
+
+  L1Eviction L1 = L1Eviction::Normal;
+  L2Eviction L2 = L2Eviction::Normal;
+  L2Prefetch Prefetch = L2Prefetch::None;
+
+  // Parse all key-value pairs from the matching node.
+  // Metadata structure is validated by the IR verifier.
+  for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
+    const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
+    if (!Key)
+      continue;
+
+    StringRef KeyStr = Key->getString();
+
+    // For eviction and prefetch hints, value should be a string
+    const auto *Val = dyn_cast<MDString>(Node->getOperand(j + 1));
+    if (!Val)
+      continue; // nvvm.l2_cache_hint uses i64, handled separately
+
+    StringRef ValStr = Val->getString();
+    if (KeyStr == "nvvm.l1_eviction") {
+      if (auto Parsed = parseL1Eviction(ValStr))
+        L1 = *Parsed;
+    } else if (KeyStr == "nvvm.l2_eviction") {
+      if (auto Parsed = parseL2Eviction(ValStr))
+        L2 = *Parsed;
+    } else if (KeyStr == "nvvm.l2_prefetch_size") {
+      if (auto Parsed = parseL2Prefetch(ValStr))
+        Prefetch = *Parsed;
+    }
+    // Unknown keys are silently ignored (may be target-specific extensions)
+  }
+
+  return encodeCacheControlHint(L1, L2, Prefetch);
+}
+
+std::optional<uint64_t> getCachePolicyFromMetadata(const Instruction *I,
+                                                   unsigned OperandNo) {
+  if (!I)
+    return std::nullopt;
+
+  const MDNode *MD = I->getMetadata(LLVMContext::MD_mem_cache_hint);
+  const MDNode *Node = findCacheControlHintNode(MD, OperandNo);
+  if (!Node)
+    return std::nullopt;
+
+  // Look for nvvm.l2_cache_hint in the matching node.
+  // Metadata structure is validated by the IR Verifier.
+  for (unsigned j = 0; j + 1 < Node->getNumOperands(); j += 2) {
+    const auto *Key = dyn_cast<MDString>(Node->getOperand(j));
+    if (!Key || Key->getString() != "nvvm.l2_cache_hint")
+      continue;
+
+    if (auto *ValCI =
+            mdconst::dyn_extract<ConstantInt>(Node->getOperand(j + 1)))
+      return ValCI->getZExtValue();
+  }
+
+  return std::nullopt;
+}
+
+} // namespace NVPTX
 
 } // namespace llvm

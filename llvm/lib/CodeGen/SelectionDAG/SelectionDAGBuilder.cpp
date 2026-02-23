@@ -4772,8 +4772,16 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
             : MachinePointerInfo();
 
     SDValue A = DAG.getObjectPtrOffset(dl, Ptr, Offsets[i]);
-    SDValue L = DAG.getLoad(MemVTs[i], dl, Root, A, PtrInfo, Alignment,
-                            MMOFlags, AAInfo, Ranges);
+
+    // Create MMO explicitly so targets can record additional info.
+    MachineFunction &MF = DAG.getMachineFunction();
+    TypeSize Size = MemVTs[i].getStoreSize();
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(PtrInfo, MMOFlags | MachineMemOperand::MOLoad,
+                                Size, Alignment, AAInfo, Ranges);
+    TLI.recordTargetMMOInfo(MF, MMO, I);
+
+    SDValue L = DAG.getLoad(MemVTs[i], dl, Root, A, MMO);
     Chains[ChainI] = L.getValue(1);
 
     if (MemVTs[i] != ValueVTs[i])
@@ -4915,8 +4923,16 @@ void SelectionDAGBuilder::visitStore(const StoreInst &I) {
     SDValue Val = SDValue(Src.getNode(), Src.getResNo() + i);
     if (MemVTs[i] != ValueVTs[i])
       Val = DAG.getPtrExtOrTrunc(Val, dl, MemVTs[i]);
-    SDValue St =
-        DAG.getStore(Root, dl, Val, Add, PtrInfo, Alignment, MMOFlags, AAInfo);
+
+    // Create MMO explicitly so targets can record additional info.
+    MachineFunction &MF = DAG.getMachineFunction();
+    TypeSize Size = MemVTs[i].getStoreSize();
+    MachineMemOperand *MMO =
+        MF.getMachineMemOperand(PtrInfo, MMOFlags | MachineMemOperand::MOStore,
+                                Size, Alignment, AAInfo);
+    TLI.recordTargetMMOInfo(MF, MMO, I);
+
+    SDValue St = DAG.getStore(Root, dl, Val, Add, MMO);
     Chains[ChainI] = St;
   }
 
