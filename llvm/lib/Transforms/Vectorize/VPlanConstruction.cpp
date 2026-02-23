@@ -987,6 +987,67 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
+void VPlanTransforms::splitLatch(VPlan &Plan) {
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan.getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+  auto *HeaderVPBB = cast<VPBasicBlock>(LatchVPBB->getSuccessors()[1]);
+  VPValue *IVInc;
+  [[maybe_unused]] bool TermBranchOnCount =
+      match(LatchVPBB->getTerminator(),
+            m_BranchOnCount(m_VPValue(IVInc),
+                            m_Specific(&Plan.getVectorTripCount())));
+  [[maybe_unused]] auto *CanIV =
+      cast<VPCanonicalIVPHIRecipe>(HeaderVPBB->begin());
+  assert(TermBranchOnCount &&
+         match(IVInc, m_Add(m_Specific(CanIV), m_Specific(&Plan.getVFxUF()))) &&
+         std::next(IVInc->getDefiningRecipe()->getIterator()) ==
+             LatchVPBB->getTerminator()->getIterator() &&
+         "Unexpected canonical iv increment");
+
+  VPBasicBlock *LatchSplit =
+      LatchVPBB->splitAt(IVInc->getDefiningRecipe()->getIterator());
+  LatchSplit->setName("latch");
+
+  // Do a version of LCSSA on the vector loop region.
+  // Collect any values defined in the loop that need a phi.
+  MapVector<VPValue *, SmallVector<VPUser *>> NeedsPhi;
+  for (VPRecipeBase &R : HeaderVPBB->phis())
+    if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(R))
+      NeedsPhi[cast<VPHeaderPHIRecipe>(R).getBackedgeValue()].push_back(&R);
+  VPValue *V;
+  for (VPRecipeBase &R : *MiddleVPBB)
+    if (match(&R, m_CombineOr(m_VPInstruction<VPInstruction::ExitingIVValue>(
+                                  m_VPValue(V)),
+                              m_ExtractLastPart(m_VPValue(V)))))
+      NeedsPhi[V].push_back(&R);
+
+  // Insert phis.
+  VPBuilder Builder(LatchSplit, LatchSplit->begin());
+  VPTypeAnalysis TypeInfo(Plan);
+  for (auto [V, Users] : NeedsPhi) {
+    if (isa<VPIRValue>(V))
+      continue;
+    VPInstruction *Phi = Builder.createScalarPhi(V);
+    for (VPUser *U : Users)
+      U->replaceUsesOfWith(V, Phi);
+  }
+}
+
+void VPlanTransforms::addTailIncomingValues(VPBasicBlock *LatchVPBB) {
+  VPlan &Plan = *LatchVPBB->getPlan();
+  VPTypeAnalysis TypeInfo(Plan);
+  for (VPRecipeBase &R : LatchVPBB->phis()) {
+    auto *Phi = cast<VPPhi>(&R);
+    // TODO: For reduction phis, use phi value instead of poison so we can
+    // remove the special casing for tail folding in
+    // LoopVectorizationPlanner::addReductionResultComputation
+    VPValue *Poison =
+        Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(Phi)));
+    Phi->addOperand(Poison);
+  }
+}
+
 void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   assert(Plan.getExitBlocks().size() == 1 &&
          "only a single-exit block is supported currently");
@@ -1008,58 +1069,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   VPValue *HeaderMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
   Builder.createNaryOp(VPInstruction::BranchOnCond, HeaderMask);
 
-  VPBasicBlock *OrigLatch = LoopRegion->getExitingBasicBlock();
-  VPValue *IVInc;
-  [[maybe_unused]] bool TermBranchOnCount =
-      match(OrigLatch->getTerminator(),
-            m_BranchOnCount(m_VPValue(IVInc),
-                            m_Specific(&Plan.getVectorTripCount())));
-  assert(TermBranchOnCount &&
-         match(IVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
-                            m_Specific(&Plan.getVFxUF()))) &&
-         std::next(IVInc->getDefiningRecipe()->getIterator()) ==
-             OrigLatch->getTerminator()->getIterator() &&
-         "Unexpected canonical iv increment");
-
-  // Split the latch at the IV update, and branch to it from the header mask.
-  VPBasicBlock *Latch =
-      OrigLatch->splitAt(IVInc->getDefiningRecipe()->getIterator());
-  Latch->setName("latch");
+  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
   VPBlockUtils::connectBlocks(Header, Latch);
-
-  // Collect any values defined in the loop that need a phi. Currently this is
-  // header phi backedges and live outs extracted in the middle block.
-  // TODO: Handle early exits via Plan.getExitBlocks()
-  assert(LoopRegion->getSingleSuccessor() == Plan.getMiddleBlock() &&
-         "The vector loop region must have the middle block as its single "
-         "successor for now");
-  MapVector<VPValue *, SmallVector<VPUser *>> NeedsPhi;
-  for (VPRecipeBase &R : Header->phis())
-    if (!isa<VPCanonicalIVPHIRecipe, VPWidenInductionRecipe>(R))
-      NeedsPhi[cast<VPHeaderPHIRecipe>(R).getBackedgeValue()].push_back(&R);
-
-  VPValue *V;
-  for (VPRecipeBase &R : *Plan.getMiddleBlock())
-    if (match(&R, m_CombineOr(m_VPInstruction<VPInstruction::ExitingIVValue>(
-                                  m_VPValue(V)),
-                              m_ExtractLastPart(m_VPValue(V)))))
-      NeedsPhi[V].push_back(&R);
-
-  // Insert phis with a poison incoming value for past the end of the tail.
-  Builder.setInsertPoint(Latch, Latch->begin());
-  VPTypeAnalysis TypeInfo(Plan);
-  for (auto [V, Users] : NeedsPhi) {
-    if (isa<VPIRValue>(V))
-      continue;
-    // TODO: For reduction phis, use phi value instead of poison so we can
-    // remove the special casing for tail folding in
-    // LoopVectorizationPlanner::addReductionResultComputation
-    VPValue *Poison =
-        Plan.getOrAddLiveIn(PoisonValue::get(TypeInfo.inferScalarType(V)));
-    VPInstruction *Phi = Builder.createScalarPhi({V, Poison});
-    for (VPUser *U : Users)
-      U->replaceUsesOfWith(V, Phi);
-  }
+  addTailIncomingValues(Latch);
 
   // Any extract of the last element must be updated to extract from the last
   // active lane of the header mask instead (i.e., the lane corresponding to the

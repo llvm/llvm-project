@@ -449,10 +449,11 @@ struct VPlanTransforms {
   static std::unique_ptr<VPlan>
   narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
 
-  /// Adapts the vector loop region for tail folding by introducing a header
-  /// mask and predicating the region:
+  /// Splits the latch so that it only contains the canonical IV increment and
+  /// terminator, and inserts phis for any value defined in the loop used
+  /// outside or in the header.
   ///
-  /// Vector loop region before:
+  /// Vector loop before:
   /// +-------------------------------------------+
   /// |%iv = ...                                  |
   /// |...                                        |
@@ -460,26 +461,25 @@ struct VPlanTransforms {
   /// |branch-on-count %iv.next, vector-trip-count|
   /// +-------------------------------------------+
   ///
-  /// Vector loop region after:
+  /// Vector loop after:
   /// +-------------------------------------------+
   /// |%iv = ...                                  |
-  /// |%wide.iv = widen-canonical-iv ...          |
-  /// |%header-mask = icmp ult %wide.iv, BTC      |
-  /// |branch-on-cond %header-mask                |---+
-  /// +-------------------------------------------+   |
-  ///                      |                          |
-  ///                      v                          |
-  /// +-------------------------------------------+   |
-  /// |                   ...                     |   |
-  /// +-------------------------------------------+   |
-  ///                      |                          |
-  ///                      v                          |
-  /// +-------------------------------------------+   |
+  /// +-------------------------------------------+
+  ///                      |
+  ///                      v
+  /// +-------------------------------------------+
   /// |<phis> = phi [..., ...], [poison, header]  |
-  /// |%iv.next = add %iv, vfxuf                  |<--+
+  /// |%iv.next = add %iv, vfxuf                  |
   /// |branch-on-count %iv.next, vector-trip-count|
   /// +-------------------------------------------+
-  ///
+  static void splitLatch(VPlan &Plan);
+
+  /// After connecting some block to the latch that will exit that iteration,
+  /// add incoming values to the phis in the latch that have outside users.
+  static void addTailIncomingValues(VPBasicBlock *LatchVPBB);
+
+  // Adapts the vector loop region for tail folding by introducing a header and
+  // branching to the latch when past the tail.
   /// Any VPInstruction::ExtractLastLanes are also updated to extract from the
   /// last active lane of the header mask.
   static void foldTailByMasking(VPlan &Plan);
