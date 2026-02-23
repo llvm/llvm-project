@@ -63,6 +63,8 @@ MonitoringProcessLauncher::LaunchProcess(const ProcessLaunchInfo &launch_info,
     } else {
       if (log)
         log->PutCString("started monitoring child process.");
+
+      // Allow the thread to exit on its own once its work is done.
       maybe_thread->Reset();
     }
   } else {
