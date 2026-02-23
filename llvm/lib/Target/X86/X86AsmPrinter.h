@@ -9,17 +9,10 @@
 #ifndef LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 #define LLVM_LIB_TARGET_X86_X86ASMPRINTER_H
 
-#include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/FaultMaps.h"
-#include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/StackMaps.h"
-#include "llvm/IR/Analysis.h"
-#include "llvm/IR/PassManager.h"
-#include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
-#include "llvm/Support/ErrorHandling.h"
 
 // Implemented in X86MCInstLower.cpp
 namespace {
