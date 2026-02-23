@@ -51,6 +51,11 @@
 #  include <memory>
 #  include <windows.h>
 
+#elif defined(__APPLE__) && defined(_LIBCPP_USE_OS_SYNC)
+
+#  include <os/os_sync_wait_on_address.h>
+#  include <time.h>
+
 #else // <- Add other operating systems here
 
 // Baseline needs no new headers
@@ -91,9 +96,6 @@ static void __platform_wake_by_address(void const* __ptr, bool __notify_one) {
 }
 
 #elif defined(__APPLE__) && defined(_LIBCPP_USE_OS_SYNC)
-
-#  include <os/os_sync_wait_on_address.h>
-#  include <time.h>
 
 template <std::size_t _Size, class MaybeTimeout>
 static void __platform_wait_on_address(void const* __ptr, void const* __val, MaybeTimeout maybe_timeout_ns) {
