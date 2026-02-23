@@ -228,8 +228,8 @@ static Expected<uint64_t> validateSectionType(StringRef ModulePath,
   // Check cache for section base address.
   std::pair<std::string, XCOFF::SectionTypeFlags> CacheKey =
       std::make_pair(ModulePath.str(), *SectionTypeFlag);
-  std::map<std::pair<std::string, XCOFF::SectionTypeFlags>,
-           uint64_t>::iterator CacheIt = XCOFFSectionBaseCache.find(CacheKey);
+  std::map<std::pair<std::string, XCOFF::SectionTypeFlags>, uint64_t>::iterator
+      CacheIt = XCOFFSectionBaseCache.find(CacheKey);
   if (CacheIt != XCOFFSectionBaseCache.end()) {
     Offset = CacheIt->second + Offset;
     return object::SectionedAddress::UndefSection;
