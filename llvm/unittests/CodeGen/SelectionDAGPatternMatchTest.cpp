@@ -793,7 +793,7 @@ TEST_F(SelectionDAGPatternMatchTest, matchConstants) {
   EXPECT_EQ(ConstVal, 3);
   uint64_t ConstUnsignedInt64Val;
   EXPECT_TRUE(sd_match(ConstNeg1, m_ConstInt(ConstUnsignedInt64Val)));
-  EXPECT_EQ(ConstUnsignedInt64Val, 4294967295);
+  EXPECT_EQ(ConstUnsignedInt64Val, 4294967295ull);
   int64_t ConstSignedInt64Val;
   EXPECT_TRUE(sd_match(ConstNeg1, m_ConstInt(ConstSignedInt64Val)));
   EXPECT_EQ(ConstSignedInt64Val, -1);
