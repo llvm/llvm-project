@@ -50,6 +50,19 @@ static bool isLoadStoreOpcode(unsigned Opcode) {
   }
 }
 
+static bool isCommutativeOpcode(unsigned Opcode) {
+  switch (Opcode) {
+  case SC32::ADD:
+  case SC32::MUL:
+  case SC32::AND:
+  case SC32::OR:
+  case SC32::XOR:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SC32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                            int SPAdj, unsigned FIOperandNum,
                                            RegScavenger *RS) const {
@@ -60,6 +73,7 @@ bool SC32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   const TargetSubtargetInfo &SI = MF.getSubtarget();
   const TargetFrameLowering &FL = *SI.getFrameLowering();
   const TargetInstrInfo &II = *SI.getInstrInfo();
+  const TargetRegisterInfo &RI = *SI.getRegisterInfo();
   const DebugLoc &DL = MI->getDebugLoc();
 
   Register FrameReg;
@@ -79,23 +93,48 @@ bool SC32RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     }
   }
 
+  int TiedDef = MI->getDesc().getOperandConstraint(FIOperandNum, MCOI::TIED_TO);
+  Register TiedReg;
+  Register ScratchReg = SC32::GP1;
+
+  if (TiedDef >= 0) {
+    TiedReg = MI->getOperand(TiedDef).getReg();
+
+    if (!MI->readsRegister(TiedReg, &RI)) {
+      ScratchReg = TiedReg;
+    }
+  }
+
   if (FixedOffset < -0xFFFFF) {
-    BuildMI(MBB, MI, DL, II.get(SC32::LUI), SC32::GP1)
+    BuildMI(MBB, MI, DL, II.get(SC32::LUI), ScratchReg)
         .addImm(FixedOffset >> 16);
-    BuildMI(MBB, MI, DL, II.get(SC32::ORI), SC32::GP1)
-        .addReg(SC32::GP1)
+    BuildMI(MBB, MI, DL, II.get(SC32::ORI), ScratchReg)
+        .addReg(ScratchReg)
         .addImm(FixedOffset & 0xFFFF);
-    BuildMI(MBB, MI, DL, II.get(SC32::ADD), SC32::GP1)
-        .addReg(SC32::GP1)
+    BuildMI(MBB, MI, DL, II.get(SC32::ADD), ScratchReg)
+        .addReg(ScratchReg)
         .addReg(FrameReg);
   } else {
-    BuildMI(MBB, MI, DL, II.get(SC32::MOV), SC32::GP1).addReg(FrameReg);
-    BuildMI(MBB, MI, DL, II.get(SC32::SUBI), SC32::GP1)
-        .addReg(SC32::GP1)
+    BuildMI(MBB, MI, DL, II.get(SC32::MOV), ScratchReg).addReg(FrameReg);
+    BuildMI(MBB, MI, DL, II.get(SC32::SUBI), ScratchReg)
+        .addReg(ScratchReg)
         .addImm(-FixedOffset);
   }
 
-  MO.ChangeToRegister(SC32::GP1, false);
+  if (TiedDef >= 0 && ScratchReg != TiedReg) {
+    if (isCommutativeOpcode(MI->getOpcode()) &&
+        TiedReg == MI->getOperand(2).getReg()) {
+      MI->getOperand(2).setReg(ScratchReg);
+      MI->getOperand(1).ChangeToRegister(TiedReg, false);
+      return false;
+    }
+
+    MI->getOperand(TiedDef).setReg(ScratchReg);
+    BuildMI(MBB, std::next(MI), DL, II.get(SC32::MOV), TiedReg)
+        .addReg(ScratchReg);
+  }
+
+  MO.ChangeToRegister(ScratchReg, false);
   return false;
 }
 
