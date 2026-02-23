@@ -23,7 +23,6 @@ define void @test_call_external_void_func_bf16_inreg(bfloat inreg %arg) #0 {
 ; GFX9-NEXT:    s_getpc_b64 s[18:19]
 ; GFX9-NEXT:    s_add_u32 s18, s18, external_void_func_bf16_inreg@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s19, s19, external_void_func_bf16_inreg@rel32@hi+12
-; GFX9-NEXT:    s_mov_b32 s0, s16
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
@@ -83,7 +82,6 @@ define void @test_call_external_void_func_v2bf16_inreg(<2 x bfloat> inreg %arg) 
 ; GFX9-NEXT:    s_getpc_b64 s[18:19]
 ; GFX9-NEXT:    s_add_u32 s18, s18, external_void_func_v2bf16_inreg@rel32@lo+4
 ; GFX9-NEXT:    s_addc_u32 s19, s19, external_void_func_v2bf16_inreg@rel32@hi+12
-; GFX9-NEXT:    s_mov_b32 s0, s16
 ; GFX9-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; GFX9-NEXT:    v_readlane_b32 s31, v40, 1
