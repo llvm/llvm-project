@@ -434,19 +434,17 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
 
     // Flatten offsets and mask to 1D to match the 1D result type.
     Value offsets = adaptor.getOffsets();
-    if (auto offsetsTy = dyn_cast<VectorType>(offsets.getType())) {
-      VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
-                                               offsetsTy.getElementType());
-      offsets = castValueTo(rewriter, cast<TypedValue<VectorType>>(offsets),
-                            offsetsTy1D);
-    }
+    auto offsetsTy = cast<VectorType>(offsets.getType());
+    VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
+                                             offsetsTy.getElementType());
+    offsets = castValueTo(rewriter, cast<TypedValue<VectorType>>(offsets),
+                          offsetsTy1D);
+
     Value mask = adaptor.getMask();
-    if (auto maskTy = dyn_cast<VectorType>(mask.getType())) {
-      VectorType maskTy1D =
-          VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
-      mask =
-          castValueTo(rewriter, cast<TypedValue<VectorType>>(mask), maskTy1D);
-    }
+    auto maskTy = cast<VectorType>(mask.getType());
+    VectorType maskTy1D =
+        VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
+    mask = castValueTo(rewriter, cast<TypedValue<VectorType>>(mask), maskTy1D);
 
     auto newOp = xegpu::LoadGatherOp::create(
         rewriter, op.getLoc(), supportedWiResultTy, adaptor.getSource(),
@@ -635,19 +633,17 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
 
     // Flatten offsets and mask to 1D to match the 1D value type.
     Value offsets = adaptor.getOffsets();
-    if (auto offsetsTy = dyn_cast<VectorType>(offsets.getType())) {
-      VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
-                                               offsetsTy.getElementType());
-      offsets = castValueTo(rewriter, cast<TypedValue<VectorType>>(offsets),
-                            offsetsTy1D);
-    }
+    auto offsetsTy = cast<VectorType>(offsets.getType());
+    VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
+                                             offsetsTy.getElementType());
+    offsets = castValueTo(rewriter, cast<TypedValue<VectorType>>(offsets),
+                          offsetsTy1D);
+
     Value mask = adaptor.getMask();
-    if (auto maskTy = dyn_cast<VectorType>(mask.getType())) {
-      VectorType maskTy1D =
-          VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
-      mask =
-          castValueTo(rewriter, cast<TypedValue<VectorType>>(mask), maskTy1D);
-    }
+    auto maskTy = cast<VectorType>(mask.getType());
+    VectorType maskTy1D =
+        VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
+    mask = castValueTo(rewriter, cast<TypedValue<VectorType>>(mask), maskTy1D);
 
     xegpu::StoreScatterOp::create(
         rewriter, op.getLoc(), adaptedValue, adaptor.getDest(), offsets, mask,
