@@ -1261,6 +1261,100 @@ static Instruction *moveAddAfterMinMax(IntrinsicInst *II,
   return IsSigned ? BinaryOperator::CreateNSWAdd(NewMinMax, Add->getOperand(1))
                   : BinaryOperator::CreateNUWAdd(NewMinMax, Add->getOperand(1));
 }
+
+static bool rightDistributesOverLeft(Instruction::BinaryOps ROp, bool HasNUW,
+                                     bool HasNSW, Intrinsic::ID LOp) {
+  switch (LOp) {
+  case Intrinsic::umax:
+    if ((HasNUW && (ROp == Instruction::UDiv || ROp == Instruction::Mul ||
+                   ROp == Instruction::Add)) || ROp == Instruction::AShr || ROp == Instruction::LShr )
+      return true;
+    return false;
+  case Intrinsic::umin:
+    if ((HasNUW && (ROp == Instruction::UDiv || ROp == Instruction::Sub)) || ROp == Instruction::AShr || ROp == Instruction::LShr)
+      return true;
+    return false;
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+    if (HasNSW && ROp == Instruction::AShr)
+      return true;
+    return false;
+  default:
+    return false;
+  }
+}
+
+///  Try canonicalize max(max(X,C1) binop C2, C3) -> max(X binop C2, max(C1
+///  binop C2, C3))
+/// -> max(X binop C2, C4) 
+
+static Instruction *reduceMinMax(IntrinsicInst *II,
+                                 InstCombiner::BuilderTy &Builder,
+                                 const DataLayout &DL) {
+  Intrinsic::ID MinMaxID = II->getIntrinsicID();
+  assert(isa<MinMaxIntrinsic>(II) && "Expected a min or max intrinsic");
+
+  Value *Op0 = II->getArgOperand(0), *Op1 = II->getArgOperand(1);
+  Value *InnerMax;
+  Constant *C2, *C3;
+  if (!match(Op0, m_OneUse(m_BinOp(m_Value(InnerMax), m_ImmConstant(C2)))) ||
+      !match(Op1, m_ImmConstant(C3)))
+    return nullptr;
+
+  auto *BinOpInst = cast<BinaryOperator>(Op0);
+  Instruction::BinaryOps BinOp = BinOpInst->getOpcode();
+
+  InnerMax = BinOpInst->getOperand(0);
+
+  auto *InnerMinMaxInst = dyn_cast<MinMaxIntrinsic>(BinOpInst->getOperand(0));
+  if (!InnerMinMaxInst || !InnerMinMaxInst->hasOneUse())
+    return nullptr;
+
+  bool IsSigned = InnerMinMaxInst->isSigned();
+  if (InnerMinMaxInst->getIntrinsicID() != MinMaxID)
+    return nullptr;
+
+  if ((IsSigned && !BinOpInst->hasNoSignedWrap()) ||
+      (!IsSigned && !BinOpInst->hasNoUnsignedWrap()))
+    return nullptr;
+
+  if (!rightDistributesOverLeft(BinOp, !BinOpInst->hasNoUnsignedWrap(),
+                                !BinOpInst->hasNoSignedWrap(),
+                                InnerMinMaxInst->getIntrinsicID()))
+    return nullptr;
+
+  Constant *C1;
+  if (!match(InnerMinMaxInst->getRHS(), m_ImmConstant(C1)))
+    return nullptr;
+  Constant *C1BinOpC2 = ConstantFoldBinaryOpOperands(BinOp, C1, C2, DL);
+  Constant *C4 = ConstantFoldBinaryIntrinsic(MinMaxID, C1BinOpC2, C3,
+                                             C3->getType(), nullptr);
+
+  // Create new X binop C2
+  Value *NewBinOp = Builder.CreateBinOp(BinOp, InnerMinMaxInst->getOperand(0),
+                                        BinOpInst->getOperand(1));
+
+  // Set overflow flags on new binary operation
+  if (auto *NewBinInst = dyn_cast<Instruction>(NewBinOp)) {
+    NewBinInst->setHasNoSignedWrap(IsSigned);
+    NewBinInst->setHasNoUnsignedWrap(!IsSigned);
+  }
+
+  // Create constant for C4
+  // Value *C4Val = ConstantInt::get(II->getType(), C4);
+
+  // Get the intrinsic function for MinMaxID
+  Type *Ty = II->getType();
+  Function *MinMaxFn =
+      Intrinsic::getOrInsertDeclaration(II->getModule(), MinMaxID, {Ty});
+
+  // Create new min/max intrinsic: MinMaxID(NewBinOp, C4)
+  Value *Args[] = {NewBinOp, C4};
+  Instruction *NewMax = CallInst::Create(MinMaxFn, Args, "", nullptr);
+
+  return NewMax;
+}
+
 /// Match a sadd_sat or ssub_sat which is using min/max to clamp the value.
 Instruction *InstCombinerImpl::matchSAddSubSat(IntrinsicInst &MinMax1) {
   Type *Ty = MinMax1.getType();
@@ -2285,6 +2379,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
 
     if (Instruction *I = moveAddAfterMinMax(II, Builder))
       return I;
+
+    // max(max(X,C1) binop C2, C3) -> max(X binop C2, max(C1 binop C2, C3)) -> max(X binop C2, C4)
+    if (Instruction *I = reduceMinMax(II, Builder,DL))  
+      return I;
+
 
     // minmax (X & NegPow2C, Y & NegPow2C) --> minmax(X, Y) & NegPow2C
     const APInt *RHSC;
