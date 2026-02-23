@@ -328,6 +328,15 @@ def dumpTopology(affinity_data, node_data, hip_uuid, numa_cpus):
 
 if __name__ == "__main__":
     sysPos, debug_numa, use_taskset, use_numactl, use_nobind, dry_run, use_md, md_count, use_nr, use_nm, dump_topo, use_rocmsmi, use_amdsmi, use_membind, use_localalloc = processArgs()
+    # support override by envvar
+    gpurun_bypass = int(os.environ.get('GPURUN_BYPASS', '0'))
+    my_env = os.environ.copy()
+    if gpurun_bypass:
+       program_to_run = [ ]
+       program_to_run.extend(sys.argv[sysPos:])
+       result = subprocess.run(program_to_run, env=my_env, capture_output=False, text=False, check=False)
+       sys.exit(0)
+
     #check for numactl and taskset
     has_numactl = check_numactl_exists()
     has_taskset = check_taskset_exists()
@@ -348,14 +357,7 @@ if __name__ == "__main__":
     rocrVisDev = int(os.environ.get('ROCR_VISIBLE_DEVICES', '-1'))
     localRank = int(os.environ.get('OMPI_COMM_WORLD_LOCAL_RANK', '0'))
     numRanksLocal = int(os.environ.get('OMPI_COMM_WORLD_LOCAL_SIZE', '1'))
-
-    # support override by envvar
     gpurun_device_bias = int(os.environ.get('GPURUN_DEVICE_BIAS', '0'))
-    gpurun_bypass = int(os.environ.get('GPURUN_BYPASS', '0'))
-    if gpurun_bypass:
-       use_taskset = False
-       use_numactl = False
-       use_nobind = True
 
     if rocrVisDev != -1 or use_nr:
        adjRank = rocrVisDev + gpurun_device_bias
