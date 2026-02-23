@@ -481,3 +481,18 @@ int test26(short n) {
   return ~n == 32768; // expected-warning {{result of comparison of 16-bit signed value == 32768 is always false}}
 }
 #endif
+
+typedef unsigned long __attribute__((__vector_size__(8))) W;
+void test27(void) {
+  int i;
+  W g;
+  // We expect no assertion failures here.
+  W w = i == (-g); // expected-warning {{}}
+}
+
+void test28(void) {
+  int i;
+  W g;
+  // We expect no assertion failures here.
+  W w = i == (~g); // expected-warning {{}}
+}
