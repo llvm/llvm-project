@@ -67,7 +67,7 @@ auto main(int argc, char **argv) -> int {
   llvm::cl::HideUnrelatedOptions({&AdvisorCategory});
   llvm::cl::ParseCommandLineOptions(argc, argv, "LLVM Compilation Advisor");
 
-  const bool isViewCommand = ViewCmd;
+  const bool isViewCommand = static_cast<bool>(ViewCmd);
   const auto &CommandLine =
       isViewCommand ? g_ViewCompileCommand : g_DefaultCompileCommand;
   if (CommandLine.empty()) {
