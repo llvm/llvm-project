@@ -2327,8 +2327,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI->PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
                        TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
                        IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                       FakeStep, Final, Mergeable,Priority,
-                      NumOfCollapseLoops](Function &OutlinedFn) mutable {
+                       FakeStep, Final, Mergeable, Priority,
+                       NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
