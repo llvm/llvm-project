@@ -98,13 +98,24 @@ jobs:
 
       - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        continue-on-error: true
         uses: actions/download-artifact@v4
         with:
           name: multiple-pr-build-params
           path: .
 
-      - name: Source the multiple PR's of params
+      - name: Check for parameterised PR trigger
+        id: check_parameterised_trigger
         if: ${{ github.event_name == 'workflow_dispatch' }}
+        run: |
+          if [ -f "./${{ github.run_id }}_PR_params.env" ]; then
+            echo "parameterised_trigger=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "parameterised_trigger=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Source the multiple PR's of params
+        if: ${{ github.event_name == 'workflow_dispatch' && steps.check_parameterised_trigger.outputs.parameterised_trigger == 'true' }}
         run: |
           set -a
           source ./${{ github.run_id }}_PR_params.env
@@ -114,7 +125,7 @@ jobs:
           echo "HIPIFY_PR_URL=$HIPIFY_PR_URL" >> "$GITHUB_ENV"
 
       - name: Update submodule pointers from provided parameter PR values
-        if: ${{ github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && steps.check_parameterised_trigger.outputs.parameterised_trigger == 'true' }}
         run: |
           git config --global --add safe.directory "$PWD"
           # Function to get SHA with git-ls
@@ -236,7 +247,7 @@ jobs:
              cd -
 
       - name: Configure PR Projects
-        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch' }} 
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}
@@ -250,7 +261,7 @@ jobs:
           python3 build_tools/github_actions/build_configure.py
 
       - name: Configure All Projects
-        if: ${{ github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch'  }}
+        if: ${{ github.event_name != 'pull_request' && github.event_name != 'workflow_dispatch' }}
         env:
           cmake_preset: ${{ inputs.build_variant_cmake_preset }}
           amdgpu_families: ${{ inputs.amdgpu_families }}

@@ -108,7 +108,7 @@ jobs:
       matrix:
         variant: ${{ fromJSON(needs.setup.outputs.linux_variants) }}
     uses: ./.github/workflows/ci_linux.yml
-    secrets: inherit
+    secrets: inherit 
     with:
       amdgpu_families: ${{ matrix.variant.family }}
       artifact_group: ${{ matrix.variant.artifact_group }}
@@ -141,6 +141,7 @@ jobs:
       matrix:
         variant: ${{ fromJSON(needs.setup.outputs.windows_variants) }}
     uses: ./.github/workflows/ci_windows.yml
+    secrets: inherit
     with:
       amdgpu_families: ${{ matrix.variant.family }}
       artifact_group: ${{ matrix.variant.artifact_group }}
