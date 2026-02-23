@@ -5,6 +5,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangTidyConcurrencyModule STATIC
   ConcurrencyTidyModule.cpp
+  LambdaCoroutineCaptureCheck.cpp
   MtUnsafeCheck.cpp
   ThreadCanceltypeAsynchronousCheck.cpp
 
