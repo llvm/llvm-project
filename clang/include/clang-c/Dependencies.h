@@ -173,6 +173,14 @@ clang_experimental_DependencyScannerServiceOptions_setCacheNegativeStats(
     CXDependencyScannerServiceOptions Opts, bool CacheNegativeStats);
 
 /**
+ * Set if scanner modules should be compiled asynchronously. Defaults to false
+ * if this is not called.
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerServiceOptions_setAsyncScanModules(
+    CXDependencyScannerServiceOptions Opts, bool AsyncScanModules);
+
+/**
  * Create a \c CXDependencyScannerService object.
  * Must be disposed with \c
  * clang_experimental_DependencyScannerService_dispose_v0().

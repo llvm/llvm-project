@@ -43,6 +43,7 @@ struct DependencyScannerServiceOptions {
   std::shared_ptr<cas::ObjectStore> CAS;
   std::shared_ptr<cas::ActionCache> Cache;
   std::optional<bool> CacheNegativeStats;
+  std::optional<bool> AsyncScanModules;
 
   ScanningOutputFormat getFormat() const;
 };
@@ -181,6 +182,11 @@ ScanningOutputFormat DependencyScannerServiceOptions::getFormat() const {
   return ScanningOutputFormat::FullIncludeTree;
 }
 
+void clang_experimental_DependencyScannerServiceOptions_setAsyncScanModules(
+    CXDependencyScannerServiceOptions Opts, bool AsyncScanModules) {
+  unwrap(Opts)->CacheNegativeStats = AsyncScanModules;
+}
+
 CXDependencyScannerService
 clang_experimental_DependencyScannerService_create_v1(
     CXDependencyScannerServiceOptions WrappedOpts) {
@@ -201,6 +207,8 @@ clang_experimental_DependencyScannerService_create_v1(
   Opts.OptimizeArgs = unwrap(WrappedOpts)->OptimizeArgs;
   if (unwrap(WrappedOpts)->CacheNegativeStats)
     Opts.CacheNegativeStats = *unwrap(WrappedOpts)->CacheNegativeStats;
+  if (unwrap(WrappedOpts)->AsyncScanModules)
+    Opts.AsyncScanModules = *unwrap(WrappedOpts)->AsyncScanModules;
   return wrap(new DependencyScanningService(std::move(Opts)));
 }
 
