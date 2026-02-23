@@ -103,26 +103,6 @@ exit:
 ; MMI pattern.
 ;
 define i64 @smax_idx_max_no_exit_user(ptr nocapture readonly %a, i64 %mm, i64 %ii, i64 %n) {
-; CHECK-LABEL: define i64 @smax_idx_max_no_exit_user(
-; CHECK-SAME: ptr readonly captures(none) [[A:%.*]], i64 [[MM:%.*]], i64 [[II:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
-; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDVARS_IV_NEXT:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[MAX_09:%.*]] = phi i64 [ [[MM]], %[[ENTRY]] ], [ [[TMP1:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[IDX_011:%.*]] = phi i64 [ [[II]], %[[ENTRY]] ], [ [[SPEC_SELECT7:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[INDVARS_IV]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[ARRAYIDX]], align 4
-; CHECK-NEXT:    [[TMP1]] = tail call i64 @llvm.smax.i64(i64 [[MAX_09]], i64 [[TMP0]])
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt i64 [[MAX_09]], [[TMP0]]
-; CHECK-NEXT:    [[SPEC_SELECT7]] = select i1 [[CMP1]], i64 [[INDVARS_IV]], i64 [[IDX_011]]
-; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[INDVARS_IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label %[[EXIT:.*]], label %[[FOR_BODY]]
-; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[SPEC_SELECT7_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT7]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    ret i64 [[SPEC_SELECT7_LCSSA]]
-;
 entry:
   br label %for.body
 

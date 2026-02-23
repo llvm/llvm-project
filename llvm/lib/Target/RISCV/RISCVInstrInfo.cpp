@@ -42,7 +42,6 @@ using namespace llvm;
 #include "RISCVGenCompressInstEmitter.inc"
 
 #define GET_INSTRINFO_CTOR_DTOR
-#define GET_INSTRINFO_NAMED_OPS
 #include "RISCVGenInstrInfo.inc"
 
 #define DEBUG_TYPE "riscv-instr-info"
@@ -2376,8 +2375,9 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
   }
 
   // Rounding modes
-  if (RISCVII::hasRoundModeOp(TSFlags) &&
-      !checkImmOperand(RISCVII::getVLOpNum(Desc) - 1))
+  if (int Idx = RISCVII::getFRMOpNum(Desc); Idx >= 0 && !checkImmOperand(Idx))
+    return false;
+  if (int Idx = RISCVII::getVXRMOpNum(Desc); Idx >= 0 && !checkImmOperand(Idx))
     return false;
 
   return true;
