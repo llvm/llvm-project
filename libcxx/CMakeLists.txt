@@ -504,11 +504,9 @@ remove_flags(-Wno-pedantic -pedantic-errors -pedantic)
 # Required flags ==============================================================
 function(cxx_add_basic_build_flags target)
 
-  # Use C++26 for all targets.
-  set_target_properties(${target} PROPERTIES
-    CXX_STANDARD 26
-    CXX_STANDARD_REQUIRED OFF # TODO: Make this REQUIRED once we don't need to accommodate the LLVM documentation builders using an ancient CMake
-    CXX_EXTENSIONS NO)
+  # Use C++26 for all targets. Note that we don't use CXX_STANDARD or cxx_std_foo
+  # since that requires a newer CMake than is available.
+  target_compile_options(${target} PRIVATE -std=c++26)
 
   # When building the dylib, don't warn for unavailable aligned allocation
   # functions based on the deployment target -- they are always available
