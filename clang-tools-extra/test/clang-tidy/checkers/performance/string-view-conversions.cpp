@@ -49,6 +49,14 @@ void positive(std::string_view sv, std::wstring_view wsv) {
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
   // CHECK-FIXES: foo_sv(42, sv, 3.14);
 
+  foo_sv(42, std::string(sv).c_str(), 3.14);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant conversion to 'const std::basic_string<char>' and calling .c_str() and then back to 'std::string_view' (aka 'basic_string_view<char>') [performance-string-view-conversions]
+  // CHECK-FIXES: foo_sv(42, sv, 3.14);
+
+  foo_sv(42, std::string(sv).data(), 3.14);
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant conversion to 'const std::basic_string<char>' and calling .data() and then back to 'std::string_view' (aka 'basic_string_view<char>') [performance-string-view-conversions]
+  // CHECK-FIXES: foo_sv(42, sv, 3.14);
+
   foo_sv(42, std::string("Hello, world"), 3.14);
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant  conversion to 'std::string' (aka 'basic_string<char>') and then back to 'basic_string_view<char, std::char_traits<char>>' [performance-string-view-conversions]
   // CHECK-FIXES: foo_sv(42, "Hello, world", 3.14);
@@ -93,6 +101,10 @@ void positive(std::string_view sv, std::wstring_view wsv) {
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant conversion to 'std::wstring' (aka 'basic_string<wchar_t>') and then back to 'basic_string_view<wchar_t, std::char_traits<wchar_t>>' [performance-string-view-conversions]
   // CHECK-FIXES: foo_wsv(42, wsv, 3.14);
 
+  foo_wsv(42, std::wstring(wsv).c_str(), 3.14);
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant conversion to 'const std::basic_string<wchar_t>' and calling .c_str() and then back to 'std::wstring_view' (aka 'basic_string_view<wchar_t>') [performance-string-view-conversions]
+  // CHECK-FIXES: foo_wsv(42, wsv, 3.14);
+
   const wchar_t *wptr = L"Hello, world";
   foo_wsv(42, std::wstring(wptr), 3.14);
   // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: redundant conversion to 'std::wstring' (aka 'basic_string<wchar_t>') and then back to 'basic_string_view<wchar_t, std::char_traits<wchar_t>>' [performance-string-view-conversions]
@@ -117,7 +129,6 @@ void negative(std::string_view sv, std::wstring_view wsv) {
   foo_sv(42, std::string(5, 'a'), 3.14);
   foo_sv(42, std::string("foo").append("bar"), 3.14);
   foo_sv(42, std::string(sv).substr(0, 5), 3.14);
-  foo_sv(42, std::string(sv).c_str(), 3.14);
 
   // No warnings expected: string parameter, not string-view
   foo_str(42, std::string(sv), 3.14);
