@@ -14,10 +14,6 @@
 #ifndef LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERTYPES_H
 #define LLVM_CLANG_LIB_CIR_DIALECT_TRANSFORMS_TARGETLOWERING_LOWERTYPES_H
 
-#include "ABIInfo.h"
-#include "CIRCXXABI.h"
-#include "CIRLowerContext.h"
-#include "mlir/IR/MLIRContext.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 
 namespace cir {
@@ -32,17 +28,6 @@ class LowerTypes {
 
 private:
   LowerModule &lm;
-  CIRLowerContext &context;
-  const clang::TargetInfo &target;
-  CIRCXXABI &cxxabi;
-
-  // This should not be moved earlier, since its initialization depends on some
-  // of the previous reference members being already initialized
-  const ABIInfo &theABIInfo;
-
-  // Used to build types and other MLIR operations.
-  mlir::MLIRContext *mlirContext;
-
   cir::CIRDataLayout dataLayout;
 
 public:
@@ -50,11 +35,7 @@ public:
   ~LowerTypes() = default;
 
   LowerModule &getLm() const { return lm; }
-  //   CIRLowerContext &getContext() { return context; }
-  //   const clang::TargetInfo &getTarget() const { return target; }
-  //   const cir::CIRDataLayout &getDataLayout() const { return dataLayout; }
-  //   CIRCXXABI &getCXXABI() const { return CXXABI; }
-  //   mlir::MLIRContext *getMLIRContext() { return mlirContext; }
+  const cir::CIRDataLayout &getDataLayout() const { return dataLayout; }
 };
 
 } // namespace cir

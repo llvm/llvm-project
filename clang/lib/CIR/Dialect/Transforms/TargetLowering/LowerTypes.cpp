@@ -18,7 +18,4 @@
 using namespace cir;
 
 LowerTypes::LowerTypes(LowerModule &lm)
-    : lm(lm), context(lm.getContext()), target(lm.getTarget()),
-      CXXABI(lm.getCXXABI()),
-      theABIInfo(lm.getTargetLoweringInfo().getABIInfo()),
-      mlirContext(lm.getMLIRContext()), dataLayout(lm.getModule()) {}
+    : lm(lm), dataLayout(lm.getModule()) {}
