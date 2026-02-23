@@ -25,7 +25,9 @@ namespace llvm {
 
 class InductionDescriptor;
 class Instruction;
+class Loop;
 class LoopVersioning;
+class OptimizationRemarkEmitter;
 class PHINode;
 class ScalarEvolution;
 class PredicatedScalarEvolution;
@@ -41,6 +43,7 @@ LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintAfterAll;
 LLVM_ABI_FOR_TEST extern cl::list<std::string> VPlanPrintAfterPasses;
+LLVM_ABI_FOR_TEST extern cl::opt<bool> VPlanPrintVectorRegionScope;
 #endif
 
 struct VPlanTransforms {
@@ -63,7 +66,10 @@ struct VPlanTransforms {
             << "VPlan for loop in '"
             << Plan.getScalarHeader()->getIRBasicBlock()->getParent()->getName()
             << "' after " << PassName << '\n';
-        dbgs() << Plan << '\n';
+        if (VPlanPrintVectorRegionScope && Plan.getVectorLoopRegion())
+          Plan.getVectorLoopRegion()->print(dbgs());
+        else
+          dbgs() << Plan << '\n';
       }
 #endif
       if (VerifyEachVPlan && EnableVerify)
@@ -185,9 +191,12 @@ struct VPlanTransforms {
                                         const TargetLibraryInfo &TLI);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
-  /// min/max reductions used by FindLastIV reductions are supported. Otherwise
-  /// return false.
-  static bool handleMultiUseReductions(VPlan &Plan);
+  /// strict and non-strict min/max reductions used by FindLastIV reductions are
+  /// supported, corresponding to computing the first and last argmin/argmax,
+  /// respectively. Otherwise return false.
+  static bool handleMultiUseReductions(VPlan &Plan,
+                                       OptimizationRemarkEmitter *ORE,
+                                       Loop *TheLoop);
 
   /// Try to have all users of fixed-order recurrences appear after the recipe
   /// defining their previous value, by either sinking users or hoisting recipes
@@ -281,9 +290,9 @@ struct VPlanTransforms {
       VPlan &Plan,
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
-  /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
+  /// Add a VPCurrentIterationPHIRecipe and related recipes to \p Plan and
   /// replaces all uses except the canonical IV increment of
-  /// VPCanonicalIVPHIRecipe with a VPEVLBasedIVPHIRecipe.
+  /// VPCanonicalIVPHIRecipe with a VPCurrentIterationPHIRecipe.
   /// VPCanonicalIVPHIRecipe is only used to control the loop after
   /// this transformation.
   static void
@@ -332,14 +341,14 @@ struct VPlanTransforms {
   /// BranchOnCond instructions. Should be called after dissolveLoopRegions.
   static void expandBranchOnTwoConds(VPlan &Plan);
 
-  /// Transform EVL loops to use variable-length stepping after region
+  /// Transform loops with variable-length stepping after region
   /// dissolution.
   ///
-  /// Once loop regions are replaced with explicit CFG, EVL loops can step with
+  /// Once loop regions are replaced with explicit CFG, loops can step with
   /// variable vector lengths instead of fixed lengths. This transformation:
-  ///  * Makes EVL-Phi concrete.
+  ///  * Makes CurrentIteration-Phi concrete.
   //   * Removes CanonicalIV and increment.
-  static void canonicalizeEVLLoops(VPlan &Plan);
+  static void convertToVariableLengthStep(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);

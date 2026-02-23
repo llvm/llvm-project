@@ -1545,6 +1545,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     if (isa<UndefValue>(Segment))
       return IC.replaceInstUsesWith(II, ConstantFP::getZero(II.getType()));
 
+    // Sign bit is not used.
+    Value *StrippedSign = InstCombiner::stripSignOnlyFPOps(Src);
+    if (StrippedSign != Src)
+      return IC.replaceOperand(II, 0, StrippedSign);
+
     if (II.isStrictFP())
       break;
 

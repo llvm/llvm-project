@@ -960,9 +960,7 @@ static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
 }
 
 void ModuleDepCollector::addFileDep(StringRef Path) {
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689) {
-    // Within P1689 format, we don't want all the paths to be absolute path
-    // since it may violate the traditional make style dependencies info.
+  if (!Service.getOpts().ReportAbsolutePaths) {
     FileDeps.emplace_back(Path);
     return;
   }

@@ -302,8 +302,8 @@ inline std::optional<SourceLanguage> toDW_LANG(SourceLanguageName name,
     return DW_LANG_Go;
   case DW_LNAME_Haskell:
     return DW_LANG_Haskell;
-  // case DW_LNAME_HIP:
-  //   return DW_LANG_HIP;
+  case DW_LNAME_HIP:
+    return DW_LANG_HIP;
   case DW_LNAME_Java:
     return DW_LANG_Java;
   case DW_LNAME_Julia:
@@ -431,7 +431,7 @@ toDW_LNAME(SourceLanguage language) {
   case DW_LANG_Haskell:
     return {{DW_LNAME_Haskell, 0}};
   case DW_LANG_HIP:
-    return {}; // return {{DW_LNAME_HIP, 0}};
+    return {{DW_LNAME_HIP, 0}};
   case DW_LANG_Java:
     return {{DW_LNAME_Java, 0}};
   case DW_LANG_Julia:

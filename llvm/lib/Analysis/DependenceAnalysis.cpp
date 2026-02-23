@@ -1070,78 +1070,6 @@ void DependenceInfo::collectCommonLoops(const SCEV *Expression,
   }
 }
 
-void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
-
-  unsigned widestWidthSeen = 0;
-  Type *widestType;
-
-  // Go through each pair and find the widest bit to which we need
-  // to extend all of them.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = SrcTy->getBitWidth();
-      widestType = SrcTy;
-    }
-    if (DstTy->getBitWidth() > widestWidthSeen) {
-      widestWidthSeen = DstTy->getBitWidth();
-      widestType = DstTy;
-    }
-  }
-
-  assert(widestWidthSeen > 0);
-
-  // Now extend each pair to the widest seen.
-  for (Subscript *Pair : Pairs) {
-    const SCEV *Src = Pair->Src;
-    const SCEV *Dst = Pair->Dst;
-    IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
-    IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
-    if (SrcTy == nullptr || DstTy == nullptr) {
-      assert(SrcTy == DstTy &&
-             "This function only unify integer types and "
-             "expect Src and Dst share the same type otherwise.");
-      continue;
-    }
-    if (SrcTy->getBitWidth() < widestWidthSeen)
-      // Sign-extend Src to widestType
-      Pair->Src = SE->getSignExtendExpr(Src, widestType);
-    if (DstTy->getBitWidth() < widestWidthSeen) {
-      // Sign-extend Dst to widestType
-      Pair->Dst = SE->getSignExtendExpr(Dst, widestType);
-    }
-  }
-}
-
-// removeMatchingExtensions - Examines a subscript pair.
-// If the source and destination are identically sign (or zero)
-// extended, it strips off the extension in an effect to simplify
-// the actual analysis.
-void DependenceInfo::removeMatchingExtensions(Subscript *Pair) {
-  const SCEV *Src = Pair->Src;
-  const SCEV *Dst = Pair->Dst;
-  if ((isa<SCEVZeroExtendExpr>(Src) && isa<SCEVZeroExtendExpr>(Dst)) ||
-      (isa<SCEVSignExtendExpr>(Src) && isa<SCEVSignExtendExpr>(Dst))) {
-    const SCEVIntegralCastExpr *SrcCast = cast<SCEVIntegralCastExpr>(Src);
-    const SCEVIntegralCastExpr *DstCast = cast<SCEVIntegralCastExpr>(Dst);
-    const SCEV *SrcCastOp = SrcCast->getOperand();
-    const SCEV *DstCastOp = DstCast->getOperand();
-    if (SrcCastOp->getType() == DstCastOp->getType()) {
-      Pair->Src = SrcCastOp;
-      Pair->Dst = DstCastOp;
-    }
-  }
-}
-
 // Examine the scev and return true iff it's affine.
 // Collect any loops mentioned in the set of "Loops".
 bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
@@ -3283,7 +3211,9 @@ bool DependenceInfo::tryDelinearize(Instruction *Src, Instruction *Dst,
   for (int I = 0; I < Size; ++I) {
     Pair[I].Src = SrcSubscripts[I];
     Pair[I].Dst = DstSubscripts[I];
-    unifySubscriptType(&Pair[I]);
+
+    assert(Pair[I].Src->getType() == Pair[I].Dst->getType() &&
+           "Unexpected different types for the subscripts");
 
     if (EnableMonotonicityCheck) {
       if (MonChecker.checkMonotonicity(Pair[I].Src, OutermostLoop).isUnknown())
@@ -3608,7 +3538,6 @@ DependenceInfo::depends(Instruction *Src, Instruction *Dst,
     Pair[P].Loops.resize(MaxLevels + 1);
     Pair[P].GroupLoops.resize(MaxLevels + 1);
     Pair[P].Group.resize(Pairs);
-    removeMatchingExtensions(&Pair[P]);
     Pair[P].Classification =
         classifyPair(Pair[P].Src, LI->getLoopFor(Src->getParent()), Pair[P].Dst,
                      LI->getLoopFor(Dst->getParent()), Pair[P].Loops);

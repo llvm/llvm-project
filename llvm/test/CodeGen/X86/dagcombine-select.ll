@@ -277,12 +277,10 @@ define double @fsub_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: fsub_constant_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB20_1
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [-1.8200000000000003E+1,0.0E+0]
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB20_1:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [9.0999999999999996E+0,0.0E+0]
+; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %eax
+; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %ecx
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fsub double 5.1, %sel
@@ -293,12 +291,10 @@ define double @fdiv_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: fdiv_constant_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB21_1
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [2.188841201716738E-1,0.0E+0]
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB21_1:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [-1.2749999999999999E+0,0.0E+0]
+; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %eax
+; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %ecx
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = fdiv double 5.1, %sel
@@ -309,12 +305,10 @@ define double @frem_constant_sel_constants(i1 %cond) {
 ; CHECK-LABEL: frem_constant_sel_constants:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    jne .LBB22_1
-; CHECK-NEXT:  # %bb.2:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [5.0999999999999996E+0,0.0E+0]
-; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB22_1:
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0999999999999996E+0,0.0E+0]
+; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %eax
+; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %ecx
+; CHECK-NEXT:    cmovneq %rax, %rcx
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    retq
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double 5.1, %sel

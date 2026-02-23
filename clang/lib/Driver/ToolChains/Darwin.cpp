@@ -1145,11 +1145,11 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
       getDriver().Diag(diag::warn_incompatible_sysroot)
           << SDKInfo->getDisplayName() << Triple.getTriple();
   } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    // If there is no SDK info, assume this is building against an SDK that
+    // predates SDKSettings.json. Try to match the triple to the SDK path.
     const char *isysroot = A->getValue();
-    StringRef SDK = getSDKName(isysroot);
-    if (!SDK.empty()) {
-      size_t StartVer = SDK.find_first_of("0123456789");
-      StringRef SDKName = SDK.slice(0, StartVer);
+    StringRef SDKName = getSDKName(isysroot);
+    if (!SDKName.empty()) {
       bool supported = true;
       if (Triple.isWatchOS())
         supported = SDKName.starts_with("Watch");
@@ -1161,9 +1161,8 @@ void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
         supported = SDKName.starts_with("iPhone");
       else if (Triple.isMacOSX())
         supported = SDKName.starts_with("MacOSX");
-      else
-        llvm::reportFatalUsageError(Twine("SDK at '") + isysroot +
-                                    "' missing SDKSettings.json.");
+      // If it's not an older SDK, then it might be a damaged SDK or a
+      // non-standard -isysroot path. Don't try to diagnose that here.
 
       if (!supported)
         getDriver().Diag(diag::warn_incompatible_sysroot)
@@ -1367,6 +1366,21 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
        TargetVersion.empty())) // apple-darwin, no version.
     return 4;
   return 5;
+}
+
+bool DarwinClang::getDefaultDebugSimpleTemplateNames() const {
+  // Default to an OS version on which LLDB supports debugging
+  // -gsimple-template-names programs.
+  if ((isTargetMacOSBased() && isMacosxVersionLT(26)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(26)) ||
+      (isTargetWatchOSBased() && TargetVersion < llvm::VersionTuple(26)) ||
+      (isTargetXROS() && TargetVersion < llvm::VersionTuple(26)) ||
+      (isTargetDriverKit() && TargetVersion < llvm::VersionTuple(25)) ||
+      (isTargetMacOSBased() &&
+       TargetVersion.empty())) // apple-darwin, no version.
+    return false;
+
+  return true;
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
@@ -1938,9 +1952,12 @@ struct DarwinPlatform {
                                           const DarwinSDKInfo &SDKInfo) {
     const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
         SDKInfo.getCanonicalPlatformInfo();
-    DarwinPlatform Result(InferredFromSDK,
-                          getPlatformFromOS(PlatformInfo.getOS()),
-                          SDKInfo.getVersion());
+    const llvm::Triple::OSType OS = PlatformInfo.getOS();
+    VersionTuple Version = SDKInfo.getVersion();
+    if (OS == llvm::Triple::MacOSX)
+      Version = getVersionFromString(
+          getSystemOrSDKMacOSVersion(Version.getAsString()));
+    DarwinPlatform Result(InferredFromSDK, getPlatformFromOS(OS), Version);
     Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
     Result.InferSimulatorFromArch = false;
     Result.InferredSource = SDKRoot;
@@ -2484,6 +2501,8 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
   // Read the SDKSettings.json file for more information, like the SDK version
   // that we can pass down to the compiler.
   SDKInfo = parseSDKSettings(getVFS(), Args, getDriver());
+  // FIXME: If SDKInfo is std::nullopt, diagnose a bad isysroot value (e.g.
+  // doesn't end in .sdk).
 
   // The OS and the version can be specified using the -target argument.
   std::optional<DarwinPlatform> PlatformAndVersion =
