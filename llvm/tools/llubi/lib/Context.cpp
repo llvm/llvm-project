@@ -59,6 +59,10 @@ AnyValue Context::getConstantValueImpl(Constant *C) {
   if (isa<ConstantAggregateZero>(C))
     return AnyValue::getNullValue(*this, C->getType());
 
+  if (isa<ConstantPointerNull>(C))
+    return Pointer::null(
+        DL.getPointerSizeInBits(C->getType()->getPointerAddressSpace()));
+
   if (auto *CI = dyn_cast<ConstantInt>(C)) {
     if (auto *VecTy = dyn_cast<VectorType>(CI->getType()))
       return std::vector<AnyValue>(getEVL(VecTy->getElementCount()),
@@ -148,10 +152,8 @@ bool Context::free(uint64_t Address) {
 
 Pointer Context::deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj) {
   assert(Obj && "Cannot determine the address space of a null memory object");
-  return Pointer(
-      Obj,
-      APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()), Obj->getAddress()),
-      /*Offset=*/0);
+  return Pointer(Obj, APInt(DL.getPointerSizeInBits(Obj->getAddressSpace()),
+                            Obj->getAddress()));
 }
 
 Function *Context::getTargetFunction(const Pointer &Ptr) {

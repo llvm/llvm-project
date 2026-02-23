@@ -139,55 +139,6 @@ core.DivideZero (C, C++, ObjC)
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
 
-.. _core-FixedAddressDereference:
-
-core.FixedAddressDereference (C, C++, ObjC)
-"""""""""""""""""""""""""""""""""""""""""""
-Check for dereferences of fixed addresses.
-
-A pointer contains a fixed address if it was set to a hard-coded value or it
-becomes otherwise obvious that at that point it can have only a single fixed
-numerical value.
-
-.. code-block:: c
-
- void test1() {
-   int *p = (int *)0x020;
-   int x = p[0]; // warn
- }
-
- void test2(int *p) {
-   if (p == (int *)-1)
-     *p = 0; // warn
- }
-
- void test3() {
-   int (*p_function)(char, char);
-   p_function = (int (*)(char, char))0x04080;
-   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
- }
-
- void volatile_pointee() {
-   *(volatile int *)0x404 = 1; // no warning: constant non-null "volatile" pointee, you must know what you are doing
- }
-
- void deref_volatile_nullptr() {
-   *(volatile int *)0 = 1; // core.NullDereference still warns about this
- }
-
-If your project is low-level (e.g., firmware), or deals with hardware interop with a lot of genuine constant addresses, then consider disabling this checker.
-The checker automatically suppresses issues if the type of the pointee of the address is ``volatile``.
-You probably already need this to be ``volatile`` for legitimate access, so the checker suppresses such issues to avoid false-positives.
-Note that null pointers will still be reported by :ref:`core.NullDereference <core-NullDereference>`
-regardless if the pointee is ``volatile`` or not.
-
-If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
-to true (the default value), then this checker never reports dereference of
-pointers with a specified address space. If the option is set to false, then
-reports from the specific x86 address spaces 256, 257 and 258 are still
-suppressed, but fixed address dereferences from other address spaces are
-reported.
-
 .. _core-NonNullParamChecker:
 
 core.NonNullParamChecker (C, C++, ObjC)
@@ -897,6 +848,60 @@ of this Clang attribute.
  auto flags = HasClaws | CanFly;
 
 Projects that use this pattern should not enable this optin checker.
+
+.. _optin-core-FixedAddressDereference:
+
+optin.core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single fixed
+numerical value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+Access of fixed numerical addresses can be legitimate in low-level projects (e.g. firmware) and hardware interop.
+These values are often marked as ``volatile`` (to prevent unwanted compiler optimizations),
+so this checker doesn't report situations where the pointee of the fixed address is ``volatile``.
+If this suppression is not sufficient on a low-level project, then consider disabling this ``optin`` checker.
+Note that null pointers will still be reported by :ref:`core.NullDereference <core-NullDereference>`
+regardless if the pointee is ``volatile`` or not.
+
+.. code-block:: c
+
+ void volatile_pointee() {
+   *(volatile int *)0x404 = 1; // no warning: fixed non-null "volatile" pointee, you must know what you are doing
+ }
+
+ void deref_volatile_nullptr() {
+   *(volatile int *)0 = 1; // core.NullDereference still warns about this
+ }
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
+Do not use the :ref:`address_space <langext-address_space_documentation>`
+attribute to suppress the reports - it just happens so that the checker also doesn't raise issues if the attribute is present.
 
 .. _optin-cplusplus-UninitializedObject:
 
@@ -3148,19 +3153,6 @@ Check for cases where the dynamic and the static type of an object are unrelated
  // incompatible with static type 'NSNumber *'"
  NSNumber *number = date;
  [number doubleValue];
-
-.. _alpha-core-FixedAddr:
-
-alpha.core.FixedAddr (C)
-""""""""""""""""""""""""
-Check for assignment of a fixed address to a pointer.
-
-.. code-block:: c
-
- void test() {
-   int *p;
-   p = (int *) 0x10000; // warn
- }
 
 .. _alpha-core-PointerArithm:
 
