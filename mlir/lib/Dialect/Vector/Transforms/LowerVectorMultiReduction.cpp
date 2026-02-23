@@ -287,7 +287,8 @@ public:
       return success();
     }
 
-    // 8. Creates shape cast for the output n-D -> 2-D.
+    // 8. Shape cast the flattened result back to the original n-D parallel
+    // shape.
     VectorType outputCastedType = VectorType::get(
         parallelShapes, multiReductionOp.getSourceVectorType().getElementType(),
         parallelScalableDims);
@@ -546,15 +547,6 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
   else
     patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext(),
                                                     benefit);
-}
-
-void mlir::vector::populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit) {
-  populateVectorMultiReductionReorderAndExpandPatterns(patterns, options,
-                                                       benefit);
-  populateVectorMultiReductionFlatteningPatterns(patterns, options, benefit);
-  populateVectorMultiReductionUnrollingPatterns(patterns, options, benefit);
 }
 
 std::unique_ptr<Pass> vector::createLowerVectorMultiReductionPass(

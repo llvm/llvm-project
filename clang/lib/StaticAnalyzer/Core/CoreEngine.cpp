@@ -428,7 +428,7 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         NodeBuilderContext Ctx(*this, B, Pred);
         ExplodedNodeSet Dst;
         IndirectGotoNodeBuilder Builder(
-            Pred, Dst, Ctx, cast<IndirectGotoStmt>(Term)->getTarget(),
+            Dst, Ctx, cast<IndirectGotoStmt>(Term)->getTarget(),
             *(B->succ_begin()));
 
         ExprEng.processIndirectGoto(Builder, Pred);
@@ -527,6 +527,12 @@ void CoreEngine::HandlePostStmt(const CFGBlock *B, unsigned StmtIdx,
                                 ExplodedNode *Pred) {
   assert(B);
   assert(!B->empty());
+
+  // We no-op by skipping any FullExprCleanup
+  while (StmtIdx < B->size() &&
+         (*B)[StmtIdx].getKind() == CFGElement::FullExprCleanup) {
+    StmtIdx++;
+  }
 
   if (StmtIdx == B->size())
     HandleBlockExit(B, Pred);
