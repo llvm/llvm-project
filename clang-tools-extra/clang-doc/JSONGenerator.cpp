@@ -36,7 +36,8 @@ static void serializeReference(const Reference &Ref, Object &ReferenceObj);
 template <typename Container, typename SerializationFunc>
 static void serializeArray(const Container &Records, Object &Obj,
                            const std::string &Key,
-                           SerializationFunc SerializeInfo);
+                           SerializationFunc SerializeInfo,
+                           const std::string &EndKey = "End");
 
 // Convenience lambda to pass to serializeArray.
 // If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
@@ -442,9 +443,9 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
 }
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo) {
+static void
+serializeArray(const Container &Records, Object &Obj, const std::string &Key,
+               SerializationFunc SerializeInfo, const std::string &EndKey) {
   json::Value RecordsArray = Array();
   auto &RecordsArrayRef = *RecordsArray.getAsArray();
   RecordsArrayRef.reserve(Records.size());
@@ -453,10 +454,11 @@ static void serializeArray(const Container &Records, Object &Obj,
     auto &ItemObj = *ItemVal.getAsObject();
     SerializeInfo(Records[Index], ItemObj);
     if (Index == Records.size() - 1)
-      ItemObj["End"] = true;
+      ItemObj[EndKey] = true;
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
+  Obj["VerticalDisplay"] = Records.size() > 2;
 }
 
 static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
@@ -479,6 +481,7 @@ static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
     ParamsArrayRef.push_back(ParamObjVal);
   }
   Obj["Parameters"] = ParamsArray;
+  Obj["VerticalDisplay"] = Params.size() > 2;
 }
 
 static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
@@ -542,7 +545,7 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   Obj["ReturnType"] = std::move(ReturnTypeObj);
 
   if (!F.Params.empty())
-    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda);
+    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda, "ParamEnd");
 
   if (F.Template)
     serializeInfo(F.Template.value(), Obj);
