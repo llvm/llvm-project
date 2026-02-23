@@ -12,47 +12,62 @@
 #include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/Chrono.h"
 
-#include <mutex>
-
 using namespace clang;
 using namespace dependencies;
 
 namespace {
 class ReaderWriterLock : public llvm::AdvisoryLock {
-  /// Reference to the mutex shared by module cache clients. When unsafe unlock
-  /// is requested, we override it using std::atomic_store(). To obtain it, we
-  /// use std::atomic_load().
-  std::shared_ptr<std::shared_timed_mutex> &SharedMutex;
-  /// The mutex we co-own with other threads. This is kept alive for the entire
-  /// lifetime of this class. Unsafe unlock does not affect it.
-  std::shared_ptr<std::shared_timed_mutex> CoOwnedMutex;
-
-  // TODO: Consider using std::atomic::{wait,notify_all} when we move to C++20.
-  std::unique_lock<std::shared_timed_mutex> OwningLock;
+  ModuleCacheEntry &Entry;
+  std::optional<unsigned> OwnedGeneration;
 
 public:
-  ReaderWriterLock(std::shared_ptr<std::shared_timed_mutex> &M)
-      : SharedMutex(M), CoOwnedMutex(std::atomic_load(&SharedMutex)),
-        OwningLock(*CoOwnedMutex, std::defer_lock) {}
+  ReaderWriterLock(ModuleCacheEntry &Entry) : Entry(Entry) {}
 
-  Expected<bool> tryLock() override { return OwningLock.try_lock(); }
+  Expected<bool> tryLock() override {
+    std::lock_guard<std::mutex> Lock(Entry.Mutex);
+    if (Entry.Locked)
+      return false;
+    Entry.Locked = true;
+    OwnedGeneration = Entry.Generation;
+    return true;
+  }
 
   llvm::WaitForUnlockResult
   waitForUnlockFor(std::chrono::seconds MaxSeconds) override {
-    assert(!OwningLock);
-    std::shared_lock<std::shared_timed_mutex> Lock(*OwningLock.mutex(),
-                                                   MaxSeconds);
-    return Lock ? llvm::WaitForUnlockResult::Success
-                : llvm::WaitForUnlockResult::Timeout;
+    assert(!OwnedGeneration);
+    std::unique_lock<std::mutex> Lock(Entry.Mutex);
+    unsigned CurrentGeneration = Entry.Generation;
+    bool Success = Entry.CondVar.wait_for(Lock, MaxSeconds, [&] {
+      // We check not only Locked, but also Generation to break the wait in case
+      // of unsafeUnlock() and successful tryLock().
+      return !Entry.Locked || Entry.Generation != CurrentGeneration;
+    });
+    return Success ? llvm::WaitForUnlockResult::Success
+                   : llvm::WaitForUnlockResult::Timeout;
   }
 
   std::error_code unsafeUnlock() override {
-    std::atomic_store(&SharedMutex,
-                      std::make_shared<std::shared_timed_mutex>());
+    {
+      std::lock_guard<std::mutex> Lock(Entry.Mutex);
+      Entry.Generation += 1;
+      Entry.Locked = false;
+    }
+    Entry.CondVar.notify_all();
     return {};
   }
 
-  ~ReaderWriterLock() override = default;
+  ~ReaderWriterLock() override {
+    if (OwnedGeneration) {
+      {
+        std::lock_guard<std::mutex> Lock(Entry.Mutex);
+        // Avoid stomping over the state managed by someone else after
+        // unsafeUnlock() and successful tryLock().
+        if (*OwnedGeneration == Entry.Generation)
+          Entry.Locked = false;
+      }
+      Entry.CondVar.notify_all();
+    }
+  }
 };
 
 class InProcessModuleCache : public ModuleCache {
@@ -70,15 +85,14 @@ public:
   void prepareForGetLock(StringRef Filename) override {}
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
-    auto &CompilationMutex =
-        [&]() -> std::shared_ptr<std::shared_timed_mutex> & {
+    auto &Entry = [&]() -> ModuleCacheEntry & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)
         Entry = std::make_unique<ModuleCacheEntry>();
-      return Entry->CompilationMutex;
+      return *Entry;
     }();
-    return std::make_unique<ReaderWriterLock>(CompilationMutex);
+    return std::make_unique<ReaderWriterLock>(Entry);
   }
 
   std::time_t getModuleTimestamp(StringRef Filename) override {
