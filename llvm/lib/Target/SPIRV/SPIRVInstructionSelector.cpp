@@ -848,7 +848,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       for (unsigned i = 0; i < I.getNumDefs(); ++i)
         MRI->setType(I.getOperand(i).getReg(), LLT::scalar(64));
     GR.invalidateMachineInstr(&I);
-    I.removeFromParent();
+    I.eraseFromParent();
     return true;
   }
   return false;
@@ -1586,18 +1586,19 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
                               MachineInstrBuilder &MIB,
                               MachineIRBuilder &MIRBuilder,
                               SPIRVGlobalRegistry &GR) {
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
   if (MemOp->isVolatile())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
   if (MemOp->isNonTemporal())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Nontemporal);
-  if (MemOp->getAlign().value())
+  // Aligned memory operand requires the Kernel capability.
+  if (!ST->isShader() && MemOp->getAlign().value())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned);
 
   [[maybe_unused]] MachineInstr *AliasList = nullptr;
   [[maybe_unused]] MachineInstr *NoAliasList = nullptr;
-  const SPIRVSubtarget *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
     if (auto *MD = MemOp->getAAInfo().Scope) {
       AliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
@@ -3140,7 +3141,7 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
     // OpKill must be the last operation of any basic block.
     if (MachineInstr *NextI = I.getNextNode()) {
       GR.invalidateMachineInstr(NextI);
-      NextI->removeFromParent();
+      NextI->eraseFromParent();
     }
   }
 
@@ -3780,7 +3781,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // the duplicated definition.
     if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
       GR.invalidateMachineInstr(MI);
-      MI->removeFromParent();
+      MI->eraseFromParent();
     }
     return true;
   }
