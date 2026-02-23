@@ -935,18 +935,20 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 // Pseudo-instructions for SFB (Short Forward Branch)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasShortForwardBranchIALU], hasSideEffects = 0,
-    mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
-  def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
-                                (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                                 GPR:$falsev, GPR:$rs1,
-                                 uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-                         Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                                ReadSFBALU]>;
-  def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
-                                (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                                 GPR:$falsev, GPR:$rs1,
-                                 uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-                         Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                                ReadSFBALU]>;
+class SFBNDS_BFO
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU,
+             ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+let Predicates = [HasShortForwardBranchIALU] in {
+  def PseudoCCNDS_BFOS : SFBNDS_BFO;
+  def PseudoCCNDS_BFOZ : SFBNDS_BFO;
 }
