@@ -31,6 +31,7 @@ __all__ = [
     "Operand",
     "Result",
     "Region",
+    "Type",
     "register_dialect",
     "register_operation",
 ]
@@ -220,7 +221,7 @@ def match_optional(type_) -> Optional[Any]:
 
 class Operation(ir.OpView):
     """
-    Base class of Python-defined operation.
+    Base class of Python-defined operations.
 
     The following example shows two ways to define operations via this class:
     ```python
@@ -513,6 +514,19 @@ class ParamDef:
 
 
 class Type(ir.DynamicType):
+    """
+    Base class of Python-defined types.
+
+    The following example shows two ways to define types via this class:
+    ```python
+    class MyType(MyDialect.Type, name=..):
+      ...
+
+    class MyType(Type, dialect=MyDialect, name=..):
+      ...
+    ```
+    """
+
     @classmethod
     def __init_subclass__(
         cls,
