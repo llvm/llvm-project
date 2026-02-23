@@ -39,27 +39,6 @@ steps:
   workingDirectory: $(Agent.BuildDirectory)/repo
 
 - script: |
-    vmr_sha=$(grep -oP '(?<=Sha=")[^"]*' $(Agent.BuildDirectory)/repo/eng/Version.Details.xml)
-    echo "##vso[task.setvariable variable=vmr_sha]$vmr_sha"
-  displayName: Obtain the vmr sha from Version.Details.xml (Unix)
-  condition: ne(variables['Agent.OS'], 'Windows_NT')
-  workingDirectory: $(Agent.BuildDirectory)/repo
-
-- powershell: |
-    [xml]$xml = Get-Content -Path $(Agent.BuildDirectory)/repo/eng/Version.Details.xml
-    $vmr_sha = $xml.SelectSingleNode("//Source").Sha
-    Write-Output "##vso[task.setvariable variable=vmr_sha]$vmr_sha"
-  displayName: Obtain the vmr sha from Version.Details.xml (Windows)
-  condition: eq(variables['Agent.OS'], 'Windows_NT')
-  workingDirectory: $(Agent.BuildDirectory)/repo
-
-- script: |
-    git fetch --all
-    git checkout $(vmr_sha)
-  displayName: Checkout VMR at correct sha for repo flow
-  workingDirectory: ${{ parameters.vmrPath }}
-
-- script: |
     git config --global user.name "dotnet-maestro[bot]"
     git config --global user.email "dotnet-maestro[bot]@users.noreply.github.com"
   displayName: Set git author to dotnet-maestro[bot]

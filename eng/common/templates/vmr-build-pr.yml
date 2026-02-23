@@ -34,6 +34,7 @@ resources:
     type: github
     name: dotnet/dotnet
     endpoint: dotnet
+    ref: refs/heads/main # Set to whatever VMR branch the PR build should insert into
 
 stages:
 - template: /eng/pipelines/templates/stages/vmr-build.yml@vmr

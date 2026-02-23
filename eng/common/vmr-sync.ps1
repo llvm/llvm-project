@@ -103,12 +103,20 @@ Set-StrictMode -Version Latest
 Highlight 'Installing .NET, preparing the tooling..'
 . .\eng\common\tools.ps1
 $dotnetRoot = InitializeDotNetCli -install:$true
+$env:DOTNET_ROOT = $dotnetRoot
 $darc = Get-Darc
-$dotnet = "$dotnetRoot\dotnet.exe"
 
 Highlight "Starting the synchronization of VMR.."
 
 # Synchronize the VMR
+$versionDetailsPath = Resolve-Path (Join-Path $PSScriptRoot '..\Version.Details.xml') | Select-Object -ExpandProperty Path
+[xml]$versionDetails = Get-Content -Path $versionDetailsPath
+$repoName = $versionDetails.SelectSingleNode('//Source').Mapping
+if (-not $repoName) {
+  Fail "Failed to resolve repo mapping from $versionDetailsPath"
+  exit 1
+}
+
 $darcArgs = (
   "vmr", "forwardflow",
   "--tmp", $tmpDir,
@@ -130,9 +138,27 @@ if ($LASTEXITCODE -eq 0) {
   Highlight "Synchronization succeeded"
 }
 else {
-  Fail "Synchronization of repo to VMR failed!"
-  Fail "'$vmrDir' is left in its last state (re-run of this script will reset it)."
-  Fail "Please inspect the logs which contain path to the failing patch file (use -debugOutput to get all the details)."
-  Fail "Once you make changes to the conflicting VMR patch, commit it locally and re-run this script."
-  exit 1
+  Highlight "Failed to flow code into the local VMR. Falling back to resetting the VMR to match repo contents..."
+  git -C $vmrDir reset --hard
+
+  $resetArgs = (
+    "vmr", "reset",
+    "${repoName}:HEAD",
+    "--vmr", $vmrDir,
+    "--tmp", $tmpDir,
+    "--additional-remotes", "${repoName}:${repoRoot}"
+  )
+
+  & "$darc" $resetArgs
+
+  if ($LASTEXITCODE -eq 0) {
+    Highlight "Successfully reset the VMR using 'darc vmr reset'"
+  }
+  else {
+    Fail "Synchronization of repo to VMR failed!"
+    Fail "'$vmrDir' is left in its last state (re-run of this script will reset it)."
+    Fail "Please inspect the logs which contain path to the failing patch file (use -debugOutput to get all the details)."
+    Fail "Once you make changes to the conflicting VMR patch, commit it locally and re-run this script."
+    exit 1
+  }
 }
