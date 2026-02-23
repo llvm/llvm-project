@@ -200,7 +200,6 @@ public:
     Opt.MaxOffset = GlobalMergeMaxOffset;
     Opt.MergeConstantGlobals = EnableGlobalMergeOnConst;
     Opt.MergeConstAggressive = GlobalMergeAllConst;
-    initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
   explicit GlobalMerge(const TargetMachine *TM, unsigned MaximalOffset,
@@ -212,7 +211,6 @@ public:
     Opt.MergeExternal = MergeExternalGlobals;
     Opt.MergeConstantGlobals = MergeConstantGlobals;
     Opt.MergeConstAggressive = MergeConstAggressive;
-    initializeGlobalMergePass(*PassRegistry::getPassRegistry());
   }
 
   bool doInitialization(Module &M) override {
@@ -267,8 +265,7 @@ bool GlobalMergeImpl::doMerge(SmallVectorImpl<GlobalVariable *> &Globals,
   llvm::stable_sort(
       Globals, [&DL](const GlobalVariable *GV1, const GlobalVariable *GV2) {
         // We don't support scalable global variables.
-        return DL.getTypeAllocSize(GV1->getValueType()).getFixedValue() <
-               DL.getTypeAllocSize(GV2->getValueType()).getFixedValue();
+        return GV1->getGlobalSize(DL) < GV2->getGlobalSize(DL);
       });
 
   // If we want to just blindly group all globals together, do so.

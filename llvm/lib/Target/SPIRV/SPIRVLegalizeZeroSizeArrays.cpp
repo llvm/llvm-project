@@ -193,25 +193,21 @@ Constant *SPIRVLegalizeZeroSizeArraysImpl::legalizeConstant(Constant *C) {
 }
 
 void SPIRVLegalizeZeroSizeArraysImpl::visitAllocaInst(AllocaInst &AI) {
-  if (!hasZeroSizeArray(AI.getAllocatedType()))
+  // Check if allocation size is known-zero
+  const DataLayout &DL = AI.getModule()->getDataLayout();
+  std::optional<TypeSize> Size = AI.getAllocationSize(DL);
+  if (!Size || !Size->isZero())
     return;
 
-  // TODO: Handle structs containing zero-size arrays.
-  ArrayType *ArrTy = dyn_cast<ArrayType>(AI.getAllocatedType());
-  if (shouldLegalizeInstType(ArrTy)) {
-    // Allocate a generic pointer instead of an empty array.
-    IRBuilder<> Builder(&AI);
-    AllocaInst *NewAI = Builder.CreateAlloca(
-        PointerType::get(
-            ArrTy->getContext(),
-            storageClassToAddressSpace(SPIRV::StorageClass::Generic)),
-        /*ArraySize=*/nullptr, AI.getName());
-    NewAI->setAlignment(AI.getAlign());
-    NewAI->setDebugLoc(AI.getDebugLoc());
-    AI.replaceAllUsesWith(NewAI);
-    ToErase.push_back(&AI);
-    Modified = true;
-  }
+  // Allocate a byte instead of an empty alloca.
+  IRBuilder<> Builder(&AI);
+  AllocaInst *NewAI = Builder.CreateAlloca(Builder.getInt8Ty());
+  NewAI->takeName(&AI);
+  NewAI->setAlignment(AI.getAlign());
+  NewAI->setDebugLoc(AI.getDebugLoc());
+  AI.replaceAllUsesWith(NewAI);
+  ToErase.push_back(&AI);
+  Modified = true;
 }
 
 void SPIRVLegalizeZeroSizeArraysImpl::visitLoadInst(LoadInst &LI) {
@@ -289,16 +285,15 @@ bool SPIRVLegalizeZeroSizeArraysImpl::runOnModule(Module &M) {
   // Runtime arrays are allowed for shaders, so we don't need to do anything.
   if (TM.getSubtargetImpl()->isShader())
     return false;
+  // 0-sized arrays are handled differently for AMDGCN flavoured SPIRV.
+  if (M.getTargetTriple().getVendor() == Triple::VendorType::AMD)
+    return false;
 
   // First pass: create new globals (legalizing the initializer as needed) and
   // track mapping (don't erase old ones yet).
   SmallVector<GlobalVariable *, 8> OldGlobals;
   for (GlobalVariable &GV : M.globals()) {
     if (!hasZeroSizeArray(GV.getValueType()))
-      continue;
-
-    // llvm.embedded.module is handled by SPIRVPrepareGlobals.
-    if (GV.getName() == "llvm.embedded.module")
       continue;
 
     Type *NewTy = legalizeType(GV.getValueType());

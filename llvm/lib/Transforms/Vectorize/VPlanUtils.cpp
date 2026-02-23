@@ -87,7 +87,7 @@ static bool propagatesPoisonFromRecipeOp(const VPRecipeBase *R) {
   return TypeSwitch<const VPRecipeBase *, bool>(R)
       .Case<VPWidenGEPRecipe, VPWidenCastRecipe>(
           [](const VPRecipeBase *) { return true; })
-      .Case<VPReplicateRecipe>([](const VPReplicateRecipe *Rep) {
+      .Case([](const VPReplicateRecipe *Rep) {
         // GEP and casts propagate poison from all operands.
         unsigned Opcode = Rep->getOpcode();
         return Opcode == Instruction::GetElementPtr ||
@@ -178,6 +178,22 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getMinusSCEV(SE.getMinusOne(Ops[0]->getType()), Ops[0]);
     });
   }
+  if (match(V, m_Mul(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+    });
+  if (match(V,
+            m_Binary<Instruction::UDiv>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getUDivExpr(Ops[0], Ops[1]);
+    });
+  // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
+  const APInt *Mask;
+  if (match(V, m_c_BinaryAnd(m_VPValue(LHSVal), m_APInt(Mask))) &&
+      (*Mask + 1).isPowerOf2())
+    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
+    });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
     const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
     Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
@@ -245,19 +261,17 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
 
   // TODO: Support constructing SCEVs for more recipes as needed.
   const VPRecipeBase *DefR = V->getDefiningRecipe();
-  const SCEV *Expr = TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
-      .Case<VPExpandSCEVRecipe>(
-          [](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
-      .Case<VPCanonicalIVPHIRecipe>([&SE, &PSE,
-                                     L](const VPCanonicalIVPHIRecipe *R) {
-        if (!L)
-          return SE.getCouldNotCompute();
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-        return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
-                                SCEV::FlagAnyWrap);
-      })
-      .Case<VPWidenIntOrFpInductionRecipe>(
-          [&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
+  const SCEV *Expr =
+      TypeSwitch<const VPRecipeBase *, const SCEV *>(DefR)
+          .Case([](const VPExpandSCEVRecipe *R) { return R->getSCEV(); })
+          .Case([&SE, &PSE, L](const VPCanonicalIVPHIRecipe *R) {
+            if (!L)
+              return SE.getCouldNotCompute();
+            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+            return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
+                                    SCEV::FlagAnyWrap);
+          })
+          .Case([&SE, &PSE, L](const VPWidenIntOrFpInductionRecipe *R) {
             const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
             if (!L || isa<SCEVCouldNotCompute>(Step))
               return SE.getCouldNotCompute();
@@ -269,27 +283,38 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
               return SE.getTruncateExpr(AddRec, R->getScalarType());
             return AddRec;
           })
-      .Case<VPDerivedIVRecipe>([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
-        const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
-        const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
-        if (any_of(ArrayRef({Start, IV, Scale}), IsaPred<SCEVCouldNotCompute>))
-          return SE.getCouldNotCompute();
+          .Case([&SE, &PSE, L](const VPWidenPointerInductionRecipe *R) {
+            const SCEV *Start =
+                getSCEVExprForVPValue(R->getStartValue(), PSE, L);
+            if (!L || isa<SCEVCouldNotCompute>(Start))
+              return SE.getCouldNotCompute();
+            const SCEV *Step = getSCEVExprForVPValue(R->getStepValue(), PSE, L);
+            if (isa<SCEVCouldNotCompute>(Step))
+              return SE.getCouldNotCompute();
+            return SE.getAddRecExpr(Start, Step, L, SCEV::FlagAnyWrap);
+          })
+          .Case([&SE, &PSE, L](const VPDerivedIVRecipe *R) {
+            const SCEV *Start = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+            const SCEV *IV = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
+            const SCEV *Scale = getSCEVExprForVPValue(R->getOperand(2), PSE, L);
+            if (any_of(ArrayRef({Start, IV, Scale}),
+                       IsaPred<SCEVCouldNotCompute>))
+              return SE.getCouldNotCompute();
 
-        return SE.getAddExpr(SE.getTruncateOrSignExtend(Start, IV->getType()),
-                             SE.getMulExpr(IV, SE.getTruncateOrSignExtend(
-                                                   Scale, IV->getType())));
-      })
-      .Case<VPScalarIVStepsRecipe>([&SE, &PSE,
-                                    L](const VPScalarIVStepsRecipe *R) {
-        const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
-        const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
-        if (isa<SCEVCouldNotCompute>(IV) || !isa<SCEVConstant>(Step))
-          return SE.getCouldNotCompute();
-        return SE.getTruncateOrSignExtend(IV, Step->getType());
-      })
-      .Default(
-          [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
+            return SE.getAddExpr(
+                SE.getTruncateOrSignExtend(Start, IV->getType()),
+                SE.getMulExpr(
+                    IV, SE.getTruncateOrSignExtend(Scale, IV->getType())));
+          })
+          .Case([&SE, &PSE, L](const VPScalarIVStepsRecipe *R) {
+            const SCEV *IV = getSCEVExprForVPValue(R->getOperand(0), PSE, L);
+            const SCEV *Step = getSCEVExprForVPValue(R->getOperand(1), PSE, L);
+            if (isa<SCEVCouldNotCompute>(IV) || !isa<SCEVConstant>(Step))
+              return SE.getCouldNotCompute();
+            return SE.getTruncateOrSignExtend(IV, Step->getType());
+          })
+          .Default(
+              [&SE](const VPRecipeBase *) { return SE.getCouldNotCompute(); });
 
   return PSE.getPredicatedSCEV(Expr);
 }
@@ -317,6 +342,7 @@ static bool preservesUniformity(unsigned Opcode) {
   if (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode))
     return true;
   switch (Opcode) {
+  case Instruction::Freeze:
   case Instruction::GetElementPtr:
   case Instruction::ICmp:
   case Instruction::FCmp:
@@ -373,22 +399,26 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
     return true;
 
   VPRecipeBase *R = V->getDefiningRecipe();
-  if (R && V->isDefinedOutsideLoopRegions()) {
+  VPBasicBlock *VPBB = R ? R->getParent() : nullptr;
+  VPlan *Plan = VPBB ? VPBB->getPlan() : nullptr;
+  if (VPBB &&
+      (VPBB == Plan->getVectorPreheader() || VPBB == Plan->getEntry())) {
     if (match(V->getDefiningRecipe(),
               m_VPInstruction<VPInstruction::CanonicalIVIncrementForPart>()))
       return false;
     return all_of(R->operands(), isUniformAcrossVFsAndUFs);
   }
 
-  auto *CanonicalIV =
-      R->getParent()->getEnclosingLoopRegion()->getCanonicalIV();
-  // Canonical IV chain is uniform.
-  if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
-    return true;
+  if (VPRegionBlock *EnclosingRegion = VPBB->getEnclosingLoopRegion()) {
+    auto *CanonicalIV = EnclosingRegion->getCanonicalIV();
+    // Canonical IV chain is uniform.
+    if (V == CanonicalIV || V == CanonicalIV->getBackedgeValue())
+      return true;
+  }
 
   return TypeSwitch<const VPRecipeBase *, bool>(R)
-      .Case<VPDerivedIVRecipe>([](const auto *R) { return true; })
-      .Case<VPReplicateRecipe>([](const auto *R) {
+      .Case([](const VPDerivedIVRecipe *R) { return true; })
+      .Case([](const VPReplicateRecipe *R) {
         // Be conservative about side-effects, except for the
         // known-side-effecting assumes and stores, which we know will be
         // uniform.
@@ -397,17 +427,17 @@ bool vputils::isUniformAcrossVFsAndUFs(VPValue *V) {
                 isa<AssumeInst, StoreInst>(R->getUnderlyingInstr())) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
-      .Case<VPWidenRecipe>([](const auto *R) {
+      .Case([](const VPWidenRecipe *R) {
         return preservesUniformity(R->getOpcode()) &&
                all_of(R->operands(), isUniformAcrossVFsAndUFs);
       })
-      .Case<VPInstruction>([](const auto *VPI) {
+      .Case([](const VPInstruction *VPI) {
         return (VPI->isScalarCast() &&
                 isUniformAcrossVFsAndUFs(VPI->getOperand(0))) ||
                (preservesUniformity(VPI->getOpcode()) &&
                 all_of(VPI->operands(), isUniformAcrossVFsAndUFs));
       })
-      .Case<VPWidenCastRecipe>([](const auto *R) {
+      .Case([](const VPWidenCastRecipe *R) {
         // A cast is uniform according to its operand.
         return isUniformAcrossVFsAndUFs(R->getOperand(0));
       })
@@ -537,6 +567,48 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
   return UncountableCondition;
 }
 
+VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  SmallVector<VPValue *> WideCanonicalIVs;
+  auto *FoundWidenCanonicalIVUser = find_if(
+      LoopRegion->getCanonicalIV()->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  assert(count_if(LoopRegion->getCanonicalIV()->users(),
+                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
+         "Must have at most one VPWideCanonicalIVRecipe");
+  if (FoundWidenCanonicalIVUser !=
+      LoopRegion->getCanonicalIV()->users().end()) {
+    auto *WideCanonicalIV =
+        cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
+    WideCanonicalIVs.push_back(WideCanonicalIV);
+  }
+
+  // Also include VPWidenIntOrFpInductionRecipes that represent a widened
+  // version of the canonical induction.
+  VPBasicBlock *HeaderVPBB = LoopRegion->getEntryBasicBlock();
+  for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
+    auto *WidenOriginalIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (WidenOriginalIV && WidenOriginalIV->isCanonical())
+      WideCanonicalIVs.push_back(WidenOriginalIV);
+  }
+
+  // Walk users of wide canonical IVs and find the single compare of the form
+  // (ICMP_ULE, WideCanonicalIV, backedge-taken-count).
+  VPSingleDefRecipe *HeaderMask = nullptr;
+  for (auto *Wide : WideCanonicalIVs) {
+    for (VPUser *U : Wide->users()) {
+      auto *VPI = dyn_cast<VPInstruction>(U);
+      if (!VPI || !vputils::isHeaderMask(VPI, Plan))
+        continue;
+
+      assert(VPI->getOperand(0) == Wide &&
+             "WidenCanonicalIV must be the first operand of the compare");
+      assert(!HeaderMask && "Multiple header masks found?");
+      HeaderMask = VPI;
+    }
+  }
+  return HeaderMask;
+}
+
 bool VPBlockUtils::isHeader(const VPBlockBase *VPB,
                             const VPDominatorTree &VPDT) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
@@ -575,4 +647,21 @@ vputils::getMemoryLocation(const VPRecipeBase &R) {
   if (MDNode *AliasScopeMD = M->getMetadata(LLVMContext::MD_alias_scope))
     Loc.AATags.Scope = AliasScopeMD;
   return Loc;
+}
+
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+VPInstruction *vputils::findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
+  VPValue *BackedgeVal = PhiR->getBackedgeValue();
+  if (auto *Res = vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+          BackedgeVal))
+    return Res;
+
+  // Look through selects inserted for tail folding or predicated reductions.
+  VPRecipeBase *SelR = vputils::findUserOf(
+      BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  if (!SelR)
+    return nullptr;
+  return vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+      cast<VPSingleDefRecipe>(SelR));
 }

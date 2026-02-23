@@ -464,3 +464,14 @@ TEST(ControllerAccessTest, CallFromController) {
 
   S.waitForShutdown();
 }
+
+TEST(ControllerAccessTest, RedundantAsyncShutdown) {
+  // Check that redundant calls to shutdown have their callbacks run.
+  std::deque<std::unique_ptr<Task>> Tasks;
+  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  S.waitForShutdown();
+
+  bool RedundantCallbackRan = false;
+  S.shutdown([&]() { RedundantCallbackRan = true; });
+  EXPECT_TRUE(RedundantCallbackRan);
+}

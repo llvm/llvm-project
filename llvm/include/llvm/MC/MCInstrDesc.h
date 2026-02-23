@@ -203,17 +203,17 @@ public:
   // the <Target>Insts table because they rely on knowing their own address to
   // find other information elsewhere in the same table.
 
-  unsigned short Opcode;         // The opcode number
-  unsigned short NumOperands;    // Num of args (may be more if variable_ops)
-  unsigned char NumDefs;         // Num of args that are definitions
-  unsigned char Size;            // Number of bytes in encoding.
-  unsigned short SchedClass;     // enum identifying instr sched class
-  unsigned char NumImplicitUses; // Num of regs implicitly used
-  unsigned char NumImplicitDefs; // Num of regs implicitly defined
-  unsigned short OpInfoOffset;   // Offset to info about operands
-  unsigned short ImplicitOffset; // Offset to start of implicit op list
-  uint64_t Flags;                // Flags identifying machine instr class
-  uint64_t TSFlags;              // Target Specific Flag values
+  uint32_t Opcode;         // The opcode number.
+  uint16_t NumOperands;    // Num of args (may be more if variable_ops)
+  uint8_t NumDefs;         // Num of args that are definitions
+  uint8_t Size;            // Number of bytes in encoding.
+  uint16_t SchedClass;     // enum identifying instr sched class
+  uint8_t NumImplicitUses; // Num of regs implicitly used
+  uint8_t NumImplicitDefs; // Num of regs implicitly defined
+  uint16_t OpInfoOffset;   // Offset to info about operands
+  uint16_t ImplicitOffset; // Offset to start of implicit op list
+  uint64_t Flags;          // Flags identifying machine instr class
+  uint64_t TSFlags;        // Target Specific Flag values
 
   /// Returns the value of the specified operand constraint if
   /// it is present. Returns -1 if it is not present.

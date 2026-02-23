@@ -210,7 +210,7 @@ struct AMDGPUOutgoingArgHandler : public AMDGPUOutgoingValueHandler {
 
     if (!SPReg) {
       const GCNSubtarget &ST = MIRBuilder.getMF().getSubtarget<GCNSubtarget>();
-      if (ST.enableFlatScratch()) {
+      if (ST.hasFlatScratchEnabled()) {
         // The stack is accessed unswizzled, so we can use a regular copy.
         SPReg = MIRBuilder.buildCopy(PtrTy,
                                      MFI->getStackPtrOffsetReg()).getReg(0);
@@ -421,7 +421,7 @@ void AMDGPUCallLowering::lowerParameter(MachineIRBuilder &B, ArgInfo &OrigArg,
   LLT PtrTy = LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64);
 
   SmallVector<ArgInfo, 32> SplitArgs;
-  SmallVector<uint64_t> FieldOffsets;
+  SmallVector<TypeSize> FieldOffsets;
   splitToValueTypes(OrigArg, SplitArgs, DL, F.getCallingConv(), &FieldOffsets);
 
   unsigned Idx = 0;
@@ -739,7 +739,7 @@ bool AMDGPUCallLowering::lowerFormalArguments(
     // For the fixed ABI, pass workitem IDs in the last argument register.
     TLI.allocateSpecialInputVGPRsFixed(CCInfo, MF, *TRI, *Info);
 
-    if (!Subtarget.enableFlatScratch())
+    if (!Subtarget.hasFlatScratchEnabled())
       CCInfo.AllocateReg(Info->getScratchRSrcReg());
     TLI.allocateSpecialInputSGPRs(CCInfo, MF, *TRI, *Info);
   }
@@ -1198,7 +1198,7 @@ void AMDGPUCallLowering::handleImplicitCallArguments(
     const GCNSubtarget &ST, const SIMachineFunctionInfo &FuncInfo,
     CallingConv::ID CalleeCC,
     ArrayRef<std::pair<MCRegister, Register>> ImplicitArgRegs) const {
-  if (!ST.enableFlatScratch()) {
+  if (!ST.hasFlatScratchEnabled()) {
     // Insert copies for the SRD. In the HSA case, this should be an identity
     // copy.
     auto ScratchRSrcReg = MIRBuilder.buildCopy(LLT::fixed_vector(4, 32),

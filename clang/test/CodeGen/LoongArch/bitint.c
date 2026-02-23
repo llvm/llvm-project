@@ -26,12 +26,12 @@ void pass_BitInt129(_BitInt(129));
 // LA32-NEXT:    [[LOADEDV1:%.*]] = trunc i128 [[TMP1]] to i65
 // LA32-NEXT:    [[STOREDV:%.*]] = sext i65 [[LOADEDV1]] to i128
 // LA32-NEXT:    store i128 [[STOREDV]], ptr [[BYVAL_TEMP]], align 16
-// LA32-NEXT:    call void @pass_BitInt65(ptr dead_on_return noundef [[BYVAL_TEMP]])
+// LA32-NEXT:    call void @pass_BitInt65(ptr noundef dead_on_return [[BYVAL_TEMP]])
 // LA32-NEXT:    [[TMP2:%.*]] = load i256, ptr [[L129]], align 16
 // LA32-NEXT:    [[LOADEDV2:%.*]] = trunc i256 [[TMP2]] to i129
 // LA32-NEXT:    [[STOREDV4:%.*]] = sext i129 [[LOADEDV2]] to i256
 // LA32-NEXT:    store i256 [[STOREDV4]], ptr [[BYVAL_TEMP3]], align 16
-// LA32-NEXT:    call void @pass_BitInt129(ptr dead_on_return noundef [[BYVAL_TEMP3]])
+// LA32-NEXT:    call void @pass_BitInt129(ptr noundef dead_on_return [[BYVAL_TEMP3]])
 // LA32-NEXT:    ret void
 //
 // LA64-LABEL: define dso_local void @example_BitInt(
@@ -54,7 +54,7 @@ void pass_BitInt129(_BitInt(129));
 // LA64-NEXT:    [[LOADEDV2:%.*]] = trunc i256 [[TMP2]] to i129
 // LA64-NEXT:    [[STOREDV:%.*]] = sext i129 [[LOADEDV2]] to i256
 // LA64-NEXT:    store i256 [[STOREDV]], ptr [[BYVAL_TEMP]], align 16
-// LA64-NEXT:    call void @pass_BitInt129(ptr dead_on_return noundef [[BYVAL_TEMP]])
+// LA64-NEXT:    call void @pass_BitInt129(ptr noundef dead_on_return [[BYVAL_TEMP]])
 // LA64-NEXT:    ret void
 //
 void example_BitInt(void) {

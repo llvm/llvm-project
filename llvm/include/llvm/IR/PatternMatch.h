@@ -606,6 +606,15 @@ inline cst_pred_ty<is_zero_int> m_ZeroInt() {
   return cst_pred_ty<is_zero_int>();
 }
 
+struct is_non_zero_int {
+  bool isValue(const APInt &C) const { return !C.isZero(); }
+};
+/// Match a non-zero integer or a vector with all non-zero elements.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_non_zero_int> m_NonZeroInt() {
+  return cst_pred_ty<is_non_zero_int>();
+}
+
 struct is_zero {
   template <typename ITy> bool match(ITy *V) const {
     auto *C = dyn_cast<Constant>(V);
@@ -1036,9 +1045,10 @@ struct bind_const_intval_ty {
     const APInt *ConstInt;
     if (!ap_match<APInt>(ConstInt, /*AllowPoison=*/false).match(V))
       return false;
-    if (ConstInt->getActiveBits() > 64)
+    std::optional<uint64_t> ZExtVal = ConstInt->tryZExtValue();
+    if (!ZExtVal)
       return false;
-    VR = ConstInt->getZExtValue();
+    VR = *ZExtVal;
     return true;
   }
 };

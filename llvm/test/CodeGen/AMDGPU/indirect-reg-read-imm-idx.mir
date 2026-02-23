@@ -1,0 +1,18 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -start-before=twoaddressinstruction %s -o - | FileCheck %s
+
+# Test that V_INDIRECT_REG_READ_GPR_IDX expansion handles immediate index operands.
+
+
+# CHECK-LABEL: indirect_reg_read_imm_idx:
+# CHECK: s_set_gpr_idx_on 0, gpr_idx(SRC0)
+# CHECK-NEXT: v_mov_b32_e32
+# CHECK-NEXT: s_set_gpr_idx_off
+
+name: indirect_reg_read_imm_idx
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    %0:vreg_512_align2 = IMPLICIT_DEF
+    %1:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 %0, 0, 3, implicit-def $m0, implicit $m0, implicit $exec
+    S_ENDPGM 0
+...

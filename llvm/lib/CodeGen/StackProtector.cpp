@@ -167,9 +167,7 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
 
 char StackProtector::ID = 0;
 
-StackProtector::StackProtector() : FunctionPass(ID) {
-  initializeStackProtectorPass(*PassRegistry::getPassRegistry());
-}
+StackProtector::StackProtector() : FunctionPass(ID) {}
 
 INITIALIZE_PASS_BEGIN(StackProtector, DEBUG_TYPE,
                       "Insert stack protectors", false, true)
@@ -521,22 +519,23 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
           continue;
         }
 
-        if (Strong &&
-            HasAddressTaken(
-                AI, M->getDataLayout().getTypeAllocSize(AI->getAllocatedType()),
-                M, VisitedPHIs)) {
-          ++NumAddrTaken;
-          if (!Layout)
-            return true;
-          Layout->insert(std::make_pair(AI, MachineFrameInfo::SSPLK_AddrOf));
-          ORE.emit([&]() {
-            return OptimizationRemark(DEBUG_TYPE, "StackProtectorAddressTaken",
-                                      &I)
-                   << "Stack protection applied to function "
-                   << ore::NV("Function", F)
-                   << " due to the address of a local variable being taken";
-          });
-          NeedsProtector = true;
+        if (Strong) {
+          std::optional<TypeSize> AllocSize =
+              AI->getAllocationSize(M->getDataLayout());
+          if (!AllocSize || HasAddressTaken(AI, *AllocSize, M, VisitedPHIs)) {
+            ++NumAddrTaken;
+            if (!Layout)
+              return true;
+            Layout->insert(std::make_pair(AI, MachineFrameInfo::SSPLK_AddrOf));
+            ORE.emit([&]() {
+              return OptimizationRemark(DEBUG_TYPE,
+                                        "StackProtectorAddressTaken", &I)
+                     << "Stack protection applied to function "
+                     << ore::NV("Function", F)
+                     << " due to the address of a local variable being taken";
+            });
+            NeedsProtector = true;
+          }
         }
         // Clear any PHIs that we visited, to make sure we examine all uses of
         // any subsequent allocas that we look at.
@@ -550,10 +549,11 @@ bool SSPLayoutAnalysis::requiresStackProtector(Function *F,
 
 /// Create a stack guard loading and populate whether SelectionDAG SSP is
 /// supported.
-static Value *getStackGuard(const TargetLoweringBase &TLI, Module *M,
+static Value *getStackGuard(const TargetLoweringBase &TLI,
+                            const LibcallLoweringInfo &Libcalls, Module *M,
                             IRBuilder<> &B,
                             bool *SupportsSelectionDAGSP = nullptr) {
-  Value *Guard = TLI.getIRStackGuard(B);
+  Value *Guard = TLI.getIRStackGuard(B, Libcalls);
   StringRef GuardMode = M->getStackProtectorGuard();
   if ((GuardMode == "tls" || GuardMode.empty()) && Guard)
     return B.CreateLoad(B.getPtrTy(), Guard, true, "StackGuard");
@@ -571,7 +571,7 @@ static Value *getStackGuard(const TargetLoweringBase &TLI, Module *M,
   // actually conveys the same information getIRStackGuard() already gives.
   if (SupportsSelectionDAGSP)
     *SupportsSelectionDAGSP = true;
-  TLI.insertSSPDeclarations(*M);
+  TLI.insertSSPDeclarations(*M, Libcalls);
   return B.CreateIntrinsic(Intrinsic::stackguard, {});
 }
 
@@ -586,13 +586,16 @@ static Value *getStackGuard(const TargetLoweringBase &TLI, Module *M,
 /// Returns true if the platform/triple supports the stackprotectorcreate pseudo
 /// node.
 static bool CreatePrologue(Function *F, Module *M, Instruction *CheckLoc,
-                           const TargetLoweringBase *TLI, AllocaInst *&AI) {
+                           const TargetLoweringBase *TLI,
+                           const LibcallLoweringInfo &Libcalls,
+                           AllocaInst *&AI) {
   bool SupportsSelectionDAGSP = false;
   IRBuilder<> B(&F->getEntryBlock().front());
   PointerType *PtrTy = PointerType::getUnqual(CheckLoc->getContext());
   AI = B.CreateAlloca(PtrTy, nullptr, "StackGuardSlot");
 
-  Value *GuardSlot = getStackGuard(*TLI, M, B, &SupportsSelectionDAGSP);
+  Value *GuardSlot =
+      getStackGuard(*TLI, Libcalls, M, B, &SupportsSelectionDAGSP);
   B.CreateIntrinsic(Intrinsic::stackprotector, {GuardSlot, AI});
   return SupportsSelectionDAGSP;
 }
@@ -641,7 +644,8 @@ bool InsertStackProtectors(const TargetLowering &TLI,
     // Generate prologue instrumentation if not already generated.
     if (!HasPrologue) {
       HasPrologue = true;
-      SupportsSelectionDAGSP &= CreatePrologue(F, M, CheckLoc, &TLI, AI);
+      SupportsSelectionDAGSP &=
+          CreatePrologue(F, M, CheckLoc, &TLI, Libcalls, AI);
     }
 
     // SelectionDAG based code generation. Nothing else needs to be done here.
@@ -672,7 +676,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
     // Generate epilogue instrumentation. The epilogue intrumentation can be
     // function-based or inlined depending on which mechanism the target is
     // providing.
-    if (Function *GuardCheck = TLI.getSSPStackGuardCheck(*M)) {
+    if (Function *GuardCheck = TLI.getSSPStackGuardCheck(*M, Libcalls)) {
       // Generate the function-based epilogue instrumentation.
       // The target provides a guard check function, generate a call to it.
       IRBuilder<> B(CheckLoc);
@@ -714,7 +718,7 @@ bool InsertStackProtectors(const TargetLowering &TLI,
         FailBB = CreateFailBB(F, Libcalls);
 
       IRBuilder<> B(CheckLoc);
-      Value *Guard = getStackGuard(TLI, M, B);
+      Value *Guard = getStackGuard(TLI, Libcalls, M, B);
       LoadInst *LI2 = B.CreateLoad(B.getPtrTy(), AI, true);
       auto *Cmp = cast<ICmpInst>(B.CreateICmpNE(Guard, LI2));
       auto SuccessProb =

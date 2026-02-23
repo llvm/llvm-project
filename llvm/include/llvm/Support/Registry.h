@@ -40,13 +40,25 @@ public:
   }
 };
 
+template <typename T, typename... CtorParamTypes> class Registry;
+namespace detail {
+template <typename R> struct IsRegistryType : std::false_type {};
+template <typename T, typename... CtorParamTypes>
+struct IsRegistryType<Registry<T, CtorParamTypes...>> : std::true_type {};
+} // namespace detail
+
 /// A global registry used in conjunction with static constructors to make
 /// pluggable components (like targets or garbage collectors) "just work" when
 /// linked with an executable.
 template <typename T, typename... CtorParamTypes> class Registry {
+  static_assert(
+      !detail::IsRegistryType<T>::value,
+      "Trying to instantiate a wrong specialization 'Registry<Registry<...>>'");
+
 public:
   using type = T;
   using entry = SimpleRegistryEntry<T, CtorParamTypes...>;
+  static constexpr bool HasCtorParamTypes = sizeof...(CtorParamTypes) != 0;
 
   class node;
   class iterator;
@@ -129,6 +141,7 @@ public:
     node Node;
 
     static std::unique_ptr<T> CtorFn(CtorParamTypes &&...Params) {
+      static_assert(std::has_virtual_destructor_v<T>);
       return std::make_unique<V>(std::forward<CtorParamTypes>(Params)...);
     }
 
@@ -147,11 +160,17 @@ public:
 #define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
   namespace llvm {                                                             \
   template class LLVM_ABI_EXPORT Registry<REGISTRY_CLASS::type>;               \
+  static_assert(!REGISTRY_CLASS::HasCtorParamTypes,                            \
+                "LLVM_INSTANTIATE_REGISTRY can't be used with extra "          \
+                "constructor parameter types");                                \
   }
 #else
 #define LLVM_INSTANTIATE_REGISTRY(REGISTRY_CLASS)                              \
   namespace llvm {                                                             \
   template class Registry<REGISTRY_CLASS::type>;                               \
+  static_assert(!REGISTRY_CLASS::HasCtorParamTypes,                            \
+                "LLVM_INSTANTIATE_REGISTRY can't be used with extra "          \
+                "constructor parameter types");                                \
   }
 #endif
 

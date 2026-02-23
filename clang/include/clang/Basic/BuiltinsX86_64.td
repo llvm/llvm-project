@@ -60,7 +60,7 @@ let Features = "sse4.1", Attributes = [NoThrow, Const, Constexpr, RequiredVector
   def vec_set_v2di : X86Builtin<"_Vector<2, long long int>(_Vector<2, long long int>, long long int, _Constant int)">;
 }
 
-let Features = "crc32", Attributes = [NoThrow, Const] in {
+let Features = "crc32", Attributes = [NoThrow, Const, Constexpr] in {
   def crc32di : X86Builtin<"unsigned long long int(unsigned long long int, unsigned long long int)">;
 }
 

@@ -54,9 +54,16 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "utils.h"
+#include "lib/Utils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Analysis/IR2Vec.h"
+#include "llvm/CodeGen/CommandFlags.h"
+#include "llvm/CodeGen/MIR2Vec.h"
+#include "llvm/CodeGen/MIRParser/MIRParser.h"
+#include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
+#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/InstIterator.h"
@@ -67,23 +74,15 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IRReader/IRReader.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/Support/raw_ostream.h"
-
-#include "llvm/CodeGen/CommandFlags.h"
-#include "llvm/CodeGen/MIR2Vec.h"
-#include "llvm/CodeGen/MIRParser/MIRParser.h"
-#include "llvm/CodeGen/MachineFunction.h"
-#include "llvm/CodeGen/MachineModuleInfo.h"
-#include "llvm/CodeGen/TargetInstrInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
 
@@ -154,9 +153,16 @@ static Error processModule(Module &M, raw_ostream &OS) {
   if (EmbeddingsSubCmd) {
     // Initialize vocabulary for embedding generation
     // Note: Requires --ir2vec-vocab-path option to be set
-    auto VocabStatus = Tool.initializeVocabulary();
-    assert(VocabStatus && "Failed to initialize IR2Vec vocabulary");
-    (void)VocabStatus;
+    // and this value will be populated in the var VocabFile
+    if (VocabFile.empty()) {
+      return createStringError(
+          errc::invalid_argument,
+          "IR2Vec vocabulary file path not specified; "
+          "You may need to set it using --ir2vec-vocab-path");
+    }
+
+    if (Error Err = Tool.initializeVocabulary(VocabFile))
+      return Err;
 
     if (!FunctionName.empty()) {
       // Process single function

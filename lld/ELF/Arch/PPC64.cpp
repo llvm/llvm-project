@@ -168,7 +168,6 @@ enum class LegacyToPrefixMask : uint64_t {
 class PPC64 final : public TargetInfo {
 public:
   PPC64(Ctx &);
-  int getTlsGdRelaxSkip(RelType type) const override;
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
@@ -181,7 +180,6 @@ public:
                  uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  template <class ELFT> void scanSection1(InputSectionBase &);
   void scanSection(InputSectionBase &) override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
@@ -191,7 +189,6 @@ public:
                   int64_t a) const override;
   uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType type, uint64_t src, uint64_t dst) const override;
-  RelExpr adjustTlsExpr(RelType type, RelExpr expr) const override;
   RelExpr adjustGotPcExpr(RelType type, int64_t addend,
                           const uint8_t *loc) const override;
   void relaxGot(uint8_t *loc, const Relocation &rel, uint64_t val) const;
@@ -619,20 +616,6 @@ PPC64::PPC64(Ctx &ctx) : TargetInfo(ctx) {
   write32(ctx, trapInstr.data(), 0x7fe00008);
 }
 
-int PPC64::getTlsGdRelaxSkip(RelType type) const {
-  // A __tls_get_addr call instruction is marked with 2 relocations:
-  //
-  //   R_PPC64_TLSGD / R_PPC64_TLSLD: marker relocation
-  //   R_PPC64_REL24: __tls_get_addr
-  //
-  // After the relaxation we no longer call __tls_get_addr and should skip both
-  // relocations to not create a false dependence on __tls_get_addr being
-  // defined.
-  if (type == R_PPC64_TLSGD || type == R_PPC64_TLSLD)
-    return 2;
-  return 1;
-}
-
 static uint32_t getEFlags(InputFile *file) {
   if (file->ekind == ELF64BEKind)
     return cast<ObjFile<ELF64BE>>(file)->getObj().getHeader().e_flags;
@@ -832,15 +815,6 @@ void PPC64::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
     }
     break;
   }
-  case R_PPC64_DTPREL16:
-  case R_PPC64_DTPREL16_HA:
-  case R_PPC64_DTPREL16_HI:
-  case R_PPC64_DTPREL16_DS:
-  case R_PPC64_DTPREL16_LO:
-  case R_PPC64_DTPREL16_LO_DS:
-  case R_PPC64_DTPREL34:
-    relocate(loc, rel, val);
-    break;
   default:
     llvm_unreachable("unsupported relocation for TLS LD to LE relaxation");
   }
@@ -995,113 +969,21 @@ void PPC64::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
   }
 }
 
+// Only needed to support relocations used by relocateNonAlloc and relocateEh.
 RelExpr PPC64::getRelExpr(RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
   case R_PPC64_NONE:
     return R_NONE;
   case R_PPC64_ADDR16:
-  case R_PPC64_ADDR16_DS:
-  case R_PPC64_ADDR16_HA:
-  case R_PPC64_ADDR16_HI:
-  case R_PPC64_ADDR16_HIGH:
-  case R_PPC64_ADDR16_HIGHER:
-  case R_PPC64_ADDR16_HIGHERA:
-  case R_PPC64_ADDR16_HIGHEST:
-  case R_PPC64_ADDR16_HIGHESTA:
-  case R_PPC64_ADDR16_LO:
-  case R_PPC64_ADDR16_LO_DS:
   case R_PPC64_ADDR32:
   case R_PPC64_ADDR64:
     return R_ABS;
-  case R_PPC64_GOT16:
-  case R_PPC64_GOT16_DS:
-  case R_PPC64_GOT16_HA:
-  case R_PPC64_GOT16_HI:
-  case R_PPC64_GOT16_LO:
-  case R_PPC64_GOT16_LO_DS:
-    return R_GOT_OFF;
-  case R_PPC64_TOC16:
-  case R_PPC64_TOC16_DS:
-  case R_PPC64_TOC16_HI:
-  case R_PPC64_TOC16_LO:
-    return R_GOTREL;
-  case R_PPC64_GOT_PCREL34:
-  case R_PPC64_GOT_TPREL_PCREL34:
-  case R_PPC64_PCREL_OPT:
-    return R_GOT_PC;
-  case R_PPC64_TOC16_HA:
-  case R_PPC64_TOC16_LO_DS:
-    return ctx.arg.tocOptimize ? RE_PPC64_RELAX_TOC : R_GOTREL;
-  case R_PPC64_TOC:
-    return RE_PPC64_TOCBASE;
-  case R_PPC64_REL14:
-  case R_PPC64_REL24:
-    return RE_PPC64_CALL_PLT;
-  case R_PPC64_REL24_NOTOC:
-    return R_PLT_PC;
-  case R_PPC64_REL16_LO:
-  case R_PPC64_REL16_HA:
-  case R_PPC64_REL16_HI:
   case R_PPC64_REL32:
   case R_PPC64_REL64:
-  case R_PPC64_PCREL34:
     return R_PC;
-  case R_PPC64_GOT_TLSGD16:
-  case R_PPC64_GOT_TLSGD16_HA:
-  case R_PPC64_GOT_TLSGD16_HI:
-  case R_PPC64_GOT_TLSGD16_LO:
-    return R_TLSGD_GOT;
-  case R_PPC64_GOT_TLSGD_PCREL34:
-    return R_TLSGD_PC;
-  case R_PPC64_GOT_TLSLD16:
-  case R_PPC64_GOT_TLSLD16_HA:
-  case R_PPC64_GOT_TLSLD16_HI:
-  case R_PPC64_GOT_TLSLD16_LO:
-    return R_TLSLD_GOT;
-  case R_PPC64_GOT_TLSLD_PCREL34:
-    return R_TLSLD_PC;
-  case R_PPC64_GOT_TPREL16_HA:
-  case R_PPC64_GOT_TPREL16_LO_DS:
-  case R_PPC64_GOT_TPREL16_DS:
-  case R_PPC64_GOT_TPREL16_HI:
-    return R_GOT_OFF;
-  case R_PPC64_GOT_DTPREL16_HA:
-  case R_PPC64_GOT_DTPREL16_LO_DS:
-  case R_PPC64_GOT_DTPREL16_DS:
-  case R_PPC64_GOT_DTPREL16_HI:
-    return R_TLSLD_GOT_OFF;
-  case R_PPC64_TPREL16:
-  case R_PPC64_TPREL16_HA:
-  case R_PPC64_TPREL16_LO:
-  case R_PPC64_TPREL16_HI:
-  case R_PPC64_TPREL16_DS:
-  case R_PPC64_TPREL16_LO_DS:
-  case R_PPC64_TPREL16_HIGHER:
-  case R_PPC64_TPREL16_HIGHERA:
-  case R_PPC64_TPREL16_HIGHEST:
-  case R_PPC64_TPREL16_HIGHESTA:
-  case R_PPC64_TPREL34:
-    return R_TPREL;
-  case R_PPC64_DTPREL16:
-  case R_PPC64_DTPREL16_DS:
-  case R_PPC64_DTPREL16_HA:
-  case R_PPC64_DTPREL16_HI:
-  case R_PPC64_DTPREL16_HIGHER:
-  case R_PPC64_DTPREL16_HIGHERA:
-  case R_PPC64_DTPREL16_HIGHEST:
-  case R_PPC64_DTPREL16_HIGHESTA:
-  case R_PPC64_DTPREL16_LO:
-  case R_PPC64_DTPREL16_LO_DS:
   case R_PPC64_DTPREL64:
-  case R_PPC64_DTPREL34:
     return R_DTPREL;
-  case R_PPC64_TLSGD:
-    return R_TLSDESC_CALL;
-  case R_PPC64_TLSLD:
-    return R_TLSLD_HINT;
-  case R_PPC64_TLS:
-    return R_TLSIE_HINT;
   default:
     Err(ctx) << getErrorLoc(ctx, loc) << "unknown relocation (" << type.v
              << ") against symbol " << &s;
@@ -1177,78 +1059,6 @@ void PPC64::writeIplt(uint8_t *buf, const Symbol &sym,
                           sym.getGotPltVA(ctx) - getPPC64TocBase(ctx));
 }
 
-static std::pair<RelType, uint64_t> toAddr16Rel(RelType type, uint64_t val) {
-  // Relocations relative to the toc-base need to be adjusted by the Toc offset.
-  uint64_t tocBiasedVal = val - ppc64TocOffset;
-  // Relocations relative to dtv[dtpmod] need to be adjusted by the DTP offset.
-  uint64_t dtpBiasedVal = val - dynamicThreadPointerOffset;
-
-  switch (type) {
-  // TOC biased relocation.
-  case R_PPC64_GOT16:
-  case R_PPC64_GOT_TLSGD16:
-  case R_PPC64_GOT_TLSLD16:
-  case R_PPC64_TOC16:
-    return {R_PPC64_ADDR16, tocBiasedVal};
-  case R_PPC64_GOT16_DS:
-  case R_PPC64_TOC16_DS:
-  case R_PPC64_GOT_TPREL16_DS:
-  case R_PPC64_GOT_DTPREL16_DS:
-    return {R_PPC64_ADDR16_DS, tocBiasedVal};
-  case R_PPC64_GOT16_HA:
-  case R_PPC64_GOT_TLSGD16_HA:
-  case R_PPC64_GOT_TLSLD16_HA:
-  case R_PPC64_GOT_TPREL16_HA:
-  case R_PPC64_GOT_DTPREL16_HA:
-  case R_PPC64_TOC16_HA:
-    return {R_PPC64_ADDR16_HA, tocBiasedVal};
-  case R_PPC64_GOT16_HI:
-  case R_PPC64_GOT_TLSGD16_HI:
-  case R_PPC64_GOT_TLSLD16_HI:
-  case R_PPC64_GOT_TPREL16_HI:
-  case R_PPC64_GOT_DTPREL16_HI:
-  case R_PPC64_TOC16_HI:
-    return {R_PPC64_ADDR16_HI, tocBiasedVal};
-  case R_PPC64_GOT16_LO:
-  case R_PPC64_GOT_TLSGD16_LO:
-  case R_PPC64_GOT_TLSLD16_LO:
-  case R_PPC64_TOC16_LO:
-    return {R_PPC64_ADDR16_LO, tocBiasedVal};
-  case R_PPC64_GOT16_LO_DS:
-  case R_PPC64_TOC16_LO_DS:
-  case R_PPC64_GOT_TPREL16_LO_DS:
-  case R_PPC64_GOT_DTPREL16_LO_DS:
-    return {R_PPC64_ADDR16_LO_DS, tocBiasedVal};
-
-  // Dynamic Thread pointer biased relocation types.
-  case R_PPC64_DTPREL16:
-    return {R_PPC64_ADDR16, dtpBiasedVal};
-  case R_PPC64_DTPREL16_DS:
-    return {R_PPC64_ADDR16_DS, dtpBiasedVal};
-  case R_PPC64_DTPREL16_HA:
-    return {R_PPC64_ADDR16_HA, dtpBiasedVal};
-  case R_PPC64_DTPREL16_HI:
-    return {R_PPC64_ADDR16_HI, dtpBiasedVal};
-  case R_PPC64_DTPREL16_HIGHER:
-    return {R_PPC64_ADDR16_HIGHER, dtpBiasedVal};
-  case R_PPC64_DTPREL16_HIGHERA:
-    return {R_PPC64_ADDR16_HIGHERA, dtpBiasedVal};
-  case R_PPC64_DTPREL16_HIGHEST:
-    return {R_PPC64_ADDR16_HIGHEST, dtpBiasedVal};
-  case R_PPC64_DTPREL16_HIGHESTA:
-    return {R_PPC64_ADDR16_HIGHESTA, dtpBiasedVal};
-  case R_PPC64_DTPREL16_LO:
-    return {R_PPC64_ADDR16_LO, dtpBiasedVal};
-  case R_PPC64_DTPREL16_LO_DS:
-    return {R_PPC64_ADDR16_LO_DS, dtpBiasedVal};
-  case R_PPC64_DTPREL64:
-    return {R_PPC64_ADDR64, dtpBiasedVal};
-
-  default:
-    return {type, val};
-  }
-}
-
 static bool isTocOptType(RelType type) {
   switch (type) {
   case R_PPC64_GOT16_HA:
@@ -1262,23 +1072,18 @@ static bool isTocOptType(RelType type) {
   }
 }
 
-// R_PPC64_TLSGD/R_PPC64_TLSLD is required to mark `bl __tls_get_addr` for
-// General Dynamic/Local Dynamic code sequences. If a GD/LD GOT relocation is
-// found but no R_PPC64_TLSGD/R_PPC64_TLSLD is seen, we assume that the
-// instructions are generated by very old IBM XL compilers. Work around the
-// issue by disabling GD/LD to IE/LE relaxation.
+// Return true if the section has GD/LD GOT relocations without
+// R_PPC64_TLSGD/R_PPC64_TLSLD markers. Old IBM XL compilers generate GD/LD code
+// sequences without markers; disable GD/LD to IE/LE relaxation for the section.
 template <class RelTy>
-static void checkPPC64TLSRelax(InputSectionBase &sec, Relocs<RelTy> rels) {
-  // Skip if sec is synthetic (sec.file is null) or if sec has been marked.
-  if (!sec.file || sec.file->ppc64DisableTLSRelax)
-    return;
-  bool hasGDLD = false;
+static bool missingTlsGdLdMarker(InputSectionBase &sec, Relocs<RelTy> rels) {
+  bool hasGotGdLd = false;
   for (const RelTy &rel : rels) {
     RelType type = rel.getType(false);
     switch (type) {
     case R_PPC64_TLSGD:
     case R_PPC64_TLSLD:
-      return; // Found a marker
+      return false; // Found a marker
     case R_PPC64_GOT_TLSGD16:
     case R_PPC64_GOT_TLSGD16_HA:
     case R_PPC64_GOT_TLSGD16_HI:
@@ -1287,62 +1092,187 @@ static void checkPPC64TLSRelax(InputSectionBase &sec, Relocs<RelTy> rels) {
     case R_PPC64_GOT_TLSLD16_HA:
     case R_PPC64_GOT_TLSLD16_HI:
     case R_PPC64_GOT_TLSLD16_LO:
-      hasGDLD = true;
+      hasGotGdLd = true;
       break;
     }
   }
-  if (hasGDLD) {
-    sec.file->ppc64DisableTLSRelax = true;
+  if (hasGotGdLd) {
     Warn(sec.file->ctx)
         << sec.file
         << ": disable TLS relaxation due to R_PPC64_GOT_TLS* relocations "
            "without "
            "R_PPC64_TLSGD/R_PPC64_TLSLD relocations";
   }
+  return hasGotGdLd;
 }
 
 template <class ELFT, class RelTy>
 void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   RelocScan rs(ctx, &sec);
   sec.relocations.reserve(rels.size());
-  checkPPC64TLSRelax<RelTy>(sec, rels);
+  bool optimizeTlsGdLd =
+      !missingTlsGdLdMarker<RelTy>(sec, rels) && !ctx.arg.shared;
   for (auto it = rels.begin(); it != rels.end(); ++it) {
-    const RelTy &rel = *it;
-    uint64_t offset = rel.r_offset;
-    uint32_t symIdx = rel.getSymbol(false);
+    RelType type = it->getType(false);
+    uint32_t symIdx = it->getSymbol(false);
     Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIdx);
-    RelType type = rel.getType(false);
-    RelExpr expr =
-        ctx.target->getRelExpr(type, sym, sec.content().data() + offset);
-    if (expr == R_NONE)
-      continue;
+    uint64_t offset = it->r_offset;
     if (sym.isUndefined() && symIdx != 0 &&
         rs.maybeReportUndefined(cast<Undefined>(sym), offset))
       continue;
-
-    auto addend = getAddend<ELFT>(rel);
+    int64_t addend = rs.getAddend<ELFT>(*it, type);
     if (ctx.arg.isPic && type == R_PPC64_TOC)
       addend += getPPC64TocBase(ctx);
 
-    // We can separate the small code model relocations into 2 categories:
-    // 1) Those that access the compiler generated .toc sections.
-    // 2) Those that access the linker allocated got entries.
-    // lld allocates got entries to symbols on demand. Since we don't try to
-    // sort the got entries in any way, we don't have to track which objects
-    // have got-based small code model relocs. The .toc sections get placed
-    // after the end of the linker allocated .got section and we do sort those
-    // so sections addressed with small code model relocations come first.
-    if (type == R_PPC64_TOC16 || type == R_PPC64_TOC16_DS)
+    RelExpr expr;
+    // Relocation types that only need a RelExpr set `expr` and break out of
+    // the switch to reach rs.process(). Types that need special handling
+    // (fast-path helpers, TLS) call a handler and use `continue`.
+    switch (type) {
+    case R_PPC64_NONE:
+      continue;
+    // Absolute relocations:
+    case R_PPC64_ADDR16:
+    case R_PPC64_ADDR16_DS:
+    case R_PPC64_ADDR16_HA:
+    case R_PPC64_ADDR16_HI:
+    case R_PPC64_ADDR16_HIGH:
+    case R_PPC64_ADDR16_HIGHER:
+    case R_PPC64_ADDR16_HIGHERA:
+    case R_PPC64_ADDR16_HIGHEST:
+    case R_PPC64_ADDR16_HIGHESTA:
+    case R_PPC64_ADDR16_LO:
+    case R_PPC64_ADDR16_LO_DS:
+    case R_PPC64_ADDR32:
+    case R_PPC64_ADDR64:
+      expr = R_ABS;
+      break;
+
+    // PC-relative relocations:
+    case R_PPC64_REL16_LO:
+    case R_PPC64_REL16_HA:
+    case R_PPC64_REL16_HI:
+    case R_PPC64_REL32:
+    case R_PPC64_REL64:
+    case R_PPC64_PCREL34:
+      rs.processR_PC(type, offset, addend, sym);
+      continue;
+
+    // GOT-generating relocations:
+    case R_PPC64_GOT16:
+    case R_PPC64_GOT16_DS:
+    case R_PPC64_GOT16_HA:
+    case R_PPC64_GOT16_HI:
+    case R_PPC64_GOT16_LO:
+    case R_PPC64_GOT16_LO_DS:
+      expr = R_GOT_OFF;
+      break;
+    case R_PPC64_GOT_PCREL34:
+      expr = R_GOT_PC;
+      break;
+    case R_PPC64_PCREL_OPT:
+      expr = adjustGotPcExpr(type, addend, sec.content().data() + offset);
+      if (expr == R_RELAX_GOT_PC)
+        ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
+      rs.processAux(expr, type, offset, sym, addend);
+      continue;
+
+    // TOC-relative relocations:
+    case R_PPC64_TOC16:
+    case R_PPC64_TOC16_DS:
       sec.file->ppc64SmallCodeModelTocRelocs = true;
+      expr = R_GOTREL;
+      break;
+    case R_PPC64_TOC16_HI:
+      expr = R_GOTREL;
+      break;
+    case R_PPC64_TOC16_LO:
+      // Record the TOC entry (.toc + addend) as not relaxable.
+      if (sym.isSection() && isa<Defined>(sym) &&
+          cast<Defined>(sym).section->name == ".toc")
+        ctx.ppc64noTocRelax.insert({&sym, addend});
+      expr = R_GOTREL;
+      break;
+    case R_PPC64_TOC16_HA:
+    case R_PPC64_TOC16_LO_DS:
+      expr = R_GOTREL;
+      break;
+    case R_PPC64_TOC:
+      expr = RE_PPC64_TOCBASE;
+      break;
 
-    // Record the TOC entry (.toc + addend) as not relaxable. See the comment in
-    // PPC64::relocateAlloc().
-    if (type == R_PPC64_TOC16_LO && sym.isSection() && isa<Defined>(sym) &&
-        cast<Defined>(sym).section->name == ".toc")
-      ctx.ppc64noTocRelax.insert({&sym, addend});
+    // PLT-generating relocations:
+    case R_PPC64_REL14:
+    case R_PPC64_REL24:
+      expr = RE_PPC64_CALL_PLT;
+      break;
+    case R_PPC64_REL24_NOTOC:
+      rs.processR_PLT_PC(type, offset, addend, sym);
+      continue;
 
-    if ((type == R_PPC64_TLSGD && expr == R_TLSDESC_CALL) ||
-        (type == R_PPC64_TLSLD && expr == R_TLSLD_HINT)) {
+    // TLS relocations:
+
+    // TLS LE:
+    case R_PPC64_TPREL16:
+    case R_PPC64_TPREL16_HA:
+    case R_PPC64_TPREL16_LO:
+    case R_PPC64_TPREL16_HI:
+    case R_PPC64_TPREL16_DS:
+    case R_PPC64_TPREL16_LO_DS:
+    case R_PPC64_TPREL16_HIGHER:
+    case R_PPC64_TPREL16_HIGHERA:
+    case R_PPC64_TPREL16_HIGHEST:
+    case R_PPC64_TPREL16_HIGHESTA:
+    case R_PPC64_TPREL34:
+      if (rs.checkTlsLe(offset, sym, type))
+        continue;
+      expr = R_TPREL;
+      break;
+
+    // TLS IE:
+    case R_PPC64_GOT_TPREL16_HA:
+    case R_PPC64_GOT_TPREL16_LO_DS:
+    case R_PPC64_GOT_TPREL16_DS:
+    case R_PPC64_GOT_TPREL16_HI:
+      rs.handleTlsIe(R_GOT_OFF, type, offset, addend, sym);
+      continue;
+    case R_PPC64_GOT_TPREL_PCREL34:
+      rs.handleTlsIe(R_GOT_PC, type, offset, addend, sym);
+      continue;
+    case R_PPC64_TLS:
+      if (!ctx.arg.shared && !sym.isPreemptible)
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      continue;
+
+    // TLS GD:
+    case R_PPC64_GOT_TLSGD16:
+    case R_PPC64_GOT_TLSGD16_HA:
+    case R_PPC64_GOT_TLSGD16_HI:
+    case R_PPC64_GOT_TLSGD16_LO:
+    case R_PPC64_GOT_TLSGD_PCREL34: {
+      bool isPCRel = type == R_PPC64_GOT_TLSGD_PCREL34;
+      if (optimizeTlsGdLd) {
+        if (sym.isPreemptible) {
+          ctx.hasTlsIe.store(true, std::memory_order_relaxed);
+          sym.setFlags(NEEDS_TLSIE);
+          sec.addReloc(
+              {isPCRel ? R_GOT_PC : R_GOT_OFF, type, offset, addend, &sym});
+        } else {
+          sec.addReloc({R_TPREL, type, offset, addend, &sym});
+        }
+      } else {
+        sym.setFlags(NEEDS_TLSGD);
+        sec.addReloc(
+            {isPCRel ? R_TLSGD_PC : R_TLSGD_GOT, type, offset, addend, &sym});
+      }
+      continue;
+    }
+    // bl __tls_get_addr(x@tlsgd) is relocated by R_PPC64_TLSGD and
+    // R_PPC64_REL24. After optimization we no longer call __tls_get_addr
+    // and should skip both relocations to avoid a false dependence on
+    // __tls_get_addr being defined.
+    case R_PPC64_TLSGD:
+    case R_PPC64_TLSLD: {
       auto it1 = it;
       ++it1;
       if (it1 == rels.end()) {
@@ -1352,48 +1282,128 @@ void PPC64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
         printLocation(diag, sec, sym, offset);
         continue;
       }
-
-      // Offset the 4-byte aligned R_PPC64_TLSGD by one byte in the NOTOC
-      // case, so we can discern it later from the toc-case.
-      if (it1->getType(/*isMips64EL=*/false) == R_PPC64_REL24_NOTOC)
+      // Increment the offset for the NOTOC case so that relaxTlsGdToIe
+      // and relaxTlsGdToLe can distinguish it from the TOC case.
+      if (it1->getType(false) == R_PPC64_REL24_NOTOC)
         ++offset;
-    }
-
-    if (oneof<R_GOTREL, RE_PPC64_TOCBASE, RE_PPC64_RELAX_TOC>(expr))
-      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
-
-    if (sym.isTls()) {
-      if (unsigned processed =
-              rs.handleTlsRelocation(expr, type, offset, sym, addend)) {
-        it += processed - 1;
-        continue;
+      if (optimizeTlsGdLd) {
+        sec.addReloc({sym.isPreemptible ? R_GOT_OFF : R_TPREL, type, offset,
+                      addend, &sym});
+        ++it; // skip REL24
       }
+      continue;
     }
+
+    // TLS LD:
+    case R_PPC64_GOT_TLSLD16:
+    case R_PPC64_GOT_TLSLD16_HA:
+    case R_PPC64_GOT_TLSLD16_HI:
+    case R_PPC64_GOT_TLSLD16_LO:
+    case R_PPC64_GOT_TLSLD_PCREL34:
+      if (optimizeTlsGdLd) {
+        sec.addReloc({R_TPREL, type, offset, addend, &sym});
+      } else {
+        ctx.needsTlsLd.store(true, std::memory_order_relaxed);
+        sec.addReloc(
+            {type == R_PPC64_GOT_TLSLD_PCREL34 ? R_TLSLD_PC : R_TLSLD_GOT, type,
+             offset, addend, &sym});
+      }
+      continue;
+    case R_PPC64_DTPREL16:
+    case R_PPC64_DTPREL16_DS:
+    case R_PPC64_DTPREL16_HA:
+    case R_PPC64_DTPREL16_HI:
+    case R_PPC64_DTPREL16_HIGHER:
+    case R_PPC64_DTPREL16_HIGHERA:
+    case R_PPC64_DTPREL16_HIGHEST:
+    case R_PPC64_DTPREL16_HIGHESTA:
+    case R_PPC64_DTPREL16_LO:
+    case R_PPC64_DTPREL16_LO_DS:
+    case R_PPC64_DTPREL64:
+    case R_PPC64_DTPREL34:
+      sec.addReloc({R_DTPREL, type, offset, addend, &sym});
+      continue;
+    case R_PPC64_GOT_DTPREL16_HA:
+    case R_PPC64_GOT_DTPREL16_LO_DS:
+    case R_PPC64_GOT_DTPREL16_DS:
+    case R_PPC64_GOT_DTPREL16_HI:
+      sym.setFlags(NEEDS_GOT_DTPREL);
+      sec.addReloc({R_TLSLD_GOT_OFF, type, offset, addend, &sym});
+      continue;
+
+    default:
+      Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
+               << "unknown relocation (" << type.v << ") against symbol "
+               << &sym;
+      continue;
+    }
+    if (oneof<R_GOTREL, RE_PPC64_TOCBASE>(expr))
+      ctx.in.got->hasGotOffRel.store(true, std::memory_order_relaxed);
     rs.process(expr, type, offset, sym, addend);
   }
 }
 
-template <class ELFT> void PPC64::scanSection1(InputSectionBase &sec) {
-  auto relocs = sec.template relsOrRelas<ELFT>();
-  if (relocs.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, relocs.crels);
-  else
-    scanSectionImpl<ELFT>(sec, relocs.relas);
-}
-
 void PPC64::scanSection(InputSectionBase &sec) {
   if (ctx.arg.isLE)
-    scanSection1<ELF64LE>(sec);
+    elf::scanSection1<PPC64, ELF64LE>(*this, sec);
   else
-    scanSection1<ELF64BE>(sec);
+    elf::scanSection1<PPC64, ELF64BE>(*this, sec);
+
+  // Sort relocations by offset for .toc sections. This is needed so that
+  // sections addressed with small code model relocations come first.
+  if (sec.name == ".toc")
+    llvm::stable_sort(sec.relocs(),
+                      [](const Relocation &lhs, const Relocation &rhs) {
+                        return lhs.offset < rhs.offset;
+                      });
 }
 
 void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   RelType type = rel.type;
   bool shouldTocOptimize =  isTocOptType(type);
-  // For dynamic thread pointer relative, toc-relative, and got-indirect
-  // relocations, proceed in terms of the corresponding ADDR16 relocation type.
-  std::tie(type, val) = toAddr16Rel(type, val);
+
+  // Handle TLS optimization.
+  switch (type) {
+  case R_PPC64_GOT_TLSGD16:
+  case R_PPC64_GOT_TLSGD16_HA:
+  case R_PPC64_GOT_TLSGD16_HI:
+  case R_PPC64_GOT_TLSGD16_LO:
+  case R_PPC64_GOT_TLSGD_PCREL34:
+  case R_PPC64_TLSGD:
+    if (rel.expr == R_TPREL) {
+      relaxTlsGdToLe(loc, rel, val);
+      return;
+    }
+    if (oneof<R_GOT_OFF, R_GOT_PC>(rel.expr)) {
+      relaxTlsGdToIe(loc, rel, val);
+      return;
+    }
+    break;
+  case R_PPC64_GOT_TLSLD16:
+  case R_PPC64_GOT_TLSLD16_HA:
+  case R_PPC64_GOT_TLSLD16_HI:
+  case R_PPC64_GOT_TLSLD16_LO:
+  case R_PPC64_GOT_TLSLD_PCREL34:
+  case R_PPC64_TLSLD:
+    if (rel.expr == R_TPREL) {
+      relaxTlsLdToLe(loc, rel, val);
+      return;
+    }
+    break;
+  case R_PPC64_GOT_TPREL16_HA:
+  case R_PPC64_GOT_TPREL16_LO_DS:
+  case R_PPC64_GOT_TPREL16_DS:
+  case R_PPC64_GOT_TPREL16_HI:
+  case R_PPC64_GOT_TPREL_PCREL34:
+  case R_PPC64_TLS:
+    if (rel.expr == R_TPREL) {
+      relaxTlsIeToLe(loc, rel, val);
+      return;
+    }
+    break;
+  default:
+    break;
+  }
 
   switch (type) {
   case R_PPC64_ADDR14: {
@@ -1403,6 +1413,13 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write16(ctx, loc + 2, (aalk & 3) | (val & 0xfffc));
     break;
   }
+  case R_PPC64_GOT16:
+  case R_PPC64_GOT_TLSGD16:
+  case R_PPC64_GOT_TLSLD16:
+  case R_PPC64_TOC16:
+  case R_PPC64_DTPREL16: // semantically subtracts DTP offset (== tocOffset)
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16:
     checkIntUInt(ctx, loc, val, 16, rel);
     write16(ctx, loc, val);
@@ -1411,6 +1428,13 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkIntUInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
+  case R_PPC64_GOT16_DS:
+  case R_PPC64_TOC16_DS:
+  case R_PPC64_GOT_DTPREL16_DS:
+  case R_PPC64_GOT_TPREL16_DS:
+  case R_PPC64_DTPREL16_DS:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_DS:
   case R_PPC64_TPREL16_DS: {
     checkInt(ctx, loc, val, 16, rel);
@@ -1420,6 +1444,15 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkAlignment(ctx, loc, lo(val), mask + 1, rel);
     write16(ctx, loc, (read16(ctx, loc) & mask) | lo(val));
   } break;
+  case R_PPC64_GOT16_HA:
+  case R_PPC64_GOT_TLSGD16_HA:
+  case R_PPC64_GOT_TLSLD16_HA:
+  case R_PPC64_GOT_TPREL16_HA:
+  case R_PPC64_GOT_DTPREL16_HA:
+  case R_PPC64_TOC16_HA:
+  case R_PPC64_DTPREL16_HA:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_HA:
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
@@ -1430,6 +1463,15 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       write16(ctx, loc, ha(val));
     }
     break;
+  case R_PPC64_GOT16_HI:
+  case R_PPC64_GOT_TLSGD16_HI:
+  case R_PPC64_GOT_TLSLD16_HI:
+  case R_PPC64_GOT_TPREL16_HI:
+  case R_PPC64_GOT_DTPREL16_HI:
+  case R_PPC64_TOC16_HI:
+  case R_PPC64_DTPREL16_HI:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_HI:
   case R_PPC64_REL16_HI:
   case R_PPC64_TPREL16_HI:
@@ -1439,22 +1481,41 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
   case R_PPC64_ADDR16_HIGH:
     write16(ctx, loc, hi(val));
     break;
+  case R_PPC64_DTPREL16_HIGHER:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_HIGHER:
   case R_PPC64_TPREL16_HIGHER:
     write16(ctx, loc, higher(val));
     break;
+  case R_PPC64_DTPREL16_HIGHERA:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_HIGHERA:
   case R_PPC64_TPREL16_HIGHERA:
     write16(ctx, loc, highera(val));
     break;
+  case R_PPC64_DTPREL16_HIGHEST:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_HIGHEST:
   case R_PPC64_TPREL16_HIGHEST:
     write16(ctx, loc, highest(val));
     break;
+  case R_PPC64_DTPREL16_HIGHESTA:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_HIGHESTA:
   case R_PPC64_TPREL16_HIGHESTA:
     write16(ctx, loc, highesta(val));
     break;
+  case R_PPC64_GOT16_LO:
+  case R_PPC64_GOT_TLSGD16_LO:
+  case R_PPC64_GOT_TLSLD16_LO:
+  case R_PPC64_TOC16_LO:
+  case R_PPC64_DTPREL16_LO:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_LO:
   case R_PPC64_REL16_LO:
   case R_PPC64_TPREL16_LO:
@@ -1472,6 +1533,13 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
       write16(ctx, loc, lo(val));
     }
     break;
+  case R_PPC64_GOT16_LO_DS:
+  case R_PPC64_GOT_TPREL16_LO_DS:
+  case R_PPC64_GOT_DTPREL16_LO_DS:
+  case R_PPC64_TOC16_LO_DS:
+  case R_PPC64_DTPREL16_LO_DS:
+    val -= ppc64TocOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR16_LO_DS:
   case R_PPC64_TPREL16_LO_DS: {
     // DQ-form instructions use bits 28-31 as part of the instruction encoding
@@ -1501,6 +1569,9 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
     break;
+  case R_PPC64_DTPREL64:
+    val -= dynamicThreadPointerOffset;
+    [[fallthrough]];
   case R_PPC64_ADDR64:
   case R_PPC64_REL64:
   case R_PPC64_TOC:
@@ -1521,13 +1592,7 @@ void PPC64::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     write32(ctx, loc, (read32(ctx, loc) & ~mask) | (val & mask));
     break;
   }
-  case R_PPC64_DTPREL64:
-    write64(ctx, loc, val - dynamicThreadPointerOffset);
-    break;
   case R_PPC64_DTPREL34:
-    // The Dynamic Thread Vector actually points 0x8000 bytes past the start
-    // of the TLS block. Therefore, in the case of R_PPC64_DTPREL34 we first
-    // need to subtract that value then fallthrough to the general case.
     val -= dynamicThreadPointerOffset;
     [[fallthrough]];
   case R_PPC64_PCREL34:
@@ -1604,14 +1669,6 @@ bool PPC64::inBranchRange(RelType type, uint64_t src, uint64_t dst) const {
   llvm_unreachable("unsupported relocation type used in branch");
 }
 
-RelExpr PPC64::adjustTlsExpr(RelType type, RelExpr expr) const {
-  if (type != R_PPC64_GOT_TLSGD_PCREL34 && expr == R_RELAX_TLS_GD_TO_IE)
-    return R_RELAX_TLS_GD_TO_IE_GOT_OFF;
-  if (expr == R_RELAX_TLS_LD_TO_LE)
-    return R_RELAX_TLS_LD_TO_LE_ABS;
-  return expr;
-}
-
 RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
                                const uint8_t *loc) const {
   if ((type == R_PPC64_GOT_PCREL34 || type == R_PPC64_PCREL_OPT) &&
@@ -1619,7 +1676,7 @@ RelExpr PPC64::adjustGotPcExpr(RelType type, int64_t addend,
     // It only makes sense to optimize pld since paddi means that the address
     // of the object in the GOT is required rather than the object itself.
     if ((readPrefixedInst(ctx, loc) & 0xfc000000) == 0xe4000000)
-      return RE_PPC64_RELAX_GOT_PC;
+      return R_RELAX_GOT_PC;
   }
   return R_GOT_PC;
 }
@@ -1698,37 +1755,42 @@ void PPC64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
   for (const Relocation &rel : sec.relocs()) {
     uint8_t *loc = buf + rel.offset;
     const uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
-    switch (rel.expr) {
-    case RE_PPC64_RELAX_GOT_PC: {
-      // The R_PPC64_PCREL_OPT relocation must appear immediately after
-      // R_PPC64_GOT_PCREL34 in the relocations table at the same offset.
-      // We can only relax R_PPC64_PCREL_OPT if we have also relaxed
-      // the associated R_PPC64_GOT_PCREL34 since only the latter has an
-      // associated symbol. So save the offset when relaxing R_PPC64_GOT_PCREL34
-      // and only relax the other if the saved offset matches.
-      if (rel.type == R_PPC64_GOT_PCREL34)
+    switch (rel.type) {
+    case R_PPC64_GOT_PCREL34:
+      if (rel.expr == R_RELAX_GOT_PC) {
         lastPPCRelaxedRelocOff = rel.offset;
-      if (rel.type == R_PPC64_PCREL_OPT && rel.offset != lastPPCRelaxedRelocOff)
-        break;
-      relaxGot(loc, rel, val);
+        relaxGot(loc, rel, val);
+        continue;
+      }
       break;
-    }
-    case RE_PPC64_RELAX_TOC:
+    case R_PPC64_PCREL_OPT:
+      // R_PPC64_PCREL_OPT must appear immediately after R_PPC64_GOT_PCREL34
+      // at the same offset. Only relax if the associated GOT_PCREL34 was
+      // relaxed.
+      if (rel.expr == R_RELAX_GOT_PC && rel.offset == lastPPCRelaxedRelocOff) {
+        relaxGot(loc, rel, val);
+        continue;
+      }
+      break;
+    case R_PPC64_TOC16_HA:
+    case R_PPC64_TOC16_LO_DS:
       // rel.sym refers to the STT_SECTION symbol associated to the .toc input
       // section. If an R_PPC64_TOC16_LO (.toc + addend) references the TOC
       // entry, there may be R_PPC64_TOC16_HA not paired with
       // R_PPC64_TOC16_LO_DS. Don't relax. This loses some relaxation
       // opportunities but is safe.
-      if (ctx.ppc64noTocRelax.count({rel.sym, rel.addend}) ||
-          !tryRelaxPPC64TocIndirection(ctx, rel, loc))
-        relocate(loc, rel, val);
+      if (ctx.arg.tocOptimize &&
+          !ctx.ppc64noTocRelax.contains({rel.sym, rel.addend}) &&
+          tryRelaxPPC64TocIndirection(ctx, rel, loc))
+        continue;
       break;
-    case RE_PPC64_CALL:
+    case R_PPC64_REL14:
+    case R_PPC64_REL24:
       // If this is a call to __tls_get_addr, it may be part of a TLS
       // sequence that has been relaxed and turned into a nop. In this
       // case, we don't want to handle it as a call.
-      if (read32(ctx, loc) == 0x60000000) // nop
-        break;
+      if (read32(ctx, loc) == NOP)
+        continue;
 
       // Patch a nop (0x60000000) to a ld.
       if (rel.sym->needsTocRestore()) {
@@ -1737,35 +1799,19 @@ void PPC64::relocateAlloc(InputSection &sec, uint8_t *buf) const {
         // wrong in the common case where the function is not preempted at
         // runtime. Just ignore.
         if ((rel.offset + 8 > sec.content().size() ||
-             read32(ctx, loc + 4) != 0x60000000) &&
+             read32(ctx, loc + 4) != NOP) &&
             rel.sym->file != sec.file) {
           // Use substr(6) to remove the "__plt_" prefix.
           Err(ctx) << getErrorLoc(ctx, loc) << "call to "
                    << toStr(ctx, *rel.sym).substr(6)
                    << " lacks nop, can't restore toc";
-          break;
+          continue;
         }
         write32(ctx, loc + 4, 0xe8410018); // ld %r2, 24(%r1)
       }
-      relocate(loc, rel, val);
-      break;
-    case R_RELAX_TLS_GD_TO_IE:
-    case R_RELAX_TLS_GD_TO_IE_GOT_OFF:
-      relaxTlsGdToIe(loc, rel, val);
-      break;
-    case R_RELAX_TLS_GD_TO_LE:
-      relaxTlsGdToLe(loc, rel, val);
-      break;
-    case R_RELAX_TLS_LD_TO_LE_ABS:
-      relaxTlsLdToLe(loc, rel, val);
-      break;
-    case R_RELAX_TLS_IE_TO_LE:
-      relaxTlsIeToLe(loc, rel, val);
-      break;
-    default:
-      relocate(loc, rel, val);
       break;
     }
+    relocate(loc, rel, val);
   }
 }
 

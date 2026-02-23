@@ -16,10 +16,7 @@ define i32 @assume_inevitable(ptr %a, ptr %b, ptr %c) {
 ; CHECK-NEXT:    [[M_A:%.*]] = call ptr @llvm.ptr.annotation.p0.p0(ptr nonnull [[M]], ptr nonnull @.str, ptr nonnull @.str1, i32 2, ptr null)
 ; CHECK-NEXT:    [[OBJSZ:%.*]] = call i64 @llvm.objectsize.i64.p0(ptr [[C:%.*]], i1 false, i1 false, i1 false)
 ; CHECK-NEXT:    store i64 [[OBJSZ]], ptr [[M_A]], align 4
-; CHECK-NEXT:    [[PTRINT:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-NEXT:    [[MASKEDPTR:%.*]] = and i64 [[PTRINT]], 31
-; CHECK-NEXT:    [[MASKCOND:%.*]] = icmp eq i64 [[MASKEDPTR]], 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[MASKCOND]])
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 32) ]
 ; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:

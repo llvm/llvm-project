@@ -406,6 +406,28 @@ bool isSmartPtr(const CXXRecordDecl *R) {
   return false;
 }
 
+enum class WebKitAnnotation : uint8_t {
+  None,
+  PointerConversion,
+  NoDelete,
+};
+
+static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
+  auto RetType = FD->getReturnType();
+  auto *Attr = dyn_cast_or_null<AttributedType>(RetType.getTypePtrOrNull());
+  if (!Attr)
+    return WebKitAnnotation::None;
+  auto *AnnotateType = dyn_cast_or_null<AnnotateTypeAttr>(Attr->getAttr());
+  if (!AnnotateType)
+    return WebKitAnnotation::None;
+  auto Annotation = AnnotateType->getAnnotation();
+  if (Annotation == "webkit.pointerconversion")
+    return WebKitAnnotation::PointerConversion;
+  if (Annotation == "webkit.nodelete")
+    return WebKitAnnotation::NoDelete;
+  return WebKitAnnotation::None;
+}
+
 bool isPtrConversion(const FunctionDecl *F) {
   assert(F);
   if (isCtorOfRefCounted(F))
@@ -423,19 +445,14 @@ bool isPtrConversion(const FunctionDecl *F) {
       FunctionName == "checked_objc_cast")
     return true;
 
-  auto ReturnType = F->getReturnType();
-  if (auto *Type = ReturnType.getTypePtrOrNull()) {
-    if (auto *AttrType = dyn_cast<AttributedType>(Type)) {
-      if (auto *Attr = AttrType->getAttr()) {
-        if (auto *AnnotateType = dyn_cast<AnnotateTypeAttr>(Attr)) {
-          if (AnnotateType->getAnnotation() == "webkit.pointerconversion")
-            return true;
-        }
-      }
-    }
-  }
+  if (typeAnnotationForReturnType(F) == WebKitAnnotation::PointerConversion)
+    return true;
 
   return false;
+}
+
+bool isNoDeleteFunction(const FunctionDecl *F) {
+  return typeAnnotationForReturnType(F) == WebKitAnnotation::NoDelete;
 }
 
 bool isTrivialBuiltinFunction(const FunctionDecl *F) {
@@ -499,17 +516,58 @@ class TrivialFunctionAnalysisVisitor
     return Result;
   }
 
+  bool CanTriviallyDestruct(QualType Ty) {
+    if (Ty.isNull())
+      return false;
+
+    // T*, T& or T&& does not run its destructor.
+    if (Ty->isPointerOrReferenceType())
+      return true;
+
+    // Primitive types don't have destructors.
+    if (Ty->isIntegralOrEnumerationType())
+      return true;
+
+    if (const auto *R = Ty->getAsCXXRecordDecl()) {
+      // C++ trivially destructible classes are fine.
+      if (R->hasDefinition() && R->hasTrivialDestructor())
+        return true;
+
+      // For Webkit, side-effects are fine as long as we don't delete objects,
+      // so check recursively.
+      if (const auto *Dtor = R->getDestructor())
+        return IsFunctionTrivial(Dtor);
+    }
+
+    // Structs in C are trivial.
+    if (Ty->isRecordType())
+      return true;
+
+    // For arrays it depends on the element type.
+    // FIXME: We should really use ASTContext::getAsArrayType instead.
+    if (const auto *AT = Ty->getAsArrayTypeUnsafe())
+      return CanTriviallyDestruct(AT->getElementType());
+
+    return false; // Otherwise it's likely not trivial.
+  }
+
 public:
   using CacheTy = TrivialFunctionAnalysis::CacheTy;
 
   TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
   bool IsFunctionTrivial(const Decl *D) {
-    if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
-      if (FnDecl->isVirtualAsWritten())
-        return false;
-    }
     return WithCachedResult(D, [&]() {
+      if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
+        if (isNoDeleteFunction(FnDecl))
+          return true;
+        if (auto *MD = dyn_cast<CXXMethodDecl>(D); MD && MD->isVirtual())
+          return false;
+        for (auto *Param : FnDecl->parameters()) {
+          if (!HasTrivialDestructor(Param))
+            return false;
+        }
+      }
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
         for (auto *CtorInit : CtorDecl->inits()) {
           if (!Visit(CtorInit->getInit()))
@@ -521,6 +579,11 @@ public:
         return false;
       return Visit(Body);
     });
+  }
+
+  bool HasTrivialDestructor(const VarDecl *VD) {
+    return WithCachedResult(
+        VD, [&] { return CanTriviallyDestruct(VD->getType()); });
   }
 
   bool IsStatementTrivial(const Stmt *S) {
@@ -560,7 +623,16 @@ public:
     return true;
   }
 
-  bool VisitDeclStmt(const DeclStmt *DS) { return VisitChildren(DS); }
+  bool VisitDeclStmt(const DeclStmt *DS) {
+    for (auto &Decl : DS->decls()) {
+      // FIXME: Handle DecompositionDecls.
+      if (auto *VD = dyn_cast<VarDecl>(Decl)) {
+        if (!HasTrivialDestructor(VD))
+          return false;
+      }
+    }
+    return VisitChildren(DS);
+  }
   bool VisitDoStmt(const DoStmt *DS) { return VisitChildren(DS); }
   bool VisitIfStmt(const IfStmt *IS) {
     return WithCachedResult(IS, [&]() { return VisitChildren(IS); });
@@ -712,6 +784,10 @@ public:
     return true;
   }
 
+  bool VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *E) {
+    return Visit(E->getExpr());
+  }
+
   bool checkArguments(const CallExpr *CE) {
     for (const Expr *Arg : CE->arguments()) {
       if (Arg && !Visit(Arg))
@@ -728,6 +804,10 @@ public:
 
     // Recursively descend into the callee to confirm that it's trivial.
     return IsFunctionTrivial(CE->getConstructor());
+  }
+
+  bool VisitCXXDeleteExpr(const CXXDeleteExpr *DE) {
+    return CanTriviallyDestruct(DE->getDestroyedType());
   }
 
   bool VisitCXXInheritedCtorInitExpr(const CXXInheritedCtorInitExpr *E) {
@@ -750,7 +830,7 @@ public:
 
   bool VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE) {
     if (auto *Temp = BTE->getTemporary()) {
-      if (!TrivialFunctionAnalysis::isTrivialImpl(Temp->getDestructor(), Cache))
+      if (!IsFunctionTrivial(Temp->getDestructor()))
         return false;
     }
     return Visit(BTE->getSubExpr());
@@ -836,6 +916,12 @@ bool TrivialFunctionAnalysis::isTrivialImpl(
     const Stmt *S, TrivialFunctionAnalysis::CacheTy &Cache) {
   TrivialFunctionAnalysisVisitor V(Cache);
   return V.IsStatementTrivial(S);
+}
+
+bool TrivialFunctionAnalysis::hasTrivialDtorImpl(const VarDecl *VD,
+                                                 CacheTy &Cache) {
+  TrivialFunctionAnalysisVisitor V(Cache);
+  return V.HasTrivialDestructor(VD);
 }
 
 } // namespace clang

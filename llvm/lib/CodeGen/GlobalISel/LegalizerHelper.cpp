@@ -639,10 +639,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::createLibcall(
   if (LibcallImpl == RTLIB::Unsupported)
     return LegalizerHelper::UnableToLegalize;
 
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-
   StringRef Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
-  const CallingConv::ID CC = TLI.getLibcallImplCallingConv(LibcallImpl);
+  const CallingConv::ID CC = Libcalls->getLibcallImplCallingConv(LibcallImpl);
   return createLibcall(Name.data(), Result, Args, CC, LocObserver, MI);
 }
 
@@ -807,7 +805,6 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
   }
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall;
   unsigned Opc = MI.getOpcode();
   switch (Opc) {
@@ -843,7 +840,7 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallImplCallingConv(RTLibcallImpl);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
 
   StringRef LibcallName =
       RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
@@ -987,7 +984,6 @@ LegalizerHelper::createAtomicLibcall(MachineInstr &MI) const {
     return LegalizerHelper::UnableToLegalize;
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
   RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
 
@@ -999,7 +995,7 @@ LegalizerHelper::createAtomicLibcall(MachineInstr &MI) const {
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallImplCallingConv(RTLibcallImpl);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
 
   StringRef LibcallName =
       RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
@@ -2820,6 +2816,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     switch (Opcode) {
     case TargetOpcode::G_CTTZ:
     case TargetOpcode::G_CTTZ_ZERO_UNDEF:
+    case TargetOpcode::G_CTLZ_ZERO_UNDEF: // undef bits shifted out below
       ExtOpc = TargetOpcode::G_ANYEXT;
       break;
     case TargetOpcode::G_CTLS:
@@ -4766,6 +4763,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return lowerFPTRUNC(MI);
   case G_FPOWI:
     return lowerFPOWI(MI);
+  case G_FMODF:
+    return lowerFMODF(MI);
   case G_SMIN:
   case G_SMAX:
   case G_UMIN:
@@ -6328,8 +6327,9 @@ Register LegalizerHelper::buildVariableShiftPart(unsigned Opcode,
   // For G_ASHR, individual parts don't have their own sign bit, only the
   // complete value does. So we use LSHR for the main operand shift in ASHR
   // context.
-  unsigned MainOpcode =
-      (Opcode == TargetOpcode::G_ASHR) ? TargetOpcode::G_LSHR : Opcode;
+  unsigned MainOpcode = (Opcode == TargetOpcode::G_ASHR)
+                            ? static_cast<unsigned>(TargetOpcode::G_LSHR)
+                            : Opcode;
 
   // Perform the primary shift on the main operand
   Register MainShifted =
@@ -7584,26 +7584,22 @@ LegalizerHelper::narrowScalarCTLS(MachineInstr &MI, unsigned TypeIdx,
   auto ShAmt = B.buildConstant(NarrowTy, NarrowSize - 1);
   auto Sign = B.buildAShr(NarrowTy, Hi, ShAmt);
 
-  auto LoSign = B.buildAShr(NarrowTy, Lo, ShAmt);
-  auto LoSameSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1),
-                                LoSign.getReg(0), Sign.getReg(0));
+  auto HiIsSign = B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign);
 
-  auto HiIsSign =
-      B.buildICmp(CmpInst::ICMP_EQ, LLT::scalar(1), Hi, Sign.getReg(0));
+  // Invert Lo if Hi is negative. Then count the leading zeros. If there are no
+  // leading zeros, then the MSB of Lo is different than the MSB of Hi.
+  // Otherwise the leading zeros represent additional sign bits of the original
+  // value.
+  auto LoInv = B.buildXor(DstTy, Lo, Sign);
+  auto LoCTLZ = B.buildCTLZ(DstTy, LoInv);
 
-  auto LoCTLS = B.buildCTLS(DstTy, Lo);
-  auto GNarrowSize = B.buildConstant(DstTy, NarrowSize);
-  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLS, GNarrowSize);
-
-  // If the low half flips sign, the run of redundant bits stops at the
-  // boundary, so use (NarrowSize - 1) instead of extending into Lo.
-  auto GNarrowSizeMinus1 = B.buildConstant(DstTy, NarrowSize - 1);
-  auto HiSignResult =
-      B.buildSelect(DstTy, LoSameSign, HiIsSignCTLS, GNarrowSizeMinus1);
+  // Add NarrowSize-1 to LoCTLZ. This is the full CTLS if Hi is all sign bits.
+  auto C_NarrowSizeM1 = B.buildConstant(DstTy, NarrowSize - 1);
+  auto HiIsSignCTLS = B.buildAdd(DstTy, LoCTLZ, C_NarrowSizeM1);
 
   auto HiCTLS = B.buildCTLS(DstTy, Hi);
 
-  B.buildSelect(DstReg, HiIsSign, HiSignResult, HiCTLS);
+  B.buildSelect(DstReg, HiIsSign, HiIsSignCTLS, HiCTLS);
 
   MI.eraseFromParent();
   return Legalized;
@@ -7804,7 +7800,19 @@ LegalizerHelper::lowerBitCount(MachineInstr &MI) {
     auto C_B8Mask4HiTo0 = B.buildConstant(Ty, B8Mask4HiTo0);
     auto B8Count = B.buildAnd(Ty, B8CountDirty4Hi, C_B8Mask4HiTo0);
 
-    assert(Size<=128 && "Scalar size is too large for CTPOP lower algorithm");
+    assert(Size <= 128 && "Scalar size is too large for CTPOP lower algorithm");
+
+    // Avoid the multiply when shift-add is cheaper.
+    if (Size == 16 && !Ty.isVector()) {
+      // v = (v + (v >> 8)) & 0xFF;
+      auto C_8 = B.buildConstant(Ty, 8);
+      auto HighSum = B.buildLShr(Ty, B8Count, C_8);
+      auto Res = B.buildAdd(Ty, B8Count, HighSum);
+      B.buildAnd(MI.getOperand(0).getReg(), Res, B.buildConstant(Ty, 0xFF));
+      MI.eraseFromParent();
+      return Legalized;
+    }
+
     // 8 bits can hold CTPOP result of 128 bit int or smaller. Mul with this
     // bitmask will set 8 msb in ResTmp to sum of all B8Counts in 8 bit blocks.
     auto MulMask = B.buildConstant(Ty, APInt::getSplat(Size, APInt(8, 0x01)));
@@ -8719,6 +8727,35 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPOWI(MachineInstr &MI) {
 
   auto CvtSrc1 = MIRBuilder.buildSITOFP(Ty, Src1);
   MIRBuilder.buildFPow(Dst, Src0, CvtSrc1, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult LegalizerHelper::lowerFMODF(MachineInstr &MI) {
+  auto [DstFrac, DstInt, Src] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Src);
+  auto Flags = MI.getFlags();
+
+  auto IntPart = MIRBuilder.buildIntrinsicTrunc(Ty, Src, Flags);
+  auto FracPart = MIRBuilder.buildFSub(Ty, Src, IntPart, Flags);
+
+  Register FracToUse;
+  if (MI.getFlag(MachineInstr::FmNoInfs)) {
+    FracToUse = FracPart.getReg(0);
+  } else {
+    auto Abs = MIRBuilder.buildFAbs(Ty, Src, Flags);
+    const fltSemantics &Semantics = getFltSemanticForLLT(Ty.getScalarType());
+    auto Inf = MIRBuilder.buildFConstant(Ty, APFloat::getInf(Semantics));
+    auto IsInf = MIRBuilder.buildFCmp(CmpInst::FCMP_OEQ,
+                                      Ty.changeElementSize(1), Abs, Inf);
+    auto Zero = MIRBuilder.buildFConstant(Ty, 0.0);
+    auto Select = MIRBuilder.buildSelect(Ty, IsInf, Zero, FracPart);
+    FracToUse = Select.getReg(0);
+  }
+
+  MIRBuilder.buildFCopysign(DstFrac, FracToUse, Src, Flags);
+  MIRBuilder.buildCopy(DstInt, IntPart.getReg(0));
+
   MI.eraseFromParent();
   return Legalized;
 }
