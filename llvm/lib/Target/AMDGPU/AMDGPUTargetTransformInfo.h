@@ -211,16 +211,20 @@ public:
     if (SrcAS != AMDGPUAS::FLAT_ADDRESS)
       return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
 
-    // Handle casts to local or global address spaces.
-    if (DstAS != AMDGPUAS::LOCAL_ADDRESS && DstAS != AMDGPUAS::GLOBAL_ADDRESS)
-      return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+    unsigned FlatPtrSize = DL.getPointerSizeInBits(AMDGPUAS::FLAT_ADDRESS);
+
+    // For global, addresses in flat and global address spaces are the same.
+    // All 64 bits are preserved.
+    if (DstAS == AMDGPUAS::GLOBAL_ADDRESS)
+      return APInt::getAllOnes(FlatPtrSize);
 
     // The aperture for local memory is 2^32 bytes in size and aligned to 2^32.
     // Address changes within the lower 32 bits do not change the address space
     // aperture, so it's safe to cast back to the original address space.
-    // For global, addresses in flat and global address spaces are the same.
-    unsigned FlatPtrSize = DL.getPointerSizeInBits(AMDGPUAS::FLAT_ADDRESS);
-    return APInt::getLowBitsSet(FlatPtrSize, 32);
+    if (DstAS == AMDGPUAS::LOCAL_ADDRESS)
+      return APInt::getLowBitsSet(FlatPtrSize, 32);
+
+    return BaseT::getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
   }
 
   bool collectFlatAddressOperands(SmallVectorImpl<int> &OpIndexes,
