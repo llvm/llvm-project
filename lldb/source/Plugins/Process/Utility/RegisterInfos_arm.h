@@ -32,6 +32,10 @@ using namespace lldb_private;
 #error FPSCR_OFFSET must be defined before including this header file
 #endif
 
+#ifndef TLS_OFFSET
+#error TLS_OFFSET must be defined before including this header file
+#endif
+
 #ifndef EXC_OFFSET
 #error EXC_OFFSET_NAME must be defined before including this header file
 #endif
@@ -145,6 +149,8 @@ enum {
   fpu_q13,
   fpu_q14,
   fpu_q15,
+
+  tls_tpidruro,
 
   exc_exception,
   exc_fsr,
@@ -681,6 +687,20 @@ static RegisterInfo g_register_infos_arm[] = {
     FPU_QREG(q13, 52),
     FPU_QREG(q14, 56),
     FPU_QREG(q15, 60),
+
+    {
+        "tpidruro",
+        nullptr,
+        4,
+        TLS_OFFSET,
+        eEncodingUint,
+        eFormatHex,
+        {LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_REGNUM_GENERIC_TP,
+         LLDB_INVALID_REGNUM, tls_tpidruro},
+        nullptr,
+        nullptr,
+        nullptr,
+    },
 
     {
         "exception",

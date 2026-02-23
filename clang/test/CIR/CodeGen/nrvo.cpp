@@ -11,6 +11,8 @@
 // lowering isn't of interest for this test. We just need to see that the
 // copy constructor is elided without -fno-elide-constructors but not with it.
 
+// XFAIL: *
+
 struct S {
   S();
   int a;

@@ -161,7 +161,6 @@ class RVInstVUnaryRd<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
   let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = NoConstraint;
 
   let UseNamedOperandTable = true;
 }

@@ -20,10 +20,10 @@ let Predicates = [HasStdExtZvabd] in {
   def VABD_VV  : VALUVV<0b010001, OPMVV, "vabd.vv">;
   def VABDU_VV : VALUVV<0b010011, OPMVV, "vabdu.vv">;
 
-  let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV in {
+  let Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV in {
     def VWABDA_VV  : VALUVV<0b010101, OPMVV, "vwabda.vv">;
     def VWABDAU_VV : VALUVV<0b010110, OPMVV, "vwabdau.vv">;
-  } // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV
+  } // Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV
 } // Predicates = [HasStdExtZvabd]
 
 //===----------------------------------------------------------------------===//

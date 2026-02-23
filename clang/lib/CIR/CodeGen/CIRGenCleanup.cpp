@@ -144,8 +144,37 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
   bool isNormalCleanup = kind & NormalCleanup;
   bool isEHCleanup = kind & EHCleanup;
   bool isLifetimeMarker = kind & LifetimeMarker;
+  bool skipCleanupScope = false;
 
   assert(!cir::MissingFeatures::innermostEHScope());
+  cir::CleanupKind cleanupKind = cir::CleanupKind::All;
+  if (isEHCleanup && cgf->getLangOpts().Exceptions) {
+    cleanupKind =
+        isNormalCleanup ? cir::CleanupKind::All : cir::CleanupKind::EH;
+  } else {
+    if (isNormalCleanup)
+      cleanupKind = cir::CleanupKind::Normal;
+    else
+      skipCleanupScope = true;
+  }
+
+  cir::CleanupScopeOp cleanupScope = nullptr;
+  if (!skipCleanupScope) {
+    CIRGenBuilderTy &builder = cgf->getBuilder();
+    mlir::Location loc = builder.getUnknownLoc();
+    cleanupScope = cir::CleanupScopeOp::create(
+        builder, loc, cleanupKind,
+        /*bodyBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // Terminations will be handled in popCleanup
+        },
+        /*cleanupBuilder=*/
+        [&](mlir::OpBuilder &b, mlir::Location loc) {
+          // Terminations will be handled after emiting cleanup
+        });
+
+    builder.setInsertionPointToEnd(&cleanupScope.getBodyRegion().back());
+  }
 
   // Per C++ [except.terminate], it is implementation-defined whether none,
   // some, or all cleanups are called before std::terminate. Thus, when
@@ -157,7 +186,7 @@ void *EHScopeStack::pushCleanup(CleanupKind kind, size_t size) {
 
   EHCleanupScope *scope = new (buffer)
       EHCleanupScope(isNormalCleanup, isEHCleanup, size, branchFixups.size(),
-                     innermostNormalCleanup, innermostEHScope);
+                     cleanupScope, innermostNormalCleanup, innermostEHScope);
 
   if (isNormalCleanup)
     innermostNormalCleanup = stable_begin();
@@ -183,6 +212,18 @@ void EHScopeStack::popCleanup() {
   EHCleanupScope &cleanup = cast<EHCleanupScope>(*begin());
   innermostNormalCleanup = cleanup.getEnclosingNormalCleanup();
   deallocate(cleanup.getAllocatedSize());
+
+  cir::CleanupScopeOp cleanupScope = cleanup.getCleanupScopeOp();
+  if (cleanupScope) {
+    auto *block = &cleanupScope.getBodyRegion().back();
+    if (!block->mightHaveTerminator()) {
+      mlir::OpBuilder::InsertionGuard guard(cgf->getBuilder());
+      cgf->getBuilder().setInsertionPointToEnd(block);
+      cir::YieldOp::create(cgf->getBuilder(),
+                           cgf->getBuilder().getUnknownLoc());
+    }
+    cgf->getBuilder().setInsertionPointAfter(cleanupScope);
+  }
 
   // Destroy the cleanup.
   cleanup.destroy();
@@ -214,13 +255,28 @@ bool EHScopeStack::requiresCatchOrCleanup() const {
   return false;
 }
 
-static void emitCleanup(CIRGenFunction &cgf, EHScopeStack::Cleanup *cleanup,
+static void emitCleanup(CIRGenFunction &cgf, cir::CleanupScopeOp cleanupScope,
+                        EHScopeStack::Cleanup *cleanup,
                         EHScopeStack::Cleanup::Flags flags) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Block &block = cleanupScope.getCleanupRegion().back();
+
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToStart(&block);
+
   // Ask the cleanup to emit itself.
   assert(cgf.haveInsertPoint() && "expected insertion point");
   assert(!cir::MissingFeatures::ehCleanupActiveFlag());
   cleanup->emit(cgf, flags);
   assert(cgf.haveInsertPoint() && "cleanup ended with no insertion point?");
+
+  mlir::Block &cleanupRegionLastBlock = cleanupScope.getCleanupRegion().back();
+  if (cleanupRegionLastBlock.empty() ||
+      !cleanupRegionLastBlock.back().hasTrait<mlir::OpTrait::IsTerminator>()) {
+    mlir::OpBuilder::InsertionGuard guardCase(builder);
+    builder.setInsertionPointToEnd(&cleanupRegionLastBlock);
+    builder.createYield(cleanupScope.getLoc());
+  }
 }
 
 static mlir::Block *createNormalEntry(CIRGenFunction &cgf,
@@ -243,6 +299,9 @@ void CIRGenFunction::popCleanupBlock() {
   assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
   EHCleanupScope &scope = cast<EHCleanupScope>(*ehStack.begin());
   assert(scope.getFixupDepth() <= ehStack.getNumBranchFixups());
+
+  cir::CleanupScopeOp cleanupScope = scope.getCleanupScopeOp();
+  assert(cleanupScope && "CleanupScopeOp is nullptr");
 
   // Remember activation information.
   bool isActive = scope.isActive();
@@ -301,7 +360,7 @@ void CIRGenFunction::popCleanupBlock() {
     assert(!cir::MissingFeatures::ehCleanupScopeRequiresEHCleanup());
     ehStack.popCleanup();
     scope.markEmitted();
-    emitCleanup(*this, cleanup, cleanupFlags);
+    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags);
   } else {
     // Otherwise, the best approach is to thread everything through
     // the cleanup block and then try to clean up after ourselves.
@@ -362,8 +421,7 @@ void CIRGenFunction::popCleanupBlock() {
     scope.markEmitted();
     ehStack.popCleanup();
     assert(ehStack.hasNormalCleanups() == hasEnclosingCleanups);
-
-    emitCleanup(*this, cleanup, cleanupFlags);
+    emitCleanup(*this, cleanupScope, cleanup, cleanupFlags);
 
     // Append the prepared cleanup prologue from above.
     assert(!cir::MissingFeatures::cleanupAppendInsts());

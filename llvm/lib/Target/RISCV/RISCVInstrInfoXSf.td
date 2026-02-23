@@ -109,7 +109,7 @@ class VCIXInfo<VCIXType type, VCIXRs1Info rs1info, bit hasOutput> {
   string Constraints = !if(!and(hasOutput, type.VdIsSource),
                            "$vd = $vd_wb", "");
 
-  RISCVVConstraint RVVConstraint = !if(!and(hasOutput, type.IsWidening),
+  RISCVVConstraint VS1VS2Constraint = !if(!and(hasOutput, type.IsWidening),
                                        !if(rs1info.IsVR, VCIXVS2VS1, VCIXVS2),
                                        NoConstraint);
 }
@@ -129,7 +129,7 @@ class RVInstVCCustom2Base<VCIXInfo info>
 
   let Uses = [VL, VTYPE];
   let Constraints = info.Constraints;
-  let RVVConstraint = info.RVVConstraint;
+  let VS1VS2Constraint = info.VS1VS2Constraint;
   let ElementsDependOn = EltDepsVLMask;
   let ReadsPastVL = 1;
 
@@ -256,7 +256,7 @@ let Predicates = [HasVendorXSfvfexpa], DecoderNamespace = "XSfvector" in {
 }
 
 let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx4, RVVConstraint=VS1Constraint in {
+    DestEEW = EEWSEWx4, VS1VS2Constraint=VS1Constraint in {
   def SF_VQMACCU_2x8x2  : CustomSiFiveVMACC<0b101100, OPMVV, "sf.vqmaccu.2x8x2">;
   def SF_VQMACC_2x8x2   : CustomSiFiveVMACC<0b101101, OPMVV, "sf.vqmacc.2x8x2">;
   def SF_VQMACCUS_2x8x2 : CustomSiFiveVMACC<0b101110, OPMVV, "sf.vqmaccus.2x8x2">;
@@ -264,7 +264,7 @@ let Predicates = [HasVendorXSfvqmaccdod], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx4, RVVConstraint=WidenV in {
+    DestEEW = EEWSEWx4, VS1VS2Constraint=WidenV in {
   def SF_VQMACCU_4x8x4  : CustomSiFiveVMACC<0b111100, OPMVV, "sf.vqmaccu.4x8x4">;
   def SF_VQMACC_4x8x4   : CustomSiFiveVMACC<0b111101, OPMVV, "sf.vqmacc.4x8x4">;
   def SF_VQMACCUS_4x8x4 : CustomSiFiveVMACC<0b111110, OPMVV, "sf.vqmaccus.4x8x4">;
@@ -272,7 +272,7 @@ let Predicates = [HasVendorXSfvqmaccqoq], DecoderNamespace = "XSfvector",
 }
 
 let Predicates = [HasVendorXSfvfwmaccqqq], DecoderNamespace = "XSfvector",
-    DestEEW = EEWSEWx2, RVVConstraint=WidenV in {
+    DestEEW = EEWSEWx2, VS1VS2Constraint=WidenV in {
   def SF_VFWMACC_4x4x4 : CustomSiFiveVMACC<0b111100, OPFVV, "sf.vfwmacc.4x4x4">;
 }
 

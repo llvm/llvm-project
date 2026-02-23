@@ -136,6 +136,8 @@ public:
   /// always true on non Windows.
   bool ShouldUsePTY() const {
 #ifdef _WIN32
+    if (!m_pty)
+      return false;
     return GetPTY().GetPseudoTerminalHandle() != ((HANDLE)(long long)-1) &&
            GetNumFileActions() == 0;
 #else

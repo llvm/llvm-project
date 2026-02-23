@@ -219,6 +219,10 @@ Changes to LLDB
 * Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
   when lldb is in the interactive mode (i.e. not in batch mode).
 
+### Linux
+
+* On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+
 Changes to BOLT
 ---------------
 

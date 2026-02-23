@@ -12,6 +12,7 @@
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 namespace clang::ssaf {
@@ -25,6 +26,12 @@ namespace clang::ssaf {
 /// Client code should not make assumptions about the implementation details,
 /// such as USRs.
 class EntityName {
+  friend class EntityLinker;
+  friend class SerializationFormat;
+  friend class TestFixture;
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                       const EntityName &EN);
+
   std::string USR;
   llvm::SmallString<16> Suffix;
   NestedBuildNamespace Namespace;
@@ -46,10 +53,9 @@ public:
   ///
   /// \param Namespace The namespace steps to append to this entity's namespace.
   EntityName makeQualified(NestedBuildNamespace Namespace) const;
-
-  friend class SerializationFormat;
-  friend class TestFixture;
 };
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const EntityName &EN);
 
 } // namespace clang::ssaf
 
