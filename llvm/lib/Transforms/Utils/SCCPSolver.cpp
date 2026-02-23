@@ -431,12 +431,13 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
     TI->eraseFromParent();
     DTU.applyUpdatesPermissive(Updates);
   } else if (FeasibleSuccessors.size() > 1) {
-    SwitchInstProfUpdateWrapper SIW(*cast<SwitchInst>(TI));
+    SwitchInst &SI = cast<SwitchInst>(*TI);
+    SwitchInstProfUpdateWrapper SIW(SI);
     SmallVector<DominatorTree::UpdateType, 8> Updates;
 
     // If the default destination is unfeasible it will never be taken. Replace
     // it with a new block with a single Unreachable instruction.
-    BasicBlock *DefaultDest = (*SIW).getDefaultDest();
+    BasicBlock *DefaultDest = SI.getDefaultDest();
     if (!FeasibleSuccessors.contains(DefaultDest)) {
       if (!NewUnreachableBB) {
         NewUnreachableBB =
@@ -448,12 +449,12 @@ bool SCCPSolver::removeNonFeasibleEdges(BasicBlock *BB, DomTreeUpdater &DTU,
       }
 
       DefaultDest->removePredecessor(BB);
-      (*SIW).setDefaultDest(NewUnreachableBB);
+      SI.setDefaultDest(NewUnreachableBB);
       Updates.push_back({DominatorTree::Delete, BB, DefaultDest});
       Updates.push_back({DominatorTree::Insert, BB, NewUnreachableBB});
     }
 
-    for (auto CI = (*SIW).case_begin(); CI != (*SIW).case_end();) {
+    for (auto CI = SI.case_begin(); CI != SI.case_end();) {
       if (FeasibleSuccessors.contains(CI->getCaseSuccessor())) {
         ++CI;
         continue;

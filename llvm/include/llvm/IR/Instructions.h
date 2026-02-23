@@ -3550,8 +3550,6 @@ protected:
 
 public:
   using CaseWeightOpt = std::optional<uint32_t>;
-  SwitchInst &operator*() { return SI; }
-  operator SwitchInst *() { return &SI; }
 
   SwitchInstProfUpdateWrapper(SwitchInst &SI) : SI(SI) { init(); }
 

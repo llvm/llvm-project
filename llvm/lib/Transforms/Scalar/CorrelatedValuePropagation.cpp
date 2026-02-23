@@ -374,7 +374,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
         LVI->getConstantRangeAtUse(I->getOperandUse(0), /*UndefAllowed=*/false);
     unsigned ReachableCaseCount = 0;
 
-    for (auto CI = (*SIW).case_begin(), CE = (*SIW).case_end(); CI != CE;) {
+    for (auto CI = I->case_begin(), CE = I->case_end(); CI != CE;) {
       ConstantInt *Case = CI->getCaseValue();
       std::optional<bool> Predicate = std::nullopt;
       if (!CR.contains(Case->getValue()))
@@ -398,11 +398,11 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
         BasicBlock *Succ = CI->getCaseSuccessor();
         Succ->removePredecessor(BB);
         CI = SIW.removeCase(CI);
-        CE = (*SIW).case_end();
+        CE = I->case_end();
 
         // The condition can be modified by removePredecessor's PHI simplification
         // logic.
-        Cond = (*SIW).getCondition();
+        Cond = I->getCondition();
 
         ++NumDeadCases;
         Changed = true;
@@ -414,8 +414,8 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
         // This case always fires.  Arrange for the switch to be turned into an
         // unconditional branch by replacing the switch condition with the case
         // value.
-        (*SIW).setCondition(Case);
-        NumDeadCases += (*SIW).getNumCases();
+        I->setCondition(Case);
+        NumDeadCases += I->getNumCases();
         Changed = true;
         break;
       }
@@ -426,9 +426,9 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
     }
 
     // The default dest is unreachable if all cases are covered.
-    if (!(*SIW).defaultDestUnreachable() &&
+    if (!I->defaultDestUnreachable() &&
         !CR.isSizeLargerThan(ReachableCaseCount)) {
-      BasicBlock *DefaultDest = (*SIW).getDefaultDest();
+      BasicBlock *DefaultDest = I->getDefaultDest();
       BasicBlock *NewUnreachableBB =
           BasicBlock::Create(BB->getContext(), "default.unreachable",
                              BB->getParent(), DefaultDest);
@@ -436,7 +436,7 @@ static bool processSwitch(SwitchInst *I, LazyValueInfo *LVI,
       UI->setDebugLoc(DebugLoc::getTemporary());
 
       DefaultDest->removePredecessor(BB);
-      (*SIW).setDefaultDest(NewUnreachableBB);
+      I->setDefaultDest(NewUnreachableBB);
 
       if (SuccessorsCount[DefaultDest] == 1)
         DTU.applyUpdates({{DominatorTree::Delete, BB, DefaultDest}});
