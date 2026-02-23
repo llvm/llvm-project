@@ -17,13 +17,12 @@
 #include "llvm/Support/Error.h"
 #include <string>
 
-
 namespace llvm::advisor {
 
 class ViewerLauncher {
 public:
-  static auto launch(const std::string &outputDir,
-                                    int port = 8000) -> llvm::Expected<int>;
+  static auto launch(const std::string &outputDir, int port = 8000)
+      -> llvm::Expected<int>;
 
 private:
   static auto findPythonExecutable() -> llvm::Expected<std::string>;
@@ -31,6 +30,5 @@ private:
 };
 
 } // namespace llvm::advisor
-
 
 #endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_VIEWERLAUNCHER_H

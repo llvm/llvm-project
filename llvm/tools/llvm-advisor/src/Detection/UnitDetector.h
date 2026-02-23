@@ -21,6 +21,12 @@
 #include "llvm/Support/Error.h"
 #include <string>
 
+namespace clang {
+namespace driver {
+class Compilation;
+}
+} // namespace clang
+
 namespace llvm {
 namespace advisor {
 
@@ -30,7 +36,8 @@ public:
 
   llvm::Expected<llvm::SmallVector<CompilationUnitInfo, 4>>
   detectUnits(llvm::StringRef compiler,
-              const llvm::SmallVectorImpl<std::string> &args);
+              const llvm::SmallVectorImpl<std::string> &args,
+              const clang::driver::Compilation *DriverCompilation = nullptr);
 
 private:
   llvm::SmallVector<SourceFile, 4>

@@ -112,7 +112,8 @@ bool UnitMetadata::hasUnit(StringRef unitName) const {
   return units.find(unitName.str()) != units.end();
 }
 
-Expected<CompilationUnitInfo> UnitMetadata::getUnitInfo(StringRef unitName) const {
+Expected<CompilationUnitInfo>
+UnitMetadata::getUnitInfo(StringRef unitName) const {
   auto it = units.find(unitName.str());
   if (it != units.end())
     return it->second;
@@ -156,7 +157,9 @@ Expected<std::string> UnitMetadata::getMostRecentUnit() const {
   return recentUnits.front();
 }
 
-void UnitMetadata::removeUnit(StringRef unitName) { units.erase(unitName.str()); }
+void UnitMetadata::removeUnit(StringRef unitName) {
+  units.erase(unitName.str());
+}
 
 void UnitMetadata::cleanupOldUnits(int maxAgeInDays) {
   auto now = std::chrono::system_clock::now();
@@ -239,8 +242,8 @@ Error UnitMetadata::fromJson(StringRef jsonStr) {
 
     if (auto timestampOpt = unitObj->getString("timestamp")) {
       auto timestampOrError = parseTimestamp(*timestampOpt);
-      info.timestamp =
-          timestampOrError ? *timestampOrError : std::chrono::system_clock::now();
+      info.timestamp = timestampOrError ? *timestampOrError
+                                        : std::chrono::system_clock::now();
     } else {
       info.timestamp = std::chrono::system_clock::now();
     }

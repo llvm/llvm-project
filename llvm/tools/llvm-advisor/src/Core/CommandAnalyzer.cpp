@@ -13,15 +13,109 @@
 //===----------------------------------------------------------------------===//
 
 #include "CommandAnalyzer.h"
+#include "clang/Driver/Action.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Job.h"
+#include "clang/Driver/ToolChain.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/TargetParser/Host.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Program.h"
+#include <memory>
 
 namespace llvm {
 namespace advisor {
+
+namespace {
+
+BuildPhase phaseFromAction(clang::driver::Action::ActionClass Kind) {
+  switch (Kind) {
+  case clang::driver::Action::CompileJobClass:
+    return BuildPhase::Compilation;
+  case clang::driver::Action::AssembleJobClass:
+    return BuildPhase::Assembly;
+  case clang::driver::Action::LinkJobClass:
+    return BuildPhase::Linking;
+  case clang::driver::Action::LipoJobClass:
+    return BuildPhase::Linking;
+  case clang::driver::Action::StaticLibJobClass:
+    return BuildPhase::Archiving;
+  default:
+    return BuildPhase::Unknown;
+  }
+}
+
+BuildPhase detectPhaseFromCompilation(const clang::driver::Compilation &C) {
+  BuildPhase Detected = BuildPhase::Unknown;
+  for (const auto &Cmd : C.getJobs()) {
+    const auto *JA =
+        llvm::dyn_cast<clang::driver::JobAction>(&Cmd.getSource());
+    if (!JA)
+      continue;
+    BuildPhase Phase = phaseFromAction(JA->getKind());
+    if (Phase == BuildPhase::Linking || Phase == BuildPhase::Archiving)
+      return Phase;
+    if (Phase == BuildPhase::Assembly && Detected != BuildPhase::Linking)
+      Detected = Phase;
+    if (Phase == BuildPhase::Compilation && Detected == BuildPhase::Unknown)
+      Detected = Phase;
+  }
+  return Detected;
+}
+
+void collectFilesFromCompilation(const clang::driver::Compilation &C,
+                                 llvm::SmallVector<std::string, 8> &Inputs,
+                                 llvm::SmallVector<std::string, 8> &Outputs) {
+  llvm::DenseSet<llvm::StringRef> SeenInputs;
+  llvm::DenseSet<llvm::StringRef> SeenOutputs;
+  for (const auto &Cmd : C.getJobs()) {
+    const auto *JA =
+        llvm::dyn_cast<clang::driver::JobAction>(&Cmd.getSource());
+    if (!JA)
+      continue;
+
+    if (JA->getKind() == clang::driver::Action::CompileJobClass) {
+      for (const auto &Info : Cmd.getInputInfos()) {
+        if (!Info.isFilename())
+          continue;
+        if (SeenInputs.insert(Info.getFilename()).second)
+          Inputs.emplace_back(Info.getFilename());
+      }
+    }
+
+    for (const auto &Out : Cmd.getOutputFilenames()) {
+      if (SeenOutputs.insert(Out).second)
+        Outputs.emplace_back(Out);
+    }
+  }
+}
+
+void detectFeaturesFromArgs(llvm::ArrayRef<const char *> Argv,
+                            BuildContext &Context) {
+  for (const char *Arg : Argv) {
+    if (!Arg)
+      continue;
+    llvm::StringRef ArgRef(Arg);
+    if (ArgRef.starts_with("-g"))
+      Context.hasDebugInfo = true;
+    if (ArgRef.starts_with("-O") && ArgRef.size() > 2)
+      Context.hasOptimization = true;
+    if (ArgRef.contains("openmp") || ArgRef.contains("offload") ||
+        ArgRef.contains("cuda"))
+      Context.hasOffloading = true;
+    if (ArgRef.starts_with("-march="))
+      Context.metadata["target_arch"] = ArgRef.substr(7);
+    if (ArgRef.starts_with("-mtune="))
+      Context.metadata["tune"] = ArgRef.substr(7);
+  }
+}
+
+} // namespace
 
 CommandAnalyzer::CommandAnalyzer(llvm::StringRef command,
                                  const llvm::SmallVectorImpl<std::string> &args)
@@ -40,6 +134,32 @@ BuildContext CommandAnalyzer::analyze() const {
   detectBuildFeatures(context);
 
   return context;
+}
+
+void CommandAnalyzer::refineWithCompilation(
+    BuildContext &context,
+    const clang::driver::Compilation *DriverCompilation) const {
+  if (!DriverCompilation)
+    return;
+  context.tool = BuildTool::Clang;
+  BuildPhase Phase = detectPhaseFromCompilation(*DriverCompilation);
+  if (Phase != BuildPhase::Unknown)
+    context.phase = Phase;
+
+  if (context.inputFiles.empty() || context.outputFiles.empty()) {
+    llvm::SmallVector<std::string, 8> Inputs;
+    llvm::SmallVector<std::string, 8> Outputs;
+    collectFilesFromCompilation(*DriverCompilation, Inputs, Outputs);
+    if (context.inputFiles.empty())
+      context.inputFiles = Inputs;
+    if (context.outputFiles.empty())
+      context.outputFiles = Outputs;
+  }
+
+  llvm::SmallVector<const char *, 32> ArgPointers;
+  for (const auto &Arg : args)
+    ArgPointers.push_back(Arg.c_str());
+  detectFeaturesFromArgs(ArgPointers, context);
 }
 
 BuildTool CommandAnalyzer::detectBuildTool() const {
@@ -98,6 +218,14 @@ BuildPhase CommandAnalyzer::detectBuildPhase(BuildTool tool) const {
     if (hasObjectFile)
       return BuildPhase::Linking;
 
+    // No explicit stop-flag (-c/-S/-E) was found.  If the command has source
+    // files but no object-file inputs the driver will compile *and* link,
+    // producing an executable.  Treat that as Linking so that
+    // CompilationManager passes the invocation through unchanged — cc1 is
+    // never invoked directly for the link step.
+    // Note: hasObjectFile was already checked above and returned Linking, so
+    // at this point hasObjectFile is always false; we only need to check for
+    // source files here.
     bool hasSourceFile = false;
     for (const auto &Arg : args) {
       llvm::StringRef argRef(Arg);
@@ -109,8 +237,10 @@ BuildPhase CommandAnalyzer::detectBuildPhase(BuildTool tool) const {
         break;
       }
     }
+    // A bare "clang foo.c -o foo" (no -c) drives both compilation and linking.
+    // Classify as Linking so the invocation is forwarded without modification.
     if (hasSourceFile)
-      return BuildPhase::Compilation; // Default for source files
+      return BuildPhase::Linking;
   }
 
   return BuildPhase::Unknown;

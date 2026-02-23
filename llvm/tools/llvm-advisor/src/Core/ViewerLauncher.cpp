@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ViewerLauncher.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -84,10 +85,12 @@ Expected<std::string> ViewerLauncher::getViewerScript() {
 
 Expected<int> ViewerLauncher::launch(const std::string &outputDir, int port) {
   auto pythonOrErr = findPythonExecutable();
-  if (!pythonOrErr) return pythonOrErr.takeError();
+  if (!pythonOrErr)
+    return pythonOrErr.takeError();
 
   auto scriptOrErr = getViewerScript();
-  if (!scriptOrErr) return scriptOrErr.takeError();
+  if (!scriptOrErr)
+    return scriptOrErr.takeError();
 
   // Verify output directory exists and has data
   if (!sys::fs::exists(outputDir))
@@ -95,9 +98,13 @@ Expected<int> ViewerLauncher::launch(const std::string &outputDir, int port) {
         std::make_error_code(std::errc::no_such_file_or_directory),
         "Output directory does not exist: " + outputDir);
 
-  std::vector<StringRef> args = {*pythonOrErr, *scriptOrErr,
-                                 "--data-dir", outputDir,
-                                 "--port",     std::to_string(port)};
+  std::vector<std::string> ownedArgs = {*pythonOrErr, *scriptOrErr,
+                                        "--data-dir", outputDir,
+                                        "--port",     std::to_string(port)};
+  llvm::SmallVector<StringRef, 8> args;
+  args.reserve(ownedArgs.size());
+  for (const auto &arg : ownedArgs)
+    args.push_back(arg);
 
   // Execute the Python web server
   int result = sys::ExecuteAndWait(*pythonOrErr, args);

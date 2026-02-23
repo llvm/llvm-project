@@ -14,9 +14,12 @@
 
 #include "CompilationUnit.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include <unordered_map>
 
@@ -49,6 +52,13 @@ std::string CompilationUnit::getExecutablePath() const {
   return info.outputExecutable;
 }
 
+std::string CompilationUnit::getScratchDir() const {
+  llvm::SmallString<128> scratchDir;
+  llvm::sys::path::append(scratchDir, workDir, "units", info.name, "scratch");
+  llvm::sys::fs::create_directories(scratchDir);
+  return std::string(scratchDir.str());
+}
+
 void CompilationUnit::addGeneratedFile(llvm::StringRef type,
                                        llvm::StringRef path) {
   generatedFiles[type.str()].push_back(path.str());
@@ -79,6 +89,33 @@ CompilationUnit::getGeneratedFiles(llvm::StringRef type) const {
 const std::unordered_map<std::string, llvm::SmallVector<std::string, 8>> &
 CompilationUnit::getAllGeneratedFiles() const {
   return generatedFiles;
+}
+
+std::string CompilationUnit::buildCategoryDir(llvm::StringRef category) const {
+  llvm::SmallString<128> dir;
+  llvm::sys::path::append(dir, workDir, "units", info.name, category);
+  llvm::sys::fs::create_directories(dir);
+  return std::string(dir.str());
+}
+
+std::string CompilationUnit::makeUniqueStem(llvm::StringRef sourcePath) const {
+  llvm::hash_code hash = llvm::hash_value(sourcePath);
+  std::string hashSuffix =
+      llvm::formatv("{0:x}", static_cast<uint64_t>(hash)).str();
+  return (llvm::Twine(llvm::sys::path::stem(sourcePath)) + "_" + hashSuffix)
+      .str();
+}
+
+std::string CompilationUnit::makeArtifactPath(llvm::StringRef category,
+                                              llvm::StringRef sourcePath,
+                                              llvm::StringRef extension) const {
+  std::string categoryDir = buildCategoryDir(category);
+  llvm::SmallString<128> filePath(categoryDir);
+  std::string stem = makeUniqueStem(sourcePath);
+  llvm::SmallString<32> fileName(stem);
+  fileName += extension;
+  llvm::sys::path::append(filePath, fileName);
+  return std::string(filePath.str());
 }
 
 } // namespace advisor

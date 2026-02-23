@@ -22,8 +22,6 @@
 #include <string>
 #include <vector>
 
-
-
 namespace llvm::advisor::utils {
 
 struct CompilationUnitInfo {
@@ -81,15 +79,12 @@ private:
   [[nodiscard]] auto
   formatTimestamp(const std::chrono::system_clock::time_point &timePoint) const
       -> std::string;
-  [[nodiscard]] auto
-  parseTimestamp(StringRef timestampStr) const
+  [[nodiscard]] auto parseTimestamp(StringRef timestampStr) const
       -> Expected<std::chrono::system_clock::time_point>;
   [[nodiscard]] auto fileExists(StringRef path) const -> bool;
   auto createDirectoryIfNeeded(StringRef path) const -> Error;
 };
 
 } // namespace llvm::advisor::utils
-
-
 
 #endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_UTILS_UNITMETADATA_H

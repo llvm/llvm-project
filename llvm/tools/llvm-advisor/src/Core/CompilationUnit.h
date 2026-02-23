@@ -32,8 +32,10 @@ struct SourceFile {
 
 struct CompilationUnitInfo {
   std::string name;
+  std::string compilerPath;
   llvm::SmallVector<SourceFile, 4> sources;
   llvm::SmallVector<std::string, 8> compileFlags;
+  llvm::SmallVector<std::string, 16> cc1Args;
   std::string targetArch;
   bool hasOffloading = false;
   std::string outputObject;
@@ -51,16 +53,22 @@ public:
 
   auto getDataDir() const -> std::string;
   auto getExecutablePath() const -> std::string;
+  auto getScratchDir() const -> std::string;
 
   void addGeneratedFile(llvm::StringRef type, llvm::StringRef path);
 
   auto hasGeneratedFiles(llvm::StringRef type) const -> bool;
-  auto
-  getGeneratedFiles(llvm::StringRef type = "") const -> llvm::SmallVector<std::string, 8>;
-  auto
-  getAllGeneratedFiles() const -> const std::unordered_map<std::string, llvm::SmallVector<std::string, 8>> &;
+  auto getGeneratedFiles(llvm::StringRef type = "") const
+      -> llvm::SmallVector<std::string, 8>;
+  auto getAllGeneratedFiles() const -> const
+      std::unordered_map<std::string, llvm::SmallVector<std::string, 8>> &;
+  auto makeArtifactPath(llvm::StringRef category, llvm::StringRef sourcePath,
+                        llvm::StringRef extension) const -> std::string;
 
 private:
+  auto buildCategoryDir(llvm::StringRef category) const -> std::string;
+  auto makeUniqueStem(llvm::StringRef sourcePath) const -> std::string;
+
   CompilationUnitInfo info;
   std::string workDir;
   std::unordered_map<std::string, llvm::SmallVector<std::string, 8>>

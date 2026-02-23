@@ -19,6 +19,12 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
+namespace clang {
+namespace driver {
+class Compilation;
+}
+} // namespace clang
+
 namespace llvm {
 namespace advisor {
 
@@ -28,6 +34,9 @@ public:
                   const llvm::SmallVectorImpl<std::string> &args);
 
   BuildContext analyze() const;
+  void refineWithCompilation(
+      BuildContext &context,
+      const clang::driver::Compilation *DriverCompilation) const;
 
 private:
   BuildTool detectBuildTool() const;

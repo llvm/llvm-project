@@ -17,7 +17,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
-
 namespace llvm::advisor {
 
 struct FileClassification {
@@ -29,12 +28,12 @@ struct FileClassification {
 
 class FileClassifier {
 public:
-  [[nodiscard]] auto classifyFile(llvm::StringRef filePath) const -> FileClassification;
+  [[nodiscard]] auto classifyFile(llvm::StringRef filePath) const
+      -> FileClassification;
   [[nodiscard]] auto shouldCollect(llvm::StringRef filePath) const -> bool;
   [[nodiscard]] auto getLanguage(llvm::StringRef filePath) const -> std::string;
 };
 
 } // namespace llvm::advisor
-
 
 #endif

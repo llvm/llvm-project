@@ -14,6 +14,7 @@
 
 #include "CompilationManager.h"
 #include "../Detection/UnitDetector.h"
+#include "../Utils/FileClassifier.h"
 #include "../Utils/FileManager.h"
 #include "../Utils/UnitMetadata.h"
 #include "CommandAnalyzer.h"
@@ -25,6 +26,7 @@
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
+#include <optional>
 #include <unordered_set>
 
 namespace llvm {
@@ -87,7 +89,8 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
     const llvm::SmallVectorImpl<std::string> &args) {
 
   // Analyze the build command
-  BuildContext buildContext = CommandAnalyzer(compiler, args).analyze();
+  CommandAnalyzer Analyzer(compiler, args);
+  BuildContext buildContext = Analyzer.analyze();
 
   if (config.getVerbose())
     llvm::outs() << "Build phase: " << static_cast<int>(buildContext.phase)
@@ -98,9 +101,51 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
       buildContext.phase == BuildPhase::Archiving)
     return buildExecutor.execute(compiler, args, buildContext, tempDir);
 
-  // Detect compilation units
+  std::string ArtifactRoot = tempDir;
+
+  auto PreparedBuildOrErr = buildExecutor.prepareBuild(
+      compiler, args, buildContext, tempDir, ArtifactRoot);
+  if (!PreparedBuildOrErr)
+    return PreparedBuildOrErr.takeError();
+
+  auto PreparedBuild = std::move(*PreparedBuildOrErr);
+
+  // ── Analysis phase (pre-instrumentation)
+  // ──────────────────────────────────── Build a non-instrumented compilation
+  // from the original user args so that phase refinement and unit detection see
+  // clean, unmodified flags.  The result is used for analysis only and must
+  // never be executed.
+  std::optional<BuildExecutor::PreparedBuild> OriginalBuild;
+  {
+    auto OrErr = buildExecutor.buildOriginalCompilation(compiler, args);
+    if (OrErr)
+      OriginalBuild = std::move(*OrErr);
+    else
+      llvm::consumeError(OrErr.takeError()); // non-fatal; fall back to nullptr
+  }
+  const clang::driver::Compilation *OriginalCompilation =
+      (OriginalBuild && OriginalBuild->UsesDriver)
+          ? OriginalBuild->Compilation.get()
+          : nullptr;
+
+  Analyzer.refineWithCompilation(buildContext, OriginalCompilation);
+  if (!buildContext.outputFiles.empty()) {
+    const std::string &PrimaryOutput = buildContext.outputFiles.front();
+    for (auto &Site : buildContext.coverageSites)
+      if (Site.instrumentedBinary.empty())
+        Site.instrumentedBinary = PrimaryOutput;
+  }
+  if (!buildContext.coverageSites.empty())
+    coverageIngestion.registerSites(buildContext.coverageSites);
+
   UnitDetector detector(config);
-  auto detectedUnits = detector.detectUnits(compiler, args);
+  auto detectedUnits =
+      detector.detectUnits(compiler, args, OriginalCompilation);
+
+  // The original compilation is no longer needed — release it before executing
+  // the (potentially large) instrumented build.
+  OriginalBuild.reset();
+
   if (!detectedUnits)
     return detectedUnits.takeError();
 
@@ -108,22 +153,18 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
   for (auto &unitInfo : *detectedUnits) {
     units.push_back(std::make_unique<CompilationUnit>(unitInfo, tempDir));
 
-    // Register unit in metadata tracker
     unitMetadata->registerUnit(unitInfo.name);
   }
 
-  // Scan existing files before compilation
-  auto existingFiles = scanDirectory(initialWorkingDir);
-
-  // Execute compilation with instrumentation
-  auto execResult =
-      buildExecutor.execute(compiler, args, buildContext, tempDir);
+  auto execResult = buildExecutor.executePreparedBuild(PreparedBuild);
   if (!execResult)
     return execResult;
   int exitCode = *execResult;
 
-  // Collect generated files (even if compilation failed for analysis)
-  collectGeneratedFiles(existingFiles, units);
+  coverageIngestion.processOnce();
+  coverageIngestion.startWatching();
+
+  registerBuildArtifacts(buildContext, units);
 
   // Extract additional data
   DataExtractor extractor(config);
@@ -175,61 +216,23 @@ llvm::Expected<int> CompilationManager::executeWithDataCollection(
   return exitCode;
 }
 
-std::unordered_set<std::string>
-CompilationManager::scanDirectory(llvm::StringRef dir) const {
-  std::unordered_set<std::string> files;
-  std::error_code EC;
-  for (llvm::sys::fs::directory_iterator DI(dir, EC), DE; DI != DE && !EC;
-       DI.increment(EC)) {
-    if (DI->type() != llvm::sys::fs::file_type::directory_file) {
-      files.insert(DI->path());
-    }
-  }
-  return files;
-}
-
-void CompilationManager::collectGeneratedFiles(
-    const std::unordered_set<std::string> &existingFiles,
+void CompilationManager::registerBuildArtifacts(
+    const BuildContext &Ctx,
     llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units) {
+  if (units.empty())
+    return;
+
   FileClassifier classifier;
+  auto *unit = units.front().get();
 
-  // Collect files from temp directory
-  std::error_code EC;
-  for (llvm::sys::fs::recursive_directory_iterator DI(tempDir, EC), DE;
-       DI != DE && !EC; DI.increment(EC)) {
-    if (DI->type() != llvm::sys::fs::file_type::directory_file) {
-      std::string filePath = DI->path();
-      if (classifier.shouldCollect(filePath)) {
-        auto classification = classifier.classifyFile(filePath);
+  for (const auto &path : Ctx.expectedGeneratedFiles) {
+    if (!llvm::sys::fs::exists(path))
+      continue;
+    if (!classifier.shouldCollect(path))
+      continue;
 
-        // Add to appropriate unit
-        if (!units.empty())
-          units[0]->addGeneratedFile(classification.category, filePath);
-      }
-    }
-  }
-
-  // Also check for files that leaked into source directory
-  auto currentFiles = scanDirectory(initialWorkingDir);
-  for (const auto &file : currentFiles) {
-    if (existingFiles.find(file) == existingFiles.end()) {
-      if (classifier.shouldCollect(file)) {
-        auto classification = classifier.classifyFile(file);
-
-        // Move leaked file to temp directory
-        std::string destPath =
-            tempDir + "/" + llvm::sys::path::filename(file).str();
-        if (auto Err = FileManager::moveFile(file, destPath)) {
-          if (config.getVerbose()) {
-            llvm::errs() << "Warning: Failed to move leaked file: " << file
-                         << "\n";
-          }
-        } else {
-          if (!units.empty())
-            units[0]->addGeneratedFile(classification.category, destPath);
-        }
-      }
-    }
+    auto classification = classifier.classifyFile(path);
+    unit->addGeneratedFile(classification.category, path);
   }
 }
 
@@ -303,25 +306,18 @@ llvm::Error CompilationManager::organizeOutput(
 }
 
 void CompilationManager::cleanupLeakedFiles() {
-  // Clean up any remaining leaked files in source directory
-  auto currentFiles = scanDirectory(initialWorkingDir);
-  for (const auto &file : currentFiles) {
-    llvm::StringRef filename = llvm::sys::path::filename(file);
+  std::error_code EC;
+  for (llvm::sys::fs::directory_iterator I(initialWorkingDir, EC), E;
+       I != E && !EC; I.increment(EC)) {
+    if (I->type() != llvm::sys::fs::file_type::regular_file)
+      continue;
 
-    // Remove optimization remarks files that leaked
-    if (filename.ends_with(".opt.yaml") || filename.ends_with(".opt.yml")) {
-      llvm::sys::fs::remove(file);
-      if (config.getVerbose()) {
-        llvm::outs() << "Cleaned up leaked file: " << file << "\n";
-      }
-    }
-
-    // Remove profile files that leaked
-    if (filename.ends_with(".profraw") || filename.ends_with(".profdata")) {
-      llvm::sys::fs::remove(file);
-      if (config.getVerbose()) {
-        llvm::outs() << "Cleaned up leaked file: " << file << "\n";
-      }
+    llvm::StringRef filename = llvm::sys::path::filename(I->path());
+    if (filename.ends_with(".opt.yaml") || filename.ends_with(".opt.yml") ||
+        filename.ends_with(".profraw") || filename.ends_with(".profdata")) {
+      llvm::sys::fs::remove(I->path());
+      if (config.getVerbose())
+        llvm::outs() << "Cleaned up leaked file: " << I->path() << "\n";
     }
   }
 }

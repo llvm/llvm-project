@@ -21,7 +21,6 @@
 #include <string>
 #include <unordered_map>
 
-
 namespace llvm::advisor {
 
 enum class BuildPhase {
@@ -71,6 +70,5 @@ struct BuildContext {
 };
 
 } // namespace llvm::advisor
-
 
 #endif // LLVM_TOOLS_LLVM_ADVISOR_SRC_CORE_BUILDCONTEXT_H

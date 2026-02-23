@@ -16,10 +16,17 @@
 
 #include "../Config/AdvisorConfig.h"
 #include "CompilationUnit.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <memory>
 #include <string>
+
+namespace clang {
+class CompilerInstance;
+class FrontendAction;
+} // namespace clang
 
 namespace llvm {
 namespace advisor {
@@ -61,7 +68,14 @@ private:
   Error extractXRay(CompilationUnit &Unit, llvm::StringRef TempDir);
   Error extractOptDot(CompilationUnit &Unit, llvm::StringRef TempDir);
 
-  Error runCompilerWithFlags(const llvm::SmallVector<std::string, 8> &Args);
+  Error runFrontendAction(
+      const CompilationUnitInfo &UnitInfo, llvm::StringRef SourcePath,
+      llvm::StringRef OutputFile, llvm::ArrayRef<std::string> ExtraArgs,
+      llvm::function_ref<std::unique_ptr<clang::FrontendAction>()>
+          ActionFactory,
+      llvm::raw_ostream *DiagOS = nullptr,
+      llvm::function_ref<void(clang::CompilerInstance &)> SetupCompiler =
+          nullptr);
 
   using ExtractorMethod = Error (DataExtractor::*)(CompilationUnit &Unit,
                                                    llvm::StringRef TempDir);

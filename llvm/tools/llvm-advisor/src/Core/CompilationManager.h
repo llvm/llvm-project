@@ -19,6 +19,7 @@
 #include "../Utils/UnitMetadata.h"
 #include "BuildExecutor.h"
 #include "CompilationUnit.h"
+#include "CoverageIngestionManager.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -34,19 +35,18 @@ public:
   explicit CompilationManager(const AdvisorConfig &config);
   ~CompilationManager();
 
-  auto
-  executeWithDataCollection(const std::string &compiler,
-                            const llvm::SmallVectorImpl<std::string> &args) -> llvm::Expected<int>;
+  auto executeWithDataCollection(const std::string &compiler,
+                                 const llvm::SmallVectorImpl<std::string> &args)
+      -> llvm::Expected<int>;
 
 private:
-  [[nodiscard]] auto scanDirectory(llvm::StringRef dir) const -> std::unordered_set<std::string>;
-
-  void collectGeneratedFiles(
-      const std::unordered_set<std::string> &existingFiles,
-      llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units);
+  void registerBuildArtifacts(
+      const BuildContext &Ctx,
+      llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &Units);
 
   auto organizeOutput(
-      const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units) -> llvm::Error;
+      const llvm::SmallVectorImpl<std::unique_ptr<CompilationUnit>> &units)
+      -> llvm::Error;
 
   void cleanupLeakedFiles();
 
@@ -55,6 +55,7 @@ private:
   std::string tempDir;
   std::string initialWorkingDir;
   std::unique_ptr<utils::UnitMetadata> unitMetadata;
+  CoverageIngestionManager coverageIngestion;
 };
 
 } // namespace llvm::advisor

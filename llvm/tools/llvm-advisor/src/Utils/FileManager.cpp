@@ -24,8 +24,7 @@ namespace advisor {
 
 Expected<std::string> FileManager::createTempDir(llvm::StringRef prefix) {
   SmallString<128> tempDirPath;
-  if (std::error_code ec =
-          sys::fs::createUniqueDirectory(prefix, tempDirPath))
+  if (std::error_code ec = sys::fs::createUniqueDirectory(prefix, tempDirPath))
     return createStringError(ec, "Failed to create unique temporary directory");
   return std::string(tempDirPath.str());
 }
@@ -39,11 +38,12 @@ Error FileManager::copyDirectory(StringRef source, StringRef dest) {
 
   std::error_code ec;
   sys::fs::recursive_directory_iterator iter(source, ec), end;
-  if (ec) return createFileError(source, ec, "Failed to iterate directory");
+  if (ec)
+    return createFileError(source, ec, "Failed to iterate directory");
 
   // Functional handlers with minimal state capture
-  const auto handleEntry = [dest](const sys::fs::directory_entry& entry,
-                                 StringRef sourceNorm) -> Error {
+  const auto handleEntry = [dest](const sys::fs::directory_entry &entry,
+                                  StringRef sourceNorm) -> Error {
     const auto currentPath = entry.path();
     StringRef currentPathRef(currentPath);
     SmallString<128> destPath = dest;
@@ -65,7 +65,6 @@ Error FileManager::copyDirectory(StringRef source, StringRef dest) {
           "Path '{}' not contained in source directory '{}'",
           currentPath.c_str(), sourceNorm.str().c_str());
 
-
     sys::path::append(destPath, relative);
     auto statusOrErr = entry.status();
     if (!statusOrErr)
@@ -79,7 +78,8 @@ Error FileManager::copyDirectory(StringRef source, StringRef dest) {
       if (!parent.empty()) {
         std::error_code createEc = sys::fs::create_directories(parent);
         if (createEc)
-          return createFileError(parent, createEc, "Failed to create parent directory");
+          return createFileError(parent, createEc,
+                                 "Failed to create parent directory");
       }
       return Error::success();
     };
@@ -91,17 +91,19 @@ Error FileManager::copyDirectory(StringRef source, StringRef dest) {
       return Error::success();
     }
 
-    if (Error err = ensureParent()) return err;
+    if (Error err = ensureParent())
+      return err;
     if (std::error_code ec = sys::fs::copy_file(currentPath, destPath))
-      return createFileError(
-          currentPath, ec, "Failed to copy file to '%s'", destPath.c_str());
+      return createFileError(currentPath, ec, "Failed to copy file to '%s'",
+                             destPath.c_str());
 
     return Error::success();
   };
 
   // Declarative iteration with error propagation
   while (iter != end && !ec) {
-    if (Error err = handleEntry(*iter, sourceNorm)) return err;
+    if (Error err = handleEntry(*iter, sourceNorm))
+      return err;
     iter.increment(ec);
   }
 
@@ -110,7 +112,8 @@ Error FileManager::copyDirectory(StringRef source, StringRef dest) {
 }
 
 Error FileManager::removeDirectory(llvm::StringRef path) {
-  if (!sys::fs::exists(path)) return Error::success();
+  if (!sys::fs::exists(path))
+    return Error::success();
 
   std::error_code EC;
   SmallVector<std::string, 8> Dirs;
@@ -125,7 +128,8 @@ Error FileManager::removeDirectory(llvm::StringRef path) {
     }
   }
 
-  if (EC) return createStringError(EC, "Error iterating directory " + path);
+  if (EC)
+    return createStringError(EC, "Error iterating directory " + path);
 
   for (const auto &Dir : llvm::reverse(Dirs)) {
     if (auto E = sys::fs::remove(Dir))
@@ -174,12 +178,16 @@ SmallVector<std::string, 8> FileManager::findFilesByExtension(
 }
 
 Error FileManager::moveFile(llvm::StringRef source, llvm::StringRef dest) {
-  if (source == dest) return Error::success();
+  if (source == dest)
+    return Error::success();
 
-  if (sys::fs::create_directories(sys::path::parent_path(dest)))
-    return createStringError(
-        std::make_error_code(std::errc::io_error),
-        "Failed to create parent directory for destination: " + dest);
+  llvm::StringRef parent = sys::path::parent_path(dest);
+  if (!parent.empty()) {
+    if (sys::fs::create_directories(parent))
+      return createStringError(
+          std::make_error_code(std::errc::io_error),
+          "Failed to create parent directory for destination: " + dest);
+  }
 
   if (sys::fs::rename(source, dest)) {
     // If rename fails, try copy and remove
@@ -198,12 +206,16 @@ Error FileManager::moveFile(llvm::StringRef source, llvm::StringRef dest) {
 }
 
 Error FileManager::copyFile(llvm::StringRef source, llvm::StringRef dest) {
-  if (source == dest) return Error::success();
+  if (source == dest)
+    return Error::success();
 
-  if (sys::fs::create_directories(sys::path::parent_path(dest))) {
-    return createStringError(
-        std::make_error_code(std::errc::io_error),
-        "Failed to create parent directory for destination: " + dest);
+  llvm::StringRef parent = sys::path::parent_path(dest);
+  if (!parent.empty()) {
+    if (sys::fs::create_directories(parent)) {
+      return createStringError(
+          std::make_error_code(std::errc::io_error),
+          "Failed to create parent directory for destination: " + dest);
+    }
   }
 
   if (sys::fs::copy_file(source, dest))
