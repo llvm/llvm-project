@@ -1,5 +1,6 @@
 # Make sure we do not create illegal packet.
 # RUN: llc -march=hexagon -run-pass global-sched -debug %s -o - | FileCheck %s
+# REQUIRES: asserts
 
 # CHECK-NOT: Non newifiable in this bundle
 

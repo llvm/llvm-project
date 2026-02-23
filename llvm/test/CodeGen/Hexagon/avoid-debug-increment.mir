@@ -1,6 +1,7 @@
 # This test case has been reduced from one of the files from nullstone benchmark.
 # It verifies that no stalls are being missed when compiling with '-g'.
 
+# REQUIRES: asserts
 # RUN: llc -march=hexagon -mcpu=hexagonv73 -run-pass=global-sched -debug-only=global_sched %s -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: bb.3:

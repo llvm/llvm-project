@@ -1353,6 +1353,13 @@ enum SymbolDownload {
   eSymbolDownloadForeground = 2,
 };
 
+enum SymbolSharedCacheUse {
+  eSymbolSharedCacheUseHostLLDBMemory = 1,
+  eSymbolSharedCacheUseHostSharedCache = 2,
+  eSymbolSharedCacheUseHostAndInferiorSharedCache = 3,
+  eSymbolSharedCacheUseInferiorSharedCacheOnly = 4,
+};
+
 /// Used in the SBProcess AddressMask/FixAddress methods.
 enum AddressMaskType {
   eAddressMaskTypeCode = 0,

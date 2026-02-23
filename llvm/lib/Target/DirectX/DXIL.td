@@ -1137,6 +1137,16 @@ def WavePrefixOp : DXILOp<121, wavePrefixOp> {
                    IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Sum>,
                    IntrinArgI8<SignedOpKind_Unsigned>
                  ]>,
+    IntrinSelect<int_dx_wave_prefix_product,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>,
+    IntrinSelect<int_dx_wave_prefix_uproduct,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveOpKind_Product>,
+                   IntrinArgI8<SignedOpKind_Unsigned>
+                 ]>,
   ];
 
   let arguments = [OverloadTy, Int8Ty, Int8Ty];
