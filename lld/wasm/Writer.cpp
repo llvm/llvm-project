@@ -1033,7 +1033,12 @@ static StringRef getOutputDataSegmentName(const InputChunk &seg) {
 OutputSegment *Writer::createOutputSegment(StringRef name) {
   LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
   OutputSegment *s = make<OutputSegment>(name);
-  if (ctx.isMultithreaded())
+  // In the shared memory case, all data segments must be passive since they will be initialized once
+  // by the main thread and then shared with other threads. In the non-shared memory case, we use
+  // passive segments only for TLS segments, so that they can be reused, and for .bss segments, which
+  // don't need to be included in the binary at all. 
+  bool passiveForCMTC = ctx.componentModelThreadContext && (s->isTLS() || s->name.startswith(".bss"));
+  if (ctx.arg.sharedMemory || passiveForCMTC)
     s->initFlags = WASM_DATA_SEGMENT_IS_PASSIVE;
   if (!ctx.arg.relocatable && name.starts_with(".bss"))
     s->isBss = true;
@@ -1158,10 +1163,10 @@ void Writer::createSyntheticInitFunctions() {
   createApplyDataRelocationsFunction();
 
   // Passive segments are used to avoid memory being reinitialized on each
-  // thread's instantiation. These passive segments are initialized and
-  // dropped in __wasm_init_memory, which is registered as the start function
-  // We also initialize bss segments (using memory.fill) as part of this
-  // function.
+  // thread's instantiation for wasi-threads, and for TLS when using cooperative threads. 
+  // These passive segments are initialized and dropped in __wasm_init_memory, which is 
+  // registered as the start function.
+  // We also initialize bss segments (using memory.fill) as part of this function.
   if (hasPassiveInitializedSegments()) {
     ctx.sym.initMemory = symtab->addSyntheticFunction(
         "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
@@ -1354,9 +1359,9 @@ void Writer::createInitMemoryFunction() {
         }
 
         // When we initialize the TLS segment we also set the `__tls_base`
-        // global.  This allows the runtime to use this static copy of the
-        // TLS data for the first/main thread.
-        if (ctx.arg.sharedMemory && s->isTLS()) {
+        // global/thread.context[1]. This allows the runtime to use this 
+        // static copy of the TLS data for the first/main thread.
+        if (ctx.isMultithreaded() && s->isTLS()) {
           if (ctx.isPic) {
             // Cache the result of the addionion in local 0
             writeU8(os, WASM_OPCODE_LOCAL_TEE, "local.tee");
