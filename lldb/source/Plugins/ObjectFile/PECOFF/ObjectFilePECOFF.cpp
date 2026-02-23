@@ -1108,6 +1108,21 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   return std::nullopt;
 }
 
+std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
+  llvm::StringRef pdb_file;
+  const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  if (llvm::Error Err = m_binary->getDebugPDBInfo(pdb_info, pdb_file)) {
+    // Ignore corrupt DebugInfo sections
+    llvm::consumeError(std::move(Err));
+    return std::nullopt;
+  }
+  if (pdb_file.empty()) {
+    // No DebugInfo section
+    return std::nullopt;
+  }
+  return FileSpec(pdb_file);
+}
+
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
