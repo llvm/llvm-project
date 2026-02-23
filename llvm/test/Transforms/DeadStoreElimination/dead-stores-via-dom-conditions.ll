@@ -20,7 +20,6 @@ define void @remove_tautological_store_via_dom_condition(ptr %x, i1 %c) {
 ; CHECK:       [[JOIN]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
-; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
 ; CHECK-NEXT:    br label %[[END]]
 ; CHECK:       [[END]]:
 ; CHECK-NEXT:    ret void
@@ -114,8 +113,6 @@ define void @remove_tautological_store_via_dom_condition_3(ptr %x, ptr %y, i1 %c
 ; CHECK-NEXT:    [[CMP_2:%.*]] = icmp eq i32 [[VAL_2]], 0
 ; CHECK-NEXT:    br i1 [[CMP_2]], label %[[IF_EQ:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_EQ]]:
-; CHECK-NEXT:    store i32 0, ptr [[X]], align 4
-; CHECK-NEXT:    store i32 0, ptr [[Y]], align 4
 ; CHECK-NEXT:    br label %[[JOIN:.*]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    br label %[[JOIN]]
