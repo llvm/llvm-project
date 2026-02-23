@@ -17,5 +17,4 @@
 
 using namespace cir;
 
-LowerTypes::LowerTypes(LowerModule &lm)
-    : lm(lm), dataLayout(lm.getModule()) {}
+LowerTypes::LowerTypes(LowerModule &lm) : lm(lm), dataLayout(lm.getModule()) {}
