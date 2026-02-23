@@ -1650,7 +1650,7 @@ void ExprEngine::processCleanupTemporaryBranch(const CXXBindTemporaryExpr *BTE,
                                                ExplodedNodeSet &Dst,
                                                const CFGBlock *DstT,
                                                const CFGBlock *DstF) {
-  BranchNodeBuilder TempDtorBuilder(Pred, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder TempDtorBuilder(Dst, BldCtx, DstT, DstF);
   ProgramStateRef State = Pred->getState();
   const LocationContext *LC = Pred->getLocationContext();
   if (getObjectUnderConstruction(State, BTE, LC)) {
@@ -2850,7 +2850,7 @@ void ExprEngine::processBranch(
 
   // Check for NULL conditions; e.g. "for(;;)"
   if (!Condition) {
-    BranchNodeBuilder NullCondBldr(Pred, Dst, BldCtx, DstT, DstF);
+    BranchNodeBuilder NullCondBldr(Dst, BldCtx, DstT, DstF);
     NullCondBldr.generateNode(Pred->getState(), true, Pred);
     return;
   }
@@ -2870,7 +2870,7 @@ void ExprEngine::processBranch(
   if (CheckersOutSet.empty())
     return;
 
-  BranchNodeBuilder Builder(CheckersOutSet, Dst, BldCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, BldCtx, DstT, DstF);
   for (ExplodedNode *PredN : CheckersOutSet) {
     if (PredN->isSink())
       continue;
@@ -2979,7 +2979,7 @@ void ExprEngine::processStaticInitializer(
   const auto *VD = cast<VarDecl>(DS->getSingleDecl());
   ProgramStateRef state = Pred->getState();
   bool initHasRun = state->contains<InitializedGlobalsSet>(VD);
-  BranchNodeBuilder Builder(Pred, Dst, BuilderCtx, DstT, DstF);
+  BranchNodeBuilder Builder(Dst, BuilderCtx, DstT, DstF);
 
   if (!initHasRun) {
     state = state->add<InitializedGlobalsSet>(VD);
@@ -3108,7 +3108,7 @@ void ExprEngine::processSwitch(NodeBuilderContext &BC, const SwitchStmt *Switch,
                                ExplodedNode *Pred, ExplodedNodeSet &Dst) {
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Pred, Dst, BC);
+  SwitchNodeBuilder Builder(Dst, BC);
 
   ProgramStateRef State = Pred->getState();
   SVal CondV = State->getSVal(Condition, Pred->getLocationContext());

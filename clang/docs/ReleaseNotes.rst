@@ -160,6 +160,8 @@ Deprecated Compiler Flags
 Modified Compiler Flags
 -----------------------
 - The `-mno-outline` and `-moutline` compiler flags are now allowed on RISC-V and X86, which both support the machine outliner.
+- The `-mno-outline` flag will now add the `nooutline` IR attribute, so that
+  `-mno-outline` and `-moutline` objects can be mixed correctly during LTO.
 
 Removed Compiler Flags
 ----------------------
@@ -270,6 +272,7 @@ Bug Fixes in This Version
 - Clang now outputs relative paths of embeds for dependency output. (#GH161950)
 - Fixed an assertion failure when evaluating ``_Countof`` on invalid ``void``-typed operands. (#GH180893)
 - Fixed a ``-Winvalid-noreturn`` false positive for unreachable ``try`` blocks following an unconditional ``throw``. (#GH174822)
+- Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

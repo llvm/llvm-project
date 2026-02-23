@@ -61,6 +61,12 @@ def InstFormatNDS_BRANCH_10 : InstFormat<27>;
 def InstFormatOther         : InstFormat<31>;
 
 
+// Indicates which operands cannot be the same as the Vd operand. This is used
+// by the assembler to provide some checking of the RVV overlap rules. We can't
+// check all overlap rules. Narrowing instructions allow overlap in the first
+// part of the register group, but not the later parts. We are not able to check
+// this in the assembler as we do not know how big the register group is since
+// that is controlled dynamically with vtype.
 class RISCVVConstraint<bit VS2 = 0, bit VS1 = 0, bit VM = 0> {
   bits<3> Value = {VM, VS1, VS2};
 }

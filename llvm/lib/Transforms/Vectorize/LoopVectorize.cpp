@@ -4139,10 +4139,10 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPRecipeBase::VPReplicateSC:
       case VPRecipeBase::VPInstructionSC:
       case VPRecipeBase::VPCanonicalIVPHISC:
+      case VPRecipeBase::VPCurrentIterationPHISC:
       case VPRecipeBase::VPVectorPointerSC:
       case VPRecipeBase::VPVectorEndPointerSC:
       case VPRecipeBase::VPExpandSCEVSC:
-      case VPRecipeBase::VPEVLBasedIVPHISC:
       case VPRecipeBase::VPPredInstPHISC:
       case VPRecipeBase::VPBranchOnMaskSC:
         continue;
@@ -4672,8 +4672,8 @@ LoopVectorizationPlanner::selectInterleaveCount(VPlan &Plan, ElementCount VF,
     return 1;
 
   if (any_of(Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis(),
-             IsaPred<VPEVLBasedIVPHIRecipe>)) {
-    LLVM_DEBUG(dbgs() << "LV: Preference for VP intrinsics indicated. "
+             IsaPred<VPCurrentIterationPHIRecipe>)) {
+    LLVM_DEBUG(dbgs() << "LV: Loop requires variable-length step. "
                          "Unroll factor forced to be 1.\n");
     return 1;
   }
@@ -7461,8 +7461,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
   VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
-  // Canonicalize EVL loops after regions are dissolved.
-  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
+  // Convert loops with variable-length stepping after regions are dissolved.
+  VPlanTransforms::convertToVariableLengthStep(BestVPlan);
   VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
   VPlanTransforms::materializeVectorTripCount(
       BestVPlan, VectorPH, CM.foldTailByMasking(),
@@ -9069,11 +9069,17 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
   AddFreezeForFindLastIVReductions(MainPlan, true);
   AddFreezeForFindLastIVReductions(EpiPlan, false);
 
-  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
-  VPValue *VectorTC = &MainPlan.getVectorTripCount();
+  VPValue *VectorTC = nullptr;
+  auto *Term =
+      MainPlan.getVectorLoopRegion()->getExitingBasicBlock()->getTerminator();
+  [[maybe_unused]] bool MatchedTC =
+      match(Term, m_BranchOnCount(m_VPValue(), m_VPValue(VectorTC)));
+  assert(MatchedTC && "must match vector trip count");
+
   // If there is a suitable resume value for the canonical induction in the
   // scalar (which will become vector) epilogue loop, use it and move it to the
   // beginning of the scalar preheader. Otherwise create it below.
+  VPBasicBlock *MainScalarPH = MainPlan.getScalarPreheader();
   auto ResumePhiIter =
       find_if(MainScalarPH->phis(), [VectorTC](VPRecipeBase &R) {
         return match(&R, m_VPInstruction<Instruction::PHI>(m_Specific(VectorTC),

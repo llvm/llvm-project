@@ -29,6 +29,8 @@ class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let Constraints = "$vd = $vd_wb";
+
+  let UseNamedOperandTable = true;
 }
 
 class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
@@ -49,6 +51,8 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
   let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
+
+  let UseNamedOperandTable = true;
 }
 
 //===----------------------------------------------------------------------===//

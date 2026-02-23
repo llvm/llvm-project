@@ -1356,6 +1356,32 @@ bool CGHLSLRuntime::emitResourceArrayCopy(LValue &LHS, Expr *RHSExpr,
   return EndIndex.has_value();
 }
 
+RawAddress CGHLSLRuntime::createBufferMatrixTempAddress(const LValue &LV,
+                                                        SourceLocation Loc,
+                                                        CodeGenFunction &CGF) {
+
+  assert(LV.getType()->isConstantMatrixType() && "expected matrix type");
+  assert(LV.getType().getAddressSpace() == LangAS::hlsl_constant &&
+         "expected cbuffer matrix");
+
+  QualType MatQualTy = LV.getType();
+  llvm::Type *MemTy = CGF.ConvertTypeForMem(MatQualTy);
+  llvm::Type *LayoutTy = HLSLBufferLayoutBuilder(CGF.CGM).layOutType(MatQualTy);
+
+  if (LayoutTy == MemTy)
+    return LV.getAddress();
+
+  Address SrcAddr = LV.getAddress();
+  // NOTE: B\C CreateMemTemp flattens MatrixTypes which causes
+  // overlapping GEPs in emitBufferCopy. Use CreateTempAlloca with
+  // the non-padded layout.
+  CharUnits Align =
+      CharUnits::fromQuantity(CGF.CGM.getDataLayout().getABITypeAlign(MemTy));
+  RawAddress DestAlloca = CGF.CreateTempAlloca(MemTy, Align, "matrix.buf.copy");
+  emitBufferCopy(CGF, DestAlloca, SrcAddr, MatQualTy);
+  return DestAlloca;
+}
+
 std::optional<LValue> CGHLSLRuntime::emitBufferArraySubscriptExpr(
     const ArraySubscriptExpr *E, CodeGenFunction &CGF,
     llvm::function_ref<llvm::Value *(bool Promote)> EmitIdxAfterBase) {

@@ -8439,6 +8439,10 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
   unsigned BW = VT.getScalarSizeInBits();
   unsigned Opcode = Node->getOpcode();
 
+  // Scalarize if the vector multiplication is unlikely to work.
+  if (VT.isVector() && !isOperationLegalOrCustom(ISD::MUL, VT))
+    return DAG.UnrollVectorOp(Node);
+
   switch (Opcode) {
   case ISD::CLMUL: {
     // NOTE: If you change this expansion, please update the cost model
