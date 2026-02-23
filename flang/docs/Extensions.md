@@ -483,6 +483,9 @@ end
   are to the same value.  Distinct initializations remain errors.
 * A pointer component that has no default initialization or explicit value
   in a structure constructor is defaulted to `NULL()`.
+* Multiple specifications of a prefix-spec on the same procedure are allowed,
+  with a warning.  C1552 (F2023) specifies that at most one of each shall be
+  present.
 
 ### Extensions supported when enabled by options
 
