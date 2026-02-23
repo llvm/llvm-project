@@ -111,10 +111,10 @@ TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
   EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
   EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
 
-  auto P1 = Builder.buildEntityPointerLevel(E1, 2);
-  auto P2 = Builder.buildEntityPointerLevel(E1, 2);
-  auto P3 = Builder.buildEntityPointerLevel(E1, 1);
-  auto P4 = Builder.buildEntityPointerLevel(E2, 2);
+  auto P1 = buildEntityPointerLevel(E1, 2);
+  auto P2 = buildEntityPointerLevel(E1, 2);
+  auto P3 = buildEntityPointerLevel(E1, 1);
+  auto P4 = buildEntityPointerLevel(E2, 2);
 
   EXPECT_EQ(P1, P2);
   EXPECT_NE(P1, P3);
@@ -131,15 +131,15 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
   EntityId E3 = Builder.addEntity({"c:@F@baz", "", {}});
 
-  auto P1 = Builder.buildEntityPointerLevel(E1, 1);
-  auto P2 = Builder.buildEntityPointerLevel(E1, 2);
-  auto P3 = Builder.buildEntityPointerLevel(E2, 1);
-  auto P4 = Builder.buildEntityPointerLevel(E2, 2);
-  auto P5 = Builder.buildEntityPointerLevel(E3, 1);
-  auto P6 = Builder.buildEntityPointerLevel(E3, 2);
+  auto P1 = buildEntityPointerLevel(E1, 1);
+  auto P2 = buildEntityPointerLevel(E1, 2);
+  auto P3 = buildEntityPointerLevel(E2, 1);
+  auto P4 = buildEntityPointerLevel(E2, 2);
+  auto P5 = buildEntityPointerLevel(E3, 1);
+  auto P6 = buildEntityPointerLevel(E3, 2);
 
   EntityPointerLevelSet Set{P1, P2, P3, P4, P5};
-  auto ES = Builder.buildUnsafeBufferUsageEntitySummary(std::move(Set));
+  auto ES = buildUnsafeBufferUsageEntitySummary(std::move(Set));
   ASSERT_TRUE(ES);
 
   EXPECT_CONTAINS(*ES, P1);
@@ -179,8 +179,7 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   {                                                                            \
     std::optional<EntityId> Entity_##Name = getEntityId##ForReturn(#Name);     \
     EXPECT_NE(Entity_##Name, std::nullopt);                                    \
-    TestFun((Summary),                                                         \
-            Builder.buildEntityPointerLevel(*(Entity_##Name), PtrLv));         \
+    TestFun((Summary), buildEntityPointerLevel(*(Entity_##Name), PtrLv));      \
   }
 #define CHECK_NO_ENTITY_POINTER_LEVEL(Name, PtrLv, Summary)                    \
   CHECK_ENTITY_POINTER_LEVEL(Name, PtrLv, *Summary, EXPECT_EXCLUDES, )
