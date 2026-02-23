@@ -205,7 +205,7 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn) {
 }
 
 void MemAllocatorTy::MemPoolTy::printUsage() {
-  ODBG_OS([&](OLDT_Alloc, llvm::raw_ostream &Os) {
+  ODBG_OS(OLDT_Alloc, [&](llvm::raw_ostream &Os) {
     auto PrintNum = [&](uint64_t Num) {
       if (Num > 1e9)
         Os << llvm::format("%.2e", float(Num));
