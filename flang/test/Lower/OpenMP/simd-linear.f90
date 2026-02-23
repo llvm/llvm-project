@@ -1,7 +1,7 @@
 ! This test checks lowering of OpenMP SIMD Directive
 ! with linear clause
 
-! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=50 %s -o - 2>&1 | FileCheck %s
+! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=60 %s -o - 2>&1 | FileCheck %s
 ! RUN: %flang_fc1 -fopenmp -emit-hlfir -fopenmp-version=45 %s -o - 2>&1 | FileCheck %s --check-prefix=IMPLICIT
 
 !CHECK: %[[X_alloca:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFsimple_linearEx"}
