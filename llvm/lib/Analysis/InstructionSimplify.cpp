@@ -79,7 +79,6 @@ static Value *simplifyCastInst(unsigned, Value *, Type *, const SimplifyQuery &,
                                unsigned);
 static Value *simplifyGEPInst(Type *, Value *, ArrayRef<Value *>,
                               GEPNoWrapFlags, const SimplifyQuery &, unsigned);
-static Value *simplifyStructuredGEP(StructuredGEPInst *I);
 static Value *simplifySelectInst(Value *, Value *, Value *,
                                  const SimplifyQuery &, unsigned);
 static Value *simplifyInstructionWithOperands(Instruction *I,
@@ -4539,11 +4538,6 @@ static Value *simplifyWithOpsReplaced(Value *V,
       if (NewOps.size() == 2 && match(NewOps[1], m_Zero()))
         return NewOps[0];
     }
-
-    if (auto SGEP = dyn_cast<StructuredGEPInst>(I)) {
-      if (SGEP->getNumIndices() == 0)
-        return NewOps[0];
-    }
   } else {
     // The simplification queries below may return the original value. Consider:
     //   %div = udiv i32 %arg, %arg2
@@ -5369,10 +5363,6 @@ static Value *simplifyGEPInst(Type *SrcTy, Value *Ptr,
 Value *llvm::simplifyGEPInst(Type *SrcTy, Value *Ptr, ArrayRef<Value *> Indices,
                              GEPNoWrapFlags NW, const SimplifyQuery &Q) {
   return ::simplifyGEPInst(SrcTy, Ptr, Indices, NW, Q, RecursionLimit);
-}
-
-static Value *simplifyStructuredGEP(StructuredGEPInst *I) {
-  return I->getNumIndices() == 0 ? I->getPointerOperand() : nullptr;
 }
 
 /// Given operands for an InsertValueInst, see if we can fold the result.
@@ -6626,6 +6616,8 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     if (isSplatValue(Op0))
       return Op0;
     break;
+  case Intrinsic::structured_gep:
+    return cast<StructuredGEPInst>(Call)->getPointerOperand();
   default:
     break;
   }
@@ -7577,9 +7569,6 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
          "context instruction should be in the same function");
 
   const SimplifyQuery Q = SQ.CxtI ? SQ : SQ.getWithInstruction(I);
-
-  if (auto *SGEP = dyn_cast<StructuredGEPInst>(I))
-    return simplifyStructuredGEP(SGEP);
 
   switch (I->getOpcode()) {
   default:
