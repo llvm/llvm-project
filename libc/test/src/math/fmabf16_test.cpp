@@ -32,7 +32,7 @@ TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
       // for (uint16_t v2 = POS_START; v2 <= POS_STOP; v2 += 256) {
 
         bfloat16 x = FPBits(v1).get_val();
-        bfloat16 y = FPBits(v2).get_val();
+        bfloat16 y = FPBits(POS_START).get_val();
         bfloat16 z = FPBits(POS_START).get_val();
         
         mpfr::TernaryInput<bfloat16> input{x, y, z};
@@ -49,7 +49,7 @@ TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
       // for (uint16_t v2 = NEG_START; v2 <= NEG_STOP; v2 += 256) {
 
         bfloat16 x = FPBits(v1).get_val();
-        bfloat16 y = FPBits(v2).get_val();
+        bfloat16 y = FPBits(NEG_START).get_val();
         bfloat16 z = FPBits(NEG_START).get_val();
 
         mpfr::TernaryInput<bfloat16> input{x, y, z};
