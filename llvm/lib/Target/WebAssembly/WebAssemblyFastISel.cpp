@@ -1309,7 +1309,7 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
 static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
   switch (Opc) {
   default:
-    return false;
+    return 0;
   case WebAssembly::I32_EXTEND8_S_I32:
     Opc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
     break;
