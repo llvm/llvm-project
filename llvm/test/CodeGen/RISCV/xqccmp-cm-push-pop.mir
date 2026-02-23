@@ -6,6 +6,8 @@
 ---
 name: push_rvlist15
 tracksRegLiveness: true
+frameInfo:
+  maxCallFrameSize: 0
 body:                   |
   bb.0:
     ; CHECK-XQCCMP32-LABEL: name: push_rvlist15

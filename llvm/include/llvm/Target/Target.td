@@ -1160,6 +1160,16 @@ class RegisterOperand<RegisterClassLike regclass, string pm = "printOperand">
   Register GIZeroRegister = ?;
 }
 
+/// RegisterByHwMode - Useful for InstAliases with a hardcoded register operand
+/// where the operand type is a RegClassByHwMode.
+class RegisterByHwMode<RegisterClassLike RegClass, list<HwMode> Modes,
+                       list<Register> Registers>
+    : HwModeSelect<Modes, !size(Registers)>, RegisterOperand<RegClass> {
+  list<Register> Objects = Registers;
+  // Note: No assertions to validate the registers against the
+  // register class here, this is done inside llvm-tblgen.
+}
+
 let OperandType = "OPERAND_IMMEDIATE" in {
 def i1imm  : Operand<i1>;
 def i8imm  : Operand<i8>;
@@ -2030,9 +2040,9 @@ class Target {
 
   // AllowRegisterRenaming - Controls whether this target allows
   // post-register-allocation renaming of registers. This is done by
-  // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to 1
-  // for all opcodes if this flag is set to 0.
-  int AllowRegisterRenaming = 0;
+  // setting hasExtraDefRegAllocReq and hasExtraSrcRegAllocReq to true
+  // for all opcodes if this flag is set to false.
+  bit AllowRegisterRenaming = false;
 
   // RegistersAreIntervals - Controls whether registers units must form
   // contiguous intervals for each register.
@@ -2045,7 +2055,7 @@ class Target {
   //
   // This enables interval-based representation of register units, which can
   // improve data structure representations in target backends.
-  int RegistersAreIntervals = 0;
+  bit RegistersAreIntervals = false;
 }
 
 //===----------------------------------------------------------------------===//
