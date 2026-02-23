@@ -8364,8 +8364,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     return nullptr;
 
   // Create whole-vector selects for find-last recurrences.
-  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan,
-                      CM.foldTailByMasking()))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
   // Create partial reduction recipes for scaled reductions and transform

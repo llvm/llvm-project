@@ -1325,7 +1325,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   return true;
 }
 
-bool VPlanTransforms::handleFindLastReductions(VPlan &Plan, bool FoldTail) {
+bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return false;
 
@@ -1350,7 +1350,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan, bool FoldTail) {
   //   ...extract-last-active replaces compute-reduction-result.
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
-  VPValue *HeaderMask = FoldTail ? vputils::findHeaderMask(Plan) : nullptr;
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
     if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
@@ -1435,6 +1435,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan, bool FoldTail) {
     VPValue *DataSelect =
         Builder.createSelect(AnyOf, Op1, Op2, SelectR->getDebugLoc());
     SelectR->replaceAllUsesWith(DataSelect);
+    PhiR->setBackedgeValue(DataSelect);
     SelectR->eraseFromParent();
 
     Builder.setInsertPoint(RdxResult);
