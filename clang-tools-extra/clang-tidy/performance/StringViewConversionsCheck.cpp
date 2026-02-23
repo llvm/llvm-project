@@ -55,9 +55,8 @@ void StringViewConversionsCheck::registerMatchers(MatchFinder *Finder) {
       cxxMemberCallExpr(callee(cxxMethodDecl(hasAnyName("c_str", "data"))),
                         on(ignoringParenImpCasts(RedundantTemporaryString)));
 
-  // Main matcher: finds cases where an expression that's convertible to a
-  // std::string_view, instead of being used to construct the std::string_view
-  // directly, is first needlessly converted to a std::string.
+  // Main matcher: finds cases where an expression convertible to std::string_view 
+  // is first converted to std::string unnecessarily.
   Finder->addMatcher(
       cxxMemberCallExpr(
           callee(memberExpr(member(hasName("operator basic_string_view")),
