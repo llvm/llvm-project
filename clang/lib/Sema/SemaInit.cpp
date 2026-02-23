@@ -1917,9 +1917,8 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
     // Not a sublist: just consume directly.
     // Note: In HLSL, elements of the InitListExpr are in row-major order, so no
     // change is needed to the Index.
-    unsigned RowMajorIdx = Index;
-    ElemEnt.setElementIndex(RowMajorIdx);
-    CheckSubElementType(ElemEnt, IList, ElemTy, RowMajorIdx, StructuredList,
+    ElemEnt.setElementIndex(Index);
+    CheckSubElementType(ElemEnt, IList, ElemTy, Index, StructuredList,
                         StructuredIndex);
     ++Index;
   }
