@@ -185,7 +185,7 @@ struct Unannotated {
 void modelIterators() {
   std::vector<int>::iterator it = std::vector<int>().begin(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                                               // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  (void)it; // cfg-note {{later used here}}
+  (void)*it; // cfg-note {{later used here}}
 }
 
 std::vector<int>::iterator modelIteratorReturn() {

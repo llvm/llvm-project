@@ -105,12 +105,10 @@ private:
   /// If so, creates a `TestPointFact` and returns true.
   bool handleTestPoint(const CXXFunctionalCastExpr *FCE);
 
-  // Treats an expression as a use of the referenced object. It will be
-  // checked for use-after-free unless it is later marked as being written to
-  // (e.g. on the left-hand side of an assignment in the case of a DeclRefExpr).
+  // Treats an expression as a use of the referenced object.
   void handleUse(const Expr *E);
 
-  void markUseAsWrite(const DeclRefExpr *DRE);
+  void markUseAsWrite(const Expr *E);
 
   llvm::SmallVector<Fact *> issuePlaceholderLoans();
   FactManager &FactMgr;

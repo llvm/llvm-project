@@ -4,6 +4,8 @@
 
 bool Bool();
 
+void use(std::string_view);
+
 namespace SimpleResize {
 void IteratorInvalidAfterResize(int new_size) {
   std::vector<int> v;
@@ -320,24 +322,24 @@ namespace Strings {
 void append(std::string str) {
   std::string_view view = str;  // expected-warning {{object whose reference is captured is later invalidated}}
   str += "456";                 // expected-note {{invalidated here}}
-  (void)view;                   // expected-note {{later used here}}
+  use(view);                    // expected-note {{later used here}}
 }
 void reassign(std::string str, std::string str2) {
   std::string_view view = str;  // expected-warning {{object whose reference is captured is later invalidated}}
   str = str2;                   // expected-note {{invalidated here}}
-  (void)view;                   // expected-note {{later used here}}
+  use(view);                    // expected-note {{later used here}}
 }
 
 void append_call(std::string str) {
   std::string_view view = str;  // expected-warning {{object whose reference is captured is later invalidated}}
   str.append("456");            // expected-note {{invalidated here}}
-  (void)view;                   // expected-note {{later used here}}
+  use(view);                    // expected-note {{later used here}}
 }
 
 void replace_call(std::string str) {
   std::string_view view = str;  // expected-warning {{object whose reference is captured is later invalidated}}
   str.replace(0, 1, "456");     // expected-note {{invalidated here}}
-  (void)view;                   // expected-note {{later used here}}
+  use(view);                    // expected-note {{later used here}}
 }
 } // namespace Strings
 
@@ -347,7 +349,7 @@ void ReassigningAfterMove(std::string str, std::string str2) {
   std::vector<std::string> someStorage;
   someStorage.push_back(std::move(str));
   str = str2;   // expected-note {{invalidated here}}
-  (void)view;   // expected-note {{later used here}}
+  use(view);    // expected-note {{later used here}}
 }
 
 namespace ContainersAsFields {
