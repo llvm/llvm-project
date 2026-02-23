@@ -18,7 +18,7 @@ define <2 x i32> @fcvtzs_v2i32_scalar_to_vector(float %a) {
 define <4 x i32> @fcvtzs_v4i32_scalar_to_vector(float %a) {
 ; CHECK-LABEL: fcvtzs_v4i32_scalar_to_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs w8, d0
+; CHECK-NEXT:    fcvtzs w8, s0
 ; CHECK-NEXT:    fmov s0, w8
 ; CHECK-NEXT:    ret
   %c = fptosi float %a to i32
@@ -29,7 +29,7 @@ define <4 x i32> @fcvtzs_v4i32_scalar_to_vector(float %a) {
 define <1 x i64> @fcvtzs_v1i64_scalar_to_vector(double %a) {
 ; CHECK-LABEL: fcvtzs_v1i64_scalar_to_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs x8, h0
+; CHECK-NEXT:    fcvtzs x8, d0
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %c = fptosi double %a to i64
@@ -40,7 +40,7 @@ define <1 x i64> @fcvtzs_v1i64_scalar_to_vector(double %a) {
 define <2 x i64> @fcvtzs_v2i64_scalar_to_vector(double %a) {
 ; CHECK-LABEL: fcvtzs_v2i64_scalar_to_vector:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fcvtzs x8, s0
+; CHECK-NEXT:    fcvtzs x8, d0
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
   %c = fptosi double %a to i64
