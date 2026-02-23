@@ -1220,6 +1220,7 @@ define void @stores_never_sunk_past_alising_loads(ptr %dst, ptr %src, ptr %cond)
 ; CHECK-NEXT:    br i1 [[TMP22]], label %[[PRED_LOAD_IF14:.*]], label %[[PRED_LOAD_CONTINUE15:.*]]
 ; CHECK:       [[PRED_LOAD_IF14]]:
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP0]]
+; CHECK-NEXT:    store i32 99, ptr [[TMP23]], align 4, !alias.scope [[META102]], !noalias [[META104]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = load i32, ptr [[TMP23]], align 4, !alias.scope [[META102]], !noalias [[META104]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <2 x i32> poison, i32 [[TMP24]], i32 0
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE15]]
@@ -1229,6 +1230,7 @@ define void @stores_never_sunk_past_alising_loads(ptr %dst, ptr %src, ptr %cond)
 ; CHECK-NEXT:    br i1 [[TMP27]], label %[[PRED_LOAD_IF16:.*]], label %[[PRED_LOAD_CONTINUE17:.*]]
 ; CHECK:       [[PRED_LOAD_IF16]]:
 ; CHECK-NEXT:    [[TMP28:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i32 [[TMP1]]
+; CHECK-NEXT:    store i32 99, ptr [[TMP28]], align 4, !alias.scope [[META102]], !noalias [[META104]]
 ; CHECK-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP28]], align 4, !alias.scope [[META102]], !noalias [[META104]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i32> [[TMP26]], i32 [[TMP29]], i32 1
 ; CHECK-NEXT:    br label %[[PRED_LOAD_CONTINUE17]]
@@ -1270,6 +1272,7 @@ loop:
 
 then:
   %gep.src.then = getelementptr inbounds i32, ptr %src, i32 %iv
+  store i32 99, ptr %gep.src.then, align 4
   %l.src.then = load i32, ptr %gep.src.then, align 4
   %add = add i32 %l.src.then, 10
   %gep.dst = getelementptr inbounds i32, ptr %dst, i32 %iv
