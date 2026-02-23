@@ -77,6 +77,48 @@ protected:
   MockServer server;
 };
 
+TEST_F(GDBRemoteCommunicationClientTest, vCont_c) {
+  std::future<bool> write_result = std::async(std::launch::async, [&] {
+    return client.GetVContSupported("c");
+  });
+  HandlePacket(server, "vCont?", "$vCont;c#16");
+  ASSERT_TRUE(write_result.get());
+  ASSERT_FALSE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_TRUE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+  return;
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, vCont_C) {
+  std::future<bool> write_result = std::async(std::launch::async, [&] {
+    return client.GetVContSupported("c");
+  });
+  HandlePacket(server, "vCont?", "$vCont;C#16");
+  ASSERT_FALSE(write_result.get());
+  ASSERT_TRUE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_TRUE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+  return;
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, vCont_cC) {
+  std::future<bool> write_result = std::async(std::launch::async, [&] {
+    return client.GetVContSupported("c");
+  });
+  HandlePacket(server, "vCont?", "$vCont;c;C#16");
+  ASSERT_TRUE(write_result.get());
+  ASSERT_TRUE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_TRUE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+  return;
+}
+
 TEST_F(GDBRemoteCommunicationClientTest, WriteRegister) {
   const lldb::tid_t tid = 0x47;
   const uint32_t reg_num = 4;
