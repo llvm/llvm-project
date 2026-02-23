@@ -211,3 +211,26 @@ void [[clang::annotate_type("webkit.nodelete")]] makeSubData() {
   // expected-warning@-1{{A function 'makeSubData' has [[clang::annotate_type("webkit.nodelete")]] but it contains code that could destruct an object}}
   SubData::create()->doSomething();
 }
+
+struct ObjectWithConstructor {
+  ObjectWithConstructor(double x) { }
+  ObjectWithConstructor(float x) { }
+  ObjectWithConstructor(decltype(nullptr)) { }
+  ObjectWithConstructor(void*) { }
+  ObjectWithConstructor(int x[3]) { }
+  ObjectWithConstructor(void* x[2]) { }
+  enum class E { V1, V2 };
+  ObjectWithConstructor(E) { }
+};
+
+void [[clang::annotate_type("webkit.nodelete")]] makeObjectWithConstructor() {
+  ObjectWithConstructor obj1(nullptr);
+  ObjectWithConstructor obj2(0.5);
+  double x = 0.7;
+  ObjectWithConstructor obj3(x);
+  int ints[] = { 1, 2, 3 };
+  ObjectWithConstructor obj4(ints);
+  void* ptrs[] = { nullptr, nullptr };
+  ObjectWithConstructor obj5(ptrs);
+  ObjectWithConstructor obj6(ObjectWithConstructor::E::V1);
+}

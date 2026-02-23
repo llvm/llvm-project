@@ -527,8 +527,8 @@ class TrivialFunctionAnalysisVisitor
     if (Ty->isPointerOrReferenceType())
       return true;
 
-    // Primitive types don't have destructors.
-    if (Ty->isIntegralOrEnumerationType())
+    // Fundamental types (integral, nullptr_t, etc...) don't have destructors.
+    if (Ty->isFundamentalType() || Ty->isIntegralOrEnumerationType())
       return true;
 
     if (const auto *R = Ty->getAsCXXRecordDecl()) {
