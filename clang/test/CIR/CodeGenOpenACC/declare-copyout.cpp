@@ -52,14 +52,19 @@ struct Struct {
     // CHECK-NEXT: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
     // CHECK-NEXT: %[[LOC_HSE_ARR_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier always>, name = "LocalHSEArr[1:1]"}
     // CHECK-NEXT: %[[ENTER:.*]] = acc.declare_enter dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
-    //
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER]]) dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSE"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier always>, name = "ArgInt"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier always>, name = "LocalHSE"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier always>, name = "LocalInt"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) to varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSEPtr[1:1]"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) to varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {modifiers = #acc<data_clause_modifier always>, name = "LocalHSEArr[1:1]"}
+
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: } cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER]]) dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSE"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier always>, name = "ArgInt"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier always>, name = "LocalHSE"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier always>, name = "LocalInt"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) to varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSEPtr[1:1]"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) to varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {modifiers = #acc<data_clause_modifier always>, name = "LocalHSEArr[1:1]"}
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
   }
   void MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEPtr);
 };
@@ -104,27 +109,38 @@ void Struct::MemFunc2(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *ArgHSEP
     // CHECK-NEXT: %[[ENTER1:.*]] = acc.declare_enter dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
 
 #pragma acc declare copyout(alwaysout:LocalHSE, LocalInt, LocalHSEArr[1:1])
-    // CHECK-NEXT: %[[LOC_HSE_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSE"} 
-    // CHECK-NEXT: %[[LOC_INT_CREATE:.*]] = acc.create varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalInt"}
-    // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
-    // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
-    // CHECK-NEXT: %[[IDX:.*]] = arith.constant 0 : i64
-    // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
-    // CHECK-NEXT: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
-    // CHECK-NEXT: %[[LOC_HSE_ARR_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSEArr[1:1]"}
-    // CHECK-NEXT: %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   %[[LOC_HSE_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSE"} 
+    // CHECK-NEXT:   %[[LOC_INT_CREATE:.*]] = acc.create varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalInt"}
+    // CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT:   %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT:   %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:   %[[IDX:.*]] = arith.constant 0 : i64
+    // CHECK-NEXT:   %[[STRIDE:.*]] = arith.constant 1 : i64
+    // CHECK-NEXT:   %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
+    // CHECK-NEXT:   %[[LOC_HSE_ARR_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSEArr[1:1]"}
+    // CHECK-NEXT:   %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
 
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER2]]) dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSE"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalInt"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) to varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSEArr[1:1]"}
-    //
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER1]]) dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "ArgHSE"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "ArgInt"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) to varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "ArgHSEPtr[1:1]"}
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER2]]) dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSE"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalInt"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) to varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "LocalHSEArr[1:1]"}
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
+ 
+    // CHECK-NEXT: cir.yield
+
+    // CHECK-NEXT: cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER1]]) dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "ArgHSE"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "ArgInt"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) to varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) {modifiers = #acc<data_clause_modifier alwaysout>, name = "ArgHSEPtr[1:1]"}
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
 }
 
 extern "C" void do_thing();
@@ -160,36 +176,46 @@ extern "C" void NormalFunc(HasSideEffects ArgHSE, int ArgInt, HasSideEffects *Ar
     // CHECK-NEXT: %[[ARG_HSE_PTR_CREATE:.*]] = acc.create varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) -> !cir.ptr<!cir.ptr<!rec_HasSideEffects>> {dataClause = #acc<data_clause acc_copyout>, modifiers = #acc<data_clause_modifier always>, name = "ArgHSEPtr[1:1]"}
     // CHECK-NEXT: %[[ENTER1:.*]] = acc.declare_enter dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
     {
-      // CHECK-NEXT: cir.scope {
+
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT: cir.scope {
 #pragma acc declare copyout(LocalHSE, LocalInt, LocalHSEArr[1:1])
-    // CHECK-NEXT: %[[LOC_HSE_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copyout>, name = "LocalHSE"} 
-    // CHECK-NEXT: %[[LOC_INT_CREATE:.*]] = acc.create varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copyout>, name = "LocalInt"}
-    // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
-    // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
-    // CHECK-NEXT: %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
-    // CHECK-NEXT: %[[IDX:.*]] = arith.constant 0 : i64
-    // CHECK-NEXT: %[[STRIDE:.*]] = arith.constant 1 : i64
-    // CHECK-NEXT: %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
-    // CHECK-NEXT: %[[LOC_HSE_ARR_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {dataClause = #acc<data_clause acc_copyout>, name = "LocalHSEArr[1:1]"}
-    // CHECK-NEXT: %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
+    // CHECK-NEXT:   %[[LOC_HSE_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) -> !cir.ptr<!rec_HasSideEffects> {dataClause = #acc<data_clause acc_copyout>, name = "LocalHSE"} 
+    // CHECK-NEXT:   %[[LOC_INT_CREATE:.*]] = acc.create varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) -> !cir.ptr<!s32i> {dataClause = #acc<data_clause acc_copyout>, name = "LocalInt"}
+    // CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT:   %[[LB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
+    // CHECK-NEXT:   %[[UB:.*]] = builtin.unrealized_conversion_cast %[[ONE]] : !s32i to si32
+    // CHECK-NEXT:   %[[IDX:.*]] = arith.constant 0 : i64
+    // CHECK-NEXT:   %[[STRIDE:.*]] = arith.constant 1 : i64
+    // CHECK-NEXT:   %[[BOUND2:.*]] = acc.bounds lowerbound(%[[LB]] : si32) extent(%[[UB]] : si32) stride(%[[STRIDE]] : i64) startIdx(%[[IDX]] : i64)
+    // CHECK-NEXT:   %[[LOC_HSE_ARR_CREATE:.*]] = acc.create varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) -> !cir.ptr<!cir.array<!rec_HasSideEffects x 5>> {dataClause = #acc<data_clause acc_copyout>, name = "LocalHSEArr[1:1]"}
+    // CHECK-NEXT:   %[[ENTER2:.*]] = acc.declare_enter dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
 
     do_thing();
-    // CHECK-NEXT: cir.call @do_thing
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER2]]) dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {name = "LocalHSE"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) {name = "LocalInt"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) to varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {name = "LocalHSEArr[1:1]"}
+    // CHECK-NEXT: cir.cleanup.scope {
+    // CHECK-NEXT:   cir.call @do_thing
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: } cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER2]]) dataOperands(%[[LOC_HSE_CREATE]], %[[LOC_INT_CREATE]], %[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>)
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[LOC_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {name = "LocalHSE"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[LOC_INT_ALLOCA]] : !cir.ptr<!s32i>) {name = "LocalInt"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[LOC_HSE_ARR_CREATE]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) bounds(%[[BOUND2]]) to varPtr(%[[LOC_HSE_ARR_ALLOCA]] : !cir.ptr<!cir.array<!rec_HasSideEffects x 5>>) {name = "LocalHSEArr[1:1]"}
+    // CHECK-NEXT:   cir.yield
+    // CHECK-NEXT: }
     }
     // CHECK-NEXT: }
 
     // Make sure that cleanup gets put in the right scope.
     do_thing();
     // CHECK-NEXT: cir.call @do_thing
-    // CHECK-NEXT: acc.declare_exit token(%[[ENTER1]]) dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
- 
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSE"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier always>, name = "ArgInt"}
-    // CHECK-NEXT: acc.copyout accPtr(%[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) to varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSEPtr[1:1]"}
+    // CHECK-NEXT: cir.yield
+
+    // CHECK-NEXT: } cleanup normal {
+    // CHECK-NEXT:   acc.declare_exit token(%[[ENTER1]]) dataOperands(%[[ARG_HSE_CREATE]], %[[ARG_INT_CREATE]], %[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!rec_HasSideEffects>, !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!rec_HasSideEffects>>)
+
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_HSE_CREATE]] : !cir.ptr<!rec_HasSideEffects>) to varPtr(%[[ARG_HSE_ALLOCA]] : !cir.ptr<!rec_HasSideEffects>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSE"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_INT_CREATE]] : !cir.ptr<!s32i>) to varPtr(%[[ARG_INT_ALLOCA]] : !cir.ptr<!s32i>) {modifiers = #acc<data_clause_modifier always>, name = "ArgInt"}
+    // CHECK-NEXT:   acc.copyout accPtr(%[[ARG_HSE_PTR_CREATE]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) bounds(%[[BOUND1]]) to varPtr(%[[ARG_HSE_PTR_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasSideEffects>>) {modifiers = #acc<data_clause_modifier always>, name = "ArgHSEPtr[1:1]"}
 }
 

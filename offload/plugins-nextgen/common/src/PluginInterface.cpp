@@ -1221,7 +1221,7 @@ Expected<void *> PinnedAllocationMapTy::registerMemory(void *HstPtr,
   auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
                                               BaseDevAccessiblePtr, BaseSize);
   if (!IsPinnedOrErr)
-    return std::move(IsPinnedOrErr.takeError());
+    return IsPinnedOrErr.takeError();
 
   // If pinned, just insert the entry representing the whole pinned buffer.
   if (*IsPinnedOrErr) {
@@ -1239,7 +1239,7 @@ Expected<void *> PinnedAllocationMapTy::registerMemory(void *HstPtr,
   // host buffer and retrieve the device accessible pointer.
   auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
   if (!DevAccessiblePtrOrErr)
-    return std::move(DevAccessiblePtrOrErr.takeError());
+    return DevAccessiblePtrOrErr.takeError();
 
   // Now insert the new entry into the map.
   if (auto Err = insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size))

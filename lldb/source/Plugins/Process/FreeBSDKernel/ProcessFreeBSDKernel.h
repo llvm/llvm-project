@@ -37,23 +37,23 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  lldb_private::Status DoDestroy() override;
-
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
-
-  void RefreshStateAfterStop() override;
 
   lldb_private::Status DoLoadCore() override;
 
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
-  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
-                      lldb_private::Status &error) override;
+  lldb_private::Status DoDestroy() override;
+
+  void RefreshStateAfterStop() override;
 
 protected:
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;
+
+  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+                      lldb_private::Status &error) override;
 
   lldb::addr_t FindSymbol(const char *name);
 
