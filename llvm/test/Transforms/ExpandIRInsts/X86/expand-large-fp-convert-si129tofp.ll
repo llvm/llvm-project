@@ -5,7 +5,8 @@
 define half @si129tohalf(i129 %a) {
 ; CHECK-LABEL: @si129tohalf(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -90,7 +91,8 @@ define half @si129tohalf(i129 %a) {
 define float @si129tofloat(i129 %a) {
 ; CHECK-LABEL: @si129tofloat(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -174,7 +176,8 @@ define float @si129tofloat(i129 %a) {
 define double @si129todouble(i129 %a) {
 ; CHECK-LABEL: @si129todouble(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -263,7 +266,8 @@ define double @si129todouble(i129 %a) {
 define x86_fp80 @si129tox86_fp80(i129 %a) {
 ; CHECK-LABEL: @si129tox86_fp80(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -347,7 +351,8 @@ define x86_fp80 @si129tox86_fp80(i129 %a) {
 define fp128 @si129tofp128(i129 %a) {
 ; CHECK-LABEL: @si129tofp128(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -431,11 +436,12 @@ define <2 x float> @si129tofloatv2(<2 x i129> %a) {
 ; CHECK-LABEL: @si129tofloatv2(
 ; CHECK-NEXT:  itofp-entryitofp-entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i129> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i129 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP110:%.*]] = freeze i129 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i129 [[TMP110]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ITOFP_RETURN1:%.*]], label [[ITOFP_IF_END2:%.*]]
 ; CHECK:       itofp-if-end2:
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i129 [[TMP0]], 128
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i129 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i129 [[TMP110]], 128
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i129 [[TMP2]], [[TMP110]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i129 [[TMP3]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP4]], i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i129 [[TMP5]] to i32
@@ -508,11 +514,12 @@ define <2 x float> @si129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:    [[TMP53:%.*]] = phi float [ [[TMP52]], [[ITOFP_IF_END269]] ], [ 0.000000e+00, [[ITOFP_ENTRYITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <2 x float> poison, float [[TMP53]], i64 0
 ; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <2 x i129> [[A]], i64 1
-; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i129 [[TMP55]], 0
+; CHECK-NEXT:    [[TMP111:%.*]] = freeze i129 [[TMP55]]
+; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i129 [[TMP111]], 0
 ; CHECK-NEXT:    br i1 [[TMP56]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
-; CHECK-NEXT:    [[TMP57:%.*]] = ashr i129 [[TMP55]], 128
-; CHECK-NEXT:    [[TMP58:%.*]] = xor i129 [[TMP57]], [[TMP55]]
+; CHECK-NEXT:    [[TMP57:%.*]] = ashr i129 [[TMP111]], 128
+; CHECK-NEXT:    [[TMP58:%.*]] = xor i129 [[TMP57]], [[TMP111]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = sub i129 [[TMP58]], [[TMP57]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP59]], i1 true)
 ; CHECK-NEXT:    [[TMP61:%.*]] = trunc i129 [[TMP60]] to i32

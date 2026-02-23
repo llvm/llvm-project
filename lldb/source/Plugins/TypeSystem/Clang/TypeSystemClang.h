@@ -657,8 +657,7 @@ public:
 
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                           bool &is_complex) override;
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override;
 
   unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
   unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;

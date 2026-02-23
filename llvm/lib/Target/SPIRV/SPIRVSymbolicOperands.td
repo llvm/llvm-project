@@ -572,7 +572,7 @@ defm FloatControls2
     : CapabilityOperand<6029, 0x10200, 0, [SPV_KHR_float_controls2], []>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
-defm FmaKHR : CapabilityOperand<6035, 0, 0, [SPV_KHR_fma], []>;
+defm FmaKHR : CapabilityOperand<6030, 0, 0, [SPV_KHR_fma], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
 defm AtomicBFloat16AddINTEL : CapabilityOperand<6255, 0, 0, [SPV_INTEL_16bit_atomics], []>;
 defm AtomicFloat16MinMaxEXT : CapabilityOperand<5616, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
@@ -1690,7 +1690,7 @@ multiclass MemoryOperandOperand<bits<32> value, bits<32> minVersion, bits<32> ma
 
 defm None : MemoryOperandOperand<0x0, 0, 0, [], []>;
 defm Volatile : MemoryOperandOperand<0x1, 0, 0, [], []>;
-defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], []>;
+defm Aligned : MemoryOperandOperand<0x2, 0, 0, [], [Kernel]>;
 defm Nontemporal : MemoryOperandOperand<0x4, 0, 0, [], []>;
 defm MakePointerAvailableKHR : MemoryOperandOperand<0x8, 0, 0, [], [VulkanMemoryModelKHR]>;
 defm MakePointerVisibleKHR : MemoryOperandOperand<0x10, 0, 0, [], [VulkanMemoryModelKHR]>;

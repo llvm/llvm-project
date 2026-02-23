@@ -10,6 +10,8 @@ struct [[gsl::Owner]] MyObj {
   MyObj();
   MyObj(int);
   MyObj(const MyObj&);
+  MyObj(MyObj&&);
+  MyObj& operator=(MyObj&&);
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
   
@@ -172,7 +174,7 @@ void potential_if_branch(bool cond) {
   MyObj* p = &safe;
   if (cond) {
     MyObj temp;
-    p = &temp;  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = &temp;  // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   if (!cond)
     (void)*p;   // expected-note {{later used here}}
@@ -200,7 +202,7 @@ void definite_potential_together(bool cond) {
     if (cond)
       p_definite = &s;  // expected-warning {{does not live long enough}}
     if (cond)
-      p_maybe = &s;     // expected-warning {{may not live long enough}}         
+      p_maybe = &s;     // expected-warning {{does not live long enough}}         
   }                     // expected-note 2 {{destroyed here}}
   (void)*p_definite;    // expected-note {{later used here}}
   if (!cond)
@@ -233,7 +235,7 @@ void potential_due_to_conditional_killing(bool cond) {
   MyObj* q;
   {
     MyObj s;
-    q = &s;       // expected-warning {{may not live long enough}}
+    q = &s;       // expected-warning {{does not live long enough}}
   }               // expected-note {{destroyed here}}
   if (cond) {
     // 'q' is conditionally "rescued". 'p' is not.
@@ -246,7 +248,7 @@ void potential_for_loop_use_after_loop_body(MyObj safe) {
   MyObj* p = &safe;
   for (int i = 0; i < 1; ++i) {
     MyObj s;
-    p = &s;     // expected-warning {{may not live long enough}}
+    p = &s;     // expected-warning {{does not live long enough}}
   }             // expected-note {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
 }
@@ -266,7 +268,7 @@ void potential_for_loop_gsl() {
   View v = safe;
   for (int i = 0; i < 1; ++i) {
     MyObj s;
-    v = s;      // expected-warning {{object whose reference is captured may not live long enough}}
+    v = s;      // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   v.use();      // expected-note {{later used here}}
 }
@@ -364,7 +366,7 @@ void potential_switch(int mode) {
   switch (mode) {
   case 1: {
     MyObj temp;
-    p = &temp;  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = &temp;  // expected-warning {{object whose reference is captured does not live long enough}}
     break;      // expected-note {{destroyed here}}
   }
   case 2: {
@@ -428,7 +430,7 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
 
   while (condition) {
     MyObj x;
-    p = &x;     // expected-warning {{may not live long enough}}
+    p = &x;     // expected-warning {{does not live long enough}}
 
     if (condition)
       q = p;
@@ -992,7 +994,7 @@ void conditional_operator_one_unsafe_branch(bool cond) {
   MyObj* p = &safe;
   {
     MyObj temp;
-    p = cond ? &temp  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = cond ? &temp  // expected-warning {{object whose reference is captured does not live long enough}}
              : &safe;
   }  // expected-note {{destroyed here}}
 
@@ -1103,12 +1105,11 @@ void passing_temporary_to_lifetime_bound_function() {
   use(a); // expected-note {{later used here}}
 }
 
-// FIXME: We expect to be warned of use-after-free at use(a), but this is not the
-// case as current analysis does not handle trivially destructed temporaries.
 void use_trivial_temporary_after_destruction() {
   View a;
-  a = trivially_destructed_temporary();
-  use(a);
+  a = trivially_destructed_temporary(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                expected-note {{destroyed here}}
+  use(a); // expected-note {{later used here}}
 }
 
 namespace GH162834 {
@@ -1189,7 +1190,7 @@ void range_based_for_not_reference() {
   {
     MyObjStorage s;
     for (MyObj o : s) { // expected-note {{destroyed here}}
-      v = o; // expected-warning {{object whose reference is captured may not live long enough}}
+      v = o; // expected-warning {{object whose reference is captured does not live long enough}}
     }
   }
   v.use();  // expected-note {{later used here}}
@@ -1404,39 +1405,69 @@ void add(int c, MyObj* node) {
 }
 } // namespace CppCoverage
 
-namespace do_not_warn_on_std_move {
-void silenced() {
+namespace strict_warn_on_move {
+void strict_warn_on_move() {
   MyObj b;
   View v;
   {
     MyObj a;
-    v = a;
-    b = std::move(a); // No warning for 'a' being moved.
-  }
-  (void)v;
+    v = a;            // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    b = std::move(a); // expected-note {{potentially moved here}}
+  }                   // expected-note {{destroyed here}}
+  (void)v;            // expected-note {{later used here}}
 }
 
-void silenced_flow_insensitive(bool c) {
-  MyObj a;
-  View v = a;
-  if (c) {
-    MyObj b = std::move(a);
-  }
-  (void)v;
+void flow_sensitive(bool c) {
+  View v;
+  {
+    MyObj a;
+    if (c) {
+      MyObj b = std::move(a);
+      return;
+    }
+    v = a;  // expected-warning {{object whose reference}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
 }
 
-// FIXME: Silence when move arg is not a declref.
 void take(MyObj&&);
-void not_silenced_via_conditional(bool cond) {
+void detect_conditional(bool cond) {
   View v;
   {
     MyObj a, b;
-    v = cond ? a : b; // expected-warning 2 {{object whose reference }}
-    take(std::move(cond ? a : b));
+    v = cond ? a : b; // expected-warning-re 2 {{object whose reference {{.*}} may have been moved}}
+    take(std::move(cond ? a : b)); // expected-note 2 {{potentially moved here}}
   }         // expected-note 2 {{destroyed here}}
   (void)v;  // expected-note 2 {{later used here}}
 }
-} // namespace do_not_warn_on_std_move
+
+void wrong_use_of_move_is_permissive() {
+  View v;
+  {
+    MyObj a;
+    v = std::move(a); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)v;  // expected-note {{later used here}}
+  const int* p;
+  {
+    MyObj a;
+    p = std::move(a).getData(); // expected-warning {{object whose reference is captured does not live long enough}}
+  }         // expected-note {{destroyed here}}
+  (void)p;  // expected-note {{later used here}}
+}
+
+void take(int*);
+void test_release_no_uaf() {
+  int* r;
+  // Calling release() marks p as moved from, so its destruction doesn't invalidate r.
+  {
+    std::unique_ptr<int> p;
+    r = p.get();        // expected-warning-re {{object whose reference {{.*}} may have been moved}}
+    take(p.release());  // expected-note {{potentially moved here}}
+  }                     // expected-note {{destroyed here}}
+  (void)*r;             // expected-note {{later used here}}
+}
+} // namespace strict_warn_on_move
 
 // Implicit this annotations with redecls.
 namespace GH172013 {
@@ -1454,7 +1485,9 @@ void bar() {
     {
         S s;
         x = s.x(); // expected-warning {{object whose reference is captured does not live long enough}}
-        View y = S().x(); // FIXME: Handle temporaries.
+        View y = S().x(); // expected-warning {{object whose reference is captured does not live long enough}} \
+                             expected-note {{destroyed here}}
+        (void)y; // expected-note {{used here}}
     } // expected-note {{destroyed here}}
     (void)x; // expected-note {{used here}}
 }

@@ -9,8 +9,7 @@ package(default_visibility = ["//visibility:public"])
         name = "%s.test" % src,
         srcs = [src],
         data = [
-            "Vector/td/unroll-elements.mlir",
-            "Vector/td/xfer-drop-unit-dims.mlir",
+            "EmitC/tosa/td.mlir",
             "Vector/vector-sink-transform.mlir",
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
@@ -24,19 +23,20 @@ package(default_visibility = ["//visibility:public"])
             "Linalg/transpose-matmul-*.mlir",
             "LLVM/*-symbol-def.mlir",
             "Transform/include/**/*.mlir",
+            "Vector/td/*.mlir",
         ]),
     )
     for src in glob(
         include = ["**/*.mlir"],
         exclude = [
+            "EmitC/tosa/td.mlir",
             "IRDL/*.irdl.mlir",
             "Linalg/td/*.mlir",
             "Linalg/transpose-matmul-*.mlir",
             "LLVM/*-symbol-def.mlir",
             "Transform/*-symbol-decl-and-schedule.mlir",
             "Transform/include/**/*.mlir",
-            "Vector/td/unroll-elements.mlir",
-            "Vector/td/xfer-drop-unit-dims.mlir",
+            "Vector/td/*.mlir",
             "Vector/vector-sink-transform.mlir",
         ],
     )

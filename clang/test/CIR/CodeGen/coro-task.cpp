@@ -172,8 +172,8 @@ VoidTask silly_task() {
 // CIR: %[[ShouldAlloc:.*]] = cir.call @__builtin_coro_alloc(%[[CoroId]]) : (!u32i) -> !cir.bool
 // CIR: cir.store{{.*}} %[[NullPtr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: cir.if %[[ShouldAlloc]] {
-// CIR:   %[[CoroSize:.*]] = cir.call @__builtin_coro_size() : () -> !u64i
-// CIR:   %[[AllocAddr:.*]] = cir.call @_Znwm(%[[CoroSize]]) : (!u64i) -> !cir.ptr<!void>
+// CIR:   %[[CoroSize:.*]] = cir.call @__builtin_coro_size() : () -> (!u64i {llvm.noundef})
+// CIR:   %[[AllocAddr:.*]] = cir.call @_Znwm(%[[CoroSize]]) {allocsize = array<i32: 0>} : (!u64i) -> (!cir.ptr<!void> {llvm.noundef})
 // CIR:   cir.store{{.*}} %[[AllocAddr]], %[[SavedFrameAddr]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
 // CIR: }
 // CIR: %[[Load0:.*]] = cir.load{{.*}} %[[SavedFrameAddr]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
@@ -418,7 +418,7 @@ folly::coro::Task<void> yield1() {
 // CIR-NEXT:   cir.store{{.*}} %[[SUSPEND]], %[[SUSPEND_PTR]] : ![[SuspendAlways]], !cir.ptr<![[SuspendAlways]]>
 // CIR-NEXT:   cir.await(yield, ready : {
 // CIR-NEXT:     %[[READY:.*]] = cir.scope {
-// CIR-NEXT:       %[[A:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SUSPEND_PTR]]) nothrow : (!cir.ptr<![[SuspendAlways]]>) -> !cir.bool
+// CIR-NEXT:       %[[A:.*]] = cir.call @_ZNSt14suspend_always11await_readyEv(%[[SUSPEND_PTR]]) nothrow : (!cir.ptr<![[SuspendAlways]]>) -> (!cir.bool {llvm.noundef})
 // CIR-NEXT:       cir.yield %[[A]] : !cir.bool
 // CIR-NEXT:     } : !cir.bool
 // CIR-NEXT:     cir.condition(%[[READY]])
@@ -506,7 +506,7 @@ folly::coro::Task<int> go4() {
 // CIR:   %[[LAMBDA:.*]] = cir.alloca !rec_anon2E2, !cir.ptr<!rec_anon2E2>, ["ref.tmp1"] {alignment = 1 : i64}
 
 // Get the lambda invoker ptr via `lambda operator folly::coro::Task<int> (*)(int const&)()`
-// CIR:   %[[INVOKER:.*]] = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%[[LAMBDA]]) nothrow : (!cir.ptr<!rec_anon2E2>) -> !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
+// CIR:   %[[INVOKER:.*]] = cir.call @_ZZ3go4vENK3$_0cvPFN5folly4coro4TaskIiEERKiEEv(%[[LAMBDA]]) nothrow : (!cir.ptr<!rec_anon2E2>) -> (!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>> {llvm.noundef})
 // CIR:   %[[PLUS:.*]] = cir.unary(plus, %[[INVOKER]]) : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>, !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
 // CIR:   cir.yield %[[PLUS]] : !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> ![[IntTask]]>>
 // CIR: }

@@ -89,15 +89,25 @@ uint64_t InputSection::getVA(uint64_t off) const {
   return parent->addr + getOffset(off);
 }
 
-static uint64_t resolveSymbolVA(const Symbol *sym, uint8_t type) {
+static uint64_t resolveSymbolOffsetVA(const Symbol *sym, uint8_t type,
+                                      int64_t offset) {
   const RelocAttrs &relocAttrs = target->getRelocAttrs(type);
-  if (relocAttrs.hasAttr(RelocAttrBits::BRANCH))
-    return sym->resolveBranchVA();
-  if (relocAttrs.hasAttr(RelocAttrBits::GOT))
-    return sym->resolveGotVA();
-  if (relocAttrs.hasAttr(RelocAttrBits::TLV))
-    return sym->resolveTlvVA();
-  return sym->getVA();
+  uint64_t symVA;
+  if (relocAttrs.hasAttr(RelocAttrBits::BRANCH)) {
+    // For branch relocations with non-zero offsets, use the actual function
+    // address rather than the stub address. Branching to an interior point
+    // of a function (e.g., _func+16) implies reliance on the original
+    // function's layout, which an interposed replacement wouldn't preserve.
+    // There's no meaningful way to "interpose" an interior offset.
+    symVA = (offset != 0) ? sym->getVA() : sym->resolveBranchVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
+    symVA = sym->resolveGotVA();
+  } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
+    symVA = sym->resolveTlvVA();
+  } else {
+    symVA = sym->getVA();
+  }
+  return symVA + offset;
 }
 
 const Defined *InputSection::getContainingSymbol(uint64_t off) const {
@@ -243,7 +253,7 @@ void ConcatInputSection::writeTo(uint8_t *buf) {
         target->handleDtraceReloc(referentSym, r, loc);
         continue;
       }
-      referentVA = resolveSymbolVA(referentSym, r.type) + r.addend;
+      referentVA = resolveSymbolOffsetVA(referentSym, r.type, r.addend);
 
       if (isThreadLocalVariables(getFlags()) && isa<Defined>(referentSym)) {
         // References from thread-local variable sections are treated as offsets

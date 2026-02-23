@@ -113,11 +113,10 @@ done. It can be omitted if asynchronous execution is desired.
   void rpc_host_call(void *fn, void *data, size_t size) {
     rpc::Client::Port port = rpc::client.open<RPC_HOST_CALL>();
     port.send_n(data, size);
-    port.send([=](rpc::Buffer *buffer) {
+    port.send([=](rpc::Buffer *buffer, uint32_t) {
       buffer->data[0] = reinterpret_cast<uintptr_t>(fn);
     });
-    port.recv([](rpc::Buffer *) {});
-    port.close();
+    port.recv([](rpc::Buffer *, uint32_t) {});
   }
 
 Server Example
@@ -131,7 +130,7 @@ call a function pointer provided by the client.
 In this example, the server simply runs forever in a separate thread for
 brevity's sake. Because the client is a GPU potentially handling several threads
 at once, the server needs to loop over all the active threads on the GPU. We
-abstract this into the ``lane_size`` variable, which is simply the device's warp
+abstract this into the ``num_lanes`` variable, which is simply the device's warp
 or wavefront size. The identifier is simply the threads index into the current
 warp or wavefront. We allocate memory to copy the struct data into, and then
 call the given function pointer with that copied data. The final send simply
@@ -147,8 +146,8 @@ data.
 
     switch(port->get_opcode()) {
     case RPC_HOST_CALL: {
-      uint64_t sizes[LANE_SIZE];
-      void *args[LANE_SIZE];
+      uint64_t sizes[NUM_LANES];
+      void *args[NUM_LANES];
       port->recv_n(args, sizes, [&](uint64_t size) { return new char[size]; });
       port->recv([&](rpc::Buffer *buffer, uint32_t id) {
         reinterpret_cast<void (*)(void *)>(buffer->data[0])(args[id]);
@@ -163,6 +162,43 @@ data.
       break;
     }
   }
+
+Function Dispatch
+-----------------
+
+There are cases where the client wants to simply execute a function as-is on the
+server. A helper function is provided to make this case almost automatic. By
+default, all memory is assumed to live privately on the client. Pointer
+arguments will be copied between the client and server for correctness. Pointers
+to void will all be treated as opaque pointers and copied by-value. Constant
+character pointers will be treated as C-strings and copied using its length.
+Functions returning void will wait for the server to complete execution rather
+than submitting asynchronously.
+
+.. code-block:: c++
+
+  double fn(int x, long y, char c, double d);
+
+  // Client-side dispatch.
+  double fn(int x, long y, char c, double d) {
+    return rpc::dispatch<OPCODE>(client, fn, x, y, c, d);
+  }
+
+  // Server-side handling.
+  for(;;) {
+    auto port = server.try_open(index);
+    if (!port)
+      return continue;
+
+    switch(port->get_opcode()) {
+    case OPCODE:
+      rpc::invoke<NUM_LANES>(fn, *port);
+    default:
+      port->recv([](rpc::Buffer *) {});
+      break;
+    }
+  }
+
 
 CUDA Server Example
 -------------------
@@ -236,7 +272,6 @@ but the following example shows how it can be used by a standard user.
 
       // Only available in-tree from the 'libc' sources.
       handle_libc_opcodes(*port, warp_size);
-      port->close();
     } while (cudaStreamQuery(stream) == cudaErrorNotReady);
   }
 
