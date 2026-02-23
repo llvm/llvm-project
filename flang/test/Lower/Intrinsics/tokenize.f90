@@ -1,5 +1,4 @@
-! RUN: bbc --use-desc-for-alloc=false -emit-fir -hlfir=false %s -o - | FileCheck %s
-! RUN: %flang_fc1 -mllvm --use-desc-for-alloc=false -emit-fir -flang-deprecated-no-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: tok_form1
 subroutine tok_form1()
@@ -7,7 +6,8 @@ subroutine tok_form1()
   character(:), allocatable :: tokens(:)
   call tokenize("a,b", ",", tokens)
   ! CHECK-DAG: %[[TOKENS:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>
-  ! CHECK-DAG: %[[TOKENS_NONE:.*]] = fir.convert %[[TOKENS]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK-DAG: %[[TOKENS_DECL:.*]]:2 = hlfir.declare %[[TOKENS]] {fortran_attrs = #fir.var_attrs<allocatable>
+  ! CHECK-DAG: %[[TOKENS_NONE:.*]] = fir.convert %[[TOKENS_DECL]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK-DAG: %[[SEP_NONE:.*]] = fir.zero_bits !fir.ref<!fir.box<none>>
   ! CHECK: fir.call @_FortranATokenize(%[[TOKENS_NONE]], %[[SEP_NONE]],
 end subroutine tok_form1
@@ -19,7 +19,9 @@ subroutine tok_form2()
   call tokenize("a,,b", ",", first, last)
   ! CHECK-DAG: %[[FIRST:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
   ! CHECK-DAG: %[[LAST:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
-  ! CHECK-DAG: %[[FIRST_NONE:.*]] = fir.convert %[[FIRST]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
-  ! CHECK-DAG: %[[LAST_NONE:.*]] = fir.convert %[[LAST]] : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK-DAG: %[[FIRST_DECL:.*]]:2 = hlfir.declare %[[FIRST]] {fortran_attrs = #fir.var_attrs<allocatable>
+  ! CHECK-DAG: %[[LAST_DECL:.*]]:2 = hlfir.declare %[[LAST]] {fortran_attrs = #fir.var_attrs<allocatable>
+  ! CHECK-DAG: %[[FIRST_NONE:.*]] = fir.convert %[[FIRST_DECL]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
+  ! CHECK-DAG: %[[LAST_NONE:.*]] = fir.convert %[[LAST_DECL]]#0 : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: fir.call @_FortranATokenizePositions(%[[FIRST_NONE]], %[[LAST_NONE]],
 end subroutine tok_form2
