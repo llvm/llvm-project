@@ -220,7 +220,7 @@ void test_loops() {
   // CHECK-FIXES: for (auto it = std::ranges::find(v, 2); (it == std::ranges::end(v)); ) { break; }
 }
 
-void test_invalid_fixit() {
+void test_condition_variable_suppression() {
   int arr[] = {1, 2, 3};
   if (int* it2 = std::find(arr, arr + 3, 2)) {}
   // CHECK-MESSAGES: :[[@LINE-1]]:12: warning: result of standard algorithm used as 'bool'; did you mean to compare with the end iterator? [bugprone-missing-end-comparison]

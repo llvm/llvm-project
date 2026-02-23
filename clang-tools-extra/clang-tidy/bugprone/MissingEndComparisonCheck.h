@@ -20,13 +20,16 @@ namespace clang::tidy::bugprone {
 /// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/missing-end-comparison.html
 class MissingEndComparisonCheck : public ClangTidyCheck {
 public:
-  MissingEndComparisonCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  MissingEndComparisonCheck(StringRef Name, ClangTidyContext *Context);
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
+
+private:
+  std::vector<StringRef> ExtraAlgorithms;
 };
 
 } // namespace clang::tidy::bugprone

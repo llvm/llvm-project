@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MissingEndComparisonCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -34,17 +35,39 @@ constexpr llvm::StringRef RangeAlgorithms[] = {
     "::std::ranges::max_element",   "::std::ranges::find_first_of",
     "::std::ranges::adjacent_find", "::std::ranges::is_sorted_until"};
 
-AST_MATCHER(DeclStmt, isConditionVariableStatement) {
-  return !match(
-              declStmt(hasAncestor(stmt(anyOf(
-                  ifStmt(hasConditionVariableStatement(equalsNode(&Node))),
-                  whileStmt(hasConditionVariableStatement(equalsNode(&Node))),
-                  forStmt(hasConditionVariableStatement(equalsNode(&Node))))))),
-              Node, Finder->getASTContext())
-              .empty();
+static bool isConditionVar(const DeclStmt *S, ASTContext &Ctx) {
+  const auto &Parents = Ctx.getParents(*S);
+  if (Parents.empty())
+    return false;
+
+  const auto *ParentStmt = Parents[0].get<Stmt>();
+  if (!ParentStmt)
+    return false;
+
+  if (const auto *If = dyn_cast<IfStmt>(ParentStmt))
+    return If->getConditionVariableDeclStmt() == S;
+  if (const auto *While = dyn_cast<WhileStmt>(ParentStmt))
+    return While->getConditionVariableDeclStmt() == S;
+  if (const auto *For = dyn_cast<ForStmt>(ParentStmt))
+    return For->getConditionVariableDeclStmt() == S;
+
+  return false;
 }
 
 } // namespace
+
+MissingEndComparisonCheck::MissingEndComparisonCheck(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      ExtraAlgorithms(
+          utils::options::parseStringList(Options.get("ExtraAlgorithms", ""))) {
+}
+
+void MissingEndComparisonCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ExtraAlgorithms",
+                utils::options::serializeStringList(ExtraAlgorithms));
+}
 
 static std::optional<std::string>
 getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
@@ -85,6 +108,23 @@ getStandardEndText(const MatchFinder::MatchResult &Result,
   if (Call->getNumArgs() < 2)
     return std::nullopt;
 
+  // Heuristic: if the first argument is a record type and the types of the
+  // first two arguments are distinct, we assume it's a range algorithm.
+  if (Call->getNumArgs() == 2) {
+    const Expr *Arg0 = Call->getArg(0);
+    const Expr *Arg1 = Call->getArg(1);
+    QualType T0 = Arg0->getType().getCanonicalType();
+    QualType T1 = Arg1->getType().getCanonicalType();
+
+    if (T0.getNonReferenceType() != T1.getNonReferenceType() &&
+        T0.getNonReferenceType()->isRecordType()) {
+      const StringRef ContainerText =
+          tooling::fixit::getText(*Arg0, *Result.Context);
+      if (!ContainerText.empty())
+        return ("std::end(" + ContainerText + ")").str();
+    }
+  }
+
   unsigned EndIdx = 1;
   const Expr *FirstArg = Call->getArg(0);
   if (const auto *Record =
@@ -105,8 +145,8 @@ getStandardEndText(const MatchFinder::MatchResult &Result,
   return tooling::fixit::getText(*EndArg, *Result.Context).str();
 }
 
-static const UnaryOperator *getLNotAncestor(const Expr *E,
-                                            ASTContext &Context) {
+static const UnaryOperator *getParentLogicalNot(const Expr *E,
+                                                ASTContext &Context) {
   const Expr *CurrentExpr = E;
   while (true) {
     auto Parents = Context.getParents(*CurrentExpr);
@@ -126,8 +166,14 @@ static const UnaryOperator *getLNotAncestor(const Expr *E,
 }
 
 void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
+  llvm::SmallVector<StringRef, 32> ExpandedIteratorAlgorithms;
+  ExpandedIteratorAlgorithms.append(std::begin(IteratorAlgorithms),
+                                    std::end(IteratorAlgorithms));
+  ExpandedIteratorAlgorithms.append(ExtraAlgorithms.begin(),
+                                    ExtraAlgorithms.end());
+
   const auto StdAlgoCall = callExpr(callee(functionDecl(
-      hasAnyName(IteratorAlgorithms), unless(parameterCountIs(0)))));
+      hasAnyName(ExpandedIteratorAlgorithms), unless(parameterCountIs(0)))));
 
   // Captures customization point object
   const auto RangesCall = cxxOperatorCallExpr(
@@ -184,7 +230,7 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
   if (!EndExprText)
     return;
 
-  const UnaryOperator *NotOp = getLNotAncestor(BoolOp, *Result.Context);
+  const UnaryOperator *NotOp = getParentLogicalNot(BoolOp, *Result.Context);
   const bool IsNegated = NotOp != nullptr;
 
   const auto Diag = diag(BoolOp->getBeginLoc(),
@@ -203,11 +249,8 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
     const auto &Parents = Result.Context->getParents(*InitVar);
     if (!Parents.empty()) {
       if (const auto *ParentDecl = Parents[0].get<DeclStmt>()) {
-        if (!match(declStmt(isConditionVariableStatement()), *ParentDecl,
-                   *Result.Context)
-                 .empty()) {
+        if (isConditionVar(ParentDecl, *Result.Context))
           return;
-        }
       }
     }
   }
