@@ -214,11 +214,8 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
   MF->insert(++MBB.getIterator(), TrueBB);
   MF->insert(++TrueBB->getIterator(), MergeBB);
 
-  // We want to copy the "true" value when the condition is true which means
-  // we need to invert the branch condition to jump over TrueBB when the
-  // condition is false. We can directly use the branch opcode which has been
-  // inverted when SDNodeXform transforms were applied on it.
-
+  // We want to copy the "true" value only when the branch is executed.
+  // The SDNodeXform is responsible for the inversion.
   unsigned BranchOpCode = MI.getOperand(3).getImm();
 
   // Insert branch instruction.

@@ -1299,7 +1299,7 @@ RISCVCC::CondCode RISCVCC::getInverseBranchCondition(RISCVCC::CondCode CC) {
 unsigned RISCVCC::getInverseBranchOpcode(unsigned BCC) {
   switch (BCC) {
   default:
-    llvm_unreachable("Unexpected condition code!");
+    llvm_unreachable("Unexpected branch opcode!");
   case RISCV::BEQ:
     return RISCV::BNE;
   case RISCV::BNE:
@@ -4375,10 +4375,10 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR: {
     // CCMOV can be commuted by inverting the condition.
-    auto bcc = MI.getOperand(3).getImm();
-    bcc = RISCVCC::getInverseBranchOpcode(bcc);
+    auto BCC = MI.getOperand(3).getImm();
+    BCC = RISCVCC::getInverseBranchOpcode(BCC);
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm(bcc);
+    WorkingMI.getOperand(3).setImm(BCC);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI*/ false,
                                                    OpIdx1, OpIdx2);
   }
