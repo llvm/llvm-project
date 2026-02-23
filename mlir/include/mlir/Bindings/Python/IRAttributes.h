@@ -588,6 +588,18 @@ public:
   static void bindDerived(ClassTy &c);
 };
 
+class MLIR_PYTHON_API_EXPORTED PyDynamicAttribute
+    : public PyConcreteAttribute<PyDynamicAttribute> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADynamicAttr;
+  static constexpr const char *pyClassName = "DynamicAttr";
+  using PyConcreteAttribute::PyConcreteAttribute;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirDynamicAttrGetTypeID;
+
+  static void bindDerived(ClassTy &c);
+};
+
 MLIR_PYTHON_API_EXPORTED void populateIRAttributes(nanobind::module_ &m);
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

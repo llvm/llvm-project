@@ -454,28 +454,11 @@ entry:
 }
 
 define <4 x i32> @signed_minmax_v4i64_to_v4i32(<4 x i64> %y) {
-; CHECK-SD-LABEL: signed_minmax_v4i64_to_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqxtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    sqxtn2 v0.4s, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: signed_minmax_v4i64_to_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI32_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI32_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI32_0
-; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI32_0]
-; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v1.2d, v2.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: signed_minmax_v4i64_to_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqxtn v0.2s, v0.2d
+; CHECK-NEXT:    sqxtn2 v0.4s, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %min = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %y, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
   %max = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %min, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
@@ -512,28 +495,11 @@ entry:
 }
 
 define <4 x i32> @signed_maxmin_v4i64_to_v4i32(<4 x i64> %y) {
-; CHECK-SD-LABEL: signed_maxmin_v4i64_to_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqxtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    sqxtn2 v0.4s, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: signed_maxmin_v4i64_to_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_1
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI35_1]
-; CHECK-GI-NEXT:    adrp x8, .LCPI35_0
-; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v1.2d, v2.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    ldr q2, [x8, :lo12:.LCPI35_0]
-; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: signed_maxmin_v4i64_to_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqxtn v0.2s, v0.2d
+; CHECK-NEXT:    sqxtn2 v0.4s, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %max = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %y, <4 x i64> <i64 -2147483648, i64 -2147483648, i64 -2147483648, i64 -2147483648>)
   %min = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %max, <4 x i64> <i64 2147483647, i64 2147483647, i64 2147483647, i64 2147483647>)
@@ -568,21 +534,11 @@ entry:
 }
 
 define <4 x i32> @unsigned_v4i64_to_v4i32(<4 x i64> %y) {
-; CHECK-SD-LABEL: unsigned_v4i64_to_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    uqxtn v0.2s, v0.2d
-; CHECK-SD-NEXT:    uqxtn2 v0.4s, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: unsigned_v4i64_to_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-GI-NEXT:    cmhi v3.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    cmhi v4.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: unsigned_v4i64_to_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uqxtn v0.2s, v0.2d
+; CHECK-NEXT:    uqxtn2 v0.4s, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %min = call <4 x i64> @llvm.umin.v2i64(<4 x i64> %y, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
   %trunc = trunc <4 x i64> %min to <4 x i32>
@@ -618,25 +574,11 @@ entry:
 }
 
 define <4 x i32> @us_maxmin_v4i64_to_v4i32(<4 x i64> %y) {
-; CHECK-SD-LABEL: us_maxmin_v4i64_to_v4i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqxtun v0.2s, v0.2d
-; CHECK-SD-NEXT:    sqxtun2 v0.4s, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: us_maxmin_v4i64_to_v4i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-GI-NEXT:    cmgt v4.2d, v1.2d, #0
-; CHECK-GI-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v4.16b
-; CHECK-GI-NEXT:    cmhi v3.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    cmhi v4.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: us_maxmin_v4i64_to_v4i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqxtun v0.2s, v0.2d
+; CHECK-NEXT:    sqxtun2 v0.4s, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %max = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %y, <4 x i64> zeroinitializer)
   %min = call <4 x i64> @llvm.umin.v4i64(<4 x i64> %max, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
@@ -673,25 +615,11 @@ entry:
 }
 
 define <4 x i32> @sminsmax_range_unsign4d_i64_to_i32(<4 x i64> %y) {
-; CHECK-SD-LABEL: sminsmax_range_unsign4d_i64_to_i32:
-; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    sqxtun v0.2s, v0.2d
-; CHECK-SD-NEXT:    sqxtun2 v0.4s, v1.2d
-; CHECK-SD-NEXT:    ret
-;
-; CHECK-GI-LABEL: sminsmax_range_unsign4d_i64_to_i32:
-; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    cmgt v3.2d, v0.2d, #0
-; CHECK-GI-NEXT:    cmgt v4.2d, v1.2d, #0
-; CHECK-GI-NEXT:    movi v2.2d, #0x000000ffffffff
-; CHECK-GI-NEXT:    and v0.16b, v0.16b, v3.16b
-; CHECK-GI-NEXT:    and v1.16b, v1.16b, v4.16b
-; CHECK-GI-NEXT:    cmgt v3.2d, v2.2d, v0.2d
-; CHECK-GI-NEXT:    cmgt v4.2d, v2.2d, v1.2d
-; CHECK-GI-NEXT:    bif v0.16b, v2.16b, v3.16b
-; CHECK-GI-NEXT:    bif v1.16b, v2.16b, v4.16b
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v1.4s
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: sminsmax_range_unsign4d_i64_to_i32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sqxtun v0.2s, v0.2d
+; CHECK-NEXT:    sqxtun2 v0.4s, v1.2d
+; CHECK-NEXT:    ret
 entry:
   %smax = call <4 x i64> @llvm.smax.v4i64(<4 x i64> %y, <4 x i64> zeroinitializer)
   %smin = call <4 x i64> @llvm.smin.v4i64(<4 x i64> %smax, <4 x i64> <i64 4294967295, i64 4294967295, i64 4294967295, i64 4294967295>)
@@ -896,4 +824,34 @@ entry:
   %trunc = trunc <4 x i32> %umin to <4 x i8>
   %shuffle = shufflevector <4 x i8> %x, <4 x i8> %trunc, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i8> %shuffle
+}
+
+define <16 x i8> @uqxtn_i32_i8(<16 x i32> %0) {
+; CHECK-SD-LABEL: uqxtn_i32_i8:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    movi v4.2d, #0x0000ff000000ff
+; CHECK-SD-NEXT:    umin v1.4s, v1.4s, v4.4s
+; CHECK-SD-NEXT:    umin v0.4s, v0.4s, v4.4s
+; CHECK-SD-NEXT:    umin v3.4s, v3.4s, v4.4s
+; CHECK-SD-NEXT:    umin v2.4s, v2.4s, v4.4s
+; CHECK-SD-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-SD-NEXT:    uzp1 v2.8h, v2.8h, v3.8h
+; CHECK-SD-NEXT:    uzp1 v0.16b, v0.16b, v2.16b
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: uqxtn_i32_i8:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    movi v4.2d, #0x0000ff000000ff
+; CHECK-GI-NEXT:    umin v0.4s, v0.4s, v4.4s
+; CHECK-GI-NEXT:    umin v1.4s, v1.4s, v4.4s
+; CHECK-GI-NEXT:    umin v2.4s, v2.4s, v4.4s
+; CHECK-GI-NEXT:    umin v3.4s, v3.4s, v4.4s
+; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
+; CHECK-GI-NEXT:    uzp1 v1.8h, v2.8h, v3.8h
+; CHECK-GI-NEXT:    uzp1 v0.16b, v0.16b, v1.16b
+; CHECK-GI-NEXT:    ret
+entry:
+  %1 = tail call <16 x i32> @llvm.umin.v16i32(<16 x i32> %0, <16 x i32> splat (i32 255))
+  %2 = trunc <16 x i32> %1 to <16 x i8>
+  ret <16 x i8> %2
 }
