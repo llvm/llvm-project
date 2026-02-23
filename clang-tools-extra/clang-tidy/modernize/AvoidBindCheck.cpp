@@ -185,8 +185,9 @@ static bool anyDescendantIsLocal(const Stmt *Statement) {
       if (Var->isLocalVarDeclOrParm())
         return true;
     }
-  } else if (isa<CXXThisExpr>(Statement))
+  } else if (isa<CXXThisExpr>(Statement)) {
     return true;
+  }
 
   return any_of(Statement->children(), anyDescendantIsLocal);
 }
@@ -365,10 +366,11 @@ static void addFunctionCallArgs(ArrayRef<BindArgument> Args,
     if (B.Kind == BK_Placeholder) {
       Stream << "std::forward<decltype(" << B.UsageIdentifier << ")>";
       Stream << "(" << B.UsageIdentifier << ")";
-    } else if (B.CM != CM_None)
+    } else if (B.CM != CM_None) {
       Stream << B.UsageIdentifier;
-    else
+    } else {
       Stream << B.SourceTokens;
+    }
 
     Delimiter = ", ";
   }

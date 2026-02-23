@@ -103,10 +103,10 @@ void ThrowByValueCatchByReferenceCheck::diagnoseThrowLocations(
     // If we have a DeclRefExpr, we flag for emitting a diagnosis message in
     // case the referenced variable is neither a function parameter nor a
     // variable declared in the catch statement.
-    if (VariableReference)
+    if (VariableReference) {
       Emit = !isFunctionOrCatchVar(VariableReference);
-    else if (ConstructorCall &&
-             ConstructorCall->getConstructor()->isCopyOrMoveConstructor()) {
+    } else if (ConstructorCall &&
+               ConstructorCall->getConstructor()->isCopyOrMoveConstructor()) {
       // If we have a copy / move construction, we emit a diagnosis message if
       // the object that we copy construct from is neither a function parameter
       // nor a variable declared in a catch statement

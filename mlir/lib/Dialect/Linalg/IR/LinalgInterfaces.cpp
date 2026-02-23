@@ -138,7 +138,15 @@ std::optional<Value> linalg::isaFillOpInterface(GenericOp op) {
 // BroadcastOpInterface implementation
 //===----------------------------------------------------------------------===//
 std::optional<SmallVector<int64_t>>
-linalg::isaBroadcastOpInterface(GenericOp op) {
+linalg::isaBroadcastOpInterface(LinalgOp linalgOp) {
+  if (auto broadcastOp = dyn_cast<BroadcastOp>(linalgOp.getOperation()))
+    return SmallVector<int64_t>(broadcastOp.getDimensions().begin(),
+                                broadcastOp.getDimensions().end());
+
+  auto op = dyn_cast<GenericOp>(linalgOp.getOperation());
+  if (!op)
+    return std::nullopt;
+
   // Structural.
   if (!op.isAllParallelLoops() || !op.isSingleInputOutput() ||
       !op.isSingleYieldOp())

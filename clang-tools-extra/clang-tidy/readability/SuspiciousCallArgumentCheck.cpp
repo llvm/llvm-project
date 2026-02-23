@@ -188,8 +188,9 @@ static bool applySubstringHeuristic(StringRef Arg, StringRef Param,
           Current[J] = 1 + Previous[J - 1];
 
         MaxLength = std::max(MaxLength, Current[J]);
-      } else
+      } else {
         Current[J] = 0;
+      }
     }
 
     Current.swap(Previous);

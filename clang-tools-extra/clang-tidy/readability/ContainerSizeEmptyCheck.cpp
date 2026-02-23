@@ -277,10 +277,11 @@ void ContainerSizeEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     ReplacementText += "empty()";
   } else if (E->isImplicitCXXThis()) {
     ReplacementText += "empty()";
-  } else if (E->getType()->isPointerType())
+  } else if (E->getType()->isPointerType()) {
     ReplacementText += "->empty()";
-  else
+  } else {
     ReplacementText += ".empty()";
+  }
 
   if (BinCmp) {
     if (BinCmp->getOperator() == OO_ExclaimEqual)

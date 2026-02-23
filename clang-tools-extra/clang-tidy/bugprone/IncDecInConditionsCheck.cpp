@@ -75,8 +75,9 @@ void IncDecInConditionsCheck::check(const MatchFinder::MatchResult &Result) {
                  Result.Nodes.getNodeAs<UnaryOperator>("operator")) {
     ExprLoc = MatchedDecl->getExprLoc();
     IsIncrementOp = MatchedDecl->isIncrementOp();
-  } else
+  } else {
     return;
+  }
 
   diag(ExprLoc,
        "%select{decrementing|incrementing}0 and referencing a variable in a "

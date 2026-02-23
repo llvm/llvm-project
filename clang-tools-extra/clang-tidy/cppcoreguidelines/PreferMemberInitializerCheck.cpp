@@ -217,9 +217,9 @@ void PreferMemberInitializerCheck::check(
         continue;
       if (Init->getMember() == Field) {
         HasInitAlready = true;
-        if (isa<ImplicitValueInitExpr>(Init->getInit()))
+        if (isa<ImplicitValueInitExpr>(Init->getInit())) {
           InsertPos = Init->getRParenLoc();
-        else {
+        } else {
           ReplaceRange = Init->getInit()->getSourceRange();
           AddBrace = isa<InitListExpr>(Init->getInit());
         }

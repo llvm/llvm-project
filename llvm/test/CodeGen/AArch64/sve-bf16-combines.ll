@@ -707,4 +707,24 @@ define <vscale x 8 x bfloat> @fsub_sel_fmul_negzero_nsz_nxv8bf16(<vscale x 8 x b
   ret <vscale x 8 x bfloat> %fsub
 }
 
+define <vscale x 4 x float> @partial_reduce_to_nxv4f32(<vscale x 4 x float> %acc, <vscale x 8 x bfloat> %a, <vscale x 8 x bfloat> %b) {
+; SVE-LABEL: partial_reduce_to_nxv4f32:
+; SVE:       // %bb.0: // %entry
+; SVE-NEXT:    bfmlalb z0.s, z1.h, z2.h
+; SVE-NEXT:    bfmlalt z0.s, z1.h, z2.h
+; SVE-NEXT:    ret
+;
+; SVE-B16B16-LABEL: partial_reduce_to_nxv4f32:
+; SVE-B16B16:       // %bb.0: // %entry
+; SVE-B16B16-NEXT:    bfmlalb z0.s, z1.h, z2.h
+; SVE-B16B16-NEXT:    bfmlalt z0.s, z1.h, z2.h
+; SVE-B16B16-NEXT:    ret
+entry:
+  %a.wide = fpext <vscale x 8 x bfloat> %a to <vscale x 8 x float>
+  %b.wide = fpext <vscale x 8 x bfloat> %b to <vscale x 8 x float>
+  %mult = fmul <vscale x 8 x float> %a.wide, %b.wide
+  %partial.reduce = call <vscale x 4 x float> @llvm.vector.partial.reduce.fadd(<vscale x 4 x float> %acc, <vscale x 8 x float> %mult)
+  ret <vscale x 4 x float> %partial.reduce
+}
+
 declare <vscale x 8 x bfloat> @llvm.fma.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, <vscale x 8 x bfloat>)

@@ -147,9 +147,9 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (ArrayTypeLoc.getTypePtr()->isIncompleteArrayType() && IsInParam) {
     // in function parameter, we also don't know the size of
     // IncompleteArrayType.
-    if (Result.Context->getLangOpts().CPlusPlus20)
+    if (Result.Context->getLangOpts().CPlusPlus20) {
       RecommendTypes.push_back("'std::span'");
-    else {
+    } else {
       RecommendTypes.push_back("'std::array'");
       RecommendTypes.push_back("'std::vector'");
     }
