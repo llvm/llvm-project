@@ -32,14 +32,15 @@ static constexpr uint16_t SUBNORM_POS_STOP = 0x007FU;
 static constexpr uint16_t SUBNORM_NEG_START = 0x8001U;
 static constexpr uint16_t SUBNORM_NEG_STOP = 0x807FU;
 
+
 static constexpr uint16_t STEP = 256;
 
 TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 
   const bfloat16 z_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
@@ -67,8 +68,8 @@ TEST_F(LlvmLibcFmaBf16Test, PositiveRange) {
 TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
   const bfloat16 z_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
@@ -94,8 +95,8 @@ TEST_F(LlvmLibcFmaBf16Test, NegativeRange) {
 TEST_F(LlvmLibcFmaBf16Test, OppositeSignRange) {
   const bfloat16 z_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
@@ -122,8 +123,8 @@ TEST_F(LlvmLibcFmaBf16Test, OppositeSignRange) {
 TEST_F(LlvmLibcFmaBf16Test, SubnormalPositiveRange) {
   const bfloat16 z_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
@@ -150,8 +151,8 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalPositiveRange) {
 TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
   const bfloat16 z_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
@@ -178,24 +179,24 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
 TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
   const bfloat16 z_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
                                max_normal};
   const bfloat16 x_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
                                max_normal};
   const bfloat16 y_values[] = {zero,
                                neg_zero,
-                               FPBits(0x3f80U).get_val(),
-                               FPBits(0xbf80U).get_val(),
+                               FPBits(static_cast<uint16_t>(0x3f80U)).get_val(),
+                               FPBits(static_cast<uint16_t>(0xbf80U)).get_val(),
                                inf,
                                neg_inf,
                                min_normal,
