@@ -92,6 +92,7 @@ multiclass Operator<string OpStr, SDNode OpNode> {
     let Constraints = "$out = $lhs";
     let Pattern = [(set i32:$out, (OpNode i32:$lhs, i32:$rhs))];
     let AsmString = !strconcat(OpStr, " $lhs, $rhs");
+    let Defs = [FLAGS];
   }
 
   def I : Instruction {
@@ -100,6 +101,7 @@ multiclass Operator<string OpStr, SDNode OpNode> {
     let Constraints = "$out = $lhs";
     let Pattern = [(set i32:$out, (OpNode i32:$lhs, uimm20:$rhs))];
     let AsmString = !strconcat(OpStr, "I $lhs, $rhs");
+    let Defs = [FLAGS];
   }
 }
 
@@ -110,6 +112,7 @@ multiclass AUXOperator<string OpStr, SDNode OpNode> {
     let Constraints = "$out = $lhs";
     let Pattern = [(set i32:$out, i32:$aux, (OpNode i32:$lhs, i32:$rhs))];
     let AsmString = !strconcat(OpStr, " $lhs, $rhs");
+    let Defs = [FLAGS];
   }
 
   def I : Instruction {
@@ -118,6 +121,7 @@ multiclass AUXOperator<string OpStr, SDNode OpNode> {
     let Constraints = "$out = $lhs";
     let Pattern = [(set i32:$out, i32:$aux, (OpNode i32:$lhs, uimm20:$rhs))];
     let AsmString = !strconcat(OpStr, "I $lhs, $rhs");
+    let Defs = [FLAGS];
   }
 }
 
