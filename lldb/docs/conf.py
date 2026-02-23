@@ -43,7 +43,12 @@ automodapi_toctreedirnm = "python_api"
 
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx", "sphinx.ext.napoleon"]
+extensions = [
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
+]
 
 # When building man pages, we do not use the markdown pages,
 # So, we can continue without the myst_parser dependencies.
