@@ -751,6 +751,13 @@ void llvm::breakLoopBackedge(Loop *L, DominatorTree &DT, ScalarEvolution &SE,
         DomTreeUpdater DTU(&DT, DomTreeUpdater::UpdateStrategy::Eager);
         Header->removePredecessor(Latch, true);
 
+        for (PHINode &PN : Header->phis()) {
+          assert(PN.getNumIncomingValues() == 1 &&
+                 "header phi has more than one incoming value after removing "
+                 "single latch");
+          PN.replaceAllUsesWith(PN.getIncomingValue(0));
+        }
+
         IRBuilder<> Builder(BI);
         auto *NewBI = Builder.CreateBr(ExitBB);
         // Transfer the metadata to the new branch instruction (minus the
