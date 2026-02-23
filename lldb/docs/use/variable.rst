@@ -1041,7 +1041,7 @@ synthetic children in the UI:
                   return 0
               return -1
 
-          def get_child_at_index(self, index) -> lldb.SBValue | None:
+          def get_child_at_index(self, index: int) -> lldb.SBValue | None:
               if index == 0:
                   return <valobj resulting from dereference>
               return None
