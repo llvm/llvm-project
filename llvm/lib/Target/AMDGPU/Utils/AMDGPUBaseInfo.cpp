@@ -218,10 +218,7 @@ StringLiteral instCounterTypeToStr(InstCounterType T) {
 }
 
 #ifndef NDEBUG
-void Waitcnt::dump() const {
-  print(dbgs());
-  dbgs() << "\n";
-}
+void Waitcnt::dump() const { dbgs() << *this << "\n"; }
 #endif
 
 /// \returns true if the target supports signed immediate offset for SMRD
