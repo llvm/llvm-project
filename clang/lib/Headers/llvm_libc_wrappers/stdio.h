@@ -21,6 +21,23 @@
 #define __LIBC_ATTRS
 #endif
 
+// To turn off emissary print (and this macro) set -fno-use-emissary-print.
+#ifdef OFFLOAD_ENABLE_EMISSARY_PRINT
+#if defined(__NVPTX__) || defined(__AMDGCN__)
+#include <EmissaryIds.h>
+#define fprintf(...)                                                           \
+  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_PRINT, _fprintf_idx, 0, 0),            \
+                 __VA_ARGS__);
+#define printf(...)                                                            \
+  _emissary_exec(_PACK_EMIS_IDS(EMIS_ID_PRINT, _printf_idx, 0, 0), __VA_ARGS__);
+#define fputc(c, stream) fprintf(stream, "%c", (unsigned char)(c))
+#define putc(c, stream) fprintf(stream, "%c", (unsigned char)(c))
+#define putchar(c) printf("%c", (char)(c))
+#define fputs(str, stream) fprintf((stream), "%s", (str))
+#define puts(str) fprintf(stdout, "%s", (str))
+#endif
+#endif
+
 // Some headers provide these as macros. Temporarily undefine them so they do
 // not conflict with any definitions for the GPU.
 

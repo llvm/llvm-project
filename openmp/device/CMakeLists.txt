@@ -7,6 +7,10 @@ if(LLVM_VERSION_MAJOR AND NOT (CMAKE_CXX_COMPILER_ID MATCHES "[Cc]lang" AND
                       " is not 'Clang ${req_ver}'.")
 endif()
 
+if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
+   set(emissary_fortrt ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryFortrt.cpp)
+endif()
+
 set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Allocator.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Configuration.cpp
@@ -23,6 +27,8 @@ set(src_files
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Tasking.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/DeviceUtils.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/src/Workshare.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/EmissaryPrint.cpp
+  ${emissary_fortrt}
 )
 
 list(APPEND compile_options -flto)
