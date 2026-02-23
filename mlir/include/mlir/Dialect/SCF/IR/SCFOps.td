@@ -1154,7 +1154,7 @@ def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
     Example:
 
     ```mlir
-    %0 = scf.index_switch %arg0 : index -> i32
+    %0 = scf.index_switch %arg0 -> i32
     case 2 {
       %1 = arith.constant 10 : i32
       scf.yield %1 : i32
