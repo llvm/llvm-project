@@ -1,4 +1,4 @@
-//===-- RegisterContextFreeBSDKernel_arm64.h --------------------*- C++ -*-===//
+//===-- RegisterContextFreeBSDKernelCore_arm64.h ----------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_ARM64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_ARM64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM64_H
 
 #include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
 #include <optional>
 
-class RegisterContextFreeBSDKernel_arm64 : public RegisterContextPOSIX_arm64 {
+class RegisterContextFreeBSDKernelCore_arm64
+    : public RegisterContextPOSIX_arm64 {
 public:
-  RegisterContextFreeBSDKernel_arm64(
+  RegisterContextFreeBSDKernelCore_arm64(
       lldb_private::Thread &thread,
       std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up,
       lldb::addr_t pcb_addr);
@@ -42,4 +43,4 @@ private:
   std::optional<int> GetOsreldate();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_ARM64_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM64_H

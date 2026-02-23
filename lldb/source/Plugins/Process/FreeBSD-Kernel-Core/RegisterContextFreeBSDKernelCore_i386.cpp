@@ -1,4 +1,4 @@
-//===-- RegisterContextFreeBSDKernel_x86_64.cpp ---------------------------===//
+//===-- RegisterContextFreeBSDKernelCore_i386.cpp -------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextFreeBSDKernel_x86_64.h"
+#include "RegisterContextFreeBSDKernelCore_i386.h"
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Thread.h"
@@ -16,40 +16,38 @@
 using namespace lldb;
 using namespace lldb_private;
 
-RegisterContextFreeBSDKernel_x86_64::RegisterContextFreeBSDKernel_x86_64(
+RegisterContextFreeBSDKernelCore_i386::RegisterContextFreeBSDKernelCore_i386(
     Thread &thread, RegisterInfoInterface *register_info, lldb::addr_t pcb_addr)
     : RegisterContextPOSIX_x86(thread, 0, register_info), m_pcb_addr(pcb_addr) {
 }
 
-bool RegisterContextFreeBSDKernel_x86_64::ReadGPR() { return true; }
+bool RegisterContextFreeBSDKernelCore_i386::ReadGPR() { return true; }
 
-bool RegisterContextFreeBSDKernel_x86_64::ReadFPR() { return true; }
+bool RegisterContextFreeBSDKernelCore_i386::ReadFPR() { return true; }
 
-bool RegisterContextFreeBSDKernel_x86_64::WriteGPR() {
+bool RegisterContextFreeBSDKernelCore_i386::WriteGPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextFreeBSDKernel_x86_64::WriteFPR() {
+bool RegisterContextFreeBSDKernelCore_i386::WriteFPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextFreeBSDKernel_x86_64::ReadRegister(
+bool RegisterContextFreeBSDKernelCore_i386::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &value) {
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
     return false;
 
-  // https://cgit.freebsd.org/src/tree/sys/amd64/include/pcb.h
+  // https://cgit.freebsd.org/src/tree/sys/i386/include/pcb.h
   struct {
-    llvm::support::ulittle64_t r15;
-    llvm::support::ulittle64_t r14;
-    llvm::support::ulittle64_t r13;
-    llvm::support::ulittle64_t r12;
-    llvm::support::ulittle64_t rbp;
-    llvm::support::ulittle64_t rsp;
-    llvm::support::ulittle64_t rbx;
-    llvm::support::ulittle64_t rip;
+    llvm::support::ulittle32_t edi;
+    llvm::support::ulittle32_t esi;
+    llvm::support::ulittle32_t ebp;
+    llvm::support::ulittle32_t esp;
+    llvm::support::ulittle32_t ebx;
+    llvm::support::ulittle32_t eip;
   } pcb;
 
   Status error;
@@ -61,18 +59,15 @@ bool RegisterContextFreeBSDKernel_x86_64::ReadRegister(
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
 #define REG(x)                                                                 \
-  case lldb_##x##_x86_64:                                                      \
+  case lldb_##x##_i386:                                                        \
     value = pcb.x;                                                             \
     break;
 
-    REG(r15);
-    REG(r14);
-    REG(r13);
-    REG(r12);
-    REG(rbp);
-    REG(rsp);
-    REG(rbx);
-    REG(rip);
+    REG(edi);
+    REG(esi);
+    REG(ebp);
+    REG(esp);
+    REG(eip);
 
 #undef REG
 
@@ -83,7 +78,7 @@ bool RegisterContextFreeBSDKernel_x86_64::ReadRegister(
   return true;
 }
 
-bool RegisterContextFreeBSDKernel_x86_64::WriteRegister(
+bool RegisterContextFreeBSDKernelCore_i386::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
   return false;
 }
