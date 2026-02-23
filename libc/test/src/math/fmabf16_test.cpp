@@ -61,9 +61,10 @@ TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
                                        LIBC_NAMESPACE::fmabf16(x, y, z), 0.5);
       }
-      mpfr::TernaryInput<bfloat16> input{x, y, -x * y};
+      bfloat16 neg_xy = -(x * y);
+      mpfr::TernaryInput<bfloat16> input{x, y, neg_xy};
       EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
-                                     LIBC_NAMESPACE::fmabf16(x, y, -x * y),
+                                     LIBC_NAMESPACE::fmabf16(x, y, neg_xy),
                                      0.5);
     }
   }
