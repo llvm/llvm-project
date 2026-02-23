@@ -29,8 +29,7 @@
 namespace llvm {
 class VPlan;
 
-/// Verify invariants for general VPlans.
-/// Currently it checks the following:
+/// Verify invariants for general VPlans. Currently it checks the following:
 /// 1. Region/Block verification: Check the Region/Block verification
 /// invariants for every region in the H-CFG.
 /// 2. all phi-like recipes must be at the beginning of a block, with no other
