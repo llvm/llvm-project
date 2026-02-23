@@ -1108,6 +1108,18 @@ std::optional<FileSpec> ObjectFilePECOFF::GetDebugLink() {
   return std::nullopt;
 }
 
+std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
+  if (!m_binary)
+    return std::nullopt;
+  const llvm::codeview::DebugInfo *pdb_info = nullptr;
+  llvm::StringRef pdb_file;
+  if (!m_binary->getDebugPDBInfo(pdb_info, pdb_file) && pdb_info &&
+      pdb_info->PDB70.CVSignature == llvm::OMF::Signature::PDB70 &&
+      !pdb_file.empty())
+    return FileSpec(pdb_file);
+  return std::nullopt;
+}
+
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
   ModuleSP module_sp(GetModule());
   if (!module_sp)
