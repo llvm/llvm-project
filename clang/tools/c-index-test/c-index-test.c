@@ -1865,13 +1865,30 @@ static enum CXChildVisitResult PrintBinOps(CXCursor C, CXCursor p,
   enum CXCursorKind ck = clang_getCursorKind(C);
   enum CXBinaryOperatorKind bok;
   CXString opstr;
-  if (ck != CXCursor_BinaryOperator && ck != CXCursor_CompoundAssignOperator)
+  if (ck != CXCursor_BinaryOperator && ck != CXCursor_CompoundAssignOperator &&
+      ck != CXCursor_CallExpr)
     return CXChildVisit_Recurse;
 
   PrintCursor(C, NULL);
   bok = clang_getCursorBinaryOperatorKind(C);
   opstr = clang_getBinaryOperatorKindSpelling(bok);
   printf(" BinOp=%s %d\n", clang_getCString(opstr), bok);
+  clang_disposeString(opstr);
+  return CXChildVisit_Recurse;
+}
+
+static enum CXChildVisitResult PrintUnOps(CXCursor C, CXCursor p,
+                                          CXClientData d) {
+  enum CXCursorKind ck = clang_getCursorKind(C);
+  enum CXUnaryOperatorKind bok;
+  CXString opstr;
+  if (ck != CXCursor_UnaryOperator && ck != CXCursor_CallExpr)
+    return CXChildVisit_Recurse;
+
+  PrintCursor(C, NULL);
+  bok = clang_getCursorUnaryOperatorKind(C);
+  opstr = clang_getUnaryOperatorKindSpelling(bok);
+  printf(" UnOp=%s %d\n", clang_getCString(opstr), bok);
   clang_disposeString(opstr);
   return CXChildVisit_Recurse;
 }
@@ -5182,6 +5199,8 @@ int cindextest_main(int argc, const char **argv) {
                                     PrintBitWidth, 0);
   else if (argc > 2 && strcmp(argv[1], "-test-print-binops") == 0)
     return perform_test_load_source(argc - 2, argv + 2, "all", PrintBinOps, 0);
+  else if (argc > 2 && strcmp(argv[1], "-test-print-unops") == 0)
+    return perform_test_load_source(argc - 2, argv + 2, "all", PrintUnOps, 0);
   else if (argc > 2 && strcmp(argv[1], "-test-print-mangle") == 0)
     return perform_test_load_tu(argv[2], "all", NULL, PrintMangledName, NULL);
   else if (argc > 2 && strcmp(argv[1], "-test-print-manglings") == 0)
