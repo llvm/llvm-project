@@ -106,7 +106,7 @@ void dr413(void) {
    * not 0.
    */
   _Static_assert((S){ /* c89only-warning {{compound literals are a C99-specific feature}}
-                         pre-c23-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+                         expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
                        */
       1,
       .t = {          /* c89only-warning {{designated initializers are a C99 feature}} */

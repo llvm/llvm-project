@@ -21096,12 +21096,10 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
       }
       const auto *DRE = dyn_cast<DeclRefExpr>(ME);
       if (DRE) {
-        const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
-        if (VD && VD->isConstexpr())
+        if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl());
+            VD && VD->isConstexpr())
           return CheckEvalInICE(E, Ctx);
       }
-      if (isa<CompoundLiteralExpr>(ME))
-        return CheckEvalInICE(E, Ctx);
     }
     return ICEDiag(IK_NotICE, E->getBeginLoc());
   }
