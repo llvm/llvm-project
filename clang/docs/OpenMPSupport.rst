@@ -478,9 +478,11 @@ implementation.
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | loop stripe transformation                                  | :good:`done`              | :none:`unclaimed`         | https://github.com/llvm/llvm-project/pull/119891                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| loop fusion transformation                                  | :part:`in progress`       | :none:`unclaimed`         | https://github.com/llvm/llvm-project/pull/139293                         |
+| loop fusion transformation                                  | :part:`in progress`       | :good:`done`              | https://github.com/llvm/llvm-project/pull/139293                         |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/161213                         |
+|                                                             |                           |                           | https://github.com/llvm/llvm-project/pull/168898                         |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
-| loop index set splitting transformation                     | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
+| loop index set splitting transformation                     | :part:`in progress`       | :none:`unclaimed`         | @amitamd7                                                                |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
 | loop transformation apply clause                            | :none:`unclaimed`         | :none:`unclaimed`         |                                                                          |
 +-------------------------------------------------------------+---------------------------+---------------------------+--------------------------------------------------------------------------+
