@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/Dialect/Tosa/Utils/QuantUtils.h"
+#include "mlir/Dialect/Traits.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Matchers.h"
@@ -1282,9 +1283,11 @@ OpFoldResult AddOp::fold(FoldAdaptor adaptor) {
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
 
-  if (lhsTy == resultTy && isSplatZero(resultETy, rhsAttr))
+  const bool isBroadcastable = OpTrait::util::staticallyKnownBroadcastable(
+      lhsTy.getShape(), rhsTy.getShape());
+  if (isBroadcastable && lhsTy == resultTy && isSplatZero(resultETy, rhsAttr))
     return getInput1();
-  if (rhsTy == resultTy && isSplatZero(resultETy, lhsAttr))
+  if (isBroadcastable && rhsTy == resultTy && isSplatZero(resultETy, lhsAttr))
     return getInput2();
 
   if (!lhsAttr || !rhsAttr)
@@ -1316,7 +1319,7 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   auto resultTy = llvm::dyn_cast<RankedTensorType>(getType());
   if (!lhsTy || !rhsTy || !resultTy)
     return {};
-  if (lhsTy != rhsTy)
+  if (lhsTy.getElementType() != rhsTy.getElementType())
     return {};
 
   // IntDivOp inputs must be integer type, no need to check for quantized
@@ -1327,13 +1330,16 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
   if (lhsAttr && lhsAttr.isSplat()) {
-    if (llvm::isa<IntegerType>(resultETy) &&
+    if (llvm::isa<IntegerType>(resultETy) && resultTy.hasStaticShape() &&
         lhsAttr.getSplatValue<APInt>().isZero())
-      return lhsAttr;
+      return lhsAttr.resizeSplat(resultTy);
   }
 
   if (rhsAttr && rhsAttr.isSplat()) {
-    if (llvm::isa<IntegerType>(resultETy) &&
+    const bool isBroadcastable = OpTrait::util::staticallyKnownBroadcastable(
+        lhsTy.getShape(), rhsTy.getShape());
+    if (isBroadcastable && lhsTy == resultTy &&
+        llvm::isa<IntegerType>(resultETy) &&
         rhsAttr.getSplatValue<APInt>().isOne())
       return getInput1();
   }
@@ -1440,19 +1446,22 @@ OpFoldResult MulOp::fold(FoldAdaptor adaptor) {
     }
   }
 
-  if (rhsTy == resultTy) {
-    if (isSplatZero(resultETy, lhsAttr) && resultTy.hasStaticShape())
-      // constant values can only be resized if resulting type is static
-      return lhsAttr.resizeSplat(resultTy);
-    if (isSplatOne(resultETy, lhsAttr, shift))
-      return rhs;
-  }
-  if (lhsTy == resultTy) {
-    if (isSplatZero(resultETy, rhsAttr) && resultTy.hasStaticShape())
-      return rhsAttr.resizeSplat(resultTy);
-    if (isSplatOne(resultETy, rhsAttr, shift))
-      return lhs;
-  }
+  if (rhsTy == resultTy && isSplatZero(resultETy, lhsAttr) &&
+      resultTy.hasStaticShape())
+    // constant values can only be resized if resulting type is static
+    return lhsAttr.resizeSplat(resultTy);
+  if (lhsTy == resultTy && isSplatZero(resultETy, rhsAttr) &&
+      resultTy.hasStaticShape())
+    return rhsAttr.resizeSplat(resultTy);
+
+  const bool isBroadcastable = OpTrait::util::staticallyKnownBroadcastable(
+      lhsTy.getShape(), rhsTy.getShape());
+  if (isBroadcastable && rhsTy == resultTy &&
+      isSplatOne(resultETy, lhsAttr, shift))
+    return rhs;
+  if (isBroadcastable && lhsTy == resultTy &&
+      isSplatOne(resultETy, rhsAttr, shift))
+    return lhs;
 
   return mulBinaryFolder(lhsAttr, rhsAttr, resultTy, shift);
 }
@@ -1475,7 +1484,9 @@ OpFoldResult SubOp::fold(FoldAdaptor adaptor) {
   auto rhsAttr =
       llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput2());
 
-  if (lhsTy == resultTy && isSplatZero(resultETy, rhsAttr))
+  const bool isBroadcastable = OpTrait::util::staticallyKnownBroadcastable(
+      lhsTy.getShape(), rhsTy.getShape());
+  if (isBroadcastable && lhsTy == resultTy && isSplatZero(resultETy, rhsAttr))
     return getInput1();
 
   if (!lhsAttr || !rhsAttr)
@@ -1788,36 +1799,47 @@ OpFoldResult SliceOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-static bool
-mayRequireBroadcast(ValueTypeRange<mlir::OperandRange> operandTypes) {
-  const auto isDynamic = [](Type ty) {
-    const auto shapedTy = llvm::dyn_cast<ShapedType>(ty);
-    return !shapedTy || !shapedTy.hasStaticShape();
-  };
-
-  return llvm::any_of(operandTypes, isDynamic) ||
-         failed(verifyCompatibleShapes(operandTypes));
-}
-
 OpFoldResult tosa::SelectOp::fold(FoldAdaptor adaptor) {
-  // Select allows operand shapes to be broadcast to the output shape. For
-  // now, don't support folding when we cannot prove no broadcasting is
-  // involved.
-  if (mayRequireBroadcast(getOperandTypes()))
+  const Value pred = getPred();
+  const Value onTrue = getOnTrue();
+  const Value onFalse = getOnFalse();
+
+  const auto predTy = llvm::dyn_cast<RankedTensorType>(pred.getType());
+  const auto onTrueTy = llvm::dyn_cast<RankedTensorType>(onTrue.getType());
+  const auto onFalseTy = llvm::dyn_cast<RankedTensorType>(onFalse.getType());
+  if (!predTy || !onTrueTy || !onFalseTy)
     return {};
 
-  if (getOnTrue() == getOnFalse())
-    return getOnTrue();
+  const Type resultTy = getType();
+
+  const ArrayRef<int64_t> predShape = predTy.getShape();
+  const ArrayRef<int64_t> onTrueShape = onTrueTy.getShape();
+
+  if (onTrue == onFalse && onTrueTy == resultTy &&
+      OpTrait::util::staticallyKnownBroadcastable(predShape, onTrueShape))
+    return onTrue;
 
   auto predicate =
       llvm::dyn_cast_if_present<DenseIntElementsAttr>(adaptor.getInput1());
   if (!predicate)
     return {};
-
   if (!predicate.isSplat())
     return {};
-  return predicate.getSplatValue<APInt>().getBoolValue() ? getOnTrue()
-                                                         : getOnFalse();
+
+  const bool predicateValue = predicate.getSplatValue<APInt>().getBoolValue();
+
+  SmallVector<SmallVector<int64_t>, 3> shapes;
+  shapes.emplace_back(predShape);
+  shapes.emplace_back(onTrueShape);
+  shapes.emplace_back(onFalseTy.getShape());
+  const bool isBroadcastable =
+      OpTrait::util::staticallyKnownBroadcastable(shapes);
+
+  if (predicateValue == true && onTrueTy == resultTy && isBroadcastable)
+    return onTrue;
+  if (predicateValue == false && onFalseTy == resultTy && isBroadcastable)
+    return onFalse;
+  return {};
 }
 
 OpFoldResult TileOp::fold(FoldAdaptor adaptor) {
