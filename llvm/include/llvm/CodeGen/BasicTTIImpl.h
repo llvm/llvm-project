@@ -3023,10 +3023,17 @@ public:
     case Intrinsic::clmul: {
       // This cost model should match the expansion in
       // TargetLowering::expandCLMUL.
-      InstructionCost PerBitCost =
+      InstructionCost PerBitCostMul =
           thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
           thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
           thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      InstructionCost PerBitCostBittest =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, RetTy,
+                                      ICmpInst::BAD_ICMP_PREDICATE, CostKind) +
+          thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, RetTy,
+                                      ICmpInst::ICMP_NE, CostKind);
+      InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
       return RetTy->getScalarSizeInBits() * PerBitCost;
     }
     default:

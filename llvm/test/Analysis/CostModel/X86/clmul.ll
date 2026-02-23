@@ -13,11 +13,11 @@ define void @clmul(i128 %a128, i128 %b128, i64 %a64, i64 %b64, i32 %a32, i32 %b3
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NO-PCLMUL-LABEL: 'clmul'
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 %a64, i64 %b64)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 %a64, i64 %b64)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %call_i32 = call i32 @llvm.clmul.i32(i32 %a32, i32 %b32)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %call_i16 = call i16 @llvm.clmul.i16(i16 %a16, i16 %b16)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %call_i8 = call i8 @llvm.clmul.i8(i8 %a8, i8 %b8)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %call_i16 = call i16 @llvm.clmul.i16(i16 %a16, i16 %b16)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %call_i8 = call i8 @llvm.clmul.i8(i8 %a8, i8 %b8)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
@@ -34,15 +34,15 @@ define void @clmul_128(<1 x i128> %a128, <1 x i128> %b128, <2 x i64> %a64, <2 x 
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %call_i64 = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %a64, <2 x i64> %b64)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %call_i32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a32, <4 x i32> %b32)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
-; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
+; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NO-PCLMUL-LABEL: 'clmul_128'
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %call_i128 = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a128, <1 x i128> %b128)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %call_i128 = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a128, <1 x i128> %b128)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 576 for instruction: %call_i64 = call <2 x i64> @llvm.clmul.v2i64(<2 x i64> %a64, <2 x i64> %b64)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %call_i32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a32, <4 x i32> %b32)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %call_i32 = call <4 x i32> @llvm.clmul.v4i32(<4 x i32> %a32, <4 x i32> %b32)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 48 for instruction: %call_i16 = call <8 x i16> @llvm.clmul.v8i16(<8 x i16> %a16, <8 x i16> %b16)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 64 for instruction: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %call_i8 = call <16 x i8> @llvm.clmul.v16i8(<16 x i8> %a8, <16 x i8> %b8)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %call_i128 = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %a128, <1 x i128> %b128)
@@ -59,15 +59,15 @@ define void @clmul_256(<2 x i128> %a128, <2 x i128> %b128, <4 x i64> %a64, <4 x 
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %call_i64 = call <4 x i64> @llvm.clmul.v4i64(<4 x i64> %a64, <4 x i64> %b64)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %call_i32 = call <8 x i32> @llvm.clmul.v8i32(<8 x i32> %a32, <8 x i32> %b32)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %call_i16 = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a16, <16 x i16> %b16)
-; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %call_i8 = call <32 x i8> @llvm.clmul.v32i8(<32 x i8> %a8, <32 x i8> %b8)
+; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %call_i8 = call <32 x i8> @llvm.clmul.v32i8(<32 x i8> %a8, <32 x i8> %b8)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NO-PCLMUL-LABEL: 'clmul_256'
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2048 for instruction: %call_i128 = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %a128, <2 x i128> %b128)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 1536 for instruction: %call_i128 = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %a128, <2 x i128> %b128)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 1152 for instruction: %call_i64 = call <4 x i64> @llvm.clmul.v4i64(<4 x i64> %a64, <4 x i64> %b64)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 512 for instruction: %call_i32 = call <8 x i32> @llvm.clmul.v8i32(<8 x i32> %a32, <8 x i32> %b32)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 320 for instruction: %call_i32 = call <8 x i32> @llvm.clmul.v8i32(<8 x i32> %a32, <8 x i32> %b32)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %call_i16 = call <16 x i16> @llvm.clmul.v16i16(<16 x i16> %a16, <16 x i16> %b16)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 128 for instruction: %call_i8 = call <32 x i8> @llvm.clmul.v32i8(<32 x i8> %a8, <32 x i8> %b8)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %call_i8 = call <32 x i8> @llvm.clmul.v32i8(<32 x i8> %a8, <32 x i8> %b8)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %call_i128 = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %a128, <2 x i128> %b128)
@@ -84,15 +84,15 @@ define void @clmul_512(<4 x i128> %a128, <4 x i128> %b128, <8 x i64> %a64, <8 x 
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %call_i64 = call <8 x i64> @llvm.clmul.v8i64(<8 x i64> %a64, <8 x i64> %b64)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %call_i32 = call <16 x i32> @llvm.clmul.v16i32(<16 x i32> %a32, <16 x i32> %b32)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %call_i16 = call <32 x i16> @llvm.clmul.v32i16(<32 x i16> %a16, <32 x i16> %b16)
-; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %call_i8 = call <64 x i8> @llvm.clmul.v64i8(<64 x i8> %a8, <64 x i8> %b8)
+; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %call_i8 = call <64 x i8> @llvm.clmul.v64i8(<64 x i8> %a8, <64 x i8> %b8)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NO-PCLMUL-LABEL: 'clmul_512'
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 4096 for instruction: %call_i128 = call <4 x i128> @llvm.clmul.v4i128(<4 x i128> %a128, <4 x i128> %b128)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 3072 for instruction: %call_i128 = call <4 x i128> @llvm.clmul.v4i128(<4 x i128> %a128, <4 x i128> %b128)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2304 for instruction: %call_i64 = call <8 x i64> @llvm.clmul.v8i64(<8 x i64> %a64, <8 x i64> %b64)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %call_i32 = call <16 x i32> @llvm.clmul.v16i32(<16 x i32> %a32, <16 x i32> %b32)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 640 for instruction: %call_i32 = call <16 x i32> @llvm.clmul.v16i32(<16 x i32> %a32, <16 x i32> %b32)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %call_i16 = call <32 x i16> @llvm.clmul.v32i16(<32 x i16> %a16, <32 x i16> %b16)
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 256 for instruction: %call_i8 = call <64 x i8> @llvm.clmul.v64i8(<64 x i8> %a8, <64 x i8> %b8)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %call_i8 = call <64 x i8> @llvm.clmul.v64i8(<64 x i8> %a8, <64 x i8> %b8)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
   %call_i128 = call <4 x i128> @llvm.clmul.v4i128(<4 x i128> %a128, <4 x i128> %b128)
