@@ -16,7 +16,7 @@
 // 0x7fc00000. For the Arm optimized FP implementation, which commits to a more
 // detailed handling of NaNs, we tighten up the check and include some extra
 // test cases specific to that NaN policy.
-#if (__arm__ || __thumb__) && COMPILER_RT_ARM_OPTIMIZED_FP
+#if COMPILER_RT_ARM_OPTIMIZED_FP_THUMB1
 #  define EXPECT_EXACT_RESULTS
 #  define ARM_NAN_HANDLING
 #endif
