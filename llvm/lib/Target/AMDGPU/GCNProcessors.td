@@ -9,12 +9,11 @@
 // The code produced for "generic" is only useful for tests and cannot
 // reasonably be expected to execute on any particular target.
 def : ProcessorModel<"generic", NoSchedModel,
-  [FeatureDX10ClampAndIEEEMode]
+  []
 >;
 
 def : ProcessorModel<"generic-hsa", NoSchedModel,
-  [FeatureFlatAddressSpace,
-   FeatureDX10ClampAndIEEEMode]
+  [FeatureFlatAddressSpace]
 >;
 
 //===------------------------------------------------------------===//
