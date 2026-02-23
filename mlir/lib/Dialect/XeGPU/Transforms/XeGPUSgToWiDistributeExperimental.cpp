@@ -413,12 +413,12 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
     // Check that leading dimensions are unit.
     int chunkSize = op.getChunkSize().value_or(1);
     int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
-    for (int i = 0; i < resultTy.getRank() - effectiveVecRank; i++) {
-      if (resultTy.getShape()[i] != 1)
-        return rewriter.notifyMatchFailure(
-            op, "Only unit dimensions allowed for the leading "
-                "dimensions of the load vector!");
-    }
+    ArrayRef<int64_t> shape = resultTy.getShape();
+    if (llvm::any_of(shape.take_front(resultTy.getRank() - effectiveVecRank),
+                     [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Only unit dimensions allowed for the leading "
+              "dimensions of the load vector!");
 
     auto expectedWiResultTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(layout, resultTy);
@@ -437,19 +437,15 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
     if (auto offsetsTy = dyn_cast<VectorType>(offsets.getType())) {
       VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
                                                offsetsTy.getElementType());
-      if (offsetsTy != offsetsTy1D)
-        offsets = vector::ShapeCastOp::create(rewriter, op.getLoc(),
-                                              offsetsTy1D, offsets)
-                      .getResult();
+      offsets = castValueTo(rewriter, cast<TypedValue<VectorType>>(offsets),
+                            offsetsTy1D);
     }
     Value mask = adaptor.getMask();
     if (auto maskTy = dyn_cast<VectorType>(mask.getType())) {
       VectorType maskTy1D =
           VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
-      if (maskTy != maskTy1D)
-        mask =
-            vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
-                .getResult();
+      mask =
+          castValueTo(rewriter, cast<TypedValue<VectorType>>(mask), maskTy1D);
     }
 
     auto newOp = xegpu::LoadGatherOp::create(
@@ -459,9 +455,8 @@ struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
 
     Value result = newOp->getResult(0);
     if (supportedWiResultTy != expectedWiResultTy)
-      result = vector::ShapeCastOp::create(rewriter, op.getLoc(),
-                                           expectedWiResultTy, result)
-                   .getResult();
+      result = castValueTo(rewriter, cast<TypedValue<VectorType>>(result),
+                           expectedWiResultTy);
     rewriter.replaceOp(op, result);
     return success();
   }
@@ -613,12 +608,12 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
     // Check that all leading dimensions are unit dimensions.
     int chunkSize = op.getChunkSize().value_or(1);
     int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
-    for (int i = 0; i < valueTy.getRank() - effectiveVecRank; i++) {
-      if (valueTy.getShape()[i] != 1)
-        return rewriter.notifyMatchFailure(
-            op, "Only unit dimensions allowed for the leading "
-                "dimensions of the store vector!");
-    }
+    ArrayRef<int64_t> shape = valueTy.getShape();
+    if (llvm::any_of(shape.take_front(valueTy.getRank() - effectiveVecRank),
+                     [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Only unit dimensions allowed for the leading "
+              "dimensions of the store vector!");
 
     auto expectedWiValueTyOrFailure =
         xegpu::getDistVecTypeBasedOnLaneLayout(layout, valueTy);
@@ -635,28 +630,23 @@ struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
     Value adaptedValue = adaptor.getValue();
     if (adaptedValue.getType() != supportedWiValueTy)
       adaptedValue =
-          vector::ShapeCastOp::create(rewriter, op.getLoc(), supportedWiValueTy,
-                                      adaptedValue)
-              .getResult();
+          castValueTo(rewriter, cast<TypedValue<VectorType>>(adaptedValue),
+                      supportedWiValueTy);
 
     // Flatten offsets and mask to 1D to match the 1D value type.
     Value offsets = adaptor.getOffsets();
     if (auto offsetsTy = dyn_cast<VectorType>(offsets.getType())) {
       VectorType offsetsTy1D = VectorType::get({offsetsTy.getNumElements()},
                                                offsetsTy.getElementType());
-      if (offsetsTy != offsetsTy1D)
-        offsets = vector::ShapeCastOp::create(rewriter, op.getLoc(),
-                                              offsetsTy1D, offsets)
-                      .getResult();
+      offsets = castValueTo(rewriter, cast<TypedValue<VectorType>>(offsets),
+                            offsetsTy1D);
     }
     Value mask = adaptor.getMask();
     if (auto maskTy = dyn_cast<VectorType>(mask.getType())) {
       VectorType maskTy1D =
           VectorType::get({maskTy.getNumElements()}, maskTy.getElementType());
-      if (maskTy != maskTy1D)
-        mask =
-            vector::ShapeCastOp::create(rewriter, op.getLoc(), maskTy1D, mask)
-                .getResult();
+      mask =
+          castValueTo(rewriter, cast<TypedValue<VectorType>>(mask), maskTy1D);
     }
 
     xegpu::StoreScatterOp::create(
