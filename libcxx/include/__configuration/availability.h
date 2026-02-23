@@ -295,11 +295,6 @@
 #  define _LIBCPP_AVAILABILITY_HAS_ADDITIONAL_IOSTREAM_EXPLICIT_INSTANTIATIONS_1 0
 #endif
 
-// This controls whether we provide an implementation of a thread safe variant of the `std::lgamma`
-// function in the dylib.
-#define _LIBCPP_AVAILABILITY_HAS_THREAD_SAFE_LGAMMA _LIBCPP_INTRODUCED_IN_LLVM_23
-// No attribute, since we call ::lgamma_r instead
-
 // Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
 #  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
 #    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8
