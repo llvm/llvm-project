@@ -1116,7 +1116,7 @@ enum class SymbolTag {
   File = 7,
   Static = 8,
   Abstract = 9, // In context of a class and method - this symbol indicates a
-                // pure virtual method.
+                // pure virtual class or method.
   Final = 10, // In context of a method - this symbol indicates that the method
               // cannot be overridden in subclasses.
               // In context of a class - this symbol indicates that the class is

@@ -172,8 +172,8 @@ SymbolTags toSymbolTagBitmask(const SymbolTag ST) {
   return (1 << static_cast<unsigned>(ST));
 }
 
-bool isOverrides(const NamedDecl *nd) {
-  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(nd)) {
+bool isOverrides(const NamedDecl *ND) {
+  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
     // A method "overrides" if:
     // 1. It overrides at least one method
     // 2. At least one of the overridden methods is virtual (but NOT pure
@@ -182,7 +182,7 @@ bool isOverrides(const NamedDecl *nd) {
     if (MD->size_overridden_methods() == 0)
       return false;
 
-    for (auto Overridden : MD->overridden_methods()) {
+    for (const auto Overridden : MD->overridden_methods()) {
       // Check if the overridden method is virtual but not pure virtual
       if (Overridden->isVirtual() && !Overridden->isPureVirtual())
         return true;
@@ -192,8 +192,8 @@ bool isOverrides(const NamedDecl *nd) {
   return false;
 }
 
-bool isImplements(const NamedDecl *nd) {
-  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(nd)) {
+bool isImplements(const NamedDecl *ND) {
+  if (const auto *MD = llvm::dyn_cast<CXXMethodDecl>(ND)) {
     // A method "implements" pure virtual methods from base classes if:
     // 1. It overrides at least one method
     // 2. It is NOT itself pure virtual (i.e., it has a concrete implementation)
@@ -202,7 +202,7 @@ bool isImplements(const NamedDecl *nd) {
     if (MD->size_overridden_methods() == 0 || MD->isPureVirtual())
       return false;
 
-    for (auto Overridden : MD->overridden_methods()) {
+    for (const auto Overridden : MD->overridden_methods()) {
       if (!Overridden->isPureVirtual())
         return false;
     }
@@ -270,8 +270,11 @@ SymbolTags computeSymbolTags(const NamedDecl &ND) {
 // symbol. This is needed to avoid redundant tags.
 SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
   SymbolTags Result = ST;
-  if (isa<CXXMethodDecl>(ND) &&
-      (ST & toSymbolTagBitmask(SymbolTag::Overrides))) {
+
+  if (not isa<CXXMethodDecl>(ND))
+    return Result;
+
+  if (ST & toSymbolTagBitmask(SymbolTag::Overrides)) {
     // Overrides means that ND overrides an existing implementation of a virtual
     // method in a base class. If a symbol is marked as Overrides, the tags
     // Virtual, Declaration and Definition should be removed, as the Overrides
@@ -280,8 +283,7 @@ SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
     Result &= ~toSymbolTagBitmask(SymbolTag::Declaration);
     Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
   }
-  if (isa<CXXMethodDecl>(ND) &&
-      (ST & toSymbolTagBitmask(SymbolTag::Implements))) {
+  if (ST & toSymbolTagBitmask(SymbolTag::Implements)) {
     // Implements means that ND implements an existing pure virtual method in a
     // base class. If a symbol is marked as Implements, the tags Virtual,
     // Declaration, Definition and Overrides should be removed, as the
@@ -292,7 +294,7 @@ SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
     Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
     Result &= ~toSymbolTagBitmask(SymbolTag::Overrides);
   }
-  if (isa<CXXMethodDecl>(ND) && (ST & toSymbolTagBitmask(SymbolTag::Virtual))) {
+  if (ST & toSymbolTagBitmask(SymbolTag::Virtual)) {
     // Virtual means that ND is a virtual method that does not override any
     // method in a base class. If a symbol is marked as Virtual, the tags
     // Declaration and Definition should be removed, as the Virtual tag implies
@@ -300,8 +302,7 @@ SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
     Result &= ~toSymbolTagBitmask(SymbolTag::Declaration);
     Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
   }
-  if (isa<CXXMethodDecl>(ND) &&
-      (ST & toSymbolTagBitmask(SymbolTag::Abstract))) {
+  if (ST & toSymbolTagBitmask(SymbolTag::Abstract)) {
     // Abstract means that ND is a pure virtual method. If a symbol is marked as
     // Abstract, the tags Virtual, Declaration and Definition should be removed,
     // as the Abstract tag implies that the symbol is virtual and a
@@ -310,7 +311,7 @@ SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
     Result &= ~toSymbolTagBitmask(SymbolTag::Declaration);
     Result &= ~toSymbolTagBitmask(SymbolTag::Definition);
   }
-  if (isa<CXXMethodDecl>(ND) && (ST & toSymbolTagBitmask(SymbolTag::Final))) {
+  if (ST & toSymbolTagBitmask(SymbolTag::Final)) {
     // Final means that ND is a method that cannot be overridden by any method
     // in a derived class. If a symbol is marked as Final, the tags Virtual and
     // Overrides should be removed, as the Final tag implies that the symbol is
