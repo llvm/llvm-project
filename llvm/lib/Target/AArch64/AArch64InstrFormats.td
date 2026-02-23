@@ -1882,11 +1882,6 @@ class STSHHI
                     [(int_aarch64_stshh (i32 imm0_7_i32:$policy))]>,
       Sched<[WriteHint]> {
   bits<3> policy;
-  // NOTE: ideally, this would have mayLoad = 0, mayStore = 0, but we cannot
-  // model patterns with sufficiently fine granularity.
-  let mayLoad = 1;
-  let mayStore = 1;
-  let hasSideEffects = 1;
   let Inst{20-12} = 0b000011001;
   let Inst{11-8} = 0b0110;
   let Inst{7-5} = policy;

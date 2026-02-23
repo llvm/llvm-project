@@ -64,7 +64,7 @@ def int_aarch64_frint64x
 def int_aarch64_hint : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
 def int_aarch64_stshh
     : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
-                            [IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
+                            [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 def int_aarch64_stshh_atomic_store
     : Intrinsic<[],
                 [llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty],
