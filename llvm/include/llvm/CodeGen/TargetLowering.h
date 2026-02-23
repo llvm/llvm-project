@@ -4299,12 +4299,22 @@ public:
   ///    results of this function, because simply replacing TLO.Old
   ///    with TLO.New will be incorrect when this parameter is true and TLO.Old
   ///    has multiple uses.
+  /// Vector elements that aren't demanded can be turned into poison unless the
+  /// corresponding bit in \p DoNotPoisonEltMask is set.
+  bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedEltMask,
+                                  const APInt &DoNotPoisonEltMask,
+                                  APInt &KnownUndef, APInt &KnownZero,
+                                  TargetLoweringOpt &TLO, unsigned Depth = 0,
+                                  bool AssumeSingleUse = false) const;
+  /// Version of SimplifyDemandedVectorElts without the DoNotPoisonEltMask
+  /// argument. All undemanded elements can be turned into poison.
   bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedEltMask,
                                   APInt &KnownUndef, APInt &KnownZero,
                                   TargetLoweringOpt &TLO, unsigned Depth = 0,
                                   bool AssumeSingleUse = false) const;
 
   /// Helper wrapper around SimplifyDemandedVectorElts.
+  /// All undemanded elements can be turned into poison.
   /// Adds Op back to the worklist upon success.
   bool SimplifyDemandedVectorElts(SDValue Op, const APInt &DemandedElts,
                                   DAGCombinerInfo &DCI) const;
