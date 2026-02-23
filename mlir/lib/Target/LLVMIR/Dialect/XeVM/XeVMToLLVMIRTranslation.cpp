@@ -215,9 +215,16 @@ private:
     if (!module)
       return mlir::failure();
 
-    // @TODO: Expect the pointer to be the first operand, but this is not a
-    // strict requirement of the protocol; it can be adjusted if needed.
-    constexpr unsigned ptrIdx = 0;
+    // @TODO: Currently we expect the pointer to be the first operand for all
+    // instructions (which can have cache control attributes) except llvm.store.
+    // but this is not a strict requirement of the protocol; it can be adjusted
+    // if needed.
+    unsigned ptrIdx = 0;
+
+    // Check if the instruction is a LLVM Store instruction, which has the
+    // pointer as the second operand.
+    if (llvm::isa<llvm::StoreInst>(inst))
+      ptrIdx = 1;
     llvm::Value *ptr = inst->getOperand(ptrIdx);
 
     if (!ptr || !ptr->getType()->isPointerTy())
