@@ -10897,26 +10897,23 @@ def warn_dangling_reference_captured_by_unknown : Warning<
    "the full-expression">, InGroup<DanglingCapture>;
 
 // Diagnostics based on the Lifetime safety analysis.
-def warn_lifetime_safety_loan_expires_permissive : Warning<
+def warn_lifetime_safety_use_after_scope : Warning<
    "object whose reference is captured does not live long enough">,
-   InGroup<LifetimeSafetyPermissive>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_strict : Warning<
-   "object whose reference is captured may not live long enough">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
-def warn_lifetime_safety_loan_expires_moved_strict : Warning<
+   InGroup<LifetimeSafetyUseAfterScope>, DefaultIgnore;
+def warn_lifetime_safety_use_after_scope_moved : Warning<
    "object whose reference is captured may not live long enough. "
    "This could be false positive as the storage may have been moved later">,
-   InGroup<LifetimeSafetyStrict>, DefaultIgnore;
+   InGroup<LifetimeSafetyUseAfterScopeMoved>, DefaultIgnore;
 
-def warn_lifetime_safety_return_stack_addr_permissive
+def warn_lifetime_safety_return_stack_addr
     : Warning<"address of stack memory is returned later">,
-      InGroup<LifetimeSafetyPermissive>,
+      InGroup<LifetimeSafetyReturnStackAddr>,
       DefaultIgnore;
-def warn_lifetime_safety_return_stack_addr_moved_strict
+def warn_lifetime_safety_return_stack_addr_moved
     : Warning<"address of stack memory may be returned later. "
       "This could be false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyStrict>,
+      InGroup<LifetimeSafetyReturnStackAddrMoved>,
       DefaultIgnore;
 
 def warn_lifetime_safety_invalidation
@@ -10932,7 +10929,7 @@ def warn_lifetime_safety_dangling_field_moved
     : Warning<"address of stack memory escapes to a field. "
       "This could be a false positive as the storage may have been moved. "
       "Consider moving first and then aliasing later to resolve the issue">,
-      InGroup<LifetimeSafetyDanglingFieldStrict>,
+      InGroup<LifetimeSafetyDanglingFieldMoved>,
       DefaultIgnore;
 
 def note_lifetime_safety_used_here : Note<"later used here">;

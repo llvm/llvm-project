@@ -2862,12 +2862,10 @@ public:
 
   void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                           const Expr *MovedExpr, SourceLocation FreeLoc,
-                          Confidence C) override {
+                          Confidence) override {
     S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_loan_expires_moved_strict
-           : C == Confidence::Definite
-               ? diag::warn_lifetime_safety_loan_expires_permissive
-               : diag::warn_lifetime_safety_loan_expires_strict)
+           MovedExpr ? diag::warn_lifetime_safety_use_after_scope_moved
+                     : diag::warn_lifetime_safety_use_after_scope)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -2879,10 +2877,10 @@ public:
 
   void reportUseAfterReturn(const Expr *IssueExpr, const Expr *ReturnExpr,
                             const Expr *MovedExpr, SourceLocation ExpiryLoc,
-                            Confidence C) override {
+                            Confidence) override {
     S.Diag(IssueExpr->getExprLoc(),
-           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved_strict
-                     : diag::warn_lifetime_safety_return_stack_addr_permissive)
+           MovedExpr ? diag::warn_lifetime_safety_return_stack_addr_moved
+                     : diag::warn_lifetime_safety_return_stack_addr)
         << IssueExpr->getSourceRange();
     if (MovedExpr)
       S.Diag(MovedExpr->getExprLoc(), diag::note_lifetime_safety_moved_here)
@@ -3148,17 +3146,14 @@ void clang::sema::AnalysisBasedWarnings::IssueWarnings(
   AC.getCFGBuildOptions().AddCXXDefaultInitExprInCtors = true;
 
   bool IsLifetimeSafetyDiagnosticEnabled =
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_use_after_scope_moved,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_loan_expires_moved_strict,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_permissive,
+      !Diags.isIgnored(diag::warn_lifetime_safety_return_stack_addr_moved,
                        D->getBeginLoc()) ||
-      !Diags.isIgnored(
-          diag::warn_lifetime_safety_return_stack_addr_moved_strict,
-          D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_invalidation,
                        D->getBeginLoc()) ||
       !Diags.isIgnored(diag::warn_lifetime_safety_noescape_escapes,

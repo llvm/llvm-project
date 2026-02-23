@@ -174,7 +174,7 @@ void potential_if_branch(bool cond) {
   MyObj* p = &safe;
   if (cond) {
     MyObj temp;
-    p = &temp;  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = &temp;  // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   if (!cond)
     (void)*p;   // expected-note {{later used here}}
@@ -202,7 +202,7 @@ void definite_potential_together(bool cond) {
     if (cond)
       p_definite = &s;  // expected-warning {{does not live long enough}}
     if (cond)
-      p_maybe = &s;     // expected-warning {{may not live long enough}}         
+      p_maybe = &s;     // expected-warning {{does not live long enough}}         
   }                     // expected-note 2 {{destroyed here}}
   (void)*p_definite;    // expected-note {{later used here}}
   if (!cond)
@@ -235,7 +235,7 @@ void potential_due_to_conditional_killing(bool cond) {
   MyObj* q;
   {
     MyObj s;
-    q = &s;       // expected-warning {{may not live long enough}}
+    q = &s;       // expected-warning {{does not live long enough}}
   }               // expected-note {{destroyed here}}
   if (cond) {
     // 'q' is conditionally "rescued". 'p' is not.
@@ -248,7 +248,7 @@ void potential_for_loop_use_after_loop_body(MyObj safe) {
   MyObj* p = &safe;
   for (int i = 0; i < 1; ++i) {
     MyObj s;
-    p = &s;     // expected-warning {{may not live long enough}}
+    p = &s;     // expected-warning {{does not live long enough}}
   }             // expected-note {{destroyed here}}
   (void)*p;     // expected-note {{later used here}}
 }
@@ -268,7 +268,7 @@ void potential_for_loop_gsl() {
   View v = safe;
   for (int i = 0; i < 1; ++i) {
     MyObj s;
-    v = s;      // expected-warning {{object whose reference is captured may not live long enough}}
+    v = s;      // expected-warning {{object whose reference is captured does not live long enough}}
   }             // expected-note {{destroyed here}}
   v.use();      // expected-note {{later used here}}
 }
@@ -366,7 +366,7 @@ void potential_switch(int mode) {
   switch (mode) {
   case 1: {
     MyObj temp;
-    p = &temp;  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = &temp;  // expected-warning {{object whose reference is captured does not live long enough}}
     break;      // expected-note {{destroyed here}}
   }
   case 2: {
@@ -430,7 +430,7 @@ void loan_from_previous_iteration(MyObj safe, bool condition) {
 
   while (condition) {
     MyObj x;
-    p = &x;     // expected-warning {{may not live long enough}}
+    p = &x;     // expected-warning {{does not live long enough}}
 
     if (condition)
       q = p;
@@ -994,7 +994,7 @@ void conditional_operator_one_unsafe_branch(bool cond) {
   MyObj* p = &safe;
   {
     MyObj temp;
-    p = cond ? &temp  // expected-warning {{object whose reference is captured may not live long enough}}
+    p = cond ? &temp  // expected-warning {{object whose reference is captured does not live long enough}}
              : &safe;
   }  // expected-note {{destroyed here}}
 
@@ -1190,7 +1190,7 @@ void range_based_for_not_reference() {
   {
     MyObjStorage s;
     for (MyObj o : s) { // expected-note {{destroyed here}}
-      v = o; // expected-warning {{object whose reference is captured may not live long enough}}
+      v = o; // expected-warning {{object whose reference is captured does not live long enough}}
     }
   }
   v.use();  // expected-note {{later used here}}
