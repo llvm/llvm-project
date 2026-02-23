@@ -1163,15 +1163,14 @@ struct ConstantInt_match {
 };
 
 template <typename T> struct Constant64_match {
+  static_assert(sizeof(T) == 8);
+
   T &BindVal;
 
   explicit Constant64_match(T &V) : BindVal(V) {}
 
   template <typename MatchContext>
   bool match(const MatchContext &Ctx, SDValue N) {
-    if constexpr (sizeof(T) != 8)
-      return false;
-
     APInt V;
     if (!ConstantInt_match(&V).match(Ctx, N))
       return false;
