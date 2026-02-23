@@ -421,11 +421,9 @@ if(LLVM_ENABLE_PIC)
       message(FATAL_ERROR "syclRuntime not found. Please set check oneapi installation and run setvars.sh.")
     endif()
 
-    add_mlir_library(mlir_sycl_runtime
+    add_library(mlir_sycl_runtime
       SHARED
       SyclRuntimeWrappers.cpp
-
-      EXCLUDE_FROM_LIBMLIR
     )
 
     check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
@@ -444,14 +442,15 @@ if(LLVM_ENABLE_PIC)
   endif()
 
   if(MLIR_ENABLE_LEVELZERO_RUNNER)
-    add_mlir_library(mlir_levelzero_runtime
+    add_library(mlir_levelzero_runtime
       SHARED
       LevelZeroRuntimeWrappers.cpp
-
-      EXCLUDE_FROM_LIBMLIR
     )
 
-    target_compile_options(mlir_levelzero_runtime PUBLIC -fexceptions -frtti)
+    check_cxx_compiler_flag("-frtti" CXX_HAS_FRTTI_FLAG)
+    if(NOT CXX_HAS_FRTTI_FLAG)
+      message(FATAL_ERROR "CXX compiler does not accept flag -frtti")
+    endif()
 
     target_include_directories(mlir_levelzero_runtime PRIVATE
       ${MLIR_INCLUDE_DIRS}
