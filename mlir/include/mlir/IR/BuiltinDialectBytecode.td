@@ -242,6 +242,13 @@ def IntegerSetAttr : EnableIntegerSetPrintingJuly2026<(attr
   let cBuilder = "IntegerSetAttr::get(IntegerSet::get(numDims, numSymbols, constraints, eqFlags))";
 }
 
+class EnableStridedPrintingJuly2026<dag d> : DialectAttribute<d>;
+
+def StridedLayoutAttr : EnableStridedPrintingJuly2026<(attr
+  SignedVarInt:$offset,
+  Array<SignedVarIntList>:$strides
+)>;
+
 // Types
 // -----
 
@@ -260,6 +267,11 @@ def IntegerType : DialectType<(type
 def IndexType : DialectType<(type)>;
 
 def FunctionType : DialectType<(type
+  Array<Type>:$inputs,
+  Array<Type>:$results
+)>;
+
+def GraphType : DialectType<(type
   Array<Type>:$inputs,
   Array<Type>:$results
 )>;
@@ -417,6 +429,7 @@ def BuiltinDialectAttributes : DialectAttributes<"Builtin"> {
     FileLineColRange,
     AffineMapAttr,
     IntegerSetAttr,
+    StridedLayoutAttr,
   ];
 }
 
@@ -455,7 +468,8 @@ def BuiltinDialectTypes : DialectTypes<"Builtin"> {
     Float6E2M3FNType,
     Float6E3M2FNType,
     Float8E8M0FNUType,
-    TokenType
+    TokenType,
+    GraphType
   ];
 }
 
