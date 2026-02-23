@@ -298,19 +298,19 @@ std::string_view danglingRefToOptionalFromTemp4() {
 void danglingReferenceFromTempOwner() {
   int &&r = *std::optional<int>();          // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        https://github.com/llvm/llvm-project/issues/175893
-  int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  // https://github.com/llvm/llvm-project/issues/175893
+  int &&r2 = *std::optional<int>(5);        // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
-  // FIXME: Detect this using the CFG-based lifetime analysis.
-  //        https://github.com/llvm/llvm-project/issues/175893
-  int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
+  // https://github.com/llvm/llvm-project/issues/175893
+  int &&r3 = std::optional<int>(5).value(); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                              // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
 
   const int &r4 = std::vector<int>().at(3); // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
   int &&r5 = std::vector<int>().at(3);      // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                             // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
-  use(r, r2, r3, r4, r5);                   // cfg-note 3 {{later used here}}
+  use(r, r2, r3, r4, r5);                   // cfg-note 5 {{later used here}}
 
   std::string_view sv = *getTempOptStr();  // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
                                            // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
@@ -385,9 +385,9 @@ void handleGslPtrInitsThroughReference2() {
 
 void handleTernaryOperator(bool cond) {
     std::basic_string<char> def;
-    // FIXME: Detect this using the CFG-based lifetime analysis.
-    std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}}
-    use(v);
+    std::basic_string_view<char> v = cond ? def : ""; // expected-warning {{object backing the pointer will be destroyed at the end of the full-expression}} \
+                                                      // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+    use(v); // cfg-note {{later used here}}
 }
 
 std::string operator+(std::string_view s1, std::string_view s2);
@@ -851,8 +851,9 @@ public:
 namespace GH118064{
 
 void test() {
-  auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}}
-  use(y);
+  auto y = std::set<int>{}.begin(); // expected-warning {{object backing the pointer}} \
+  // cfg-warning {{object whose reference is captured does not live long enough}} cfg-note {{destroyed here}}
+  use(y); // cfg-note {{later used here}}
 }
 } // namespace GH118064
 
