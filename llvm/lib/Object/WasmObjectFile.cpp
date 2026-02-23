@@ -1486,6 +1486,15 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     wasm::WasmSymbolInfo Info;
     Info.Name = Ex.Name;
     Info.Flags = 0;
+    // For shared objects, look up flags (e.g. TLS) from dylink export info
+    if (HasDylinkSection) {
+      for (const auto &ExportInfo : DylinkInfo.ExportInfo) {
+        if (ExportInfo.Name == Ex.Name) {
+          Info.Flags = ExportInfo.Flags;
+          break;
+        }
+      }
+    }
     switch (Ex.Kind) {
     case wasm::WASM_EXTERNAL_FUNCTION: {
       if (!isValidFunctionIndex(Ex.Index))
