@@ -3004,17 +3004,21 @@ public:
             }
           };
           ScoreLoadOrOpcode(Op, OpLastLane);
-          // If copyable, check against the operands of the copyable op
-          if (S.isCopyableElement(VL[Lane]) &&
-              !S.isCopyableElement(VL[LastLane])) {
-            if (Instruction *I = dyn_cast<Instruction>(Op)) {
-              if (Instruction::isBinaryOp(I->getOpcode())) {
-                Value *OpOperand0 = I->getOperand(0);
-                ScoreLoadOrOpcode(OpOperand0, OpLastLane);
-                if (I->isCommutative()) {
-                  Value *OpOperand1 = I->getOperand(1);
-                  ScoreLoadOrOpcode(OpOperand1, OpLastLane);
-                }
+          // If Op or OpLastLane is Copyable, score against the Copyable Value's
+          // operands
+          if (S.isCopyableElement(VL[Lane]) !=
+              S.isCopyableElement(VL[LastLane])) {
+            bool OpIsCopyable = S.isCopyableElement(VL[Lane]);
+            Instruction *I =
+                dyn_cast<Instruction>(OpIsCopyable ? Op : OpLastLane);
+            if (I && Instruction::isBinaryOp(I->getOpcode())) {
+              Value *IOp0 = I->getOperand(0);
+              ScoreLoadOrOpcode(OpIsCopyable ? IOp0 : Op,
+                                OpIsCopyable ? OpLastLane : IOp0);
+              if (I->isCommutative()) {
+                Value *IOp1 = I->getOperand(1);
+                ScoreLoadOrOpcode(OpIsCopyable ? IOp1 : Op,
+                                  OpIsCopyable ? OpLastLane : IOp1);
               }
             }
           }
