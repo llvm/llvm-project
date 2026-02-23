@@ -2472,7 +2472,7 @@ static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG) {
       if (SCC.size() != 1)
         continue;
       Function &F = SCC.begin()->getFunction();
-      if (!F.isDeclaration() && F.hasInternalLinkage())
+      if (!F.isDeclaration() && F.hasInternalLinkage() && !F.use_empty())
         Worklist.push_back(&F);
     }
   }

@@ -3083,7 +3083,7 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v32
 ; GCN-O0-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GCN-O0-NEXT:    s_mov_b32 m0, s6
-; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v0
+; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v1
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:140 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:136 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 s[6:7], s[4:5]
@@ -3257,7 +3257,7 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[4:5], s6, v32
 ; GCN-O0-NEXT:    s_and_saveexec_b64 s[4:5], s[4:5]
 ; GCN-O0-NEXT:    s_mov_b32 m0, s6
-; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v1
+; GCN-O0-NEXT:    v_movrels_b32_e32 v0, v0
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:276 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:272 ; 4-byte Folded Spill
 ; GCN-O0-NEXT:    s_mov_b64 s[6:7], s[4:5]
@@ -3277,11 +3277,10 @@ define double @double16_extelt_vec(i32 %sel) {
 ; GCN-O0-NEXT:    v_readlane_b32 s5, v35, 38
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-O0-NEXT:  ; %bb.6:
-; GCN-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    ; implicit-def: $sgpr4
-; GCN-O0-NEXT:    ; implicit-def: $sgpr5
-; GCN-O0-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:276 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:140 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
+; GCN-O0-NEXT:    v_mov_b32_e32 v1, v0
 ; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v2, v3
 ; GCN-O0-NEXT:    s_mov_b32 s4, 32

@@ -249,7 +249,7 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %amt) nounwind {
 ; AVX1-NEXT:    vpsubw %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm4 = [15,15,15,15,15,15,15,15]
 ; AVX1-NEXT:    vpand %xmm4, %xmm2, %xmm2
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm5 = xmm2[4,4,5,5,6,6,7,7]
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm5 = xmm2[4],xmm3[4],xmm2[5],xmm3[5],xmm2[6],xmm3[6],xmm2[7],xmm3[7]
 ; AVX1-NEXT:    vpslld $23, %xmm5, %xmm5
 ; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm6 = [1065353216,1065353216,1065353216,1065353216]
 ; AVX1-NEXT:    vpaddd %xmm6, %xmm5, %xmm5
@@ -265,7 +265,7 @@ define <16 x i16> @var_funnnel_v16i16(<16 x i16> %x, <16 x i16> %amt) nounwind {
 ; AVX1-NEXT:    vpor %xmm7, %xmm2, %xmm2
 ; AVX1-NEXT:    vpsubw %xmm1, %xmm3, %xmm1
 ; AVX1-NEXT:    vpand %xmm4, %xmm1, %xmm1
-; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm1[4,4,5,5,6,6,7,7]
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm3 = xmm1[4],xmm3[4],xmm1[5],xmm3[5],xmm1[6],xmm3[6],xmm1[7],xmm3[7]
 ; AVX1-NEXT:    vpslld $23, %xmm3, %xmm3
 ; AVX1-NEXT:    vpaddd %xmm6, %xmm3, %xmm3
 ; AVX1-NEXT:    vcvttps2dq %xmm3, %xmm3
@@ -1134,10 +1134,10 @@ define <8 x i32> @constant_funnnel_v8i32(<8 x i32> %x) nounwind {
 ; AVX1-LABEL: constant_funnnel_v8i32:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [134217728,u,33554432,u]
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [134217728,134217728,33554432,33554432]
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
-; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [8388608,u,2097152,u]
+; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3 # [8388608,8388608,2097152,2097152]
 ; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
 ; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [268435456,134217728,67108864,33554432]
 ; AVX1-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [16777216,8388608,4194304,2097152]

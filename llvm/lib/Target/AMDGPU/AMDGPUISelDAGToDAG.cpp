@@ -134,7 +134,6 @@ static SDValue stripExtractLoElt(SDValue In) {
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISelLegacy, "amdgpu-isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfoWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUPerfHintAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 #ifdef EXPENSIVE_CHECKS
@@ -238,7 +237,6 @@ bool AMDGPUDAGToDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void AMDGPUDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<AMDGPUArgumentUsageInfoWrapperLegacy>();
   AU.addRequired<UniformityInfoWrapperPass>();
 #ifdef EXPENSIVE_CHECKS
   AU.addRequired<DominatorTreeWrapperPass>();
