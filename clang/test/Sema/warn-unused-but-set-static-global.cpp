@@ -20,6 +20,7 @@ void f0() {
   with_unused_attr = 5;
 }
 
+// Named namespace.
 namespace test {
   static int set_unused;  // expected-warning {{variable 'set_unused' set but not used}}
   static int set_and_used;
@@ -32,6 +33,7 @@ namespace test {
   }
 }
 
+// Nested named namespace.
 namespace outer {
 namespace inner {
 static int nested_unused; // expected-warning {{variable 'nested_unused' set but not used}}
@@ -41,33 +43,23 @@ void f2() {
 }
 }
 
-// Anonymous namespace (all vars have internal linkage)
+// Anonymous namespace (all vars have internal linkage).
 namespace {
   int anon_ns_unused; // expected-warning {{variable 'anon_ns_unused' set but not used}}
   static int anon_ns_static_unused; // expected-warning {{variable 'anon_ns_static_unused' set but not used}}
 
-  // Should not warn on static data members in current implementation.
-  class AnonClass {
-  public:
-    static int unused_member;
-  };
-
-  int AnonClass::unused_member = 0;
-
   void f3() {
     anon_ns_unused = 1;
     anon_ns_static_unused = 2;
-    AnonClass::unused_member = 3;
   }
 }
 
-// Function pointers at file scope (unused)
+// Function pointers at file scope.
 static void (*unused_func_ptr)(); // expected-warning {{variable 'unused_func_ptr' set but not used}}
 void SetUnusedCallback(void (*f)()) {
   unused_func_ptr = f;
 }
 
-// Function pointers at file scope (used)
 static void (*used_func_ptr)();
 void SetUsedCallback(void (*f)()) {
   used_func_ptr = f;
@@ -77,7 +69,7 @@ void CallUsedCallback() {
     used_func_ptr();
 }
 
-// Static data members (have external linkage so should not warn).
+// Static data members (external linkage, should not warn).
 class MyClass {
 public:
   static int unused_static_member;
@@ -93,4 +85,49 @@ void f4() {
   MyClass::used_static_member = 20;
   int x = MyClass::used_static_member;
   (void)x;
+}
+
+// Static data members in a named namespace (external linkage, should not warn).
+namespace named {
+  struct NamedClass {
+    static int w;
+  };
+  int NamedClass::w = 0;
+}
+
+void f5() {
+  named::NamedClass::w = 4;
+}
+
+// Static data members in anonymous namespace (internal linkage, should warn).
+namespace {
+  class AnonClass {
+  public:
+    static int unused_member;
+    static int used_member;
+  };
+
+  int AnonClass::unused_member = 0; // expected-warning {{variable 'unused_member' set but not used}}
+  int AnonClass::used_member = 0;
+}
+
+void f6() {
+  AnonClass::unused_member = 3;
+  AnonClass::used_member = 4;
+  int y = AnonClass::used_member;
+  (void)y;
+}
+
+// Static data members in nested anonymous namespace (internal linkage, should warn).
+namespace outer2 {
+  namespace {
+    struct NestedAnonClass {
+      static int v;
+    };
+    int NestedAnonClass::v = 0; // expected-warning {{variable 'v' set but not used}}
+  }
+}
+
+void f7() {
+  outer2::NestedAnonClass::v = 5;
 }

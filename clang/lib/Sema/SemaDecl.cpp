@@ -1911,12 +1911,10 @@ bool Sema::mightHaveNonExternalLinkage(const DeclaratorDecl *D) {
   return !D->isExternallyVisible();
 }
 
-// FIXME: This needs to be refactored; some other isInMainFile users want
-// these semantics.
-static bool isMainFileLoc(const Sema &S, SourceLocation Loc) {
-  if (S.TUKind != TU_Complete || S.getLangOpts().IsHeaderFile)
+bool Sema::isMainFileLoc(SourceLocation Loc) const {
+  if (TUKind != TU_Complete || getLangOpts().IsHeaderFile)
     return false;
-  return S.SourceMgr.isInMainFile(Loc);
+  return SourceMgr.isInMainFile(Loc);
 }
 
 bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
@@ -1945,7 +1943,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
         return false;
     } else {
       // 'static inline' functions are defined in headers; don't warn.
-      if (FD->isInlined() && !isMainFileLoc(*this, FD->getLocation()))
+      if (FD->isInlined() && !isMainFileLoc(FD->getLocation()))
         return false;
     }
 
@@ -1956,7 +1954,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
     // Constants and utility variables are defined in headers with internal
     // linkage; don't warn.  (Unlike functions, there isn't a convenient marker
     // like "inline".)
-    if (!isMainFileLoc(*this, VD->getLocation()))
+    if (!isMainFileLoc(VD->getLocation()))
       return false;
 
     if (Context.DeclMustBeEmitted(VD))
@@ -1970,7 +1968,7 @@ bool Sema::ShouldWarnIfUnusedFileScopedDecl(const DeclaratorDecl *D) const {
         VD->getMemberSpecializationInfo() && !VD->isOutOfLine())
       return false;
 
-    if (VD->isInline() && !isMainFileLoc(*this, VD->getLocation()))
+    if (VD->isInline() && !isMainFileLoc(VD->getLocation()))
       return false;
   } else {
     return false;
@@ -2306,7 +2304,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
         DiagnoseUnusedNestedTypedefs(RD, addDiag);
       if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
         // Wait until end of TU to diagnose internal linkage file vars.
-        if (!VD->hasInternalLinkageFileVar()) {
+        if (!VD->isInternalLinkageFileVar()) {
           DiagnoseUnusedButSetDecl(VD, addDiag);
           RefsMinusAssignments.erase(VD);
         }
