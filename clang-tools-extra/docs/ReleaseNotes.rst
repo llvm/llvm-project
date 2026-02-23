@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-sprintf-to-snprintf
+  <clang-tidy/checks/bugprone/sprintf-to-snprintf>` check.
+
+  Finds calls to ``sprintf`` where the destination is a fixed-size character
+  array and suggests replacing them with the safer ``snprintf``.
+
 - New :doc:`llvm-type-switch-case-types
   <clang-tidy/checks/llvm/type-switch-case-types>` check.
 
