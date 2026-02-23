@@ -99,6 +99,35 @@ static LogicalResult transferPreconditions(PatternRewriter &rewriter,
   return success();
 }
 
+// Checks whether the given `vector.transfer_read` operation can be
+// lowered to a block-load.
+static bool shouldLowerTransferReadToBlockLoad(vector::TransferReadOp readOp) {
+  auto chip = xegpu::getChipStr(readOp);
+  if (chip != "pvc" && chip != "bmg")
+    return false;
+
+  VectorType vecTy = readOp.getVectorType();
+  if (vecTy.getRank() == 1 && !readOp.hasOutOfBoundsDim())
+    return false;
+
+  return true;
+}
+
+// Checks whether the given 'transfer_read with transpose' can be directly
+// lowered to xegpu.load/_nd ops with transpose support.
+static bool isTransferReadTransposeSupported(vector::TransferReadOp readOp) {
+  // Scatter-load always supports transpose-permutations
+  if (!shouldLowerTransferReadToBlockLoad(readOp))
+    return true;
+
+  unsigned minTransposeBitWidth = 32;
+  auto elementType = readOp.getVectorType().getElementType();
+  if (elementType.getIntOrFloatBitWidth() < minTransposeBitWidth)
+    return false;
+
+  return true;
+}
+
 static xegpu::CreateNdDescOp createNdDescriptor(PatternRewriter &rewriter,
                                                 Location loc,
                                                 xegpu::TensorDescType descType,
@@ -538,9 +567,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     if (failed(transferPreconditions(rewriter, readOp)))
       return failure();
 
-    // TODO:This check needs to be replaced with proper uArch capability check
-    auto chip = xegpu::getChipStr(readOp);
-    if (chip != "pvc" && chip != "bmg") {
+    if (!shouldLowerTransferReadToBlockLoad(readOp)) {
       // lower to scattered load Op if the target HW doesn't have 2d block load
       // support
       // TODO: add support for OutOfBound access
@@ -550,10 +577,6 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     }
 
     VectorType vecTy = readOp.getVectorType();
-
-    // Lower using load.gather in 1D case
-    if (vecTy.getRank() == 1 && !readOp.hasOutOfBoundsDim())
-      return lowerToScatteredLoadOp(readOp, rewriter);
 
     // Perform common data transfer checks.
     if (failed(storeLoadPreconditions(rewriter, readOp, vecTy)))
@@ -568,9 +591,7 @@ struct TransferReadLowering : public OpRewritePattern<vector::TransferReadOp> {
     bool isTransposeLoad = !readMap.isMinorIdentity();
 
     Type elementType = vecTy.getElementType();
-    unsigned minTransposeBitWidth = 32;
-    if (isTransposeLoad &&
-        elementType.getIntOrFloatBitWidth() < minTransposeBitWidth)
+    if (isTransposeLoad && !isTransferReadTransposeSupported(readOp))
       return rewriter.notifyMatchFailure(
           readOp, "Unsupported data type for transposition");
 
@@ -841,9 +862,64 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
   }
 };
 
+// Splits 'vector.transfer_read' with unsupported transpose-permutations
+// into 'transfer_read() + transpose()'.
+struct TransferReadDecomposeUnsupportedTranspose
+    : public OpRewritePattern<vector::TransferReadOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::TransferReadOp readOp,
+                                PatternRewriter &rewriter) const override {
+    Location loc = readOp.getLoc();
+    AffineMap readMap = readOp.getPermutationMap();
+
+    bool isTransposeLoad = !readMap.isMinorIdentity();
+    if (!isTransposeLoad)
+      return failure();
+
+    bool isTransposeSupported = isTransferReadTransposeSupported(readOp);
+    if (isTransposeSupported)
+      return failure();
+
+    auto resultType = cast<VectorType>(readOp.getResult().getType());
+    if (!resultType)
+      return failure();
+
+    // 'Revert' permutation for the transfer_read result shape to make it
+    // 'untransposed'
+    auto newShape = applyPermutationMap(readMap, resultType.getShape());
+    auto newTransferReadRes =
+        VectorType::get(newShape, resultType.getElementType());
+
+    // Step 1. Create 'plain' transfer_read without transpose
+    auto newReadOp = vector::TransferReadOp::create(
+        rewriter, loc, newTransferReadRes, readOp.getBase(),
+        readOp.getIndices(), AffineMap::get(loc.getContext()),
+        readOp.getPadding(), readOp.getMask(), readOp.getInBoundsAttr());
+
+    // Step 2. Transpose the result of the 'plain' transfer_read
+    auto range = llvm::seq<int64_t>(0, readMap.getResults().size());
+    SmallVector<int64_t> perm(range.begin(), range.end());
+    auto permApplied = applyPermutationMap<int64_t>(readMap, perm);
+    auto transposeOp = vector::TransposeOp::create(
+        rewriter, loc, newReadOp.getResult(), permApplied);
+
+    // Step 3. Replace old transfer_read op with 'transpose()'
+    rewriter.replaceOp(readOp, transposeOp);
+    return success();
+  }
+};
+
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
+    RewritePatternSet prepareTransferReadPatterns(&getContext());
+    prepareTransferReadPatterns.add<TransferReadDecomposeUnsupportedTranspose>(
+        prepareTransferReadPatterns.getContext());
+    if (failed(applyPatternsGreedily(getOperation(),
+                                     std::move(prepareTransferReadPatterns))))
+      return signalPassFailure();
+
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))

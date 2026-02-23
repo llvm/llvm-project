@@ -297,7 +297,8 @@ gpu.func @load_transpose_f16(%source: memref<32x64xf16>,
 }
 
 // LOAD-ND-LABEL:  @load_transpose_f16(
-// LOAD-ND:        vector.transfer_read
+// LOAD-ND:        %[[LOAD:.*]] = xegpu.load_nd
+// LOAD-ND:        vector.transpose %[[LOAD]], [1, 0] : vector<16x8xf16> to vector<8x16xf16>
 
 // LOAD-GATHER-LABEL:  @load_transpose_f16(
 // LOAD-GATHER-SAME:    %[[SRC:.+]]: memref<32x64xf16>,
