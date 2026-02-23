@@ -234,7 +234,6 @@ public:
   /// Turn a stable reference to a scope depth into a unstable pointer
   /// to the EH stack.
   iterator find(stable_iterator savePoint) const;
-
 };
 
 } // namespace clang::CIRGen
