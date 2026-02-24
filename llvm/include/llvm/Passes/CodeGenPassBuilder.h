@@ -490,8 +490,19 @@ protected:
 
   void addPostBBSections(PassManagerWrapper &PMW) const {}
 
-  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const {
+  void addAsmPrinterBegin(PassManagerWrapper &PMW,
+                          CreateMCStreamer CreateStreamer) const {
+    llvm_unreachable("addAsmPrinterBegin is not overriden");
+  }
+
+  void addAsmPrinter(PassManagerWrapper &PMW,
+                     CreateMCStreamer CreateStreamer) const {
     llvm_unreachable("addAsmPrinter is not overridden");
+  }
+
+  void addAsmPrinterEnd(PassManagerWrapper &PMW,
+                        CreateMCStreamer CreateStreamer) const {
+    llvm_unreachable("addAsmPrinterEnd is not overriden");
   }
 
   /// Utilities for targets to add passes to the pass manager.
@@ -588,6 +599,13 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   addISelPasses(PMW);
   flushFPMsToMPM(PMW);
 
+  CreateMCStreamer CreateStreamer = [&Out, DwoOut, FileType,
+                                     &Ctx](TargetMachine &TM) {
+    return TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
+  };
+  if (PrintAsm)
+    derived().addAsmPrinterBegin(PMW, CreateStreamer);
+
   if (PrintMIR)
     addModulePass(PrintMIRPreparePass(Out), PMW, /*Force=*/true);
 
@@ -601,16 +619,14 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
   if (PrintAsm) {
-    derived().addAsmPrinter(
-        PMW, [this, &Out, DwoOut, FileType, &Ctx](TargetMachine &TM) {
-          return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
-        });
+    derived().addAsmPrinter(PMW, CreateStreamer);
+    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
+    derived().addAsmPrinterEnd(PMW, CreateStreamer);
+  } else {
+    if (PrintMIR)
+      addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
+    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
   }
-
-  if (PrintMIR)
-    addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
-
-  flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
 
   return verifyStartStop(*StartStopInfo);
 }
