@@ -199,6 +199,9 @@ public:
   bool shouldEmitWeakSwiftAsyncExtendedFramePointerFlags() const override {
     return ShouldEmitWeakSwiftAsyncExtendedFramePointerFlags;
   }
+
+  std::function<ProfileSummaryInfo *(Module &)> GetPSI;
+  std::function<StaticDataProfileInfo *(Module &)> GetSDPI;
 };
 
 } // end namespace llvm
