@@ -1,8 +1,9 @@
 set(LLVM_LINK_COMPONENTS
   Option
   Object
-  Support
+  BinaryFormat
   TargetParser
+  Support
 )
 
 add_llvm_tool(llvm-gpu-loader

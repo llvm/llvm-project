@@ -85,6 +85,37 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
   return result;
 }
 
+mlir::LogicalResult
+CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
+  for (const Attr *attr : s.getAttrs()) {
+    switch (attr->getKind()) {
+    default:
+      break;
+    case attr::NoMerge:
+    case attr::NoInline:
+    case attr::AlwaysInline:
+    case attr::NoConvergent:
+    case attr::MustTail:
+    case attr::Atomic:
+    case attr::HLSLControlFlowHint:
+      cgm.errorNYI(s.getSourceRange(),
+                   "Unimplemented statement attribute: ", attr->getKind());
+      break;
+    case attr::CXXAssume: {
+      const Expr *assumptionExpr = cast<CXXAssumeAttr>(attr)->getAssumption();
+      if (getLangOpts().CXXAssumptions && builder.getInsertionBlock() &&
+          !assumptionExpr->HasSideEffects(getContext())) {
+        mlir::Value assumptionValue = emitCheckedArgForAssume(assumptionExpr);
+        cir::AssumeOp::create(builder, getLoc(s.getSourceRange()),
+                              assumptionValue);
+      }
+    } break;
+    }
+  }
+
+  return emitStmt(s.getSubStmt(), /*useCurrentScope=*/true, s.getAttrs());
+}
+
 mlir::LogicalResult CIRGenFunction::emitCompoundStmt(const CompoundStmt &s,
                                                      Address *lastValue,
                                                      AggValueSlot slot) {
@@ -437,6 +468,8 @@ mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
     return emitBreakStmt(cast<BreakStmt>(*s));
   case Stmt::ReturnStmtClass:
     return emitReturnStmt(cast<ReturnStmt>(*s));
+  case Stmt::AttributedStmtClass:
+    return emitAttributedStmt(cast<AttributedStmt>(*s));
   }
 
   return mlir::success();

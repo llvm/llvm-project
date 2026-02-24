@@ -396,7 +396,7 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
     }
   }
 
-  // Validate all stores go to same invariant address.
+  // Validate all stores go to same invariant address and are in the same block.
   StoreInst *IntermediateStore = nullptr;
   const SCEV *StorePtrSCEV = nullptr;
   for (StoreInst *SI : Stores) {
@@ -405,7 +405,11 @@ static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
         (StorePtrSCEV && StorePtrSCEV != Ptr))
       return {};
     StorePtrSCEV = Ptr;
-    if (!IntermediateStore || IntermediateStore->comesBefore(SI))
+    if (!IntermediateStore)
+      IntermediateStore = SI;
+    else if (IntermediateStore->getParent() != SI->getParent())
+      return {};
+    else if (IntermediateStore->comesBefore(SI))
       IntermediateStore = SI;
   }
 

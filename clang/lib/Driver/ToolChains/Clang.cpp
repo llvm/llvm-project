@@ -9336,12 +9336,17 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
           (TC->getTriple().isAMDGPU() || TC->getTriple().isNVPTX()))
         LinkerArgs.emplace_back("-lompdevice");
 
-      // For SPIR-V some functions will be defined by the runtime so allow
-      // unresolved symbols in `spirv-link`. `spirv-link` isn't called in LTO
-      // mode so restrict this flag to normal compilation.
+      // For SPIR-V, pass some extra flags to `spirv-link`, the out-of-tree
+      // SPIR-V linker. `spirv-link` isn't called in LTO mode so restrict these
+      // flags to normal compilation.
       if (TC->getTriple().isSPIRV() && !C.getDriver().isUsingLTO() &&
-          !C.getDriver().isUsingOffloadLTO())
+          !C.getDriver().isUsingOffloadLTO()) {
+        // For SPIR-V some functions will be defined by the runtime so allow
+        // unresolved symbols in `spirv-link`.
         LinkerArgs.emplace_back("--allow-partial-linkage");
+        // Don't optimize out exported symbols.
+        LinkerArgs.emplace_back("--create-library");
+      }
 
       // Forward all of these to the appropriate toolchain.
       for (StringRef Arg : CompilerArgs)

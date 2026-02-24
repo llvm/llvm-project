@@ -1243,3 +1243,58 @@ loop:
 exit:
   ret void
 }
+
+; Make sure we don't crash when checking for min/max recurrences with
+; intermediate stores in different basic blocks.
+define void @smax_intermediate_stores_different_bbs(ptr %p, i1 %c) {
+; CHECK-LABEL: define void @smax_intermediate_stores_different_bbs(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
+; CHECK:       [[LOOP_HEADER]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[RED:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[BE:%.*]], %[[LOOP_LATCH]] ]
+; CHECK-NEXT:    br i1 [[C]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
+; CHECK:       [[IF_ELSE]]:
+; CHECK-NEXT:    [[SMAX1:%.*]] = call i32 @llvm.smax.i32(i32 [[RED]], i32 1)
+; CHECK-NEXT:    store i32 [[SMAX1]], ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[IF_THEN]]:
+; CHECK-NEXT:    [[SMAX2:%.*]] = call i32 @llvm.smax.i32(i32 [[RED]], i32 1)
+; CHECK-NEXT:    store i32 [[SMAX2]], ptr [[P]], align 4
+; CHECK-NEXT:    br label %[[LOOP_LATCH]]
+; CHECK:       [[LOOP_LATCH]]:
+; CHECK-NEXT:    [[BE]] = phi i32 [ [[SMAX1]], %[[IF_ELSE]] ], [ [[RED]], %[[IF_THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %red = phi i32 [ 0, %entry ], [ %be, %loop.latch ]
+  br i1 %c, label %if.then, label %if.else
+
+if.else:
+  %smax1 = call i32 @llvm.smax.i32(i32 %red, i32 1)
+  store i32 %smax1, ptr %p, align 4
+  br label %loop.latch
+
+if.then:
+  %smax2 = call i32 @llvm.smax.i32(i32 %red, i32 1)
+  store i32 %smax2, ptr %p, align 4
+  br label %loop.latch
+
+loop.latch:
+  %be = phi i32 [ %smax1, %if.else ], [ %red, %if.then ]
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 100
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}

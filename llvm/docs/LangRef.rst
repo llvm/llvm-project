@@ -11613,6 +11613,9 @@ See :ref:`llvm.lifetime.start <int_lifestart>` and
 :ref:`llvm.lifetime.end <int_lifeend>` for the precise semantics of
 lifetime-manipulating intrinsics.
 
+If the element count is ``undef`` or ``poison``, this instruction has undefined
+behavior.
+
 Example:
 """"""""
 
