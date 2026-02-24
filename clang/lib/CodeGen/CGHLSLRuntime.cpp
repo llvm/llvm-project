@@ -267,13 +267,6 @@ static std::optional<llvm::Value *> initializeLocalResourceArray(
   return Index;
 }
 
-static void addDisableOptimizations(llvm::Module &M) {
-  if (M.getModuleFlag("dx.disable_optimizations"))
-    return;
-  StringRef Key = "dx.disable_optimizations";
-  M.addModuleFlag(llvm::Module::ModFlagBehavior::Override, Key, 1);
-}
-
 } // namespace
 
 llvm::Type *
@@ -493,6 +486,10 @@ void CGHLSLRuntime::finishCodeGen() {
   if (CodeGenOpts.AllResourcesBound)
     M.setModuleFlag(llvm::Module::ModFlagBehavior::Error,
                     "dx.allresourcesbound", 1);
+  if (CodeGenOpts.OptimizationLevel == 0)
+    M.addModuleFlag(llvm::Module::ModFlagBehavior::Override,
+                    "dx.disable_optimizations", 1);
+
   // NativeHalfType corresponds to the -fnative-half-type clang option which is
   // aliased by clang-dxc's -enable-16bit-types option. This option is used to
   // set the UseNativeLowPrecision DXIL module flag in the DirectX backend
@@ -529,8 +526,6 @@ void clang::CodeGen::CGHLSLRuntime::setHLSLEntryAttributes(
   // later in the compiler-flow for such module functions is not aware of and
   // hence not able to set attributes of the newly materialized entry functions.
   // So, set attributes of entry function here, as appropriate.
-  if (CGM.getCodeGenOpts().OptimizationLevel == 0)
-    addDisableOptimizations(CGM.getModule());
   Fn->addFnAttr(llvm::Attribute::NoInline);
 
   if (CGM.getLangOpts().HLSLSpvEnableMaximalReconvergence) {
