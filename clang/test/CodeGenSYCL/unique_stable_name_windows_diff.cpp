@@ -4,6 +4,9 @@
 template<typename KN, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 
+template<typename KN, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 template<typename KN, typename Func>
 [[clang::sycl_kernel_entry_point(KN)]] void kernel(Func F){
   F();

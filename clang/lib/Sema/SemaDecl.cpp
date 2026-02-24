@@ -16466,7 +16466,7 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     const auto *SKEPAttr = FD->getAttr<SYCLKernelEntryPointAttr>();
     if (!SKEPAttr->isInvalidAttr()) {
       ExprResult LaunchIdExpr =
-          SYCL().BuildSYCLKernelLaunchIdExpr(FD, SKEPAttr->getKernelName());
+          SYCL().BuildSYCLKernelLaunchIdExpr(FD, SKEPAttr->getKernelName(), "sycl_kernel_launch");
       // Do not mark 'FD' as invalid if construction of `LaunchIDExpr` produces
       // an invalid result. Name lookup failure for 'sycl_kernel_launch' is
       // treated as an error in the definition of 'FD'; treating it as an error
@@ -16475,6 +16475,13 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
       // 'LaunchIDExpr' failed, then 'SYCLKernelLaunchIdExpr' will be assigned
       // a null pointer value below; that is expected.
       getCurFunction()->SYCLKernelLaunchIdExpr = LaunchIdExpr.get();
+      if (!LaunchIdExpr.isInvalid() &&
+          !LaunchIdExpr.get()->getType()->isVoidType()) {
+        ExprResult HSPSPIdExpr = SYCL().BuildSYCLKernelLaunchIdExpr(
+            FD, SKEPAttr->getKernelName(),
+            "sycl_handle_special_kernel_parameters");
+        getCurFunction()->HandleSYCLSpecialParamsIdExpr = HSPSPIdExpr.get();
+      }
     }
   }
 
@@ -16690,7 +16697,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         // The function body should already be a SYCLKernelCallStmt in this
         // case, but might not be if there were previous errors.
         SR = Body;
-      } else if (!getCurFunction()->SYCLKernelLaunchIdExpr) {
+      } else if (!getCurFunction()->SYCLKernelLaunchIdExpr ||
+                 !getCurFunction()->HandleSYCLSpecialParamsIdExpr) {
         // If name lookup for a template named sycl_kernel_launch failed
         // earlier, don't try to build a SYCL kernel call statement as that
         // would cause additional errors to be issued; just proceed with the
@@ -16698,11 +16706,13 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body, bool IsInstantiation,
         SR = Body;
       } else if (FD->isTemplated()) {
         SR = SYCL().BuildUnresolvedSYCLKernelCallStmt(
-            cast<CompoundStmt>(Body), getCurFunction()->SYCLKernelLaunchIdExpr);
+            cast<CompoundStmt>(Body), getCurFunction()->SYCLKernelLaunchIdExpr,
+            getCurFunction()->HandleSYCLSpecialParamsIdExpr);
       } else {
         SR = SYCL().BuildSYCLKernelCallStmt(
             FD, cast<CompoundStmt>(Body),
-            getCurFunction()->SYCLKernelLaunchIdExpr);
+            getCurFunction()->SYCLKernelLaunchIdExpr,
+            getCurFunction()->HandleSYCLSpecialParamsIdExpr);
       }
       // If construction of the replacement body fails, just continue with the
       // original function body. An early error return here is not valid; the

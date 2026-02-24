@@ -249,6 +249,10 @@ public:
   /// to a SYCL kernel launch function in a dependent context.
   Expr *SYCLKernelLaunchIdExpr = nullptr;
 
+  /// An unresolved identifier lookup expression for an implicit call
+  /// to a handling function for SYCL kernel special parameters.
+  Expr *HandleSYCLSpecialParamsIdExpr = nullptr;
+
 public:
   /// Represents a simple identification of a weak object.
   ///

@@ -24,6 +24,9 @@ struct KT {
 };
 
 
+template<typename KN, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 // sycl_kernel_launch as function template at namespace scope.
 namespace ok1 {
   template<typename KN, typename... Ts>

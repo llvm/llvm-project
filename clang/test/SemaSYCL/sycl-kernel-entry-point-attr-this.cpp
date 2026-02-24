@@ -26,6 +26,9 @@ struct type_info {
 template<typename KernelName, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 
+template<typename KernelName, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Valid declarations.
 ////////////////////////////////////////////////////////////////////////////////

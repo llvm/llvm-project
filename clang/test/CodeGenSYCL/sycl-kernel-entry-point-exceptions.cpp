@@ -16,6 +16,9 @@ struct KT {
 };
 
 
+template<typename KN, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 // Validate that exception handling instructions are omitted when a
 // potentially throwing sycl_kernel_entry_point attributed function
 // calls a potentially throwing sycl_kernel_launch function (a thrown

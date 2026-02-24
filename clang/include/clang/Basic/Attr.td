@@ -1744,6 +1744,13 @@ def SYCLSpecialClass: InheritableAttr {
   let Documentation = [SYCLSpecialClassDocs];
 }
 
+def SYCLSpecialKernelParameter : InheritableAttr {
+  let Spellings = [CXX11<"clang", "sycl_special_kernel_parameter">];
+  let Subjects = SubjectList<[CXXRecord]>;
+  let LangOpts = [SYCLHost, SYCLDevice];
+  let Documentation = [Undocumented];
+}
+
 def C11NoReturn : InheritableAttr {
   let Spellings = [CustomKeyword<"_Noreturn">];
   let Subjects = SubjectList<[Function], ErrorDiag>;

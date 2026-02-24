@@ -21,6 +21,9 @@ template<int> struct KN;
 template<typename KN, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 
+template<typename KN, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 [[clang::sycl_kernel_entry_point(KN<1>)]]
 void common_test1() {}
 

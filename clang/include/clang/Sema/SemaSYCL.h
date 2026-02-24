@@ -83,19 +83,22 @@ public:
   /// passed as the 'LaunchIdExpr' argument in a call to either
   /// BuildSYCLKernelCallStmt() or BuildUnresolvedSYCLKernelCallStmt() after
   /// the function body has been parsed.
-  ExprResult BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD, QualType KernelName);
+  ExprResult BuildSYCLKernelLaunchIdExpr(FunctionDecl *FD, QualType KernelName,
+                                         StringRef FuncName);
 
   /// Builds a SYCLKernelCallStmt to wrap 'Body' and to be used as the body of
   /// 'FD'. 'LaunchIdExpr' specifies the lookup result returned by a previous
   /// call to BuildSYCLKernelLaunchIdExpr().
   StmtResult BuildSYCLKernelCallStmt(FunctionDecl *FD, CompoundStmt *Body,
-                                     Expr *LaunchIdExpr);
+                                     Expr *LaunchIdExpr,
+                                     Expr *HandleSpecParamsExpr);
 
   /// Builds an UnresolvedSYCLKernelCallStmt to wrap 'Body'. 'LaunchIdExpr'
   /// specifies the lookup result returned by a previous call to
   /// BuildSYCLKernelLaunchIdExpr().
   StmtResult BuildUnresolvedSYCLKernelCallStmt(CompoundStmt *Body,
-                                               Expr *LaunchIdExpr);
+                                               Expr *LaunchIdExpr,
+                                               Expr *HandleSpecParamsExpr);
 };
 
 } // namespace clang

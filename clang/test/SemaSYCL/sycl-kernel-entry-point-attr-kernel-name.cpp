@@ -14,6 +14,9 @@ struct S1;
 template<typename KernelName, typename... Ts>
 void sycl_kernel_launch(const char *, Ts...) {}
 
+template<typename KernelName, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 // expected-warning@+3 {{redundant 'clang::sycl_kernel_entry_point' attribute}}
 // expected-note@+1  {{previous attribute is here}}
 [[clang::sycl_kernel_entry_point(S1),

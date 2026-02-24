@@ -29,6 +29,9 @@ int foo() {
 template <typename Name, typename... Ts>
 void sycl_kernel_launch(Ts...) {}
 
+template <typename Name, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 template <typename Name, typename Func>
 [[clang::sycl_kernel_entry_point(Name)]] void kernel_single_task(const Func &kernelFunc) {
   kernelFunc();

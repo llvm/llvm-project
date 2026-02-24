@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -fsycl-is-host -ast-print %s -o - | FileCheck %s
 // RUN: %clang_cc1 -fsycl-is-device -ast-print %s -o - | FileCheck %s
 
+template<typename KernelName, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 struct sycl_kernel_launcher {
   template<typename KernelName, typename... Ts>
   void sycl_kernel_launch(const char *, Ts...) {}

@@ -19,6 +19,9 @@ struct KT {
 };
 
 
+template<typename KN, typename... Ts>
+void sycl_handle_special_kernel_parameters(Ts...) {}
+
 namespace ok1 {
   template<typename Derived>
   struct base_handler {
