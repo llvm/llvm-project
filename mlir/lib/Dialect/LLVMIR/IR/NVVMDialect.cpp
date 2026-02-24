@@ -1917,7 +1917,8 @@ LogicalResult MmaBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k64.mxf4nvf4");
     } else {
@@ -2185,7 +2186,8 @@ LogicalResult MmaSpBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k128.mxf4nvf4");
     } else {
