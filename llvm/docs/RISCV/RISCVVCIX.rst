@@ -140,36 +140,34 @@ To do so, first let’s look at the existing ``ProcResource`` we used before, na
   def FDiv    : ProcResource<1>; // FP Division/Sqrt
 
   // Arithmetic sequencer(s)
+  // VA1 can handle any vector airthmetic instruction.
+  def VA1     : ProcResource<1>;
   if dualVALU then {
-    // VA1 can handle any vector airthmetic instruction.
-    def VA1     : ProcResource<1>;
     // VA2 generally can only handle simple vector arithmetic.
     def VA2     : ProcResource<1>;
-  } else {
-    def VA      : ProcResource<1>;
   }
+
   def VL      : ProcResource<1>; // Load sequencer
   def VS      : ProcResource<1>; // Store sequencer
   def VCQ     : ProcResource<1>; // Vector Command Queue
 
-The ``VA1`` we saw earlier is actually a *conditional* alias to either ``VA1`` (when ``dualVALU`` is true) or ``VA`` (when ``dualVALU`` is false). This alias is created in another class, ``SiFive7SchedResources``:
+These ``ProcResources`` are instantiated in another class, ``SiFive7SchedResources``, where we also create an alias for each of them (through ``defvar``) so that it's easier to use later:
 
 .. code-block:: td
 
-  defvar SiFive7PipeA = !cast<ProcResource>(NAME # SiFive7PipeA);
-  defvar SiFive7PipeB = !cast<ProcResource>(NAME # SiFive7PipeB);
-  defvar SiFive7PipeAB = !cast<ProcResGroup>(NAME # SiFive7PipeAB);
-  defvar SiFive7IDiv = !cast<ProcResource>(NAME # SiFive7IDiv);
-  defvar SiFive7FDiv = !cast<ProcResource>(NAME # SiFive7FDiv);
+  defvar SiFive7PipeA = !cast<ProcResource>(NAME # "SiFive7PipeA");
+  defvar SiFive7PipeB = !cast<ProcResource>(NAME # "SiFive7PipeB");
+  defvar SiFive7PipeAB = !cast<ProcResGroup>(NAME # "SiFive7PipeAB");
+  defvar SiFive7IDiv = !cast<ProcResource>(NAME # "SiFive7IDiv");
+  defvar SiFive7FDiv = !cast<ProcResource>(NAME # "SiFive7FDiv");
 
-  defvar SiFive7VA1 = !if (dualVALU,
-                            !cast<ProcResource>(NAME # SiFive7VA1),
-                            !cast<ProcResource>(NAME # SiFive7VA));
+  defvar SiFive7VA1 = !cast<ProcResource>(NAME # "SiFive7VA1");
+
   defvar SiFive7VA1OrVA2 = !if (dualVALU,
-                            !cast<ProcResGroup>(NAME # SiFive7VA1OrVA2),
-                            !cast<ProcResource>(NAME # SiFive7VA));
+                                !cast<ProcResGroup>(NAME # "SiFive7VA1OrVA2"),
+                                !cast<ProcResource>(NAME # "SiFive7VA1"));
 
-Specifically, ``SiFive7VA1`` here is the alias we’re discussing, which is also the instance we’ll eventually pass as a parameter to ``SiFive7WriteResBase`` mentioned earlier.
+Specifically, ``SiFive7VA1`` here is the alias for ``VA1`` mentioned previously, which is also the instance we’ll eventually pass as a parameter to ``SiFive7WriteResBase`` mentioned earlier.
 
 So if you want to add your own, that might look something like this:
 
