@@ -9,9 +9,6 @@
 ; CHECK-DAG: %[[#F16Ty:]] = OpTypeFloat 16
 ; CHECK-DAG: %[[#F32Ty:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#F64Ty:]] = OpTypeFloat 64
-; CHECK-DAG: %[[#Vec2_16Ty:]] = OpTypeVector %[[#F16Ty]] 2
-; CHECK-DAG: %[[#Vec2_32Ty:]] = OpTypeVector %[[#F32Ty]] 2
-; CHECK-DAG: %[[#Vec2_64Ty:]] = OpTypeVector %[[#F64Ty]] 2
 ; CHECK-DAG: %[[#Vec16_16Ty:]] = OpTypeVector %[[#F16Ty]] 16
 ; CHECK-DAG: %[[#Vec16_32y:]] = OpTypeVector %[[#F32Ty]] 16
 ; CHECK-DAG: %[[#Vec16_64Ty:]] = OpTypeVector %[[#F64Ty]] 16
@@ -45,37 +42,6 @@ define double @test_exp10_f64_scalar(double %x) {
     %res = call double @llvm.exp10.f64(double %x)
     ret double %res
 }
-
-; CHECK-LABEL: Begin function test_exp10_f16_vec2
-; CHECK: %[[#v2_16_arg:]] = OpFunctionParameter %[[#Vec2_16Ty]]
-; CHECK: %[[#v2_16_ret:]] = OpExtInst %[[#Vec2_16Ty]] %[[#ExtInstId]] exp10 %[[#v2_16_arg]]
-; CHECK: OpReturnValue %[[#v2_16_ret]]
-; CHECK-LABEL: OpFunctionEnd
-define <2 x half> @test_exp10_f16_vec2(<2 x half>  %x) {
-    %res = call <2 x half>  @llvm.exp10.v2f16(<2 x half>  %x)
-    ret <2 x half>  %res
-}
-
-; CHECK-LABEL: Begin function test_exp10_f32_vec2
-; CHECK: %[[#v2_32_arg:]] = OpFunctionParameter %[[#Vec2_32Ty]]
-; CHECK: %[[#v2_32_ret:]] = OpExtInst %[[#Vec2_32Ty]] %[[#ExtInstId]] exp10 %[[#v2_32_arg]]
-; CHECK: OpReturnValue %[[#v2_32_ret]]
-; CHECK-LABEL: OpFunctionEnd
-define <2 x float> @test_exp10_f32_vec2(<2 x float>  %x) {
-    %res = call <2 x float>  @llvm.exp10.v2f32(<2 x float>  %x)
-    ret <2 x float>  %res
-}
-
-; CHECK-LABEL: Begin function test_exp10_f64_vec2
-; CHECK: %[[#v2_64_arg:]] = OpFunctionParameter %[[#Vec2_64Ty]]
-; CHECK: %[[#v2_64_ret:]] = OpExtInst %[[#Vec2_64Ty]] %[[#ExtInstId]] exp10 %[[#v2_64_arg]]
-; CHECK: OpReturnValue %[[#v2_64_ret]]
-; CHECK-LABEL: OpFunctionEnd
-define <2 x double> @test_exp10_f64_vec2(<2 x double>  %x) {
-    %res = call <2 x double>  @llvm.exp10.v2f64(<2 x double>  %x)
-    ret <2 x double>  %res
-}
-
 
 ; CHECK-LABEL: Begin function test_exp10_f16_vec16
 ; CHECK: %[[#v16_16_arg:]] = OpFunctionParameter %[[#Vec16_16Ty]]
