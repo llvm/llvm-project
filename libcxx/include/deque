@@ -953,7 +953,7 @@ private:
     (void)__end;
     (void)__annotation_type;
     (void)__place;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     // __beg - index of the first item to annotate
     // __end - index behind the last item to annotate (so last item + 1)
     // __annotation_type - __asan_unposion or __asan_poison
@@ -1046,23 +1046,23 @@ private:
       std::__annotate_double_ended_contiguous_container<_Allocator>(
           __mem_beg, __mem_end, __old_beg, __old_end, __new_beg, __new_end);
     }
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_new(size_type __current_size) const _NOEXCEPT {
     (void)__current_size;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     if (__current_size == 0)
       __annotate_from_to(0, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     else {
       __annotate_from_to(0, __start_, __asan_poison, __asan_front_moved);
       __annotate_from_to(__start_ + __current_size, __map_.size() * __block_size, __asan_poison, __asan_back_moved);
     }
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_delete() const _NOEXCEPT {
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     if (empty()) {
       for (size_t __i = 0; __i < __map_.size(); ++__i) {
         __annotate_whole_block(__i, __asan_unposion);
@@ -1071,19 +1071,19 @@ private:
       __annotate_from_to(0, __start_, __asan_unposion, __asan_front_moved);
       __annotate_from_to(__start_ + size(), __map_.size() * __block_size, __asan_unposion, __asan_back_moved);
     }
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_front(size_type __n) const _NOEXCEPT {
     (void)__n;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__start_ - __n, __start_, __asan_unposion, __asan_front_moved);
 #  endif
   }
 
   _LIBCPP_HIDE_FROM_ABI void __annotate_increase_back(size_type __n) const _NOEXCEPT {
     (void)__n;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__start_ + size(), __start_ + size() + __n, __asan_unposion, __asan_back_moved);
 #  endif
   }
@@ -1091,7 +1091,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_front(size_type __old_size, size_type __old_start) const _NOEXCEPT {
     (void)__old_size;
     (void)__old_start;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__old_start, __old_start + (__old_size - size()), __asan_poison, __asan_front_moved);
 #  endif
   }
@@ -1099,7 +1099,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI void __annotate_shrink_back(size_type __old_size, size_type __old_start) const _NOEXCEPT {
     (void)__old_size;
     (void)__old_start;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __annotate_from_to(__old_start + size(), __old_start + __old_size, __asan_poison, __asan_back_moved);
 #  endif
   }
@@ -1112,7 +1112,7 @@ private:
   __annotate_whole_block(size_t __block_index, __asan_annotation_type __annotation_type) const _NOEXCEPT {
     (void)__block_index;
     (void)__annotation_type;
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
     __map_const_iterator __block_it = __map_.begin() + __block_index;
     const void* __block_start       = std::__to_address(*__block_it);
     const void* __block_end         = std::__to_address(*__block_it + __block_size);
@@ -1125,7 +1125,7 @@ private:
     }
 #  endif
   }
-#  if __has_feature(address_sanitizer)
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
 
 public:
   _LIBCPP_HIDE_FROM_ABI bool __verify_asan_annotations() const _NOEXCEPT {
@@ -1187,7 +1187,7 @@ public:
   }
 
 private:
-#  endif // __has_feature(address_sanitizer)
+#  endif // _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS
   _LIBCPP_HIDE_FROM_ABI bool __maybe_remove_front_spare(bool __keep_one = true) {
     if (__front_spare_blocks() >= 2 || (!__keep_one && __front_spare_blocks())) {
       __annotate_whole_block(0, __asan_unposion);

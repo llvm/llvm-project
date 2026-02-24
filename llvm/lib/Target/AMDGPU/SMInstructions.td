@@ -1464,7 +1464,7 @@ class SMEM_Real_gfx12Plus<bits<6> op, SM_Pseudo ps, string opName,
 class SMEM_Real_gfx12<bits<6> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
     SMEM_Real_gfx12Plus<op, ps, opName, SIEncodingFamily.GFX12,
                         SGPR_NULL_gfx11plus> {
-  let AssemblerPredicate = isGFX12Plus;
+  let AssemblerPredicate = isGFX12Only;
   let DecoderNamespace = "GFX12";
 
   let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
@@ -1537,3 +1537,84 @@ multiclass SMEM_Real_Probe_gfx12<bits<6> op> {
 
 defm S_ATC_PROBE        : SMEM_Real_Probe_gfx12<0x22>;
 defm S_ATC_PROBE_BUFFER : SMEM_Real_Probe_gfx12<0x23>;
+
+//===----------------------------------------------------------------------===//
+// GFX13.
+//===----------------------------------------------------------------------===//
+
+class SMEM_Real_gfx13<bits<6> op, SM_Pseudo ps, string opName = ps.Mnemonic> :
+    SMEM_Real_gfx12Plus<op, ps, opName, SIEncodingFamily.GFX13,
+                        SGPR_NULL_gfx11plus> {
+  let AssemblerPredicate = isGFX13Plus;
+  let DecoderNamespace = "GFX13";
+
+  let Inst{5-0}   = !if(ps.has_sbase, sbase{6-1}, ?);
+  let Inst{12-6}  = !if(ps.has_sdst, sdst{6-0}, ?);
+}
+
+class SMEM_Real_Prefetch_gfx13<bits<6> op, SM_Pseudo ps> :
+    SMEM_Real_gfx13<op, ps> {
+  bits<7> sdata; // Only 5 bits of sdata are supported.
+
+  let sdst = ?;
+  let Inst{12-11} = 0; // Unused sdata bits.
+  let Inst{10-6}  = !if(ps.has_sdst, sdata{4-0}, ?);
+}
+
+class SMEM_Real_Load_gfx13<bits<6> op, string ps, string opName, OffsetMode offsets> :
+    SMEM_Real_gfx13<op, !cast<SM_Pseudo>(ps # offsets.Variant), opName> {
+  RegisterClass BaseClass = !cast<SM_Load_Pseudo>(ps # offsets.Variant).BaseClass;
+  let InOperandList = !con((ins BaseClass:$sbase), offsets.Ins, (ins CPol:$cpol));
+
+  let Inst{20} = cpol{CPolBit.NV}; // non-volatile
+  let Inst{22-21} = cpol{4-3}; // scope
+  let Inst{24-23} = cpol{1-0}; // th - only lower 2 bits are supported
+  let Inst{56} = cpol{CPolBit.SCAL}; // scale offset
+}
+
+multiclass SM_Real_Loads_gfx13<bits<6> op, string ps = NAME> {
+  defvar opName = !tolower(NAME);
+  def _IMM_gfx13 : SMEM_Real_Load_gfx13<op, ps, opName, IMM_Offset>;
+  def _SGPR_IMM_gfx13 : SMEM_Real_Load_gfx13<op, ps, opName, SGPR_IMM_OptOffset>;
+}
+
+defm S_LOAD_B32  : SM_Real_Loads_gfx13<0x00, "S_LOAD_DWORD">;
+defm S_LOAD_B64  : SM_Real_Loads_gfx13<0x01, "S_LOAD_DWORDX2">;
+defm S_LOAD_B96  : SM_Real_Loads_gfx13<0x0e, "S_LOAD_DWORDX3">;
+defm S_LOAD_B128 : SM_Real_Loads_gfx13<0x02, "S_LOAD_DWORDX4">;
+defm S_LOAD_B256 : SM_Real_Loads_gfx13<0x03, "S_LOAD_DWORDX8">;
+defm S_LOAD_B512 : SM_Real_Loads_gfx13<0x04, "S_LOAD_DWORDX16">;
+
+defm S_LOAD_I8   : SM_Real_Loads_gfx13<0x30>;
+defm S_LOAD_U8   : SM_Real_Loads_gfx13<0x31>;
+defm S_LOAD_I16  : SM_Real_Loads_gfx13<0x32>;
+defm S_LOAD_U16  : SM_Real_Loads_gfx13<0x33>;
+
+defm S_BUFFER_LOAD_B32  : SM_Real_Loads_gfx13<0x08, "S_BUFFER_LOAD_DWORD">;
+defm S_BUFFER_LOAD_B64  : SM_Real_Loads_gfx13<0x09, "S_BUFFER_LOAD_DWORDX2">;
+defm S_BUFFER_LOAD_B96  : SM_Real_Loads_gfx13<0x0d, "S_BUFFER_LOAD_DWORDX3">;
+defm S_BUFFER_LOAD_B128 : SM_Real_Loads_gfx13<0x0a, "S_BUFFER_LOAD_DWORDX4">;
+defm S_BUFFER_LOAD_B256 : SM_Real_Loads_gfx13<0x0b, "S_BUFFER_LOAD_DWORDX8">;
+defm S_BUFFER_LOAD_B512 : SM_Real_Loads_gfx13<0x0c, "S_BUFFER_LOAD_DWORDX16">;
+
+defm S_BUFFER_LOAD_I8  : SM_Real_Loads_gfx13<0x34>;
+defm S_BUFFER_LOAD_U8  : SM_Real_Loads_gfx13<0x35>;
+defm S_BUFFER_LOAD_I16 : SM_Real_Loads_gfx13<0x36>;
+defm S_BUFFER_LOAD_U16 : SM_Real_Loads_gfx13<0x37>;
+
+def S_DCACHE_INV_gfx13 : SMEM_Real_gfx13<0x020, S_DCACHE_INV>;
+
+def S_PREFETCH_INST_gfx13        : SMEM_Real_Prefetch_gfx13<0x22, S_PREFETCH_INST>;
+def S_PREFETCH_INST_PC_REL_gfx13 : SMEM_Real_Prefetch_gfx13<0x23, S_PREFETCH_INST_PC_REL>;
+def S_PREFETCH_DATA_gfx13        : SMEM_Real_Prefetch_gfx13<0x2c, S_PREFETCH_DATA>;
+def S_BUFFER_PREFETCH_DATA_gfx13 : SMEM_Real_Prefetch_gfx13<0x2d, S_BUFFER_PREFETCH_DATA>;
+def S_PREFETCH_DATA_PC_REL_gfx13 : SMEM_Real_Prefetch_gfx13<0x2e, S_PREFETCH_DATA_PC_REL>;
+
+multiclass SMEM_Real_Probe_gfx13<bits<6> op> {
+  defvar ps = NAME;
+  def _IMM_gfx13      : SMEM_Real_Prefetch_gfx13<op, !cast<SM_Probe_Pseudo>(ps#_IMM)>;
+  def _SGPR_IMM_gfx13 : SMEM_Real_Prefetch_gfx13<op, !cast<SM_Probe_Pseudo>(ps#_SGPR_OPT_IMM)>;
+}
+
+defm S_ATC_PROBE        : SMEM_Real_Probe_gfx13<0x26>;
+defm S_ATC_PROBE_BUFFER : SMEM_Real_Probe_gfx13<0x27>;

@@ -338,13 +338,15 @@ def LDAT_PSEUDO : PPCCustomInserterPseudo<
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr, g8rc:$val, u5imm:$fc),
     "#LDAT_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val, timm:$fc))]>;
+    [(set i64:$dst, (int_ppc_amo_ldat ptr_rc_nor0:$ptr, g8rc:$val,
+                                      u5imm_timm:$fc))]>;
 
 def LDAT_COND_PSEUDO : PPCCustomInserterPseudo <
     (outs g8rc:$dst),
     (ins ptr_rc_nor0:$ptr, u5imm:$fc),
     "#LDAT_COND_PSEUDO",
-    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr, timm:$fc))]>;
+    [(set i64:$dst, (int_ppc_amo_ldat_cond ptr_rc_nor0:$ptr,
+                                            u5imm_timm:$fc))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STDCX : XForm_1_memOp<31, 214, (outs), (ins g8rc:$RST, (memrr $RA, $RB):$addr),
@@ -412,9 +414,11 @@ def : Pat<(int_ppc_cmpxchg_i128 ForceXForm:$ptr,
                            g8rc:$new_hi))>;
 
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
-def STDAT : XForm_base_r3xo_memOp<31, 742, (outs), (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
+def STDAT : XForm_base_r3xo_memOp<31, 742, (outs),
+                                  (ins g8rc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                                   "stdat $RST, $RA, $RB", IIC_LdStStore,
-                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA, timm:$RB)]>, isPPC64,
+                                  [(PPCstat i64:$RST, ptr_rc_nor0:$RA,
+                                            u5imm_timm:$RB)]>, isPPC64,
             Requires<[IsISA3_0]>;
 
 let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
@@ -1823,7 +1827,7 @@ def ADDEX8 : Z23Form_RTAB5_CY2<31, 170, (outs g8rc:$RT),
                               (ins g8rc:$RA, g8rc:$RB, u2imm:$CY),
                               "addex $RT, $RA, $RB, $CY", IIC_IntGeneral,
                               [(set i64:$RT, (int_ppc_addex i64:$RA, i64:$RB,
-                                                            timm:$CY))]>;
+                                                            u2imm_timm:$CY))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Patterns

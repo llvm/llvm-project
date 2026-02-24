@@ -18,11 +18,11 @@ void emit_simple_parallel() {
   // CHECK-NEXT: }
 #pragma omp parallel
   {
-    // TODO(OMP): We don't yet emit captured stmt, so the body of this is lost,x
-    // thus we don't emit the 'during' call.
     during(i);
   }
   // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: {{.*}} = cir.load align(4) %{{.*}} : !cir.ptr<!s32i>, !s32i
+  // CHECK-NEXT: cir.call @during(%{{.*}}) : (!s32i) -> ()
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 
@@ -41,10 +41,18 @@ void parallel_with_operations() {
   // lines will need updating.
 #pragma omp parallel shared(a) firstprivate(b)
   {
-   ++a;
-   ++b;
+   a = a + 1;
+   b = b + 1;
   }
   // CHECK-NEXT: omp.parallel {
+  // CHECK-NEXT: cir.load align(4) %{{.*}}
+  // CHECK-NEXT: cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: cir.binop(add, %{{.*}}, %{{.*}}) nsw : !s32i
+  // CHECK-NEXT: cir.store align(4) %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
+  // CHECK-NEXT: cir.load align(4) %{{.*}}
+  // CHECK-NEXT: cir.const #cir.int<1> : !s32i
+  // CHECK-NEXT: cir.binop(add, %{{.*}}, %{{.*}}) nsw : !s32i
+  // CHECK-NEXT: cir.store align(4) %{{.*}}, %{{.*}} : !s32i, !cir.ptr<!s32i>
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 }

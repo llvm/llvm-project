@@ -27,12 +27,12 @@ define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias 
 ; CHECK-NEXT:    br label %[[INNERLOOP:.*]]
 ; CHECK:       [[INNERLOOP]]:
 ; CHECK-NEXT:    [[INDEX_J:%.*]] = phi i64 [ [[J_NEXT:%.*]], %[[INNERLOOP_SPLIT:.*]] ], [ 0, %[[INNERLOOP_PREHEADER]] ]
-; CHECK-NEXT:    [[DEAD_REDUCTION:%.*]] = phi double [ [[ADD_LCSSA:%.*]], %[[INNERLOOP_SPLIT]] ], [ 0.000000e+00, %[[INNERLOOP_PREHEADER]] ]
+; CHECK-NEXT:    [[REDUCTION:%.*]] = phi double [ [[ADD_LCSSA:%.*]], %[[INNERLOOP_SPLIT]] ], [ 0.000000e+00, %[[INNERLOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[FIRSTITER:%.*]] = phi i1 [ false, %[[INNERLOOP_SPLIT]] ], [ true, %[[INNERLOOP_PREHEADER]] ]
 ; CHECK-NEXT:    br label %[[OUTERLOOPHEADER_PREHEADER]]
 ; CHECK:       [[INNERLOOP_SPLIT1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ADDR_S]], align 8
-; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRSTITER]], double [[TMP0]], double 0.000000e+00
+; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRSTITER]], double 0.000000e+00, double [[TMP0]]
 ; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_A]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[A_J_I:%.*]] = load double, ptr [[ADDR_A_J_I]], align 8
 ; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_B]], i64 [[INDEX_J]]
@@ -45,7 +45,7 @@ define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias 
 ; CHECK-NEXT:    br label %[[OUTERLOOP_LATCH]]
 ; CHECK:       [[INNERLOOP_SPLIT]]:
 ; CHECK-NEXT:    [[ADD_LCSSA]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
-; CHECK-NEXT:    [[DEAD_LCSSA:%.*]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
+; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[INDEX_J]], 1
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[EXIT_LOOPEXIT:.*]], label %[[INNERLOOP]]

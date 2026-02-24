@@ -609,44 +609,6 @@ TEST_F(TestTypeSystemClang, TestConvertAccessTypeToAccessSpecifier) {
                               eAccessProtected));
 }
 
-TEST_F(TestTypeSystemClang, TestUnifyAccessSpecifiers) {
-  // Unifying two of the same type should return the same type
-  EXPECT_EQ(AS_public,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_public));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_private));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_protected));
-
-  // Otherwise the result should be the strictest of the two.
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_public));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_protected));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_private));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_private));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_public));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_protected));
-
-  // None is stricter than everything (by convention)
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_public));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_protected));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_private));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_none));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_none));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_none));
-}
-
 TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType int_type = m_ast->GetBasicType(eBasicTypeInt);
 
@@ -1088,7 +1050,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
 
   EXPECT_EQ(TU, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
-  EXPECT_EQ(clang::AccessSpecifier::AS_none, func_template->getAccess());
+  EXPECT_EQ(clang::AccessSpecifier::AS_public, func_template->getAccess());
 }
 
 TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
@@ -1348,6 +1310,71 @@ TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
       m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
   EXPECT_EQ(vector_of_float.GetTypeInfo(),
             (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
+}
+
+TEST_F(TestTypeSystemClang, TestIsRealFloatingPointType) {
+  // Tests CompilerType::IsRealFloatingPointType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  EXPECT_FALSE(m_ast->GetType(ast.getComplexType(ast.FloatTy))
+                   .IsRealFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic))
+          .IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.HalfTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.FloatTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.DoubleTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.LongDoubleTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Float128Ty).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.BFloat16Ty).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Ibm128Ty).IsRealFloatingPointType());
+}
+
+TEST_F(TestTypeSystemClang, TestIsFloatingPointType) {
+  // Tests CompilerType::IsFloatingPointType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  // Vectors of floats
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic))
+          .IsFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.DoubleTy, 1, VectorKind::Generic))
+          .IsFloatingPointType());
+
+  // Complex floats
+  EXPECT_TRUE(
+      m_ast->GetType(ast.getComplexType(ast.FloatTy)).IsFloatingPointType());
+  EXPECT_TRUE(
+      m_ast->GetType(ast.getComplexType(ast.DoubleTy)).IsFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getComplexType(ast.IntTy)).IsFloatingPointType());
+
+  // Builtin floats
+  EXPECT_TRUE(m_ast->GetType(ast.HalfTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.FloatTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.DoubleTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.LongDoubleTy).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Float128Ty).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.BFloat16Ty).IsFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.Ibm128Ty).IsFloatingPointType());
+}
+
+TEST_F(TestTypeSystemClang, TestGetIsComplexType) {
+  // Tests CompilerType::IsComplexType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.IntTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.FloatTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.VoidTy)).IsComplexType());
+  EXPECT_FALSE(m_ast
+                   ->GetType(ast.getIncompleteArrayType(
+                       ast.getComplexType(ast.FloatTy), /*ASM=*/{},
+                       /*IndexTypeQuals=*/{}))
+                   .IsComplexType());
 }
 
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {

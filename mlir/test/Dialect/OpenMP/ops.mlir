@@ -160,6 +160,18 @@ func.func @omp_parallel_pretty(%data_var : memref<i32>, %if_cond : i1, %num_thre
    omp.terminator
  }
 
+ // CHECK: omp.parallel num_threads(%{{.*}}, %{{.*}} : i64, i64)
+ omp.parallel num_threads(%n_i64, %n_i64 : i64, i64) {
+   omp.terminator
+ }
+
+ %n_i16 = arith.constant 8 : i16
+ // Test num_threads with mixed types.
+ // CHECK: omp.parallel num_threads(%{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
+ omp.parallel num_threads(%num_threads, %n_i64, %n_i16 : i32, i64, i16) {
+   omp.terminator
+ }
+
  // CHECK: omp.parallel allocate(%{{.*}} : memref<i32> -> %{{.*}} : memref<i32>)
  omp.parallel allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
    omp.terminator
@@ -1077,7 +1089,7 @@ func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
 
 // CHECK-LABEL: omp_teams
 func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
-                     %data_var : memref<i32>) -> () {
+                     %data_var : memref<i32>, %ub64 : i64, %ub16 : i16) -> () {
   // Test nesting inside of omp.target
   omp.target {
     // CHECK: omp.teams
@@ -1109,6 +1121,19 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     omp.terminator
   }
 
+  // CHECK: omp.teams num_teams( to %{{.*}}, %{{.*}}, %{{.*}} : i32, i32, i32)
+  omp.teams num_teams(to %lb, %ub, %ub : i32, i32, i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test num_teams with mixed types.
+  // CHECK: omp.teams num_teams( to %{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
+  omp.teams num_teams(to %lb, %ub64, %ub16 : i32, i64, i16) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   // Test if.
   // CHECK: omp.teams if(%{{.+}})
   omp.teams if(%if_cond) {
@@ -1119,6 +1144,19 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
   // Test thread limit.
   // CHECK: omp.teams thread_limit(%{{.+}} : i32)
   omp.teams thread_limit(%num_threads : i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.teams thread_limit(%{{.*}}, %{{.*}} : i32, i32)
+  omp.teams thread_limit(%lb, %ub : i32, i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test thread_limit with mixed types.
+  // CHECK: omp.teams thread_limit(%{{.*}}, %{{.*}}, %{{.*}} : i32, i64, i16)
+  omp.teams thread_limit(%lb, %ub64, %ub16 : i32, i64, i16) {
     // CHECK: omp.terminator
     omp.terminator
   }
@@ -3425,6 +3463,41 @@ func.func @omp_declare_simd_uniform(%a: f64, %b: f64,
   return
 }
 
+// CHECK-LABEL: func.func @omp_declare_simd_inbranch
+func.func @omp_declare_simd_inbranch() -> () {
+  // CHECK:      omp.declare_simd inbranch
+  omp.declare_simd inbranch
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_notinbranch
+func.func @omp_declare_simd_notinbranch() -> () {
+  // CHECK:      omp.declare_simd notinbranch
+  omp.declare_simd notinbranch
+  return
+}
+
+// CHECK-LABEL: func.func @omp_declare_simd_multiple_clauses
+func.func @omp_declare_simd_multiple_clauses(%a: f64, %b: f64,
+                                             %p0: memref<i32>, %p1: memref<i32>,
+                                             %iv: i32, %step: i32) -> () {
+  // CHECK:      omp.declare_simd
+  // CHECK-SAME: aligned(
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
+  // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: notinbranch
+  // CHECK-SAME: simdlen(8)
+  // CHECK-SAME: uniform(
+  // CHECK-SAME: %{{.*}} : memref<i32>,
+  // CHECK-SAME: %{{.*}} : memref<i32>)
+  omp.declare_simd simdlen(8)
+    aligned(%p0 : memref<i32> -> 32 : i64,
+            %p1 : memref<i32> -> 128 : i64)
+    uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+    notinbranch
+  return
+}
+
 // CHECK-LABEL: func.func @omp_declare_simd_all_clauses
 func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
                                         %p0: memref<i32>, %p1: memref<i32>,
@@ -3433,6 +3506,7 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
   // CHECK-SAME: aligned(
   // CHECK-SAME: %{{.*}} : memref<i32> -> 32 : i64,
   // CHECK-SAME: %{{.*}} : memref<i32> -> 128 : i64)
+  // CHECK-SAME: inbranch
   // CHECK-SAME: linear(%{{.*}} = %{{.*}} : i32)
   // CHECK-SAME: simdlen(8)
   // CHECK-SAME: uniform(
@@ -3443,5 +3517,36 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
             %p1 : memref<i32> -> 128 : i64)
     linear(%iv = %step : i32)
     uniform(%p0 : memref<i32>, %p1 : memref<i32>)
+    inbranch
+  return
+}
+
+// CHECK-LABEL: func.func @task_affinity_single
+func.func @task_affinity_single() {
+  // CHECK:       %[[A:.*]] = memref.alloca() : memref<100xi32>
+  // CHECK:       omp.task affinity(%[[A]] : memref<100xi32>) {
+  // CHECK:         omp.terminator
+  // CHECK:       }
+  // CHECK:       return
+  %a = memref.alloca() : memref<100xi32>
+  omp.task affinity(%a : memref<100xi32>) {
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @task_affinity_multi
+func.func @task_affinity_multi() {
+  // CHECK:       %[[A:.*]] = memref.alloca() : memref<64xi32>
+  // CHECK:       %[[B:.*]] = memref.alloca() : memref<8xf64>
+  // CHECK:       omp.task affinity(%[[A]] : memref<64xi32>, %[[B]] : memref<8xf64>) {
+  // CHECK:         omp.terminator
+  // CHECK:       }
+  // CHECK:       return
+  %a = memref.alloca() : memref<64xi32>
+  %b = memref.alloca() : memref<8xf64>
+  omp.task affinity(%a : memref<64xi32>, %b : memref<8xf64>) {
+    omp.terminator
+  }
   return
 }

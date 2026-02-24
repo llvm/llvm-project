@@ -7,11 +7,8 @@ declare void @llvm.memset.inline.p0.i64(ptr nocapture, i8, i64, i1) nounwind
 define void @test1(ptr %a, i8 %value) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    mov x8, #72340172838076673
-; CHECK-NEXT:    and x9, x1, #0xff
-; CHECK-NEXT:    mul x8, x9, x8
-; CHECK-NEXT:    str x8, [x0]
+; CHECK-NEXT:    dup v0.16b, w1
+; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 %value, i64 8, i1 0)
   ret void

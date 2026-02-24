@@ -1447,7 +1447,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
         const int64_t Imm = MI.getOperand(0).getImm();
         AMDGPU::Waitcnt Decoded = AMDGPU::decodeWaitcnt(IV, Imm);
         // DsCnt corresponds to LGKMCnt here.
-        return (Decoded.DsCnt == 0);
+        return Decoded.get(AMDGPU::DS_CNT) == 0;
       }
       default:
         assert((!SIInstrInfo::isWaitcnt(MI.getOpcode()) ||
@@ -1932,7 +1932,7 @@ bool GCNHazardRecognizer::fixVALUTransUseHazard(MachineInstr *MI) {
 }
 
 bool GCNHazardRecognizer::fixVALUTransCoexecutionHazards(MachineInstr *MI) {
-  if (!AMDGPU::isGFX1250(ST) || // Coexecution disabled.
+  if (!ST.hasGFX1250Insts() || // Coexecution disabled.
       !SIInstrInfo::isVALU(*MI) || SIInstrInfo::isTRANS(*MI))
     return false;
 
@@ -2077,7 +2077,7 @@ static bool IsWMMAHazardInstInCategory(const MachineInstr &MI,
 }
 
 int GCNHazardRecognizer::checkWMMACoexecutionHazards(MachineInstr *MI) {
-  if (!AMDGPU::isGFX1250(ST))
+  if (!ST.hasGFX1250Insts())
     return 0;
 
   const SIInstrInfo *TII = ST.getInstrInfo();

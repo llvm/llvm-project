@@ -14,7 +14,7 @@ class SubtargetFeatureFetchLimit <string Value> :
 >;
 
 def FeatureR600ALUInst : SubtargetFeature<"R600ALUInst",
-  "R600ALUInst",
+  "HasR600ALUInst",
   "false",
   "Older version of ALU instructions encoding"
 >;
@@ -29,13 +29,13 @@ def FeatureVertexCache : SubtargetFeature<"HasVertexCache",
 >;
 
 def FeatureCaymanISA : SubtargetFeature<"caymanISA",
-  "CaymanISA",
+  "HasCaymanISA",
   "true",
   "Use Cayman ISA"
 >;
 
 def FeatureCFALUBug : SubtargetFeature<"cfalubug",
-  "CFALUBug",
+  "HasCFALUBug",
   "true",
   "GPU has CF_ALU bug"
 >;

@@ -2126,9 +2126,25 @@ static std::string scalarConstantToHexString(const Constant *C) {
   if (isa<UndefValue>(C)) {
     return APIntToHexString(APInt::getZero(Ty->getPrimitiveSizeInBits()));
   } else if (const auto *CFP = dyn_cast<ConstantFP>(C)) {
-    return APIntToHexString(CFP->getValueAPF().bitcastToAPInt());
+    if (CFP->getType()->isFloatingPointTy())
+      return APIntToHexString(CFP->getValueAPF().bitcastToAPInt());
+
+    std::string HexString;
+    unsigned NumElements =
+        cast<FixedVectorType>(CFP->getType())->getNumElements();
+    for (unsigned I = 0; I < NumElements; ++I)
+      HexString += APIntToHexString(CFP->getValueAPF().bitcastToAPInt());
+    return HexString;
   } else if (const auto *CI = dyn_cast<ConstantInt>(C)) {
-    return APIntToHexString(CI->getValue());
+    if (CI->getType()->isIntegerTy())
+      return APIntToHexString(CI->getValue());
+
+    std::string HexString;
+    unsigned NumElements =
+        cast<FixedVectorType>(CI->getType())->getNumElements();
+    for (unsigned I = 0; I < NumElements; ++I)
+      HexString += APIntToHexString(CI->getValue());
+    return HexString;
   } else {
     unsigned NumElements;
     if (auto *VTy = dyn_cast<VectorType>(Ty))
@@ -2392,7 +2408,9 @@ MCSymbol *
 TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
                                                const TargetMachine &TM) const {
   // We always use a qualname symbol for a GV that represents
-  // a declaration, a function descriptor, or a common symbol.
+  // a declaration, a function descriptor, or a common symbol. An IFunc is
+  // lowered as a special trampoline function which has an entry point and a
+  // descriptor.
   // If a GV represents a GlobalVariable and -fdata-sections is enabled, we
   // also return a qualname so that a label symbol could be avoided.
   // It is inherently ambiguous when the GO represents the address of a
@@ -2410,6 +2428,11 @@ TargetLoweringObjectFileXCOFF::getTargetSymbol(const GlobalValue *GV,
         return static_cast<const MCSectionXCOFF *>(
                    SectionForGlobal(GVar, SectionKind::getData(), TM))
             ->getQualNameSymbol();
+
+    if (isa<GlobalIFunc>(GO))
+      return static_cast<const MCSectionXCOFF *>(
+                 getSectionForFunctionDescriptor(GO, TM))
+          ->getQualNameSymbol();
 
     SectionKind GOKind = getKindForGlobal(GO, TM);
     if (GOKind.isText())
@@ -2683,7 +2706,7 @@ TargetLoweringObjectFileXCOFF::getStorageClassForGlobal(const GlobalValue *GV) {
 
 MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
     const GlobalValue *Func, const TargetMachine &TM) const {
-  assert((isa<Function>(Func) ||
+  assert((isa<Function>(Func) || isa<GlobalIFunc>(Func) ||
           (isa<GlobalAlias>(Func) &&
            isa_and_nonnull<Function>(
                cast<GlobalAlias>(Func)->getAliaseeObject()))) &&
@@ -2700,7 +2723,7 @@ MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
   // undefined symbols gets treated as csect with XTY_ER property.
   if (((TM.getFunctionSections() && !Func->hasSection()) ||
        Func->isDeclarationForLinker()) &&
-      isa<Function>(Func)) {
+      (isa<Function>(Func) || isa<GlobalIFunc>(Func))) {
     return getContext()
         .getXCOFFSection(
             NameStr, SectionKind::getText(),
@@ -2714,7 +2737,9 @@ MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
 }
 
 MCSection *TargetLoweringObjectFileXCOFF::getSectionForFunctionDescriptor(
-    const Function *F, const TargetMachine &TM) const {
+    const GlobalObject *F, const TargetMachine &TM) const {
+  assert((isa<Function>(F) || isa<GlobalIFunc>(F)) &&
+         "F must be a function or ifunc object.");
   SmallString<128> NameStr;
   getNameWithPrefix(NameStr, F, TM);
   return getContext().getXCOFFSection(
@@ -2795,6 +2820,15 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
+  // Initialize the label for the ADA section.
+  MCSymbolGOFF *ADASym = static_cast<MCSymbolGOFF *>(
+      getContext().getOrCreateSymbol(ADAPR->getName()));
+  ADAPR->setBeginSymbol(ADASym);
+}
+
+bool TargetLoweringObjectFileGOFF::shouldPutJumpTableInFunctionSection(
+    bool UsesLabelDifference, const Function &F) const {
+  return true;
 }
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
@@ -2857,4 +2891,36 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                                        ED);
   }
   return TextSection;
+}
+
+MCSection *
+TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
+  // XL C/C++ compilers on z/OS support priorities from min-int to max-int, with
+  // sinit as source priority 0. For clang, sinit has source priority 65535.
+  // For GOFF, the priority sortkey field is an unsigned value. So, we
+  // add min-int to get sorting to work properly but also subtract the
+  // clang sinit (65535) value so internally xl sinit and clang sinit have
+  // the same unsigned GOFF priority sortkey field value (i.e. 0x80000000).
+  static constexpr const uint32_t ClangDefaultSinitPriority = 65535;
+  uint32_t Prio = Priority + (0x80000000 - ClangDefaultSinitPriority);
+
+  std::string Name(".xtor");
+  if (Priority != ClangDefaultSinitPriority)
+    Name = llvm::Twine(Name).concat(".").concat(llvm::utostr(Priority)).str();
+
+  MCContext &Ctx = getContext();
+  MCSectionGOFF *SInit = Ctx.getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_SINIT,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword},
+      static_cast<const MCSectionGOFF *>(TextSection)->getParent());
+
+  MCSectionGOFF *Xtor = Ctx.getGOFFSection(
+      SectionKind::getData(), Name,
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                   GOFF::ESD_BSC_Section, Prio},
+      SInit);
+  return Xtor;
 }

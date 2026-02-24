@@ -2207,13 +2207,14 @@ func.func @index_switch_fold_no_res() {
 
 // -----
 
-// Step 0 is invalid, the loop is eliminated.
+// Step size 0: The loop has an infinite number of iterations.
 // CHECK-LABEL: func @scf_for_all_step_size_0()
-//       CHECK-NOT:   scf.forall
+//       CHECK:   scf.forall (%[[arg0:.*]]) = (0) to (1) step (0)
+//       CHECK:     vector.print %[[arg0]]
 func.func @scf_for_all_step_size_0()  {
   %x = arith.constant 0 : index
   scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
-    vector.print %x : index
+    vector.print %i : index
     scf.forall.in_parallel {}
   }
   return
