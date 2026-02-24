@@ -11,6 +11,7 @@
 
 #include "gid_t.h"
 #include "key_t.h"
+#include "mode_t.h"
 #include "uid_t.h"
 
 #ifdef __linux__
@@ -20,7 +21,7 @@ struct ipc_perm {
   gid_t gid;
   uid_t cuid;
   gid_t cgid;
-  unsigned short mode;
+  mode_t mode;
   unsigned short seq;
   unsigned short padding;
   unsigned long unused_0;

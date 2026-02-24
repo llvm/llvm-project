@@ -10,8 +10,8 @@
 #ifndef LLVM_LIBC_SRC_SYS_IPC_FTOK_H
 #define LLVM_LIBC_SRC_SYS_IPC_FTOK_H
 
+#include "hdr/types/key_t.h"
 #include "src/__support/macros/config.h"
-#include <sys/ipc.h>
 
 namespace LIBC_NAMESPACE_DECL {
 

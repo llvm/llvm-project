@@ -12,9 +12,9 @@
 #define IPC_PRIVATE 0
 
 // Resource get request flags.
-#define IPC_CREAT 00001000
-#define IPC_EXCL 00002000
-#define IPC_NOWAIT 00004000
+#define IPC_CREAT 01000
+#define IPC_EXCL 02000
+#define IPC_NOWAIT 04000
 
 // Control commands used with semctl, msgctl, and shmctl.
 #define IPC_RMID 0
