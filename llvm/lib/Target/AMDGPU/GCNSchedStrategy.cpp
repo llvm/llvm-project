@@ -169,6 +169,14 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
                     << ", SGPRExcessLimit = " << SGPRExcessLimit << "\n\n");
 }
 
+void GCNRPTracker::setPhysRegTracking() {
+  if (!GCNTrackers || !TrackPhysRegInTrackers) {
+    TrackPhysRegs = false;
+    return;
+  }
+  TrackPhysRegs = true;
+}
+
 /// Checks whether \p SU can use the cached DAG pressure diffs to compute the
 /// current register pressure.
 ///
@@ -994,8 +1002,6 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   if (Regions[RegionIdx].first == Regions[RegionIdx].second)
     return llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
   GCNDownwardRPTracker RPTracker(*LIS, MF.getRegInfo());
-  if (GCNTrackers && TrackPhysRegInTrackers)
-    RPTracker.enablePhysTracking();
   RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
                     &LiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
@@ -1010,8 +1016,6 @@ static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
                                                 const MachineBasicBlock *MBB) {
   GCNDownwardRPTracker RPTracker(*LIS, MF.getRegInfo());
-  if (GCNTrackers && TrackPhysRegInTrackers)
-    RPTracker.enablePhysTracking();
 
   // If the block has the only successor then live-ins of that successor are
   // live-outs of the current block. We can reuse calculated live set if the
@@ -1159,10 +1163,6 @@ void GCNScheduleDAGMILive::runSchedStages() {
 #endif
 
   GCNSchedStrategy &S = static_cast<GCNSchedStrategy &>(*SchedImpl);
-  if (GCNTrackers && TrackPhysRegInTrackers) {
-    S.getDownwardTracker()->enablePhysTracking();
-    S.getUpwardTracker()->enablePhysTracking();
-  }
   while (S.advanceStage()) {
     auto Stage = createSchedStage(S.getCurrentStage());
     if (!Stage->initGCNSchedStage())

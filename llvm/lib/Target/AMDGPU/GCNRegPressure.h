@@ -324,9 +324,11 @@ protected:
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &Info)
-      : LIS(LIS), MRI(&Info) {
-    PhysLiveRegs.init(*MRI);
+  GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
+      : LIS(LIS), MRI(&MRI) {
+    setPhysRegTracking();
+    if (TrackPhysRegs)
+      PhysLiveRegs.init(MRI);
   }
 
   // Copy constructor - PhysLiveRegs must be initialized then copied.
@@ -375,9 +377,9 @@ protected:
   bool insertAllNotLiveUnits(Register Reg);
 
 public:
-  // Enable physical register tracking. Should only be called when GCNTrackers
-  // are enabled to avoid changing behavior when using generic trackers.
-  void enablePhysTracking() { TrackPhysRegs = true; }
+  // Enable physical register tracking only if both GCNTrackers and
+  // TrackPhysRegInTrackers are true.
+  void setPhysRegTracking();
 
   // reset tracker and set live register set to the specified value.
   void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);

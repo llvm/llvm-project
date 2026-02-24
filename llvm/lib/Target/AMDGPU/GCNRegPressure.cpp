@@ -598,6 +598,7 @@ void GCNRPTracker::reset(const MachineInstr &MI,
 
   MaxVirtPressure = CurVirtPressure = getRegPressure(*MRI, VirtLiveRegs);
 
+  setPhysRegTracking();
   // Clear physical register tracking (only if enabled)
   if (TrackPhysRegs) {
     PhysLiveRegs.clear();
@@ -614,6 +615,7 @@ void GCNRPTracker::reset(const MachineRegisterInfo &MRI_,
   LastTrackedMI = nullptr;
   MaxVirtPressure = CurVirtPressure = getRegPressure(MRI_, LiveRegs_);
 
+  setPhysRegTracking();
   // Clear physical register tracking (only if enabled)
   if (TrackPhysRegs) {
     PhysLiveRegs.clear();
