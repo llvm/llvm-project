@@ -3460,41 +3460,41 @@ namespace ISD {
   /// every element of a constant BUILD_VECTOR.
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
   template <typename ConstNodeType>
-  bool matchUnaryPredicateImpl(SDValue Op,
-                               const APInt &DemandedElts,
+  bool matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
                                std::function<bool(ConstNodeType *)> Match,
                                bool AllowUndefs = false,
                                bool AllowTruncation = false);
 
   /// Hook for matching ConstantSDNode predicate
-  inline bool matchUnaryPredicate(SDValue Op,
-                                  const APInt &DemandedElts,
+  inline bool matchUnaryPredicate(SDValue Op, const APInt &DemandedElts,
                                   std::function<bool(ConstantSDNode *)> Match,
                                   bool AllowUndefs = false,
                                   bool AllowTruncation = false) {
-    return matchUnaryPredicateImpl<ConstantSDNode>(Op, DemandedElts, Match, AllowUndefs,
-                                                   AllowTruncation);
+    return matchUnaryPredicateImpl<ConstantSDNode>(
+        Op, DemandedElts, Match, AllowUndefs, AllowTruncation);
   }
 
   inline bool matchUnaryPredicate(SDValue Op,
                                   std::function<bool(ConstantSDNode *)> Match,
                                   bool AllowUndefs = false,
                                   bool AllowTruncation = false) {
-    return matchUnaryPredicate(Op, APInt(1, 1), Match, AllowUndefs, AllowTruncation);
+    return matchUnaryPredicate(Op, APInt(1, 1), Match, AllowUndefs,
+                               AllowTruncation);
   }
 
   /// Hook for matching ConstantFPSDNode predicate
   inline bool
-  matchUnaryFpPredicate(SDValue Op,
-                        const APInt &DemandedElts,
+  matchUnaryFpPredicate(SDValue Op, const APInt &DemandedElts,
                         std::function<bool(ConstantFPSDNode *)> Match,
                         bool AllowUndefs = false) {
-    return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, DemandedElts, Match, AllowUndefs);
+    return matchUnaryPredicateImpl<ConstantFPSDNode>(Op, DemandedElts, Match,
+                                                     AllowUndefs);
   }
 
-  inline bool matchUnaryFpPredicate(SDValue Op,
-                                    std::function<bool(ConstantFPSDNode *)> Match,
-                                    bool AllowUndefs = false) {
+  inline bool
+  matchUnaryFpPredicate(SDValue Op,
+                        std::function<bool(ConstantFPSDNode *)> Match,
+                        bool AllowUndefs = false) {
     return matchUnaryFpPredicate(Op, APInt(1, 1), Match, AllowUndefs);
   }
 
