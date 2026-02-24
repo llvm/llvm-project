@@ -335,7 +335,6 @@ private:
     /// Indicates the size of the field in bits.
     size_t bit_size = 0;
     uint64_t data_bit_offset = UINT64_MAX;
-    lldb::AccessType accessibility = lldb::eAccessNone;
     std::optional<uint64_t> byte_size;
     std::optional<lldb_private::plugin::dwarf::DWARFFormValue> const_value_form;
     lldb_private::plugin::dwarf::DWARFFormValue encoding_form;
@@ -553,7 +552,6 @@ struct ParsedDWARFTypeAttributes {
   explicit ParsedDWARFTypeAttributes(
       const lldb_private::plugin::dwarf::DWARFDIE &die);
 
-  lldb::AccessType accessibility = lldb::eAccessNone;
   bool is_artificial = false;
   bool is_complete_objc_class = false;
   bool is_explicit = false;

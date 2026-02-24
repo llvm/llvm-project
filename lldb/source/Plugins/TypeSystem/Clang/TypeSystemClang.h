@@ -205,11 +205,6 @@ public:
   std::optional<ClangASTMetadata> GetMetadata(const clang::Decl *object);
   std::optional<ClangASTMetadata> GetMetadata(const clang::Type *object);
 
-  void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
-                              clang::AccessSpecifier access);
-  clang::AccessSpecifier
-  GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object);
-
   // Basic Types
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
                                                    size_t bit_size) override;
@@ -311,9 +306,6 @@ public:
 
   static clang::AccessSpecifier
   ConvertAccessTypeToAccessSpecifier(lldb::AccessType access);
-
-  static clang::AccessSpecifier
-  UnifyAccessSpecifiers(clang::AccessSpecifier lhs, clang::AccessSpecifier rhs);
 
   uint32_t GetNumBaseClasses(const clang::CXXRecordDecl *cxx_record_decl,
                              bool omit_empty_base_classes);
@@ -1243,12 +1235,6 @@ private:
   typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;
   /// Maps Types to their associated ClangASTMetadata.
   TypeMetadataMap m_type_metadata;
-
-  typedef llvm::DenseMap<const clang::CXXRecordDecl *, clang::AccessSpecifier>
-      CXXRecordDeclAccessMap;
-  /// Maps CXXRecordDecl to their most recent added method/field's
-  /// AccessSpecifier.
-  CXXRecordDeclAccessMap m_cxx_record_decl_access;
 
   /// The sema associated that is currently used to build this ASTContext.
   /// May be null if we are already done parsing this ASTContext or the
