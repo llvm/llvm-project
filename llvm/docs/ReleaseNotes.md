@@ -151,6 +151,7 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
 * `-mcpu=spacemit-a100` was added.
+* `-riscv-enable-p-ext-simd-codegen` has been removed.
 
 Changes to the WebAssembly Backend
 ----------------------------------
