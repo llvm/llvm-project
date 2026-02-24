@@ -745,7 +745,6 @@ if (MSVC)
   if (NOT CLANG_CL)
     set(msvc_warning_flags
       # Disabled warnings.
-      -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
       -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
