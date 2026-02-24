@@ -1529,7 +1529,11 @@ static bool compileModuleAndReadASTBehindLock(
           << Module->Name;
       // Clear the lock file so that future invocations can make progress.
       Lock->unsafeMaybeUnlock();
-      continue;
+      // Instead of trying to acquire the lock again (which can fail
+      // indefinitely with lock implementations that do not support unsafe
+      // unlock), compile the module ourselves.
+      return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
+                                         ModuleNameLoc, Module, ModuleFileName);
     }
 
     // Read the module that was just written by someone else.

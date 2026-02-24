@@ -20,10 +20,10 @@ using namespace dependencies;
 namespace {
 class ReaderWriterLock : public llvm::AdvisoryLock {
   // TODO: Consider using std::atomic::{wait,notify_all} when we move to C++20.
-  std::unique_lock<std::shared_mutex> OwningLock;
+  std::unique_lock<std::shared_timed_mutex> OwningLock;
 
 public:
-  ReaderWriterLock(std::shared_mutex &Mutex)
+  ReaderWriterLock(std::shared_timed_mutex &Mutex)
       : OwningLock(Mutex, std::defer_lock) {}
 
   Expected<bool> tryLock() override { return OwningLock.try_lock(); }
@@ -31,18 +31,17 @@ public:
   llvm::WaitForUnlockResult
   waitForUnlockFor(std::chrono::seconds MaxSeconds) override {
     assert(!OwningLock);
-    // We do not respect the timeout here. It's very generous for implicit
-    // modules, so we'd typically only reach it if the owner crashed (but so did
-    // we, since we run in the same process), or encountered deadlock.
-    (void)MaxSeconds;
-    std::shared_lock<std::shared_mutex> Lock(*OwningLock.mutex());
-    return llvm::WaitForUnlockResult::Success;
+    std::shared_lock<std::shared_timed_mutex> Lock(*OwningLock.mutex(),
+                                                   MaxSeconds);
+    return Lock ? llvm::WaitForUnlockResult::Success
+                : llvm::WaitForUnlockResult::Timeout;
   }
 
   std::error_code unsafeMaybeUnlock() override {
-    // Unlocking the mutex here would trigger UB and we don't expect this to be
-    // actually called when compiling scanning modules due to the no-timeout
-    // guarantee above.
+    // Only the thread that locked a mutex can unlock it without triggering UB.
+    // We're forced to ignore the request with the understanding that we will
+    // not unblock other threads that are currently waiting, and they will have
+    // to time out themselves.
     return {};
   }
 
@@ -64,7 +63,7 @@ public:
   void prepareForGetLock(StringRef Filename) override {}
 
   std::unique_ptr<llvm::AdvisoryLock> getLock(StringRef Filename) override {
-    auto &CompilationMutex = [&]() -> std::shared_mutex & {
+    auto &CompilationMutex = [&]() -> std::shared_timed_mutex & {
       std::lock_guard<std::mutex> Lock(Entries.Mutex);
       auto &Entry = Entries.Map[Filename];
       if (!Entry)

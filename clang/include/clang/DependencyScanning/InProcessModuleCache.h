@@ -20,7 +20,7 @@ namespace clang {
 namespace dependencies {
 
 struct ModuleCacheEntry {
-  std::shared_mutex CompilationMutex;
+  std::shared_timed_mutex CompilationMutex;
   std::atomic<std::time_t> Timestamp = 0;
 };
 
