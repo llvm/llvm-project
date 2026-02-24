@@ -1054,13 +1054,10 @@ public:
     /// until this object is destroyed.
     void forceCleanup() {
       assert(performCleanup && "Already forced cleanup");
-      {
-        mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
-        cgf.didCallStackSave = oldDidCallStackSave;
-        cgf.popCleanupBlocks(cleanupStackDepth);
-        performCleanup = false;
-        cgf.currentCleanupStackDepth = oldCleanupStackDepth;
-      }
+      cgf.didCallStackSave = oldDidCallStackSave;
+      cgf.popCleanupBlocks(cleanupStackDepth);
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
   };
 

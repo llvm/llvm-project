@@ -1436,8 +1436,9 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
-  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::SHL, ISD::SRA, ISD::SRL,
-                       ISD::MUL, ISD::FMA, ISD::SINT_TO_FP, ISD::BUILD_VECTOR});
+  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::XOR, ISD::SHL, ISD::SRA,
+                       ISD::SRL, ISD::MUL, ISD::FMA, ISD::SINT_TO_FP,
+                       ISD::BUILD_VECTOR});
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine({ISD::LOAD, ISD::STORE, ISD::BR_CC});
@@ -11360,14 +11361,38 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     unsigned CmprOpc = OpVT == MVT::f128 ? PPC::XSTSTDCQP
                                          : (OpVT == MVT::f64 ? PPC::XSTSTDCDP
                                                              : PPC::XSTSTDCSP);
+    // Lower __builtin_ppc_test_data_class(value, mask) to XSTSTDC* instruction.
+    // The XSTSTDC* instructions test if a floating-point value matches any of
+    // the data classes specified in the mask, setting CR field bits
+    // accordingly. We need to extract the EQ bit (bit 2) from the CR field and
+    // convert it to an integer result (1 if match, 0 if no match).
+    //
+    // Note: Operands are swapped because XSTSTDC* expects (mask, value) but the
+    // intrinsic provides (value, mask) as Op.getOperand(1) and
+    // Op.getOperand(2).
+    SDValue TestDataClass =
+        SDValue(DAG.getMachineNode(CmprOpc, dl, MVT::i32,
+                                   {Op.getOperand(2), Op.getOperand(1)}),
+                0);
+    if (Subtarget.isISA3_1()) {
+      // ISA 3.1+: Use SETBC instruction to directly convert CR bit to integer.
+      // This is more efficient than the SELECT_CC approach used in earlier
+      // ISAs.
+      SDValue SubRegIdx = DAG.getTargetConstant(PPC::sub_eq, dl, MVT::i32);
+      SDValue CRBit =
+          SDValue(DAG.getMachineNode(TargetOpcode::EXTRACT_SUBREG, dl, MVT::i1,
+                                     TestDataClass, SubRegIdx),
+                  0);
+
+      return DAG.getNode(PPCISD::SETBC, dl, MVT::i32, CRBit);
+    }
+
+    // Pre-ISA 3.1: Use SELECT_CC to convert CR field to integer (1 or 0).
     return SDValue(
-        DAG.getMachineNode(
-            PPC::SELECT_CC_I4, dl, MVT::i32,
-            {SDValue(DAG.getMachineNode(CmprOpc, dl, MVT::i32, Op.getOperand(2),
-                                        Op.getOperand(1)),
-                     0),
-             DAG.getConstant(1, dl, MVT::i32), DAG.getConstant(0, dl, MVT::i32),
-             DAG.getTargetConstant(PPC::PRED_EQ, dl, MVT::i32)}),
+        DAG.getMachineNode(PPC::SELECT_CC_I4, dl, MVT::i32,
+                           {TestDataClass, DAG.getConstant(1, dl, MVT::i32),
+                            DAG.getConstant(0, dl, MVT::i32),
+                            DAG.getTargetConstant(PPC::PRED_EQ, dl, MVT::i32)}),
         0);
   }
   case Intrinsic::ppc_fnmsub: {
@@ -17182,6 +17207,164 @@ static SDValue DAGCombineAddc(SDNode *N,
   return SDValue();
 }
 
+// Optimize zero-extension of setcc when the compared value is known to be 0
+// or 1.
+//
+// Pattern: zext(setcc(Value, 0, seteq/setne)) where Value is 0 or 1
+//   -> zext(xor(Value, 1))  for seteq
+//   -> zext(Value)          for setne
+//
+// This optimization avoids the i32 -> i1 -> i32/i64 conversion sequence
+// by keeping the value in its original i32 type throughout.
+//
+// Example:
+//   Before: zext(setcc(test_data_class(...), 0, seteq))
+//           // test_data_class returns 0 or 1 in i32
+//           // setcc converts i32 -> i1
+//           // zext converts i1 -> i64
+//   After:  zext(xor(test_data_class(...), 1))
+//           // Stays in i32, then extends to i64
+//
+// This is beneficial because:
+// 1. Eliminates the setcc instruction
+// 2. Avoids i32 -> i1 truncation
+// 3. Keeps computation in native integer width
+
+static SDValue combineZextSetccWithZero(SDNode *N, SelectionDAG &DAG) {
+  // Check if this is a zero_extend
+  if (N->getOpcode() != ISD::ZERO_EXTEND)
+    return SDValue();
+
+  SDValue Src = N->getOperand(0);
+
+  // Check if the source is a setcc
+  if (Src.getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  SDValue LHS = Src.getOperand(0);
+  SDValue RHS = Src.getOperand(1);
+  ISD::CondCode CC = cast<CondCodeSDNode>(Src.getOperand(2))->get();
+
+  if (!isNullConstant(RHS) && !isNullConstant(LHS))
+    return SDValue();
+
+  SDValue NonNullConstant = isNullConstant(RHS) ? LHS : RHS;
+
+  auto isZeroOrOne = [=](SDValue &V) {
+    if (V.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
+        V.getConstantOperandVal(0) == Intrinsic::ppc_test_data_class)
+      return true;
+    return false;
+  };
+
+  if (!isZeroOrOne(NonNullConstant))
+    return SDValue();
+
+  // Check for pattern: zext(setcc (Value), 0, seteq)) or
+  // zext(setcc (Value), 0, setne))
+  if (CC == ISD::SETEQ || CC == ISD::SETNE) {
+    // Replace with: zext(xor(Value, 1)) for seteq
+    //           or: zext(Value)         for setne
+    // This keeps the value in i32 instead of converting to i1
+    SDLoc DL(N);
+    EVT VType = N->getValueType(0);
+    SDValue NewNonNullConstant = DAG.getZExtOrTrunc(NonNullConstant, DL, VType);
+
+    if (CC == ISD::SETNE)
+      return NewNonNullConstant;
+
+    SDValue One = DAG.getConstant(1, DL, VType);
+    return DAG.getNode(ISD::XOR, DL, VType, NewNonNullConstant, One);
+  }
+
+  return SDValue();
+}
+
+// Combine XOR patterns with SELECT_CC_I4/I8, for Example:
+// 1. XOR(SELECT_CC_I4(cond, 1, 0, cc), 1) -> SELECT_CC_I4(cond, 0, 1, cc)
+// 2. XOR(ZEXT(SELECT_CC_I4(cond, 1, 0, cc)), 1) -> SELECT_CC_I4/I8(cond, 0,
+// 1, cc))
+// 3. XOR(ANYEXT(SELECT_CC_I4(cond, 1, 0, cc)), 1) -> SELECT_CC_I4/I8(cond,
+// 0, 1, cc))
+// 4. etc
+static SDValue combineXorSelectCC(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::XOR && "Expected XOR node");
+
+  EVT XorVT = N->getValueType(0);
+  if ((XorVT != MVT::i32 && XorVT != MVT::i64))
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+
+  // Check for XOR with constant 1
+  ConstantSDNode *XorConst = dyn_cast<ConstantSDNode>(RHS);
+  if (!XorConst || !XorConst->isOne()) {
+    XorConst = dyn_cast<ConstantSDNode>(LHS);
+    if (!XorConst || !XorConst->isOne())
+      return SDValue();
+    // Swap so LHS is the SELECT_CC_I4 (or extension) and RHS is the constant
+    std::swap(LHS, RHS);
+  }
+
+  // Check if LHS has only one use
+  if (!LHS.hasOneUse())
+    return SDValue();
+
+  // Handle extensions: ZEXT, ANYEXT
+  SDValue SelectNode = LHS;
+
+  if (LHS.getOpcode() == ISD::ZERO_EXTEND ||
+      LHS.getOpcode() == ISD::ANY_EXTEND) {
+    SelectNode = LHS.getOperand(0);
+
+    // Check if the extension input has only one use
+    if (!SelectNode.hasOneUse())
+      return SDValue();
+  }
+
+  // Check if SelectNode is a MachineSDNode with SELECT_CC_I4/I8 opcode
+  if (!SelectNode.isMachineOpcode())
+    return SDValue();
+
+  unsigned MachineOpc = SelectNode.getMachineOpcode();
+
+  // Handle both SELECT_CC_I4 and SELECT_CC_I8
+  if (MachineOpc != PPC::SELECT_CC_I4 && MachineOpc != PPC::SELECT_CC_I8)
+    return SDValue();
+
+  // SELECT_CC_I4 operands: (cond, true_val, false_val, bropc)
+  if (SelectNode.getNumOperands() != 4)
+    return SDValue();
+
+  ConstantSDNode *ConstOp1 = dyn_cast<ConstantSDNode>(SelectNode.getOperand(1));
+  ConstantSDNode *ConstOp2 = dyn_cast<ConstantSDNode>(SelectNode.getOperand(2));
+
+  if (!ConstOp1 || !ConstOp2)
+    return SDValue();
+
+  // Only optimize if operands are {0, 1} or {1, 0}
+  if (!((ConstOp1->isOne() && ConstOp2->isZero()) ||
+        (ConstOp1->isZero() && ConstOp2->isOne())))
+    return SDValue();
+
+  // Pattern matched! Create new SELECT_CC with swapped 0/1 operands to
+  // eliminate XOR. If original was SELECT_CC(cond, 1, 0, pred), create
+  // SELECT_CC(cond, 0, 1, pred). If original was SELECT_CC(cond, 0, 1, pred),
+  // create SELECT_CC(cond, 1, 0, pred).
+  SDLoc DL(N);
+  MachineOpc = (XorVT == MVT::i32) ? PPC::SELECT_CC_I4 : PPC::SELECT_CC_I8;
+
+  bool ConstOp1IsOne = ConstOp1->isOne();
+  return SDValue(
+      DAG.getMachineNode(MachineOpc, DL, XorVT,
+                         {SelectNode.getOperand(0),
+                          DAG.getConstant(ConstOp1IsOne ? 0 : 1, DL, XorVT),
+                          DAG.getConstant(ConstOp1IsOne ? 1 : 0, DL, XorVT),
+                          SelectNode.getOperand(3)}),
+      0);
+}
+
 SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -17214,6 +17397,12 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     SDValue NarrowAnd = DAG.getNode(ISD::AND, dl, MVT::i32, NarrowOp, ConstOp);
     return DAG.getZExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
   }
+  case ISD::XOR: {
+    // Optimize XOR(ISEL(1,0,CR), 1) -> ISEL(0,1,CR)
+    if (SDValue V = combineXorSelectCC(N, DAG))
+      return V;
+    break;
+  }
   case ISD::SHL:
     return combineSHL(N, DCI);
   case ISD::SRA:
@@ -17240,8 +17429,11 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
         return N->getOperand(0);
     }
     break;
-  case ISD::SIGN_EXTEND:
   case ISD::ZERO_EXTEND:
+    if (SDValue RetV = combineZextSetccWithZero(N, DCI.DAG))
+      return RetV;
+    [[fallthrough]];
+  case ISD::SIGN_EXTEND:
   case ISD::ANY_EXTEND:
     return DAGCombineExtBoolTrunc(N, DCI);
   case ISD::TRUNCATE:
