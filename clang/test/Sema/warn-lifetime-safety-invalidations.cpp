@@ -374,3 +374,78 @@ void ChangingRegionOwnedByContainerIsOk() {
 }
 
 } // namespace ContainersAsFields
+
+namespace AssociativeContainers {
+void SetInsertDoesNotInvalidate() {
+  std::set<int> s;
+  s.insert(0);
+  auto it = s.begin();
+  s.insert(2);
+  *it;
+}
+
+void MapInsertDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m.insert({1, 2});
+  *it;
+}
+
+void MapEmplaceDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m.emplace(1, 2);
+  *it;
+}
+
+void MultisetInsertDoesNotInvalidate() {
+  std::multiset<int> s;
+  auto it = s.begin();
+  s.insert(1);
+  *it;
+}
+
+void MultimapInsertDoesNotInvalidate() {
+  std::multimap<int, int> m;
+  auto it = m.begin();
+  m.insert({1, 2});
+  *it;
+}
+
+void SetEraseDoesNotInvalidateOthers() {
+  std::set<int> s;
+  s.insert(1);
+  s.insert(2);
+  auto it1 = s.begin();
+  auto it2 = it1;
+  ++it2;
+  s.erase(it2);
+  *it1;
+}
+
+void SetExtractDoesNotInvalidateOthers() {
+  std::set<int> s;
+  s.insert(1);
+  s.insert(2);
+  auto it1 = s.begin();
+  auto it2 = it1;
+  ++it2;
+  s.extract(it2);
+  *it1;
+}
+
+void SetClearInvalidates() {
+  std::set<int> s;
+  auto it = s.begin(); // expected-warning {{object whose reference is captured is later invalidated}}
+  s.clear(); // expected-note {{invalidated here}}
+  *it; // expected-note {{later used here}}
+}
+
+void MapClearInvalidates() {
+  std::map<int, int> m;
+  auto it = m.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+  m.clear(); // expected-note {{invalidated here}}
+  *it; // expected-note {{later used here}}
+}
+
+} // namespace AssociativeContainers

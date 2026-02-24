@@ -272,28 +272,109 @@ bool isUniquePtrRelease(const CXXMethodDecl &MD) {
          MD.getNumParams() == 0 && isStdUniquePtr(*MD.getParent());
 }
 
+/// Returns the set of methods that invalidate iterators for the given
+/// container, or nullptr if the container is not recognized.
+///
+/// Iterator invalidation rules per the C++ standard:
+/// https://en.cppreference.com/w/cpp/container#Iterator_invalidation
+static const llvm::StringSet<> *
+getInvalidatingMethods(StringRef ContainerName) {
+  static const llvm::StringSet<> Vector = {// Insertion
+                                           "insert", "emplace", "emplace_back",
+                                           "push_back", "insert_range",
+                                           "append_range",
+                                           // Removal
+                                           "pop_back", "erase", "clear",
+                                           // Memory management
+                                           "reserve", "resize", "shrink_to_fit",
+                                           // Assignment
+                                           "swap", "assign", "assign_range"};
+
+  static const llvm::StringSet<> Deque = {
+      // Insertion
+      "insert", "emplace", "emplace_back", "push_back", "push_front",
+      "emplace_front", "insert_range", "append_range",
+      // Removal
+      "pop_back", "pop_front", "erase", "clear",
+      // Memory management
+      "resize", "shrink_to_fit",
+      // Assignment
+      "swap", "assign", "assign_range"};
+
+  static const llvm::StringSet<> String = {
+      // Insertion
+      "insert", "push_back", "append", "replace", "replace_with_range",
+      "insert_range", "append_range",
+      // Removal
+      "pop_back", "erase", "clear",
+      // Memory management
+      "reserve", "resize", "resize_and_overwrite", "shrink_to_fit",
+      // Assignment
+      "swap", "assign", "assign_range"};
+
+  // FIXME: Add queue and stack and check for underlying container
+  // (e.g. no invalidation for std::list).
+  static const llvm::StringSet<> PriorityQueue = {// Insertion
+                                                  "push", "emplace",
+                                                  "push_range",
+                                                  // Removal
+                                                  "pop",
+                                                  // Assignment
+                                                  "swap"};
+
+  static const llvm::StringSet<> Associative = {// Removal
+                                                "clear",
+                                                // Assignment
+                                                "swap"};
+
+  // For unordered associative containers, `try_emplace` and `insert_or_assign`
+  // only exist on `unordered_map`. Listing them here is harmless since the
+  // methods won't be found on other types.
+  static const llvm::StringSet<> UnorderedAssociative = {
+      // Insertion
+      "insert", "emplace", "emplace_hint", "try_emplace", "insert_or_assign",
+      "insert_range", "merge",
+      // Removal
+      "clear",
+      // Hash policy
+      "rehash", "reserve",
+      // Assignment
+      "swap"};
+
+  // For `flat_*` container adaptors, `try_emplace` and `insert_or_assign`
+  // only exist on `flat_map`. Listing them here is harmless since the methods
+  // won't be found on other types.
+  static const llvm::StringSet<> Flat = {// Insertion
+                                         "insert", "emplace", "emplace_hint",
+                                         "try_emplace", "insert_or_assign",
+                                         "insert_range", "merge",
+                                         // Removal
+                                         "extract", "erase", "clear",
+                                         // Assignment
+                                         "swap", "replace"};
+
+  return llvm::StringSwitch<const llvm::StringSet<> *>(ContainerName)
+      .Case("vector", &Vector)
+      .Case("basic_string", &String)
+      .Case("deque", &Deque)
+      .Case("priority_queue", &PriorityQueue)
+      .Cases({"set", "multiset", "map", "multimap"}, &Associative)
+      .Cases({"unordered_set", "unordered_multiset", "unordered_map",
+              "unordered_multimap"},
+             &UnorderedAssociative)
+      .Cases({"flat_map", "flat_set", "flat_multimap", "flat_multiset"}, &Flat)
+      .Default(nullptr);
+}
+
 bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
   const CXXRecordDecl *RD = MD.getParent();
   if (!isInStlNamespace(RD))
     return false;
 
   StringRef ContainerName = getName(*RD);
-  static const llvm::StringSet<> Containers = {
-      // Sequence
-      "vector", "basic_string", "deque",
-      // Adaptors
-      // FIXME: Add queue and stack and check for underlying container (e.g. no
-      // invalidation for std::list).
-      "priority_queue",
-      // Associative
-      "set", "multiset", "map", "multimap",
-      // Unordered Associative
-      "unordered_set", "unordered_multiset", "unordered_map",
-      "unordered_multimap",
-      // C++23 Flat
-      "flat_map", "flat_set", "flat_multimap", "flat_multiset"};
-
-  if (!Containers.contains(ContainerName))
+  const llvm::StringSet<> *InvalidatingMethods =
+      getInvalidatingMethods(ContainerName);
+  if (!InvalidatingMethods)
     return false;
 
   // Handle Operators via OverloadedOperatorKind
@@ -318,41 +399,6 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
   if (!MD.getIdentifier())
     return false;
 
-  StringRef MethodName = MD.getName();
-
-  // Special handling for 'erase':
-  // It invalidates the whole container (effectively) for contiguous/flat
-  // storage, but is safe for other iterators in node-based containers.
-  if (MethodName == "erase") {
-    static const llvm::StringSet<> NodeBasedContainers = {"map",
-                                                          "set",
-                                                          "multimap",
-                                                          "multiset",
-                                                          "unordered_map",
-                                                          "unordered_set",
-                                                          "unordered_multimap",
-                                                          "unordered_multiset"};
-
-    // 'erase' invalidates for non node-based containers (vector, deque, string,
-    // flat_map).
-    return !NodeBasedContainers.contains(ContainerName);
-  }
-
-  static const llvm::StringSet<> InvalidatingMembers = {
-      // Basic Insertion/Emplacement
-      "push_front", "push_back", "emplace_front", "emplace_back", "insert",
-      "emplace", "push",
-      // Basic Removal/Clearing
-      "pop_front", "pop_back", "pop", "clear",
-      // Memory Management
-      "reserve", "resize", "shrink_to_fit",
-      // Assignment (Named)
-      "assign", "swap",
-      // String Specifics
-      "append", "replace",
-      // Modern C++ (C++17/23)
-      "extract", "try_emplace", "insert_range", "append_range", "assign_range"};
-
-  return InvalidatingMembers.contains(MethodName);
+  return InvalidatingMethods->contains(MD.getName());
 }
 } // namespace clang::lifetimes
