@@ -324,6 +324,7 @@ FEATURE(shadow_call_stack,
 FEATURE(tls, PP.getTargetInfo().isTLSSupported())
 FEATURE(underlying_type, LangOpts.CPlusPlus)
 FEATURE(experimental_library, LangOpts.ExperimentalLibrary)
+FEATURE(bounds_safety, LangOpts.BoundsSafety)
 
 // C11 features supported by other languages as extensions.
 EXTENSION(c_alignas, true)
