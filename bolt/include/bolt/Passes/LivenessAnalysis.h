@@ -36,8 +36,20 @@ public:
         NumRegs(BF.getBinaryContext().MRI->getNumRegs()) {}
   virtual ~LivenessAnalysis();
 
+  // Liveness analysis is a backwards dataflow analysis, therefore
+  // getStateAt ProgramPoint actually means "before" in control
+  // flow terms.
+  BitVector getLiveIn(ProgramPoint P) const { return *this->getStateAt(P); }
+
+  // Liveness analysis is a backwards dataflow analysis, therefore
+  // getStateBefore ProgramPoint actually means "after" in control
+  // flow terms.
+  BitVector getLiveOut(ProgramPoint P) const {
+    return *this->getStateBefore(P);
+  }
+
   bool isAlive(ProgramPoint PP, MCPhysReg Reg) const {
-    const BitVector &BV = *this->getStateAt(PP);
+    const BitVector &BV = getLiveIn(PP);
     const BitVector &RegAliases = BC.MIB->getAliases(Reg);
     return BV.anyCommon(RegAliases);
   }
@@ -47,7 +59,7 @@ public:
   // Return a usable general-purpose reg after point P. Return 0 if no reg is
   // available.
   MCPhysReg scavengeRegAfter(ProgramPoint P) {
-    BitVector BV = *this->getStateAt(P);
+    BitVector BV = getLiveOut(P);
     BV.flip();
     BitVector GPRegs(NumRegs, false);
     this->BC.MIB->getGPRegs(GPRegs, /*IncludeAlias=*/false);

@@ -524,6 +524,37 @@ TEST_P(MCPlusBuilderTester, AArch64_Psign_Pauth_variants) {
   ASSERT_TRUE(BC->MIB->isPAuthAndRet(Retab));
 }
 
+TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+
+  // mov x0, xzr
+  MCInst ORRXrs = MCInstBuilder(AArch64::ORRXrs)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::XZR)
+                      .addReg(AArch64::XZR)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRXrs));
+
+  // mov w0, wzr
+  MCInst ORRWrs = MCInstBuilder(AArch64::ORRWrs)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::WZR)
+                      .addReg(AArch64::WZR)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(ORRWrs));
+
+  // mov x0, #0
+  MCInst MOVZXi =
+      MCInstBuilder(AArch64::MOVZXi).addReg(AArch64::X0).addImm(0).addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZXi));
+
+  // mov w0, #0
+  MCInst MOVZWi =
+      MCInstBuilder(AArch64::MOVZWi).addReg(AArch64::W0).addImm(0).addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZWi));
+}
+
 #endif // AARCH64_AVAILABLE
 
 #ifdef X86_AVAILABLE

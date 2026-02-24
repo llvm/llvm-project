@@ -1595,7 +1595,7 @@ public:
     llvm_unreachable("not implemented");
   }
 
-  /// Similar to getDefaultDefIn
+  /// Registers which may contain a meaningful value after a function returns.
   virtual void getDefaultLiveOut(BitVector &Regs) const {
     llvm_unreachable("not implemented");
   }
