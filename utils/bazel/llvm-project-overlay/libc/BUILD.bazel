@@ -4790,28 +4790,28 @@ libc_math_function(
 libc_math_function(
     name = "bf16fmul",
     additional_deps = [
-        ":__support_math_bf16mul"
+        ":__support_math_bf16mul",
     ],
 )
 
 libc_math_function(
     name = "bf16fmulf",
     additional_deps = [
-        ":__support_math_bf16mulf"
+        ":__support_math_bf16mulf",
     ],
 )
 
 libc_math_function(
     name = "bf16fmulf128",
     additional_deps = [
-        ":__support_math_bf16mulf128"
+        ":__support_math_bf16mulf128",
     ],
 )
 
 libc_math_function(
     name = "bf16fmull",
     additional_deps = [
-        ":__support_math_bf16mull"
+        ":__support_math_bf16mull",
     ],
 )
 
