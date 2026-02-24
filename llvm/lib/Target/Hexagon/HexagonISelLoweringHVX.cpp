@@ -1177,11 +1177,8 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
   SDValue W0 = isUndef(PredV)
                   ? DAG.getUNDEF(MVT::i64)
                   : DAG.getNode(HexagonISD::P2D, dl, MVT::i64, PredV);
-  if (Bytes < BitBytes) {
-    Words[IdxW].push_back(HiHalf(W0, DAG));
-    Words[IdxW].push_back(LoHalf(W0, DAG));
-  } else
-    Words[IdxW].push_back(W0);
+  Words[IdxW].push_back(HiHalf(W0, DAG));
+  Words[IdxW].push_back(LoHalf(W0, DAG));
 
   while (Bytes < BitBytes) {
     IdxW ^= 1;
@@ -1202,27 +1199,7 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     Bytes *= 2;
   }
 
-  while (Bytes > BitBytes) {
-    IdxW ^= 1;
-    Words[IdxW].clear();
-
-    if (Bytes <= 4) {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        SDValue T = contractPredicate(W, dl, DAG);
-        Words[IdxW].push_back(T);
-      }
-    } else {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        Words[IdxW].push_back(W);
-      }
-    }
-    Bytes /= 2;
-  }
-
   assert(Bytes == BitBytes);
-  if (BitBytes == 1 && PredTy == MVT::v2i1)
-    ByteTy = MVT::getVectorVT(MVT::i16, HwLen);
-
   SDValue Vec = ZeroFill ? getZero(dl, ByteTy, DAG) : DAG.getUNDEF(ByteTy);
   SDValue S4 = DAG.getConstant(HwLen-4, dl, MVT::i32);
   for (const SDValue &W : Words[IdxW]) {
@@ -1906,13 +1883,17 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
   // corresponds to.
   unsigned BitBytes = HwLen / VecTy.getVectorNumElements();
 
+  // Make sure that createHvxPrefixPred will only ever need to expand
+  // the predicate, i.e. bytes-per-bit in the input is not greater than
+  // the target bytes-per-bit in the result.
+  SDValue Combined = combineConcatOfScalarPreds(Op, BitBytes, DAG);
   SmallVector<SDValue,8> Prefixes;
-  for (SDValue V : Op.getNode()->op_values()) {
+  for (SDValue V : Combined.getNode()->op_values()) {
     SDValue P = createHvxPrefixPred(V, dl, BitBytes, true, DAG);
     Prefixes.push_back(P);
   }
 
-  unsigned InpLen = ty(Op.getOperand(0)).getVectorNumElements();
+  unsigned InpLen = ty(Combined.getOperand(0)).getVectorNumElements();
   MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
   SDValue S = DAG.getConstant(HwLen - InpLen*BitBytes, dl, MVT::i32);
   SDValue Res = getZero(dl, ByteTy, DAG);
@@ -4034,8 +4015,8 @@ HexagonTargetLowering::combineTruncateBeforeLegal(SDValue Op,
 }
 
 SDValue
-HexagonTargetLowering::combineConcatVectorsBeforeLegal(
-    SDValue Op, DAGCombinerInfo &DCI) const {
+HexagonTargetLowering::combineConcatOfShuffles(SDValue Op,
+                                               SelectionDAG &DAG) const {
   // Fold
   //   concat (shuffle x, y, m1), (shuffle x, y, m2)
   // into
@@ -4043,7 +4024,6 @@ HexagonTargetLowering::combineConcatVectorsBeforeLegal(
   if (Op.getNumOperands() != 2)
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
   const SDLoc &dl(Op);
   SDValue V0 = Op.getOperand(0);
   SDValue V1 = Op.getOperand(1);
@@ -4097,6 +4077,55 @@ HexagonTargetLowering::combineConcatVectorsBeforeLegal(
 
   SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, LongTy, {C0, C1});
   return DAG.getVectorShuffle(LongTy, dl, Cat, DAG.getUNDEF(LongTy), LongMask);
+}
+
+// Reassociate concat(p1, p2, ...) into
+//   concat(concat(p1, ...), concat(pi, ...), ...)
+// where each inner concat produces a predicate where each bit corresponds
+// to at most BitBytes bytes.
+// Concatenating predicates decreases the number of bytes per each predicate
+// bit.
+SDValue
+HexagonTargetLowering::combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
+                                                  SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  SmallVector<SDValue> Ops(Op->ops());
+  MVT ResTy = ty(Op);
+  MVT InpTy = ty(Ops[0]);
+  unsigned InpLen = InpTy.getVectorNumElements(); // Scalar predicate
+  unsigned ResLen = ResTy.getVectorNumElements(); // HVX vector predicate
+  assert(InpLen <= 8 && "Too long for scalar predicate");
+  assert(ResLen > 8 && "Too short for HVX vector predicate");
+
+  unsigned Bytes = 8 / InpLen; // Bytes-per-bit in input
+
+  // Already in the right form?
+  if (Bytes <= BitBytes)
+    return Op;
+
+  ArrayRef<SDValue> Inputs(Ops);
+  unsigned SliceLen = Bytes / BitBytes;
+
+  SmallVector<SDValue> Cats;
+  // (8 / BitBytes) is the desired length of the result of the inner concat.
+  for (unsigned i = 0; i != ResLen / (8 / BitBytes); ++i) {
+    SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i1,
+                              Inputs.slice(SliceLen * i, SliceLen));
+    Cats.push_back(Cat);
+  }
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy, Cats);
+}
+
+SDValue HexagonTargetLowering::combineConcatVectorsBeforeLegal(
+    SDValue Op, DAGCombinerInfo &DCI) const {
+  MVT ResTy = ty(Op);
+  MVT ElemTy = ResTy.getVectorElementType();
+
+  if (ElemTy != MVT::i1) {
+    return combineConcatOfShuffles(Op, DCI.DAG);
+  }
+  return SDValue();
 }
 
 // Create the inner partial reduction MLA that can be efficiently lowered. This

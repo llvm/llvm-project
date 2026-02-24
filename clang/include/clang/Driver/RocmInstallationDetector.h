@@ -157,8 +157,7 @@ private:
 
   bool allGenericLibsValid() const {
     return !OCML.empty() && !OCKL.empty() && !OpenCL.empty() &&
-           WavefrontSize64.isValid() && FiniteOnly.isValid() &&
-           UnsafeMath.isValid();
+           WavefrontSize64.isValid();
   }
 
   void scanLibDevicePath(llvm::StringRef Path);
@@ -242,11 +241,11 @@ public:
   }
 
   StringRef getFiniteOnlyPath(bool Enabled) const {
-    return FiniteOnly.get(Enabled);
+    return FiniteOnly.isValid() ? FiniteOnly.get(Enabled) : "";
   }
 
   StringRef getUnsafeMathPath(bool Enabled) const {
-    return UnsafeMath.get(Enabled);
+    return UnsafeMath.isValid() ? UnsafeMath.get(Enabled) : "";
   }
 
   StringRef getABIVersionPath(DeviceLibABIVersion ABIVer) const {

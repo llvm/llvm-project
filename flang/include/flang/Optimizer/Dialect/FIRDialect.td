@@ -26,7 +26,6 @@ def FIROpsDialect : Dialect {
   let cppNamespace = "::fir";
   let useDefaultTypePrinterParser = 0;
   let useDefaultAttributePrinterParser = 0;
-  let usePropertiesForAttributes = 1;
   let dependentDialects = [
     // Arith dialect provides FastMathFlagsAttr
     // supported by some FIR operations.

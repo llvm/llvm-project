@@ -9,6 +9,12 @@
 // RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,COMMON-DEFAULT,GFX900,WAVE64 %s
 
 
+// RUN: %clang -### -target amdgcn-amd-amdhsa \
+// RUN:   -x cl -mcpu=gfx900 \
+// RUN:   --rocm-path=%S/Inputs/rocm-no-math-opt-libs \
+// RUN:   %s \
+// RUN: 2>&1 | FileCheck  --check-prefixes=COMMON,GFX900,WAVE64 %s
+
 
 // Make sure the different denormal default is respected for gfx8
 // RUN: %clang -### -target amdgcn-amd-amdhsa \

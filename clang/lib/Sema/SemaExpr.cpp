@@ -19108,7 +19108,15 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
                                ? diag::note_cuda_const_var_unpromoted
                                : diag::note_cuda_host_var);
       }
-    } else if (VarTarget == SemaCUDA::CVT_Device &&
+    } else if ((VarTarget == SemaCUDA::CVT_Device ||
+                // Also capture __device__ const variables, which are classified
+                // as CVT_Both due to an implicit CUDAConstantAttr. We check for
+                // an explicit CUDADeviceAttr to distinguish them from plain
+                // const variables (no __device__), which also get CVT_Both but
+                // only have an implicit CUDADeviceAttr.
+                (VarTarget == SemaCUDA::CVT_Both &&
+                 Var->hasAttr<CUDADeviceAttr>() &&
+                 !Var->getAttr<CUDADeviceAttr>()->isImplicit())) &&
                !Var->hasAttr<CUDASharedAttr>() &&
                (UserTarget == CUDAFunctionTarget::Host ||
                 UserTarget == CUDAFunctionTarget::HostDevice)) {

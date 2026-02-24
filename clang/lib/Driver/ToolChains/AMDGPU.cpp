@@ -1028,8 +1028,10 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
-    BCLib.ShouldInternalize = Internalize;
-    BCLibs.emplace_back(BCLib);
+    if (!BCLib.Path.empty()) {
+      BCLib.ShouldInternalize = Internalize;
+      BCLibs.emplace_back(BCLib);
+    }
   };
   auto AddSanBCLibs = [&]() {
     if (Pref.GPUSan)

@@ -4689,9 +4689,9 @@ elementtype may be any integer, floating-point, pointer type, or a sized
 target extension type that has the ``CanBeVectorElement`` property. Vectors
 of size zero are not allowed. For scalable vectors, the total number of
 elements is a constant multiple (called vscale) of the specified number
-of elements; vscale is a positive integer that is unknown at compile time
-and the same hardware-dependent constant for all scalable vectors at run
-time. The size of a specific scalable vector type is thus constant within
+of elements; vscale is a positive power-of-two integer that is unknown at
+compile time and the same hardware-dependent constant for all scalable vectors
+at run time. The size of a specific scalable vector type is thus constant within
 IR, even if the exact size in bytes cannot be determined until run time.
 
 :Examples:
@@ -31515,8 +31515,8 @@ vectors such as ``<vscale x 16 x i8>``.
 Semantics:
 """"""""""
 
-``vscale`` is a positive value that is constant throughout program
-execution, but is unknown at compile time.
+``vscale`` is a positive power-of-two integer that is constant throughout
+program execution, but is unknown at compile time.
 If the result value does not fit in the result type, then the result is
 a :ref:`poison value <poisonvalues>`.
 

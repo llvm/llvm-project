@@ -13,11 +13,14 @@
 #ifndef CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_H
 
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Serialization/SerializationFormat.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Registry.h"
+
+#include <set>
 
 namespace clang::ssaf {
 
@@ -81,12 +84,26 @@ private:
   entityNameFromJSON(const Object &EntityNameObject) const;
   Object entityNameToJSON(const EntityName &EN) const;
 
+  llvm::Expected<EntityLinkage>
+  entityLinkageFromJSON(const Object &EntityLinkageObject) const;
+  Object entityLinkageToJSON(const EntityLinkage &EL) const;
+
   llvm::Expected<std::pair<EntityName, EntityId>>
   entityIdTableEntryFromJSON(const Object &EntityIdTableEntryObject) const;
   llvm::Expected<EntityIdTable>
   entityIdTableFromJSON(const Array &EntityIdTableArray) const;
   Object entityIdTableEntryToJSON(const EntityName &EN, EntityId EI) const;
   Array entityIdTableToJSON(const EntityIdTable &IdTable) const;
+
+  llvm::Expected<std::pair<EntityId, EntityLinkage>>
+  linkageTableEntryFromJSON(const Object &LinkageTableEntryObject) const;
+  Object linkageTableEntryToJSON(EntityId EI, const EntityLinkage &EL) const;
+
+  llvm::Expected<std::map<EntityId, EntityLinkage>>
+  linkageTableFromJSON(const Array &LinkageTableArray,
+                       std::set<EntityId> EntityIds) const;
+  Array linkageTableToJSON(
+      const std::map<EntityId, EntityLinkage> &LinkageTable) const;
 
   llvm::Expected<std::unique_ptr<EntitySummary>>
   entitySummaryFromJSON(const SummaryName &SN,
