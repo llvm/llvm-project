@@ -6281,6 +6281,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::ElementArchetype:
   case swift::TypeKind::Error:
   case swift::TypeKind::ErrorUnion:
@@ -6448,6 +6449,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinPackIndex:    
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::Locatable:
   case swift::TypeKind::Integer:
   case swift::TypeKind::Pack:
@@ -6949,6 +6951,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinJob:
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::Error:
   case swift::TypeKind::InOut:
   case swift::TypeKind::Locatable:
@@ -7064,6 +7067,7 @@ SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::DependentMember:
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::ElementArchetype:
@@ -7203,6 +7207,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::Error:
   case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::InOut:
@@ -7431,6 +7436,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::Error:
   case swift::TypeKind::ErrorUnion:
   case swift::TypeKind::InOut:
@@ -7630,6 +7636,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinRawUnsafeContinuation:
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinUnboundGeneric:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::Class:
   case swift::TypeKind::DependentMember:
   case swift::TypeKind::DynamicSelf:
@@ -7789,6 +7796,7 @@ llvm::Expected<CompilerType> SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinUnsafeValueBuffer:
   case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::DependentMember:
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::ElementArchetype:
@@ -8186,6 +8194,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::BuiltinUnboundGeneric:
     case swift::TypeKind::BuiltinUnsafeValueBuffer:
     case swift::TypeKind::BuiltinVector:
+    case swift::TypeKind::BuiltinImplicitActor:
     case swift::TypeKind::DynamicSelf:
     case swift::TypeKind::ElementArchetype:
     case swift::TypeKind::Error:
@@ -8603,6 +8612,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::BuiltinUnboundGeneric:
   case swift::TypeKind::BuiltinVector:
+  case swift::TypeKind::BuiltinImplicitActor:
   case swift::TypeKind::DynamicSelf:
   case swift::TypeKind::Error:
   case swift::TypeKind::ErrorUnion:
