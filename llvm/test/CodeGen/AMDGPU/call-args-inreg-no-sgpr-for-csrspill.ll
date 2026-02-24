@@ -16,28 +16,14 @@ define void @test_call_external_void_func_a15i32_inreg([15 x i32] inreg %arg0) #
 ; CHECK-NEXT:    s_mov_b64 exec, s[42:43]
 ; CHECK-NEXT:    v_writelane_b32 v40, s40, 2
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    s_mov_b32 s40, s26
+; CHECK-NEXT:    v_readfirstlane_b32 s42, v0
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
-; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
-; CHECK-NEXT:    s_getpc_b64 s[42:43]
-; CHECK-NEXT:    s_add_u32 s42, s42, external_void_func_a15i32_inreg@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s43, s43, external_void_func_a15i32_inreg@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s3, s19
-; CHECK-NEXT:    s_mov_b32 s2, s18
-; CHECK-NEXT:    s_mov_b32 s1, s17
-; CHECK-NEXT:    s_mov_b32 s0, s16
-; CHECK-NEXT:    s_mov_b32 s16, s20
-; CHECK-NEXT:    s_mov_b32 s17, s21
-; CHECK-NEXT:    s_mov_b32 s18, s22
-; CHECK-NEXT:    s_mov_b32 s19, s23
-; CHECK-NEXT:    s_mov_b32 s20, s24
-; CHECK-NEXT:    s_mov_b32 s21, s25
-; CHECK-NEXT:    s_mov_b32 s22, s40
-; CHECK-NEXT:    s_mov_b32 s23, s27
-; CHECK-NEXT:    s_mov_b32 s24, s28
-; CHECK-NEXT:    s_mov_b32 s25, s29
+; CHECK-NEXT:    s_getpc_b64 s[40:41]
+; CHECK-NEXT:    s_add_u32 s40, s40, external_void_func_a15i32_inreg@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s41, s41, external_void_func_a15i32_inreg@rel32@hi+12
+; CHECK-NEXT:    v_mov_b32_e32 v0, s42
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[40:41]
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
@@ -63,30 +49,16 @@ define void @test_call_external_void_func_a16i32_inreg([16 x i32] inreg %arg0) #
 ; CHECK-NEXT:    s_mov_b64 exec, s[42:43]
 ; CHECK-NEXT:    v_writelane_b32 v40, s40, 2
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    s_mov_b32 s40, s27
-; CHECK-NEXT:    s_mov_b32 s41, s26
+; CHECK-NEXT:    v_readfirstlane_b32 s42, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s43, v1
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
-; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
-; CHECK-NEXT:    s_getpc_b64 s[42:43]
-; CHECK-NEXT:    s_add_u32 s42, s42, external_void_func_a16i32_inreg@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s43, s43, external_void_func_a16i32_inreg@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s3, s19
-; CHECK-NEXT:    s_mov_b32 s2, s18
-; CHECK-NEXT:    s_mov_b32 s1, s17
-; CHECK-NEXT:    s_mov_b32 s0, s16
-; CHECK-NEXT:    s_mov_b32 s16, s20
-; CHECK-NEXT:    s_mov_b32 s17, s21
-; CHECK-NEXT:    s_mov_b32 s18, s22
-; CHECK-NEXT:    s_mov_b32 s19, s23
-; CHECK-NEXT:    s_mov_b32 s20, s24
-; CHECK-NEXT:    s_mov_b32 s21, s25
-; CHECK-NEXT:    s_mov_b32 s22, s41
-; CHECK-NEXT:    s_mov_b32 s23, s40
-; CHECK-NEXT:    s_mov_b32 s24, s28
-; CHECK-NEXT:    s_mov_b32 s25, s29
+; CHECK-NEXT:    s_getpc_b64 s[40:41]
+; CHECK-NEXT:    s_add_u32 s40, s40, external_void_func_a16i32_inreg@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s41, s41, external_void_func_a16i32_inreg@rel32@hi+12
+; CHECK-NEXT:    v_mov_b32_e32 v0, s42
+; CHECK-NEXT:    v_mov_b32_e32 v1, s43
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[40:41]
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
@@ -112,30 +84,16 @@ define void @test_call_external_void_func_a15i32_inreg_i32_inreg([15 x i32] inre
 ; CHECK-NEXT:    s_mov_b64 exec, s[42:43]
 ; CHECK-NEXT:    v_writelane_b32 v40, s40, 2
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
-; CHECK-NEXT:    s_mov_b32 s40, s27
-; CHECK-NEXT:    s_mov_b32 s41, s26
+; CHECK-NEXT:    v_readfirstlane_b32 s42, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s43, v1
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
-; CHECK-NEXT:    v_readfirstlane_b32 s27, v1
-; CHECK-NEXT:    v_readfirstlane_b32 s26, v0
-; CHECK-NEXT:    s_getpc_b64 s[42:43]
-; CHECK-NEXT:    s_add_u32 s42, s42, external_void_func_a15i32_inreg_i32_inreg@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s43, s43, external_void_func_a15i32_inreg_i32_inreg@rel32@hi+12
-; CHECK-NEXT:    s_mov_b32 s3, s19
-; CHECK-NEXT:    s_mov_b32 s2, s18
-; CHECK-NEXT:    s_mov_b32 s1, s17
-; CHECK-NEXT:    s_mov_b32 s0, s16
-; CHECK-NEXT:    s_mov_b32 s16, s20
-; CHECK-NEXT:    s_mov_b32 s17, s21
-; CHECK-NEXT:    s_mov_b32 s18, s22
-; CHECK-NEXT:    s_mov_b32 s19, s23
-; CHECK-NEXT:    s_mov_b32 s20, s24
-; CHECK-NEXT:    s_mov_b32 s21, s25
-; CHECK-NEXT:    s_mov_b32 s22, s41
-; CHECK-NEXT:    s_mov_b32 s23, s40
-; CHECK-NEXT:    s_mov_b32 s24, s28
-; CHECK-NEXT:    s_mov_b32 s25, s29
+; CHECK-NEXT:    s_getpc_b64 s[40:41]
+; CHECK-NEXT:    s_add_u32 s40, s40, external_void_func_a15i32_inreg_i32_inreg@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s41, s41, external_void_func_a15i32_inreg_i32_inreg@rel32@hi+12
+; CHECK-NEXT:    v_mov_b32_e32 v0, s42
+; CHECK-NEXT:    v_mov_b32_e32 v1, s43
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[42:43]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[40:41]
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
