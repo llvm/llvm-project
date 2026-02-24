@@ -101,6 +101,11 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     # because they will be instantiated in the importing translation unit if
     # needed.
     elif symbol.startswith("??$"):
+        # Keep Type::getAs<T>() explicit template specializations. These are
+        # declared in headers but defined in Type.cpp, so they cannot be
+        # instantiated locally. Pattern: ??$getAs@<template_arg>@Type@clang@@...
+        if symbol.startswith("??$getAs@") and "@Type@clang@@" in symbol:
+            return symbol
         return None
     # Delete lambda object constructors and operator() functions. These start
     # with ??R<lambda_ or ??0<lambda_ and can be discarded because lambdas are
