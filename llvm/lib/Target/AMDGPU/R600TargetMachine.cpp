@@ -58,7 +58,12 @@ public:
                          PassInstrumentationCallbacks *PIC);
 
   void addPreISel(PassManagerWrapper &PMW) const;
-  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW,
+                          CreateMCStreamer CreateStreamer) const;
+  void addAsmPrinter(PassManagerWrapper &PMW,
+                     CreateMCStreamer CreateStreamer) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW,
+                        CreateMCStreamer CreateStreamer) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
 };
 
@@ -192,9 +197,19 @@ void R600CodeGenPassBuilder::addPreISel(PassManagerWrapper &PMW) const {
   // TODO: Add passes pre instruction selection.
 }
 
-void R600CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
-                                           CreateMCStreamer) const {
+void R600CodeGenPassBuilder::addAsmPrinterBegin(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+  // TODO: Add AsmPrinterBegin
+}
+
+void R600CodeGenPassBuilder::addAsmPrinter(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
   // TODO: Add AsmPrinter.
+}
+
+void R600CodeGenPassBuilder::addAsmPrinterEnd(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+  // TODO: Add AsmPrinterEnd
 }
 
 Error R600CodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
