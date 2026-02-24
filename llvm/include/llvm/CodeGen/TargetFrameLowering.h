@@ -373,7 +373,7 @@ public:
                                   BitVector &SavedRegs) const;
 
   /// This method determines which of the registers reported by
-  /// TargetRegisterInfo::getCalleeSavedRegs() should actually get saved.
+  /// getMustPreserveRegisters() should actually get saved.
   /// The default implementation checks populates the \p SavedRegs bitset with
   /// all registers which are modified in the function, targets may override
   /// this function to save additional registers.
@@ -382,8 +382,37 @@ public:
   /// This method should not be called by any passes outside of PEI, because
   /// it may change state passed in by \p MF and \p RS. The preferred
   /// interface outside PEI is getCalleeSaves.
+  // LLVM_DEPRECATED("Use determinePrologCalleeSaves instead",
+  //                 "determinePrologCalleeSaves")
   virtual void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                                     RegScavenger *RS = nullptr) const;
+
+  /// Return the list of registers which must be preserved by the function: the
+  /// value on exit must be the same as the value on entry. A register from this
+  /// list does not need to be saved / reloaded if the function did not use it.
+  const MCPhysReg *getMustPreserveRegisters(const MachineFunction &MF) const;
+
+  /// This method determines which of the registers reported by
+  /// getMustPreserveRegisters() must be saved in prolog and reloaded in epilog
+  /// regardless of whether or not they were modified by the function.
+  virtual void
+  determineUncondPrologCalleeSaves(MachineFunction &MF, const MCPhysReg *CSRegs,
+                                   BitVector &UncondPrologCSRs) const;
+
+  /// If the target has to do all saves / restores of "must preserve" registers
+  /// in prolog / epilog, this method returns empty set. Otherwise, this method
+  /// returns the difference between getMustPreserveRegisters and
+  /// determineUncondPrologCalleeSaves. These registers will be preserved by the
+  /// code optimizer and do not need to be saved / restored in prolog / epilog.
+  virtual void determineEarlyCalleeSaves(MachineFunction &MF,
+                                         BitVector &EarlyCSRs) const;
+
+  /// This method returns those registers in the difference of
+  /// getMustPreserveRegisters and determineEarlyCalleeSaves that were modified
+  /// by the function and need to be saved / restored in prolog / epilog.
+  virtual void determinePrologCalleeSaves(MachineFunction &MF,
+                                          BitVector &PrologCSRs,
+                                          RegScavenger *RS) const;
 
   /// processFunctionBeforeFrameFinalized - This method is called immediately
   /// before the specified function's frame layout (MF.getFrameInfo()) is
