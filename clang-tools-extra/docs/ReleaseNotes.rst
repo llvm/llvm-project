@@ -162,6 +162,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
   negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
 
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
+  C++ files because suggested ``reinterpret_cast`` is not available in pure C.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
