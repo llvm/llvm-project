@@ -333,6 +333,22 @@ add_header_library(
 )
 
 add_header_library(
+  asinpif16
+  HDRS
+    asinpif16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   bf16add
   HDRS
     bf16add.h
@@ -346,6 +362,16 @@ add_header_library(
   bf16addf
   HDRS
     bf16addf.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16addl
+  HDRS
+    bf16addl.h
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.generic.add_sub
@@ -379,6 +405,57 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+add_header_library(
+  bf16fmaf128
+  HDRS
+    bf16fmaf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16mul
+  HDRS
+    bf16mul.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16mulf
+  HDRS
+    bf16mulf.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16mulf128
+  HDRS
+    bf16mulf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  bf16mull
+  HDRS
+    bf16mull.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.generic.mul
     libc.src.__support.macros.config
 )
 
@@ -809,7 +886,7 @@ add_header_library(
 )
 
 add_header_library(
-  f16addl   
+  f16addl
   HDRS
     f16addl.h
   DEPENDS
@@ -983,6 +1060,63 @@ add_header_library(
     fsqrtl.h
   DEPENDS
     libc.src.__support.FPUtil.generic.sqrt
+)
+
+add_header_library(
+  getpayload
+  HDRS
+    getpayload.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadbf16
+  HDRS
+    getpayloadbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadf
+  HDRS
+    getpayloadf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadf128
+  HDRS
+    getpayloadf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadf16
+  HDRS
+    getpayloadf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  getpayloadl
+  HDRS
+    getpayloadl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
 )
 
 add_header_library(
@@ -1508,6 +1642,63 @@ add_header_library(
 )
 
 add_header_library(
+  nextdown
+  HDRS
+    nextdown.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownbf16
+  HDRS
+    nextdownbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownf
+  HDRS
+    nextdownf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownf128
+  HDRS
+    nextdownf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownf16
+  HDRS
+    nextdownf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownl
+  HDRS
+    nextdownl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h
@@ -1563,6 +1754,120 @@ add_header_library(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+)
+
+add_header_library(
+  setpayload
+  HDRS
+    setpayload.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadbf16
+  HDRS
+    setpayloadbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadf
+  HDRS
+    setpayloadf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadf128
+  HDRS
+    setpayloadf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadf16
+  HDRS
+    setpayloadf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadl
+  HDRS
+    setpayloadl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadsig
+  HDRS
+    setpayloadsig.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadsigbf16
+  HDRS
+    setpayloadsigbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadsigf
+  HDRS
+    setpayloadsigf.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadsigf128
+  HDRS
+    setpayloadsigf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadsigf16
+  HDRS
+    setpayloadsigf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  setpayloadsigl
+  HDRS
+    setpayloadsigl.h
+  DEPENDS
+    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.macros.config
 )
 
 add_header_library(
