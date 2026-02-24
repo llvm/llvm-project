@@ -6598,10 +6598,10 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
   // loop below can propagate the DLL attribute to them.
   if (ClassExported) {
     SmallVector<ConstructorUsingShadowDecl *, 4> Shadows;
-    for (auto *D : Class->decls())
+    for (Decl *D : Class->decls())
       if (auto *S = dyn_cast<ConstructorUsingShadowDecl>(D))
         Shadows.push_back(S);
-    for (auto *S : Shadows)
+    for (ConstructorUsingShadowDecl *S : Shadows)
       if (auto *BC = dyn_cast<CXXConstructorDecl>(S->getTargetDecl());
           BC && !BC->isDeleted())
         findInheritingConstructor(Class->getLocation(), BC, S);
@@ -14391,8 +14391,8 @@ Sema::findInheritingConstructor(SourceLocation Loc,
   // inherited ctor is an inline definition synthesized by the compiler.
   if (Derived->hasAttr<DLLExportAttr>() &&
       !DerivedCtor->hasAttr<DLLExportAttr>()) {
-    auto *NewAttr = ::new (getASTContext())
-        DLLExportAttr(getASTContext(), *Derived->getAttr<DLLExportAttr>());
+    auto *NewAttr = DLLExportAttr::CreateImplicit(
+        getASTContext(), *Derived->getAttr<DLLExportAttr>());
     NewAttr->setInherited(true);
     DerivedCtor->addAttr(NewAttr);
   }
