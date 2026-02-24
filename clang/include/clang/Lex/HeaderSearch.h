@@ -388,6 +388,23 @@ class HeaderSearch {
   void buildHeaderToModuleCache(DirectoryEntryRef Dir,
                                 ModuleMapDirectoryState &MMState);
 
+  void processModuleMapForHeaderToModuleCache(
+      const modulemap::ModuleMapFile &MMF, DirectoryEntryRef MMDir,
+      StringRef PathPrefix, ModuleMapDirectoryState &MMState);
+
+  void processExternModuleDeclForHeaderToModuleCache(
+      const modulemap::ExternModuleDecl &EMD, DirectoryEntryRef MMDir,
+      StringRef PathPrefix, ModuleMapDirectoryState &MMState);
+
+  void processModuleDeclForHeaderToModuleCache(
+      const modulemap::ModuleDecl &MD, StringRef ModuleName,
+      DirectoryEntryRef MMDir, StringRef PathPrefix,
+      ModuleMapDirectoryState &MMState);
+
+  void addToHeaderToModuleCache(StringRef RelPath, StringRef ModuleName,
+                                StringRef PathPrefix,
+                                ModuleMapDirectoryState &MMState);
+
 public:
   HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
                DiagnosticsEngine &Diags, const LangOptions &LangOpts,

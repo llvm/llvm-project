@@ -1631,94 +1631,101 @@ void HeaderSearch::buildHeaderToModuleCache(DirectoryEntryRef Dir,
   if (MMState.PrivateModuleMapFile)
     ParsedPrivateMM = ModMap.getParsedModuleMap(*MMState.PrivateModuleMapFile);
 
-  std::function<void(const modulemap::ModuleMapFile &, DirectoryEntryRef,
-                     StringRef)>
-      ProcessModuleMapFile = [&](const modulemap::ModuleMapFile &MMF,
-                                 DirectoryEntryRef MMDir,
-                                 StringRef PathPrefix) {
-        auto AddToCache = [&](StringRef RelPath, StringRef ModuleName) {
-          SmallString<128> RelFromRootPath(PathPrefix);
-          llvm::sys::path::append(RelFromRootPath, RelPath);
-          llvm::sys::path::native(RelFromRootPath);
-          MMState.HeaderToModules[RelFromRootPath].push_back(ModuleName);
-        };
-
-        auto ProcessExternModuleDecl =
-            [&](const modulemap::ExternModuleDecl &EMD) {
-              StringRef FileNameRef = EMD.Path;
-              SmallString<128> ModuleMapFileName;
-              if (llvm::sys::path::is_relative(FileNameRef)) {
-                ModuleMapFileName = MMDir.getName();
-                llvm::sys::path::append(ModuleMapFileName, EMD.Path);
-                FileNameRef = ModuleMapFileName;
-              }
-              if (auto EFile = FileMgr.getOptionalFileRef(FileNameRef)) {
-                if (auto *ExtMMF = ModMap.getParsedModuleMap(*EFile)) {
-                  // Compute the new prefix by appending the extern module's
-                  // directory (from the extern declaration path) to the current
-                  // prefix.
-                  SmallString<128> NewPrefix(PathPrefix);
-                  StringRef ExternDir = llvm::sys::path::parent_path(EMD.Path);
-                  if (!ExternDir.empty()) {
-                    llvm::sys::path::append(NewPrefix, ExternDir);
-                    llvm::sys::path::native(NewPrefix);
-                  }
-                  ProcessModuleMapFile(*ExtMMF, EFile->getDir(), NewPrefix);
-                }
-              }
-            };
-
-        std::function<void(const modulemap::ModuleDecl &, StringRef)>
-            ProcessModule = [&](const modulemap::ModuleDecl &MD,
-                                StringRef ModuleName) {
-              // Skip inferred submodules (module *)
-              if (MD.Id.front().first == "*")
-                return;
-              for (const auto &Decl : MD.Decls) {
-                std::visit(
-                    llvm::makeVisitor(
-                        [&](const modulemap::HeaderDecl &HD) {
-                          if (HD.Umbrella) {
-                            MMState.UmbrellaHeaderModules.push_back(ModuleName);
-                          } else {
-                            AddToCache(HD.Path, ModuleName);
-                          }
-                        },
-                        [&](const modulemap::UmbrellaDirDecl &UDD) {
-                          SmallString<128> FullPath(PathPrefix);
-                          llvm::sys::path::append(FullPath, UDD.Path);
-                          llvm::sys::path::native(FullPath);
-                          MMState.UmbrellaDirModules.push_back(std::make_pair(
-                              std::string(FullPath), ModuleName));
-                        },
-                        [&](const modulemap::ModuleDecl &SubMD) {
-                          ProcessModule(SubMD, ModuleName);
-                        },
-                        [&](const modulemap::ExternModuleDecl &EMD) {
-                          ProcessExternModuleDecl(EMD);
-                        },
-                        [](const auto &) {
-                          // Ignore other decls.
-                        }),
-                    Decl);
-              }
-            };
-
-        for (const auto &Decl : MMF.Decls) {
-          std::visit(llvm::makeVisitor(
-                         [&](const modulemap::ModuleDecl &MD) {
-                           ProcessModule(MD, MD.Id.front().first);
-                         },
-                         [&](const modulemap::ExternModuleDecl &EMD) {
-                           ProcessExternModuleDecl(EMD);
-                         }),
-                     Decl);
-        }
-      };
-
-  ProcessModuleMapFile(*ParsedMM, Dir, "");
+  processModuleMapForHeaderToModuleCache(*ParsedMM, Dir, "", MMState);
   if (ParsedPrivateMM)
-    ProcessModuleMapFile(*ParsedPrivateMM, Dir, "");
+    processModuleMapForHeaderToModuleCache(*ParsedPrivateMM, Dir, "", MMState);
+}
+
+void HeaderSearch::addToHeaderToModuleCache(StringRef RelPath,
+                                            StringRef ModuleName,
+                                            StringRef PathPrefix,
+                                            ModuleMapDirectoryState &MMState) {
+  SmallString<128> RelFromRootPath(PathPrefix);
+  llvm::sys::path::append(RelFromRootPath, RelPath);
+  llvm::sys::path::native(RelFromRootPath);
+  MMState.HeaderToModules[RelFromRootPath].push_back(ModuleName);
+}
+
+void HeaderSearch::processExternModuleDeclForHeaderToModuleCache(
+    const modulemap::ExternModuleDecl &EMD, DirectoryEntryRef MMDir,
+    StringRef PathPrefix, ModuleMapDirectoryState &MMState) {
+  StringRef FileNameRef = EMD.Path;
+  SmallString<128> ModuleMapFileName;
+  if (llvm::sys::path::is_relative(FileNameRef)) {
+    ModuleMapFileName = MMDir.getName();
+    llvm::sys::path::append(ModuleMapFileName, EMD.Path);
+    FileNameRef = ModuleMapFileName;
+  }
+  if (auto EFile = FileMgr.getOptionalFileRef(FileNameRef)) {
+    if (auto *ExtMMF = ModMap.getParsedModuleMap(*EFile)) {
+      // Compute the new prefix by appending the extern module's directory
+      // (from the extern declaration path) to the current prefix.
+      SmallString<128> NewPrefix(PathPrefix);
+      StringRef ExternDir = llvm::sys::path::parent_path(EMD.Path);
+      if (!ExternDir.empty()) {
+        llvm::sys::path::append(NewPrefix, ExternDir);
+        llvm::sys::path::native(NewPrefix);
+      }
+      processModuleMapForHeaderToModuleCache(*ExtMMF, EFile->getDir(),
+                                             NewPrefix, MMState);
+    }
+  }
+}
+
+void HeaderSearch::processModuleDeclForHeaderToModuleCache(
+    const modulemap::ModuleDecl &MD, StringRef ModuleName,
+    DirectoryEntryRef MMDir, StringRef PathPrefix,
+    ModuleMapDirectoryState &MMState) {
+  // Skip inferred submodules (module *)
+  if (MD.Id.front().first == "*")
+    return;
+  for (const auto &Decl : MD.Decls) {
+    std::visit(llvm::makeVisitor(
+                   [&](const modulemap::HeaderDecl &HD) {
+                     if (HD.Umbrella) {
+                       MMState.UmbrellaHeaderModules.push_back(ModuleName);
+                     } else {
+                       addToHeaderToModuleCache(HD.Path, ModuleName, PathPrefix,
+                                                MMState);
+                     }
+                   },
+                   [&](const modulemap::UmbrellaDirDecl &UDD) {
+                     SmallString<128> FullPath(PathPrefix);
+                     llvm::sys::path::append(FullPath, UDD.Path);
+                     llvm::sys::path::native(FullPath);
+                     MMState.UmbrellaDirModules.push_back(
+                         std::make_pair(std::string(FullPath), ModuleName));
+                   },
+                   [&](const modulemap::ModuleDecl &SubMD) {
+                     processModuleDeclForHeaderToModuleCache(
+                         SubMD, ModuleName, MMDir, PathPrefix, MMState);
+                   },
+                   [&](const modulemap::ExternModuleDecl &EMD) {
+                     processExternModuleDeclForHeaderToModuleCache(
+                         EMD, MMDir, PathPrefix, MMState);
+                   },
+                   [](const auto &) {
+                     // Ignore other decls.
+                   }),
+               Decl);
+  }
+}
+
+void HeaderSearch::processModuleMapForHeaderToModuleCache(
+    const modulemap::ModuleMapFile &MMF, DirectoryEntryRef MMDir,
+    StringRef PathPrefix, ModuleMapDirectoryState &MMState) {
+  for (const auto &Decl : MMF.Decls) {
+    std::visit(llvm::makeVisitor(
+                   [&](const modulemap::ModuleDecl &MD) {
+                     processModuleDeclForHeaderToModuleCache(
+                         MD, MD.Id.front().first, MMDir, PathPrefix, MMState);
+                   },
+                   [&](const modulemap::ExternModuleDecl &EMD) {
+                     processExternModuleDeclForHeaderToModuleCache(
+                         EMD, MMDir, PathPrefix, MMState);
+                   }),
+               Decl);
+  }
 }
 
 bool HeaderSearch::hasModuleMap(StringRef FileName,
