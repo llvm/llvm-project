@@ -502,8 +502,6 @@ private:
                      int OpIdx = -1) const;
   void renderFPImm64(MachineInstrBuilder &MIB, const MachineInstr &MI,
                      int OpIdx = -1) const;
-  void renderBitcastFPImm(MachineInstrBuilder &MIB, const MachineInstr &MI,
-                          int OpIdx = -1) const;
   void renderFPImm32SIMDModImmType4(MachineInstrBuilder &MIB,
                                     const MachineInstr &MI,
                                     int OpIdx = -1) const;
@@ -2730,7 +2728,30 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
     }
 
-    return false;
+    assert((DefSize == 32 || DefSize == 64) && "Unexpected const def size");
+    // Either emit a FMOV, or emit a copy to emit a normal mov.
+    const Register DefGPRReg = MRI.createVirtualRegister(
+        DefSize == 32 ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass);
+    MachineOperand &RegOp = I.getOperand(0);
+    RegOp.setReg(DefGPRReg);
+    MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
+    MIB.buildCopy({DefReg}, {DefGPRReg});
+
+    if (!RBI.constrainGenericRegister(DefReg, FPRRC, MRI)) {
+      LLVM_DEBUG(dbgs() << "Failed to constrain G_FCONSTANT def operand\n");
+      return false;
+    }
+
+    MachineOperand &ImmOp = I.getOperand(1);
+    // FIXME: Is going through int64_t always correct?
+    ImmOp.ChangeToImmediate(
+        ImmOp.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
+
+    const unsigned MovOpc =
+        DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
+    I.setDesc(TII.get(MovOpc));
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_EXTRACT: {
     Register DstReg = I.getOperand(0).getReg();
@@ -7961,16 +7982,6 @@ void AArch64InstructionSelector::renderFPImm64(MachineInstrBuilder &MIB,
          "Expected G_FCONSTANT");
   MIB.addImm(
       AArch64_AM::getFP64Imm(MI.getOperand(1).getFPImm()->getValueAPF()));
-}
-
-void AArch64InstructionSelector::renderBitcastFPImm(MachineInstrBuilder &MIB,
-                                                    const MachineInstr &MI,
-                                                    int OpIdx) const {
-  assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT && OpIdx == -1 &&
-         "Expected G_FCONSTANT");
-  const APInt Bits =
-      MI.getOperand(1).getFPImm()->getValueAPF().bitcastToAPInt();
-  MIB.addImm(Bits.getZExtValue());
 }
 
 void AArch64InstructionSelector::renderFPImm32SIMDModImmType4(

@@ -176,10 +176,11 @@ define i100 @test_signed_i100_f32(float %f) nounwind {
 ; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    fmov s8, s0
 ; CHECK-GI-NEXT:    bl __fixsfti
-; CHECK-GI-NEXT:    movi v0.2s, #241, lsl #24
-; CHECK-GI-NEXT:    mov w8, #1895825407 // =0x70ffffff
+; CHECK-GI-NEXT:    mov w8, #-251658240 // =0xf1000000
 ; CHECK-GI-NEXT:    mov x10, #34359738367 // =0x7ffffffff
 ; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov w8, #1895825407 // =0x70ffffff
 ; CHECK-GI-NEXT:    fcmp s8, s0
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    mov x8, #34359738368 // =0x800000000
@@ -228,10 +229,11 @@ define i128 @test_signed_i128_f32(float %f) nounwind {
 ; CHECK-GI-NEXT:    str x30, [sp, #8] // 8-byte Spill
 ; CHECK-GI-NEXT:    fmov s8, s0
 ; CHECK-GI-NEXT:    bl __fixsfti
-; CHECK-GI-NEXT:    movi v0.2s, #255, lsl #24
-; CHECK-GI-NEXT:    mov w8, #2130706431 // =0x7effffff
+; CHECK-GI-NEXT:    mov w8, #-16777216 // =0xff000000
 ; CHECK-GI-NEXT:    mov x10, #9223372036854775807 // =0x7fffffffffffffff
 ; CHECK-GI-NEXT:    ldr x30, [sp, #8] // 8-byte Reload
+; CHECK-GI-NEXT:    fmov s0, w8
+; CHECK-GI-NEXT:    mov w8, #2130706431 // =0x7effffff
 ; CHECK-GI-NEXT:    fcmp s8, s0
 ; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    mov x8, #-9223372036854775808 // =0x8000000000000000

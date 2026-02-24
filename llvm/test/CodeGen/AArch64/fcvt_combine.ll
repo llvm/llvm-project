@@ -279,33 +279,12 @@ define <2 x i32> @test12(<2 x float> %f) {
 
 ; Test which should not fold due to power of 2 out of range (i.e., 2^33).
 define <2 x i32> @test13(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test13:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-NO16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test13:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-FP16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test13:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test13:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test13:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2s, #80, lsl #24
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 0x4200000000000000, float 0x4200000000000000>
   %vcvt.i = fptosi <2 x float> %mul.i to <2 x i32>
   ret <2 x i32> %vcvt.i
@@ -848,33 +827,12 @@ define <2 x i32> @test12_sat(<2 x float> %f) {
 
 ; Test which should not fold due to power of 2 out of range (i.e., 2^33).
 define <2 x i32> @test13_sat(<2 x float> %f) {
-; CHECK-NO16-SD-LABEL: test13_sat:
-; CHECK-NO16-SD:       // %bb.0:
-; CHECK-NO16-SD-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-NO16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-NO16-SD-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-SD-NEXT:    ret
-;
-; CHECK-FP16-SD-LABEL: test13_sat:
-; CHECK-FP16-SD:       // %bb.0:
-; CHECK-FP16-SD-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-FP16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-FP16-SD-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-SD-NEXT:    ret
-;
-; CHECK-NO16-GI-LABEL: test13_sat:
-; CHECK-NO16-GI:       // %bb.0:
-; CHECK-NO16-GI-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-NO16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-NO16-GI-NEXT:    ret
-;
-; CHECK-FP16-GI-LABEL: test13_sat:
-; CHECK-FP16-GI:       // %bb.0:
-; CHECK-FP16-GI-NEXT:    movi v1.2s, #80, lsl #24
-; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.s[0]
-; CHECK-FP16-GI-NEXT:    fcvtzs v0.2s, v0.2s
-; CHECK-FP16-GI-NEXT:    ret
+; CHECK-LABEL: test13_sat:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v1.2s, #80, lsl #24
+; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NEXT:    fcvtzs v0.2s, v0.2s
+; CHECK-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 0x4200000000000000, float 0x4200000000000000>
   %vcvt.i = call <2 x i32> @llvm.fptosi.sat.v2i32.v2f32(<2 x float> %mul.i)
   ret <2 x i32> %vcvt.i

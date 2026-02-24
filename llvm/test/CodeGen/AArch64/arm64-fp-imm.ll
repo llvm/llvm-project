@@ -3,23 +3,14 @@
 ; RUN: llc < %s -mtriple=arm64-apple-darwin -global-isel | FileCheck --check-prefixes=CHECK,CHECK-GI %s
 
 define double @foo() {
-; CHECK-SD-LABEL: foo:
-; CHECK-SD:       ; %bb.0:
-; CHECK-SD-NEXT:  Lloh0:
-; CHECK-SD-NEXT:    adrp x8, lCPI0_0@PAGE
-; CHECK-SD-NEXT:  Lloh1:
-; CHECK-SD-NEXT:    ldr d0, [x8, lCPI0_0@PAGEOFF]
-; CHECK-SD-NEXT:    ret
-; CHECK-SD-NEXT:    .loh AdrpLdr Lloh0, Lloh1
-;
-; CHECK-GI-LABEL: foo:
-; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:    mov x8, #11544 ; =0x2d18
-; CHECK-GI-NEXT:    movk x8, #21572, lsl #16
-; CHECK-GI-NEXT:    movk x8, #8699, lsl #32
-; CHECK-GI-NEXT:    movk x8, #16393, lsl #48
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    ret
+; CHECK-LABEL: foo:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:  Lloh0:
+; CHECK-NEXT:    adrp x8, lCPI0_0@PAGE
+; CHECK-NEXT:  Lloh1:
+; CHECK-NEXT:    ldr d0, [x8, lCPI0_0@PAGEOFF]
+; CHECK-NEXT:    ret
+; CHECK-NEXT:    .loh AdrpLdr Lloh0, Lloh1
   ret double 0x400921FB54442D18
 }
 

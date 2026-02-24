@@ -361,13 +361,12 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
   return RegisterBankInfo::getInstrAlternativeMappings(MI);
 }
 
-static bool isLegalFPImm(const MachineInstr &MI, const MachineRegisterInfo &MRI,
-                         const AArch64Subtarget &STI) {
+static bool preferGPRForFPImm(const MachineInstr &MI,
+                              const MachineRegisterInfo &MRI,
+                              const AArch64Subtarget &STI) {
   assert(MI.getOpcode() == TargetOpcode::G_FCONSTANT);
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
-  if (!Ty.isScalar())
-    return false;
 
   unsigned Bits = Ty.getSizeInBits();
   if (Bits != 16 && Bits != 32 && Bits != 64)
@@ -375,9 +374,19 @@ static bool isLegalFPImm(const MachineInstr &MI, const MachineRegisterInfo &MRI,
 
   EVT VT = EVT::getFloatingPointVT(Bits);
   const AArch64TargetLowering *TLI = STI.getTargetLowering();
-  return TLI->isFPImmLegal(
-      MI.getOperand(1).getFPImm()->getValueAPF(), VT,
-      shouldOptimizeForSize(&MI.getMF()->getFunction(), nullptr, nullptr));
+
+  const APFloat Imm = MI.getOperand(1).getFPImm()->getValueAPF();
+
+  // We want to use GPR when the value cannot be encoded as the immediate value
+  // of a fmov and when it will not result in a constant pool load. As
+  // AArch64TargetLowering::isFPImmLegal is used by the instruction selector
+  // to choose whether to emit a constant pool load, negating this check will
+  // ensure it would not have become a constant pool load.
+  bool OptForSize =
+      shouldOptimizeForSize(&MI.getMF()->getFunction(), nullptr, nullptr);
+  bool IsLegal = TLI->isFPImmLegal(Imm, VT, OptForSize);
+  bool IsFMov = TLI->isFPImmLegalAsFMov(Imm, VT);
+  return !IsFMov && IsLegal;
 }
 
 // Some of the instructions in applyMappingImpl attempt to anyext small values.
@@ -960,8 +969,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_FCONSTANT: {
-    LLT ImmTy = MRI.getType(MI.getOperand(0).getReg());
-    if (ImmTy.getScalarSizeInBits() != 128 && !isLegalFPImm(MI, MRI, STI)) {
+    if (preferGPRForFPImm(MI, MRI, STI)) {
       // Materialize in GPR and rely on later bank copies for FP uses.
       MappingID = CustomMappingID;
       OpRegBankIdx = {PMI_FirstGPR};

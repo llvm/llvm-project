@@ -54,13 +54,21 @@ define fp128 @test_v1f128(<1 x fp128> %a) nounwind {
 }
 
 define float @test_v3f32(<3 x float> %a) nounwind {
-; CHECK-LABEL: test_v3f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.2s, #128, lsl #24
-; CHECK-NEXT:    mov v0.s[3], v1.s[0]
-; CHECK-NEXT:    faddp v0.4s, v0.4s, v0.4s
-; CHECK-NEXT:    faddp s0, v0.2s
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: test_v3f32:
+; CHECK-SD:       // %bb.0:
+; CHECK-SD-NEXT:    movi v1.2s, #128, lsl #24
+; CHECK-SD-NEXT:    mov v0.s[3], v1.s[0]
+; CHECK-SD-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECK-SD-NEXT:    faddp s0, v0.2s
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: test_v3f32:
+; CHECK-GI:       // %bb.0:
+; CHECK-GI-NEXT:    mov w8, #-2147483648 // =0x80000000
+; CHECK-GI-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NEXT:    faddp v0.4s, v0.4s, v0.4s
+; CHECK-GI-NEXT:    faddp s0, v0.2s
+; CHECK-GI-NEXT:    ret
   %b = call reassoc float @llvm.vector.reduce.fadd.f32.v3f32(float -0.0, <3 x float> %a)
   ret float %b
 }

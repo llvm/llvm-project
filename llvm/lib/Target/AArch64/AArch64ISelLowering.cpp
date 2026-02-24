@@ -13188,9 +13188,8 @@ bool AArch64TargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                         bool OptForSize) const {
-  bool IsLegal = false;
+bool AArch64TargetLowering::isFPImmLegalAsFMov(const APFloat &Imm,
+                                               EVT VT) const {
   // We can materialize #0.0 as fmov $Rd, XZR for 64-bit, 32-bit cases, and
   // 16-bit case when target has full fp16 support.
   // We encode bf16 bit patterns as if they were fp16. This results in very
@@ -13200,18 +13199,24 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
   // FP16 1.9375 which shares the same bit pattern as BF16 1.5.
   // FIXME: We should be able to handle f128 as well with a clever lowering.
   const APInt ImmInt = Imm.bitcastToAPInt();
+
   if (VT == MVT::f64)
-    IsLegal = AArch64_AM::getFP64Imm(ImmInt) != -1 ||
-              AArch64_AM::isAdvSIMDModImmType12(ImmInt.getZExtValue()) ||
-              Imm.isPosZero();
-  else if (VT == MVT::f32)
-    IsLegal = AArch64_AM::getFP32Imm(ImmInt) != -1 ||
-              AArch64_AM::isAdvSIMDModImmType11(ImmInt.getZExtValue()) ||
-              Imm.isPosZero();
-  else if (VT == MVT::f16 || VT == MVT::bf16)
-    IsLegal =
-        (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
-        Imm.isPosZero();
+    return AArch64_AM::getFP64Imm(ImmInt) != -1 || Imm.isPosZero();
+
+  if (VT == MVT::f32)
+    return AArch64_AM::getFP32Imm(ImmInt) != -1 || Imm.isPosZero();
+
+  if (VT == MVT::f16 || VT == MVT::bf16)
+    return (Subtarget->hasFullFP16() && AArch64_AM::getFP16Imm(ImmInt) != -1) ||
+           Imm.isPosZero();
+
+  return false;
+}
+
+bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
+                                         bool OptForSize) const {
+  bool IsLegal = isFPImmLegalAsFMov(Imm, VT);
+  const APInt ImmInt = Imm.bitcastToAPInt();
 
   // If we can not materialize in immediate field for fmov, check if the
   // value can be encoded as the immediate operand of a logical instruction.
