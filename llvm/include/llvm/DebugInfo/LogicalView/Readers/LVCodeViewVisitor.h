@@ -220,6 +220,7 @@ public:
   Error visitKnownRecord(CVSymbol &Record, ObjNameSym &ObjName) override;
   Error visitKnownRecord(CVSymbol &Record, ProcSym &Proc) override;
   Error visitKnownRecord(CVSymbol &Record, RegRelativeSym &Local) override;
+  Error visitKnownRecord(CVSymbol &Record, RegRelativeIndirSym &Local) override;
   Error visitKnownRecord(CVSymbol &Record, ScopeEndSym &ScopeEnd) override;
   Error visitKnownRecord(CVSymbol &Record, Thunk32Sym &Thunk) override;
   Error visitKnownRecord(CVSymbol &Record, UDTSym &UDT) override;

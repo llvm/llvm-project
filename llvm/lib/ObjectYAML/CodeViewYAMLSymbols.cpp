@@ -555,6 +555,14 @@ template <> void SymbolRecordImpl<RegRelativeSym>::map(IO &IO) {
   IO.mapRequired("VarName", Symbol.Name);
 }
 
+template <> void SymbolRecordImpl<RegRelativeIndirSym>::map(IO &IO) {
+  IO.mapRequired("Offset", Symbol.Offset);
+  IO.mapRequired("Type", Symbol.Type);
+  IO.mapRequired("Register", Symbol.Register);
+  IO.mapRequired("OffsetInUdt", Symbol.OffsetInUdt);
+  IO.mapRequired("VarName", Symbol.Name);
+}
+
 template <> void SymbolRecordImpl<ConstantSym>::map(IO &IO) {
   IO.mapRequired("Type", Symbol.Type);
   IO.mapRequired("Value", Symbol.Value);
