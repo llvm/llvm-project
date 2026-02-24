@@ -615,9 +615,13 @@ Object JSONFormat::linkageTableEntryToJSON(EntityId EI,
 // LinkageTable
 //----------------------------------------------------------------------------
 
+// ExpectedIds is the set of EntityIds from the IdTable that must appear in the
+// linkage table—no more, no fewer. It is taken by value because it is consumed
+// during parsing: each successfully matched id is erased from the set, and any
+// ids remaining at the end are reported as missing.
 llvm::Expected<std::map<EntityId, EntityLinkage>>
 JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
-                                 std::set<EntityId> EntityIds) const {
+                                 std::set<EntityId> ExpectedIds) const {
   std::map<EntityId, EntityLinkage> LinkageTable;
 
   for (const auto &[Index, LinkageTableEntryValue] :
@@ -651,7 +655,7 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
           .build();
     }
 
-    if (EntityIds.erase(EI) == 0) {
+    if (ExpectedIds.erase(EI) == 0) {
       return ErrorBuilder::create(
                  std::errc::invalid_argument,
                  ErrorMessages::FailedToDeserializeLinkageTableExtraId,
@@ -661,11 +665,11 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
     }
   }
 
-  if (!EntityIds.empty()) {
+  if (!ExpectedIds.empty()) {
     return ErrorBuilder::create(
                std::errc::invalid_argument,
                ErrorMessages::FailedToDeserializeLinkageTableMissingId,
-               getIndex(*EntityIds.begin()))
+               getIndex(*ExpectedIds.begin()))
         .build();
   }
 
@@ -1054,12 +1058,15 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
           .build();
     }
 
-    auto EntityIdRange =
+    auto ExpectedIdRange =
         llvm::make_second_range(getEntities(getIdTable(Summary)));
-    std::set<EntityId> EntityIds(EntityIdRange.begin(), EntityIdRange.end());
+    std::set<EntityId> ExpectedIds(ExpectedIdRange.begin(),
+                                   ExpectedIdRange.end());
 
+    // Move ExpectedIds in since linkageTableFromJSON consumes it to verify
+    // that the linkage table contains exactly the ids present in the IdTable.
     auto ExpectedLinkageTable =
-        linkageTableFromJSON(*LinkageTableArray, std::move(EntityIds));
+        linkageTableFromJSON(*LinkageTableArray, std::move(ExpectedIds));
     if (!ExpectedLinkageTable) {
       return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
           .context(ErrorMessages::ReadingFromField, "LinkageTable",
