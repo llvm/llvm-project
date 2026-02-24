@@ -4,23 +4,13 @@
 
 target triple = "aarch64-unknown-linux-gnu"
 
-define <2 x float> @no_switch_to_lookup_table_const_vector(i32 %c) {
-; CHECK-LABEL: define <2 x float> @no_switch_to_lookup_table_const_vector(
+define <2 x float> @switch_to_lookup_table_const_vector(i32 %c) {
+; CHECK-LABEL: define <2 x float> @switch_to_lookup_table_const_vector(
 ; CHECK-SAME: i32 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    switch i32 [[C]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[RET:.*]]
-; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
-; CHECK-NEXT:      i32 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br label %[[RET]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br label %[[RET]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi <2 x float> [ <float 3.000000e+00, float 3.300000e+01>, %[[BB2]] ], [ <float 2.000000e+00, float 2.200000e+01>, %[[BB1]] ], [ <float 1.000000e+00, float 1.100000e+01>, %[[ENTRY]] ]
+; CHECK-NEXT:  [[RET:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[C]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x <2 x float>], ptr @switch.table.switch_to_lookup_table_const_vector, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[PHI:%.*]] = load <2 x float>, ptr [[SWITCH_GEP]], align 8
 ; CHECK-NEXT:    ret <2 x float> [[PHI]]
 ;
 entry:
@@ -47,23 +37,13 @@ ret:
   ret <2 x float> %phi
 }
 
-define <4 x float> @no_switch_to_lookup_table_const_vector_splat(i32 %c) {
-; CHECK-LABEL: define <4 x float> @no_switch_to_lookup_table_const_vector_splat(
+define <4 x float> @switch_to_lookup_table_const_vector_splat(i32 %c) {
+; CHECK-LABEL: define <4 x float> @switch_to_lookup_table_const_vector_splat(
 ; CHECK-SAME: i32 [[C:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    switch i32 [[C]], label %[[DEFAULT:.*]] [
-; CHECK-NEXT:      i32 0, label %[[RET:.*]]
-; CHECK-NEXT:      i32 1, label %[[BB1:.*]]
-; CHECK-NEXT:      i32 2, label %[[BB2:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[BB1]]:
-; CHECK-NEXT:    br label %[[RET]]
-; CHECK:       [[BB2]]:
-; CHECK-NEXT:    br label %[[RET]]
-; CHECK:       [[DEFAULT]]:
-; CHECK-NEXT:    unreachable
-; CHECK:       [[RET]]:
-; CHECK-NEXT:    [[PHI:%.*]] = phi <4 x float> [ splat (float 3.000000e+00), %[[BB2]] ], [ splat (float 2.000000e+00), %[[BB1]] ], [ splat (float 1.000000e+00), %[[ENTRY]] ]
+; CHECK-NEXT:  [[RET:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[C]] to i64
+; CHECK-NEXT:    [[SWITCH_GEP:%.*]] = getelementptr inbounds [3 x <4 x float>], ptr @switch.table.switch_to_lookup_table_const_vector_splat, i64 0, i64 [[TMP0]]
+; CHECK-NEXT:    [[PHI:%.*]] = load <4 x float>, ptr [[SWITCH_GEP]], align 16
 ; CHECK-NEXT:    ret <4 x float> [[PHI]]
 ;
 entry:
