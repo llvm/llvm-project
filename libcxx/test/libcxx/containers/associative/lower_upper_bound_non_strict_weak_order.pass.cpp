@@ -21,6 +21,7 @@
 // overlapping intervals as equivalent, which is incorrect but was relied upon.
 
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_LEGACY_TREE_SEARCH_ALGORITHM
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include <cassert>
 #include <map>

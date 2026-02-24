@@ -13,12 +13,14 @@
 // predicate that is not a strict weak ordering when the debug mode is enabled.
 
 // REQUIRES: libcpp-hardening-mode=debug
+// UNSUPPORTED: c++03, c++11, c++14
 
 #include <map>
 #include <set>
 #include <utility>
 
 #include "check_assertion.h"
+#include "test_macros.h"
 
 struct InvalidLess {
   bool operator()(int a, int b) const {
@@ -67,11 +69,13 @@ int main() {
     }
 
     // contains
+#if TEST_STD_VER >= 20
     {
       std::set<int, InvalidLess> s = {1, 2, 3, 4};
       TEST_LIBCPP_ASSERT_FAILURE(s.contains(4), "Comparator does not induce a strict weak ordering");
       TEST_LIBCPP_ASSERT_FAILURE(std::as_const(s).contains(4), "Comparator does not induce a strict weak ordering");
     }
+#endif
   }
 
   // std::map
@@ -115,10 +119,12 @@ int main() {
     }
 
     // contains
+#if TEST_STD_VER >= 20
     {
       std::map<int, X, InvalidLess> s = {{1, x}, {2, x}, {3, x}, {4, x}};
       TEST_LIBCPP_ASSERT_FAILURE(s.contains(4), "Comparator does not induce a strict weak ordering");
       TEST_LIBCPP_ASSERT_FAILURE(std::as_const(s).contains(4), "Comparator does not induce a strict weak ordering");
     }
+#endif
   }
 }
