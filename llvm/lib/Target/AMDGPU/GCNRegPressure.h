@@ -313,9 +313,9 @@ protected:
   LiveRegSet VirtLiveRegs;
   GCNRegPressure CurVirtPressure, MaxVirtPressure;
 
-  // Physical register tracking: Maintain clean separation between virtual and physical registers.
-  // Tracking physical registers can be turned OFF with an option. Using llvm::LiveRegSet for consistency
-  // with the generic tracker.
+  // Physical register tracking: Maintain clean separation between virtual and
+  // physical registers. Tracking physical registers can be turned OFF with an
+  // option. Using llvm::LiveRegSet for consistency with the generic tracker.
   llvm::LiveRegSet PhysLiveRegs;
   GCNRegPressure CurPhysPressure, MaxPhysPressure;
 
