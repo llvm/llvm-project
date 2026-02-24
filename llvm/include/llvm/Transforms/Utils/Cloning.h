@@ -439,6 +439,14 @@ LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
 LLVM_ABI void cloneAndAdaptNoAliasScopes(ArrayRef<MDNode *> NoAliasDeclScopes,
                                          Instruction *IStart, Instruction *IEnd,
                                          LLVMContext &Context, StringRef Ext);
+/// Check if Function F appears in the inline history chain.
+/// InlineHistory is a vector of (Function, ParentHistoryID) pairs.
+/// Returns true if F was already inlined in the chain leading to
+/// InlineHistoryID.
+LLVM_ABI bool inlineHistoryIncludes(
+    Function *F, int InlineHistoryID,
+    const SmallVectorImpl<std::pair<Function *, int>> &InlineHistory);
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_UTILS_CLONING_H
