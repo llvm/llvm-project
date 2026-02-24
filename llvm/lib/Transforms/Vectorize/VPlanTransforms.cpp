@@ -5080,9 +5080,9 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
-  // Note that after the transform, Plan.getVF and Plan.getVFxUF should not be
-  // used.
-  // TODO: Assert that they aren't used.
+  // Note that after the transform, no further uses of Plan.getVF and
+  // Plan.getVFxUF should be added.
+  // TODO: Add assertions for this.
 
   VPValue *UF =
       Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
