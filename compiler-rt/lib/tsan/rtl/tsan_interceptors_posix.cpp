@@ -40,6 +40,7 @@
 #include "tsan_mman.h"
 #include "tsan_platform.h"
 #include "tsan_rtl.h"
+#include "tsan_simulate.h"
 #include "tsan_suppressions.h"
 
 using namespace __tsan;
@@ -93,6 +94,7 @@ extern "C" int pthread_key_create(unsigned *key, void (*destructor)(void* v));
 extern "C" int pthread_setspecific(unsigned key, const void *v);
 DECLARE_REAL(int, pthread_mutexattr_gettype, void *, void *)
 DECLARE_REAL(int, fflush, __sanitizer_FILE *fp)
+DECLARE_REAL(int, pthread_mutex_trylock, void* m)
 DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize size)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
 extern "C" int pthread_equal(void *t1, void *t2);
@@ -381,6 +383,7 @@ struct BlockingCall {
 
 TSAN_INTERCEPTOR(unsigned, sleep, unsigned sec) {
   SCOPED_TSAN_INTERCEPTOR(sleep, sec);
+  SIMULATE_CHECK_UNSUPPORTED(sleep);
   unsigned res = BLOCK_REAL(sleep)(sec);
   AfterSleep(thr, pc);
   return res;
@@ -388,6 +391,7 @@ TSAN_INTERCEPTOR(unsigned, sleep, unsigned sec) {
 
 TSAN_INTERCEPTOR(int, usleep, long_t usec) {
   SCOPED_TSAN_INTERCEPTOR(usleep, usec);
+  SIMULATE_CHECK_UNSUPPORTED(usleep);
   int res = BLOCK_REAL(usleep)(usec);
   AfterSleep(thr, pc);
   return res;
@@ -395,6 +399,7 @@ TSAN_INTERCEPTOR(int, usleep, long_t usec) {
 
 TSAN_INTERCEPTOR(int, nanosleep, void *req, void *rem) {
   SCOPED_TSAN_INTERCEPTOR(nanosleep, req, rem);
+  SIMULATE_CHECK_UNSUPPORTED(nanosleep);
   int res = BLOCK_REAL(nanosleep)(req, rem);
   AfterSleep(thr, pc);
   return res;
@@ -1039,6 +1044,7 @@ struct ThreadParam {
   void* (*callback)(void *arg);
   void *param;
   Tid tid;
+  uptr pthread_handle;
   Semaphore created;
   Semaphore started;
 };
@@ -1064,12 +1070,14 @@ extern "C" void *__tsan_thread_start_func(void *arg) {
     Processor *proc = ProcCreate();
     ProcWire(proc, thr);
     ThreadStart(thr, p->tid, GetTid(), ThreadType::Regular);
+    SimulateThreadRegister(p->pthread_handle);
     p->started.Post();
   }
 
   AdaptiveDelay::BeforeChildThreadRuns();
+  SimulateBeforeChildThreadRuns();
 
-  void *res = callback(param);
+  void* res = callback(param);
   // Prevent the callback from being tail called,
   // it mixes up stack traces.
   volatile int foo = 42;
@@ -1120,6 +1128,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
   if (res == 0) {
     p.tid = ThreadCreate(thr, pc, *(uptr *)th, IsStateDetached(detached));
     CHECK_NE(p.tid, kMainTid);
+    p.pthread_handle = *(uptr*)th;
     // Synchronization on p.tid serves two purposes:
     // 1. ThreadCreate must finish before the new thread starts.
     //    Otherwise the new thread can call pthread_detach, but the pthread_t
@@ -1133,6 +1142,7 @@ TSAN_INTERCEPTOR(int, pthread_create,
   if (attr == &myattr)
     pthread_attr_destroy(&myattr);
   AdaptiveDelay::AfterThreadCreation();
+  SimulateSchedule();
   return res;
 }
 
@@ -1156,7 +1166,13 @@ TSAN_INTERCEPTOR(int, pthread_join, void *th, void **ret) {
 #endif
   Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
-  int res = BLOCK_REAL(pthread_join)(th, ret);
+  int res;
+  if (SimulateIsActive())
+    res = SimulateJoin(th, ret, [thr](void* th, void** ret) {
+      return BLOCK_REAL(pthread_join)(th, ret);
+    });
+  else
+    res = BLOCK_REAL(pthread_join)(th, ret);
   ThreadIgnoreEnd(thr);
   if (res == 0) {
     ThreadJoin(thr, pc, tid);
@@ -1214,6 +1230,7 @@ TSAN_INTERCEPTOR(int, pthread_tryjoin_np, void *th, void **ret) {
 TSAN_INTERCEPTOR(int, pthread_timedjoin_np, void *th, void **ret,
                  const struct timespec *abstime) {
   SCOPED_INTERCEPTOR_RAW(pthread_timedjoin_np, th, ret, abstime);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_timedjoin_np);
   Tid tid = ThreadConsumeTid(thr, pc, (uptr)th);
   ThreadIgnoreBegin(thr, pc);
   int res = BLOCK_REAL(pthread_timedjoin_np)(th, ret, abstime);
@@ -1308,17 +1325,20 @@ int cond_wait(ThreadState *thr, uptr pc, ScopedInterceptor *si, const Fn &fn,
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
   MutexUnlock(thr, pc, (uptr)m);
   int res = 0;
-  // This ensures that we handle mutex lock even in case of pthread_cancel.
-  // See test/tsan/cond_cancel.cpp.
-  {
+
+  if (SimulateIsActive()) {
+    res = SimulateCondWait(thr, pc, c, m);
+    if (res != 0 && res != errno_EOWNERDEAD)
+      return res;
+  } else {
     // Enable signal delivery while the thread is blocked.
     BlockingCall bc(thr);
     CondMutexUnlockCtx<Fn> arg = {si, thr, pc, m, c, fn};
     res = call_pthread_cancel_with_cleanup(
-        [](void *arg) -> int {
+        [](void* arg) -> int {
           return ((const CondMutexUnlockCtx<Fn> *)arg)->Cancel();
         },
-        [](void *arg) { ((const CondMutexUnlockCtx<Fn> *)arg)->Unlock(); },
+        [](void* arg) { ((const CondMutexUnlockCtx<Fn>*)arg)->Unlock(); },
         &arg);
   }
   if (res == errno_EOWNERDEAD) MutexRepair(thr, pc, (uptr)m);
@@ -1337,6 +1357,7 @@ INTERCEPTOR(int, pthread_cond_wait, void *c, void *m) {
 INTERCEPTOR(int, pthread_cond_timedwait, void *c, void *m, void *abstime) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait, cond, m, abstime);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_cond_timedwait);
   return cond_wait(
       thr, pc, &si,
       [=]() { return REAL(pthread_cond_timedwait)(cond, m, abstime); }, cond,
@@ -1348,6 +1369,7 @@ INTERCEPTOR(int, pthread_cond_clockwait, void *c, void *m,
             __sanitizer_clockid_t clock, void *abstime) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_clockwait, cond, m, clock, abstime);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_cond_clockwait);
   return cond_wait(
       thr, pc, &si,
       [=]() { return REAL(pthread_cond_clockwait)(cond, m, clock, abstime); },
@@ -1363,6 +1385,7 @@ INTERCEPTOR(int, pthread_cond_timedwait_relative_np, void *c, void *m,
             void *reltime) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_timedwait_relative_np, cond, m, reltime);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_cond_timedwait_relative_np);
   return cond_wait(
       thr, pc, &si,
       [=]() {
@@ -1376,14 +1399,20 @@ INTERCEPTOR(int, pthread_cond_signal, void *c) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_signal, cond);
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
-  return REAL(pthread_cond_signal)(cond);
+  int res = REAL(pthread_cond_signal)(cond);
+  SimulateCondSignal((uptr)cond);
+  SimulateSchedule();
+  return res;
 }
 
 INTERCEPTOR(int, pthread_cond_broadcast, void *c) {
   void *cond = init_cond(c);
   SCOPED_TSAN_INTERCEPTOR(pthread_cond_broadcast, cond);
   MemoryAccessRange(thr, pc, (uptr)c, sizeof(uptr), false);
-  return REAL(pthread_cond_broadcast)(cond);
+  int res = REAL(pthread_cond_broadcast)(cond);
+  SimulateCondBroadcast((uptr)cond);
+  SimulateSchedule();
+  return res;
 }
 
 INTERCEPTOR(int, pthread_cond_destroy, void *c) {
@@ -1429,7 +1458,17 @@ TSAN_INTERCEPTOR(int, pthread_mutex_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_lock, m);
   MutexPreLock(thr, pc, (uptr)m);
   AdaptiveDelay::SyncOp();
-  int res = BLOCK_REAL(pthread_mutex_lock)(m);
+  int res;
+  if (SimulateIsActive()) {
+    SimulateSchedule();
+    while (true) {
+      res = REAL(pthread_mutex_trylock)(m);
+      if (res != errno_EBUSY)
+        break;
+      SimulateMutexBlock((uptr)m);
+    }
+  } else
+    res = BLOCK_REAL(pthread_mutex_lock)(m);
   if (res == errno_EOWNERDEAD)
     MutexRepair(thr, pc, (uptr)m);
   if (res == 0 || res == errno_EOWNERDEAD)
@@ -1453,6 +1492,7 @@ TSAN_INTERCEPTOR(int, pthread_mutex_trylock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_mutex_timedlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_mutex_timedlock, m, abstime);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_mutex_timedlock);
   AdaptiveDelay::SyncOp();
   int res = REAL(pthread_mutex_timedlock)(m, abstime);
   if (res == 0) {
@@ -1467,6 +1507,8 @@ TSAN_INTERCEPTOR(int, pthread_mutex_unlock, void *m) {
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_mutex_unlock)(m);
   AdaptiveDelay::SyncOp();
+  SimulateMutexUnblock((uptr)m);
+  SimulateSchedule();
   if (res == errno_EINVAL)
     MutexInvalidAccess(thr, pc, (uptr)m);
   return res;
@@ -1540,6 +1582,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_destroy, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_lock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_spin_lock);
   MutexPreLock(thr, pc, (uptr)m);
   AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_spin_lock)(m);
@@ -1551,6 +1594,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_lock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_trylock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_trylock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_spin_trylock);
   AdaptiveDelay::SyncOp();
   int res = REAL(pthread_spin_trylock)(m);
   if (res == 0) {
@@ -1561,6 +1605,7 @@ TSAN_INTERCEPTOR(int, pthread_spin_trylock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_spin_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_spin_unlock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_spin_unlock);
   MutexUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_spin_unlock)(m);
   AdaptiveDelay::SyncOp();
@@ -1588,6 +1633,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_destroy, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_rdlock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_rwlock_rdlock);
   MutexPreReadLock(thr, pc, (uptr)m);
   AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_rdlock)(m);
@@ -1599,6 +1645,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_rdlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_tryrdlock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_rwlock_tryrdlock);
   AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_tryrdlock)(m);
   if (res == 0) {
@@ -1610,6 +1657,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_tryrdlock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedrdlock, m, abstime);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_rwlock_timedrdlock);
   AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_timedrdlock)(m, abstime);
   if (res == 0) {
@@ -1621,6 +1669,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedrdlock, void *m, void *abstime) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_wrlock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_rwlock_wrlock);
   MutexPreLock(thr, pc, (uptr)m);
   AdaptiveDelay::SyncOp();
   int res = BLOCK_REAL(pthread_rwlock_wrlock)(m);
@@ -1632,6 +1681,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_wrlock, void *m) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_trywrlock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_rwlock_trywrlock);
   AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_trywrlock)(m);
   if (res == 0) {
@@ -1643,6 +1693,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_trywrlock, void *m) {
 #if !SANITIZER_APPLE
 TSAN_INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_timedwrlock, m, abstime);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_rwlock_timedwrlock);
   AdaptiveDelay::SyncOp();
   int res = REAL(pthread_rwlock_timedwrlock)(m, abstime);
   if (res == 0) {
@@ -1654,6 +1705,7 @@ TSAN_INTERCEPTOR(int, pthread_rwlock_timedwrlock, void *m, void *abstime) {
 
 TSAN_INTERCEPTOR(int, pthread_rwlock_unlock, void *m) {
   SCOPED_TSAN_INTERCEPTOR(pthread_rwlock_unlock, m);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_rwlock_unlock);
   MutexReadOrWriteUnlock(thr, pc, (uptr)m);
   int res = REAL(pthread_rwlock_unlock)(m);
   AdaptiveDelay::SyncOp();
@@ -1677,6 +1729,7 @@ TSAN_INTERCEPTOR(int, pthread_barrier_destroy, void *b) {
 
 TSAN_INTERCEPTOR(int, pthread_barrier_wait, void *b) {
   SCOPED_TSAN_INTERCEPTOR(pthread_barrier_wait, b);
+  SIMULATE_CHECK_UNSUPPORTED(pthread_barrier_wait);
   Release(thr, pc, (uptr)b);
   MemoryAccess(thr, pc, (uptr)b, 1, kAccessRead);
   int res = REAL(pthread_barrier_wait)(b);

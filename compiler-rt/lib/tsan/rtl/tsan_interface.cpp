@@ -11,10 +11,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "tsan_interface.h"
-#include "tsan_interface_ann.h"
-#include "tsan_rtl.h"
+
 #include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_ptrauth.h"
+#include "tsan_interface_ann.h"
+#include "tsan_platform.h"
+#include "tsan_rtl.h"
+#include "tsan_shadow.h"
+#include "tsan_simulate.h"
 
 #define CALLERPC ((uptr)__builtin_return_address(0))
 
@@ -82,6 +86,43 @@ void __tsan_set_fiber_name(void *fiber, const char *name) {
   ThreadSetName(static_cast<ThreadState *>(fiber), name);
 }
 }  // extern "C"
+
+int __tsan_simulate(void (*callback)(void* arg), void* arg) {
+  Initialize(cur_thread_init());
+  return SimulateRun(callback, arg);
+}
+
+#if SANITIZER_LINUX
+// Support for -fsanitize-thread-simulate-main linker wrapping.
+// The --wrap linker feature is only available on GNU LD (Linux), not on macOS.
+extern "C" SANITIZER_WEAK_ATTRIBUTE int __real_main(int argc, char** argv,
+                                                    char** envp);
+
+namespace {
+struct MainArgs {
+  int argc;
+  char** argv;
+  char** envp;
+  int exit_code;
+};
+
+static void wrapped_main_callback(void* arg) {
+  MainArgs* args = static_cast<MainArgs*>(arg);
+  args->exit_code = __real_main(args->argc, args->argv, args->envp);
+}
+}  // namespace
+
+extern "C" int __wrap_main(int argc, char** argv, char** envp) {
+  MainArgs args = {argc, argv, envp, 0};
+  int sim_result = __tsan_simulate(wrapped_main_callback, &args);
+  // If simulation succeeded (return code 0 or exit due to no threads spawned),
+  // return the exit code from main. Otherwise, return the simulation error
+  // code.
+  if (sim_result == 0)
+    return args.exit_code;
+  return sim_result;
+}
+#endif  // SANITIZER_LINUX
 
 void __tsan_acquire(void *addr) {
   Acquire(cur_thread(), CALLERPC, (uptr)addr);

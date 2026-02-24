@@ -243,6 +243,9 @@ struct alignas(SANITIZER_CACHE_LINE_SIZE) ThreadState {
 
   AdaptiveDelayState adaptive_delay_state;
 
+  // Simulation thread index. -1 when not participating in simulation.
+  int sim_thread_idx = -1;
+
   explicit ThreadState(Tid tid);
 };
 
