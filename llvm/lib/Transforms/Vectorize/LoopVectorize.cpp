@@ -7360,41 +7360,57 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
   else
     return;
 
-  Value *MainResumeValue;
-  if (match(BackedgeVal, m_VPInstruction<VPInstruction::ReductionStartVector>(
-                             m_VPValue(Incoming), m_VPValue(), m_VPValue()))) {
-    MainResumeValue = Incoming->getUnderlyingValue();
-  } else {
-    auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
+  auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
+      vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+  if (!EpiRedHeaderPhi) {
+    match(BackedgeVal,
+          m_Select(m_VPValue(), m_VPValue(BackedgeVal), m_VPValue()));
+    EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
         vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
-    if (!EpiRedHeaderPhi) {
-      match(BackedgeVal,
-            m_Select(m_VPValue(), m_VPValue(BackedgeVal), m_VPValue()));
-      EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
-          vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
-    }
+  }
 
-    if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
-      assert((VPI->getOpcode() == VPInstruction::Broadcast ||
-              VPI->getOpcode() == VPInstruction::ReductionStartVector) &&
-             "unexpected start recipe");
-      MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
-    } else
-      MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
-    if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
-      [[maybe_unused]] Value *StartV =
-          EpiRedResult->getOperand(0)->getLiveInIRValue();
-      auto *Cmp = cast<ICmpInst>(MainResumeValue);
-      assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
-             "AnyOf expected to start with ICMP_NE");
-      assert(
-          Cmp->getOperand(1) == StartV &&
-          "AnyOf expected to start by comparing main resume value to original "
-          "start value");
-      MainResumeValue = Cmp->getOperand(0);
-    } else if (IsFindIV) {
-      MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
+  // Look through Broadcast or ReductionStartVector to get the underlying
+  // start value.
+  auto GetStartValue = [&](VPValue *V) -> Value * {
+    VPValue *Start;
+    if (match(V, m_VPInstruction<VPInstruction::ReductionStartVector>(
+                     m_VPValue(Start), m_VPValue(), m_VPValue())) ||
+        match(V, m_Broadcast(m_VPValue(Start))))
+      return Start->getUnderlyingValue();
+    return V->getUnderlyingValue();
+  };
+
+  Value *MainResumeValue;
+  if (EpiRedHeaderPhi) {
+    MainResumeValue = GetStartValue(EpiRedHeaderPhi->getStartValue());
+  } else {
+    // The epilogue vector loop was dissolved (single-iteration). The
+    // reduction header phi was replaced by its start value. Look for a
+    // Broadcast or ReductionStartVector in BackedgeVal or its operands.
+    MainResumeValue = GetStartValue(BackedgeVal);
+    if (MainResumeValue == BackedgeVal->getUnderlyingValue() &&
+        BackedgeVal->getDefiningRecipe()) {
+      for (VPValue *Op : BackedgeVal->getDefiningRecipe()->operands()) {
+        Value *V = GetStartValue(Op);
+        if (V != Op->getUnderlyingValue()) {
+          MainResumeValue = V;
+          break;
+        }
+      }
     }
+  }
+  if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
+    [[maybe_unused]] Value *StartV =
+        EpiRedResult->getOperand(0)->getLiveInIRValue();
+    auto *Cmp = cast<ICmpInst>(MainResumeValue);
+    assert(Cmp->getPredicate() == CmpInst::ICMP_NE &&
+           "AnyOf expected to start with ICMP_NE");
+    assert(Cmp->getOperand(1) == StartV &&
+           "AnyOf expected to start by comparing main resume value to original "
+           "start value");
+    MainResumeValue = Cmp->getOperand(0);
+  } else if (IsFindIV) {
+    MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
 
