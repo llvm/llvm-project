@@ -80,6 +80,24 @@ define double @f_pow() {
   ret double %res
 }
 
+declare float @powf(float, float) #0
+define float @f_powf_inf_nofold() {
+; CHECK-LABEL: @f_powf_inf_nofold(
+; CHECK-NEXT:    ret float 0x7FF0000000000000
+;
+  %res = tail call fast float @powf(float 10., float 100.)
+  ret float %res
+}
+
+define double @f_pow_inf_nofold() {
+; CHECK-LABEL: @f_pow_inf_nofold(
+; CHECK-NEXT:    [[RES:%.*]] = tail call fast double @pow(double 1.000000e+01, double 1.000000e+03)
+; CHECK-NEXT:    ret double [[RES]]
+;
+  %res = tail call fast double @pow(double 10., double 1000.0)
+  ret double %res
+}
+
 declare float @llvm.pow.f32(float, float)
 define float @i_powf() {
 ; CHECK-LABEL: @i_powf(
