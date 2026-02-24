@@ -169,6 +169,19 @@ public:
     Debug = 2 ///< Emit .debug_frame
   };
 
+  // Callbacks to get analyses to allow portability between the new and
+  // legacy pass managers.
+  // TODO(boomanaiden154): Remove these and use a more native solution once
+  // we drop support for the legacy PM.
+  std::function<MachineModuleInfo *()> GetMMI;
+  std::function<MachineOptimizationRemarkEmitter *(MachineFunction &)> GetORE;
+  std::function<MachineDominatorTree *(MachineFunction &)> GetMDT;
+  std::function<MachineLoopInfo *(MachineFunction &)> GetMLI;
+  std::function<void(Module &)> BeginGCAssembly;
+  std::function<void(Module &)> FinishGCAssembly;
+  std::function<void(Module &)> EmitStackMaps;
+  std::function<void()> AssertDebugEHFinalized;
+
 private:
   MCSymbol *CurrentFnEnd = nullptr;
 
@@ -581,9 +594,6 @@ public:
   /// eligible for PC relative GOT entry conversion, in such cases we need to
   /// emit the proxies we previously omitted in EmitGlobalVariable.
   void emitGlobalGOTEquivs();
-
-  /// Emit the stack maps.
-  void emitStackMaps();
 
   //===------------------------------------------------------------------===//
   // Overridable Hooks
