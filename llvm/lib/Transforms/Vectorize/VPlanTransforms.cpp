@@ -5846,18 +5846,16 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
     if (Mul->hasOneUse() &&
         (Ext->getOpcode() == MulLHS->getOpcode() || MulLHS == MulRHS) &&
         MulLHS->getOpcode() == MulRHS->getOpcode()) {
-      VPBuilder Builder(Ext);
-      MulLHS = Builder.createWidenCast(
-          MulLHS->getOpcode(), MulLHS->getOperand(0), Ext->getResultType());
-      MulRHS = IsSame ? MulLHS
-                      : Builder.createWidenCast(MulRHS->getOpcode(),
-                                                MulRHS->getOperand(0),
-                                                Ext->getResultType());
-      auto *BinOpRecipe =
-          new VPWidenRecipe(Instruction::Mul, {MulLHS, MulRHS}, VPIRFlags(*Mul),
-                            VPIRMetadata(*Mul), Mul->getDebugLoc());
-      Builder.insert(BinOpRecipe);
-      BinOp = BinOpRecipe;
+      VPBuilder Builder(Mul);
+      Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
+                                                 MulLHS->getOperand(0),
+                                                 Ext->getResultType()));
+      Mul->setOperand(1, IsSame
+                             ? Mul->getOperand(0)
+                             : Builder.createWidenCast(MulRHS->getOpcode(),
+                                                       MulRHS->getOperand(0),
+                                                       Ext->getResultType()));
+      BinOp = Mul;
     }
   }
 
