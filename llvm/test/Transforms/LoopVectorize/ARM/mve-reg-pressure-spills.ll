@@ -12,10 +12,10 @@ define void @spills_not_profitable(ptr %in1, ptr %in2, ptr %out, i32 %n) {
 ; CHECK-NOPRESSURE: Cost for VF 2: 394 (Estimated cost per lane: 197.0)
 ; CHECK-NOPRESSURE: Cost for VF 4: 338 (Estimated cost per lane: 84.5)
 ; CHECK-NOPRESSURE: LV: Selecting VF: 4
-; CHECK-PRESSURE: LV(REG): Cost of 300 from 25 spills of Generic::VectorRC
-; CHECK-PRESSURE-NEXT: Cost for VF 2: 694 (Estimated cost per lane: 347.0)
-; CHECK-PRESSURE: LV(REG): Cost of 100 from 25 spills of Generic::VectorRC
-; CHECK-PRESSURE-NEXT: Cost for VF 4: 438 (Estimated cost per lane: 109.5)
+; CHECK-PRESSURE: LV(REG): Cost of 50 from 25 spills of Generic::VectorRC
+; CHECK-PRESSURE-NEXT: Cost for VF 2: 444 (Estimated cost per lane: 222.0)
+; CHECK-PRESSURE: LV(REG): Cost of 50 from 25 spills of Generic::VectorRC
+; CHECK-PRESSURE-NEXT: Cost for VF 4: 388 (Estimated cost per lane: 97.0)
 ; CHECK-PRESSURE: LV: Selecting VF: 1
 entry:
   %cmp = icmp eq i32 %n, 0
@@ -172,10 +172,10 @@ define void @spills_profitable(ptr %in1, ptr %in2, ptr %out, i32 %n, i32 %m) {
 ; CHECK: LV: Scalar loop costs: 54
 ; CHECK-NOPRESSURE: Cost for VF 2: 1530 (Estimated cost per lane: 765.0)
 ; CHECK-NOPRESSURE: Cost for VF 4: 38 (Estimated cost per lane: 9.5)
-; CHECK-PRESSURE: LV(REG): Cost of 8 from 2 spills of Generic::ScalarRC
-; CHECK-PRESSURE-NEXT: Cost for VF 2: 1538 (Estimated cost per lane: 769.0)
-; CHECK-PRESSURE: LV(REG): Cost of 24 from 3 spills of Generic::VectorRC
-; CHECK-PRESSURE-NEXT: Cost for VF 4: 62 (Estimated cost per lane: 15.5)
+; CHECK-PRESSURE: LV(REG): Cost of 4 from 2 spills of Generic::ScalarRC
+; CHECK-PRESSURE-NEXT: Cost for VF 2: 1534 (Estimated cost per lane: 767.0)
+; CHECK-PRESSURE: LV(REG): Cost of 6 from 3 spills of Generic::VectorRC
+; CHECK-PRESSURE-NEXT: Cost for VF 4: 44 (Estimated cost per lane: 11.0)
 ; CHECK: LV: Selecting VF: 4
 entry:
   %cmp = icmp eq i32 %n, 0

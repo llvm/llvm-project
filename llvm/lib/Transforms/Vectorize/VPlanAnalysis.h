@@ -81,8 +81,6 @@ struct VPRegisterUsage {
   /// Holds the maximum number of concurrent live intervals in the loop.
   /// The key is ClassID of target-provided register class.
   SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
-  /// Holds the largest type used in each register class.
-  SmallMapVector<unsigned, Type *, 4> LargestType;
 
   /// Calculate the estimated cost of any spills due to using more registers
   /// than the number available for the target. If non-zero, OverrideMaxNumRegs
