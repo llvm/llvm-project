@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=optin.taint,core,security.ArrayBound -analyzer-config \
 // RUN: assume-controlled-environment=false -analyzer-output=text -verify %s
+// no warning expected
 
 // This file is for testing enhanced diagnostics produced by the
 // GenericTaintChecker
@@ -25,9 +26,6 @@ int main(int argc, char *argv[]) { // expected-note {{Taint originated in 'argv'
   return 0;
 }
 
-// Arguments of main as a class member
-// are note taint sources.
-// no warning expected
 // A function declared inside a class or namespace may be named "main" but it
 // cannot be _the_ `main` function that is executed at startup. Validate that
 // in a case like this the arguments are not marked as tainted and no warning

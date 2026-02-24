@@ -1,18 +1,17 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=optin.taint,core,security.ArrayBound -analyzer-config \
 // RUN: assume-controlled-environment=false -analyzer-output=text -verify %s
 
-// This file is for testing enhanced
-// diagnostics produced by the GenericTaintChecker
-
 typedef __typeof(sizeof(int)) size_t;
 int system(const char *command);
 size_t strlen(const char *str);
 char *strncat(char *destination, const char *source, size_t num);
 
-// invalid main function
-// expected-no-diagnostics
+// When main is declared with incorrect signature,
+// the analyzer won't crash and we get a compilation error.
 
-int main(void) {
+int main(char* argv[], int argc) {
+  //expected-error@-1 {{first parameter of 'main' (argument count) must be of type 'int'}}
+  //expected-error@-2 {{second parameter of 'main' (argument array) must be of type 'char **'}}
   char cmd[2048] = "/bin/cat ";
   char filename[1024];
   strncat(cmd, filename, sizeof(cmd) - strlen(cmd) - 1);

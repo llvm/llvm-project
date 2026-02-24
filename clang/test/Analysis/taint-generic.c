@@ -1407,4 +1407,3 @@ int main(int argc, char * argv[]) {
    system(cmd);// expected-warning {{Untrusted data is passed to a system call}}
    return 0;
  }
- 

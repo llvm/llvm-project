@@ -833,10 +833,7 @@ bool isPointerToCharArray(const QualType &QT) {
   if (!QT->isPointerType())
     return false;
   QualType PointeeType = QT->getPointeeType();
-  if (!PointeeType->isPointerType() ||
-      !PointeeType->getPointeeType()->isCharType())
-    return false;
-  return true;
+  return PointeeType->isPointerType() && PointeeType->getPointeeType()->isCharType();
 }
 
 // The incoming parameters of the main function get tainted
@@ -893,10 +890,10 @@ void GenericTaintChecker::checkBeginFunction(CheckerContext &C) const {
   const NoteTag *OriginatingTag =
       C.getNoteTag([ArgvSVal, ArgcSVal, ArgcName, ArgvName, EnvpSVal,
                     EnvpName](PathSensitiveBugReport &BR) -> std::string {
-        // We give diagnostics only for taint related reports
         if ((!BR.isInteresting(ArgcSVal) && !BR.isInteresting(ArgvSVal) &&
-             !BR.isInteresting(EnvpSVal)) ||
-            BR.getBugType().getCategory() != categories::TaintedData)
+             !BR.isInteresting(EnvpSVal)))
+          return "";
+        if (BR.getBugType().getCategory() != categories::TaintedData)
           return "";
         std::string Message = "";
         if (BR.isInteresting(ArgvSVal))
