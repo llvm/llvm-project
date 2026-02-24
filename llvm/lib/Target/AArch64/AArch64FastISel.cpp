@@ -537,9 +537,13 @@ Register AArch64FastISel::fastMaterializeConstant(const Constant *C) {
   MVT VT = CEVT.getSimpleVT();
   // arm64_32 has 32-bit pointers held in 64-bit registers. Because of that,
   // 'null' pointers need to have a somewhat special treatment.
-  if (isa<ConstantPointerNull>(C)) {
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(C)) {
     assert(VT == MVT::i64 && "Expected 64-bit pointers");
-    return materializeInt(ConstantInt::get(Type::getInt64Ty(*Context), 0), VT);
+    unsigned AS = CPN->getType()->getAddressSpace();
+    return materializeInt(
+        ConstantInt::get(Type::getInt64Ty(*Context),
+                         DL.getNullPtrValue(AS).getZExtValue()),
+        VT);
   }
 
   if (const auto *CI = dyn_cast<ConstantInt>(C))

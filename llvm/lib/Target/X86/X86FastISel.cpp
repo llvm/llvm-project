@@ -654,9 +654,12 @@ bool X86FastISel::X86FastEmitStore(EVT VT, Register ValReg, X86AddressMode &AM,
 bool X86FastISel::X86FastEmitStore(EVT VT, const Value *Val,
                                    X86AddressMode &AM,
                                    MachineMemOperand *MMO, bool Aligned) {
-  // Handle 'null' like i32/i64 0.
-  if (isa<ConstantPointerNull>(Val))
-    Val = Constant::getNullValue(DL.getIntPtrType(Val->getContext()));
+  // Handle 'null' like i32/i64 null pointer value.
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(Val)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    Val = ConstantInt::get(DL.getIntPtrType(Val->getContext()),
+                           DL.getNullPtrValue(AS));
+  }
 
   // If this is a store of a simple constant, fold the constant into the store.
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
@@ -1405,9 +1408,12 @@ bool X86FastISel::X86FastEmitCompare(const Value *Op0, const Value *Op1, EVT VT,
   if (!Op0Reg)
     return false;
 
-  // Handle 'null' like i32/i64 0.
-  if (isa<ConstantPointerNull>(Op1))
-    Op1 = Constant::getNullValue(DL.getIntPtrType(Op0->getContext()));
+  // Handle 'null' like i32/i64 null pointer value.
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(Op1)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    Op1 = ConstantInt::get(DL.getIntPtrType(Op0->getContext()),
+                           DL.getNullPtrValue(AS));
+  }
 
   // We have two options: compare with register or immediate.  If the RHS of
   // the compare is an immediate that we can fold into this compare, use

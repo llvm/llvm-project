@@ -350,8 +350,9 @@ static bool runIPSCCP(
     GV->getDebugInfo(GVEs);
     if (GVEs.size() == 1) {
       DIBuilder DIB(M);
-      if (DIExpression *InitExpr = getExpressionForConstant(
-              DIB, *GV->getInitializer(), *GV->getValueType()))
+      if (DIExpression *InitExpr =
+              getExpressionForConstant(DIB, *GV->getInitializer(),
+                                       *GV->getValueType(), M.getDataLayout()))
         GVEs[0]->replaceOperandWith(1, InitExpr);
     }
 

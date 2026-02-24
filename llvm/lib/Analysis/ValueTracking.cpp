@@ -2472,8 +2472,14 @@ void computeKnownBits(const Value *V, const APInt &DemandedElts,
     Known = KnownBits::makeConstant(*C);
     return;
   }
-  // Null and aggregate-zero are all-zeros.
-  if (isa<ConstantPointerNull>(V) || isa<ConstantAggregateZero>(V)) {
+  // Null pointer: known bits come from the null pointer value for the AS.
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(V)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    Known = KnownBits::makeConstant(Q.DL.getNullPtrValue(AS));
+    return;
+  }
+  // Aggregate-zero is all-zeros.
+  if (isa<ConstantAggregateZero>(V)) {
     Known.setAllZero();
     return;
   }

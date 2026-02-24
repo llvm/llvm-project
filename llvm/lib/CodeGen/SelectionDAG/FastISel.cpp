@@ -284,12 +284,14 @@ Register FastISel::materializeConstant(const Value *V, MVT VT) {
       Reg = fastEmit_i(VT, VT, ISD::Constant, CI->getZExtValue());
   } else if (isa<AllocaInst>(V))
     Reg = fastMaterializeAlloca(cast<AllocaInst>(V));
-  else if (isa<ConstantPointerNull>(V))
-    // Translate this as an integer zero so that it can be
-    // local-CSE'd with actual integer zeros.
-    Reg =
-        getRegForValue(Constant::getNullValue(DL.getIntPtrType(V->getType())));
-  else if (const auto *CF = dyn_cast<ConstantFP>(V)) {
+  else if (auto *CPN = dyn_cast<ConstantPointerNull>(V)) {
+    // Translate this as an integer constant so that it can be
+    // local-CSE'd with actual integer constants.
+    unsigned AS = CPN->getType()->getAddressSpace();
+    const APInt &NullVal = DL.getNullPtrValue(AS);
+    Reg = getRegForValue(
+        ConstantInt::get(DL.getIntPtrType(V->getType()), NullVal));
+  } else if (const auto *CF = dyn_cast<ConstantFP>(V)) {
     if (CF->isNullValue())
       Reg = fastMaterializeFloatZero(CF);
     else
@@ -618,9 +620,11 @@ bool FastISel::addStackMapLiveVars(SmallVectorImpl<MachineOperand> &Ops,
     if (const auto *C = dyn_cast<ConstantInt>(Val)) {
       Ops.push_back(MachineOperand::CreateImm(StackMaps::ConstantOp));
       Ops.push_back(MachineOperand::CreateImm(C->getSExtValue()));
-    } else if (isa<ConstantPointerNull>(Val)) {
+    } else if (auto *CPN = dyn_cast<ConstantPointerNull>(Val)) {
+      unsigned AS = CPN->getType()->getAddressSpace();
       Ops.push_back(MachineOperand::CreateImm(StackMaps::ConstantOp));
-      Ops.push_back(MachineOperand::CreateImm(0));
+      Ops.push_back(
+          MachineOperand::CreateImm(DL.getNullPtrValue(AS).getZExtValue()));
     } else if (auto *AI = dyn_cast<AllocaInst>(Val)) {
       // Values coming from a stack location also require a special encoding,
       // but that is added later on by the target specific frame index
@@ -829,9 +833,11 @@ bool FastISel::selectPatchpoint(const CallInst *I) {
       llvm_unreachable("Unsupported ConstantExpr.");
   } else if (const auto *GV = dyn_cast<GlobalValue>(Callee)) {
     Ops.push_back(MachineOperand::CreateGA(GV, 0));
-  } else if (isa<ConstantPointerNull>(Callee))
-    Ops.push_back(MachineOperand::CreateImm(0));
-  else
+  } else if (auto *CPN = dyn_cast<ConstantPointerNull>(Callee)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    Ops.push_back(
+        MachineOperand::CreateImm(DL.getNullPtrValue(AS).getZExtValue()));
+  } else
     llvm_unreachable("Unsupported callee address.");
 
   // Adjust <numArgs> to account for any arguments that have been passed on

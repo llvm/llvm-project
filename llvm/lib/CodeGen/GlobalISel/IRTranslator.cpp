@@ -3814,9 +3814,10 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
     EntryBuilder->buildFConstant(Reg, *CF);
   } else if (isa<UndefValue>(C))
     EntryBuilder->buildUndef(Reg);
-  else if (isa<ConstantPointerNull>(C))
-    EntryBuilder->buildConstant(Reg, 0);
-  else if (auto GV = dyn_cast<GlobalValue>(&C))
+  else if (auto *CPN = dyn_cast<ConstantPointerNull>(&C)) {
+    unsigned AS = CPN->getType()->getAddressSpace();
+    EntryBuilder->buildConstant(Reg, DL->getNullPtrValue(AS).getZExtValue());
+  } else if (auto GV = dyn_cast<GlobalValue>(&C))
     EntryBuilder->buildGlobalValue(Reg, GV);
   else if (auto CPA = dyn_cast<ConstantPtrAuth>(&C)) {
     Register Addr = getOrCreateVReg(*CPA->getPointer());

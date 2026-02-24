@@ -1875,8 +1875,11 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
                          getValue(CPA->getDiscriminator()));
     }
 
-    if (isa<ConstantPointerNull>(C))
-      return DAG.getConstant(0, getCurSDLoc(), VT);
+    if (auto *CPN = dyn_cast<ConstantPointerNull>(C)) {
+      unsigned AS = CPN->getType()->getAddressSpace();
+      const APInt &NullVal = DAG.getDataLayout().getNullPtrValue(AS);
+      return DAG.getConstant(NullVal, getCurSDLoc(), VT);
+    }
 
     if (match(C, m_VScale()))
       return DAG.getVScale(getCurSDLoc(), VT, APInt(VT.getSizeInBits(), 1));
@@ -3628,7 +3631,8 @@ void SelectionDAGBuilder::visitLandingPad(const LandingPadInst &LP) {
                            TLI.getPointerTy(DAG.getDataLayout())),
         dl, ValueVTs[0]);
   } else {
-    Ops[0] = DAG.getConstant(0, dl, TLI.getPointerTy(DAG.getDataLayout()));
+    Ops[0] = DAG.getConstant(DAG.getDataLayout().getNullPtrValue(0), dl,
+                             TLI.getPointerTy(DAG.getDataLayout()));
   }
   Ops[1] = DAG.getZExtOrTrunc(
       DAG.getCopyFromReg(DAG.getEntryNode(), dl,

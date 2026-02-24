@@ -545,9 +545,11 @@ static ConstantInt *getConstantInt(Value *V, const DataLayout &DL) {
   // ConstantInt if possible.
   IntegerType *IntPtrTy = cast<IntegerType>(DL.getIntPtrType(V->getType()));
 
-  // Null pointer means 0, see SelectionDAGBuilder::getValue(const Value*).
-  if (isa<ConstantPointerNull>(V))
-    return ConstantInt::get(IntPtrTy, 0);
+  // Null pointer value comes from DataLayout.
+  if (auto *CPN = dyn_cast<ConstantPointerNull>(V)) {
+    return cast<ConstantInt>(ConstantInt::get(
+        IntPtrTy, DL.getNullPtrValue(CPN->getType()->getAddressSpace())));
+  }
 
   // IntToPtr const int, we can look through this if the semantics of
   // inttoptr for this address space are a simple (truncating) bitcast.
