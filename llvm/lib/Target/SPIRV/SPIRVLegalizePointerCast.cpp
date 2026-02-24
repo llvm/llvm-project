@@ -67,9 +67,35 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     GR->addAssignPtrTypeInstr(Arg, AssignCI);
   }
 
+  static FixedVectorType *makeVectorFromTotalBits(Type *ElemTy,
+                                                  TypeSize TotalBits) {
+    unsigned ElemBits = ElemTy->getScalarSizeInBits();
+    assert(ElemBits && TotalBits % ElemBits == 0 &&
+           "TotalBits must be divisible by element bit size");
+    return FixedVectorType::get(ElemTy, TotalBits / ElemBits);
+  }
+
+  Value *resizeVectorBitsWithShuffle(IRBuilder<> &B, Value *V,
+                                     FixedVectorType *DstTy) {
+    auto *SrcTy = cast<FixedVectorType>(V->getType());
+    assert(SrcTy->getElementType() == DstTy->getElementType() &&
+           "shuffle resize expects identical element types");
+
+    const unsigned NumNeeded = DstTy->getNumElements();
+    const unsigned NumSource = SrcTy->getNumElements();
+
+    SmallVector<int> Mask(NumNeeded);
+    for (unsigned I = 0; I < NumNeeded; ++I)
+      Mask[I] = (I < NumSource) ? static_cast<int>(I) : -1;
+
+    Value *Resized = B.CreateShuffleVector(V, V, Mask);
+    buildAssignType(B, DstTy, Resized);
+    return Resized;
+  }
+
   // Loads parts of the vector of type |SourceType| from the pointer |Source|
   // and create a new vector of type |TargetType|. |TargetType| must be a vector
-  // type, and element types of |TargetType| and |SourceType| must match.
+  // type.
   // Returns the loaded value.
   Value *loadVectorFromVector(IRBuilder<> &B, FixedVectorType *SourceType,
                               FixedVectorType *TargetType, Value *Source) {
@@ -78,15 +104,35 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     Value *AssignValue = NewLoad;
     if (TargetType->getElementType() != SourceType->getElementType()) {
       const DataLayout &DL = B.GetInsertBlock()->getModule()->getDataLayout();
-      [[maybe_unused]] TypeSize TargetTypeSize =
-          DL.getTypeSizeInBits(TargetType);
-      [[maybe_unused]] TypeSize SourceTypeSize =
-          DL.getTypeSizeInBits(SourceType);
-      assert(TargetTypeSize == SourceTypeSize);
-      AssignValue = B.CreateIntrinsic(Intrinsic::spv_bitcast,
-                                      {TargetType, SourceType}, {NewLoad});
-      buildAssignType(B, TargetType, AssignValue);
-      return AssignValue;
+      TypeSize TargetTypeSize = DL.getTypeSizeInBits(TargetType);
+      TypeSize SourceTypeSize = DL.getTypeSizeInBits(SourceType);
+
+      Value *BitcastSrcVal = NewLoad;
+      FixedVectorType *BitcastSrcTy =
+          cast<FixedVectorType>(BitcastSrcVal->getType());
+      FixedVectorType *BitcastDstTy = TargetType;
+
+      if (TargetTypeSize != SourceTypeSize) {
+        unsigned TargetElemBits =
+            TargetType->getElementType()->getScalarSizeInBits();
+        if (SourceTypeSize % TargetElemBits == 0) {
+          // No Resize needed. Same total bits as source, but use target element
+          // type.
+          BitcastDstTy = makeVectorFromTotalBits(TargetType->getElementType(),
+                                                 SourceTypeSize);
+        } else {
+          // Resize source to target total bitwidth using source element type.
+          BitcastSrcTy = makeVectorFromTotalBits(SourceType->getElementType(),
+                                                 TargetTypeSize);
+          BitcastSrcVal = resizeVectorBitsWithShuffle(B, NewLoad, BitcastSrcTy);
+        }
+      }
+      AssignValue =
+          B.CreateIntrinsic(Intrinsic::spv_bitcast,
+                            {BitcastDstTy, BitcastSrcTy}, {BitcastSrcVal});
+      buildAssignType(B, BitcastDstTy, AssignValue);
+      if (BitcastDstTy == TargetType)
+        return AssignValue;
     }
 
     assert(TargetType->getNumElements() < SourceType->getNumElements());

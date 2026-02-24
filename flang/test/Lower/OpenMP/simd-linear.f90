@@ -16,9 +16,9 @@
 subroutine simple_linear
     implicit none
     integer :: x, y, i
-    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
+    !CHECK: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, %[[I]]#0 = %{{.*}} : !fir.ref<i32>) {{.*}}
+    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32, %[[I]]#0 : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
     !$omp simd linear(x)
     do i = 1, 10
     end do
@@ -39,9 +39,9 @@ subroutine linear_step
     implicit none
     integer :: x, y, i
     !CHECK: %[[const:.*]] = arith.constant 4 : i32
-    !CHECK: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>) {{.*}}
+    !CHECK: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[const]] : !fir.ref<i32>, %[[I]]#0 = %{{.*}} : !fir.ref<i32>) {{.*}}
+    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[const]] : i32, %[[I]]#0 : !fir.ref<i32> = %{{.*}} : i32) {{.*}}
     !$omp simd linear(x:4)
     do i = 1, 10
     end do
@@ -71,12 +71,37 @@ subroutine linear_expr
     !IMPLICIT: %[[const:.*]] = arith.constant 4 : i32
     !IMPLICIT: %[[LINEAR_EXPR:.*]] = arith.addi %[[LOAD_A]], %[[const]] : i32
 
-    !CHECK: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>) {{.*}}
+    !CHECK: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32) {{.*}}
 
-    !IMPLICIT: omp.simd linear(%[[X]]#0 = %[[LINEAR_EXPR]] : !fir.ref<i32>, %[[I]]#0 = {{.*}} : !fir.ref<i32>) {{.*}}
+    !IMPLICIT: omp.simd linear(%[[X]]#0 : !fir.ref<i32> = %[[LINEAR_EXPR]] : i32, %[[I]]#0 : !fir.ref<i32> = {{.*}} : i32) {{.*}}
     !$omp simd linear(x:a+4)
     do i = 1, 10
     end do
     !CHECK: } {linear_var_types = [i32]}
     !IMPLICIT: } {linear_var_types = [i32, i32]}
+end subroutine
+
+
+subroutine non_i32_type
+!CHECK: %[[I_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!CHECK: %[[J_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEj"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!CHECK: %[[CONST:.*]] = arith.constant 1 : i64
+
+
+!IMPLICIT: %[[I_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+!IMPLICIT: %[[J_DECLARE:.*]]:2 = hlfir.declare {{.*}} {uniq_name = "_QFnon_i32_typeEj"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
+!IMPLICIT: %[[CONST:.*]] = arith.constant 1 : i64
+!IMPLICIT: {{.*}} = arith.constant 1 : i32
+!IMPLICIT: {{.*}} = arith.constant 10 : i32
+!IMPLICIT: %[[STEP_VAR_CONST:.*]] = arith.constant 1 : i32
+    integer(kind=8)::j=0
+
+    !CHECK: omp.simd linear(%[[J_DECLARE]]#0 : !fir.ref<i64> = %[[CONST]] : i64) {{.*}}
+    !IMPLICIT: omp.simd linear(%[[J_DECLARE]]#0 : !fir.ref<i64> = %[[CONST]] : i64, %[[I_DECLARE]]#0 : !fir.ref<i32> = %[[STEP_VAR_CONST]] : i32)
+    !$omp simd linear(j:1_8)
+    do i = 1,10
+    end do 
+    !$omp end simd
+    !CHECK: } {linear_var_types = [i64]}
+    !IMPLICIT: } {linear_var_types = [i64, i32]}
 end subroutine

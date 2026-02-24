@@ -364,7 +364,7 @@ llvm.func @wsloop_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: call void @__kmpc_barrier(ptr {{.*}}, i32 %[[THREAD_ID]])
 // CHECK: br label %omp_loop.after
 
-  omp.wsloop linear(%x = %step : !llvm.ptr) {
+  omp.wsloop linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -759,7 +759,7 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i32 %omp_loop.iv, {{.*}}
 // CHECK: %[[ADD:.*]] = add i32 %[[LOAD]], %[[MUL]]
 // CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4, !llvm.access.group !1
-  omp.simd linear(%x = %step : !llvm.ptr) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -791,7 +791,7 @@ llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
 // CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
 // CHECK: store i64 %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x = %step : !llvm.ptr) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
@@ -823,7 +823,7 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK-NEXT: %[[MUL_FP:.*]] = sitofp i32 %[[MUL_INT]] to double
 // CHECK-NEXT: %[[ADD:.*]] = fadd double %[[LOAD]], %[[MUL_FP]]
 // CHECK-NEXT: store double %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
-  omp.simd linear(%x = %step : !llvm.ptr) {
+  omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
       omp.yield
     }
