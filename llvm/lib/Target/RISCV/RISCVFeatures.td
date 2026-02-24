@@ -877,12 +877,12 @@ def FeatureStdExtZvksg
 
 // Vector quad widening dot product
 
-def FeatureStdExtZvqdotq
-    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
+def FeatureStdExtZvdot4a8i
+    : RISCVExperimentalExtension<0, 1, "Vector 4-element Dot Product of packed 8-bit Integers",
                                  [FeatureStdExtZve32x]>;
-def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
-                       AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
-                           "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
+def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
+                         AssemblerPredicate<(all_of FeatureStdExtZvdot4a8i),
+                         "'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)">;
 
 // Vector instruction predicates
 

@@ -20893,7 +20893,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   QualType DeclTy = VD->getType();
 
   if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
+    auto &InterpCtx = Ctx.getInterpContext();
     if (!InterpCtx.evaluateAsInitializer(Info, VD, this, Value))
       return false;
 

@@ -851,9 +851,9 @@ CXXABI *ASTContext::createCXXABI(const TargetInfo &T) {
   llvm_unreachable("Invalid CXXABI type!");
 }
 
-interp::Context &ASTContext::getInterpContext() {
+interp::Context &ASTContext::getInterpContext() const {
   if (!InterpContext) {
-    InterpContext.reset(new interp::Context(*this));
+    InterpContext.reset(new interp::Context(const_cast<ASTContext &>(*this)));
   }
   return *InterpContext;
 }

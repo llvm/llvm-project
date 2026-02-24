@@ -1379,10 +1379,10 @@ Experimental extensions
     zicfiss              1.0
     zvabd                0.7
     zvbc32e              0.7
+    zvdot4a8i            0.1
     zvfbfa               0.1
     zvfofp8min           0.2
     zvkgs                0.7
-    zvqdotq              0.0
     smpmpmt              0.6
     svukte               0.3
     xrivosvisni          0.1
