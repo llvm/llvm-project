@@ -72,8 +72,7 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
 
 AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
                                          const MemoryLocation &LocB,
-                                         AAQueryInfo &AAQI,
-                                         const Instruction *) {
+                                         AAQueryInfo &, const Instruction *) {
   return alias(LocA, LocB);
 }
 

@@ -40,8 +40,8 @@ public:
   LLVM_ABI static AliasResult alias(const MemoryLocation &LocA,
                                     const MemoryLocation &LocB);
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
-                             const MemoryLocation &LocB, AAQueryInfo &AAQI,
-                             const Instruction *CtxI);
+                             const MemoryLocation &LocB, AAQueryInfo &,
+                             const Instruction *);
   LLVM_ABI ModRefInfo getModRefInfo(const CallBase *Call,
                                     const MemoryLocation &Loc,
                                     AAQueryInfo &AAQI);
