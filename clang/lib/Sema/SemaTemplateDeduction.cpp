@@ -6501,6 +6501,8 @@ bool Sema::isTemplateTemplateParameterAtLeastAsSpecializedAs(
   if (Inst.isInvalid())
     return false;
 
+  LocalInstantiationScope Scope(*this);
+
   //   Given an invented class template X with the template parameter list of
   //   A (including default arguments):
   //    - Each function template has a single function parameter whose type is
