@@ -16,7 +16,9 @@
 #include <compare>
 #include <string_view>
 #include <text_encoding>
-#include <utility>
+#include <type_traits>
+
+#include "test_macros.h"
 
 constexpr bool test() {
   // Test iterator operators.
@@ -26,12 +28,14 @@ constexpr bool test() {
   auto j = te.aliases().begin();
   auto k = te.aliases().end();
 
-  static_assert(std::three_way_comparable<decltype(i), std::strong_ordering>);
+  static_assert(std::three_way_comparable<decltype(i)>);
 
   {
     assert(i == j);
     assert(i != k);
-    assert((i <=> j) == std::strong_ordering::equal);
+    assert(i <= j);
+    assert(i >= j);
+    assert(i <=> j == std::strong_ordering::equal);
     assert(std::string_view(*i) == std::string_view(*j));
   }
   {
@@ -41,7 +45,10 @@ constexpr bool test() {
   {
     i++;
     assert(i > j);
-    assert((i <=> j) == std::strong_ordering::greater);
+    assert(i >= j);
+    assert(!(i <= j));
+    assert(i <=> j == std::strong_ordering::greater);
+    assert(i - j == 1);
     assert(std::string_view(*i) != std::string_view(*j));
   }
   {
@@ -90,6 +97,50 @@ constexpr bool test() {
     assert(i == j);
     assert(i != tempi && (tempi - i) == 2);
     assert(j != tempj && (tempj - j) == 3);
+  }
+
+  { // noexcept
+    ASSERT_NOEXCEPT(*i);
+    ASSERT_NOEXCEPT(i[0]);
+    ASSERT_NOEXCEPT(i.operator->());
+    ASSERT_NOEXCEPT(i + 1);
+    ASSERT_NOEXCEPT(1 + i);
+    ASSERT_NOEXCEPT(i - 1);
+    ASSERT_NOEXCEPT(i - j);
+    ASSERT_NOEXCEPT(i++);
+    ASSERT_NOEXCEPT(++i);
+    ASSERT_NOEXCEPT(i--);
+    ASSERT_NOEXCEPT(--i);
+    ASSERT_NOEXCEPT(i += 2);
+    ASSERT_NOEXCEPT(i -= 2);
+    ASSERT_NOEXCEPT(i == j);
+    ASSERT_NOEXCEPT(i != k);
+    ASSERT_NOEXCEPT(i <=> j);
+    ASSERT_NOEXCEPT(i > j);
+    ASSERT_NOEXCEPT(i < j);
+    ASSERT_NOEXCEPT(i >= j);
+    ASSERT_NOEXCEPT(i <= j);
+  }
+  { // iterator operator return types
+    ASSERT_SAME_TYPE(const char*, decltype(*i));
+    ASSERT_SAME_TYPE(const char*, decltype(i[0]));
+    ASSERT_SAME_TYPE(const char* const*, decltype(i.operator->()));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i + 1));
+    ASSERT_SAME_TYPE(decltype(i), decltype(1 + i));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i - 1));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(++i));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i++));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(--i));
+    ASSERT_SAME_TYPE(decltype(i), decltype(i--));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(i += 1));
+    ASSERT_SAME_TYPE(std::add_lvalue_reference_t<decltype(i)>, decltype(i -= 1));
+    ASSERT_SAME_TYPE(bool, decltype(i == j));
+    ASSERT_SAME_TYPE(bool, decltype(i != j));
+    ASSERT_SAME_TYPE(bool, decltype(i > j));
+    ASSERT_SAME_TYPE(bool, decltype(i < j));
+    ASSERT_SAME_TYPE(bool, decltype(i >= j));
+    ASSERT_SAME_TYPE(bool, decltype(i <= j));
+    ASSERT_SAME_TYPE(std::strong_ordering, decltype(i <=> j));
   }
 
   return true;
