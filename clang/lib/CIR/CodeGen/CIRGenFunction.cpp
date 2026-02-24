@@ -1071,10 +1071,14 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::ImplicitCastExprClass:
   case Expr::CStyleCastExprClass:
   case Expr::CXXStaticCastExprClass:
   case Expr::CXXDynamicCastExprClass:
-  case Expr::ImplicitCastExprClass:
+  case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXConstCastExprClass:
+    // TODO(cir): The above list is missing CXXFunctionalCastExprClass,
+    // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
