@@ -41,3 +41,36 @@ bool detail::PtrUseVisitorBase::adjustOffsetForGEP(GetElementPtrInst &GEPI) {
 
   return false;
 }
+
+bool detail::PtrUseVisitorBase::adjustOffsetForSGEP(StructuredGEPInst &SGEP) {
+  if (!IsOffsetKnown)
+    return false;
+
+  Type *CurrentType = SGEP.getBaseType();
+  unsigned int OffsetBitWidth = DL.getIndexTypeSizeInBits(SGEP.getType());
+  APInt TmpOffset(OffsetBitWidth, 0);
+
+  for (unsigned I = 0; I < SGEP.getNumIndices(); I++) {
+    Value *V = SGEP.getIndexOperand(I);
+    ConstantInt *CI = dyn_cast<ConstantInt>(V);
+    if (!CI) {
+      IsOffsetKnown = false;
+      return false;
+    }
+
+    if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
+      uint32_t EltTypeSize = DL.getTypeSizeInBits(AT->getElementType()) / 8;
+      TmpOffset += CI->getZExtValue() * EltTypeSize;
+      CurrentType = AT->getElementType();
+    } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
+      const auto &STL = DL.getStructLayout(ST);
+      TmpOffset += STL->getElementOffset(CI->getZExtValue());
+      CurrentType = ST->getElementType(CI->getZExtValue());
+    } else {
+      llvm_unreachable("unimplemented");
+    }
+  }
+
+  Offset += TmpOffset;
+  return true;
+}

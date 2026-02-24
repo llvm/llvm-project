@@ -175,6 +175,12 @@ protected:
   /// This routine does the heavy lifting of the pointer walk by computing
   /// offsets and looking through GEPs.
   bool adjustOffsetForGEP(GetElementPtrInst &GEPI);
+
+  /// Walk the operands of a StructuredGEP and adjust the offset as appropriate.
+  /// The returned offset can be compared against other offsets during an
+  /// analysis, but should not be stored as constant in the IR as it may not
+  /// represent the actual physical offset.
+  bool adjustOffsetForSGEP(StructuredGEPInst &SGEP);
 };
 
 } // end namespace detail
@@ -283,10 +289,24 @@ protected:
     enqueueUsers(GEPI);
   }
 
+  void visitStructuredGEPInst(StructuredGEPInst &SGEP) {
+    if (SGEP.use_empty())
+      return;
+
+    if (!adjustOffsetForSGEP(SGEP)) {
+      IsOffsetKnown = false;
+      Offset = APInt();
+    }
+    enqueueUsers(SGEP);
+  }
+
   // No-op intrinsics which we know don't escape the pointer to logic in
   // some other function.
   void visitMemIntrinsic(MemIntrinsic &I) {}
   void visitIntrinsicInst(IntrinsicInst &II) {
+    if (auto *SGEP = dyn_cast<StructuredGEPInst>(&II))
+      return visitStructuredGEPInst(*SGEP);
+
     switch (II.getIntrinsicID()) {
     default:
       return Base::visitIntrinsicInst(II);
