@@ -182,28 +182,10 @@ class TranslationUnitLoadError(Exception):
     This is raised in the case where a TranslationUnit could not be
     instantiated due to failure in the libclang library.
 
+    FIXME: Make libclang expose additional error information in this scenario.
     """
 
-    def __init__(self, message: str, err_code: Optional[ErrorCode] = None):
-        assert isinstance(err_code, ErrorCode)
-        if err_code is None:
-            err_code = ErrorCode.FAILURE
-        assert err_code != ErrorCode.SUCCESS
-
-        def get_error_info(err_code: ErrorCode) -> str:
-            if err_code == ErrorCode.FAILURE:
-                return "\nA generic error code, no further details are available."
-            if err_code == ErrorCode.CRASHED:
-                return "\nlibclang crashed while performing the requested operation."
-            if err_code == ErrorCode.INVALID_ARGUMENTS:
-                return "\nThe function detected that the arguments violate the function contract"
-            if err_code == ErrorCode.AST_READ_ERROR:
-                return "\nAn AST deserialization error has occurred."
-            return ""
-
-        err_info = get_error_info(err_code)
-
-        Exception.__init__(self, f"error {err_code.name}: {message}{err_info}")
+    pass
 
 
 class TranslationUnitSaveError(Exception):
@@ -1627,23 +1609,6 @@ class ExceptionSpecificationKind(BaseEnumeration):
     UNINSTANTIATED = 7
     UNPARSED = 8
     NOTHROW = 9
-
-
-### ErrorCode ###
-class ErrorCode(BaseEnumeration):
-    """
-    Error codes returned by libclang routines.
-
-    `ErrorCode.Success` is the only error code indicating success.  Other
-    error codes. indicate errors.
-    """
-
-    SUCCESS = 0
-    FAILURE = 1
-    CRASHED = 2
-    INVALID_ARGUMENTS = 3
-    AST_READ_ERROR = 4
-
 
 ### Cursors ###
 
@@ -3505,6 +3470,21 @@ class TranslationUnit(ClangObject):
                 unsaved_array[i].length = len(binary_contents)
         return unsaved_array
 
+    @staticmethod
+    def __get_error_info(err_code: int) -> str:
+        # FIXME: the `err_code` currently mimics the values of CXErrorCode
+        # change once we have stablised a way of handling errors.
+        err_msg = "Error parsing translation unit."
+        if err_code == 1:
+            err_msg += "\nA generic error code, no further details are available."
+        elif err_code == 2:
+            err_msg += "\nlibclang crashed while performing the requested operation."
+        elif err_code == 3:
+            err_msg += "\nThe function detected that the arguments violate the function contract"
+        elif err_code == 4:
+            err_msg += "\nAn AST deserialization error has occurred."
+        return err_msg
+
     @classmethod
     def from_source(
         cls, filename, args=None, unsaved_files=None, options=0, index=None
@@ -3564,21 +3544,19 @@ class TranslationUnit(ClangObject):
         unsaved_array = cls.process_unsaved_files(unsaved_files)
 
         tu_ptr = c_object_p()
-        err_code: ErrorCode = ErrorCode.from_id(
-            conf.lib.clang_parseTranslationUnit2(
-                index,
-                os.fspath(filename) if filename is not None else None,
-                args_array,
-                len(args),
-                unsaved_array,
-                len(unsaved_files),
-                options,
-                byref(tu_ptr),
-            )
+        err_code = conf.lib.clang_parseTranslationUnit2(
+            index,
+            os.fspath(filename) if filename is not None else None,
+            args_array,
+            len(args),
+            unsaved_array,
+            len(unsaved_files),
+            options,
+            byref(tu_ptr),
         )
-
-        if err_code != ErrorCode.SUCCESS:
-            raise TranslationUnitLoadError("Error parsing translation unit.", err_code)
+        err_message = TranslationUnit.__get_error_info(err_code)
+        if err_code != 0:
+            raise TranslationUnitLoadError(err_message)
 
         return cls(tu_ptr, index=index)
 
@@ -3601,13 +3579,13 @@ class TranslationUnit(ClangObject):
             index = Index.create()
 
         tu_ptr = c_object_p()
-        err_id = conf.lib.clang_createTranslationUnit2(
+        err_code = conf.lib.clang_createTranslationUnit2(
             index, os.fspath(filename), tu_ptr
         )
-        err_code: ErrorCode = ErrorCode.from_id(err_id)
 
-        if err_code != ErrorCode.SUCCESS:
-            raise TranslationUnitLoadError(filename, err_code)
+        err_message = TranslationUnit.__get_error_info(err_code)
+        if err_code != 0:
+            raise TranslationUnitLoadError(err_message)
 
         return cls(ptr=tu_ptr, index=index)
 
@@ -4672,7 +4650,6 @@ __all__ = [
     "CursorKind",
     "Cursor",
     "Diagnostic",
-    "ErrorCode",
     "ExceptionSpecificationKind",
     "File",
     "FixIt",

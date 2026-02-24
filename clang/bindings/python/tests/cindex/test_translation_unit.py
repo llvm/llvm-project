@@ -3,7 +3,6 @@ import os
 from clang.cindex import (
     Cursor,
     CursorKind,
-    ErrorCode,
     File,
     Index,
     SourceLocation,
@@ -342,8 +341,7 @@ int SOME_DEFINE;
         path = os.path.join(INPUTS_DIR, "non-existent.cpp")
         try:
             tu = TranslationUnit.from_source(path)
-        except TranslationUnitLoadError as err:
-            self.assertIn(ErrorCode.FAILURE.name, str(err))
+        except TranslationUnitLoadError:
             tu = None
         self.assertEqual(tu, None)
 
