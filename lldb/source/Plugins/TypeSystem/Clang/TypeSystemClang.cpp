@@ -771,6 +771,8 @@ TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
       return GetType(ast.UnsignedLongLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedInt128Ty))
       return GetType(ast.UnsignedInt128Ty);
+    if (QualTypeMatchesBitSize(bit_size, ast, ast.UnsignedInt256Ty))
+      return GetType(ast.UnsignedInt256Ty);
     break;
 
   case eEncodingSint:
@@ -786,6 +788,8 @@ TypeSystemClang::GetBuiltinTypeForEncodingAndBitSize(Encoding encoding,
       return GetType(ast.LongLongTy);
     if (QualTypeMatchesBitSize(bit_size, ast, ast.Int128Ty))
       return GetType(ast.Int128Ty);
+    if (QualTypeMatchesBitSize(bit_size, ast, ast.Int256Ty))
+      return GetType(ast.Int256Ty);
     break;
 
   case eEncodingIEEE754:
@@ -863,6 +867,12 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
       // the following two lines must be present:
       {"__int128", eBasicTypeInt128},
       {"unsigned __int128", eBasicTypeUnsignedInt128},
+
+      // "int256"
+      {"__int256_t", eBasicTypeInt256},
+      {"__uint256_t", eBasicTypeUnsignedInt256},
+      {"__int256", eBasicTypeInt256},
+      {"unsigned __int256", eBasicTypeUnsignedInt256},
 
       // "bool"
       {"bool", eBasicTypeBool},
@@ -2043,6 +2053,10 @@ TypeSystemClang::GetOpaqueCompilerType(clang::ASTContext *ast,
     return ast->Int128Ty.getAsOpaquePtr();
   case eBasicTypeUnsignedInt128:
     return ast->UnsignedInt128Ty.getAsOpaquePtr();
+  case eBasicTypeInt256:
+    return ast->Int256Ty.getAsOpaquePtr();
+  case eBasicTypeUnsignedInt256:
+    return ast->UnsignedInt256Ty.getAsOpaquePtr();
   case eBasicTypeBool:
     return ast->BoolTy.getAsOpaquePtr();
   case eBasicTypeHalf:
@@ -3812,6 +3826,7 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::ULong:
     case clang::BuiltinType::ULongLong:
     case clang::BuiltinType::UInt128:
+    case clang::BuiltinType::UInt256:
     case clang::BuiltinType::Char_S:
     case clang::BuiltinType::SChar:
     case clang::BuiltinType::WChar_S:
@@ -3820,6 +3835,7 @@ TypeSystemClang::GetTypeInfo(lldb::opaque_compiler_type_t type,
     case clang::BuiltinType::Long:
     case clang::BuiltinType::LongLong:
     case clang::BuiltinType::Int128:
+    case clang::BuiltinType::Int256:
     case clang::BuiltinType::Float:
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:
@@ -4814,6 +4830,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
     case clang::BuiltinType::Long:
     case clang::BuiltinType::LongLong:
     case clang::BuiltinType::Int128:
+    case clang::BuiltinType::Int256:
       return lldb::eEncodingSint;
 
     case clang::BuiltinType::Bool:
@@ -4828,6 +4845,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
     case clang::BuiltinType::ULong:
     case clang::BuiltinType::ULongLong:
     case clang::BuiltinType::UInt128:
+    case clang::BuiltinType::UInt256:
       return lldb::eEncodingUint;
 
     // Fixed point types. Note that they are currently ignored.
@@ -5144,6 +5162,10 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
       return lldb::eFormatUnsigned;
     case clang::BuiltinType::Int128:
       return lldb::eFormatDecimal;
+    case clang::BuiltinType::UInt256:
+      return lldb::eFormatUnsigned;
+    case clang::BuiltinType::Int256:
+      return lldb::eFormatDecimal;
     case clang::BuiltinType::Half:
     case clang::BuiltinType::Float:
     case clang::BuiltinType::Double:
@@ -5455,6 +5477,10 @@ TypeSystemClang::GetBasicTypeEnumeration(lldb::opaque_compiler_type_t type) {
         return eBasicTypeInt128;
       case clang::BuiltinType::UInt128:
         return eBasicTypeUnsignedInt128;
+      case clang::BuiltinType::Int256:
+        return eBasicTypeInt256;
+      case clang::BuiltinType::UInt256:
+        return eBasicTypeUnsignedInt256;
 
       case clang::BuiltinType::Half:
         return eBasicTypeHalf;
@@ -6020,6 +6046,7 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
     case clang::BuiltinType::ULong:
     case clang::BuiltinType::ULongLong:
     case clang::BuiltinType::UInt128:
+    case clang::BuiltinType::UInt256:
     case clang::BuiltinType::Char_S:
     case clang::BuiltinType::SChar:
     case clang::BuiltinType::WChar_S:
@@ -6028,6 +6055,7 @@ uint32_t TypeSystemClang::GetNumPointeeChildren(clang::QualType type) {
     case clang::BuiltinType::Long:
     case clang::BuiltinType::LongLong:
     case clang::BuiltinType::Int128:
+    case clang::BuiltinType::Int256:
     case clang::BuiltinType::Float:
     case clang::BuiltinType::Double:
     case clang::BuiltinType::LongDouble:

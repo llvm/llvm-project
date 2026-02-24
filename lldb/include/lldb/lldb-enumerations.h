@@ -836,6 +836,8 @@ enum BasicType {
   eBasicTypeUnsignedLongLong,
   eBasicTypeInt128,
   eBasicTypeUnsignedInt128,
+  eBasicTypeInt256,
+  eBasicTypeUnsignedInt256,
   eBasicTypeBool,
   eBasicTypeHalf,
   eBasicTypeFloat,

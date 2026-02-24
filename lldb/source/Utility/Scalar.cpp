@@ -390,6 +390,30 @@ llvm::APInt Scalar::UInt128(const llvm::APInt &fail_value) const {
   return fail_value;
 }
 
+llvm::APInt Scalar::SInt256(const llvm::APInt &fail_value) const {
+  switch (m_type) {
+  case e_void:
+    break;
+  case e_int:
+    return m_integer;
+  case e_float:
+    return ToAPInt(m_float, 256, /*is_unsigned=*/false);
+  }
+  return fail_value;
+}
+
+llvm::APInt Scalar::UInt256(const llvm::APInt &fail_value) const {
+  switch (m_type) {
+  case e_void:
+    break;
+  case e_int:
+    return m_integer;
+  case e_float:
+    return ToAPInt(m_float, 256, /*is_unsigned=*/true);
+  }
+  return fail_value;
+}
+
 float Scalar::Float(float fail_value) const {
   switch (m_type) {
   case e_void:
