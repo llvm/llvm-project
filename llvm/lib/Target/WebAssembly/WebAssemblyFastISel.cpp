@@ -206,13 +206,6 @@ public:
   }
 
   bool fastSelectInstruction(const Instruction *I) override;
-  /// This callback is invoked by the FastISel framework when it detects that
-  /// an operand (specified by OpNo) of the given MachineInstr (MI) is a
-  /// virtual register produced by a LoadInst (LI).
-  ///
-  /// The goal of this function is to determine if the operation of MI can be
-  /// folded together with the load into a single, optimized target-specific
-  /// memory instruction, and if possible, to actually perform the folding.
   bool tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                            const LoadInst *LI) override;
 
@@ -1113,7 +1106,6 @@ bool WebAssemblyFastISel::selectSExt(const Instruction *I) {
   Register In = getRegForValue(Op);
   if (In == 0)
     return false;
-
   unsigned Reg = signExtend(In, Op, From, To);
   if (Reg == 0)
     return false;
