@@ -85,11 +85,6 @@ enum OperandType {
   /// memory ordering immediate for atomic instructions.
   OPERAND_MEMORDER,
 };
-
-enum MemOrder {
-  MEM_ORDER_SEQ_CST = 0,
-  MEM_ORDER_ACQ_REL = 1,
-};
 } // end namespace WebAssembly
 
 namespace WebAssemblyII {

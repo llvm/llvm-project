@@ -375,15 +375,15 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
                                                              unsigned OpNo,
                                                              raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
-  if (Imm == WebAssembly::MEM_ORDER_SEQ_CST &&
+  if (Imm == wasm::WASM_MEM_ORDER_SEQ_CST &&
       (!STI || !STI->getFeatureBits()[WebAssembly::FeatureSharedEverything]))
     return;
 
   switch (Imm) {
-  case WebAssembly::MEM_ORDER_ACQ_REL:
+  case wasm::WASM_MEM_ORDER_ACQ_REL:
     O << " acqrel";
     break;
-  case WebAssembly::MEM_ORDER_SEQ_CST:
+  case wasm::WASM_MEM_ORDER_SEQ_CST:
     O << " seqcst";
     break;
   default:

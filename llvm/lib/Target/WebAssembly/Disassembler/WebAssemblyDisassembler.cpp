@@ -43,7 +43,6 @@ static constexpr int WebAssemblyInstructionTableSize = 256;
 namespace {
 class WebAssemblyDisassembler final : public MCDisassembler {
   std::unique_ptr<const MCInstrInfo> MCII;
-  mutable std::optional<uint8_t> DecodedOrder;
 
   DecodeStatus getInstruction(MCInst &Instr, uint64_t &Size,
                               ArrayRef<uint8_t> Bytes, uint64_t Address,
@@ -165,7 +164,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     raw_ostream &CS) const {
   CommentStream = &CS;
   Size = 0;
-  DecodedOrder.reset();
+  uint8_t DecodedOrder = 0xFF;
   int Opc = nextByte(Bytes, Size);
   if (Opc < 0)
     return MCDisassembler::Fail;
@@ -266,6 +265,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         return MCDisassembler::Fail;
       break;
     }
+    // Vector lane operands and memory ordering (not LEB encoded).
     case WebAssembly::OPERAND_VEC_I8IMM: {
       if (!parseImmediate<uint8_t>(MI, Size, Bytes))
         return MCDisassembler::Fail;
@@ -273,8 +273,8 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     }
     case WebAssembly::OPERAND_MEMORDER: {
       uint8_t Val;
-      if (DecodedOrder) {
-        Val = *DecodedOrder;
+      if (DecodedOrder != 0xFF) {
+        Val = DecodedOrder;
       } else {
         bool HasP2Align = false;
         for (uint8_t J = 0; J < OPI; J++)
@@ -286,13 +286,13 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
             return MCDisassembler::Fail;
           Val = Bytes[Size++];
         } else {
-          Val = WebAssembly::MEM_ORDER_SEQ_CST;
+          Val = wasm::WASM_MEM_ORDER_SEQ_CST;
         }
       }
-      if (Val == 0x11 || Val == 0x01)
-        MI.addOperand(MCOperand::createImm(WebAssembly::MEM_ORDER_ACQ_REL));
+      if (Val == wasm::WASM_MEM_ORDER_RMW_ACQ_REL || Val == wasm::WASM_MEM_ORDER_ACQ_REL)
+        MI.addOperand(MCOperand::createImm(wasm::WASM_MEM_ORDER_ACQ_REL));
       else
-        MI.addOperand(MCOperand::createImm(WebAssembly::MEM_ORDER_SEQ_CST));
+        MI.addOperand(MCOperand::createImm(wasm::WASM_MEM_ORDER_SEQ_CST));
       break;
     }
     case WebAssembly::OPERAND_VEC_I16IMM: {

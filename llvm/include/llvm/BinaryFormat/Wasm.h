@@ -81,6 +81,14 @@ enum : unsigned {
   WASM_TYPE_NORESULT = 0x40, // for blocks with no result values
 };
 
+// Memory ordering encodings for atomic instructions.
+enum : unsigned {
+  WASM_MEM_ORDER_SEQ_CST = 0x00,
+  WASM_MEM_ORDER_ACQ_REL = 0x01,
+  // RMW/CMPXCHG operations have 2 orderings but they must currently match.
+  WASM_MEM_ORDER_RMW_ACQ_REL = 0x11,
+};
+
 // Kinds of externals (for imports and exports).
 enum : unsigned {
   WASM_EXTERNAL_FUNCTION = 0x0,

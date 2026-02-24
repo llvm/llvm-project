@@ -111,13 +111,13 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                   Desc.operands()[J].OperandType ==
                       WebAssembly::OPERAND_MEMORDER) {
                 uint8_t Val = MI.getOperand(J).getImm();
-                if (Val != WebAssembly::MEM_ORDER_SEQ_CST) {
+                if (Val != wasm::WASM_MEM_ORDER_SEQ_CST) {
                   P2Align |= 0x20;
                   encodeULEB128(P2Align, OS);
-                  if (Val == WebAssembly::MEM_ORDER_ACQ_REL) {
+                  if (Val == wasm::WASM_MEM_ORDER_ACQ_REL) {
                     StringRef Name = MCII.getName(Opcode);
                     if (Name.contains("RMW") || Name.contains("CMPXCHG"))
-                      Val = 0x11;
+                      Val = wasm::WASM_MEM_ORDER_RMW_ACQ_REL;
                   }
                   support::endian::write<uint8_t>(OS, Val,
                                                   llvm::endianness::little);
@@ -159,10 +159,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           }
           uint8_t Val = MO.getImm();
           if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
-            if (Val == WebAssembly::MEM_ORDER_ACQ_REL) {
+            if (Val == wasm::WASM_MEM_ORDER_ACQ_REL) {
               StringRef Name = MCII.getName(Opcode);
               if (Name.contains("RMW") || Name.contains("CMPXCHG"))
-                Val = 0x11;
+                Val = wasm::WASM_MEM_ORDER_RMW_ACQ_REL;
             }
             support::endian::write<uint8_t>(OS, Val,
                                             llvm::endianness::little);

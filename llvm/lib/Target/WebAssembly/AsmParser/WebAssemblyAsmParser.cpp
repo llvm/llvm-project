@@ -478,8 +478,8 @@ public:
       return false;
     StringRef S = Tok.getString();
     int64_t Order = StringSwitch<int64_t>(S)
-                        .Case("acqrel", WebAssembly::MEM_ORDER_ACQ_REL)
-                        .Case("seqcst", WebAssembly::MEM_ORDER_SEQ_CST)
+                        .Case("acqrel", wasm::WASM_MEM_ORDER_ACQ_REL)
+                        .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
                         .Default(-1);
     if (Order == -1)
       return false;
@@ -1483,7 +1483,7 @@ bool isAtomic(unsigned Opc) {
         for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
           auto &Op = Inst.getOperand(i);
           if (Op.isImm() && Op.getImm() == -1)
-            Op.setImm(WebAssembly::MEM_ORDER_SEQ_CST);
+            Op.setImm(wasm::WASM_MEM_ORDER_SEQ_CST);
         }
       }
       if (!SkipTypeCheck)
