@@ -68,8 +68,8 @@ void SymbolLocatorMicrosoft::Initialize() {
   // First version can only locate PDB in local SymStore (no download yet)
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-      nullptr, LocateExecutableSymbolFile, nullptr,
-      nullptr, SymbolLocatorMicrosoft::DebuggerInitialize);
+      nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
+      SymbolLocatorMicrosoft::DebuggerInitialize);
 }
 
 void SymbolLocatorMicrosoft::DebuggerInitialize(Debugger &debugger) {

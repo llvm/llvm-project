@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+
 class MicrosoftSymSrvTests(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -74,7 +75,7 @@ class MicrosoftSymSrvTests(TestBase):
 
     def symstore_key(self, exe):
         """Load module UUID like: 12345678-1234-5678-9ABC-DEF012345678-00000001
-           and transform to SymStore key: 12345678123456789ABCDEF0123456781"""
+        and transform to SymStore key: 12345678123456789ABCDEF0123456781"""
         try:
             spec = lldb.SBModuleSpec()
             spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact(exe)))
@@ -94,10 +95,10 @@ class MicrosoftSymSrvTests(TestBase):
         """Check that LLDB can fetch PDB from local SymStore directory"""
         tmp_dir = tempfile.mkdtemp()
         symstore_dir = self.populate_symstore(tmp_dir)
-        
+
         self.runCmd(
-            "settings set plugin.symbol-locator.microsoft.symstore-urls %s" %
-            symstore_dir.replace("\\", "/")
+            "settings set plugin.symbol-locator.microsoft.symstore-urls %s"
+            % symstore_dir.replace("\\", "/")
         )
 
         self.try_breakpoint(should_have_loc=True)
