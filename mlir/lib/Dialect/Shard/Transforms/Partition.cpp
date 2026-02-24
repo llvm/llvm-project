@@ -661,9 +661,9 @@ partitionOperation(ShardOp shardOp, IRMapping &partitionMap,
 }
 
 // Check if the block args are correctly annotated with sharding information:
-//   - non-tensor and 0d-tensor args are ignored
+//   - non-tensor, 0d-tensor and unused args are ignored
 //   - each tensor arg must have exactly one use, which must be a shard.shard
-//   operation
+//     operation
 static LogicalResult checkFullyAnnotated(Block &block) {
   for (const BlockArgument &arg : block.getArguments()) {
     auto rankedTensorArg = dyn_cast<TypedValue<RankedTensorType>>(arg);
@@ -671,7 +671,7 @@ static LogicalResult checkFullyAnnotated(Block &block) {
         rankedTensorArg.use_empty())
       continue;
 
-    if (rankedTensorArg.getNumUses() > 1)
+    if (!rankedTensorArg.hasOneUse())
       return emitError(block.getParent()->getLoc())
              << "Cannot partition: expected a single use for block argument "
              << arg.getArgNumber() << " in block "
