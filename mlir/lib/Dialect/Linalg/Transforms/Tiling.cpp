@@ -851,8 +851,8 @@ public:
 /// TODO: Move this into `getCanonicalizationPattern` and do the same for all
 /// dialects, so that we don't need this hack to also get the operations'
 /// canonicalization patterns per dialect.
-static void populateLinalgCanonicalizationPatterns(
-    RewritePatternSet &patterns) {
+static void
+populateLinalgCanonicalizationPatterns(RewritePatternSet &patterns) {
   auto *ctx = patterns.getContext();
   ctx->getLoadedDialect<LinalgDialect>()->getCanonicalizationPatterns(patterns);
 
