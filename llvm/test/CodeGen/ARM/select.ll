@@ -440,17 +440,15 @@ define float @f12(i32 %a, i32 %b) nounwind uwtable readnone ssp {
 define i1 @test_overflow_recombine(i32 %in1, i32 %in2) {
 ; CHECK-LABEL: test_overflow_recombine:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mul r2, r0, r1
-; CHECK-NEXT:    smmul r0, r0, r1
-; CHECK-NEXT:    subs r0, r0, r2, asr #31
+; CHECK-NEXT:    smull r0, r1, r0, r1
+; CHECK-NEXT:    subs r0, r1, r0, asr #31
 ; CHECK-NEXT:    movwne r0, #1
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-NEON-LABEL: test_overflow_recombine:
 ; CHECK-NEON:       @ %bb.0:
-; CHECK-NEON-NEXT:    mul r2, r0, r1
-; CHECK-NEON-NEXT:    smmul r0, r0, r1
-; CHECK-NEON-NEXT:    subs.w r0, r0, r2, asr #31
+; CHECK-NEON-NEXT:    smull r0, r1, r0, r1
+; CHECK-NEON-NEXT:    subs.w r0, r1, r0, asr #31
 ; CHECK-NEON-NEXT:    it ne
 ; CHECK-NEON-NEXT:    movne r0, #1
 ; CHECK-NEON-NEXT:    bx lr

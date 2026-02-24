@@ -140,7 +140,6 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   Code << "class " << PatternName
        << " : public mlir::OpConversionPattern<cir::" << OpName << "> {\n";
-  Code << "  [[maybe_unused]] cir::LowerModule *lowerMod;\n";
   Code << "  [[maybe_unused]] mlir::DataLayout const &dataLayout;\n";
 
   if (CustomCtor) {
@@ -156,10 +155,8 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
 
   // Constructor
   Code << "  " << PatternName
-       << "(mlir::TypeConverter const "
-          "&typeConverter, mlir::MLIRContext *context, "
-          "cir::LowerModule *lowerMod, mlir::DataLayout const "
-          "&dataLayout";
+       << "(const mlir::TypeConverter &typeConverter, "
+          "mlir::MLIRContext *context, const mlir::DataLayout &dataLayout";
 
   if (CustomCtor)
     emitCustomParamList(Code, CustomCtor->Params);
@@ -167,8 +164,7 @@ void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
   Code << ")\n";
 
   Code << "    : OpConversionPattern<cir::" << OpName
-       << ">(typeConverter, context), lowerMod(lowerMod), "
-          "dataLayout(dataLayout)";
+       << ">(typeConverter, context), dataLayout(dataLayout)";
 
   if (CustomCtor)
     emitCustomInitList(Code, CustomCtor->Params);

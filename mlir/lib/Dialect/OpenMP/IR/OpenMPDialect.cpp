@@ -3137,9 +3137,10 @@ LogicalResult DeclareReductionOp::verifyRegions() {
 void TaskOp::build(OpBuilder &builder, OperationState &state,
                    const TaskOperands &clauses) {
   MLIRContext *ctx = builder.getContext();
-  TaskOp::build(builder, state, clauses.allocateVars, clauses.allocatorVars,
-                makeArrayAttr(ctx, clauses.dependKinds), clauses.dependVars,
-                clauses.final, clauses.ifExpr, clauses.inReductionVars,
+  TaskOp::build(builder, state, clauses.affinityVars, clauses.allocateVars,
+                clauses.allocatorVars, makeArrayAttr(ctx, clauses.dependKinds),
+                clauses.dependVars, clauses.final, clauses.ifExpr,
+                clauses.inReductionVars,
                 makeDenseBoolArrayAttr(ctx, clauses.inReductionByref),
                 makeArrayAttr(ctx, clauses.inReductionSyms), clauses.mergeable,
                 clauses.priority, /*private_vars=*/clauses.privateVars,
@@ -3453,6 +3454,15 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
             })
             .Case([&](UnrollHeuristicOp op) -> std::string {
               llvm_unreachable("heuristic unrolling does not generate a loop");
+            })
+            .Case([&](FuseOp op) -> std::string {
+              unsigned opnum = generator->getOperandNumber();
+              // The position of the first loop to be fused is the same position
+              // as the resulting fused loop
+              if (op.getFirst().has_value() && opnum != op.getFirst().value())
+                return "canonloop_fuse";
+              else
+                return "fused";
             })
             .Case([&](TileOp op) -> std::string {
               auto [generateesFirst, generateesCount] =
@@ -3826,6 +3836,60 @@ std::pair<unsigned, unsigned> TileOp ::getApplyeesODSOperandIndexAndLength() {
 }
 
 std::pair<unsigned, unsigned> TileOp::getGenerateesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_generatees);
+}
+
+//===----------------------------------------------------------------------===//
+// FuseOp
+//===----------------------------------------------------------------------===//
+
+static void printLoopTransformClis(OpAsmPrinter &p, FuseOp op,
+                                   OperandRange generatees,
+                                   OperandRange applyees) {
+  if (!generatees.empty())
+    p << '(' << llvm::interleaved(generatees) << ')';
+
+  if (!applyees.empty())
+    p << " <- (" << llvm::interleaved(applyees) << ')';
+}
+
+LogicalResult FuseOp::verify() {
+  if (getApplyees().size() < 2)
+    return emitOpError() << "must apply to at least two loops";
+
+  if (getFirst().has_value() && getCount().has_value()) {
+    int64_t first = getFirst().value();
+    int64_t count = getCount().value();
+    if ((unsigned)(first + count - 1) > getApplyees().size())
+      return emitOpError() << "the numbers of applyees must be at least first "
+                              "minus one plus count attributes";
+    if (!getGeneratees().empty() &&
+        getGeneratees().size() != getApplyees().size() + 1 - count)
+      return emitOpError() << "the number of generatees must be the number of "
+                              "aplyees plus one minus count";
+
+  } else {
+    if (!getGeneratees().empty() && getGeneratees().size() != 1)
+      return emitOpError()
+             << "in a complete fuse the number of generatees must be exactly 1";
+  }
+  for (auto &&applyee : getApplyees()) {
+    auto [create, gen, cons] = decodeCli(applyee);
+
+    if (!gen)
+      return emitOpError() << "applyee CLI has no generator";
+    auto loop = dyn_cast_or_null<CanonicalLoopOp>(gen->getOwner());
+    if (!loop)
+      return emitOpError()
+             << "currently only supports omp.canonical_loop as applyee";
+  }
+  return success();
+}
+std::pair<unsigned, unsigned> FuseOp::getApplyeesODSOperandIndexAndLength() {
+  return getODSOperandIndexAndLength(odsIndex_applyees);
+}
+
+std::pair<unsigned, unsigned> FuseOp::getGenerateesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_generatees);
 }
 
@@ -4531,6 +4595,32 @@ static void printUniformClause(OpAsmPrinter &p, Operation *op,
     if (i != 0)
       p << ", ";
     p << uniformVars[i] << " : " << uniformTypes[i];
+  }
+}
+
+//===----------------------------------------------------------------------===//
+// Parser and printer for Affinity Clause
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseAffinityClause(
+    OpAsmParser &parser,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &affinityVars,
+    SmallVectorImpl<Type> &affinityTypes) {
+  return parser.parseCommaSeparatedList([&]() -> ParseResult {
+    if (parser.parseOperand(affinityVars.emplace_back()) ||
+        parser.parseColonType(affinityTypes.emplace_back()))
+      return failure();
+    return success();
+  });
+}
+
+static void printAffinityClause(OpAsmPrinter &p, Operation *op,
+                                ValueRange affinityVars,
+                                TypeRange affinityTypes) {
+  for (unsigned i = 0; i < affinityVars.size(); ++i) {
+    if (i)
+      p << ", ";
+    p << affinityVars[i] << " : " << affinityTypes[i];
   }
 }
 

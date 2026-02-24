@@ -3520,3 +3520,33 @@ func.func @omp_declare_simd_all_clauses(%a: f64, %b: f64,
     inbranch
   return
 }
+
+// CHECK-LABEL: func.func @task_affinity_single
+func.func @task_affinity_single() {
+  // CHECK:       %[[A:.*]] = memref.alloca() : memref<100xi32>
+  // CHECK:       omp.task affinity(%[[A]] : memref<100xi32>) {
+  // CHECK:         omp.terminator
+  // CHECK:       }
+  // CHECK:       return
+  %a = memref.alloca() : memref<100xi32>
+  omp.task affinity(%a : memref<100xi32>) {
+    omp.terminator
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @task_affinity_multi
+func.func @task_affinity_multi() {
+  // CHECK:       %[[A:.*]] = memref.alloca() : memref<64xi32>
+  // CHECK:       %[[B:.*]] = memref.alloca() : memref<8xf64>
+  // CHECK:       omp.task affinity(%[[A]] : memref<64xi32>, %[[B]] : memref<8xf64>) {
+  // CHECK:         omp.terminator
+  // CHECK:       }
+  // CHECK:       return
+  %a = memref.alloca() : memref<64xi32>
+  %b = memref.alloca() : memref<8xf64>
+  omp.task affinity(%a : memref<64xi32>, %b : memref<8xf64>) {
+    omp.terminator
+  }
+  return
+}

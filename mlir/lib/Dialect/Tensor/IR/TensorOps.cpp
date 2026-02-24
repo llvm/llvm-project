@@ -2041,6 +2041,16 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
           verifyReshapeLikeTypes(op, expandedType, collapsedType, isExpansion)))
     return failure();
 
+  // Reshape must preserve the number of elements when statically known.
+  if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
+    int64_t expandedNumElements = expandedType.getNumElements();
+    int64_t collapsedNumElements = collapsedType.getNumElements();
+    if (expandedNumElements != collapsedNumElements) {
+      return op.emitOpError("number of elements must be preserved: ")
+             << expandedNumElements << " != " << collapsedNumElements;
+    }
+  }
+
   auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
       CollapseShapeOp::inferCollapsedType(expandedType, maps);
@@ -2067,6 +2077,19 @@ LogicalResult ExpandShapeOp::verify() {
            << llvm::count(getStaticOutputShape(), ShapedType::kDynamic)
            << " dynamic dims while output_shape has " << getOutputShape().size()
            << " values";
+
+  // Verify that the number of dynamic dims in output_shape matches the number
+  // of dynamic dims in the result type.
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOutputShape())))
+    return failure();
+
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  for (auto [pos, shape] : llvm::enumerate(resShape))
+    if (ShapedType::isStatic(shape) && shape != staticOutputShapes[pos])
+      return emitOpError("invalid output shape provided at pos ") << pos;
 
   return verifyTensorReshapeOp(*this, resultType, srcType);
 }

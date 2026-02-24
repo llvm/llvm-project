@@ -1725,7 +1725,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Handle case when index is zero.
       Constant *CIndex = dyn_cast<Constant>(Index);
-      if (CIndex && CIndex->isZeroValue())
+      if (CIndex && CIndex->isNullValue())
         continue;
 
       if (StructType *STy = GTI.getStructTypeOrNull()) {
@@ -5362,7 +5362,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                        ExponentKnownBits, Q, Depth + 1);
 
       KnownFPClass KnownSrc;
-      if (!ExponentKnownBits.isEven()) {
+      if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven()) {
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
                             KnownSrc, Q, Depth + 1);
       }
@@ -5414,6 +5414,23 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // TODO: Copy inf handling from instructions
       break;
+
+    case Intrinsic::amdgcn_fract: {
+      Known.knownNot(fcInf);
+
+      if (InterestedClasses & fcNan) {
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Q, Depth + 1);
+
+        if (KnownSrc.isKnownNeverInfOrNaN())
+          Known.knownNot(fcNan);
+        else if (KnownSrc.isKnownNever(fcSNan))
+          Known.knownNot(fcSNan);
+      }
+
+      break;
+    }
     case Intrinsic::amdgcn_rcp: {
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
@@ -5480,6 +5497,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           Known.knownNot(fcPosInf);
       }
 
+      break;
+    }
+    case Intrinsic::amdgcn_trig_preop: {
+      Known.knownNot(fcNan | fcInf);
       break;
     }
     default:

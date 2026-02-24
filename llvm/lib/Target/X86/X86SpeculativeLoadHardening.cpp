@@ -501,7 +501,6 @@ bool X86SpeculativeLoadHardeningImpl::run(MachineFunction &MF) {
     ZeroEFLAGSDefOp->setIsDead(true);
     BuildMI(Entry, EntryInsertPt, Loc, TII->get(X86::SUBREG_TO_REG),
             PS->InitialReg)
-        .addImm(0)
         .addReg(PredStateSubReg)
         .addImm(X86::sub_32bit);
   }

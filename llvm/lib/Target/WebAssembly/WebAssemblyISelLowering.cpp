@@ -271,11 +271,6 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
     // There is no i8x16.mul instruction
     setOperationAction(ISD::MUL, MVT::v16i8, Expand);
 
-    // There is no vector conditional select instruction
-    for (auto T : {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64,
-                   MVT::v2f64})
-      setOperationAction(ISD::SELECT_CC, T, Expand);
-
     // Expand integer operations supported for scalars but not SIMD
     for (auto Op :
          {ISD::SDIV, ISD::UDIV, ISD::SREM, ISD::UREM, ISD::ROTL, ISD::ROTR})
@@ -369,6 +364,16 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
   for (auto T : {MVT::i32, MVT::i64, MVT::f32, MVT::f64})
     for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
       setOperationAction(Op, T, Expand);
+
+  if (Subtarget->hasReferenceTypes())
+    for (auto Op : {ISD::BR_CC, ISD::SELECT_CC})
+      for (auto T : {MVT::externref, MVT::funcref})
+        setOperationAction(Op, T, Expand);
+
+  // There is no vector conditional select instruction
+  for (auto T :
+       {MVT::v16i8, MVT::v8i16, MVT::v4i32, MVT::v4f32, MVT::v2i64, MVT::v2f64})
+    setOperationAction(ISD::SELECT_CC, T, Expand);
 
   // We have custom switch handling.
   setOperationAction(ISD::BR_JT, MVT::Other, Custom);
@@ -2294,13 +2299,14 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
 
 static SDValue GetExtendHigh(SDValue Op, unsigned UserOpc, EVT VT,
                              SelectionDAG &DAG) {
-  if (Op.getOpcode() != ISD::VECTOR_SHUFFLE)
+  SDValue Source = peekThroughBitcasts(Op);
+  if (Source.getOpcode() != ISD::VECTOR_SHUFFLE)
     return SDValue();
 
   assert((UserOpc == WebAssemblyISD::EXTEND_LOW_U ||
           UserOpc == WebAssemblyISD::EXTEND_LOW_S) &&
          "expected extend_low");
-  auto *Shuffle = cast<ShuffleVectorSDNode>(Op.getNode());
+  auto *Shuffle = cast<ShuffleVectorSDNode>(Source.getNode());
 
   ArrayRef<int> Mask = Shuffle->getMask();
   // Look for a shuffle which moves from the high half to the low half.
@@ -2315,7 +2321,11 @@ static SDValue GetExtendHigh(SDValue Op, unsigned UserOpc, EVT VT,
   unsigned Opc = UserOpc == WebAssemblyISD::EXTEND_LOW_S
                      ? WebAssemblyISD::EXTEND_HIGH_S
                      : WebAssemblyISD::EXTEND_HIGH_U;
-  return DAG.getNode(Opc, DL, VT, Shuffle->getOperand(0));
+  SDValue ShuffleSrc = Shuffle->getOperand(0);
+  if (Op.getOpcode() == ISD::BITCAST)
+    ShuffleSrc = DAG.getBitcast(Op.getValueType(), ShuffleSrc);
+
+  return DAG.getNode(Opc, DL, VT, ShuffleSrc);
 }
 
 SDValue

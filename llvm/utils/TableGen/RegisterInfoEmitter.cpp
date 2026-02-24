@@ -29,7 +29,10 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TableGen/CodeGenHelpers.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/SetTheory.h"
@@ -85,6 +88,9 @@ public:
   // run - Output the register file description.
   TableGenOutputFiles run(StringRef FilenamePrefix);
 
+  template <typename InfoTy, typename FnTy>
+  Printable printByHwMode(const InfoByHwMode<InfoTy> &Info, FnTy Func);
+
   void debugDump(raw_ostream &OS);
 
 private:
@@ -102,10 +108,8 @@ private:
 
 static void emitInclude(StringRef FilenamePrefix, StringRef IncludeFile,
                         StringRef GuardMacro, raw_ostream &OS) {
-  OS << "#ifdef " << GuardMacro << '\n';
-  OS << "#undef " << GuardMacro << '\n';
+  IfDefEmitter IfDed(OS, GuardMacro);
   OS << "#include \"" << FilenamePrefix << IncludeFile << "\"\n";
-  OS << "#endif\n\n";
 }
 
 // runEnums - Print out enum values for all of the registers.
@@ -122,41 +126,36 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
 
   emitSourceFileHeader("Target Register Enum Values", OS);
 
-  OS << "namespace llvm {\n\n";
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
   OS << "class MCRegisterClass;\n"
      << "extern const MCRegisterClass " << Target.getName()
      << "MCRegisterClasses[];\n\n";
 
-  if (!Namespace.empty())
-    OS << "namespace " << Namespace << " {\n";
-  OS << "enum : unsigned {\n  NoRegister,\n";
+  {
+    NamespaceEmitter RegNS(OS, Namespace);
+    OS << "enum : unsigned {\n  NoRegister,\n";
 
-  for (const auto &Reg : Registers)
-    OS << "  " << Reg.getName() << " = " << Reg.EnumValue << ",\n";
-  assert(Registers.size() == Registers.back().EnumValue &&
-         "Register enum value mismatch!");
-  OS << "  NUM_TARGET_REGS // " << Registers.size() + 1 << "\n";
-  OS << "};\n";
-  if (!Namespace.empty())
-    OS << "} // end namespace " << Namespace << "\n";
+    for (const auto &Reg : Registers)
+      OS << "  " << Reg.getName() << " = " << Reg.EnumValue << ",\n";
+    assert(Registers.size() == Registers.back().EnumValue &&
+           "Register enum value mismatch!");
+    OS << "  NUM_TARGET_REGS // " << Registers.size() + 1 << "\n";
+    OS << "};\n";
+  }
 
   const auto &RegisterClasses = RegBank.getRegClasses();
   if (!RegisterClasses.empty()) {
-
     // RegisterClass enums are stored as uint16_t in the tables.
-    assert(RegisterClasses.size() <= 0xffff &&
+    assert(RegisterClasses.size() <= UINT16_MAX &&
            "Too many register classes to fit in tables");
 
     OS << "\n// Register classes\n\n";
-    if (!Namespace.empty())
-      OS << "namespace " << Namespace << " {\n";
+    NamespaceEmitter RegNS(OS, Namespace);
     OS << "enum {\n";
     for (const auto &RC : RegisterClasses)
       OS << "  " << RC.getIdName() << " = " << RC.EnumValue << ",\n";
     OS << "\n};\n";
-    if (!Namespace.empty())
-      OS << "} // end namespace " << Namespace << "\n\n";
   }
 
   ArrayRef<const Record *> RegAltNameIndices = Target.getRegAltNameIndices();
@@ -164,47 +163,54 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS, raw_ostream &MainOS,
   // emit anything.
   if (RegAltNameIndices.size() > 1) {
     OS << "\n// Register alternate name indices\n\n";
-    if (!Namespace.empty())
-      OS << "namespace " << Namespace << " {\n";
+    NamespaceEmitter RegNS(OS, Namespace);
     OS << "enum {\n";
     for (unsigned i = 0, e = RegAltNameIndices.size(); i != e; ++i)
       OS << "  " << RegAltNameIndices[i]->getName() << ",\t// " << i << "\n";
     OS << "  NUM_TARGET_REG_ALT_NAMES = " << RegAltNameIndices.size() << "\n";
     OS << "};\n";
-    if (!Namespace.empty())
-      OS << "} // end namespace " << Namespace << "\n\n";
   }
 
   auto &SubRegIndices = RegBank.getSubRegIndices();
   if (!SubRegIndices.empty()) {
     OS << "\n// Subregister indices\n\n";
-    std::string Namespace = SubRegIndices.front().getNamespace();
-    if (!Namespace.empty())
-      OS << "namespace " << Namespace << " {\n";
+    NamespaceEmitter SubRegNS(OS, SubRegIndices.front().getNamespace());
     OS << "enum : uint16_t {\n  NoSubRegister,\n";
     unsigned i = 0;
     for (const auto &Idx : SubRegIndices)
       OS << "  " << Idx.getName() << ",\t// " << ++i << "\n";
     OS << "  NUM_TARGET_SUBREGS\n};\n";
-    if (!Namespace.empty())
-      OS << "} // end namespace " << Namespace << "\n\n";
   }
 
-  OS << "// Register pressure sets enum.\n";
-  if (!Namespace.empty())
-    OS << "namespace " << Namespace << " {\n";
-  OS << "enum RegisterPressureSets {\n";
-  unsigned NumSets = RegBank.getNumRegPressureSets();
-  for (unsigned i = 0; i < NumSets; ++i) {
-    const RegUnitSet &RegUnits = RegBank.getRegSetAt(i);
-    OS << "  " << RegUnits.Name << " = " << i << ",\n";
+  {
+    OS << "// Register pressure sets enum.\n";
+    NamespaceEmitter RegNS(OS, Namespace);
+    OS << "enum RegisterPressureSets {\n";
+    unsigned NumSets = RegBank.getNumRegPressureSets();
+    for (unsigned i = 0; i < NumSets; ++i) {
+      const RegUnitSet &RegUnits = RegBank.getRegSetAt(i);
+      OS << "  " << RegUnits.Name << " = " << i << ",\n";
+    }
+    OS << "};\n";
   }
-  OS << "};\n";
-  if (!Namespace.empty())
-    OS << "} // end namespace " << Namespace << '\n';
-  OS << '\n';
 
-  OS << "} // end namespace llvm\n\n";
+  // Note: While these functions are not enums, we need to define them in the
+  // same place as <TARGET>::<REG>, so that the assembly parser can use them
+  // without having to include <TARGETT>RegisterInfo.h, which may not be
+  // possible due to build system structure.
+  ArrayRef<const Record *> RegisterByHwModeRecords =
+      Records.getAllDerivedDefinitions("RegisterByHwMode");
+  if (!RegisterByHwModeRecords.empty()) {
+    OS << "// Registers by HwMode\n";
+    OS << "class MCRegister;\n";
+    NamespaceEmitter RegClassNS(OS, Namespace + "::RegisterByHwMode");
+    // Define the getters for the RegisterByHwMode in one globally accessible
+    // location so they can be reused by all callers.
+    for (const Record *Rec : RegisterByHwModeRecords) {
+      OS << "LLVM_READONLY MCRegister get" << Rec->getName()
+         << "(unsigned HwMode);\n";
+    }
+  }
 }
 
 static void printInt(raw_ostream &OS, int Val) { OS << Val; }
@@ -982,7 +988,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   LaneMaskSeqs.layout();
   SubRegIdxSeqs.layout();
 
-  OS << "namespace llvm {\n\n";
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
   const std::string &TargetName = Target.getName().str();
 
@@ -1048,6 +1054,8 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
   if (Target.getRegistersAreIntervals()) {
     OS << "extern const unsigned " << TargetName
        << "RegUnitIntervals[][2] = {\n";
+    // Add entry for NoRegister
+    OS << "  { 0, 0 },\n";
     for (const CodeGenRegister &Reg : Regs) {
       const auto &Units = Reg.getNativeRegUnits();
       if (Units.empty()) {
@@ -1063,40 +1071,40 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   const auto &RegisterClasses = RegBank.getRegClasses();
 
-  // Loop over all of the register classes... emitting each one.
-  OS << "namespace {     // Register classes...\n";
-
   SequenceToOffsetTable<std::string> RegClassStrings;
 
-  // Emit the register enum value arrays for each RegisterClass
-  for (const auto &RC : RegisterClasses) {
-    ArrayRef<const Record *> Order = RC.getOrder();
+  // Loop over all of the register classes... emitting each one.
+  {
+    AnonNamespaceEmitter AnonNS(OS);
+    OS << "// Register classes...\n";
 
-    // Give the register class a legal C name if it's anonymous.
-    const std::string &Name = RC.getName();
+    // Emit the register enum value arrays for each RegisterClass
+    for (const auto &RC : RegisterClasses) {
+      ArrayRef<const Record *> Order = RC.getOrder();
 
-    RegClassStrings.add(Name);
+      // Give the register class a legal C name if it's anonymous.
+      const std::string &Name = RC.getName();
 
-    // Emit the register list now (unless it would be a zero-length array).
-    if (!Order.empty()) {
-      OS << "  // " << Name << " Register Class...\n"
-         << "  const MCPhysReg " << Name << "[] = {\n    ";
-      for (const Record *Reg : Order) {
-        OS << getQualifiedName(Reg) << ", ";
+      RegClassStrings.add(Name);
+
+      // Emit the register list now (unless it would be a zero-length array).
+      if (!Order.empty()) {
+        OS << "  // " << Name << " Register Class...\n"
+           << "  const MCPhysReg " << Name << "[] = {\n    ";
+        for (const Record *Reg : Order)
+          OS << getQualifiedName(Reg) << ", ";
+        OS << "\n  };\n\n";
+
+        OS << "  // " << Name << " Bit set.\n"
+           << "  const uint8_t " << Name << "Bits[] = {\n    ";
+        BitVectorEmitter BVE;
+        for (const Record *Reg : Order)
+          BVE.add(RegBank.getReg(Reg)->EnumValue);
+        BVE.print(OS);
+        OS << "\n  };\n\n";
       }
-      OS << "\n  };\n\n";
-
-      OS << "  // " << Name << " Bit set.\n"
-         << "  const uint8_t " << Name << "Bits[] = {\n    ";
-      BitVectorEmitter BVE;
-      for (const Record *Reg : Order) {
-        BVE.add(RegBank.getReg(Reg)->EnumValue);
-      }
-      BVE.print(OS);
-      OS << "\n  };\n\n";
     }
   }
-  OS << "} // end anonymous namespace\n\n";
 
   RegClassStrings.layout();
   RegClassStrings.emitStringLiteralDef(
@@ -1150,13 +1158,44 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
      << TargetName << "LaneMaskLists, " << TargetName << "RegStrings, "
      << TargetName << "RegClassStrings, " << TargetName << "SubRegIdxLists, "
      << (llvm::size(SubRegIndices) + 1) << ",\n"
-     << TargetName << "RegEncodingTable);\n\n";
+     << TargetName << "RegEncodingTable, "
+     << (Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
+                                           : "nullptr")
+     << ");\n\n";
 
   EmitRegMapping(OS, Regs, false);
 
   OS << "}\n\n";
 
-  OS << "} // end namespace llvm\n\n";
+  // Emit the register by HwMode (if present).
+  ArrayRef<const Record *> RegisterByHwModeRecords =
+      Records.getAllDerivedDefinitions("RegisterByHwMode");
+  if (!RegisterByHwModeRecords.empty()) {
+    OS << "// Registers by HwMode\n";
+    NamespaceEmitter RegClassNS(OS, RegisterClasses.front().Namespace +
+                                        "::RegisterByHwMode");
+
+    unsigned NumModes = Target.getHwModes().getNumModeIds();
+    for (const Record *Rec : RegisterByHwModeRecords) {
+      RegisterByHwMode RegByMode(Rec, RegBank);
+      OS << "LLVM_READONLY MCRegister get" << Rec->getName()
+         << "(unsigned HwMode) {\n";
+      OS << indent(2) << "switch (HwMode) {\n";
+      for (unsigned M = 0; M < NumModes; ++M) {
+        if (RegByMode.hasMode(M)) {
+          const CodeGenRegister *R = RegByMode.get(M);
+          OS << indent(2) << "case " << M << ": return "
+             << getQualifiedName(R->TheDef) << "; // "
+             << Target.getHwModes().getModeName(M, true) << "\n";
+        }
+      }
+      OS << indent(2)
+         << "default: llvm_unreachable(\"Unhandled HwMode for Register "
+         << Rec->getName() << "\");\n"
+         << indent(2) << "}\n"
+         << "}\n";
+    }
+  }
 }
 
 void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
@@ -1170,7 +1209,7 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
 
   OS << "#include \"llvm/CodeGen/TargetRegisterInfo.h\"\n\n";
 
-  OS << "namespace llvm {\n\n";
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
   OS << "class " << TargetName << "FrameLowering;\n\n";
 
@@ -1228,18 +1267,15 @@ void RegisterInfoEmitter::runTargetHeader(raw_ostream &OS, raw_ostream &MainOS,
   OS << "};\n\n";
 
   if (!RegisterClasses.empty()) {
-    OS << "namespace " << RegisterClasses.front().Namespace
-       << " { // Register classes\n";
+    NamespaceEmitter RegClassNS(OS, RegisterClasses.front().Namespace);
+    OS << "// Register classes\n";
 
     for (const auto &RC : RegisterClasses) {
-      const std::string &Name = RC.getName();
-
       // Output the extern for the instance.
-      OS << "  extern const TargetRegisterClass " << Name << "RegClass;\n";
+      OS << "  extern const TargetRegisterClass " << RC.getName()
+         << "RegClass;\n";
     }
-    OS << "} // end namespace " << RegisterClasses.front().Namespace << "\n\n";
   }
-  OS << "} // end namespace llvm\n\n";
 }
 
 //
@@ -1252,7 +1288,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   emitSourceFileHeader("Target Register and Register Classes Information", OS);
 
-  OS << "namespace llvm {\n\n";
+  NamespaceEmitter LlvmNS(OS, "llvm");
 
   // Get access to MCRegisterClass data.
   OS << "extern const MCRegisterClass " << Target.getName()
@@ -1332,12 +1368,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
        << " = {\n";
     for (unsigned M = 0; M < NumModes; ++M) {
       unsigned EV = 0;
-      OS << "  // Mode = " << M << " (";
-      if (M == 0)
-        OS << "Default";
-      else
-        OS << CGH.getMode(M).Name;
-      OS << ")\n";
+      OS << "  // Mode = " << M << " ("
+         << CGH.getModeName(M, /*IncludeDefault=*/true) << ")\n";
       for (const auto &RC : RegisterClasses) {
         assert(RC.EnumValue == EV && "Unexpected order of register classes");
         ++EV;
@@ -1453,8 +1485,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
     }
 
     // Now emit the actual value-initialized register class instances.
-    OS << "\nnamespace " << RegisterClasses.front().Namespace
-       << " {   // Register class instances\n";
+    NamespaceEmitter RegClassNS(OS, RegisterClasses.front().Namespace);
+    OS << "// Register class instances\n";
 
     for (const auto &RC : RegisterClasses) {
       OS << "  extern const TargetRegisterClass " << RC.getName()
@@ -1481,16 +1513,15 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
         OS << RC.getName() << "GetRawAllocationOrder\n";
       OS << "  };\n\n";
     }
-
-    OS << "} // end namespace " << RegisterClasses.front().Namespace << "\n";
   }
 
-  OS << "\nnamespace {\n";
-  OS << "  const TargetRegisterClass *const RegisterClasses[] = {\n";
-  for (const auto &RC : RegisterClasses)
-    OS << "    &" << RC.getQualifiedName() << "RegClass,\n";
-  OS << "  };\n";
-  OS << "} // end anonymous namespace\n";
+  {
+    AnonNamespaceEmitter AnonNS(OS);
+    OS << "  const TargetRegisterClass *const RegisterClasses[] = {\n";
+    for (const auto &RC : RegisterClasses)
+      OS << "    &" << RC.getQualifiedName() << "RegClass,\n";
+    OS << "  };\n";
+  }
 
   // Emit extra information about registers.
   const std::string &TargetName = Target.getName().str();
@@ -1557,13 +1588,23 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
        << " const {\n";
     // Use the smallest type that can hold a regclass ID with room for a
     // sentinel.
-    if (RegisterClasses.size() <= UINT8_MAX)
-      OS << "  static const uint8_t Table[";
-    else if (RegisterClasses.size() <= UINT16_MAX)
-      OS << "  static const uint16_t Table[";
-    else
-      PrintFatalError("Too many register classes.");
-    OS << RegisterClasses.size() << "][" << SubRegIndicesSize << "] = {\n";
+    const size_t NumRegClasses = RegisterClasses.size();
+    const char *RegClassTy = getMinimalTypeForRange(NumRegClasses + 1);
+    auto EmitTableLookup = [&]() {
+      OS << formatv(R"(
+  };
+  assert(RC && "Missing regclass");
+  if (!Idx) return RC;
+  --Idx;
+  assert(Idx < {} && "Bad subreg");
+  unsigned TV = Table[RC->getID()][Idx];
+  return TV ? getRegClass(TV - 1) : nullptr;
+})",
+                    SubRegIndicesSize);
+    };
+
+    OS << formatv("  static constexpr {} Table[{}][{}] = {{\n", RegClassTy,
+                  NumRegClasses, SubRegIndicesSize);
     for (const auto &RC : RegisterClasses) {
       OS << "    {\t// " << RC.getName() << "\n";
       for (auto &Idx : SubRegIndices) {
@@ -1575,28 +1616,15 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
       }
       OS << "    },\n";
     }
-    OS << "  };\n  assert(RC && \"Missing regclass\");\n"
-       << "  if (!Idx) return RC;\n  --Idx;\n"
-       << "  assert(Idx < " << SubRegIndicesSize << " && \"Bad subreg\");\n"
-       << "  unsigned TV = Table[RC->getID()][Idx];\n"
-       << "  return TV ? getRegClass(TV - 1) : nullptr;\n}\n\n";
+    EmitTableLookup();
 
-    // Emit getSubRegisterClass
+    // Emit getSubRegisterClass.
     OS << "const TargetRegisterClass *" << ClassName
        << "::getSubRegisterClass(const TargetRegisterClass *RC, unsigned Idx)"
        << " const {\n";
 
-    // Use the smallest type that can hold a regclass ID with room for a
-    // sentinel.
-    if (RegisterClasses.size() <= UINT8_MAX)
-      OS << "  static const uint8_t Table[";
-    else if (RegisterClasses.size() <= UINT16_MAX)
-      OS << "  static const uint16_t Table[";
-    else
-      PrintFatalError("Too many register classes.");
-
-    OS << RegisterClasses.size() << "][" << SubRegIndicesSize << "] = {\n";
-
+    OS << formatv("  static constexpr {} Table[{}][{}] = {{\n", RegClassTy,
+                  NumRegClasses, SubRegIndicesSize);
     for (const auto &RC : RegisterClasses) {
       OS << "    {\t// " << RC.getName() << '\n';
       for (auto &Idx : SubRegIndices) {
@@ -1622,11 +1650,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
 
       OS << "    },\n";
     }
-    OS << "  };\n  assert(RC && \"Missing regclass\");\n"
-       << "  if (!Idx) return RC;\n  --Idx;\n"
-       << "  assert(Idx < " << SubRegIndicesSize << " && \"Bad subreg\");\n"
-       << "  unsigned TV = Table[RC->getID()][Idx];\n"
-       << "  return TV ? getRegClass(TV - 1) : nullptr;\n}\n\n";
+    EmitTableLookup();
   }
 
   EmitRegUnitPressure(OS, ClassName);
@@ -1693,6 +1717,8 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   OS << "extern const MCPhysReg " << TargetName << "RegUnitRoots[][2];\n";
   OS << "extern const uint16_t " << TargetName << "SubRegIdxLists[];\n";
   OS << "extern const uint16_t " << TargetName << "RegEncodingTable[];\n";
+  if (Target.getRegistersAreIntervals())
+    OS << "extern const unsigned " << TargetName << "RegUnitIntervals[][2];\n";
 
   EmitRegMappingTables(OS, Regs, true);
 
@@ -1718,7 +1744,11 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "                     " << TargetName << "RegClassStrings,\n"
      << "                     " << TargetName << "SubRegIdxLists,\n"
      << "                     " << SubRegIndicesSize + 1 << ",\n"
-     << "                     " << TargetName << "RegEncodingTable);\n\n";
+     << "                     " << TargetName << "RegEncodingTable,\n"
+     << "                     "
+     << (Target.getRegistersAreIntervals() ? TargetName + "RegUnitIntervals"
+                                           : "nullptr")
+     << ");\n\n";
 
   EmitRegMapping(OS, Regs, true);
 
@@ -1862,8 +1892,6 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
      << "  return static_cast<const " << TargetName << "FrameLowering *>(\n"
      << "      MF.getSubtarget().getFrameLowering());\n"
      << "}\n\n";
-
-  OS << "} // end namespace llvm\n\n";
 }
 
 TableGenOutputFiles RegisterInfoEmitter::run(StringRef FilenamePrefix) {
@@ -1895,31 +1923,44 @@ TableGenOutputFiles RegisterInfoEmitter::run(StringRef FilenamePrefix) {
 
   // The suffixes should be in sync with the tablegen function in
   // llvm/cmake/modules/TableGen.cmake.
-  return {Main,
+  return {std::move(Main),
           {{"Enums.inc", Enums},
            {"MCDesc.inc", MCDesc},
            {"Header.inc", Header},
            {"TargetDesc.inc", TargetDesc}}};
 }
 
-void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
-  const CodeGenHwModes &CGH = Target.getHwModes();
-  unsigned NumModes = CGH.getNumModeIds();
-  auto getModeName = [CGH](unsigned M) -> StringRef {
-    if (M == 0)
-      return "Default";
-    return CGH.getMode(M).Name;
-  };
+template <typename InfoTy, typename FnTy>
+Printable RegisterInfoEmitter::printByHwMode(const InfoByHwMode<InfoTy> &Info,
+                                             FnTy Func) {
+  return Printable([&](raw_ostream &OS) {
+    if (Info.isSimple()) {
+      OS << Func(Info.getSimple());
+      return;
+    }
 
+    const CodeGenHwModes &CGH = Target.getHwModes();
+
+    OS << "{";
+    for (unsigned M = 0, E = CGH.getNumModeIds(); M != E; ++M)
+      OS << ' ' << CGH.getModeName(M, /*IncludeDefault=*/true) << ':'
+         << Func(Info.get(M));
+    OS << " }";
+  });
+}
+
+void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
   for (const CodeGenRegisterClass &RC : RegBank.getRegClasses()) {
     OS << "RegisterClass " << RC.getName() << ":\n";
-    OS << "\tSpillSize: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << RC.RSI.get(M).SpillSize;
-    OS << " }\n\tSpillAlignment: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << RC.RSI.get(M).SpillAlignment;
-    OS << " }\n\tNumRegs: " << RC.getMembers().size() << '\n';
+    OS << "\tSpillSize: " << printByHwMode(RC.RSI, [](const RegSizeInfo &Info) {
+      return Info.SpillSize;
+    }) << '\n';
+    OS << "\tSpillAlignment: "
+       << printByHwMode(
+              RC.RSI,
+              [](const RegSizeInfo &Info) { return Info.SpillAlignment; })
+       << '\n';
+    OS << "\tNumRegs: " << RC.getMembers().size() << '\n';
     OS << "\tLaneMask: " << PrintLaneMask(RC.LaneMask) << '\n';
     OS << "\tHasDisjunctSubRegs: " << RC.HasDisjunctSubRegs << '\n';
     OS << "\tCoveredBySubRegs: " << RC.CoveredBySubRegs << '\n';
@@ -1950,13 +1991,12 @@ void RegisterInfoEmitter::debugDump(raw_ostream &OS) {
     OS << "SubRegIndex " << SRI.getName() << ":\n";
     OS << "\tLaneMask: " << PrintLaneMask(SRI.LaneMask) << '\n';
     OS << "\tAllSuperRegsCovered: " << SRI.AllSuperRegsCovered << '\n';
-    OS << "\tOffset: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Offset;
-    OS << " }\n\tSize: {";
-    for (unsigned M = 0; M != NumModes; ++M)
-      OS << ' ' << getModeName(M) << ':' << SRI.Range.get(M).Size;
-    OS << " }\n";
+    OS << "\tOffset: " << printByHwMode(SRI.Range, [](const SubRegRange &Info) {
+      return Info.Offset;
+    }) << '\n';
+    OS << "\tSize: " << printByHwMode(SRI.Range, [](const SubRegRange &Info) {
+      return Info.Size;
+    }) << '\n';
   }
 
   for (const CodeGenRegister &R : RegBank.getRegisters()) {

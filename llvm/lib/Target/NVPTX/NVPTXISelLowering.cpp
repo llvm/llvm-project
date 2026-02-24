@@ -891,6 +891,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                        ISD::SIGN_EXTEND,
                        ISD::INTRINSIC_WO_CHAIN});
 
+  // If the vector operands require register coalescing, scalarize instead
+  if (STI.hasF32x2Instructions())
+    setTargetDAGCombine({ISD::FMA, ISD::FMUL, ISD::FSUB});
+
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
   if (STI.allowFP16Math() || STI.hasBF16Math())
@@ -4115,6 +4119,8 @@ SDValue NVPTXTargetLowering::LowerFormalArguments(
 
       SDValue P;
       if (isKernelFunction(F)) {
+        assert(isParamGridConstant(Arg) && "ByVal argument must be lowered to "
+                                           "grid_constant by NVPTXLowerArgs");
         P = ArgSymbol;
         P.getNode()->setIROrder(Arg.getArgNo() + 1);
       } else {
@@ -6133,13 +6139,125 @@ static SDValue PerformADDCombine(SDNode *N,
   return PerformADDCombineWithOperands(N, N1, N0, DCI);
 }
 
+/// Check if a v2f32 BUILD_VECTOR provably packs values from non-adjacent
+/// register pairs (non-coalescable).
+static bool isNonCoalescableBuildVector(const SDValue &BV) {
+  if (BV.getOpcode() != ISD::BUILD_VECTOR || BV.getValueType() != MVT::v2f32)
+    return false;
+
+  SDValue Elt0 = BV.getOperand(0);
+  SDValue Elt1 = BV.getOperand(1);
+
+  bool IsExt0 = Elt0.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+  bool IsExt1 = Elt1.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+
+  // If neither element is an EXTRACT_VECTOR_ELT they are free-standing
+  // scalars and the register allocator can still place them side-by-side.
+  if (!IsExt0 && !IsExt1)
+    return false;
+
+  // If exactly one element is an EXTRACT_VECTOR_ELT, the other is a scalar
+  // that cannot generally occupy the adjacent register slot.
+  if (IsExt0 != IsExt1)
+    return true;
+
+  // At this point both sources are extracting from vectors. If they are from
+  // different vectors, then the BUILD_VECTOR is non-coalescable.
+  SDValue Src0 = Elt0.getOperand(0);
+  SDValue Src1 = Elt1.getOperand(0);
+  if (Src0 != Src1)
+    return true;
+
+  auto *Idx0 = dyn_cast<ConstantSDNode>(Elt0.getOperand(1));
+  auto *Idx1 = dyn_cast<ConstantSDNode>(Elt1.getOperand(1));
+  // If both indices are dynamic they will be lowered to
+  // loads and the vector will be spilled to local memory. The register
+  // allocator can easily place the results in adjacent registers.
+  if (!Idx0 && !Idx1)
+    return false;
+
+  // If one index is dynamic and the other is constant, the value from the
+  // constant load will result in an additional register to pair with the result
+  // from the dynamic load. We consider this non-coalescable.
+  if ((Idx0 && !Idx1) || (!Idx0 && Idx1))
+    return true;
+
+  // Both are constant, adjacent pairs are coalescable
+  return std::abs(Idx0->getSExtValue() - Idx1->getSExtValue()) != 1;
+}
+
+/// Scalarize a v2f32 arithmetic node (FADD, FMUL, FSUB, FMA) when at least
+/// one operand is a BUILD_VECTOR that repacks values from non-adjacent register
+/// pairs.  Without this combine the BUILD_VECTOR forces allocation of a
+/// temporary 64-bit register, increasing register pressure.
+///
+/// Example - before:
+///   t0: v2f32,v2f32,ch = LoadV2 ...
+///   t1: f32 = extract_vector_elt t0, 0
+///   t2: f32 = extract_vector_elt t0:1, 0
+///   t3: v2f32 = BUILD_VECTOR t1, t2       ;; non-coalescable repack
+///   t4: v2f32 = fma t_a, t3, t_c
+///
+/// After:
+///   t0: v2f32,v2f32,ch = LoadV2 ...
+///   t1: f32 = extract_vector_elt t0, 0
+///   t2: f32 = extract_vector_elt t0:1, 0
+///   a0: f32 = extract_vector_elt t_a, 0
+///   a1: f32 = extract_vector_elt t_a, 1
+///   c0: f32 = extract_vector_elt t_c, 0
+///   c1: f32 = extract_vector_elt t_c, 1
+///   r0: f32 = fma a0, t1, c0
+///   r1: f32 = fma a1, t2, c1
+///   t4: v2f32 = BUILD_VECTOR r0, r1
+static SDValue PerformScalarizeV2F32Op(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v2f32)
+    return SDValue();
+
+  // Only scalarize when at least one operand is a BUILD_VECTOR whose elements
+  // are guaranteed to reside in different register pairs.
+  if (none_of(N->ops(), isNonCoalescableBuildVector))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  EVT EltVT = VT.getVectorElementType();
+  unsigned Opc = N->getOpcode();
+
+  // For each operand, get the scalar element at the given index: if the operand
+  // is a BUILD_VECTOR, grab the element directly; otherwise, emit an
+  // EXTRACT_VECTOR_ELT.
+  auto GetElement = [&](SDValue Op, unsigned Index) -> SDValue {
+    if (Op.getOpcode() == ISD::BUILD_VECTOR)
+      return Op.getOperand(Index);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Op,
+                       DAG.getVectorIdxConstant(Index, DL));
+  };
+
+  // Build scalar operand lists for element 0 and element 1.
+  SmallVector<SDValue, 3> Ops0, Ops1;
+  for (const SDValue &Op : N->ops()) {
+    Ops0.push_back(GetElement(Op, 0));
+    Ops1.push_back(GetElement(Op, 1));
+  }
+
+  SDValue Res0 = DAG.getNode(Opc, DL, EltVT, Ops0, N->getFlags());
+  SDValue Res1 = DAG.getNode(Opc, DL, EltVT, Ops1, N->getFlags());
+
+  return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Res0, Res1);
+}
+
 /// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
 ///
 static SDValue PerformFADDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  if (SDValue Result = PerformScalarizeV2F32Op(N, DCI))
+    return Result;
 
   EVT VT = N0.getValueType();
   if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
@@ -6991,6 +7109,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformEXTRACTCombine(N, DCI);
   case ISD::FADD:
     return PerformFADDCombine(N, DCI, OptLevel);
+  case ISD::FMA:
+  case ISD::FMUL:
+  case ISD::FSUB:
+    return PerformScalarizeV2F32Op(N, DCI);
   case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::FMAXIMUM:
@@ -7435,46 +7557,84 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
 
 bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  // When CAS bitwidth is not supported on the hardware, the CAS is emulated
-  // using a retry loop that uses a higher-bitwidth monotonic CAS. We enforce
-  // the memory order using explicit fences around the retry loop.
-  // The memory order of natively supported CAS operations can be enforced
-  // by lowering to an atom.cas with the right memory synchronizing effect.
-  // However, atom.cas only supports relaxed, acquire, release and acq_rel.
-  // So we also use explicit fences for enforcing memory order for
-  // seq_cast CAS with natively-supported bitwidths.
-  return CI &&
-         (cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() <
-              STI.getMinCmpXchgSizeInBits() ||
-          CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent);
+  // This function returns true iff the operation is emulated using a CAS-loop,
+  // or if it has the memory order seq_cst (which is not natively supported in
+  // the PTX `atom` instruction).
+  //
+  // atomicrmw and cmpxchg instructions not efficiently supported by PTX
+  // are lowered to CAS emulation loops that preserve their memory order,
+  // syncscope, and volatile semantics. For PTX, it is more efficient to use
+  // atom.cas.relaxed.sco instructions within the loop, and fences before and
+  // after the loop to restore order.
+  //
+  // Atomic instructions efficiently supported by PTX are lowered to
+  // `atom.<op>.<sem>.<scope` instruction with their corresponding memory order
+  // and scope. Since PTX does not support seq_cst, we emulate it by lowering to
+  // a fence.sc followed by an atom according to the PTX atomics ABI
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
+    return (cast<IntegerType>(CI->getCompareOperand()->getType())
+                ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
+           CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
+  if (auto *RI = dyn_cast<AtomicRMWInst>(I))
+    return shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg ||
+           RI->getOrdering() == AtomicOrdering::SequentiallyConsistent;
+  return false;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(
     const Instruction *I) const {
-  auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
-  bool BitwidthSupportedAndIsSeqCst =
+  // If the operation is emulated by a CAS-loop, we lower the instruction to
+  // atom.<op>.relaxed, since AtomicExpandPass will insert fences for enforcing
+  // the correct memory ordering around the CAS loop.
+  //
+  // When the operation is not emulated, but the memory order is seq_cst,
+  // we must lower to "fence.sc.<scope>; atom.<op>.acquire.<scope>;" to conform
+  // to the PTX atomics ABI.
+  // https://docs.nvidia.com/cuda/ptx-writers-guide-to-interoperability/atomic-abi.html
+  // For such cases, emitLeadingFence() will separately insert the leading
+  // "fence.sc.<scope>;". Here, we only set the memory order to acquire.
+  //
+  // Otherwise, the operation is not emulated, and the memory order is not
+  // seq_cst.  In this case, the LLVM memory order is natively supported by the
+  // PTX `atom` instruction, and we just lower to the corresponding
+  // `atom.<op>.relaxed|acquire|release|acq_rel". For such cases, this function
+  // will NOT be called.
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // I before its memory order was modified.
+  if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I);
       CI && CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent &&
       cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth() >=
-          STI.getMinCmpXchgSizeInBits();
-  return BitwidthSupportedAndIsSeqCst ? AtomicOrdering::Acquire
-                                      : AtomicOrdering::Monotonic;
+          STI.getMinCmpXchgSizeInBits())
+    return AtomicOrdering::Acquire;
+  else if (auto *RI = dyn_cast<AtomicRMWInst>(I);
+           RI && RI->getOrdering() == AtomicOrdering::SequentiallyConsistent &&
+           shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::None)
+    return AtomicOrdering::Acquire;
+
+  return AtomicOrdering::Monotonic;
 }
 
 Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
                                                    Instruction *Inst,
                                                    AtomicOrdering Ord) const {
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // `Inst` before its memory order was modified. We cannot enforce this with an
+  // assert, because AtomicExpandPass will have modified the memory order
+  // between the initial call to shouldInsertFencesForAtomic() and the call to
+  // this function.
+  if (!isa<AtomicCmpXchgInst>(Inst) && !isa<AtomicRMWInst>(Inst))
     return TargetLoweringBase::emitLeadingFence(Builder, Inst, Ord);
 
-  // Specialize for cmpxchg
-  // Emit a fence.sc leading fence for cmpxchg seq_cst which are not emulated
-  SyncScope::ID SSID = cast<AtomicCmpXchgInst>(Inst)->getSyncScopeID();
+  // Specialize for cmpxchg and atomicrmw
+  auto SSID = getAtomicSyncScopeID(Inst);
+  assert(SSID.has_value() && "Expected an atomic operation");
+
   if (isReleaseOrStronger(Ord))
     return Builder.CreateFence(Ord == AtomicOrdering::SequentiallyConsistent
-                                   ? Ord
+                                   ? AtomicOrdering::SequentiallyConsistent
                                    : AtomicOrdering::Release,
-                               SSID);
+                               SSID.value());
 
   return nullptr;
 }
@@ -7482,19 +7642,25 @@ Instruction *NVPTXTargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 Instruction *NVPTXTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
                                                     Instruction *Inst,
                                                     AtomicOrdering Ord) const {
-  // Specialize for cmpxchg
-  if (!isa<AtomicCmpXchgInst>(Inst))
+  // prerequisite: shouldInsertFencesForAtomic() should have returned `true` for
+  // `Inst` before its memory order was modified. See `emitLeadingFence` for why
+  // this cannot be enforced with an assert.  Specialize for cmpxchg and
+  // atomicrmw
+  auto *CI = dyn_cast<AtomicCmpXchgInst>(Inst);
+  auto *RI = dyn_cast<AtomicRMWInst>(Inst);
+  if (!CI && !RI)
     return TargetLoweringBase::emitTrailingFence(Builder, Inst, Ord);
 
-  auto *CI = cast<AtomicCmpXchgInst>(Inst);
-  auto CASWidth =
-      cast<IntegerType>(CI->getCompareOperand()->getType())->getBitWidth();
-  SyncScope::ID SSID = CI->getSyncScopeID();
-  // Do not emit a trailing fence for cmpxchg seq_cst which are not emulated
-  if (isAcquireOrStronger(Ord) &&
-      (Ord != AtomicOrdering::SequentiallyConsistent ||
-       CASWidth < STI.getMinCmpXchgSizeInBits()))
-    return Builder.CreateFence(AtomicOrdering::Acquire, SSID);
+  auto SSID = getAtomicSyncScopeID(Inst);
+  assert(SSID.has_value() && "Expected an atomic operation");
+
+  bool IsEmulated =
+      CI ? cast<IntegerType>(CI->getCompareOperand()->getType())
+                   ->getBitWidth() < STI.getMinCmpXchgSizeInBits()
+         : shouldExpandAtomicRMWInIR(RI) == AtomicExpansionKind::CmpXChg;
+
+  if (isAcquireOrStronger(Ord) && IsEmulated)
+    return Builder.CreateFence(AtomicOrdering::Acquire, SSID.value());
 
   return nullptr;
 }
