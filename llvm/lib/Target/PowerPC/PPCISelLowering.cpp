@@ -17204,6 +17204,54 @@ static SDValue DAGCombineAddc(SDNode *N,
   }
   return SDValue();
 }
+/// Optimize the bitfloor pattern for PowerPC.
+/// Transforms: select_cc X, 0, 0, (srl MinSignedValue, (ctlz X)), seteq
+/// Into: srl MinSignedValue, (ctlz X)
+///
+/// This is safe on PowerPC because the srw instruction returns 0 when the
+/// shift amount is == bitwidth, which matches the behavior we need for X=0.
+static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
+  assert(N->getOpcode() == ISD::SELECT_CC && "Expected SELECT_CC node");
+
+  // SELECT_CC operands: LHS, RHS, TrueVal, FalseVal, CC
+  SDValue CmpLHS = N->getOperand(0);
+  SDValue CmpRHS = N->getOperand(1);
+  SDValue TrueVal = N->getOperand(2);
+  SDValue FalseVal = N->getOperand(3);
+  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(4))->get();
+
+  // Check if condition is (X == 0)
+  if (CC != ISD::SETEQ || !isNullConstant(CmpRHS))
+    return SDValue();
+
+  // Check if TrueVal is constant 0
+  if (!isNullConstant(TrueVal))
+    return SDValue();
+
+  // Check if FalseVal is (srl MinSignedValue, ShiftAmt)
+  if (FalseVal.getOpcode() != ISD::SRL)
+    return SDValue();
+
+  SDValue ShiftVal = FalseVal.getOperand(0);
+  SDValue ShiftAmt = FalseVal.getOperand(1);
+
+  // Check if ShiftVal is MinSignedValue
+  auto *ShiftConst = dyn_cast<ConstantSDNode>(ShiftVal);
+  if (!ShiftConst || !ShiftConst->getAPIntValue().isMinSignedValue())
+    return SDValue();
+
+  // Check if ShiftAmt is (ctlz CmpLHS
+  if (ShiftAmt.getOpcode() != ISD::CTLZ)
+    return SDValue();
+
+  SDValue CtlzArg = ShiftAmt.getOperand(0);
+
+  // Check if ctlz operates on the same value as the comparison
+  if (CtlzArg != CmpLHS)
+    return SDValue();
+
+  return FalseVal;
+}
 
 // Optimize zero-extension of setcc when the compared value is known to be 0
 // or 1.
@@ -17441,6 +17489,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       return CSCC;
     [[fallthrough]];
   case ISD::SELECT_CC:
+    if (SDValue V = combineSELECT_CCBitFloor(N, DAG))
+      return V;
     return DAGCombineTruncBoolExt(N, DCI);
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:
