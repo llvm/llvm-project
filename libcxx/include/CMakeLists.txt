@@ -892,7 +892,7 @@ set(files
   __type_traits/is_volatile.h
   __type_traits/is_within_lifetime.h
   __type_traits/lazy.h
-  __type_traits/make_32_64_or_128_bit.h
+  __type_traits/make_32_64_128_or_256_bit.h
   __type_traits/make_const_lvalue_ref.h
   __type_traits/make_signed.h
   __type_traits/make_transparent.h

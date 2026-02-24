@@ -31,6 +31,10 @@ double __promote_impl(unsigned long long);
 double __promote_impl(__int128_t);
 double __promote_impl(__uint128_t);
 #endif
+#if _LIBCPP_HAS_INT256
+double __promote_impl(__int256_t);
+double __promote_impl(__uint256_t);
+#endif
 double __promote_impl(double);
 long double __promote_impl(long double);
 

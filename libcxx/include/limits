@@ -186,7 +186,10 @@ protected:
 
   static _LIBCPP_CONSTEXPR const bool is_signed   = type(-1) < type(0);
   static _LIBCPP_CONSTEXPR const int digits       = static_cast<int>(sizeof(type) * __CHAR_BIT__ - is_signed);
-  static _LIBCPP_CONSTEXPR const int digits10     = digits * 3 / 10;
+  // floor(digits * log10(2)); 301/1000 approximates log10(2) = 0.30103...
+  // more accurately than 3/10 = 0.3, which under-counts at 256+ bits.
+  // Exact for all bit widths up to at least 33000 (beyond any practical use).
+  static _LIBCPP_CONSTEXPR const int digits10     = digits * 301 / 1000;
   static _LIBCPP_CONSTEXPR const int max_digits10 = 0;
   static _LIBCPP_CONSTEXPR const type __min       = is_signed ? _Tp(_Tp(1) << digits) : 0;
   static _LIBCPP_CONSTEXPR const type __max       = is_signed ? type(type(~0) ^ __min) : type(~0);

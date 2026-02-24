@@ -42,8 +42,8 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __format {
 /// The type stored in @ref basic_format_arg.
 ///
-/// @note The 128-bit types are unconditionally in the list to avoid the values
-/// of the enums to depend on the availability of 128-bit integers.
+/// @note The 128-bit and 256-bit types are unconditionally in the list to avoid
+/// the values of the enums to depend on the availability of extended integers.
 ///
 /// @note The value is stored as a 5-bit value in the __packed_arg_t_bits. This
 /// limits the maximum number of elements to 32.
@@ -65,9 +65,11 @@ enum class __arg_t : uint8_t {
   __int,
   __long_long,
   __i128, // extension
+  __i256, // extension
   __unsigned,
   __unsigned_long_long,
   __u128, // extension
+  __u256, // extension
   __float,
   __double,
   __long_double,
@@ -119,6 +121,12 @@ _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_
 #  else
     __libcpp_unreachable();
 #  endif
+  case __format::__arg_t::__i256:
+#  if _LIBCPP_HAS_INT256
+    return std::invoke(std::forward<_Visitor>(__vis), __arg.__value_.__i256_);
+#  else
+    __libcpp_unreachable();
+#  endif
   case __format::__arg_t::__unsigned:
     return std::invoke(std::forward<_Visitor>(__vis), __arg.__value_.__unsigned_);
   case __format::__arg_t::__unsigned_long_long:
@@ -126,6 +134,12 @@ _LIBCPP_HIDE_FROM_ABI decltype(auto) __visit_format_arg(_Visitor&& __vis, basic_
   case __format::__arg_t::__u128:
 #  if _LIBCPP_HAS_INT128
     return std::invoke(std::forward<_Visitor>(__vis), __arg.__value_.__u128_);
+#  else
+    __libcpp_unreachable();
+#  endif
+  case __format::__arg_t::__u256:
+#  if _LIBCPP_HAS_INT256
+    return std::invoke(std::forward<_Visitor>(__vis), __arg.__value_.__u256_);
 #  else
     __libcpp_unreachable();
 #  endif
@@ -170,6 +184,12 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
 #    else
     __libcpp_unreachable();
 #    endif
+  case __format::__arg_t::__i256:
+#    if _LIBCPP_HAS_INT256
+    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__i256_);
+#    else
+    __libcpp_unreachable();
+#    endif
   case __format::__arg_t::__unsigned:
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__unsigned_);
   case __format::__arg_t::__unsigned_long_long:
@@ -177,6 +197,12 @@ _LIBCPP_HIDE_FROM_ABI _Rp __visit_format_arg(_Visitor&& __vis, basic_format_arg<
   case __format::__arg_t::__u128:
 #    if _LIBCPP_HAS_INT128
     return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__u128_);
+#    else
+    __libcpp_unreachable();
+#    endif
+  case __format::__arg_t::__u256:
+#    if _LIBCPP_HAS_INT256
+    return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), __arg.__value_.__u256_);
 #    else
     __libcpp_unreachable();
 #    endif
@@ -242,6 +268,10 @@ public:
     __int128_t __i128_;
     __uint128_t __u128_;
 #  endif
+#  if _LIBCPP_HAS_INT256
+    __int256_t __i256_;
+    __uint256_t __u256_;
+#  endif
     float __float_;
     double __double_;
     long double __long_double_;
@@ -265,6 +295,10 @@ public:
 #  if _LIBCPP_HAS_INT128
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__int128_t __value) noexcept : __i128_(__value) {}
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__uint128_t __value) noexcept : __u128_(__value) {}
+#  endif
+#  if _LIBCPP_HAS_INT256
+  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__int256_t __value) noexcept : __i256_(__value) {}
+  _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(__uint256_t __value) noexcept : __u256_(__value) {}
 #  endif
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(float __value) noexcept : __float_(__value) {}
   _LIBCPP_HIDE_FROM_ABI __basic_format_arg_value(double __value) noexcept : __double_(__value) {}
@@ -303,6 +337,17 @@ public:
       return std::invoke(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
     }
 #    endif
+#    if _LIBCPP_HAS_INT256
+    case __format::__arg_t::__i256: {
+      typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__i256_};
+      return std::invoke(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
+    }
+
+    case __format::__arg_t::__u256: {
+      typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__u256_};
+      return std::invoke(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
+    }
+#    endif
     default:
       return std::__visit_format_arg(std::forward<_Visitor>(__vis), __arg);
     }
@@ -321,6 +366,17 @@ public:
 
     case __format::__arg_t::__u128: {
       typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__u128_};
+      return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
+    }
+#    endif
+#    if _LIBCPP_HAS_INT256
+    case __format::__arg_t::__i256: {
+      typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__i256_};
+      return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
+    }
+
+    case __format::__arg_t::__u256: {
+      typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__u256_};
       return std::invoke_r<_Rp>(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
     }
 #    endif
@@ -385,6 +441,17 @@ visit_format_arg(_Visitor&& __vis, basic_format_arg<_Context> __arg) {
     return std::invoke(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
   }
 #  endif // _LIBCPP_HAS_INT128
+#  if _LIBCPP_HAS_INT256
+  case __format::__arg_t::__i256: {
+    typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__i256_};
+    return std::invoke(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
+  }
+
+  case __format::__arg_t::__u256: {
+    typename __basic_format_arg_value<_Context>::__handle __h{__arg.__value_.__u256_};
+    return std::invoke(std::forward<_Visitor>(__vis), typename basic_format_arg<_Context>::handle{__h});
+  }
+#  endif // _LIBCPP_HAS_INT256
   default:
     return std::__visit_format_arg(std::forward<_Visitor>(__vis), __arg);
   }

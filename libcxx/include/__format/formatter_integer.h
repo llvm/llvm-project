@@ -19,7 +19,7 @@
 #include <__format/formatter_output.h>
 #include <__format/parser_std_format_spec.h>
 #include <__type_traits/is_void.h>
-#include <__type_traits/make_32_64_or_128_bit.h>
+#include <__type_traits/make_32_64_128_or_256_bit.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -46,7 +46,7 @@ public:
     if (__specs.__std_.__type_ == __format_spec::__type::__char)
       return __formatter::__format_char(__value, __ctx.out(), __specs);
 
-    using _Type = __make_32_64_or_128_bit_t<_Tp>;
+    using _Type = __make_32_64_128_or_256_bit_t<_Tp>;
     static_assert(!is_void<_Type>::value, "unsupported integral type used in __formatter_integer::__format");
 
     // Reduce the number of instantiation of the integer formatter
@@ -71,6 +71,10 @@ struct formatter<long long, _CharT> : public __formatter_integer<_CharT> {};
 template <__fmt_char_type _CharT>
 struct formatter<__int128_t, _CharT> : public __formatter_integer<_CharT> {};
 #  endif
+#  if _LIBCPP_HAS_INT256
+template <__fmt_char_type _CharT>
+struct formatter<__int256_t, _CharT> : public __formatter_integer<_CharT> {};
+#  endif
 
 // Unsigned integral types.
 template <__fmt_char_type _CharT>
@@ -86,6 +90,10 @@ struct formatter<unsigned long long, _CharT> : public __formatter_integer<_CharT
 #  if _LIBCPP_HAS_INT128
 template <__fmt_char_type _CharT>
 struct formatter<__uint128_t, _CharT> : public __formatter_integer<_CharT> {};
+#  endif
+#  if _LIBCPP_HAS_INT256
+template <__fmt_char_type _CharT>
+struct formatter<__uint256_t, _CharT> : public __formatter_integer<_CharT> {};
 #  endif
 
 #  if _LIBCPP_STD_VER >= 23
@@ -103,6 +111,10 @@ inline constexpr bool enable_nonlocking_formatter_optimization<long long> = true
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<__int128_t> = true;
 #    endif
+#    if _LIBCPP_HAS_INT256
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<__int256_t> = true;
+#    endif
 
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<unsigned char> = true;
@@ -117,6 +129,10 @@ inline constexpr bool enable_nonlocking_formatter_optimization<unsigned long lon
 #    if _LIBCPP_HAS_INT128
 template <>
 inline constexpr bool enable_nonlocking_formatter_optimization<__uint128_t> = true;
+#    endif
+#    if _LIBCPP_HAS_INT256
+template <>
+inline constexpr bool enable_nonlocking_formatter_optimization<__uint256_t> = true;
 #    endif
 #  endif // _LIBCPP_STD_VER >= 23
 #endif   // _LIBCPP_STD_VER >= 20

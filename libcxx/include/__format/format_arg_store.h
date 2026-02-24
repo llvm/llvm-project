@@ -75,6 +75,10 @@ consteval __arg_t __determine_arg_t() {
   else if constexpr (sizeof(_Tp) == sizeof(__int128_t))
     return __arg_t::__i128;
 #  endif
+#  if _LIBCPP_HAS_INT256
+  else if constexpr (sizeof(_Tp) == sizeof(__int256_t))
+    return __arg_t::__i256;
+#  endif
   else
     static_assert(sizeof(_Tp) == 0, "an unsupported signed integer was used");
 }
@@ -89,6 +93,10 @@ consteval __arg_t __determine_arg_t() {
 #  if _LIBCPP_HAS_INT128
   else if constexpr (sizeof(_Tp) == sizeof(__uint128_t))
     return __arg_t::__u128;
+#  endif
+#  if _LIBCPP_HAS_INT256
+  else if constexpr (sizeof(_Tp) == sizeof(__uint256_t))
+    return __arg_t::__u256;
 #  endif
   else
     static_assert(sizeof(_Tp) == 0, "an unsupported unsigned integer was used");

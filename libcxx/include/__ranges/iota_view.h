@@ -60,7 +60,12 @@ struct __get_wider_signed {
       return type_identity<long>{};
     else if constexpr (sizeof(_Int) < sizeof(long long))
       return type_identity<long long>{};
-#  if _LIBCPP_HAS_INT128
+#  if _LIBCPP_HAS_INT256
+    else if constexpr (sizeof(_Int) < sizeof(__int128))
+      return type_identity<__int128>{};
+    else if constexpr (sizeof(_Int) <= sizeof(__int256))
+      return type_identity<__int256>{};
+#  elif _LIBCPP_HAS_INT128
     else if constexpr (sizeof(_Int) <= sizeof(__int128))
       return type_identity<__int128>{};
 #  else

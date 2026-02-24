@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
-#define _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
+#ifndef _LIBCPP___TYPE_TRAITS_MAKE_32_64_128_OR_256_BIT_H
+#define _LIBCPP___TYPE_TRAITS_MAKE_32_64_128_OR_256_BIT_H
 
 #include <__config>
 #include <__type_traits/conditional.h>
@@ -23,19 +23,23 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-/// Helper to promote an integral to smallest 32, 64, or 128 bit representation.
+/// Helper to promote an integral to smallest 32, 64, 128, or 256 bit representation.
 ///
-/// The restriction is the same as the integral version of to_char.
+/// The restriction is the same as the integral version of to_chars.
 template <class _Tp>
 #if _LIBCPP_STD_VER >= 20
   requires(is_signed_v<_Tp> || is_unsigned_v<_Tp> || is_same_v<_Tp, char>)
 #endif
 // clang-format off
-using __make_32_64_or_128_bit_t _LIBCPP_NODEBUG =
+using __make_32_64_128_or_256_bit_t _LIBCPP_NODEBUG =
     __copy_unsigned_t<_Tp,
         __conditional_t<sizeof(_Tp) <= sizeof(int32_t),    int32_t,
         __conditional_t<sizeof(_Tp) <= sizeof(int64_t),    int64_t,
-#if _LIBCPP_HAS_INT128
+#if _LIBCPP_HAS_INT256
+        __conditional_t<sizeof(_Tp) <= sizeof(__int128_t), __int128_t,
+        __conditional_t<sizeof(_Tp) <= sizeof(__int256_t), __int256_t,
+        /* else */                                         void> >
+#elif _LIBCPP_HAS_INT128
         __conditional_t<sizeof(_Tp) <= sizeof(__int128_t), __int128_t,
         /* else */                                         void>
 #else
@@ -46,4 +50,4 @@ using __make_32_64_or_128_bit_t _LIBCPP_NODEBUG =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___TYPE_TRAITS_MAKE_32_64_OR_128_BIT_H
+#endif // _LIBCPP___TYPE_TRAITS_MAKE_32_64_128_OR_256_BIT_H

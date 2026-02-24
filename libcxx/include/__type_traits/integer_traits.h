@@ -35,6 +35,10 @@ inline const bool __is_signed_integer_v<signed long long> = true;
 template <>
 inline const bool __is_signed_integer_v<__int128_t> = true;
 #endif
+#if _LIBCPP_HAS_INT256
+template <>
+inline const bool __is_signed_integer_v<__int256_t> = true;
+#endif
 
 // This trait is to determine whether a type is an /unsigned integer type/
 // See [basic.fundamental]/p2
@@ -53,6 +57,10 @@ inline const bool __is_unsigned_integer_v<unsigned long long> = true;
 #if _LIBCPP_HAS_INT128
 template <>
 inline const bool __is_unsigned_integer_v<__uint128_t> = true;
+#endif
+#if _LIBCPP_HAS_INT256
+template <>
+inline const bool __is_unsigned_integer_v<__uint256_t> = true;
 #endif
 
 #if _LIBCPP_STD_VER >= 20

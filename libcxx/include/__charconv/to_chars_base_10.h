@@ -175,6 +175,67 @@ __base_10_u128(char* __buffer, __uint128_t __value) _NOEXCEPT {
   return __buffer;
 }
 #  endif
+
+#if _LIBCPP_HAS_INT256
+/// \returns 10^\a exp
+///
+/// \pre \a exp [0, 77]
+_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline __uint256_t __pow_10_256(int __exp) _NOEXCEPT {
+  _LIBCPP_ASSERT_INTERNAL(__exp >= __pow10_256_offset, "Index out of bounds");
+  return __pow10_256[__exp - __pow10_256_offset];
+}
+
+_LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI inline char*
+__base_10_u256(char* __buffer, __uint256_t __value) _NOEXCEPT {
+  _LIBCPP_ASSERT_INTERNAL(
+      __value > numeric_limits<__uint128_t>::max(), "The optimizations for this algorithm fail when this isn't true.");
+
+  // Maximum unsigned values:
+  // 128 bit                  340'282'366'920'938'463'463'374'607'431'768'211'455 (39 digits)
+  // 256 bit  115'792'089'237'316'195'423'570'985'008'687'907'853'
+  //          269'984'665'640'564'039'457'584'007'913'129'639'935   (78 digits)
+  //
+  // Strategy: divide into chunks of 19 digits (10^19 fits in uint64_t).
+  // A 256-bit number has at most 78 digits = 4 chunks of 19 + 2 leading digits.
+  // We peel off 19-digit chunks from the bottom using 256-bit division by 10^19.
+
+  __uint256_t __p19 = __pow_10_256(19);
+
+  // A 256-bit number has at most 78 digits = 5 chunks of up to 19 digits.
+  // Extract 5 chunks of at most 19 digits each from the bottom.
+  uint64_t __c0 = static_cast<uint64_t>(__value % __p19);
+  __value /= __p19;
+  uint64_t __c1 = static_cast<uint64_t>(__value % __p19);
+  __value /= __p19;
+  uint64_t __c2 = static_cast<uint64_t>(__value % __p19);
+  __value /= __p19;
+  uint64_t __c3 = static_cast<uint64_t>(__value % __p19);
+  __value /= __p19;
+  uint64_t __c4 = static_cast<uint64_t>(__value); // at most 2 digits
+
+  // Emit 19-digit zero-padded chunk: [9 digits] + [10 digits]
+  auto __emit_padded = [&](uint64_t __c) {
+    __buffer = __itoa::__append9(__buffer, static_cast<uint32_t>(__c / 10000000000));
+    __buffer = __itoa::__append10(__buffer, __c % 10000000000);
+  };
+
+  // Find the first non-zero chunk and emit it with variable width.
+  if (__c4) {
+    __buffer = __base_10_u64(__buffer, __c4);
+    __emit_padded(__c3);
+    __emit_padded(__c2);
+  } else if (__c3) {
+    __buffer = __base_10_u64(__buffer, __c3);
+    __emit_padded(__c2);
+  } else {
+    __buffer = __base_10_u64(__buffer, __c2);
+  }
+  __emit_padded(__c1);
+  __emit_padded(__c0);
+
+  return __buffer;
+}
+#endif
 } // namespace __itoa
 
 _LIBCPP_END_NAMESPACE_STD

@@ -25,7 +25,7 @@
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/is_signed.h>
-#include <__type_traits/make_32_64_or_128_bit.h>
+#include <__type_traits/make_32_64_128_or_256_bit.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/unreachable.h>
 #include <cstdint>
@@ -88,6 +88,24 @@ __to_chars_itoa(char* __first, char* __last, __uint128_t __value, false_type) {
     return {__last, errc::value_too_large};
 }
 #  endif
+
+#if _LIBCPP_HAS_INT256
+template <>
+inline _LIBCPP_CONSTEXPR_SINCE_CXX23
+_LIBCPP_HIDE_FROM_ABI __to_chars_result __to_chars_itoa(char* __first, char* __last, __uint256_t __value, false_type) {
+  // When the value fits in 128-bits use the 128-bit code path.
+  if (__value <= numeric_limits<__uint128_t>::max())
+    return __to_chars_itoa(__first, __last, static_cast<__uint128_t>(__value), false_type());
+
+  using __tx  = __itoa::__traits<__uint256_t>;
+  auto __diff = __last - __first;
+
+  if (__tx::digits <= __diff || __tx::__width(__value) <= __diff)
+    return {__tx::__convert(__first, __value), errc(0)};
+  else
+    return {__last, errc::value_too_large};
+}
+#endif
 
 template <class _Tp, __enable_if_t<!is_signed<_Tp>::value, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI __to_chars_result
@@ -321,7 +339,7 @@ to_chars_result to_chars(char*, char*, bool, int = 10) = delete;
 template <typename _Tp, __enable_if_t<is_integral<_Tp>::value, int> = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value) {
-  using _Type = __make_32_64_or_128_bit_t<_Tp>;
+  using _Type = __make_32_64_128_or_256_bit_t<_Tp>;
   static_assert(!is_same<_Type, void>::value, "unsupported integral type used in to_chars");
   return std::__to_chars_itoa(__first, __last, static_cast<_Type>(__value), is_signed<_Tp>());
 }
@@ -331,7 +349,7 @@ inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base) {
   _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
 
-  using _Type = __make_32_64_or_128_bit_t<_Tp>;
+  using _Type = __make_32_64_128_or_256_bit_t<_Tp>;
   return std::__to_chars_integral(__first, __last, static_cast<_Type>(__value), __base);
 }
 

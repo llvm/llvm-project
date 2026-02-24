@@ -113,6 +113,30 @@ struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__u
 };
 #  endif
 
+#if _LIBCPP_HAS_INT256
+template <typename _Tp>
+struct _LIBCPP_HIDDEN __traits_base<_Tp, __enable_if_t<sizeof(_Tp) == sizeof(__uint256_t)> > {
+  using type = __uint256_t;
+
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __width(_Tp __v) {
+    _LIBCPP_ASSERT_INTERNAL(
+        __v > numeric_limits<__uint128_t>::max(), "The optimizations for this algorithm fail when this isn't true.");
+    // There's always a bit set in the upper 128-bits.
+    auto __t = (256 - std::__countl_zero(static_cast<__uint128_t>(__v >> 128))) * 1233 >> 12;
+    _LIBCPP_ASSERT_INTERNAL(__t >= __itoa::__pow10_256_offset, "Index out of bounds");
+    return __t - (__v < __itoa::__pow10_256[__t - __itoa::__pow10_256_offset]) + 1;
+  }
+
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI char* __convert(char* __p, _Tp __v) {
+    return __itoa::__base_10_u256(__p, __v);
+  }
+
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI decltype(__pow10_256)& __pow() {
+    return __itoa::__pow10_256;
+  }
+};
+#endif
+
 template <typename _Tp, typename _Up>
 _LIBCPP_HIDE_FROM_ABI bool _LIBCPP_CONSTEXPR_SINCE_CXX23 __mul_overflowed(_Tp __a, _Up __b, _Tp& __r) {
   static_assert(is_unsigned<_Tp>::value);

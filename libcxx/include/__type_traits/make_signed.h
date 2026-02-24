@@ -38,6 +38,10 @@ using __signed_types =
                 ,
                 __int128_t
 #  endif
+#  if _LIBCPP_HAS_INT256
+                ,
+                __int256_t
+#  endif
                 >;
 
 template <class _Tp, bool = is_integral<_Tp>::value || is_enum<_Tp>::value>
@@ -61,6 +65,10 @@ template <> struct __make_signed<unsigned long long, true> {typedef long long ty
 #  if _LIBCPP_HAS_INT128
 template <> struct __make_signed<__int128_t,         true> {typedef __int128_t type;};
 template <> struct __make_signed<__uint128_t,        true> {typedef __int128_t type;};
+#  endif
+#  if _LIBCPP_HAS_INT256
+template <> struct __make_signed<__int256_t,         true> {typedef __int256_t type;};
+template <> struct __make_signed<__uint256_t,        true> {typedef __int256_t type;};
 #  endif
 // clang-format on
 

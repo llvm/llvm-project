@@ -41,6 +41,11 @@ template <integral _Tp>
            static_cast<_Tp>(byteswap(static_cast<uint64_t>(__val >> 64)));
 #    endif // __has_builtin(__builtin_bswap128)
 #  endif   // _LIBCPP_HAS_INT128
+#  if _LIBCPP_HAS_INT256
+  } else if constexpr (sizeof(_Tp) == 32) {
+    return (static_cast<_Tp>(byteswap(static_cast<__uint128_t>(__val))) << 128) |
+           static_cast<_Tp>(byteswap(static_cast<__uint128_t>(__val >> 128)));
+#  endif // _LIBCPP_HAS_INT256
   } else {
     static_assert(sizeof(_Tp) == 0, "byteswap is unimplemented for integral types of this size");
   }

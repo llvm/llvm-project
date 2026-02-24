@@ -40,6 +40,10 @@ using __unsigned_types =
                 ,
                 __uint128_t
 #  endif
+#  if _LIBCPP_HAS_INT256
+                ,
+                __uint256_t
+#  endif
                 >;
 
 template <class _Tp, bool = is_integral<_Tp>::value || is_enum<_Tp>::value>
@@ -63,6 +67,10 @@ template <> struct __make_unsigned<unsigned long long, true> {typedef unsigned l
 #  if _LIBCPP_HAS_INT128
 template <> struct __make_unsigned<__int128_t,         true> {typedef __uint128_t        type;};
 template <> struct __make_unsigned<__uint128_t,        true> {typedef __uint128_t        type;};
+#  endif
+#  if _LIBCPP_HAS_INT256
+template <> struct __make_unsigned<__int256_t,         true> {typedef __uint256_t        type;};
+template <> struct __make_unsigned<__uint256_t,        true> {typedef __uint256_t        type;};
 #  endif
 // clang-format on
 

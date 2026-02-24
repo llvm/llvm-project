@@ -214,6 +214,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __compile_time_visit_format_arg(
     std::__throw_format_error("Invalid argument");
 #  endif
     return;
+  case __arg_t::__i256:
+#  if _LIBCPP_HAS_INT256
+    return __format::__compile_time_validate_argument<_CharT, __int256_t>(__parse_ctx, __ctx);
+#  else
+    std::__throw_format_error("Invalid argument");
+#  endif
+    return;
   case __arg_t::__unsigned:
     return __format::__compile_time_validate_argument<_CharT, unsigned>(__parse_ctx, __ctx);
   case __arg_t::__unsigned_long_long:
@@ -221,6 +228,13 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __compile_time_visit_format_arg(
   case __arg_t::__u128:
 #  if _LIBCPP_HAS_INT128
     return __format::__compile_time_validate_argument<_CharT, __uint128_t>(__parse_ctx, __ctx);
+#  else
+    std::__throw_format_error("Invalid argument");
+#  endif
+    return;
+  case __arg_t::__u256:
+#  if _LIBCPP_HAS_INT256
+    return __format::__compile_time_validate_argument<_CharT, __uint256_t>(__parse_ctx, __ctx);
 #  else
     std::__throw_format_error("Invalid argument");
 #  endif

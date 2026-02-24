@@ -73,6 +73,13 @@ template <>
 struct __libcpp_random_is_valid_inttype<__uint128_t> : true_type {}; // extension
 #endif                                                               // _LIBCPP_HAS_INT128
 
+#if _LIBCPP_HAS_INT256
+template <>
+struct __libcpp_random_is_valid_inttype<__int256_t> : true_type {}; // extension
+template <>
+struct __libcpp_random_is_valid_inttype<__uint256_t> : true_type {}; // extension
+#endif                                                               // _LIBCPP_HAS_INT256
+
 // [rand.req.urng]/3:
 // A class G meets the uniform random bit generator requirements if G models
 // uniform_random_bit_generator, invoke_result_t<G&> is an unsigned integer type,

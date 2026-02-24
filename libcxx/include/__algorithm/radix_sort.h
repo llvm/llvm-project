@@ -334,6 +334,13 @@ struct __unsigned_integer_of_size<16> {
 };
 #  endif
 
+#  if _LIBCPP_HAS_INT256
+template <>
+struct __unsigned_integer_of_size<32> {
+  using type _LIBCPP_NODEBUG = unsigned __int256;
+};
+#  endif
+
 template <size_t _Size>
 using __unsigned_integer_of_size_t _LIBCPP_NODEBUG = typename __unsigned_integer_of_size<_Size>::type;
 
