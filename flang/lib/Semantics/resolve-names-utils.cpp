@@ -214,6 +214,7 @@ private:
   void MakeDeferred(int);
   Bound GetBound(const std::optional<parser::SpecificationExpr> &);
   Bound GetBound(const parser::SpecificationExpr &);
+  void checkExplicitShapeBoundsSpec(const parser::ExplicitShapeBoundsSpec &x);
 };
 
 ArraySpec AnalyzeArraySpec(
@@ -352,7 +353,15 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
       std::get<parser::SpecificationExpr>(x.t));
 }
 
+void ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(const parser::ExplicitShapeBoundsSpec &x) {
+  printf("called new function checkExplicitShapeBoundsSpec\n");
+  
+}
+
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
+  // TODO: reuse the work done when checking for semantic errors
+  checkExplicitShapeBoundsSpec(x);
+
   const auto &lowerBoundOpt{std::get<0>(x.t)};
   const auto &upperBound{std::get<1>(x.t)};
 
@@ -407,12 +416,15 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   }
 
   // Create one ShapeSpec per element
-  for (std::size_t i{0}; i < ubValues.size(); ++i) {
+  std::size_t numDims{std::max(ubValues.size(), lbValues.size())};
+  for (std::size_t i{0}; i < numDims; ++i) {
     Bound lb{1};
-    if (i < lbValues.size()) {
-      lb = Bound{common::Clone(evaluate::ExtentExpr{lbValues[i]})};
+    if (!lbValues.empty()) {
+      std::size_t lbIdx{lbValues.size() == 1 ? 0 : i};
+      lb = Bound{common::Clone(evaluate::ExtentExpr{lbValues[lbIdx]})};
     }
-    Bound ub{common::Clone(evaluate::ExtentExpr{ubValues[i]})};
+    std::size_t ubIdx{ubValues.size() == 1 ? 0 : i};
+    Bound ub{common::Clone(evaluate::ExtentExpr{ubValues[ubIdx]})};
     arraySpec_.push_back(ShapeSpec::MakeExplicit(std::move(lb), std::move(ub)));
   }
 }
