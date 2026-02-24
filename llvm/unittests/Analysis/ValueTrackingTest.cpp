@@ -902,7 +902,7 @@ TEST_F(ValueTrackingTest, impliesPoison_Select_SameArm) {
                 "  ret void\n"
                 "}");
   EXPECT_TRUE(impliesPoison(A, A4));
-  EXPECT_FALSE(impliesPoison(A2, A4));
+  EXPECT_TRUE(impliesPoison(A2, A4));
 
   EXPECT_FALSE(impliesPoison(A4, A));
   EXPECT_FALSE(impliesPoison(A4, A2));

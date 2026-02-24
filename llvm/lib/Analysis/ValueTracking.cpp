@@ -7630,6 +7630,12 @@ static bool directlyImpliesPoison(const Value *ValAssumedPoison, const Value *V,
         (match(ValAssumedPoison, m_ExtractValue(m_Specific(II))) ||
          llvm::is_contained(II->args(), ValAssumedPoison)))
       return true;
+
+    // If both arms of the select are the same, then it can only return that
+    // value and that value is poison now.
+    if (match(I, m_Select(m_Value(), m_Specific(ValAssumedPoison),
+                          m_Specific(ValAssumedPoison))))
+      return true;
   }
   return false;
 }
