@@ -400,8 +400,8 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
 LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
 #endif
 
-std::error_code ProfileSymbolList::read(const uint8_t *Data,
-                                        uint64_t ListSize, bool IsMD5) {
+std::error_code ProfileSymbolList::read(const uint8_t *Data, uint64_t ListSize,
+                                        bool IsMD5) {
   if (IsMD5) {
     // New format: array of little-endian uint64_t hashes.
     UseMD5 = true;

@@ -904,8 +904,7 @@ std::error_code SampleProfileReaderExtBinaryBase::readOneSection(
     break;
   }
   case SecProfileSymbolList: {
-    bool IsMD5 =
-        hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5);
+    bool IsMD5 = hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5);
     if (std::error_code EC = readProfileSymbolList(IsMD5))
       return EC;
     break;
