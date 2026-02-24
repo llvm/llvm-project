@@ -8,6 +8,7 @@
 
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
+#include "llvm/Support/Casting.h"
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -120,7 +121,8 @@ bool Type::isIntOrFloat() const {
 bool Type::isIntOrIndexOrFloat() const { return isIntOrFloat() || isIndex(); }
 
 unsigned Type::getIntOrFloatBitWidth() const {
-  assert(isIntOrFloat() && "only integers and floats have a bitwidth");
+  assert(isIntOrIndexOrFloat() && "only integers, indexes and floats have a bitwidth");
+  if(isIndex()) return llvm::dyn_cast<IndexType>(*this).kInternalStorageBitWidth;
   if (auto intType = llvm::dyn_cast<IntegerType>(*this))
     return intType.getWidth();
   return llvm::cast<FloatType>(*this).getWidth();
