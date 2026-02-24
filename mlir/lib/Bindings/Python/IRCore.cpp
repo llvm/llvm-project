@@ -2772,8 +2772,9 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
     std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
-    MlirLocation loc =
-        mlirLocationFileLineColGet(ctx, wrap(fileName), startLine, 0);
+    MlirLocation loc = mlirLocationFileLineColGet(
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        0);
 #else
     std::string name =
         nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
@@ -2785,10 +2786,12 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
       throw nb::python_error();
     }
     MlirLocation loc = mlirLocationFileLineColRangeGet(
-        ctx, wrap(fileName), startLine, startCol, endLine, endCol);
+        ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+        startCol, endLine, endCol);
 #endif
 
-    frames[count] = mlirLocationNameGet(ctx, wrap(funcName), loc);
+    frames[count] = mlirLocationNameGet(
+        ctx, mlirStringRefCreate(funcName.data(), funcName.size()), loc);
     ++count;
   }
   // When the loop breaks (after the last iter), current frame (if non-null)
@@ -4682,7 +4685,7 @@ void populateIRCore(nb::module_ &m) {
   m.attr("_T") = nb::type_var("_T", "bound"_a = m.attr("Type"));
 
   nb::class_<PyValue>(m, "Value", nb::is_generic(),
-                      nb::sig("class Value(Generic[_T])"))
+                      nb::sig("class Value(typing.Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), "value"_a,
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
@@ -4820,27 +4823,6 @@ void populateIRCore(nb::module_ &m) {
           },
           "Replace all uses of value with the new value, updating anything in "
           "the IR that uses `self` to use the other value instead.")
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, PyOperation &exception) {
-            MlirOperation exceptedUser = exception.get();
-            mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, const nb::list &exceptions) {
-            // Convert Python list to a std::vector of MlirOperations
-            std::vector<MlirOperation> exceptionOps;
-            for (nb::handle exception : exceptions) {
-              exceptionOps.push_back(nb::cast<PyOperation &>(exception).get());
-            }
-
-            mlirValueReplaceAllUsesExcept(
-                self, with, static_cast<intptr_t>(exceptionOps.size()),
-                exceptionOps.data());
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",
           [](PyValue &self, PyValue &with, PyOperation &exception) {

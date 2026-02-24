@@ -383,7 +383,7 @@ struct A {
 // LLVM:   br label %[[SCOPE_BB:.*]]
 // LLVM: [[SCOPE_BB]]:
 // LLVM:   %[[STRUCT_A:.*]] = getelementptr %[[REC_LAM_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
-// LLVM:   call void @llvm.memcpy.p0.p0.i32(ptr %[[STRUCT_A]], ptr %[[THIS]], i32 4, i1 false)
+// LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr %[[STRUCT_A]], ptr %[[THIS]], i64 4, i1 false)
 // LLVM:   %[[LAM_RET:.*]] = call noundef i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr %[[LAM_ALLOCA]])
 // LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
 // LLVM:   br label %[[RET_BB:.*]]

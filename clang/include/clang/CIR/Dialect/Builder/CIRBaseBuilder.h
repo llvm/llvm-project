@@ -16,6 +16,7 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "mlir/IR/Builders.h"
