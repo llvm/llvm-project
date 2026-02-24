@@ -736,12 +736,18 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
   VectorType sourceType = src.getType();
   int64_t sourceH = sourceType.getShape()[0];
   int64_t sourceW = sourceType.getShape()[1];
-  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
+
   // Create a constant vector to hold the result of the reduction.
   TypedAttr zeroAttr = rewriter.getZeroAttr(sourceType.getElementType());
   Value reductionResult = arith::ConstantOp::create(
       rewriter, loc, acc.getType(),
       DenseElementsAttr::get(acc.getType(), zeroAttr));
+
+  // nSlices is the number of reduction operations needed to reduce the entire
+  // source vector. For example, if reductionDim is 0, we are reducing across
+  // rows, and each slice is a column of the source vector. So the number of
+  // slices is the number of columns, which is sourceW.
+  int nSlices = (reductionDim == 0) ? sourceW : sourceH;
 
   // For each slice of the source, extract the slice vector, do a reduction
   // and, insert the reduced value back to the result vector.
