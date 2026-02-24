@@ -27664,8 +27664,6 @@ static SDValue performVSelectCombine(SDNode *N,
     }
   }
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-
   // Attempt to convert a (vXi1 bitcast(iX N0)) selection mask before it might
   // get split by legalization.
   if (N0.getOpcode() == ISD::BITCAST && CCVT.isVector() &&
