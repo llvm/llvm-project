@@ -59,7 +59,6 @@ SDValue SC32TargetLowering::LowerFormalArguments(
       SDValue Load = DAG.getLoad(ArgLocs[I].getLocVT(), DL, Chain, FIPtr,
                                  MachinePointerInfo::getFixedStack(MF, FI));
       InVals.push_back(Load);
-      continue;
     }
   }
 
@@ -80,11 +79,25 @@ SC32TargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SmallVector<SDValue, 2> RetOps = {SDValue()};
   SDValue Glue;
 
+  int FPOffset = CCInfo.getStackSize() > 0 ? CCInfo.getStackSize() + 4 : 0;
   for (size_t I = 0; I < RVLocs.size(); I++) {
-    Register Reg = RVLocs[I].getLocReg();
-    Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals[I], Glue);
-    Glue = Chain.getValue(1);
-    RetOps.push_back(DAG.getRegister(Reg, MVT::i32));
+    if (RVLocs[I].isMemLoc()) {
+      int Offset = RVLocs[I].getLocMemOffset() + FPOffset;
+      SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, SC32::GP29, MVT::i32);
+      Chain = StackPtr.getValue(1);
+      SDValue PtrOff = DAG.getSignedConstant(-Offset, DL, MVT::i32);
+      PtrOff = DAG.getNode(ISD::SUB, DL, MVT::i32, StackPtr, PtrOff);
+      Chain = DAG.getStore(Chain, DL, OutVals[I], PtrOff, MachinePointerInfo());
+    }
+  }
+
+  for (size_t I = 0; I < RVLocs.size(); I++) {
+    if (RVLocs[I].isRegLoc()) {
+      Register Reg = RVLocs[I].getLocReg();
+      Chain = DAG.getCopyToReg(Chain, DL, Reg, OutVals[I], Glue);
+      Glue = Chain.getValue(1);
+      RetOps.push_back(DAG.getRegister(Reg, MVT::i32));
+    }
   }
 
   RetOps[0] = Chain;
@@ -162,10 +175,24 @@ SDValue SC32TargetLowering::LowerCall(CallLoweringInfo &CLI,
   RVInfo.AnalyzeCallResult(CLI.Ins, RetCC_SC32);
 
   for (size_t I = 0; I < RVLocs.size(); I++) {
-    Register Reg = RVLocs[I].getLocReg();
-    Chain = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i32, Glue).getValue(1);
-    Glue = Chain.getValue(2);
-    InVals.push_back(Chain.getValue(0));
+    if (RVLocs[I].isRegLoc()) {
+      Register Reg = RVLocs[I].getLocReg();
+      Chain = DAG.getCopyFromReg(Chain, DL, Reg, MVT::i32, Glue).getValue(1);
+      Glue = Chain.getValue(2);
+      InVals.push_back(Chain.getValue(0));
+    }
+  }
+
+  for (size_t I = 0; I < RVLocs.size(); I++) {
+    if (RVLocs[I].isMemLoc()) {
+      signed Offset = RVLocs[I].getLocMemOffset() - RVInfo.getStackSize();
+      int FI = MF.getFrameInfo().CreateFixedObject(4, Offset, true);
+      SDValue FIPtr = DAG.getFrameIndex(FI, MVT::i32);
+      SDValue Load = DAG.getLoad(ArgLocs[I].getLocVT(), DL, Chain, FIPtr,
+                                 MachinePointerInfo::getFixedStack(MF, FI));
+      Chain = Load.getValue(1);
+      InVals.push_back(Load);
+    }
   }
 
   return Chain;

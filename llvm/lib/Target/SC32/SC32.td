@@ -42,7 +42,7 @@ def GP : RegisterClass<"SC32", [i32], 32, (sequence "GP%u", 0, 31)>;
 def AUX : RegisterClass<"SC32", [i32], 32, (add AUX0)>;
 
 def CC_SC32 : CallingConv<[CCAssignToReg<[GP23, GP24, GP25, GP26]>, CCAssignToStack<4,4>]>;
-def RetCC_SC32 : CallingConv<[CCAssignToReg<[GP28]>]>;
+def RetCC_SC32 : CallingConv<[CCAssignToReg<[GP28]>, CCAssignToStack<4,4>]>;
 
 def CSR : CalleeSavedRegs<(add)>;
 
