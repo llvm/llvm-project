@@ -1393,6 +1393,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
         Args.MakeArgString(Twine(PluginOptPrefix) + "-time-passes"));
 
   addDTLTOOptions(ToolChain, Args, CmdArgs);
+
+  unsigned LoopAlignment = ParseLoopAlignment(D, Args);
+  if (LoopAlignment)
+    CmdArgs.push_back(Args.MakeArgString(
+        Twine(PluginOptPrefix) + "-align-loops=" + Twine(LoopAlignment)));
 }
 
 void tools::addOpenMPRuntimeLibraryPath(const ToolChain &TC,
@@ -2224,6 +2229,27 @@ unsigned tools::ParseFunctionAlignment(const ToolChain &TC,
     TC.getDriver().Diag(diag::err_drv_invalid_int_value)
         << A->getAsString(Args) << A->getValue();
   return Value ? llvm::Log2_32_Ceil(std::min(Value, 65536u)) : Value;
+}
+
+// Parse `-falign-loops`. Return `0` if the target preference should be used.
+unsigned tools::ParseLoopAlignment(const Driver &D, const ArgList &Args) {
+  const Arg *A = Args.getLastArg(options::OPT_falign_loops_EQ);
+  if (!A)
+    return 0;
+  unsigned Value = 0;
+  if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536) {
+    D.Diag(diag::err_drv_invalid_int_value)
+        << A->getAsString(Args) << A->getValue();
+    return 0;
+  }
+  // We support -falign-loops=N where N is a power of 2. GCC supports more
+  // forms.
+  if (Value & (Value - 1)) {
+    D.Diag(diag::err_drv_alignment_not_power_of_two)
+        << A->getAsString(Args) << A->getValue();
+    return 0;
+  }
+  return Value;
 }
 
 void tools::addDebugInfoKind(

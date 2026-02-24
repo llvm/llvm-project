@@ -1,7 +1,9 @@
+// UNSUPPORTED: system-windows
+
 /// Treat -falign-loops=0 as not specifying the option.
 // RUN: %clang -### -falign-loops=0 %s 2>&1 | FileCheck %s --check-prefix=CHECK_NO
-// RUN: %clang -### -falign-loops=1 %s 2>&1 | FileCheck %s --check-prefix=CHECK_1
-// RUN: %clang -### -falign-loops=4 %s 2>&1 | FileCheck %s --check-prefix=CHECK_4
+// RUN: %clang -### -falign-loops=1 %s 2>&1 | FileCheck %s --check-prefixes=CHECK_1,OBJ
+// RUN: %clang -### -falign-loops=4 -flto %s 2>&1 | FileCheck %s --check-prefixes=CHECK_4,LTO
 /// Only powers of 2 are supported for now.
 // RUN: not %clang -### -falign-loops=5 %s 2>&1 | FileCheck %s --check-prefix=CHECK_5
 // RUN: %clang -### -falign-loops=65536 %s 2>&1 | FileCheck %s --check-prefix=CHECK_65536
@@ -15,3 +17,6 @@
 // CHECK_65536: "-falign-loops=65536"
 // CHECK_65537: error: invalid integral value '65537' in '-falign-loops=65537'
 // CHECK_ERR_A: error: invalid integral value 'a' in '-falign-loops=a'
+
+// OBJ-NOT: -plugin-opt=-align-loops=
+// LTO: -plugin-opt=-align-loops=
