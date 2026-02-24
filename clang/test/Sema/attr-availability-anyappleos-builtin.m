@@ -1,13 +1,16 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios26.0 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos26.0 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple arm64-apple-tvos26.0 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos26.0 -darwin-target-variant-triple x86_64-apple-ios27.0-macabi -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple arm64-apple-ios26.0 -fsyntax-only -verify=expected,ios %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos26.0 -fsyntax-only -verify=expected,macos %s
+// RUN: %clang_cc1 -triple arm64-apple-tvos26.0 -fsyntax-only -verify=expected,tvos %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos26.0 -darwin-target-variant-triple x86_64-apple-ios27.0-macabi -fsyntax-only -verify=expected,macos %s
 
 // Test @available and __builtin_available with anyAppleOS.
 
 // Declarations with anyAppleOS availability.
 void func_introduced_26(void) __attribute__((availability(anyAppleOS, introduced=26.0)));
-void func_introduced_27(void) __attribute__((availability(anyAppleOS, introduced=27.0)));
+void func_introduced_27(void) __attribute__((availability(anyAppleOS, introduced=27.0))); // \
+  // ios-note {{'func_introduced_27' has been marked as being introduced in iOS 27.0 here, but the deployment target is iOS 26.0}} \
+  // macos-note 2 {{'func_introduced_27' has been marked as being introduced in macOS 27.0 here, but the deployment target is macOS 26.0}} \
+  // tvos-note 2 {{'func_introduced_27' has been marked as being introduced in tvOS 27.0 here, but the deployment target is tvOS 26.0}}
 void func_deprecated_27(void) __attribute__((availability(anyAppleOS, introduced=26.0, deprecated=27.0)));
 void func_obsoleted_28(void) __attribute__((availability(anyAppleOS, introduced=26.0, obsoleted=28.0)));
 void func_unavailable(void) __attribute__((availability(anyAppleOS, unavailable))); // expected-note {{has been explicitly marked unavailable here}}
@@ -22,6 +25,30 @@ void test_builtin_available() {
   if (__builtin_available(anyAppleOS 26, iOS 28, *)) {
     func_introduced_26(); // No warning
   }
+
+  // FIXME: The tvOS diagnostic is incorrect. When an explicit iOS version
+  // check (iOS 27) is present alongside anyAppleOS, tvOS should infer its
+  // availability from iOS. Therefore, the iOS 27 check should satisfy the tvOS
+  // 27 requirement and no tvOS diagnostic should be emitted here.
+  if (__builtin_available(anyAppleOS 26, iOS 27, *))
+    func_introduced_27(); // \
+    // macos-warning {{'func_introduced_27' is only available on macOS 27.0 or newer}} \
+    // macos-note {{enclose 'func_introduced_27' in an @available check}} \
+    // tvos-warning {{'func_introduced_27' is only available on tvOS 27.0 or newer}} \
+    // tvos-note {{enclose 'func_introduced_27' in an @available check}}
+
+  if (__builtin_available(iOS 27, anyAppleOS 26, *))
+    func_introduced_27(); // \
+    // macos-warning {{'func_introduced_27' is only available on macOS 27.0 or newer}} \
+    // macos-note {{enclose 'func_introduced_27' in an @available check}} \
+    // tvos-warning {{'func_introduced_27' is only available on tvOS 27.0 or newer}} \
+    // tvos-note {{enclose 'func_introduced_27' in an @available check}}
+
+  // FIXME: Diagnostics should be emitted for tvOS and macCatalyst here.
+  if (__builtin_available(anyAppleOS 27, iOS 26, *))
+    func_introduced_27(); // \
+    // ios-warning {{'func_introduced_27' is only available on iOS 27.0 or newer}} \
+    // ios-note {{enclose 'func_introduced_27' in an @available check}} \
 
   // Guard for multiple versions
   if (__builtin_available(anyAppleOS 26, *)) {

@@ -75,3 +75,54 @@ void test_macos_check_on_ios(void) {
   if (__builtin_available(macos 28.0, *))
     ;
 }
+
+void test_priority(void) {
+  // Platform-specific checks take priority over anyAppleOS.
+
+  // On macOS: macos 28.0 applies (platform-specific), requires runtime check since deployment is 27.0.
+  // On iOS: anyAppleOS 26.0 applies, folds to true since deployment is 27.0.
+  // On Android: Non-Apple OS, folds to true.
+  // CHECK-MACOS-LABEL: define{{.*}} void @test_priority
+  // CHECK-MACOS: call i32 @__isPlatformVersionAtLeast(i32 1, i32 28, i32 0, i32 0)
+  // CHECK-MACOS-NEXT: icmp ne
+  // CHECK-IOS-LABEL: define{{.*}} void @test_priority
+  // CHECK-IOS-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-IOS: br i1 true
+  // CHECK-ANDROID-LABEL: define{{.*}} void @test_priority
+  // CHECK-ANDROID-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-ANDROID: br i1 true
+  if (__builtin_available(anyAppleOS 26.0, macos 28.0, *))
+    ;
+
+  // Order of checks shouldn't matter; same behavior as above.
+  // CHECK-MACOS: call i32 @__isPlatformVersionAtLeast(i32 1, i32 28, i32 0, i32 0)
+  // CHECK-MACOS-NEXT: icmp ne
+  // CHECK-IOS-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-IOS: br i1 true
+  // CHECK-ANDROID-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-ANDROID: br i1 true
+  if (__builtin_available(macos 28.0, anyAppleOS 26.0, *))
+    ;
+
+  // On macOS: macos 26.0 applies (platform-specific), folds to true since deployment is 27.0.
+  // On iOS: anyAppleOS 28.0 applies, requires runtime check since deployment is 27.0.
+  // On Android: Non-Apple OS, folds to true.
+  // CHECK-MACOS-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-MACOS: br i1 true
+  // CHECK-IOS: call i32 @__isPlatformVersionAtLeast(i32 2, i32 28, i32 0, i32 0)
+  // CHECK-IOS-NEXT: icmp ne
+  // CHECK-ANDROID-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-ANDROID: br i1 true
+  if (__builtin_available(anyAppleOS 28.0, macos 26.0, *))
+    ;
+
+  // Order of checks shouldn't matter; same behavior as above.
+  // CHECK-MACOS-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-MACOS: br i1 true
+  // CHECK-IOS: call i32 @__isPlatformVersionAtLeast(i32 2, i32 28, i32 0, i32 0)
+  // CHECK-IOS-NEXT: icmp ne
+  // CHECK-ANDROID-NOT: call i32 @__isPlatformVersionAtLeast
+  // CHECK-ANDROID: br i1 true
+  if (__builtin_available(macos 26.0, anyAppleOS 28.0, *))
+    ;
+}
