@@ -764,24 +764,17 @@ Value xegpu::lowerCrossLaneReductionToShuffles(
     vector::ExtractStridedSliceOp extractOp =
         vector::ExtractStridedSliceOp::create(rewriter, loc, src, sliceOffsets,
                                               sliceSizes, {1, 1});
-
     int64_t nSliceElements = extractOp.getResult().getType().getNumElements();
-
     vector::ShapeCastOp slice = vector::ShapeCastOp::create(
         rewriter, loc,
         VectorType::get({nSliceElements}, sourceType.getElementType()),
         extractOp.getResult());
 
-    // Extract and reduction results in scalars, so no result layout is needed.
     Value accExtract = vector::ExtractOp::create(rewriter, loc, acc, i);
-
-    // Distribute and reduce across work-items in the subgroup.
     Value fullReduce =
         xegpu::subgroupReduction(loc, rewriter, slice, kind, reductionSize);
-
     fullReduce =
         vector::makeArithReduction(rewriter, loc, kind, fullReduce, accExtract);
-
     reductionResult =
         vector::InsertOp::create(rewriter, loc, fullReduce, reductionResult, i);
   }

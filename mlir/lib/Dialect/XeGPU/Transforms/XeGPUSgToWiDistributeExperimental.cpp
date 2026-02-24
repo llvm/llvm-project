@@ -487,9 +487,7 @@ struct SgToWiMultiDimReduction
     } else {
       auto reductionDim = reductionDims[0];
       VectorType sourceType = op.getSourceVectorType();
-      SmallVector<int64_t, 2> sourceShape(sourceType.getShape().begin(),
-                                          sourceType.getShape().end());
-      int64_t reductionDimSize = sourceShape[reductionDim];
+      int64_t reductionDimSize = sourceType.getShape()[reductionDim];
       result = xegpu::lowerCrossLaneReductionToShuffles(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
