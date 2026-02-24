@@ -13604,6 +13604,8 @@ bool BoUpSLP::matchesSelectOfBits(const TreeEntry &SelectTE) const {
     return false;
   if (!UserIgnoreList)
     return false;
+  if (any_of(SelectTE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
+    return false;
   // Check that all reduction operands are or instructions.
   if (any_of(*UserIgnoreList,
              [](Value *V) { return !match(V, m_Or(m_Value(), m_Value())); }))

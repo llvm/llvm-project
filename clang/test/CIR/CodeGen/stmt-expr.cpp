@@ -26,10 +26,10 @@ void test1() {
 // CIR:     %[[TMP:.+]]      = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["tmp"]
 // CIR:     cir.scope {
 // CIR:       %[[A:.+]] = cir.alloca !rec_A, !cir.ptr<!rec_A>, ["a", init]
-// CIR:       cir.call @_ZN1AC2Ev(%[[A]]) : (!cir.ptr<!rec_A>) -> ()
-// CIR:       cir.call @_ZN1AC2ERS_(%[[REF_TMP0]], %[[A]]) : (!cir.ptr<!rec_A>, !cir.ptr<!rec_A>) -> ()
+// CIR:       cir.call @_ZN1AC2Ev(%[[A]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
+// CIR:       cir.call @_ZN1AC2ERS_(%[[REF_TMP0]], %[[A]]) : (!cir.ptr<!rec_A> {{.*}}, !cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:     }
-// CIR:     cir.call @_ZN1A3FooEv(%[[REF_TMP0]]) : (!cir.ptr<!rec_A>) -> ()
+// CIR:     cir.call @_ZN1A3FooEv(%[[REF_TMP0]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR:   }
 // CIR:   cir.return
 
@@ -41,11 +41,11 @@ void test1() {
 // LLVM: [[LBL4]]:
 // LLVM:     br label %[[LBL5:.+]]
 // LLVM: [[LBL5]]:
-// LLVM:     call void @_ZN1AC2Ev(ptr %[[VAR3]])
-// LLVM:     call void @_ZN1AC2ERS_(ptr %[[VAR1]], ptr %[[VAR3]])
+// LLVM:     call void @_ZN1AC2Ev(ptr {{.*}} %[[VAR3]])
+// LLVM:     call void @_ZN1AC2ERS_(ptr {{.*}} %[[VAR1]], ptr {{.*}} %[[VAR3]])
 // LLVM:     br label %[[LBL6:.+]]
 // LLVM: [[LBL6]]:
-// LLVM:     call void @_ZN1A3FooEv(ptr %[[VAR1]])
+// LLVM:     call void @_ZN1A3FooEv(ptr {{.*}} %[[VAR1]])
 // LLVM:     br label %[[LBL7:.+]]
 // LLVM: [[LBL7]]:
 // LLVM:     ret void
@@ -70,7 +70,7 @@ void cleanup() {
 // CIR: cir.func {{.*}} @_Z7cleanupv()
 // CIR:   cir.scope {
 // CIR:     %[[WD:.+]] = cir.alloca !rec_with_dtor, !cir.ptr<!rec_with_dtor>, ["wd"]
-// CIR:     cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor>) -> ()
+// CIR:     cir.call @_ZN9with_dtorD1Ev(%[[WD]]) nothrow : (!cir.ptr<!rec_with_dtor> {{.*}}) -> ()
 // CIR:   }
 // CIR:   cir.return
 
@@ -78,7 +78,7 @@ void cleanup() {
 // LLVM:   %[[WD:.+]] = alloca %struct.with_dtor, i64 1
 // LLVM:   br label %[[LBL2:.+]]
 // LLVM: [[LBL2]]:
-// LLVM:     call void @_ZN9with_dtorD1Ev(ptr %[[WD]])
+// LLVM:     call void @_ZN9with_dtorD1Ev(ptr {{.*}} %[[WD]])
 // LLVM:     br label %[[LBL3:.+]]
 // LLVM: [[LBL3]]:
 // LLVM:     ret void

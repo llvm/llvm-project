@@ -57,14 +57,14 @@ B::~B() { }
 // Deleting (D0) dtor for B: defers to the complete dtor but also calls operator delete.
 
 // CIR: cir.func{{.*}} @_ZN1BD0Ev
-// CIR:   cir.call @_ZN1BD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_B>) -> ()
+// CIR:   cir.call @_ZN1BD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_B> {{.*}}) -> ()
 // CIR:   %[[THIS_VOID:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_B> -> !cir.ptr<!void>
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<16>
 // CIR:   cir.call @_ZdlPvm(%[[THIS_VOID]], %[[SIZE]])
 
 // LLVM: define{{.*}} void @_ZN1BD0Ev
-// LLVM:   call void @_ZN1BD1Ev(ptr %[[THIS:.*]])
-// LLVM:   call void @_ZdlPvm(ptr %[[THIS]], i64 16)
+// LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[THIS:.*]])
+// LLVM:   call void @_ZdlPvm(ptr {{.*}} %[[THIS]], i64 {{.*}} 16)
 
 // OGCG: define{{.*}} @_ZN1BD0Ev
 // OGCG:   call void @_ZN1BD1Ev(ptr{{.*}} %[[THIS:.*]])
@@ -97,14 +97,14 @@ C::~C() { }
 // Deleting (D0) dtor for C: defers to the complete dtor but also calls operator delete.
 
 // CIR: cir.func{{.*}} @_ZN1CD0Ev
-// CIR:   cir.call @_ZN1CD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_C>) -> ()
+// CIR:   cir.call @_ZN1CD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_C> {{.*}}) -> ()
 // CIR:   %[[THIS_VOID:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_C> -> !cir.ptr<!void>
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<16>
 // CIR:   cir.call @_ZdlPvm(%[[THIS_VOID]], %[[SIZE]])
 
 // LLVM: define{{.*}} void @_ZN1CD0Ev
-// LLVM:   call void @_ZN1CD1Ev(ptr %[[THIS:.*]])
-// LLVM:   call void @_ZdlPvm(ptr %[[THIS]], i64 16)
+// LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[THIS:.*]])
+// LLVM:   call void @_ZdlPvm(ptr {{.*}} %[[THIS]], i64 {{.*}} 16)
 
 // OGCG: define{{.*}} @_ZN1CD0Ev
 // OGCG:   call void @_ZN1CD1Ev(ptr{{.*}} %[[THIS:.*]])

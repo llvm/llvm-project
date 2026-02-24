@@ -934,9 +934,24 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
       llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
-  call_interface_impl::printFunctionSignature(
-      printer, op->getOperands().getTypes(), argAttrs,
-      /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  if (calleeSym || !argAttrs) {
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(), argAttrs,
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  } else {
+    // indirect function calls use an 'arg' type for the type of its indirect
+    // argument.  However, we don't store a similar attribute collection.  In
+    // order to make `printFunctionSignature` have the attributes line up, we
+    // have to make a 'shimmed' copy of the attributes that have a blank set of
+    // attributes for the indirect argument.
+    llvm::SmallVector<Attribute> shimmedArgAttrs;
+    shimmedArgAttrs.push_back(mlir::DictionaryAttr::get(op->getContext(), {}));
+    shimmedArgAttrs.append(argAttrs.begin(), argAttrs.end());
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(),
+        mlir::ArrayAttr::get(op->getContext(), shimmedArgAttrs),
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  }
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
