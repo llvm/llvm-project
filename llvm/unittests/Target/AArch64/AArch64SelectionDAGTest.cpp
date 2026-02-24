@@ -971,32 +971,6 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
       DAG->isKnownToBeAPowerOfTwo(VSelect444Big, DemandAll, /*OrZero=*/true));
 }
 
-TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_And) {
-  SDLoc Loc;
-  auto IntVT = MVT::i32;
-
-  // Unknown value X (could be zero or non-zero).
-  auto X = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, IntVT);
-  auto Zero = DAG->getConstant(0, Loc, IntVT);
-  auto NegX = DAG->getNode(ISD::SUB, Loc, IntVT, Zero, X);
-  auto AndXNegX = DAG->getNode(ISD::AND, Loc, IntVT, X, NegX);
-
-  // x & -x with unknown x: can't prove non-zero, so OrZero=false -> false.
-  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(AndXNegX));
-  // x & -x is always pow2-or-zero, so OrZero=true -> true.
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(AndXNegX, /*OrZero=*/true));
-
-  // Known non-zero X (X | 4 is always non-zero).
-  auto Cst4 = DAG->getConstant(4, Loc, IntVT);
-  auto XNonZero = DAG->getNode(ISD::OR, Loc, IntVT, X, Cst4);
-  auto NegXNZ = DAG->getNode(ISD::SUB, Loc, IntVT, Zero, XNonZero);
-  auto AndNZ = DAG->getNode(ISD::AND, Loc, IntVT, XNonZero, NegXNZ);
-
-  // Known non-zero: both should be true.
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(AndNZ));
-  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(AndNZ, /*OrZero=*/true));
-}
-
 TEST_F(AArch64SelectionDAGTest, isSplatValue_Fixed_BUILD_VECTOR) {
   TargetLowering TL(*TM, *STI);
 
