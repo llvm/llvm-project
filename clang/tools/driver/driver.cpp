@@ -55,6 +55,9 @@
 #include <optional>
 #include <set>
 #include <system_error>
+#if LLVM_ON_UNIX
+#include <signal.h>
+#endif
 
 using namespace clang;
 using namespace clang::driver;
@@ -378,7 +381,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process) {
     TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
-    llvm::CrashRecoveryContext::Enable();
+    llvm::CrashRecoveryContext::Enable(true);
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
@@ -407,6 +410,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   Driver::CommandStatus CommandStatus = Driver::CommandStatus::Ok;
   // Pretend the first command failed if ReproStatus is Always.
   const Command *FailingCommand = nullptr;
+  int CommandRes = 0;
   if (!C->getJobs().empty())
     FailingCommand = &*C->getJobs().begin();
   if (C && !C->containsError()) {
@@ -414,7 +418,7 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     Res = TheDriver.ExecuteCompilation(*C, FailingCommands);
 
     for (const auto &P : FailingCommands) {
-      int CommandRes = P.first;
+      CommandRes = P.first;
       FailingCommand = P.second;
       if (!Res)
         Res = CommandRes;
@@ -469,6 +473,18 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   // propagated.
   if (Res < 0)
     Res = 1;
+#endif
+
+#if LLVM_ON_UNIX
+  // On Unix, signals are represented by return codes of 128 plus the signal
+  // number. If the return code indicates it was from a signal handler, raise
+  // the signal so that the exit code includes the signal number, as required
+  // by POSIX. Return code 255 is excluded because some tools, such as
+  // llvm-ifs, exit with code 255 (-1) on failure.
+  if (CommandRes > 128 && CommandRes != 255) {
+    llvm::sys::unregisterHandlers();
+    raise(CommandRes - 128);
+  }
 #endif
 
   // If we have multiple failing commands, we return the result of the first

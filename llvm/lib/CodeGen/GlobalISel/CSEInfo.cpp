@@ -435,9 +435,8 @@ const GISelInstProfileBuilder &GISelInstProfileBuilder::addNodeIDMachineOperand(
 }
 
 GISelCSEInfo &
-GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
-                             bool Recompute) {
-  if (!AlreadyComputed || Recompute) {
+GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt) {
+  if (!AlreadyComputed) {
     Info.releaseMemory();
     Info.setCSEConfig(std::move(CSEOpt));
     Info.analyze(*MF);
@@ -445,6 +444,18 @@ GISelCSEAnalysisWrapper::get(std::unique_ptr<CSEConfigBase> CSEOpt,
   }
   return Info;
 }
+
+AnalysisKey GISelCSEAnalysis::Key;
+
+GISelCSEAnalysis::Result
+GISelCSEAnalysis::run(MachineFunction &MF,
+                      MachineFunctionAnalysisManager &MFAM) {
+  std::unique_ptr<GISelCSEInfo> Info = std::make_unique<GISelCSEInfo>();
+  Info->setCSEConfig(getStandardCSEConfigForOpt(TM->getOptLevel()));
+  Info->analyze(MF);
+  return Info;
+}
+
 void GISelCSEAnalysisWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   MachineFunctionPass::getAnalysisUsage(AU);

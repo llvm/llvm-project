@@ -134,6 +134,40 @@ precedence. Here are a few examples.
   fun:*bar
   fun:bad_bar=sanitize
 
+Interaction with Overflow Behavior Types
+----------------------------------------
+
+The ``overflow_behavior`` attribute provides a more granular, source-level
+control that takes precedence over the Sanitizer Special Case List. If a type
+is given an ``overflow_behavior`` attribute, it will override any matching
+``type:`` entry in a special case list.
+
+This allows developers to enforce a specific overflow behavior for a critical
+type, even if a broader rule in the special case list would otherwise disable
+instrumentation for it.
+
+.. code-block:: bash
+
+  $ cat ignorelist.txt
+  # Disable signed overflow checks for all types by default.
+  [signed-integer-overflow]
+  type:*
+
+  $ cat foo.c
+  // Force 'critical_type' to always have overflow checks,
+  // overriding the ignorelist.
+  typedef int __attribute__((overflow_behavior(trap))) critical_type;
+
+  void foo(int x) {
+    critical_type a = x;
+    a++; // Overflow is checked here due to the 'trap' attribute.
+
+    int b = x;
+    b++; // Overflow is NOT checked here due to the ignorelist.
+  }
+
+For more details on overflow behavior types, see :doc:`OverflowBehaviorTypes`.
+
 Format
 ======
 

@@ -17,9 +17,7 @@ void useBar(__amdgpu_named_workgroup_barrier_t *);
 // CHECK-LABEL: define {{[^@]+}}@_Z7testSemPu34__amdgpu_named_workgroup_barrier_t
 // CHECK-SAME: (ptr noundef [[P:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[RETVAL:%.*]] = alloca ptr, align 8, addrspace(5)
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr, align 8, addrspace(5)
-// CHECK-NEXT:    [[RETVAL_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[RETVAL]] to ptr
 // CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
 // CHECK-NEXT:    store ptr [[P]], ptr [[P_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR_ASCAST]], align 8

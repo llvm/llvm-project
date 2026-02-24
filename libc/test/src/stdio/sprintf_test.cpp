@@ -151,6 +151,8 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
   written = LIBC_NAMESPACE::sprintf(buff, "%lld", -9223372036854775807ll - 1ll);
   ASSERT_STREQ_LEN(written, buff, "-9223372036854775808"); // ll min
 
+#ifndef LIBC_COPT_PRINTF_DISABLE_BITINT
+  // Bit int width tests
   written = LIBC_NAMESPACE::sprintf(buff, "%w3d", 5807);
   ASSERT_STREQ_LEN(written, buff, "7");
 
@@ -218,6 +220,7 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
 
   written = LIBC_NAMESPACE::sprintf(buff, "%wf999d", 9223372036854775807ll);
   ASSERT_STREQ_LEN(written, buff, "9223372036854775807");
+#endif // LIBC_COPT_PRINTF_DISABLE_BITINT
 
   // Min Width Tests.
 

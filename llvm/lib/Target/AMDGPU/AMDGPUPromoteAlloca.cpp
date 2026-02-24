@@ -367,12 +367,11 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
 }
 
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
+  if (DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
+    return false;
+
   Mod = F.getParent();
   DL = &Mod->getDataLayout();
-
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-  if (!ST.enablePromoteAlloca())
-    return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
   MaxVGPRs = getMaxVGPRs(CurrentLocalMemUsage, TM, F);
@@ -606,21 +605,6 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
                                         InstSimplifyFolder(DL));
   Builder.SetInsertPoint(Inst);
 
-  const auto CreateTempPtrIntCast = [&Builder, DL](Value *Val,
-                                                   Type *PtrTy) -> Value * {
-    assert(DL.getTypeStoreSize(Val->getType()) == DL.getTypeStoreSize(PtrTy));
-    const unsigned Size = DL.getTypeStoreSizeInBits(PtrTy);
-    if (!PtrTy->isVectorTy())
-      return Builder.CreateBitOrPointerCast(Val, Builder.getIntNTy(Size));
-    const unsigned NumPtrElts = cast<FixedVectorType>(PtrTy)->getNumElements();
-    // If we want to cast to cast, e.g. a <2 x ptr> into a <4 x i32>, we need to
-    // first cast the ptr vector to <2 x i64>.
-    assert((Size % NumPtrElts == 0) && "Vector size not divisble");
-    Type *EltTy = Builder.getIntNTy(Size / NumPtrElts);
-    return Builder.CreateBitOrPointerCast(
-        Val, FixedVectorType::get(EltTy, NumPtrElts));
-  };
-
   Type *VecEltTy = AA.Vector.Ty->getElementType();
 
   switch (Inst->getOpcode()) {
@@ -633,13 +617,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     Type *AccessTy = Inst->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        if (AccessTy->isPtrOrPtrVectorTy())
-          CurVal = CreateTempPtrIntCast(CurVal, AccessTy);
-        else if (CurVal->getType()->isPtrOrPtrVectorTy())
-          CurVal = CreateTempPtrIntCast(CurVal, CurVal->getType());
-        Value *NewVal = Builder.CreateBitOrPointerCast(CurVal, AccessTy);
-        Inst->replaceAllUsesWith(NewVal);
+      if (CI->isNullValue() && AccessSize == VecStoreSize) {
+        Inst->replaceAllUsesWith(
+            Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
         return nullptr;
       }
     }
@@ -689,13 +669,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
             SubVec, Builder.CreateExtractElement(CurVal, CurIdx), K);
       }
 
-      if (AccessTy->isPtrOrPtrVectorTy())
-        SubVec = CreateTempPtrIntCast(SubVec, AccessTy);
-      else if (SubVecTy->isPtrOrPtrVectorTy())
-        SubVec = CreateTempPtrIntCast(SubVec, SubVecTy);
-
-      SubVec = Builder.CreateBitOrPointerCast(SubVec, AccessTy);
-      Inst->replaceAllUsesWith(SubVec);
+      Inst->replaceAllUsesWith(
+          Builder.CreateBitPreservingCastChain(DL, SubVec, AccessTy));
       return nullptr;
     }
 
@@ -719,15 +694,9 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     // We're storing the full vector, we can handle this without knowing CurVal.
     Type *AccessTy = Val->getType();
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
-    if (Constant *CI = dyn_cast<Constant>(Index)) {
-      if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        if (AccessTy->isPtrOrPtrVectorTy())
-          Val = CreateTempPtrIntCast(Val, AccessTy);
-        else if (AA.Vector.Ty->isPtrOrPtrVectorTy())
-          Val = CreateTempPtrIntCast(Val, AA.Vector.Ty);
-        return Builder.CreateBitOrPointerCast(Val, AA.Vector.Ty);
-      }
-    }
+    if (Constant *CI = dyn_cast<Constant>(Index))
+      if (CI->isNullValue() && AccessSize == VecStoreSize)
+        return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
     // Storing a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
@@ -738,13 +707,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
-      if (SubVecTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, SubVecTy);
-      else if (AccessTy->isPtrOrPtrVectorTy())
-        Val = CreateTempPtrIntCast(Val, AccessTy);
-
-      Val = Builder.CreateBitOrPointerCast(Val, SubVecTy);
-
+      Val = Builder.CreateBitPreservingCastChain(DL, Val, SubVecTy);
       Value *CurVec = GetCurVal();
       for (unsigned K = 0, NumElts = std::min(NumWrittenElts, NumVecElts);
            K < NumElts; ++K) {

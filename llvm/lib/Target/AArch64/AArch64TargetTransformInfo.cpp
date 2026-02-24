@@ -651,6 +651,27 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::scmp:
+  case Intrinsic::ucmp: {
+    static const CostTblEntry BitreverseTbl[] = {
+        {Intrinsic::scmp, MVT::i32, 3},   // cmp+cset+csinv
+        {Intrinsic::scmp, MVT::i64, 3},   // cmp+cset+csinv
+        {Intrinsic::scmp, MVT::v8i8, 3},  // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v16i8, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v4i16, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v8i16, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v2i32, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v4i32, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v1i64, 3}, // cmgt+cmgt+sub
+        {Intrinsic::scmp, MVT::v2i64, 3}, // cmgt+cmgt+sub
+    };
+    const auto LT = getTypeLegalizationCost(RetTy);
+    const auto *Entry =
+        CostTableLookup(BitreverseTbl, Intrinsic::scmp, LT.second);
+    if (Entry)
+      return Entry->Cost * LT.first;
+    break;
+  }
   case Intrinsic::sadd_sat:
   case Intrinsic::ssub_sat:
   case Intrinsic::uadd_sat:
@@ -1071,9 +1092,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       EVT VecVT = getTLI()->getValueType(DL, RetTy);
       unsigned EltSizeInBytes =
           cast<ConstantInt>(ICA.getArgs()[2])->getZExtValue();
-      if (is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) &&
-          VecVT.getVectorMinNumElements() == (16 / EltSizeInBytes))
-        return 1;
+      if (!is_contained({1u, 2u, 4u, 8u}, EltSizeInBytes) ||
+          VecVT.getVectorMinNumElements() != (16 / EltSizeInBytes))
+        break;
+      // For fixed-vector types we need to AND the mask with a ptrue vl<N>.
+      return isa<FixedVectorType>(RetTy) ? 2 : 1;
     }
     break;
   }
@@ -5909,6 +5932,11 @@ InstructionCost AArch64TTIImpl::getPartialReductionCost(
       getTypeLegalizationCost(InputVectorType);
 
   InstructionCost Cost = InputLT.first * TTI::TCC_Basic;
+
+  // The sub/negation cannot be folded into the operands of
+  // ISD::PARTIAL_REDUCE_*MLA, so make the cost more expensive.
+  if (Opcode == Instruction::Sub)
+    Cost += 8;
 
   // Prefer using full types by costing half-full input types as more expensive.
   if (TypeSize::isKnownLT(InputVectorType->getPrimitiveSizeInBits(),

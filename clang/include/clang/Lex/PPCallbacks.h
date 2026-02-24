@@ -212,6 +212,13 @@ public:
                             const Module *Imported) {
   }
 
+  /// Callback invoked whenever a module load was skipped due to enabled
+  /// single-module-parse-mode.
+  ///
+  /// \param Skipped The module that was not loaded.
+  ///
+  virtual void moduleLoadSkipped(Module *Skipped) {}
+
   /// Callback invoked when the end of the main file is reached.
   ///
   /// No subsequent callbacks will be made.
@@ -552,6 +559,11 @@ public:
                     const Module *Imported) override {
     First->moduleImport(ImportLoc, Path, Imported);
     Second->moduleImport(ImportLoc, Path, Imported);
+  }
+
+  void moduleLoadSkipped(Module *Skipped) override {
+    First->moduleLoadSkipped(Skipped);
+    Second->moduleLoadSkipped(Skipped);
   }
 
   void EndOfMainFile() override {

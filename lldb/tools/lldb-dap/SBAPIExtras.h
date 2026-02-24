@@ -8,6 +8,7 @@
 // Extensions on SB API.
 //===----------------------------------------------------------------------===//
 
+#include "lldb/API/SBProcess.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStructuredData.h"
 #include "lldb/API/SBThread.h"
@@ -34,17 +35,32 @@ struct iter {
   bool operator!=(const iter &other) { return index != other.index; }
 };
 
+/// SBProcess thread iterator.
+using process_thread_iter =
+    iter<SBProcess, SBThread, size_t, &SBProcess::GetThreadAtIndex>;
+inline process_thread_iter begin(SBProcess P) { return {P, 0}; }
+inline process_thread_iter end(SBProcess P) { return {P, P.GetNumThreads()}; }
+
 /// SBThreadCollection thread iterator.
-using thread_iter = iter<SBThreadCollection, SBThread, size_t,
-                         &SBThreadCollection::GetThreadAtIndex>;
-inline thread_iter begin(SBThreadCollection TC) { return {TC, 0}; }
-inline thread_iter end(SBThreadCollection TC) { return {TC, TC.GetSize()}; }
+using thread_collection_iter = iter<SBThreadCollection, SBThread, size_t,
+                                    &SBThreadCollection::GetThreadAtIndex>;
+inline thread_collection_iter begin(SBThreadCollection TC) { return {TC, 0}; }
+inline thread_collection_iter end(SBThreadCollection TC) {
+  return {TC, TC.GetSize()};
+}
 
 /// SBThread frame iterator.
 using frame_iter =
     iter<SBThread, SBFrame, uint32_t, &SBThread::GetFrameAtIndex>;
 inline frame_iter begin(SBThread T) { return {T, 0}; }
 inline frame_iter end(SBThread T) { return {T, T.GetNumFrames()}; }
+
+/// SBValue value iterators.
+/// @{
+using value_iter = iter<SBValue, SBValue, uint32_t, &SBValue::GetChildAtIndex>;
+inline value_iter begin(SBValue &T) { return {T, 0}; }
+inline value_iter end(SBValue &T) { return {T, T.GetNumChildren()}; }
+/// @}
 
 // llvm::raw_ostream print helpers.
 
