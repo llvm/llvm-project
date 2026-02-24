@@ -15,14 +15,14 @@
 // and NaN inputs, because they can vary between platforms. For the Arm
 // optimized FP implementation, which commits to more detail, we include some
 // extra test cases specific to that NaN policy.
-#if (__arm__ && !(__thumb__ && !__thumb2__)) && COMPILER_RT_ARM_OPTIMIZED_FP
+#if COMPILER_RT_ARM_OPTIMIZED_FP
 #  define ARM_INVALID_HANDLING
 #endif
 
 // Returns: a converted from double to int64_t
 COMPILER_RT_ABI int64_t __fixunsdfdi(double a);
 
-int test__fixunsdfdi(int line, uint64_t a_rep, uint64_t expected) {
+int test__fixunsdfdi(uint64_t a_rep, uint64_t expected, int line) {
   double a = fromRep64(a_rep);
   uint64_t x = (uint64_t)__fixunsdfdi(a);
   int ret = x != expected;
@@ -35,7 +35,7 @@ int test__fixunsdfdi(int line, uint64_t a_rep, uint64_t expected) {
   return ret;
 }
 
-#define test__fixunsdfdi(a, x) test__fixunsdfdi(__LINE__, a, x)
+#define test__fixunsdfdi(a, x) test__fixunsdfdi(a, x, __LINE__)
 
 int main(void) {
   int status = 0;

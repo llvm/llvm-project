@@ -2966,10 +2966,66 @@ static Value *simplifyICmpOfBools(CmpPredicate Pred, Value *LHS, Value *RHS,
   return nullptr;
 }
 
+/// Check if RHS is zero or can be transformed to an equivalent zero comparison.
+/// E.g., icmp sgt X, -1 --> icmp sge X, 0
+static bool matchEquivZeroRHS(CmpPredicate &Pred, const Value *RHS) {
+  // icmp [pred] X, 0 --> as-is
+  if (match(RHS, m_Zero()))
+    return true;
+
+  // Handle comparisons with -1 (all ones)
+  if (match(RHS, m_AllOnes())) {
+    switch (Pred) {
+    case ICmpInst::ICMP_SGT:
+      // icmp sgt X, -1 --> icmp sge X, 0
+      Pred = ICmpInst::ICMP_SGE;
+      return true;
+    case ICmpInst::ICMP_SLE:
+      // icmp sle X, -1 --> icmp slt X, 0
+      Pred = ICmpInst::ICMP_SLT;
+      return true;
+    // Note: unsigned comparisons with -1 (UINT_MAX) are not handled here:
+    // - icmp ugt X, -1 is always false (nothing > UINT_MAX)
+    // - icmp ule X, -1 is always true (everything <= UINT_MAX)
+    default:
+      return false;
+    }
+  }
+
+  // Handle comparisons with 1
+  if (match(RHS, m_One())) {
+    switch (Pred) {
+    case ICmpInst::ICMP_SGE:
+      // icmp sge X, 1 --> icmp sgt X, 0
+      Pred = ICmpInst::ICMP_SGT;
+      return true;
+    case ICmpInst::ICMP_UGE:
+      // icmp uge X, 1 --> icmp ugt X, 0
+      Pred = ICmpInst::ICMP_UGT;
+      return true;
+    case ICmpInst::ICMP_SLT:
+      // icmp slt X, 1 --> icmp sle X, 0
+      Pred = ICmpInst::ICMP_SLE;
+      return true;
+    case ICmpInst::ICMP_ULT:
+      // icmp ult X, 1 --> icmp ule X, 0
+      Pred = ICmpInst::ICMP_ULE;
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  return false;
+}
+
 /// Try hard to fold icmp with zero RHS because this is a common case.
+/// Note that, this function also handles the equivalent zero RHS, e.g.,
+/// icmp sgt X, -1 --> icmp sge X, 0
 static Value *simplifyICmpWithZero(CmpPredicate Pred, Value *LHS, Value *RHS,
                                    const SimplifyQuery &Q) {
-  if (!match(RHS, m_Zero()))
+  // Check if RHS is zero or can be transformed to an equivalent zero comparison
+  if (!matchEquivZeroRHS(Pred, RHS))
     return nullptr;
 
   Type *ITy = getCompareTy(LHS); // The return type.

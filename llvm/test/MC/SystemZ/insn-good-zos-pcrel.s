@@ -1,5 +1,5 @@
 * For z10 and above.
-* RUN: llvm-mc -triple s390x-ibm-zos -show-encoding %s | FileCheck %s
+* RUN: llvm-mc -triple s390x-ibm-zos -show-encoding -emit-gnuas-syntax-on-zos=1 %s | FileCheck %s
 
 *CHECK: brcl	0, FOO                  * encoding: [0xc0,0x04,A,A,A,A]
 *CHECK:  fixup A - offset: 2, value: FOO+2, kind: FK_390_PC32DBL

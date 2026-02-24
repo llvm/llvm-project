@@ -22,8 +22,8 @@ COMPILER_RT_ABI int __unorddf2(double, double);
 
 enum Result { RESULT_LT, RESULT_GT, RESULT_EQ, RESULT_UN };
 
-int expect(int line, uint64_t a_rep, uint64_t b_rep, const char *name,
-           int result, int ok, const char *expected) {
+int expect(uint64_t a_rep, uint64_t b_rep, const char *name, int result, int ok,
+           const char *expected, int line) {
   if (!ok)
     printf("error at line %d: %s(%016" PRIx64 ", %016" PRIx64
            ") = %d, expected %s\n",
@@ -31,8 +31,8 @@ int expect(int line, uint64_t a_rep, uint64_t b_rep, const char *name,
   return !ok;
 }
 
-int test__comparedf2(int line, uint64_t a_rep, uint64_t b_rep,
-                     enum Result result) {
+int test__comparedf2(uint64_t a_rep, uint64_t b_rep, enum Result result,
+                     int line) {
   double a = fromRep64(a_rep), b = fromRep64(b_rep);
 
   int eq = __eqdf2(a, b);
@@ -48,51 +48,51 @@ int test__comparedf2(int line, uint64_t a_rep, uint64_t b_rep,
 
   switch (result) {
   case RESULT_LT:
-    ret |= expect(line, a_rep, b_rep, "__eqdf2", eq, eq != 0, "!= 0");
-    ret |= expect(line, a_rep, b_rep, "__nedf2", ne, ne != 0, "!= 0");
-    ret |= expect(line, a_rep, b_rep, "__gedf2", ge, ge < 0, "< 0");
-    ret |= expect(line, a_rep, b_rep, "__gtdf2", gt, gt <= 0, "<= 0");
-    ret |= expect(line, a_rep, b_rep, "__ledf2", le, le <= 0, "<= 0");
-    ret |= expect(line, a_rep, b_rep, "__ltdf2", lt, lt < 0, "< 0");
-    ret |= expect(line, a_rep, b_rep, "__cmpdf2", cmp, cmp == -1, "== -1");
-    ret |= expect(line, a_rep, b_rep, "__unorddf2", unord, unord == 0, "== 0");
+    ret |= expect(a_rep, b_rep, "__eqdf2", eq, eq != 0, "!= 0", line);
+    ret |= expect(a_rep, b_rep, "__nedf2", ne, ne != 0, "!= 0", line);
+    ret |= expect(a_rep, b_rep, "__gedf2", ge, ge < 0, "< 0", line);
+    ret |= expect(a_rep, b_rep, "__gtdf2", gt, gt <= 0, "<= 0", line);
+    ret |= expect(a_rep, b_rep, "__ledf2", le, le <= 0, "<= 0", line);
+    ret |= expect(a_rep, b_rep, "__ltdf2", lt, lt < 0, "< 0", line);
+    ret |= expect(a_rep, b_rep, "__cmpdf2", cmp, cmp == -1, "== -1", line);
+    ret |= expect(a_rep, b_rep, "__unorddf2", unord, unord == 0, "== 0", line);
     break;
   case RESULT_GT:
-    ret |= expect(line, a_rep, b_rep, "__eqdf2", eq, eq != 0, "!= 0");
-    ret |= expect(line, a_rep, b_rep, "__nedf2", ne, ne != 0, "!= 0");
-    ret |= expect(line, a_rep, b_rep, "__gedf2", ge, ge >= 0, ">= 0");
-    ret |= expect(line, a_rep, b_rep, "__gtdf2", gt, gt > 0, "> 0");
-    ret |= expect(line, a_rep, b_rep, "__ledf2", le, le > 0, "> 0");
-    ret |= expect(line, a_rep, b_rep, "__ltdf2", lt, lt >= 0, ">= 0");
-    ret |= expect(line, a_rep, b_rep, "__cmpdf2", cmp, cmp == 1, "== 1");
-    ret |= expect(line, a_rep, b_rep, "__unorddf2", unord, unord == 0, "== 0");
+    ret |= expect(a_rep, b_rep, "__eqdf2", eq, eq != 0, "!= 0", line);
+    ret |= expect(a_rep, b_rep, "__nedf2", ne, ne != 0, "!= 0", line);
+    ret |= expect(a_rep, b_rep, "__gedf2", ge, ge >= 0, ">= 0", line);
+    ret |= expect(a_rep, b_rep, "__gtdf2", gt, gt > 0, "> 0", line);
+    ret |= expect(a_rep, b_rep, "__ledf2", le, le > 0, "> 0", line);
+    ret |= expect(a_rep, b_rep, "__ltdf2", lt, lt >= 0, ">= 0", line);
+    ret |= expect(a_rep, b_rep, "__cmpdf2", cmp, cmp == 1, "== 1", line);
+    ret |= expect(a_rep, b_rep, "__unorddf2", unord, unord == 0, "== 0", line);
     break;
   case RESULT_EQ:
-    ret |= expect(line, a_rep, b_rep, "__eqdf2", eq, eq == 0, "== 0");
-    ret |= expect(line, a_rep, b_rep, "__nedf2", ne, ne == 0, "== 0");
-    ret |= expect(line, a_rep, b_rep, "__gedf2", ge, ge >= 0, ">= 0");
-    ret |= expect(line, a_rep, b_rep, "__gtdf2", gt, gt <= 0, "<= 0");
-    ret |= expect(line, a_rep, b_rep, "__ledf2", le, le <= 0, "<= 0");
-    ret |= expect(line, a_rep, b_rep, "__ltdf2", lt, lt >= 0, ">= 0");
-    ret |= expect(line, a_rep, b_rep, "__cmpdf2", cmp, cmp == 0, "== 0");
-    ret |= expect(line, a_rep, b_rep, "__unorddf2", unord, unord == 0, "== 0");
+    ret |= expect(a_rep, b_rep, "__eqdf2", eq, eq == 0, "== 0", line);
+    ret |= expect(a_rep, b_rep, "__nedf2", ne, ne == 0, "== 0", line);
+    ret |= expect(a_rep, b_rep, "__gedf2", ge, ge >= 0, ">= 0", line);
+    ret |= expect(a_rep, b_rep, "__gtdf2", gt, gt <= 0, "<= 0", line);
+    ret |= expect(a_rep, b_rep, "__ledf2", le, le <= 0, "<= 0", line);
+    ret |= expect(a_rep, b_rep, "__ltdf2", lt, lt >= 0, ">= 0", line);
+    ret |= expect(a_rep, b_rep, "__cmpdf2", cmp, cmp == 0, "== 0", line);
+    ret |= expect(a_rep, b_rep, "__unorddf2", unord, unord == 0, "== 0", line);
     break;
   case RESULT_UN:
-    ret |= expect(line, a_rep, b_rep, "__eqdf2", eq, eq != 0, "!= 0");
-    ret |= expect(line, a_rep, b_rep, "__nedf2", ne, ne != 0, "!= 0");
-    ret |= expect(line, a_rep, b_rep, "__gedf2", ge, ge < 0, "< 0");
-    ret |= expect(line, a_rep, b_rep, "__gtdf2", gt, gt <= 0, "<= 0");
-    ret |= expect(line, a_rep, b_rep, "__ledf2", le, le > 0, "> 0");
-    ret |= expect(line, a_rep, b_rep, "__ltdf2", lt, lt >= 0, ">= 0");
-    ret |= expect(line, a_rep, b_rep, "__cmpdf2", cmp, cmp == 1, "== 1");
-    ret |= expect(line, a_rep, b_rep, "__unorddf2", unord, unord == 1, "== 1");
+    ret |= expect(a_rep, b_rep, "__eqdf2", eq, eq != 0, "!= 0", line);
+    ret |= expect(a_rep, b_rep, "__nedf2", ne, ne != 0, "!= 0", line);
+    ret |= expect(a_rep, b_rep, "__gedf2", ge, ge < 0, "< 0", line);
+    ret |= expect(a_rep, b_rep, "__gtdf2", gt, gt <= 0, "<= 0", line);
+    ret |= expect(a_rep, b_rep, "__ledf2", le, le > 0, "> 0", line);
+    ret |= expect(a_rep, b_rep, "__ltdf2", lt, lt >= 0, ">= 0", line);
+    ret |= expect(a_rep, b_rep, "__cmpdf2", cmp, cmp == 1, "== 1", line);
+    ret |= expect(a_rep, b_rep, "__unorddf2", unord, unord == 1, "== 1", line);
     break;
   }
 
   return ret;
 }
 
-#define test__comparedf2(a, b, x) test__comparedf2(__LINE__, a, b, x)
+#define test__comparedf2(a, b, x) test__comparedf2(a, b, x, __LINE__)
 
 int main(void) {
   int status = 0;

@@ -6220,7 +6220,7 @@ defm VQNEG    : N2VInt_QHS<0b11, 0b11, 0b00, 0b01111, 0,
 //   VCLS     : Vector Count Leading Sign Bits
 defm VCLS     : N2VInt_QHS<0b11, 0b11, 0b00, 0b01000, 0,
                            IIC_VCNTiD, IIC_VCNTiQ, "vcls", "s",
-                           int_arm_neon_vcls>;
+                           ctls>;
 //   VCLZ     : Vector Count Leading Zeros
 defm VCLZ     : N2VInt_QHS<0b11, 0b11, 0b00, 0b01001, 0,
                            IIC_VCNTiD, IIC_VCNTiQ, "vclz", "i",
@@ -7349,12 +7349,12 @@ multiclass VRINT_FPI<string op, bits<3> op9_7, SDPatternOperator Int> {
   }
 }
 
-defm VRINTNN : VRINT_FPI<"n", 0b000, froundeven>;
-defm VRINTXN : VRINT_FPI<"x", 0b001, frint>;
-defm VRINTAN : VRINT_FPI<"a", 0b010, fround>;
-defm VRINTZN : VRINT_FPI<"z", 0b011, ftrunc>;
-defm VRINTMN : VRINT_FPI<"m", 0b101, ffloor>;
-defm VRINTPN : VRINT_FPI<"p", 0b111, fceil>;
+defm VRINTNN : VRINT_FPI<"n", 0b000, any_froundeven>;
+defm VRINTXN : VRINT_FPI<"x", 0b001, any_frint>;
+defm VRINTAN : VRINT_FPI<"a", 0b010, any_fround>;
+defm VRINTZN : VRINT_FPI<"z", 0b011, any_ftrunc>;
+defm VRINTMN : VRINT_FPI<"m", 0b101, any_ffloor>;
+defm VRINTPN : VRINT_FPI<"p", 0b111, any_fceil>;
 
 // Cryptography instructions
 let PostEncoderMethod = "NEONThumb2DataIPostEncoder",
@@ -7403,25 +7403,29 @@ def SHA256SU1 : N3SHA3Op<"256su1", 0b00110, 0b10, int_arm_neon_sha256su1>;
 let Predicates = [HasNEON] in {
 def : Pat<(i32 (int_arm_neon_sha1h i32:$Rn)),
           (COPY_TO_REGCLASS (f32 (EXTRACT_SUBREG
-              (SHA1H (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS i32:$Rn, SPR)),
+              (SHA1H (INSERT_SUBREG (IMPLICIT_DEF),
+                                    (f32 (COPY_TO_REGCLASS i32:$Rn, SPR)),
                                     ssub_0)),
               ssub_0)), GPR)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1c v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1C v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
+                                (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1m v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1M v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
+                                (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
 
 def : Pat<(v4i32 (int_arm_neon_sha1p v4i32:$hash_abcd, i32:$hash_e, v4i32:$wk)),
           (SHA1P v4i32:$hash_abcd,
-                 (SUBREG_TO_REG (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
+                 (INSERT_SUBREG (IMPLICIT_DEF),
+                                (f32 (COPY_TO_REGCLASS i32:$hash_e, SPR)),
                                 ssub_0),
                  v4i32:$wk)>;
 }
