@@ -70,8 +70,11 @@ TEST_F(LlvmLibcBfloat16ConversionTest, FromInteger) {
 
 TEST_F(LlvmLibcBfloat16ConversionTest, MultiplyAssign) {
 
-  static constexpr BFloat16 val[] = {bfloat16(1.0f), bfloat16(4.0f),
-                                     bfloat16(2.0f), bfloat16(3.0f)};
+  static constexpr BFloat16 val[] = {
+      zero,           neg_zero,        inf,
+      neg_inf,        min_normal,      max_normal,
+      bfloat16(1.0f), bfloat16(-1.0f), bfloat16(2.0f),
+      bfloat16(3.0f)};
   for (const bfloat16 &x : val) {
     for (const bfloat16 &y : val) {
       BFloat16 a = x, b = y;
