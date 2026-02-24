@@ -31,7 +31,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <string>
-#include <sys/file.h>
 
 using namespace llvm;
 
