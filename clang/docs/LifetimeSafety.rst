@@ -1,6 +1,6 @@
-======================
+========================
 Lifetime Safety Analysis
-======================
+========================
 
 .. contents::
    :local:
@@ -44,16 +44,18 @@ Getting Started
     std::string_view v;
     {
       std::string s = "hello";
-      v = s;  // 'v' borrows from 's'.
-    }       // 's' is destroyed here, 'v' becomes dangling.
-    (void)v;  // WARNING! 'v' is used after 's' has been destroyed.
+      v = s;  // warning: object whose reference is captured does not live long enough
+    }         // note: destroyed here
+    std::cout << v; // note: later used here
   }
 
 This example demonstrates
-a basic use-after-scope defect. The ``std::string_view`` object ``v`` holds a
+a basic use-after-scope bug. The ``std::string_view`` object ``v`` holds a
 reference to ``s``, a ``std::string``. When ``s`` goes out of
-scope at the end of the inner block, ``v`` becomes a dangling reference, and
-its subsequent use is flagged by the analysis.
+scope at the end of the inner block, ``v`` becomes a dangling reference.
+The analysis flags the assignment ``v = s`` as defective because ``s`` is
+destroyed while ``v`` is still alive and points to ``s``, and adds a note
+to where ``v`` is used after ``s`` has been destroyed.
 
 Running The Analysis
 --------------------
@@ -98,12 +100,12 @@ types using these attributes:
   #include <string>
   #include <string_view>
 
-  // Owning type
+  // Owner type
   struct [[gsl::Owner]] MyObj {
     std::string Data = "Hello";
   };
 
-  // Non-owning view type
+  // View type
   struct [[gsl::Pointer]] View {
     std::string_view SV;
     View() = default;
@@ -115,9 +117,9 @@ types using these attributes:
     View v;
     {
       MyObj o;
-      v = o;
-    } // o is destroyed
-    v.use(); // WARNING: object whose reference is captured does not live long enough
+      v = o; // warning: object whose reference is captured does not live long enough
+    }        // note: destroyed here
+    v.use(); // note: later used here
   }
 
 Without these annotations, the analysis may not be able to determine whether a
@@ -149,8 +151,9 @@ arguments.
   void test_lifetimebound() {
     std::string_view sv;
     sv = MyOwner().getView(); // getView() is called on a temporary MyOwner
-                             // MyOwner temporary is destroyed here.
-    (void)sv;                // WARNING: object whose reference is captured does not live long enough
+                             // warning: object whose reference is captured does not live long enough
+                             // note: destroyed here
+    (void)sv;                // note: later used here
   }
 
 Without ``[[clang::lifetimebound]]`` on ``getView()``, the analysis would not
@@ -173,39 +176,97 @@ For more details, see `noescape <https://clang.llvm.org/docs/AttributeReference.
 Checks Performed
 ================
 
-Use-After-Scope
+
+.. raw:: html
+
+   <style>
+   /* Align text to left and add red/green colors */
+   table.colored-code-table td, table.colored-code-table th { text-align: left !important; }
+   table.colored-code-table td:first-child, table.colored-code-table th:first-child { background-color: #ffeaea !important; }
+   table.colored-code-table td:nth-child(2), table.colored-code-table th:nth-child(2) { background-color: #eafaea !important; }
+   table.colored-code-table td .highlight, table.colored-code-table td pre { background-color: transparent !important; border: none !important; }
+
+   div.bad-code { background-color: #ffeaea !important; padding: 5px; border-left: 4px solid #ff6b6b; text-align: left !important; }
+   div.bad-code .highlight, div.bad-code pre { background-color: transparent !important; border: none !important; }
+
+   div.good-code { background-color: #eafaea !important; padding: 5px; border-left: 4px solid #51cf66; text-align: left !important; }
+   div.good-code .highlight, div.good-code pre { background-color: transparent !important; border: none !important; }
+   </style>
+
+Use after scope
 ---------------
 
 This is the simplest dangling pointer scenario, where a pointer or reference
 outlives the stack variable it refers to.
 
-.. code-block:: c++
+.. list-table::
+   :widths: 50 50
+   :header-rows: 1
+   :class: colored-code-table
 
-  void use_after_scope() {
-    int* p;
-    {
-      int i = 0;
-      p = &i; // p borrows from i
-    }       // i is destroyed, p dangles
-    (void)*p; // WARNING: use-after-scope
-  }
+   * - Use after scope
+     - Correct
+   * -
+       .. code-block:: c++
+
+         void foo() {
+           int* p;
+           {
+             int i = 0;
+             p = &i;  // warning: 'p' does not live long enough
+           }          // note: destroyed here
+           (void)*p;  // note: later used here
+         }
+     -
+       .. code-block:: c++
+
+         void foo() {
+           int i = 0;
+           int* p;
+           {
+             p = &i; // OK!
+           }
+           (void)*p;
+         }
 
 Return of stack address
 -----------------------
 
 This check warns when a function returns a pointer or reference to a
 stack-allocated variable, which will be destroyed when the function returns,
-leaving the caller with a dangling pointer.
+leaving the caller with a dangling pointer.◊
 
-.. code-block:: c++
+.. list-table::
+   :widths: 50 50
+   :header-rows: 1
+   :class: colored-code-table
 
-  #include <string>
-  #include <string_view>
+   * - Return of stack address
+     - Correct
+   * -
+       .. code-block:: c++
 
-  std::string_view return_stack_string_view() {
-    std::string s = "hello";
-    return s; // WARNING: address of stack memory is returned
-  }
+        #include <string>
+        #include <string_view>
+
+        std::string_view bar() {
+          std::string s = "on stack";
+          std::string_view result = s;
+          // warning: address of stack variable 's' is returned later
+          return result; // note: returned here
+        }
+     -
+       .. code-block:: c++
+
+        #include <string>
+        #include <string_view>
+
+        std::string bar() {
+          std::string s = "on stack";
+          std::string_view result = s;
+          return result; // OK!
+        }
+
 
 Dangling field
 --------------
@@ -214,19 +275,48 @@ This check warns when a constructor or method assigns a pointer to a
 stack-allocated variable or temporary to a field of the class, and the
 stack variable's lifetime is shorter than the object's lifetime.
 
-.. code-block:: c++
+.. list-table::
+   :widths: 50 50
+   :header-rows: 1
+   :class: colored-code-table
 
-  #include <string>
-  #include <string_view>
 
-  struct DanglingField {
-    std::string_view view;
-    // WARNING: 's' is a temporary that will be destroyed after the
-    // constructor finishes, leaving 'view' dangling.
-    DanglingField(std::string s) : view(s) {}
-  };
+   * - Dangling field
+     - Correct
+   * -
+       .. code-block:: c++
 
-Use-after-invalidation (experimental)
+          #include <string>
+          #include <string_view>
+
+          // Constructor finishes, leaving 'field' dangling.
+          struct DanglingField {
+            std::string_view field; // note: this field dangles
+            DanglingField(std::string s) {
+              field = s; // warning: stack variable 's' escapes to a field
+            }
+          };
+     -
+       .. code-block:: c++
+
+          // Make the field an owner.
+          struct DanglingField {
+            std::string field;
+            DanglingField(std::string s) {
+              field = s;
+            }
+          };
+          // Or take a string_view parameter.
+          struct DanglingField {
+            std::string_view field;
+            DanglingField(std::string_view s [[clang::lifetimebound]]) {
+              field = s;
+            }
+          };
+         };
+
+
+Use after invalidation (experimental)
 -------------------------------------
 
 This check warns when a reference to a container element (such as an iterator,
@@ -239,15 +329,35 @@ its elements.
   Container invalidation checking is highly experimental and may produce false
   positives or miss some invalidations. Field-sensitivity is also limited.
 
-.. code-block:: c++
+.. list-table::
+   :widths: 50 50
+   :header-rows: 1
+   :class: colored-code-table
 
-  #include <vector>
 
-  void use_after_invalidation(std::vector<int>& v) {
-    int* p = &v[0];
-    v.push_back(4); // push_back might reallocate and invalidate p
-    *p = 10;        // WARNING: use after invalidation
-  }
+   * - Use after invalidation (experimental)
+     - Correct
+   * -
+       .. code-block:: c++
+
+        #include <vector>
+
+        void baz(std::vector<int>& v) {
+          int* p = &v[0]; // warning: 'v' is later invalidated
+          v.push_back(4); // note: invalidated here
+          *p = 10;        // note: later used here
+        }
+     -
+       .. code-block:: c++
+
+        #include <vector>
+
+        void baz(std::vector<int>& v) {
+          v.push_back(4);
+          int* p = &v[0]; // OK!
+          *p = 10;
+        }
+
 
 Annotation Inference and Suggestions
 ====================================
@@ -264,14 +374,15 @@ To enable annotation suggestions, use ``-Wlifetime-safety-suggestions``.
 
   #include <string_view>
 
-  // The analysis will suggest adding [[clang::lifetimebound]] to 'a'
-  // because 'a' is returned.
-  std::string_view return_view(std::string_view a) { // warning: parameter in intra-TU function should be marked [[clang::lifetimebound]]
+  // The analysis will suggest adding [[clang::lifetimebound]] to 'a'.
+  std::string_view return_view(std::string_view a) { 
+                            // ^^^^^^^^^^^^^^^^^^
+                            // warning: parameter 'a' should be marked [[clang::lifetimebound]]
     return a;               // note: param returned here
   }
 
-TU-Wide analysis and Inference
-------------------------------
+Translation-Unit-Wide Analysis and Inference
+--------------------------------------------
 
 By default, lifetime analysis is intra-procedural for error checking.
 However, for annotation inference to be effective, lifetime information needs
@@ -293,124 +404,162 @@ enable categories of checks incrementally. For example, ``-Wlifetime-safety``
 enables all dangling pointer checks, while ``-Wlifetime-safety-permissive``
 enables only the high-confidence subset of these checks.
 
-*   **``-Wlifetime-safety-all``**: Enables all lifetime safety warnings, including
+*  ``-Wlifetime-safety-all``: Enables all lifetime safety warnings, including
     dangling pointer checks, annotation suggestions, and annotation validations.
 
-*   **``-Wlifetime-safety``**: Enables dangling pointer checks from both the
-    ``permissive`` and ``strict`` groups listed below.
-    *   **``-Wlifetime-safety-permissive``**: Enables high-confidence checks for dangling
-        pointers. Recommended for initial adoption.
-        *   **``-Wlifetime-safety-use-after-scope``**: Warns when a pointer to
-            a stack variable is used after the variable's lifetime has ended.
-        *   **``-Wlifetime-safety-return-stack-addr``**: Warns when a function
-            returns a pointer or reference to one of its local stack variables.
-        *   **``-Wlifetime-safety-dangling-field``**: Warns when a class field is
-            assigned a pointer to a temporary or stack variable whose lifetime
-            is shorter than the class instance.
-    *   **``-Wlifetime-safety-strict``**: Enables stricter and experimental checks. These
-        may produce false positives in code that uses move semantics heavily, as
-        the analysis might conservatively assume a use-after-free even if
-        ownership was transferred.
-        *   **``-Wlifetime-safety-use-after-scope-moved``**: Same as
-            ``-Wlifetime-safety-use-after-scope`` but for cases where the
-            variable may have been moved from before its destruction.
-        *   **``-Wlifetime-safety-return-stack-addr-moved``**: Same as
-            ``-Wlifetime-safety-return-stack-addr`` but for cases where the
-            variable may have been moved from.
-        *   **``-Wlifetime-safety-dangling-field-moved``**: Same as
-            ``-Wlifetime-safety-dangling-field`` but for cases where the
-            variable may have been moved from.
-        *   **``-Wlifetime-safety-invalidation``**: Warns when a container
-            iterator or reference to an element is used after an operation
-            that may invalidate it (Experimental).
+*  ``-Wlifetime-safety``: Enables dangling pointer checks from both the ``permissive`` and ``strict`` groups listed below.
 
-*   **``-Wlifetime-safety-suggestions``**: Enables suggestions to add
-    ``[[clang::lifetimebound]]`` to function parameters and ``this``
-    parameters.
-    *   **``-Wlifetime-safety-intra-tu-suggestions``**: Suggestions for functions
-        local to the translation unit.
-    *   **``-Wlifetime-safety-cross-tu-suggestions``**: Suggestions for functions
-        visible across translation units (e.g., in headers).
+  * ``-Wlifetime-safety-permissive``: Enables high-confidence checks for dangling pointers. **Recommended for initial adoption.**
 
-*   **``-Wlifetime-safety-validations``**: Enables checks that validate existing
-    lifetime annotations.
-    *   **``-Wlifetime-safety-noescape``**: Warns when a parameter marked with
-        ``[[clang::noescape]]`` escapes the function.
+    * ``-Wlifetime-safety-use-after-scope``: Warns when a pointer to a stack variable is used after the variable's lifetime has ended.
+    * ``-Wlifetime-safety-return-stack-addr``: Warns when a function returns a pointer or reference to one of its local stack variables.
+    * ``-Wlifetime-safety-dangling-field``: Warns when a class field is assigned a pointer to a temporary or stack variable whose lifetime is shorter than the class instance.
+  
+  * ``-Wlifetime-safety-strict``: Enables stricter and experimental checks. These may produce false positives in code that uses move semantics heavily, as the analysis might conservatively assume a use-after-free even if ownership was transferred.
+
+    *   ``-Wlifetime-safety-use-after-scope-moved``: Same as ``-Wlifetime-safety-use-after-scope`` but for cases where the variable may have been moved from before its destruction.
+    *   ``-Wlifetime-safety-return-stack-addr-moved``: Same as ``-Wlifetime-safety-return-stack-addr`` but for cases where the variable may have been moved from.
+    *   ``-Wlifetime-safety-dangling-field-moved``: Same as ``-Wlifetime-safety-dangling-field`` but for cases where the variable may have been moved from.
+    *   ``-Wlifetime-safety-invalidation``: Warns when a container iterator or reference to an element is used after an operation that may invalidate it (Experimental).
+
+*   ``-Wlifetime-safety-suggestions``: Enables suggestions to add ``[[clang::lifetimebound]]`` to function parameters and ``this`` parameters.
+
+  * ``-Wlifetime-safety-intra-tu-suggestions``: Suggestions for functions local to the translation unit.
+  * ``-Wlifetime-safety-cross-tu-suggestions``: Suggestions for functions visible across translation units (e.g., in headers).
+
+* ``-Wlifetime-safety-validations``: Enables checks that validate existing lifetime annotations.
+
+  * ``-Wlifetime-safety-noescape``: Warns when a parameter marked with ``[[clang::noescape]]`` escapes the function.
 
 Limitations
 ===========
 
-Move Semantics and False Positives
-----------------------------------
-When an object is moved from, its state becomes unspecified. If pointers or
-views were created that refer to the object *before* it was moved, those
-pointers may become invalid after the move. Because the analysis cannot always
-know if a move operation invalidates outstanding pointers or simply transfers
-ownership, it issues ``-Wlifetime-safety-*-moved`` warnings in these situations.
-These warnings indicate a *potential* dangling issue but may be false positives
-if ownership was safely transferred and the resource remains alive.
-``std::unique_ptr::release()`` is treated similarly to ``std::move()`` in this
-regard, as it also relinquishes ownership.
+Move Semantics
+--------------
+The analysis does not currently track ownership transfers through move operations.
+Instead, it uses scope-based lifetime tracking: when an owner goes out of scope,
+the analysis assumes the resource is destroyed, even if ownership was transferred
+via ``std::move()`` or ``std::unique_ptr::release()``.
 
-To avoid these warnings and prevent potential bugs, follow the
-**"move-first-then-alias"** pattern: ensure that views or raw pointers are
-created *after* a potential move, sourcing them from the new owner rather than
-aliasing an object that is about to be moved.
+This means that if a pointer or view is created from an owner, and that owner is
+later moved-from and goes out of scope, the analysis will issue a
+``-Wlifetime-safety-*-moved`` warning. This warning indicates that the pointer
+may be dangling, even though the resource may still be alive under a new owner.
+These are often false positives when ownership has been safely transferred.
+
+To avoid these warnings and ensure correctness, follow the
+**"move-first-then-alias"** pattern: create views or raw pointers *after* the
+ownership transfer, sourcing them from the new owner rather than the original
+owner that will go out of scope.
 
 For example:
 
+.. list-table::
+   :widths: 50 50
+   :header-rows: 1
+   :align: left
+   :class: colored-code-table
+
+   * - Anti-Pattern: Aliasing Before Move
+     - Good Practice: Move-First-Then-Alias
+   * -
+       .. code-block:: c++
+
+         #include <memory>
+
+         void use(int*);
+
+         void bar() {
+           std::unique_ptr<int> b;
+           int* p;
+           {
+             auto a = std::make_unique<int>(42);
+             p = a.get(); // warning!
+             b = std::move(a);
+           }
+           use(p);
+         }
+     -
+       .. code-block:: c++
+
+         #include <memory>
+
+         void use(int*);
+
+         void bar() {
+           std::unique_ptr<int> b;
+           int* p;
+           {
+             auto a = std::make_unique<int>(42);
+             b = std::move(a);
+             p = b.get(); // OK!
+           }
+           use(p);
+         }
+
+The same principle applies when moving ownership using ``std::unique_ptr::release()``:
+
 .. code-block:: c++
-
-  #include <memory>
-
-  void use(int*);
-  void take(std::unique_ptr<int>&&);
-
-  void bar() {
-    std::unique_ptr<int> b;
-    int* p;
-    {
-      auto a = std::make_unique<int>(42);
-      p = a.get(); // p aliases a's content
-      b = std::move(a); // a is moved-from
-    }
-    use(p); // WARNING: -Wlifetime-safety-use-after-scope-moved
-  }
-
-  void foo() {
-    int* p;
-    {
-      auto a = std::make_unique<int>(42);
-      p = a.get(); // p aliases a's content
-      take(std::move(a)); // a is moved-from and goes out of scope
-    }
-    use(p); // WARNING: -Wlifetime-safety-use-after-scope-moved
-  }
-
-The same principle applies when creating other aliases via ``get()`` or ``release()`` before moving or releasing ownership:
-
-.. code-block:: c++
+  :class: bad-code
 
   #include <memory>
   #include <utility>
 
   void use(int*);
-  void take_ownership(std::unique_ptr<int>);
+  void take_ownership(int*);
 
-  void test_aliasing_before_move() {
+  void test_aliasing_before_release() {
     int* p;
     {
       auto u = std::make_unique<int>(1);
-      p = u.get(); // p aliases u's content
-      take_ownership(std::move(u)); // u is moved-from
-    }
-    // 'p' now points to memory whose ownership was transferred,
-    // and it might be invalid depending on what take_ownership does.
-    use(p); // WARNING: -Wlifetime-safety-use-after-scope-moved
+      p = u.get();
+      //  ^ warning: 'u' does not live long enough!
+      take_ownership(u.release());
+    } 
+    use(p);  
   }
 
-Dangling Fields and Intra-Procedural Analysis
----------------------------------------------
+``std::unique_ptr`` with custom deleters
+----------------------------------------
+The analysis assumes standard ownership semantics for owner types like
+``std::unique_ptr``: when a ``unique_ptr`` goes out of scope, it is assumed
+that the owned object is destroyed and its memory is deallocated.
+However, ``std::unique_ptr`` can be used with a custom deleter that modifies
+this behavior. For example, a custom deleter might keep the memory alive
+by transferring it to a memory pool, or simply do nothing, allowing
+another system to manage the lifetime.
+
+Because the analysis relies on scope-based lifetime for owners, it does not
+support custom deleters that extend the lifetime of the owned object beyond
+the lifetime of the ``std::unique_ptr``. In such cases, the analysis will
+assume the object is destroyed when the ``std::unique_ptr`` goes out of scope,
+leading to false positive warnings if pointers to the object are used afterward.
+
+.. code-block:: c++
+
+  #include <memory>
+
+  void use(int*);
+
+  struct NoOpDeleter {
+    void operator()(int* p) const {
+      // Do not delete p, memory is managed elsewhere.
+    }
+  };
+
+  void test_custom_deleter() {
+    int* p;
+    {
+      std::unique_ptr<int, NoOpDeleter> u(new int(42));
+      p = u.get();  // warning: object whose reference is captured does not live long enough
+    }               // note: destroyed here
+    // With NoOpDeleter, p would still be valid here.
+    // But analysis assumes standard unique_ptr semantics and memory being freed.
+    use(p);         // note: later used here
+  }
+
+Dangling Fields
+---------------
 The lifetime analysis is intra-procedural. It analyzes one function or method at
 a time.
 This means if a field is assigned a pointer to a local variable or temporary
@@ -425,8 +574,8 @@ because it cannot see how other methods are implemented or used.
   #include <string_view>
 
   struct MyWidget {
-    std::string_view name_;
-    MyWidget(std::string name) : name_(name) {} // WARNING: 'name' is destroyed when ctor ends, leaving 'name_' dangling
+    std::string_view name_; // note: this field dangles
+    MyWidget(std::string name) : name_(name) {} // warning: address of stack memory escapes to a field
     const char* data() { return name_.data(); } // Potential use-after-free if called
   };
 
@@ -439,18 +588,11 @@ or ensuring the borrowed object (e.g., one passed by ``const&``) has a
 sufficient lifetime.
 
 
-Heap and Globals
-----------------
-
-Currently, the analysis focuses on dangling pointers to stack variables,
-temporaries, and function parameters. It does not track lifetimes of heap-
-allocated memory or global variables.
-
 Performance
 ===========
 
 Lifetime analysis relies on Clang's CFG (Control Flow Graph). For functions
-with very large or complex CFGs, analysis time can be significant. To mitigate
-this, the analysis will skip functions where the number of CFG blocks exceeds
+with very large or complex CFGs, analysis time can sometimes be significant. To mitigate
+this, the analysis allows to skip functions where the number of CFG blocks exceeds
 a certain threshold, controlled by the ``-flifetime-safety-max-cfg-blocks=N`` language
 option.
