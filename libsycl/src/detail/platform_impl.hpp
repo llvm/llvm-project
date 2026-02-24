@@ -122,11 +122,6 @@ public:
   void iterateDevices(info::device_type DeviceType,
                       std::function<void(DeviceImpl *)> callback) const;
 
-  /// Returns all root devices for platform
-  ///
-  /// \return reference to collection of root devices
-  const std::vector<DeviceImplUPtr> &getRootDevices() const;
-
   /// Returns context dummy (w/o liboffload handle) that represents all devices
   /// in platform.
   ///
@@ -134,6 +129,11 @@ public:
   ContextImpl &getDefaultContext();
 
 private:
+  /// Returns all root devices for platform
+  ///
+  /// \return reference to collection of root devices
+  const std::vector<DeviceImplUPtr> &getRootDevices() const;
+
   const ol_platform_handle_t MOffloadPlatform{};
   const size_t MOffloadPlatformIndex{};
 
@@ -142,7 +142,6 @@ private:
 
   std::vector<DeviceImplUPtr> MRootDevices;
 
-  // To be redesigned  once liboffload supports context
   std::shared_ptr<ContextImpl> MDefaultContext;
 };
 

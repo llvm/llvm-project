@@ -15,8 +15,8 @@ namespace detail {
 
 void ContextImpl::iterateDevices(
     const std::function<void(DeviceImpl *)> &callback) const {
-  // Intentionally don't store devices in context now. This class should be
-  // reimplemented once liboffload adds context support. Treat context as
+  // TODO: Intentionally don't store devices in context now. This class should
+  // be reimplemented once liboffload adds context support. Treat context as
   // default context that is associated with all devices in the platform.
   return MPlatform.iterateDevices(info::device_type::all, callback);
 }
