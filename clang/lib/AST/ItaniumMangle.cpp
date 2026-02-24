@@ -140,7 +140,7 @@ public:
       return false;
 
     // Anonymous tags are already numbered.
-    if (const TagDecl *Tag = dyn_cast<TagDecl>(ND);
+    if (const auto *Tag = dyn_cast<TagDecl>(ND);
         Tag && Tag->getName().empty() && !Tag->getTypedefNameForAnonDecl())
       return false;
 
