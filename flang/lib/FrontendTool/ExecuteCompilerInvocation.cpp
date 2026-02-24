@@ -18,10 +18,17 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
+#include "flang/Optimizer/CodeGen/CodeGen.h"
+#include "flang/Optimizer/HLFIR/Passes.h"
+#include "flang/Optimizer/OpenMP/Passes.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
+#include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
+#include "mlir/Transforms/Passes.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Options/Options.h"
 #include "llvm/Option/OptTable.h"
@@ -207,6 +214,23 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
 
   // Honor -mmlir. This should happen AFTER plugins have been loaded!
   if (!flang->getFrontendOpts().mlirArgs.empty()) {
+    // Register MLIR and FIR passes so that --mlir-print-ir-before=<pass> works.
+    // This must happen BEFORE registerPassManagerCLOptions() because that
+    // function creates the PassNameCLParser which snapshots the pass registry
+    // during initialization.
+    mlir::registerCSEPass();
+    mlir::registerCanonicalizerPass();
+    mlir::registerInlinerPass();
+    mlir::registerSCFToControlFlowPass();
+    mlir::registerConvertMathToFuncs();
+    mlir::registerConvertComplexToStandardPass();
+    mlir::registerConvertMathToLLVMPass();
+    mlir::LLVM::registerLLVMAddComdats();
+    mlir::registerReconcileUnrealizedCastsPass();
+    fir::registerOptCodeGenPasses();
+    fir::registerOptTransformPasses();
+    hlfir::registerHLFIRPasses();
+    flangomp::registerFlangOpenMPPasses();
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
     mlir::registerAsmPrinterCLOptions();
