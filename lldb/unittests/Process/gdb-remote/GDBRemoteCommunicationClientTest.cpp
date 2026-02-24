@@ -113,7 +113,6 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_cC) {
   ASSERT_FALSE(client.GetVContSupported("S"));
   ASSERT_TRUE(client.GetVContSupported("a"));
   ASSERT_FALSE(client.GetVContSupported("A"));
-  return;
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, WriteRegister) {
