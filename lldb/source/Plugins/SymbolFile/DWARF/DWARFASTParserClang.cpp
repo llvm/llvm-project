@@ -1880,9 +1880,6 @@ DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
   LanguageType cu_language = SymbolFileDWARF::GetLanguage(*die.GetCU());
   Log *log = GetLog(DWARFLog::TypeCompletion | DWARFLog::Lookups);
 
-  clang::DeclContext *containing_decl_ctx =
-      GetClangDeclContextContainingDIE(die, nullptr);
-
   ConstString unique_typename(attrs.name);
   Declaration unique_decl(attrs.decl);
   uint64_t byte_size = attrs.byte_size.value_or(0);
