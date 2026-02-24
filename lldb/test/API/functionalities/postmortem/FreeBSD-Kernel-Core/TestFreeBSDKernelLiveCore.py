@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class FreeBSDKernelVMCoreTestCase(TestBase):
+class FreeBSDKernelLiveCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_mem(self):

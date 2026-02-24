@@ -114,6 +114,7 @@
 ; O2-NEXT: x86-global-base-reg
 ; O2-NEXT: x86-argument-stack-slot
 ; O2-NEXT: finalize-isel
+; O2-NEXT: x86-domain-reassignment
 ; O2-NEXT: early-tailduplication
 ; O2-NEXT: opt-phis
 ; O2-NEXT: stack-coloring
@@ -302,6 +303,7 @@
 ; O3-WINDOWS-NEXT: x86-global-base-reg
 ; O3-WINDOWS-NEXT: x86-argument-stack-slot
 ; O3-WINDOWS-NEXT: finalize-isel
+; O3-WINDOWS-NEXT: x86-domain-reassignment
 ; O3-WINDOWS-NEXT: early-tailduplication
 ; O3-WINDOWS-NEXT: opt-phis
 ; O3-WINDOWS-NEXT: stack-coloring

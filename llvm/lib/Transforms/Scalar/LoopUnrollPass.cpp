@@ -882,7 +882,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
     return std::nullopt;
 
   if (!UP.Partial) {
-    LLVM_DEBUG(dbgs().indent(3) << "will not try to unroll partially because "
+    LLVM_DEBUG(dbgs().indent(3) << "Will not try to unroll partially because "
                                 << "-unroll-allow-partial not given\n");
     return 0;
   }
@@ -920,7 +920,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
     count = UP.MaxCount;
 
   LLVM_DEBUG(dbgs().indent(3)
-             << "partially unrolling with count: " << count << "\n");
+             << "Partially unrolling with count: " << count << "\n");
 
   return count;
 }
@@ -1105,8 +1105,8 @@ bool llvm::computeUnrollCount(
   UP.Runtime |= PragmaEnableUnroll || PragmaCount > 0 || UserUnrollCount;
   if (!UP.Runtime) {
     LLVM_DEBUG(dbgs().indent(2)
-               << "will not try to unroll loop with runtime trip count "
-               << "-unroll-runtime not given\n");
+               << "Will not try to unroll loop with runtime trip count "
+               << "because -unroll-runtime not given\n");
     UP.Count = 0;
     return false;
   }
@@ -1159,7 +1159,7 @@ bool llvm::computeUnrollCount(
     UP.Count = MaxTripCount;
 
   LLVM_DEBUG(dbgs().indent(2)
-             << "runtime unrolling with count: " << UP.Count << "\n");
+             << "Runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
   return ExplicitUnroll;

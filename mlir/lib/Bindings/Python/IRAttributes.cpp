@@ -1086,6 +1086,8 @@ PyDenseResourceElementsAttribute::getFromBuffer(
   size_t inferredAlignment;
   if (alignment)
     inferredAlignment = *alignment;
+  else if (view->ndim == 0)
+    inferredAlignment = view->itemsize;
   else
     inferredAlignment = view->strides[view->ndim - 1];
 

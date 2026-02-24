@@ -1,4 +1,4 @@
-//===-- ThreadFreeBSDKernel.h ------------------------------------- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNEL_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNEL_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNELCORE_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNELCORE_H
 
 #include "lldb/Target/Thread.h"
 
-class ThreadFreeBSDKernel : public lldb_private::Thread {
+class ThreadFreeBSDKernelCore : public lldb_private::Thread {
 public:
-  ThreadFreeBSDKernel(lldb_private::Process &process, lldb::tid_t tid,
-                      lldb::addr_t pcb_addr, std::string thread_name);
+  ThreadFreeBSDKernelCore(lldb_private::Process &process, lldb::tid_t tid,
+                          lldb::addr_t pcb_addr, std::string thread_name);
 
-  ~ThreadFreeBSDKernel() override;
+  ~ThreadFreeBSDKernelCore() override;
 
   void RefreshStateAfterStop() override;
 
@@ -49,4 +49,4 @@ private:
   bool m_is_crashed = false;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNEL_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNELCORE_H

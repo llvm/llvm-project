@@ -131,8 +131,7 @@ void X86CodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
 
 void X86CodeGenPassBuilder::addMachineSSAOptimization(
     PassManagerWrapper &PMW) const {
-  // TODO(boomanaiden154): Add X86DomainReassignmentPass here once it has been
-  // ported.
+  addMachineFunctionPass(X86DomainReassignmentPass(), PMW);
   Base::addMachineSSAOptimization(PMW);
 }
 

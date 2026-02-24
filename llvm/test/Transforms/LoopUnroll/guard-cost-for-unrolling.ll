@@ -9,7 +9,7 @@
 define void @test_guard_as_intrinsic(ptr %arr, i64 %n, i64 %bound) {
 ; CHECK-LABEL: Loop Unroll: F[test_guard_as_intrinsic] Loop %loop
 ; CHECK-NEXT:    Loop Size = 8
-; CHECK-NEXT:    runtime unrolling with count: 2
+; CHECK-NEXT:    Runtime unrolling with count: 2
 entry:
   br label %loop
 
@@ -31,7 +31,7 @@ exit:
 define void @test_guard_as_branch(ptr %arr, i64 %n, i64 %bound) {
 ; CHECK-LABEL: Loop Unroll: F[test_guard_as_branch] Loop %loop
 ; CHECK-NEXT:    Loop Size = 8
-; CHECK-NEXT:    runtime unrolling with count: 2
+; CHECK-NEXT:    Runtime unrolling with count: 2
 entry:
   br label %loop
 

@@ -1,4 +1,4 @@
-//===-- RegisterContextFreeBSDKernel_arm64.cpp ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RegisterContextFreeBSDKernel_arm64.h"
+#include "RegisterContextFreeBSDKernelCore_arm64.h"
 #include "Plugins/Process/Utility/lldb-arm64-register-enums.h"
 
 #include "lldb/Symbol/Symbol.h"
@@ -21,27 +21,27 @@
 using namespace lldb;
 using namespace lldb_private;
 
-RegisterContextFreeBSDKernel_arm64::RegisterContextFreeBSDKernel_arm64(
+RegisterContextFreeBSDKernelCore_arm64::RegisterContextFreeBSDKernelCore_arm64(
     Thread &thread, std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up,
     lldb::addr_t pcb_addr)
     : RegisterContextPOSIX_arm64(thread, std::move(register_info_up)),
       m_pcb_addr(pcb_addr) {}
 
-bool RegisterContextFreeBSDKernel_arm64::ReadGPR() { return true; }
+bool RegisterContextFreeBSDKernelCore_arm64::ReadGPR() { return true; }
 
-bool RegisterContextFreeBSDKernel_arm64::ReadFPR() { return true; }
+bool RegisterContextFreeBSDKernelCore_arm64::ReadFPR() { return true; }
 
-bool RegisterContextFreeBSDKernel_arm64::WriteGPR() {
+bool RegisterContextFreeBSDKernelCore_arm64::WriteGPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextFreeBSDKernel_arm64::WriteFPR() {
+bool RegisterContextFreeBSDKernelCore_arm64::WriteFPR() {
   assert(0);
   return false;
 }
 
-bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
+bool RegisterContextFreeBSDKernelCore_arm64::ReadRegister(
     const RegisterInfo *reg_info, RegisterValue &value) {
   if (m_pcb_addr == LLDB_INVALID_ADDRESS)
     return false;
@@ -165,12 +165,12 @@ bool RegisterContextFreeBSDKernel_arm64::ReadRegister(
   return true;
 }
 
-bool RegisterContextFreeBSDKernel_arm64::WriteRegister(
+bool RegisterContextFreeBSDKernelCore_arm64::WriteRegister(
     const RegisterInfo *reg_info, const RegisterValue &value) {
   return false;
 }
 
-std::optional<int> RegisterContextFreeBSDKernel_arm64::GetOsreldate() {
+std::optional<int> RegisterContextFreeBSDKernelCore_arm64::GetOsreldate() {
   ProcessSP process_sp = m_thread.GetProcess();
   if (!process_sp)
     return std::nullopt;

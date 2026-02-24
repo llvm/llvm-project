@@ -1,4 +1,4 @@
-//===-- ProcessFreeBSDKernel.cpp ------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,41 +17,41 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "Plugins/DynamicLoader/FreeBSD-Kernel/DynamicLoaderFreeBSDKernel.h"
-#include "ProcessFreeBSDKernel.h"
-#include "ThreadFreeBSDKernel.h"
+#include "ProcessFreeBSDKernelCore.h"
+#include "ThreadFreeBSDKernelCore.h"
 
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(ProcessFreeBSDKernel)
+LLDB_PLUGIN_DEFINE(ProcessFreeBSDKernelCore)
 
-ProcessFreeBSDKernel::ProcessFreeBSDKernel(lldb::TargetSP target_sp,
-                                           ListenerSP listener_sp, kvm_t *kvm,
-                                           const FileSpec &core_file)
+ProcessFreeBSDKernelCore::ProcessFreeBSDKernelCore(lldb::TargetSP target_sp,
+                                                   ListenerSP listener_sp,
+                                                   kvm_t *kvm,
+                                                   const FileSpec &core_file)
     : PostMortemProcess(target_sp, listener_sp, core_file), m_kvm(kvm) {}
 
-ProcessFreeBSDKernel::~ProcessFreeBSDKernel() {
+ProcessFreeBSDKernelCore::~ProcessFreeBSDKernelCore() {
   if (m_kvm)
     kvm_close(m_kvm);
 }
 
-lldb::ProcessSP ProcessFreeBSDKernel::CreateInstance(lldb::TargetSP target_sp,
-                                                     ListenerSP listener_sp,
-                                                     const FileSpec *crash_file,
-                                                     bool can_connect) {
+lldb::ProcessSP ProcessFreeBSDKernelCore::CreateInstance(
+    lldb::TargetSP target_sp, ListenerSP listener_sp,
+    const FileSpec *crash_file, bool can_connect) {
   ModuleSP executable = target_sp->GetExecutableModule();
   if (crash_file && !can_connect && executable) {
     kvm_t *kvm =
         kvm_open2(executable->GetFileSpec().GetPath().c_str(),
                   crash_file->GetPath().c_str(), O_RDONLY, nullptr, nullptr);
     if (kvm)
-      return std::make_shared<ProcessFreeBSDKernel>(target_sp, listener_sp, kvm,
-                                                    *crash_file);
+      return std::make_shared<ProcessFreeBSDKernelCore>(target_sp, listener_sp,
+                                                        kvm, *crash_file);
   }
   return nullptr;
 }
 
-void ProcessFreeBSDKernel::Initialize() {
+void ProcessFreeBSDKernelCore::Initialize() {
   static llvm::once_flag g_once_flag;
 
   llvm::call_once(g_once_flag, []() {
@@ -60,38 +60,38 @@ void ProcessFreeBSDKernel::Initialize() {
   });
 }
 
-void ProcessFreeBSDKernel::Terminate() {
-  PluginManager::UnregisterPlugin(ProcessFreeBSDKernel::CreateInstance);
+void ProcessFreeBSDKernelCore::Terminate() {
+  PluginManager::UnregisterPlugin(ProcessFreeBSDKernelCore::CreateInstance);
 }
 
-bool ProcessFreeBSDKernel::CanDebug(lldb::TargetSP target_sp,
-                                    bool plugin_specified_by_name) {
+bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
+                                        bool plugin_specified_by_name) {
   return true;
 }
 
-Status ProcessFreeBSDKernel::DoLoadCore() {
+Status ProcessFreeBSDKernelCore::DoLoadCore() {
   // The core is already loaded by CreateInstance().
   return Status();
 }
 
-DynamicLoader *ProcessFreeBSDKernel::GetDynamicLoader() {
+DynamicLoader *ProcessFreeBSDKernelCore::GetDynamicLoader() {
   if (m_dyld_up.get() == nullptr)
     m_dyld_up.reset(DynamicLoader::FindPlugin(
         this, DynamicLoaderFreeBSDKernel::GetPluginNameStatic()));
   return m_dyld_up.get();
 }
 
-Status ProcessFreeBSDKernel::DoDestroy() { return Status(); }
+Status ProcessFreeBSDKernelCore::DoDestroy() { return Status(); }
 
-void ProcessFreeBSDKernel::RefreshStateAfterStop() {
+void ProcessFreeBSDKernelCore::RefreshStateAfterStop() {
   if (!m_printed_unread_message) {
     PrintUnreadMessage();
     m_printed_unread_message = true;
   }
 }
 
-bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
-                                              ThreadList &new_thread_list) {
+bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
+                                                  ThreadList &new_thread_list) {
   if (old_thread_list.GetSize(false) == 0) {
     // Make up the thread the first time this is called so we can set our one
     // and only core thread state up.
@@ -223,7 +223,7 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
         }
 
         auto thread =
-            new ThreadFreeBSDKernel(*this, tid, pcb_addr, thread_desc);
+            new ThreadFreeBSDKernelCore(*this, tid, pcb_addr, thread_desc);
 
         if (tid == dumptid)
           thread->SetIsCrashedThread(true);
@@ -239,8 +239,8 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
   return new_thread_list.GetSize(false) > 0;
 }
 
-size_t ProcessFreeBSDKernel::DoReadMemory(lldb::addr_t addr, void *buf,
-                                          size_t size, Status &error) {
+size_t ProcessFreeBSDKernelCore::DoReadMemory(lldb::addr_t addr, void *buf,
+                                              size_t size, Status &error) {
   ssize_t rd = 0;
   rd = kvm_read2(m_kvm, addr, buf, size);
   if (rd < 0 || static_cast<size_t>(rd) != size) {
@@ -251,13 +251,13 @@ size_t ProcessFreeBSDKernel::DoReadMemory(lldb::addr_t addr, void *buf,
   return rd;
 }
 
-lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
+lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   ModuleSP mod_sp = GetTarget().GetExecutableModule();
   const Symbol *sym = mod_sp->FindFirstSymbolWithNameAndType(ConstString(name));
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
 }
 
-void ProcessFreeBSDKernel::PrintUnreadMessage() {
+void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
   Target &target = GetTarget();
   Debugger &debugger = target.GetDebugger();
 
@@ -316,8 +316,9 @@ void ProcessFreeBSDKernel::PrintUnreadMessage() {
     }
 
     if (field_found != 4) {
-      LLDB_LOGF(GetLog(LLDBLog::Object),
-                "FreeBSDKernel: Could not find all required fields for msgbuf");
+      LLDB_LOGF(
+          GetLog(LLDBLog::Object),
+          "FreeBSD-Kernel-Core: Could not find all required fields for msgbuf");
       return;
     }
   } else {
@@ -404,4 +405,4 @@ void ProcessFreeBSDKernel::PrintUnreadMessage() {
   stream_sp->Flush();
 }
 
-const char *ProcessFreeBSDKernel::GetError() { return kvm_geterr(m_kvm); }
+const char *ProcessFreeBSDKernelCore::GetError() { return kvm_geterr(m_kvm); }

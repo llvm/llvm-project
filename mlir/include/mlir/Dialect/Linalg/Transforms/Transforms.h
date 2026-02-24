@@ -1928,7 +1928,6 @@ private:
 /// Canonicalization patterns relevant to apply after tiling patterns. These
 /// are applied automatically by the tiling pass but need to be applied
 /// manually when tiling is called programmatically.
-RewritePatternSet getLinalgTilingCanonicalizationPatterns(MLIRContext *ctx);
 void populateLinalgTilingCanonicalizationPatterns(RewritePatternSet &patterns);
 
 /// Linalg generalization patterns
