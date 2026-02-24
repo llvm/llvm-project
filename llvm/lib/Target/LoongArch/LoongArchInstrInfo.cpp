@@ -20,8 +20,14 @@
 #include "llvm/CodeGen/StackMaps.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
+
+static cl::opt<bool> DisableRelocSched(
+    "loongarch-disable-reloc-sched",
+    cl::desc("Disable scheduling of instructions with target flags"),
+    cl::init(false), cl::Hidden);
 
 #define GET_INSTRINFO_CTOR_DTOR
 #include "LoongArchGenInstrInfo.inc"
@@ -382,6 +388,12 @@ bool LoongArchInstrInfo::isBranchOffsetInRange(unsigned BranchOp,
 bool LoongArchInstrInfo::isSafeToMove(const MachineInstr &MI,
                                       const MachineBasicBlock *MBB,
                                       const MachineFunction &MF) const {
+  if (DisableRelocSched) {
+    for (const MachineOperand &MO : MI.operands())
+      if (MO.getTargetFlags())
+        return false;
+  }
+
   auto MII = MI.getIterator();
   auto MIE = MBB->end();
 

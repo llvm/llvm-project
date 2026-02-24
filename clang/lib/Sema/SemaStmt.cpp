@@ -1761,30 +1761,30 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     return;
   }
 
-  typedef SmallVector<std::pair<llvm::APSInt, EnumConstantDecl *>, 64>
-      EnumValsTy;
-  EnumValsTy EnumVals;
+  const EnumDecl *Key = ED->getCanonicalDecl();
+  auto [It, Inserted] = AssignEnumCache.try_emplace(Key);
+  auto &Values = It->second;
 
-  // Gather all enum values, set their type and sort them,
-  // allowing easier comparison with rhs constant.
-  for (auto *EDI : ED->enumerators()) {
-    llvm::APSInt Val = EDI->getInitVal();
-    AdjustAPSInt(Val, DstWidth, DstIsSigned);
-    EnumVals.emplace_back(Val, EDI);
+  if (Inserted) {
+    Values.reserve(std::distance(ED->enumerator_begin(), ED->enumerator_end()));
+
+    for (auto *EC : ED->enumerators()) {
+      Values.push_back(EC->getInitVal());
+      AdjustAPSInt(Values.back(), DstWidth, DstIsSigned);
+    }
+
+    if (Values.empty())
+      return;
+
+    llvm::sort(Values);
+    Values.erase(llvm::unique(Values), Values.end());
   }
-  if (EnumVals.empty())
+
+  if (llvm::binary_search(Values, *RHSVal))
     return;
-  llvm::stable_sort(EnumVals, CmpEnumVals);
-  EnumValsTy::iterator EIend = llvm::unique(EnumVals, EqEnumVals);
 
-  // See which values aren't in the enum.
-  EnumValsTy::const_iterator EI = EnumVals.begin();
-  while (EI != EIend && EI->first < *RHSVal)
-    EI++;
-  if (EI == EIend || EI->first != *RHSVal) {
-    Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
-        << DstType.getUnqualifiedType();
-  }
+  Diag(SrcExpr->getExprLoc(), diag::warn_not_in_enum_assignment)
+      << DstType.getUnqualifiedType();
 }
 
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
@@ -1996,9 +1996,33 @@ namespace {
     }
 
     void VisitDeclRefExpr(DeclRefExpr *E) {
-      if (VarDecl *VD = dyn_cast<VarDecl>(E->getDecl()))
+      if (const auto *VD = dyn_cast<VarDecl>(E->getDecl())) {
         if (Decls.count(VD))
           FoundDecl = true;
+      } else if (const auto *MD = dyn_cast<CXXMethodDecl>(E->getDecl());
+                 MD && isLambdaCallOperator(MD)) {
+        // FIXME: This has limitations handling updates to the loop control
+        // variable that occur indirectly inside a lambda called from the loop
+        // body. For example:
+        //
+        //   int a = 0;
+        //   int *c = &a;
+        //   auto incr_c = [c]() { ++*c; };
+        //   for (a = 10; a <= 20; incr_c())
+        //     foo(a);
+        for (const auto &Capture : MD->getParent()->captures()) {
+          if (!Capture.capturesVariable())
+            continue;
+
+          LambdaCaptureKind CK = Capture.getCaptureKind();
+          if (CK != LCK_ByRef)
+            continue;
+
+          const auto *VD = dyn_cast<VarDecl>(Capture.getCapturedVar());
+          if (VD && Decls.count(VD))
+            FoundDecl = true;
+        }
+      }
     }
 
     void VisitPseudoObjectExpr(PseudoObjectExpr *POE) {

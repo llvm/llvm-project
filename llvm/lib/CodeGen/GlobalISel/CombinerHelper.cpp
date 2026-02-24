@@ -168,6 +168,13 @@ bool CombinerHelper::isLegalOrHasWidenScalar(const LegalityQuery &Query) const {
          LI->getAction(Query).Action == LegalizeActions::WidenScalar;
 }
 
+bool CombinerHelper::isLegalOrHasFewerElements(
+    const LegalityQuery &Query) const {
+  LegalizeAction Action = LI->getAction(Query).Action;
+  return Action == LegalizeActions::Legal ||
+         Action == LegalizeActions::FewerElements;
+}
+
 bool CombinerHelper::isConstantLegalOrBeforeLegalizer(const LLT Ty) const {
   if (!Ty.isVector())
     return isLegalOrBeforeLegalizer({TargetOpcode::G_CONSTANT, {Ty}});
@@ -3043,13 +3050,6 @@ bool CombinerHelper::matchSelectSameVal(MachineInstr &MI) const {
 bool CombinerHelper::matchBinOpSameVal(MachineInstr &MI) const {
   return matchEqualDefs(MI.getOperand(1), MI.getOperand(2)) &&
          canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(1).getReg(),
-                       MRI);
-}
-
-bool CombinerHelper::matchOperandIsZero(MachineInstr &MI,
-                                        unsigned OpIdx) const {
-  return matchConstantOp(MI.getOperand(OpIdx), 0) &&
-         canReplaceReg(MI.getOperand(0).getReg(), MI.getOperand(OpIdx).getReg(),
                        MRI);
 }
 
@@ -6054,7 +6054,8 @@ bool CombinerHelper::matchTruncSSatS(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
-  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}}))
+  if (!LI || !isLegalOrHasFewerElements(
+                 {TargetOpcode::G_TRUNC_SSAT_S, {DstTy, SrcTy}}))
     return false;
 
   APInt SignedMax = APInt::getSignedMaxValue(NumDstBits).sext(NumSrcBits);
@@ -6086,7 +6087,8 @@ bool CombinerHelper::matchTruncSSatU(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
-  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+  if (!LI || !isLegalOrHasFewerElements(
+                 {TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
     return false;
   APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
   return mi_match(Src, MRI,
@@ -6118,7 +6120,8 @@ bool CombinerHelper::matchTruncUSatU(MachineInstr &MI,
   unsigned NumSrcBits = SrcTy.getScalarSizeInBits();
   assert(NumSrcBits > NumDstBits && "Unexpected types for truncate operation");
 
-  if (!LI || !isLegal({TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
+  if (!LI || !isLegalOrHasFewerElements(
+                 {TargetOpcode::G_TRUNC_SSAT_U, {DstTy, SrcTy}}))
     return false;
   APInt UnsignedMax = APInt::getMaxValue(NumDstBits).zext(NumSrcBits);
   return mi_match(Min, MRI, m_SpecificICstOrSplat(UnsignedMax)) &&

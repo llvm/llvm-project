@@ -4,10 +4,10 @@ Test lldb-dap launch request.
 
 from lldbsuite.test.decorators import (
     skipIfAsan,
-    expectedFailureWindows,
     skipIf,
     skipIfBuildType,
     no_match,
+    skipIfWindows,
 )
 import lldbdap_testcase
 import tempfile
@@ -19,9 +19,7 @@ class TestDAP_launch_stdio_redirection_and_console(lldbdap_testcase.DAPTestCaseB
     """
 
     @skipIfAsan
-    @expectedFailureWindows(
-        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
-    )
+    @skipIfWindows  # https://github.com/llvm/llvm-project/issues/62336
     @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
     @skipIfBuildType(["debug"])
     def test(self):
@@ -29,10 +27,10 @@ class TestDAP_launch_stdio_redirection_and_console(lldbdap_testcase.DAPTestCaseB
         program = self.getBuildArtifact("a.out")
 
         with tempfile.NamedTemporaryFile("rt") as f:
-            self.launch(
+            self.launch_and_configurationDone(
                 program, console="integratedTerminal", stdio=[None, f.name, None]
             )
-            self.continue_to_exit()
+            self.verify_process_exited()
             lines = f.readlines()
             self.assertIn(
                 program, lines[0], "make sure program path is in first argument"

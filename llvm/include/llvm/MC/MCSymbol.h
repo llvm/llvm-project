@@ -307,7 +307,6 @@ public:
   ///
   /// \param Size - The size of the symbol.
   /// \param Alignment - The alignment of the symbol.
-  /// \param Target - Is the symbol a target-specific common-like symbol.
   void setCommon(uint64_t Size, Align Alignment) {
     assert(getOffset() == 0);
     CommonSize = Size;

@@ -1285,6 +1285,58 @@ define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
   ret <1 x i1> %cmp
 }
 
+; negative test - denormal inputs flushed to zero (positivezero)
+
+define i1 @bitcast_eq0_denorm_positivezero_input(i32 %x) denormal_fpenv(positivezero) {
+; CHECK-LABEL: @bitcast_eq0_denorm_positivezero_input(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - denormal inputs flushed to zero (positivezero), outputs are not (ieee)
+
+define i1 @bitcast_eq0_denorm_positivezero_input_ieee_output(i32 %x) denormal_fpenv(ieee|positivezero) {
+; CHECK-LABEL: @bitcast_eq0_denorm_positivezero_input_ieee_output(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - denormal inputs flushed to zero (preservesign)
+
+define <2 x i1> @bitcast_ne0_denorm_preservesign_input(<2 x i32> %x) denormal_fpenv(preservesign) {
+; CHECK-LABEL: @bitcast_ne0_denorm_preservesign_input(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i32> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %f = bitcast <2 x i32> %x to <2 x float>
+  %r = fcmp une <2 x float> %f, zeroinitializer
+  ret <2 x i1> %r
+}
+
+; negative test - denormal inputs flushed to zero (dynamic)
+
+define <2 x i1> @bitcast_ne0_denorm_dynamic_input(<2 x i32> %x) denormal_fpenv(dynamic) {
+; CHECK-LABEL: @bitcast_ne0_denorm_dynamic_input(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i32> [[X:%.*]] to <2 x float>
+; CHECK-NEXT:    [[R:%.*]] = fcmp une <2 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %f = bitcast <2 x i32> %x to <2 x float>
+  %r = fcmp une <2 x float> %f, zeroinitializer
+  ret <2 x i1> %r
+}
+
 ; Simplify fcmp (x + 0.0), y => fcmp x, y
 
 define i1 @fcmp_fadd_zero_ugt(float %x, float %y) {
@@ -2125,7 +2177,7 @@ define <8 x i1> @fcmp_une_fsub_const_nnan_vec(<8 x float> %x, <8 x float> %y) {
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_ugt_fsub_const_vec_denormal_positive-zero(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="positive-zero,positive-zero" {
+define <8 x i1> @fcmp_ugt_fsub_const_vec_denormal_positive-zero(<8 x float> %x, <8 x float> %y) denormal_fpenv(positivezero|positivezero) {
 ; CHECK-LABEL: @fcmp_ugt_fsub_const_vec_denormal_positive-zero(
 ; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer
@@ -2136,7 +2188,7 @@ define <8 x i1> @fcmp_ugt_fsub_const_vec_denormal_positive-zero(<8 x float> %x, 
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_dynamic(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="dynamic,dynamic" {
+define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_dynamic(<8 x float> %x, <8 x float> %y) denormal_fpenv(dynamic) {
 ; CHECK-LABEL: @fcmp_ogt_fsub_const_vec_denormal_dynamic(
 ; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer
@@ -2147,7 +2199,7 @@ define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_dynamic(<8 x float> %x, <8 x f
   ret <8 x i1> %cmp
 }
 
-define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(<8 x float> %x, <8 x float> %y) "denormal-fp-math"="preserve-sign,preserve-sign" {
+define <8 x i1> @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(<8 x float> %x, <8 x float> %y) denormal_fpenv(preservesign) {
 ; CHECK-LABEL: @fcmp_ogt_fsub_const_vec_denormal_preserve-sign(
 ; CHECK-NEXT:    [[FS:%.*]] = fsub <8 x float> [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt <8 x float> [[FS]], zeroinitializer

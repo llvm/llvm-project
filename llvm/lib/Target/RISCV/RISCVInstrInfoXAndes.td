@@ -380,6 +380,8 @@ class NDSRVInstVSINTLN<bits<5> funct5, string opcodestr>
   let mayLoad = 1;
   let mayStore = 0;
   let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
@@ -400,7 +402,9 @@ class NDSRVInstVSINTCvt<bits<5> fucnt5, string opcodestr>
   let mayLoad = 0;
   let mayStore = 0;
   let Uses = [FRM, VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstBFHCvt<bits<7> funct7, bits<5> rs1val, DAGOperand rdty,
@@ -434,7 +438,9 @@ class NDSRVInstVFPMAD<bits<6> funct6, string opcodestr>
   let mayLoad = 0;
   let mayStore = 0;
 
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
@@ -457,7 +463,9 @@ class NDSRVInstVD4DOT<bits<6> funct6, string opcodestr>
   let mayLoad = 0;
   let mayStore = 0;
 
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
@@ -477,6 +485,8 @@ class NDSRVInstVBFHCvt<bits<5> vs1, string opcodestr>
   let mayStore = 0;
 
   let Uses = [VL, VTYPE];
+
+  let UseNamedOperandTable = true;
 }
 
 class NDSRVInstVLN<bits<5> funct5, string opcodestr>
@@ -499,12 +509,14 @@ class NDSRVInstVLN<bits<5> funct5, string opcodestr>
   let mayStore = 0;
 
   let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
+  let VMConstraint = true;
+
+  let UseNamedOperandTable = true;
 }
 
 class VPseudoVLN8NoMask<VReg RetClass, bit U> :
       RISCVVPseudo<(outs RetClass:$rd),
-                   (ins RetClass:$dest,
+                   (ins RetClass:$passthru,
                         GPRMemZeroOffset:$rs1,
                         AVL:$vl, sew:$sew, vec_policy:$policy), []>,
       RISCVNDSVLN</*Masked*/0, /*Unsigned*/U, !logtwo(8), VLMul> {
@@ -514,7 +526,7 @@ class VPseudoVLN8NoMask<VReg RetClass, bit U> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
-  let Constraints = "$rd = $dest";
+  let Constraints = "$rd = $passthru";
 }
 
 class VPseudoVLN8Mask<VReg RetClass, bit U> :
@@ -714,10 +726,10 @@ let Predicates = [HasVendorXAndesBFHCvt] in {
 
 let Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
-  let RVVConstraint = VS2Constraint, DestEEW = EEWSEWx2 in
-    def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
+  let VS1VS2Constraint = VS2Constraint, DestEEW = EEWSEWx2 in
+  def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
   let Uses = [FRM, VL, VTYPE] in
-    def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
+  def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
 } // Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
   // mayRaiseFPException = true
 
@@ -923,18 +935,19 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 // Pseudo-instructions for SFB (Short Forward Branch)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasShortForwardBranchIALU], hasSideEffects = 0,
-    mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
-  def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
-                                (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                                 GPR:$falsev, GPR:$rs1,
-                                 uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-                         Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                                ReadSFBALU]>;
-  def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
-                                (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                                 GPR:$falsev, GPR:$rs1,
-                                 uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-                         Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                                ReadSFBALU]>;
+class SFBNDS_BFO
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+let Predicates = [HasShortForwardBranchIALU] in {
+  def PseudoCCNDS_BFOS : SFBNDS_BFO;
+  def PseudoCCNDS_BFOZ : SFBNDS_BFO;
 }

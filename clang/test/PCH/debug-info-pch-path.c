@@ -17,6 +17,7 @@
 // RUN: %clang_cc1 -debug-info-kind=standalone                  \
 // RUN:     -dwarf-ext-refs -fmodule-format=obj                 \
 // RUN:     -triple %itanium_abi_triple                         \
+// RUN:     -fdebug-compilation-dir=%t                          \
 // RUN:     -include-pch prefix.pch %s -emit-llvm -o %t.nodir.ll %s
 // RUN: cat %t.nodir.ll | FileCheck %s --check-prefix=CHECK-REL-NODIR
 //
@@ -42,6 +43,7 @@
 // RUN: %clang_cc1 -debug-info-kind=standalone                  \
 // RUN:     -dwarf-ext-refs -fmodule-format=obj                 \
 // RUN:     -triple %itanium_abi_triple                         \
+// RUN:     -fdebug-compilation-dir=%t                          \
 // RUN:     -include-pch pchdir/prefix.pch %s -emit-llvm -o %t.rel.ll %s
 // RUN: cat %t.rel.ll | FileCheck %s --check-prefix=CHECK-REL
 

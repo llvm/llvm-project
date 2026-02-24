@@ -2041,6 +2041,16 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
           verifyReshapeLikeTypes(op, expandedType, collapsedType, isExpansion)))
     return failure();
 
+  // Reshape must preserve the number of elements when statically known.
+  if (expandedType.hasStaticShape() && collapsedType.hasStaticShape()) {
+    int64_t expandedNumElements = expandedType.getNumElements();
+    int64_t collapsedNumElements = collapsedType.getNumElements();
+    if (expandedNumElements != collapsedNumElements) {
+      return op.emitOpError("number of elements must be preserved: ")
+             << expandedNumElements << " != " << collapsedNumElements;
+    }
+  }
+
   auto maps = op.getReassociationMaps();
   RankedTensorType expectedType =
       CollapseShapeOp::inferCollapsedType(expandedType, maps);
@@ -2051,8 +2061,8 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  auto srcType = getSrcType();
-  auto resultType = getResultType();
+  RankedTensorType srcType = getSrc().getType();
+  RankedTensorType resultType = getResult().getType();
 
   if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
     return emitOpError("expected number of static shape dims to be equal to "
@@ -2068,6 +2078,19 @@ LogicalResult ExpandShapeOp::verify() {
            << " dynamic dims while output_shape has " << getOutputShape().size()
            << " values";
 
+  // Verify that the number of dynamic dims in output_shape matches the number
+  // of dynamic dims in the result type.
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOutputShape())))
+    return failure();
+
+  // Verify if provided output shapes are in agreement with output type.
+  DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();
+  ArrayRef<int64_t> resShape = getResult().getType().getShape();
+  for (auto [pos, shape] : llvm::enumerate(resShape))
+    if (ShapedType::isStatic(shape) && shape != staticOutputShapes[pos])
+      return emitOpError("invalid output shape provided at pos ") << pos;
+
   return verifyTensorReshapeOp(*this, resultType, srcType);
 }
 
@@ -2077,7 +2100,10 @@ LogicalResult CollapseShapeOp::verify() {
                    [](ReassociationIndices group) { return group.empty(); })) {
     return op.emitOpError("reassociation indices must not be empty");
   }
-  return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
+  RankedTensorType srcType = op.getSrc().getType();
+  RankedTensorType resultType = op.getResult().getType();
+
+  return verifyTensorReshapeOp(op, srcType, resultType);
 }
 
 namespace {
@@ -2708,8 +2734,24 @@ struct SliceReturnTypeCanonicalizer {
                               ArrayRef<OpFoldResult> mixedOffsets,
                               ArrayRef<OpFoldResult> mixedSizes,
                               ArrayRef<OpFoldResult> mixedStrides) {
-    return ExtractSliceOp::inferCanonicalRankReducedResultType(
-        op.getType().getRank(), op.getSourceType(), mixedSizes);
+    // Infer a tensor type without taking into account any rank reductions.
+    RankedTensorType nonReducedType =
+        ExtractSliceOp::inferResultType(op.getSourceType(), mixedSizes);
+
+    // Directly return the non-rank reduced type if there are no dropped
+    // dims.
+    llvm::SmallBitVector droppedDims = op.getDroppedDims();
+    if (droppedDims.none())
+      return nonReducedType;
+
+    // Build the reduced shape, preserving the original rank reduction pattern.
+    SmallVector<int64_t> targetShape;
+    for (auto i : llvm::seq<int64_t>(mixedSizes.size()))
+      if (!droppedDims.test(i))
+        targetShape.push_back(nonReducedType.getDimSize(i));
+
+    return RankedTensorType::get(targetShape, nonReducedType.getElementType(),
+                                 nonReducedType.getEncoding());
   }
 };
 

@@ -12,6 +12,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/QualTypeNames.h"
 #include "clang/Analysis/DomainSpecific/CocoaConventions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
@@ -65,42 +66,45 @@ public:
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
 
-  void visitFunctionDecl(const FunctionDecl *FD) const {
-    if (!FD->doesThisDeclarationHaveABody())
-      return;
+  static bool hasNoDeleteAnnotation(const FunctionDecl *FD) {
+    if (llvm::any_of(FD->redecls(), isNoDeleteFunction))
+      return true;
 
-    bool HasNoDeleteAnnotation = isNoDeleteFunction(FD);
-    if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
-      if (auto *Cls = MD->getParent(); Cls && MD->isVirtual()) {
-        CXXBasePaths Paths;
-        Paths.setOrigin(Cls);
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    if (!MD || !MD->isVirtual())
+      return false;
 
-        Cls->lookupInBases(
-            [&](const CXXBaseSpecifier *Base, CXXBasePath &) {
-              const Type *T = Base->getType().getTypePtrOrNull();
-              if (!T)
-                return false;
-
-              const CXXRecordDecl *R = T->getAsCXXRecordDecl();
-              if (!R)
-                return false;
-
-              for (const CXXMethodDecl *BaseMD : R->methods()) {
-                if (BaseMD->getCorrespondingMethodInClass(Cls) == MD) {
-                  if (isNoDeleteFunction(FD)) {
-                    HasNoDeleteAnnotation = true;
-                    return false;
-                  }
-                }
-              }
-              return true;
-            },
-            Paths, /*LookupInDependent =*/true);
-      }
+    auto Overriders = llvm::to_vector(MD->overridden_methods());
+    while (!Overriders.empty()) {
+      const auto *Fn = Overriders.pop_back_val();
+      llvm::append_range(Overriders, Fn->overridden_methods());
+      if (isNoDeleteFunction(Fn))
+        return true;
     }
 
+    return false;
+  }
+
+  void visitFunctionDecl(const FunctionDecl *FD) const {
+    if (!FD->doesThisDeclarationHaveABody() || FD->isDependentContext())
+      return;
+
+    if (!hasNoDeleteAnnotation(FD))
+      return;
+
     auto Body = FD->getBody();
-    if (!Body || TFA.isTrivial(Body))
+    if (!Body)
+      return;
+
+    NamedDecl *ParamDecl = nullptr;
+    for (auto *D : FD->parameters()) {
+      if (!TFA.hasTrivialDtor(D)) {
+        ParamDecl = D;
+        break;
+      }
+    }
+    const Stmt *OffendingStmt = nullptr;
+    if (!ParamDecl && TFA.isTrivial(Body, &OffendingStmt))
       return;
 
     SmallString<100> Buf;
@@ -108,13 +112,24 @@ public:
 
     Os << "A function ";
     printQuotedName(Os, FD);
-    Os << " has [[clang::annotate_type(\"webkit.nodelete\")]] but it contains "
-          "code that could destruct an object";
+    Os << " has [[clang::annotate_type(\"webkit.nodelete\")]] but it contains ";
+    SourceLocation SrcLocToReport;
+    SourceRange Range;
+    if (ParamDecl) {
+      Os << "a parameter ";
+      printQuotedName(Os, ParamDecl);
+      Os << " which could destruct an object.";
+      SrcLocToReport = FD->getBeginLoc();
+      Range = ParamDecl->getSourceRange();
+    } else {
+      Os << "code that could destruct an object.";
+      SrcLocToReport = OffendingStmt->getBeginLoc();
+      Range = OffendingStmt->getSourceRange();
+    }
 
-    const SourceLocation SrcLocToReport = FD->getBeginLoc();
     PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(FD->getSourceRange());
+    Report->addRange(Range);
     Report->setDeclWithIssue(FD);
     BR->emitReport(std::move(Report));
   }

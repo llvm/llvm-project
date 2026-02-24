@@ -28,7 +28,8 @@ flags = (test_dir / 'flags.subs').open().read().strip()
 link_flags = (test_dir / 'link_flags.subs').open().read().strip()
 spec_dir = pathlib.Path((test_dir / 'spec_dir.subs').open().read().strip())
 
-# Setup the configuration file
+# Setup the configuration file. We need to force the usage of C++17 since
+# SPEC doesn't compile with newer standards.
 test_dir.mkdir(parents=True, exist_ok=True)
 spec_config = test_dir / 'spec-config.cfg'
 spec_config.write_text(f"""
@@ -46,7 +47,7 @@ default:
     copies               = 1
     threads              = 1
     CC                   = cc -O3 -std=c18 -Wno-implicit-function-declaration
-    CXX                  = {cxx} {compile_flags} {flags} {link_flags} -w # we don't care about warnings in SPEC
+    CXX                  = {cxx} {compile_flags} {flags} {link_flags} -std=c++17 -w # we don't care about warnings in SPEC
     CC_VERSION_OPTION    = --version
     CXX_VERSION_OPTION   = --version
     EXTRA_PORTABILITY    = -DSPEC_NO_CXX17_SPECIAL_MATH_FUNCTIONS # because libc++ doesn't implement the special math functions yet
@@ -88,5 +89,5 @@ for benchmark in spec_benchmarks:
 
     # If there were no errors, parse the SPEC results and the `time` output into LNT-compatible format and print them.
     print(f'RUN: %{{libcxx-dir}}/utils/parse-spec-results %{{temp}}/result/*.train.csv --output-format=lnt > %{{temp}}/results.lnt')
-    print(f'RUN: %{{libcxx-dir}}/utils/parse-time-output %{{temp}}/time.txt --benchmark {benchmark} --extract instructions max_rss cycles peak_memory >> %{{temp}}/results.lnt')
+    print(f'RUN: %{{libcxx-dir}}/utils/parse-time-output %{{temp}}/time.txt --benchmark {benchmark.replace(".", "_")} --extract instructions max_rss cycles peak_memory >> %{{temp}}/results.lnt')
     print(f'RUN: cat %{{temp}}/results.lnt')

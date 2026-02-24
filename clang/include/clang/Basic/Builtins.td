@@ -767,6 +767,12 @@ def Bitreverse : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Prototype = "T(T)";
 }
 
+def Bitreverseg : Builtin {
+  let Spellings = ["__builtin_bitreverseg"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "int(...)";
+}
+
 def RotateLeft : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Spellings = ["__builtin_rotateleft"];
   let Attributes = [NoThrow, Const, Constexpr];
@@ -4776,6 +4782,12 @@ def PtrauthAuthAndResign : Builtin {
   let Prototype = "void*(void*,int,void*,int,void*)";
 }
 
+def PtrauthAuthLoadRelativeAndSign : Builtin {
+  let Spellings = ["__builtin_ptrauth_auth_load_relative_and_sign"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void*(void*,int,void*,int,void*,ptrdiff_t)";
+}
+
 def PtrauthAuth : Builtin {
   let Spellings = ["__builtin_ptrauth_auth"];
   let Attributes = [CustomTypeChecking, NoThrow];
@@ -4970,8 +4982,7 @@ def OSLogFormatBufferSize : Builtin {
 
 def OSLogFormat : Builtin {
   let Spellings = ["__builtin_os_log_format"];
-  // FIXME: The printf attribute looks suspiciously like it should be argument #1.
-  let Attributes = [PrintfFormat<0>, NoThrow, CustomTypeChecking];
+  let Attributes = [PrintfFormat<1>, NoThrow, CustomTypeChecking];
   let Prototype = "void*(void*, char const*, ...)";
 }
 
@@ -4995,8 +5006,56 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
+def HLSLResourceGetPointerTyped : Builtin {
+  let Spellings = ["__builtin_hlsl_resource_getpointer_typed"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_with_status"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceLoadWithStatusTyped : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_load_with_status_typed"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceSample : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_sample"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceSampleBias : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_sample_bias"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceSampleGrad : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_sample_grad"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceSampleLevel : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_sample_level"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceSampleCmp : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_sample_cmp"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceSampleCmpLevelZero : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_sample_cmp_level_zero"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }
@@ -5127,6 +5186,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool()";
 }
 
+def HLSLWavePrefixCountBits : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_prefix_count_bits"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(bool)";
+}
+
 def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_read_lane_at"];
   let Attributes = [NoThrow, Const];
@@ -5137,6 +5202,18 @@ def HLSLWaveGetLaneCount : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_get_lane_count"];
   let Attributes = [NoThrow, Const];
   let Prototype = "unsigned int()";
+}
+
+def HLSLWavePrefixSum : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_prefix_sum"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_prefix_product"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
 }
 
 def HLSLClamp : LangBuiltin<"HLSL_LANG"> {

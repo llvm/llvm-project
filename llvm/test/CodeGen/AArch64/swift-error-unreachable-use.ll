@@ -5,15 +5,19 @@
 
 define void @"func"(ptr swifterror %0) #0 {
 ; CHECK-LABEL: func:
-; CHECK:       {{.*}}%bb.0:
-; CHECK-NEXT:    b {{\.?}}LBB0_2
-; CHECK-NEXT:  {{\.?}}LBB0_1:{{.*}}%thirtythree
-; CHECK-NEXT:  {{.*}}=>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    b {{\.?}}LBB0_1
-; CHECK-NEXT:  {{\.?}}LBB0_2:{{.*}}%thirtyeight
-; CHECK-NEXT:    b {{\.?}}LBB0_3
-; CHECK-NEXT:  {{\.?}}LBB0_3:{{.*}}%thirtythree.preheader
-; CHECK-NEXT:    b {{\.?}}LBB0_1
+; CHECK:  {{.*}}%bb.0:
+; CHECK:    b {{.*}}LBB0_5
+; CHECK:  {{.*}}LBB0_1:{{.*}}%common.ret
+; CHECK:  {{.*}}LBB0_2:
+; CHECK:    b {{.*}}LBB0_1
+; CHECK:  {{.*}}LBB0_4:{{.*}}%thirtythree
+; CHECK:    {{.*}}=>This Inner Loop Header: Depth=1
+; CHECK:    b {{.*}}LBB0_4
+; CHECK:  {{.*}}LBB0_5:{{.*}}%thirtyeight
+; CHECK:    {{.*}}=>This Inner Loop Header: Depth=1
+; CHECK:    b {{.*}}LBB0_6
+; CHECK:  {{.*}}LBB0_6:{{.*}}%thirtythree.preheader
+; CHECK:    b {{.*}}LBB0_4
   br label %thirtyeight
 
 five:

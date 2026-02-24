@@ -329,8 +329,7 @@ bool llvm::IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV,
 
   // Look through ptr->int and ptr->ptr casts.
   if (CE->getOpcode() == Instruction::PtrToInt ||
-      CE->getOpcode() == Instruction::PtrToAddr ||
-      CE->getOpcode() == Instruction::BitCast)
+      CE->getOpcode() == Instruction::PtrToAddr)
     return IsConstantOffsetFromGlobal(CE->getOperand(0), GV, Offset, DL,
                                       DSOEquiv);
 
@@ -985,9 +984,8 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
 
   // Otherwise canonicalize this to a single ptradd.
   LLVMContext &Ctx = Ptr->getContext();
-  return ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Ptr,
-                                        ConstantInt::get(Ctx, Offset), NW,
-                                        InRange);
+  return ConstantExpr::getPtrAdd(Ptr, ConstantInt::get(Ctx, Offset), NW,
+                                 InRange);
 }
 
 /// Attempt to constant fold an instruction with the
@@ -3133,7 +3131,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       break;
 
     case Intrinsic::wasm_anytrue:
-      return Op->isZeroValue() ? ConstantInt::get(Ty, 0)
+      return Op->isNullValue() ? ConstantInt::get(Ty, 0)
                                : ConstantInt::get(Ty, 1);
 
     case Intrinsic::wasm_alltrue:
@@ -3142,7 +3140,7 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       for (unsigned I = 0; I != E; ++I) {
         Constant *Elt = Op->getAggregateElement(I);
         // Return false as soon as we find a non-true element.
-        if (Elt && Elt->isZeroValue())
+        if (Elt && Elt->isNullValue())
           return ConstantInt::get(Ty, 0);
         // Bail as soon as we find an element we cannot prove to be true.
         if (!Elt || !isa<ConstantInt>(Elt))
@@ -4747,6 +4745,17 @@ Constant *llvm::getLosslessInvCast(Constant *C, Type *InvCastTo,
       Flags->NNeg = CastInvC == SExtInvC;
     }
     return InvC;
+  }
+  case Instruction::FPExt: {
+    Constant *InvC =
+        ConstantFoldCastOperand(Instruction::FPTrunc, C, InvCastTo, DL);
+    if (InvC) {
+      Constant *CastInvC =
+          ConstantFoldCastOperand(CastOp, InvC, C->getType(), DL);
+      if (CastInvC == C)
+        return InvC;
+    }
+    return nullptr;
   }
   default:
     return nullptr;

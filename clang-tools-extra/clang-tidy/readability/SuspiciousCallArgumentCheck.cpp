@@ -188,8 +188,9 @@ static bool applySubstringHeuristic(StringRef Arg, StringRef Param,
           Current[J] = 1 + Previous[J - 1];
 
         MaxLength = std::max(MaxLength, Current[J]);
-      } else
+      } else {
         Current[J] = 0;
+      }
     }
 
     Current.swap(Previous);
@@ -528,7 +529,11 @@ SuspiciousCallArgumentCheck::SuspiciousCallArgumentCheck(
   for (const StringRef Abbreviation : optutils::parseStringList(
            Options.get("Abbreviations", DefaultAbbreviations))) {
     const auto [Key, Value] = Abbreviation.split("=");
-    assert(!Key.empty() && !Value.empty());
+    if (Key.empty() || Value.empty()) {
+      configurationDiag("Invalid abbreviation configuration '%0', ignoring.")
+          << Abbreviation;
+      continue;
+    }
     AbbreviationDictionary.try_emplace(Key, Value.str());
   }
 }
