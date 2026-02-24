@@ -802,6 +802,14 @@ const VPBasicBlock *VPBasicBlock::getCFGPredecessor(unsigned Idx) const {
   return Pred->getExitingBasicBlock();
 }
 
+VPHeaderPHIRecipe *VPRegionBlock::getCurrentIteration() {
+  VPCurrentIterationPHIRecipe *CurrentIteration =
+      vputils::getCurrentIterationPhi(*getPlan());
+  if (CurrentIteration)
+    return CurrentIteration;
+  return getCanonicalIV();
+}
+
 InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   if (!isReplicator()) {
     InstructionCost Cost = 0;

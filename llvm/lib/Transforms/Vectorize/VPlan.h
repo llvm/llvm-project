@@ -4472,6 +4472,10 @@ public:
   const Type *getCanonicalIVType() const {
     return getCanonicalIV()->getScalarType();
   }
+
+  /// Return VPCurrentIterationPHIRecipe for variable-length
+  /// stepping loops, or VPCanonicalIVPHIRecipe otherwise.
+  VPHeaderPHIRecipe *getCurrentIteration();
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {

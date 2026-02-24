@@ -570,12 +570,13 @@ vputils::getRecipesForUncountableExit(VPlan &Plan,
 VPSingleDefRecipe *vputils::findHeaderMask(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<VPValue *> WideCanonicalIVs;
-  VPHeaderPHIRecipe *LoopIndex = getLoopIndex(Plan);
+  VPHeaderPHIRecipe *CurrentIteration = LoopRegion->getCurrentIteration();
   auto *FoundWidenCanonicalIVUser =
-      find_if(LoopIndex->users(), IsaPred<VPWidenCanonicalIVRecipe>);
-  assert(count_if(LoopIndex->users(), IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
+      find_if(CurrentIteration->users(), IsaPred<VPWidenCanonicalIVRecipe>);
+  assert(count_if(CurrentIteration->users(),
+                  IsaPred<VPWidenCanonicalIVRecipe>) <= 1 &&
          "Must have at most one VPWideCanonicalIVRecipe");
-  if (FoundWidenCanonicalIVUser != LoopIndex->users().end()) {
+  if (FoundWidenCanonicalIVUser != CurrentIteration->users().end()) {
     auto *WideCanonicalIV =
         cast<VPWidenCanonicalIVRecipe>(*FoundWidenCanonicalIVUser);
     WideCanonicalIVs.push_back(WideCanonicalIV);
@@ -688,12 +689,4 @@ VPCurrentIterationPHIRecipe *vputils::getCurrentIterationPhi(VPlan &Plan) {
       }
 
   return CurrentIteration;
-}
-
-VPHeaderPHIRecipe *vputils::getLoopIndex(VPlan &Plan) {
-  VPCurrentIterationPHIRecipe *CurrentIteration =
-      vputils::getCurrentIterationPhi(Plan);
-  if (CurrentIteration)
-    return CurrentIteration;
-  return Plan.getVectorLoopRegion()->getCanonicalIV();
 }

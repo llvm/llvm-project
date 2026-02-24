@@ -285,10 +285,6 @@ struct VPlanTransforms {
       VPlan &Plan,
       const std::function<bool(BasicBlock *)> &BlockNeedsPredication);
 
-  /// Add a VPCurrentIterationPHIRecipe to \p Plan and replaces all uses of
-  /// VPCanonicalIVPHIRecipe with VPCurrentIterationPHIRecipe, except for the
-  /// canonical IV increment.
-  static void addCurrentIterationPhi(VPlan &Plan);
   /// Convert a tail-folded vector loop to use explicit vector length (EVL)
   /// instead of VF elements each iteration.
   static void
