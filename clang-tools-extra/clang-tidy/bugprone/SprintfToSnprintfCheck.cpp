@@ -27,12 +27,6 @@ void SprintfToSnprintfCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
                 utils::options::serializeStringList(SprintfLikeFunctions));
 }
 
-bool SprintfToSnprintfCheck::isLanguageVersionSupported(
-    const LangOptions &LangOpts) const {
-  // Explicitly support C and C++ (and others where sprintf is valid)
-  return true;
-}
-
 void SprintfToSnprintfCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(callee(functionDecl(hasAnyName(SprintfLikeFunctions))),
