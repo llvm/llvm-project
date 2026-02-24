@@ -198,17 +198,17 @@ bool Evaluator::MutableValue::write(Constant *V, APInt Offset,
   return true;
 }
 
-Constant *Evaluator::MutableAggregate::toConstant() const {
+Constant *Evaluator::MutableAggregate::toConstant(const DataLayout &DL) const {
   SmallVector<Constant *, 32> Consts;
   for (const MutableValue &MV : Elements)
-    Consts.push_back(MV.toConstant());
+    Consts.push_back(MV.toConstant(DL));
 
   if (auto *ST = dyn_cast<StructType>(Ty))
-    return ConstantStruct::get(ST, Consts);
+    return ConstantStruct::get(ST, Consts, &DL);
   if (auto *AT = dyn_cast<ArrayType>(Ty))
-    return ConstantArray::get(AT, Consts);
+    return ConstantArray::get(AT, Consts, &DL);
   assert(isa<FixedVectorType>(Ty) && "Must be vector");
-  return ConstantVector::get(Consts);
+  return ConstantVector::get(Consts, &DL);
 }
 
 /// Return the value that would be computed by a load from P after the stores

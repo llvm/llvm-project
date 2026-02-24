@@ -15,6 +15,7 @@
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -111,8 +112,7 @@ static bool shouldConvertToRelLookupTable(LookupTableInfo &Info, Module &M,
     if (!GlovalVarOp || !GlovalVarOp->isConstant())
       return false;
 
-    if (!GlovalVarOp->hasLocalLinkage() ||
-        !GlovalVarOp->isDSOLocal() ||
+    if (!GlovalVarOp->hasLocalLinkage() || !GlovalVarOp->isDSOLocal() ||
         !GlovalVarOp->isImplicitDSOLocal())
       return false;
 
@@ -133,6 +133,7 @@ static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
                                             Function &Func,
                                             GlobalVariable &LookupTable) {
   Module &M = *Func.getParent();
+  const auto &DL = M.getDataLayout();
   ArrayType *IntArrayTy =
       ArrayType::get(Type::getInt32Ty(M.getContext()), Info.Ptrs.size());
 
@@ -156,7 +157,7 @@ static GlobalVariable *createRelLookupTable(LookupTableInfo &Info,
   }
 
   Constant *Initializer =
-      ConstantArray::get(IntArrayTy, RelLookupTableContents);
+      ConstantArray::get(IntArrayTy, RelLookupTableContents, &DL);
   RelLookupTable->setInitializer(Initializer);
   RelLookupTable->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   RelLookupTable->setAlignment(llvm::Align(4));

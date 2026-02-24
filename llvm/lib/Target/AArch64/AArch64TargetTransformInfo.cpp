@@ -1730,7 +1730,7 @@ static Value *stripInactiveLanes(Value *V, const Value *Pg) {
       Dup->getOperand(1) == Pg && isa<Constant>(Dup->getOperand(2)))
     return ConstantVector::getSplat(
         cast<VectorType>(V->getType())->getElementCount(),
-        cast<Constant>(Dup->getOperand(2)));
+        cast<Constant>(Dup->getOperand(2)), &Dup->getDataLayout());
 
   return V;
 }

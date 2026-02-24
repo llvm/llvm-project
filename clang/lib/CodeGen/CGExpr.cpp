@@ -2346,7 +2346,7 @@ LValue CodeGenFunction::EmitMatrixElementExpr(const MatrixElementExpr *E) {
 
   for (unsigned Index : Indices)
     CElts.push_back(BaseElts->getAggregateElement(Index));
-  llvm::Constant *CV = llvm::ConstantVector::get(CElts);
+  llvm::Constant *CV = llvm::ConstantVector::get(CElts, &CGM.getDataLayout());
   return LValue::MakeExtVectorElt(
       MaybeConvertMatrixAddress(Base.getExtVectorAddress(), *this), CV,
       ResultType, Base.getBaseInfo(), TBAAAccessInfo());
@@ -3918,7 +3918,8 @@ llvm::Constant *CodeGenFunction::EmitCheckTypeDescriptor(QualType T) {
     Builder.getInt16(TypeKind), Builder.getInt16(TypeInfo),
     llvm::ConstantDataArray::getString(getLLVMContext(), Buffer)
   };
-  llvm::Constant *Descriptor = llvm::ConstantStruct::getAnon(Components);
+  llvm::Constant *Descriptor =
+      llvm::ConstantStruct::getAnon(Components, false, &CGM.getDataLayout());
 
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), Descriptor->getType(),
@@ -4018,7 +4019,7 @@ llvm::Constant *CodeGenFunction::EmitCheckSourceLocation(SourceLocation Loc) {
   llvm::Constant *Data[] = {Filename, Builder.getInt32(Line),
                             Builder.getInt32(Column)};
 
-  return llvm::ConstantStruct::getAnon(Data);
+  return llvm::ConstantStruct::getAnon(Data, false, &CGM.getDataLayout());
 }
 
 namespace {
@@ -4207,7 +4208,8 @@ void CodeGenFunction::EmitCheck(
 
   // Emit handler arguments and create handler function type.
   if (!StaticArgs.empty()) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+    llvm::Constant *Info =
+        llvm::ConstantStruct::getAnon(StaticArgs, false, &CGM.getDataLayout());
     auto *InfoPtr = new llvm::GlobalVariable(
         CGM.getModule(), Info->getType(),
         // Non-constant global is used in a handler to deduplicate reports.
@@ -4272,7 +4274,8 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   llvm::CallInst *CheckCall;
   llvm::FunctionCallee SlowPathFn;
   if (WithDiag) {
-    llvm::Constant *Info = llvm::ConstantStruct::getAnon(StaticArgs);
+    llvm::Constant *Info =
+        llvm::ConstantStruct::getAnon(StaticArgs, false, &CGM.getDataLayout());
     auto *InfoPtr =
         new llvm::GlobalVariable(CGM.getModule(), Info->getType(), false,
                                  llvm::GlobalVariable::PrivateLinkage, Info);
@@ -5432,7 +5435,8 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
         MatIndices.push_back(llvm::ConstantInt::get(Int32Ty, Linear));
       }
 
-      llvm::Constant *ConstIdxs = llvm::ConstantVector::get(MatIndices);
+      llvm::Constant *ConstIdxs =
+          llvm::ConstantVector::get(MatIndices, &CGM.getDataLayout());
       return LValue::MakeExtVectorElt(Base.getMatrixAddress(), ConstIdxs,
                                       E->getBase()->getType(),
                                       Base.getBaseInfo(), TBAAAccessInfo());
@@ -5455,7 +5459,7 @@ EmitExtVectorElementExpr(const ExtVectorElementExpr *E) {
 
   for (unsigned Index : Indices)
     CElts.push_back(BaseElts->getAggregateElement(Index));
-  llvm::Constant *CV = llvm::ConstantVector::get(CElts);
+  llvm::Constant *CV = llvm::ConstantVector::get(CElts, &CGM.getDataLayout());
   return LValue::MakeExtVectorElt(Base.getExtVectorAddress(), CV, type,
                                   Base.getBaseInfo(), TBAAAccessInfo());
 }

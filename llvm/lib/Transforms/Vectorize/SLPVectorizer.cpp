@@ -14260,7 +14260,7 @@ class BoUpSLP::ShuffleCostEstimator : public BaseShuffleAnalysis {
                                DL.getTypeStoreSizeInBits(Ty->getScalarType()))),
           Ty->getScalarType());
       if (auto *VTy = dyn_cast<VectorType>(Ty))
-        Res = ConstantVector::getSplat(VTy->getElementCount(), Res);
+        Res = ConstantVector::getSplat(VTy->getElementCount(), Res, &DL);
       return Res;
     }
     return Constant::getAllOnesValue(Ty);
@@ -15045,12 +15045,12 @@ public:
         // types.
         Vals = replicateMask(Vals, VecTy->getNumElements());
       }
-      return ConstantVector::get(Vals);
+      return ConstantVector::get(Vals, R.DL);
     }
     return ConstantVector::getSplat(
         ElementCount::getFixed(
             cast<FixedVectorType>(Root->getType())->getNumElements()),
-        getAllOnesValue(*R.DL, ScalarTy->getScalarType()));
+        getAllOnesValue(*R.DL, ScalarTy->getScalarType()), R.DL);
   }
   InstructionCost createFreeze(InstructionCost Cost) { return Cost; }
   /// Finalize emission of the shuffles.
@@ -21201,7 +21201,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             assert(SLPReVec && "Only supported by REVEC.");
             MaskValues = replicateMask(MaskValues, VecTy->getNumElements());
           }
-          Constant *MaskValue = ConstantVector::get(MaskValues);
+          Constant *MaskValue = ConstantVector::get(MaskValues, DL);
           NewLI = Builder.CreateMaskedLoad(LoadVecTy, PO, CommonAlignment,
                                            MaskValue);
         } else {
@@ -21276,7 +21276,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
               VecTy->getElementType(),
               Builder.CreateShuffleVector(
                   VecPtr, createReplicatedMask(ScalarTyNumElements, VF)),
-              ConstantVector::get(Indices));
+              ConstantVector::get(Indices, DL));
         }
         // Use the minimum alignment of the gathered loads.
         Align CommonAlignment = computeCommonAlignment<LoadInst>(E->Scalars);
@@ -26368,7 +26368,7 @@ public:
         // Emit code to correctly handle reused reduced values, if required.
         if (OptReusedScalars && !SameScaleFactor) {
           VectorizedRoot = emitReusedOps(VectorizedRoot, Builder, V,
-                                         SameValuesCounter, TrackedToOrig);
+                                         SameValuesCounter, TrackedToOrig, DL);
         }
 
         Type *ScalarTy = VL.front()->getType();
@@ -26415,7 +26415,7 @@ public:
     if (!VectorValuesAndScales.empty())
       VectorizedTree = GetNewVectorizedTree(
           VectorizedTree,
-          emitReduction(Builder, *TTI, ReductionRoot->getType()));
+          emitReduction(Builder, *TTI, ReductionRoot->getType(), DL));
 
     if (!VectorizedTree) {
       if (!CheckForReusedReductionOps) {
@@ -26825,7 +26825,7 @@ private:
   /// sub-registers, combines them with the given reduction operation as a
   /// vector operation and then performs single (small enough) reduction.
   Value *emitReduction(IRBuilderBase &Builder, const TargetTransformInfo &TTI,
-                       Type *DestTy) {
+                       Type *DestTy, const DataLayout &DL) {
     Value *ReducedSubTree = nullptr;
     // Creates reduction and combines with the previous reduction.
     auto CreateSingleOp = [&](Value *Vec, unsigned Scale, bool IsSigned,
@@ -26878,7 +26878,7 @@ private:
                 Vec, getWidenedType(DestTy, getNumElements(Vec->getType())),
                 IsSigned);
           Value *Scale = ConstantVector::getSplat(
-              EC, ConstantInt::get(DestTy->getScalarType(), Cnt));
+              EC, ConstantInt::get(DestTy->getScalarType(), Cnt), &DL);
           LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Cnt << "of " << Vec
                             << ". (HorRdx)\n");
           ++NumVectorInstructions;
@@ -26896,7 +26896,7 @@ private:
         case RecurKind::FAdd: {
           // res = fmul v, n
           Value *Scale =
-              ConstantVector::getSplat(EC, ConstantFP::get(ScalarTy, Cnt));
+              ConstantVector::getSplat(EC, ConstantFP::get(ScalarTy, Cnt), &DL);
           LLVM_DEBUG(dbgs() << "SLP: FAdd (to-fmul) " << Cnt << "of " << Vec
                             << ". (HorRdx)\n");
           ++NumVectorInstructions;
@@ -27080,7 +27080,8 @@ private:
   Value *
   emitReusedOps(Value *VectorizedValue, IRBuilderBase &Builder, BoUpSLP &R,
                 const SmallMapVector<Value *, unsigned, 16> &SameValuesCounter,
-                const DenseMap<Value *, Value *> &TrackedToOrig) {
+                const DenseMap<Value *, Value *> &TrackedToOrig,
+                const DataLayout &DL) {
     assert(IsSupportedHorRdxIdentityOp &&
            "The optimization of matched scalar identity horizontal reductions "
            "must be supported.");
@@ -27100,7 +27101,7 @@ private:
         unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
         Vals.push_back(ConstantInt::get(V->getType(), Cnt, /*IsSigned=*/false));
       }
-      auto *Scale = ConstantVector::get(Vals);
+      auto *Scale = ConstantVector::get(Vals, &DL);
       LLVM_DEBUG(dbgs() << "SLP: Add (to-mul) " << Scale << "of "
                         << VectorizedValue << ". (HorRdx)\n");
       return Builder.CreateMul(VectorizedValue, Scale);
@@ -27158,7 +27159,7 @@ private:
         unsigned Cnt = SameValuesCounter.lookup(TrackedToOrig.at(V));
         Vals.push_back(ConstantFP::get(V->getType(), Cnt));
       }
-      auto *Scale = ConstantVector::get(Vals);
+      auto *Scale = ConstantVector::get(Vals, &DL);
       return Builder.CreateFMul(VectorizedValue, Scale);
     }
     case RecurKind::Sub:

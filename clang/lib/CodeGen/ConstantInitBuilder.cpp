@@ -270,7 +270,8 @@ llvm::Constant *ConstantAggregateBuilderBase::finishArray(llvm::Type *eltTy) {
   auto elts = llvm::ArrayRef(buffer).slice(Begin);
   if (!eltTy) eltTy = elts[0]->getType();
   auto type = llvm::ArrayType::get(eltTy, elts.size());
-  auto constant = llvm::ConstantArray::get(type, elts);
+  auto constant =
+      llvm::ConstantArray::get(type, elts, &Builder.CGM.getDataLayout());
   buffer.erase(buffer.begin() + Begin, buffer.end());
   return constant;
 }
@@ -288,9 +289,11 @@ ConstantAggregateBuilderBase::finishStruct(llvm::StructType *ty) {
   llvm::Constant *constant;
   if (ty) {
     assert(ty->isPacked() == Packed);
-    constant = llvm::ConstantStruct::get(ty, elts);
+    constant =
+        llvm::ConstantStruct::get(ty, elts, &Builder.CGM.getDataLayout());
   } else {
-    constant = llvm::ConstantStruct::getAnon(elts, Packed);
+    constant = llvm::ConstantStruct::getAnon(elts, Packed,
+                                             &Builder.CGM.getDataLayout());
   }
 
   buffer.erase(buffer.begin() + Begin, buffer.end());

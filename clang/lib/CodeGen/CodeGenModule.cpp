@@ -1082,7 +1082,8 @@ void CodeGenModule::Release() {
 
     auto *GV = new llvm::GlobalVariable(
         getModule(), ATy, false, llvm::GlobalValue::InternalLinkage,
-        llvm::ConstantArray::get(ATy, UsedArray), "__clang_gpu_used_external");
+        llvm::ConstantArray::get(ATy, UsedArray, &getDataLayout()),
+        "__clang_gpu_used_external");
     addCompilerUsedGlobal(GV);
   }
   if (LangOpts.HIP) {
@@ -3487,7 +3488,7 @@ static void emitUsed(CodeGenModule &CGM, StringRef Name,
 
   auto *GV = new llvm::GlobalVariable(
       CGM.getModule(), ATy, false, llvm::GlobalValue::AppendingLinkage,
-      llvm::ConstantArray::get(ATy, UsedArray), Name);
+      llvm::ConstantArray::get(ATy, UsedArray, &CGM.getDataLayout()), Name);
 
   GV->setSection("llvm.metadata");
 }
@@ -3804,8 +3805,9 @@ void CodeGenModule::EmitGlobalAnnotations() {
     return;
 
   // Create a new global variable for the ConstantStruct in the Module.
-  llvm::Constant *Array = llvm::ConstantArray::get(llvm::ArrayType::get(
-    Annotations[0]->getType(), Annotations.size()), Annotations);
+  llvm::Constant *Array = llvm::ConstantArray::get(
+      llvm::ArrayType::get(Annotations[0]->getType(), Annotations.size()),
+      Annotations, &getDataLayout());
   auto *gv = new llvm::GlobalVariable(getModule(), Array->getType(), false,
                                       llvm::GlobalValue::AppendingLinkage,
                                       Array, "llvm.global.annotations");
@@ -3866,7 +3868,8 @@ llvm::Constant *CodeGenModule::EmitAnnotationArgs(const AnnotateAttr *Attr) {
     return ConstEmiter.emitAbstract(CE->getBeginLoc(), CE->getAPValueResult(),
                                     CE->getType());
   });
-  auto *Struct = llvm::ConstantStruct::getAnon(LLVMArgs);
+  auto *Struct =
+      llvm::ConstantStruct::getAnon(LLVMArgs, false, &getDataLayout());
   auto *GV = new llvm::GlobalVariable(getModule(), Struct->getType(), true,
                                       llvm::GlobalValue::PrivateLinkage, Struct,
                                       ".args");
@@ -3899,7 +3902,7 @@ llvm::Constant *CodeGenModule::EmitAnnotateAttr(llvm::GlobalValue *GV,
   llvm::Constant *Fields[] = {
       GVInGlobalsAS, AnnoGV, UnitGV, LineNoCst, Args,
   };
-  return llvm::ConstantStruct::getAnon(Fields);
+  return llvm::ConstantStruct::getAnon(Fields, false, &getDataLayout());
 }
 
 void CodeGenModule::AddGlobalAnnotations(const ValueDecl *D,
@@ -4129,7 +4132,7 @@ ConstantAddress CodeGenModule::GetAddrOfMSGuidDecl(const MSGuidDecl *GD) {
         llvm::ConstantDataArray::getRaw(
             StringRef(reinterpret_cast<char *>(Parts.Part4And5), 8), 8,
             Int8Ty)};
-    Init = llvm::ConstantStruct::getAnon(Fields);
+    Init = llvm::ConstantStruct::getAnon(Fields, false, &getDataLayout());
   }
 
   auto *GV = new llvm::GlobalVariable(

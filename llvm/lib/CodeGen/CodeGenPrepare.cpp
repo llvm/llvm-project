@@ -8289,7 +8289,7 @@ class VectorPromoteHelper {
 
     ElementCount EC = cast<VectorType>(getTransitionType())->getElementCount();
     if (UseSplat)
-      return ConstantVector::getSplat(EC, Val);
+      return ConstantVector::getSplat(EC, Val, &DL);
 
     if (!EC.isScalable()) {
       SmallVector<Constant *, 4> ConstVec;
@@ -8300,7 +8300,7 @@ class VectorPromoteHelper {
         else
           ConstVec.push_back(PoisonVal);
       }
-      return ConstantVector::get(ConstVec);
+      return ConstantVector::get(ConstVec, &DL);
     } else
       llvm_unreachable(
           "Generate scalable vector for non-splat is unimplemented");

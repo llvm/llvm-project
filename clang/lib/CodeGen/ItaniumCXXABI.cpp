@@ -1139,7 +1139,7 @@ ItaniumCXXABI::EmitNullMemberPointer(const MemberPointerType *MPT) {
 
   llvm::Constant *Zero = llvm::ConstantInt::get(CGM.PtrDiffTy, 0);
   llvm::Constant *Values[2] = { Zero, Zero };
-  return llvm::ConstantStruct::getAnon(Values);
+  return llvm::ConstantStruct::getAnon(Values, false, &CGM.getDataLayout());
 }
 
 llvm::Constant *
@@ -1239,7 +1239,7 @@ llvm::Constant *ItaniumCXXABI::BuildMemberPointer(const CXXMethodDecl *MD,
                                        ThisAdjustment.getQuantity());
   }
 
-  return llvm::ConstantStruct::getAnon(MemPtr);
+  return llvm::ConstantStruct::getAnon(MemPtr, false, &CGM.getDataLayout());
 }
 
 llvm::Constant *ItaniumCXXABI::EmitMemberPointer(const APValue &MP,
@@ -4335,7 +4335,8 @@ llvm::Constant *ItaniumRTTIBuilder::BuildTypeInfo(
     llvm_unreachable("HLSL doesn't support RTTI");
   }
 
-  GV->replaceInitializer(llvm::ConstantStruct::getAnon(Fields));
+  GV->replaceInitializer(
+      llvm::ConstantStruct::getAnon(Fields, false, &CGM.getDataLayout()));
 
   // Export the typeinfo in the same circumstances as the vtable is exported.
   auto GVDLLStorageClass = DLLStorageClass;

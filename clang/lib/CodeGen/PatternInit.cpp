@@ -68,7 +68,7 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
     llvm::SmallVector<llvm::Constant *, 8> Element(
         ArrTy->getNumElements(),
         initializationPatternFor(CGM, ArrTy->getElementType()));
-    return llvm::ConstantArray::get(ArrTy, Element);
+    return llvm::ConstantArray::get(ArrTy, Element, &CGM.getDataLayout());
   }
 
   // Note: this doesn't touch struct padding. It will initialize as much union
@@ -81,5 +81,5 @@ llvm::Constant *clang::CodeGen::initializationPatternFor(CodeGenModule &CGM,
   llvm::SmallVector<llvm::Constant *, 8> Struct(StructTy->getNumElements());
   for (unsigned El = 0; El != Struct.size(); ++El)
     Struct[El] = initializationPatternFor(CGM, StructTy->getElementType(El));
-  return llvm::ConstantStruct::get(StructTy, Struct);
+  return llvm::ConstantStruct::get(StructTy, Struct, &CGM.getDataLayout());
 }

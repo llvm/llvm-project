@@ -314,7 +314,7 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
   // Otherwise, we'll use an array of the constants.
   uint64_t ArraySize = 16 / Size;
   ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
-  return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
+  return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C), &DL);
 }
 
 // TODO: Handle atomic memcpy and memcpy.inline

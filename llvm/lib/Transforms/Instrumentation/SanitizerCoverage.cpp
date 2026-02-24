@@ -806,7 +806,7 @@ ModuleSanitizerCoverage::CreatePCArray(Function &F,
   auto *PCArray =
       CreateFunctionLocalArrayInSection(N * 2, F, PtrTy, SanCovPCsSectionName);
   PCArray->setInitializer(
-      ConstantArray::get(ArrayType::get(PtrTy, N * 2), PCs));
+      ConstantArray::get(ArrayType::get(PtrTy, N * 2), PCs, DL));
   PCArray->setConstant(true);
 
   return PCArray;
@@ -925,7 +925,7 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
       ArrayType *ArrayOfInt64Ty = ArrayType::get(Int64Ty, Initializers.size());
       GlobalVariable *GV = new GlobalVariable(
           *CurModule, ArrayOfInt64Ty, false, GlobalVariable::InternalLinkage,
-          ConstantArray::get(ArrayOfInt64Ty, Initializers),
+          ConstantArray::get(ArrayOfInt64Ty, Initializers, DL),
           "__sancov_gen_cov_switch_values");
       if (Options.GatedCallbacks) {
         auto GateBranch = CreateGateBranch(F, FunctionGateCmp, I);
@@ -1235,6 +1235,6 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
   FunctionCFsArray = CreateFunctionLocalArrayInSection(CFs.size(), F, PtrTy,
                                                        SanCovCFsSectionName);
   FunctionCFsArray->setInitializer(
-      ConstantArray::get(ArrayType::get(PtrTy, CFs.size()), CFs));
+      ConstantArray::get(ArrayType::get(PtrTy, CFs.size()), CFs, DL));
   FunctionCFsArray->setConstant(true);
 }

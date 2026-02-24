@@ -1020,8 +1020,9 @@ Constant *OpenMPIRBuilder::getOrCreateIdent(Constant *SrcLocStr,
         IdentData[SrcLocStrArgIdx]->getType()->getPointerAddressSpace())
       IdentData[SrcLocStrArgIdx] = ConstantExpr::getAddrSpaceCast(
           SrcLocStr, OpenMPIRBuilder::Ident->getElementType(SrcLocStrArgIdx));
+    const auto &DL = M.getDataLayout();
     Constant *Initializer =
-        ConstantStruct::get(OpenMPIRBuilder::Ident, IdentData);
+        ConstantStruct::get(OpenMPIRBuilder::Ident, IdentData, &DL);
 
     // Look for existing encoding of the location + flags, not needed but
     // minimizes the difference to the existing solution while we transition.
@@ -7769,24 +7770,23 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetInit(
           : ConstantExpr::getAddrSpaceCast(DynamicEnvironmentGV,
                                            DynamicEnvironmentPtr);
 
-  Constant *ConfigurationEnvironmentInitializer = ConstantStruct::get(
-      ConfigurationEnvironment, {
-                                    UseGenericStateMachineVal,
-                                    MayUseNestedParallelismVal,
-                                    IsSPMDVal,
-                                    MinThreads,
-                                    MaxThreads,
-                                    MinTeams,
-                                    MaxTeams,
-                                    ReductionDataSize,
-                                    ReductionBufferLength,
-                                });
+  Constant *ConfigurationEnvironmentInitializer =
+      ConstantStruct::get(ConfigurationEnvironment,
+                          {
+                              UseGenericStateMachineVal,
+                              MayUseNestedParallelismVal,
+                              IsSPMDVal,
+                              MinThreads,
+                              MaxThreads,
+                              MinTeams,
+                              MaxTeams,
+                              ReductionDataSize,
+                              ReductionBufferLength,
+                          },
+                          &DL);
   Constant *KernelEnvironmentInitializer = ConstantStruct::get(
-      KernelEnvironment, {
-                             ConfigurationEnvironmentInitializer,
-                             Ident,
-                             DynamicEnvironment,
-                         });
+      KernelEnvironment,
+      {ConfigurationEnvironmentInitializer, Ident, DynamicEnvironment}, &DL);
   std::string KernelEnvironmentName =
       (KernelName + "_kernel_environment").str();
   GlobalVariable *KernelEnvironmentGV = new GlobalVariable(
@@ -9967,8 +9967,9 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
         SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
     restoreIPandDebugLoc(Builder, CodeGenIP);
   } else {
+    const auto &DL = M.getDataLayout();
     auto *SizesArrayInit = ConstantArray::get(
-        ArrayType::get(Int64Ty, ConstSizes.size()), ConstSizes);
+        ArrayType::get(Int64Ty, ConstSizes.size()), ConstSizes, &DL);
     std::string Name = createPlatformSpecificName({"offload_sizes"});
     auto *SizesArrayGbl =
         new GlobalVariable(M, SizesArrayInit->getType(), /*isConstant=*/true,
@@ -10993,10 +10994,11 @@ OpenMPIRBuilder::createDistribute(const LocationDescription &Loc,
 GlobalVariable *
 OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
                                        std::string VarName) {
+  const auto &DL = M.getDataLayout();
   llvm::Constant *MapNamesArrayInit = llvm::ConstantArray::get(
       llvm::ArrayType::get(llvm::PointerType::getUnqual(M.getContext()),
                            Names.size()),
-      Names);
+      Names, &DL);
   auto *MapNamesArrayGlobal = new llvm::GlobalVariable(
       M, MapNamesArrayInit->getType(),
       /*isConstant=*/true, llvm::GlobalValue::PrivateLinkage, MapNamesArrayInit,

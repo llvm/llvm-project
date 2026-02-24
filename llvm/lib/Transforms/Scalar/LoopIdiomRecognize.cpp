@@ -1559,7 +1559,7 @@ bool LoopIdiomRecognize::optimizeCRCLoop(const PolynomialInfo &Info) {
             CRCConstants.begin(),
             [CRCTy](const APInt &E) { return ConstantInt::get(CRCTy, E); });
   Constant *ConstArray =
-      ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants);
+      ConstantArray::get(ArrayType::get(CRCTy, 256), CRCConstants, DL);
   GlobalVariable *GV =
       new GlobalVariable(M, ConstArray->getType(), true,
                          GlobalValue::PrivateLinkage, ConstArray, ".crctable");

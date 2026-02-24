@@ -701,7 +701,7 @@ static Constant *computePointerDifference(const DataLayout &DL, Value *LHS,
   //  = LHSOffset - RHSOffset
   Constant *Res = ConstantInt::get(LHS->getContext(), LHSOffset - RHSOffset);
   if (auto *VecTy = dyn_cast<VectorType>(LHS->getType()))
-    Res = ConstantVector::getSplat(VecTy->getElementCount(), Res);
+    Res = ConstantVector::getSplat(VecTy->getElementCount(), Res, &DL);
   return Res;
 }
 
@@ -5195,7 +5195,7 @@ static Value *simplifySelectInst(Value *Cond, Value *TrueVal, Value *FalseVal,
         break;
     }
     if (NewC.size() == NumElts)
-      return ConstantVector::get(NewC);
+      return ConstantVector::get(NewC, &Q.DL);
   }
 
   if (Value *V =
@@ -5756,7 +5756,7 @@ static Value *simplifyShuffleVectorInst(Value *Op0, Value *Op1,
       for (unsigned i = 0; i != MaskNumElts; ++i)
         if (Indices[i] == -1)
           VecC[i] = PoisonValue::get(C->getType());
-      return ConstantVector::get(VecC);
+      return ConstantVector::get(VecC, &Q.DL);
     }
   }
 
@@ -7131,7 +7131,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
           // Handle splat vectors (including scalable vectors)
           OptResult = OptimizeConstMinMax(SplatVal, IID, Call, &NewConst);
           if (OptResult == MinMaxOptResult::UseNewConstVal)
-            NewConst = ConstantVector::getSplat(ElemCount, NewConst);
+            NewConst = ConstantVector::getSplat(ElemCount, NewConst, &Q.DL);
 
         } else if (ElemCount.isFixed()) {
           // Storage to build up new const return value (with NaNs quieted)
@@ -7161,7 +7161,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
               OptResult = ElemResult;
           }
           if (OptResult == MinMaxOptResult::UseNewConstVal)
-            NewConst = ConstantVector::get(NewC);
+            NewConst = ConstantVector::get(NewC, &Q.DL);
         }
       } else {
         // Handle scalar inputs

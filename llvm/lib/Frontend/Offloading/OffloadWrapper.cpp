@@ -127,6 +127,7 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
                               EntryArrayTy EntryArray, StringRef Suffix,
                               bool Relocatable) {
   LLVMContext &C = M.getContext();
+  const auto &DL = M.getDataLayout();
   auto [EntriesB, EntriesE] = EntryArray;
 
   auto *Zero = ConstantInt::get(getSizeTTy(M), 0u);
@@ -175,13 +176,14 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
     auto *ImageE =
         ConstantExpr::getGetElementPtr(Image->getValueType(), Image, ZeroSize);
 
-    ImagesInits.push_back(ConstantStruct::get(getDeviceImageTy(M), ImageB,
-                                              ImageE, EntriesB, EntriesE));
+    ImagesInits.push_back(ConstantStruct::get(
+        getDeviceImageTy(M), {ImageB, ImageE, EntriesB, EntriesE}, &DL));
   }
 
   // Then create images array.
   auto *ImagesData = ConstantArray::get(
-      ArrayType::get(getDeviceImageTy(M), ImagesInits.size()), ImagesInits);
+      ArrayType::get(getDeviceImageTy(M), ImagesInits.size()), ImagesInits,
+      &DL);
 
   auto *Images =
       new GlobalVariable(M, ImagesData->getType(), /*isConstant*/ true,
@@ -192,8 +194,9 @@ GlobalVariable *createBinDesc(Module &M, ArrayRef<ArrayRef<char>> Bufs,
   // And finally create the binary descriptor object.
   auto *DescInit = ConstantStruct::get(
       getBinDescTy(M),
-      ConstantInt::get(Type::getInt32Ty(C), ImagesInits.size()), Images,
-      EntriesB, EntriesE);
+      {ConstantInt::get(Type::getInt32Ty(C), ImagesInits.size()), Images,
+       EntriesB, EntriesE},
+      &DL);
 
   return new GlobalVariable(M, DescInit->getType(), /*isConstant=*/true,
                             GlobalValue::InternalLinkage, DescInit,
@@ -303,8 +306,9 @@ GlobalVariable *createFatbinDesc(Module &M, ArrayRef<char> Image, bool IsHIP,
       ConstantExpr::getPointerBitCastOrAddrSpaceCast(Fatbin, Int8PtrTy),
       ConstantPointerNull::get(PointerType::getUnqual(C))};
 
+  const auto &DL = M.getDataLayout();
   Constant *FatbinInitializer =
-      ConstantStruct::get(getFatbinWrapperTy(M), FatbinWrapper);
+      ConstantStruct::get(getFatbinWrapperTy(M), FatbinWrapper, &DL);
 
   auto *FatbinDesc =
       new GlobalVariable(M, getFatbinWrapperTy(M),
@@ -916,8 +920,9 @@ private:
       EntriesInits.push_back(GV->getInitializer());
     }
 
+    const auto &DL = M.getDataLayout();
     Constant *Arr = ConstantArray::get(
-        ArrayType::get(EntryTy, EntriesInits.size()), EntriesInits);
+        ArrayType::get(EntryTy, EntriesInits.size()), EntriesInits, &DL);
     GlobalVariable *EntriesGV = new GlobalVariable(
         M, Arr->getType(), /*isConstant*/ true, GlobalVariable::InternalLinkage,
         Arr, OffloadKindTag + "entries_arr");
@@ -967,19 +972,24 @@ private:
 
     // .first and .second arguments below correspond to start and end pointers
     // respectively.
+    const auto &DL = M.getDataLayout();
     Constant *WrappedBinary = ConstantStruct::get(
-        SyclDeviceImageTy, Version, OffloadKindConstant, ImageKindConstant,
-        TripleConstant, CompileOptions, LinkOptions, Binary.first,
-        Binary.second, ImageEntriesPtrs.first, ImageEntriesPtrs.second,
-        PropertiesConstants.first, PropertiesConstants.second);
+        SyclDeviceImageTy,
+        {Version, OffloadKindConstant, ImageKindConstant, TripleConstant,
+         CompileOptions, LinkOptions, Binary.first, Binary.second,
+         ImageEntriesPtrs.first, ImageEntriesPtrs.second,
+         PropertiesConstants.first, PropertiesConstants.second},
+        &DL);
 
     return WrappedBinary;
   }
 
   GlobalVariable *combineWrappedImages(ArrayRef<Constant *> WrappedImages,
                                        StringRef OffloadKindTag) {
+    const auto &DL = M.getDataLayout();
     Constant *ImagesData = ConstantArray::get(
-        ArrayType::get(SyclDeviceImageTy, WrappedImages.size()), WrappedImages);
+        ArrayType::get(SyclDeviceImageTy, WrappedImages.size()), WrappedImages,
+        &DL);
     GlobalVariable *ImagesGV =
         new GlobalVariable(M, ImagesData->getType(), /*isConstant*/ true,
                            GlobalValue::InternalLinkage, ImagesData,
@@ -991,9 +1001,10 @@ private:
     static constexpr uint16_t BinDescStructVersion = 1;
     Constant *DescInit = ConstantStruct::get(
         SyclBinDescTy,
-        ConstantInt::get(Type::getInt16Ty(C), BinDescStructVersion),
-        ConstantInt::get(Type::getInt16Ty(C), WrappedImages.size()), ImagesGV,
-        EntriesB, EntriesE);
+        {ConstantInt::get(Type::getInt16Ty(C), BinDescStructVersion),
+         ConstantInt::get(Type::getInt16Ty(C), WrappedImages.size()), ImagesGV,
+         EntriesB, EntriesE},
+        &DL);
 
     return new GlobalVariable(M, DescInit->getType(), /*isConstant*/ true,
                               GlobalValue::InternalLinkage, DescInit,

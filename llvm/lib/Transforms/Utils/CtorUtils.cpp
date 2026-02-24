@@ -13,6 +13,7 @@
 #include "llvm/Transforms/Utils/CtorUtils.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
@@ -25,7 +26,9 @@
 using namespace llvm;
 
 /// Given a specified llvm.global_ctors list, remove the listed elements.
-static void removeGlobalCtors(GlobalVariable *GCL, const BitVector &CtorsToRemove) {
+static void removeGlobalCtors(GlobalVariable *GCL,
+                              const BitVector &CtorsToRemove) {
+  const auto &DL = GCL->getParent()->getDataLayout();
   // Filter out the initializer elements to remove.
   ConstantArray *OldCA = cast<ConstantArray>(GCL->getInitializer());
   SmallVector<Constant *, 10> CAList;
@@ -36,7 +39,7 @@ static void removeGlobalCtors(GlobalVariable *GCL, const BitVector &CtorsToRemov
   // Create the new array initializer.
   ArrayType *ATy =
       ArrayType::get(OldCA->getType()->getElementType(), CAList.size());
-  Constant *CA = ConstantArray::get(ATy, CAList);
+  Constant *CA = ConstantArray::get(ATy, CAList, &DL);
 
   // If we didn't change the number of elements, don't create a new GV.
   if (CA->getType() == OldCA->getType()) {

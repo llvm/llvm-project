@@ -404,7 +404,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
         ConstantVec.push_back(ConstantInt::getNullValue(SVT));
       }
     }
-    return ConstantVector::get(ConstantVec);
+    return ConstantVector::get(ConstantVec, &II.getDataLayout());
   }
 
   // We can't handle only some out of range values with generic logical shifts.
@@ -419,7 +419,7 @@ static Value *simplifyX86varShift(const IntrinsicInst &II,
     else
       ShiftVecAmts.push_back(ConstantInt::get(SVT, Idx));
   }
-  auto ShiftVec = ConstantVector::get(ShiftVecAmts);
+  auto ShiftVec = ConstantVector::get(ShiftVecAmts, &II.getDataLayout());
 
   if (ShiftLeft)
     return Builder.CreateShl(Vec, ShiftVec);
@@ -1844,11 +1844,12 @@ static Value *simplifyX86insertps(const IntrinsicInst &II,
 static Value *simplifyX86extrq(IntrinsicInst &II, Value *Op0,
                                ConstantInt *CILength, ConstantInt *CIIndex,
                                InstCombiner::BuilderTy &Builder) {
+  const DataLayout &DL = II.getDataLayout();
   auto LowConstantHighUndef = [&](uint64_t Val) {
     Type *IntTy64 = Type::getInt64Ty(II.getContext());
     Constant *Args[] = {ConstantInt::get(IntTy64, Val),
                         UndefValue::get(IntTy64)};
-    return ConstantVector::get(Args);
+    return ConstantVector::get(Args, &DL);
   };
 
   // See if we're dealing with constant values.
@@ -2003,7 +2004,7 @@ static Value *simplifyX86insertq(IntrinsicInst &II, Value *Op0, Value *Op1,
     Type *IntTy64 = Type::getInt64Ty(II.getContext());
     Constant *Args[] = {ConstantInt::get(IntTy64, Val.getZExtValue()),
                         UndefValue::get(IntTy64)};
-    return ConstantVector::get(Args);
+    return ConstantVector::get(Args, &II.getDataLayout());
   }
 
   // If we were an INSERTQ call, we'll save demanded elements if we convert to

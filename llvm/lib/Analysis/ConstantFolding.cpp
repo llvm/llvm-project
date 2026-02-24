@@ -155,7 +155,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   if (!isa<VectorType>(C->getType()) &&
       (isa<ConstantFP>(C) || isa<ConstantInt>(C))) {
     Constant *Ops = C; // don't take the address of C!
-    return FoldBitCast(ConstantVector::get(Ops), DestTy, DL);
+    return FoldBitCast(ConstantVector::get(Ops, &DL), DestTy, DL);
   }
 
   // Some of what follows may extend to cover scalable vectors but the current
@@ -258,7 +258,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       }
       Result.push_back(Elt);
     }
-    return ConstantVector::get(Result);
+    return ConstantVector::get(Result, &DL);
   }
 
   // Handle: bitcast (<2 x i64> <i64 0, i64 1> to <4 x i32>)
@@ -294,7 +294,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
     }
   }
 
-  return ConstantVector::get(Result);
+  return ConstantVector::get(Result, &DL);
 }
 
 } // end anonymous namespace
@@ -1128,7 +1128,7 @@ ConstantFoldConstantImpl(const Constant *C, const DataLayout &DL,
   }
 
   assert(isa<ConstantVector>(C));
-  return ConstantVector::get(Ops);
+  return ConstantVector::get(Ops, &DL);
 }
 
 } // end anonymous namespace
@@ -4147,7 +4147,7 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     if (NewElements.size() != FVTy->getNumElements())
       return nullptr;
-    return ConstantVector::get(NewElements);
+    return ConstantVector::get(NewElements, &DL);
   }
   case Intrinsic::arm_mve_vctp8:
   case Intrinsic::arm_mve_vctp16:
@@ -4164,7 +4164,7 @@ static Constant *ConstantFoldFixedVectorCall(
         else
           NCs.push_back(ConstantInt::getFalse(Ty));
       }
-      return ConstantVector::get(NCs);
+      return ConstantVector::get(NCs, &DL);
     }
     return nullptr;
   }
@@ -4210,7 +4210,7 @@ static Constant *ConstantFoldFixedVectorCall(
       Result[I - StartingIndex] = Elt;
     }
 
-    return ConstantVector::get(Result);
+    return ConstantVector::get(Result, &DL);
   }
   case Intrinsic::vector_insert: {
     Constant *Vec = Operands[0];
@@ -4238,7 +4238,7 @@ static Constant *ConstantFoldFixedVectorCall(
         return nullptr;
       Result[I] = Elt;
     }
-    return ConstantVector::get(Result);
+    return ConstantVector::get(Result, &DL);
   }
   case Intrinsic::vector_interleave2:
   case Intrinsic::vector_interleave3:
@@ -4258,7 +4258,7 @@ static Constant *ConstantFoldFixedVectorCall(
         Result[NumOperands * I + J] = Elt;
       }
     }
-    return ConstantVector::get(Result);
+    return ConstantVector::get(Result, &DL);
   }
   case Intrinsic::wasm_dot: {
     unsigned NumElements =
@@ -4282,7 +4282,7 @@ static Constant *ConstantFoldFixedVectorCall(
       Result[I] = ConstantInt::getSigned(Ty, IAdd, /*ImplicitTrunc=*/true);
     }
 
-    return ConstantVector::get(Result);
+    return ConstantVector::get(Result, &DL);
   }
   default:
     break;
@@ -4312,7 +4312,7 @@ static Constant *ConstantFoldFixedVectorCall(
     Result[I] = Folded;
   }
 
-  return ConstantVector::get(Result);
+  return ConstantVector::get(Result, &DL);
 }
 
 static Constant *ConstantFoldScalableVectorCall(
@@ -4348,7 +4348,7 @@ static Constant *ConstantFoldScalableVectorCall(
     if (!llvm::all_equal(Operands))
       return nullptr;
 
-    return ConstantVector::getSplat(SVTy->getElementCount(), SplatVal);
+    return ConstantVector::getSplat(SVTy->getElementCount(), SplatVal, &DL);
   }
   default:
     break;
@@ -4376,7 +4376,7 @@ static Constant *ConstantFoldScalableVectorCall(
       Name, IntrinsicID, SVTy->getElementType(), SplatOps, TLI, Call);
   if (!Folded)
     return nullptr;
-  return ConstantVector::getSplat(SVTy->getElementCount(), Folded);
+  return ConstantVector::getSplat(SVTy->getElementCount(), Folded, &DL);
 }
 
 static std::pair<Constant *, Constant *>
@@ -4425,14 +4425,16 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
           return nullptr;
       }
 
-      return ConstantStruct::get(StTy, ConstantVector::get(Results0),
-                                 ConstantVector::get(Results1));
+      return ConstantStruct::get(StTy,
+                                 {ConstantVector::get(Results0, &DL),
+                                  ConstantVector::get(Results1, &DL)},
+                                 &DL);
     }
 
     auto [Result0, Result1] = ConstantFoldScalarFrexpCall(Operands[0], Ty1);
     if (!Result0)
       return nullptr;
-    return ConstantStruct::get(StTy, Result0, Result1);
+    return ConstantStruct::get(StTy, {Result0, Result1}, &DL);
   }
   case Intrinsic::sincos: {
     Type *Ty = StTy->getContainedType(0);
@@ -4459,14 +4461,16 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
           return nullptr;
       }
 
-      return ConstantStruct::get(StTy, ConstantVector::get(SinResults),
-                                 ConstantVector::get(CosResults));
+      return ConstantStruct::get(StTy,
+                                 {ConstantVector::get(SinResults, &DL),
+                                  ConstantVector::get(CosResults, &DL)},
+                                 &DL);
     }
 
     auto [SinResult, CosResult] = ConstantFoldScalarSincosCall(Operands[0]);
     if (!SinResult || !CosResult)
       return nullptr;
-    return ConstantStruct::get(StTy, SinResult, CosResult);
+    return ConstantStruct::get(StTy, {SinResult, CosResult}, &DL);
   }
   case Intrinsic::vector_deinterleave2:
   case Intrinsic::vector_deinterleave3:
@@ -4483,9 +4487,9 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
         VecTy->getElementCount().divideCoefficientBy(NumResults);
 
     if (auto *EltC = Vec->getSplatValue()) {
-      auto *ResultVec = ConstantVector::getSplat(ResultEC, EltC);
+      auto *ResultVec = ConstantVector::getSplat(ResultEC, EltC, &DL);
       SmallVector<Constant *, 8> Results(NumResults, ResultVec);
-      return ConstantStruct::get(StTy, Results);
+      return ConstantStruct::get(StTy, Results, &DL);
     }
 
     if (!ResultEC.isFixed())
@@ -4501,9 +4505,9 @@ ConstantFoldStructCall(StringRef Name, Intrinsic::ID IntrinsicID,
           return nullptr;
         Elements[J] = Elt;
       }
-      Results[I] = ConstantVector::get(Elements);
+      Results[I] = ConstantVector::get(Elements, &DL);
     }
-    return ConstantStruct::get(StTy, Results);
+    return ConstantStruct::get(StTy, Results, &DL);
   }
   default:
     // TODO: Constant folding of vector intrinsics that fall through here does

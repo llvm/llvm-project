@@ -60,10 +60,10 @@ class Evaluator {
       return cast<MutableAggregate *>(Val)->Ty;
     }
 
-    Constant *toConstant() const {
+    Constant *toConstant(const DataLayout &DL) const {
       if (auto *C = dyn_cast_if_present<Constant *>(Val))
         return C;
-      return cast<MutableAggregate *>(Val)->toConstant();
+      return cast<MutableAggregate *>(Val)->toConstant(DL);
     }
 
     Constant *read(Type *Ty, APInt Offset, const DataLayout &DL) const;
@@ -75,7 +75,7 @@ class Evaluator {
     SmallVector<MutableValue> Elements;
 
     MutableAggregate(Type *Ty) : Ty(Ty) {}
-    Constant *toConstant() const;
+    Constant *toConstant(const DataLayout &DL) const;
   };
 
 public:
@@ -102,7 +102,7 @@ public:
   DenseMap<GlobalVariable *, Constant *> getMutatedInitializers() const {
     DenseMap<GlobalVariable *, Constant *> Result;
     for (const auto &Pair : MutatedMemory)
-      Result[Pair.first] = Pair.second.toConstant();
+      Result[Pair.first] = Pair.second.toConstant(DL);
     return Result;
   }
 

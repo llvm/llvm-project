@@ -138,16 +138,18 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
 #undef _VOLATILE_PTRDECL
 #undef _MUTEXDECL
 
+  const auto &DL = M.getDataLayout();
 #define _PTRDECL(_, __) Constant::getNullValue(PointerTy),
 #define _VOLATILE_PTRDECL(_, __) _PTRDECL(_, __)
 #define _MUTEXDECL(_) Constant::getNullValue(SanitizerMutexType),
 #define _CONTEXT_ROOT                                                          \
   Constant::getIntegerValue(                                                   \
-      PointerTy,                                                               \
-      APInt(M.getDataLayout().getPointerTypeSizeInBits(PointerTy), 1U)),
+      PointerTy, APInt(DL.getPointerTypeSizeInBits(PointerTy), 1U)),
   CannotBeRootInitializer = ConstantStruct::get(
-      FunctionDataTy, {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT,
-                                             _VOLATILE_PTRDECL, _MUTEXDECL)});
+      FunctionDataTy,
+      {CTXPROF_FUNCTION_DATA(_PTRDECL, _CONTEXT_ROOT, _VOLATILE_PTRDECL,
+                             _MUTEXDECL)},
+      &DL);
 #undef _PTRDECL
 #undef _CONTEXT_ROOT
 #undef _VOLATILE_PTRDECL

@@ -381,8 +381,9 @@ bool TypeSanitizer::generateBaseTypeDescriptor(
 
   PushTDSub(NameData);
 
+  const auto &DL = M.getDataLayout();
   StructType *TDTy = StructType::get(C, TDSubTys);
-  Constant *TD = ConstantStruct::get(TDTy, TDSubData);
+  Constant *TD = ConstantStruct::get(TDTy, TDSubData, &DL);
 
   GlobalVariable *TDGV =
       new GlobalVariable(TDTy, true,
@@ -460,11 +461,14 @@ bool TypeSanitizer::generateTypeDescriptor(
   // The descriptor for a scalar is:
   //   [1, base-type pointer, access-type pointer, offset]
 
+  const auto &DL = M.getDataLayout();
   StructType *TDTy =
       StructType::get(IntptrTy, Base->getType(), Access->getType(), IntptrTy);
   Constant *TD =
-      ConstantStruct::get(TDTy, ConstantInt::get(IntptrTy, 1), Base, Access,
-                          ConstantInt::get(IntptrTy, Offset));
+      ConstantStruct::get(TDTy,
+                          {ConstantInt::get(IntptrTy, 1), Base, Access,
+                           ConstantInt::get(IntptrTy, Offset)},
+                          &DL);
 
   bool ShouldBeComdat = cast<GlobalVariable>(Base)->getLinkage() ==
                         GlobalValue::LinkOnceODRLinkage;

@@ -99,7 +99,8 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
      VTTComponents.push_back(Init);
   }
 
-  llvm::Constant *Init = llvm::ConstantArray::get(ArrayType, VTTComponents);
+  llvm::Constant *Init =
+      llvm::ConstantArray::get(ArrayType, VTTComponents, &CGM.getDataLayout());
 
   VTT->setInitializer(Init);
 

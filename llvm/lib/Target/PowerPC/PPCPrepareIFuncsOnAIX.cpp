@@ -96,7 +96,7 @@ bool PPCPrepareIFuncsOnAIX::runOnModule(Module &M) {
     // function descriptor, which is what these two values end up being
     // in assembly.
     Constant *InitVals[] = {&IFunc, IFunc.getResolver()};
-    GV->setInitializer(ConstantStruct::get(IFuncPairType, InitVals));
+    GV->setInitializer(ConstantStruct::get(IFuncPairType, InitVals, &DL));
 
     // Liveness of __update_foo is dependent on liveness of ifunc foo.
     IFunc.setMetadata(LLVMContext::MD_implicit_ref,

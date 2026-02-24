@@ -2549,8 +2549,8 @@ void CoverageMappingModuleGen::emitFunctionMappingRecord(
   llvm::Constant *FunctionRecordVals[] = {
       #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto *FuncRecordConstant =
-      llvm::ConstantStruct::get(FunctionRecordTy, ArrayRef(FunctionRecordVals));
+  auto *FuncRecordConstant = llvm::ConstantStruct::get(
+      FunctionRecordTy, ArrayRef(FunctionRecordVals), &CGM.getDataLayout());
 
   // Create the function record global.
   auto *FuncRecord = new llvm::GlobalVariable(
@@ -2643,14 +2643,15 @@ void CoverageMappingModuleGen::emit() {
 #define COVMAP_HEADER(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  auto CovDataHeaderVal =
-      llvm::ConstantStruct::get(CovDataHeaderTy, ArrayRef(CovDataHeaderVals));
+  auto CovDataHeaderVal = llvm::ConstantStruct::get(
+      CovDataHeaderTy, ArrayRef(CovDataHeaderVals), &CGM.getDataLayout());
 
   // Create the coverage data record
   llvm::Type *CovDataTypes[] = {CovDataHeaderTy, FilenamesVal->getType()};
   auto CovDataTy = llvm::StructType::get(Ctx, ArrayRef(CovDataTypes));
   llvm::Constant *TUDataVals[] = {CovDataHeaderVal, FilenamesVal};
-  auto CovDataVal = llvm::ConstantStruct::get(CovDataTy, ArrayRef(TUDataVals));
+  auto CovDataVal = llvm::ConstantStruct::get(CovDataTy, ArrayRef(TUDataVals),
+                                              &CGM.getDataLayout());
   auto CovData = new llvm::GlobalVariable(
       CGM.getModule(), CovDataTy, true, llvm::GlobalValue::PrivateLinkage,
       CovDataVal, llvm::getCoverageMappingVarName());
@@ -2665,7 +2666,8 @@ void CoverageMappingModuleGen::emit() {
     auto AddrSpace = FunctionNames.front()->getType()->getPointerAddressSpace();
     auto NamesArrTy = llvm::ArrayType::get(
         llvm::PointerType::get(Ctx, AddrSpace), FunctionNames.size());
-    auto NamesArrVal = llvm::ConstantArray::get(NamesArrTy, FunctionNames);
+    auto NamesArrVal = llvm::ConstantArray::get(NamesArrTy, FunctionNames,
+                                                &CGM.getDataLayout());
     // This variable will *NOT* be emitted to the object file. It is used
     // to pass the list of names referenced to codegen.
     new llvm::GlobalVariable(CGM.getModule(), NamesArrTy, true,

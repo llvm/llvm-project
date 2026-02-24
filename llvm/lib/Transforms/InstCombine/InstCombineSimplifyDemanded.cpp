@@ -1525,7 +1525,7 @@ Value *InstCombinerImpl::SimplifyDemandedVectorElts(Value *V,
     }
 
     // If we changed the constant, return it.
-    Constant *NewCV = ConstantVector::get(Elts);
+    Constant *NewCV = ConstantVector::get(Elts, &getDataLayout());
     return NewCV != C ? NewCV : nullptr;
   }
 

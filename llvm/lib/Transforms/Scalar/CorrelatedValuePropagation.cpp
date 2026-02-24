@@ -639,9 +639,12 @@ static bool processOverflowIntrinsic(WithOverflowInst *WO, LazyValueInfo *LVI) {
   setDeducedOverflowingFlags(NewOp, Opcode, NSW, NUW);
 
   StructType *ST = cast<StructType>(WO->getType());
-  Constant *Struct = ConstantStruct::get(ST,
-      { PoisonValue::get(ST->getElementType(0)),
-        ConstantInt::getFalse(ST->getElementType(1)) });
+  const auto &DL = WO->getDataLayout();
+  Constant *Struct =
+      ConstantStruct::get(ST,
+                          {PoisonValue::get(ST->getElementType(0)),
+                           ConstantInt::getFalse(ST->getElementType(1))},
+                          &DL);
   Value *NewI = B.CreateInsertValue(Struct, NewOp, 0);
   WO->replaceAllUsesWith(NewI);
   WO->eraseFromParent();

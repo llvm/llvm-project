@@ -1507,7 +1507,8 @@ static Instruction *hoistInsEltConst(InsertElementInst &InsElt2,
 
 /// insertelt (shufflevector X, CVec, Mask|insertelt X, C1, CIndex1), C, CIndex
 /// --> shufflevector X, CVec', Mask'
-static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
+static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt,
+                                                  InstCombinerImpl &IC) {
   auto *Inst = dyn_cast<Instruction>(InsElt.getOperand(0));
   // Bail out if the parent has more than one use. In that case, we'd be
   // replacing the insertelt with a shuffle, and that's not a clear win.
@@ -1560,8 +1561,9 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
 
     // Create new operands for a shuffle that includes the constant of the
     // original insertelt. The old shuffle will be dead now.
-    return new ShuffleVectorInst(Shuf->getOperand(0),
-                                 ConstantVector::get(NewShufElts), NewMaskElts);
+    return new ShuffleVectorInst(
+        Shuf->getOperand(0),
+        ConstantVector::get(NewShufElts, &IC.getDataLayout()), NewMaskElts);
   } else if (auto *IEI = dyn_cast<InsertElementInst>(Inst)) {
     // Transform sequences of insertelements ops with constant data/indexes into
     // a single shuffle op.
@@ -1601,8 +1603,9 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
     }
     // Create new operands for a shuffle that includes the constant of the
     // original insertelt.
-    return new ShuffleVectorInst(IEI->getOperand(0),
-                                 ConstantVector::get(Values), Mask);
+    return new ShuffleVectorInst(
+        IEI->getOperand(0), ConstantVector::get(Values, &IC.getDataLayout()),
+        Mask);
   }
   return nullptr;
 }
@@ -1836,7 +1839,7 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
     }
   }
 
-  if (Instruction *Shuf = foldConstantInsEltIntoShuffle(IE))
+  if (Instruction *Shuf = foldConstantInsEltIntoShuffle(IE, *this))
     return Shuf;
 
   if (Instruction *NewInsElt = hoistInsEltConst(IE, Builder))

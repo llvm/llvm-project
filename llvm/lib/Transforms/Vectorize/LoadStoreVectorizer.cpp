@@ -1990,7 +1990,7 @@ Value *Vectorizer::createMaskForExtraElements(const ArrayRef<ChainElem> C,
     else
       MaskElts[VecIdx] = Builder.getInt1(true);
   }
-  return ConstantVector::get(MaskElts);
+  return ConstantVector::get(MaskElts, &DL);
 }
 
 void Vectorizer::deleteExtraElements() {

@@ -540,7 +540,8 @@ bool GlobalMergeImpl::doMerge(const SmallVectorImpl<GlobalVariable *> &Globals,
                                             : GlobalValue::InternalLinkage;
     // Use a packed struct so we can control alignment.
     StructType *MergedTy = StructType::get(M.getContext(), Tys, true);
-    Constant *MergedInit = ConstantStruct::get(MergedTy, Inits);
+    const auto &DL = M.getDataLayout();
+    Constant *MergedInit = ConstantStruct::get(MergedTy, Inits, &DL);
 
     // On Darwin external linkage needs to be preserved, otherwise
     // dsymutil cannot preserve the debug info for the merged

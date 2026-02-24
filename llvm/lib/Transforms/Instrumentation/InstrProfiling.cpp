@@ -1544,9 +1544,10 @@ void InstrLowerer::getOrCreateVTableProfData(GlobalVariable *GV) {
 #undef INSTR_PROF_VTABLE_DATA
   };
 
+  const auto &DL = M.getDataLayout();
   auto *Data =
       new GlobalVariable(M, DataTy, /*constant=*/false, Linkage,
-                         ConstantStruct::get(DataTy, DataVals),
+                         ConstantStruct::get(DataTy, DataVals, &DL),
                          getInstrProfVTableVarPrefix() + PGOVTableName);
 
   Data->setVisibility(Visibility);
@@ -1656,9 +1657,10 @@ InstrLowerer::createRegionCounters(InstrProfCntrInstBase *Inc, StringRef Name,
     // TODO: `Constant::getAllOnesValue()` does not yet accept an array type.
     std::vector<Constant *> InitialValues(NumCounters,
                                           Constant::getAllOnesValue(CounterTy));
-    GV = new GlobalVariable(M, CounterArrTy, false, Linkage,
-                            ConstantArray::get(CounterArrTy, InitialValues),
-                            Name);
+    const auto &DL = M.getDataLayout();
+    GV = new GlobalVariable(
+        M, CounterArrTy, false, Linkage,
+        ConstantArray::get(CounterArrTy, InitialValues, &DL), Name);
     GV->setAlignment(Align(1));
   } else {
     auto *CounterTy = ArrayType::get(Type::getInt64Ty(Ctx), NumCounters);
@@ -1856,7 +1858,8 @@ void InstrLowerer::createDataVariable(InstrProfCntrInstBase *Inc) {
 #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
 #include "llvm/ProfileData/InstrProfData.inc"
   };
-  Data->setInitializer(ConstantStruct::get(DataTy, DataVals));
+  const auto &DL = M.getDataLayout();
+  Data->setInitializer(ConstantStruct::get(DataTy, DataVals, &DL));
 
   Data->setVisibility(Visibility);
   Data->setSection(

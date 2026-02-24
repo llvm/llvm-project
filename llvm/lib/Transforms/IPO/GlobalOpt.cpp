@@ -2145,10 +2145,11 @@ static void setUsedInitializer(GlobalVariable &V,
   ArrayType *ATy = ArrayType::get(PtrTy, UsedArray.size());
 
   Module *M = V.getParent();
+  const auto &DL = M->getDataLayout();
   V.removeFromParent();
   GlobalVariable *NV = new GlobalVariable(
       *M, ATy, false, GlobalValue::AppendingLinkage,
-      ConstantArray::get(ATy, UsedArray), "", nullptr,
+      ConstantArray::get(ATy, UsedArray, &DL), "", nullptr,
       GlobalVariable::NotThreadLocal, V.getType()->getAddressSpace());
   NV->takeName(&V);
   NV->setSection("llvm.metadata");

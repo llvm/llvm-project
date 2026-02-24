@@ -2349,7 +2349,8 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
     Constant *Splat = C->getSplatValue();
     if (!Splat)
       return nullptr;
-    return ConstantVector::getSplat(NewCTy->getElementCount(), Splat);
+    return ConstantVector::getSplat(NewCTy->getElementCount(), Splat,
+                                    &getDataLayout());
   }
 
   if (cast<FixedVectorType>(NewCTy)->getNumElements() >
@@ -2377,7 +2378,7 @@ Constant *InstCombinerImpl::unshuffleConstant(ArrayRef<int> ShMask, Constant *C,
       NewVecC[ShMask[I]] = CElt;
     }
   }
-  return ConstantVector::get(NewVecC);
+  return ConstantVector::get(NewVecC, &getDataLayout());
 }
 
 // Get the result of `Vector Op Splat` (or Splat Op Vector if \p SplatLHS).
@@ -2385,7 +2386,7 @@ static Constant *constantFoldBinOpWithSplat(unsigned Opcode, Constant *Vector,
                                             Constant *Splat, bool SplatLHS,
                                             const DataLayout &DL) {
   ElementCount EC = cast<VectorType>(Vector->getType())->getElementCount();
-  Constant *LHS = ConstantVector::getSplat(EC, Splat);
+  Constant *LHS = ConstantVector::getSplat(EC, Splat, &DL);
   Constant *RHS = Vector;
   if (!SplatLHS)
     std::swap(LHS, RHS);
@@ -5024,7 +5025,8 @@ Instruction *InstCombinerImpl::visitLandingPadInst(LandingPadInst &LI) {
       if (MakeNewFilter) {
         FilterType = ArrayType::get(FilterType->getElementType(),
                                     NewFilterElts.size());
-        FilterClause = ConstantArray::get(FilterType, NewFilterElts);
+        FilterClause =
+            ConstantArray::get(FilterType, NewFilterElts, &getDataLayout());
         MakeNewInstruction = true;
       }
 

@@ -1540,7 +1540,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
                                    PoisonValue::get(VecTy->getElementType()));
   CmpC[Index0] = C0;
   CmpC[Index1] = C1;
-  Value *VCmp = Builder.CreateCmp(Pred, X, ConstantVector::get(CmpC));
+  Value *VCmp = Builder.CreateCmp(Pred, X, ConstantVector::get(CmpC, DL));
   Value *Shuf = createShiftShuffle(VCmp, ExpensiveIndex, CheapIndex, Builder);
   Value *LHS = ConvertToShuf == Ext0 ? Shuf : VCmp;
   Value *RHS = ConvertToShuf == Ext0 ? VCmp : Shuf;
@@ -5428,7 +5428,8 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   NewSplatVal <<= Width;
   NewSplatVal |= SplatVal0->zext(Width * 2);
   auto *NewSplat = ConstantVector::getSplat(
-      ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal));
+      ExtVTy->getElementCount(), ConstantInt::get(F.getContext(), NewSplatVal),
+      DL);
 
   IRBuilder<> Builder(&I);
   replaceValue(I, *Builder.CreateBitCast(NewSplat, I.getType()));

@@ -413,7 +413,7 @@ static llvm::VectorType *GetFloatNeonType(CodeGenFunction *CGF,
 
 Value *CodeGenFunction::EmitNeonSplat(Value *V, Constant *C,
                                       const ElementCount &Count) {
-  Value *SV = llvm::ConstantVector::getSplat(Count, C);
+  Value *SV = llvm::ConstantVector::getSplat(Count, C, &CGM.getDataLayout());
   return Builder.CreateShuffleVector(V, V, SV, "lane");
 }
 
@@ -3315,7 +3315,8 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
       // Extract the other lane.
       Ops[1] = Builder.CreateBitCast(Ops[1], Ty);
       int Lane = cast<ConstantInt>(Ops[2])->getZExtValue();
-      Value *SV = llvm::ConstantVector::get(ConstantInt::get(Int32Ty, 1-Lane));
+      Value *SV = llvm::ConstantVector::get(
+          {ConstantInt::get(Int32Ty, 1 - Lane)}, &CGM.getDataLayout());
       Ops[1] = Builder.CreateShuffleVector(Ops[1], Ops[1], SV);
       // Load the value as a one-element vector.
       Ty = llvm::FixedVectorType::get(VTy->getElementType(), 1);
@@ -3383,7 +3384,8 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     // a one-element vector and avoid poor code for i64 in the backend.
     if (VTy->getElementType()->isIntegerTy(64)) {
       Ops[1] = Builder.CreateBitCast(Ops[1], Ty);
-      Value *SV = llvm::ConstantVector::get(cast<llvm::Constant>(Ops[2]));
+      Value *SV = llvm::ConstantVector::get({cast<llvm::Constant>(Ops[2])},
+                                            &CGM.getDataLayout());
       Ops[1] = Builder.CreateShuffleVector(Ops[1], Ops[1], SV);
       Ops[2] = getAlignmentValue32(PtrOp0);
       llvm::Type *Tys[] = {Int8PtrTy, Ops[1]->getType()};
@@ -6741,7 +6743,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                            VTy->getNumElements() * 2);
     Ops[2] = Builder.CreateBitCast(Ops[2], STy);
     Value *SV = llvm::ConstantVector::getSplat(VTy->getElementCount(),
-                                               cast<ConstantInt>(Ops[3]));
+                                               cast<ConstantInt>(Ops[3]),
+                                               &CGM.getDataLayout());
     Ops[2] = Builder.CreateShuffleVector(Ops[2], Ops[2], SV, "lane");
 
     return emitCallMaybeConstrainedFPBuiltin(
@@ -7961,7 +7964,7 @@ BuildVector(ArrayRef<llvm::Value*> Ops) {
     SmallVector<llvm::Constant*, 16> CstOps;
     for (llvm::Value *Op : Ops)
       CstOps.push_back(cast<Constant>(Op));
-    return llvm::ConstantVector::get(CstOps);
+    return llvm::ConstantVector::get(CstOps, &CGM.getDataLayout());
   }
 
   // Otherwise, insertelement the values to build the vector.
