@@ -385,6 +385,15 @@ public:
     return ptr;
   }
 
+  std::optional<swift::remote::RemoteExistential>
+  ReadMetadataAndValueOpaqueExistential(
+      lldb::addr_t existential_address) override {
+    return m_reflection_ctx.readMetadataAndValueOpaqueExistential(
+        swift::remote::RemoteAddress(
+            existential_address,
+            swift::remote::RemoteAddress::DefaultAddressSpace));
+  }
+
   std::optional<bool> IsValueInlinedInExistentialContainer(
       swift::remote::RemoteAddress existential_address) override {
     return m_reflection_ctx.isValueInlinedInExistentialContainer(

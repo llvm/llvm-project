@@ -741,8 +741,7 @@ public:
   GetByteStride(lldb::opaque_compiler_type_t type,
                 ExecutionContextScope *exe_scope) override;
 
-  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                             uint64_t &count) override;
+  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
 
   llvm::Expected<uint32_t>
   GetNumChildren(lldb::opaque_compiler_type_t type,
@@ -780,6 +779,11 @@ public:
 
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                  bool expand_pack) override;
+  lldb::TemplateArgumentKind
+  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx,
+                          bool expand_pack) override;
+  CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                       size_t idx, bool expand_pack) override;
 
   lldb::GenericKind GetGenericArgumentKind(lldb::opaque_compiler_type_t type,
                                            size_t idx);

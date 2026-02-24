@@ -693,6 +693,23 @@ protected:
   CompilerType GetDynamicTypeAndAddress_EmbeddedClass(uint64_t instance_ptr,
                                                       CompilerType class_type);
 
+  /// Resolves the dynamic type of a class-constrained embedded Swift
+  /// existential.
+  std::optional<std::pair<CompilerType, uint64_t>>
+  GetDynamicTypeAndAddress_ClassConstrainedExistentialEmbedded(
+      lldb::addr_t existential_address, CompilerType existential_type);
+
+  /// Resolves the dynamic type of an embedded Swift existential container.
+  std::optional<std::pair<CompilerType, uint64_t>>
+  GetDynamicTypeAndAddress_ExistentialContainerEmbedded(
+      lldb::addr_t existential_address, CompilerType existential_type);
+
+  /// Resolves the dynamic type of an embedded Swift existential.
+  /// Tries class-constrained first, then falls back to existential container.
+  llvm::Expected<std::pair<CompilerType, uint64_t>>
+  GetDynamicTypeAndAddress_ExistentialEmbedded(lldb::addr_t existential_address,
+                                               CompilerType existential_type);
+
   /// Dynamic type resolution tends to want to generate scalar data -
   /// but there are caveats Per original comment here "Our address is
   /// the location of the dynamic type stored in memory.  It isn't a

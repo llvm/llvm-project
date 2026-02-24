@@ -2226,6 +2226,124 @@ CompilerType SwiftLanguageRuntime::GetDynamicTypeAndAddress_EmbeddedClass(
   return dynamic_type;
 }
 
+std::optional<std::pair<CompilerType, uint64_t>> SwiftLanguageRuntime::
+    GetDynamicTypeAndAddress_ClassConstrainedExistentialEmbedded(
+        lldb::addr_t existential_address, CompilerType existential_type) {
+  auto reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return std::nullopt;
+
+  auto maybe_addr_or_symbol = reflection_ctx->ReadPointer(existential_address);
+  if (!maybe_addr_or_symbol)
+    return std::nullopt;
+
+  uint64_t address = 0;
+  if (maybe_addr_or_symbol->getSymbol().empty() &&
+      maybe_addr_or_symbol->getOffset() == 0) {
+    address = maybe_addr_or_symbol->getResolvedAddress().getRawAddress();
+  } else {
+    SymbolContextList sc_list;
+    auto &module_list = GetProcess().GetTarget().GetImages();
+    module_list.FindSymbolsWithNameAndType(
+        ConstString(maybe_addr_or_symbol->getSymbol()), eSymbolTypeAny,
+        sc_list);
+    if (sc_list.GetSize() != 1)
+      return std::nullopt;
+
+    SymbolContext sc = sc_list[0];
+    Symbol *symbol = sc.symbol;
+    address = symbol->GetLoadAddress(&GetProcess().GetTarget());
+  }
+
+  CompilerType dynamic_type =
+      GetDynamicTypeAndAddress_EmbeddedClass(address, existential_type);
+  if (!dynamic_type)
+    return std::nullopt;
+
+  return std::make_pair(
+      dynamic_type, maybe_addr_or_symbol->getResolvedAddress().getRawAddress());
+}
+
+std::optional<std::pair<CompilerType, uint64_t>>
+SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialContainerEmbedded(
+    lldb::addr_t existential_address, CompilerType existential_type) {
+  auto reflection_ctx = GetReflectionContext();
+  if (!reflection_ctx)
+    return std::nullopt;
+
+  auto existential_container =
+      reflection_ctx->ReadMetadataAndValueOpaqueExistential(
+          existential_address);
+  if (!existential_container)
+    return std::nullopt;
+
+  lldb::addr_t metadata_addr =
+      existential_container->MetadataAddress.getRawAddress();
+  if (metadata_addr == 0)
+    return std::nullopt;
+
+  auto dynamic_address = existential_container->PayloadAddress.getRawAddress();
+  if (dynamic_address == 0)
+    return std::nullopt;
+
+  // The value witness table pointer is stored at MetadataAddress - PointerSize.
+  size_t ptr_size = GetProcess().GetAddressByteSize();
+  lldb::addr_t vwt_ptr_addr = metadata_addr - ptr_size;
+
+  Status error;
+  lldb::addr_t vwt_addr =
+      GetProcess().ReadPointerFromMemory(vwt_ptr_addr, error);
+  if (error.Fail() || vwt_addr == 0 || vwt_addr == LLDB_INVALID_ADDRESS)
+    return std::nullopt;
+
+  Address vwt_address;
+  vwt_address.SetLoadAddress(vwt_addr, &GetProcess().GetTarget());
+  Symbol *symbol = vwt_address.CalculateSymbolContextSymbol();
+  if (!symbol)
+    return std::nullopt;
+
+  Mangled mangled = symbol->GetMangled();
+  if (!mangled)
+    return std::nullopt;
+
+  llvm::StringRef symbol_name = mangled.GetMangledName().GetStringRef();
+  TypeSystemSwiftTypeRefSP ts = existential_type.GetTypeSystem()
+                                    .dyn_cast_or_null<TypeSystemSwift>()
+                                    ->GetTypeSystemSwiftTypeRef();
+  if (!ts)
+    return std::nullopt;
+
+  CompilerType dynamic_type = ts->GetTypeFromValueWitnessTable(symbol_name);
+  if (!dynamic_type)
+    return std::nullopt;
+
+  return std::make_pair(dynamic_type,
+                        existential_container->PayloadAddress.getRawAddress());
+}
+
+llvm::Expected<std::pair<CompilerType, uint64_t>>
+SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialEmbedded(
+    lldb::addr_t existential_address, CompilerType existential_type) {
+  // In the embedded Swift case, if the existential is class constrained, it
+  // will simply point to the instance. If it's not class constrained, it will
+  // have an existential container. Since there is no metadata to distinguish
+  // between the cases, we need to try both cases.
+
+  // First, try class-constrained existential.
+  if (auto result =
+          GetDynamicTypeAndAddress_ClassConstrainedExistentialEmbedded(
+              existential_address, existential_type))
+    return *result;
+
+  // If that fails, try existential container.
+  if (auto result = GetDynamicTypeAndAddress_ExistentialContainerEmbedded(
+          existential_address, existential_type))
+    return *result;
+
+  return llvm::createStringError(
+      "failed to resolve dynamic type of embedded existential");
+}
+
 bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Class(
     ValueObject &in_value, CompilerType class_type,
     lldb::DynamicValueType use_dynamic, TypeAndOrName &class_type_or_name,
@@ -2498,40 +2616,14 @@ bool SwiftLanguageRuntime::GetDynamicTypeAndAddress_Existential(
       dynamic_type = ts->RemangleAsType(dem, node, flavor);
       dynamic_address = out_address.getRawAddress();
     } else {
-      // In the embedded Swift case, the existential container just points to
-      // the instance.
-      auto reflection_ctx = GetReflectionContext();
-      if (!reflection_ctx)
+      auto result_or_err = GetDynamicTypeAndAddress_ExistentialEmbedded(
+          existential_address, existential_type);
+      if (!result_or_err) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types), result_or_err.takeError(),
+                       "{0}");
         return false;
-      auto maybe_addr_or_symbol =
-          reflection_ctx->ReadPointer(existential_address);
-      if (!maybe_addr_or_symbol)
-        return false;
-
-      uint64_t address = 0;
-      if (maybe_addr_or_symbol->getSymbol().empty() &&
-          maybe_addr_or_symbol->getOffset() == 0) {
-        address = maybe_addr_or_symbol->getResolvedAddress().getRawAddress();
-      } else {
-        SymbolContextList sc_list;
-        auto &module_list = GetProcess().GetTarget().GetImages();
-        module_list.FindSymbolsWithNameAndType(
-            ConstString(maybe_addr_or_symbol->getSymbol()), eSymbolTypeAny,
-            sc_list);
-        if (sc_list.GetSize() != 1)
-          return false;
-
-        SymbolContext sc = sc_list[0];
-        Symbol *symbol = sc.symbol;
-        address = symbol->GetLoadAddress(&GetProcess().GetTarget());
       }
-
-      dynamic_type =
-          GetDynamicTypeAndAddress_EmbeddedClass(address, existential_type);
-      if (!dynamic_type)
-        return false;
-      dynamic_address =
-          maybe_addr_or_symbol->getResolvedAddress().getRawAddress();
+      std::tie(dynamic_type, dynamic_address) = *result_or_err;
     }
     class_type_or_name.SetCompilerType(dynamic_type);
     address.SetRawAddress(dynamic_address);

@@ -223,8 +223,7 @@ public:
   std::optional<uint64_t>
   GetByteStride(lldb::opaque_compiler_type_t type,
                 ExecutionContextScope *exe_scope) override;
-  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                             uint64_t &count) override;
+  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
   llvm::Expected<uint32_t>
   GetNumChildren(lldb::opaque_compiler_type_t type,
                  bool omit_empty_base_classes,
@@ -250,6 +249,11 @@ public:
                                 std::vector<uint32_t> &child_indexes) override;
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                  bool expand_pack) override;
+  lldb::TemplateArgumentKind
+  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx,
+                          bool expand_pack) override;
+  CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                       size_t idx, bool expand_pack) override;
   CompilerType GetTypeForFormatters(lldb::opaque_compiler_type_t type) override;
   LazyBool ShouldPrintAsOneLiner(lldb::opaque_compiler_type_t type,
                                  ValueObject *valobj) override;
@@ -446,6 +450,10 @@ public:
   /// Given a mangled name that mangles a "type metadata for Type", return a
   /// CompilerType with that Type.
   CompilerType GetTypeFromTypeMetadataNode(llvm::StringRef mangled_name);
+
+  /// Given a mangled name that mangles a "value witness table for Type",
+  /// return a CompilerType with that Type.
+  CompilerType GetTypeFromValueWitnessTable(llvm::StringRef mangled_name);
 
   /// Use API notes to determine the swiftified name of \p clang_decl.
   std::string GetSwiftName(const clang::Decl *clang_decl,
