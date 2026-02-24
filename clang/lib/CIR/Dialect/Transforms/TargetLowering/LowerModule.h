@@ -16,6 +16,7 @@
 
 #include "CIRCXXABI.h"
 #include "LowerTypes.h"
+#include "CIRLowerContext.h"
 #include "TargetLoweringInfo.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "clang/Basic/CodeGenOptions.h"
