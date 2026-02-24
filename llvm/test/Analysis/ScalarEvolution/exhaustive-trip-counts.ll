@@ -227,10 +227,9 @@ exit:
 define i64 @test_fp_fdiv_denormal_preservesign() denormal_fpenv(preservesign) {
 ; CHECK-LABEL: 'test_fp_fdiv_denormal_preservesign'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_fp_fdiv_denormal_preservesign
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 16
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 16
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 16
-; CHECK-NEXT:  Loop %loop: Trip multiple is 17
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   br label %loop
@@ -251,10 +250,9 @@ exit:
 define i64 @test_fp_fdiv_denormal_positivezero() denormal_fpenv(preservesign) {
 ; CHECK-LABEL: 'test_fp_fdiv_denormal_positivezero'
 ; CHECK-NEXT:  Determining loop execution counts for: @test_fp_fdiv_denormal_positivezero
-; CHECK-NEXT:  Loop %loop: backedge-taken count is i32 16
-; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is i32 16
-; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is i32 16
-; CHECK-NEXT:  Loop %loop: Trip multiple is 17
+; CHECK-NEXT:  Loop %loop: Unpredictable backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %loop: Unpredictable symbolic max backedge-taken count.
 ;
 entry:
   br label %loop
