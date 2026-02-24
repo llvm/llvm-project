@@ -1110,10 +1110,12 @@ TEST(StringRefTest, FindIf) {
   EXPECT_EQ(12U, Punct.rfind_if(IsPunct));
   EXPECT_EQ(7U, Punct.rfind_if(IsPunct, /*End=*/12));
   EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/0));
 
   EXPECT_EQ(12U, Punct.rfind_if_not(IsAlpha));
   EXPECT_EQ(7U, Punct.rfind_if_not(IsAlpha, /*End=*/12));
   EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/0));
 }
 
 TEST(StringRefTest, TakeWhileUntil) {
