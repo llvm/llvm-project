@@ -17,11 +17,6 @@
 
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 namespace detail {
-// The approach utilizes the following rule:
-// For each local object obj with static storage duration, obj is destroyed
-// as if a function calling the destructor of obj were registered with
-// std::atexit at the completion of the constructor of obj.
-//
 // libsycl follows SYCL 2020 specification that doesn't declare any
 // init/shutdown methods that can help to avoid usage of static variables.
 // liboffload uses static variables too. In the first call of get_platforms
