@@ -20,3 +20,163 @@ define void @test_strm_release(ptr %p, i32 %v) {
   call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr %p, i32 %v, i32 3, i32 1)
   ret void
 }
+
+define void @test_keep_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_keep_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    strb w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i8(ptr %p, i8 %v, i32 0, i32 0)
+  ret void
+}
+
+define void @test_keep_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_keep_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    strh w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i16(ptr %p, i16 %v, i32 0, i32 0)
+  ret void
+}
+
+define void @test_keep_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_keep_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    str w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr %p, i32 %v, i32 0, i32 0)
+  ret void
+}
+
+define void @test_keep_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_keep_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    str x1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i64(ptr %p, i64 %v, i32 0, i32 0)
+  ret void
+}
+
+define void @test_strm_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_strm_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    strb w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i8(ptr %p, i8 %v, i32 0, i32 1)
+  ret void
+}
+
+define void @test_strm_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_strm_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    strh w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i16(ptr %p, i16 %v, i32 0, i32 1)
+  ret void
+}
+
+define void @test_strm_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_strm_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    str w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr %p, i32 %v, i32 0, i32 1)
+  ret void
+}
+
+define void @test_strm_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_strm_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    str x1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i64(ptr %p, i64 %v, i32 0, i32 1)
+  ret void
+}
+
+define void @test_strm_release_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_strm_release_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i8(ptr %p, i8 %v, i32 3, i32 1)
+  ret void
+}
+
+define void @test_strm_release_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_strm_release_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i16(ptr %p, i16 %v, i32 3, i32 1)
+  ret void
+}
+
+define void @test_strm_release_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_strm_release_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr %p, i32 %v, i32 3, i32 1)
+  ret void
+}
+
+define void @test_strm_release_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_strm_release_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i64(ptr %p, i64 %v, i32 3, i32 1)
+  ret void
+}
+
+define void @test_strm_seqcst_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_strm_seqcst_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlrb w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i8(ptr %p, i8 %v, i32 5, i32 1)
+  ret void
+}
+
+define void @test_strm_seqcst_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_strm_seqcst_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlrh w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i16(ptr %p, i16 %v, i32 5, i32 1)
+  ret void
+}
+
+define void @test_strm_seqcst_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_strm_seqcst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlr w1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr %p, i32 %v, i32 5, i32 1)
+  ret void
+}
+
+define void @test_strm_seqcst_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_strm_seqcst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh strm
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0.i64(ptr %p, i64 %v, i32 5, i32 1)
+  ret void
+}

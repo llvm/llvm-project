@@ -1227,10 +1227,7 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   }
 
   // Arg 3 (retention policy) must be between KEEP(0) and STRM(1).
-  if (SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 1))
-    return true;
-
-  return false;
+  return SemaRef.BuiltinConstantArgRange(TheCall, 3, 0, 1);
 }
 
 bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,

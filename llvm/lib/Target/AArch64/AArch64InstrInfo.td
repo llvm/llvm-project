@@ -1584,16 +1584,16 @@ def STSHH: STSHHI;
 let hasSideEffects = 1, mayStore = 1, isPseudo = 1, isCodeGenOnly = 1 in {
 def STSHH_ATOMIC_STORE_B
     : Pseudo<(outs), (ins GPR32:$val, GPR64sp:$addr, i32imm:$order,
-                          i64imm:$policy), []>, Sched<[]>;
+                          i32imm:$policy), []>, Sched<[]>;
 def STSHH_ATOMIC_STORE_H
     : Pseudo<(outs), (ins GPR32:$val, GPR64sp:$addr, i32imm:$order,
-                          i64imm:$policy), []>, Sched<[]>;
+                          i32imm:$policy), []>, Sched<[]>;
 def STSHH_ATOMIC_STORE_W
     : Pseudo<(outs), (ins GPR32:$val, GPR64sp:$addr, i32imm:$order,
-                          i64imm:$policy), []>, Sched<[]>;
+                          i32imm:$policy), []>, Sched<[]>;
 def STSHH_ATOMIC_STORE_X
     : Pseudo<(outs), (ins GPR64:$val, GPR64sp:$addr, i32imm:$order,
-                          i64imm:$policy), []>, Sched<[]>;
+                          i32imm:$policy), []>, Sched<[]>;
 }
 
 // In order to be able to write readable assembly, LLVM should accept assembly

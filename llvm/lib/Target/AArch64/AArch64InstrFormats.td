@@ -1183,11 +1183,6 @@ def imm0_7 : Operand<i64>, ImmLeaf<i64, [{
   let ParserMatchClass = Imm0_7Operand;
 }
 
-// imm0_7_i32 predicate - True if the immediate is in the range [0,7]
-def imm0_7_i32 : Operand<i32>, ImmLeaf<i32, [{
-  return ((uint32_t)Imm) < 8;
-}]>;
-
 // imm0_3 predicate - True if the immediate is in the range [0,3]
 def imm0_3 : Operand<i64>, ImmLeaf<i64, [{
   return ((uint64_t)Imm) < 4;
