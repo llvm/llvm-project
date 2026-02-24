@@ -1569,7 +1569,7 @@ AAAMDGPUClusterDims::createForPosition(const IRPosition &IRP, Attributor &A) {
   llvm_unreachable("AAAMDGPUClusterDims is only valid for function position");
 }
 
-static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
+static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass, bool DeleteFns,
                     Module &M, AnalysisGetter &AG, TargetMachine &TM,
                     AMDGPUAttributorOptions Options,
                     ThinOrFullLTOPhase LTOPhase) {
@@ -1590,6 +1590,7 @@ static bool runImpl(SetVector<Function *> &Functions, bool IsModulePass,
   AC.IsClosedWorldModule = Options.IsClosedWorld;
   AC.Allowed = &Allowed;
   AC.IsModulePass = IsModulePass;
+  AC.DeleteFns = DeleteFns;
   AC.DefaultInitializeLiveInternals = false;
   AC.IndirectCalleeSpecializationCallback =
       [](Attributor &A, const AbstractAttribute &AA, CallBase &CB,
@@ -1671,7 +1672,7 @@ PreservedAnalyses llvm::AMDGPUAttributorPass::run(Module &M,
     return PreservedAnalyses::all();
 
   // TODO: Probably preserves CFG
-  return runImpl(Functions, true /*IsModulePass*/, M, AG, TM, Options, LTOPhase)
+  return runImpl(Functions, true /*IsModulePass*/, true /*DeleteFns*/, M, AG, TM, Options, LTOPhase)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
 }
@@ -1696,8 +1697,10 @@ PreservedAnalyses llvm::AMDGPUAttributorCGSCCPass::run(LazyCallGraph::SCC &C,
     return PreservedAnalyses::all();
 
   AMDGPUAttributorOptions Options;
-  Module *M = C.begin()->getFunction().getParent();
-  return runImpl(Functions, false /*IsModulePass*/, *M, AG, TM, Options,
+    Module *M = C.begin()->getFunction().getParent();
+  // In the CGSCC pipeline, avoid untracked call graph modifications by
+  // disabling function deletion, mirroring the generic AttributorCGSCCPass.
+  return runImpl(Functions, false /*IsModulePass*/, false /*DeleteFns*/, *M, AG, TM, Options,
                  ThinOrFullLTOPhase::None)
              ? PreservedAnalyses::none()
              : PreservedAnalyses::all();
