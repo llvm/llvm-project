@@ -70,6 +70,9 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Now also provides include files without extension, if they are in a directory
+  only called ``include``.
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -159,6 +162,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
   negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
 
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
+  C++ files because suggested ``reinterpret_cast`` is not available in pure C.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
@@ -205,6 +212,9 @@ Changes in existing checks
   - Added support for analyzing function parameters with the `AnalyzeParameters`
     option.
 
+  - Fixed false positive where an array of pointers to ``const`` was
+    incorrectly diagnosed as allowing the pointee to be made ``const``.
+
 - Improved :doc:`modernize-pass-by-value
   <clang-tidy/checks/modernize/pass-by-value>` check by adding `IgnoreMacros`
   option to suppress warnings in macros.
@@ -226,6 +236,11 @@ Changes in existing checks
   - Exclude ``enum`` in ``extern "C"`` blocks.
 
   - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
+
+- Improved :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>` check to
+  analyze calls to the ``starts_with``, ``ends_with``, and ``contains``
+  string member functions.
 
 - Improved :doc:`performance-inefficient-vector-operation
   <clang-tidy/checks/performance/inefficient-vector-operation>` check by

@@ -1192,7 +1192,18 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
+  // Find the record containing the count field. Walk up through anonymous
+  // structs/unions (which are transparent in C) but stop at named records.
+  // Using getOuterLexicalRecordContext() here would be wrong because it walks
+  // past named nested structs to the outermost record, causing a crash when a
+  // struct with a counted_by FAM is defined nested inside another struct.
+  const RecordDecl *RD = CountDecl->getParent();
+  while (RD->isAnonymousStructOrUnion()) {
+    const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
+    if (!Parent)
+      break;
+    RD = Parent;
+  }
 
   // Find the base struct expr (i.e. p in p->a.b.c.d).
   const Expr *StructBase = StructAccessBase(RD).Visit(Base);
@@ -2499,8 +2510,9 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   if (LV.isVectorElt()) {
     llvm::LoadInst *Load = Builder.CreateLoad(LV.getVectorAddress(),
                                               LV.isVolatileQualified());
-    return RValue::get(Builder.CreateExtractElement(Load, LV.getVectorIdx(),
-                                                    "vecext"));
+    llvm::Value *Elt =
+        Builder.CreateExtractElement(Load, LV.getVectorIdx(), "vecext");
+    return RValue::get(EmitFromMemory(Elt, LV.getType()));
   }
 
   // If this is a reference to a subset of the elements of a vector, either
@@ -2515,14 +2527,18 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
 
   if (LV.isMatrixElt()) {
     llvm::Value *Idx = LV.getMatrixIdx();
-    if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
-      const auto *const MatTy = LV.getType()->castAs<ConstantMatrixType>();
-      llvm::MatrixBuilder MB(Builder);
-      MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
+    QualType EltTy = LV.getType();
+    if (const auto *MatTy = EltTy->getAs<ConstantMatrixType>()) {
+      EltTy = MatTy->getElementType();
+      if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
+        llvm::MatrixBuilder MB(Builder);
+        MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
+      }
     }
     llvm::LoadInst *Load =
         Builder.CreateLoad(LV.getMatrixAddress(), LV.isVolatileQualified());
-    return RValue::get(Builder.CreateExtractElement(Load, Idx, "matrixext"));
+    llvm::Value *Elt = Builder.CreateExtractElement(Load, Idx, "matrixext");
+    return RValue::get(EmitFromMemory(Elt, EltTy));
   }
   if (LV.isMatrixRow()) {
     QualType MatTy = LV.getType();
