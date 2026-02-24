@@ -1637,13 +1637,10 @@ void HeaderSearch::buildHeaderToModuleCache(DirectoryEntryRef Dir,
                                  DirectoryEntryRef MMDir,
                                  StringRef PathPrefix) {
         auto AddToCache = [&](StringRef RelPath, StringRef ModuleName) {
-          if (PathPrefix.empty()) {
-            MMState.HeaderToModules[RelPath].push_back(ModuleName);
-          } else {
-            SmallString<128> RelFromRootPath(PathPrefix);
-            llvm::sys::path::append(RelFromRootPath, RelPath);
-            MMState.HeaderToModules[RelFromRootPath].push_back(ModuleName);
-          }
+          SmallString<128> RelFromRootPath(PathPrefix);
+          llvm::sys::path::append(RelFromRootPath, RelPath);
+          llvm::sys::path::native(RelFromRootPath);
+          MMState.HeaderToModules[RelFromRootPath].push_back(ModuleName);
         };
 
         auto ProcessExternModuleDecl =
@@ -1662,8 +1659,10 @@ void HeaderSearch::buildHeaderToModuleCache(DirectoryEntryRef Dir,
                   // prefix.
                   SmallString<128> NewPrefix(PathPrefix);
                   StringRef ExternDir = llvm::sys::path::parent_path(EMD.Path);
-                  if (!ExternDir.empty())
+                  if (!ExternDir.empty()) {
                     llvm::sys::path::append(NewPrefix, ExternDir);
+                    llvm::sys::path::native(NewPrefix);
+                  }
                   ProcessModuleMapFile(*ExtMMF, EFile->getDir(), NewPrefix);
                 }
               }
@@ -1688,6 +1687,7 @@ void HeaderSearch::buildHeaderToModuleCache(DirectoryEntryRef Dir,
                         [&](const modulemap::UmbrellaDirDecl &UDD) {
                           SmallString<128> FullPath(PathPrefix);
                           llvm::sys::path::append(FullPath, UDD.Path);
+                          llvm::sys::path::native(FullPath);
                           MMState.UmbrellaDirModules.push_back(std::make_pair(
                               std::string(FullPath), ModuleName));
                         },
@@ -1770,6 +1770,9 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
     while (!RelativePath.empty() &&
            llvm::sys::path::is_separator(RelativePath.front()))
       RelativePath = RelativePath.substr(1);
+    SmallString<128> RelativePathNative(RelativePath);
+    llvm::sys::path::native(RelativePathNative);
+    RelativePath = RelativePathNative;
 
     // Check for exact matches in cache
     llvm::SmallVector<StringRef, 4> ModulesToLoad;
