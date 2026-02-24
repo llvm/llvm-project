@@ -327,7 +327,8 @@ private:
 
   bool selectExtInstWithSrcs(Register ResVReg, SPIRVTypeInst ResType,
                              MachineInstr &I, ArrayRef<Register> SrcRegs,
-                             const ExtInstList &ExtInsts) const;
+                             const ExtInstList &ExtInsts,
+                             bool setMIFlags = false) const;
 
   bool selectLog10(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
@@ -1380,9 +1381,12 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
   return false;
 }
 
-bool SPIRVInstructionSelector::selectExtInstWithSrcs(
-    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
-    ArrayRef<Register> SrcRegs, const ExtInstList &Insts) const {
+bool SPIRVInstructionSelector::selectExtInstWithSrcs(Register ResVReg,
+                                                     SPIRVTypeInst ResType,
+                                                     MachineInstr &I,
+                                                     ArrayRef<Register> SrcRegs,
+                                                     const ExtInstList &Insts,
+                                                     bool setMIFlags) const {
   for (const auto &[InstructionSet, Opcode] : Insts) {
     if (!STI.canUseExtInstSet(InstructionSet))
       continue;
@@ -1391,8 +1395,9 @@ bool SPIRVInstructionSelector::selectExtInstWithSrcs(
                    .addDef(ResVReg)
                    .addUse(GR.getSPIRVTypeID(ResType))
                    .addImm(static_cast<uint32_t>(InstructionSet))
-                   .addImm(Opcode)
-                   .setMIFlags(I.getFlags());
+                   .addImm(Opcode);
+    if (setMIFlags)
+      MIB.setMIFlags(I.getFlags());
     for (Register SReg : SrcRegs) {
       MIB.addUse(SReg);
     }
@@ -3284,7 +3289,7 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
       return false;
     if (!selectExtInstWithSrcs(
             ResVReg, ResType, I, {ArgReg},
-            {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}}))
+            {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}}, false))
       return false;
 
     return true;
