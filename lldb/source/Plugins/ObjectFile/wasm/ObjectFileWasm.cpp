@@ -157,8 +157,11 @@ ObjectFile *ObjectFileWasm::CreateInstance(const ModuleSP &module_sp,
     data_offset = 0;
   }
 
-  assert(extractor_sp);
-  if (!ValidateModuleHeader(extractor_sp->GetData())) {
+  // If this is operating on a VirtualDataExtractor, it can have gaps between
+  // valid bytes in the DataBuffer, so only get the contiguous part.
+  assert(extractor_sp && extractor_sp->GetContiguousDataExtractorSP());
+  if (!ValidateModuleHeader(
+          extractor_sp->GetContiguousDataExtractorSP()->GetData())) {
     LLDB_LOGF(log,
               "Failed to create ObjectFileWasm instance: invalid Wasm header");
     return nullptr;
