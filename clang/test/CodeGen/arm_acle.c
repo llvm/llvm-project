@@ -1822,4 +1822,14 @@ int test_rndrrs(uint64_t *__addr) {
 }
 #endif
 
+#if defined(__ARM_64BIT_STATE)
 
+// AArch64-LABEL: @test_stshh_atomic_store(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr %p, i32 %v, i32 0, i32 0)
+// AArch64-NEXT:    ret void
+//
+void test_stshh_atomic_store(int *p, int v) {
+  __arm_atomic_store_with_stshh(p, v, __ATOMIC_RELAXED, 0);
+}
+#endif

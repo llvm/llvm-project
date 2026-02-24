@@ -62,9 +62,6 @@ def int_aarch64_frint64x
 // HINT
 
 def int_aarch64_hint : DefaultAttrsIntrinsic<[], [llvm_i32_ty]>;
-def int_aarch64_stshh
-    : DefaultAttrsIntrinsic<[], [llvm_i32_ty],
-                            [IntrNoMem, IntrHasSideEffects, ImmArg<ArgIndex<0>>]>;
 def int_aarch64_stshh_atomic_store
     : Intrinsic<[],
                 [llvm_anyptr_ty, llvm_anyint_ty, llvm_i32_ty, llvm_i32_ty],
@@ -4295,4 +4292,3 @@ let TargetPrefix = "aarch64" in {
   def int_aarch64_sve_pmlal_pair_x2 : DefaultAttrsIntrinsic<[llvm_nxv2i64_ty, llvm_nxv2i64_ty],
       [llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty, llvm_nxv2i64_ty], [IntrNoMem]>;
 }
-

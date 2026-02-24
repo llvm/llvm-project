@@ -5299,8 +5299,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
 
     Function *F =
         CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
-              {StoreAddr->getType(), StoreValue->getType()});
-
+                         {StoreAddr->getType(), StoreValue->getType()});
 
     // Emit a single intrinsic so backend can expand to STSHH followed by
     // atomic store, to guarantee STSHH immediately precedes store insn.

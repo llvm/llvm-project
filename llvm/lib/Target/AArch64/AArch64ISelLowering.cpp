@@ -6369,15 +6369,6 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_VOID(SDValue Op,
                        Op.getOperand(0),                        // Chain
                        DAG.getTargetConstant(24, DL, MVT::i32), // Rt
                        Op.getOperand(2));                       // Addr
-  case Intrinsic::aarch64_stshh: {
-    SDValue Chain = Op.getOperand(0);
-    auto *PolicyC = cast<ConstantSDNode>(Op.getOperand(2));
-    SDValue Policy =
-        DAG.getTargetConstant(PolicyC->getZExtValue(), DL, MVT::i32);
-    SDValue Ops[] = {Policy, Chain};
-    MachineSDNode *N = DAG.getMachineNode(AArch64::STSHH, DL, MVT::Other, Ops);
-    return SDValue(N, 0);
-  }
   case Intrinsic::aarch64_stshh_atomic_store: {
     SDValue Chain = Op.getOperand(0);
     SDValue Ptr = Op.getOperand(2);
