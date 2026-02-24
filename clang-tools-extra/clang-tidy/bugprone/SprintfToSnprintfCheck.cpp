@@ -53,10 +53,10 @@ void SprintfToSnprintfCheck::check(const MatchFinder::MatchResult &Result) {
   const StringRef FuncName = Callee->getName();
   const StringRef BufferName = Buffer->getName();
 
-  auto Diag = diag(Call->getBeginLoc(),
-                   "use 'snprintf' instead of '%0' for fixed-size "
-                   "character arrays")
-              << FuncName;
+  auto Diag =
+      diag(Call->getBeginLoc(), "use 'snprintf' instead of '%0' for fixed-size "
+                                "character arrays")
+      << FuncName;
 
   // Only provide an automated Fix-It if the function is exactly "sprintf"
   if (FuncName == "sprintf") {
