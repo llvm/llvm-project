@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 namespace clang::ssaf {
@@ -91,6 +92,47 @@ TEST(NestedBuildNamespaceTest, EmptyQualified) {
 
   auto Qualified = Empty.makeQualified(NBN);
   EXPECT_EQ(Qualified, NBN);
+}
+
+TEST(BuildNamespaceTest, StreamOutputCompilationUnit) {
+  BuildNamespace BN(BuildNamespaceKind::CompilationUnit, "test.cpp");
+  std::string S;
+  llvm::raw_string_ostream(S) << BN;
+  EXPECT_EQ(S, "BuildNamespace(compilation_unit, test.cpp)");
+}
+
+TEST(BuildNamespaceTest, StreamOutputLinkUnit) {
+  BuildNamespace BN(BuildNamespaceKind::LinkUnit, "app");
+  std::string S;
+  llvm::raw_string_ostream(S) << BN;
+  EXPECT_EQ(S, "BuildNamespace(link_unit, app)");
+}
+
+TEST(NestedBuildNamespaceTest, StreamOutputEmpty) {
+  NestedBuildNamespace NBN;
+  std::string S;
+  llvm::raw_string_ostream(S) << NBN;
+  EXPECT_EQ(S, "NestedBuildNamespace([])");
+}
+
+TEST(NestedBuildNamespaceTest, StreamOutputSingle) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  std::string S;
+  llvm::raw_string_ostream(S) << NBN;
+  EXPECT_EQ(
+      S, "NestedBuildNamespace([BuildNamespace(compilation_unit, test.cpp)])");
+}
+
+TEST(NestedBuildNamespaceTest, StreamOutputMultiple) {
+  NestedBuildNamespace NBN(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+  NBN = NBN.makeQualified(NestedBuildNamespace(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, "app")));
+  std::string S;
+  llvm::raw_string_ostream(S) << NBN;
+  EXPECT_EQ(S, "NestedBuildNamespace([BuildNamespace(compilation_unit, "
+               "test.cpp), BuildNamespace(link_unit, app)])");
 }
 
 } // namespace

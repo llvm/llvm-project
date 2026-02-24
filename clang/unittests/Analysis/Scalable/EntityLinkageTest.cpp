@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 using clang::ssaf::EntityLinkage;
@@ -43,6 +44,36 @@ TEST(EntityLinkageTest, AssignmentOperator) {
 
   EXPECT_EQ(Linkage1.getLinkage(), External);
   EXPECT_EQ(Linkage1.getLinkage(), Linkage2.getLinkage());
+}
+
+TEST(EntityLinkageTest, EqualityOperatorReflexive) {
+  EXPECT_EQ(EntityLinkage(None), EntityLinkage(None));
+  EXPECT_EQ(EntityLinkage(Internal), EntityLinkage(Internal));
+  EXPECT_EQ(EntityLinkage(External), EntityLinkage(External));
+}
+
+TEST(EntityLinkageTest, EqualityOperatorDistinct) {
+  EXPECT_NE(EntityLinkage(None), EntityLinkage(Internal));
+  EXPECT_NE(EntityLinkage(None), EntityLinkage(External));
+  EXPECT_NE(EntityLinkage(Internal), EntityLinkage(External));
+}
+
+TEST(EntityLinkageTest, StreamOutputNone) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkage(None);
+  EXPECT_EQ(S, "EntityLinkage(None)");
+}
+
+TEST(EntityLinkageTest, StreamOutputInternal) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkage(Internal);
+  EXPECT_EQ(S, "EntityLinkage(Internal)");
+}
+
+TEST(EntityLinkageTest, StreamOutputExternal) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkage(External);
+  EXPECT_EQ(S, "EntityLinkage(External)");
 }
 
 } // namespace
