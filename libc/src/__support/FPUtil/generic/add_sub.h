@@ -96,7 +96,7 @@ add_or_sub(InType x, InType y) {
 
     if (x_bits.is_zero()) {
       if (y_bits.is_zero()) {
-         if (is_effectively_add) {
+        if (is_effectively_add) {
           return OutFPBits::zero(x_bits.sign()).get_val();
         } else {
           switch (quick_get_round()) {
@@ -105,7 +105,7 @@ add_or_sub(InType x, InType y) {
           default:
             return OutFPBits::zero(Sign::POS).get_val();
           }
-      }
+        }
 
       if constexpr (cpp::is_same_v<InType, bfloat16> &&
                     cpp::is_same_v<OutType, bfloat16>) {
