@@ -114,7 +114,6 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   GenericScheduler::initialize(DAG);
 
   MF = &DAG->MF;
-
   const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
 
   SGPRExcessLimit =
@@ -989,6 +988,9 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   if (Regions[RegionIdx].first == Regions[RegionIdx].second)
     return llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
   GCNDownwardRPTracker RPTracker(*LIS);
+  RPTracker.initPhysLiveRegs(MF.getRegInfo());
+  if (GCNTrackers)
+    RPTracker.enablePhysTracking();
   RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
                     &LiveIns[RegionIdx]);
   return RPTracker.moveMaxPressure();
@@ -1003,6 +1005,9 @@ static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
                                                 const MachineBasicBlock *MBB) {
   GCNDownwardRPTracker RPTracker(*LIS);
+  RPTracker.initPhysLiveRegs(MF.getRegInfo());
+  if (GCNTrackers)
+    RPTracker.enablePhysTracking();
 
   // If the block has the only successor then live-ins of that successor are
   // live-outs of the current block. We can reuse calculated live set if the
@@ -1135,7 +1140,6 @@ void GCNScheduleDAGMILive::finalizeSchedule() {
 
 void GCNScheduleDAGMILive::runSchedStages() {
   LLVM_DEBUG(dbgs() << "All regions recorded, starting actual scheduling.\n");
-
   if (!Regions.empty()) {
     BBLiveInMap = getRegionLiveInMap();
     if (GCNTrackers)
@@ -1151,6 +1155,13 @@ void GCNScheduleDAGMILive::runSchedStages() {
 #endif
 
   GCNSchedStrategy &S = static_cast<GCNSchedStrategy &>(*SchedImpl);
+  // Initialize physical register tracking in GCN trackers.
+  S.getDownwardTracker()->initPhysLiveRegs(MF.getRegInfo());
+  S.getUpwardTracker()->initPhysLiveRegs(MF.getRegInfo());
+  if (GCNTrackers) {
+    S.getDownwardTracker()->enablePhysTracking();
+    S.getUpwardTracker()->enablePhysTracking();
+  }
   while (S.advanceStage()) {
     auto Stage = createSchedStage(S.getCurrentStage());
     if (!Stage->initGCNSchedStage())

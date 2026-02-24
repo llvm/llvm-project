@@ -308,12 +308,40 @@ public:
 
 protected:
   const LiveIntervals &LIS;
-  LiveRegSet LiveRegs;
-  GCNRegPressure CurPressure, MaxPressure;
+
+  // Virtual register tracking
+  LiveRegSet VirtLiveRegs;
+  GCNRegPressure CurVirtPressure, MaxVirtPressure;
+
+  // Physical register tracking
+  llvm::LiveRegSet PhysLiveRegs;
+  GCNRegPressure CurPhysPressure, MaxPhysPressure;
+
+  // Flag to control whether physical register tracking is active.
+  // Set to true when GCNTrackers are enabled, false otherwise.
+  bool TrackPhysRegs = false;
+
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
   GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+
+  // Copy constructor - PhysLiveRegs must be initialized then copied.
+  GCNRPTracker(const GCNRPTracker &Other)
+      : LIS(Other.LIS), VirtLiveRegs(Other.VirtLiveRegs),
+        CurVirtPressure(Other.CurVirtPressure),
+        MaxVirtPressure(Other.MaxVirtPressure),
+        CurPhysPressure(Other.CurPhysPressure),
+        MaxPhysPressure(Other.MaxPhysPressure),
+        TrackPhysRegs(Other.TrackPhysRegs), LastTrackedMI(Other.LastTrackedMI),
+        MRI(Other.MRI) {
+    // Initialize PhysLiveRegs with proper universe, then copy contents.
+    if (MRI) {
+      PhysLiveRegs.init(*MRI);
+      PhysLiveRegs =
+          Other.PhysLiveRegs; // Use assignment operator to copy live regs.
+    }
+  }
 
   void reset(const MachineInstr &MI, const LiveRegSet *LiveRegsCopy,
              bool After);
@@ -323,20 +351,50 @@ protected:
 
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
+  // Helper methods for physical register tracking
+  Register getPhysRegFromUnit(MCRegUnit Unit) const;
+  bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
+
 public:
+  // Initialize PhysLiveRegs capacity. Must be called before first use.
+  void initPhysLiveRegs(const MachineRegisterInfo &MRI_) {
+    PhysLiveRegs.init(MRI_);
+  }
+
+  // Enable physical register tracking. Should only be called when GCNTrackers
+  // are enabled to avoid changing behavior when using generic trackers.
+  void enablePhysTracking() { TrackPhysRegs = true; }
+
   // reset tracker and set live register set to the specified value.
   void reset(const MachineRegisterInfo &MRI_, const LiveRegSet &LiveRegs_);
+
   // live regs for the current state
-  const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
+  const decltype(VirtLiveRegs) &getLiveRegs() const { return VirtLiveRegs; }
+  const decltype(VirtLiveRegs) &getVirtLiveRegs() const { return VirtLiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
-  void clearMaxPressure() { MaxPressure.clear(); }
-
-  GCNRegPressure getPressure() const { return CurPressure; }
-
-  decltype(LiveRegs) moveLiveRegs() {
-    return std::move(LiveRegs);
+  void clearMaxPressure() {
+    MaxVirtPressure.clear();
+    MaxPhysPressure.clear();
   }
+
+  // Returns sum of virtual and physical register pressure
+  GCNRegPressure getPressure() const {
+    return CurVirtPressure + CurPhysPressure;
+  }
+
+  // Returns only virtual register pressure
+  GCNRegPressure getVirtPressure() const { return CurVirtPressure; }
+
+  // Returns only physical register pressure
+  GCNRegPressure getPhysPressure() const { return CurPhysPressure; }
+
+  // Returns sum of virtual and physical max pressure
+  GCNRegPressure getMaxPressure() const {
+    return MaxVirtPressure + MaxPhysPressure;
+  }
+
+  decltype(VirtLiveRegs) moveLiveRegs() { return std::move(VirtLiveRegs); }
 };
 
 GCNRPTracker::LiveRegSet
@@ -378,12 +436,13 @@ public:
   /// to reported by LIS.
   bool isValid() const;
 
-  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
-
-  void resetMaxPressure() { MaxPressure = CurPressure; }
+  void resetMaxPressure() {
+    MaxVirtPressure = CurVirtPressure;
+    MaxPhysPressure = CurPhysPressure;
+  }
 
   GCNRegPressure getMaxPressureAndReset() {
-    GCNRegPressure RP = MaxPressure;
+    GCNRegPressure RP = getMaxPressure();
     resetMaxPressure();
     return RP;
   }
@@ -407,8 +466,9 @@ public:
 
   /// \p return MaxPressure and clear it.
   GCNRegPressure moveMaxPressure() {
-    auto Res = MaxPressure;
-    MaxPressure.clear();
+    auto Res = getMaxPressure();
+    MaxVirtPressure.clear();
+    MaxPhysPressure.clear();
     return Res;
   }
 

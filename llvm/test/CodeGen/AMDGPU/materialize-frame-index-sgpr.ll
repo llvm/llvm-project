@@ -7,6 +7,14 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 < %s | FileCheck -check-prefix=GFX10_3 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefix=GFX7-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx810 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefix=GFX8-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefixes=GFX900-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefixes=GFX942-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefix=GFX10_1-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1030 -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefix=GFX10_3-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefix=GFX11-GCNTRACKERS %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck -check-prefix=GFX12-GCNTRACKERS %s
 
 %asm.output = type { <16 x i32>, <16 x i32>, <16 x i32>, <8 x i32>, <2 x i32>, i32, ; sgprs
                      <16 x i32>, <7 x i32>, ; vgprs
@@ -563,6 +571,540 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX7-GCNTRACKERS:       ; %bb.0:
+; GFX7-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x101100
+; GFX7-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX7-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX7-GCNTRACKERS-NEXT:    v_lshr_b32_e64 v0, s32, 6
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX7-GCNTRACKERS-NEXT:    v_add_i32_e32 v0, vcc, 64, v0
+; GFX7-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    buffer_store_dword v0, off, s[0:3], s32
+; GFX7-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, 0x4040
+; GFX7-GCNTRACKERS-NEXT:    v_mad_u32_u24 v0, v0, 64, s32
+; GFX7-GCNTRACKERS-NEXT:    v_lshrrev_b32_e32 v0, 6, v0
+; GFX7-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v0
+; GFX7-GCNTRACKERS-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; GFX7-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX7-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x101100
+; GFX7-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX7-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX7-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX8-GCNTRACKERS:       ; %bb.0:
+; GFX8-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x101100
+; GFX8-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX8-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX8-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX8-GCNTRACKERS-NEXT:    v_add_u32_e32 v0, vcc, 64, v0
+; GFX8-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    buffer_store_dword v0, off, s[0:3], s32
+; GFX8-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, 0x4040
+; GFX8-GCNTRACKERS-NEXT:    v_mad_u32_u24 v0, v0, 64, s32
+; GFX8-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX8-GCNTRACKERS-NEXT:    v_lshrrev_b32_e32 v0, 6, v0
+; GFX8-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v0
+; GFX8-GCNTRACKERS-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; GFX8-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX8-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x101100
+; GFX8-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX8-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX8-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX900-GCNTRACKERS:       ; %bb.0:
+; GFX900-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x101100
+; GFX900-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX900-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX900-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX900-GCNTRACKERS-NEXT:    v_add_u32_e32 v0, 64, v0
+; GFX900-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    buffer_store_dword v0, off, s[0:3], s32
+; GFX900-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
+; GFX900-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX900-GCNTRACKERS-NEXT:    v_add_u32_e32 v0, 0x4040, v0
+; GFX900-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v0
+; GFX900-GCNTRACKERS-NEXT:    buffer_load_dword v0, off, s[0:3], s32
+; GFX900-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX900-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x101100
+; GFX900-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX900-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX942-GCNTRACKERS:       ; %bb.0:
+; GFX942-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s2, s32, 0x4044
+; GFX942-GCNTRACKERS-NEXT:    scratch_store_dword off, v23, s2 ; 4-byte Folded Spill
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s0, s32, 64
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX942-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[0:1], 0, exec
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 0x4040
+; GFX942-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX942-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
+; GFX942-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b32 s54, s59
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX942-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s2, s32, 0x4044
+; GFX942-GCNTRACKERS-NEXT:    scratch_load_dword v23, off, s2 ; 4-byte Folded Reload
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10_1-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX10_1-GCNTRACKERS:       ; %bb.0:
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_1-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80880
+; GFX10_1-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s5 ; 4-byte Folded Spill
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX10_1-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
+; GFX10_1-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX10_1-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v0, 64, v0
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v24, 5, s32
+; GFX10_1-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX10_1-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v24, 0x4040, v24
+; GFX10_1-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v24
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX10_1-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_1-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80880
+; GFX10_1-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s5 ; 4-byte Folded Reload
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10_3-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX10_3-GCNTRACKERS:       ; %bb.0:
+; GFX10_3-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_3-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_3-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80880
+; GFX10_3-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s5 ; 4-byte Folded Spill
+; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX10_3-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
+; GFX10_3-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX10_3-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v0, 64, v0
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v24, 5, s32
+; GFX10_3-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX10_3-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v24, 0x4040, v24
+; GFX10_3-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v24
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX10_3-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_3-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80880
+; GFX10_3-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s5 ; 4-byte Folded Reload
+; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_3-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10_3-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX11-GCNTRACKERS:       ; %bb.0:
+; GFX11-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s1, s32, 0x4044
+; GFX11-GCNTRACKERS-NEXT:    scratch_store_b32 off, v23, s1 ; 4-byte Folded Spill
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s0, s32, 64
+; GFX11-GCNTRACKERS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 0x4040
+; GFX11-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX11-GCNTRACKERS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
+; GFX11-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 s54, s59
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX11-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s1, s32, 0x4044
+; GFX11-GCNTRACKERS-NEXT:    scratch_load_b32 v23, off, s1 ; 4-byte Folded Reload
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs:
+; GFX12-GCNTRACKERS:       ; %bb.0:
+; GFX12-GCNTRACKERS-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_expcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-GCNTRACKERS-NEXT:    scratch_store_b32 off, v23, s32 offset:16388 ; 4-byte Folded Spill
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX12-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s32
+; GFX12-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    s_add_co_ci_u32 s59, s32, 0x4000
+; GFX12-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
+; GFX12-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 s54, s59
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc, s54, scc
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX12-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-GCNTRACKERS-NEXT:    scratch_load_b32 v23, off, s32 offset:16388 ; 4-byte Folded Reload
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
   %alloca0 = alloca [4096 x i32], align 64, addrspace(5)
   %alloca1 = alloca i32, align 4, addrspace(5)
   call void asm sideeffect "; use alloca0 $0", "v"(ptr addrspace(5) %alloca0)
@@ -1084,6 +1626,485 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX7-GCNTRACKERS:       ; %bb.0:
+; GFX7-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x100400
+; GFX7-GCNTRACKERS-NEXT:    buffer_store_dword v21, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX7-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX7-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    v_mad_u32_u24 v22, 16, 64, s32
+; GFX7-GCNTRACKERS-NEXT:    v_lshrrev_b32_e32 v22, 6, v22
+; GFX7-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX7-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x100400
+; GFX7-GCNTRACKERS-NEXT:    buffer_load_dword v21, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX7-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX7-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX8-GCNTRACKERS:       ; %bb.0:
+; GFX8-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x100400
+; GFX8-GCNTRACKERS-NEXT:    buffer_store_dword v21, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX8-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX8-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    v_mad_u32_u24 v22, 16, 64, s32
+; GFX8-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX8-GCNTRACKERS-NEXT:    v_lshrrev_b32_e32 v22, 6, v22
+; GFX8-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX8-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x100400
+; GFX8-GCNTRACKERS-NEXT:    buffer_load_dword v21, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX8-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX8-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX900-GCNTRACKERS:       ; %bb.0:
+; GFX900-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x100400
+; GFX900-GCNTRACKERS-NEXT:    buffer_store_dword v21, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX900-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX900-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v22, 6, s32
+; GFX900-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX900-GCNTRACKERS-NEXT:    v_add_u32_e32 v22, 16, v22
+; GFX900-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX900-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x100400
+; GFX900-GCNTRACKERS-NEXT:    buffer_load_dword v21, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX900-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX942-GCNTRACKERS:       ; %bb.0:
+; GFX942-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s2, s32, 0x4010
+; GFX942-GCNTRACKERS-NEXT:    scratch_store_dword off, v21, s2 ; 4-byte Folded Spill
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[0:1], 0, exec
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 16
+; GFX942-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX942-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
+; GFX942-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b32 s54, s59
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX942-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s2, s32, 0x4010
+; GFX942-GCNTRACKERS-NEXT:    scratch_load_dword v21, off, s2 ; 4-byte Folded Reload
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10_1-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX10_1-GCNTRACKERS:       ; %bb.0:
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_1-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80200
+; GFX10_1-GCNTRACKERS-NEXT:    buffer_store_dword v21, off, s[0:3], s5 ; 4-byte Folded Spill
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX10_1-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v22, 5, s32
+; GFX10_1-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX10_1-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v22, 16, v22
+; GFX10_1-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX10_1-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_1-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80200
+; GFX10_1-GCNTRACKERS-NEXT:    buffer_load_dword v21, off, s[0:3], s5 ; 4-byte Folded Reload
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10_3-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX10_3-GCNTRACKERS:       ; %bb.0:
+; GFX10_3-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_3-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_3-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80200
+; GFX10_3-GCNTRACKERS-NEXT:    buffer_store_dword v21, off, s[0:3], s5 ; 4-byte Folded Spill
+; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX10_3-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v22, 5, s32
+; GFX10_3-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX10_3-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v22, 16, v22
+; GFX10_3-GCNTRACKERS-NEXT:    v_readfirstlane_b32 s54, v22
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX10_3-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_3-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x80200
+; GFX10_3-GCNTRACKERS-NEXT:    buffer_load_dword v21, off, s[0:3], s5 ; 4-byte Folded Reload
+; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_3-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10_3-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX11-GCNTRACKERS:       ; %bb.0:
+; GFX11-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s1, s32, 0x4010
+; GFX11-GCNTRACKERS-NEXT:    scratch_store_b32 off, v21, s1 ; 4-byte Folded Spill
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX11-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    s_addc_u32 s59, s32, 16
+; GFX11-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX11-GCNTRACKERS-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX11-GCNTRACKERS-NEXT:    s_bitcmp1_b32 s59, 0
+; GFX11-GCNTRACKERS-NEXT:    s_bitset0_b32 s59, 0
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 s54, s59
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX11-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s1, s32, 0x4010
+; GFX11-GCNTRACKERS-NEXT:    scratch_load_b32 v21, off, s1 ; 4-byte Folded Reload
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowest_offset:
+; GFX12-GCNTRACKERS:       ; %bb.0:
+; GFX12-GCNTRACKERS-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_expcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-GCNTRACKERS-NEXT:    scratch_store_b32 off, v21, s32 offset:16384 ; 4-byte Folded Spill
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
+; GFX12-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s35, 4
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s36, 5
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s37, 6
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s38, 7
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s39, 8
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s48, 9
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s49, 10
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s50, 11
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s51, 12
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s52, 13
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s53, 14
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s54, 15
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s55, 16
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 s54, s32
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc, s54, scc
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v21, 16
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v21, 15
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v21, 14
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v21, 13
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v21, 12
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v21, 11
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v21, 10
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v21, 9
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v21, 8
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v21, 7
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v21, 6
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v21, 5
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v21, 4
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v21, 3
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v21, 2
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v21, 1
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v21, 0
+; GFX12-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-GCNTRACKERS-NEXT:    scratch_load_b32 v21, off, s32 offset:16384 ; 4-byte Folded Reload
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
   %alloca0 = alloca [4096 x i32], align 16, addrspace(5)
 
   ; Force no SGPRs to be available for the carry-out of the vector add.
@@ -1660,6 +2681,543 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_i
 ; GFX12-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX7-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX7-GCNTRACKERS:       ; %bb.0:
+; GFX7-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX7-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201100
+; GFX7-GCNTRACKERS-NEXT:    buffer_store_dword v22, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX7-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s28, 17
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s29, 18
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX7-GCNTRACKERS-NEXT:    s_lshr_b32 s5, s32, 6
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX7-GCNTRACKERS-NEXT:    v_lshr_b32_e64 v0, s32, 6
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s4, s5, 0x4240
+; GFX7-GCNTRACKERS-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX7-GCNTRACKERS-NEXT:    v_add_i32_e32 v0, vcc, 64, v0
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s4, 0
+; GFX7-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX7-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 0
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX7-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX7-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s28, v23, 17
+; GFX7-GCNTRACKERS-NEXT:    v_readlane_b32 s29, v23, 18
+; GFX7-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX7-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX7-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201100
+; GFX7-GCNTRACKERS-NEXT:    buffer_load_dword v22, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX7-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX7-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX7-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX8-GCNTRACKERS:       ; %bb.0:
+; GFX8-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX8-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201100
+; GFX8-GCNTRACKERS-NEXT:    buffer_store_dword v22, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX8-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX8-GCNTRACKERS-NEXT:    s_lshr_b32 s5, s32, 6
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX8-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s4, s5, 0x4240
+; GFX8-GCNTRACKERS-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX8-GCNTRACKERS-NEXT:    v_add_u32_e32 v0, vcc, 64, v0
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s4, 0
+; GFX8-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX8-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 0
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX8-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX8-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX8-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX8-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX8-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX8-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201100
+; GFX8-GCNTRACKERS-NEXT:    buffer_load_dword v22, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX8-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX8-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX8-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX900-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX900-GCNTRACKERS:       ; %bb.0:
+; GFX900-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX900-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX900-GCNTRACKERS-NEXT:    buffer_store_dword v23, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201100
+; GFX900-GCNTRACKERS-NEXT:    buffer_store_dword v22, off, s[0:3], s6 ; 4-byte Folded Spill
+; GFX900-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s30, 0
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s31, 1
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s33, 2
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s34, 3
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s35, 4
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s36, 5
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s37, 6
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s38, 7
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s39, 8
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s48, 9
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s49, 10
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s50, 11
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s51, 12
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s52, 13
+; GFX900-GCNTRACKERS-NEXT:    s_lshr_b32 s5, s32, 6
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s53, 14
+; GFX900-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 6, s32
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s4, s5, 0x4240
+; GFX900-GCNTRACKERS-NEXT:    ; implicit-def: $vgpr22 : SGPR spill to VGPR lane
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s54, 15
+; GFX900-GCNTRACKERS-NEXT:    v_add_u32_e32 v0, 64, v0
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s4, 0
+; GFX900-GCNTRACKERS-NEXT:    s_and_b64 s[4:5], 0, exec
+; GFX900-GCNTRACKERS-NEXT:    v_writelane_b32 v23, s55, 16
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 0
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX900-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX900-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v23, 16
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v23, 15
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v23, 14
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v23, 13
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v23, 12
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v23, 11
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v23, 10
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v23, 9
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v23, 8
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v23, 7
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v23, 6
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v23, 5
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v23, 4
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v23, 3
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v23, 2
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v23, 1
+; GFX900-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v23, 0
+; GFX900-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201000
+; GFX900-GCNTRACKERS-NEXT:    buffer_load_dword v23, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX900-GCNTRACKERS-NEXT:    s_add_i32 s6, s32, 0x201100
+; GFX900-GCNTRACKERS-NEXT:    buffer_load_dword v22, off, s[0:3], s6 ; 4-byte Folded Reload
+; GFX900-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[4:5]
+; GFX900-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX900-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX942-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX942-GCNTRACKERS:       ; %bb.0:
+; GFX942-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX942-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s2, s32, 0x8040
+; GFX942-GCNTRACKERS-NEXT:    scratch_store_dword off, v22, s2 ; 4-byte Folded Spill
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s30, 0
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s31, 1
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s33, 2
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s34, 3
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s35, 4
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s36, 5
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s37, 6
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s38, 7
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s39, 8
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s48, 9
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s49, 10
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s50, 11
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s51, 12
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s52, 13
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s0, s32, 64
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s53, 14
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s58, s32, 0x4240
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s54, 15
+; GFX942-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s0
+; GFX942-GCNTRACKERS-NEXT:    s_and_b64 s[0:1], 0, exec
+; GFX942-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s55, 16
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX942-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX942-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v22, 16
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 15
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v22, 14
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v22, 13
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v22, 12
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v22, 11
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v22, 10
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v22, 9
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v22, 8
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v22, 7
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v22, 6
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v22, 5
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v22, 4
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v22, 3
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v22, 2
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v22, 1
+; GFX942-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v22, 0
+; GFX942-GCNTRACKERS-NEXT:    s_xor_saveexec_b64 s[0:1], -1
+; GFX942-GCNTRACKERS-NEXT:    s_add_i32 s2, s32, 0x8040
+; GFX942-GCNTRACKERS-NEXT:    scratch_load_dword v22, off, s2 ; 4-byte Folded Reload
+; GFX942-GCNTRACKERS-NEXT:    s_mov_b64 exec, s[0:1]
+; GFX942-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX942-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10_1-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX10_1-GCNTRACKERS:       ; %bb.0:
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_1-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x100800
+; GFX10_1-GCNTRACKERS-NEXT:    buffer_store_dword v22, off, s[0:3], s5 ; 4-byte Folded Spill
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s30, 0
+; GFX10_1-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
+; GFX10_1-GCNTRACKERS-NEXT:    s_lshr_b32 s4, s32, 5
+; GFX10_1-GCNTRACKERS-NEXT:    s_add_i32 s58, s4, 0x4240
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s31, 1
+; GFX10_1-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v0, 64, v0
+; GFX10_1-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s33, 2
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s34, 3
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s35, 4
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s36, 5
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s37, 6
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s38, 7
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s39, 8
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s48, 9
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s49, 10
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s50, 11
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s51, 12
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s52, 13
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s53, 14
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s54, 15
+; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s55, 16
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_1-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX10_1-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v22, 16
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 15
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v22, 14
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v22, 13
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v22, 12
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v22, 11
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v22, 10
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v22, 9
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v22, 8
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v22, 7
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v22, 6
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v22, 5
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v22, 4
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v22, 3
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v22, 2
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v22, 1
+; GFX10_1-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v22, 0
+; GFX10_1-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_1-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x100800
+; GFX10_1-GCNTRACKERS-NEXT:    buffer_load_dword v22, off, s[0:3], s5 ; 4-byte Folded Reload
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10_1-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX10_3-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX10_3-GCNTRACKERS:       ; %bb.0:
+; GFX10_3-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10_3-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_3-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x100800
+; GFX10_3-GCNTRACKERS-NEXT:    buffer_store_dword v22, off, s[0:3], s5 ; 4-byte Folded Spill
+; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s30, 0
+; GFX10_3-GCNTRACKERS-NEXT:    v_lshrrev_b32_e64 v0, 5, s32
+; GFX10_3-GCNTRACKERS-NEXT:    s_lshr_b32 s4, s32, 5
+; GFX10_3-GCNTRACKERS-NEXT:    s_add_i32 s58, s4, 0x4240
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s31, 1
+; GFX10_3-GCNTRACKERS-NEXT:    v_add_nc_u32_e32 v0, 64, v0
+; GFX10_3-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s33, 2
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s34, 3
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s35, 4
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s36, 5
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s37, 6
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s38, 7
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s39, 8
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s48, 9
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s49, 10
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s50, 11
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s51, 12
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s52, 13
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s53, 14
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s54, 15
+; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s55, 16
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX10_3-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX10_3-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v22, 16
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 15
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v22, 14
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v22, 13
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v22, 12
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v22, 11
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v22, 10
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v22, 9
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v22, 8
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v22, 7
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v22, 6
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v22, 5
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v22, 4
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v22, 3
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v22, 2
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v22, 1
+; GFX10_3-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v22, 0
+; GFX10_3-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s4, -1
+; GFX10_3-GCNTRACKERS-NEXT:    s_add_i32 s5, s32, 0x100800
+; GFX10_3-GCNTRACKERS-NEXT:    buffer_load_dword v22, off, s[0:3], s5 ; 4-byte Folded Reload
+; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
+; GFX10_3-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX10_3-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX11-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX11-GCNTRACKERS:       ; %bb.0:
+; GFX11-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s1, s32, 0x8040
+; GFX11-GCNTRACKERS-NEXT:    scratch_store_b32 off, v22, s1 ; 4-byte Folded Spill
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s30, 0
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s0, s32, 64
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s58, s32, 0x4240
+; GFX11-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s0
+; GFX11-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s31, 1
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s33, 2
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s34, 3
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s35, 4
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s36, 5
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s37, 6
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s38, 7
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s39, 8
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s48, 9
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s49, 10
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s50, 11
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s51, 12
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s52, 13
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s53, 14
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s54, 15
+; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s55, 16
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX11-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX11-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX11-GCNTRACKERS-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v22, 16
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 15
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v22, 14
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v22, 13
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v22, 12
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v22, 11
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v22, 10
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v22, 9
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v22, 8
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v22, 7
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v22, 6
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v22, 5
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v22, 4
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v22, 3
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v22, 2
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v22, 1
+; GFX11-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v22, 0
+; GFX11-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX11-GCNTRACKERS-NEXT:    s_add_i32 s1, s32, 0x8040
+; GFX11-GCNTRACKERS-NEXT:    scratch_load_b32 v22, off, s1 ; 4-byte Folded Reload
+; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX11-GCNTRACKERS-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GCNTRACKERS-LABEL: scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs_gep_immoffset:
+; GFX12-GCNTRACKERS:       ; %bb.0:
+; GFX12-GCNTRACKERS-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_expcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-GCNTRACKERS-NEXT:    scratch_store_b32 off, v22, s32 offset:32768 ; 4-byte Folded Spill
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s30, 0
+; GFX12-GCNTRACKERS-NEXT:    s_add_co_i32 s58, s32, 0x4200
+; GFX12-GCNTRACKERS-NEXT:    v_mov_b32_e32 v0, s32
+; GFX12-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; use alloca0 v0
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s31, 1
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s33, 2
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s34, 3
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s35, 4
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s36, 5
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s37, 6
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s38, 7
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s39, 8
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s48, 9
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s49, 10
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s50, 11
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s51, 12
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s52, 13
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s53, 14
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s54, 15
+; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v22, s55, 16
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    ; kill: def $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 killed $sgpr48_sgpr49_sgpr50_sgpr51_sgpr52_sgpr53_sgpr54_sgpr55 def $sgpr54
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 s54, s58
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMSTART
+; GFX12-GCNTRACKERS-NEXT:    ; use s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], v[0:15], v[16:21], vcc, s54, scc
+; GFX12-GCNTRACKERS-NEXT:    ;;#ASMEND
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s55, v22, 16
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s54, v22, 15
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s53, v22, 14
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s52, v22, 13
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s51, v22, 12
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s50, v22, 11
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s49, v22, 10
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s48, v22, 9
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s39, v22, 8
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s38, v22, 7
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s37, v22, 6
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s36, v22, 5
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s35, v22, 4
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s34, v22, 3
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s33, v22, 2
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s31, v22, 1
+; GFX12-GCNTRACKERS-NEXT:    v_readlane_b32 s30, v22, 0
+; GFX12-GCNTRACKERS-NEXT:    s_xor_saveexec_b32 s0, -1
+; GFX12-GCNTRACKERS-NEXT:    scratch_load_b32 v22, off, s32 offset:32768 ; 4-byte Folded Reload
+; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
+; GFX12-GCNTRACKERS-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GCNTRACKERS-NEXT:    s_setpc_b64 s[30:31]
   %alloca0 = alloca [4096 x i32], align 64, addrspace(5)
   %alloca1 = alloca [4096 x i32], align 4, addrspace(5)
   call void asm sideeffect "; use alloca0 $0", "v"(ptr addrspace(5) %alloca0)
