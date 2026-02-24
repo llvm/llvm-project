@@ -73,31 +73,46 @@ __global__ void kernel(int x, float y) {}
 // DEVICE-NOT: @main
 
 // CUDA-NEW-LABEL: cir.func {{.*}} @main
+// HIP-NEW-LABEL: cir.func {{.*}} @main
 int main(void) {
   // Check dim3 temporaries are allocated for grid and block dimensions
   // CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp0"]
   // CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp1"]
+  // HIP-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp0"]
+  // HIP-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["agg.tmp1"]
   //
   // Check dim3 constructors are called for grid and block dimensions
   // CUDA-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3>, !u32i, !u32i, !u32i) -> ()
   // CUDA-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3>, !u32i, !u32i, !u32i) -> ()
+  // HIP-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3>, !u32i, !u32i, !u32i) -> ()
+  // HIP-NEW: cir.call @_ZN4dim3C1Ejjj({{.*}}) : (!cir.ptr<!rec_dim3>, !u32i, !u32i, !u32i) -> ()
   //
   // Check default shared memory (0) and null stream are set
   // CUDA-NEW: cir.const #cir.int<0> : !u64i
   // CUDA-NEW: cir.const #cir.ptr<null> : !cir.ptr<!rec_cudaStream>
+  // HIP-NEW: cir.const #cir.int<0> : !u64i
+  // HIP-NEW: cir.const #cir.ptr<null> : !cir.ptr<!rec_hipStream>
   //
-  // Check __cudaPushCallConfiguration is called with grid, block, shared mem, stream
+  // Check Push call configuration is called with grid, block, shared mem, stream
   // CUDA-NEW: cir.call @__cudaPushCallConfiguration({{.*}}) : (!rec_dim3, !rec_dim3, !u64i, !cir.ptr<!rec_cudaStream>) -> !s32i
+  // HIP-NEW: cir.call @__hipPushCallConfiguration({{.*}}) : (!rec_dim3, !rec_dim3, !u64i, !cir.ptr<!rec_hipStream>) -> !u32i
   //
   // Check the config result is cast to bool for the conditional
   // CUDA-NEW: cir.cast int_to_bool {{.*}} : !s32i -> !cir.bool
+  // HIP-NEW: cir.cast int_to_bool {{.*}} : !u32i -> !cir.bool
   //
   // Check conditional launch: if config fails (true), skip; else call kernel
   // CUDA-NEW: cir.if %{{.*}} {
   // CUDA-NEW: } else {
   // CUDA-NEW:   cir.const #cir.int<42> : !s32i
   // CUDA-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
-  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) : (!s32i, !cir.float) -> ()
+  // CUDA-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<_Z6kernelif>} : (!s32i, !cir.float) -> ()
   // CUDA-NEW: }
+  // HIP-NEW: cir.if %{{.*}} {
+  // HIP-NEW: } else {
+  // HIP-NEW:   cir.const #cir.int<42> : !s32i
+  // HIP-NEW:   cir.const #cir.fp<1.000000e+00> : !cir.float
+  // HIP-NEW:   cir.call @_Z21__device_stub__kernelif({{.*}}) {cu.kernel_name = #cir.cu.kernel_name<_Z6kernelif>} : (!s32i, !cir.float) -> ()
+  // HIP-NEW: }
   kernel<<<1, 1>>>(42, 1.0f);
 }

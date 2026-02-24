@@ -1980,7 +1980,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
   cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
 
-  assert(!cir::MissingFeatures::hip());
+  if ((cgm.getLangOpts().CUDA || cgm.getLangOpts().HIP) &&
+      !cgm.getLangOpts().CUDAIsDevice && fd->hasAttr<CUDAGlobalAttr>()) {
+    mlir::Operation *handle = cgm.getCUDARuntime().getKernelHandle(callee, gd);
+    callee =
+        mlir::cast<cir::FuncOp>(*cgm.getCUDARuntime().getKernelStub(handle));
+  }
 
   return CIRGenCallee::forDirect(callee, gd);
 }
