@@ -51,12 +51,10 @@ using namespace llvm;
 static cl::opt<bool> EnableScopedNoAlias("enable-scoped-noalias",
                                          cl::init(true), cl::Hidden);
 
-AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
-                                         const MemoryLocation &LocB,
-                                         AAQueryInfo &AAQI,
-                                         const Instruction *) {
+bool ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
+                                  const MemoryLocation &LocB) {
   if (!EnableScopedNoAlias)
-    return AliasResult::MayAlias;
+    return true;
 
   // Get the attached MDNodes.
   const MDNode *AScopes = LocA.AATags.Scope, *BScopes = LocB.AATags.Scope;
@@ -64,12 +62,19 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
   const MDNode *ANoAlias = LocA.AATags.NoAlias, *BNoAlias = LocB.AATags.NoAlias;
 
   if (!mayAliasInScopes(AScopes, BNoAlias))
-    return AliasResult::NoAlias;
+    return false;
 
   if (!mayAliasInScopes(BScopes, ANoAlias))
-    return AliasResult::NoAlias;
+    return false;
 
-  return AliasResult::MayAlias;
+  return true;
+}
+
+AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
+                                         const MemoryLocation &LocB,
+                                         AAQueryInfo &AAQI,
+                                         const Instruction *) {
+  return alias(LocA, LocB) ? AliasResult::MayAlias : AliasResult::NoAlias;
 }
 
 ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,

@@ -201,8 +201,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   if (!MemLoc.AATags.Scope)
     return false;
 
-  const AAMDNodes &MemAA = MemLoc.AATags;
-
   for (VPBlockBase *Block = FirstBB; Block;
        Block = Block->getSingleSuccessor()) {
     assert(Block->getNumSuccessors() <= 1 &&
@@ -222,19 +220,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      // The following code handles four cases:
-      // 1. When sinking, if the current memory operation's scope is contained
-      // within the sinking-store's noalias-scope, it is safe to sink.
-      // 2. Similarly, when hoisting, if hoisting-load's scope is contained
-      // within the current store's noalias-scope, it is safe to hoist.
-      // 3. When sinking, if the sinking-store's scope is not contained within
-      // the current memory operation's noalias-scope, it is not safe to sink.
-      // 4. When hoisting, if the current store's scope is not contained within
-      // the hoisting-load's noalias-scope, it is not safe to hoist.
-      if (ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
-                                                  MemAA.NoAlias) &&
-          ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
-                                                  Loc->AATags.NoAlias))
+      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc))
         return false;
     }
 
