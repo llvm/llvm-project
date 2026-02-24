@@ -4629,13 +4629,13 @@ static void printAffinityClause(OpAsmPrinter &p, Operation *op,
 //===----------------------------------------------------------------------===//
 
 static ParseResult
-parseIteratorsHeader(OpAsmParser &parser, Region &region,
-                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lbs,
-                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &ubs,
-                     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
-                     SmallVectorImpl<Type> &lbTypes,
-                     SmallVectorImpl<Type> &ubTypes,
-                     SmallVectorImpl<Type> &stepTypes) {
+parseIteratorHeader(OpAsmParser &parser, Region &region,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &lbs,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &ubs,
+                    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &steps,
+                    SmallVectorImpl<Type> &lbTypes,
+                    SmallVectorImpl<Type> &ubTypes,
+                    SmallVectorImpl<Type> &stepTypes) {
 
   llvm::SMLoc ivLoc = parser.getCurrentLocation();
   SmallVector<OpAsmParser::Argument> ivArgs;
@@ -4693,10 +4693,10 @@ parseIteratorsHeader(OpAsmParser &parser, Region &region,
   return parser.parseRegion(region, ivArgs);
 }
 
-static void printIteratorsHeader(OpAsmPrinter &p, Operation *op, Region &region,
-                                 ValueRange lbs, ValueRange ubs,
-                                 ValueRange steps, TypeRange, TypeRange,
-                                 TypeRange) {
+static void printIteratorHeader(OpAsmPrinter &p, Operation *op, Region &region,
+                                ValueRange lbs, ValueRange ubs,
+                                ValueRange steps, TypeRange, TypeRange,
+                                TypeRange) {
   Block &entry = region.front();
 
   for (unsigned i = 0, e = entry.getNumArguments(); i < e; ++i) {
@@ -4718,7 +4718,7 @@ static void printIteratorsHeader(OpAsmPrinter &p, Operation *op, Region &region,
                 /*printBlockTerminators=*/true);
 }
 
-LogicalResult IteratorsOp::verify() {
+LogicalResult IteratorOp::verify() {
   auto iteratedTy = llvm::dyn_cast<omp::IteratedType>(getIterated().getType());
   if (!iteratedTy)
     return emitOpError() << "result must be omp.iterated<entry_ty>";
@@ -4728,6 +4728,18 @@ LogicalResult IteratorsOp::verify() {
 
   if (!yield)
     return emitOpError() << "region must be terminated by omp.yield";
+
+  if (yield.getNumOperands() != 1)
+    return emitOpError()
+           << "omp.yield in omp.iterator region must yield exactly one value";
+
+  mlir::Type yieldedTy = yield.getOperand(0).getType();
+  mlir::Type elemTy = iteratedTy.getElementType();
+
+  if (yieldedTy != elemTy)
+    return emitOpError() << "omp.iterated element type (" << elemTy
+                         << ") does not match omp.yield operand type ("
+                         << yieldedTy << ")";
 
   return success();
 }

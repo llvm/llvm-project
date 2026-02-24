@@ -849,7 +849,7 @@ def YieldOp
     : OpenMP_Op<"yield", [Pure, ReturnLike, Terminator,
                           ParentOneOf<["AtomicUpdateOp", "DeclareReductionOp",
                                        "LoopNestOp", "PrivateClauseOp",
-                                       "IteratorsOp"]>]> {
+                                       "IteratorOp"]>]> {
   let summary = "loop yield and termination operation";
   let description = [{
     "omp.yield" yields SSA values from the OpenMP dialect op region and
@@ -2301,36 +2301,35 @@ def DeclareSimdOp
 }
 
 //===----------------------------------------------------------------------===//
-// Iterators Op
+// Iterator Op
 //===----------------------------------------------------------------------===//
 
-def IteratorsOp
-    : OpenMP_Op<"iterators", [AttrSizedOperandSegments,
-                              SingleBlockImplicitTerminator<"YieldOp">]> {
+def IteratorOp : OpenMP_Op<"iterator",
+                           [AttrSizedOperandSegments,
+                            SingleBlockImplicitTerminator<"YieldOp">],
+                           clauses = [OpenMP_LoopRelatedClause]> {
   let summary = "OpenMP iterator modifier";
   let description = [{
-    The result of `omp.iterators` is an abstract handle of type
+    The result of `omp.iterator` is an abstract handle of type
     `!omp.iterated<T>`, representing the list of yielded values. This handle
     can be directly consumed by OpenMP clauses that accept iterator modifiers,
     such as `affinity`, `map`, `to`, `from`, or `depend`.
 
     Example:
-      %it = omp.iterators(%i, %j) =
+      %it = omp.iterator(%i, %j) =
         (%lb_i to %ub_i step %st_i, %lb_j to %ub_j step %st_j) {
         %addr = ...
         omp.yield(%addr)
       } -> !omp.iterated<ptr>
   }];
 
-  let arguments = (ins Variadic<IntLikeType>:$lbs, Variadic<IntLikeType>:$ubs,
-      Variadic<IntLikeType>:$steps);
   let regions = (region SizedRegion<1>:$region);
   let results = (outs OpenMP_IteratedType:$iterated);
 
   let assemblyFormat = [{
-    `(` custom<IteratorsHeader>($region,
-                                $lbs, $ubs, $steps,
-                                type($lbs), type($ubs), type($steps))
+    `(` custom<IteratorHeader>($region,
+                                $loop_lower_bounds, $loop_upper_bounds, $loop_steps,
+                                type($loop_lower_bounds), type($loop_upper_bounds), type($loop_steps))
     `->` qualified(type($iterated)) attr-dict
   }];
 
