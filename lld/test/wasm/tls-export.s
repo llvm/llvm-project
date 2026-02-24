@@ -43,3 +43,9 @@ tls1:
 # CHECK-NEXT:      - Name:            tls1
 # CHECK-NEXT:        Kind:            GLOBAL
 # CHECK-NEXT:        Index:           2
+
+# Check that linking a shared object that exports a TLS global doesn't cause 
+# the global to be erroneously marked as non-TLS.
+
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t-user.o %S/Inputs/use-tls.s
+# RUN: wasm-ld --shared-memory -shared -o %t-user.so %t.so %t-user.o
