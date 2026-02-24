@@ -231,12 +231,6 @@ private:
     return __x;
   }
 };
-template <class _Iter1>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter<_Iter1>
-operator+(typename __wrap_iter<_Iter1>::difference_type __n, __wrap_iter<_Iter1> __x) _NOEXCEPT {
-  __x += __n;
-  return __x;
-}
 
 #if _LIBCPP_STD_VER <= 17
 template <class _It>
