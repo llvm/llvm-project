@@ -28,10 +28,10 @@ namespace math {
 namespace exp10m1f_internal {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
-static constexpr size_t N_EXCEPTS_LO = 11;
+LIBC_INLINE_VAR constexpr size_t N_EXCEPTS_LO = 11;
 
-static constexpr fputil::ExceptValues<float, N_EXCEPTS_LO> EXP10M1F_EXCEPTS_LO =
-    {{
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS_LO>
+    EXP10M1F_EXCEPTS_LO = {{
         // x = 0x1.0fe54ep-11, exp10m1f(x) = 0x1.3937eep-10 (RZ)
         {0x3a07'f2a7U, 0x3a9c'9bf7U, 1U, 0U, 1U},
         // x = 0x1.80e6eap-11, exp10m1f(x) = 0x1.bb8272p-10 (RZ)
@@ -56,10 +56,10 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS_LO> EXP10M1F_EXCEPTS_LO =
         {0xbb65'b4a6U, 0xbc03'b272U, 0U, 1U, 0U},
     }};
 
-static constexpr size_t N_EXCEPTS_HI = 19;
+LIBC_INLINE_VAR constexpr size_t N_EXCEPTS_HI = 19;
 
-static constexpr fputil::ExceptValues<float, N_EXCEPTS_HI> EXP10M1F_EXCEPTS_HI =
-    {{
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float, N_EXCEPTS_HI>
+    EXP10M1F_EXCEPTS_HI = {{
         // (input, RZ output, RU offset, RD offset, RN offset)
         // x = 0x1.8d31eep-8, exp10m1f(x) = 0x1.cc7e4cp-7 (RZ)
         {0x3bc6'98f7U, 0x3c66'3f26U, 1U, 0U, 1U},
@@ -104,7 +104,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS_HI> EXP10M1F_EXCEPTS_HI =
 
 } // namespace exp10m1f_internal
 
-LIBC_INLINE static constexpr float exp10m1f(float x) {
+LIBC_INLINE constexpr float exp10m1f(float x) {
   using namespace exp10m1f_internal;
   using FPBits = fputil::FPBits<float>;
   FPBits xbits(x);

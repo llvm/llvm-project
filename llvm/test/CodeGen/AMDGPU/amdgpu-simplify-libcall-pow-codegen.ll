@@ -34,8 +34,10 @@ define float @test_pow_fast_f32(float %x, float %y) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
-; CHECK-NEXT:    s_add_u32 s16, s16, _Z3powff@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s17, s17, _Z3powff@rel32@hi+12
+; CHECK-NEXT:    s_add_u32 s16, s16, _Z10__pow_fastff@gotpcrel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s17, s17, _Z10__pow_fastff@gotpcrel32@hi+12
+; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
 ; CHECK-NEXT:    s_setpc_b64 s[16:17]
   %pow = tail call fast float @_Z3powff(float %x, float %y)
   ret float %pow
@@ -67,7 +69,7 @@ define half @test_pow_fast_f16__integral_y(half %x, i32 %y.i) {
 ; CHECK-NEXT:    v_cvt_i32_f32_e32 v2, v2
 ; CHECK-NEXT:    v_lshlrev_b16_e32 v2, 15, v2
 ; CHECK-NEXT:    v_and_b32_e32 v0, v2, v0
-; CHECK-NEXT:    v_or_b32_e32 v0, v0, v1
+; CHECK-NEXT:    v_or_b32_e32 v0, v1, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %y = sitofp i32 %y.i to half
   %pow = tail call fast half @_Z3powDhDh(half %x, half %y)
@@ -176,7 +178,7 @@ define double @test_pow_fast_f64__integral_y(double %x, i32 %y.i) {
 ; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_or_b32_e32 v1, v2, v1
+; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_readlane_b32 s53, v43, 13
 ; CHECK-NEXT:    v_readlane_b32 s52, v43, 12
 ; CHECK-NEXT:    v_readlane_b32 s51, v43, 11
@@ -353,7 +355,7 @@ define half @test_pown_fast_f16(half %x, i32 %y) {
 ; CHECK-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; CHECK-NEXT:    v_mul_f16_e32 v2, v3, v2
 ; CHECK-NEXT:    v_exp_f16_e32 v2, v2
-; CHECK-NEXT:    v_or_b32_e32 v0, v0, v2
+; CHECK-NEXT:    v_or_b32_e32 v0, v2, v0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %call = tail call fast half @_Z4pownDhi(half %x, i32 %y)
   ret half %call
@@ -458,7 +460,7 @@ define double @test_pown_fast_f64(double %x, i32 %y) {
 ; CHECK-NEXT:    buffer_load_dword v42, off, s[0:3], s33 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; CHECK-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
-; CHECK-NEXT:    v_or_b32_e32 v1, v2, v1
+; CHECK-NEXT:    v_or_b32_e32 v1, v1, v2
 ; CHECK-NEXT:    v_readlane_b32 s53, v43, 13
 ; CHECK-NEXT:    v_readlane_b32 s52, v43, 12
 ; CHECK-NEXT:    v_readlane_b32 s51, v43, 11

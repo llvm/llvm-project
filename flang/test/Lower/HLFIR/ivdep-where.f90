@@ -1,6 +1,6 @@
 ! RUN: %flang_fc1 -emit-fir -O2 %s -o - | FileCheck %s
 
-! CHECK: #[[ANNOTATION:.*]] = #llvm.loop_annotation<vectorize = #{{.*}}, parallelAccesses = #[[GROUP:.*]]>
+! CHECK: #[[ANNOTATION:.*]] = #llvm.loop_annotation<parallelAccesses = #[[GROUP:.*]]>
 subroutine test_where(a, l)
   real :: a(100,100)
   logical :: l(100, 100)
