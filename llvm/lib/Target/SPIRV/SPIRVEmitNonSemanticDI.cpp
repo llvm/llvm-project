@@ -62,6 +62,7 @@ struct SPIRVEmitNonSemanticDI : public MachineFunctionPass {
 
 private:
   bool emitGlobalDI(MachineFunction &MF);
+  bool emitFunctionDI(MachineFunction &MF);
   static SourceLanguage
   convertDWARFToSPIRVSourceLanguage(int64_t LLVMSourceLanguage);
   static Register emitOpString(MachineRegisterInfo &MRI,
@@ -73,6 +74,14 @@ private:
                     const RegisterBankInfo *RBI, MachineFunction &MF,
                     SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
                     ArrayRef<Register> Registers);
+  static Register
+  emitDebugTypeFunction(MachineRegisterInfo &MRI, MachineIRBuilder &MIRBuilder,
+                        SPIRVGlobalRegistry *GR, const SPIRVTypeInst &VoidTy,
+                        const SPIRVTypeInst &I32Ty, const SPIRVInstrInfo *TII,
+                        const SPIRVRegisterInfo *TRI,
+                        const RegisterBankInfo *RBI, MachineFunction &MF,
+                        DISubroutineType *FuncType, LLVMContext *Context);
+  static uint64_t getDebugFunctionFlags(const DISubprogram *SP);
 };
 } // anonymous namespace
 
@@ -154,6 +163,63 @@ Register SPIRVEmitNonSemanticDI::emitDIInstruction(
   MIB.constrainAllUses(*TII, *TRI, *RBI);
   GR->assignSPIRVTypeToVReg(VoidTy, InstReg, MF);
   return InstReg;
+}
+
+// Emit a DebugTypeFunction instruction for the given DISubroutineType.
+// This creates a SPIRV debug type function that represents the function
+// signature, including type flags, return type, and parameter types. Currently
+// only handles void functions with no parameters; type flags are not translated
+// (using 0 as a placeholder), and full parameter and return type support is
+// TODO.
+Register SPIRVEmitNonSemanticDI::emitDebugTypeFunction(
+    MachineRegisterInfo &MRI, MachineIRBuilder &MIRBuilder,
+    SPIRVGlobalRegistry *GR, const SPIRVTypeInst &VoidTy,
+    const SPIRVTypeInst &I32Ty, const SPIRVInstrInfo *TII,
+    const SPIRVRegisterInfo *TRI, const RegisterBankInfo *RBI,
+    MachineFunction &MF, DISubroutineType *FuncType, LLVMContext *Context) {
+  // TODO: Translate flags from the function type. Currently not translating
+  // flags, using 0 as a placeholder.
+  const Register TypeFlagsReg =
+      GR->buildConstantInt(0, MIRBuilder, I32Ty, false);
+
+  SmallVector<Register> TypeRegs;
+  TypeRegs.push_back(TypeFlagsReg);
+
+  // TODO: Handle parameters and return types
+  // void function with no parameters - use OpTypeVoid for return type
+  const SPIRVTypeInst OpTypeVoidInst =
+      GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
+                               SPIRV::AccessQualifier::ReadWrite, false);
+  const Register VoidTypeReg = GR->getSPIRVTypeID(OpTypeVoidInst);
+  TypeRegs.push_back(VoidTypeReg);
+
+  // Emit DebugTypeFunction instruction
+  const Register InstReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
+  MRI.setType(InstReg, LLT::scalar(32));
+  MachineInstrBuilder MIB =
+      MIRBuilder.buildInstr(SPIRV::OpExtInst)
+          .addDef(InstReg)
+          .addUse(GR->getSPIRVTypeID(VoidTy))
+          .addImm(static_cast<int64_t>(
+              SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100))
+          .addImm(SPIRV::NonSemanticExtInst::DebugTypeFunction);
+  for (auto Reg : TypeRegs) {
+    MIB.addUse(Reg);
+  }
+  MIB.constrainAllUses(*TII, *TRI, *RBI);
+  GR->assignSPIRVTypeToVReg(VoidTy, InstReg, MF);
+  return InstReg;
+}
+
+// TODO: Support additional DebugFunction flags. Currently only FlagIsDefinition
+// is handled.
+uint64_t SPIRVEmitNonSemanticDI::getDebugFunctionFlags(const DISubprogram *SP) {
+  // Map flags - minimal implementation
+  // FlagIsDefinition = 1 << 3
+  uint64_t Flags = 0;
+  if (SP->isDefinition())
+    Flags |= (1 << 3); // FlagIsDefinition
+  return Flags;
 }
 
 bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
@@ -373,8 +439,160 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   return true;
 }
 
+// Emits the SPIRV DebugFunction instruction for a given MachineFunction.
+bool SPIRVEmitNonSemanticDI::emitFunctionDI(MachineFunction &MF) {
+  const Function &F = MF.getFunction();
+
+  DISubprogram *SP = F.getSubprogram();
+  // DISubProgram is not available, don't translate
+  if (!SP) {
+    return false;
+  }
+
+  // TODO: Support declarations
+  // Only process function definitions, skip declarations.
+  // Function declarations require an optional operand in the DebugFunction
+  // instruction that is not yet supported.
+  if (!SP->isDefinition()) {
+    return false;
+  }
+
+  // We insert at the first basic block available
+  if (MF.begin() == MF.end()) {
+    return false;
+  }
+
+  // Get the scope from DISubProgram
+  DIScope *Scope = SP->getScope();
+  if (!Scope) {
+    return false;
+  }
+
+  // TODO: Support additional DIScope types beyond DIFile.
+  // Only translate when scope is DIFile
+  const DIFile *FileScope = dyn_cast<DIFile>(Scope);
+  if (!FileScope) {
+    return false;
+  }
+
+  // Use SP->getUnit() as the scope for DebugSource.
+  // In SPIRV, the DebugSource scope cannot be a File, so we use the
+  // CompilationUnit instead. This matches what the translator does when
+  // handling DIFile scopes.
+  const DICompileUnit *CU = SP->getUnit();
+  if (!CU) {
+    return false;
+  }
+
+  // Check for function type - required for DebugTypeFunction
+  DISubroutineType *FuncType = SP->getType();
+  if (!FuncType) {
+    return false;
+  }
+
+  // TODO: Support functions with return types and parameters.
+  // Check that the function type array has exactly one element and it is null.
+  // This corresponds to void functions with no parameters.
+  DITypeArray TypeArray = FuncType->getTypeArray();
+  if (TypeArray.size() != 1 || TypeArray[0] != nullptr) {
+    return false;
+  }
+
+  const Module *M = getModule(MF);
+  LLVMContext *Context = &M->getContext();
+
+  // Emit DebugCompilationUnit and DebugFunction
+  {
+    const SPIRVInstrInfo *TII = TM->getSubtargetImpl()->getInstrInfo();
+    const SPIRVRegisterInfo *TRI = TM->getSubtargetImpl()->getRegisterInfo();
+    const RegisterBankInfo *RBI = TM->getSubtargetImpl()->getRegBankInfo();
+    SPIRVGlobalRegistry *GR = TM->getSubtargetImpl()->getSPIRVGlobalRegistry();
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+    MachineBasicBlock &MBB = *MF.begin();
+
+    MachineIRBuilder MIRBuilder(MBB, MBB.getFirstTerminator());
+
+    const SPIRVTypeInst VoidTy =
+        GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
+
+    const SPIRVTypeInst I32Ty =
+        GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
+                                 SPIRV::AccessQualifier::ReadWrite, false);
+
+    // Get file path from DICompileUnit for DebugSource (needed for
+    // DebugFunction)
+    DIFile *File = CU->getFile();
+    SmallString<128> FilePath;
+    sys::path::append(FilePath, File->getDirectory(), File->getFilename());
+
+    // Emit DebugSource (needed for DebugFunction)
+    const Register FilePathStrReg = emitOpString(MRI, MIRBuilder, FilePath);
+    const Register DebugSourceReg = emitDIInstruction(
+        MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+        SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
+
+    // Look up the DebugCompilationUnit register from emitGlobalDI
+    auto It = CompileUnitRegMap.find(CU);
+    assert(It != CompileUnitRegMap.end() &&
+           "DebugCompilationUnit register should have been created in "
+           "emitGlobalDI");
+    const Register DebugCompUnitReg = It->second;
+
+    // Emit DebugFunction
+    // Get function metadata
+    StringRef FuncName = SP->getName();
+    StringRef LinkageName = SP->getLinkageName();
+    unsigned Line = SP->getLine();
+    unsigned ScopeLine = SP->getScopeLine();
+
+    uint64_t Flags = getDebugFunctionFlags(SP);
+
+    const Register NameStrReg = emitOpString(MRI, MIRBuilder, FuncName);
+    const Register LinkageNameStrReg =
+        emitOpString(MRI, MIRBuilder, LinkageName);
+
+    // Emit DebugTypeFunction
+    const Register DebugTypeFunctionReg =
+        emitDebugTypeFunction(MRI, MIRBuilder, GR, VoidTy, I32Ty, TII, TRI, RBI,
+                              MF, FuncType, Context);
+
+    const Register LineReg =
+        GR->buildConstantInt(Line, MIRBuilder, I32Ty, false);
+    const Register ColumnReg =
+        GR->buildConstantInt(0, MIRBuilder, I32Ty, false);
+    const Register FlagsReg =
+        GR->buildConstantInt(Flags, MIRBuilder, I32Ty, false);
+    const Register ScopeLineReg =
+        GR->buildConstantInt(ScopeLine, MIRBuilder, I32Ty, false);
+
+    // TODO: Handle function declarations. Declarations require an optional
+    // operand in the DebugFunction instruction that specifies the declaration's
+    // location.
+    const Register DebugFuncReg = emitDIInstruction(
+        MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+        SPIRV::NonSemanticExtInst::DebugFunction,
+        {NameStrReg, DebugTypeFunctionReg, DebugSourceReg, LineReg, ColumnReg,
+         DebugCompUnitReg, LinkageNameStrReg, FlagsReg, ScopeLineReg});
+
+    // Emit DebugFunctionDefinition to link the DebugFunction to the actual
+    // OpFunction.
+    const MachineInstr *OpFunctionMI = GR->getFunctionDefinition(&F);
+    if (OpFunctionMI && OpFunctionMI->getOpcode() == SPIRV::OpFunction) {
+      Register FuncReg = OpFunctionMI->getOperand(0).getReg();
+      emitDIInstruction(MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
+                        SPIRV::NonSemanticExtInst::DebugFunctionDefinition,
+                        {DebugFuncReg, FuncReg});
+    }
+
+    return true;
+  }
+}
+
+// TODO: Deduplicate instructions
 bool SPIRVEmitNonSemanticDI::runOnMachineFunction(MachineFunction &MF) {
   CompileUnitRegMap.clear();
   bool Res = emitGlobalDI(MF);
+  Res |= emitFunctionDI(MF);
   return Res;
 }
