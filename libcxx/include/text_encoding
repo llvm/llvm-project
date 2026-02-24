@@ -57,22 +57,19 @@ struct text_encoding
 
 */
 
-#if __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
-#  include <__cxx03/__config>
-#else
+#include <__config>
 
-#  include <__config>
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#if _LIBCPP_STD_VER >= 26
+
 #  include <__functional/hash.h>
 #  include <__ranges/enable_borrowed_range.h>
 #  include <__text_encoding/te_impl.h>
 #  include <string_view>
 #  include <version>
-
-#  if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
-#    pragma GCC system_header
-#  endif
-
-#  if _LIBCPP_STD_VER >= 26
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -136,7 +133,5 @@ inline constexpr bool ranges::enable_borrowed_range<text_encoding::aliases_view>
 _LIBCPP_END_NAMESPACE_STD
 
 #  endif // _LIBCPP_STD_VER >= 26
-
-#endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_TEXT_ENCODING

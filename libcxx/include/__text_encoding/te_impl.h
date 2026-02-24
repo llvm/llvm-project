@@ -65,7 +65,7 @@ private:
     INVARIANT               = 29,
     ISO2IntlRefVersion      = 30,
     NATSSEFI                = 31,
-    NATSSEFIADD             = 32,
+    NATSSEFIADD             = 32, // NATS-DANO (33) and NATS-DANO-ADD (34) are omitted by the standard.
     ISO10Swedish            = 35,
     KSC56011987             = 36,
     ISO2022KR               = 37,
@@ -372,7 +372,7 @@ private:
 
     const __te_data* __found = std::find_if(__entries + 2, std::end(__entries), __pred);
     if (__found == std::end(__entries)) {
-      return 0u; // other
+      return __other_idx_; // other
     }
 
     return __found - __entries;
@@ -386,7 +386,7 @@ private:
     auto __found = std::lower_bound(std::begin(__entries), std::end(__entries), __i);
 
     if (__found == std::end(__entries)) {
-      return 1u; // unknown
+      return __unknown_idx_; // unknown
     }
 
     return __found - __entries;
@@ -595,9 +595,12 @@ private:
       {857, 2108, 2}, {859, 2109, 2}, {861, 2250, 2}, {863, 2251, 2}, {865, 2252, 2}, {867, 2253, 2}, {869, 2254, 2},
       {871, 2255, 2}, {873, 2256, 2}, {875, 2257, 2}, {877, 2258, 2}, {879, 2259, 3}, {882, 2260, 2}};
 
+  static constexpr auto __other_idx_   = 0u;
+  static constexpr auto __unknown_idx_ = 1u;
+
   static constexpr char const* __aliases_table[] = {
-      "",
-      "",
+      "", // other
+      "", // unknown
       "US-ASCII",
       "iso-ir-6",
       "ANSI_X3.4-1968",
