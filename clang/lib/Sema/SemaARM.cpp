@@ -1174,20 +1174,13 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   if (ValRes.isInvalid())
     return true;
 
-  // Check if value is an integer type.
   Expr *ValArg = ValRes.get();
-  if (!ValArg->getType()->isIntegerType()) {
-    SemaRef.Diag(
-        Loc, diag::err_arm_atomic_store_with_stshh_bad_value_must_be_integer)
-        << ValArg->getType() << ValArg->getSourceRange();
-    return true;
-  }
+  QualType ValArgType = ValArg->getType().getUnqualifiedType();
 
-  // Value width must match the pointee width.
-  if (Context.getTypeSize(ValArg->getType()) != Bits) {
+  // Check value type and width
+  if (!Context.hasSameType(ValArgType, ValType)) {
     SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_value_type)
-        << Bits << Context.getTypeSize(ValArg->getType())
-        << ValArg->getSourceRange();
+        << ValType << ValArg->getType() << ValArg->getSourceRange();
     return true;
   }
 
@@ -1221,19 +1214,13 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
     return true;
   }
 
-  // Validate order here; the value is mapped to LLVM ordering in codegen.
-  llvm::APSInt OrderVal = *OrderValOpt;
-  int64_t Order = OrderVal.getSExtValue();
+  llvm::APSInt OrderVal;
+  if (SemaRef.BuiltinConstantArg(TheCall, 2, OrderVal))
+    return true;
+
   // __ATOMIC_RELAXED=0, __ATOMIC_RELEASE=3, __ATOMIC_SEQ_CST=5.
-  constexpr int64_t AtomicRelaxed = 0;
-  constexpr int64_t AtomicRelease = 3;
-  constexpr int64_t AtomicSeqCst = 5;
-  switch (Order) {
-  case AtomicRelaxed:
-  case AtomicRelease:
-  case AtomicSeqCst:
-    break;
-  default:
+  int64_t Order = OrderVal.getSExtValue();
+  if (Order != 0 && Order != 3 && Order != 5) {
     SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_order)
         << OrderArg->getSourceRange();
     return true;

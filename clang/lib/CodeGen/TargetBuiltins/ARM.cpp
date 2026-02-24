@@ -5275,8 +5275,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_atomic_store_with_stshh) {
-    const Expr *Arg0 = E->getArg(0);
-    Value *StoreAddr = EmitScalarExpr(Arg0);
+    Value *StoreAddr = EmitScalarExpr(E->getArg(0));
     Value *StoreValue = EmitScalarExpr(E->getArg(1));
     Value *Order = EmitScalarExpr(E->getArg(2));
     Value *Policy = EmitScalarExpr(E->getArg(3));
@@ -5298,20 +5297,14 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
           "unexpected memory order for __arm_atomic_store_with_stshh");
     }
 
-    llvm::Value *OrderArg =
-        llvm::ConstantInt::get(Int32Ty, OrderC->getZExtValue());
-    llvm::Value *PolicyArg =
-        llvm::ConstantInt::get(Int32Ty, PolicyC->getZExtValue());
-
-    llvm::Type *PtrTy = StoreAddr->getType();
-    llvm::Type *ValTy = StoreValue->getType();
-
     Function *F =
-        CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store, {PtrTy, ValTy});
+        CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
+              {StoreAddr->getType(), StoreValue->getType()});
+
 
     // Emit a single intrinsic so backend can expand to STSHH followed by
     // atomic store, to guarantee STSHH immediately precedes store insn.
-    return Builder.CreateCall(F, {StoreAddr, StoreValue, OrderArg, PolicyArg});
+    return Builder.CreateCall(F, {StoreAddr, StoreValue, OrderC, PolicyC});
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||
