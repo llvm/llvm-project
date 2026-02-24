@@ -8,6 +8,7 @@
 
 #include "startup/linux/irelative.h"
 #include "hdr/elf_macros.h"
+#include "hdr/elf_proxy.h"
 #include "hdr/link_macros.h"
 #include "src/__support/macros/config.h"
 

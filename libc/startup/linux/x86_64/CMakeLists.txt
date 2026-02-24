@@ -36,6 +36,7 @@ add_startup_object(
   DEPENDS
     libc.hdr.link_macros
     libc.hdr.elf_macros
+    libc.hdr.elf_proxy
     libc.hdr.stdint_proxy
     libc.src.__support.macros.config
   COMPILE_OPTIONS
