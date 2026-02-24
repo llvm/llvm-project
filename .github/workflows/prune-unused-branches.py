@@ -144,10 +144,6 @@ def generate_patches_for_all_branches(branches_to_remove: list[str], patches_pat
 
 def delete_branches(branches_to_remove: list[str]):
     for branch in branches_to_remove:
-        # TODO(boomanaiden154): Only delete my branches for now to verify that
-        # everything is working in the production environment.
-        if "boomanaiden154" not in branch:
-            continue
         command_vector = ["git", "push", "-d", "origin", branch]
         try:
             subprocess.run(
