@@ -177,10 +177,10 @@ COFFVCRuntimeBootstrapper::getMSVCToolchainPath() {
   MSVCToolchainPath ToolchainPath;
   SmallString<256> VCToolchainLib(VCToolChainPath);
   sys::path::append(VCToolchainLib, "lib", "x64");
-  ToolchainPath.VCToolchainLib = VCToolchainLib;
+  ToolchainPath.VCToolchainLib = std::move(VCToolchainLib);
 
   SmallString<256> UCRTSdkLib(UniversalCRTSdkPath);
   sys::path::append(UCRTSdkLib, "Lib", UCRTVersion, "ucrt", "x64");
-  ToolchainPath.UCRTSdkLib = UCRTSdkLib;
+  ToolchainPath.UCRTSdkLib = std::move(UCRTSdkLib);
   return ToolchainPath;
 }

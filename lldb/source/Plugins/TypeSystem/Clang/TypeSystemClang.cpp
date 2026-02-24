@@ -885,11 +885,15 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
 }
 
 uint32_t TypeSystemClang::GetPointerByteSize() {
-  if (m_pointer_byte_size == 0)
-    if (auto size = GetBasicType(lldb::eBasicTypeVoid)
-                        .GetPointerType()
-                        .GetByteSize(nullptr))
-      m_pointer_byte_size = *size;
+  if (m_pointer_byte_size != 0)
+    return m_pointer_byte_size;
+  auto size_or_err =
+      GetBasicType(lldb::eBasicTypeVoid).GetPointerType().GetByteSize(nullptr);
+  if (!size_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    return m_pointer_byte_size;
+  }
+  m_pointer_byte_size = *size_or_err;
   return m_pointer_byte_size;
 }
 
@@ -1323,8 +1327,7 @@ CompilerType TypeSystemClang::CreateRecordType(
   if (metadata)
     SetMetadata(decl, *metadata);
 
-  if (access_type != eAccessNone)
-    decl->setAccess(ConvertAccessTypeToAccessSpecifier(access_type));
+  decl->setAccess(AS_public);
 
   if (decl_ctx)
     decl_ctx->addDecl(decl);
@@ -1344,29 +1347,6 @@ QualType GetValueParamType(const clang::TemplateArgument &argument) {
     return argument.getStructuralValueType();
   default:
     return {};
-  }
-}
-
-void AddAccessSpecifierDecl(clang::CXXRecordDecl *cxx_record_decl,
-                            ASTContext &ct,
-                            clang::AccessSpecifier previous_access,
-                            clang::AccessSpecifier access_specifier) {
-  if (!cxx_record_decl->isClass() && !cxx_record_decl->isStruct())
-    return;
-  if (previous_access != access_specifier) {
-    // For struct, don't add AS_public if it's the first AccessSpecDecl.
-    // For class, don't add AS_private if it's the first AccessSpecDecl.
-    if ((cxx_record_decl->isStruct() &&
-         previous_access == clang::AccessSpecifier::AS_none &&
-         access_specifier == clang::AccessSpecifier::AS_public) ||
-        (cxx_record_decl->isClass() &&
-         previous_access == clang::AccessSpecifier::AS_none &&
-         access_specifier == clang::AccessSpecifier::AS_private)) {
-      return;
-    }
-    cxx_record_decl->addDecl(
-        AccessSpecDecl::Create(ct, access_specifier, cxx_record_decl,
-                               SourceLocation(), SourceLocation()));
   }
 }
 } // namespace
@@ -1458,11 +1438,7 @@ clang::FunctionTemplateDecl *TypeSystemClang::CreateFunctionTemplateDecl(
     // TODO: verify which decl context we should put template_param_decls into..
     template_param_decls[i]->setDeclContext(func_decl);
   }
-  // Function templates inside a record need to have an access specifier.
-  // It doesn't matter what access specifier we give the template as LLDB
-  // anyway allows accessing everything inside a record.
-  if (decl_ctx->isRecord())
-    func_tmpl_decl->setAccess(clang::AccessSpecifier::AS_public);
+  func_tmpl_decl->setAccess(clang::AccessSpecifier::AS_public);
 
   return func_tmpl_decl;
 }
@@ -1637,9 +1613,7 @@ ClassTemplateDecl *TypeSystemClang::CreateClassTemplateDecl(
   template_cxx_decl->setDescribedClassTemplate(class_template_decl);
   SetOwningModule(class_template_decl, owning_module);
 
-  if (access_type != eAccessNone)
-    class_template_decl->setAccess(
-        ConvertAccessTypeToAccessSpecifier(access_type));
+  class_template_decl->setAccess(AS_public);
 
   decl_ctx->addDecl(class_template_decl);
 
@@ -1770,20 +1744,6 @@ bool TypeSystemClang::CheckOverloadedOperatorKindParameterCount(
     break;
   }
   return false;
-}
-
-clang::AccessSpecifier
-TypeSystemClang::UnifyAccessSpecifiers(clang::AccessSpecifier lhs,
-                                       clang::AccessSpecifier rhs) {
-  // Make the access equal to the stricter of the field and the nested field's
-  // access
-  if (lhs == AS_none || rhs == AS_none)
-    return AS_none;
-  if (lhs == AS_private || rhs == AS_private)
-    return AS_private;
-  if (lhs == AS_protected || rhs == AS_protected)
-    return AS_protected;
-  return AS_public;
 }
 
 bool TypeSystemClang::FieldIsBitfield(FieldDecl *field,
@@ -2383,7 +2343,7 @@ CompilerType TypeSystemClang::CreateEnumerationType(
   // TODO: check if we should be setting the promotion type too?
   enum_decl->setIntegerType(ClangUtil::GetQualType(integer_clang_type));
 
-  enum_decl->setAccess(AS_public); // TODO respect what's in the debug info
+  enum_decl->setAccess(AS_public);
 
   return GetType(ast.getCanonicalTagType(enum_decl));
 }
@@ -2558,22 +2518,6 @@ TypeSystemClang::GetMetadata(const clang::Type *object) {
     return It->second;
 
   return std::nullopt;
-}
-
-void TypeSystemClang::SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
-                                             clang::AccessSpecifier access) {
-  if (access == clang::AccessSpecifier::AS_none)
-    m_cxx_record_decl_access.erase(object);
-  else
-    m_cxx_record_decl_access[object] = access;
-}
-
-clang::AccessSpecifier
-TypeSystemClang::GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object) {
-  auto It = m_cxx_record_decl_access.find(object);
-  if (It != m_cxx_record_decl_access.end())
-    return It->second;
-  return clang::AccessSpecifier::AS_none;
 }
 
 clang::DeclContext *
@@ -2814,23 +2758,6 @@ static bool GetCompleteQualType(clang::ASTContext *ast,
   }
 
   return true;
-}
-
-static clang::ObjCIvarDecl::AccessControl
-ConvertAccessTypeToObjCIvarAccessControl(AccessType access) {
-  switch (access) {
-  case eAccessNone:
-    return clang::ObjCIvarDecl::None;
-  case eAccessPublic:
-    return clang::ObjCIvarDecl::Public;
-  case eAccessPrivate:
-    return clang::ObjCIvarDecl::Private;
-  case eAccessProtected:
-    return clang::ObjCIvarDecl::Protected;
-  case eAccessPackage:
-    return clang::ObjCIvarDecl::Package;
-  }
-  return clang::ObjCIvarDecl::None;
 }
 
 // Tests
@@ -3469,38 +3396,15 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
-bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                          bool &is_complex) {
-  if (type) {
-    clang::QualType qual_type(GetCanonicalQualType(type));
+bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
 
-    if (const clang::BuiltinType *BT = llvm::dyn_cast<clang::BuiltinType>(
-            qual_type->getCanonicalTypeInternal())) {
-      clang::BuiltinType::Kind kind = BT->getKind();
-      if (kind >= clang::BuiltinType::Float &&
-          kind <= clang::BuiltinType::LongDouble) {
-        is_complex = false;
-        return true;
-      }
-    } else if (const clang::ComplexType *CT =
-                   llvm::dyn_cast<clang::ComplexType>(
-                       qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(),
-                              is_complex)) {
-        is_complex = true;
-        return true;
-      }
-    } else if (const clang::VectorType *VT = llvm::dyn_cast<clang::VectorType>(
-                   qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(),
-                              is_complex)) {
-        is_complex = false;
-        return true;
-      }
-    }
-  }
-  is_complex = false;
-  return false;
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  if (qual_type.isNull())
+    return false;
+
+  return qual_type->isFloatingType();
 }
 
 bool TypeSystemClang::IsDefined(lldb::opaque_compiler_type_t type) {
@@ -4196,6 +4100,7 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   // Ext-Int is just an integer type.
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return lldb::eTypeClassBuiltin;
   case clang::Type::ObjCObjectPointer:
     return lldb::eTypeClassObjCObjectPointer;
@@ -4708,7 +4613,7 @@ CompilerType TypeSystemClang::CreateTypedef(
     if (tdecl && !tdecl->getIdentifier() && !tdecl->getTypedefNameForAnonDecl())
       tdecl->setTypedefNameForAnonDecl(decl);
 
-    decl->setAccess(clang::AS_public); // TODO respect proper access specifier
+    decl->setAccess(clang::AS_public);
 
     // Get a uniqued clang::QualType for the typedef decl type
     NestedNameSpecifier Qualifier =
@@ -4894,6 +4799,7 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return qual_type->isUnsignedIntegerType() ? lldb::eEncodingUint
                                               : lldb::eEncodingSint;
 
@@ -5194,6 +5100,7 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
 
   case clang::Type::BitInt:
   case clang::Type::DependentBitInt:
+  case clang::Type::OverflowBehavior:
     return qual_type->isUnsignedIntegerType() ? lldb::eFormatUnsigned
                                               : lldb::eFormatDecimal;
 
@@ -7533,17 +7440,8 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     }
 
     if (field) {
-      clang::AccessSpecifier access_specifier =
-          TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access);
-      field->setAccess(access_specifier);
+      field->setAccess(AS_public);
 
-      if (clang::CXXRecordDecl *cxx_record_decl =
-              llvm::dyn_cast<CXXRecordDecl>(record_decl)) {
-        AddAccessSpecifierDecl(cxx_record_decl, ast->getASTContext(),
-                               ast->GetCXXRecordDeclAccess(cxx_record_decl),
-                               access_specifier);
-        ast->SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
-      }
       record_decl->addDecl(field);
 
       VerifyDecl(field);
@@ -7562,7 +7460,7 @@ clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
       ivar->setDeclContext(class_interface_decl);
       ivar->setDeclName(ident);
       ivar->setType(ClangUtil::GetQualType(field_clang_type));
-      ivar->setAccessControl(ConvertAccessTypeToObjCIvarAccessControl(access));
+      ivar->setAccessControl(ObjCIvarDecl::AccessControl::Public);
       if (bit_width)
         ivar->setBitWidth(bit_width);
       ivar->setSynthesize(is_synthesized);
@@ -7634,8 +7532,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
 
           indirect_field->setImplicit();
 
-          indirect_field->setAccess(TypeSystemClang::UnifyAccessSpecifiers(
-              field_pos->getAccess(), nested_field_decl->getAccess()));
+          indirect_field->setAccess(AS_public);
 
           indirect_fields.push_back(indirect_field);
         } else if (clang::IndirectFieldDecl *nested_indirect_field_decl =
@@ -7665,8 +7562,7 @@ void TypeSystemClang::BuildIndirectFields(const CompilerType &type) {
 
           indirect_field->setImplicit();
 
-          indirect_field->setAccess(TypeSystemClang::UnifyAccessSpecifiers(
-              field_pos->getAccess(), nested_indirect_field_decl->getAccess()));
+          indirect_field->setAccess(AS_public);
 
           indirect_fields.push_back(indirect_field);
         }
@@ -7732,8 +7628,7 @@ clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
   if (!var_decl)
     return nullptr;
 
-  var_decl->setAccess(
-      TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access));
+  var_decl->setAccess(AS_public);
   record_decl->addDecl(var_decl);
 
   VerifyDecl(var_decl);
@@ -7929,10 +7824,7 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   }
   SetMemberOwningModule(cxx_method_decl, cxx_record_decl);
 
-  clang::AccessSpecifier access_specifier =
-      TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access);
-
-  cxx_method_decl->setAccess(access_specifier);
+  cxx_method_decl->setAccess(AS_public);
   cxx_method_decl->setVirtualAsWritten(is_virtual);
 
   if (is_attr_used)
@@ -7946,11 +7838,6 @@ clang::CXXMethodDecl *TypeSystemClang::AddMethodToCXXRecordType(
   // have names, so we omit them when creating the ParmVarDecls.
   cxx_method_decl->setParams(CreateParameterDeclarations(
       cxx_method_decl, *method_function_prototype, /*parameter_names=*/{}));
-
-  AddAccessSpecifierDecl(cxx_record_decl, getASTContext(),
-                         GetCXXRecordDeclAccess(cxx_record_decl),
-                         access_specifier);
-  SetCXXRecordDeclAccess(cxx_record_decl, access_specifier);
 
   cxx_record_decl->addDecl(cxx_method_decl);
 
@@ -8510,8 +8397,6 @@ bool TypeSystemClang::CompleteTagDeclarationDefinition(
       cxx_record_decl->setHasLoadedFieldsFromExternalStorage(true);
       cxx_record_decl->setHasExternalLexicalStorage(false);
       cxx_record_decl->setHasExternalVisibleStorage(false);
-      lldb_ast->SetCXXRecordDeclAccess(cxx_record_decl,
-                                       clang::AccessSpecifier::AS_none);
       return true;
     }
   }
@@ -9109,7 +8994,8 @@ clang::ClassTemplateDecl *TypeSystemClang::ParseClassTemplateDecl(
     if (auto i = template_basename.find('<'); i != std::string::npos)
       template_basename.erase(i);
 
-    return CreateClassTemplateDecl(decl_ctx, owning_module, access_type,
+    return CreateClassTemplateDecl(decl_ctx, owning_module,
+                                   /*access_type=*/{},
                                    template_basename.c_str(), tag_decl_kind,
                                    template_param_infos);
   }

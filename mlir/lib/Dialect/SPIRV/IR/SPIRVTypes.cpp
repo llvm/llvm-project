@@ -50,10 +50,10 @@ public:
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case<ArrayType, ImageType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
-        .Case<SampledImageType>([this](SampledImageType concreteType) {
+        .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
         })
-        .Case<StructType>([this](StructType concreteType) {
+        .Case([this](StructType concreteType) {
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
@@ -97,13 +97,13 @@ public:
         .Case<CooperativeMatrixType, ImageType, MatrixType, PointerType,
               RuntimeArrayType, ScalarType, TensorArmType, VectorType>(
             [this](auto concreteType) { addConcrete(concreteType); })
-        .Case<ArrayType>([this](ArrayType concreteType) {
+        .Case([this](ArrayType concreteType) {
           add(concreteType.getElementType());
         })
-        .Case<SampledImageType>([this](SampledImageType concreteType) {
+        .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
         })
-        .Case<StructType>([this](StructType concreteType) {
+        .Case([this](StructType concreteType) {
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
@@ -195,9 +195,8 @@ Type CompositeType::getElementType(unsigned index) const {
   return TypeSwitch<Type, Type>(*this)
       .Case<ArrayType, CooperativeMatrixType, RuntimeArrayType, VectorType,
             TensorArmType>([](auto type) { return type.getElementType(); })
-      .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
-      .Case<StructType>(
-          [index](StructType type) { return type.getElementType(index); })
+      .Case([](MatrixType type) { return type.getColumnType(); })
+      .Case([index](StructType type) { return type.getElementType(index); })
       .DefaultUnreachable("Invalid composite type");
 }
 
@@ -205,7 +204,7 @@ unsigned CompositeType::getNumElements() const {
   return TypeSwitch<SPIRVType, unsigned>(*this)
       .Case<ArrayType, StructType, TensorArmType, VectorType>(
           [](auto type) { return type.getNumElements(); })
-      .Case<MatrixType>([](MatrixType type) { return type.getNumColumns(); })
+      .Case([](MatrixType type) { return type.getNumColumns(); })
       .DefaultUnreachable("Invalid type for number of elements query");
 }
 
@@ -552,6 +551,11 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
     extensions.push_back(ext);
   }
 
+  if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+    static constexpr auto ext = Extension::SPV_EXT_float8;
+    extensions.push_back(ext);
+  }
+
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
   // SPV_KHR_8bit_storage for more details.
@@ -649,6 +653,15 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   } else {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
+    case 8: {
+      if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+        static constexpr auto cap = Capability::Float8EXT;
+        capabilities.push_back(cap);
+      } else {
+        llvm_unreachable("invalid 8-bit float type to getCapabilities");
+      }
+      break;
+    }
     case 16: {
       if (isa<BFloat16Type>(type)) {
         static constexpr auto cap = Capability::BFloat16TypeKHR;
@@ -704,7 +717,7 @@ void SPIRVType::getCapabilities(
 
 std::optional<int64_t> SPIRVType::getSizeInBytes() {
   return TypeSwitch<SPIRVType, std::optional<int64_t>>(*this)
-      .Case<ScalarType>([](ScalarType type) -> std::optional<int64_t> {
+      .Case([](ScalarType type) -> std::optional<int64_t> {
         // According to the SPIR-V spec:
         // "There is no physical size or bit pattern defined for values with
         // boolean type. If they are stored (in conjunction with OpVariable),
@@ -717,7 +730,7 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
           return std::nullopt;
         return bitWidth / 8;
       })
-      .Case<ArrayType>([](ArrayType type) -> std::optional<int64_t> {
+      .Case([](ArrayType type) -> std::optional<int64_t> {
         // Since array type may have an explicit stride declaration (in bytes),
         // we also include it in the calculation.
         auto elementType = cast<SPIRVType>(type.getElementType());

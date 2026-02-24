@@ -5,7 +5,8 @@
 define half @ui129tohalf(i129 %a) {
 ; CHECK-LABEL: @ui129tohalf(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -90,7 +91,8 @@ define half @ui129tohalf(i129 %a) {
 define float @ui129tofloat(i129 %a) {
 ; CHECK-LABEL: @ui129tofloat(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -174,7 +176,8 @@ define float @ui129tofloat(i129 %a) {
 define double @ui129todouble(i129 %a) {
 ; CHECK-LABEL: @ui129todouble(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -263,7 +266,8 @@ define double @ui129todouble(i129 %a) {
 define x86_fp80 @ui129tox86_fp80(i129 %a) {
 ; CHECK-LABEL: @ui129tox86_fp80(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -347,7 +351,8 @@ define x86_fp80 @ui129tox86_fp80(i129 %a) {
 define fp128 @ui129tofp128(i129 %a) {
 ; CHECK-LABEL: @ui129tofp128(
 ; CHECK-NEXT:  itofp-entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A:%.*]], 0
+; CHECK-NEXT:    [[A:%.*]] = freeze i129 [[A1:%.*]]
+; CHECK-NEXT:    [[TMP0:%.*]] = icmp eq i129 [[A]], 0
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
 ; CHECK-NEXT:    [[TMP1:%.*]] = ashr i129 [[A]], 128
@@ -431,13 +436,14 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-LABEL: @ui129tofloatv2(
 ; CHECK-NEXT:  itofp-entryitofp-entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i129> [[A:%.*]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i129 [[TMP0]], 0
+; CHECK-NEXT:    [[TMP10:%.*]] = freeze i129 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i129 [[TMP10]], 0
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[ITOFP_RETURN1:%.*]], label [[ITOFP_IF_END2:%.*]]
 ; CHECK:       itofp-if-end2:
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i129 [[TMP0]], 128
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i129 [[TMP2]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = ashr i129 [[TMP10]], 128
+; CHECK-NEXT:    [[TMP3:%.*]] = xor i129 [[TMP2]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i129 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP0]], i1 true)
+; CHECK-NEXT:    [[TMP5:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP10]], i1 true)
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i129 [[TMP5]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 129, [[TMP6]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 128, [[TMP6]]
@@ -449,22 +455,22 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:      i32 26, label [[ITOFP_SW_EPILOG6:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       itofp-sw-bb4:
-; CHECK-NEXT:    [[TMP10:%.*]] = shl i129 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP65:%.*]] = shl i129 [[TMP10]], 1
 ; CHECK-NEXT:    br label [[ITOFP_SW_EPILOG6]]
 ; CHECK:       itofp-sw-default5:
 ; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 103, [[TMP6]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i129
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i129 [[TMP0]], [[TMP12]]
+; CHECK-NEXT:    [[TMP13:%.*]] = lshr i129 [[TMP10]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP6]], 26
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i129
 ; CHECK-NEXT:    [[TMP16:%.*]] = lshr i129 -1, [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = and i129 [[TMP16]], [[TMP0]]
+; CHECK-NEXT:    [[TMP17:%.*]] = and i129 [[TMP16]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ne i129 [[TMP17]], 0
 ; CHECK-NEXT:    [[TMP19:%.*]] = zext i1 [[TMP18]] to i129
 ; CHECK-NEXT:    [[TMP20:%.*]] = or i129 [[TMP13]], [[TMP19]]
 ; CHECK-NEXT:    br label [[ITOFP_SW_EPILOG6]]
 ; CHECK:       itofp-sw-epilog6:
-; CHECK-NEXT:    [[TMP21:%.*]] = phi i129 [ [[TMP20]], [[ITOFP_SW_DEFAULT5]] ], [ [[TMP0]], [[ITOFP_IF_THEN43]] ], [ [[TMP10]], [[ITOFP_SW_BB4]] ]
+; CHECK-NEXT:    [[TMP21:%.*]] = phi i129 [ [[TMP20]], [[ITOFP_SW_DEFAULT5]] ], [ [[TMP10]], [[ITOFP_IF_THEN43]] ], [ [[TMP65]], [[ITOFP_SW_BB4]] ]
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc i129 [[TMP21]] to i32
 ; CHECK-NEXT:    [[TMP23:%.*]] = lshr i32 [[TMP22]], 2
 ; CHECK-NEXT:    [[TMP24:%.*]] = and i32 [[TMP23]], 1
@@ -487,7 +493,7 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK:       itofp-if-else8:
 ; CHECK-NEXT:    [[TMP37:%.*]] = add i32 [[TMP6]], -105
 ; CHECK-NEXT:    [[TMP38:%.*]] = zext i32 [[TMP37]] to i129
-; CHECK-NEXT:    [[TMP39:%.*]] = shl i129 [[TMP0]], [[TMP38]]
+; CHECK-NEXT:    [[TMP39:%.*]] = shl i129 [[TMP10]], [[TMP38]]
 ; CHECK-NEXT:    [[TMP40:%.*]] = trunc i129 [[TMP39]] to i32
 ; CHECK-NEXT:    [[TMP41:%.*]] = lshr i129 [[TMP39]], 32
 ; CHECK-NEXT:    [[TMP42:%.*]] = trunc i129 [[TMP41]] to i32
@@ -508,13 +514,14 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:    [[TMP53:%.*]] = phi float [ [[TMP52]], [[ITOFP_IF_END269]] ], [ 0.000000e+00, [[ITOFP_ENTRYITOFP_ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[TMP54:%.*]] = insertelement <2 x float> poison, float [[TMP53]], i64 0
 ; CHECK-NEXT:    [[TMP55:%.*]] = extractelement <2 x i129> [[A]], i64 1
-; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i129 [[TMP55]], 0
+; CHECK-NEXT:    [[TMP110:%.*]] = freeze i129 [[TMP55]]
+; CHECK-NEXT:    [[TMP56:%.*]] = icmp eq i129 [[TMP110]], 0
 ; CHECK-NEXT:    br i1 [[TMP56]], label [[ITOFP_RETURN:%.*]], label [[ITOFP_IF_END:%.*]]
 ; CHECK:       itofp-if-end:
-; CHECK-NEXT:    [[TMP57:%.*]] = ashr i129 [[TMP55]], 128
-; CHECK-NEXT:    [[TMP58:%.*]] = xor i129 [[TMP57]], [[TMP55]]
+; CHECK-NEXT:    [[TMP57:%.*]] = ashr i129 [[TMP110]], 128
+; CHECK-NEXT:    [[TMP58:%.*]] = xor i129 [[TMP57]], [[TMP110]]
 ; CHECK-NEXT:    [[TMP59:%.*]] = sub i129 [[TMP58]], [[TMP57]]
-; CHECK-NEXT:    [[TMP60:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP55]], i1 true)
+; CHECK-NEXT:    [[TMP60:%.*]] = call i129 @llvm.ctlz.i129(i129 [[TMP110]], i1 true)
 ; CHECK-NEXT:    [[TMP61:%.*]] = trunc i129 [[TMP60]] to i32
 ; CHECK-NEXT:    [[TMP62:%.*]] = sub i32 129, [[TMP61]]
 ; CHECK-NEXT:    [[TMP63:%.*]] = sub i32 128, [[TMP61]]
@@ -526,22 +533,22 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK-NEXT:      i32 26, label [[ITOFP_SW_EPILOG:%.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       itofp-sw-bb:
-; CHECK-NEXT:    [[TMP65:%.*]] = shl i129 [[TMP55]], 1
+; CHECK-NEXT:    [[TMP111:%.*]] = shl i129 [[TMP110]], 1
 ; CHECK-NEXT:    br label [[ITOFP_SW_EPILOG]]
 ; CHECK:       itofp-sw-default:
 ; CHECK-NEXT:    [[TMP66:%.*]] = sub i32 103, [[TMP61]]
 ; CHECK-NEXT:    [[TMP67:%.*]] = zext i32 [[TMP66]] to i129
-; CHECK-NEXT:    [[TMP68:%.*]] = lshr i129 [[TMP55]], [[TMP67]]
+; CHECK-NEXT:    [[TMP68:%.*]] = lshr i129 [[TMP110]], [[TMP67]]
 ; CHECK-NEXT:    [[TMP69:%.*]] = add i32 [[TMP61]], 26
 ; CHECK-NEXT:    [[TMP70:%.*]] = zext i32 [[TMP69]] to i129
 ; CHECK-NEXT:    [[TMP71:%.*]] = lshr i129 -1, [[TMP70]]
-; CHECK-NEXT:    [[TMP72:%.*]] = and i129 [[TMP71]], [[TMP55]]
+; CHECK-NEXT:    [[TMP72:%.*]] = and i129 [[TMP71]], [[TMP110]]
 ; CHECK-NEXT:    [[TMP73:%.*]] = icmp ne i129 [[TMP72]], 0
 ; CHECK-NEXT:    [[TMP74:%.*]] = zext i1 [[TMP73]] to i129
 ; CHECK-NEXT:    [[TMP75:%.*]] = or i129 [[TMP68]], [[TMP74]]
 ; CHECK-NEXT:    br label [[ITOFP_SW_EPILOG]]
 ; CHECK:       itofp-sw-epilog:
-; CHECK-NEXT:    [[TMP76:%.*]] = phi i129 [ [[TMP75]], [[ITOFP_SW_DEFAULT]] ], [ [[TMP55]], [[ITOFP_IF_THEN4]] ], [ [[TMP65]], [[ITOFP_SW_BB]] ]
+; CHECK-NEXT:    [[TMP76:%.*]] = phi i129 [ [[TMP75]], [[ITOFP_SW_DEFAULT]] ], [ [[TMP110]], [[ITOFP_IF_THEN4]] ], [ [[TMP111]], [[ITOFP_SW_BB]] ]
 ; CHECK-NEXT:    [[TMP77:%.*]] = trunc i129 [[TMP76]] to i32
 ; CHECK-NEXT:    [[TMP78:%.*]] = lshr i32 [[TMP77]], 2
 ; CHECK-NEXT:    [[TMP79:%.*]] = and i32 [[TMP78]], 1
@@ -564,7 +571,7 @@ define <2 x float> @ui129tofloatv2(<2 x i129> %a) {
 ; CHECK:       itofp-if-else:
 ; CHECK-NEXT:    [[TMP92:%.*]] = add i32 [[TMP61]], -105
 ; CHECK-NEXT:    [[TMP93:%.*]] = zext i32 [[TMP92]] to i129
-; CHECK-NEXT:    [[TMP94:%.*]] = shl i129 [[TMP55]], [[TMP93]]
+; CHECK-NEXT:    [[TMP94:%.*]] = shl i129 [[TMP110]], [[TMP93]]
 ; CHECK-NEXT:    [[TMP95:%.*]] = trunc i129 [[TMP94]] to i32
 ; CHECK-NEXT:    [[TMP96:%.*]] = lshr i129 [[TMP94]], 32
 ; CHECK-NEXT:    [[TMP97:%.*]] = trunc i129 [[TMP96]] to i32

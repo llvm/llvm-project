@@ -51,11 +51,13 @@ static cl::opt<unsigned>
 
 TargetRegisterInfo::TargetRegisterInfo(
     const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-    regclass_iterator RCE, const char *const *SRINames,
-    const SubRegCoveredBits *SubIdxRanges, const LaneBitmask *SRILaneMasks,
-    LaneBitmask SRICoveringLanes, const RegClassInfo *const RCIs,
-    const MVT::SimpleValueType *const RCVTLists, unsigned Mode)
-    : InfoDesc(ID), SubRegIndexNames(SRINames), SubRegIdxRanges(SubIdxRanges),
+    regclass_iterator RCE, const char *SRIStrings,
+    ArrayRef<uint32_t> SRINameOffsets, const SubRegCoveredBits *SubIdxRanges,
+    const LaneBitmask *SRILaneMasks, LaneBitmask SRICoveringLanes,
+    const RegClassInfo *const RCIs, const MVT::SimpleValueType *const RCVTLists,
+    unsigned Mode)
+    : InfoDesc(ID), SubRegIndexStrings(SRIStrings),
+      SubRegIndexNameOffsets(SRINameOffsets), SubRegIdxRanges(SubIdxRanges),
       SubRegIndexLaneMasks(SRILaneMasks), RegClassBegin(RCB), RegClassEnd(RCE),
       CoveringLanes(SRICoveringLanes), RCInfos(RCIs), RCVTLists(RCVTLists),
       HwMode(Mode) {}
@@ -555,7 +557,7 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
 
   for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
     // Is this index even compatible with the given class?
-    if (getSubClassWithSubReg(RC, Idx) != RC)
+    if (!isSubRegValidForRegClass(RC, Idx))
       continue;
     LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
     // Early exit if we found a perfect match.
@@ -646,7 +648,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     if (!CopySrcReg.isVirtual())
@@ -669,7 +671,7 @@ Register TargetRegisterInfo::lookThruSingleUseCopyChain(
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     // Continue only if the next definition in the chain is for a virtual

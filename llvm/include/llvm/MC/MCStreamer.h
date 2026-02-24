@@ -43,6 +43,7 @@ class APInt;
 class AssemblerConstantPools;
 class MCAsmBackend;
 class MCAssembler;
+class MCLFIRewriter;
 class MCContext;
 class MCExpr;
 class MCInst;
@@ -221,7 +222,6 @@ class LLVM_ABI MCStreamer {
   MCContext &Context;
   std::unique_ptr<MCTargetStreamer> TargetStreamer;
 
-  std::vector<MCDwarfFrameInfo> DwarfFrameInfos;
   // This is a pair of index into DwarfFrameInfos and the MCSection associated
   // with the frame. Note, we use an index instead of an iterator because they
   // can be invalidated in std::vector.
@@ -266,6 +266,8 @@ protected:
 
   MCFragment *CurFrag = nullptr;
 
+  SmallVector<MCDwarfFrameInfo, 0> DwarfFrameInfos;
+
   MCStreamer(MCContext &Ctx);
 
   /// This is called by popSection and switchSection, if the current
@@ -290,6 +292,8 @@ protected:
   /// Returns true if the .cv_loc directive is in the right section.
   bool checkCVLocSection(unsigned FuncId, unsigned FileNo, SMLoc Loc);
 
+  std::unique_ptr<MCLFIRewriter> LFIRewriter;
+
 public:
   MCStreamer(const MCStreamer &) = delete;
   MCStreamer &operator=(const MCStreamer &) = delete;
@@ -306,6 +310,10 @@ public:
   SMLoc getStartTokLoc() const {
     return StartTokLocPtr ? *StartTokLocPtr : SMLoc();
   }
+
+  void setLFIRewriter(std::unique_ptr<MCLFIRewriter> Rewriter);
+
+  MCLFIRewriter *getLFIRewriter() { return LFIRewriter.get(); }
 
   /// State management
   ///
@@ -353,8 +361,6 @@ public:
   }
 
   bool isInEpilogCFI() const { return CurrentWinEpilog; }
-
-  void generateCompactUnwindEncodings(MCAsmBackend *MAB);
 
   /// \name Assembly File Formatting.
   /// @{
@@ -903,6 +909,14 @@ public:
                                      unsigned Isa, unsigned Discriminator,
                                      StringRef FileName,
                                      StringRef Comment = {});
+
+  /// This is same as emitDwarfLocDirective, except it has the capability to
+  /// add inlined_at information.
+  virtual void emitDwarfLocDirectiveWithInlinedAt(
+      unsigned FileNo, unsigned Line, unsigned Column, unsigned FileIA,
+      unsigned LineIA, unsigned ColumnIA, const MCSymbol *Sym, unsigned Flags,
+      unsigned Isa, unsigned Discriminator, StringRef FileName,
+      StringRef Comment = {}) {}
 
   /// This implements the '.loc_label Name' directive.
   virtual void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name);

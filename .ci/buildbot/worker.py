@@ -148,7 +148,7 @@ def rmtree(path):
     Taken from official Python docs
     https://docs.python.org/3/library/shutil.html#rmtree-example
     """
-    shutil.rmtree(path, onexc=_remove_readonly)
+    shutil.rmtree(path, onerror=_remove_readonly)
 
 
 def try_delete(path):
@@ -290,6 +290,10 @@ class Worker:
     def rmtree(self, *args, **kwargs):
         """Convenience wrapper for rmtree()"""
         return rmtree(*args, *kwargs)
+
+    def try_delete(self, *args, **kwargs):
+        """Convenience wrapper for try_delete()"""
+        return try_delete(*args, *kwargs)
 
     def checkout(self, giturl, sourcepath):
         """Convenience wrapper for checkout()"""
