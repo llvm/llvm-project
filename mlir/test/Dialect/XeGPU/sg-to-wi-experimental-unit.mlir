@@ -317,4 +317,58 @@ gpu.func @vector_multi_reduction_dim0_distributed_dim1_reduction(%laneid: index)
       [1] : vector<16x12xf32> to vector<16xf32>
   gpu.return
 }
+
+// CHECK-LABEL: gpu.func @vector_extract_from_2d
+// CHECK: %[[EXT:.*]] = vector.extract %{{.*}}[0] : vector<1xf32> from vector<4x1xf32>
+gpu.func @vector_extract_from_2d() {
+  %src = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : () -> vector<4x16xf32>
+  %0 = vector.extract %src[0]
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : vector<16xf32> from vector<4x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_extract_from_2d_idx2
+// CHECK: %[[EXT:.*]] = vector.extract %{{.*}}[2] : vector<1xf32> from vector<8x1xf32>
+gpu.func @vector_extract_from_2d_idx2() {
+  %src = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : () -> vector<8x16xf32>
+  %0 = vector.extract %src[2]
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : vector<16xf32> from vector<8x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_insert_into_2d
+// CHECK: %[[INS:.*]] = vector.insert %{{.*}}, %{{.*}}[0] : vector<1xf32> into vector<4x1xf32>
+gpu.func @vector_insert_into_2d() {
+  %val = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : () -> vector<16xf32>
+  %dst = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : () -> vector<4x16xf32>
+  %0 = vector.insert %val, %dst[0]
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : vector<16xf32> into vector<4x16xf32>
+  gpu.return
+}
+
+// CHECK-LABEL: gpu.func @vector_insert_into_2d_idx2
+// CHECK: %[[INS:.*]] = vector.insert %{{.*}}, %{{.*}}[2] : vector<1xf32> into vector<8x1xf32>
+gpu.func @vector_insert_into_2d_idx2() {
+  %val = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>}
+    : () -> vector<16xf32>
+  %dst = "some_op"()
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : () -> vector<8x16xf32>
+  %0 = vector.insert %val, %dst[2]
+    {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+    : vector<16xf32> into vector<8x16xf32>
+  gpu.return
+}
 }

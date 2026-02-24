@@ -522,6 +522,57 @@ struct LowerVectorMultiReductionPattern
   }
 };
 
+/// Distributes a subgroup-level vector.extract op to workitem-level. Only
+/// handles sub-vector extraction (result is VectorType, not scalar).
+struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
+  using OpConversionPattern<vector::ExtractOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ExtractOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only handle vector results (not scalar extraction).
+    auto resultType = dyn_cast<VectorType>(op.getType());
+    if (!resultType)
+      return rewriter.notifyMatchFailure(op, "scalar extract not supported");
+
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!layout || !layout.isForSubgroup())
+      return failure();
+
+    auto newOp = vector::ExtractOp::create(
+        rewriter, op.getLoc(), adaptor.getSource(), op.getMixedPosition());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level vector.insert op to workitem-level. Only
+/// handles sub-vector insertion (value to store is VectorType, not scalar).
+struct SgToWiVectorInsert : public OpConversionPattern<vector::InsertOp> {
+  using OpConversionPattern<vector::InsertOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InsertOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // Only handle vector value-to-store (not scalar insertion).
+    auto valueType = dyn_cast<VectorType>(op.getValueToStoreType());
+    if (!valueType)
+      return rewriter.notifyMatchFailure(op, "scalar insert not supported");
+
+    xegpu::DistributeLayoutAttr layout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!layout || !layout.isForSubgroup())
+      return failure();
+
+    auto newOp = vector::InsertOp::create(
+        rewriter, op.getLoc(), adaptor.getValueToStore(), adaptor.getDest(),
+        op.getMixedPosition());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
 struct XeGPUSgToWiDistributeExperimentalPass
     : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
           XeGPUSgToWiDistributeExperimentalPass> {
@@ -727,11 +778,26 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         // Lane local reductions are illegal at this point and must be lowered.
         return !isReductionLaneLocal(op);
       });
+  // vector::ExtractOp is legal only if its result has no temporary layout
+  // attribute. Scalar extraction is always legal.
+  target.addDynamicallyLegalOp<vector::ExtractOp>(
+      [=](vector::ExtractOp op) -> bool {
+        if (!isa<VectorType>(op.getType()))
+          return true;
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
+  // vector::InsertOp is legal only if its result has no temporary layout
+  // attribute.
+  target.addDynamicallyLegalOp<vector::InsertOp>(
+      [=](vector::InsertOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
-               SgToWiVectorReduction, SgToWiMultiDimReduction>(
-      typeConverter, patterns.getContext());
+               SgToWiVectorReduction, SgToWiMultiDimReduction,
+               SgToWiVectorExtract, SgToWiVectorInsert>(typeConverter,
+                                                        patterns.getContext());
 }
 
 void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
