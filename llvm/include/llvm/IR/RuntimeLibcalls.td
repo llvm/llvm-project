@@ -2181,6 +2181,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        SMEABI_LibCalls_PreserveMost_From_X0,
        SMEABI_LibCalls_PreserveMost_From_X1,
        SMEABI_LibCalls_PreserveMost_From_X2,
+       DefaultSafeStackGlobals,
        LibcSafestackPointerAddress)
 >;
 
