@@ -4266,16 +4266,16 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
       return TokError("invalid operand for TLBIP instruction");
 
     if (!TLBIP->haveFeatures(getSTI().getFeatureBits())) {
-      std::string Str("instruction requires: ");
       FeatureBitset Active = getSTI().getFeatureBits();
       FeatureBitset Missing = TLBIP->getRequiredFeatures() & ~Active;
-      bool HasEither =
-          Active[AArch64::FeatureD128] || Active[AArch64::FeatureTLBID];
-      bool NeedOrTLBID = TLBIP->allowTLBID() && !HasEither;
-      if (TLBIP->allowTLBID()) {
-        Missing.reset(AArch64::FeatureD128);
-        Missing.reset(AArch64::FeatureTLBID);
+      bool NeedOrTLBID = false;
+
+      if (TLBIP->d128orTLBID) {
+        Missing &= ~AArch64TLBIP::TLBIP::D128OrTLBIDMask;
+        NeedOrTLBID =
+            !(Active[AArch64::FeatureD128] || Active[AArch64::FeatureTLBID]);
       }
+      std::string Str("instruction requires: ");
       if (Missing.none()) {
         Str += "tlbid or d128";
         return TokError(Str);
