@@ -3644,8 +3644,6 @@ std::string ELFDumper<ELFT>::getProgramHeadersNumString() {
 
   uint32_t PhNum;
   PhNum = *PhNumOrErr;
-  if (PhNum == ELF::PN_XNUM)
-    return "65535 (corrupt)";
   if (Obj.getHeader().e_phnum != ELF::PN_XNUM)
     return to_string(PhNum);
   return "65535 (" + to_string(PhNum) + ")";
@@ -4876,7 +4874,8 @@ template <class ELFT> void GNUELFDumper<ELFT>::printProgramHeaders() {
   Field Fields[8] = {2,         17,        26,        37 + Bias,
                      48 + Bias, 56 + Bias, 64 + Bias, 68 + Bias};
   uint32_t PhNum = 0;
-  if (Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum(); PhNumOrErr)
+  Expected<uint32_t> PhNumOrErr = this->Obj.getPhNum();
+  if (PhNumOrErr)
     PhNum = *PhNumOrErr;
   else
     this->reportUniqueWarning(PhNumOrErr.takeError());
