@@ -824,6 +824,152 @@ TEST_F(ValueTrackingTest, impliesPoisonTest_MaskCmp) {
   EXPECT_TRUE(impliesPoison(A2, A));
 }
 
+TEST_F(ValueTrackingTest, impliesPoison_BinOp_SameValue) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %A3 = and i32 %A, %A\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A3, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_BinOp_SameValueUsed) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %aplus42 = add i32 %A, 42\n"
+                "  %aplusA = add i32 %A, %A\n"
+                "  %A3 = and i32 %aplus42, %aplusA\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A3, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_BinOp_DifferentValues) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %A2 = add i32 %2, 0\n"
+                "  %A3 = and i32 %A, %A2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A2, A3));
+
+  EXPECT_FALSE(impliesPoison(A3, A));
+  EXPECT_FALSE(impliesPoison(A3, A2));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select) {
+  parseAssembly("define void @test(i1 %cond, i32 %tv, i32 %fv) {\n"
+                "  %A = and i1 %cond, true\n"
+                "  %A2 = add i32 %tv, 0\n"
+                "  %A3 = add i32 %fv, 0\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 %A3\n"
+                "  ret void\n"
+                "}");
+  // If the condition is poison, then the result is poison.
+  EXPECT_TRUE(impliesPoison(A, A4));
+  // But, if one if the arms is poison, then the result might not be poison.
+  EXPECT_FALSE(impliesPoison(A2, A4));
+  EXPECT_FALSE(impliesPoison(A3, A4));
+
+  // The poison may come from any of the arms or condition. Can't surely tell
+  // from where so it won't imply poison for any of the operands.
+  EXPECT_FALSE(impliesPoison(A4, A));
+  EXPECT_FALSE(impliesPoison(A4, A2));
+  EXPECT_FALSE(impliesPoison(A4, A3));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_AllParamsSame) {
+  parseAssembly("define void @test(i1 %cond) {\n"
+                "  %A = and i1 %cond, true\n"
+                "  %A4 = select i1 %A, i1 %A, i1 %A\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A4));
+
+  // Since all operators are the same value if the select is poison the it must
+  // be because of that value.
+  EXPECT_TRUE(impliesPoison(A4, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_SameArm) {
+  parseAssembly("define void @test(i1 %cond, i32 %tv, i32 %fv) {\n"
+                "  %A = and i1 %cond, true\n"
+                "  %A2 = add i32 %tv, 0\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 %A2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A4));
+  EXPECT_FALSE(impliesPoison(A2, A4));
+
+  EXPECT_FALSE(impliesPoison(A4, A));
+  EXPECT_FALSE(impliesPoison(A4, A2));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_SameValuesUsedInCondAndArm) {
+  parseAssembly("define void @test(i32 %tv) {\n"
+                "  %A = icmp eq i32 %tv, 42\n"
+                "  %A2 = add i32 %tv, 42\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 42\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A2, A4));
+  EXPECT_TRUE(impliesPoison(A4, A2));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_AllValueUsedInArmUsedInCond) {
+  parseAssembly("define void @test(i32 %x, i32 %y) {\n"
+                "  %cmp1 = icmp ne i32 %x, 0\n"
+                "  %cmp2 = icmp ugt i32 %x, %y\n"
+                "  %A = select i1 %cmp2, i1 %cmp1, i1 false\n"
+                "  %A2 = and i1 %cmp1, %cmp2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A2));
+  EXPECT_TRUE(impliesPoison(A2, A));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_AllValuesUsedInCondBinOps) {
+  parseAssembly("define void @test(i32 %1, i32 %2) {\n"
+                "  %A = add i32 %1, 0\n"
+                "  %A2 = add i32 %2, 0\n"
+                "  %aEQ = icmp eq i32 %A, 0\n"
+                "  %a2EQ = icmp eq i32 %A2, 0\n"
+                "  %A3 = and i1 %aEQ, %a2EQ\n"
+                "  %A5 = select i1 %A3, i32 %A, i32 %A2\n"
+                "  ret void\n"
+                "}");
+  EXPECT_TRUE(impliesPoison(A, A3));
+  EXPECT_TRUE(impliesPoison(A2, A3));
+
+  // These should be true ideally, but the recursion limit doesn't let us go
+  // deep enough.
+  EXPECT_FALSE(impliesPoison(A2, A5));
+  EXPECT_FALSE(impliesPoison(A, A5));
+
+  EXPECT_TRUE(impliesPoison(A3, A5));
+}
+
+TEST_F(ValueTrackingTest, impliesPoison_Select_CondLogic) {
+  parseAssembly("define void @test(i32 %6, i32 %44) {\n"
+                "  %A2 = add i32 %6, 0\n"
+                "  %A3 = add i32 %44, 0\n"
+                "  %46 = icmp eq i32 %A3, 4\n"
+                "  %47 = icmp eq i32 %A2, 4\n"
+                "  %or.cond.i = and i1 %47, %46\n"
+                "  %48 = xor i1 %47, true\n"
+                "  %A = or i1 %46, %48\n"
+                "  %A4 = select i1 %A, i32 %A2, i32 %A3\n"
+                "  ret void\n"
+                "}");
+  // These should be true ideally, but the recursion limit doesn't let us go
+  // deep enough.
+  EXPECT_FALSE(impliesPoison(A2, A4));
+  EXPECT_FALSE(impliesPoison(A3, A4));
+}
+
 TEST_F(ValueTrackingTest, ComputeNumSignBits_Shuffle_Pointers) {
   parseAssembly(
       "define <2 x ptr> @test(<2 x ptr> %x) {\n"
