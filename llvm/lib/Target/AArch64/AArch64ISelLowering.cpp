@@ -27669,9 +27669,7 @@ static SDValue performVSelectCombine(SDNode *N,
   // Attempt to convert a (vXi1 bitcast(iX N0)) selection mask before it might
   // get split by legalization.
   if (N0.getOpcode() == ISD::BITCAST && CCVT.isVector() &&
-      CCVT.getVectorElementType() == MVT::i1 &&
-      TLI.isTypeLegal(ResVT.getScalarType())) {
-
+      CCVT.getVectorElementType() == MVT::i1) {
     SDLoc DL(N);
     EVT ExtCondVT = ResVT.changeVectorElementTypeToInteger();
 

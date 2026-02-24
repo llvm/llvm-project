@@ -965,5 +965,157 @@ define <64 x i8> @broadcast_u64_to_v64i8_sext(i64 %x) {
   ret <64 x i8> %v8
 }
 
+define void @if_then_else8_i8(ptr %out, i8 %mask, ptr %if_true, ptr %if_false) {
+; CHECK-LE-LABEL: if_then_else8_i8:
+; CHECK-LE:       // %bb.0: // %start
+; CHECK-LE-NEXT:    dup v0.8b, w1
+; CHECK-LE-NEXT:    adrp x8, .LCPI12_0
+; CHECK-LE-NEXT:    ldr d2, [x3]
+; CHECK-LE-NEXT:    ldr d1, [x8, :lo12:.LCPI12_0]
+; CHECK-LE-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-LE-NEXT:    ldr d1, [x2]
+; CHECK-LE-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-LE-NEXT:    bsl v0.8b, v2.8b, v1.8b
+; CHECK-LE-NEXT:    str d0, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: if_then_else8_i8:
+; CHECK-BE:       // %bb.0: // %start
+; CHECK-BE-NEXT:    dup v0.8b, w1
+; CHECK-BE-NEXT:    adrp x8, .LCPI12_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI12_0
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x8]
+; CHECK-BE-NEXT:    ld1 { v2.8b }, [x3]
+; CHECK-BE-NEXT:    and v0.8b, v0.8b, v1.8b
+; CHECK-BE-NEXT:    ld1 { v1.8b }, [x2]
+; CHECK-BE-NEXT:    cmeq v0.8b, v0.8b, #0
+; CHECK-BE-NEXT:    bsl v0.8b, v2.8b, v1.8b
+; CHECK-BE-NEXT:    st1 { v0.8b }, [x0]
+; CHECK-BE-NEXT:    ret
+start:
+  %t = load <8 x i8>, ptr %if_true, align 4
+  %f = load <8 x i8>, ptr %if_false, align 4
+  %m = bitcast i8 %mask to <8 x i1>
+  %s = select <8 x i1> %m, <8 x i8> %t, <8 x i8> %f
+  store <8 x i8> %s, ptr %out, align 4
+  ret void
+}
+
+define void @if_then_else16_i16(ptr %out, i16 %mask, ptr %if_true, ptr %if_false) {
+; CHECK-LE-LABEL: if_then_else16_i16:
+; CHECK-LE:       // %bb.0: // %start
+; CHECK-LE-NEXT:    adrp x8, .LCPI13_1
+; CHECK-LE-NEXT:    dup v0.8h, w1
+; CHECK-LE-NEXT:    ldr q1, [x8, :lo12:.LCPI13_1]
+; CHECK-LE-NEXT:    adrp x8, .LCPI13_0
+; CHECK-LE-NEXT:    ldr q2, [x8, :lo12:.LCPI13_0]
+; CHECK-LE-NEXT:    ldp q4, q3, [x2]
+; CHECK-LE-NEXT:    and v1.16b, v0.16b, v1.16b
+; CHECK-LE-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-LE-NEXT:    ldp q5, q2, [x3]
+; CHECK-LE-NEXT:    cmeq v1.8h, v1.8h, #0
+; CHECK-LE-NEXT:    cmeq v0.8h, v0.8h, #0
+; CHECK-LE-NEXT:    bsl v1.16b, v2.16b, v3.16b
+; CHECK-LE-NEXT:    bsl v0.16b, v5.16b, v4.16b
+; CHECK-LE-NEXT:    stp q0, q1, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: if_then_else16_i16:
+; CHECK-BE:       // %bb.0: // %start
+; CHECK-BE-NEXT:    adrp x8, .LCPI13_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI13_1
+; CHECK-BE-NEXT:    dup v0.8h, w1
+; CHECK-BE-NEXT:    ld1 { v1.8h }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI13_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI13_0
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x8]
+; CHECK-BE-NEXT:    add x8, x2, #16
+; CHECK-BE-NEXT:    add x9, x3, #16
+; CHECK-BE-NEXT:    ld1 { v3.8h }, [x9]
+; CHECK-BE-NEXT:    ld1 { v4.8h }, [x2]
+; CHECK-BE-NEXT:    ld1 { v5.8h }, [x3]
+; CHECK-BE-NEXT:    and v1.16b, v0.16b, v1.16b
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-BE-NEXT:    ld1 { v2.8h }, [x8]
+; CHECK-BE-NEXT:    add x8, x0, #16
+; CHECK-BE-NEXT:    cmeq v1.8h, v1.8h, #0
+; CHECK-BE-NEXT:    cmeq v0.8h, v0.8h, #0
+; CHECK-BE-NEXT:    bsl v1.16b, v3.16b, v2.16b
+; CHECK-BE-NEXT:    bsl v0.16b, v5.16b, v4.16b
+; CHECK-BE-NEXT:    st1 { v1.8h }, [x8]
+; CHECK-BE-NEXT:    st1 { v0.8h }, [x0]
+; CHECK-BE-NEXT:    ret
+start:
+  %t = load <16 x i16>, ptr %if_true, align 4
+  %f = load <16 x i16>, ptr %if_false, align 4
+  %m = bitcast i16 %mask to <16 x i1>
+  %s = select <16 x i1> %m, <16 x i16> %t, <16 x i16> %f
+  store <16 x i16> %s, ptr %out, align 4
+  ret void
+}
+
+define void @if_then_else32_i8(ptr %out, i32 %mask, ptr %if_true, ptr %if_false) {
+; CHECK-LE-LABEL: if_then_else32_i8:
+; CHECK-LE:       // %bb.0: // %start
+; CHECK-LE-NEXT:    adrp x8, .LCPI14_2
+; CHECK-LE-NEXT:    fmov s1, w1
+; CHECK-LE-NEXT:    ldr q0, [x8, :lo12:.LCPI14_2]
+; CHECK-LE-NEXT:    adrp x8, .LCPI14_0
+; CHECK-LE-NEXT:    ldr q2, [x8, :lo12:.LCPI14_0]
+; CHECK-LE-NEXT:    adrp x8, .LCPI14_1
+; CHECK-LE-NEXT:    tbl v0.16b, { v1.16b }, v0.16b
+; CHECK-LE-NEXT:    ldp q4, q3, [x2]
+; CHECK-LE-NEXT:    tbl v1.16b, { v1.16b }, v2.16b
+; CHECK-LE-NEXT:    ldr q2, [x8, :lo12:.LCPI14_1]
+; CHECK-LE-NEXT:    and v0.16b, v0.16b, v2.16b
+; CHECK-LE-NEXT:    and v1.16b, v1.16b, v2.16b
+; CHECK-LE-NEXT:    ldp q5, q2, [x3]
+; CHECK-LE-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-LE-NEXT:    cmeq v1.16b, v1.16b, #0
+; CHECK-LE-NEXT:    bsl v0.16b, v2.16b, v3.16b
+; CHECK-LE-NEXT:    bsl v1.16b, v5.16b, v4.16b
+; CHECK-LE-NEXT:    stp q1, q0, [x0]
+; CHECK-LE-NEXT:    ret
+;
+; CHECK-BE-LABEL: if_then_else32_i8:
+; CHECK-BE:       // %bb.0: // %start
+; CHECK-BE-NEXT:    fmov s0, w1
+; CHECK-BE-NEXT:    adrp x8, .LCPI14_2
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI14_2
+; CHECK-BE-NEXT:    ld1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI14_0
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI14_0
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x8]
+; CHECK-BE-NEXT:    adrp x8, .LCPI14_1
+; CHECK-BE-NEXT:    add x8, x8, :lo12:.LCPI14_1
+; CHECK-BE-NEXT:    rev32 v0.16b, v0.16b
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x8]
+; CHECK-BE-NEXT:    add x8, x2, #16
+; CHECK-BE-NEXT:    add x9, x3, #16
+; CHECK-BE-NEXT:    ld1 { v4.16b }, [x2]
+; CHECK-BE-NEXT:    ld1 { v5.16b }, [x3]
+; CHECK-BE-NEXT:    tbl v1.16b, { v0.16b }, v1.16b
+; CHECK-BE-NEXT:    tbl v0.16b, { v0.16b }, v2.16b
+; CHECK-BE-NEXT:    ld1 { v2.16b }, [x8]
+; CHECK-BE-NEXT:    add x8, x0, #16
+; CHECK-BE-NEXT:    and v1.16b, v1.16b, v3.16b
+; CHECK-BE-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-BE-NEXT:    ld1 { v3.16b }, [x9]
+; CHECK-BE-NEXT:    cmeq v1.16b, v1.16b, #0
+; CHECK-BE-NEXT:    cmeq v0.16b, v0.16b, #0
+; CHECK-BE-NEXT:    bsl v1.16b, v3.16b, v2.16b
+; CHECK-BE-NEXT:    bsl v0.16b, v5.16b, v4.16b
+; CHECK-BE-NEXT:    st1 { v1.16b }, [x8]
+; CHECK-BE-NEXT:    st1 { v0.16b }, [x0]
+; CHECK-BE-NEXT:    ret
+start:
+  %t = load <32 x i8>, ptr %if_true, align 4
+  %f = load <32 x i8>, ptr %if_false, align 4
+  %m = bitcast i32 %mask to <32 x i1>
+  %s = select <32 x i1> %m, <32 x i8> %t, <32 x i8> %f
+  store <32 x i8> %s, ptr %out, align 4
+  ret void
+}
+
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
