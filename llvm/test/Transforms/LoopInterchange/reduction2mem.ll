@@ -2,19 +2,18 @@
 ; NOTE: Support the reduction in the inner loop.
 ; RUN: opt < %s -passes="loop-interchange"  -loop-interchange-reduction-to-mem -loop-interchange-profitabilities=ignore -S | FileCheck %s
 
-; for (int i = 0; i < n; i++) {
+; for (int i = 0; i < 100; i++) {
 ;   r = 0;
-;   for (int j = 0; j < n; j++)
+;   for (int j = 0; j < 100; j++)
 ;     r = r + a[j][i] * b[j][i];
 ;   s[i] = r;
 ; }
 
-define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
+define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
 ; CHECK-LABEL: define void @func(
-; CHECK-SAME: ptr noalias readonly [[A:%.*]], ptr noalias readonly [[B:%.*]], ptr noalias writeonly [[S:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias readonly [[A:%.*]], ptr noalias readonly [[B:%.*]], ptr noalias writeonly [[S:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[N]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[INNERLOOP_PREHEADER:.*]], label %[[EXIT:.*]]
+; CHECK-NEXT:    br label %[[INNERLOOP_PREHEADER:.*]]
 ; CHECK:       [[OUTERLOOPHEADER_PREHEADER:.*]]:
 ; CHECK-NEXT:    br label %[[OUTERLOOP_HEADER:.*]]
 ; CHECK:       [[OUTERLOOP_HEADER]]:
@@ -33,34 +32,31 @@ define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias 
 ; CHECK:       [[INNERLOOP_SPLIT1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ADDR_S]], align 8
 ; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRSTITER]], double 0.000000e+00, double [[TMP0]]
-; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_A]], i64 [[INDEX_J]]
+; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[ADDR_A]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[A_J_I:%.*]] = load double, ptr [[ADDR_A_J_I]], align 8
-; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_B]], i64 [[INDEX_J]]
+; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw [100 x double], ptr [[ADDR_B]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[B_J_I:%.*]] = load double, ptr [[ADDR_B_J_I]], align 8
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[B_J_I]], [[A_J_I]]
 ; CHECK-NEXT:    [[ADD:%.*]] = fadd fast double [[MUL]], [[NEW_VAR]]
 ; CHECK-NEXT:    store double [[ADD]], ptr [[ADDR_S]], align 8
 ; CHECK-NEXT:    [[DEAD_J_NEXT:%.*]] = add nuw nsw i64 [[INDEX_J]], 1
-; CHECK-NEXT:    [[DEAD_COND:%.*]] = icmp eq i64 [[DEAD_J_NEXT]], [[N]]
+; CHECK-NEXT:    [[COND1:%.*]] = icmp eq i64 [[DEAD_J_NEXT]], 100
 ; CHECK-NEXT:    br label %[[OUTERLOOP_LATCH]]
 ; CHECK:       [[INNERLOOP_SPLIT]]:
 ; CHECK-NEXT:    [[ADD_LCSSA]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
 ; CHECK-NEXT:    [[LCSSA:%.*]] = phi double [ [[ADD]], %[[OUTERLOOP_LATCH]] ]
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[INDEX_J]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[J_NEXT]], [[N]]
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i64 [[J_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[CMP1]], label %[[EXIT_LOOPEXIT:.*]], label %[[INNERLOOP]]
 ; CHECK:       [[OUTERLOOP_LATCH]]:
 ; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[INDEX_I]], 1
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i64 [[I_NEXT]], 100
 ; CHECK-NEXT:    br i1 [[CMP2]], label %[[INNERLOOP_SPLIT]], label %[[OUTERLOOP_HEADER]]
 ; CHECK:       [[EXIT_LOOPEXIT]]:
-; CHECK-NEXT:    br label %[[EXIT]]
-; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %cmp = icmp sgt i64 %n, 0
-  br i1 %cmp, label %outerloop_header, label %exit
+  br label %outerloop_header
 
 outerloop_header:
   %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %outerloop_latch ]
@@ -72,21 +68,21 @@ outerloop_header:
 innerloop:
   %index_j = phi i64 [ 0, %outerloop_header ], [ %index_j.next, %innerloop ]
   %reduction = phi double [ 0.000000e+00, %outerloop_header ], [ %add, %innerloop ]
-  %addr_a_j_i = getelementptr inbounds nuw double, ptr %invariant.gep.us, i64 %index_j
+  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
   %0 = load double, ptr %addr_a_j_i, align 8
-  %addr_b_j_i = getelementptr inbounds nuw double, ptr %invariant.gep32.us, i64 %index_j
+  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
   %1 = load double, ptr %addr_b_j_i, align 8
   %mul = fmul fast double %1, %0
   %add = fadd fast double %mul, %reduction
   %index_j.next = add nuw nsw i64 %index_j, 1
-  %cond1 = icmp eq i64 %index_j.next, %n
+  %cond1 = icmp eq i64 %index_j.next, 100
   br i1 %cond1, label %outerloop_latch, label %innerloop
 
 outerloop_latch:
   %lcssa = phi double [ %add, %innerloop ]
   store double %lcssa, ptr %addr_s, align 8
   %index_i.next = add nuw nsw i64 %index_i, 1
-  %cond2 = icmp eq i64 %index_i.next, %n
+  %cond2 = icmp eq i64 %index_i.next, 100
   br i1 %cond2, label %exit, label %outerloop_header
 
 exit:
