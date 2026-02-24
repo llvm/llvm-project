@@ -568,10 +568,7 @@ ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
   ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
   N->addPredecessor(Pred, G);
 
-  if (!IsNew)
-    return nullptr;
-
-  return N;
+  return IsNew ? N : nullptr;
 }
 
 /// generateNode - Utility method to generate nodes, hook up successors,
