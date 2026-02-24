@@ -9,8 +9,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; DEFAULT-LABEL: define void @iv_casts(
 ; DEFAULT-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; DEFAULT-NEXT:  [[ITER_CHECK:.*]]:
-; DEFAULT-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; DEFAULT-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; DEFAULT-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; DEFAULT-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; DEFAULT-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; DEFAULT-NEXT:    [[TMP2:%.*]] = shl nuw i64 [[TMP1]], 2
@@ -118,8 +118,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-LABEL: define void @iv_casts(
 ; PRED-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 [[X:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; PRED-NEXT:  [[ENTRY:.*:]]
-; PRED-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
-; PRED-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; PRED-NEXT:    [[SRC2:%.*]] = ptrtoaddr ptr [[SRC]] to i64
+; PRED-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
 ; PRED-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
 ; PRED:       [[VECTOR_MEMCHECK]]:
@@ -133,10 +133,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[TMP5:%.*]] = shl nuw i64 [[TMP4]], 4
 ; PRED-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 16 x i32> poison, i32 [[X]], i64 0
 ; PRED-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 16 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer
-; PRED-NEXT:    [[TMP6:%.*]] = call i64 @llvm.vscale.i64()
-; PRED-NEXT:    [[TMP7:%.*]] = shl nuw i64 [[TMP6]], 4
-; PRED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP0]], [[TMP7]]
-; PRED-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], [[TMP7]]
+; PRED-NEXT:    [[TMP8:%.*]] = sub i64 [[TMP0]], [[TMP5]]
+; PRED-NEXT:    [[TMP9:%.*]] = icmp ugt i64 [[TMP0]], [[TMP5]]
 ; PRED-NEXT:    [[TMP10:%.*]] = select i1 [[TMP9]], i64 [[TMP8]], i64 0
 ; PRED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[TMP0]])
 ; PRED-NEXT:    [[TMP11:%.*]] = trunc <vscale x 16 x i32> [[BROADCAST_SPLAT]] to <vscale x 16 x i16>

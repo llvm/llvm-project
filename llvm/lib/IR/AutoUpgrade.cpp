@@ -4871,7 +4871,7 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
     if (CI->arg_size() == 4) {
       auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1));
       // Nonzero offset dbg.values get dropped without a replacement.
-      if (!Offset || !Offset->isZeroValue())
+      if (!Offset || !Offset->isNullValue())
         return;
       VarOp = 2;
       ExprOp = 3;
@@ -5195,7 +5195,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     assert(CI->arg_size() == 4);
     // Drop nonzero offsets instead of attempting to upgrade them.
     if (auto *Offset = dyn_cast_or_null<Constant>(CI->getArgOperand(1)))
-      if (Offset->isZeroValue()) {
+      if (Offset->isNullValue()) {
         NewCall = Builder.CreateCall(
             NewFn,
             {CI->getArgOperand(0), CI->getArgOperand(2), CI->getArgOperand(3)});
@@ -6332,12 +6332,24 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
     Arg.removeAttrs(
         AttributeFuncs::typeIncompatible(Arg.getType(), Arg.getAttributes()));
 
+  bool AddingAttrs = false, RemovingAttrs = false;
+  AttrBuilder AttrsToAdd(F.getContext());
+  AttributeMask AttrsToRemove;
+
   // Older versions of LLVM treated an "implicit-section-name" attribute
   // similarly to directly setting the section on a Function.
   if (Attribute A = F.getFnAttribute("implicit-section-name");
       A.isValid() && A.isStringAttribute()) {
     F.setSection(A.getValueAsString());
-    F.removeFnAttr("implicit-section-name");
+    AttrsToRemove.addAttribute("implicit-section-name");
+    RemovingAttrs = true;
+  }
+
+  if (Attribute A = F.getFnAttribute("nooutline");
+      A.isValid() && A.isStringAttribute()) {
+    AttrsToRemove.addAttribute("nooutline");
+    AttrsToAdd.addAttribute(Attribute::NoOutline);
+    AddingAttrs = RemovingAttrs = true;
   }
 
   if (!F.empty()) {
@@ -6354,9 +6366,46 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
 
       // We will leave behind dead attribute uses on external declarations, but
       // clang never added these to declarations anyway.
-      F.removeFnAttr("amdgpu-unsafe-fp-atomics");
+      AttrsToRemove.addAttribute("amdgpu-unsafe-fp-atomics");
+      RemovingAttrs = true;
     }
   }
+
+  DenormalMode DenormalFPMath = DenormalMode::getIEEE();
+  DenormalMode DenormalFPMathF32 = DenormalMode::getInvalid();
+
+  bool HandleDenormalMode = false;
+
+  if (Attribute Attr = F.getFnAttribute("denormal-fp-math"); Attr.isValid()) {
+    DenormalMode ParsedMode = parseDenormalFPAttribute(Attr.getValueAsString());
+    if (ParsedMode.isValid()) {
+      DenormalFPMath = ParsedMode;
+      AttrsToRemove.addAttribute("denormal-fp-math");
+      AddingAttrs = RemovingAttrs = true;
+      HandleDenormalMode = true;
+    }
+  }
+
+  if (Attribute Attr = F.getFnAttribute("denormal-fp-math-f32");
+      Attr.isValid()) {
+    DenormalMode ParsedMode = parseDenormalFPAttribute(Attr.getValueAsString());
+    if (ParsedMode.isValid()) {
+      DenormalFPMathF32 = ParsedMode;
+      AttrsToRemove.addAttribute("denormal-fp-math-f32");
+      AddingAttrs = RemovingAttrs = true;
+      HandleDenormalMode = true;
+    }
+  }
+
+  if (HandleDenormalMode)
+    AttrsToAdd.addDenormalFPEnvAttr(
+        DenormalFPEnv(DenormalFPMath, DenormalFPMathF32));
+
+  if (RemovingAttrs)
+    F.removeFnAttrs(AttrsToRemove);
+
+  if (AddingAttrs)
+    F.addFnAttrs(AttrsToAdd);
 }
 
 // Check if the function attribute is not present and set it.

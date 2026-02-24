@@ -34,7 +34,7 @@ int f1(int i) {
   return i;
 }
 
-// CIR:      cir.func{{.*}} @f1(%arg0: !s32i loc({{.*}})) -> !s32i
+// CIR:      cir.func{{.*}} @f1(%arg0: !s32i {llvm.noundef} loc({{.*}})) -> !s32i
 // CIR-NEXT:   %[[I_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["i", init] {alignment = 4 : i64}
 // CIR-NEXT:   %[[RV:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"] {alignment = 4 : i64}
 // CIR-NEXT:   cir.store{{.*}} %arg0, %[[I_PTR]] : !s32i, !cir.ptr<!s32i>
@@ -44,7 +44,7 @@ int f1(int i) {
 // CIR-NEXT:   %[[R:.*]] = cir.load{{.*}} %[[RV]] : !cir.ptr<!s32i>, !s32i
 // CIR-NEXT:   cir.return %[[R]] : !s32i
 
-//      LLVM: define{{.*}} i32 @f1(i32 %[[IP:.*]])
+//      LLVM: define{{.*}} i32 @f1(i32 noundef %[[IP:.*]])
 // LLVM-NEXT:   %[[I_PTR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[RV:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   store i32 %[[IP]], ptr %[[I_PTR]], align 4
@@ -269,12 +269,12 @@ void f9() {}
 
 void f10(int arg0, ...) {}
 
-//      CIR: cir.func{{.*}} @f10(%[[ARG0:.*]]: !s32i loc({{.*}}), ...)
+//      CIR: cir.func{{.*}} @f10(%[[ARG0:.*]]: !s32i {llvm.noundef} loc({{.*}}), ...)
 // CIR-NEXT:   %[[ARG0_PTR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["arg0", init] {alignment = 4 : i64}
 // CIR-NEXT:   cir.store{{.*}} %[[ARG0]], %[[ARG0_PTR]] : !s32i, !cir.ptr<!s32i>
 // CIR-NEXT:   cir.return
 
-//      LLVM: define{{.*}} void @f10(i32 %[[ARG0:.*]], ...)
+//      LLVM: define{{.*}} void @f10(i32 noundef %[[ARG0:.*]], ...)
 // LLVM-NEXT:   %[[ARG0_PTR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   store i32 %[[ARG0]], ptr %[[ARG0_PTR]], align 4
 // LLVM-NEXT:   ret void
