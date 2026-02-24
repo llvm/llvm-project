@@ -353,9 +353,8 @@ struct TwoDimMultiReductionToElementWise
     Value result = multiReductionOp.getAcc();
     for (int64_t i = 0; i < outerDim; i++) {
       auto v = vector::ExtractOp::create(rewriter, loc, source, i);
-      Value m;
-      m = mask ? Value(vector::ExtractOp::create(rewriter, loc, mask, i))
-               : nullptr;
+      Value m = mask ? Value(vector::ExtractOp::create(rewriter, loc, mask, i))
+                     : nullptr;
       result = makeArithReduction(rewriter, loc, multiReductionOp.getKind(), v,
                                   result, /*fastmath=*/nullptr, m);
     }
@@ -383,7 +382,7 @@ struct TwoDimMultiReductionToElementWise
 ///   %v_1 = vector.extract %src[1] : vector<4xf32> from vector<2x4xf32>
 ///   %a_1 = vector.extract %acc[1] : f32 from vector<2xf32>
 ///   %red_2 = vector.reduction <mul>, %v_1, %a_1 : vector<4xf32> into f32
-///   %res_final = vector.insert %red_2, %red_2 [1] : f32 into vector<2xf32>
+///   %res_final = vector.insert %red_2, %res_tmp [1] : f32 into vector<2xf32>
 struct TwoDimMultiReductionToReduction
     : public vector::MaskableOpRewritePattern<vector::MultiDimReductionOp> {
   using MaskableOpRewritePattern::MaskableOpRewritePattern;
@@ -412,16 +411,15 @@ struct TwoDimMultiReductionToReduction
         rewriter.getZeroAttr(multiReductionOp.getDestType()));
 
     SmallVector<Value> vectors(outerDim);
-    Value m, v, a;
     for (int64_t i = 0; i < outerDim; ++i) {
-      v = vector::ExtractOp::create(rewriter, loc, source, i);
-      a = vector::ExtractOp::create(rewriter, loc, acc, i);
+      Value v = vector::ExtractOp::create(rewriter, loc, source, i);
+      Value a = vector::ExtractOp::create(rewriter, loc, acc, i);
 
       Operation *reductionOp = vector::ReductionOp::create(
           rewriter, loc, multiReductionOp.getKind(), v, a);
 
       if (mask) {
-        m = vector::ExtractOp::create(rewriter, loc, mask, i);
+        Value m = vector::ExtractOp::create(rewriter, loc, mask, i);
         reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, m);
       }
 
