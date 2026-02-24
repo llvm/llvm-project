@@ -422,7 +422,7 @@ public:
         isa<BuiltinBitCastExpr>(E) ||
         // This covers both co_await and co_yield.
         // The result object of co_await is <op>.await_resume(), but there is
-        // no expression for that to prpagate to.
+        // no expression for that to propagate to.
         // co_yield is equivalent to `co_await promise.yield_value(expr)`.
         isa<CoroutineSuspendExpr>(E)) {
       return;
