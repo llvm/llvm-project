@@ -3283,8 +3283,8 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
                           {I.getOperand(1).getReg(), ConstReg}, Opcode))
       return false;
     if (!selectExtInstWithSrcs(
-        ResVReg, ResType, I, {ArgReg},
-        {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}}))
+            ResVReg, ResType, I, {ArgReg},
+            {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}}))
       return false;
 
     return true;
@@ -5372,7 +5372,7 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
 
   // Build 0.30103.
   assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
-        ResType->getOpcode() == SPIRV::OpTypeFloat);
+         ResType->getOpcode() == SPIRV::OpTypeFloat);
   // TODO: Add matrix implementation once supported by the HLSL frontend.
   SPIRVTypeInst SpirvScalarType = ResType->getOpcode() == SPIRV::OpTypeVector
                                       ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
