@@ -11,10 +11,14 @@
 
 #include "lldb/Target/PostMortemProcess.h"
 
+#include <kvm.h>
+
 class ProcessFreeBSDKernel : public lldb_private::PostMortemProcess {
 public:
   ProcessFreeBSDKernel(lldb::TargetSP target_sp, lldb::ListenerSP listener,
-                       const lldb_private::FileSpec &core_file);
+                       kvm_t *kvm, const lldb_private::FileSpec &core_file);
+
+  ~ProcessFreeBSDKernel();
 
   static lldb::ProcessSP
   CreateInstance(lldb::TargetSP target_sp, lldb::ListenerSP listener,
@@ -33,22 +37,34 @@ public:
 
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
 
-  lldb_private::Status DoDestroy() override;
-
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
-
-  void RefreshStateAfterStop() override;
 
   lldb_private::Status DoLoadCore() override;
 
   lldb_private::DynamicLoader *GetDynamicLoader() override;
 
+  lldb_private::Status DoDestroy() override;
+
+  void RefreshStateAfterStop() override;
+
 protected:
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;
 
+  size_t DoReadMemory(lldb::addr_t addr, void *buf, size_t size,
+                      lldb_private::Status &error) override;
+
   lldb::addr_t FindSymbol(const char *name);
+
+private:
+  void PrintUnreadMessage();
+
+  const char *GetError();
+
+  bool m_printed_unread_message = false;
+
+  kvm_t *m_kvm;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNEL_H

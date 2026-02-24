@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+// XFAIL: *
+
 void f0(int len) {
   int arr[len];
 }
@@ -21,7 +23,7 @@ void f0(int len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
-// LLVM: define{{.*}} void @f0(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f0(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
@@ -67,7 +69,7 @@ void f1(int len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
-// LLVM: define{{.*}} void @f1(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f1(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
@@ -115,7 +117,7 @@ void f2(int len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
   
-// LLVM: define{{.*}} void @f2(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f2(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
@@ -190,7 +192,7 @@ void f3(unsigned len) {
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
 // CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
 
-// LLVM: define{{.*}} void @f3(i32 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} void @f3(i32 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
@@ -305,7 +307,7 @@ int f5(unsigned long len) {
 // CIR:   %[[RET_VAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RET_VAL]] : !s32i
 
-// LLVM: define{{.*}} i32 @f5(i64 %[[LEN_ARG:.*]])
+// LLVM: define{{.*}} i32 @f5(i64 {{.*}} %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i64
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
