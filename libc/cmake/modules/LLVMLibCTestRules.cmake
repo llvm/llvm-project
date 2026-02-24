@@ -82,7 +82,6 @@ function(_get_hermetic_test_compile_options output_var)
          -mcode-object-version=${LIBC_GPU_CODE_OBJECT_VERSION})
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     list(APPEND compile_options
-         "SHELL:-mllvm -nvptx-emit-init-fini-kernel=false"
          -Wno-multi-gpu --cuda-path=${LIBC_CUDA_ROOT}
          -nogpulib -march=${LIBC_GPU_TARGET_ARCHITECTURE} -fno-use-cxa-atexit)
   endif()
@@ -637,6 +636,7 @@ function(add_integration_test test_name)
   # makes `add_custom_target` construct the correct command and execute it.
   set(test_cmd
       ${INTEGRATION_TEST_ENV}
+      $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
       $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}>
       ${CMAKE_CROSSCOMPILING_EMULATOR}
       ${INTEGRATION_TEST_LOADER_ARGS}
@@ -790,8 +790,7 @@ function(add_libc_hermetic test_name)
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
-      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
+      -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
@@ -859,6 +858,7 @@ function(add_libc_hermetic test_name)
       string(REPLACE " " ";" test_cmd "${test_cmd_parsed}")
     else()
       set(test_cmd ${HERMETIC_TEST_ENV}
+        $<$<BOOL:${LIBC_TARGET_ARCHITECTURE_IS_NVPTX}>:LIBOMPTARGET_STACK_SIZE=3072>
         $<$<BOOL:${LIBC_TARGET_OS_IS_GPU}>:${gpu_loader_exe}> ${CMAKE_CROSSCOMPILING_EMULATOR} ${HERMETIC_TEST_LOADER_ARGS}
         $<TARGET_FILE:${fq_build_target_name}> ${HERMETIC_TEST_ARGS})
     endif()
