@@ -532,7 +532,8 @@ shardedBlockArgumentTypes(Block &block,
       block.getArguments(), std::back_inserter(res),
       [&symbolTableCollection](BlockArgument arg) {
         auto rankedTensorArg = dyn_cast<TypedValue<RankedTensorType>>(arg);
-        if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0) {
+        if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0 ||
+            rankedTensorArg.use_empty()) {
           return arg.getType();
         }
 
@@ -666,7 +667,8 @@ partitionOperation(ShardOp shardOp, IRMapping &partitionMap,
 static LogicalResult checkFullyAnnotated(Block &block) {
   for (const BlockArgument &arg : block.getArguments()) {
     auto rankedTensorArg = dyn_cast<TypedValue<RankedTensorType>>(arg);
-    if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0)
+    if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0 ||
+        rankedTensorArg.use_empty())
       continue;
 
     if (rankedTensorArg.getNumUses() > 1)
@@ -674,6 +676,7 @@ static LogicalResult checkFullyAnnotated(Block &block) {
              << "Cannot partition: expected a single use for block argument "
              << arg.getArgNumber() << " in block "
              << block.computeBlockNumber();
+
     Operation *useOp = *rankedTensorArg.getUsers().begin();
     auto shardOp = dyn_cast<ShardOp>(useOp);
     if (!shardOp)
