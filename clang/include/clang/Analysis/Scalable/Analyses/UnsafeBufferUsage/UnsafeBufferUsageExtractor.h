@@ -11,6 +11,7 @@
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsageBuilder.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryExtractor.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 
 namespace clang::ssaf {
@@ -28,7 +29,7 @@ public:
   // FIXME: need some general traversal in the Base class
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   extractEntitySummary(EntityId Contributor, const Decl *ContributorDefn,
-                       ASTContext &Ctx);
+                       ASTContext &Ctx, llvm::Error &Error);
 };
 } // namespace clang::ssaf
 

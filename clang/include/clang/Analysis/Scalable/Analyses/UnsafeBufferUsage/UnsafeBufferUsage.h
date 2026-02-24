@@ -28,16 +28,13 @@ namespace clang::ssaf {
 ///
 /// An EntityPointerLevel can be identified by an EntityId and an unsigned
 /// integer indicating the pointer level: '(EntityId, PointerLevel)'.
-/// An EntityPointerLevel 'P' is valid iff
-///   - 'P.EntityId' has a pointer type with at least 'P.PointerLevel' levels
-///     (This implies 'P.PointerLevel > 0');
-///   - 'P.EntityId' identifies an lvalue object and 'P.PointerLevel == 0'.
-/// The latter case represents address-of expressions.
+/// An EntityPointerLevel 'P' is valid iff 'P.EntityId' has a pointer type with
+/// at least 'P.PointerLevel' levels (This implies 'P.PointerLevel > 0').
 ///
 /// For the same example 'int *p[10];', the EntityPointerLevels below are valid:
-/// '(p, 1)' is associated with 'int *[10]' of 'p';
-/// '(p, 2)' is associated with 'int *' of 'p';
-/// '(p, 0)' represents '&p'.
+/// - '(p, 2)' is associated with the 'int *' part of the declared type of 'p';
+/// - '(p, 1)' is associated with the 'int *[10]' part of the declared type of
+/// 'p'.
 class EntityPointerLevel {
   EntityId Entity;
   unsigned PointerLevel;

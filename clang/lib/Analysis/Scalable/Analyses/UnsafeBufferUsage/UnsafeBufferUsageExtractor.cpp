@@ -36,10 +36,12 @@ constexpr inline auto buildEntityPointerLevel =
     UnsafeBufferUsageTUSummaryBuilder::buildEntityPointerLevel;
 
 // Translate a pointer type expression 'E' to a (set of) EntityPointerLevel(s)
-// associated with the declared type of the base address of `E`.
+// associated with the declared type of the base address of `E`. If the base
+// address of `E` is not associated with an entity, the translation result is an
+// empty set.
 //
-// The translation is a process of stripping off the pointer 'E' until its base
-// address can be represented by an entity, with the number of dereferences
+// The translation is a process of traversing into the pointer 'E' until its
+// base address can be represented by an entity, with the number of dereferences
 // tracked by incrementing the pointer level.  Naturally, taking address of, as
 // the inverse operation of dereference, is tracked by decrementing the pointer
 // level.
@@ -231,11 +233,12 @@ private:
   }
 };
 
-EntityPointerLevelSet
+Expected<EntityPointerLevelSet>
 buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
                          UnsafeBufferUsageTUSummaryBuilder &Builder) {
   EntityPointerLevelSet Result{};
   EntityPointerLevelTranslator Translator{Builder};
+  llvm::Error AllErrors = llvm::ErrorSuccess();
 
   for (const Expr *Ptr : UnsafePointers) {
     Expected<EntityPointerLevelSet> Translation = Translator.translate(Ptr);
@@ -250,19 +253,23 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
       Result.insert(FilteredTranslation.begin(), FilteredTranslation.end());
       continue;
     }
-#ifndef NDEBUG
-    // FIXME: Log error message
-#endif
-    llvm::consumeError(Translation.takeError());
+    AllErrors = llvm::joinErrors(std::move(AllErrors), Translation.takeError());
   }
+  if (AllErrors)
+    return AllErrors;
   return Result;
 }
 } // namespace
 
 std::unique_ptr<UnsafeBufferUsageEntitySummary>
 UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
-    EntityId Contributor, const Decl *ContributorDefn, ASTContext &Ctx) {
-  return getBuilder().buildUnsafeBufferUsageEntitySummary(
-      buildEntityPointerLevels(findUnsafePointers(ContributorDefn),
-                               getBuilder()));
+    EntityId Contributor, const Decl *ContributorDefn, ASTContext &Ctx,
+    llvm::Error &Error) {
+  Expected<EntityPointerLevelSet> EPLs = buildEntityPointerLevels(
+      findUnsafePointers(ContributorDefn), getBuilder());
+
+  if (EPLs)
+    return getBuilder().buildUnsafeBufferUsageEntitySummary(std::move(*EPLs));
+  Error = EPLs.takeError();
+  return nullptr;
 }

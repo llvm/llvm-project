@@ -16,8 +16,10 @@
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <utility>
 
 using namespace clang;
 using namespace ssaf;
@@ -69,7 +71,7 @@ protected:
 
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   setUpTest(StringRef Code, StringRef ContributorName) {
-    AST = tooling::buildASTFromCodeWithArgs(Code, {});
+    AST = tooling::buildASTFromCodeWithArgs(Code, {"-Wno-unused-value"});
 
     const auto *ContributorDefn =
         findDeclByName(ContributorName, AST->getASTContext());
@@ -77,8 +79,16 @@ protected:
 
     if (!ContributorDefn || !EN)
       return nullptr;
-    return Extractor.extractEntitySummary(
-        Builder.addEntity(*EN), ContributorDefn, AST->getASTContext());
+
+    llvm::Error Error = llvm::ErrorSuccess();
+    auto Sum = Extractor.extractEntitySummary(
+        Builder.addEntity(*EN), ContributorDefn, AST->getASTContext(), Error);
+
+    if (Error) {
+      llvm::consumeError(std::move(Error));
+      return nullptr;
+    }
+    return Sum;
   }
 
   std::optional<EntityId> getEntityId(StringRef Name) {
@@ -451,5 +461,22 @@ TEST_F(UnsafeBufferUsageTest, AddressOfThenDereference) {
   CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
   CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+}
+
+TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
+  auto Sum = setUpTest(R"cpp(
+    void foo() {
+      int * arr[10];
+      int * (*p)[10] = arr;
+
+      (*p)[5][5]; // '(*p)[5]' is unsafe 
+                  // '(*p)' is fine because 5 < 10
+    }
+  )cpp",
+                       "foo");
+
+  EXPECT_NE(Sum, nullptr);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 3, *Sum);
+  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
 }
 } // namespace
