@@ -674,9 +674,8 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   Args.addAllArgs(CmdArgs, {options::OPT_L});
   TC.AddFilePathLibArgs(Args, CmdArgs);
-  Args.addAllArgs(CmdArgs, {options::OPT_u, options::OPT_T_Group, options::OPT_s,
-                            options::OPT_t, options::OPT_r});
-
+  Args.addAllArgs(CmdArgs, {options::OPT_u, options::OPT_T_Group,
+                            options::OPT_s, options::OPT_t, options::OPT_r});
 
   for (const auto &LibPath : TC.getLibraryPaths())
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
