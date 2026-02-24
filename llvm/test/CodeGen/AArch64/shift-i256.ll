@@ -155,3 +155,4 @@ define i256 @ashr_i256_const(i256 %a) nounwind {
   %r = ashr i256 %a, 17
   ret i256 %r
 }
+

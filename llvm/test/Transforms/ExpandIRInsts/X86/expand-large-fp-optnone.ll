@@ -8,88 +8,88 @@
 define double @main(i224 %0) #0 {
 ; CHECK-LABEL: define double @main(
 ; CHECK-SAME: i224 [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRYITOFP_ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP59:%.*]] = freeze i224 [[TMP0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i224 [[TMP59]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label %[[ITOFP_RETURN:.*]], label %[[ITOFP_IF_END:.*]]
+; CHECK-NEXT:  [[ITOFP_RETURN:.*]]:
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i224 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i224 [[TMP1]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[ITOFP_RETURN1:.*]], label %[[ITOFP_IF_END:.*]]
 ; CHECK:       [[ITOFP_IF_END]]:
-; CHECK-NEXT:    [[TMP2:%.*]] = ashr i224 [[TMP59]], 223
-; CHECK-NEXT:    [[TMP3:%.*]] = xor i224 [[TMP2]], [[TMP59]]
-; CHECK-NEXT:    [[TMP4:%.*]] = sub i224 [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = call i224 @llvm.ctlz.i224(i224 [[TMP4]], i1 true)
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i224 [[TMP5]] to i32
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 224, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 223, [[TMP6]]
-; CHECK-NEXT:    [[TMP9:%.*]] = icmp sgt i32 [[TMP7]], 53
-; CHECK-NEXT:    br i1 [[TMP9]], label %[[ITOFP_IF_THEN4:.*]], label %[[ITOFP_IF_ELSE:.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = ashr i224 [[TMP1]], 223
+; CHECK-NEXT:    [[TMP4:%.*]] = xor i224 [[TMP3]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = sub i224 [[TMP4]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i224 @llvm.ctlz.i224(i224 [[TMP5]], i1 true)
+; CHECK-NEXT:    [[TMP7:%.*]] = trunc i224 [[TMP6]] to i32
+; CHECK-NEXT:    [[TMP8:%.*]] = sub i32 224, [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = sub i32 223, [[TMP7]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp sgt i32 [[TMP8]], 53
+; CHECK-NEXT:    br i1 [[TMP10]], label %[[ITOFP_IF_THEN4:.*]], label %[[ITOFP_IF_ELSE:.*]]
 ; CHECK:       [[ITOFP_IF_THEN4]]:
-; CHECK-NEXT:    switch i32 [[TMP7]], label %[[ITOFP_SW_DEFAULT:.*]] [
+; CHECK-NEXT:    switch i32 [[TMP8]], label %[[ITOFP_SW_DEFAULT:.*]] [
 ; CHECK-NEXT:      i32 54, label %[[ITOFP_SW_BB:.*]]
 ; CHECK-NEXT:      i32 55, label %[[ITOFP_SW_EPILOG:.*]]
 ; CHECK-NEXT:    ]
 ; CHECK:       [[ITOFP_SW_BB]]:
-; CHECK-NEXT:    [[TMP10:%.*]] = shl i224 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = shl i224 [[TMP5]], 1
 ; CHECK-NEXT:    br label %[[ITOFP_SW_EPILOG]]
 ; CHECK:       [[ITOFP_SW_DEFAULT]]:
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 169, [[TMP6]]
-; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[TMP11]] to i224
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr i224 [[TMP4]], [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = add i32 [[TMP6]], 55
-; CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i224
-; CHECK-NEXT:    [[TMP16:%.*]] = lshr i224 -1, [[TMP15]]
-; CHECK-NEXT:    [[TMP17:%.*]] = and i224 [[TMP16]], [[TMP4]]
-; CHECK-NEXT:    [[TMP18:%.*]] = icmp ne i224 [[TMP17]], 0
-; CHECK-NEXT:    [[TMP19:%.*]] = zext i1 [[TMP18]] to i224
-; CHECK-NEXT:    [[TMP20:%.*]] = or i224 [[TMP13]], [[TMP19]]
+; CHECK-NEXT:    [[TMP12:%.*]] = sub i32 169, [[TMP7]]
+; CHECK-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP12]] to i224
+; CHECK-NEXT:    [[TMP14:%.*]] = lshr i224 [[TMP5]], [[TMP13]]
+; CHECK-NEXT:    [[TMP15:%.*]] = add i32 [[TMP7]], 55
+; CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i224
+; CHECK-NEXT:    [[TMP17:%.*]] = lshr i224 -1, [[TMP16]]
+; CHECK-NEXT:    [[TMP18:%.*]] = and i224 [[TMP17]], [[TMP5]]
+; CHECK-NEXT:    [[TMP19:%.*]] = icmp ne i224 [[TMP18]], 0
+; CHECK-NEXT:    [[TMP20:%.*]] = zext i1 [[TMP19]] to i224
+; CHECK-NEXT:    [[TMP21:%.*]] = or i224 [[TMP14]], [[TMP20]]
 ; CHECK-NEXT:    br label %[[ITOFP_SW_EPILOG]]
 ; CHECK:       [[ITOFP_SW_EPILOG]]:
-; CHECK-NEXT:    [[TMP21:%.*]] = phi i224 [ [[TMP20]], %[[ITOFP_SW_DEFAULT]] ], [ [[TMP4]], %[[ITOFP_IF_THEN4]] ], [ [[TMP10]], %[[ITOFP_SW_BB]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = trunc i224 [[TMP21]] to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = lshr i32 [[TMP22]], 2
-; CHECK-NEXT:    [[TMP24:%.*]] = and i32 [[TMP23]], 1
-; CHECK-NEXT:    [[TMP25:%.*]] = zext i32 [[TMP24]] to i224
-; CHECK-NEXT:    [[TMP26:%.*]] = or i224 [[TMP21]], [[TMP25]]
-; CHECK-NEXT:    [[TMP27:%.*]] = add i224 [[TMP26]], 1
-; CHECK-NEXT:    [[TMP28:%.*]] = ashr i224 [[TMP27]], 2
-; CHECK-NEXT:    [[A3:%.*]] = and i224 [[TMP27]], 36028797018963968
-; CHECK-NEXT:    [[TMP29:%.*]] = icmp eq i224 [[A3]], 0
-; CHECK-NEXT:    [[TMP30:%.*]] = trunc i224 [[TMP28]] to i64
-; CHECK-NEXT:    [[TMP31:%.*]] = lshr i224 [[TMP28]], 32
-; CHECK-NEXT:    [[TMP32:%.*]] = trunc i224 [[TMP31]] to i32
-; CHECK-NEXT:    br i1 [[TMP29]], label %[[ITOFP_IF_END26:.*]], label %[[ITOFP_IF_THEN20:.*]]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi i224 [ [[TMP21]], %[[ITOFP_SW_DEFAULT]] ], [ [[TMP5]], %[[ITOFP_IF_THEN4]] ], [ [[TMP11]], %[[ITOFP_SW_BB]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = trunc i224 [[TMP22]] to i32
+; CHECK-NEXT:    [[TMP24:%.*]] = lshr i32 [[TMP23]], 2
+; CHECK-NEXT:    [[TMP25:%.*]] = and i32 [[TMP24]], 1
+; CHECK-NEXT:    [[TMP26:%.*]] = zext i32 [[TMP25]] to i224
+; CHECK-NEXT:    [[TMP27:%.*]] = or i224 [[TMP22]], [[TMP26]]
+; CHECK-NEXT:    [[TMP28:%.*]] = add i224 [[TMP27]], 1
+; CHECK-NEXT:    [[TMP29:%.*]] = ashr i224 [[TMP28]], 2
+; CHECK-NEXT:    [[A3:%.*]] = and i224 [[TMP28]], 36028797018963968
+; CHECK-NEXT:    [[TMP30:%.*]] = icmp eq i224 [[A3]], 0
+; CHECK-NEXT:    [[TMP31:%.*]] = trunc i224 [[TMP29]] to i64
+; CHECK-NEXT:    [[TMP32:%.*]] = lshr i224 [[TMP29]], 32
+; CHECK-NEXT:    [[TMP33:%.*]] = trunc i224 [[TMP32]] to i32
+; CHECK-NEXT:    br i1 [[TMP30]], label %[[ITOFP_IF_END26:.*]], label %[[ITOFP_IF_THEN20:.*]]
 ; CHECK:       [[ITOFP_IF_THEN20]]:
-; CHECK-NEXT:    [[TMP33:%.*]] = ashr i224 [[TMP27]], 3
-; CHECK-NEXT:    [[TMP34:%.*]] = trunc i224 [[TMP33]] to i64
-; CHECK-NEXT:    [[TMP35:%.*]] = lshr i224 [[TMP33]], 32
-; CHECK-NEXT:    [[TMP36:%.*]] = trunc i224 [[TMP35]] to i32
+; CHECK-NEXT:    [[TMP34:%.*]] = ashr i224 [[TMP28]], 3
+; CHECK-NEXT:    [[TMP35:%.*]] = trunc i224 [[TMP34]] to i64
+; CHECK-NEXT:    [[TMP36:%.*]] = lshr i224 [[TMP34]], 32
+; CHECK-NEXT:    [[TMP37:%.*]] = trunc i224 [[TMP36]] to i32
 ; CHECK-NEXT:    br label %[[ITOFP_IF_END26]]
 ; CHECK:       [[ITOFP_IF_ELSE]]:
-; CHECK-NEXT:    [[TMP37:%.*]] = add i32 [[TMP6]], -171
-; CHECK-NEXT:    [[TMP38:%.*]] = zext i32 [[TMP37]] to i224
-; CHECK-NEXT:    [[TMP39:%.*]] = shl i224 [[TMP4]], [[TMP38]]
-; CHECK-NEXT:    [[TMP40:%.*]] = trunc i224 [[TMP39]] to i64
-; CHECK-NEXT:    [[TMP41:%.*]] = lshr i224 [[TMP39]], 32
-; CHECK-NEXT:    [[TMP42:%.*]] = trunc i224 [[TMP41]] to i32
+; CHECK-NEXT:    [[TMP38:%.*]] = add i32 [[TMP7]], -171
+; CHECK-NEXT:    [[TMP39:%.*]] = zext i32 [[TMP38]] to i224
+; CHECK-NEXT:    [[TMP40:%.*]] = shl i224 [[TMP5]], [[TMP39]]
+; CHECK-NEXT:    [[TMP41:%.*]] = trunc i224 [[TMP40]] to i64
+; CHECK-NEXT:    [[TMP42:%.*]] = lshr i224 [[TMP40]], 32
+; CHECK-NEXT:    [[TMP43:%.*]] = trunc i224 [[TMP42]] to i32
 ; CHECK-NEXT:    br label %[[ITOFP_IF_END26]]
 ; CHECK:       [[ITOFP_IF_END26]]:
-; CHECK-NEXT:    [[TMP43:%.*]] = phi i64 [ [[TMP34]], %[[ITOFP_IF_THEN20]] ], [ [[TMP30]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP40]], %[[ITOFP_IF_ELSE]] ]
-; CHECK-NEXT:    [[TMP44:%.*]] = phi i32 [ [[TMP36]], %[[ITOFP_IF_THEN20]] ], [ [[TMP32]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP42]], %[[ITOFP_IF_ELSE]] ]
-; CHECK-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP7]], %[[ITOFP_IF_THEN20]] ], [ [[TMP8]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP8]], %[[ITOFP_IF_ELSE]] ]
-; CHECK-NEXT:    [[TMP46:%.*]] = trunc i224 [[TMP2]] to i32
-; CHECK-NEXT:    [[TMP47:%.*]] = and i32 [[TMP46]], -2147483648
-; CHECK-NEXT:    [[TMP48:%.*]] = shl i32 [[TMP45]], 20
-; CHECK-NEXT:    [[TMP49:%.*]] = add i32 [[TMP48]], 1072693248
-; CHECK-NEXT:    [[TMP50:%.*]] = and i32 [[TMP44]], 1048575
-; CHECK-NEXT:    [[TMP51:%.*]] = or i32 [[TMP50]], [[TMP47]]
-; CHECK-NEXT:    [[TMP52:%.*]] = or i32 [[TMP51]], [[TMP49]]
-; CHECK-NEXT:    [[TMP53:%.*]] = zext i32 [[TMP52]] to i64
-; CHECK-NEXT:    [[TMP54:%.*]] = shl i64 [[TMP53]], 32
-; CHECK-NEXT:    [[TMP55:%.*]] = and i64 [[TMP43]], 4294967295
-; CHECK-NEXT:    [[TMP56:%.*]] = or i64 [[TMP54]], [[TMP55]]
-; CHECK-NEXT:    [[TMP57:%.*]] = bitcast i64 [[TMP56]] to double
-; CHECK-NEXT:    br label %[[ITOFP_RETURN]]
-; CHECK:       [[ITOFP_RETURN]]:
-; CHECK-NEXT:    [[TMP58:%.*]] = phi double [ [[TMP57]], %[[ITOFP_IF_END26]] ], [ 0.000000e+00, %[[ENTRYITOFP_ENTRY]] ]
+; CHECK-NEXT:    [[TMP44:%.*]] = phi i64 [ [[TMP35]], %[[ITOFP_IF_THEN20]] ], [ [[TMP31]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP41]], %[[ITOFP_IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP45:%.*]] = phi i32 [ [[TMP37]], %[[ITOFP_IF_THEN20]] ], [ [[TMP33]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP43]], %[[ITOFP_IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP46:%.*]] = phi i32 [ [[TMP8]], %[[ITOFP_IF_THEN20]] ], [ [[TMP9]], %[[ITOFP_SW_EPILOG]] ], [ [[TMP9]], %[[ITOFP_IF_ELSE]] ]
+; CHECK-NEXT:    [[TMP47:%.*]] = trunc i224 [[TMP3]] to i32
+; CHECK-NEXT:    [[TMP48:%.*]] = and i32 [[TMP47]], -2147483648
+; CHECK-NEXT:    [[TMP49:%.*]] = shl i32 [[TMP46]], 20
+; CHECK-NEXT:    [[TMP50:%.*]] = add i32 [[TMP49]], 1072693248
+; CHECK-NEXT:    [[TMP51:%.*]] = and i32 [[TMP45]], 1048575
+; CHECK-NEXT:    [[TMP52:%.*]] = or i32 [[TMP51]], [[TMP48]]
+; CHECK-NEXT:    [[TMP53:%.*]] = or i32 [[TMP52]], [[TMP50]]
+; CHECK-NEXT:    [[TMP54:%.*]] = zext i32 [[TMP53]] to i64
+; CHECK-NEXT:    [[TMP55:%.*]] = shl i64 [[TMP54]], 32
+; CHECK-NEXT:    [[TMP56:%.*]] = and i64 [[TMP44]], 4294967295
+; CHECK-NEXT:    [[TMP57:%.*]] = or i64 [[TMP55]], [[TMP56]]
+; CHECK-NEXT:    [[TMP59:%.*]] = bitcast i64 [[TMP57]] to double
+; CHECK-NEXT:    br label %[[ITOFP_RETURN1]]
+; CHECK:       [[ITOFP_RETURN1]]:
+; CHECK-NEXT:    [[TMP58:%.*]] = phi double [ [[TMP59]], %[[ITOFP_IF_END26]] ], [ 0.000000e+00, %[[ITOFP_RETURN]] ]
 ; CHECK-NEXT:    ret double [[TMP58]]
 ;
 entry:
