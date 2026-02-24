@@ -33,6 +33,9 @@ static_assert(std::__unsigned_integer<unsigned short int>);
 #if _LIBCPP_HAS_INT128
 static_assert(std::__unsigned_integer<__uint128_t>);
 #endif
+#if _LIBCPP_HAS_INT256
+static_assert(std::__unsigned_integer<__uint256_t>);
+#endif
 // Signed
 static_assert(!std::__unsigned_integer<signed char>);
 static_assert(!std::__unsigned_integer<short int>);
@@ -42,6 +45,9 @@ static_assert(!std::__unsigned_integer<long long int>);
 static_assert(!std::__unsigned_integer<short int>);
 #if _LIBCPP_HAS_INT128
 static_assert(!std::__unsigned_integer<__int128_t>);
+#endif
+#if _LIBCPP_HAS_INT256
+static_assert(!std::__unsigned_integer<__int256_t>);
 #endif
 // Non-integer
 static_assert(!std::__unsigned_integer<bool>);

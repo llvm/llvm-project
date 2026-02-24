@@ -70,6 +70,12 @@ constexpr void test() {
                          OutIt, CharT>::template formatter_type<__uint128_t>,
                      std::formatter<__uint128_t, CharT>>);
 #endif
+#ifndef TEST_HAS_NO_INT256
+  static_assert(std::is_same_v<typename std::basic_format_context< OutIt, CharT>::template formatter_type<__int256_t>,
+                               std::formatter<__int256_t, CharT>>);
+  static_assert(std::is_same_v<typename std::basic_format_context< OutIt, CharT>::template formatter_type<__uint256_t>,
+                               std::formatter<__uint256_t, CharT>>);
+#endif
   static_assert(
       std::is_same_v<typename std::basic_format_context<
                          OutIt, CharT>::template formatter_type<float>,

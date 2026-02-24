@@ -113,6 +113,10 @@ int main(int, char**)
   check_integral_types<__int128_t, __int128_t>();
   check_integral_types<__uint128_t, __uint128_t>();
 #endif
+#ifndef TEST_HAS_NO_INT256
+  check_integral_types<__int256_t, __int256_t>();
+  check_integral_types<__uint256_t, __uint256_t>();
+#endif
     // TODO(ericwf): Not standard
   typedef std::underlying_type<enum1>::type Enum1UT;
   check_enum_types<enum1, decltype(((Enum1UT)1) + 1)>();

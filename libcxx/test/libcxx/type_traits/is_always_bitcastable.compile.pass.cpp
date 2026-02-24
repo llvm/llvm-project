@@ -105,6 +105,11 @@ constexpr void test() {
     check<true, types::type_list<__int128_t, __uint128_t>>();
 #endif
 
+    // 256-bit types.
+#ifndef TEST_HAS_NO_INT256
+    check<true, types::type_list<__int256_t, __uint256_t>>();
+#endif
+
     // Bool.
     check<true, types::type_list<bool>, types::concatenate_t<types::type_list<bool>, integral_8>>();
 

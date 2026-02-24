@@ -435,6 +435,14 @@ inline Tp const& DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_INT128
 #endif
 
+#ifdef _LIBCPP_USE_FROZEN_CXX03_HEADERS
+#  define TEST_HAS_NO_INT256
+#elif defined(_LIBCPP_VERSION) && (!defined(_LIBCPP_HAS_INT256) || !_LIBCPP_HAS_INT256)
+#  define TEST_HAS_NO_INT256
+#elif !defined(__SIZEOF_INT256__)
+#  define TEST_HAS_NO_INT256
+#endif
+
 #if defined(_LIBCPP_VERSION) && !_LIBCPP_HAS_LOCALIZATION
 #  define TEST_HAS_NO_LOCALIZATION
 #endif
