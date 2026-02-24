@@ -51,6 +51,19 @@ using namespace MIPatternMatch;
 
 namespace {
 
+CombinerInfo createCombinerInfo(bool OptEnabled, const Function &F) {
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true,
+                     /*ShouldLegalizeIllegal=*/false,
+                     /*LInfo=*/nullptr, /*OptEnabled=*/OptEnabled,
+                     /*OptSize=*/F.hasOptSize(), /*MinSize=*/F.hasMinSize());
+  // Disable fixed-point iteration to reduce compile-time
+  CInfo.MaxIterations = 1;
+  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
+  // Legalizer performs DCE, so a full DCE pass is unnecessary.
+  CInfo.EnableFullDCE = false;
+  return CInfo;
+}
+
 #define GET_GICOMBINER_TYPES
 #include "X86GenPostLegalizeGICombiner.inc"
 #undef GET_GICOMBINER_TYPES
@@ -153,15 +166,8 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
 
-  CombinerInfo CInfo(/*AllowIllegalOps=*/true,
-                     /*ShouldLegalizeIllegal=*/false,
-                     /*LegalizerInfo=*/nullptr, !skipFunction(F),
-                     F.hasOptSize(), F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
-  // Legalizer performs DCE, so a full DCE pass is unnecessary.
-  CInfo.EnableFullDCE = false;
+  CombinerInfo CInfo = createCombinerInfo(!skipFunction(F), F);
+
   X86PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
                                     MDT);
   return Impl.combineMachineInstrs();
@@ -191,15 +197,7 @@ X86PostLegalizerCombinerPass::run(MachineFunction &MF,
   MachineDominatorTree &MDT = MFAM.getResult<MachineDominatorTreeAnalysis>(MF);
   auto &CSEInfo = MFAM.getResult<GISelCSEAnalysis>(MF);
 
-  CombinerInfo CInfo(/*AllowIllegalOps=*/true,
-                     /*ShouldLegalizeIllegal=*/false,
-                     /*LegalizerInfo=*/nullptr, /*OptEnabled=*/true,
-                     F.hasOptSize(), F.hasMinSize());
-  // Disable fixed-point iteration to reduce compile-time
-  CInfo.MaxIterations = 1;
-  CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
-  // Legalizer performs DCE, so a full DCE pass is unnecessary.
-  CInfo.EnableFullDCE = false;
+  CombinerInfo CInfo = createCombinerInfo(true, F);
 
   X86PostLegalizerCombinerImplRuleConfig RuleConfig;
   if (!RuleConfig.parseCommandLineOption())
