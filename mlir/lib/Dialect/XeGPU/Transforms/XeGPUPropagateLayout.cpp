@@ -278,15 +278,6 @@ static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
       xegpu::LayoutAttr::get(ctx, {1, uArch->getSubgroupSize()}, {1, 1}));
 }
 
-static LayoutInfo getDefaultSIMTLayoutInfo(mlir::MLIRContext *ctx,
-                                           unsigned rank, int subgroupSize) {
-  assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
-  if (rank == 1) {
-    return LayoutInfo(xegpu::LayoutAttr::get(ctx, {subgroupSize}, {1}));
-  }
-  return LayoutInfo(xegpu::LayoutAttr::get(ctx, {1, subgroupSize}, {1, 1}));
-}
-
 /// Helper to get the default layout for 2D block operations.
 template <typename Ty>
 static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,

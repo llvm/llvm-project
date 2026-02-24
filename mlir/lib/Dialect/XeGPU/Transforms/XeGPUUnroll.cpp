@@ -968,11 +968,10 @@ struct UnrollStoreMatrixOp : public UnrollPattern<xegpu::StoreMatrixOp> {
 
 void mlir::xegpu::populateXeGPUUnrollPatterns(
     RewritePatternSet &patterns, const xegpu::UnrollOptions &options) {
-  patterns
-      .add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
-           UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp,
-           UnrollLoadGatherOp, UnrollStoreScatterOp, UnrollPrefetchOp,
-           UnrollUpdateOffsetOp, UnrollLoadMatrixOp, UnrollStoreMatrixOp,
-           UnrollLoadGatherOpWithOffset, UnrollStoreScatterOpWithOffsets>(
-          patterns.getContext(), options);
+  patterns.add<UnrollCreateNdOp, UnrollUpdateNdOffsetOp, UnrollPrefetchNdOp,
+               UnrollLoadNdOp, UnrollStoreNdOp, UnrollDpasOp,
+               UnrollLoadGatherOp, UnrollStoreScatterOp, UnrollPrefetchOp,
+               UnrollUpdateOffsetOp, UnrollLoadMatrixOp, UnrollStoreMatrixOp,
+               UnrollLoadGatherOpWithOffset, UnrollStoreScatterOpWithOffsets>(
+      patterns.getContext(), options);
 }
