@@ -1574,4 +1574,38 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
   EXPECT_FALSE(DAG->isKnownNeverZero(VSelect444Big, DemandAll));
   EXPECT_TRUE(DAG->isKnownNeverZero(VSelect4444, DemandAll));
 }
+
+TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Div) {
+  SDLoc Loc;
+
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
+  auto Cst1 = DAG->getConstant(1, Loc, MVT::i32);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
+  auto Neg1 = DAG->getNode(ISD::SUB, Loc, MVT::i32, Cst0, Cst1);
+  auto Neg4 = DAG->getNode(ISD::SUB, Loc, MVT::i32, Cst0, Cst4);
+
+  auto UDiv04 = DAG->getNode(ISD::UDIV, Loc, MVT::i32, Cst0, Cst4);
+  auto UDiv41 = DAG->getNode(ISD::UDIV, Loc, MVT::i32, Cst4, Cst1);
+  auto UDivNeg41 = DAG->getNode(ISD::UDIV, Loc, MVT::i32, Neg4, Cst1);
+  auto UDiv4Neg1 = DAG->getNode(ISD::UDIV, Loc, MVT::i32, Cst4, Neg1);
+  auto UDivNeg1Neg4 = DAG->getNode(ISD::UDIV, Loc, MVT::i32, Neg1, Neg4);
+
+  EXPECT_FALSE(DAG->isKnownNeverZero(UDiv04));
+  EXPECT_TRUE(DAG->isKnownNeverZero(UDiv41));
+  EXPECT_TRUE(DAG->isKnownNeverZero(UDivNeg41));
+  EXPECT_FALSE(DAG->isKnownNeverZero(UDiv4Neg1));
+  EXPECT_TRUE(DAG->isKnownNeverZero(UDivNeg1Neg4));
+
+  auto SDiv04 = DAG->getNode(ISD::SDIV, Loc, MVT::i32, Cst0, Cst4);
+  auto SDiv41 = DAG->getNode(ISD::SDIV, Loc, MVT::i32, Cst4, Cst1);
+  auto SDivNeg41 = DAG->getNode(ISD::SDIV, Loc, MVT::i32, Neg4, Cst1);
+  auto SDiv4Neg1 = DAG->getNode(ISD::SDIV, Loc, MVT::i32, Cst4, Neg1);
+  auto SDivNeg1Neg4 = DAG->getNode(ISD::SDIV, Loc, MVT::i32, Neg1, Neg4);
+
+  EXPECT_FALSE(DAG->isKnownNeverZero(SDiv04));
+  EXPECT_TRUE(DAG->isKnownNeverZero(SDiv41));
+  EXPECT_TRUE(DAG->isKnownNeverZero(SDivNeg41));
+  EXPECT_TRUE(DAG->isKnownNeverZero(SDiv4Neg1));
+  EXPECT_FALSE(DAG->isKnownNeverZero(SDivNeg1Neg4));
+}
 } // end namespace llvm
