@@ -23,11 +23,11 @@
 #include "flang/Optimizer/OpenMP/Passes.h"
 #include "flang/Optimizer/Transforms/Passes.h"
 
+#include "mlir/Conversion/Passes.h"
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
-#include "mlir/Conversion/Passes.h"
-#include "mlir/Dialect/LLVMIR/Transforms/Passes.h"
 #include "mlir/Transforms/Passes.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Options/Options.h"
