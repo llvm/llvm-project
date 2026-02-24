@@ -49,6 +49,11 @@ C++ Specific Potentially Breaking Changes
 ABI Changes in This Version
 ---------------------------
 
+- Fixed incorrect struct layout for ``_BitInt`` bitfields wider than 255 bits
+  on MSVC targets. Internal bitfield tracking fields were changed from
+  ``unsigned char`` to ``uint64_t`` to prevent overflow. This might be an ABI
+  break for such structs compared to earlier Clang versions.
+
 AST Dumping Potentially Breaking Changes
 ----------------------------------------
 
@@ -65,6 +70,11 @@ Clang Frontend Potentially Breaking Changes
   default. The replacement for the option is
   `--offload-targets=spirv{32,64}-unknown-chipstar` when using the new
   offload driver (`--offload-new-driver`).
+- The new driver (`--offload-new-driver`) is now default for all offloading
+  compilations. This changes the ABI for relocatable device code. Currently,
+  libraries will need to be recompiled, or used with
+  (`--no-offload-new-driver`). This option will be removed in the next release.
+
 
 
 Clang Python Bindings Potentially Breaking Changes
@@ -284,6 +294,7 @@ Bug Fixes in This Version
 - Clang now outputs relative paths of embeds for dependency output. (#GH161950)
 - Fixed an assertion failure when evaluating ``_Countof`` on invalid ``void``-typed operands. (#GH180893)
 - Fixed a ``-Winvalid-noreturn`` false positive for unreachable ``try`` blocks following an unconditional ``throw``. (#GH174822)
+- Fixed an assertion failure in the serialized diagnostic printer when it is destroyed without calling ``finish()``. (#GH140433)
 - Fixed an assertion failure caused by error recovery while extending a nested name specifier with results from ordinary lookup. (#GH181470)
 
 Bug Fixes to Compiler Builtins
@@ -363,6 +374,9 @@ RISC-V Support
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- The new offloading driver is now the default for HIP. Use
+  `--no-oflfoad-new-driver` to return to the old behavior.
+
 CUDA Support
 ^^^^^^^^^^^^
 
@@ -413,6 +427,7 @@ clang-format
 
 libclang
 --------
+- Visit switch initializer statements (https://bugs.kde.org/show_bug.cgi?id=415537#c2)
 - Fix crash in clang_getBinaryOperatorKindSpelling and clang_getUnaryOperatorKindSpelling
 
 Code Completion
