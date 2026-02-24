@@ -129,6 +129,14 @@ template <> struct HostTypeHelper<Type<TypeCategory::Integer, 16>> {
 #endif
 };
 
+template <> struct HostTypeHelper<Type<TypeCategory::Integer, 32>> {
+#if defined(__SIZEOF_INT256__)
+  using Type = __int256_t;
+#else
+  using Type = UnsupportedType;
+#endif
+};
+
 // TODO no mapping to host types are defined currently for 16bits float
 // It should be defined when gcc/clang have a better support for it.
 
