@@ -35,10 +35,9 @@ struct maptest {
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_ADDR]], i32 0, i32 0
     // CHECK: [[S_DATA_5_ADDR:%.+]] = getelementptr inbounds nuw [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 5
     // CHECK: [[S_DATA_6_ADDR:%.+]] = getelementptr float, ptr [[S_DATA_5_ADDR]], i32 1
-    // CHECK: [[END_BC:%.+]] = ptrtoint ptr [[S_DATA_6_ADDR]] to i64
-    // CHECK: [[BEG_BC:%.+]] = ptrtoint ptr [[S_DATA_0_ADDR]] to i64
-    // CHECK: [[DIFF:%.+]] = sub i64 [[END_BC]], [[BEG_BC]]
-    // CHECK: [[SZ:%.+]] = sdiv exact i64 [[DIFF]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+    // CHECK: [[END_BC:%.+]] = ptrtoaddr ptr [[S_DATA_6_ADDR]] to i64
+    // CHECK: [[BEG_BC:%.+]] = ptrtoaddr ptr [[S_DATA_0_ADDR]] to i64
+    // CHECK: [[SZ:%.+]] = sub i64 [[END_BC]], [[BEG_BC]]
 
     // Fill mapping arrays
     // CHECK: [[BPTR0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BPTRS]], i32 0, i32 0
@@ -71,10 +70,9 @@ struct maptest {
     // CHECK: [[S_DATA_ADDR:%.+]] = getelementptr inbounds nuw %struct.S, ptr [[S_ADDR]], i32 0, i32 0
     // CHECK: [[S_DATA_5_ADDR:%.+]] = getelementptr inbounds nuw [6 x float], ptr [[S_DATA_ADDR]], i64 0, i64 5
     // CHECK: [[S_DATA_6_ADDR:%.+]] = getelementptr float, ptr [[S_DATA_5_ADDR]], i32 1
-    // CHECK: [[END_BC:%.+]] = ptrtoint ptr [[S_DATA_6_ADDR]] to i64
-    // CHECK: [[BEG_BC:%.+]] = ptrtoint ptr [[S_DATA_0_ADDR]] to i64
-    // CHECK: [[DIFF:%.+]] = sub i64 [[END_BC]], [[BEG_BC]]
-    // CHECK: [[SZ:%.+]] = sdiv exact i64 [[DIFF]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
+    // CHECK: [[END_BC:%.+]] = ptrtoaddr ptr [[S_DATA_6_ADDR]] to i64
+    // CHECK: [[BEG_BC:%.+]] = ptrtoaddr ptr [[S_DATA_0_ADDR]] to i64
+    // CHECK: [[SZ:%.+]] = sub i64 [[END_BC]], [[BEG_BC]]
 
     // Fill mapping arrays
     // CHECK: [[BPTR0:%.+]] = getelementptr inbounds [2 x ptr], ptr [[BPTRS]], i32 0, i32 0

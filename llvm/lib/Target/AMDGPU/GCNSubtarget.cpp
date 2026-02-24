@@ -66,7 +66,7 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // Similarly we want enable-prt-strict-null to be on by default and not to
   // unset everything else if it is disabled
 
-  SmallString<256> FullFS("+promote-alloca,+load-store-opt,+enable-ds128,");
+  SmallString<256> FullFS("+load-store-opt,+enable-ds128,");
 
   // Turn on features that HSA ABI requires. Also turn on FlatForGlobal by
   // default
@@ -576,7 +576,7 @@ GCNSubtarget::getMaxNumVectorRegs(const Function &F) const {
 
   unsigned MaxNumVGPRs = MaxVectorRegs;
   unsigned MaxNumAGPRs = 0;
-  unsigned NumArchVGPRs = has1024AddressableVGPRs() ? 1024 : 256;
+  unsigned NumArchVGPRs = getAddressableNumArchVGPRs();
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
