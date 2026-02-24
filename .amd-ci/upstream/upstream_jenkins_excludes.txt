@@ -1,7 +1,5 @@
 # Extended regexp patterns of files to exclude from the AOCC 'upstream' pipeline.
 ^.*aocc-essentials/notes/
-^.*SPEC_perf_cfgs/cpuV8/
-^.*SPEC_perf_cfgs/cpuv8_.*
 ^.*_jenkins_excludes.txt
 ^.*/bump_aocc_ver.sh
 ^.*/bump_llvm_ver.sh
@@ -17,6 +15,7 @@
 ^.*prj-essentials/devo/aocc/merge/
 ^prj-essentials/devo/aocc/CODEOWNERS\.AOCC\.m4
 ^\.github/\.ai_pr_platform/
+^\.github/copilot-instructions\.md
 ^\.github/workflows/amd-.*\.yml
 ^\.github/workflows/amd-.*\.yaml
 ^CODEOWNERS

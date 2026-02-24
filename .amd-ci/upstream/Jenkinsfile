@@ -191,7 +191,7 @@ try {
                                 userRemoteConfigs: [
                                     [
                                         credentialsId: gitHubAppCredsId,
-                                        url: 'https://github.amd.com/AOCC/aocc-devops.git'
+                                        url: 'https://github.amd.com/cpu-compilers/aocc-devops.git'
                                     ]
                                 ]
                             )
@@ -220,7 +220,7 @@ try {
                 } else {
                     essDir = 'aocc-essentials'
                 }
-                theUrl = 'https://github.amd.com/AOCC/llvm-project'
+                theUrl = 'https://github.amd.com/cpu-compilers/llvm-project'
                 dir (llvmProj) {
                     gitVars = checkout(
                         changelog: true,
