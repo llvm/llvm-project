@@ -364,8 +364,9 @@ void ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(const parser::ExplicitShape
   int ubRank{ubFolded.Rank()};
 
   bool constError_{false};
+  bool rankError_{false};
   // Check that upper bound is a constant expression if it's an array
-  if (ubRank > 0 && !evaluate::IsActuallyConstant(ubFolded)) {
+  if (!evaluate::IsActuallyConstant(ubFolded)) {
     parser::CharBlock at{parser::FindSourceLocation(upperBound)};
     context_.Say(at, 
         "Array (upper) bound must be a constant expression"_err_en_US);
@@ -374,6 +375,14 @@ void ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(const parser::ExplicitShape
     // hadError_ = true;
     constError_ = true;
   }
+  if(ubRank > 1) {
+    parser::CharBlock at{parser::FindSourceLocation(upperBound)};
+    context_.Say(at,
+      "Integer array used as upper bounds in DECLARATION must be rank-1 but is rank-%d"_err_en_US, ubRank);
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+    rankError_ = true;
+  }
+
 
   // Analyze and fold the lower bound expression if present
   int lbRank{0};
@@ -384,17 +393,24 @@ void ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(const parser::ExplicitShape
       lbFolded = evaluate::Fold(context_.foldingContext(), std::move(*lbExpr));
       lbRank = lbFolded->Rank();
       // Check that lower bound is a constant expression if it's an array
-      if (lbRank > 0 && !evaluate::IsActuallyConstant(*lbFolded)) {
+      if (!evaluate::IsActuallyConstant(*lbFolded)) {
         parser::CharBlock at{parser::FindSourceLocation(*lowerBoundOpt)};
         context_.Say(at,
             "Array (lower) bound must be a constant expression"_err_en_US);
         arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
         constError_ = true;
       }
+      if(lbRank > 1) {
+        parser::CharBlock at{parser::FindSourceLocation(*lowerBoundOpt)};
+        context_.Say(at,
+          "Integer array used as lower bounds in DECLARATION must be rank-1 but is rank-%d"_err_en_US, lbRank);
+        arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+        rankError_ = true;
+      }
     }
   }
 
-  if(constError_) return;
+  if(constError_ || rankError_) return;
 
   // Check: if both lower and upper bounds are arrays, they must have the same
   // number of elements
@@ -436,7 +452,6 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   auto extractValues = [&](SomeExpr &folded) -> std::vector<std::int64_t> {
     std::vector<std::int64_t> values;
     if (auto scalar{evaluate::ToInt64(folded)}) {
-      printf("this is a scalar, %d\n", scalar);
       values.push_back(*scalar);
     } else if (const auto *someInt{
                    evaluate::UnwrapExpr<evaluate::Expr<evaluate::SomeInteger>>(
@@ -447,7 +462,6 @@ void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
             if (const auto *constArray{
                     evaluate::UnwrapExpr<evaluate::Constant<typename T::Result>>(
                         kindExpr)}) {
-              printf("this is a rank-1 array, ");
               for (auto it{constArray->values().begin()};
                    it != constArray->values().end(); ++it) {
                 printf("%d ", it->ToInt64());
