@@ -793,6 +793,7 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
           int PrevOp = -1;
           bool Switched = false;
           bool CanSlideUpMerge = true;
+          unsigned SlideAmt;
           for (unsigned Idx = 0; Idx < NumElts; ++Idx) {
             if (Mask[Idx] == -1)
               continue;
@@ -803,13 +804,16 @@ RISCVTTIImpl::getShuffleCost(TTI::ShuffleKind Kind, VectorType *DstTy,
                 break;
               }
               Switched = true;
+              SlideAmt = Idx;
             }
             PrevOp = CurrOp;
           }
           if (CanSlideUpMerge)
-            MaskCost = std::min(MaskCost,
-                                getRISCVInstructionCost(RISCV::VSLIDEUP_VI,
-                                                        LT.second, CostKind));
+            MaskCost =
+                std::min(MaskCost, getRISCVInstructionCost(
+                                       isUInt<5>(SlideAmt) ? RISCV::VSLIDEUP_VI
+                                                           : RISCV::VSLIDEUP_VX,
+                                       LT.second, CostKind));
         }
         return 2 * IndexCost +
                getRISCVInstructionCost({RISCV::VRGATHER_VV, RISCV::VRGATHER_VV},
