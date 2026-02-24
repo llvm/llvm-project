@@ -6769,7 +6769,10 @@ bool LLParser::convertValIDToValue(Type *Ty, ValID &ID, Value *&V,
     if (auto *TETy = dyn_cast<TargetExtType>(Ty))
       if (!TETy->hasProperty(TargetExtType::HasZeroInit))
         return error(ID.Loc, "invalid type for null constant");
-    V = Constant::getNullValue(Ty, &M->getDataLayout());
+    // zeroinitializer represents the all-zero-bits value. For pointer types
+    // this is distinct from null (the semantic null that may be non-zero).
+    // For non-pointer types, getZeroValue delegates to getNullValue.
+    V = Constant::getZeroValue(Ty);
     return false;
   case ValID::t_None:
     if (!Ty->isTokenTy())

@@ -73,6 +73,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
@@ -244,7 +245,7 @@ class Vectorizer {
   ScalarEvolution &SE;
   TargetTransformInfo &TTI;
   const DataLayout &DL;
-  IRBuilder<> Builder;
+  IRBuilder<TargetFolder> Builder;
 
   /// We could erase instrs right after vectorizing them, but that can mess up
   /// our BB iterators, and also can make the equivalence class keys point to
@@ -259,8 +260,8 @@ class Vectorizer {
 public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
-      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
-        DL(F.getDataLayout()), Builder(SE.getContext()) {}
+      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI), DL(F.getDataLayout()),
+        Builder(SE.getContext(), TargetFolder(DL)) {}
 
   bool run();
 

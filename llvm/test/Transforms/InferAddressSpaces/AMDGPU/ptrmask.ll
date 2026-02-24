@@ -31,9 +31,7 @@ define <3 x ptr addrspace(3)> @ptrmask_vector_cast_local_to_flat(<3 x ptr addrsp
 ; Casting null does not necessarily result in null again.
 define i8 @ptrmask_cast_local_null_to_flat(i64 %mask) {
 ; CHECK-LABEL: @ptrmask_cast_local_null_to_flat(
-; CHECK-NEXT:    [[MASKED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr addrspacecast (ptr addrspace(3) null to ptr), i64 [[MASK:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[MASKED]] to ptr addrspace(3)
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr null, align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %masked = call ptr @llvm.ptrmask.p0.i64(ptr addrspacecast (ptr addrspace(3) zeroinitializer to ptr), i64 %mask)
@@ -43,9 +41,7 @@ define i8 @ptrmask_cast_local_null_to_flat(i64 %mask) {
 
 define <3 x ptr addrspace(3)> @ptrmask_vector_cast_local_null_to_flat(<3 x i64> %mask) {
 ; CHECK-LABEL: @ptrmask_vector_cast_local_null_to_flat(
-; CHECK-NEXT:    [[MASKED:%.*]] = call <3 x ptr> @llvm.ptrmask.v3p0.v3i64(<3 x ptr> <ptr addrspacecast (ptr addrspace(3) null to ptr), ptr addrspacecast (ptr addrspace(3) null to ptr), ptr addrspacecast (ptr addrspace(3) null to ptr)>, <3 x i64> [[MASK:%.*]])
-; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast <3 x ptr> [[MASKED]] to <3 x ptr addrspace(3)>
-; CHECK-NEXT:    ret <3 x ptr addrspace(3)> [[CAST]]
+; CHECK-NEXT:    ret <3 x ptr addrspace(3)> zeroinitializer
 ;
   %masked = call <3 x ptr> @llvm.ptrmask.v3p0.v3i64(<3 x ptr> addrspacecast (<3 x ptr addrspace(3)> <ptr addrspace(3) zeroinitializer, ptr addrspace(3) zeroinitializer, ptr addrspace(3) zeroinitializer> to <3 x ptr>), <3 x i64> %mask)
   %cast = addrspacecast <3 x ptr> %masked to <3 x ptr addrspace(3)>
@@ -133,7 +129,7 @@ define <3 x ptr addrspace(3)> @ptrmask_vector_cast_flat_to_local(<3 x ptr> %src.
 ; truncating)
 define i8 @ptrmask_cast_flat_null_to_local(i64 %mask) {
 ; CHECK-LABEL: @ptrmask_cast_flat_null_to_local(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), align 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) null, align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %masked = call ptr @llvm.ptrmask.p0.i64(ptr null, i64 %mask)
@@ -144,7 +140,7 @@ define i8 @ptrmask_cast_flat_null_to_local(i64 %mask) {
 
 define i8 @ptrmask_vector_cast_flat_null_to_local(<3 x i64> %mask, i32 %ptridx, i32 %idx) {
 ; CHECK-LABEL: @ptrmask_vector_cast_flat_null_to_local(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(3) addrspacecast (ptr null to ptr addrspace(3)), i32 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr addrspace(3) null, i32 [[IDX:%.*]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[GEP]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
@@ -325,9 +321,7 @@ define i8 @ptrmask_cast_local_to_flat_const_mask_7fffffffffffffff(ptr addrspace(
 ; Do not fold: casting null does not necessarily result in null again
 define i8 @ptrmask_cast_local_null_to_flat_const_mask_7fffffffffffffff() {
 ; CHECK-LABEL: @ptrmask_cast_local_null_to_flat_const_mask_7fffffffffffffff(
-; CHECK-NEXT:    [[MASKED:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr addrspacecast (ptr addrspace(3) null to ptr), i64 9223372036854775807)
-; CHECK-NEXT:    [[TMP1:%.*]] = addrspacecast ptr [[MASKED]] to ptr addrspace(3)
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) [[TMP1]], align 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr addrspace(3) null, align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
   %cast = addrspacecast ptr addrspace(3) zeroinitializer to ptr
