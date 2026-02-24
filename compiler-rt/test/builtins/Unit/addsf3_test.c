@@ -16,7 +16,7 @@
 // 0x7fc00000. For the Arm assembler FP implementations, which commit to a
 // more detailed handling of NaNs, we tighten up the check and include some
 // extra test cases specific to that NaN policy.
-#if __arm__ || __thumb__
+#if COMPILER_RT_ARM_OPTIMIZED_FP_THUMB1
 #  define EXPECT_EXACT_RESULTS
 #  define ARM_NAN_HANDLING
 #endif
@@ -24,8 +24,8 @@
 // Returns: a + b
 COMPILER_RT_ABI float __addsf3(float a, float b);
 
-int test__addsf3(int line, uint32_t a_rep, uint32_t b_rep,
-                 uint32_t expected_rep) {
+int test__addsf3(uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep,
+                 int line) {
   float a = fromRep32(a_rep), b = fromRep32(b_rep);
   float x = __addsf3(a, b);
 #ifdef EXPECT_EXACT_RESULTS
@@ -42,7 +42,7 @@ int test__addsf3(int line, uint32_t a_rep, uint32_t b_rep,
   return ret;
 }
 
-#define test__addsf3(a, b, x) (test__addsf3)(__LINE__, a, b, x)
+#define test__addsf3(a, b, x) (test__addsf3)(a, b, x, __LINE__)
 
 int main() {
   int status = 0;
