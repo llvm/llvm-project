@@ -76,6 +76,7 @@
 ; O2-NEXT: require<collector-metadata>
 ; O2-NEXT: require<runtime-libcall-info>
 ; O2-NEXT: require<libcall-lowering-info>
+; O2-NEXT: function(objc-arc-contract)
 ; O2-NEXT: pre-isel-intrinsic-lowering
 ; O2-NEXT: function(expand-ir-insts<O2>
 ; O2-NEXT: atomic-expand
@@ -100,7 +101,6 @@
 ; O2-NEXT: indirectbr-expand
 ; O2-NEXT: codegenprepare
 ; O2-NEXT: dwarf-eh-prepare
-; O2-NEXT: objc-arc-contract
 ; O2-NEXT: inline-asm-prepare
 ; O2-NEXT: safe-stack
 ; O2-NEXT: stack-protector
@@ -257,6 +257,7 @@
 ; O3-WINDOWS-NEXT: require<collector-metadata>
 ; O3-WINDOWS-NEXT: require<runtime-libcall-info>
 ; O3-WINDOWS-NEXT: require<libcall-lowering-info>
+; O3-WINDOWS-NEXT: function(objc-arc-contract)
 ; O3-WINDOWS-NEXT: pre-isel-intrinsic-lowering
 ; O3-WINDOWS-NEXT: function(expand-ir-insts<O3>
 ; O3-WINDOWS-NEXT: atomic-expand
@@ -283,7 +284,6 @@
 ; O3-WINDOWS-NEXT: codegenprepare
 ; O3-WINDOWS-NEXT: win-eh-prepare
 ; O3-WINDOWS-NEXT: dwarf-eh-prepare
-; O3-WINDOWS-NEXT: objc-arc-contract
 ; O3-WINDOWS-NEXT: inline-asm-prepare
 ; O3-WINDOWS-NEXT: safe-stack
 ; O3-WINDOWS-NEXT: stack-protector
