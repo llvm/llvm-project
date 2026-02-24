@@ -1174,23 +1174,24 @@ TEST_F(AArch64SelectionDAGTest,
 
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTL) {
   SDLoc Loc;
-  auto IntVT = EVT::getIntegerVT(Context, 32);
-
   // Power-of-two values
-  auto Pow2_4 = DAG->getConstant(4, Loc, IntVT);
-  auto Pow2_8 = DAG->getConstant(8, Loc, IntVT);
+  SDValue Pow2_4 = DAG->getConstant(4, Loc, MVT::i32);
+  SDValue Pow2_8 = DAG->getConstant(8, Loc, MVT::i32);
 
   // Non-power-of-two values
-  auto NonPow2_5 = DAG->getConstant(5, Loc, IntVT);
-  auto NonPow2_0 = DAG->getConstant(0, Loc, IntVT);
+  SDValue NonPow2_5 = DAG->getConstant(5, Loc, MVT::i32);
+  SDValue NonPow2_0 = DAG->getConstant(0, Loc, MVT::i32);
 
-  auto RotAmount = DAG->getConstant(3, Loc, IntVT);
+  SDValue RotAmount = DAG->getConstant(3, Loc, MVT::i32);
 
-  auto RotlPow2_4 = DAG->getNode(ISD::ROTL, Loc, IntVT, Pow2_4, RotAmount);
-  auto RotlPow2_8 = DAG->getNode(ISD::ROTL, Loc, IntVT, Pow2_8, RotAmount);
-  auto RotlNonPow2_5 =
-      DAG->getNode(ISD::ROTL, Loc, IntVT, NonPow2_5, RotAmount);
-  auto RotlZero = DAG->getNode(ISD::ROTL, Loc, IntVT, NonPow2_0, RotAmount);
+  SDValue RotlPow2_4 =
+      DAG->getNode(ISD::ROTL, Loc, MVT::i32, Pow2_4, RotAmount);
+  SDValue RotlPow2_8 =
+      DAG->getNode(ISD::ROTL, Loc, MVT::i32, Pow2_8, RotAmount);
+  SDValue RotlNonPow2_5 =
+      DAG->getNode(ISD::ROTL, Loc, MVT::i32, NonPow2_5, RotAmount);
+  SDValue RotlZero =
+      DAG->getNode(ISD::ROTL, Loc, MVT::i32, NonPow2_0, RotAmount);
 
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotlPow2_4));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotlPow2_8));
@@ -1200,45 +1201,47 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTL) {
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotlZero));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotlZero, /*OrZero=*/true));
 
-    // Also verify DemandedElts is forwarded through ROTL for vector lanes.
-    auto VecVT = EVT::getVectorVT(Context, IntVT, 2, /*IsScalable=*/false);
-    auto PowAndZero = DAG->getBuildVector(VecVT, Loc, {Pow2_4, NonPow2_0});
-    auto RotAmountVec = DAG->getBuildVector(VecVT, Loc, {RotAmount, RotAmount});
-    auto RotlPowAndZero =
+  // Also verify DemandedElts is forwarded through ROTL for vector lanes.
+  MVT::SimpleValueType VecVT = MVT::v2i32;
+  SDValue PowAndZero = DAG->getBuildVector(VecVT, Loc, {Pow2_4, NonPow2_0});
+  SDValue RotAmountVec =
+      DAG->getBuildVector(VecVT, Loc, {RotAmount, RotAmount});
+  SDValue RotlPowAndZero =
       DAG->getNode(ISD::ROTL, Loc, VecVT, PowAndZero, RotAmountVec);
-    APInt DemandAll(2, 3);
-    EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotlPowAndZero, DemandAll));
-    EXPECT_TRUE(
+  APInt DemandAll(2, 3);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotlPowAndZero, DemandAll));
+  EXPECT_TRUE(
       DAG->isKnownToBeAPowerOfTwo(RotlPowAndZero, DemandAll, /*OrZero=*/true));
 }
 
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ROTR) {
   SDLoc Loc;
-  auto IntVT = EVT::getIntegerVT(Context, 32);
 
-  auto Pow2_16 = DAG->getConstant(16, Loc, IntVT);
-  auto NonPow2_6 = DAG->getConstant(6, Loc, IntVT);
-  auto Zero = DAG->getConstant(0, Loc, IntVT);
+  SDValue Pow2_16 = DAG->getConstant(16, Loc, MVT::i32);
+  SDValue NonPow2_6 = DAG->getConstant(6, Loc, MVT::i32);
+  SDValue Zero = DAG->getConstant(0, Loc, MVT::i32);
 
-  auto RotAmount = DAG->getConstant(5, Loc, IntVT);
+  SDValue RotAmount = DAG->getConstant(5, Loc, MVT::i32);
 
-  auto RotrPow2 = DAG->getNode(ISD::ROTR, Loc, IntVT, Pow2_16, RotAmount);
-  auto RotrNonPow2 = DAG->getNode(ISD::ROTR, Loc, IntVT, NonPow2_6, RotAmount);
-  auto RotrZero = DAG->getNode(ISD::ROTR, Loc, IntVT, Zero, RotAmount);
+  SDValue RotrPow2 = DAG->getNode(ISD::ROTR, Loc, MVT::i32, Pow2_16, RotAmount);
+  SDValue RotrNonPow2 =
+      DAG->getNode(ISD::ROTR, Loc, MVT::i32, NonPow2_6, RotAmount);
+  SDValue RotrZero = DAG->getNode(ISD::ROTR, Loc, MVT::i32, Zero, RotAmount);
 
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotrPow2));
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrNonPow2));
   EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrZero));
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(RotrZero, /*OrZero=*/true));
 
-    auto VecVT = EVT::getVectorVT(Context, IntVT, 2, /*IsScalable=*/false);
-    auto PowAndZero = DAG->getBuildVector(VecVT, Loc, {Pow2_16, Zero});
-    auto RotAmountVec = DAG->getBuildVector(VecVT, Loc, {RotAmount, RotAmount});
-    auto RotrPowAndZero =
+  MVT::SimpleValueType VecVT = MVT::v2i32;
+  SDValue PowAndZero = DAG->getBuildVector(VecVT, Loc, {Pow2_16, Zero});
+  SDValue RotAmountVec =
+      DAG->getBuildVector(VecVT, Loc, {RotAmount, RotAmount});
+  SDValue RotrPowAndZero =
       DAG->getNode(ISD::ROTR, Loc, VecVT, PowAndZero, RotAmountVec);
-    APInt DemandAll(2, 3);
-    EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrPowAndZero, DemandAll));
-    EXPECT_TRUE(
+  APInt DemandAll(2, 3);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(RotrPowAndZero, DemandAll));
+  EXPECT_TRUE(
       DAG->isKnownToBeAPowerOfTwo(RotrPowAndZero, DemandAll, /*OrZero=*/true));
 }
 
