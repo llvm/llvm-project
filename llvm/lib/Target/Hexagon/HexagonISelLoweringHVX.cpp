@@ -4097,7 +4097,7 @@ HexagonTargetLowering::combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
   assert(InpLen <= 8 && "Too long for scalar predicate");
   assert(ResLen > 8 && "Too short for HVX vector predicate");
 
-  unsigned Bytes = 8 / InpLen;  // Bytes-per-bit in input
+  unsigned Bytes = 8 / InpLen; // Bytes-per-bit in input
 
   // Already in the right form?
   if (Bytes <= BitBytes)
@@ -4117,8 +4117,7 @@ HexagonTargetLowering::combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
   return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy, Cats);
 }
 
-SDValue
-HexagonTargetLowering::combineConcatVectorsBeforeLegal(
+SDValue HexagonTargetLowering::combineConcatVectorsBeforeLegal(
     SDValue Op, DAGCombinerInfo &DCI) const {
   MVT ResTy = ty(Op);
   MVT ElemTy = ResTy.getVectorElementType();
