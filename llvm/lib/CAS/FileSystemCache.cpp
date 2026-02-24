@@ -201,7 +201,6 @@ void FileSystemCache::finishLazyFile(DirectoryEntry &FileEntry, size_t Size) {
 }
 
 sys::fs::file_type DirectoryEntry::getFileType() const {
-  assert(!isSymlink() && "Expected symlink to be followed first");
   switch (Kind) {
   case Directory:
     return sys::fs::file_type::directory_file;
@@ -209,14 +208,15 @@ sys::fs::file_type DirectoryEntry::getFileType() const {
   case Executable:
     return sys::fs::file_type::regular_file;
   case Symlink:
-    llvm_unreachable("symlinks should be followed before getting file type");
+    return sys::fs::file_type::symlink_file;
   };
 }
 
-ErrorOr<vfs::Status> DirectoryEntry::getStatus(const Twine &RequestedName) {
+ErrorOr<vfs::Status> DirectoryEntry::getStatus(const Twine &RequestedName,
+                                               bool FollowSymlinks) {
   // Symlinks should be followed first. Getting here indicates a broken symlink
   // in directory iteration.
-  if (Kind == Symlink)
+  if (Kind == Symlink && FollowSymlinks)
     return std::errc::no_such_file_or_directory;
 
   const sys::fs::perms RegularPermissions =
@@ -243,7 +243,10 @@ ErrorOr<vfs::Status> DirectoryEntry::getStatus(const Twine &RequestedName) {
     break;
   }
   case Symlink:
-    llvm_unreachable("symlinks don't expose status");
+    Size = 0;
+    Permissions = RegularPermissions;
+    UniqueID = asSymlink().getUniqueID();
+    break;
   };
 
   return vfs::Status(RequestedName, UniqueID, sys::TimePoint<>(), /*User=*/0,

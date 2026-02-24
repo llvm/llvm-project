@@ -125,7 +125,9 @@ private:
 
 class CASFileSystem::VFSFile final : public CASBackedFile {
 public:
-  ErrorOr<vfs::Status> status() final { return Entry->getStatus(Name); }
+  ErrorOr<vfs::Status> status() final {
+    return Entry->getStatus(Name, /*FollowSymlinks=*/true);
+  }
 
   ErrorOr<std::string> getName() final { return Name; }
 
@@ -321,7 +323,7 @@ ErrorOr<vfs::Status> CASFileSystem::status(const Twine &Path) {
       return errorToErrorCode(std::move(E));
   }
 
-  return Entry->getStatus(PathRef);
+  return Entry->getStatus(PathRef, /*FollowSymlinks=*/true);
 }
 
 Expected<const vfs::CachedDirectoryEntry *>

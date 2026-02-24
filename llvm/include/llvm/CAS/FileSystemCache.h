@@ -296,7 +296,8 @@ public:
 
   /// Get the status with the requested name. Requires that this is not a
   /// symlink.
-  ErrorOr<vfs::Status> getStatus(const Twine &RequestedName);
+  ErrorOr<vfs::Status> getStatus(const Twine &RequestedName,
+                                 bool FollowSymlinks);
 
   FileSystemCache::Directory &asDirectory() const {
     assert(isDirectory());

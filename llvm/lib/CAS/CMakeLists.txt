@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMCAS
   BuiltinUnifiedCASDatabases.cpp
   CASConfiguration.cpp
   CASFileSystem.cpp
+  CASFSBuilder.cpp
   CASNodeSchema.cpp
   CASOutputBackend.cpp
   CASProvidingFileSystem.cpp
