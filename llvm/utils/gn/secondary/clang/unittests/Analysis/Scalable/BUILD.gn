@@ -28,5 +28,7 @@ unittest("ClangScalableAnalysisTests") {
     "Registries/SummaryExtractorRegistryTest.cpp",
     "Serialization/JSONFormatTest.cpp",
     "SummaryNameTest.cpp",
+    "TUSummaryBuilderTest.cpp",
+    "TestFixture.cpp",
   ]
 }
