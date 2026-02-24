@@ -8944,8 +8944,9 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // want to forward-subst the cast.
 
     if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
-       // If this is a bitcast from an illegal integer type to a legal vector type,
-      // try to hoist it to the source's basic block to avoid register splitting.
+      // If this is a bitcast from an illegal integer type to a legal vector
+      // type, try to hoist it to the source's basic block to avoid register
+      // splitting.
       if (optimizeBitCast(BCI, *TLI, *DL))
         return true;
     }
