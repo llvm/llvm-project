@@ -173,6 +173,13 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   else
     setMaxAtomicSizeInBitsSupported(32);
 
+  // Note: i256 div/rem and FP conversions are intentionally NOT routed to
+  // libcalls on x86-64.  The x86-64 SysV ABI classifies __int256 as MEMORY
+  // (> 2 eightbytes), so the frontend uses indirect passing (sret/byval).
+  // Backend-generated libcalls pass i256 as a split scalar (4 x i64 in
+  // registers), creating an ABI mismatch with the compiled builtins.
+  // Instead, ExpandLargeDivRem and ExpandLargeFPConvert expand these
+  // operations at the IR level.
   setMaxDivRemBitWidthSupported(Subtarget.is64Bit() ? 128 : 64);
 
   setMaxLargeFPConvertBitWidthSupported(128);

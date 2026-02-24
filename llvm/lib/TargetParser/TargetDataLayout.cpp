@@ -85,8 +85,8 @@ static std::string computeAArch64DataLayout(const Triple &TT) {
     if (TT.getArch() == Triple::aarch64_32)
       return "e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
              "n32:64-S128-Fn32";
-    return "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-n32:64-S128-"
-           "Fn32";
+    return "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+           "n32:64-S128-Fn32";
   }
   if (TT.isOSBinFormatCOFF())
     return "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-i64:64-i128:"
@@ -200,9 +200,10 @@ static std::string computeMipsDataLayout(const Triple &TT, StringRef ABIName) {
   // 32 bit registers are always available and the stack is at least 64 bit
   // aligned. On N64 64 bit registers are also available and the stack is
   // 128 bit aligned.
-  if (ABI == MipsABI::N64 || ABI == MipsABI::N32)
-    Ret += "-i128:128-n32:64-S128";
-  else
+  if (ABI == MipsABI::N64 || ABI == MipsABI::N32) {
+    Ret += "-i128:128";
+    Ret += "-n32:64-S128";
+  } else
     Ret += "-n32-S64";
 
   return Ret;
@@ -242,9 +243,10 @@ static std::string computePowerDataLayout(const Triple &T, StringRef ABIName) {
   Ret += "-i64:64";
 
   // PPC64 has 32 and 64 bit registers, PPC32 has only 32 bit ones.
-  if (is64Bit)
-    Ret += "-i128:128-n32:64";
-  else
+  if (is64Bit) {
+    Ret += "-i128:128";
+    Ret += "-n32:64";
+  } else
     Ret += "-n32";
 
   // The ABI alignment for doubles on AIX is 4 bytes.
@@ -410,9 +412,9 @@ static std::string computeX86DataLayout(const Triple &TT) {
   // Some ABIs align 64 bit integers and doubles to 64 bits, others to 32.
   // 128 bit integers are not specified in the 32-bit ABIs but are used
   // internally for lowering f128, so we match the alignment to that.
-  if (Is64Bit || TT.isOSWindows())
+  if (Is64Bit || TT.isOSWindows()) {
     Ret += "-i64:64-i128:128";
-  else if (TT.isOSIAMCU())
+  } else if (TT.isOSIAMCU())
     Ret += "-i64:32-f64:32";
   else
     Ret += "-i128:128-f64:32:64";

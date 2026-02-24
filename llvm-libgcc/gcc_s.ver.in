@@ -67,6 +67,16 @@ GCC_4.3.0 { __bswapdi2; __bswapsi2; __emutls_get_address;                 };
   GCC_3.4.4 { __absvti2;     __addvti3; __mulvti3;   __negvti2;    __subvti3; };
   GCC_4.2.0 { __floatuntidf; __floatuntisf;                                   };
   GCC_7.0.0 { __divmodti4;                                                    };
+
+  // 256-bit integer builtins (compiler-rt only, requires __int256 support)
+  COMPILER_RT_256 {
+    __ashloi3; __ashroi3; __lshroi3; __multi5; __divoi3; __udivoi3; __modoi3;
+    __umodoi3; __negoi2; __cmpoi2; __ucmpoi2; __udivmodoi4; __divmodoi4;
+    __clzoi2; __ctzoi2; __popcountoi2; __parityoi2; __ffsoi2;
+    __absvoi2; __addvoi3; __subvoi3; __mulvoi3; __negvoi2; __muloi5;
+    __fixsfoi; __fixdfoi; __fixunssfoi; __fixunsdfoi;
+    __floatoisf; __floatoidf; __floatunoisf; __floatunoidf;
+  };
 #endif
 
 #if defined(GLOBAL_X86)

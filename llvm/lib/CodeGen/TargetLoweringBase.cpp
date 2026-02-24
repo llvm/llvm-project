@@ -130,6 +130,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getSHL(EVT VT) {
     return RTLIB::SHL_I64;
   if (VT == MVT::i128)
     return RTLIB::SHL_I128;
+  if (VT == MVT::i256)
+    return RTLIB::SHL_I256;
 
   return RTLIB::UNKNOWN_LIBCALL;
 }
@@ -143,6 +145,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getSRL(EVT VT) {
     return RTLIB::SRL_I64;
   if (VT == MVT::i128)
     return RTLIB::SRL_I128;
+  if (VT == MVT::i256)
+    return RTLIB::SRL_I256;
 
   return RTLIB::UNKNOWN_LIBCALL;
 }
@@ -156,6 +160,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getSRA(EVT VT) {
     return RTLIB::SRA_I64;
   if (VT == MVT::i128)
     return RTLIB::SRA_I128;
+  if (VT == MVT::i256)
+    return RTLIB::SRA_I256;
 
   return RTLIB::UNKNOWN_LIBCALL;
 }
@@ -169,6 +175,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getMUL(EVT VT) {
     return RTLIB::MUL_I64;
   if (VT == MVT::i128)
     return RTLIB::MUL_I128;
+  if (VT == MVT::i256)
+    return RTLIB::MUL_I256;
   return RTLIB::UNKNOWN_LIBCALL;
 }
 
@@ -179,6 +187,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getMULO(EVT VT) {
     return RTLIB::MULO_I64;
   if (VT == MVT::i128)
     return RTLIB::MULO_I128;
+  if (VT == MVT::i256)
+    return RTLIB::MULO_I256;
   return RTLIB::UNKNOWN_LIBCALL;
 }
 
@@ -191,6 +201,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getSDIV(EVT VT) {
     return RTLIB::SDIV_I64;
   if (VT == MVT::i128)
     return RTLIB::SDIV_I128;
+  if (VT == MVT::i256)
+    return RTLIB::SDIV_I256;
   return RTLIB::UNKNOWN_LIBCALL;
 }
 
@@ -203,6 +215,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getUDIV(EVT VT) {
     return RTLIB::UDIV_I64;
   if (VT == MVT::i128)
     return RTLIB::UDIV_I128;
+  if (VT == MVT::i256)
+    return RTLIB::UDIV_I256;
   return RTLIB::UNKNOWN_LIBCALL;
 }
 
@@ -215,6 +229,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getSREM(EVT VT) {
     return RTLIB::SREM_I64;
   if (VT == MVT::i128)
     return RTLIB::SREM_I128;
+  if (VT == MVT::i256)
+    return RTLIB::SREM_I256;
   return RTLIB::UNKNOWN_LIBCALL;
 }
 
@@ -227,6 +243,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getUREM(EVT VT) {
     return RTLIB::UREM_I64;
   if (VT == MVT::i128)
     return RTLIB::UREM_I128;
+  if (VT == MVT::i256)
+    return RTLIB::UREM_I256;
   return RTLIB::UNKNOWN_LIBCALL;
 }
 
@@ -237,6 +255,8 @@ LLVM_ABI RTLIB::Libcall RTLIB::getCTPOP(EVT VT) {
     return RTLIB::CTPOP_I64;
   if (VT == MVT::i128)
     return RTLIB::CTPOP_I128;
+  if (VT == MVT::i256)
+    return RTLIB::CTPOP_I256;
   return RTLIB::UNKNOWN_LIBCALL;
 }
 
@@ -356,6 +376,8 @@ RTLIB::Libcall RTLIB::getFPTOSINT(EVT OpVT, EVT RetVT) {
       return FPTOSINT_F32_I64;
     if (RetVT == MVT::i128)
       return FPTOSINT_F32_I128;
+    if (RetVT == MVT::i256)
+      return FPTOSINT_F32_I256;
   } else if (OpVT == MVT::f64) {
     if (RetVT == MVT::i32)
       return FPTOSINT_F64_I32;
@@ -363,6 +385,8 @@ RTLIB::Libcall RTLIB::getFPTOSINT(EVT OpVT, EVT RetVT) {
       return FPTOSINT_F64_I64;
     if (RetVT == MVT::i128)
       return FPTOSINT_F64_I128;
+    if (RetVT == MVT::i256)
+      return FPTOSINT_F64_I256;
   } else if (OpVT == MVT::f80) {
     if (RetVT == MVT::i32)
       return FPTOSINT_F80_I32;
@@ -370,6 +394,8 @@ RTLIB::Libcall RTLIB::getFPTOSINT(EVT OpVT, EVT RetVT) {
       return FPTOSINT_F80_I64;
     if (RetVT == MVT::i128)
       return FPTOSINT_F80_I128;
+    if (RetVT == MVT::i256)
+      return FPTOSINT_F80_I256;
   } else if (OpVT == MVT::f128) {
     if (RetVT == MVT::i32)
       return FPTOSINT_F128_I32;
@@ -377,6 +403,8 @@ RTLIB::Libcall RTLIB::getFPTOSINT(EVT OpVT, EVT RetVT) {
       return FPTOSINT_F128_I64;
     if (RetVT == MVT::i128)
       return FPTOSINT_F128_I128;
+    if (RetVT == MVT::i256)
+      return FPTOSINT_F128_I256;
   } else if (OpVT == MVT::ppcf128) {
     if (RetVT == MVT::i32)
       return FPTOSINT_PPCF128_I32;
@@ -405,6 +433,8 @@ RTLIB::Libcall RTLIB::getFPTOUINT(EVT OpVT, EVT RetVT) {
       return FPTOUINT_F32_I64;
     if (RetVT == MVT::i128)
       return FPTOUINT_F32_I128;
+    if (RetVT == MVT::i256)
+      return FPTOUINT_F32_I256;
   } else if (OpVT == MVT::f64) {
     if (RetVT == MVT::i32)
       return FPTOUINT_F64_I32;
@@ -412,6 +442,8 @@ RTLIB::Libcall RTLIB::getFPTOUINT(EVT OpVT, EVT RetVT) {
       return FPTOUINT_F64_I64;
     if (RetVT == MVT::i128)
       return FPTOUINT_F64_I128;
+    if (RetVT == MVT::i256)
+      return FPTOUINT_F64_I256;
   } else if (OpVT == MVT::f80) {
     if (RetVT == MVT::i32)
       return FPTOUINT_F80_I32;
@@ -419,6 +451,8 @@ RTLIB::Libcall RTLIB::getFPTOUINT(EVT OpVT, EVT RetVT) {
       return FPTOUINT_F80_I64;
     if (RetVT == MVT::i128)
       return FPTOUINT_F80_I128;
+    if (RetVT == MVT::i256)
+      return FPTOUINT_F80_I256;
   } else if (OpVT == MVT::f128) {
     if (RetVT == MVT::i32)
       return FPTOUINT_F128_I32;
@@ -426,6 +460,8 @@ RTLIB::Libcall RTLIB::getFPTOUINT(EVT OpVT, EVT RetVT) {
       return FPTOUINT_F128_I64;
     if (RetVT == MVT::i128)
       return FPTOUINT_F128_I128;
+    if (RetVT == MVT::i256)
+      return FPTOUINT_F128_I256;
   } else if (OpVT == MVT::ppcf128) {
     if (RetVT == MVT::i32)
       return FPTOUINT_PPCF128_I32;
@@ -481,6 +517,15 @@ RTLIB::Libcall RTLIB::getSINTTOFP(EVT OpVT, EVT RetVT) {
       return SINTTOFP_I128_F128;
     if (RetVT == MVT::ppcf128)
       return SINTTOFP_I128_PPCF128;
+  } else if (OpVT == MVT::i256) {
+    if (RetVT == MVT::f32)
+      return SINTTOFP_I256_F32;
+    if (RetVT == MVT::f64)
+      return SINTTOFP_I256_F64;
+    if (RetVT == MVT::f80)
+      return SINTTOFP_I256_F80;
+    if (RetVT == MVT::f128)
+      return SINTTOFP_I256_F128;
   }
   return UNKNOWN_LIBCALL;
 }
@@ -529,6 +574,15 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
       return UINTTOFP_I128_F128;
     if (RetVT == MVT::ppcf128)
       return UINTTOFP_I128_PPCF128;
+  } else if (OpVT == MVT::i256) {
+    if (RetVT == MVT::f32)
+      return UINTTOFP_I256_F32;
+    if (RetVT == MVT::f64)
+      return UINTTOFP_I256_F64;
+    if (RetVT == MVT::f80)
+      return UINTTOFP_I256_F80;
+    if (RetVT == MVT::f128)
+      return UINTTOFP_I256_F128;
   }
   return UNKNOWN_LIBCALL;
 }

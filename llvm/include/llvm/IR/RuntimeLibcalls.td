@@ -81,21 +81,21 @@ def ExceptionModelIsSjLj : RuntimeLibcallPredicate<
 //--------------------------------------------------------------------
 
 // Integer
-foreach IntTy = ["I16", "I32", "I64", "I128"] in {
+foreach IntTy = ["I16", "I32", "I64", "I128", "I256"] in {
   def SHL_#IntTy : RuntimeLibcall;
   def SRL_#IntTy : RuntimeLibcall;
   def SRA_#IntTy : RuntimeLibcall;
 }
 
-foreach IntTy = ["I8", "I16", "I32", "I64", "I128"] in {
+foreach IntTy = ["I8", "I16", "I32", "I64", "I128", "I256"] in {
   def MUL_#IntTy : RuntimeLibcall;
 }
 
-foreach IntTy = ["I32", "I64", "I128" ] in {
+foreach IntTy = ["I32", "I64", "I128", "I256"] in {
   def MULO_#IntTy : RuntimeLibcall;
 }
 
-foreach IntTy = ["I8", "I16", "I32", "I64", "I128"] in {
+foreach IntTy = ["I8", "I16", "I32", "I64", "I128", "I256"] in {
   def SDIV_#IntTy : RuntimeLibcall;
   def UDIV_#IntTy : RuntimeLibcall;
   def SREM_#IntTy : RuntimeLibcall;
@@ -108,7 +108,7 @@ foreach IntTy = ["I32", "I64" ] in {
   def NEG_#IntTy : RuntimeLibcall;
 }
 
-foreach IntTy = ["I32", "I64", "I128"] in {
+foreach IntTy = ["I32", "I64", "I128", "I256"] in {
   def CTLZ_#IntTy : RuntimeLibcall;
   def CTPOP_#IntTy : RuntimeLibcall;
 }
@@ -305,12 +305,16 @@ def FPTOSINT_F64_I128 : RuntimeLibcall;
 def FPTOSINT_F80_I32 : RuntimeLibcall;
 def FPTOSINT_F80_I64 : RuntimeLibcall;
 def FPTOSINT_F80_I128 : RuntimeLibcall;
+def FPTOSINT_F80_I256 : RuntimeLibcall;
 def FPTOSINT_F128_I32 : RuntimeLibcall;
 def FPTOSINT_F128_I64 : RuntimeLibcall;
 def FPTOSINT_F128_I128 : RuntimeLibcall;
 def FPTOSINT_PPCF128_I32 : RuntimeLibcall;
 def FPTOSINT_PPCF128_I64 : RuntimeLibcall;
 def FPTOSINT_PPCF128_I128 : RuntimeLibcall;
+def FPTOSINT_F32_I256 : RuntimeLibcall;
+def FPTOSINT_F64_I256 : RuntimeLibcall;
+def FPTOSINT_F128_I256 : RuntimeLibcall;
 def FPTOUINT_F16_I32 : RuntimeLibcall;
 def FPTOUINT_F16_I64 : RuntimeLibcall;
 def FPTOUINT_F16_I128 : RuntimeLibcall;
@@ -323,12 +327,16 @@ def FPTOUINT_F64_I128 : RuntimeLibcall;
 def FPTOUINT_F80_I32 : RuntimeLibcall;
 def FPTOUINT_F80_I64 : RuntimeLibcall;
 def FPTOUINT_F80_I128 : RuntimeLibcall;
+def FPTOUINT_F80_I256 : RuntimeLibcall;
 def FPTOUINT_F128_I32 : RuntimeLibcall;
 def FPTOUINT_F128_I64 : RuntimeLibcall;
 def FPTOUINT_F128_I128 : RuntimeLibcall;
 def FPTOUINT_PPCF128_I32 : RuntimeLibcall;
 def FPTOUINT_PPCF128_I64 : RuntimeLibcall;
 def FPTOUINT_PPCF128_I128 : RuntimeLibcall;
+def FPTOUINT_F32_I256 : RuntimeLibcall;
+def FPTOUINT_F64_I256 : RuntimeLibcall;
+def FPTOUINT_F128_I256 : RuntimeLibcall;
 def SINTTOFP_I32_F16 : RuntimeLibcall;
 def SINTTOFP_I32_F32 : RuntimeLibcall;
 def SINTTOFP_I32_F64 : RuntimeLibcall;
@@ -348,6 +356,10 @@ def SINTTOFP_I128_F64 : RuntimeLibcall;
 def SINTTOFP_I128_F80 : RuntimeLibcall;
 def SINTTOFP_I128_F128 : RuntimeLibcall;
 def SINTTOFP_I128_PPCF128 : RuntimeLibcall;
+def SINTTOFP_I256_F32 : RuntimeLibcall;
+def SINTTOFP_I256_F64 : RuntimeLibcall;
+def SINTTOFP_I256_F80 : RuntimeLibcall;
+def SINTTOFP_I256_F128 : RuntimeLibcall;
 def UINTTOFP_I32_F16 : RuntimeLibcall;
 def UINTTOFP_I32_F32 : RuntimeLibcall;
 def UINTTOFP_I32_F64 : RuntimeLibcall;
@@ -367,6 +379,10 @@ def UINTTOFP_I128_F64 : RuntimeLibcall;
 def UINTTOFP_I128_F80 : RuntimeLibcall;
 def UINTTOFP_I128_F128 : RuntimeLibcall;
 def UINTTOFP_I128_PPCF128 : RuntimeLibcall;
+def UINTTOFP_I256_F32 : RuntimeLibcall;
+def UINTTOFP_I256_F64 : RuntimeLibcall;
+def UINTTOFP_I256_F80 : RuntimeLibcall;
+def UINTTOFP_I256_F128 : RuntimeLibcall;
 def CONVERT_F128_PPCF128 : RuntimeLibcall;
 def CONVERT_PPCF128_F128 : RuntimeLibcall;
 
@@ -926,24 +942,28 @@ def __divhi3 : RuntimeLibcallImpl<SDIV_I16>;
 def __divsi3 : RuntimeLibcallImpl<SDIV_I32>;
 def __divdi3 : RuntimeLibcallImpl<SDIV_I64>;
 def __divti3 : RuntimeLibcallImpl<SDIV_I128>;
+def __divoi3 : RuntimeLibcallImpl<SDIV_I256>;
 
 def __udivqi3 : RuntimeLibcallImpl<UDIV_I8>;
 def __udivhi3 : RuntimeLibcallImpl<UDIV_I16>;
 def __udivsi3 : RuntimeLibcallImpl<UDIV_I32>;
 def __udivdi3 : RuntimeLibcallImpl<UDIV_I64>;
 def __udivti3 : RuntimeLibcallImpl<UDIV_I128>;
+def __udivoi3 : RuntimeLibcallImpl<UDIV_I256>;
 
 def __modqi3 : RuntimeLibcallImpl<SREM_I8>;
 def __modhi3 : RuntimeLibcallImpl<SREM_I16>;
 def __modsi3 : RuntimeLibcallImpl<SREM_I32>;
 def __moddi3 : RuntimeLibcallImpl<SREM_I64>;
 def __modti3 : RuntimeLibcallImpl<SREM_I128>;
+def __modoi3 : RuntimeLibcallImpl<SREM_I256>;
 
 def __umodqi3 : RuntimeLibcallImpl<UREM_I8>;
 def __umodhi3 : RuntimeLibcallImpl<UREM_I16>;
 def __umodsi3 : RuntimeLibcallImpl<UREM_I32>;
 def __umoddi3 : RuntimeLibcallImpl<UREM_I64>;
 def __umodti3 : RuntimeLibcallImpl<UREM_I128>;
+def __umodoi3 : RuntimeLibcallImpl<UREM_I256>;
 
 def __negsi2 : RuntimeLibcallImpl<NEG_I32>;
 def __negdi2 : RuntimeLibcallImpl<NEG_I64>;
@@ -951,10 +971,12 @@ def __negdi2 : RuntimeLibcallImpl<NEG_I64>;
 def __clzsi2 : RuntimeLibcallImpl<CTLZ_I32>;
 def __clzdi2 : RuntimeLibcallImpl<CTLZ_I64>;
 def __clzti2 : RuntimeLibcallImpl<CTLZ_I128>;
+def __clzoi2 : RuntimeLibcallImpl<CTLZ_I256>;
 
 def __popcountsi2 : RuntimeLibcallImpl<CTPOP_I32>;
 def __popcountdi2 : RuntimeLibcallImpl<CTPOP_I64>;
 def __popcountti2 : RuntimeLibcallImpl<CTPOP_I128>;
+def __popcountoi2 : RuntimeLibcallImpl<CTPOP_I256>;
 
 def __addsf3 : RuntimeLibcallImpl<ADD_F32>;
 def __adddf3 : RuntimeLibcallImpl<ADD_F64>;
@@ -1023,15 +1045,19 @@ def __fixhfti : RuntimeLibcallImpl<FPTOSINT_F16_I128>;
 def __fixsfsi : RuntimeLibcallImpl<FPTOSINT_F32_I32>;
 def __fixsfdi : RuntimeLibcallImpl<FPTOSINT_F32_I64>;
 def __fixsfti : RuntimeLibcallImpl<FPTOSINT_F32_I128>;
+def __fixsfoi : RuntimeLibcallImpl<FPTOSINT_F32_I256>;
 def __fixdfsi : RuntimeLibcallImpl<FPTOSINT_F64_I32>;
 def __fixdfdi : RuntimeLibcallImpl<FPTOSINT_F64_I64>;
 def __fixdfti : RuntimeLibcallImpl<FPTOSINT_F64_I128>;
+def __fixdfoi : RuntimeLibcallImpl<FPTOSINT_F64_I256>;
 def __fixxfsi : RuntimeLibcallImpl<FPTOSINT_F80_I32>;
 def __fixxfdi : RuntimeLibcallImpl<FPTOSINT_F80_I64>;
 def __fixxfti : RuntimeLibcallImpl<FPTOSINT_F80_I128>;
+def __fixxfoi : RuntimeLibcallImpl<FPTOSINT_F80_I256>;
 def __fixtfsi : RuntimeLibcallImpl<FPTOSINT_F128_I32>;
 def __fixtfdi_f128 : RuntimeLibcallImpl<FPTOSINT_F128_I64, "__fixtfdi">;
 def __fixtfti_f128 : RuntimeLibcallImpl<FPTOSINT_F128_I128, "__fixtfti">;
+def __fixtfoi_f128 : RuntimeLibcallImpl<FPTOSINT_F128_I256, "__fixtfoi">;
 def __gcc_qtou : RuntimeLibcallImpl<FPTOSINT_PPCF128_I32>;
 def __fixtfdi_ppcf128 : RuntimeLibcallImpl<FPTOSINT_PPCF128_I64, "__fixtfdi">;
 def __fixtfti_ppcf128 : RuntimeLibcallImpl<FPTOSINT_PPCF128_I128, "__fixtfti">;
@@ -1041,15 +1067,19 @@ def __fixunshfti : RuntimeLibcallImpl<FPTOUINT_F16_I128>;
 def __fixunssfsi : RuntimeLibcallImpl<FPTOUINT_F32_I32>;
 def __fixunssfdi : RuntimeLibcallImpl<FPTOUINT_F32_I64>;
 def __fixunssfti : RuntimeLibcallImpl<FPTOUINT_F32_I128>;
+def __fixunssfoi : RuntimeLibcallImpl<FPTOUINT_F32_I256>;
 def __fixunsdfsi : RuntimeLibcallImpl<FPTOUINT_F64_I32>;
 def __fixunsdfdi : RuntimeLibcallImpl<FPTOUINT_F64_I64>;
 def __fixunsdfti : RuntimeLibcallImpl<FPTOUINT_F64_I128>;
+def __fixunsdfoi : RuntimeLibcallImpl<FPTOUINT_F64_I256>;
 def __fixunsxfsi : RuntimeLibcallImpl<FPTOUINT_F80_I32>;
 def __fixunsxfdi : RuntimeLibcallImpl<FPTOUINT_F80_I64>;
 def __fixunsxfti : RuntimeLibcallImpl<FPTOUINT_F80_I128>;
+def __fixunsxfoi : RuntimeLibcallImpl<FPTOUINT_F80_I256>;
 def __fixunstfsi_f128 : RuntimeLibcallImpl<FPTOUINT_F128_I32, "__fixunstfsi">;
 def __fixunstfdi_f128 : RuntimeLibcallImpl<FPTOUINT_F128_I64, "__fixunstfdi">;
 def __fixunstfti_f128 : RuntimeLibcallImpl<FPTOUINT_F128_I128, "__fixunstfti">;
+def __fixunstfoi_f128 : RuntimeLibcallImpl<FPTOUINT_F128_I256, "__fixunstfoi">;
 def __fixunstfsi_ppcf128 : RuntimeLibcallImpl<FPTOUINT_PPCF128_I32, "__fixunstfsi">;
 def __fixunstfdi_ppcf128 : RuntimeLibcallImpl<FPTOUINT_PPCF128_I64, "__fixunstfdi">;
 def __fixunstfti_ppcf128 : RuntimeLibcallImpl<FPTOUINT_PPCF128_I128, "__fixunstfti">;
@@ -1072,6 +1102,10 @@ def __floattidf : RuntimeLibcallImpl<SINTTOFP_I128_F64>;
 def __floattixf : RuntimeLibcallImpl<SINTTOFP_I128_F80>;
 def __floattitf_f128 : RuntimeLibcallImpl<SINTTOFP_I128_F128, "__floattitf">;
 def __floattitf_ppcf128 : RuntimeLibcallImpl<SINTTOFP_I128_PPCF128, "__floattitf">;
+def __floatoisf : RuntimeLibcallImpl<SINTTOFP_I256_F32>;
+def __floatoidf : RuntimeLibcallImpl<SINTTOFP_I256_F64>;
+def __floatoixf : RuntimeLibcallImpl<SINTTOFP_I256_F80>;
+def __floatoitf_f128 : RuntimeLibcallImpl<SINTTOFP_I256_F128, "__floatoitf">;
 def __floatunsihf : RuntimeLibcallImpl<UINTTOFP_I32_F16>;
 def __floatunsisf : RuntimeLibcallImpl<UINTTOFP_I32_F32>;
 def __floatunsidf : RuntimeLibcallImpl<UINTTOFP_I32_F64>;
@@ -1091,6 +1125,10 @@ def __floatuntidf : RuntimeLibcallImpl<UINTTOFP_I128_F64>;
 def __floatuntixf : RuntimeLibcallImpl<UINTTOFP_I128_F80>;
 def __floatuntitf_f128 : RuntimeLibcallImpl<UINTTOFP_I128_F128, "__floatuntitf">;
 def __floatuntitf_ppcf128 : RuntimeLibcallImpl<UINTTOFP_I128_PPCF128, "__floatuntitf">;
+def __floatunoisf : RuntimeLibcallImpl<UINTTOFP_I256_F32>;
+def __floatunoidf : RuntimeLibcallImpl<UINTTOFP_I256_F64>;
+def __floatunoixf : RuntimeLibcallImpl<UINTTOFP_I256_F80>;
+def __floatunoitf_f128 : RuntimeLibcallImpl<UINTTOFP_I256_F128, "__floatunoitf">;
 def __extendkftf2 : RuntimeLibcallImpl<CONVERT_F128_PPCF128>;
 def __trunctfkf2 : RuntimeLibcallImpl<CONVERT_PPCF128_F128>;
 
@@ -1788,6 +1826,17 @@ defset list<RuntimeLibcallImpl> Int128RTLibcalls = {
   def __multi3 : RuntimeLibcallImpl<MUL_I128>;
 }
 
+defset list<RuntimeLibcallImpl> Int256RTLibcalls = {
+  // i256 libcalls are intentionally NOT registered.  The backend expands i256
+  // operations inline (shifts via ExpandToParts, multiplication via
+  // forceExpandMultiply).  Registering libcalls like __multi5 causes an ABI
+  // mismatch on targets where __int256 uses indirect passing (sret/byval):
+  // the backend generates calls with split-scalar convention (4 x i64 in regs)
+  // while the compiled builtins expect indirect pointers.  Additionally,
+  // registering libcalls causes link failures in sanitizer runtimes that embed
+  // UBSan but don't link against compiler-rt builtins.
+}
+
 //--------------------------------------------------------------------
 // compiler-rt only, not available by default
 //--------------------------------------------------------------------
@@ -1798,6 +1847,10 @@ defset list<RuntimeLibcallImpl> CompilerRTOnlyInt64Libcalls = {
 
 defset list<RuntimeLibcallImpl> CompilerRTOnlyInt128Libcalls = {
   def __muloti4 : RuntimeLibcallImpl<MULO_I128>;
+}
+
+defset list<RuntimeLibcallImpl> CompilerRTOnlyInt256Libcalls = {
+  def __muloi5 : RuntimeLibcallImpl<MULO_I256>;
 }
 
 //--------------------------------------------------------------------
@@ -1976,7 +2029,9 @@ defvar DefaultRuntimeLibcallImpls_f128 =
 defvar DefaultRuntimeLibcallImplsBaseList =
 !listremove(
   !listremove(
-    !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
+    !listremove(
+      !listremove(AllDefaultRuntimeLibcallImpls, Int128RTLibcalls),
+                  Int256RTLibcalls),
                 DefaultRuntimeLibcallImpls_f80),
                 DefaultRuntimeLibcallImpls_ppcf128);
 
@@ -2170,6 +2225,7 @@ def AArch64SystemLibrary : SystemRuntimeLibrary<
        LibmHasFrexpF128, LibmHasLdexpF128,
        AArch64LibcallImpls,
        LibcallImpls<(add Int128RTLibcalls), isAArch64_ILP64>,
+       Int256RTLibcalls,
        LibcallImpls<(add bzero), isOSDarwin>,
        DarwinExp10, DarwinSinCosStret, DarwinMemsetPattern,
        MacOSUnlockedIO,
@@ -3419,7 +3475,7 @@ def X86_32SystemLibrary
 
 def X86_64SystemLibrary
     : SystemRuntimeLibrary<isX86_64,
-      (add X86CommonLibcalls, Int128RTLibcalls)>;
+      (add X86CommonLibcalls, Int128RTLibcalls, Int256RTLibcalls)>;
 
 //===----------------------------------------------------------------------===//
 // XCore Runtime Libcalls
