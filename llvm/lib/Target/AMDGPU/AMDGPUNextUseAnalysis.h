@@ -446,7 +446,7 @@ public:
 
   unsigned getNextUseDistance(const MachineBasicBlock &MBB,
                               const VRegMaskPair VMP);
-  unsigned getNextUseDistance(const MachineBasicBlock::iterator I,
+  unsigned getNextUseDistance(MachineBasicBlock::const_iterator I,
                               const VRegMaskPair VMP);
   void getFromSortedRecords(const VRegDistances::SortedRecords &Dists,
                             LaneBitmask Mask, unsigned SnapshotOffset,
