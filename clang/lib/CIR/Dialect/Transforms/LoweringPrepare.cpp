@@ -1304,8 +1304,8 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
   mlir::Value transformedResult;
   if (cmpInfo.getOrdering() != CmpOrdering::Partial) {
     // Total ordering
-    mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, gtRes);
-    transformedResult = builder.createSelect(loc, lt, ltRes, selectOnEq);
+    mlir::Value selectOnLt = builder.createSelect(loc, lt, ltRes, gtRes);
+    transformedResult = builder.createSelect(loc, eq, eqRes, selectOnLt);
   } else {
     // Partial ordering
     cir::ConstantOp unorderedRes = builder.getConstantInt(
