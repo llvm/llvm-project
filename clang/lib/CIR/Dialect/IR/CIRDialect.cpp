@@ -3804,8 +3804,7 @@ LogicalResult cir::TryOp::verify() {
     if (mlir::isa<cir::UnwindAttr>(typeAttr))
       continue;
 
-    if (entryBlock.empty() ||
-        !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
+    if (entryBlock.empty() || !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
       return emitOpError(
           "catch handler region must start with 'cir.begin_catch'");
   }

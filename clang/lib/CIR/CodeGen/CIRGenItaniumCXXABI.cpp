@@ -81,8 +81,7 @@ public:
   void emitRethrow(CIRGenFunction &cgf, bool isNoReturn) override;
   void emitThrow(CIRGenFunction &cgf, const CXXThrowExpr *e) override;
 
-  void emitBeginCatch(CIRGenFunction &cgf,
-                      const CXXCatchStmt *catchStmt,
+  void emitBeginCatch(CIRGenFunction &cgf, const CXXCatchStmt *catchStmt,
                       mlir::Value ehToken) override;
 
   bool useThunkForDtorVariant(const CXXDestructorDecl *dtor,
@@ -2337,11 +2336,10 @@ struct CallEndCatch final : EHScopeStack::Cleanup {
 
 static mlir::Value callBeginCatch(CIRGenFunction &cgf, mlir::Value ehToken,
                                   mlir::Type exnPtrTy, bool endMightThrow) {
-  auto catchTokenTy =
-      cir::CatchTokenType::get(cgf.getBuilder().getContext());
-  auto beginCatch = cir::BeginCatchOp::create(
-      cgf.getBuilder(), cgf.getBuilder().getUnknownLoc(),
-      catchTokenTy, exnPtrTy, ehToken);
+  auto catchTokenTy = cir::CatchTokenType::get(cgf.getBuilder().getContext());
+  auto beginCatch = cir::BeginCatchOp::create(cgf.getBuilder(),
+                                              cgf.getBuilder().getUnknownLoc(),
+                                              catchTokenTy, exnPtrTy, ehToken);
 
   cgf.ehStack.pushCleanup<CallEndCatch>(
       NormalAndEHCleanup,
