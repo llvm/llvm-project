@@ -8,6 +8,10 @@ add_flang_library(flangFrontendTool
 
   LINK_LIBS
   flangFrontend
+  FIRCodeGen
+  FIRTransforms
+  HLFIRTransforms
+  FlangOpenMPTransforms
 
   LINK_COMPONENTS
   Option
@@ -15,7 +19,14 @@ add_flang_library(flangFrontendTool
   Support
 
   MLIR_LIBS
+  MLIRComplexToStandard
+  MLIRLLVMIRTransforms
+  MLIRMathToFuncs
+  MLIRMathToLLVM
   MLIRPass
+  MLIRReconcileUnrealizedCasts
+  MLIRSCFToControlFlow
+  MLIRTransforms
 
   CLANG_LIBS
   clangBasic
