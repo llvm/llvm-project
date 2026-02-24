@@ -153,41 +153,44 @@ getManifestEntryForCommand(const Command &Job,
   return nullptr;
 }
 
-/// Adds all \p SystemIncludeDirs to \p Job's arguments.
+/// Adds all \p SystemIncludeDirs to the \p CC1Args of \p Job.
 static void
 addSystemIncludeDirsFromManifest(Compilation &C, Command &Job,
+                                 ArgStringList &CC1Args,
                                  ArrayRef<std::string> SystemIncludeDirs) {
   const ToolChain &TC = Job.getCreator().getToolChain();
   const DerivedArgList &TCArgs =
       C.getArgsForToolChain(&TC, Job.getSource().getOffloadingArch(),
                             Job.getSource().getOffloadingDeviceKind());
 
-  ArgStringList NewArgs = Job.getArguments();
   for (const auto &IncludeDir : SystemIncludeDirs)
-    TC.addSystemInclude(TCArgs, NewArgs, IncludeDir);
-  Job.replaceArguments(NewArgs);
+    TC.addSystemInclude(TCArgs, CC1Args, IncludeDir);
 }
 
 static bool isCC1Job(const Command &Job) {
   return StringRef(Job.getCreator().getName()) == "clang";
 }
 
-/// For each job that generates a Standard library module, applies any
-/// local arguments specified in the corresponding module manifest entry.
-static void
-applyLocalArgsFromManifest(Compilation &C,
-                           const ManifestEntryLookup &ManifestEntryBySource,
-                           MutableArrayRef<std::unique_ptr<Command>> Jobs) {
+/// Apply command-line modifications specific for inputs originating from the
+/// Standard library module manifest.
+static void applyArgsForStdModuleManifestInputs(
+    Compilation &C, const ManifestEntryLookup &ManifestEntryBySource,
+    MutableArrayRef<std::unique_ptr<Command>> Jobs) {
   for (auto &Job : Jobs) {
     if (!isCC1Job(*Job))
       continue;
 
     const auto *Entry = getManifestEntryForCommand(*Job, ManifestEntryBySource);
-    if (!Entry || !Entry->LocalArgs)
+    if (!Entry)
       continue;
 
-    const auto &IncludeDirs = Entry->LocalArgs->SystemIncludeDirs;
-    addSystemIncludeDirsFromManifest(C, *Job, IncludeDirs);
+    auto CC1Args = Job->getArguments();
+    if (Entry->IsStdlib)
+      CC1Args.push_back("-Wno-reserved-module-identifier");
+    if (Entry->LocalArgs)
+      addSystemIncludeDirsFromManifest(C, *Job, CC1Args,
+                                       Entry->LocalArgs->SystemIncludeDirs);
+    Job->replaceArguments(CC1Args);
   }
 }
 
@@ -196,14 +199,18 @@ void driver::modules::runModulesDriver(
   llvm::PrettyStackTraceString CrashInfo("Running modules driver.");
 
   auto Jobs = C.getJobs().takeJobs();
-  assert(ManifestEntries.size() <= Jobs.size() &&
-         "Expected at least one job per Standard library module input");
 
-  // Apply manifest-specified local arguments before scanning as they may affect
-  // the scan results.
   const auto ManifestEntryBySource = buildManifestLookupMap(ManifestEntries);
-  applyLocalArgsFromManifest(C, ManifestEntryBySource, Jobs);
+  // Apply manifest-entry specific command-line modifications before the scan as
+  // they might affect it.
+  applyArgsForStdModuleManifestInputs(C, ManifestEntryBySource, Jobs);
 
   // TODO: Run the dependency scan.
+  // TODO: Prune jobs for modules specified in the manifest that are not
+  // required by any command-line input.
   // TODO: Reorder and modify jobs based on the discovered dependencies.
+
+  // Add jobs back to the Compilation.
+  for (auto &Job : Jobs)
+    C.addCommand(std::move(Job));
 }

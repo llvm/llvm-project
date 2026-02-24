@@ -1833,10 +1833,10 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
   if (UseModulesDriver) {
     Diags.Report(diag::remark_performing_driver_managed_module_build);
 
-    // Read the Standard modules manifest, and if available, add all
-    // discovered modules to the compilation. Compilation jobs for modules
-    // discovered from the manifest which are not imported by any other source
-    // input are pruned later.
+    // Read the Standard library module manifest and, if available, add all
+    // discovered modules to this Compilation. Jobs for modules specified in
+    // the manifest that are not required by any command-line input are pruned
+    // later.
     const auto StdModuleManifestPath =
         GetStdModuleManifestPath(*C, C->getDefaultToolChain());
 
