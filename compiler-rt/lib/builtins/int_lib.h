@@ -112,7 +112,13 @@ COMPILER_RT_ABI su_int __udivmodsi4(su_int a, su_int b, su_int *rem);
 COMPILER_RT_ABI du_int __udivmoddi4(du_int a, du_int b, du_int *rem);
 #ifdef CRT_HAS_128BIT
 COMPILER_RT_ABI int __clzti2(ti_int a);
+COMPILER_RT_ABI int __ctzti2(ti_int a);
 COMPILER_RT_ABI tu_int __udivmodti4(tu_int a, tu_int b, tu_int *rem);
+#endif
+
+#ifdef CRT_HAS_256BIT
+COMPILER_RT_ABI int __clzoi2(oi_int a);
+COMPILER_RT_ABI ou_int __udivmodoi4(ou_int a, ou_int b, ou_int *rem);
 #endif
 
 // Definitions for builtins unavailable on MSVC

@@ -63,7 +63,13 @@ static __inline dst_t __floatXiYf__(src_t a) {
   const dst_rep_t dstSignMask = DST_REP_C(1) << (dstBits - 1);
   const int dstExpBits = dstBits - dstSigBits - 1;
   const int dstExpBias = (1 << (dstExpBits - 1)) - 1;
+  const int dstExpMax = (1 << dstExpBits) - 1;
   const dst_rep_t dstSignificandMask = (DST_REP_C(1) << dstSigBits) - 1;
+  // If the exponent exceeds the destination's range, return infinity.
+  if (e + dstExpBias >= dstExpMax) {
+    return dstFromRep(((dst_rep_t)s & dstSignMask) |
+                      ((dst_rep_t)dstExpMax << dstSigBits));
+  }
   // Combine sign, exponent, and mantissa.
   const dst_rep_t result = ((dst_rep_t)s & dstSignMask) |
                            ((dst_rep_t)(e + dstExpBias) << dstSigBits) |

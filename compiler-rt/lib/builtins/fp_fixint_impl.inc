@@ -27,8 +27,8 @@ static __inline fixint_t __fixint(fp_t a) {
   if (exponent < 0)
     return 0;
 
-  // If the value is too large for the integer type, saturate.
-  if ((unsigned)exponent >= sizeof(fixint_t) * CHAR_BIT)
+  // If the value is too large for the integer type, or is inf/NaN, saturate.
+  if ((unsigned)exponent >= sizeof(fixint_t) * CHAR_BIT || aAbs >= infRep)
     return sign == 1 ? fixint_max : fixint_min;
 
   // If 0 <= exponent < significandBits, right shift to get the result.

@@ -36,6 +36,16 @@ typedef __uint128_t src_t;
 typedef __uint128_t usrc_t;
 static __inline int clzSrcT(usrc_t x) { return __clzti2(x); }
 
+#elif defined SRC_I256
+typedef __int256_t src_t;
+typedef __uint256_t usrc_t;
+static __inline int clzSrcT(usrc_t x) { return __clzoi2(x); }
+
+#elif defined SRC_U256
+typedef __uint256_t src_t;
+typedef __uint256_t usrc_t;
+static __inline int clzSrcT(usrc_t x) { return __clzoi2(x); }
+
 #else
 #error Source should be a handled integer type.
 #endif

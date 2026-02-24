@@ -121,6 +121,56 @@ static __inline tu_int make_tu(du_int h, du_int l) {
 
 #endif // CRT_HAS_128BIT
 
+#if defined(__SIZEOF_INT256__)
+#define CRT_HAS_256BIT
+#endif
+
+#ifdef CRT_HAS_256BIT
+typedef __int256_t oi_int;
+typedef __uint256_t ou_int;
+
+typedef union {
+  oi_int all;
+  struct {
+#if _YUGA_LITTLE_ENDIAN
+    tu_int low;
+    ti_int high;
+#else
+    ti_int high;
+    tu_int low;
+#endif // _YUGA_LITTLE_ENDIAN
+  } s;
+} owords;
+
+typedef union {
+  ou_int all;
+  struct {
+#if _YUGA_LITTLE_ENDIAN
+    tu_int low;
+    tu_int high;
+#else
+    tu_int high;
+    tu_int low;
+#endif // _YUGA_LITTLE_ENDIAN
+  } s;
+} uowords;
+
+static __inline oi_int make_oi(ti_int h, ti_int l) {
+  owords r;
+  r.s.high = (tu_int)h;
+  r.s.low = (tu_int)l;
+  return r.all;
+}
+
+static __inline ou_int make_ou(tu_int h, tu_int l) {
+  uowords r;
+  r.s.high = h;
+  r.s.low = l;
+  return r.all;
+}
+
+#endif // CRT_HAS_256BIT
+
 // FreeBSD's boot environment does not support using floating-point and poisons
 // the float and double keywords.
 #if defined(__FreeBSD__) && defined(_STANDALONE)

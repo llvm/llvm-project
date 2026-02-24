@@ -72,74 +72,94 @@ include_directories(../../../third-party/siphash/include)
 set(GENERIC_SOURCES
   absvdi2.c
   absvsi2.c
+  absvoi2.c
   absvti2.c
   adddf3.c
   addsf3.c
   addvdi3.c
   addvsi3.c
+  addvoi3.c
   addvti3.c
   apple_versioning.c
   ashldi3.c
+  ashloi3.c
   ashlti3.c
   ashrdi3.c
+  ashroi3.c
   ashrti3.c
   bswapdi2.c
   bswapsi2.c
   clzdi2.c
   clzsi2.c
+  clzoi2.c
   clzti2.c
   cmpdi2.c
+  cmpoi2.c
   cmpti2.c
   comparedf2.c
   comparesf2.c
   ctzdi2.c
   ctzsi2.c
+  ctzoi2.c
   ctzti2.c
   divdc3.c
   divdf3.c
   divdi3.c
   divmoddi4.c
   divmodsi4.c
+  divmodoi4.c
   divmodti4.c
   divsc3.c
   divsf3.c
   divsi3.c
+  divoi3.c
   divti3.c
   extendsfdf2.c
   extendhfsf2.c
   extendhfdf2.c
   ffsdi2.c
   ffssi2.c
+  ffsoi2.c
   ffsti2.c
   fixdfdi.c
   fixdfsi.c
+  fixdfoi.c
   fixdfti.c
   fixsfdi.c
+  fixsfoi.c
   fixsfsi.c
   fixsfti.c
   fixunsdfdi.c
+  fixunsdfoi.c
   fixunsdfsi.c
   fixunsdfti.c
   fixunssfdi.c
+  fixunssfoi.c
   fixunssfsi.c
   fixunssfti.c
   floatdidf.c
   floatdisf.c
   floatsidf.c
   floatsisf.c
+  floatoidf.c
+  floatoisf.c
   floattidf.c
   floattisf.c
   floatundidf.c
   floatundisf.c
   floatunsidf.c
   floatunsisf.c
+  floatunoidf.c
+  floatunoisf.c
   floatuntidf.c
   floatuntisf.c
   fp_mode.c
   int_util.c
   lshrdi3.c
+  lshroi3.c
   lshrti3.c
   moddi3.c
+  modoi3.c
   modsi3.c
   modti3.c
   muldc3.c
@@ -147,25 +167,32 @@ set(GENERIC_SOURCES
   muldi3.c
   mulodi4.c
   mulosi4.c
+  muloi5.c
   muloti4.c
   mulsc3.c
   mulsf3.c
   multi3.c
+  multi5.c
   mulvdi3.c
+  mulvoi3.c
   mulvsi3.c
   mulvti3.c
   negdf2.c
   negdi2.c
   negsf2.c
+  negoi2.c
   negti2.c
   negvdi2.c
+  negvoi2.c
   negvsi2.c
   negvti2.c
   os_version_check.c
   paritydi2.c
   paritysi2.c
+  parityoi2.c
   parityti2.c
   popcountdi2.c
+  popcountoi2.c
   popcountsi2.c
   popcountti2.c
   powidf2.c
@@ -174,20 +201,25 @@ set(GENERIC_SOURCES
   subsf3.c
   subvdi3.c
   subvsi3.c
+  subvoi3.c
   subvti3.c
   trampoline_setup.c
   truncdfhf2.c
   truncdfsf2.c
   truncsfhf2.c
   ucmpdi2.c
+  ucmpoi2.c
   ucmpti2.c
   udivdi3.c
   udivmoddi4.c
+  udivmodoi4.c
   udivmodsi4.c
   udivmodti4.c
+  udivoi3.c
   udivsi3.c
   udivti3.c
   umoddi3.c
+  umodoi3.c
   umodsi3.c
   umodti3.c
 )
@@ -211,14 +243,18 @@ set(GENERIC_TF_SOURCES
   extendsftf2.c
   fixtfdi.c
   fixtfsi.c
+  fixtfoi.c
   fixtfti.c
   fixunstfdi.c
+  fixunstfoi.c
   fixunstfsi.c
   fixunstfti.c
   floatditf.c
+  floatoitf.c
   floatsitf.c
   floattitf.c
   floatunditf.c
+  floatunoitf.c
   floatunsitf.c
   floatuntitf.c
   multc3.c
@@ -306,13 +342,17 @@ set(x86_80_BIT_SOURCES
   extendhfxf2.c
   extendxftf2.c
   fixxfdi.c
+  fixxfoi.c
   fixxfti.c
   fixunsxfdi.c
+  fixunsxfoi.c
   fixunsxfsi.c
   fixunsxfti.c
   floatdixf.c
+  floatoixf.c
   floattixf.c
   floatundixf.c
+  floatunoixf.c
   floatuntixf.c
   mulxc3.c
   powixf2.c
