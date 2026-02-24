@@ -565,6 +565,13 @@ mlir::Value createParentSymAndGenIntermediateMaps(
         interimMapType &= ~mlir::omp::ClauseMapFlags::to;
         interimMapType &= ~mlir::omp::ClauseMapFlags::from;
         interimMapType &= ~mlir::omp::ClauseMapFlags::return_param;
+        // We do not want to carry over the separation of descriptor and pointer
+        // mapping of any intermediate components we emit maps for as this can
+        // result in very odd differing behaviour when either ref_ptr/ptee is
+        // specified.
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptee;
+        interimMapType &= ~mlir::omp::ClauseMapFlags::ref_ptr_ptee;
 
         // Create a map for the intermediate member and insert it and it's
         // indices into the parentMemberIndices list to track it.
@@ -712,6 +719,11 @@ void insertChildMapInfoIntoParent(
       // applied to the parent and data being incorrectly moved to or
       // from device.
       mlir::omp::ClauseMapFlags mapType = mlir::omp::ClauseMapFlags::storage;
+
+      for (mlir::omp::MapInfoOp memberMap : indices.second.memberMap)
+        if ((memberMap.getMapType() & mlir::omp::ClauseMapFlags::present) ==
+            mlir::omp::ClauseMapFlags::present)
+          mapType |= mlir::omp::ClauseMapFlags::present;
 
       llvm::SmallVector<mlir::Value> members;
       members.reserve(indices.second.memberMap.size());
