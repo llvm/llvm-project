@@ -1,4 +1,5 @@
 // RUN: %clang_analyze_cc1 -verify %s \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -7,6 +8,7 @@
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -15,6 +17,7 @@
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DVARIANT \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -23,6 +26,7 @@
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS -DVARIANT \
+// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
