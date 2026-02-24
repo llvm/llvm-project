@@ -1346,13 +1346,12 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
                                           const CallBase &CI,
                                           MachineFunction &MF,
                                           unsigned IntrID) const {
-  IntrinsicInfo Info;
-  Info.flags = MachineMemOperand::MONone;
+  MachineMemOperand::Flags Flags = MachineMemOperand::MONone;
   if (CI.hasMetadata(LLVMContext::MD_invariant_load))
-    Info.flags |= MachineMemOperand::MOInvariant;
+    Flags |= MachineMemOperand::MOInvariant;
   if (CI.hasMetadata(LLVMContext::MD_nontemporal))
-    Info.flags |= MachineMemOperand::MONonTemporal;
-  Info.flags |= getTargetMMOFlags(CI);
+    Flags |= MachineMemOperand::MONonTemporal;
+  Flags |= getTargetMMOFlags(CI);
 
   if (const AMDGPU::RsrcIntrinsic *RsrcIntr =
           AMDGPU::lookupRsrcIntrinsic(IntrID)) {
@@ -1362,6 +1361,15 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     if (ME.doesNotAccessMemory())
       return;
 
+    bool IsSPrefetch = IntrID == Intrinsic::amdgcn_s_buffer_prefetch_data;
+    if (!IsSPrefetch) {
+      auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
+      if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
+        Flags |= MachineMemOperand::MOVolatile;
+    }
+    Flags |= MachineMemOperand::MODereferenceable;
+
+    IntrinsicInfo Info;
     // TODO: Should images get their own address space?
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
 
@@ -1384,14 +1392,6 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         Info.ptrVal = RsrcArg;
     }
 
-    bool IsSPrefetch = IntrID == Intrinsic::amdgcn_s_buffer_prefetch_data;
-    if (!IsSPrefetch) {
-      auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
-      if (Aux->getZExtValue() & AMDGPU::CPol::VOLATILE)
-        Info.flags |= MachineMemOperand::MOVolatile;
-    }
-
-    Info.flags |= MachineMemOperand::MODereferenceable;
     if (ME.onlyReadsMemory()) {
       if (RsrcIntr->IsImage) {
         unsigned MaxNumLanes = 4;
@@ -1414,7 +1414,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
 
       // FIXME: What does alignment mean for an image?
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.flags |= MachineMemOperand::MOLoad;
+      Info.flags = Flags | MachineMemOperand::MOLoad;
     } else if (ME.onlyWritesMemory()) {
       Info.opc = ISD::INTRINSIC_VOID;
 
@@ -1427,19 +1427,18 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
       } else
         Info.memVT = getValueType(MF.getDataLayout(), DataTy);
 
-      Info.flags |= MachineMemOperand::MOStore;
+      Info.flags = Flags | MachineMemOperand::MOStore;
     } else {
       // Atomic, NoReturn Sampler or prefetch
       Info.opc = CI.getType()->isVoidTy() ? ISD::INTRINSIC_VOID
                                           : ISD::INTRINSIC_W_CHAIN;
-      Info.flags |=
-          MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
-
-      if (!IsSPrefetch)
-        Info.flags |= MachineMemOperand::MOStore;
 
       switch (IntrID) {
       default:
+        Info.flags = Flags | MachineMemOperand::MOLoad;
+        if (!IsSPrefetch)
+          Info.flags |= MachineMemOperand::MOStore;
+
         if ((RsrcIntr->IsImage && BaseOpcode->NoReturn) || IsSPrefetch) {
           // Fake memory access type for no return sampler intrinsics
           Info.memVT = MVT::i32;
@@ -1463,7 +1462,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         // Don't set an offset, since the pointer value always represents the
         // base of the buffer.
         Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
-        Info.flags &= ~MachineMemOperand::MOStore;
+        Info.flags = Flags | MachineMemOperand::MOLoad;
         Infos.push_back(Info);
 
         // Entry 1: Store to LDS.
@@ -1475,8 +1474,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         Info.offset = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 2))
                           ->getZExtValue();
         Info.fallbackAddressSpace = AMDGPUAS::LOCAL_ADDRESS;
-        Info.flags &= ~MachineMemOperand::MOLoad;
-        Info.flags |= MachineMemOperand::MOStore;
+        Info.flags = Flags | MachineMemOperand::MOStore;
         Infos.push_back(Info);
         return;
       }
@@ -1487,7 +1485,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
         Info.memVT =
             memVTFromLoadIntrReturn(*this, MF.getDataLayout(), CI.getType(),
                                     std::numeric_limits<unsigned>::max());
-        Info.flags &= ~MachineMemOperand::MOStore;
+        Info.flags = Flags | MachineMemOperand::MOLoad;
         Infos.push_back(Info);
         return;
       }
@@ -1497,6 +1495,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     return;
   }
 
+  IntrinsicInfo Info;
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_ordered_add:
   case Intrinsic::amdgcn_ds_ordered_swap: {
@@ -1504,7 +1503,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags = Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(4));
     if (!Vol->isZero())
@@ -1529,7 +1528,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags = Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
 
     const ConstantInt *Vol = cast<ConstantInt>(CI.getOperand(1));
     if (!Vol->isZero())
@@ -1548,7 +1547,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = MVT::i64;
     Info.size = 8;
     Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags = Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Infos.push_back(Info);
     return;
   }
@@ -1564,8 +1563,8 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
 
     Info.fallbackAddressSpace = AMDGPUAS::BUFFER_RESOURCE;
     Info.align.reset();
-    Info.flags |=
-        MachineMemOperand::MOLoad | MachineMemOperand::MODereferenceable;
+    Info.flags = Flags | MachineMemOperand::MOLoad |
+                 MachineMemOperand::MODereferenceable;
     Infos.push_back(Info);
     return;
   }
@@ -1578,9 +1577,9 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
-                  MachineMemOperand::MODereferenceable |
-                  MachineMemOperand::MOVolatile;
+    Info.flags =
+        Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
+        MachineMemOperand::MODereferenceable | MachineMemOperand::MOVolatile;
     Infos.push_back(Info);
     return;
   }
@@ -1603,7 +1602,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = MVT::getVT(CI.getType());
     Info.ptrVal = CI.getOperand(0);
     Info.align.reset();
-    Info.flags |= MachineMemOperand::MOLoad;
+    Info.flags = Flags | MachineMemOperand::MOLoad;
     Infos.push_back(Info);
     return;
   }
@@ -1669,9 +1668,9 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.align = Align(4);
 
     if (IntrID == Intrinsic::amdgcn_ds_gws_barrier)
-      Info.flags |= MachineMemOperand::MOLoad;
+      Info.flags = Flags | MachineMemOperand::MOLoad;
     else
-      Info.flags |= MachineMemOperand::MOStore;
+      Info.flags = Flags | MachineMemOperand::MOStore;
     Infos.push_back(Info);
     return;
   }
@@ -1688,12 +1687,11 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getArgOperand(0); // Global pointer
     Info.offset = cast<ConstantInt>(CI.getArgOperand(2))->getSExtValue();
-    Info.flags |= MachineMemOperand::MOLoad;
+    Info.flags = Flags | MachineMemOperand::MOLoad;
     Infos.push_back(Info);
 
     // Entry 1: Store to LDS (same offset).
-    Info.flags &= ~MachineMemOperand::MOLoad;
-    Info.flags |= MachineMemOperand::MOStore;
+    Info.flags = Flags | MachineMemOperand::MOStore;
     Info.ptrVal = CI.getArgOperand(1); // LDS pointer
     Infos.push_back(Info);
     return;
@@ -1707,12 +1705,11 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = EVT::getIntegerVT(CI.getContext(), getIntrMemWidth(IntrID));
     Info.ptrVal = CI.getArgOperand(1); // LDS pointer
     Info.offset = cast<ConstantInt>(CI.getArgOperand(2))->getSExtValue();
-    Info.flags |= MachineMemOperand::MOLoad;
+    Info.flags = Flags | MachineMemOperand::MOLoad;
     Infos.push_back(Info);
 
     // Entry 1: Store to global (same offset).
-    Info.flags &= ~MachineMemOperand::MOLoad;
-    Info.flags |= MachineMemOperand::MOStore;
+    Info.flags = Flags | MachineMemOperand::MOStore;
     Info.ptrVal = CI.getArgOperand(0); // Global pointer
     Infos.push_back(Info);
     return;
@@ -1724,15 +1721,15 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     unsigned Width = cast<ConstantInt>(CI.getArgOperand(2))->getZExtValue();
     auto *Aux = cast<ConstantInt>(CI.getArgOperand(CI.arg_size() - 1));
     bool IsVolatile = Aux->getZExtValue() & AMDGPU::CPol::VOLATILE;
+    if (IsVolatile)
+      Flags |= MachineMemOperand::MOVolatile;
 
     // Entry 0: Load from source (global/flat).
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), Width * 8);
     Info.ptrVal = CI.getArgOperand(0); // Source pointer
     Info.offset = cast<ConstantInt>(CI.getArgOperand(3))->getSExtValue();
-    Info.flags |= MachineMemOperand::MOLoad;
-    if (IsVolatile)
-      Info.flags |= MachineMemOperand::MOVolatile;
+    Info.flags = Flags | MachineMemOperand::MOLoad;
     Infos.push_back(Info);
 
     // Entry 1: Store to LDS.
@@ -1741,8 +1738,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.memVT = EVT::getIntegerVT(CI.getContext(),
                                    Width * 8 * Subtarget->getWavefrontSize());
     Info.ptrVal = CI.getArgOperand(1); // LDS destination pointer
-    Info.flags &= ~MachineMemOperand::MOLoad;
-    Info.flags |= MachineMemOperand::MOStore;
+    Info.flags = Flags | MachineMemOperand::MOStore;
     Infos.push_back(Info);
     return;
   }
@@ -1763,7 +1759,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.size = 4;
     Info.align = Align(4);
 
-    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+    Info.flags = Flags | MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     Infos.push_back(Info);
     return;
   }
@@ -1773,7 +1769,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = EVT::getIntegerVT(CI.getContext(), 8);
     Info.ptrVal = CI.getArgOperand(0);
-    Info.flags |= MachineMemOperand::MOLoad;
+    Info.flags = Flags | MachineMemOperand::MOLoad;
     Infos.push_back(Info);
     return;
   }
