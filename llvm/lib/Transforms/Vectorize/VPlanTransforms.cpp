@@ -233,8 +233,9 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
 // Collect either Loads or Stores grouped by their address SCEV.
 template <unsigned Opcode>
 static SmallVector<SmallVector<VPReplicateRecipe *, 4>>
-collectGroupedMemOps(VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L,
-                     function_ref<bool(VPReplicateRecipe *)> FilterFn) {
+collectGroupedReplicateMemOps(
+    VPlan &Plan, PredicatedScalarEvolution &PSE, const Loop *L,
+    function_ref<bool(VPReplicateRecipe *)> FilterFn) {
   static_assert(Opcode == Instruction::Load || Opcode == Instruction::Store,
                 "Only Load and Store opcodes supported");
   constexpr bool IsLoad = (Opcode == Instruction::Load);
@@ -4646,16 +4647,17 @@ void VPlanTransforms::hoistInvariantLoads(VPlan &Plan,
     VPValue *Addr = RepR->getOperand(0);
     return Addr->isDefinedOutsideLoopRegions();
   };
-  auto Groups =
-      collectGroupedMemOps<Instruction::Load>(Plan, PSE, L, IsInvariantLoad);
+  auto Groups = collectGroupedReplicateMemOps<Instruction::Load>(
+      Plan, PSE, L, IsInvariantLoad);
   for (auto Group : Groups) {
     VPReplicateRecipe *EarliestLoad = Group[0];
-    VPBasicBlock *FirstBB = EarliestLoad->getParent();
+    VPBasicBlock *EntryBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
     VPBasicBlock *LastBB = Group.back()->getParent();
 
-    // Check that the load doesn't alias with stores between FirstBB and LastBB.
+    // Check that the load doesn't alias with stores between EntryBB and
+    // LastBB.
     auto LoadLoc = vputils::getMemoryLocation(*EarliestLoad);
-    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, FirstBB, LastBB))
+    if (!LoadLoc || !canHoistOrSinkWithNoAliasCheck(*LoadLoc, EntryBB, LastBB))
       continue;
 
     for (VPReplicateRecipe *Load : Group)
@@ -4687,10 +4689,9 @@ collectComplementaryPredicatedMemOps(VPlan &Plan,
   auto GetLoadStoreValueType = [&](VPReplicateRecipe *Recipe) {
     return TypeInfo.inferScalarType(IsLoad ? Recipe : Recipe->getOperand(0));
   };
-  auto Groups =
-      collectGroupedMemOps<Opcode>(Plan, PSE, L, [](VPReplicateRecipe *RepR) {
-        return RepR->isPredicated();
-      });
+  auto Groups = collectGroupedReplicateMemOps<Opcode>(
+      Plan, PSE, L,
+      [](VPReplicateRecipe *RepR) { return RepR->isPredicated(); });
   for (auto Recipes : Groups) {
     if (Recipes.size() < 2)
       continue;
