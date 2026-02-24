@@ -349,7 +349,7 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   // zve32x is broken for partial_reduce_umla, but let's make sure we
   // don't generate them.
-  if (!ST->hasStdExtZvqdotq() || ST->getELen() < 64 ||
+  if (!ST->hasStdExtZvdot4a8i() || ST->getELen() < 64 ||
       Opcode != Instruction::Add || !BinOp || *BinOp != Instruction::Mul ||
       InputTypeA != InputTypeB || !InputTypeA->isIntegerTy(8) ||
       !AccumType->isIntegerTy(32) || !VF.isKnownMultipleOf(4))
@@ -357,9 +357,9 @@ InstructionCost RISCVTTIImpl::getPartialReductionCost(
 
   Type *Tp = VectorType::get(AccumType, VF.divideCoefficientBy(4));
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Tp);
-  // Note: Asuming all vqdot* variants are equal cost
+  // Note: Asuming all vdota4* variants are equal cost
   return LT.first *
-         getRISCVInstructionCost(RISCV::VQDOT_VV, LT.second, CostKind);
+         getRISCVInstructionCost(RISCV::VDOTA4_VV, LT.second, CostKind);
 }
 
 bool RISCVTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
