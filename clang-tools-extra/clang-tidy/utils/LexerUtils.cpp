@@ -185,11 +185,11 @@ std::optional<Token> getQualifyingToken(tok::TokenKind TK,
       Tok.setIdentifierInfo(&Info);
       Tok.setKind(Info.getTokenID());
     }
-    if (Tok.is(tok::less))
+    if (Tok.is(tok::less)) {
       SawTemplate = true;
-    else if (Tok.isOneOf(tok::greater, tok::greatergreater))
+    } else if (Tok.isOneOf(tok::greater, tok::greatergreater)) {
       LastMatchAfterTemplate = std::nullopt;
-    else if (Tok.is(TK)) {
+    } else if (Tok.is(TK)) {
       if (SawTemplate)
         LastMatchAfterTemplate = Tok;
       else
