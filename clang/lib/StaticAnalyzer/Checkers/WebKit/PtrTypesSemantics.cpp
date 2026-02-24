@@ -414,7 +414,10 @@ enum class WebKitAnnotation : uint8_t {
 
 static WebKitAnnotation typeAnnotationForReturnType(const FunctionDecl *FD) {
   auto RetType = FD->getReturnType();
-  auto *Attr = dyn_cast_or_null<AttributedType>(RetType.getTypePtrOrNull());
+  auto *Type = RetType.getTypePtrOrNull();
+  if (auto *MacroQualified = dyn_cast_or_null<MacroQualifiedType>(Type))
+    Type = MacroQualified->desugar().getTypePtrOrNull();
+  auto *Attr = dyn_cast_or_null<AttributedType>(Type);
   if (!Attr)
     return WebKitAnnotation::None;
   auto *AnnotateType = dyn_cast_or_null<AnnotateTypeAttr>(Attr->getAttr());
