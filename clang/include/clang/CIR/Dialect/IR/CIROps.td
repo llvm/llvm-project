@@ -6250,7 +6250,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 
 def CIR_TryOp : CIR_Op<"try",[
   DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
-  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
+  RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "C++ try block";
   let description = [{
@@ -6261,17 +6261,32 @@ def CIR_TryOp : CIR_Op<"try",[
     when exiting the try region via exception, even if the exception is not
     caught.
 
+    Each catch handler region and unwind region receives a `!cir.eh_token`
+    argument representing the inflight exception. The first operation in a
+    catch handler region must be a `cir.begin_catch` operation. This must
+    be followed by a `cir.cleanup.scope` operation, with the `cir.end_catch`
+    operation in its cleanup region. The catch handling code will be emitted
+    into the body of the cleanup scope. This ensures that all paths out of the
+    catch handler will execute the end_catch operation.
+
     Example:
 
     ```mlir
     cir.try {
       cir.call exception @function() : () -> ()
       cir.yield
-    } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
-      %1 = cir.catch_param : !cir.ptr<!cir.float>
-      ...
+    } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.float>)
+      cir.cleanup.scope {
+        ...
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
       cir.yield
-    } unwind {
+    } unwind (%eh_token : !cir.eh_token) {
       cir.resume
     }
     ```
@@ -6637,35 +6652,50 @@ def CIR_EndCleanupOp : CIR_Op<"end_cleanup"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Flattened EH Operations: BeginCatchOp
+// EH Operations: BeginCatchOp
 //===----------------------------------------------------------------------===//
 
 def CIR_BeginCatchOp : CIR_Op<"begin_catch"> {
-  let summary = "Begin a catch handler block";
+  let summary = "Begin a catch handler";
   let description = [{
     `cir.begin_catch` marks the beginning of a catch handler. It takes a
-    `!cir.eh_token` and an optional exception type, and returns a
+    `!cir.eh_token` representing the inflight exception and returns a
     `!cir.catch_token` along with a pointer to the exception object.
 
     The catch token must be passed to the corresponding `cir.end_catch`
     operation. The exception pointer points to the caught exception object
     and can be used to access the exception value.
 
-    For `catch(...)` (catch all), the exception type is omitted.
+    For `catch(...)` (catch all), the exception pointer type is
+    `!cir.ptr<!void>`.
+
+    In the high-level CIR representation, this operation appears as the
+    first operation in a catch handler region of a `cir.try` operation,
+    taking the region's `!cir.eh_token` argument. In the flattened CIR
+    representation, it appears in a catch block, taking the block's
+    `!cir.eh_token` argument.
 
     Example:
 
     ```mlir
+    // High-level form (inside cir.try catch handler region):
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      cir.cleanup.scope {
+        // Handle exception...
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+
+    // Flattened form (inside a catch block):
     ^catch_int(%eh_token : !cir.eh_token):
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
-      // Handle exception...
-      cir.end_catch %catch_token : !cir.catch_token
-      cir.br ^continue
-
-    ^catch_all(%eh_token : !cir.eh_token):
-      %catch_token, %exn_ptr = cir.begin_catch %eh_token
-        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
       // Handle exception...
       cir.end_catch %catch_token : !cir.catch_token
       cir.br ^continue
@@ -6685,22 +6715,39 @@ def CIR_BeginCatchOp : CIR_Op<"begin_catch"> {
 }
 
 //===----------------------------------------------------------------------===//
-// Flattened EH Operations: EndCatchOp
+// EH Operations: EndCatchOp
 //===----------------------------------------------------------------------===//
 
 def CIR_EndCatchOp : CIR_Op<"end_catch"> {
-  let summary = "End a catch handler block";
+  let summary = "End a catch handler";
   let description = [{
-    `cir.end_catch` marks the end of a catch handler block. It takes the
+    `cir.end_catch` marks the end of a catch handler. It takes the
     `!cir.catch_token` returned by the corresponding `cir.begin_catch`
     operation.
 
-    All control flow paths through a catch handler must pass through a single
-    `cir.end_catch` operation before leaving the catch block.
+    In the high-level CIR representation, this operation appears inside
+    the cleanup region of the `cir.cleanup.scope` that follows
+    `cir.begin_catch` in a catch handler region. In the flattened CIR
+    representation, it appears at the end of a path that exits the catch
+    handler.
 
     Example:
 
     ```mlir
+    // High-level form (inside cir.try catch handler region):
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token
+        : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      cir.cleanup.scope {
+        // Handle exception...
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+    }
+
+    // Flattened form:
     ^catch_int(%eh_token : !cir.eh_token):
       %catch_token, %exn_ptr = cir.begin_catch %eh_token
         : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)

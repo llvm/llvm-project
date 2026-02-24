@@ -426,6 +426,7 @@ ENUM_LANGOPT(ClangABICompat, ClangABI, 4, ClangABI::Latest, NotCompatible,
              "with")
 
 VALUE_LANGOPT(FunctionAlignment, 5, 0, Compatible, "Default alignment for functions")
+VALUE_LANGOPT(PreferredFunctionAlignment, 5, 0, Compatible, "Preferred alignment for functions")
 VALUE_LANGOPT(LoopAlignment, 32, 0, Compatible, "Default alignment for loops")
 
 LANGOPT(FixedPoint, 1, 0, NotCompatible, "fixed point types")

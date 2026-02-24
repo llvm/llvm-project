@@ -433,3 +433,30 @@ TEST(ProtocolRequestsTest, SetVariableArguments) {
       parse<SetVariableArguments>(R"({})"),
       FailedWithMessage("missing value at (root).variablesReference"));
 }
+
+TEST(ProtocolRequestsTest, CancelRequestArguments) {
+  llvm::Expected<CancelArguments> expected = parse<CancelArguments>(R"({
+    "requestId": 42,
+    "progressId": "abc"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->requestId, 42U);
+  EXPECT_EQ(expected->progressId, "abc");
+
+  expected = parse<CancelArguments>(R"({
+    "requestId": 42
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->requestId, 42U);
+  EXPECT_TRUE(expected->progressId.empty());
+
+  expected = parse<CancelArguments>(R"({
+    "progressId": "abc"
+  })");
+  ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
+  EXPECT_EQ(expected->requestId, 0u);
+  EXPECT_EQ(expected->progressId, "abc");
+
+  // Check an empty message, all keys are optional.
+  EXPECT_THAT_EXPECTED(parse<CancelArguments>(R"({})"), Succeeded());
+}

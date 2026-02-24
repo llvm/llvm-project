@@ -25,7 +25,7 @@ cir.func dso_local @invalid_catch_rtti_type() {
     // expected-error @below {{'cir.try' op attribute 'handler_types' failed to satisfy constraint: catch all or unwind or global view array attribute}}
     cir.try {
       cir.yield
-    } catch [type #cir.undef] {
+    } catch [type #cir.undef] (%eh_token : !cir.eh_token) {
       cir.yield
     }
   }
@@ -43,8 +43,8 @@ cir.func dso_local @invalid_catch_empty_block() {
     cir.try {
       cir.yield
     }
-    // expected-error @below {{'cir.try' handler region shall not be empty}}
-    catch all {
+    // expected-error @below {{'cir.try' blocks are expected to be explicitly terminated}}
+    catch all (%eh_token : !cir.eh_token) {
     }
   }
   cir.return
@@ -65,7 +65,7 @@ cir.func dso_local @invalid_catch_not_terminated() {
       cir.yield
     } 
     // expected-error @below {{'cir.try' blocks are expected to be explicitly terminated}}
-    catch all {
+    catch all (%eh_token : !cir.eh_token) {
        %tmp_a = cir.load %a : !cir.ptr<!s32i>, !s32i
     }
   }
@@ -82,11 +82,11 @@ cir.func dso_local @invalid_catch_multiple_catch_all() {
   cir.scope {
     cir.try {
       cir.yield
-    } catch all {
+    } catch all (%eh_token : !cir.eh_token) {
       cir.yield
     } 
     // expected-error @below {{op 'cir.try' can't have more than one catch all}}
-    catch all {
+    catch all (%eh_token_1 : !cir.eh_token) {
       cir.yield
     }
   }
@@ -106,7 +106,7 @@ cir.func dso_local @invalid_catch_without_type_info() {
     } 
     // expected-error @below {{expected attribute value}}
     // expected-error @below {{op 'cir.try' expected valid RTTI info attribute}}
-    catch [type] {
+    catch [type] (%eh_token : !cir.eh_token) {
       cir.yield
     }
   }
@@ -125,7 +125,7 @@ cir.func dso_local @invalid_catch_all_with_type_info() {
       cir.yield
     }
     // expected-error @below {{op 'cir.try' catch all dosen't need RTTI info attribute}}
-    catch [all] {
+    catch [all] (%eh_token : !cir.eh_token) {
       cir.yield
     }
   }
@@ -143,14 +143,14 @@ module {
 
 cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
 
-cir.func dso_local @catch_handler_missing_catch_param() {
+cir.func dso_local @catch_handler_missing_begin_catch() {
   cir.scope {
-    // expected-error @below {{catch handler region must start with 'cir.catch_param'}}
+    // expected-error @below {{catch handler region must start with 'cir.begin_catch'}}
     cir.try {
       cir.yield
-    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
       cir.yield
-    } unwind {
+    } unwind (%eh_token_1 : !cir.eh_token) {
       cir.resume
     }
   }
@@ -165,12 +165,12 @@ cir.func dso_local @catch_handler_missing_catch_param() {
 
 module {
 
-cir.func dso_local @catch_all_handler_missing_catch_param() {
+cir.func dso_local @catch_all_handler_missing_begin_catch() {
   cir.scope {
-    // expected-error @below {{catch handler region must start with 'cir.catch_param'}}
+    // expected-error @below {{catch handler region must start with 'cir.begin_catch'}}
     cir.try {
       cir.yield
-    } catch all {
+    } catch all (%eh_token : !cir.eh_token) {
       cir.yield
     }
   }
@@ -188,11 +188,11 @@ cir.func dso_local @invalid_unwind_with_catch_all() {
     cir.try {
       cir.yield
     }
-    catch all {
+    catch all (%eh_token : !cir.eh_token) {
       cir.yield
     }
     // expected-error @below {{op 'cir.try' unwind can't be used with catch all}}
-    unwind {
+    unwind (%eh_token_1 : !cir.eh_token) {
 
     }
   }
