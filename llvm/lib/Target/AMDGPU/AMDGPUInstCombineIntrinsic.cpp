@@ -727,20 +727,29 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     // under the assumption that a call to this intrinsic is not present with
     // that attribute.
     uint64_t ImplicitArgBytes = ST->getImplicitArgNumBytes(*II.getFunction());
+
+    uint64_t CurrentOrNullBytes =
+        II.getAttributes().getRetDereferenceableOrNullBytes();
+    if (CurrentOrNullBytes != 0) {
+      uint64_t NewBytes = std::max(CurrentOrNullBytes, ImplicitArgBytes);
+      if (NewBytes != CurrentOrNullBytes) {
+        II.addRetAttr(Attribute::getWithDereferenceableOrNullBytes(
+            II.getContext(), NewBytes));
+        return &II;
+      }
+      return std::nullopt;
+    }
+
     uint64_t CurrentBytes = II.getAttributes().getRetDereferenceableBytes();
-    uint64_t NewBytes = (CurrentBytes == 0)
-                            ? ImplicitArgBytes
-                            : std::min(CurrentBytes, ImplicitArgBytes);
+    uint64_t NewBytes = std::max(CurrentBytes, ImplicitArgBytes);
     if (NewBytes != CurrentBytes) {
-      if (CurrentBytes != 0)
-        II.removeRetAttr(Attribute::Dereferenceable);
       II.addRetAttr(
           Attribute::getWithDereferenceableBytes(II.getContext(), NewBytes));
       return &II;
     }
 
     return std::nullopt;
-  } break;
+  }
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
     if (isa<PoisonValue>(Src))
