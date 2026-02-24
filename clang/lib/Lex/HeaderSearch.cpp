@@ -2015,11 +2015,9 @@ bool HeaderSearch::parseAndLoadModuleMapFile(FileEntryRef File, bool IsSystem,
   llvm_unreachable("Unknown load module map result");
 }
 
-HeaderSearch::ModuleMapResult
-HeaderSearch::parseAndLoadModuleMapFileImpl(FileEntryRef File, bool IsSystem,
-                                            DirectoryEntryRef Dir, FileID ID,
-                                            unsigned *Offset,
-                                            bool DiagnosePrivMMap) {
+HeaderSearch::ModuleMapResult HeaderSearch::parseAndLoadModuleMapFileImpl(
+    FileEntryRef File, bool IsSystem, DirectoryEntryRef Dir, FileID ID,
+    unsigned *Offset, bool DiagnosePrivMMap) {
   // Check whether we've already loaded this module map, and mark it as being
   // loaded in case we recursively try to load it from itself.
   auto AddResult = LoadedModuleMaps.insert(std::make_pair(File, true));
