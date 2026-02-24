@@ -16,7 +16,7 @@
 // 0x7fc00000. For the Arm optimized FP implementation, which commits to a more
 // detailed handling of NaNs, we tighten up the check and include some extra
 // test cases specific to that NaN policy.
-#if (__arm__ && !(__thumb__ && !__thumb2__)) && COMPILER_RT_ARM_OPTIMIZED_FP
+#if COMPILER_RT_ARM_OPTIMIZED_FP
 #  define EXPECT_EXACT_RESULTS
 #  define ARM_NAN_HANDLING
 #endif
@@ -24,7 +24,7 @@
 // Returns: a converted from double to float
 COMPILER_RT_ABI float __truncdfsf2(double a);
 
-int test__truncdfsf2(int line, uint64_t a_rep, uint32_t expected_rep) {
+int test__truncdfsf2(uint64_t a_rep, uint32_t expected_rep, int line) {
   double a = fromRep64(a_rep);
   float x = __truncdfsf2(a);
 #ifdef EXPECT_EXACT_RESULTS
@@ -41,7 +41,7 @@ int test__truncdfsf2(int line, uint64_t a_rep, uint32_t expected_rep) {
   return ret;
 }
 
-#define test__truncdfsf2(a, x) test__truncdfsf2(__LINE__, a, x)
+#define test__truncdfsf2(a, x) test__truncdfsf2(a, x, __LINE__)
 
 int main(void) {
   int status = 0;
