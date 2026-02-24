@@ -23,6 +23,7 @@ using A1 [[=1]] = int;
 // Right hand side of a alias declaration
 using A2 = [[=2]] int;  // expected-error {{an attribute list cannot appear here}}
 using A3 = int [[=2]];  // expected-error {{annotations are not permitted on defining-type-id}}
+using A4 = unsigned [[=1]] int;  // expected-error {{an attribute list cannot appear here}}
 // Mixing annotation and attributes, with or without trailing characters
 struct [[nodiscard, =1]] f6 {};  // expected-error {{attribute specifier cannot contain both attributes and annotations}}
 struct [[nodiscard, =1,]] f7 {};  // expected-error {{attribute specifier cannot contain both attributes and annotations}}
