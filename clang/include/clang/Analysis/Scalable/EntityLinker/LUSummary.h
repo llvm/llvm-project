@@ -19,12 +19,11 @@
 #include "clang/Analysis/Scalable/Model/EntityIdTable.h"
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
+#include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include <map>
 #include <memory>
 
 namespace clang::ssaf {
-
-class EntitySummary;
 
 /// Represents a link unit (LU) summary containing merged entity summaries.
 ///
