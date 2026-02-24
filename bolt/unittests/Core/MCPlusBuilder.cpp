@@ -124,97 +124,95 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
     GTEST_SKIP();
 
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
-  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
   std::unique_ptr<BinaryBasicBlock> TargetBB = BF->createBasicBlock();
-  BB->addSuccessor(TargetBB.get());
 
-  // cbgt x0, #0, target
+  // Compare register with immediate and branch.
+  // Inversion requires incrementing the immediate value.
+  // cbgt x0, #0, target ~> cblt x0, #1, target
   MCInst NeedsImmInc = MCInstBuilder(AArch64::CBGTXri)
                            .addReg(AArch64::X0)
                            .addImm(0)
                            .addExpr(MCSymbolRefExpr::create(
                                TargetBB->getLabel(), *BC->Ctx.get()));
-  BB->addInstruction(NeedsImmInc);
-  // cblo x0, #1, target
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmInc));
+  BC->MIB->reverseBranchCondition(NeedsImmInc, TargetBB->getLabel(), BC->Ctx.get());
+  ASSERT_EQ(NeedsImmInc.getOpcode(), AArch64::CBLTXri);
+  ASSERT_EQ(NeedsImmInc.getOperand(1).getImm(), 1);
+
+  // Compare register with immediate and branch.
+  // Inversion requires decrementing the immediate value.
+  // cblo x0, #1, target ~> cbhi x0, #0, target
   MCInst NeedsImmDec = MCInstBuilder(AArch64::CBLOXri)
                            .addReg(AArch64::X0)
                            .addImm(1)
                            .addExpr(MCSymbolRefExpr::create(
                                TargetBB->getLabel(), *BC->Ctx.get()));
-  BB->addInstruction(NeedsImmDec);
-  // cbge x0, x1, target
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmDec));
+  BC->MIB->reverseBranchCondition(NeedsImmDec, TargetBB->getLabel(), BC->Ctx.get());
+  ASSERT_EQ(NeedsImmDec.getOpcode(), AArch64::CBHIXri);
+  ASSERT_EQ(NeedsImmDec.getOperand(1).getImm(), 0);
+
+  // Compare registers and branch.
+  // Inversion requires swapping registers.
+  // cbge x0, x1, target ~> cbgt x1, x0, target
   MCInst CompRegNeedsRegSwap = MCInstBuilder(AArch64::CBGEXrr)
                                    .addReg(AArch64::X0)
                                    .addReg(AArch64::X1)
                                    .addExpr(MCSymbolRefExpr::create(
                                        TargetBB->getLabel(), *BC->Ctx.get()));
-  BB->addInstruction(CompRegNeedsRegSwap);
-  // cbbhi w0, w1, target
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(CompRegNeedsRegSwap));
+  BC->MIB->reverseBranchCondition(CompRegNeedsRegSwap, TargetBB->getLabel(), BC->Ctx.get());
+  ASSERT_EQ(CompRegNeedsRegSwap.getOpcode(), AArch64::CBGTXrr);
+  ASSERT_EQ(CompRegNeedsRegSwap.getOperand(0).getReg(), AArch64::X1);
+  ASSERT_EQ(CompRegNeedsRegSwap.getOperand(1).getReg(), AArch64::X0);
+
+  // Compare bytes and branch.
+  // Inversion requires swapping registers.
+  // cbbhi w0, w1, target ~> cbbhs w1, w0, target
   MCInst CompByteNeedsRegSwap = MCInstBuilder(AArch64::CBBHIWrr)
                                     .addReg(AArch64::W0)
                                     .addReg(AArch64::W1)
                                     .addExpr(MCSymbolRefExpr::create(
                                         TargetBB->getLabel(), *BC->Ctx.get()));
-  BB->addInstruction(CompByteNeedsRegSwap);
-  // cbhhs w0, w1, target
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(CompByteNeedsRegSwap));
+  BC->MIB->reverseBranchCondition(CompByteNeedsRegSwap, TargetBB->getLabel(), BC->Ctx.get());
+  ASSERT_EQ(CompByteNeedsRegSwap.getOpcode(), AArch64::CBBHSWrr);
+  ASSERT_EQ(CompByteNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
+  ASSERT_EQ(CompByteNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
+
+  // Compare halfwords and branch.
+  // Inversion requires swapping registers.
+  // cbhhs w0, w1, target ~> cbhhi w1, w0, target
   MCInst CompHalfNeedsRegSwap = MCInstBuilder(AArch64::CBHHSWrr)
                                     .addReg(AArch64::W0)
                                     .addReg(AArch64::W1)
                                     .addExpr(MCSymbolRefExpr::create(
                                         TargetBB->getLabel(), *BC->Ctx.get()));
-  BB->addInstruction(CompHalfNeedsRegSwap);
+  ASSERT_TRUE(BC->MIB->isReversibleBranch(CompHalfNeedsRegSwap));
+  BC->MIB->reverseBranchCondition(CompHalfNeedsRegSwap, TargetBB->getLabel(), BC->Ctx.get());
+  ASSERT_EQ(CompHalfNeedsRegSwap.getOpcode(), AArch64::CBHHIWrr);
+  ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
+  ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
+
+  // Compare register with immediate and branch.
+  // Inversion not possible, immediate value underflows.
   // cblt x0, #0, target
   MCInst Underflows = MCInstBuilder(AArch64::CBLTXri)
                           .addReg(AArch64::X0)
                           .addImm(0)
                           .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(),
                                                            *BC->Ctx.get()));
-  BB->addInstruction(Underflows);
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(Underflows));
+
+  // Compare register with immediate and branch.
+  // Inversion not possible, immediate value overflows.
   // cbhi x0, #63, target
   MCInst Overflows = MCInstBuilder(AArch64::CBHIXri)
                          .addReg(AArch64::X0)
                          .addImm(63)
                          .addExpr(MCSymbolRefExpr::create(TargetBB->getLabel(),
                                                           *BC->Ctx.get()));
-  BB->addInstruction(Overflows);
-
-  auto II = BB->begin();
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
-  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
-  // cblt x0, #1, target
-  ASSERT_EQ(II->getOpcode(), AArch64::CBLTXri);
-  ASSERT_EQ(II->getOperand(1).getImm(), 1);
-  II++;
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
-  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
-  // cbhi x0, #0, target
-  ASSERT_EQ(II->getOpcode(), AArch64::CBHIXri);
-  ASSERT_EQ(II->getOperand(1).getImm(), 0);
-  II++;
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
-  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
-  // cbgt x1, x0, target
-  ASSERT_EQ(II->getOpcode(), AArch64::CBGTXrr);
-  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X1);
-  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
-  II++;
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
-  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
-  // cbbhs w1, w0, target
-  ASSERT_EQ(II->getOpcode(), AArch64::CBBHSWrr);
-  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::W1);
-  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::W0);
-  II++;
-  ASSERT_TRUE(BC->MIB->isReversibleBranch(*II));
-  BC->MIB->reverseBranchCondition(*II, TargetBB->getLabel(), BC->Ctx.get());
-  // cbhhi w1, w0, target
-  ASSERT_EQ(II->getOpcode(), AArch64::CBHHIWrr);
-  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::W1);
-  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::W0);
-  II++;
-  ASSERT_FALSE(BC->MIB->isReversibleBranch(*II));
-  II++;
-  ASSERT_FALSE(BC->MIB->isReversibleBranch(*II));
+  ASSERT_FALSE(BC->MIB->isReversibleBranch(Overflows));
 }
 
 TEST_P(MCPlusBuilderTester, AArch64_CmpJE) {
