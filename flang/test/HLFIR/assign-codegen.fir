@@ -530,7 +530,7 @@ func.func @alloc_assign_array(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.array<?xi3
 // CUDA Fortran device allocatable should still use the runtime
 func.func @alloc_assign_cuf_device(%arg0: !fir.ref<!fir.box<!fir.heap<i32>>>) {
   %c42 = arith.constant 42 : i32
-  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, data_attr = #cuf<device>, uniq_name = "k"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
+  %0:2 = hlfir.declare %arg0 {fortran_attrs = #fir.var_attrs<allocatable>, data_attr = #cuf.cuda<device>, uniq_name = "k"} : (!fir.ref<!fir.box<!fir.heap<i32>>>) -> (!fir.ref<!fir.box<!fir.heap<i32>>>, !fir.ref<!fir.box<!fir.heap<i32>>>)
   hlfir.assign %c42 to %0#0 realloc : i32, !fir.ref<!fir.box<!fir.heap<i32>>>
   return
 }
