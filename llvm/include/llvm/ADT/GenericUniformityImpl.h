@@ -396,11 +396,7 @@ public:
   };
 
   /// \brief Whether \p Val is divergent at its definition.
-  bool isDivergent(ConstValueRefT V) const {
-    if (ContextT::isNeverDivergent(V))
-      return false;
-    return DivergentValues.count(V);
-  }
+  bool isDivergent(ConstValueRefT V) const { return DivergentValues.count(V); }
 
   /// \brief Whether \p V was not present during analysis (not in uniform or
   /// divergent set).
@@ -1128,7 +1124,7 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
   // Initialize worklist.
   auto DivValuesCopy = DivergentValues;
   for (const auto DivVal : DivValuesCopy) {
-    assert(DivergentValues.count(DivVal) && "Worklist invariant violated!");
+    assert(isDivergent(DivVal) && "Worklist invariant violated!");
     pushUsers(DivVal);
   }
 
