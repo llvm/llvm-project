@@ -978,6 +978,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
 )
 add_header_library(
   floorbf16
@@ -987,6 +989,8 @@ add_header_library(
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
 )
 add_header_library(
   floorf
@@ -995,6 +999,8 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
 )
 add_header_library(
   floorf128
@@ -1014,6 +1020,8 @@ add_header_library(
     libc.src.__support.FPUtil.cast
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
+  FLAGS
+    ROUND_OPT
 )
 add_header_library(
   floorl
