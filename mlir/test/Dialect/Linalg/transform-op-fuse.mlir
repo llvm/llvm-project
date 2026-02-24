@@ -75,10 +75,11 @@ func.func @fuse_unary_param(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> t
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["linalg.add"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.param.constant 32 : i32 -> !transform.param<i32>
-    %2 = transform.param.constant 1 : i32 -> !transform.param<i32>
-    %3, %loops:2 = transform.structured.fuse %0 tile_sizes [%1, 32] interchange [0, %2]
-      : (!transform.any_op, !transform.param<i32>, !transform.param<i32>) ->
+    %c32 = transform.param.constant 32 : i32 -> !transform.param<i32>
+    %c32_as_any = transform.param.constant 32 : i32 -> !transform.any_param
+    %c1 = transform.param.constant 1 : i32 -> !transform.param<i32>
+    %3, %loops:2 = transform.structured.fuse %0 tile_sizes [%c32, %c32_as_any] interchange [0, %c1]
+      : (!transform.any_op, !transform.param<i32>, !transform.any_param, !transform.param<i32>) ->
       (!transform.any_op, !transform.any_op, !transform.any_op)
       transform.yield
   }
