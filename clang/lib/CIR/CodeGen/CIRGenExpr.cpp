@@ -989,7 +989,7 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
     return createDummyValue(getLoc(loc), boolTy);
   }
 
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
   if (!e->getType()->isAnyComplexType())
     return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
 
