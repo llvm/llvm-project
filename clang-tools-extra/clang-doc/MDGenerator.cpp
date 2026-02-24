@@ -67,6 +67,23 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
+static std::string genRawText(const std::vector<CommentInfo> &Comments) {
+  std::string Result;
+  std::queue<const CommentInfo *> Q;
+  for (const auto &CI : Comments)
+    Q.push(&CI);
+  const CommentInfo *Comment;
+  while (Q.size()) {
+    Comment = Q.front();
+    Q.pop();
+    if (!Comment->Text.empty())
+      Result += Comment->Text;
+    for (const auto &CI : Comment->Children)
+      Q.push(CI.get());
+  }
+  return Result;
+}
+
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
                                     const ClangDocContext &CDCtx,
                                     const std::optional<Location> &DefLoc) {
@@ -162,11 +179,20 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
     writeLine("| enum " + I.Name + " |", OS);
   writeLine("--", OS);
 
+  OS << "| Name | Value | Comments |\n\n";
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
   if (!I.Members.empty())
-    for (const auto &N : I.Members)
-      Members << "| " << N.Name << " |\n";
+    for (const auto &N : I.Members) {
+      Members << "| " << N.Name << " ";
+      if (!N.Value.empty())
+        Members << "| " << N.Value << " ";
+      std::string RawComment = genRawText(N.Description);
+      RawComment.erase(0, RawComment.find_first_not_of(" \t\r\n"));
+      RawComment.erase(RawComment.find_last_not_of(" \t\r\n") + 1);
+      Members << "| " << (RawComment.empty() ? "--" : RawComment) << " ";
+      Members << "|\n";
+    }
   writeLine(Members.str(), OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
