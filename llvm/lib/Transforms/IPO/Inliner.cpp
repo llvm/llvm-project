@@ -344,12 +344,8 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
         continue;
       }
 
-      // For flatten callers, inline all viable calls without cost analysis.
-      bool IsFlatten = F.hasFnAttribute(Attribute::Flatten) &&
-                       !CB->getAttributes().hasFnAttr(Attribute::NoInline);
       std::unique_ptr<InlineAdvice> Advice =
-          IsFlatten ? Advisor.getAdviceWithoutCost(*CB)
-                    : Advisor.getAdvice(*CB, OnlyMandatory);
+          Advisor.getAdvice(*CB, OnlyMandatory);
 
       // Check whether we want to inline this callsite.
       if (!Advice)

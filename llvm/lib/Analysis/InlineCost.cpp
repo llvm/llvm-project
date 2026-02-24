@@ -3254,6 +3254,14 @@ std::optional<InlineResult> llvm::getAttributeBasedInliningDecision(
   if (Callee->hasFnAttribute("loader-replaceable"))
     return InlineResult::failure("loader replaceable function attribute");
 
+  // Flatten: inline all viable calls from flatten functions regardless of cost.
+  if (Caller->hasFnAttribute(Attribute::Flatten)) {
+    auto IsViable = isInlineViable(*Callee);
+    if (IsViable.isSuccess())
+      return InlineResult::success();
+    return InlineResult::failure(IsViable.getFailureReason());
+  }
+
   return std::nullopt;
 }
 
