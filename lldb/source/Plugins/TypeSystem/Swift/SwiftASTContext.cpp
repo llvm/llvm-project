@@ -3797,8 +3797,8 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
           std::make_unique<SwiftDWARFImporterDelegate>(*this);
     auto importer_diags = getScopedDiagnosticConsumer();
     clang_importer_up = swift::ClangImporter::create(
-        *m_ast_context_up, "", m_dependency_tracker.get(),
-        m_dwarfimporter_delegate_up.get());
+        *m_ast_context_up, &GetCompilerInvocation().getIRGenOptions(),
+        "", m_dependency_tracker.get(), m_dwarfimporter_delegate_up.get());
 
     // Handle any errors.
     if (!clang_importer_up || importer_diags->HasErrors()) {
