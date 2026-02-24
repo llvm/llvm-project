@@ -369,27 +369,6 @@ static void FactorNodes(MatcherList &ML) {
 
   SmallVectorImpl<MatcherList> &OptionsToMatch = Scope->getChildren();
 
-  for (auto I = OptionsToMatch.begin(); I != OptionsToMatch.end();) {
-    assert(!I->empty());
-    // Factor the subexpression.
-    FactorNodes(*I);
-
-    // If the child is a ScopeMatcher we can just merge its contents.
-    if (auto *SM = dyn_cast<ScopeMatcher>(I->front())) {
-      // Move the MatcherList to a temporary so we can overwrite the location
-      // in OptionsToMatch without deleting the ScopeMatcher.
-      MatcherList Tmp = std::move(*I);
-      SmallVectorImpl<MatcherList> &Children = SM->getChildren();
-      *I++ = std::move(Children.front());
-      I = OptionsToMatch.insert(I,
-                                std::make_move_iterator(Children.begin() + 1),
-                                std::make_move_iterator(Children.end()));
-      I += Children.size() - 1;
-    } else {
-      ++I;
-    }
-  }
-
   // Loop over options to match, merging neighboring patterns with identical
   // starting nodes into a shared matcher.
   auto E = OptionsToMatch.end();
@@ -484,17 +463,48 @@ static void FactorNodes(MatcherList &ML) {
 
     // Factor these checks by pulling the first node off each entry and
     // discarding it.  Take the first one off the first entry to reuse.
+    auto EqualIt = EqualMatchers.begin();
     MatcherList Shared;
-    Shared.splice_after(Shared.before_begin(), EqualMatchers[0],
-                        EqualMatchers[0].before_begin());
-    Optn = EqualMatchers[0].empty() ? nullptr : EqualMatchers[0].front();
+    Shared.splice_after(Shared.before_begin(), *EqualIt,
+                        EqualIt->before_begin());
+    bool FirstEmpty = EqualIt->empty();
+    Optn = EqualIt->empty() ? nullptr : EqualIt->front();
+
+    // If the remainder is a ScopeMatcher, merge its contents so we can add
+    // them to the new ScopeMatcher we're going to create.
+    if (auto *SM = dyn_cast_or_null<ScopeMatcher>(Optn)) {
+      MatcherList TmpList = std::move(*EqualIt);
+      SmallVectorImpl<MatcherList> &Children = SM->getChildren();
+      *EqualIt++ = std::move(Children.front());
+      EqualIt = EqualMatchers.insert(
+          EqualIt, std::make_move_iterator(Children.begin() + 1),
+          std::make_move_iterator(Children.end()));
+      EqualIt += Children.size() - 1;
+    } else {
+      ++EqualIt;
+    }
 
     // Remove and delete the first node from the other matchers we're factoring.
-    for (unsigned i = 1, e = EqualMatchers.size(); i != e; ++i) {
-      EqualMatchers[i].pop_front();
-      [[maybe_unused]] Matcher *Tmp =
-          EqualMatchers[i].empty() ? nullptr : EqualMatchers[i].front();
-      assert(!Optn == !Tmp && "Expected all to be null if any are null");
+    for (; EqualIt != EqualMatchers.end();) {
+      EqualIt->pop_front();
+      assert(FirstEmpty == EqualIt->empty() &&
+             "Expect all to be empty if any are empty");
+      (void)FirstEmpty;
+      Matcher *Tmp = EqualIt->empty() ? nullptr : EqualIt->front();
+
+      // If the remainder is a ScopeMatcher, merge its contents so we can add
+      // them to the new ScopeMatcher we're going to create.
+      if (auto *SM = dyn_cast_or_null<ScopeMatcher>(Tmp)) {
+        MatcherList TmpList = std::move(*EqualIt);
+        SmallVectorImpl<MatcherList> &Children = SM->getChildren();
+        *EqualIt++ = std::move(Children.front());
+        EqualIt = EqualMatchers.insert(
+            EqualIt, std::make_move_iterator(Children.begin() + 1),
+            std::make_move_iterator(Children.end()));
+        EqualIt += Children.size() - 1;
+      } else {
+        ++EqualIt;
+      }
     }
 
     if (!EqualMatchers[0].empty()) {
@@ -603,18 +613,26 @@ static void FactorNodes(MatcherList &ML) {
       unsigned &Entry = TypeEntry[CTMTy.SimpleTy];
       if (Entry != 0) {
         // If we have unfactored duplicate types, then we should factor them.
-        MatcherList &PrevMatcher = Cases[Entry - 1].second;
-        if (ScopeMatcher *SM = dyn_cast<ScopeMatcher>(PrevMatcher.front())) {
-          SM->getChildren().push_back(std::move(Optn));
-          continue;
+        ScopeMatcher *SM =
+            dyn_cast<ScopeMatcher>(Cases[Entry - 1].second.front());
+        // Create a new scope if we don't have one.
+        if (!SM) {
+          SmallVector<MatcherList, 1> Entries;
+          Entries.push_back(std::move(Cases[Entry - 1].second));
+          Cases[Entry - 1].second.push_front(
+              new ScopeMatcher(std::move(Entries)));
+          SM = cast<ScopeMatcher>(Cases[Entry - 1].second.front());
         }
 
-        SmallVector<MatcherList, 2> Entries;
-        Entries.push_back(std::move(PrevMatcher));
-        Entries.push_back(std::move(Optn));
-        assert(Cases[Entry - 1].second.empty());
-        Cases[Entry - 1].second.push_front(
-            new ScopeMatcher(std::move(Entries)));
+        // If Optn is ScopeMatcher, merge its contents into this ScopeMatcher.
+        if (auto *ChildSM = dyn_cast<ScopeMatcher>(Optn.front())) {
+          MatcherList TmpList = std::move(Optn);
+          SmallVectorImpl<MatcherList> &Children = ChildSM->getChildren();
+          SM->getChildren().append(std::make_move_iterator(Children.begin()),
+                                   std::make_move_iterator(Children.end()));
+        } else {
+          SM->getChildren().push_back(std::move(Optn));
+        }
         continue;
       }
 
