@@ -70,4 +70,4 @@ attributes #0 = { inaccessiblememonly nocallback nofree nosync nounwind willretu
 !10 = !DILocation(line: 7, column: 3, scope: !9)
 !11 = !DILocation(line: 9, column: 5, scope: !9)
 !12 = !DILocation(line: 14, column: 3, scope: !6)
-!13 = !{i64 6699318081062747564, i64 138464321060, !"foo"}
+!13 = !{i64 6699318081062747564, i64 138464321060, i8 0, !"foo"}

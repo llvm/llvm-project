@@ -35,6 +35,12 @@ enum class PseudoProbeAttributes {
   HasDiscriminator = 0x4, // for probes with a discriminator
 };
 
+enum class PseudoProbeDescAttributes {
+  AlwaysInline = 0x1, // Function has always_inline attribute
+  NoInline = 0x2,     // Function has no_inline attribute
+  Sentinel = 0x10,    // Guard against the 4bit encoding space
+};
+
 // The saturated distrution factor representing 100% for block probes.
 constexpr static uint64_t PseudoProbeFullDistributionFactor =
     std::numeric_limits<uint64_t>::max();
@@ -107,12 +113,19 @@ public:
 class PseudoProbeDescriptor {
   uint64_t FunctionGUID;
   uint64_t FunctionHash;
+  uint8_t Attributes;
 
 public:
-  PseudoProbeDescriptor(uint64_t GUID, uint64_t Hash)
-      : FunctionGUID(GUID), FunctionHash(Hash) {}
+  PseudoProbeDescriptor(uint64_t GUID, uint64_t Hash, uint8_t Attributes)
+      : FunctionGUID(GUID), FunctionHash(Hash), Attributes(Attributes) {
+    assert((Attributes < (uint8_t)PseudoProbeDescAttributes::Sentinel) &&
+           "Attributes exceed 4bit long encoding space.");
+  }
   uint64_t getFunctionGUID() const { return FunctionGUID; }
   uint64_t getFunctionHash() const { return FunctionHash; }
+  bool hasAttribute(PseudoProbeDescAttributes Attribute) const {
+    return Attributes & (uint8_t)Attribute;
+  }
 };
 
 struct PseudoProbe {
@@ -120,9 +133,9 @@ struct PseudoProbe {
   uint32_t Type;
   uint32_t Attr;
   uint32_t Discriminator;
-  // Distribution factor that estimates the portion of the real execution count.
-  // A saturated distribution factor stands for 1.0 or 100%. A pesudo probe has
-  // a factor with the value ranged from 0.0 to 1.0.
+  // Distribution factor that estimates the portion of the real execution
+  // count. A saturated distribution factor stands for 1.0 or 100%. A pesudo
+  // probe has a factor with the value ranged from 0.0 to 1.0.
   float Factor;
 };
 

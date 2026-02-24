@@ -1,8 +1,8 @@
 ; REQUIRES: x86-registered-target
 ; RUN: opt < %s -passes=pseudo-probe -S -o - | FileCheck %s
 
-; CHECK: ![[#]] = !{i64 -3345296970173352005, i64 [[#]], !"foo.dbg"}
-; CHECK-NOT: ![[#]] = !{i64 6699318081062747564, i64 [[#]], !"foo"}
+; CHECK: ![[#]] = !{i64 -3345296970173352005, i64 [[#]], i8 [[#]], !"foo.dbg"}
+; CHECK-NOT: ![[#]] = !{i64 6699318081062747564, i64 [[#]], i8 [[#]], !"foo"}
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @foo() #0 !dbg !8 {
