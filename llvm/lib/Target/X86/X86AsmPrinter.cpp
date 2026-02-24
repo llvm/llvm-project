@@ -1140,3 +1140,49 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
   RegisterAsmPrinter<X86AsmPrinter> X(getTheX86_32Target());
   RegisterAsmPrinter<X86AsmPrinter> Y(getTheX86_64Target());
 }
+
+PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+  if (!Streamer)
+    reportFatalInternalError("Failed to create MCStreamer");
+  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  AsmPrinter.GetPSI = [&MAM](Module &M) {
+    return &MAM.getResult<ProfileSummaryAnalysis>(M);
+  };
+  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+  if (!Streamer)
+    reportFatalInternalError("Failed to create MCStreamer");
+  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  AsmPrinter.GetPSI = [&MFAM, &MF](Module &M) {
+    return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+        .getCachedResult<ProfileSummaryAnalysis>(M);
+  };
+  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
+  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+  if (!Streamer)
+    reportFatalInternalError("Failed to create MCStreamer");
+  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  AsmPrinter.GetPSI = [&MAM](Module &M) {
+    return &MAM.getResult<ProfileSummaryAnalysis>(M);
+  };
+  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
+}
