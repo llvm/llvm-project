@@ -312,35 +312,26 @@ start:
   ret void
 }
 
-define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) {
+define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) nounwind {
 ; CHECK-LE-LABEL: if_then_else64:
 ; CHECK-LE:       // %bb.0: // %start
 ; CHECK-LE-NEXT:    sub sp, sp, #80
-; CHECK-LE-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
-; CHECK-LE-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
-; CHECK-LE-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
-; CHECK-LE-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-LE-NEXT:    .cfi_def_cfa_offset 80
-; CHECK-LE-NEXT:    .cfi_offset b8, -8
-; CHECK-LE-NEXT:    .cfi_offset b9, -16
-; CHECK-LE-NEXT:    .cfi_offset b10, -24
-; CHECK-LE-NEXT:    .cfi_offset b11, -32
-; CHECK-LE-NEXT:    .cfi_offset b12, -40
-; CHECK-LE-NEXT:    .cfi_offset b13, -48
-; CHECK-LE-NEXT:    .cfi_offset b14, -56
-; CHECK-LE-NEXT:    .cfi_offset b15, -64
 ; CHECK-LE-NEXT:    fmov d21, x1
 ; CHECK-LE-NEXT:    adrp x8, .LCPI3_6
+; CHECK-LE-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
 ; CHECK-LE-NEXT:    ldr q26, [x8, :lo12:.LCPI3_6]
 ; CHECK-LE-NEXT:    adrp x8, .LCPI3_7
+; CHECK-LE-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
 ; CHECK-LE-NEXT:    ldr q27, [x8, :lo12:.LCPI3_7]
 ; CHECK-LE-NEXT:    adrp x8, .LCPI3_0
+; CHECK-LE-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
 ; CHECK-LE-NEXT:    dup v5.4s, v21.s[0]
 ; CHECK-LE-NEXT:    dup v28.4s, v21.s[1]
 ; CHECK-LE-NEXT:    ldr q22, [x8, :lo12:.LCPI3_0]
 ; CHECK-LE-NEXT:    ldp q25, q24, [x2, #96]
 ; CHECK-LE-NEXT:    adrp x8, .LCPI3_3
 ; CHECK-LE-NEXT:    ldp q21, q31, [x3, #96]
+; CHECK-LE-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
 ; CHECK-LE-NEXT:    and v23.16b, v5.16b, v26.16b
 ; CHECK-LE-NEXT:    and v9.16b, v5.16b, v27.16b
 ; CHECK-LE-NEXT:    and v10.16b, v28.16b, v22.16b
@@ -433,12 +424,6 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) {
 ; CHECK-BE-LABEL: if_then_else64:
 ; CHECK-BE:       // %bb.0: // %start
 ; CHECK-BE-NEXT:    stp d11, d10, [sp, #-32]! // 16-byte Folded Spill
-; CHECK-BE-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
-; CHECK-BE-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-BE-NEXT:    .cfi_offset b8, -8
-; CHECK-BE-NEXT:    .cfi_offset b9, -16
-; CHECK-BE-NEXT:    .cfi_offset b10, -24
-; CHECK-BE-NEXT:    .cfi_offset b11, -32
 ; CHECK-BE-NEXT:    fmov d4, x1
 ; CHECK-BE-NEXT:    add x9, x2, #224
 ; CHECK-BE-NEXT:    add x8, x2, #240
@@ -481,6 +466,7 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) {
 ; CHECK-BE-NEXT:    ld1 { v22.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x2, #48
 ; CHECK-BE-NEXT:    ld1 { v27.4s }, [x9]
+; CHECK-BE-NEXT:    stp d9, d8, [sp, #16] // 16-byte Folded Spill
 ; CHECK-BE-NEXT:    ld1 { v20.4s }, [x8]
 ; CHECK-BE-NEXT:    cmeq v16.4s, v16.4s, #0
 ; CHECK-BE-NEXT:    and v8.16b, v6.16b, v25.16b
@@ -506,14 +492,14 @@ define void @if_then_else64(ptr %out, i64 %mask, ptr %if_true, ptr %if_false) {
 ; CHECK-BE-NEXT:    and v11.16b, v6.16b, v31.16b
 ; CHECK-BE-NEXT:    cmeq v30.4s, v10.4s, #0
 ; CHECK-BE-NEXT:    add x9, x3, #112
+; CHECK-BE-NEXT:    bit v19.16b, v26.16b, v8.16b
+; CHECK-BE-NEXT:    and v8.16b, v29.16b, v20.16b
+; CHECK-BE-NEXT:    ld1 { v10.4s }, [x9]
 ; CHECK-BE-NEXT:    bsl v17.16b, v9.16b, v21.16b
 ; CHECK-BE-NEXT:    ld1 { v9.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x2, #32
-; CHECK-BE-NEXT:    bit v19.16b, v26.16b, v8.16b
-; CHECK-BE-NEXT:    and v8.16b, v29.16b, v20.16b
 ; CHECK-BE-NEXT:    ld1 { v21.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x2, #16
-; CHECK-BE-NEXT:    ld1 { v10.4s }, [x9]
 ; CHECK-BE-NEXT:    cmeq v26.4s, v11.4s, #0
 ; CHECK-BE-NEXT:    bif v23.16b, v22.16b, v30.16b
 ; CHECK-BE-NEXT:    ld1 { v22.4s }, [x8]
