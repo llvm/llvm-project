@@ -152,9 +152,9 @@ define i64 @extract_last_i64(<2 x i64> %data, <2 x i64> %mask, i64 %passthru) {
 ; NEON-FIXED-NEXT:    sub sp, sp, #16
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
-; NEON-FIXED-NEXT:    adrp x8, .LCPI3_0
+; NEON-FIXED-NEXT:    mov x8, #4294967296 // =0x100000000
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d3, [x8, :lo12:.LCPI3_0]
+; NEON-FIXED-NEXT:    fmov d3, x8
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v2.2s, v1.2d
 ; NEON-FIXED-NEXT:    umaxv s1, v1.4s
@@ -348,9 +348,9 @@ define double @extract_last_double(<2 x double> %data, <2 x i64> %mask, double %
 ; NEON-FIXED-NEXT:    sub sp, sp, #16
 ; NEON-FIXED-NEXT:    .cfi_def_cfa_offset 16
 ; NEON-FIXED-NEXT:    cmtst v1.2d, v1.2d, v1.2d
-; NEON-FIXED-NEXT:    adrp x8, .LCPI7_0
+; NEON-FIXED-NEXT:    mov x8, #4294967296 // =0x100000000
 ; NEON-FIXED-NEXT:    mov x9, sp
-; NEON-FIXED-NEXT:    ldr d4, [x8, :lo12:.LCPI7_0]
+; NEON-FIXED-NEXT:    fmov d4, x8
 ; NEON-FIXED-NEXT:    str q0, [sp]
 ; NEON-FIXED-NEXT:    xtn v3.2s, v1.2d
 ; NEON-FIXED-NEXT:    umaxv s1, v1.4s
