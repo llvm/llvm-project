@@ -1691,8 +1691,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
          << "::getPhysRegBaseClass(MCRegister Reg)"
          << " const {\n";
       OS << "  static const uint16_t InvalidRegClassID = UINT16_MAX;\n\n";
-      OS << "  static constexpr uint16_t Mapping[" << Regs.size() + 1
-         << "] = {\n";
+      OS << "  static const uint16_t Mapping[" << Regs.size() + 1 << "] = {\n";
       OS << "    InvalidRegClassID,  // NoRegister\n";
       for (const CodeGenRegister &Reg : Regs) {
         const CodeGenRegisterClass *BaseRC = nullptr;
