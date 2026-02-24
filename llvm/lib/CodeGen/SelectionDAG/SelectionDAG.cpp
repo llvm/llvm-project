@@ -362,7 +362,6 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
 
   EVT SVT = Op.getValueType().getScalarType();
   for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
-    // Skip non-demanded lanes
     if (!DemandedElts[i])
       continue;
 
@@ -6165,7 +6164,7 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     return !V.isZero();
   };
 
-  if (ISD::matchUnaryPredicate(Op, IsNeverZero))
+  if (ISD::matchUnaryPredicate(Op, DemandedElts, IsNeverZero))
     return true;
 
   // TODO: Recognize more cases here. Most of the cases are also incomplete to
@@ -6173,23 +6172,6 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
   switch (Op.getOpcode()) {
   default:
     break;
-
-  case ISD::BUILD_VECTOR:
-    // Are all operands of a build vector constant non-zero?
-    if (all_of(enumerate(Op->ops()), [&](auto P) {
-          auto *C = dyn_cast<ConstantSDNode>(P.value());
-          return !DemandedElts[P.index()] || (C && IsNeverZero(C));
-        }))
-      return true;
-    break;
-
-  case ISD::SPLAT_VECTOR:
-    // Is the operand of a splat vector a constant non-zero?
-    if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(0)))
-      if (IsNeverZero(C))
-        return true;
-    break;
-
   case ISD::OR:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
