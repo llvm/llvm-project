@@ -25717,9 +25717,6 @@ bool RISCVTargetLowering::isVScaleKnownToBeAPowerOfTwo() const {
   // We define vscale to be VLEN/RVVBitsPerBlock.  VLEN is always a power
   // of two >= 64, and RVVBitsPerBlock is 64.  Thus, vscale must be
   // a power of two as well.
-  // FIXME: This doesn't work for zve32, but that's already broken
-  // elsewhere for the same reason.
-  assert(Subtarget.getRealMinVLen() >= 64 && "zve32* unsupported");
   static_assert(RISCV::RVVBitsPerBlock == 64,
                 "RVVBitsPerBlock changed, audit needed");
   return true;

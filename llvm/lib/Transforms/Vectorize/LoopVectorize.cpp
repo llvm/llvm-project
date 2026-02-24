@@ -296,9 +296,9 @@ cl::opt<unsigned> llvm::ForceTargetInstructionCost(
 
 static cl::opt<bool> ForceTargetSupportsScalableVectors(
     "force-target-supports-scalable-vectors", cl::init(false), cl::Hidden,
-    cl::desc(
-        "Pretend that scalable vectors are supported, even if the target does "
-        "not support them. This flag should only be used for testing."));
+    cl::desc("Pretend that scalable vectors are supported and vscale is a "
+             "power of two, even if the target does "
+             "not support them. This flag should only be used for testing."));
 
 static cl::opt<unsigned> SmallLoopCost(
     "small-loop-cost", cl::init(20), cl::Hidden,
@@ -3385,6 +3385,10 @@ bool LoopVectorizationCostModel::isScalableVectorizationAllowed() {
 
   IsScalableVectorizationAllowed = false;
   if (!TTI.supportsScalableVectors() && !ForceTargetSupportsScalableVectors)
+    return false;
+
+  if (!TTI.isVScaleKnownToBeAPowerOfTwo() &&
+      !ForceTargetSupportsScalableVectors)
     return false;
 
   if (Hints->isScalableVectorizationDisabled()) {
