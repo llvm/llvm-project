@@ -1873,17 +1873,22 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
         setOperationPromotedToType(ISD::FMINIMUM, VT, PromotedVT);
         setOperationPromotedToType(ISD::FMINNUM, VT, PromotedVT);
 
-        if (VT != MVT::nxv2bf16 && Subtarget->hasBF16()) {
+        if (Subtarget->hasBF16()) {
           // These operations can be lowered to BFMLAT/B. Note: nxv2bf16 is not
           // supported to avoid performing fp operations on inactive lanes (as
           // BFMLAT/B is unpredicated).
-          setOperationAction(ISD::FMUL, VT, Custom);
-          setOperationAction(ISD::FADD, VT, Custom);
-          setOperationAction(ISD::FSUB, VT, Custom);
-        } else {
-          setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
-          setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
-          setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+          if (VT != MVT::nxv2bf16)
+            setOperationAction(ISD::FMUL, VT, Custom);
+          else
+            setOperationPromotedToType(ISD::FMUL, VT, PromotedVT);
+          // Limit ADD/SUB to nxv8bf16 (it's not an improvement for other types)
+          if (VT == MVT::nxv8bf16) {
+            setOperationAction(ISD::FADD, VT, Custom);
+            setOperationAction(ISD::FSUB, VT, Custom);
+          } else {
+            setOperationPromotedToType(ISD::FADD, VT, PromotedVT);
+            setOperationPromotedToType(ISD::FSUB, VT, PromotedVT);
+          }
         }
       }
 
@@ -8041,7 +8046,7 @@ AArch64TargetLowering::LowerBFloatArithToBFMLAL(SDValue Op,
     LHS = Op.getOperand(1);
     RHS = DAG.getConstantFP(Opcode == ISD::FSUB ? -1.0F : 1.0F, DL, VT);
   } else {
-    llvm_unreachable("Unexpected operation");
+    return SDValue();
   }
 
   // All SVE intrinsics expect to operate on full bf16 vector types.
