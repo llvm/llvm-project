@@ -24209,9 +24209,9 @@ static SDValue combineToExtendBoolVectorInReg(
     Vec = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, BroadcastVT, N00);
     Vec = DAG.getBitcast(VT, Vec);
 
-    for (unsigned i = 0; i != Scale; ++i) {
-      ShuffleMask.append(EltSizeInBits, (int)i);
-    }
+    for (unsigned I = 0; I != Scale; ++I)
+      ShuffleMask.append(EltSizeInBits, (int)I);
+
     Vec = DAG.getVectorShuffle(VT, DL, Vec, Vec, ShuffleMask);
   } else {
     // For smaller scalar integers, we can simply any-extend it to the vector
@@ -24222,8 +24222,8 @@ static SDValue combineToExtendBoolVectorInReg(
 
   // Now, mask the relevant bit in each element.
   SmallVector<SDValue, 32> Bits;
-  for (unsigned i = 0; i != NumElts; ++i) {
-    unsigned ScalarBit = IsBE ? (NumElts - 1 - i) : i;
+  for (unsigned I = 0; I != NumElts; ++I) {
+    unsigned ScalarBit = IsBE ? (NumElts - 1 - I) : I;
     int BitIdx = (ScalarBit % EltSizeInBits);
     APInt Bit = APInt::getBitsSet(EltSizeInBits, BitIdx, BitIdx + 1);
     Bits.push_back(DAG.getConstant(Bit, DL, SVT));
