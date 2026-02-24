@@ -9,7 +9,6 @@
 #include "SystemZHLASMAsmStreamer.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/GOFF.h"
-#include "llvm/MC/MCEncodingCommentHelper.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCGOFFAttributes.h"
 #include "llvm/MC/MCGOFFStreamer.h"
@@ -191,15 +190,6 @@ void SystemZHLASMAsmStreamer::emitBytes(StringRef Data) {
   OS << '\'' << toHex(Chars) << '\'';
 
   EmitEOL();
-}
-
-void SystemZHLASMAsmStreamer::addEncodingComment(const MCInst &Inst,
-                                                 const MCSubtargetInfo &STI) {
-  raw_ostream &OS = getCommentOS();
-
-  // SystemZ uses big-endian encoding, so don't force little-endian.
-  mc::emitEncodingComment(OS, Inst, STI, getAssembler(), *MAI,
-                          /*ForceLE=*/false);
 }
 
 void SystemZHLASMAsmStreamer::emitInstruction(const MCInst &Inst,

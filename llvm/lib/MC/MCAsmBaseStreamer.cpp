@@ -1,4 +1,4 @@
-//===- MCEncodingCommentHelper.cpp - Encoding Comment Helper ----*- C++ -*-===//
+//===- MCAsmBaseStreamer.cpp - Base Class for Asm Streamers -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/MC/MCEncodingCommentHelper.h"
+#include "llvm/MC/MCAsmBaseStreamer.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -14,26 +14,41 @@
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
+#include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
-void llvm::mc::emitEncodingComment(raw_ostream &OS, const MCInst &Inst,
-                                   const MCSubtargetInfo &STI,
-                                   MCAssembler &Assembler, const MCAsmInfo &MAI,
-                                   bool ForceLE) {
+MCAsmBaseStreamer::MCAsmBaseStreamer(MCContext &Context,
+                                     std::unique_ptr<MCCodeEmitter> Emitter,
+                                     std::unique_ptr<MCAsmBackend> AsmBackend)
+    : MCStreamer(Context),
+      Assembler(std::make_unique<MCAssembler>(
+          Context, std::move(AsmBackend), std::move(Emitter),
+          (AsmBackend) ? AsmBackend->createObjectWriter(NullStream) : nullptr)),
+      CommentStream(CommentToEmit) {}
+
+void MCAsmBaseStreamer::addEncodingComment(const MCInst &Inst,
+                                           const MCSubtargetInfo &STI) {
+  raw_ostream &OS = getCommentOS();
   SmallString<256> Code;
   SmallVector<MCFixup, 4> Fixups;
 
   // If we have no code emitter, don't emit code.
-  if (!Assembler.getEmitterPtr())
+  if (!getAssembler().getEmitterPtr())
     return;
 
-  Assembler.getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+  getAssembler().getEmitter().encodeInstruction(Inst, Code, Fixups, STI);
+
+  // RISC-V instructions are always little-endian, even on BE systems.
+  bool ForceLE = getContext().getTargetTriple().isRISCV();
+
+  const MCAsmInfo *MAI = getContext().getAsmInfo();
 
   // If we are showing fixups, create symbolic markers in the encoded
   // representation. We do this by making a per-bit map to the fixup item index,
@@ -45,7 +60,8 @@ void llvm::mc::emitEncodingComment(raw_ostream &OS, const MCInst &Inst,
 
   for (unsigned I = 0, E = Fixups.size(); I != E; ++I) {
     MCFixup &F = Fixups[I];
-    MCFixupKindInfo Info = Assembler.getBackend().getFixupKindInfo(F.getKind());
+    MCFixupKindInfo Info =
+        getAssembler().getBackend().getFixupKindInfo(F.getKind());
     for (unsigned J = 0; J != Info.TargetSize; ++J) {
       unsigned Index = F.getOffset() * 8 + Info.TargetOffset + J;
       assert(Index < Code.size() * 8 && "Invalid offset in fixup!");
@@ -91,7 +107,7 @@ void llvm::mc::emitEncodingComment(raw_ostream &OS, const MCInst &Inst,
         // RISC-V instructions are always little-endian.
         // The FixupMap is indexed by actual bit positions in the LE
         // instruction.
-        if (MAI.isLittleEndian() || ForceLE)
+        if (MAI->isLittleEndian() || ForceLE)
           FixupBit = I * 8 + J;
         else
           FixupBit = I * 8 + (7 - J);
@@ -110,13 +126,13 @@ void llvm::mc::emitEncodingComment(raw_ostream &OS, const MCInst &Inst,
     MCFixup &F = Fixups[I];
     OS << "  fixup " << char('A' + I) << " - "
        << "offset: " << F.getOffset() << ", value: ";
-    MAI.printExpr(OS, *F.getValue());
+    MAI->printExpr(OS, *F.getValue());
     auto Kind = F.getKind();
     if (mc::isRelocation(Kind))
       OS << ", relocation type: " << Kind;
     else {
       OS << ", kind: ";
-      auto Info = Assembler.getBackend().getFixupKindInfo(Kind);
+      auto Info = getAssembler().getBackend().getFixupKindInfo(Kind);
       if (F.isPCRel() && StringRef(Info.Name).starts_with("FK_Data_"))
         OS << "FK_PCRel_" << (Info.TargetSize / 8);
       else

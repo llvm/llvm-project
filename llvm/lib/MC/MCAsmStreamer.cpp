@@ -11,12 +11,12 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
 #include "llvm/MC/MCAsmBackend.h"
+#include "llvm/MC/MCAsmBaseStreamer.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCCodeView.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCEncodingCommentHelper.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -43,17 +43,13 @@ using namespace llvm;
 
 namespace {
 
-class MCAsmStreamer final : public MCStreamer {
+class MCAsmStreamer final : public MCAsmBaseStreamer {
   std::unique_ptr<formatted_raw_ostream> OSOwner;
   formatted_raw_ostream &OS;
   const MCAsmInfo *MAI;
   std::unique_ptr<MCInstPrinter> InstPrinter;
-  std::unique_ptr<MCAssembler> Assembler;
 
   SmallString<128> ExplicitCommentToEmit;
-  SmallString<128> CommentToEmit;
-  raw_svector_ostream CommentStream;
-  raw_null_ostream NullStream;
 
   bool EmittedSectionDirective = false;
 
@@ -84,17 +80,13 @@ class MCAsmStreamer final : public MCStreamer {
                                    StringRef FileName, StringRef Comment);
 
 public:
-  MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> os,
-                std::unique_ptr<MCInstPrinter> printer,
-                std::unique_ptr<MCCodeEmitter> emitter,
-                std::unique_ptr<MCAsmBackend> asmbackend)
-      : MCStreamer(Context), OSOwner(std::move(os)), OS(*OSOwner),
-        MAI(Context.getAsmInfo()), InstPrinter(std::move(printer)),
-        Assembler(std::make_unique<MCAssembler>(
-            Context, std::move(asmbackend), std::move(emitter),
-            (asmbackend) ? asmbackend->createObjectWriter(NullStream)
-                         : nullptr)),
-        CommentStream(CommentToEmit) {
+  MCAsmStreamer(MCContext &Context, std::unique_ptr<formatted_raw_ostream> OS,
+                std::unique_ptr<MCInstPrinter> Printer,
+                std::unique_ptr<MCCodeEmitter> Emitter,
+                std::unique_ptr<MCAsmBackend> AsmBackend)
+      : MCAsmBaseStreamer(Context, std::move(Emitter), std::move(AsmBackend)),
+        OSOwner(std::move(OS)), OS(*OSOwner), MAI(Context.getAsmInfo()),
+        InstPrinter(std::move(Printer)) {
     assert(InstPrinter);
     if (Assembler->getBackendPtr())
       setAllowAutoPadding(Assembler->getBackend().allowAutoPadding());
@@ -122,9 +114,6 @@ public:
     }
   }
 
-  MCAssembler &getAssembler() { return *Assembler; }
-  MCAssembler *getAssemblerPtr() override { return nullptr; }
-
   inline void EmitEOL() {
     // Dump Explicit Comments here.
     emitExplicitComments();
@@ -150,9 +139,6 @@ public:
   /// output of the compiler more readable. This only affects the MCAsmStreamer
   /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
-
-  /// Add a comment showing the encoding of an instruction.
-  void AddEncodingComment(const MCInst &Inst, const MCSubtargetInfo &);
 
   /// Return a raw_ostream that comments can be written to.
   /// Unlike AddComment, you are required to terminate comments with \n if you
@@ -2387,16 +2373,6 @@ void MCAsmStreamer::emitCGProfileEntry(const MCSymbolRefExpr *From,
   EmitEOL();
 }
 
-void MCAsmStreamer::AddEncodingComment(const MCInst &Inst,
-                                       const MCSubtargetInfo &STI) {
-  raw_ostream &OS = getCommentOS();
-
-  // RISC-V instructions are always little-endian, even on BE systems.
-  bool ForceLE = getContext().getTargetTriple().isRISCV();
-
-  mc::emitEncodingComment(OS, Inst, STI, getAssembler(), *MAI, ForceLE);
-}
-
 void MCAsmStreamer::emitInstruction(const MCInst &Inst,
                                     const MCSubtargetInfo &STI) {
   if (LFIRewriter && LFIRewriter->rewriteInst(Inst, *this, STI))
@@ -2413,7 +2389,7 @@ void MCAsmStreamer::emitInstruction(const MCInst &Inst,
     MCDwarfLineEntry::make(this, getCurrentSectionOnly());
 
   // Show the encoding in a comment if we have a code emitter.
-  AddEncodingComment(Inst, STI);
+  addEncodingComment(Inst, STI);
 
   // Show the MCInst if enabled.
   if (ShowInst) {
