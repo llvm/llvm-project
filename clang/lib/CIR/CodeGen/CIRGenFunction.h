@@ -1391,6 +1391,8 @@ public:
       const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
 
+  mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
 
