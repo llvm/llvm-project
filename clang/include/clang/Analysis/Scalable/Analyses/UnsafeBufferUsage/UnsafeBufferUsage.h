@@ -14,6 +14,7 @@
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include "llvm/ADT/iterator_range.h"
 #include <set>
+#include <tuple>
 
 namespace clang::ssaf {
 
@@ -26,8 +27,8 @@ namespace clang::ssaf {
 /// *' of 'p'.
 ///
 /// An EntityPointerLevel can be identified by an EntityId and an unsigned
-/// integer indicating the pointer level: '(EntityId, PointerLevel)'.  An
-/// EntityPointerLevel 'P' is valid iff
+/// integer indicating the pointer level: '(EntityId, PointerLevel)'.
+/// An EntityPointerLevel 'P' is valid iff
 ///   - 'P.EntityId' has a pointer type with at least 'P.PointerLevel' levels
 ///     (This implies 'P.PointerLevel > 0');
 ///   - 'P.EntityId' identifies an lvalue object and 'P.PointerLevel == 0'.
@@ -52,7 +53,8 @@ public:
   unsigned getPointerLevel() const { return PointerLevel; }
 
   bool operator==(const EntityPointerLevel &Other) const {
-    return Entity == Other.Entity && PointerLevel == Other.PointerLevel;
+    return std::tie(Entity, PointerLevel) ==
+           std::tie(Other.Entity, Other.PointerLevel);
   }
 
   bool operator!=(const EntityPointerLevel &Other) const {
@@ -64,7 +66,8 @@ public:
            std::tie(Other.Entity, Other.PointerLevel);
   }
 
-  // Comparator supporting partial comparison against EntityId:
+  /// Compares `EntityPointerLevel`s; additionally, partially compares
+  /// `EntityPointerLevel` with `EntityId`.
   struct Comparator {
     using is_transparent = void;
     bool operator()(const EntityPointerLevel &L,
@@ -90,7 +93,7 @@ class UnsafeBufferUsageEntitySummary final : public EntitySummary {
 
   friend class UnsafeBufferUsageTUSummaryBuilder;
 
-  UnsafeBufferUsageEntitySummary(EntityPointerLevelSet &&UnsafeBuffers)
+  UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
       : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:

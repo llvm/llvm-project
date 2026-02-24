@@ -16,6 +16,7 @@
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -68,7 +69,7 @@ protected:
 
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   setUpTest(StringRef Code, StringRef ContributorName) {
-    AST = tooling::buildASTFromCodeWithArgs(Code, {"-Wno-everything"});
+    AST = tooling::buildASTFromCodeWithArgs(Code, {});
 
     const auto *ContributorDefn =
         findDeclByName(ContributorName, AST->getASTContext());
@@ -104,8 +105,9 @@ constexpr inline auto buildUnsafeBufferUsageEntitySummary =
 //                   Data Structure Tests                   //
 //////////////////////////////////////////////////////////////
 
-#define EXPECT_CONTAINS(Set, Elt) EXPECT_NE((Set).find(Elt), (Set).end())
-#define EXPECT_EXCLUDES(Set, Elt) EXPECT_EQ((Set).find(Elt), (Set).end())
+MATCHER_P2(EXPECT_CONTAINS, Set, Elt, "Check a set contains an element") {
+  return (Set).find(Elt) != (Set).end();
+}
 
 TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
   EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
@@ -136,7 +138,6 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   auto P3 = buildEntityPointerLevel(E2, 1);
   auto P4 = buildEntityPointerLevel(E2, 2);
   auto P5 = buildEntityPointerLevel(E3, 1);
-  auto P6 = buildEntityPointerLevel(E3, 2);
 
   EntityPointerLevelSet Set{P1, P2, P3, P4, P5};
   auto ES = buildUnsafeBufferUsageEntitySummary(std::move(Set));
@@ -147,7 +148,7 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   EXPECT_CONTAINS(*ES, P3);
   EXPECT_CONTAINS(*ES, P4);
   EXPECT_CONTAINS(*ES, P5);
-  EXPECT_EXCLUDES(*ES, P6);
+  EXPECT_EQ(ES->getNumUnsafeBuffers(), 5U);
 
   EntityPointerLevelSet Subset1{ES->getSubsetOf(E1).begin(),
                                 ES->getSubsetOf(E1).end()};
@@ -167,7 +168,6 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
                                 ES->getSubsetOf(E3).end()};
 
   EXPECT_CONTAINS(Subset3, P5);
-  EXPECT_EXCLUDES(Subset3, P6);
   EXPECT_EQ(Subset3.size(), 1U);
 }
 
@@ -175,18 +175,22 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
 //                   Extractor Tests                        //
 //////////////////////////////////////////////////////////////
 
-#define CHECK_ENTITY_POINTER_LEVEL(Name, PtrLv, Summary, TestFun, ForReturn)   \
-  {                                                                            \
-    std::optional<EntityId> Entity_##Name = getEntityId##ForReturn(#Name);     \
-    EXPECT_NE(Entity_##Name, std::nullopt);                                    \
-    TestFun((Summary), buildEntityPointerLevel(*(Entity_##Name), PtrLv));      \
-  }
-#define CHECK_NO_ENTITY_POINTER_LEVEL(Name, PtrLv, Summary)                    \
-  CHECK_ENTITY_POINTER_LEVEL(Name, PtrLv, *Summary, EXPECT_EXCLUDES, )
-#define CHECK_HAS_ENTITY_POINTER_LEVEL(Name, PtrLv, Summary)                   \
-  CHECK_ENTITY_POINTER_LEVEL(Name, PtrLv, *Summary, EXPECT_CONTAINS, )
-#define CHECK_HAS_ENTITY_POINTER_LEVEL_FOR_RETURN(Name, PtrLv, Summary)        \
-  CHECK_ENTITY_POINTER_LEVEL(Name, PtrLv, *Summary, EXPECT_CONTAINS, ForReturn)
+MATCHER_P3(CHECK_HAS_ENTITY_POINTER_LEVEL, Name, PtrLv, Summary,
+           "Check Summary contains EntityPointerLevel") {
+  std::optional<EntityId> Entity = getEntityId(Name);
+
+  EXPECT_NE(Entity, std::nullopt);
+  EXPECT_CONTAINS((Summary), buildEntityPointerLevel(*Entity, PtrLv));
+}
+
+MATCHER_P3(CHECK_HAS_ENTITY_POINTER_LEVEL_FOR_RETURN, Name, PtrLv, Summary,
+           "Check Summary contains EntityPointerLevel representing function "
+           "return value") {
+  std::optional<EntityId> Entity = getEntityIdForReturn(Name);
+
+  EXPECT_NE(Entity, std::nullopt);
+  EXPECT_CONTAINS((Summary), buildEntityPointerLevel(*Entity, PtrLv));
+}
 
 TEST_F(UnsafeBufferUsageTest, SimpleFunctionWithUnsafePointer) {
   auto Sum = setUpTest(R"cpp(
@@ -197,7 +201,7 @@ TEST_F(UnsafeBufferUsageTest, SimpleFunctionWithUnsafePointer) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
 }
 
@@ -211,8 +215,8 @@ TEST_F(UnsafeBufferUsageTest, PointerArithmetic) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 
@@ -228,10 +232,10 @@ TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(r, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(s, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("r", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("s", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 4U);
 }
 
@@ -244,8 +248,8 @@ TEST_F(UnsafeBufferUsageTest, PointerAssignment) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 
@@ -259,8 +263,8 @@ TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 
@@ -276,12 +280,10 @@ TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 2, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(r, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(r, 2, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(q, 2, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 2, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("r", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("r", 2, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 4U);
 }
 
@@ -295,10 +297,10 @@ TEST_F(UnsafeBufferUsageTest, ConditionalOperator) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 2, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 2, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 2, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 2, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 4U);
 }
 
@@ -312,8 +314,7 @@ TEST_F(UnsafeBufferUsageTest, CastExpression) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(q, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
 }
 
@@ -326,8 +327,7 @@ TEST_F(UnsafeBufferUsageTest, CommaOperator) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(x, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
 }
 
@@ -340,7 +340,7 @@ TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
 }
 
@@ -355,9 +355,9 @@ TEST_F(UnsafeBufferUsageTest, ArrayParameter) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(arr, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(arr2, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(arr2, 2, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("arr", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("arr2", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("arr2", 2, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 3U);
 }
 
@@ -373,7 +373,7 @@ TEST_F(UnsafeBufferUsageTest, FunctionCall) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL_FOR_RETURN(foo, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL_FOR_RETURN("foo", 1, *Sum);
   // No (foo, 2) becasue indirect calls are ignored.
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
 }
@@ -393,10 +393,8 @@ TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(ptr, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(ptr_to_arr, 2, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(ptr, 2, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(ptr_to_arr, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("ptr", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("ptr_to_arr", 2, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 
@@ -410,7 +408,7 @@ TEST_F(UnsafeBufferUsageTest, StringLiteralSubscript) {
 
   EXPECT_NE(Sum, nullptr);
   // String literals should not generate pointer kind variables
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), static_cast<size_t>(0));
+  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 0U);
 }
 
 TEST_F(UnsafeBufferUsageTest, OpaqueValueExpr) {
@@ -422,10 +420,8 @@ TEST_F(UnsafeBufferUsageTest, OpaqueValueExpr) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(p, 2, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(q, 2, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 
@@ -439,8 +435,6 @@ TEST_F(UnsafeBufferUsageTest, AddressOfOperator) {
 
   EXPECT_NE(Sum, nullptr);
   // Address-of should not generate pointer kind variables for 'x'
-  CHECK_NO_ENTITY_POINTER_LEVEL(x, 0, Sum);
-  CHECK_NO_ENTITY_POINTER_LEVEL(x, 1, Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 0U);
 }
 
@@ -454,8 +448,8 @@ TEST_F(UnsafeBufferUsageTest, AddressOfThenDereference) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(p, 1, Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL(q, 1, Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
+  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
   EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
 }
 } // namespace

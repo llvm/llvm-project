@@ -24,7 +24,7 @@ public:
   }
 
   static std::unique_ptr<UnsafeBufferUsageEntitySummary>
-  buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet &&UnsafeBuffers) {
+  buildUnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers) {
     return std::make_unique<UnsafeBufferUsageEntitySummary>(
         UnsafeBufferUsageEntitySummary(std::move(UnsafeBuffers)));
   }

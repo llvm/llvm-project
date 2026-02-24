@@ -1,4 +1,4 @@
-//===- UnsafeBufferUsage.cpp -----------------------------------*- C++ -*-===//
+//===- UnsafeBufferUsageExtractor.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
-#include <functional>
 #include <memory>
 
 namespace {
@@ -156,7 +155,7 @@ private:
   }
 
   // Translate((T*)base) -> Translate(p) if p has pointer type
-  //                  -> {} otherwise
+  //                     -> {} otherwise
   Expected<EntityPointerLevelSet> VisitCastExpr(const CastExpr *E) {
     if (hasPointerType(E->getSubExpr()))
       return Visit(E->getSubExpr());
