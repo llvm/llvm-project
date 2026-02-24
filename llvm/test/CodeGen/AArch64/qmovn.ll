@@ -739,9 +739,9 @@ define <8 x i8> @sminsmax_range_unsigned_i64_to_i8(<4 x i8> %x, <4 x i32> %y) {
 ; CHECK-SD-LABEL: sminsmax_range_unsigned_i64_to_i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-SD-NEXT:    movi v3.2d, #0x0000ff000000ff
 ; CHECK-SD-NEXT:    smax v1.4s, v1.4s, v2.4s
-; CHECK-SD-NEXT:    movi v2.2d, #0x0000ff000000ff
-; CHECK-SD-NEXT:    smin v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    smin v1.4s, v1.4s, v3.4s
 ; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    ret
@@ -771,9 +771,9 @@ define <8 x i8> @sminsmax_range_signed_i32_to_i8(<4 x i8> %x, <4 x i32> %y) {
 ; CHECK-SD-LABEL: sminsmax_range_signed_i32_to_i8:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mvni v2.4s, #127
+; CHECK-SD-NEXT:    movi v3.4s, #127
 ; CHECK-SD-NEXT:    smax v1.4s, v1.4s, v2.4s
-; CHECK-SD-NEXT:    movi v2.4s, #127
-; CHECK-SD-NEXT:    smin v1.4s, v1.4s, v2.4s
+; CHECK-SD-NEXT:    smin v1.4s, v1.4s, v3.4s
 ; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
 ; CHECK-SD-NEXT:    uzp1 v0.8b, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    ret
