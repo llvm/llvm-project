@@ -141,13 +141,39 @@ define <2 x i32> @test8(<2 x float> %f) {
 
 ; Test which should not fold due to non-matching power of 2.
 define <2 x i32> @test9(<2 x float> %f) {
-; CHECK-LABEL: test9:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI8_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
-; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
-; CHECK-NEXT:    ret
+; CHECK-NO16-SD-LABEL: test9:
+; CHECK-NO16-SD:       // %bb.0:
+; CHECK-NO16-SD-NEXT:    mov x8, #1098907648 // =0x41800000
+; CHECK-NO16-SD-NEXT:    movk x8, #16640, lsl #48
+; CHECK-NO16-SD-NEXT:    fmov d1, x8
+; CHECK-NO16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NO16-SD-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NO16-SD-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: test9:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    mov x8, #1098907648 // =0x41800000
+; CHECK-FP16-SD-NEXT:    movk x8, #16640, lsl #48
+; CHECK-FP16-SD-NEXT:    fmov d1, x8
+; CHECK-FP16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-FP16-SD-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-NO16-GI-LABEL: test9:
+; CHECK-NO16-GI:       // %bb.0:
+; CHECK-NO16-GI-NEXT:    adrp x8, .LCPI8_0
+; CHECK-NO16-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
+; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NO16-GI-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NO16-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: test9:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI8_0
+; CHECK-FP16-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI8_0]
+; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-FP16-GI-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-FP16-GI-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 8.000000e+00>
   %vcvt.i = fptoui <2 x float> %mul.i to <2 x i32>
   ret <2 x i32> %vcvt.i
@@ -684,13 +710,39 @@ define <2 x i32> @test8_sat(<2 x float> %f) {
 
 ; Test which should not fold due to non-matching power of 2.
 define <2 x i32> @test9_sat(<2 x float> %f) {
-; CHECK-LABEL: test9_sat:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI27_0
-; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
-; CHECK-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-NEXT:    fcvtzu v0.2s, v0.2s
-; CHECK-NEXT:    ret
+; CHECK-NO16-SD-LABEL: test9_sat:
+; CHECK-NO16-SD:       // %bb.0:
+; CHECK-NO16-SD-NEXT:    mov x8, #1098907648 // =0x41800000
+; CHECK-NO16-SD-NEXT:    movk x8, #16640, lsl #48
+; CHECK-NO16-SD-NEXT:    fmov d1, x8
+; CHECK-NO16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NO16-SD-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NO16-SD-NEXT:    ret
+;
+; CHECK-FP16-SD-LABEL: test9_sat:
+; CHECK-FP16-SD:       // %bb.0:
+; CHECK-FP16-SD-NEXT:    mov x8, #1098907648 // =0x41800000
+; CHECK-FP16-SD-NEXT:    movk x8, #16640, lsl #48
+; CHECK-FP16-SD-NEXT:    fmov d1, x8
+; CHECK-FP16-SD-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-FP16-SD-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-FP16-SD-NEXT:    ret
+;
+; CHECK-NO16-GI-LABEL: test9_sat:
+; CHECK-NO16-GI:       // %bb.0:
+; CHECK-NO16-GI-NEXT:    adrp x8, .LCPI27_0
+; CHECK-NO16-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
+; CHECK-NO16-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-NO16-GI-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-NO16-GI-NEXT:    ret
+;
+; CHECK-FP16-GI-LABEL: test9_sat:
+; CHECK-FP16-GI:       // %bb.0:
+; CHECK-FP16-GI-NEXT:    adrp x8, .LCPI27_0
+; CHECK-FP16-GI-NEXT:    ldr d1, [x8, :lo12:.LCPI27_0]
+; CHECK-FP16-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
+; CHECK-FP16-GI-NEXT:    fcvtzu v0.2s, v0.2s
+; CHECK-FP16-GI-NEXT:    ret
   %mul.i = fmul <2 x float> %f, <float 16.000000e+00, float 8.000000e+00>
   %vcvt.i = call <2 x i32> @llvm.fptoui.sat.v2i32.v2f32(<2 x float> %mul.i)
   ret <2 x i32> %vcvt.i

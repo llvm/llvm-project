@@ -45,10 +45,6 @@ if(APPLE)
   darwin_filter_host_archs(BUILTIN_SUPPORTED_ARCH BUILTIN_TEST_ARCH)
 endif()
 
-if(COMPILER_RT_ARM_OPTIMIZED_FP)
-  list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_ARM_OPTIMIZED_FP)
-endif()
-
 foreach(arch ${BUILTIN_TEST_ARCH})
   set(BUILTINS_TEST_TARGET_ARCH ${arch})
   string(TOLOWER "-${arch}-${OS_NAME}" BUILTINS_TEST_CONFIG_SUFFIX)
@@ -75,6 +71,23 @@ foreach(arch ${BUILTIN_TEST_ARCH})
       list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_HAS_FLOAT16)
       string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
     endif()
+  endif()
+
+  if(COMPILER_RT_ARM_OPTIMIZED_FP AND arch MATCHES "arm")
+    if(arch MATCHES "armv6m|armv8m\.base")
+      # Set a compile-time definition promising that the Thumb-1 optimized FP
+      # implementations are present in this library, and therefore, can be
+      # expected to behave in the way expected by the extra-strict tests of NaN
+      # and error handling.
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_ARM_OPTIMIZED_FP_THUMB1)
+    else()
+      # For AArch32 targets that are not just Thumb-1, set a more general flag
+      # _and_ the previous one too, so that tests can check
+      # COMPILER_RT_ARM_OPTIMIZED_FP_THUMB1 by itself to test for an optimized
+      # function available on all AArch32 platforms.
+      list(APPEND BUILTINS_TEST_TARGET_CFLAGS -DCOMPILER_RT_ARM_OPTIMIZED_FP)
+    endif()
+    string(REPLACE ";" " " BUILTINS_TEST_TARGET_CFLAGS "${BUILTINS_TEST_TARGET_CFLAGS}")
   endif()
 
   if(COMPILER_RT_ENABLE_CET)
