@@ -29,10 +29,11 @@
 ; O0-NEXT: expand-reductions
 ; O0-NEXT: indirectbr-expand
 ; O0-NEXT: dwarf-eh-prepare
-; O0-NEXT: callbr-prepare
+; O0-NEXT: inline-asm-prepare
 ; O0-NEXT: safe-stack
 ; O0-NEXT: stack-protector
 ; O0-NEXT: verify)
+; O0-NEXT: x86-asm-printer-begin
 ; O0-NEXT: function(machine-function(x86-isel
 ; O0-NEXT: x86-global-base-reg
 ; O0-NEXT: x86-argument-stack-slot
@@ -58,6 +59,7 @@
 ; O0-NEXT: patchable-function
 ; O0-NEXT: x86-indirect-branch-tracking
 ; O0-NEXT: x86-compress-evex
+; O0-NEXT: x86-insert-x87-wait
 ; O0-NEXT: FuncletLayoutPass
 ; O0-NEXT: remove-loads-into-fake-uses
 ; O0-NEXT: StackMapLivenessPass
@@ -67,8 +69,10 @@
 ; O0-NEXT: x86-seses
 ; O0-NEXT: x86-return-thunks
 ; O0-NEXT: x86-lvi-ret
-; O0-NEXT: verify)
+; O0-NEXT: verify
+; O0-NEXT: x86-asm-printer)
 ; O0-NEXT: free-machine-function)
+; O0-NEXT: x86-asm-printer-end
 
 ; O2: require<MachineModuleAnalysis>
 ; O2-NEXT: require<profile-summary>
@@ -100,10 +104,11 @@
 ; O2-NEXT: codegenprepare
 ; O2-NEXT: dwarf-eh-prepare
 ; O2-NEXT: objc-arc-contract
-; O2-NEXT: callbr-prepare
+; O2-NEXT: inline-asm-prepare
 ; O2-NEXT: safe-stack
 ; O2-NEXT: stack-protector
 ; O2-NEXT: verify)
+; O2-NEXT: x86-asm-printer-begin
 ; O2-NEXT: function(machine-function(x86-isel
 ; O2-NEXT: x86-cleanup-local-dynamic-tls
 ; O2-NEXT: x86-global-base-reg
@@ -173,6 +178,7 @@
 ; O2-NEXT: x86-fixup-inst-tuning
 ; O2-NEXT: x86-fixup-inst-tuning
 ; O2-NEXT: x86-compress-evex
+; O2-NEXT: x86-insert-x87-wait
 ; O2-NEXT: FuncletLayoutPass
 ; O2-NEXT: remove-loads-into-fake-uses
 ; O2-NEXT: StackMapLivenessPass
@@ -182,8 +188,10 @@
 ; O2-NEXT: x86-seses
 ; O2-NEXT: x86-return-thunks
 ; O2-NEXT: x86-lvi-ret
-; O2-NEXT: verify)
+; O2-NEXT: verify
+; O2-NEXT: x86-asm-printer)
 ; O2-NEXT: free-machine-function)
+; O2-NEXT: x86-asm-printer-end
 
 ; O0-WINDOWS: require<MachineModuleAnalysis>
 ; O0-WINDOWS-NEXT: require<profile-summary>
@@ -206,10 +214,11 @@
 ; O0-WINDOWS-NEXT: cfguard
 ; O0-WINDOWS-NEXT: win-eh-prepare
 ; O0-WINDOWS-NEXT: dwarf-eh-prepare
-; O0-WINDOWS-NEXT: callbr-prepare
+; O0-WINDOWS-NEXT: inline-asm-prepare
 ; O0-WINDOWS-NEXT: safe-stack
 ; O0-WINDOWS-NEXT: stack-protector
 ; O0-WINDOWS-NEXT: verify)
+; O0-WINDOWS-NEXT: x86-asm-printer-begin
 ; O0-WINDOWS-NEXT: function(machine-function(x86-isel
 ; O0-WINDOWS-NEXT: x86-global-base-reg
 ; O0-WINDOWS-NEXT: x86-argument-stack-slot
@@ -235,6 +244,7 @@
 ; O0-WINDOWS-NEXT: patchable-function
 ; O0-WINDOWS-NEXT: x86-indirect-branch-tracking
 ; O0-WINDOWS-NEXT: x86-compress-evex
+; O0-WINDOWS-NEXT: x86-insert-x87-wait
 ; O0-WINDOWS-NEXT: FuncletLayoutPass
 ; O0-WINDOWS-NEXT: remove-loads-into-fake-uses
 ; O0-WINDOWS-NEXT: StackMapLivenessPass
@@ -246,8 +256,10 @@
 ; O0-WINDOWS-NEXT: x86-avoid-trailing-call
 ; O0-WINDOWS-NEXT: x86-lvi-ret
 ; O0-WINDOWS-NEXT: x86-wineh-unwindv2
-; O0-WINDOWS-NEXT: verify)
+; O0-WINDOWS-NEXT: verify
+; O0-WINDOWS-NEXT: x86-asm-printer)
 ; O0-WINDOWS-NEXT: free-machine-function)
+; O0-WINDOWS-NEXT: x86-asm-printer-end
 
 ; O3-WINDOWS: require<MachineModuleAnalysis>
 ; O3-WINDOWS-NEXT: require<profile-summary>
@@ -281,10 +293,11 @@
 ; O3-WINDOWS-NEXT: win-eh-prepare
 ; O3-WINDOWS-NEXT: dwarf-eh-prepare
 ; O3-WINDOWS-NEXT: objc-arc-contract
-; O3-WINDOWS-NEXT: callbr-prepare
+; O3-WINDOWS-NEXT: inline-asm-prepare
 ; O3-WINDOWS-NEXT: safe-stack
 ; O3-WINDOWS-NEXT: stack-protector
 ; O3-WINDOWS-NEXT: verify)
+; O3-WINDOWS-NEXT: x86-asm-printer-begin
 ; O3-WINDOWS-NEXT: function(machine-function(x86-isel
 ; O3-WINDOWS-NEXT: x86-global-base-reg
 ; O3-WINDOWS-NEXT: x86-argument-stack-slot
@@ -353,6 +366,7 @@
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT: x86-fixup-inst-tuning
 ; O3-WINDOWS-NEXT: x86-compress-evex
+; O3-WINDOWS-NEXT: x86-insert-x87-wait
 ; O3-WINDOWS-NEXT: FuncletLayoutPass
 ; O3-WINDOWS-NEXT: remove-loads-into-fake-uses
 ; O3-WINDOWS-NEXT: StackMapLivenessPass
@@ -364,5 +378,7 @@
 ; O3-WINDOWS-NEXT: x86-avoid-trailing-call
 ; O3-WINDOWS-NEXT: x86-lvi-ret
 ; O3-WINDOWS-NEXT: x86-wineh-unwindv2
-; O3-WINDOWS-NEXT: verify)
+; O3-WINDOWS-NEXT: verify
+; O3-WINDOWS-NEXT: x86-asm-printer)
 ; O3-WINDOWS-NEXT: free-machine-function)
+; O3-WINDOWS-NEXT: x86-asm-printer-end
