@@ -30,4 +30,34 @@ exit:
   ret i8 %result
 }
 
+define i8 @test_legal_i64(ptr %a0) {
+; CHECK-LABEL: @test_legal_i64(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SRC64:%.*]] = load i64, ptr [[A0:%.*]], align 8
+; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[SRC64]], 0
+; CHECK-NEXT:    br i1 [[ISZERO]], label [[EXIT:%.*]], label [[REDUCTION:%.*]]
+; CHECK:       reduction:
+; CHECK-NEXT:    [[SRC64_BITCAST:%.*]] = bitcast i64 [[SRC64]] to <8 x i8>
+; CHECK-NEXT:    [[RED:%.*]] = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> [[SRC64_BITCAST]])
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[RESULT:%.*]] = phi i8 [ 0, [[ENTRY:%.*]] ], [ [[RED]], [[REDUCTION]] ]
+; CHECK-NEXT:    ret i8 [[RESULT]]
+;
+entry:
+  %src64 = load i64, ptr %a0, align 8
+  %iszero = icmp eq i64 %src64, 0
+  br i1 %iszero, label %exit, label %reduction
+
+reduction:
+  %src64.bitcast = bitcast i64 %src64 to <8 x i8>
+  %red = call i8 @llvm.vector.reduce.umax.v8i8(<8 x i8> %src64.bitcast)
+  br label %exit
+
+exit:
+  %result = phi i8 [ 0, %entry ], [ %red, %reduction ]
+  ret i8 %result
+}
+
+declare i8 @llvm.vector.reduce.umax.v8i8(<8 x i8>)
 declare i8 @llvm.vector.reduce.umax.v32i8(<32 x i8>)
