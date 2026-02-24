@@ -15,6 +15,7 @@
 using namespace mlir;
 
 DEFINE_C_API_PTR_METHODS(MlirDynamicOpTrait, DynamicOpTrait)
+DEFINE_C_API_PTR_METHODS(MlirDynamicTypeDefinition, DynamicTypeDefinition)
 
 bool mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
                               MlirStringRef opName, MlirContext context) {
@@ -84,4 +85,55 @@ MlirDynamicOpTrait mlirDynamicOpTraitCreate(
     MlirTypeID typeID, MlirDynamicOpTraitCallbacks callbacks, void *userData) {
   return wrap(
       new mlir::ExternalDynamicOpTrait(unwrap(typeID), callbacks, userData));
+}
+
+bool mlirDialectIsAExtensibleDialect(MlirDialect dialect) {
+  return llvm::isa<mlir::ExtensibleDialect>(unwrap(dialect));
+}
+
+MlirDynamicTypeDefinition
+mlirExtensibleDialectLookupTypeDefinition(MlirDialect dialect,
+                                          MlirStringRef typeName) {
+  return wrap(llvm::cast<mlir::ExtensibleDialect>(unwrap(dialect))
+                  ->lookupTypeDefinition(unwrap(typeName)));
+}
+
+bool mlirTypeIsADynamicType(MlirType type) {
+  return llvm::isa<mlir::DynamicType>(unwrap(type));
+}
+
+MlirTypeID mlirDynamicTypeGetTypeID() {
+  return wrap(mlir::DynamicType::getTypeID());
+}
+
+MlirType mlirDynamicTypeGet(MlirDynamicTypeDefinition typeDef,
+                            MlirAttribute *attrs, intptr_t numAttrs) {
+  llvm::SmallVector<mlir::Attribute> attributes;
+  attributes.reserve(numAttrs);
+  for (intptr_t i = 0; i < numAttrs; ++i)
+    attributes.push_back(unwrap(attrs[i]));
+
+  return wrap(mlir::DynamicType::get(unwrap(typeDef), attributes));
+}
+
+intptr_t mlirDynamicTypeGetNumParams(MlirType type) {
+  return llvm::cast<mlir::DynamicType>(unwrap(type)).getParams().size();
+}
+
+MlirAttribute mlirDynamicTypeGetParam(MlirType type, intptr_t index) {
+  return wrap(llvm::cast<mlir::DynamicType>(unwrap(type)).getParams()[index]);
+}
+
+MlirDynamicTypeDefinition mlirDynamicTypeGetTypeDef(MlirType type) {
+  return wrap(llvm::cast<mlir::DynamicType>(unwrap(type)).getTypeDef());
+}
+
+MlirStringRef
+mlirDynamicTypeDefinitionGetName(MlirDynamicTypeDefinition typeDef) {
+  return wrap(unwrap(typeDef)->getName());
+}
+
+MlirDialect
+mlirDynamicTypeDefinitionGetDialect(MlirDynamicTypeDefinition typeDef) {
+  return wrap(unwrap(typeDef)->getDialect());
 }
