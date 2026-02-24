@@ -921,102 +921,133 @@ mlir::Value genAffinityAddr(Fortran::lower::AbstractConverter &converter,
                             const omp::Object &object,
                             Fortran::lower::StatementContext &stmtCtx,
                             mlir::Location loc) {
-  // Get address from expression if it exists: affinity(a(3)), affinity(a(1:10))
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+
+  auto genRawAddress = [&](mlir::Value v) -> mlir::Value {
+    // Only wrap with hlfir::Entity if it is a Fortran entity (avoids asserts).
+    if (!hlfir::isFortranEntity(v))
+      return v;
+
+    hlfir::Entity entity{v};
+    entity = hlfir::derefPointersAndAllocatables(loc, builder, entity);
+    return hlfir::genVariableRawAddress(loc, builder, entity);
+  };
+
+  // affinity(a(3)), affinity(a(1:10)), ...
   if (auto expr = object.ref()) {
     fir::ExtendedValue exv =
         converter.genExprAddr(toEvExpr(*expr), stmtCtx, &loc);
-    return fir::getBase(exv);
+    mlir::Value baseAddr = fir::getBase(exv);
+    return genRawAddress(baseAddr);
   }
 
-  // Fallback to base symbol address: affinity(a)
+  // affinity(a)
   const Fortran::semantics::Symbol *sym = object.sym();
   assert(sym && "expected symbol in affinity object");
-  mlir::Value addr = converter.getSymbolAddress(*sym);
-
-  if (mlir::isa<fir::BoxType>(addr.getType())) {
-    addr = fir::BoxAddrOp::create(converter.getFirOpBuilder(), loc, addr);
-  }
-  return addr;
+  mlir::Value symAddr = converter.getSymbolAddress(*sym);
+  return genRawAddress(symAddr);
 }
 
-static mlir::Value buildNumElemsFromMapBound(fir::FirOpBuilder &builder,
-                                             mlir::Location loc,
-                                             mlir::omp::MapBoundsOp mb) {
-  mlir::Value lb = mb.getLowerBound();
-  mlir::Value ub = mb.getUpperBound();
-  mlir::Value stride = mb.getStride();
+int64_t getElementBytesOrZero(hlfir::Entity entity,
+                              const mlir::DataLayout &dl) {
+  if (entity.isBoxAddressOrValue() || entity.isAssumedRank())
+    return 0;
 
-  // ((ub - lb) / stride) + 1
-  mlir::Value diff = mlir::arith::SubIOp::create(builder, loc, ub, lb);
-  mlir::Value div = mlir::arith::DivUIOp::create(builder, loc, diff, stride);
+  mlir::Type elemTy = entity.getFortranElementType();
+
+  if (auto charTy = mlir::dyn_cast<fir::CharacterType>(elemTy)) {
+    auto len = hlfir::getCharLengthIfConst(entity);
+    if (!len)
+      return 0;
+    const int64_t charBytes = charTy.getFKind();
+    return charBytes * (*len);
+  }
+
+  if (fir::isRecordWithTypeParameters(elemTy))
+    return 0;
+
+  return static_cast<int64_t>(dl.getTypeSize(elemTy));
+}
+
+// return 0 if the total number of elements cannot be determined at compile time
+static int getTotalElement(hlfir::Entity entity, mlir::Location loc,
+                           fir::FirOpBuilder &builder) {
+  if (entity.isBoxAddressOrValue() || entity.isAssumedRank())
+    return 0;
+  assert(!entity.isScalar() &&
+         "expected non-scalar entity to compute total elements");
+  const int rank = entity.getRank();
+  assert(rank >= 0 && "expected non-negative rank for non-assumed-rank entity");
+
+  int totalElems = 1;
+  for (unsigned d = 0; d < static_cast<unsigned>(rank); ++d) {
+    mlir::Value extent = hlfir::genExtent(loc, builder, entity, d);
+    auto cst = fir::getIntIfConstant(extent);
+    if (!cst)
+      return 0;
+    totalElems *= *cst;
+  }
+  return totalElems;
+}
+
+// Compute the byte span of a Fortran array section described by bounds.
+// The span is (highest_address - lowest_address + 1) * element_size
+// where addresses are computed according to Fortran column-major layout.
+// For each dimension d, the highest address is:
+//   highest_address = (ub_d - lb_d) * distance_d
+//   distance_d = product of fullExtents[0..d-1]
+//   distance_0 = 1
+// For example:
+// integer a[5][7], a(2:4, 3:5), lowest = a(2,3), highest = a(4,5)
+// lowest = (2-1) * (3-1) * 5 = 11
+// highest = (4-1) * (5-1) * 5 = 23
+// total span = 23 - 11 + 1 = 13 elements
+static mlir::Value computeBoundsSpan(fir::FirOpBuilder &builder,
+                                     mlir::Location loc,
+                                     llvm::ArrayRef<mlir::Value> bounds,
+                                     hlfir::Entity entity) {
+  assert(!bounds.empty() && "expected non-empty bounds to compute span");
+  auto fullExtents = hlfir::genExtentsVector(loc, builder, entity);
+  assert(fullExtents.size() == bounds.size() &&
+         "expected bounds and full extents to have the same size");
   mlir::Value one =
       builder.createIntegerConstant(loc, builder.getIndexType(), 1);
-  mlir::Value result = mlir::arith::AddIOp::create(builder, loc, div, one);
+  mlir::Value span = one;     // inclusive: +1
+  mlir::Value distance = one; // column-major linearization factor
+  for (auto [b, extent] : llvm::zip(bounds, fullExtents)) {
+    auto mb = b.getDefiningOp<mlir::omp::MapBoundsOp>();
+    mlir::Value delta = mlir::arith::SubIOp::create(
+        builder, loc, mb.getUpperBound(), mb.getLowerBound());
 
-  return mlir::arith::IndexCastOp::create(builder, loc, builder.getI64Type(),
-                                          result);
+    span = mlir::arith::AddIOp::create(
+        builder, loc, span,
+        mlir::arith::MulIOp::create(builder, loc, delta, distance));
+
+    distance = mlir::arith::MulIOp::create(builder, loc, distance, extent);
+  }
+  // Convert from index to i64 (bounds are in index type)
+  return fir::ConvertOp::create(builder, loc, builder.getI64Type(), span);
 }
 
 mlir::Value genAffinityLen(fir::FirOpBuilder &builder, mlir::Location loc,
-                           const mlir::DataLayout &dl, mlir::Value addr,
-                           llvm::ArrayRef<mlir::Value> bounds, bool hasRef) {
-  auto isDescriptorLike = [](mlir::Type t) -> bool {
-    t = fir::unwrapPassByRefType(t);
-    return mlir::isa<fir::BoxType, fir::ClassType>(t);
-  };
+                           const mlir::DataLayout &dl, hlfir::Entity entity,
+                           llvm::ArrayRef<mlir::Value> bounds) {
+  int64_t elemBytes = getElementBytesOrZero(entity, dl);
 
-  auto getElementBytesOrZero = [&](mlir::Type baseTy) -> int64_t {
-    if (isDescriptorLike(baseTy))
-      return 0;
-    mlir::Type eleTy = fir::unwrapPassByRefType(baseTy);
-    eleTy = fir::unwrapSequenceType(eleTy);
-    return static_cast<int64_t>(dl.getTypeSize(eleTy));
-  };
-
-  auto getWholeObjectBytesIfStaticOrZero = [&](mlir::Type addrTy) -> int64_t {
-    if (isDescriptorLike(addrTy))
-      return 0;
-
-    mlir::Type eleTy = fir::unwrapPassByRefType(addrTy);
-
-    // Scalar
-    if (!mlir::isa<fir::SequenceType>(eleTy))
-      return static_cast<int64_t>(dl.getTypeSize(eleTy));
-
-    // Array with static extents
-    auto seqTy = mlir::cast<fir::SequenceType>(eleTy);
-    int64_t elems = 1;
-    for (int64_t d : seqTy.getShape()) {
-      if (d < 0)
-        return 0; // dynamic extent => unknown here
-      elems *= d;
-    }
-
-    int64_t elemBytes = static_cast<int64_t>(dl.getTypeSize(seqTy.getEleTy()));
-    return elems * elemBytes;
-  };
-
-  // Return the length of the first dimension if bounds are available
-  if (!bounds.empty()) {
-    auto mb = bounds.front().getDefiningOp<mlir::omp::MapBoundsOp>();
-    mlir::Value numElems = buildNumElemsFromMapBound(builder, loc, mb);
-    int64_t elemBytes = getElementBytesOrZero(addr.getType());
-    if (elemBytes == 0)
-      return builder.createIntegerConstant(loc, builder.getI64Type(), 0);
-
-    return mlir::arith::MulIOp::create(
-        builder, loc, numElems,
-        builder.createIntegerConstant(loc, builder.getI64Type(), elemBytes));
-  }
-
-  // explicit ref => element size (a(3), a(i))
-  if (hasRef) {
-    int64_t elemBytes = getElementBytesOrZero(addr.getType());
+  if (entity.isScalar()) {
     return builder.createIntegerConstant(loc, builder.getI64Type(), elemBytes);
   }
 
+  if (!bounds.empty()) {
+    mlir::Value spanElems = computeBoundsSpan(builder, loc, bounds, entity);
+    return mlir::arith::MulIOp::create(
+        builder, loc, spanElems,
+        builder.createIntegerConstant(loc, builder.getIntegerType(64),
+                                      elemBytes));
+  }
+
   // whole object => whole size if static, else 0
-  int64_t wholeBytes = getWholeObjectBytesIfStaticOrZero(addr.getType());
+  int64_t wholeBytes = getTotalElement(entity, loc, builder) * elemBytes;
   return builder.createIntegerConstant(loc, builder.getI64Type(), wholeBytes);
 }
 
@@ -1038,69 +1069,34 @@ bool hasIVReference(
 }
 
 mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
-                                  mlir::Value base,
+                                  hlfir::Entity entity,
                                   llvm::ArrayRef<mlir::Value> ivs,
                                   mlir::Location loc) {
   auto &builder = converter.getFirOpBuilder();
-  mlir::Type baseTy = base.getType();
+  mlir::Value base = entity.getBase();
 
-  // If base is a reference-to-box, load it to get the box value.
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(baseTy)) {
-    if (auto innerBoxTy = mlir::dyn_cast<fir::BoxType>(refTy.getEleTy())) {
-      base = fir::LoadOp::create(builder, loc, innerBoxTy, base);
-      baseTy = base.getType();
-    }
+  // If base is a reference-to-box, load it so array_coor sees the box value
+  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(base.getType())) {
+    if (mlir::isa<fir::BoxType>(refTy.getEleTy()))
+      base = fir::LoadOp::create(builder, loc, base);
   }
 
-  // descriptor-backed arrays (assumed-shape dummies etc.)
-  if (auto boxTy = mlir::dyn_cast<fir::BoxType>(baseTy)) {
-    // Build !fir.shape<rank> from descriptor extents.
-    const unsigned rank = ivs.size();
-    llvm::SmallVector<mlir::Value> extents;
-    extents.reserve(rank);
+  // Build shape from the entity extents
+  auto extents = hlfir::genExtentsVector(loc, builder, entity);
+  assert(extents.size() == ivs.size() &&
+         "expected the number of extents and iteration variables to match for "
+         "iterator");
+  mlir::Value shape = fir::ShapeOp::create(builder, loc, extents);
 
-    for (unsigned d = 0; d < rank; ++d) {
-      mlir::Value dim = builder.createIntegerConstant(loc, builder.getI32Type(),
-                                                      static_cast<int64_t>(d));
-      auto dims = fir::BoxDimsOp::create(builder, loc,
-                                         /*lbType=*/builder.getIndexType(),
-                                         /*extentType=*/builder.getIndexType(),
-                                         /*strideType=*/builder.getIndexType(),
-                                         base, dim);
-      extents.push_back(dims.getExtent());
-    }
+  mlir::Type elementToRefTy =
+      fir::ReferenceType::get(entity.getFortranElementType());
 
-    mlir::Value shape = fir::ShapeOp::create(builder, loc, extents);
-
-    // Result element reference type.
-    mlir::Type boxedEleTy = boxTy.getEleTy(); // e.g. !fir.array<?x?xi32>
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(boxedEleTy))
-      boxedEleTy = seqTy.getEleTy();
-    mlir::Type eleRefTy = fir::ReferenceType::get(boxedEleTy);
-
-    return fir::ArrayCoorOp::create(builder, loc, eleRefTy,
-                                    /*memref=*/base,
-                                    /*shape=*/shape,
-                                    /*slice=*/mlir::Value{},
-                                    /*indices=*/mlir::ValueRange{ivs},
-                                    /*typeparams=*/mlir::ValueRange{});
-  }
-
-  // explicit-shape arrays lowered as !fir.ref<!fir.array<...>>
-  // base must be a reference to a SequenceType.
-  auto baseRefTy = mlir::cast<fir::ReferenceType>(baseTy);
-  auto seqTy = mlir::cast<fir::SequenceType>(baseRefTy.getEleTy());
-  mlir::Type eleRefTy = fir::ReferenceType::get(seqTy.getEleTy());
-
-  // coordinate_of expects i32 subscripts.
-  llvm::SmallVector<mlir::Value> subsI32;
-  subsI32.reserve(ivs.size());
-  for (mlir::Value iv : ivs) {
-    subsI32.push_back(mlir::arith::IndexCastOp::create(
-        builder, loc, builder.getI32Type(), iv));
-  }
-
-  return fir::CoordinateOp::create(builder, loc, eleRefTy, base, subsI32);
+  return fir::ArrayCoorOp::create(builder, loc, elementToRefTy,
+                                  /*memref=*/base,
+                                  /*shape=*/shape,
+                                  /*slice=*/mlir::Value{},
+                                  /*indices=*/ivs,
+                                  /*typeparams=*/mlir::ValueRange{});
 }
 
 } // namespace omp

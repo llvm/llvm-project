@@ -202,14 +202,21 @@ getIfClauseOperand(lower::AbstractConverter &converter,
                                     ifVal);
 }
 
-template <typename IteratorSpecT>
+template <typename SomeType, typename IteratorSpecT>
 static IteratorRange lowerIteratorRange(
     Fortran::lower::AbstractConverter &converter, const IteratorSpecT &itSpec,
     Fortran::lower::StatementContext &stmtCtx, mlir::Location loc) {
   auto &builder = converter.getFirOpBuilder();
 
-  const auto &ivObj = std::get<1>(itSpec.t);
-  const auto &range = std::get<2>(itSpec.t);
+  using IdTy =
+      Fortran::lower::omp::IdTyTemplate<Fortran::evaluate::Expr<SomeType>>;
+  using ExprTy = Fortran::evaluate::Expr<SomeType>;
+
+  using ObjTy = tomp::type::ObjectT<IdTy, ExprTy>;
+  using RangeTy = tomp::type::RangeT<ExprTy>;
+
+  const ObjTy &ivObj = std::get<1>(itSpec.t);
+  const RangeTy &range = std::get<2>(itSpec.t);
 
   IteratorRange r;
   r.ivSym = ivObj.sym();
@@ -228,8 +235,7 @@ static IteratorRange lowerIteratorRange(
                     mlir::Value v) -> mlir::Value {
     if (v.getType().isIndex())
       return v;
-    return mlir::arith::IndexCastOp::create(builder, loc,
-                                            builder.getIndexType(), v);
+    return fir::ConvertOp::create(builder, loc, builder.getIndexType(), v);
   };
 
   r.lb = toIndex(builder, loc, lbVal);
@@ -858,38 +864,10 @@ bool ClauseProcessor::processAffinity(
             &context, refI8Ty, builder.getI64Type());
         mlir::Type iterTy = mlir::omp::IteratedType::get(&context, entryTy);
 
-        auto normalizeAddr = [](fir::FirOpBuilder &b, mlir::Location l,
-                                mlir::Type addrTy,
-                                mlir::Value v) -> mlir::Value {
-          mlir::Value addr = v;
-
-          // ref-to-box -> load box -> box_addr
-          if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(addr.getType())) {
-            if (auto innerBoxTy =
-                    mlir::dyn_cast<fir::BoxType>(refTy.getEleTy())) {
-              mlir::Value boxVal = fir::LoadOp::create(b, l, innerBoxTy, addr);
-              mlir::Type boxedEleTy = innerBoxTy.getEleTy();
-              addr = fir::BoxAddrOp::create(
-                  b, l, fir::ReferenceType::get(boxedEleTy), boxVal);
-            }
-          }
-
-          // box value -> box_addr
-          if (auto boxTy = mlir::dyn_cast<fir::BoxType>(addr.getType())) {
-            mlir::Type boxedEleTy = boxTy.getEleTy();
-            addr = fir::BoxAddrOp::create(
-                b, l, fir::ReferenceType::get(boxedEleTy), addr);
-          }
-
-          assert(mlir::isa<fir::ReferenceType>(addr.getType()) &&
-                 "expect fir.ref after normalization");
-          return fir::ConvertOp::create(b, l, addrTy, addr);
-        };
-
         auto makeAffinityEntry = [&](fir::FirOpBuilder &b, mlir::Location l,
                                      mlir::Type entryTy, mlir::Value addr,
                                      mlir::Value len) -> mlir::Value {
-          mlir::Value addrI8 = normalizeAddr(b, l, refI8Ty, addr);
+          mlir::Value addrI8 = fir::ConvertOp::create(b, l, refI8Ty, addr);
           return mlir::omp::AffinityEntryOp::create(b, l, entryTy, addrI8, len)
               .getResult();
         };
@@ -905,7 +883,8 @@ bool ClauseProcessor::processAffinity(
           iteratorRanges.reserve(iteratorModifierSpecs.size());
           for (const auto &itSpec : iteratorModifierSpecs)
             iteratorRanges.push_back(
-                lowerIteratorRange(converter, itSpec, stmtCtx, clauseLocation));
+                lowerIteratorRange<Fortran::evaluate::SomeType>(
+                    converter, itSpec, stmtCtx, clauseLocation));
 
           for (const IteratorRange &r : iteratorRanges)
             ivSyms.insert(&r.ivSym->GetUltimate());
@@ -925,31 +904,28 @@ bool ClauseProcessor::processAffinity(
                       Fortran::lower::getDataOperandBaseAddr(
                           converter, builder, *sym, loc,
                           /*unwrapFirBox=*/false);
-                  // TODO check correctness of genIteratorCoordinate
+                  hlfir::Entity entity{info.addr};
                   mlir::Value addr =
-                      genIteratorCoordinate(converter, info.addr, ivs, loc);
-                  // Length of iterator-based affinity entry set as element size
-                  mlir::Value len = genAffinityLen(
-                      builder, clauseLocation, builder.getDataLayout(),
-                      info.addr, bounds, static_cast<bool>(object.ref()));
+                      genIteratorCoordinate(converter, entity, ivs, loc);
+                  mlir::Value len = builder.createIntegerConstant(
+                      loc, builder.getIntegerType(64),
+                      getElementBytesOrZero(entity, builder.getDataLayout()));
                   return makeAffinityEntry(builder, loc, entryTy, addr, len);
                 });
-            iterHandle.dump();
             result.iterated.push_back(iterHandle);
           } else {
             mlir::Value addr =
                 genAffinityAddr(converter, object, stmtCtx, clauseLocation);
+            // get hlfir.declare for length calculation
             fir::factory::AddrAndBoundsInfo info =
                 lower::gatherDataOperandAddrAndBounds<mlir::omp::MapBoundsOp,
                                                       mlir::omp::MapBoundsType>(
                     converter, builder, semaCtx, stmtCtx, *object.sym(),
                     object.ref(), clauseLocation, asFortran, bounds,
                     treatIndexAsSection);
-            mlir::Value len = genAffinityLen(
-                builder, clauseLocation, builder.getDataLayout(), info.addr,
-                bounds, static_cast<bool>(object.ref()));
-            // info.addr is not the base address so use the result from
-            // genAffinityAddr instead
+            mlir::Value len =
+                genAffinityLen(builder, clauseLocation, builder.getDataLayout(),
+                               hlfir::Entity{info.addr}, bounds);
             result.affinityVars.push_back(
                 makeAffinityEntry(builder, clauseLocation, entryTy, addr, len));
           }

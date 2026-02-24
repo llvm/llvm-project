@@ -3538,7 +3538,7 @@ func.func @task_affinity_single(%ptr: !llvm.ptr) {
   return
 }
 
-// CHECK-LABEL: func.func @task_affinity_multi(
+// CHECK-LABEL: func.func @task_affinity_multi
 func.func @task_affinity_multi(%ptr1: !llvm.ptr, %ptr2: !llvm.ptr) {
   // CHECK:         %[[LEN1:.*]] = llvm.mlir.constant(400 : i64) : i64
   // CHECK:         %[[AE1:.*]] = omp.affinity_entry %{{.*}}, %[[LEN1]] : (!llvm.ptr, i64) -> !omp.affinity_entry_ty<!llvm.ptr, i64>
@@ -3601,7 +3601,7 @@ func.func @omp_iterator_2d(%s2 : !llvm.struct<(ptr, i64)>) -> () {
   return
 }
 
-// CHECK-LABEL: func.func @omp_task_affinity_iterator_1d(
+// CHECK-LABEL: func.func @omp_task_affinity_iterator_1d
 func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index,
                                        %addr : !llvm.ptr, %len : i64) -> () {
   // CHECK: %[[IT:.*]] = omp.iterators(%[[IV:.*]]: index) = (%[[LB:.*]] to %[[UB:.*]] step %[[ST:.*]]) {
@@ -3623,6 +3623,7 @@ func.func @omp_task_affinity_iterator_1d(%lb : index, %ub : index, %step : index
   return
 }
 
+// CHECK-LABEL: func.func @omp_task_affinity_iterator_2d
 func.func @omp_task_affinity_iterator_2d(%lb0 : index, %ub0 : index, %st0 : index,
                                           %lb1 : index, %ub1 : index, %st1 : index,
                                           %addr0 : !llvm.ptr, %addr1 : !llvm.ptr,
