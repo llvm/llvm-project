@@ -3793,14 +3793,21 @@ LogicalResult cir::TryOp::verify() {
 
   for (const auto &[typeAttr, handlerRegion] :
        llvm::zip(handlerTypes, handlerRegions)) {
-    // The unwind region does not require a cir.catch_param.
+    // Verify that handler regions have a !cir.eh_token block argument.
+    mlir::Block &entryBlock = handlerRegion.front();
+    if (entryBlock.getNumArguments() != 1 ||
+        !mlir::isa<cir::EhTokenType>(entryBlock.getArgument(0).getType()))
+      return emitOpError(
+          "handler region must have a single '!cir.eh_token' argument");
+
+    // The unwind region does not require a cir.begin_catch.
     if (mlir::isa<cir::UnwindAttr>(typeAttr))
       continue;
 
-    mlir::Block &entryBlock = handlerRegion.front();
-    if (entryBlock.empty() || !mlir::isa<cir::CatchParamOp>(entryBlock.front()))
+    if (entryBlock.empty() ||
+        !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
       return emitOpError(
-          "catch handler region must start with 'cir.catch_param'");
+          "catch handler region must start with 'cir.begin_catch'");
   }
 
   return success();
@@ -3827,7 +3834,22 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
       printer << "] ";
     }
 
-    printer.printRegion(handlerRegions[typeIdx],
+    // Print handler region block arguments (e.g. (%eh_token : !cir.eh_token))
+    // before the region body.
+    mlir::Region &region = handlerRegions[typeIdx];
+    if (!region.empty()) {
+      mlir::Block &entryBlock = region.front();
+      if (entryBlock.getNumArguments() > 0) {
+        printer << "(";
+        llvm::interleaveComma(entryBlock.getArguments(), printer,
+                              [&](mlir::BlockArgument arg) {
+                                printer.printRegionArgument(arg);
+                              });
+        printer << ") ";
+      }
+    }
+
+    printer.printRegion(region,
                         /*printEntryBLockArgs=*/false,
                         /*printBlockTerminators=*/true);
   }
@@ -3842,8 +3864,22 @@ static mlir::ParseResult parseTryHandlerRegions(
     handlerRegions.emplace_back(new mlir::Region);
 
     mlir::Region &currRegion = *handlerRegions.back();
+
+    // Parse optional region arguments: (%arg : type, ...)
+    llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
+    if (parser.parseOptionalLParen().succeeded()) {
+      do {
+        mlir::OpAsmParser::Argument arg;
+        if (parser.parseArgument(arg, /*allowType=*/true))
+          return failure();
+        regionArgs.push_back(arg);
+      } while (parser.parseOptionalComma().succeeded());
+      if (parser.parseRParen())
+        return failure();
+    }
+
     mlir::SMLoc regionLoc = parser.getCurrentLocation();
-    if (parser.parseRegion(currRegion)) {
+    if (parser.parseRegion(currRegion, regionArgs)) {
       handlerRegions.clear();
       return failure();
     }
