@@ -303,9 +303,8 @@ LIBC_INLINE constexpr static void store(T v, void *ptr, bool aligned = false) {
   __builtin_memcpy_inline(ptr, &v, sizeof(T));
 }
 template <typename T>
-LIBC_NO_SANITIZE_OOB_ACCESS
-    LIBC_INLINE T constexpr static load_unsanitized(const void *ptr,
-                                                     bool aligned = false) {
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE
+    T constexpr static load_unsanitized(const void *ptr, bool aligned = false) {
   if (aligned)
     ptr = __builtin_assume_aligned(ptr, alignof(T));
   T tmp;
