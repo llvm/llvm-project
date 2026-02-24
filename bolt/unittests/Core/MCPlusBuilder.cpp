@@ -135,7 +135,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                            .addExpr(MCSymbolRefExpr::create(
                                TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmInc));
-  BC->MIB->reverseBranchCondition(NeedsImmInc, TargetBB->getLabel(), BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(NeedsImmInc, TargetBB->getLabel(),
+                                  BC->Ctx.get());
   ASSERT_EQ(NeedsImmInc.getOpcode(), AArch64::CBLTXri);
   ASSERT_EQ(NeedsImmInc.getOperand(1).getImm(), 1);
 
@@ -148,7 +149,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                            .addExpr(MCSymbolRefExpr::create(
                                TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(NeedsImmDec));
-  BC->MIB->reverseBranchCondition(NeedsImmDec, TargetBB->getLabel(), BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(NeedsImmDec, TargetBB->getLabel(),
+                                  BC->Ctx.get());
   ASSERT_EQ(NeedsImmDec.getOpcode(), AArch64::CBHIXri);
   ASSERT_EQ(NeedsImmDec.getOperand(1).getImm(), 0);
 
@@ -161,7 +163,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                                    .addExpr(MCSymbolRefExpr::create(
                                        TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(CompRegNeedsRegSwap));
-  BC->MIB->reverseBranchCondition(CompRegNeedsRegSwap, TargetBB->getLabel(), BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(CompRegNeedsRegSwap, TargetBB->getLabel(),
+                                  BC->Ctx.get());
   ASSERT_EQ(CompRegNeedsRegSwap.getOpcode(), AArch64::CBGTXrr);
   ASSERT_EQ(CompRegNeedsRegSwap.getOperand(0).getReg(), AArch64::X1);
   ASSERT_EQ(CompRegNeedsRegSwap.getOperand(1).getReg(), AArch64::X0);
@@ -175,7 +178,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                                     .addExpr(MCSymbolRefExpr::create(
                                         TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(CompByteNeedsRegSwap));
-  BC->MIB->reverseBranchCondition(CompByteNeedsRegSwap, TargetBB->getLabel(), BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(CompByteNeedsRegSwap, TargetBB->getLabel(),
+                                  BC->Ctx.get());
   ASSERT_EQ(CompByteNeedsRegSwap.getOpcode(), AArch64::CBBHSWrr);
   ASSERT_EQ(CompByteNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
   ASSERT_EQ(CompByteNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
@@ -189,7 +193,8 @@ TEST_P(MCPlusBuilderTester, AArch64_ReverseCompAndBranch) {
                                     .addExpr(MCSymbolRefExpr::create(
                                         TargetBB->getLabel(), *BC->Ctx.get()));
   ASSERT_TRUE(BC->MIB->isReversibleBranch(CompHalfNeedsRegSwap));
-  BC->MIB->reverseBranchCondition(CompHalfNeedsRegSwap, TargetBB->getLabel(), BC->Ctx.get());
+  BC->MIB->reverseBranchCondition(CompHalfNeedsRegSwap, TargetBB->getLabel(),
+                                  BC->Ctx.get());
   ASSERT_EQ(CompHalfNeedsRegSwap.getOpcode(), AArch64::CBHHIWrr);
   ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(0).getReg(), AArch64::W1);
   ASSERT_EQ(CompHalfNeedsRegSwap.getOperand(1).getReg(), AArch64::W0);
