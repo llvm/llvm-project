@@ -265,9 +265,29 @@ void longFunction(A a, B b, C c, D d, E e) {}
 // JSON-NEXT:        "VerticalDisplay": true
 // JSON-NEXT:      }
 
-// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;</code><span class="param-container"><span class="param"><code class="language-cpp code-clang-doc">typename A, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename B, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename C, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename D, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename E</code></span></span><code class="language-cpp code-clang-doc">&gt;</code></pre>
-// HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void longFunction (</code><span class="param-container"><span class="param"><code class="language-cpp code-clang-doc">A</code> <code class="language-cpp code-clang-doc">a, </code></span><span class="param"><code class="language-cpp code-clang-doc">B</code> <code class="language-cpp code-clang-doc">b, </code></span><span class="param"><code class="language-cpp code-clang-doc">C</code> <code class="language-cpp code-clang-doc">c, </code></span><span class="param"><code class="language-cpp code-clang-doc">D</code> <code class="language-cpp code-clang-doc">d, </code></span><span class="param"><code class="language-cpp code-clang-doc">E</code> <code class="language-cpp code-clang-doc">e</code></span></span><code class="language-cpp code-clang-doc">)</code></pre>
-// HTML-NEXT:      <p>Defined at line [[# @LINE - 122]] of file {{.*}}templates.cpp</p>
+// HTML:           <pre>
+// HTML-SAME:        <code class="language-cpp code-clang-doc">template &lt;</code>
+// HTML-SAME:        <span class="param-container">
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">typename A, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">typename B, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">typename C, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">typename D, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">typename E</code></span>
+// HTML-SAME:        </span>
+// HTML-SAME:        <code class="language-cpp code-clang-doc">&gt;</code>
+// HTML-SAME:      </pre>
+// HTML-NEXT:      <pre>
+// HTML-SAME:        <code class="language-cpp code-clang-doc">void longFunction (</code>
+// HTML-SAME:        <span class="param-container">
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">A</code> <code class="language-cpp code-clang-doc">a, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">B</code> <code class="language-cpp code-clang-doc">b, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">C</code> <code class="language-cpp code-clang-doc">c, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">D</code> <code class="language-cpp code-clang-doc">d, </code></span>
+// HTML-SAME:          <span class="param"><code class="language-cpp code-clang-doc">E</code> <code class="language-cpp code-clang-doc">e</code></span>
+// HTML-SAME:        </span>
+// HTML-SAME:        <code class="language-cpp code-clang-doc">)</code>
+// HTML-SAME:      </pre>
+// HTML-NEXT:      <p>Defined at line [[# @LINE - 142]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
 
 template <>
