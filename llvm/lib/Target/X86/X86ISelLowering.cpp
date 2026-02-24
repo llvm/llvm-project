@@ -6547,8 +6547,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     narrowShuffleMaskElts(MaskSize / SrcMask0.size(), SrcMask0, Mask0);
     narrowShuffleMaskElts(MaskSize / SrcMask1.size(), SrcMask1, Mask1);
     for (int i = 0; i != (int)MaskSize; ++i) {
-      // NOTE: Don't handle SM_SentinelUndef, as we can end up in infinite
-      // loops converting between OR and BLEND shuffles due to
+      // NOTE: Don't handle demanded SM_SentinelUndef, as we can end up in
+      // infinite loops converting between OR and BLEND shuffles due to
       // canWidenShuffleElements merging away undef elements, meaning we
       // fail to recognise the OR as the undef element isn't known zero.
       if (Mask0[i] == SM_SentinelZero && Mask1[i] == SM_SentinelZero)
@@ -6557,6 +6557,8 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
         Mask.push_back(i);
       else if (Mask0[i] == SM_SentinelZero)
         Mask.push_back(i + MaskSize);
+      else if (MaskSize == NumElts && !DemandedElts[i])
+        Mask.push_back(SM_SentinelUndef);
       else
         return false;
     }
@@ -16142,9 +16144,8 @@ static SDValue lowerV2X128Shuffle(const SDLoc &DL, MVT VT, SDValue V1,
 static SDValue lowerShuffleAsLanePermuteAndRepeatedMask(
     const SDLoc &DL, MVT VT, SDValue V1, SDValue V2, ArrayRef<int> Mask,
     const X86Subtarget &Subtarget, SelectionDAG &DAG) {
-  assert(!V2.isUndef() && "This is only useful with multiple inputs.");
-
-  if (is128BitLaneRepeatedShuffleMask(VT, Mask))
+  // This is only useful for binary shuffle with a non-repeating mask.
+  if (V2.isUndef() || is128BitLaneRepeatedShuffleMask(VT, Mask))
     return SDValue();
 
   int NumElts = Mask.size();
@@ -18188,10 +18189,9 @@ static SDValue lowerV32I16Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
   // shuffle.
-  if (!V2.isUndef())
-    if (SDValue Result = lowerShuffleAsLanePermuteAndRepeatedMask(
-            DL, MVT::v32i16, V1, V2, Mask, Subtarget, DAG))
-      return Result;
+  if (SDValue Result = lowerShuffleAsLanePermuteAndRepeatedMask(
+          DL, MVT::v32i16, V1, V2, Mask, Subtarget, DAG))
+    return Result;
 
   return lowerShuffleWithPERMV(DL, MVT::v32i16, Mask, V1, V2, Subtarget, DAG);
 }
@@ -18284,10 +18284,9 @@ static SDValue lowerV64I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
 
   // Try to simplify this by merging 128-bit lanes to enable a lane-based
   // shuffle.
-  if (!V2.isUndef())
-    if (SDValue Result = lowerShuffleAsLanePermuteAndRepeatedMask(
-            DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
-      return Result;
+  if (SDValue Result = lowerShuffleAsLanePermuteAndRepeatedMask(
+          DL, MVT::v64i8, V1, V2, Mask, Subtarget, DAG))
+    return Result;
 
   // VBMI can use VPERMV/VPERMV3 byte shuffles.
   if (Subtarget.hasVBMI())
