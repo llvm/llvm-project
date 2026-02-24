@@ -518,23 +518,25 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
   Value result;
-  if (atomicOp.getKind() == arith::AtomicRMWKind::ori) {
+  switch (atomicOp.getKind()) {
+  case arith::AtomicRMWKind::ori: {
     // OR only sets bits, so shifting the value to the target position and
     // ORing with zeros in other positions preserves the unaffected bits.
     Value elemMask = rewriter.createOrFold<spirv::ConstantOp>(
-        loc, dstType, rewriter.getIntegerAttr(dstType, (1 << srcBits) - 1));
+        loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
     Value storeVal =
         shiftValue(loc, adaptor.getValue(), offset, elemMask, rewriter);
     result = spirv::AtomicOrOp::create(
         rewriter, loc, dstType, adjustedPtr, *scope,
         spirv::MemorySemantics::AcquireRelease, storeVal);
-  } else {
-    assert(atomicOp.getKind() == arith::AtomicRMWKind::andi);
-    // AND: build a mask that preserves all bits outside the target element
+    break;
+  }
+  case arith::AtomicRMWKind::andi: {
+    // Build a mask that preserves all bits outside the target element
     // and applies the operand mask to the target element.
     //   mask = (operand << offset) | ~(elemMask << offset)
     Value elemMask = rewriter.createOrFold<spirv::ConstantOp>(
-        loc, dstType, rewriter.getIntegerAttr(dstType, (1 << srcBits) - 1));
+        loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
     Value storeVal =
         shiftValue(loc, adaptor.getValue(), offset, elemMask, rewriter);
     Value shiftedElemMask = rewriter.createOrFold<spirv::ShiftLeftLogicalOp>(
@@ -546,6 +548,10 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
     result = spirv::AtomicAndOp::create(
         rewriter, loc, dstType, adjustedPtr, *scope,
         spirv::MemorySemantics::AcquireRelease, mask);
+    break;
+  }
+  default:
+    return rewriter.notifyMatchFailure(atomicOp, "unimplemented atomic kind");
   }
 
   // The atomic op returns the old value of the full storage element (e.g.,
@@ -553,7 +559,7 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
   result = rewriter.createOrFold<spirv::ShiftRightLogicalOp>(loc, dstType,
                                                              result, offset);
   Value mask = rewriter.createOrFold<spirv::ConstantOp>(
-      loc, dstType, rewriter.getIntegerAttr(dstType, (1 << srcBits) - 1));
+      loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
   result =
       rewriter.createOrFold<spirv::BitwiseAndOp>(loc, dstType, result, mask);
   rewriter.replaceOp(atomicOp, result);
