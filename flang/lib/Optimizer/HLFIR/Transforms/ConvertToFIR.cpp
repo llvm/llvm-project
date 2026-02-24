@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/Runtime/Derived.h"
 #include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -92,11 +93,12 @@ public:
 
     if (assignOp.isAllocatableAssignment()) {
       // For trivial scalar allocatable assignments that are not polymorphic,
-      // not character, and not temporary, inline the assignment instead of
-      // calling the runtime.
+      // not character, not temporary, and not CUDA Fortran, inline the
+      // assignment instead of calling the runtime.
       if (!assignOp.mustKeepLhsLengthInAllocatableAssignment() &&
           !assignOp.isTemporaryLHS() && !lhs.isPolymorphic() &&
-          !lhs.isArray() && fir::isa_trivial(lhs.getFortranElementType())) {
+          !lhs.isArray() && fir::isa_trivial(lhs.getFortranElementType()) &&
+          !cuf::getDataAttr(lhs.getDefiningOp())) {
         mlir::Value rhsVal = fir::getBase(rhsExv);
         mlir::Value boxRef = fir::getBase(lhsExv);
         mlir::Value box = fir::LoadOp::create(builder, loc, boxRef);
