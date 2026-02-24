@@ -308,16 +308,16 @@ private:
       return __enc.__mib_rep_ < static_cast<unsigned short>(__i);
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr const char* const* __aliases_begin() const {
+    _LIBCPP_HIDE_FROM_ABI constexpr const char* const* __aliases_begin() const noexcept {
       return &__aliases_table[__first_alias_index_];
     }
 
-    _LIBCPP_HIDE_FROM_ABI constexpr const char* const* __aliases_end() const {
+    _LIBCPP_HIDE_FROM_ABI constexpr const char* const* __aliases_end() const noexcept {
       return &__aliases_table[__first_alias_index_ + __num_aliases_];
     }
   };
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr bool __comp_name(string_view __a, string_view __b) {
+  _LIBCPP_HIDE_FROM_ABI static constexpr bool __comp_name(string_view __a, string_view __b) noexcept {
     if (__a.empty() || __b.empty()) {
       return false;
     }
@@ -359,7 +359,7 @@ private:
     return true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx(string_view __a) {
+  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx(string_view __a) noexcept {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__a.size() <= __max_name_length_, "input string_view must have size <= 63");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(!__a.contains('\0'), "input string_view must not contain '\\0'");
 
@@ -378,7 +378,7 @@ private:
     return __found - __entries;
   }
 
-  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx_by_id(__id __i) {
+  _LIBCPP_HIDE_FROM_ABI static constexpr unsigned short __find_data_idx_by_id(__id __i) noexcept {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i >= __id::other, "invalid text_encoding::id passed");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__i <= __id::CP50220, "invalid text_encoding::id passed");
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(int_least32_t(__i) != __NATS_DANO_, "Mib for NATS-DANO used");
@@ -423,71 +423,65 @@ private:
 
       constexpr __iterator() noexcept = default;
 
-      _LIBCPP_HIDE_FROM_ABI constexpr reference operator*() const { return *__data_; }
+      _LIBCPP_HIDE_FROM_ABI constexpr reference operator*() const noexcept { return *__data_; }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](difference_type __n) const {
+      _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](difference_type __n) const noexcept {
         auto __it = *this;
         return *(__it + __n);
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const { return __data_; }
+      _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator->() const noexcept { return __data_; }
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __it, difference_type __n) {
+      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(__iterator __it, difference_type __n) noexcept {
         __it += __n;
         return __it;
       }
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __it) {
+      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator+(difference_type __n, __iterator __it) noexcept {
         __it += __n;
         return __it;
       }
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __it, difference_type __n) {
+      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(__iterator __it, difference_type __n) noexcept {
         __it -= __n;
         return __it;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __iterator& __other) const {
+      _LIBCPP_HIDE_FROM_ABI constexpr difference_type operator-(const __iterator& __other) const noexcept {
         return __data_ - __other.__data_;
       }
 
-      _LIBCPP_HIDE_FROM_ABI friend constexpr __iterator operator-(difference_type __n, __iterator& __it) {
-        __it -= __n;
-        return __it;
-      }
-
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() noexcept {
         __data_++;
         return *this;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int) {
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator++(int) noexcept {
         auto __old = *this;
         __data_++;
         return __old;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--() {
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator--() noexcept {
         __data_--;
         return *this;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int) {
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator operator--(int) noexcept {
         auto __old = *this;
         __data_--;
         return __old;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n) {
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator+=(difference_type __n) noexcept {
         __data_ += __n;
         return *this;
       }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n) { return (*this += -__n); }
+      _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator-=(difference_type __n) noexcept { return (*this += -__n); }
 
-      _LIBCPP_HIDE_FROM_ABI constexpr bool operator==(const __iterator& __it) const { return __data_ == __it.__data_; }
-
-      _LIBCPP_HIDE_FROM_ABI constexpr auto operator<=>(__iterator __it) const { return __data_ <=> __it.__data_; }
+      _LIBCPP_HIDE_FROM_ABI friend constexpr auto
+      operator<=>(const __iterator& __it, const __iterator& __it2) noexcept = default;
 
     private:
       friend struct __aliases_view;
@@ -497,8 +491,13 @@ private:
       const char* const* __data_;
     }; // __iterator
 
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const { return __iterator{__view_data_->__aliases_begin()}; }
-    _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const { return __iterator{__view_data_->__aliases_end()}; }
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator begin() const noexcept {
+      return __iterator{__view_data_->__aliases_begin()};
+    }
+
+    _LIBCPP_HIDE_FROM_ABI constexpr __iterator end() const noexcept {
+      return __iterator{__view_data_->__aliases_end()};
+    }
 
   private:
     friend struct __te_impl;
@@ -507,7 +506,7 @@ private:
     const __te_data* __view_data_;
   }; // __aliases_view
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr __aliases_view __aliases() const {
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI constexpr __aliases_view __aliases() const noexcept {
     return __aliases_view(&__entries[__encoding_idx_]);
   }
 

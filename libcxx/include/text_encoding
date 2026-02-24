@@ -90,7 +90,7 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr id mib() const noexcept { return __impl_.__mib(); }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const char* name() const noexcept { return __impl_.__name(); }
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const { return __impl_.__aliases(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr aliases_view aliases() const noexcept { return __impl_.__aliases(); }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr bool operator==(const text_encoding& __a, const text_encoding& __b) noexcept {
     return __a.__impl_ == __b.__impl_;
