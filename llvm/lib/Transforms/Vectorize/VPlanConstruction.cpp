@@ -1358,15 +1358,17 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       continue;
 
     // Find the condition for the select/blend.
-    VPValue *BackedgeSelect = PhiR->getBackedgeRecipe().getVPSingleValue();
+    VPValue *BackedgeSelect = PhiR->getBackedgeValue();
     VPValue *CondSelect = BackedgeSelect;
 
     // If there's a header mask, the backedge select will not be the find-last
     // select.
-    if (HeaderMask && !match(BackedgeSelect,
-                             m_Select(m_Specific(HeaderMask),
-                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+    if (HeaderMask && !match(BackedgeSelect, m_Select(m_Specific(HeaderMask),
+                                                      m_VPValue(CondSelect),
+                                                      m_Specific(PhiR)))) {
+      assert(false && "expected header mask select");
       return false;
+    }
 
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
 
@@ -1424,7 +1426,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     assert(Op2 == PhiR && "data value must be selected if Cond is true");
 
     if (HeaderMask)
-      Cond = Builder.createLogicalAnd(Cond, HeaderMask);
+      Cond = Builder.createLogicalAnd(HeaderMask, Cond);
 
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
