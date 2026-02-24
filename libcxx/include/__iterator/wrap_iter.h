@@ -212,15 +212,13 @@ private:
   }
 #endif // _LIBCPP_STD_VER >= 20
 
-template <class _Iter1, class _Iter2>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 #ifndef _LIBCPP_CXX03_LANG
   template <class _Iter2>
-[[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 auto
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 auto
   operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
 #else
   template <class _Iter2>
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
   typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
   {
