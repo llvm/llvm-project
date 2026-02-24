@@ -584,7 +584,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VTs,
                        Legal);
     setOperationAction(ISD::SELECT, VTs, Custom);
-    setOperationAction(ISD::SELECT_CC, VTs, Expand);
     setOperationAction(ISD::VSELECT, VTs, Legal);
     setOperationAction(ISD::SETCC, VTs, Legal);
     setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
@@ -1826,7 +1825,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // zve32x is broken for partial_reduce_umla, but let's not make it worse.
-  if (Subtarget.hasStdExtZvqdotq() && Subtarget.getELen() >= 64) {
+  if (Subtarget.hasStdExtZvdot4a8i() && Subtarget.getELen() >= 64) {
     static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
                                       ISD::PARTIAL_REDUCE_UMLA,
                                       ISD::PARTIAL_REDUCE_SUMLA};
@@ -9313,7 +9312,8 @@ SDValue RISCVTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
 
 SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  // Currently, only the vqdot and vqdotu case (from zvqdotq) should be legal.
+  // Currently, only the vdota4 and vdota4u case (from zvdot4a8i) should be
+  // legal.
   // TODO: There are many other sub-cases we could potentially lower, are
   // any of them worthwhile?  Ex: via vredsum, vwredsum, vwwmaccu, etc..
   SDLoc DL(Op);
@@ -9328,7 +9328,7 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
          ArgVT.getVectorElementType() == MVT::i8);
   (void)ArgVT;
 
-  // The zvqdotq pseudos are defined with sources and destination both
+  // The zvdot4a8i pseudos are defined with sources and destination both
   // being i32.  This cast is needed for correctness to avoid incorrect
   // .vx matching of i8 splats.
   A = DAG.getBitcast(VT, A);
@@ -9345,13 +9345,13 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   unsigned Opc;
   switch (Op.getOpcode()) {
   case ISD::PARTIAL_REDUCE_SMLA:
-    Opc = RISCVISD::VQDOT_VL;
+    Opc = RISCVISD::VDOTA4_VL;
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
-    Opc = RISCVISD::VQDOTU_VL;
+    Opc = RISCVISD::VDOTA4U_VL;
     break;
   case ISD::PARTIAL_REDUCE_SUMLA:
-    Opc = RISCVISD::VQDOTSU_VL;
+    Opc = RISCVISD::VDOTA4SU_VL;
     break;
   default:
     llvm_unreachable("Unexpected opcode");
@@ -10328,31 +10328,57 @@ SDValue RISCVTargetLowering::lowerShiftRightParts(SDValue Op, SelectionDAG &DAG,
   SDValue Shamt = Op.getOperand(2);
   EVT VT = Lo.getValueType();
 
-  // With P extension on RV32, use NSRL/NSRA for the low part.
-  if (Subtarget.hasStdExtP() && !Subtarget.is64Bit()) {
-    SDValue LoRes = DAG.getNode(IsSRA ? RISCVISD::NSRA : RISCVISD::NSRL, DL, VT,
-                                Lo, Hi, Shamt);
-    // Mask shift amount to avoid UB when Shamt >= 32.
+  // With P extension, use NSRL/NSRA for RV32 or FSHR (SRX) for RV64.
+  if (Subtarget.hasStdExtP()) {
+    unsigned XLen = Subtarget.getXLen();
+
+    SDValue LoRes;
+    if (Subtarget.is64Bit()) {
+      // On RV64, use FSHR (SRX instruction) for the low part. We will need
+      // to fix this later if ShAmt >= 64.
+      LoRes = DAG.getNode(ISD::FSHR, DL, VT, Hi, Lo, Shamt);
+    } else {
+      // On RV32, use NSRL/NSRA for the low part.
+      // NSRL/NSRA read 6 bits of shift amount, so they handle Shamt >= 32
+      // correctly.
+      LoRes = DAG.getNode(IsSRA ? RISCVISD::NSRA : RISCVISD::NSRL, DL, VT, Lo,
+                          Hi, Shamt);
+    }
+
+    // Mask shift amount to avoid UB when Shamt >= XLen.
     SDValue ShamtMasked =
-        DAG.getNode(ISD::AND, DL, VT, Shamt, DAG.getConstant(31, DL, VT));
+        DAG.getNode(ISD::AND, DL, VT, Shamt, DAG.getConstant(XLen - 1, DL, VT));
     SDValue HiRes =
         DAG.getNode(IsSRA ? ISD::SRA : ISD::SRL, DL, VT, Hi, ShamtMasked);
 
-    // Create a mask that is -1 when Shamt >= 32, 0 otherwise.
+    // Create a mask that is -1 when Shamt >= XLen, 0 otherwise.
     // FIXME: We should use a select and let LowerSelect make the
     // optimizations.
     SDValue ShAmtExt =
-        DAG.getNode(ISD::SHL, DL, VT, Shamt, DAG.getConstant(26, DL, VT));
-    SDValue Mask =
-        DAG.getNode(ISD::SRA, DL, VT, ShAmtExt, DAG.getConstant(31, DL, VT));
+        DAG.getNode(ISD::SHL, DL, VT, Shamt,
+                    DAG.getConstant(XLen - Log2_32(XLen) - 1, DL, VT));
+    SDValue Mask = DAG.getNode(ISD::SRA, DL, VT, ShAmtExt,
+                               DAG.getConstant(XLen - 1, DL, VT));
 
+    if (Subtarget.is64Bit()) {
+      // On RV64, FSHR masks shift amount to 63. We need to replace LoRes
+      // with HiRes when Shamt >= 64.
+      // LoRes = (LoRes & ~Mask) | (HiRes & Mask)
+      SDValue LoMasked =
+          DAG.getNode(ISD::AND, DL, VT, LoRes, DAG.getNOT(DL, Mask, VT));
+      SDValue HiMasked = DAG.getNode(ISD::AND, DL, VT, HiRes, Mask);
+      LoRes = DAG.getNode(ISD::OR, DL, VT, LoMasked, HiMasked,
+                          SDNodeFlags::Disjoint);
+    }
+
+    // If ShAmt >= XLen, we need to replace HiRes with 0 or sign bits.
     if (IsSRA) {
-      // sra hi, hi, (mask & 31) - shifts by 31 when shamt >= 32
-      SDValue MaskAmt =
-          DAG.getNode(ISD::AND, DL, VT, Mask, DAG.getConstant(31, DL, VT));
+      // sra hi, hi, (mask & (XLen-1)) - shifts by XLen-1 when shamt >= XLen
+      SDValue MaskAmt = DAG.getNode(ISD::AND, DL, VT, Mask,
+                                    DAG.getConstant(XLen - 1, DL, VT));
       HiRes = DAG.getNode(ISD::SRA, DL, VT, HiRes, MaskAmt);
     } else {
-      // andn hi, hi, mask - clears hi when shamt >= 32
+      // andn hi, hi, mask - clears hi when shamt >= XLen
       HiRes = DAG.getNode(ISD::AND, DL, VT, HiRes, DAG.getNOT(DL, Mask, VT));
     }
 
@@ -20314,10 +20340,10 @@ static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
   return DAG.getInsertSubvector(DL, B, Res, 0);
 }
 
-static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
-                                         SelectionDAG &DAG,
-                                         const RISCVSubtarget &Subtarget,
-                                         const RISCVTargetLowering &TLI) {
+static SDValue foldReduceOperandViaVDOTA4(SDValue InVec, const SDLoc &DL,
+                                          SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget,
+                                          const RISCVTargetLowering &TLI) {
   using namespace SDPatternMatch;
   // Note: We intentionally do not check the legality of the reduction type.
   // We want to handle the m4/m8 *src*  types, and thus need to let illegal
@@ -20330,8 +20356,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
   // form).
   SDValue A, B;
   if (sd_match(InVec, m_AddLike(m_Value(A), m_Value(B)))) {
-    SDValue AOpt = foldReduceOperandViaVQDOT(A, DL, DAG, Subtarget, TLI);
-    SDValue BOpt = foldReduceOperandViaVQDOT(B, DL, DAG, Subtarget, TLI);
+    SDValue AOpt = foldReduceOperandViaVDOTA4(A, DL, DAG, Subtarget, TLI);
+    SDValue BOpt = foldReduceOperandViaVDOTA4(B, DL, DAG, Subtarget, TLI);
     if (AOpt || BOpt) {
       if (AOpt)
         A = AOpt;
@@ -20403,13 +20429,13 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
 static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
                                        const RISCVSubtarget &Subtarget,
                                        const RISCVTargetLowering &TLI) {
-  if (!Subtarget.hasStdExtZvqdotq())
+  if (!Subtarget.hasStdExtZvdot4a8i())
     return SDValue();
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue InVec = N->getOperand(0);
-  if (SDValue V = foldReduceOperandViaVQDOT(InVec, DL, DAG, Subtarget, TLI))
+  if (SDValue V = foldReduceOperandViaVDOTA4(InVec, DL, DAG, Subtarget, TLI))
     return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, V);
   return SDValue();
 }
@@ -20737,8 +20763,8 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, DL, VT, Ops);
 }
 
-static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
-                                 const RISCVSubtarget &Subtarget) {
+static SDValue combineVdota4Accum(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
 
   assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
 
@@ -20754,21 +20780,21 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  auto IsVqdotqOpc = [](unsigned Opc) {
+  auto IsVdota4Opc = [](unsigned Opc) {
     switch (Opc) {
-    case RISCVISD::VQDOT_VL:
-    case RISCVISD::VQDOTU_VL:
-    case RISCVISD::VQDOTSU_VL:
+    case RISCVISD::VDOTA4_VL:
+    case RISCVISD::VDOTA4U_VL:
+    case RISCVISD::VDOTA4SU_VL:
       return true;
     default:
       return false;
     }
   };
 
-  if (!IsVqdotqOpc(DotOp.getOpcode()))
+  if (!IsVdota4Opc(DotOp.getOpcode()))
     std::swap(Addend, DotOp);
 
-  if (!IsVqdotqOpc(DotOp.getOpcode()))
+  if (!IsVdota4Opc(DotOp.getOpcode()))
     return SDValue();
 
   auto [AddMask, AddVL] = [](SDNode *N, SelectionDAG &DAG,
@@ -21525,7 +21551,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
       return V;
-    if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
+    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
       return V;
     return performADDCombine(N, DCI, Subtarget);
   }
@@ -21655,6 +21681,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case RISCVISD::CZERO_NEZ: {
     SDValue Val = N->getOperand(0);
     SDValue Cond = N->getOperand(1);
+    MVT VT = N->getSimpleValueType(0);
 
     unsigned Opc = N->getOpcode();
 
@@ -21671,7 +21698,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue NewCond = Cond.getOperand(0);
       APInt Mask = APInt::getBitsSetFrom(NewCond.getValueSizeInBits(), 1);
       if (DAG.MaskedValueIsZero(NewCond, Mask))
-        return DAG.getNode(InvOpc, SDLoc(N), N->getValueType(0), Val, NewCond);
+        return DAG.getNode(InvOpc, SDLoc(N), VT, Val, NewCond);
     }
     // czero_eqz x, (setcc y, 0, ne) -> czero_eqz x, y
     // czero_nez x, (setcc y, 0, ne) -> czero_nez x, y
@@ -21680,8 +21707,24 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
     if (Cond.getOpcode() == ISD::SETCC && isNullConstant(Cond.getOperand(1))) {
       ISD::CondCode CCVal = cast<CondCodeSDNode>(Cond.getOperand(2))->get();
       if (ISD::isIntEqualitySetCC(CCVal))
-        return DAG.getNode(CCVal == ISD::SETNE ? Opc : InvOpc, SDLoc(N),
-                           N->getValueType(0), Val, Cond.getOperand(0));
+        return DAG.getNode(CCVal == ISD::SETNE ? Opc : InvOpc, SDLoc(N), VT,
+                           Val, Cond.getOperand(0));
+    }
+
+    // Remove SRL from bittest patterns (srl (and X, (1 << C)), C) if the and
+    // is an ANDI. Because only 1 bit can be set after the AND, it doesn't
+    // matter if we shift it.
+    if (Cond.getOpcode() == ISD::SRL &&
+        isa<ConstantSDNode>(Cond.getOperand(1)) &&
+        Cond.getOperand(0).getOpcode() == ISD::AND) {
+      const APInt &ShAmt = Cond.getConstantOperandAPInt(1);
+      unsigned BitWidth = VT.getSizeInBits();
+      SDValue And = Cond.getOperand(0);
+      if (ShAmt.ult(BitWidth) && isa<ConstantSDNode>(And.getOperand(1))) {
+        uint64_t AndConst = And.getConstantOperandVal(1);
+        if (AndConst == (1ULL << ShAmt.getZExtValue()) && isInt<12>(AndConst))
+          return DAG.getNode(Opc, DL, VT, Val, And);
+      }
     }
 
     // czero_nez (setcc X, Y, CC), (setcc X, Y, eq) -> (setcc X, Y, CC)
@@ -22081,7 +22124,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
-    if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
+    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
   case RISCVISD::VWADDU_VL:
