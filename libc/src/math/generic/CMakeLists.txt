@@ -655,6 +655,8 @@ add_entrypoint_object(
     ../floor.h
   DEPENDS
     libc.src.__support.math.floor
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -665,6 +667,8 @@ add_entrypoint_object(
     ../floorf.h
   DEPENDS
     libc.src.__support.math.floorf
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -685,6 +689,8 @@ add_entrypoint_object(
     ../floorf16.h
   DEPENDS
     libc.src.__support.math.floorf16
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
@@ -705,6 +711,8 @@ add_entrypoint_object(
     ../floorbf16.h
   DEPENDS
     libc.src.__support.math.floorbf16
+  FLAGS
+    ROUND_OPT
 )
 
 add_entrypoint_object(
