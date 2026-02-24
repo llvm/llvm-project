@@ -214,14 +214,12 @@ template <class _Iter1, class _Iter2>
   template <class _Iter2>
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
   typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
-[[__nodiscard__]] typename __wrap_iter<_Iter1>::difference_type
-operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
   {
     return __x.__i_ - __y.__i_;
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
+  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
   operator+(typename __wrap_iter::difference_type __n, __wrap_iter __x) _NOEXCEPT {
     __x += __n;
     return __x;
