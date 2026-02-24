@@ -2414,6 +2414,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_setpayload",
+    hdrs = ["src/__support/math/setpayload.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadbf16",
+    hdrs = ["src/__support/math/setpayloadbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadf",
+    hdrs = ["src/__support/math/setpayloadf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadf128",
+    hdrs = ["src/__support/math/setpayloadf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadf16",
+    hdrs = ["src/__support/math/setpayloadf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadl",
+    hdrs = ["src/__support/math/setpayloadl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sqrtf16",
     hdrs = ["src/__support/math/sqrtf16.h"],
     deps = [
@@ -6074,15 +6131,40 @@ libc_math_function(name = "scalbnf128")
 
 libc_math_function(name = "scalbnf16")
 
-libc_math_function(name = "setpayload")
+libc_math_function(
+    name = "setpayload",
+    additional_deps = [
+        ":__support_math_setpayload",
+    ],
+)
 
-libc_math_function(name = "setpayloadf")
+libc_math_function(
+    name = "setpayloadf",
+    additional_deps = [
+        ":__support_math_setpayloadf",
+    ],
+)
 
-libc_math_function(name = "setpayloadl")
+libc_math_function(
+    name = "setpayloadl",
+    additional_deps = [
+        ":__support_math_setpayloadl",
+    ],
+)
 
-libc_math_function(name = "setpayloadf128")
+libc_math_function(
+    name = "setpayloadf128",
+    additional_deps = [
+        ":__support_math_setpayloadf128",
+    ],
+)
 
-libc_math_function(name = "setpayloadf16")
+libc_math_function(
+    name = "setpayloadf16",
+    additional_deps = [
+        ":__support_math_setpayloadf16",
+    ],
+)
 
 libc_math_function(name = "setpayloadsig")
 
