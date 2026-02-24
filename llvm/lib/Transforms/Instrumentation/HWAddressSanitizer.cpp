@@ -152,6 +152,11 @@ static cl::opt<bool>
                     cl::desc("detect use after scope within function"),
                     cl::Hidden, cl::init(true));
 
+static cl::opt<bool> ClStrictUseAfterScope(
+    "hwasan-strict-use-after-scope",
+    cl::desc("for complicated lifetimes, tag both on end and return"),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClGenerateTagsWithCalls(
     "hwasan-generate-tags-with-calls",
     cl::desc("generate new tags with runtime library calls"), cl::Hidden,
@@ -1496,6 +1501,12 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     memtag::annotateDebugRecords(Info, retagMask(N));
 
+    auto TagStarts = [&]() {
+      for (IntrinsicInst *Start : Info.LifetimeStart) {
+        IRB.SetInsertPoint(Start->getNextNode());
+        tagAlloca(IRB, AI, Tag, Size);
+      }
+    };
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
       // When untagging, use the `AlignedSize` because we need to set the tags
@@ -1504,32 +1515,35 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       // last granule, due to how short granules are implemented.
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
+    auto EraseLifetimes = [&]() {
+      for (auto &II : Info.LifetimeStart)
+        II->eraseFromParent();
+      for (auto &II : Info.LifetimeEnd)
+        II->eraseFromParent();
+    };
     // Calls to functions that may return twice (e.g. setjmp) confuse the
     // postdominator analysis, and will leave us to keep memory tagged after
     // function return. Work around this by always untagging at every return
     // statement if return_twice functions are called.
     if (DetectUseAfterScope && !SInfo.CallsReturnTwice &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   &LI, ClMaxLifetimes)) {
-      for (IntrinsicInst *Start : Info.LifetimeStart) {
-        IRB.SetInsertPoint(Start->getNextNode());
-        tagAlloca(IRB, AI, Tag, Size);
-      }
+        memtag::isStandardLifetime(Info, &DT, &LI, ClMaxLifetimes)) {
+      TagStarts();
       if (!memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec,
                                         TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }
+    } else if (DetectUseAfterScope && ClStrictUseAfterScope) {
+      // SInfo.CallsReturnTwice || !isStandardLifetime
+      tagAlloca(IRB, AI, Tag, Size);
+      TagStarts();
+      for_each(Info.LifetimeEnd, TagEnd);
+      for_each(SInfo.RetVec, TagEnd);
+      EraseLifetimes();
     } else {
       tagAlloca(IRB, AI, Tag, Size);
-      for (auto *RI : SInfo.RetVec)
-        TagEnd(RI);
-      // We inserted tagging outside of the lifetimes, so we have to remove
-      // them.
-      for (auto &II : Info.LifetimeStart)
-        II->eraseFromParent();
-      for (auto &II : Info.LifetimeEnd)
-        II->eraseFromParent();
+      for_each(SInfo.RetVec, TagEnd);
+      EraseLifetimes();
     }
     memtag::alignAndPadAlloca(Info, Mapping.getObjectAlignment());
   }
@@ -1900,7 +1914,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
   if (TargetTriple.isOSFuchsia()) {
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    SetFixed(0);
+    Kind = OffsetKind::kGlobal;
   } else if (CompileKernel || InstrumentWithCalls) {
     SetFixed(0);
     WithFrameRecord = false;

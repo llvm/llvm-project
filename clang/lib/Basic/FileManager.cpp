@@ -38,6 +38,27 @@ using namespace clang;
 
 #define DEBUG_TYPE "file-search"
 
+static void normalizeCacheKey(StringRef &Path,
+                              std::optional<std::string> &Storage) {
+  using namespace llvm::sys::path;
+
+  // Drop trailing separators for non-root paths so that cache keys and `stat`
+  // queries use a single spelling. Keep root paths (`/`, `[A-Z]:\`) unchanged.
+  if (Path.size() > 1 && root_path(Path) != Path && is_separator(Path.back()))
+    Path = Path.drop_back();
+
+  // A bare drive path like "[A-Z]:" is drive-relative (current directory on the
+  // drive).  As `[A-Z]:` is not a path specification, we must canonicalise it
+  // to `[A-Z]:.`.
+  if (is_style_windows(Style::native)) {
+    if (Path.size() > 1 && Path.back() == ':' &&
+        Path.equals_insensitive(root_name(Path))) {
+      Storage = Path.str() + ".";
+      Path = *Storage;
+    }
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Common logic.
 //===----------------------------------------------------------------------===//
@@ -104,6 +125,13 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   if (DirName.empty())
     DirName = ".";
 
+  // Normalize the key for cache lookup/insert, but keep the original DirName
+  // for recursive processing since normalization can create paths that don't
+  // work well with parent_path() (e.g., "C:" -> "C:.").
+  std::optional<std::string> Storage;
+  StringRef OriginalDirName = DirName;
+  normalizeCacheKey(DirName, Storage);
+
   auto &NamedDirEnt = *SeenDirEntries.insert(
         {DirName, std::errc::no_such_file_or_directory}).first;
 
@@ -131,28 +159,13 @@ void FileManager::addAncestorsAsVirtualDirs(StringRef Path) {
   }
 
   // Recursively add the other ancestors.
-  addAncestorsAsVirtualDirs(DirName);
+  addAncestorsAsVirtualDirs(OriginalDirName);
 }
 
 llvm::Expected<DirectoryEntryRef>
 FileManager::getDirectoryRef(StringRef DirName, bool CacheFailure) {
-  // stat doesn't like trailing separators except for root directory.
-  // At least, on Win32 MSVCRT, stat() cannot strip trailing '/'.
-  // (though it can strip '\\')
-  if (DirName.size() > 1 &&
-      DirName != llvm::sys::path::root_path(DirName) &&
-      llvm::sys::path::is_separator(DirName.back()))
-    DirName = DirName.drop_back();
   std::optional<std::string> DirNameStr;
-  if (is_style_windows(llvm::sys::path::Style::native)) {
-    // Fixing a problem with "clang C:test.c" on Windows.
-    // Stat("C:") does not recognize "C:" as a valid directory
-    if (DirName.size() > 1 && DirName.back() == ':' &&
-        DirName.equals_insensitive(llvm::sys::path::root_name(DirName))) {
-      DirNameStr = DirName.str() + '.';
-      DirName = *DirNameStr;
-    }
-  }
+  normalizeCacheKey(DirName, DirNameStr);
 
   ++NumDirLookups;
 
@@ -492,13 +505,17 @@ bool FileManager::fixupRelativePath(const FileSystemOptions &FileSystemOpts,
   return true;
 }
 
-bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path) const {
+bool FileManager::makeAbsolutePath(SmallVectorImpl<char> &Path,
+                                   bool Canonicalize) const {
   bool Changed = FixupRelativePath(Path);
 
   if (!llvm::sys::path::is_absolute(StringRef(Path.data(), Path.size()))) {
     FS->makeAbsolute(Path);
     Changed = true;
   }
+
+  if (Canonicalize)
+    Changed |= llvm::sys::path::remove_dots(Path);
 
   return Changed;
 }
