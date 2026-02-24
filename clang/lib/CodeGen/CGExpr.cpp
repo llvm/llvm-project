@@ -2637,10 +2637,11 @@ RValue CodeGenFunction::EmitLoadOfGlobalRegLValue(LValue LV) {
   return RValue::get(Call);
 }
 
-/// Extends a scalar or vector value if needed for HLSL element stores. 
-static llvm::Value *emitExtendForHLSLStore(CGBuilderTy &Builder,
-                                           llvm::Value *Val,
-                                           llvm::Type *ElemTy) {
+/// Extends a scalar or vector value if needed for HLSL element stores.
+static llvm::Value *emitHLSLRValueZExt(CGBuilderTy &Builder, RValue Src,
+                                       llvm::Type *ElemTy) {
+
+  llvm::Value *Val = Src.getScalarVal();
   if (Val->getType()->getScalarSizeInBits() >= ElemTy->getScalarSizeInBits())
     return Val;
 
@@ -2652,15 +2653,13 @@ static llvm::Value *emitExtendForHLSLStore(CGBuilderTy &Builder,
 }
 
 /// Emit an HLSL element-wise store using GEP.
-static void emitHLSLElementStore(CGBuilderTy &Builder,
-                                 llvm::Value *Val,
-                                 Address DstAddr,
-                                 llvm::Value *Idx,
-                                 llvm::Type *DestAddrTy,
-                                 CharUnits ElemAlign,
-                                 bool IsVolatile) {
+static void emitHLSLVectorEltStore(CGBuilderTy &Builder, llvm::Value *Val,
+                                   Address DstAddr, llvm::Value *Idx,
+                                   llvm::Type *DestAddrTy, CharUnits ElemAlign,
+                                   bool IsVolatile) {
   llvm::Value *Zero = Builder.getInt32(0);
-  Address DstElemAddr = Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
+  Address DstElemAddr =
+      Builder.CreateGEP(DstAddr, {Zero, Idx}, DestAddrTy, ElemAlign);
   Builder.CreateStore(Val, DstElemAddr, IsVolatile);
 }
 
@@ -2684,10 +2683,11 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         assert(ElemTy->getScalarSizeInBits() >= 8 &&
                "vector element type must be at least byte-sized");
 
-        llvm::Value *Val = emitExtendForHLSLStore(Builder, Src.getScalarVal(), ElemTy);
+        llvm::Value *Val = emitHLSLRValueZExt(Builder, Src, ElemTy);
 
-        emitHLSLElementStore(Builder, Val, DstAddr, Dst.getVectorIdx(), 
-                             DestAddrTy, ElemAlign, Dst.isVolatileQualified());
+        emitHLSLVectorEltStore(Builder, Val, DstAddr, Dst.getVectorIdx(),
+                               DestAddrTy, ElemAlign,
+                               Dst.isVolatileQualified());
         return;
       }
 
@@ -2751,10 +2751,11 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
         assert(ElemTy->getScalarSizeInBits() >= 8 &&
                "matrix element type must be at least byte-sized");
 
-        llvm::Value *Val = emitExtendForHLSLStore(Builder, Src.getScalarVal(), ElemTy);
+        llvm::Value *Val = emitHLSLRValueZExt(Builder, Src, ElemTy);
 
-        emitHLSLElementStore(Builder, Val, DstAddr, Dst.getMatrixIdx(), 
-                             DestAddrTy, ElemAlign, Dst.isVolatileQualified());
+        emitHLSLVectorEltStore(Builder, Val, DstAddr, Dst.getMatrixIdx(),
+                               DestAddrTy, ElemAlign,
+                               Dst.isVolatileQualified());
         return;
       }
 
@@ -2795,7 +2796,7 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
       assert(ElemTy->getScalarSizeInBits() >= 8 &&
              "matrix element type must be at least byte-sized");
 
-      llvm::Value *RowVal = emitExtendForHLSLStore(Builder, Src.getScalarVal(), ElemTy);
+      llvm::Value *RowVal = emitHLSLRValueZExt(Builder, Src, ElemTy);
 
       llvm::MatrixBuilder MB(Builder);
 
@@ -2820,8 +2821,8 @@ void CodeGenFunction::EmitStoreThroughLValue(RValue Src, LValue Dst,
             MB.CreateIndex(Row, ColIdx, NumRows, NumCols, IsMatrixRowMajor);
         llvm::Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
         llvm::Value *NewElt = Builder.CreateExtractElement(RowVal, Lane);
-        emitHLSLElementStore(Builder, NewElt, DstAddr, EltIndex, 
-                             DestAddrTy, ElemAlign, Dst.isVolatileQualified());
+        emitHLSLVectorEltStore(Builder, NewElt, DstAddr, EltIndex, DestAddrTy,
+                               ElemAlign, Dst.isVolatileQualified());
       }
 
       return;
@@ -4535,14 +4536,11 @@ static const Expr *isSimpleArrayDecayOperand(const Expr *E) {
   return SubExpr;
 }
 
-static llvm::Value *emitArraySubscriptGEP(CodeGenFunction &CGF,
-                                          llvm::Type *elemType,
-                                          llvm::Value *ptr,
-                                          ArrayRef<llvm::Value*> indices,
-                                          bool inbounds,
-                                          bool signedIndices,
-                                          SourceLocation loc,
-                                    const llvm::Twine &name = "arrayidx") {
+static llvm::Value *
+emitArraySubscriptGEP(CodeGenFunction &CGF, llvm::Type *elemType,
+                      llvm::Value *ptr, ArrayRef<llvm::Value *> indices,
+                      bool inbounds, bool signedIndices, SourceLocation loc,
+                      const llvm::Twine &name = "arrayidx") {
   if (inbounds) {
     return CGF.EmitCheckedInBoundsGEP(elemType, ptr, indices, signedIndices,
                                       CodeGenFunction::NotSubtraction, loc,
@@ -5527,7 +5525,7 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   const RecordDecl *rec = field->getParent();
 
   unsigned idx =
-    CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
+      CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
   if (!IsInBounds)
     return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
