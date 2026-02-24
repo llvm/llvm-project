@@ -8186,11 +8186,14 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::splitLatch, *Plan);
   VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
 
-  VPlanTransforms::createLoopRegions(*Plan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *Plan);
+  if (CM.foldTailByMasking())
+    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::foldTailByMasking, *Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8245,8 +8248,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
-                           CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan);
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar

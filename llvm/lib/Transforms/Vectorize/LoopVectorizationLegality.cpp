@@ -1849,6 +1849,11 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
 
   // Check non-dereferenceable loads if any.
   for (LoadInst *LI : NonDerefLoads) {
+    // Occurs after all early exits, so we can predicate it.
+    if (all_of(UncountableExitingBlocks, [this, &LI](BasicBlock *ExitingBB) {
+          return DT->properlyDominates(ExitingBB, LI->getParent());
+        }))
+      continue;
     // Only support unit-stride access for now.
     int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
     if (Stride != 1) {
@@ -2047,6 +2052,11 @@ bool LoopVectorizationLegality::canVectorize(bool UseVPlanNativePath) {
         else
           return false;
       }
+      // isVectorizableEarlyExitLoop will have predicated some instructions when
+      // they previously weren't. Call canVectorizeWithIfConvert again to
+      // repopulate MaskedOp with any new instructions.
+      if (!canVectorizeWithIfConvert())
+        return false;
     }
   }
 

@@ -449,10 +449,44 @@ struct VPlanTransforms {
   static std::unique_ptr<VPlan>
   narrowInterleaveGroups(VPlan &Plan, const TargetTransformInfo &TTI);
 
+  /// Splits the latch so that it only contains the canonical IV increment and
+  /// terminator, and inserts phis for any value defined in the loop used
+  /// outside or in the header.
+  ///
+  /// Vector loop before:
+  /// +-------------------------------------------+
+  /// |%iv = ...                                  |
+  /// |...                                        |
+  /// |%iv.next = add %iv, vfxuf                  |
+  /// |branch-on-count %iv.next, vector-trip-count|
+  /// +-------------------------------------------+
+  ///
+  /// Vector loop after:
+  /// +-------------------------------------------+
+  /// |%iv = ...                                  |
+  /// +-------------------------------------------+
+  ///                      |
+  ///                      v
+  /// +-------------------------------------------+
+  /// |<phis> = phi [..., ...], [poison, header]  |
+  /// |%iv.next = add %iv, vfxuf                  |
+  /// |branch-on-count %iv.next, vector-trip-count|
+  /// +-------------------------------------------+
+  static void splitLatch(VPlan &Plan);
+
+  /// After connecting some block to the latch that will exit that iteration,
+  /// add incoming values to the phis in the latch that have outside users.
+  static void addTailIncomingValues(VPBasicBlock *LatchVPBB);
+
+  // Adapts the vector loop region for tail folding by introducing a header and
+  // branching to the latch when past the tail.
+  /// Any VPInstruction::ExtractLastLanes are also updated to extract from the
+  /// last active lane of the header mask.
+  static void foldTailByMasking(VPlan &Plan);
+
   /// Predicate and linearize the control-flow in the only loop region of
-  /// \p Plan. If \p FoldTail is true, create a mask guarding the loop
-  /// header, otherwise use all-true for the header mask.
-  static void introduceMasksAndLinearize(VPlan &Plan, bool FoldTail);
+  /// \p Plan.
+  static void introduceMasksAndLinearize(VPlan &Plan);
 
   /// Add branch weight metadata, if the \p Plan's middle block is terminated by
   /// a BranchOnCond recipe.

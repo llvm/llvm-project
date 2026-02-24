@@ -4064,10 +4064,11 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     VPBasicBlock *EarlyExitingVPBB;
     VPIRBasicBlock *EarlyExitVPBB;
     VPValue *CondToExit;
+    VPValue *ExitMask;
   };
 
   VPDominatorTree VPDT(Plan);
-  VPBuilder Builder(LatchVPBB->getTerminator());
+  VPBuilder Builder;
   SmallVector<EarlyExitInfo> Exits;
   for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
     for (VPBlockBase *Pred : to_vector(ExitBlock->getPredecessors())) {
@@ -4081,21 +4082,26 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
           match(EarlyExitingVPBB->getTerminator(),
                 m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
       assert(Matched && "Terminator must be BranchOnCond");
+      Builder.setInsertPoint(EarlyExitingVPBB->getTerminator());
       auto *CondToEarlyExit = TrueSucc == ExitBlock
                                   ? CondOfEarlyExitingVPBB
                                   : Builder.createNot(CondOfEarlyExitingVPBB);
+      VPValue *FirstExitLane =
+          Builder.createNaryOp(VPInstruction::FirstActiveLane, CondToEarlyExit);
+      VPValue *ExitMask = Builder.createICmp(
+          CmpInst::ICMP_ULT,
+          Builder.createNaryOp(VPInstruction::StepVector, {},
+                               Type::getInt64Ty(Plan.getContext())),
+          FirstExitLane);
       assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
               VPDT.properlyDominates(
                   CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
                   LatchVPBB)) &&
              "exit condition must dominate the latch");
-      Exits.push_back({
-          EarlyExitingVPBB,
-          ExitBlock,
-          CondToEarlyExit,
-      });
+      Exits.push_back({EarlyExitingVPBB, ExitBlock, CondToEarlyExit, ExitMask});
     }
   }
+  Builder.setInsertPoint(LatchVPBB->getTerminator());
 
   assert(!Exits.empty() && "must have at least one early exit");
   // Sort exits by dominance to get the correct program order.
@@ -4163,7 +4169,7 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   //
   for (auto [Exit, VectorEarlyExitVPBB] :
        zip_equal(Exits, VectorEarlyExitVPBBs)) {
-    auto &[EarlyExitingVPBB, EarlyExitVPBB, _] = Exit;
+    auto &[EarlyExitingVPBB, EarlyExitVPBB, _, ExitMask] = Exit;
     // Adjust the phi nodes in EarlyExitVPBB.
     //   1. remove incoming values from EarlyExitingVPBB,
     //   2. extract the incoming value at FirstActiveLane
@@ -4187,8 +4193,10 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
       ExitIRI->addOperand(NewIncoming);
     }
 
-    EarlyExitingVPBB->getTerminator()->eraseFromParent();
+    EarlyExitingVPBB->getTerminator()->setOperand(0, ExitMask);
     VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EarlyExitVPBB);
+    VPBlockUtils::connectBlocks(EarlyExitingVPBB, LatchVPBB);
+    addTailIncomingValues(LatchVPBB);
     VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
   }
 

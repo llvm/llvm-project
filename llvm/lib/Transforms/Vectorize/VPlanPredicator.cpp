@@ -73,11 +73,7 @@ public:
     return EdgeMaskCache.lookup({Src, Dst});
   }
 
-  /// Compute and return the mask for the vector loop header block.
-  void createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail);
-
-  /// Compute the predicate of \p VPBB, assuming that the header block of the
-  /// loop is set to True, or to the loop mask when tail folding.
+  /// Compute the predicate of \p VPBB.
   void createBlockInMask(VPBasicBlock *VPBB);
 
   /// Convert phi recipes in \p VPBB to VPBlendRecipes.
@@ -151,28 +147,6 @@ void VPPredicator::createBlockInMask(VPBasicBlock *VPBB) {
   }
 
   setBlockInMask(VPBB, BlockMask);
-}
-
-void VPPredicator::createHeaderMask(VPBasicBlock *HeaderVPBB, bool FoldTail) {
-  if (!FoldTail) {
-    setBlockInMask(HeaderVPBB, nullptr);
-    return;
-  }
-
-  // Introduce the early-exit compare IV <= BTC to form header block mask.
-  // This is used instead of IV < TC because TC may wrap, unlike BTC. Start by
-  // constructing the desired canonical IV in the header block as its first
-  // non-phi instructions.
-
-  auto &Plan = *HeaderVPBB->getPlan();
-  auto *IV =
-      new VPWidenCanonicalIVRecipe(HeaderVPBB->getParent()->getCanonicalIV());
-  Builder.setInsertPoint(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
-  Builder.insert(IV);
-
-  VPValue *BTC = Plan.getOrCreateBackedgeTakenCount();
-  VPValue *BlockMask = Builder.createICmp(CmpInst::ICMP_ULE, IV, BTC);
-  setBlockInMask(HeaderVPBB, BlockMask);
 }
 
 void VPPredicator::createSwitchEdgeMasks(VPInstruction *SI) {
@@ -265,7 +239,7 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
   }
 }
 
-void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
+void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   // Scan the body of the loop in a topological order to visit each basic block
   // after having visited its predecessor basic blocks.
@@ -279,9 +253,7 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
     // Introduce the mask for VPBB, which may introduce needed edge masks, and
     // convert all phi recipes of VPBB to blend recipes unless VPBB is the
     // header.
-    if (VPBB == Header) {
-      Predicator.createHeaderMask(Header, FoldTail);
-    } else {
+    if (VPBB != Header) {
       Predicator.createBlockInMask(VPBB);
       Predicator.convertPhisToBlends(VPBB);
     }
@@ -312,34 +284,5 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
       VPBlockUtils::connectBlocks(PrevVPBB, VPBB);
 
     PrevVPBB = VPBB;
-  }
-
-  // If we folded the tail and introduced a header mask, any extract of the
-  // last element must be updated to extract from the last active lane of the
-  // header mask instead (i.e., the lane corresponding to the last active
-  // iteration).
-  if (FoldTail) {
-    assert(Plan.getExitBlocks().size() == 1 &&
-           "only a single-exit block is supported currently");
-    assert(Plan.getExitBlocks().front()->getSinglePredecessor() ==
-               Plan.getMiddleBlock() &&
-           "the exit block must have middle block as single predecessor");
-
-    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
-    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
-      VPValue *Op;
-      if (!match(&R, m_CombineOr(
-                         m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),
-                         m_ExtractLastLane(m_ExtractLastPart(m_VPValue(Op))))))
-        continue;
-
-      // Compute the index of the last active lane.
-      VPValue *HeaderMask = Predicator.getBlockInMask(Header);
-      VPValue *LastActiveLane =
-          B.createNaryOp(VPInstruction::LastActiveLane, HeaderMask);
-      auto *Ext =
-          B.createNaryOp(VPInstruction::ExtractLane, {LastActiveLane, Op});
-      R.getVPSingleValue()->replaceAllUsesWith(Ext);
-    }
   }
 }
