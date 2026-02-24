@@ -10,7 +10,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -std=c++20 -emit-llvm %s -o %t-og.ll 2>&1
 // RUN: FileCheck --input-file=%t-og.ll %s -check-prefix=OGCG
 
-#include "../../CodeGenCXX/Inputs/std-compare.h"
+#include "../Inputs/std-compare.h"
 
 // BEFORE: #cmp3way_info_partial_ltn1eq0gt1unn127 = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
 // BEFORE: #cmp3way_info_strong_ltn1eq0gt1 = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
