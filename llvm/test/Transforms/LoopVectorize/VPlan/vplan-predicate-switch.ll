@@ -1,4 +1,5 @@
 ; RUN: opt -p loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -vplan-print-after="printFinalVPlan$" -disable-output %s 2>&1 | FileCheck %s
+; REQUIRES: asserts
 
 define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; CHECK:      VPlan 'Final VPlan for VF={2},UF={1}' {

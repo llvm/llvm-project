@@ -3,6 +3,7 @@
 ; RUN: -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN: -mtriple=powerpc64le-unknown-linux-gnu \
 ; RUN: -mcpu=pwr10 -disable-output < %s 2>&1 | FileCheck %s
+: REQUIRES: asserts
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; CHECK-LABEL: VPlan 'Initial VPlan for VF={2,4},UF>=1' {

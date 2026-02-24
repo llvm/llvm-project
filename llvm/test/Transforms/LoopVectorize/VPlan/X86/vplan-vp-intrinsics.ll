@@ -7,6 +7,7 @@
 ; RUN: -force-tail-folding-style=none \
 ; RUN: -prefer-predicate-over-epilogue=predicate-else-scalar-epilogue \
 ; RUN: -mtriple=x86_64 -mattr=+avx512f -disable-output < %s 2>&1 | FileCheck --check-prefix=NO-VP %s
+; REQUIRES: asserts
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL: VPlan 'Initial VPlan for VF={4},UF>=1' {
