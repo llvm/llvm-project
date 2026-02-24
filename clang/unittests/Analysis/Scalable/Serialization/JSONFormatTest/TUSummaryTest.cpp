@@ -1926,12 +1926,16 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
 
   auto Result = writeTUSummary(Summary, "output.json");
 
-  EXPECT_THAT_ERROR(
-      std::move(Result),
-      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
-                              HasSubstr("failed to serialize EntitySummary"),
-                              HasSubstr("no FormatInfo registered for summary "
-                                        "'unknown_summary_type'"))));
+  EXPECT_THAT_ERROR(std::move(Result),
+                    FailedWithMessage(AllOf(
+                        HasSubstr("writing TUSummary to file"),
+                        HasSubstr("writing SummaryData entry to index '0'"),
+                        HasSubstr("writing EntitySummary entries to field "
+                                  "'summary_data'"),
+                        HasSubstr("writing EntitySummary entry to index '0'"),
+                        HasSubstr("failed to serialize EntitySummary"),
+                        HasSubstr("no FormatInfo registered for summary "
+                                  "'unknown_summary_type'"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, WriteStreamOpenFailure) {
