@@ -72,7 +72,6 @@ enum class IRMemLocation {
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
-  FirstTarget = TargetMem0,
   Last = TargetMem1,
 };
 
