@@ -1104,10 +1104,10 @@ void CXXNameMangler::mangleModuleName(const NamedDecl *ND) {
 }
 
 // <module-name> ::= <module-subname>
-//		 ::= <module-name> <module-subname>
-//	 	 ::= <substitution>
+//               ::= <module-name> <module-subname>
+//               ::= <substitution>
 // <module-subname> ::= W <source-name>
-//		    ::= W P <source-name>
+//                  ::= W P <source-name>
 void CXXNameMangler::mangleModuleNamePrefix(StringRef Name, bool IsPartition) {
   //  <substitution> ::= S <seq-id> _
   auto It = ModuleSubstitutions.find(Name);
