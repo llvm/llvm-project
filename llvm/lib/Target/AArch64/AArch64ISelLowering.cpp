@@ -4054,7 +4054,7 @@ static bool canEmitConjunction(SelectionDAG &DAG, const SDValue Val,
       if (!CanNegateL && !CanNegateR)
         return false;
       // If we the result of the OR will be negated and we can naturally negate
-      // the leafs, then this sub-tree as a whole negates naturally.
+      // the leaves, then this sub-tree as a whole negates naturally.
       CanNegate = WillNegate && CanNegateL && CanNegateR;
       // If we cannot naturally negate the whole sub-tree, then this must be
       // emitted first.
@@ -24066,7 +24066,7 @@ static SDValue performZExtDeinterleaveShuffleCombine(SDNode *N,
   unsigned Idx;
   bool IsDeInterleave = ShuffleVectorInst::isDeInterleaveMaskOfFactor(
       Shuffle->getMask().slice(ExtOffset, VT.getVectorNumElements()), 4, Idx);
-  // An undef interleave shuffle can come up after other canonicalizations,
+  // An undef interleave shuffle can come up after other canonicalization,
   // where the shuffle has been converted to
   //   zext(extract(shuffle b, undef, [u,u,0,4]))
   bool IsUndefDeInterleave = false;

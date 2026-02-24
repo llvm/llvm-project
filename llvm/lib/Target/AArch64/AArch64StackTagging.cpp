@@ -220,7 +220,7 @@ public:
     }
 
     // Look through 8-byte initializer list 16 bytes at a time;
-    // If one of the two 8-byte halfs is non-zero non-undef, emit STGP.
+    // If one of the two 8-byte halves is non-zero non-undef, emit STGP.
     // Otherwise, emit zeroes up to next available item.
     uint64_t LastOffset = 0;
     for (uint64_t Offset = 0; Offset < Size; Offset += 16) {
