@@ -25,6 +25,8 @@ DEFAULT_PLUGINS = [
     "CPlusPlusLanguage",
     "CXXItaniumABI",
     "DisassemblerLLVMC",
+    "HighlighterClang",
+    "HighlighterDefault",
     "DynamicLoaderDarwinKernel",
     "DynamicLoaderHexagonDYLD",
     "DynamicLoaderMacOSXDYLD",
