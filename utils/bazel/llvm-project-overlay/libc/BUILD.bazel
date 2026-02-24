@@ -3173,8 +3173,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_fdim",
     hdrs = ["src/__support/math/fdim.h"],
-    name = "__support_math_fadd",
-    hdrs = ["src/__support/math/fadd.h"],
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
@@ -3203,8 +3201,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_fdimf128",
     hdrs = ["src/__support/math/fdimf128.h"],
-    name = "__support_math_faddf128",
-    hdrs = ["src/__support/math/faddf128.h"],
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
@@ -3225,8 +3221,6 @@ libc_support_library(
 libc_support_library(
     name = "__support_math_fdiml",
     hdrs = ["src/__support/math/fdiml.h"],
-    name = "__support_math_faddl",
-    hdrs = ["src/__support/math/faddl.h"],
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
