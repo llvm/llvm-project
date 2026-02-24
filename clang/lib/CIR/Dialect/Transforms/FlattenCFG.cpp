@@ -902,28 +902,6 @@ public:
     });
   }
 
-  // Given a cir.resume that terminates an EH cleanup block, trace back through
-  // the cir.end_cleanup -> cir.begin_cleanup chain to find the eh_token that
-  // represents the in-flight exception. This token is needed to branch to the
-  // outer cleanup's EH handler.
-  //
-  // Expected block structure:
-  //   ^eh_cleanup(%eh_token : !cir.eh_token):
-  //     %ct = cir.begin_cleanup %eh_token
-  //     <cleanup operations>
-  //     cir.end_cleanup %ct
-  //     cir.resume
-  static mlir::Value getEhTokenFromResume(cir::ResumeOp resumeOp) {
-    mlir::Operation *prevOp = resumeOp->getPrevNode();
-    assert(prevOp && isa<cir::EndCleanupOp>(prevOp) &&
-           "expected cir.end_cleanup immediately before cir.resume");
-    auto endCleanup = cast<cir::EndCleanupOp>(prevOp);
-    auto beginCleanup =
-        endCleanup.getCleanupToken().getDefiningOp<cir::BeginCleanupOp>();
-    assert(beginCleanup && "cleanup_token must come from cir.begin_cleanup");
-    return beginCleanup.getEhToken();
-  }
-
   // Collect all function calls in the cleanup scope body that may throw
   // exceptions and need to be replaced with try_call operations. Skips calls
   // that are marked nothrow and calls inside nested TryOps (the latter will be
@@ -1336,7 +1314,7 @@ public:
     // flows through the outer cleanup before unwinding to the caller.
     if (ehCleanupEntry) {
       for (cir::ResumeOp resumeOp : resumeOpsToChain) {
-        mlir::Value ehToken = getEhTokenFromResume(resumeOp);
+        mlir::Value ehToken = resumeOp.getEhToken();
         rewriter.setInsertionPoint(resumeOp);
         rewriter.replaceOpWithNewOp<cir::BrOp>(
             resumeOp, mlir::ValueRange{ehToken}, ehCleanupEntry);
