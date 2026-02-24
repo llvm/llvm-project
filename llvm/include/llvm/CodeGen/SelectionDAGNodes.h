@@ -3478,7 +3478,11 @@ namespace ISD {
                                   std::function<bool(ConstantSDNode *)> Match,
                                   bool AllowUndefs = false,
                                   bool AllowTruncation = false) {
-    return matchUnaryPredicate(Op, APInt(1, 1), Match, AllowUndefs,
+    EVT VT = Op.getValueType();
+    APInt DemandedElts = VT.isFixedLengthVector()
+                             ? APInt::getAllOnes(VT.getVectorNumElements())
+                             : APInt(1, 1);
+    return matchUnaryPredicate(Op, DemandedElts, Match, AllowUndefs,
                                AllowTruncation);
   }
 
@@ -3495,7 +3499,11 @@ namespace ISD {
   matchUnaryFpPredicate(SDValue Op,
                         std::function<bool(ConstantFPSDNode *)> Match,
                         bool AllowUndefs = false) {
-    return matchUnaryFpPredicate(Op, APInt(1, 1), Match, AllowUndefs);
+    EVT VT = Op.getValueType();
+    APInt DemandedElts = VT.isFixedLengthVector()
+                             ? APInt::getAllOnes(VT.getVectorNumElements())
+                             : APInt(1, 1);
+    return matchUnaryFpPredicate(Op, DemandedElts, Match, AllowUndefs);
   }
 
   /// Attempt to match a binary predicate against a pair of scalar/splat
@@ -3503,9 +3511,21 @@ namespace ISD {
   /// If AllowUndef is true, then UNDEF elements will pass nullptr to Match.
   /// If AllowTypeMismatch is true then RetType + ArgTypes don't need to match.
   LLVM_ABI bool matchBinaryPredicate(
-      SDValue LHS, SDValue RHS,
+      SDValue LHS, SDValue RHS, const APInt &DemandedElts,
       std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
       bool AllowUndefs = false, bool AllowTypeMismatch = false);
+
+  inline bool matchBinaryPredicate(
+      SDValue LHS, SDValue RHS,
+      std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
+      bool AllowUndefs = false, bool AllowTypeMismatch = false) {
+    EVT VT = LHS.getValueType();
+    APInt DemandedElts = VT.isFixedLengthVector()
+                             ? APInt::getAllOnes(VT.getVectorNumElements())
+                             : APInt(1, 1);
+    return matchBinaryPredicate(LHS, RHS, DemandedElts, Match, AllowUndefs,
+                                AllowTypeMismatch);
+  }
 
   /// Returns true if the specified value is the overflow result from one
   /// of the overflow intrinsic nodes.

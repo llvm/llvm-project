@@ -361,8 +361,9 @@ bool ISD::matchUnaryPredicateImpl(SDValue Op, const APInt &DemandedElts,
     return false;
 
   EVT SVT = Op.getValueType().getScalarType();
+  bool IsSplat = ISD::SPLAT_VECTOR == Op.getOpcode();
   for (unsigned i = 0, e = Op.getNumOperands(); i != e; ++i) {
-    if (!DemandedElts[i])
+    if (!DemandedElts[IsSplat ? 0 : i])
       continue;
 
     if (AllowUndefs && Op.getOperand(i).isUndef()) {
@@ -386,7 +387,7 @@ template bool ISD::matchUnaryPredicateImpl<ConstantFPSDNode>(
     bool);
 
 bool ISD::matchBinaryPredicate(
-    SDValue LHS, SDValue RHS,
+    SDValue LHS, SDValue RHS, const APInt &DemandedElts,
     std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
     bool AllowUndefs, bool AllowTypeMismatch) {
   if (!AllowTypeMismatch && LHS.getValueType() != RHS.getValueType())
@@ -404,7 +405,10 @@ bool ISD::matchBinaryPredicate(
     return false;
 
   EVT SVT = LHS.getValueType().getScalarType();
+  bool IsSplat = ISD::SPLAT_VECTOR == LHS.getOpcode();
   for (unsigned i = 0, e = LHS.getNumOperands(); i != e; ++i) {
+    if (!DemandedElts[IsSplat ? 0 : i])
+      continue;
     SDValue LHSOp = LHS.getOperand(i);
     SDValue RHSOp = RHS.getOperand(i);
     bool LHSUndef = AllowUndefs && LHSOp.isUndef();
