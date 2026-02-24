@@ -1629,8 +1629,8 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
     return true;
   };
 
-  // Check that dest alloca has no Mod/Ref, from the alloca to the Store. And
-  // collect modref inst for the reachability check.
+  // Check that dest alloca has no Mod/Ref, for the whole alloca, before the
+  // Store. And collect modref inst for the reachability check.
   ModRefInfo DestModRef = ModRefInfo::NoModRef;
   MemoryLocation DestLoc(DestAlloca, LocationSize::precise(*DestSize));
   SmallVector<BasicBlock *, 8> ReachabilityWorklist;
@@ -1674,47 +1674,12 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
                                  DestAddressCaptured))
     return false;
 
-  // Check that copy is full with dest size (from DestOffset to end), either
-  // because it wrote every byte, or it was fresh. The store itself was ignored
-  // earlier, but might be in a loop, so it could (in rare cases) observe that
-  // earlier store which needs to be checked for now. For example, a source
-  // language might emit code matching that pattern for a simple array reverse
-  // with a struct element type:
-  //   for (i = 0; i < size; i++) dest[size - i - 1] = src[i];
-  if (*DestOffset != 0 || Size != *DestSize) {
-    // Similar analysis to overreadUndefContents
-    MemoryLocation Loc;
-    Value *Ptr;
-    if (auto SI = dyn_cast<StoreInst>(Store)) {
-      Loc = MemoryLocation::get(SI);
-      Ptr = SI->getPointerOperand();
-    } else if (auto MI = dyn_cast<MemCpyInst>(Store)) {
-      Loc = MemoryLocation::getForDest(MI);
-      Ptr = MI->getDest();
-    } else {
-      llvm_unreachable("performStackMoveOptzn must have a known store kind");
-    }
-    // If offset and size are constant, then this overwrote the same bytes
-    // every time anyways.
-    if (!Ptr->getPointerOffsetFrom(DestAlloca, DL)) {
-      // Otherwise, if the other bytes are not known-undef, then also need to
-      // consider whether they could have been defined by this same store in a
-      // loop.
-      MemoryUseOrDef *MemAccess = MSSA->getMemoryAccess(Store);
-      MemoryAccess *Clobber = MSSA->getWalker()->getClobberingMemoryAccess(
-          MemAccess->getDefiningAccess(), Loc, BAA);
-      bool allOverreadUndefContents = false;
-      if (auto *MD = dyn_cast<MemoryDef>(Clobber))
-        if (hasUndefContents(MSSA, BAA, Ptr, MD))
-          allOverreadUndefContents = true;
-      if (!allOverreadUndefContents) {
-        BasicBlock *BB = Store->getParent();
-        ReachabilityWorklist.append(succ_begin(BB), succ_end(BB));
-      }
-    }
-  }
-
   // Bailout if Dest may have any ModRef before Store.
+  // If DestOffset was allowed to be non-constant, then this would also have to
+  // check if the store could observe itself (e.g. from a loop), since the store
+  // was ignored earlier. For example, a source language might emit code
+  // matching that pattern for a simple array reverse:
+  //   for (i = 0; i < size; i++) dest[size - i - 1] = src[i];
   if (!ReachabilityWorklist.empty() &&
       isPotentiallyReachableFromMany(ReachabilityWorklist, Store->getParent(),
                                      nullptr, DT, nullptr))
@@ -1730,8 +1695,22 @@ bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
   //     to be the bounds of the first and last mod region, and which is at
   //     least as large as DestOffset to DestSize, and at most as large as
   //     SrcAlloca to SrcSize.
-  //   - Currently DestOffset==0 and DestSize==Size, so this math is simplified.
-  MemoryLocation SrcLoc(SrcPtr, LocationSize::precise(Size));
+  //   - Currently DestOffset<=SrcOffset, so this math is simplified.
+  // Since we cannot express MemoryLocation offsets, use either SrcPtr if
+  // possible, else use SrcAlloca.
+  MemoryLocation SrcLoc;
+  if (!SrcSize->isFixed() || !DestSize->isFixed())
+    SrcLoc = MemoryLocation(SrcAlloca, LocationSize::precise(*SrcSize));
+  else if (*DestOffset)
+    SrcLoc = MemoryLocation(
+        SrcAlloca,
+        LocationSize::precise(std::min(DestSize->getFixedValue() + *DestOffset,
+                                       SrcSize->getFixedValue())));
+  else
+    SrcLoc = MemoryLocation(
+        SrcPtr,
+        LocationSize::precise(std::min(DestSize->getFixedValue(),
+                                       SrcSize->getFixedValue() - *SrcOffset)));
 
   auto SrcModRefCallback = [&](Instruction *UI) -> bool {
     // Any ModRef post-dominated by Load doesn't matter, also Load and Store
