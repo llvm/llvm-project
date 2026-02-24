@@ -87,7 +87,6 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_c) {
   ASSERT_FALSE(client.GetVContSupported("S"));
   ASSERT_TRUE(client.GetVContSupported("a"));
   ASSERT_FALSE(client.GetVContSupported("A"));
-  return;
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, vCont_C) {
@@ -100,7 +99,6 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_C) {
   ASSERT_FALSE(client.GetVContSupported("S"));
   ASSERT_TRUE(client.GetVContSupported("a"));
   ASSERT_FALSE(client.GetVContSupported("A"));
-  return;
 }
 
 TEST_F(GDBRemoteCommunicationClientTest, vCont_cC) {
