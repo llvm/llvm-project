@@ -140,15 +140,6 @@ public:
   /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
 
-  /// Return a raw_ostream that comments can be written to.
-  /// Unlike AddComment, you are required to terminate comments with \n if you
-  /// use this method.
-  raw_ostream &getCommentOS() override {
-    if (!IsVerboseAsm)
-      return nulls();  // Discard comments unless in verbose asm mode.
-    return CommentStream;
-  }
-
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
 
   void addExplicitComment(const Twine &T) override;
