@@ -26,7 +26,7 @@ struct PrintOpAvailability
   StringRef getArgument() const final { return "test-tosa-op-availability"; }
   StringRef getDescription() const final { return "Test Tosa op availability"; }
 };
-  static llvm::sys::SmartRWMutex<true> PrintMutex;
+static llvm::sys::SmartRWMutex<true> PrintMutex;
 } // namespace
 
 void PrintOpAvailability::runOnOperation() {
