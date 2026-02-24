@@ -2921,7 +2921,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
       [&](Register InputRegister, bool IsUnsigned) {
         const bool IsFloatTy =
             GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMax
+        const auto IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMax
                                           : SPIRV::OpGroupNonUniformSMax;
         return IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntOp;
       });
@@ -2936,7 +2936,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
       [&](Register InputRegister, bool IsUnsigned) {
         const bool IsFloatTy =
             GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMin
+        const auto IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMin
                                           : SPIRV::OpGroupNonUniformSMin;
         return IsFloatTy ? SPIRV::OpGroupNonUniformFMin : IntOp;
       });
@@ -2968,7 +2968,7 @@ bool SPIRVInstructionSelector::selectWaveReduce(
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  const unsigned Opcode = PickOpcode(InputRegister, IsUnsigned);
+  const auto Opcode = PickOpcode(InputRegister, IsUnsigned);
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
