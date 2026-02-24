@@ -141,9 +141,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
 
 static bool isKnownMonotonic(VPValue *V) {
   VPValue *X, *Y;
+  // TODO: Check for hasNoUnsignedWrap() when we set nuw in VPlanUnroll
   if (match(V, m_Add(m_VPValue(X), m_VPValue(Y))))
-    cast<VPRecipeWithIRFlags>(V)->hasNoUnsignedWrap() && isKnownMonotonic(X) &&
-        isKnownMonotonic(Y);
+    return isKnownMonotonic(X) && isKnownMonotonic(Y);
   if (match(V, m_StepVector()))
     return true;
   // Only handle a subset of IVs until we can guarantee there's no overflow.
@@ -183,7 +183,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
         (Pred == CmpInst::ICMP_ULE || Pred == CmpInst::ICMP_ULT) &&
         isKnownMonotonic(LHS) &&
         (vputils::isUniformAcrossVFsAndUFs(RHS) ||
-         vputils::isSingleScalar(RHS)))
+         match(RHS, m_EVL(m_VPValue()))))
       continue;
 
     errs() << "LastActiveLane operand ";
