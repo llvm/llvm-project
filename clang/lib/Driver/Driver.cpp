@@ -421,8 +421,8 @@ Driver::executeProgram(llvm::ArrayRef<llvm::StringRef> Args) const {
   return std::move(*OutputBuf);
 }
 
-static Arg *MakeInputArg(DerivedArgList &Args, const OptTable &Opts,
-                         StringRef Value, bool Claim = true) {
+Arg *clang::driver::makeInputArg(DerivedArgList &Args, const OptTable &Opts,
+                                 StringRef Value, bool Claim) {
   Arg *A = new Arg(Opts.getOption(options::OPT_INPUT), Value,
                    Args.getBaseArgs().MakeIndex(Value), Value.data());
   Args.AddSynthesizedArg(A);
@@ -511,7 +511,7 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     if (A->getOption().matches(options::OPT__DASH_DASH)) {
       A->claim();
       for (StringRef Val : A->getValues())
-        DAL->append(MakeInputArg(*DAL, Opts, Val, false));
+        DAL->append(makeInputArg(*DAL, Opts, Val, false));
       continue;
     }
 
@@ -2318,7 +2318,14 @@ int Driver::ExecuteCompilation(
 
     if (!FailingCommand->getCreator().hasGoodDiagnostics() || CommandRes != 1) {
       // FIXME: See FIXME above regarding result code interpretation.
+#if LLVM_ON_UNIX
+      // On Unix, signals are represented by return codes of 128 plus the
+      // signal number. Return code 255 is excluded because some tools,
+      // such as llvm-ifs, exit with code 255 (-1) on failure.
+      if (CommandRes > 128 && CommandRes != 255)
+#else
       if (CommandRes < 0)
+#endif
         Diag(clang::diag::err_drv_command_signalled)
             << FailingTool.getShortName();
       else
@@ -3131,7 +3138,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       StringRef Value = A->getValue();
       if (DiagnoseInputExistence(Value, types::TY_C,
                                  /*TypoCorrect=*/false)) {
-        Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
+        Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_C, InputArg));
       }
       A->claim();
@@ -3139,7 +3146,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
       StringRef Value = A->getValue();
       if (DiagnoseInputExistence(Value, types::TY_CXX,
                                  /*TypoCorrect=*/false)) {
-        Arg *InputArg = MakeInputArg(Args, Opts, A->getValue());
+        Arg *InputArg = makeInputArg(Args, Opts, A->getValue());
         Inputs.push_back(std::make_pair(types::TY_CXX, InputArg));
       }
       A->claim();
@@ -3178,7 +3185,7 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
   if (CCCIsCPP() && Inputs.empty()) {
     // If called as standalone preprocessor, stdin is processed
     // if no other input is present.
-    Arg *A = MakeInputArg(Args, Opts, "-");
+    Arg *A = makeInputArg(Args, Opts, "-");
     Inputs.push_back(std::make_pair(types::TY_C, A));
   }
 }
@@ -3226,14 +3233,14 @@ class OffloadingActionBuilder final {
     DerivedArgList &Args;
 
     /// The inputs associated with this builder.
-    const Driver::InputList &Inputs;
+    const InputList &Inputs;
 
     /// The associated offload kind.
     Action::OffloadKind AssociatedOffloadKind = Action::OFK_None;
 
   public:
     DeviceActionBuilder(Compilation &C, DerivedArgList &Args,
-                        const Driver::InputList &Inputs,
+                        const InputList &Inputs,
                         Action::OffloadKind AssociatedOffloadKind)
         : C(C), Args(Args), Inputs(Inputs),
           AssociatedOffloadKind(AssociatedOffloadKind) {}
@@ -3330,8 +3337,7 @@ class OffloadingActionBuilder final {
 
   public:
     CudaActionBuilderBase(Compilation &C, DerivedArgList &Args,
-                          const Driver::InputList &Inputs,
-                          Action::OffloadKind OFKind)
+                          const InputList &Inputs, Action::OffloadKind OFKind)
         : DeviceActionBuilder(C, Args, Inputs, OFKind),
           CUIDOpts(C.getDriver().getCUIDOpts()) {
 
@@ -3502,7 +3508,7 @@ class OffloadingActionBuilder final {
   class CudaActionBuilder final : public CudaActionBuilderBase {
   public:
     CudaActionBuilder(Compilation &C, DerivedArgList &Args,
-                      const Driver::InputList &Inputs)
+                      const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_Cuda) {
       DefaultOffloadArch = OffloadArch::CudaDefault;
     }
@@ -3631,7 +3637,7 @@ class OffloadingActionBuilder final {
 
   public:
     HIPActionBuilder(Compilation &C, DerivedArgList &Args,
-                     const Driver::InputList &Inputs)
+                     const InputList &Inputs)
         : CudaActionBuilderBase(C, Args, Inputs, Action::OFK_HIP) {
 
       DefaultOffloadArch = OffloadArch::HIPDefault;
@@ -3892,7 +3898,7 @@ class OffloadingActionBuilder final {
 
 public:
   OffloadingActionBuilder(Compilation &C, DerivedArgList &Args,
-                          const Driver::InputList &Inputs)
+                          const InputList &Inputs)
       : C(C) {
     // Create a specialized builder for each device toolchain.
 
@@ -4378,14 +4384,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   handleArguments(C, Args, Inputs, Actions);
 
-  bool UseNewOffloadingDriver =
-      C.isOffloadingHostKind(Action::OFK_OpenMP) ||
-      C.isOffloadingHostKind(Action::OFK_SYCL) ||
-      Args.hasFlag(options::OPT_foffload_via_llvm,
-                   options::OPT_fno_offload_via_llvm, false) ||
-      Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver,
-                   C.isOffloadingHostKind(Action::OFK_Cuda));
+  bool UseNewOffloadingDriver = Args.hasFlag(
+      options::OPT_offload_new_driver, options::OPT_no_offload_new_driver,
+      C.getActiveOffloadKinds() != Action::OFK_None);
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
@@ -5007,8 +5008,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   bool ShouldBundleHIP =
       Args.hasFlag(options::OPT_gpu_bundle_output,
                    options::OPT_no_gpu_bundle_output, false) ||
-      (HIPNoRDC && offloadDeviceOnly() &&
-       llvm::none_of(OffloadActions, [](Action *A) {
+      (!Args.getLastArg(options::OPT_no_gpu_bundle_output) && HIPNoRDC &&
+       offloadDeviceOnly() && llvm::none_of(OffloadActions, [](Action *A) {
          return A->getType() != types::TY_Image;
        }));
 
@@ -5187,7 +5188,8 @@ Action *Driver::ConstructPhaseAction(
     // offload driver, where mid-end is done in linker wrapper.
     if (TargetDeviceOffloadKind == Action::OFK_HIP &&
         Args.hasFlag(options::OPT_offload_new_driver,
-                     options::OPT_no_offload_new_driver, false) &&
+                     options::OPT_no_offload_new_driver,
+                     C.getActiveOffloadKinds() != Action::OFK_None) &&
         !offloadDeviceOnly())
       return Input;
 
@@ -5244,7 +5246,8 @@ Action *Driver::ConstructPhaseAction(
          ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                         false) ||
            (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver, false) &&
+                         options::OPT_no_offload_new_driver,
+                         C.getActiveOffloadKinds() != Action::OFK_None) &&
             (!offloadDeviceOnly() ||
              (Input->getOffloadingToolChain() &&
               TargetDeviceOffloadKind == Action::OFK_HIP &&
@@ -5257,7 +5260,8 @@ Action *Driver::ConstructPhaseAction(
                    (TargetDeviceOffloadKind == Action::OFK_HIP &&
                     !Args.hasFlag(options::OPT_offload_new_driver,
                                   options::OPT_no_offload_new_driver,
-                                  C.isOffloadingHostKind(Action::OFK_Cuda))))
+                                  C.getActiveOffloadKinds() !=
+                                      Action::OFK_None)))
               ? types::TY_LLVM_IR
               : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);

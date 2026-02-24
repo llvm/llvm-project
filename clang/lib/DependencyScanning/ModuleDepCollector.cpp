@@ -664,6 +664,16 @@ void ModuleDepCollectorPP::EndOfMainFile() {
     MDC.Consumer.handlePrebuiltModuleDependency(I.second);
 }
 
+static StringRef makeAbsoluteAndCanonicalize(CompilerInstance &CI,
+                                             StringRef Path,
+                                             SmallVectorImpl<char> &Storage) {
+  // FIXME: Consider skipping if path is already absolute & canonicalized.
+
+  Storage.assign(Path.begin(), Path.end());
+  CI.getFileManager().makeAbsolutePath(Storage, /*Canonicalize=*/true);
+  return StringRef(Storage.data(), Storage.size());
+}
+
 std::optional<ModuleID>
 ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   assert(M == M->getTopLevelModule() && "Expected top level module!");
@@ -707,7 +717,10 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   serialization::ModuleFile *MF =
       MDC.ScanInstance.getASTReader()->getModuleManager().lookup(
           *M->getASTFile());
-  MD.FileDepsBaseDir = MF->BaseDirectory;
+
+  llvm::SmallString<256> Storage;
+  MD.FileDepsBaseDir =
+      makeAbsoluteAndCanonicalize(MDC.ScanInstance, MF->BaseDirectory, Storage);
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
@@ -948,27 +961,14 @@ void ModuleDepCollector::addVisibleModules() {
     InsertVisibleModules(Import);
 }
 
-static StringRef makeAbsoluteAndPreferred(CompilerInstance &CI, StringRef Path,
-                                          SmallVectorImpl<char> &Storage) {
-  if (llvm::sys::path::is_absolute(Path) &&
-      !llvm::sys::path::is_style_windows(llvm::sys::path::Style::native))
-    return Path;
-  Storage.assign(Path.begin(), Path.end());
-  CI.getFileManager().makeAbsolutePath(Storage);
-  llvm::sys::path::make_preferred(Storage);
-  return StringRef(Storage.data(), Storage.size());
-}
-
 void ModuleDepCollector::addFileDep(StringRef Path) {
-  if (Service.getOpts().Format == ScanningOutputFormat::P1689) {
-    // Within P1689 format, we don't want all the paths to be absolute path
-    // since it may violate the traditional make style dependencies info.
+  if (!Service.getOpts().ReportAbsolutePaths) {
     FileDeps.emplace_back(Path);
     return;
   }
 
   llvm::SmallString<256> Storage;
-  Path = makeAbsoluteAndPreferred(ScanInstance, Path, Storage);
+  Path = makeAbsoluteAndCanonicalize(ScanInstance, Path, Storage);
   FileDeps.emplace_back(Path);
 }
 

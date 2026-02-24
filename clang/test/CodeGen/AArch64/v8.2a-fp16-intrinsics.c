@@ -619,19 +619,3 @@ float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
 float16_t test_vsubh_f16(float16_t a, float16_t b) {
   return vsubh_f16(a, b);
 }
-
-// CHECK-LABEL: test_vfmah_f16
-// CHECK:  [[FMA:%.*]] = call half @llvm.fma.f16(half %b, half %c, half %a)
-// CHECK:  ret half [[FMA]]
-float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
-  return vfmah_f16(a, b, c);
-}
-
-// CHECK-LABEL: test_vfmsh_f16
-// CHECK:  [[SUB:%.*]] = fneg half %b
-// CHECK:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half %c, half %a)
-// CHECK:  ret half [[ADD]]
-float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
-  return vfmsh_f16(a, b, c);
-}
-
