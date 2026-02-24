@@ -54,6 +54,7 @@ class MIRParserImpl {
   yaml::Input In;
   StringRef Filename;
   SlotMapping IRSlots;
+  std::optional<unsigned> UnnamedFunctionID;
   std::unique_ptr<PerTargetMIParsingState> Target;
 
   /// True when the MIR file doesn't have LLVM IR. Dummy IR functions are
@@ -194,6 +195,10 @@ private:
 
   bool parseMachineInst(MachineFunction &MF, yaml::MachineInstrLoc MILoc,
                         MachineInstr const *&MI);
+
+  std::optional<unsigned> getFirstUnnamedFunctionID();
+
+  std::optional<unsigned> getNextUnnamedFunctionID();
 };
 
 } // end namespace llvm
@@ -250,6 +255,16 @@ void MIRParserImpl::reportDiagnostic(const SMDiagnostic &Diag) {
   Context.diagnose(DiagnosticInfoMIRParser(Kind, Diag));
 }
 
+std::optional<unsigned> MIRParserImpl::getFirstUnnamedFunctionID() {
+  for (unsigned ID = 0; ID < IRSlots.GlobalValues.getNext(); ++ID) {
+    auto *GV = IRSlots.GlobalValues.get(ID);
+    if (GV && GV->getValueType()->isFunctionTy())
+      return ID;
+  }
+
+  return std::nullopt;
+}
+
 std::unique_ptr<Module>
 MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
   if (!In.setCurrentDocument()) {
@@ -276,6 +291,7 @@ MIRParserImpl::parseIRModule(DataLayoutCallbackTy DataLayoutCallback) {
       reportDiagnostic(diagFromBlockStringDiag(Error, BSN->getSourceRange()));
       return nullptr;
     }
+    UnnamedFunctionID = getFirstUnnamedFunctionID();
     In.nextDocument();
     if (!In.setCurrentDocument())
       NoMIRDocuments = true;
@@ -319,6 +335,20 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   return F;
 }
 
+std::optional<unsigned> MIRParserImpl::getNextUnnamedFunctionID() {
+  if (!UnnamedFunctionID.has_value())
+    return std::nullopt;
+
+  for (unsigned ID = *UnnamedFunctionID + 1;
+       ID < IRSlots.GlobalValues.getNext(); ++ID) {
+    auto *GV = IRSlots.GlobalValues.get(ID);
+    if (GV && GV->getValueType()->isFunctionTy())
+      return ID;
+  }
+
+  return std::nullopt;
+}
+
 bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
                                          ModuleAnalysisManager *MAM) {
   // Parse the yaml.
@@ -339,6 +369,9 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
   if (!F) {
     if (NoLLVMIR) {
       F = createDummyFunction(FunctionName, M);
+    } else if (FunctionName.empty() && UnnamedFunctionID.has_value()) {
+      F = static_cast<Function *>(IRSlots.GlobalValues.get(*UnnamedFunctionID));
+      UnnamedFunctionID = getNextUnnamedFunctionID();
     } else {
       return error(Twine("function '") + FunctionName +
                    "' isn't defined in the provided LLVM IR");
