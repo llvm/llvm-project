@@ -369,6 +369,10 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   if (CannotBeSubnormal)
     Known.knownNot(fcSubnormal);
 
+  // Multiply of values <= 1 cannot introduce overflow.
+  if (KnownLHS.isKnownNever(fcInf) && MinKnownExponent <= 0)
+    Known.knownNot(fcInf);
+
   return Known;
 }
 

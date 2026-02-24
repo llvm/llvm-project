@@ -806,7 +806,7 @@ define float @ret_known_inf_or_nan_fmul_known_inf_or_nan(float nofpclass(norm su
 
 ; Cannot introduce overflow, propagate no-infs
 define float @ret_fmul__not_inf__half(float nofpclass(inf) %x) {
-; CHECK-LABEL: define float @ret_fmul__not_inf__half(
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__half(
 ; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 5.000000e-01
 ; CHECK-NEXT:    ret float [[MUL]]
@@ -837,7 +837,7 @@ define float @ret_fmul__not_ninf__half(float nofpclass(ninf) %x) {
 
 ; Cannot introduce overflow, propagate no-infs
 define float @ret_fmul__not_inf__1(float nofpclass(inf) %x) {
-; CHECK-LABEL: define float @ret_fmul__not_inf__1(
+; CHECK-LABEL: define nofpclass(inf) float @ret_fmul__not_inf__1(
 ; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 1.000000e+00
 ; CHECK-NEXT:    ret float [[MUL]]
