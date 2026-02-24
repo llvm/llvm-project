@@ -1086,6 +1086,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
   case Expr::ChooseExprClass:
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
+  case Expr::SubstNonTypeTemplateParmExprClass:
+    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
   }
 }
 
