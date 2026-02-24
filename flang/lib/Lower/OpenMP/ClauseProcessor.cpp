@@ -270,7 +270,7 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
     steps.push_back(r.step);
   }
 
-  auto itOp = mlir::omp::IteratorsOp::create(
+  auto itOp = mlir::omp::IteratorOp::create(
       builder, loc, iterTy, mlir::ValueRange{lbs}, mlir::ValueRange{ubs},
       mlir::ValueRange{steps});
 

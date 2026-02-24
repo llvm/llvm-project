@@ -118,7 +118,7 @@ subroutine task_affinity_iterator_simple()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_simple()
-! CHECK: %[[ITERATED:.*]] = omp.iterators(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[ITERATED:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c16 : (index) -> !fir.shape<1>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[IV]] : (!fir.ref<!fir.array<16xi32>>, !fir.shape<1>, index) -> !fir.ref<i32>
 ! CHECK:   %[[C4:.*]] = arith.constant 4 : i64
@@ -147,7 +147,7 @@ subroutine task_affinity_iterator_multi_dimension()
 end subroutine
 
 ! CHECK-LABEL: func.func @_QPtask_affinity_iterator_multi_dimension()
-! CHECK: %[[ITER:.*]] = omp.iterators(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+! CHECK: %[[ITER:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
 ! CHECK:   %[[SHAPE:.*]] = fir.shape %c4, %c6 : (index, index) -> !fir.shape<2>
 ! CHECK:   %[[COOR:.*]] = fir.array_coor {{.*}}(%[[SHAPE]]) %[[IV0]], %[[IV1]] : (!fir.ref<!fir.array<4x6xi32>>, !fir.shape<2>, index, index) -> !fir.ref<i32>
 ! CHECK:   %[[C4:.*]] = arith.constant 4 : i64
