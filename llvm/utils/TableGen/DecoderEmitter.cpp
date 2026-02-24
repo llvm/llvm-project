@@ -194,10 +194,6 @@ private:
   void parseInstructionEncodings();
 };
 
-} // end anonymous namespace
-
-namespace {
-
 struct EncodingIsland {
   unsigned StartBit;
   unsigned NumBits;
@@ -660,8 +656,14 @@ static std::vector<EncodingIsland> getIslands(const KnownBits &EncodingBits,
     if (!IsFiltered && IsKnown) {
       if (OnIsland) {
         // Accumulate island bits.
-        FieldVal |= static_cast<uint64_t>(EncodingBits.One[I])
-                    << (I - StartBit);
+        const unsigned BitNo = I - StartBit;
+        FieldVal |= static_cast<uint64_t>(EncodingBits.One[I]) << (BitNo);
+        // If island becomes larger than 64-bits complete the island and start a
+        // new one
+        if (BitNo >= 63) {
+          Islands.push_back({StartBit, 64, FieldVal});
+          OnIsland = false;
+        }
       } else {
         // Onto an island.
         StartBit = I;
@@ -696,8 +698,6 @@ static void emitBinaryParser(raw_ostream &OS, indent Indent,
 
   // Special case for 'bits<0>'.
   if (OpInfo.Fields.empty() && !OpInfo.InitValue) {
-    if (IgnoreNonDecodableOperands)
-      return;
     assert(!OpInfo.Decoder.empty());
     // The operand has no encoding, so the corresponding argument is omitted.
     // This avoids confusion and allows the function to be overloaded if the

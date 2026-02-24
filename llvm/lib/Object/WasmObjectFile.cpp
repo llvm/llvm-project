@@ -43,11 +43,20 @@ void WasmSymbol::print(raw_ostream &Out) const {
     case wasm::WASM_SYMBOL_BINDING_LOCAL: Out << "local"; break;
     case wasm::WASM_SYMBOL_BINDING_WEAK: Out << "weak"; break;
   }
-  if (isHidden()) {
+  if (isHidden())
     Out << ", hidden";
-  } else {
+  else
     Out << ", default";
-  }
+  if (Info.Flags & wasm::WASM_SYMBOL_NO_STRIP)
+    Out << ", no_strip";
+  if (Info.Flags & wasm::WASM_SYMBOL_TLS)
+    Out << ", tls";
+  if (Info.Flags & wasm::WASM_SYMBOL_ABSOLUTE)
+    Out << ", absolute";
+  if (Info.Flags & wasm::WASM_SYMBOL_EXPORTED)
+    Out << ", exported";
+  if (isUndefined())
+    Out << ", undefined";
   Out << "]";
   if (!isTypeData()) {
     Out << ", ElemIndex=" << Info.ElementIndex;
@@ -275,9 +284,9 @@ static Error readInitExpr(wasm::WasmInitExpr &Expr,
         Expr.Body = ArrayRef<uint8_t>(Start, Ctx.Ptr - Start);
         return Error::success();
       default:
-        return make_error<GenericBinaryError>(
-            Twine("invalid opcode in init_expr: ") + Twine(unsigned(Opcode)),
-            object_error::parse_failed);
+        return make_error<GenericBinaryError>("invalid opcode in init_expr: " +
+                                                  Twine(unsigned(Opcode)),
+                                              object_error::parse_failed);
       }
     }
   }
@@ -1267,60 +1276,86 @@ Error WasmObjectFile::parseTypeSection(ReadContext &Ctx) {
   return Error::success();
 }
 
+Error WasmObjectFile::parseImport(ReadContext &Ctx, wasm::WasmImport &Im) {
+  switch (Im.Kind) {
+  case wasm::WASM_EXTERNAL_FUNCTION:
+    NumImportedFunctions++;
+    Im.SigIndex = readVaruint32(Ctx);
+    if (Im.SigIndex >= Signatures.size())
+      return make_error<GenericBinaryError>("invalid function type",
+                                            object_error::parse_failed);
+    break;
+  case wasm::WASM_EXTERNAL_GLOBAL:
+    NumImportedGlobals++;
+    Im.Global.Type = readUint8(Ctx);
+    Im.Global.Mutable = readVaruint1(Ctx);
+    break;
+  case wasm::WASM_EXTERNAL_MEMORY:
+    Im.Memory = readLimits(Ctx);
+    if (Im.Memory.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
+      HasMemory64 = true;
+    break;
+  case wasm::WASM_EXTERNAL_TABLE: {
+    Im.Table = readTableType(Ctx);
+    NumImportedTables++;
+    auto ElemType = Im.Table.ElemType;
+    if (ElemType != wasm::ValType::FUNCREF &&
+        ElemType != wasm::ValType::EXTERNREF &&
+        ElemType != wasm::ValType::EXNREF &&
+        ElemType != wasm::ValType::OTHERREF)
+      return make_error<GenericBinaryError>("invalid table element type",
+                                            object_error::parse_failed);
+    break;
+  }
+  case wasm::WASM_EXTERNAL_TAG:
+    NumImportedTags++;
+    if (readUint8(Ctx) != 0) // Reserved 'attribute' field
+      return make_error<GenericBinaryError>("invalid attribute",
+                                            object_error::parse_failed);
+    Im.SigIndex = readVaruint32(Ctx);
+    if (Im.SigIndex >= Signatures.size())
+      return make_error<GenericBinaryError>("invalid tag type",
+                                            object_error::parse_failed);
+    break;
+  default:
+    return make_error<GenericBinaryError>("unexpected import kind: " +
+                                              Twine(unsigned(Im.Kind)),
+                                          object_error::parse_failed);
+  }
+  Imports.push_back(Im);
+  return Error::success();
+}
+
 Error WasmObjectFile::parseImportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
-  uint32_t NumTypes = Signatures.size();
   Imports.reserve(Count);
-  for (uint32_t I = 0; I < Count; I++) {
+  uint32_t I = 0;
+  while (I < Count) {
     wasm::WasmImport Im;
     Im.Module = readString(Ctx);
     Im.Field = readString(Ctx);
     Im.Kind = readUint8(Ctx);
-    switch (Im.Kind) {
-    case wasm::WASM_EXTERNAL_FUNCTION:
-      NumImportedFunctions++;
-      Im.SigIndex = readVaruint32(Ctx);
-      if (Im.SigIndex >= NumTypes)
-        return make_error<GenericBinaryError>("invalid function type",
-                                              object_error::parse_failed);
-      break;
-    case wasm::WASM_EXTERNAL_GLOBAL:
-      NumImportedGlobals++;
-      Im.Global.Type = readUint8(Ctx);
-      Im.Global.Mutable = readVaruint1(Ctx);
-      break;
-    case wasm::WASM_EXTERNAL_MEMORY:
-      Im.Memory = readLimits(Ctx);
-      if (Im.Memory.Flags & wasm::WASM_LIMITS_FLAG_IS_64)
-        HasMemory64 = true;
-      break;
-    case wasm::WASM_EXTERNAL_TABLE: {
-      Im.Table = readTableType(Ctx);
-      NumImportedTables++;
-      auto ElemType = Im.Table.ElemType;
-      if (ElemType != wasm::ValType::FUNCREF &&
-          ElemType != wasm::ValType::EXTERNREF &&
-          ElemType != wasm::ValType::EXNREF &&
-          ElemType != wasm::ValType::OTHERREF)
-        return make_error<GenericBinaryError>("invalid table element type",
-                                              object_error::parse_failed);
-      break;
+    // 0x7E/0x7F along with an empty Field signals a block of compact imports.
+    if (Im.Kind == 0x7E && Im.Field == "") {
+      return make_error<GenericBinaryError>(
+          "compact import format (0x7E) is not yet supported",
+          object_error::parse_failed);
+    } else if (Im.Kind == 0x7F && Im.Field == "") {
+      uint32_t NumCompactImports = readVaruint32(Ctx);
+      while (NumCompactImports--) {
+        Im.Field = readString(Ctx);
+        Im.Kind = readUint8(Ctx);
+        Error rtn = parseImport(Ctx, Im);
+        if (rtn)
+          return rtn;
+        I++;
+      }
+    } else {
+      Error rtn = parseImport(Ctx, Im);
+      if (rtn)
+        return rtn;
+      I++;
     }
-    case wasm::WASM_EXTERNAL_TAG:
-      NumImportedTags++;
-      if (readUint8(Ctx) != 0) // Reserved 'attribute' field
-        return make_error<GenericBinaryError>("invalid attribute",
-                                              object_error::parse_failed);
-      Im.SigIndex = readVaruint32(Ctx);
-      if (Im.SigIndex >= NumTypes)
-        return make_error<GenericBinaryError>("invalid tag type",
-                                              object_error::parse_failed);
-      break;
-    default:
-      return make_error<GenericBinaryError>("unexpected import kind",
-                                            object_error::parse_failed);
-    }
-    Imports.push_back(Im);
   }
   if (Ctx.Ptr != Ctx.End)
     return make_error<GenericBinaryError>("import section ended prematurely",

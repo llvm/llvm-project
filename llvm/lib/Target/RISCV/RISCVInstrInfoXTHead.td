@@ -60,6 +60,8 @@ def immfour : RISCVOp {
   let DecoderMethod = "decodeImmFourOperand";
 }
 
+def tuimm2 : TImmLeaf<XLenVT, [{return isUInt<2>(Imm);}]>;
+
 //===----------------------------------------------------------------------===//
 // Instruction class templates
 //===----------------------------------------------------------------------===//
@@ -255,13 +257,13 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
+  let VS1VS2Constraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>;
 }
 
 multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
     : THVdotVMAQA_VX<opcodestr, funct6> {
-  let RVVConstraint = WidenV, ElementsDependOn = EltDepsVLMask in
+  let VS1VS2Constraint = WidenV, ElementsDependOn = EltDepsVLMask in
   def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", EarlyClobber=1>;
 }
 
@@ -557,8 +559,8 @@ multiclass VPatTernaryVMAQA_VV_VX<string intrinsic, string instruction,
 let Predicates = [HasVendorXTHeadBa] in {
 def : Pat<(add_like_non_imm12 (shl GPR:$rs2, uimm2:$uimm2), (XLenVT GPR:$rs1)),
           (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
-def : Pat<(XLenVT (riscv_shl_add GPR:$rs2, uimm2:$uimm2, GPR:$rs1)),
-          (TH_ADDSL GPR:$rs1, GPR:$rs2, uimm2:$uimm2)>;
+def : Pat<(XLenVT (riscv_shl_add GPR:$rs2, tuimm2:$uimm2, GPR:$rs1)),
+          (TH_ADDSL GPR:$rs1, GPR:$rs2, tuimm2:$uimm2)>;
 
 // Reuse complex patterns from StdExtZba
 def : Pat<(add_like_non_imm12 sh1add_op:$rs2, (XLenVT GPR:$rs1)),

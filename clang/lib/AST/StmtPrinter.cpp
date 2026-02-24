@@ -151,11 +151,11 @@ namespace {
       else StmtVisitor<StmtPrinter>::Visit(S);
     }
 
-    void VisitStmt(Stmt *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitStmt(Stmt *Node) {
       Indent() << "<<unknown stmt type>>" << NL;
     }
 
-    void VisitExpr(Expr *Node) LLVM_ATTRIBUTE_UNUSED {
+    [[maybe_unused]] void VisitExpr(Expr *Node) {
       OS << "<<unknown expr type>>";
     }
 
@@ -491,6 +491,11 @@ void StmtPrinter::VisitBreakStmt(BreakStmt *Node) {
   if (Policy.IncludeNewlines) OS << NL;
 }
 
+void StmtPrinter::VisitDeferStmt(DeferStmt *Node) {
+  Indent() << "_Defer";
+  PrintControlledStmt(Node->getBody());
+}
+
 void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
   Indent() << "return";
   if (Node->getRetValue()) {
@@ -792,6 +797,11 @@ void StmtPrinter::VisitOMPReverseDirective(OMPReverseDirective *Node) {
 
 void StmtPrinter::VisitOMPInterchangeDirective(OMPInterchangeDirective *Node) {
   Indent() << "#pragma omp interchange";
+  PrintOMPExecutableDirective(Node);
+}
+
+void StmtPrinter::VisitOMPFuseDirective(OMPFuseDirective *Node) {
+  Indent() << "#pragma omp fuse";
   PrintOMPExecutableDirective(Node);
 }
 
@@ -1680,6 +1690,14 @@ void StmtPrinter::VisitArraySubscriptExpr(ArraySubscriptExpr *Node) {
   OS << "]";
 }
 
+void StmtPrinter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << "[";
+  PrintExpr(Node->getRowIdx());
+  OS << "]";
+}
+
 void StmtPrinter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *Node) {
   PrintExpr(Node->getBase());
   OS << "[";
@@ -1803,6 +1821,12 @@ void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {
 }
 
 void StmtPrinter::VisitExtVectorElementExpr(ExtVectorElementExpr *Node) {
+  PrintExpr(Node->getBase());
+  OS << ".";
+  OS << Node->getAccessor().getName();
+}
+
+void StmtPrinter::VisitMatrixElementExpr(MatrixElementExpr *Node) {
   PrintExpr(Node->getBase());
   OS << ".";
   OS << Node->getAccessor().getName();
@@ -2559,6 +2583,11 @@ void StmtPrinter::VisitCXXUnresolvedConstructExpr(
   }
   if (!Node->isListInitialization())
     OS << ')';
+}
+
+void StmtPrinter::VisitCXXReflectExpr(CXXReflectExpr *S) {
+  // TODO(Reflection): Implement this.
+  assert(false && "not implemented yet");
 }
 
 void StmtPrinter::VisitCXXDependentScopeMemberExpr(

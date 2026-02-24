@@ -132,7 +132,7 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     }
     if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
       if (const auto *ET = ECD->getType()->getAsCanonical<EnumType>())
-        removeFromFoundDecls(ET->getOriginalDecl());
+        removeFromFoundDecls(ET->getDecl());
     }
   };
   // We rely on the fact that the clang AST is walked in order, usages are only
@@ -161,9 +161,8 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       return;
     }
 
-    if (Used->getKind() == TemplateArgument::Declaration) {
+    if (Used->getKind() == TemplateArgument::Declaration)
       RemoveNamedDecl(Used->getAsDecl());
-    }
     return;
   }
 
@@ -173,10 +172,9 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   }
   // Check the uninstantiated template function usage.
   if (const auto *ULE = Result.Nodes.getNodeAs<UnresolvedLookupExpr>("used")) {
-    for (const NamedDecl *ND : ULE->decls()) {
+    for (const NamedDecl *ND : ULE->decls())
       if (const auto *USD = dyn_cast<UsingShadowDecl>(ND))
         removeFromFoundDecls(USD->getTargetDecl()->getCanonicalDecl());
-    }
     return;
   }
   // Check user-defined literals

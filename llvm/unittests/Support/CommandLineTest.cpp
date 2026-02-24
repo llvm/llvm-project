@@ -100,7 +100,7 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   static const char ArgString[] = "new-test-option";
   static const char ValueString[] = "Integer";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
 
   ASSERT_EQ(Map.count("test-option"), 1u) << "Could not find option in map.";
@@ -421,7 +421,7 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
   ASSERT_EQ(cl::NotHidden, TestOption2.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
@@ -447,7 +447,7 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   ASSERT_EQ(cl::NotHidden, TestOption3.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map =
+  DenseMap<StringRef, cl::Option *> &Map =
       cl::getRegisteredOptions(cl::SubCommand::getTopLevel());
   ASSERT_TRUE(Map.count("help") == (size_t)0 ||
               cl::NotHidden == Map["help"]->getOptionHiddenFlag())
@@ -2114,6 +2114,22 @@ TEST(CommandLineTest, ConsumeAfterTwoPositionals) {
   EXPECT_EQ(ExtraArgs.size(), 2u);
   EXPECT_EQ(ExtraArgs[0], "arg1");
   EXPECT_EQ(ExtraArgs[1], "arg2");
+  EXPECT_TRUE(Errs.empty());
+}
+
+TEST(CommandLineTest, ConsumeOptionalString) {
+  cl::ResetCommandLineParser();
+
+  StackOption<std::optional<std::string>, cl::opt<std::optional<std::string>>>
+      Input("input");
+
+  const char *Args[] = {"prog", "--input=\"value\""};
+
+  std::string Errs;
+  raw_string_ostream OS(Errs);
+  ASSERT_TRUE(cl::ParseCommandLineOptions(2, Args, StringRef(), &OS));
+  ASSERT_TRUE(Input.has_value());
+  EXPECT_EQ("\"value\"", *Input);
   EXPECT_TRUE(Errs.empty());
 }
 

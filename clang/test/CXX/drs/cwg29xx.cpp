@@ -38,7 +38,7 @@ struct A {
 #endif
 } // namespace cwg2915
 
-namespace cwg2917 { // cwg2917: 20 review 2024-07-30
+namespace cwg2917 { // cwg2917: 20
 #if __cplusplus >= 201103L
 template <typename>
 class Foo;
@@ -74,8 +74,10 @@ template<bool B> struct X {
 };
 
 void test() {
-  &X<true>::f;      // since-cxx20-error {{reference to overloaded function could not be resolved}}
-  &X<true>::g<int>; // since-cxx20-error {{reference to overloaded function could not be resolved}}
+  &X<true>::f;
+  // since-cxx20-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
+  &X<true>::g<int>;
+  // since-cxx20-error@-1 {{reference to overloaded function could not be resolved; did you mean to call it?}}
 }
 
 } // namespace Example1

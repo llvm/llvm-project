@@ -15,19 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 // A 7-bit unsigned immediate where the least significant three bits are zero.
-def uimm7_lsb000 : RISCVOp,
-                   ImmLeaf<XLenVT, [{return isShiftedUInt<4, 3>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<7, "Lsb000">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<7>";
-  let OperandType = "OPERAND_UIMM7_LSB000";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<4, 3>(Imm);
-  }];
-}
+def uimm7_lsb000 : RISCVUImmLsbZeroOp<7, 3>;
 
 // A 9-bit unsigned offset
 def uimm9 : RISCVUImmOp<9>;
@@ -175,7 +163,7 @@ def MIPS_CCMOV : RVInstR4<0b11, 0b011, OPC_CUSTOM_0, (outs GPR:$rd),
                  Sched<[]>;
 }
 
-let Predicates = [UseCCMovInsn] in {
+let Predicates = [UseMIPSCCMovInsn] in {
 def : Pat<(select (riscv_setne (XLenVT GPR:$rs2)),
                   (XLenVT GPR:$rs1), (XLenVT GPR:$rs3)),
           (MIPS_CCMOV GPR:$rs1, GPR:$rs2, GPR:$rs3)>;

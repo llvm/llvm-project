@@ -116,7 +116,7 @@ static void collectMDInDomain(const MDNode *List, const MDNode *Domain,
 
 /// Collect the set of scoped domains relevant to the noalias scopes.
 void ScopedNoAliasAAResult::collectScopedDomains(
-    const MDNode *NoAlias, SmallPtrSetImpl<const MDNode *> &Domains) const {
+    const MDNode *NoAlias, SmallPtrSetImpl<const MDNode *> &Domains) {
   if (!NoAlias)
     return;
   assert(Domains.empty() && "Domains should be empty");
@@ -127,7 +127,7 @@ void ScopedNoAliasAAResult::collectScopedDomains(
 }
 
 bool ScopedNoAliasAAResult::mayAliasInScopes(const MDNode *Scopes,
-                                             const MDNode *NoAlias) const {
+                                             const MDNode *NoAlias) {
   if (!Scopes || !NoAlias)
     return true;
 

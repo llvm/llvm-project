@@ -11,7 +11,6 @@
 // CHECK-RUN-QUIET-NOT: [1/1]
 // CHECK-RUN-QUIET: 42 is a magic number;
 
-// REQUIRES: shell
 // RUN: sed 's/42/99/' %s > %t-diff.cpp
 
 // RUN: not diff -U0 %s %t-diff.cpp | %clang_tidy_diff -checks=-*,readability-magic-numbers -quiet -hide-progress -- -std=c++11 2>&1 | FileCheck %s --check-prefix=CHECK-DIFF-QUIET

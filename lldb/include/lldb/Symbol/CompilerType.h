@@ -144,7 +144,13 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsComplexType() const;
+
+  /// Returns \c true for floating point types (including complex floats).
+  bool IsFloatingPointType() const;
+
+  /// Returns \c true for non-complex float types.
+  bool IsRealFloatingPointType() const;
 
   bool IsFunctionType() const;
 
@@ -198,8 +204,6 @@ public:
 
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
-
-  bool IsFloat() const;
 
   /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;
@@ -400,7 +404,7 @@ public:
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 

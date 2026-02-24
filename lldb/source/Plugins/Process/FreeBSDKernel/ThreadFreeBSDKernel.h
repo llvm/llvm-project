@@ -20,11 +20,6 @@ public:
 
   void RefreshStateAfterStop() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
-
-  lldb::RegisterContextSP
-  CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
-
   const char *GetName() override {
     if (m_thread_name.empty())
       return nullptr;
@@ -38,13 +33,20 @@ public:
       m_thread_name.clear();
   }
 
-protected:
+  lldb::RegisterContextSP GetRegisterContext() override;
+
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
+
+  void SetIsCrashedThread(bool is_crashed) { m_is_crashed = is_crashed; }
+
   bool CalculateStopInfo() override;
 
 private:
   std::string m_thread_name;
   lldb::RegisterContextSP m_thread_reg_ctx_sp;
   lldb::addr_t m_pcb_addr;
+  bool m_is_crashed = false;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_THREADFREEBSDKERNEL_H

@@ -1,5 +1,4 @@
-# RUN: %PYTHON %s pybind11 | FileCheck %s
-# RUN: %PYTHON %s nanobind | FileCheck %s
+# RUN: %PYTHON %s | FileCheck %s
 import sys
 import typing
 from typing import Union, Optional
@@ -10,26 +9,14 @@ import mlir.dialects.python_test as test
 import mlir.dialects.tensor as tensor
 import mlir.dialects.arith as arith
 
-if sys.argv[1] == "pybind11":
-    from mlir._mlir_libs._mlirPythonTestPybind11 import (
-        TestAttr,
-        TestType,
-        TestTensorValue,
-        TestIntegerRankedTensorType,
-    )
+from mlir._mlir_libs._mlirPythonTestNanobind import (
+    TestAttr,
+    TestType,
+    TestTensorValue,
+    TestIntegerRankedTensorType,
+)
 
-    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=False)
-elif sys.argv[1] == "nanobind":
-    from mlir._mlir_libs._mlirPythonTestNanobind import (
-        TestAttr,
-        TestType,
-        TestTensorValue,
-        TestIntegerRankedTensorType,
-    )
-
-    test.register_python_test_dialect(get_dialect_registry(), use_nanobind=True)
-else:
-    raise ValueError("Expected pybind11 or nanobind as argument")
+test.register_python_test_dialect(get_dialect_registry())
 
 
 def run(f):
@@ -554,7 +541,7 @@ def testOptionalOperandOp():
             )
             assert (
                 typing.get_type_hints(test.OptionalOperandOp.result.fget)["return"]
-                is OpResult
+                == OpResult[IntegerType]
             )
             assert type(op1.result) is OpResult
 
@@ -599,9 +586,18 @@ def testCustomAttribute():
         try:
             TestAttr(42)
         except TypeError as e:
-            assert "Expected an MLIR object (got 42)" in str(e)
-        except ValueError as e:
-            assert "Cannot cast attribute to TestAttr (from 42)" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_attr: mlir._mlir_libs._mlir.ir.Attribute) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestAttr, int"
+                in str(e)
+            )
         else:
             raise
 
@@ -626,12 +622,6 @@ def testCustomType():
         b = TestType(a)
         # Instance custom types should have typeids
         assert isinstance(b.typeid, TypeID)
-        # Subclasses of ir.Type should not have a static_typeid
-        # CHECK: 'TestType' object has no attribute 'static_typeid'
-        try:
-            b.static_typeid
-        except AttributeError as e:
-            print(e)
 
         i8 = IntegerType.get_signless(8)
         try:
@@ -646,9 +636,18 @@ def testCustomType():
         try:
             TestType(42)
         except TypeError as e:
-            assert "Expected an MLIR object (got 42)" in str(e)
-        except ValueError as e:
-            assert "Cannot cast type to TestType (from 42)" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_type: mlir._mlir_libs._mlir.ir.Type) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestType, int"
+                in str(e)
+            )
         else:
             raise
 
@@ -660,6 +659,13 @@ def testCustomType():
             pass
         else:
             raise
+
+
+@run
+# CHECK-LABEL: TEST: testValue
+def testValue():
+    # Check that Value is a generic class at runtime.
+    assert hasattr(Value, "__class_getitem__")
 
 
 @run
@@ -848,7 +854,7 @@ def testVariadicOperandAccess():
             variadic_operands = test.SameVariadicOperandSizeOp(
                 [zero, one], two, [three, four]
             )
-            # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
+            # CHECK: OpResult(%{{.*}} = arith.constant 2 : i32)
             print(variadic_operands.non_variadic)
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.non_variadic.fget)[
@@ -856,9 +862,9 @@ def testVariadicOperandAccess():
                 ]
                 is Value
             )
-            assert type(variadic_operands.non_variadic) is Value
+            assert type(variadic_operands.non_variadic) is OpResult
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 0 : i32)', 'OpResult(%{{.*}} = arith.constant 1 : i32)']
             print(values(variadic_operands.variadic1))
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.variadic1.fget)[
@@ -868,7 +874,7 @@ def testVariadicOperandAccess():
             )
             assert type(variadic_operands.variadic1) is OpOperandList
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 3 : i32)', 'OpResult(%{{.*}} = arith.constant 4 : i32)']
             print(values(variadic_operands.variadic2))
             assert type(variadic_operands.variadic2) is OpOperandList
 
@@ -904,7 +910,7 @@ def testVariadicResultAccess():
 
             assert (
                 typing.get_type_hints(test.same_variadic_result_vfv)["return"]
-                is Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
+                == Union[OpResult, OpResultList, test.SameVariadicResultSizeOpVFV]
             )
             assert (
                 type(test.same_variadic_result_vfv([i[0], i[1]], i[2], [i[3], i[4]]))
@@ -992,7 +998,7 @@ def testVariadicResultAccess():
 
             assert (
                 typing.get_type_hints(test.results_variadic)["return"]
-                is Union[OpResult, OpResultList, test.ResultsVariadicOp]
+                == Union[OpResult, OpResultList, test.ResultsVariadicOp]
             )
             assert type(test.results_variadic([i[0]])) is OpResult
             op_res_variadic = test.ResultsVariadicOp([i[0]])
@@ -1003,7 +1009,7 @@ def testVariadicResultAccess():
             assert type(op_res_variadic.res) is OpResultList
 
 
-# CHECK-LABEL: TEST: testVariadicAndNormalRegion
+# CHECK-LABEL: TEST: testVariadicAndNormalRegionOp
 @run
 def testVariadicAndNormalRegionOp():
     with Context() as ctx, Location.unknown(ctx):
@@ -1024,3 +1030,6 @@ def testVariadicAndNormalRegionOp():
                 is RegionSequence
             )
             assert type(region_op.variadic) is RegionSequence
+
+            assert isinstance(region_op.opview, OpView)
+            assert isinstance(region_op.operation.opview, OpView)

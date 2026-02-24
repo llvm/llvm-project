@@ -447,6 +447,9 @@ public:
   void VisitBTFTagAttributedType(const BTFTagAttributedType *T) {
     Visit(T->getWrappedType());
   }
+  void VisitOverflowBehaviorType(const OverflowBehaviorType *T) {
+    Visit(T->getUnderlyingType());
+  }
   void VisitHLSLAttributedResourceType(const HLSLAttributedResourceType *T) {
     QualType Contained = T->getContainedType();
     if (!Contained.isNull())
@@ -770,7 +773,7 @@ public:
       // it will not be in the parent context:
       if (auto *TT = D->getFriendType()->getType()->getAs<TagType>())
         if (TT->isTagOwned())
-          Visit(TT->getOriginalDecl());
+          Visit(TT->getDecl());
     } else {
       Visit(D->getFriendDecl());
     }

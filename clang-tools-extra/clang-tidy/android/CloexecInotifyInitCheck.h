@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_INOTIFY_INIT_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_INOTIFY_INIT_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECINOTIFYINITCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECINOTIFYINITCHECK_H
 
 #include "CloexecCheck.h"
 
@@ -16,7 +16,7 @@ namespace clang::tidy::android {
 /// inotify_init() is better to be replaced by inotify_init1().
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-inotify-init.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-inotify-init.html
 class CloexecInotifyInitCheck : public CloexecCheck {
 public:
   CloexecInotifyInitCheck(StringRef Name, ClangTidyContext *Context)
@@ -27,4 +27,4 @@ public:
 
 } // namespace clang::tidy::android
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_INOTIFY_INIT_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXECINOTIFYINITCHECK_H

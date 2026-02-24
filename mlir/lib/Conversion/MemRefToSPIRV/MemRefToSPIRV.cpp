@@ -134,14 +134,16 @@ static bool isAllocationSupported(Operation *allocOp, MemRefType type) {
     return false;
   }
 
-  // Currently only support static shape and int or float or vector of int or
-  // float element type.
+  // Currently only support static shape and int or float, complex of int or
+  // float, or vector of int or float element type.
   if (!type.hasStaticShape())
     return false;
 
   Type elementType = type.getElementType();
   if (auto vecType = dyn_cast<VectorType>(elementType))
     elementType = vecType.getElementType();
+  if (auto compType = dyn_cast<ComplexType>(elementType))
+    elementType = compType.getElementType();
   return elementType.isIntOrFloat();
 }
 
@@ -425,6 +427,42 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
   if (!ptr)
     return failure();
 
+  // Determine the source and destination bitwidths. The source is the original
+  // memref element type and the destination is the SPIR-V storage type (e.g.,
+  // i32 for Vulkan).
+  int srcBits = memrefType.getElementType().getIntOrFloatBitWidth();
+  auto pointerType = typeConverter.convertType<spirv::PointerType>(memrefType);
+  if (!pointerType)
+    return rewriter.notifyMatchFailure(atomicOp,
+                                       "failed to convert memref type");
+
+  Type pointeeType = pointerType.getPointeeType();
+  IntegerType dstType;
+  if (typeConverter.allows(spirv::Capability::Kernel)) {
+    if (auto arrayType = dyn_cast<spirv::ArrayType>(pointeeType))
+      dstType = dyn_cast<IntegerType>(arrayType.getElementType());
+    else
+      dstType = dyn_cast<IntegerType>(pointeeType);
+  } else {
+    Type structElemType =
+        cast<spirv::StructType>(pointeeType).getElementType(0);
+    if (auto arrayType = dyn_cast<spirv::ArrayType>(structElemType))
+      dstType = dyn_cast<IntegerType>(arrayType.getElementType());
+    else
+      dstType = dyn_cast<IntegerType>(
+          cast<spirv::RuntimeArrayType>(structElemType).getElementType());
+  }
+
+  if (!dstType)
+    return rewriter.notifyMatchFailure(
+        atomicOp, "failed to determine destination element type");
+
+  int dstBits = static_cast<int>(dstType.getWidth());
+  assert(dstBits % srcBits == 0);
+
+  // When the source and destination bitwidths match, emit the atomic operation
+  // directly.
+  if (srcBits == dstBits) {
 #define ATOMIC_CASE(kind, spirvOp)                                             \
   case arith::AtomicRMWKind::kind:                                             \
     rewriter.replaceOpWithNewOp<spirv::spirvOp>(                               \
@@ -432,19 +470,101 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
         spirv::MemorySemantics::AcquireRelease, adaptor.getValue());           \
     break
 
+    switch (atomicOp.getKind()) {
+      ATOMIC_CASE(addi, AtomicIAddOp);
+      ATOMIC_CASE(maxs, AtomicSMaxOp);
+      ATOMIC_CASE(maxu, AtomicUMaxOp);
+      ATOMIC_CASE(mins, AtomicSMinOp);
+      ATOMIC_CASE(minu, AtomicUMinOp);
+      ATOMIC_CASE(ori, AtomicOrOp);
+      ATOMIC_CASE(andi, AtomicAndOp);
+    default:
+      return rewriter.notifyMatchFailure(atomicOp, "unimplemented atomic kind");
+    }
+
+#undef ATOMIC_CASE
+
+    return success();
+  }
+
+  // Sub-element-width atomic: the element type (e.g., i8) is narrower than the
+  // storage type (e.g., i32). We need to adjust the index and shift/mask the
+  // value to operate on the correct bits within the wider storage element.
+  //
+  // Only ori and andi can be emulated because they operate bitwise and don't
+  // carry across byte boundaries. Other kinds (addi, max, min) would require
+  // CAS loops.
+  if (atomicOp.getKind() != arith::AtomicRMWKind::ori &&
+      atomicOp.getKind() != arith::AtomicRMWKind::andi) {
+    return rewriter.notifyMatchFailure(
+        atomicOp,
+        "atomic op on sub-element-width types is only supported for ori/andi");
+  }
+
+  // Bitcasting is currently unsupported for Kernel capability /
+  // spirv.PtrAccessChain.
+  if (typeConverter.allows(spirv::Capability::Kernel))
+    return rewriter.notifyMatchFailure(
+        atomicOp,
+        "sub-element-width atomic ops unsupported with Kernel capability");
+
+  auto accessChainOp = ptr.getDefiningOp<spirv::AccessChainOp>();
+  if (!accessChainOp)
+    return failure();
+
+  // Compute the bit offset within the storage element and adjust the pointer
+  // to address the containing storage element.
+  assert(accessChainOp.getIndices().size() == 2);
+  Value lastDim = accessChainOp->getOperand(accessChainOp.getNumOperands() - 1);
+  Value offset = getOffsetForBitwidth(loc, lastDim, srcBits, dstBits, rewriter);
+  Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
+                                                   srcBits, dstBits, rewriter);
+  Value result;
   switch (atomicOp.getKind()) {
-    ATOMIC_CASE(addi, AtomicIAddOp);
-    ATOMIC_CASE(maxs, AtomicSMaxOp);
-    ATOMIC_CASE(maxu, AtomicUMaxOp);
-    ATOMIC_CASE(mins, AtomicSMinOp);
-    ATOMIC_CASE(minu, AtomicUMinOp);
-    ATOMIC_CASE(ori, AtomicOrOp);
-    ATOMIC_CASE(andi, AtomicAndOp);
+  case arith::AtomicRMWKind::ori: {
+    // OR only sets bits, so shifting the value to the target position and
+    // ORing with zeros in other positions preserves the unaffected bits.
+    Value elemMask = rewriter.createOrFold<spirv::ConstantOp>(
+        loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
+    Value storeVal =
+        shiftValue(loc, adaptor.getValue(), offset, elemMask, rewriter);
+    result = spirv::AtomicOrOp::create(
+        rewriter, loc, dstType, adjustedPtr, *scope,
+        spirv::MemorySemantics::AcquireRelease, storeVal);
+    break;
+  }
+  case arith::AtomicRMWKind::andi: {
+    // Build a mask that preserves all bits outside the target element
+    // and applies the operand mask to the target element.
+    //   mask = (operand << offset) | ~(elemMask << offset)
+    Value elemMask = rewriter.createOrFold<spirv::ConstantOp>(
+        loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
+    Value storeVal =
+        shiftValue(loc, adaptor.getValue(), offset, elemMask, rewriter);
+    Value shiftedElemMask = rewriter.createOrFold<spirv::ShiftLeftLogicalOp>(
+        loc, dstType, elemMask, offset);
+    Value invertedElemMask =
+        rewriter.createOrFold<spirv::NotOp>(loc, dstType, shiftedElemMask);
+    Value mask = rewriter.createOrFold<spirv::BitwiseOrOp>(loc, storeVal,
+                                                           invertedElemMask);
+    result = spirv::AtomicAndOp::create(
+        rewriter, loc, dstType, adjustedPtr, *scope,
+        spirv::MemorySemantics::AcquireRelease, mask);
+    break;
+  }
   default:
     return rewriter.notifyMatchFailure(atomicOp, "unimplemented atomic kind");
   }
 
-#undef ATOMIC_CASE
+  // The atomic op returns the old value of the full storage element (e.g.,
+  // i32). Extract the original sub-element value from the correct position.
+  result = rewriter.createOrFold<spirv::ShiftRightLogicalOp>(loc, dstType,
+                                                             result, offset);
+  Value mask = rewriter.createOrFold<spirv::ConstantOp>(
+      loc, dstType, rewriter.getIntegerAttr(dstType, (1uLL << srcBits) - 1));
+  result =
+      rewriter.createOrFold<spirv::BitwiseAndOp>(loc, dstType, result, mask);
+  rewriter.replaceOp(atomicOp, result);
 
   return success();
 }
@@ -512,7 +632,7 @@ calculateMemoryRequirements(Value accessedPtr, bool isNontemporal,
   if (!sizeInBytes.has_value())
     return failure();
 
-  memoryAccess = memoryAccess | spirv::MemoryAccess::Aligned;
+  memoryAccess |= spirv::MemoryAccess::Aligned;
   auto memAccessAttr = spirv::MemoryAccessAttr::get(ctx, memoryAccess);
   auto alignmentValue = preferredAlignment ? preferredAlignment : *sizeInBytes;
   auto alignment = IntegerAttr::get(IntegerType::get(ctx, 32), alignmentValue);
@@ -699,6 +819,35 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
   return success();
 }
 
+template <typename OpAdaptor>
+static FailureOr<SmallVector<Value>>
+extractLoadCoordsForComposite(memref::LoadOp loadOp, OpAdaptor adaptor,
+                              ConversionPatternRewriter &rewriter) {
+  // At present we only support linear "tiling" as specified in Vulkan, this
+  // means that texels are assumed to be laid out in memory in a row-major
+  // order. This allows us to support any memref layout that is a permutation of
+  // the dimensions. Future work will pass an optional image layout to the
+  // rewrite pattern so that we can support optimized target specific tilings.
+  SmallVector<Value> indices = adaptor.getIndices();
+  AffineMap map = loadOp.getMemRefType().getLayout().getAffineMap();
+  if (!map.isPermutation())
+    return rewriter.notifyMatchFailure(
+        loadOp,
+        "Cannot lower memrefs with memory layout which is not a permutation");
+
+  // The memrefs layout determines the dimension ordering so we need to follow
+  // the map to get the ordering of the dimensions/indices.
+  const unsigned dimCount = map.getNumDims();
+  SmallVector<Value, 3> coords(dimCount);
+  for (unsigned dim = 0; dim < dimCount; ++dim)
+    coords[map.getDimPosition(dim)] = indices[dim];
+
+  // We need to reverse the coordinates because the memref layout is slowest to
+  // fastest moving and the vector coordinates for the image op is fastest to
+  // slowest moving.
+  return llvm::to_vector(llvm::reverse(coords));
+}
+
 LogicalResult
 ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
@@ -755,13 +904,17 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 
   // Build a vector of coordinates or just a scalar index if we have a 1D image.
   Value coords;
-  if (memrefType.getRank() != 1) {
+  if (memrefType.getRank() == 1) {
+    coords = adaptor.getIndices()[0];
+  } else {
+    FailureOr<SmallVector<Value>> maybeCoords =
+        extractLoadCoordsForComposite(loadOp, adaptor, rewriter);
+    if (failed(maybeCoords))
+      return failure();
     auto coordVectorType = VectorType::get({loadOp.getMemRefType().getRank()},
                                            adaptor.getIndices().getType()[0]);
     coords = spirv::CompositeConstructOp::create(rewriter, loc, coordVectorType,
-                                                 adaptor.getIndices());
-  } else {
-    coords = adaptor.getIndices()[0];
+                                                 maybeCoords.value());
   }
 
   // Fetch the value out of the image.

@@ -2162,6 +2162,10 @@ enum CXCursorKind {
    */
   CXCursor_OMPStripeDirective = 310,
 
+  /** OpenMP fuse directive
+   */
+  CXCursor_OMPFuseDirective = 311,
+
   /** OpenACC Compute Construct.
    */
   CXCursor_OpenACCComputeConstruct = 320,
@@ -6928,7 +6932,8 @@ enum CXUnaryOperatorKind {
   /** __extension__ marker operator. */
   CXUnaryOperator_Extension,
   /** C++ co_await operator. */
-  CXUnaryOperator_Coawait
+  CXUnaryOperator_Coawait,
+  CXUnaryOperator_Last = CXUnaryOperator_Coawait
 };
 
 /**

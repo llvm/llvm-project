@@ -28,9 +28,14 @@
 #include <functional>
 #include <vector>
 
+// Match the PluginInitCallback and PluginTermCallback signature. The generated
+// initializer always succeeds.
 #define LLDB_PLUGIN_DEFINE_ADV(ClassName, PluginName)                          \
-  namespace lldb_private {                                                     \
-  void lldb_initialize_##PluginName() { ClassName::Initialize(); }             \
+  extern "C" {                                                                 \
+  bool lldb_initialize_##PluginName() {                                        \
+    ClassName::Initialize();                                                   \
+    return true;                                                               \
+  }                                                                            \
   void lldb_terminate_##PluginName() { ClassName::Terminate(); }               \
   }
 
@@ -39,8 +44,8 @@
 
 // FIXME: Generate me with CMake
 #define LLDB_PLUGIN_DECLARE(PluginName)                                        \
-  namespace lldb_private {                                                     \
-  extern void lldb_initialize_##PluginName();                                  \
+  extern "C" {                                                                 \
+  extern bool lldb_initialize_##PluginName();                                  \
   extern void lldb_terminate_##PluginName();                                   \
   }
 
@@ -343,9 +348,11 @@ public:
   static lldb::RegisterTypeBuilderSP GetRegisterTypeBuilder(Target &target);
 
   // ScriptInterpreter
-  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
-                             lldb::ScriptLanguage script_lang,
-                             ScriptInterpreterCreateInstance create_callback);
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 lldb::ScriptLanguage script_lang,
+                 ScriptInterpreterCreateInstance create_callback,
+                 ScriptInterpreterGetPath get_path_callback = nullptr);
 
   static bool UnregisterPlugin(ScriptInterpreterCreateInstance create_callback);
 
@@ -355,6 +362,27 @@ public:
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
+
+  static FileSpec
+  GetScriptInterpreterLibraryPath(lldb::ScriptLanguage script_lang);
+
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_native_callback,
+                 ScriptedFrameProviderCreateInstance create_scripted_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(ScriptedFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
+
+  static ScriptedFrameProviderCreateInstance
+  GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx);
 
   // StructuredDataPlugin
 
@@ -469,8 +497,7 @@ public:
       llvm::StringRef schema,
       DebuggerInitializeCallback debugger_init_callback);
 
-  static bool
-  UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
+  static bool UnregisterPlugin(TraceCreateInstanceFromBundle create_callback);
 
   static TraceCreateInstanceFromBundle
   GetTraceCreateCallback(llvm::StringRef plugin_name);
@@ -601,6 +628,15 @@ public:
   static LanguageSet GetREPLSupportedLanguagesAtIndex(uint32_t idx);
 
   static LanguageSet GetREPLAllTypeSystemSupportedLanguages();
+
+  // Higlhighter
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             HighlighterCreateInstance create_callback);
+
+  static bool UnregisterPlugin(HighlighterCreateInstance create_callback);
+
+  static HighlighterCreateInstance
+  GetHighlighterCreateCallbackAtIndex(uint32_t idx);
 
   // Some plug-ins might register a DebuggerInitializeCallback callback when
   // registering the plug-in. After a new Debugger instance is created, this

@@ -5,14 +5,15 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-#include "Annotations.h"
 #include "AST.h"
+#include "Annotations.h"
 #include "ParsedAST.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "TestWorkspace.h"
 #include "XRefs.h"
 #include "index/MemIndex.h"
 #include "clang/AST/Decl.h"
@@ -52,6 +53,11 @@ MATCHER(declRange, "") {
   const LocatedSymbol &Sym = ::testing::get<0>(arg);
   const Range &Range = ::testing::get<1>(arg);
   return Sym.PreferredDeclaration.range == Range;
+}
+MATCHER(defRange, "") {
+  const LocatedSymbol &Sym = ::testing::get<0>(arg);
+  const Range &Range = ::testing::get<1>(arg);
+  return Sym.Definition.value_or(Sym.PreferredDeclaration).range == Range;
 }
 
 // Extracts ranges from an annotated example, and constructs a matcher for a
@@ -311,6 +317,7 @@ MATCHER_P3(sym, Name, Decl, DefOrNone, "") {
 MATCHER_P(sym, Name, "") { return arg.Name == Name; }
 
 MATCHER_P(rangeIs, R, "") { return arg.Loc.range == R; }
+MATCHER_P(fileIs, F, "") { return arg.Loc.uri.file() == F; }
 MATCHER_P(containerIs, C, "") {
   return arg.Loc.containerName.value_or("") == C;
 }
@@ -1876,8 +1883,8 @@ TEST(FindImplementations, Inheritance) {
       virtual void B$2^ar();
       void Concrete();  // No implementations for concrete methods.
     };
-    struct Child2 : Child1 {
-      void $3[[Foo]]() override;
+    struct $0[[Child2]] : Child1 {
+      void $1[[$3[[Foo]]]]() override;
       void $2[[Bar]]() override;
     };
     void FromReference() {
@@ -1919,6 +1926,42 @@ TEST(FindImplementations, Inheritance) {
           << Code.code() << " at " << Point << " for Label " << Label;
     }
   }
+}
+
+TEST(FindImplementations, InheritanceRecursion) {
+  // Make sure inheritance is followed, but does not diverge.
+  llvm::StringRef Test = R"cpp(
+    template <int>
+    struct Ev^en;
+
+    template <int>
+    struct Odd;
+
+    template <>
+    struct Even<0> {
+      static const bool value = true;
+    };
+
+    template <>
+    struct Odd<0> {
+      static const bool value = false;
+    };
+
+    template <int I>
+    struct [[Even]] : Odd<I - 1> {};
+
+    template <int I>
+    struct [[Odd]] : Even<I - 1> {};
+
+    constexpr bool Answer = Even<42>::value;
+  )cpp";
+
+  Annotations Code(Test);
+  auto TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+  EXPECT_THAT(findImplementations(AST, Code.point(), Index.get()),
+              UnorderedPointwise(defRange(), Code.ranges()));
 }
 
 TEST(FindImplementations, InheritanceObjC) {
@@ -2711,6 +2754,140 @@ TEST(FindReferences, NoQueryForLocalSymbols) {
     else
       EXPECT_EQ(Rec.RefIDs, std::nullopt) << T.AnnotatedCode;
   }
+}
+
+TEST(FindReferences, ConstructorForwardingInAST) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
+TEST(FindReferences, ConstructorForwardingInASTChained) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique2(Args &&...args) {
+      return make_unique<T>(forward<Args>(args)...);
+    }
+    template <class T, class... Args> T *make_unique3(Args &&...args) {
+      return make_unique2<T>(forward<Args>(args)...);
+    }
+    }
+
+    struct Test {
+      $Constructor[[T^est]](){}
+    };
+
+    int main() {
+      auto a = std::$Caller[[make_unique3]]<Test>();
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point(), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller"))));
+}
+
+TEST(FindReferences, ConstructorForwardingInIndex) {
+  Annotations Header(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+    struct Test {
+      [[T^est]](){}
+    };
+  )cpp");
+  Annotations Main(R"cpp(
+    #include "header.hpp"
+    int main() {
+      auto a = std::[[make_unique]]<Test>();
+    }
+  )cpp");
+  TestWorkspace TW;
+  TW.addSource("header.hpp", Header.code());
+  TW.addMainFile("main.cpp", Main.code());
+  auto AST = TW.openFile("header.hpp").value();
+  auto Index = TW.index();
+
+  EXPECT_THAT(
+      findReferences(AST, Header.point(), 0, Index.get(),
+                     /*AddContext*/ true)
+          .References,
+      ElementsAre(
+          AllOf(rangeIs(Header.range()), fileIs(testPath("header.hpp"))),
+          AllOf(rangeIs(Main.range()), fileIs(testPath("main.cpp")))));
+}
+
+TEST(FindReferences, TemplatedConstructorForwarding) {
+  Annotations Main(R"cpp(
+    namespace std {
+    template <class T> T &&forward(T &t);
+    template <class T, class... Args> T *make_unique(Args &&...args) {
+      return new T(std::forward<Args>(args)...);
+    }
+    }
+
+    struct Waldo {
+      template <typename T>
+      $Constructor[[W$Waldo^aldo]](T);
+    };
+    template <typename T>
+    struct Waldo2 {
+      $Constructor2[[W$Waldo2^aldo2]](int);
+    };
+    struct S {};
+
+    int main() {
+      S s;
+      Waldo $Caller[[w]](s);
+      std::$ForwardedCaller[[make_unique]]<Waldo>(s);
+
+      Waldo2<int> $Caller2[[w2]](42);
+      std::$ForwardedCaller2[[make_unique]]<Waldo2<int>>(42);
+    }
+  )cpp");
+  TestTU TU;
+  TU.Code = std::string(Main.code());
+  auto AST = TU.build();
+
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo"), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor")),
+                          rangeIs(Main.range("Caller")),
+                          rangeIs(Main.range("ForwardedCaller"))));
+
+  EXPECT_THAT(findReferences(AST, Main.point("Waldo2"), 0).References,
+              ElementsAre(rangeIs(Main.range("Constructor2")),
+                          rangeIs(Main.range("Caller2")),
+                          rangeIs(Main.range("ForwardedCaller2"))));
 }
 
 TEST(GetNonLocalDeclRefs, All) {

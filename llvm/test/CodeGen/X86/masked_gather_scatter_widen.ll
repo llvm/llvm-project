@@ -164,8 +164,7 @@ define <2 x i32> @test_gather_v2i32_data(<2 x ptr> %ptr, <2 x i1> %mask, <2 x i3
 ; WIDEN_SKX-LABEL: test_gather_v2i32_data:
 ; WIDEN_SKX:       # %bb.0:
 ; WIDEN_SKX-NEXT:    vpsllq $63, %xmm1, %xmm1
-; WIDEN_SKX-NEXT:    vpmovq2m %xmm1, %k0
-; WIDEN_SKX-NEXT:    kmovw %k0, %eax
+; WIDEN_SKX-NEXT:    vmovmskpd %xmm1, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
 ; WIDEN_SKX-NEXT:    jne .LBB2_1
 ; WIDEN_SKX-NEXT:  # %bb.2: # %else
@@ -226,8 +225,7 @@ define void @test_scatter_v2i32_data(<2 x i32>%a1, <2 x ptr> %ptr, <2 x i1>%mask
 ; WIDEN_SKX-LABEL: test_scatter_v2i32_data:
 ; WIDEN_SKX:       # %bb.0:
 ; WIDEN_SKX-NEXT:    vpsllq $63, %xmm2, %xmm2
-; WIDEN_SKX-NEXT:    vpmovq2m %xmm2, %k0
-; WIDEN_SKX-NEXT:    kmovw %k0, %eax
+; WIDEN_SKX-NEXT:    vmovmskpd %xmm2, %eax
 ; WIDEN_SKX-NEXT:    testb $1, %al
 ; WIDEN_SKX-NEXT:    jne .LBB3_1
 ; WIDEN_SKX-NEXT:  # %bb.2: # %else

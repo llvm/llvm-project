@@ -101,6 +101,7 @@ void parser<unsigned long long>::anchor() {}
 void parser<double>::anchor() {}
 void parser<float>::anchor() {}
 void parser<std::string>::anchor() {}
+void parser<std::optional<std::string>>::anchor() {}
 void parser<char>::anchor() {}
 
 // These anchor functions instantiate opt<T> and reference its virtual
@@ -145,6 +146,7 @@ static inline bool isPrefixedOrGrouping(const Option *O) {
          O->getFormattingFlag() == cl::AlwaysPrefix;
 }
 
+using OptionsMapTy = DenseMap<StringRef, Option *>;
 
 namespace {
 
@@ -278,7 +280,7 @@ public:
     auto End = Sub.OptionsMap.end();
     for (auto Name : OptionNames) {
       auto I = Sub.OptionsMap.find(Name);
-      if (I != End && I->getValue() == O)
+      if (I != End && I->second == O)
         Sub.OptionsMap.erase(I);
     }
 
@@ -373,7 +375,7 @@ public:
           O->hasArgStr())
         addOption(O, sub);
       else
-        addLiteralOption(*O, sub, E.first());
+        addLiteralOption(*O, sub, E.first);
     }
   }
 
@@ -381,7 +383,7 @@ public:
     RegisteredSubCommands.erase(sub);
   }
 
-  iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+  iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
   getRegisteredSubcommands() {
     return make_range(RegisteredSubCommands.begin(),
                       RegisteredSubCommands.end());
@@ -587,7 +589,7 @@ SubCommand *CommandLineParser::LookupSubCommand(StringRef Name,
 /// (after an equal sign) return that as well.  This assumes that leading dashes
 /// have already been stripped.
 static Option *LookupNearestOption(StringRef Arg,
-                                   const StringMap<Option *> &OptionsMap,
+                                   const OptionsMapTy &OptionsMap,
                                    std::string &NearestString) {
   // Reject all dashes.
   if (Arg.empty())
@@ -601,10 +603,7 @@ static Option *LookupNearestOption(StringRef Arg,
   // Find the closest match.
   Option *Best = nullptr;
   unsigned BestDistance = 0;
-  for (StringMap<Option *>::const_iterator it = OptionsMap.begin(),
-                                           ie = OptionsMap.end();
-       it != ie; ++it) {
-    Option *O = it->second;
+  for (const auto &[_, O] : OptionsMap) {
     // Do not suggest really hidden options (not shown in any help).
     if (O->getOptionHiddenFlag() == ReallyHidden)
       continue;
@@ -736,9 +735,9 @@ bool llvm::cl::ProvidePositionalOption(Option *Handler, StringRef Arg, int i) {
 //
 static Option *getOptionPred(StringRef Name, size_t &Length,
                              bool (*Pred)(const Option *),
-                             const StringMap<Option *> &OptionsMap) {
-  StringMap<Option *>::const_iterator OMI = OptionsMap.find(Name);
-  if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+                             const OptionsMapTy &OptionsMap) {
+  auto OMI = OptionsMap.find(Name);
+  if (OMI != OptionsMap.end() && !Pred(OMI->second))
     OMI = OptionsMap.end();
 
   // Loop while we haven't found an option and Name still has at least two
@@ -747,7 +746,7 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
   while (OMI == OptionsMap.end() && Name.size() > 1) {
     Name = Name.drop_back();
     OMI = OptionsMap.find(Name);
-    if (OMI != OptionsMap.end() && !Pred(OMI->getValue()))
+    if (OMI != OptionsMap.end() && !Pred(OMI->second))
       OMI = OptionsMap.end();
   }
 
@@ -762,10 +761,9 @@ static Option *getOptionPred(StringRef Name, size_t &Length,
 /// with at least one '-') does not fully match an available option.  Check to
 /// see if this is a prefix or grouped option.  If so, split arg into output an
 /// Arg/Value pair and return the Option to parse it with.
-static Option *
-HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
-                              bool &ErrorParsing,
-                              const StringMap<Option *> &OptionsMap) {
+static Option *HandlePrefixedOrGroupedOption(StringRef &Arg, StringRef &Value,
+                                             bool &ErrorParsing,
+                                             const OptionsMapTy &OptionsMap) {
   if (Arg.size() == 1)
     return nullptr;
 
@@ -2261,6 +2259,22 @@ void parser<std::string>::printOptionDiff(const Option &O, StringRef V,
   outs() << ")\n";
 }
 
+void parser<std::optional<std::string>>::printOptionDiff(
+    const Option &O, std::optional<StringRef> V,
+    const OptionValue<std::optional<std::string>> &D,
+    size_t GlobalWidth) const {
+  printOptionName(O, GlobalWidth);
+  outs() << "= " << V;
+  size_t VSize = V.has_value() ? V.value().size() : 0;
+  size_t NumSpaces = MaxOptWidth > VSize ? MaxOptWidth - VSize : 0;
+  outs().indent(NumSpaces) << " (default: ";
+  if (D.hasValue() && D.getValue().has_value())
+    outs() << D.getValue();
+  else
+    outs() << "*no value*";
+  outs() << ")\n";
+}
+
 // Print a placeholder for options that don't yet support printOptionDiff().
 void basic_parser_impl::printOptionNoValue(const Option &O,
                                            size_t GlobalWidth) const {
@@ -2283,13 +2297,12 @@ static int SubNameCompare(const std::pair<const char *, SubCommand *> *LHS,
 }
 
 // Copy Options into a vector so we can sort them as we like.
-static void sortOpts(StringMap<Option *> &OptMap,
+static void sortOpts(OptionsMapTy &OptMap,
                      SmallVectorImpl<std::pair<const char *, Option *>> &Opts,
                      bool ShowHidden) {
   SmallPtrSet<Option *, 32> OptionSet; // Duplicate option detection.
 
-  for (StringMap<Option *>::iterator I = OptMap.begin(), E = OptMap.end();
-       I != E; ++I) {
+  for (auto I = OptMap.begin(), E = OptMap.end(); I != E; ++I) {
     // Ignore really-hidden options.
     if (I->second->getOptionHiddenFlag() == ReallyHidden)
       continue;
@@ -2303,7 +2316,7 @@ static void sortOpts(StringMap<Option *> &OptMap,
       continue;
 
     Opts.push_back(
-        std::pair<const char *, Option *>(I->getKey().data(), I->second));
+        std::pair<const char *, Option *>(I->first.data(), I->second));
   }
 
   // Sort the options list alphabetically.
@@ -2326,10 +2339,10 @@ namespace {
 class HelpPrinter {
 protected:
   const bool ShowHidden;
-  typedef SmallVector<std::pair<const char *, Option *>, 128>
-      StrOptionPairVector;
-  typedef SmallVector<std::pair<const char *, SubCommand *>, 128>
-      StrSubCommandPairVector;
+  using StrOptionPairVector =
+      SmallVector<std::pair<const char *, Option *>, 128>;
+  using StrSubCommandPairVector =
+      SmallVector<std::pair<const char *, SubCommand *>, 128>;
   // Print the options. Opts is assumed to be alphabetically sorted.
   virtual void printOptions(StrOptionPairVector &Opts, size_t MaxArgLen) {
     for (const auto &Opt : Opts)
@@ -2543,7 +2556,7 @@ public:
 namespace {
 class VersionPrinter {
 public:
-  void print(std::vector<VersionPrinterTy> ExtraPrinters = {}) {
+  void print(const std::vector<VersionPrinterTy> &ExtraPrinters) {
     raw_ostream &OS = outs();
 #ifdef PACKAGE_VENDOR
     OS << PACKAGE_VENDOR << " ";
@@ -2805,7 +2818,7 @@ void cl::AddExtraVersionPrinter(VersionPrinterTy func) {
   CommonOptions->ExtraVersionPrinters.push_back(func);
 }
 
-StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
+OptionsMapTy &cl::getRegisteredOptions(SubCommand &Sub) {
   initCommonOptions();
   auto &Subs = GlobalParser->RegisteredSubCommands;
   (void)Subs;
@@ -2813,7 +2826,7 @@ StringMap<Option *> &cl::getRegisteredOptions(SubCommand &Sub) {
   return Sub.OptionsMap;
 }
 
-iterator_range<typename SmallPtrSet<SubCommand *, 4>::iterator>
+iterator_range<SmallPtrSet<SubCommand *, 4>::iterator>
 cl::getRegisteredSubcommands() {
   return GlobalParser->getRegisteredSubcommands();
 }

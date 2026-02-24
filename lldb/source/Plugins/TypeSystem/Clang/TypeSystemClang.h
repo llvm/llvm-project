@@ -44,6 +44,12 @@
 class DWARFASTParserClang;
 class PDBASTParser;
 
+namespace lldb_private {
+namespace npdb {
+class PdbAstBuilderClang;
+} // namespace npdb
+} // namespace lldb_private
+
 namespace clang {
 class FileManager;
 class HeaderSearch;
@@ -199,11 +205,6 @@ public:
   std::optional<ClangASTMetadata> GetMetadata(const clang::Decl *object);
   std::optional<ClangASTMetadata> GetMetadata(const clang::Type *object);
 
-  void SetCXXRecordDeclAccess(const clang::CXXRecordDecl *object,
-                              clang::AccessSpecifier access);
-  clang::AccessSpecifier
-  GetCXXRecordDeclAccess(const clang::CXXRecordDecl *object);
-
   // Basic Types
   CompilerType GetBuiltinTypeForEncodingAndBitSize(lldb::Encoding encoding,
                                                    size_t bit_size) override;
@@ -305,9 +306,6 @@ public:
 
   static clang::AccessSpecifier
   ConvertAccessTypeToAccessSpecifier(lldb::AccessType access);
-
-  static clang::AccessSpecifier
-  UnifyAccessSpecifiers(clang::AccessSpecifier lhs, clang::AccessSpecifier rhs);
 
   uint32_t GetNumBaseClasses(const clang::CXXRecordDecl *cxx_record_decl,
                              bool omit_empty_base_classes);
@@ -651,8 +649,7 @@ public:
 
   bool IsDefined(lldb::opaque_compiler_type_t type) override;
 
-  bool IsFloatingPointType(lldb::opaque_compiler_type_t type, uint32_t &count,
-                           bool &is_complex) override;
+  bool IsFloatingPointType(lldb::opaque_compiler_type_t type) override;
 
   unsigned GetPtrAuthKey(lldb::opaque_compiler_type_t type) override;
   unsigned GetPtrAuthDiscriminator(lldb::opaque_compiler_type_t type) override;
@@ -837,8 +834,7 @@ public:
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
 
-  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
-                             uint64_t &count) override;
+  lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type) override;
 
   lldb::Format GetFormat(lldb::opaque_compiler_type_t type) override;
 
@@ -938,6 +934,14 @@ public:
                               bool expand_pack) override;
 
   CompilerType GetTypeForFormatters(void *type) override;
+
+  // DIL
+
+  bool IsPromotableIntegerType(lldb::opaque_compiler_type_t type) override;
+
+  llvm::Expected<CompilerType>
+  DoIntegralPromotion(CompilerType from,
+                      ExecutionContextScope *exe_scope) override;
 
 #define LLDB_INVALID_DECL_LEVEL UINT32_MAX
   // LLDB_INVALID_DECL_LEVEL is returned by CountDeclLevels if child_decl_ctx
@@ -1215,7 +1219,7 @@ private:
   std::unique_ptr<clang::ModuleMap> m_module_map_up;
   std::unique_ptr<DWARFASTParserClang> m_dwarf_ast_parser_up;
   std::unique_ptr<PDBASTParser> m_pdb_ast_parser_up;
-  std::unique_ptr<npdb::PdbAstBuilder> m_native_pdb_ast_parser_up;
+  std::unique_ptr<npdb::PdbAstBuilderClang> m_native_pdb_ast_parser_up;
   std::unique_ptr<clang::MangleContext> m_mangle_ctx_up;
   uint32_t m_pointer_byte_size = 0;
   bool m_ast_owned = false;
@@ -1231,12 +1235,6 @@ private:
   typedef llvm::DenseMap<const clang::Type *, ClangASTMetadata> TypeMetadataMap;
   /// Maps Types to their associated ClangASTMetadata.
   TypeMetadataMap m_type_metadata;
-
-  typedef llvm::DenseMap<const clang::CXXRecordDecl *, clang::AccessSpecifier>
-      CXXRecordDeclAccessMap;
-  /// Maps CXXRecordDecl to their most recent added method/field's
-  /// AccessSpecifier.
-  CXXRecordDeclAccessMap m_cxx_record_decl_access;
 
   /// The sema associated that is currently used to build this ASTContext.
   /// May be null if we are already done parsing this ASTContext or the

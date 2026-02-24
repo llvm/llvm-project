@@ -38,31 +38,13 @@ define ptr @test(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[TMP0]]
 ; CHECK-NEXT:    store <2 x i32> [[PREDPHI]], ptr [[TMP14]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nsw <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP17]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
-; CHECK:       [[SCALAR_PH:.*]]:
-; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
-; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr inbounds i32, ptr [[SRC]], i64 [[IV]]
-; CHECK-NEXT:    [[CMP_1:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[CMP_1]], label %[[LOOP_LATCH]], label %[[THEN:.*]]
-; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
-; CHECK-NEXT:    br label %[[LOOP_LATCH]]
-; CHECK:       [[LOOP_LATCH]]:
-; CHECK-NEXT:    [[M:%.*]] = phi i32 [ [[L]], %[[THEN]] ], [ 0, %[[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[GEP_DST:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 [[IV]]
-; CHECK-NEXT:    store i32 [[M]], ptr [[GEP_DST]], align 4
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP_2:%.*]] = icmp slt i64 [[IV_NEXT]], 1000
-; CHECK-NEXT:    br i1 [[CMP_2]], label %[[LOOP_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[GEP_LCSSA:%.*]] = phi ptr [ [[GEP_SRC]], %[[LOOP_LATCH]] ], [ [[TMP2]], %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    ret ptr [[GEP_LCSSA]]
+; CHECK-NEXT:    ret ptr [[TMP2]]
 ;
 entry:
   br label %loop.header

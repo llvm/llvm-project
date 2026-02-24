@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_C_HEADERS_TO_CXX_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_C_HEADERS_TO_CXX_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_DEPRECATEDHEADERSCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_DEPRECATEDHEADERSCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -29,7 +29,7 @@ namespace clang::tidy::modernize {
 /// Example: ``<stdio.h> => <cstdio>``
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/deprecated-headers.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/modernize/deprecated-headers.html
 class DeprecatedHeadersCheck : public ClangTidyCheck {
 public:
   DeprecatedHeadersCheck(StringRef Name, ClangTidyContext *Context);
@@ -44,7 +44,7 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 
   struct IncludeMarker {
-    std::string Replacement;
+    StringRef Replacement;
     StringRef FileName;
     SourceRange ReplacementRange;
     SourceLocation DiagLoc;
@@ -57,4 +57,4 @@ private:
 
 } // namespace clang::tidy::modernize
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_C_HEADERS_TO_CXX_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_DEPRECATEDHEADERSCHECK_H

@@ -6,7 +6,7 @@ target triple = "i386--netbsd"
 @a = common global ptr null, align 4
 
 ; Function Attrs: noreturn nounwind readonly
-define i32 @fn1() #0 {
+define i32 @fn1() {
 ; CHECK-LABEL: define i32 @fn1(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -36,8 +36,6 @@ do.body:                                          ; preds = %do.body, %entry
   %add2 = add nsw i32 %add, 1
   br label %do.body
 }
-
-attributes #0 = { noreturn nounwind readonly "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !0 = !{!"any pointer", !1}
 !1 = !{!"omnipotent char", !2}

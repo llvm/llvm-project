@@ -905,12 +905,12 @@ TEST(ValueTracking, propagatesPoison) {
       {true, "call i32 @llvm.umin.i32(i32 %x, i32 %y)", 0},
       {true, "call i32 @llvm.bitreverse.i32(i32 %x)", 0},
       {true, "call i32 @llvm.bswap.i32(i32 %x)", 0},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
-      {false, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
-      {false, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {true, "call i32 @llvm.fshl.i32(i32 %x, i32 %y, i32 %shamt)", 2},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 0},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 1},
+      {true, "call i32 @llvm.fshr.i32(i32 %x, i32 %y, i32 %shamt)", 2},
       {true, "call float @llvm.sqrt.f32(float %fx)", 0},
       {true, "call float @llvm.powi.f32.i32(float %fx, i32 %x)", 0},
       {true, "call float @llvm.sin.f32(float %fx)", 0},
@@ -1089,6 +1089,16 @@ TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison) {
     EXPECT_FALSE(isGuaranteedNotToBeUndefOrPoison(V3));
     EXPECT_FALSE(isGuaranteedNotToBePoison(V3));
   }
+}
+
+TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_splat) {
+  parseAssembly(
+      "define <4 x i32> @test(i32 noundef %x) {\n"
+      "  %ins = insertelement <4 x i32> poison, i32 %x, i32 0\n"
+      "  %A = shufflevector <4 x i32> %ins, <4 x i32> poison, <4 x i32> zeroinitializer\n"
+      "  ret <4 x i32> %A\n"
+      "}");
+  EXPECT_TRUE(isGuaranteedNotToBeUndefOrPoison(A));
 }
 
 TEST_F(ValueTrackingTest, isGuaranteedNotToBeUndefOrPoison_assume) {
@@ -1570,19 +1580,18 @@ TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_NegSign) {
       "  %A = call float @llvm.copysign.f32(float %ninf, float -1.0)"
       "  ret float %A\n"
       "}\n");
-  expectKnownFPClass(fcNegFinite | fcNan, true);
+  expectKnownFPClass(fcNegZero | fcNegNormal | fcNan, true);
 }
 
 TEST_F(ComputeKnownFPClassTest, CopySignNInfSrc0_PosSign) {
-  parseAssembly(
-      "declare float @llvm.sqrt.f32(float)\n"
-      "declare float @llvm.copysign.f32(float, float)\n"
-      "define float @test(float %arg0, float %arg1) {\n"
-      "  %ninf = call ninf float @llvm.sqrt.f32(float %arg0)"
-      "  %A = call float @llvm.copysign.f32(float %ninf, float 1.0)"
-      "  ret float %A\n"
-      "}\n");
-  expectKnownFPClass(fcPosFinite | fcNan, false);
+  parseAssembly("declare float @llvm.sqrt.f32(float)\n"
+                "declare float @llvm.copysign.f32(float, float)\n"
+                "define float @test(float %arg0, float %arg1) {\n"
+                "  %ninf = call ninf float @llvm.log.f32(float %arg0)"
+                "  %A = call float @llvm.copysign.f32(float %ninf, float 1.0)"
+                "  ret float %A\n"
+                "}\n");
+  expectKnownFPClass(fcPosZero | fcPosNormal | fcNan, false);
 }
 
 TEST_F(ComputeKnownFPClassTest, UIToFP) {
@@ -1645,7 +1654,7 @@ TEST_F(ComputeKnownFPClassTest, FSub) {
 
 TEST_F(ComputeKnownFPClassTest, FMul) {
   parseAssembly(
-      "define float @test(float nofpclass(nan inf) %nnan.ninf0, float nofpclass(nan inf) %nnan.ninf1, float nofpclass(nan) %nnan, float nofpclass(qnan) %no.qnan, float %unknown) {\n"
+      "define float @test(float noundef nofpclass(nan inf) %nnan.ninf0, float noundef nofpclass(nan inf) %nnan.ninf1, float noundef nofpclass(nan) %nnan, float noundef nofpclass(qnan) %no.qnan, float noundef %unknown) {\n"
       "  %A = fmul float %nnan.ninf0, %nnan.ninf1"
       "  %A2 = fmul float %nnan.ninf0, %nnan"
       "  %A3 = fmul float %nnan, %nnan.ninf0"
@@ -1657,12 +1666,12 @@ TEST_F(ComputeKnownFPClassTest, FMul) {
   expectKnownFPClass(fcAllFlags, std::nullopt, A2);
   expectKnownFPClass(fcAllFlags, std::nullopt, A3);
   expectKnownFPClass(fcAllFlags, std::nullopt, A4);
-  expectKnownFPClass(fcPositive | fcNan, std::nullopt, A5);
+  expectKnownFPClass(fcPositive, false, A5);
 }
 
 TEST_F(ComputeKnownFPClassTest, FMulNoZero) {
   parseAssembly(
-      "define float @test(float nofpclass(zero) %no.zero, float nofpclass(zero nan) %no.zero.nan0, float nofpclass(zero nan) %no.zero.nan1, float nofpclass(nzero nan) %no.negzero.nan, float nofpclass(pzero nan) %no.poszero.nan, float nofpclass(inf nan) %no.inf.nan, float nofpclass(inf) %no.inf, float nofpclass(nan) %no.nan) {\n"
+      "define float @test(float noundef nofpclass(zero) %no.zero, float noundef nofpclass(zero nan) %no.zero.nan0, float noundef nofpclass(zero nan) %no.zero.nan1, float noundef nofpclass(nzero nan) %no.negzero.nan, float noundef nofpclass(pzero nan) %no.poszero.nan, float noundef nofpclass(inf nan) %no.inf.nan, float noundef nofpclass(inf) %no.inf, float noundef nofpclass(nan) %no.nan) {\n"
       "  %A = fmul float %no.zero.nan0, %no.zero.nan1"
       "  %A2 = fmul float %no.zero, %no.zero"
       "  %A3 = fmul float %no.poszero.nan, %no.zero.nan0"
@@ -2073,8 +2082,8 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
       "  ret float %A\n"
       "}\n");
 
-  const FPClassTest SqrtMask = fcPositive | fcNegZero | fcNan;
-  const FPClassTest NszSqrtMask = fcPositive | fcNan;
+  const FPClassTest SqrtMask = fcPosInf | fcPosNormal | fcZero | fcNan;
+  const FPClassTest NszSqrtMask = fcPosInf | fcPosNormal | fcPosZero | fcNan;
 
   {
     KnownFPClass UseInstrInfo =
@@ -2108,14 +2117,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfoNoNan =
         computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+    EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               UseInstrInfoNoNan.KnownFPClasses);
     EXPECT_EQ(std::nullopt, UseInstrInfoNoNan.SignBit);
 
     KnownFPClass NoUseInstrInfoNoNan =
         computeKnownFPClass(A3, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
-    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+    EXPECT_EQ(fcPosNormal | fcPosInf | fcZero | fcQNan,
               NoUseInstrInfoNoNan.KnownFPClasses);
     EXPECT_EQ(std::nullopt, NoUseInstrInfoNoNan.SignBit);
   }
@@ -2124,13 +2133,14 @@ TEST_F(ComputeKnownFPClassTest, SqrtNszSignBit) {
     KnownFPClass UseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/true);
-    EXPECT_EQ(fcPositive | fcQNan, UseInstrInfoNSZNoNan.KnownFPClasses);
+    EXPECT_EQ(fcPosInf | fcPosNormal | fcPosZero | fcQNan,
+              UseInstrInfoNSZNoNan.KnownFPClasses);
     EXPECT_EQ(std::nullopt, UseInstrInfoNSZNoNan.SignBit);
 
     KnownFPClass NoUseInstrInfoNSZNoNan =
         computeKnownFPClass(A4, M->getDataLayout(), fcAllFlags, nullptr,
                             nullptr, nullptr, nullptr, /*UseInstrInfo=*/false);
-    EXPECT_EQ(fcPositive | fcNegZero | fcQNan,
+    EXPECT_EQ(fcPosInf | fcPosNormal | fcZero | fcQNan,
               NoUseInstrInfoNSZNoNan.KnownFPClasses);
     EXPECT_EQ(std::nullopt, NoUseInstrInfoNSZNoNan.SignBit);
   }
@@ -2687,9 +2697,9 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRange) {
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load i64, ptr %p, !range !{i64 64, i64 65536}\n"
-      "  %APtr = inttoptr i64 %A to float*"
-      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
-      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  %APtr = inttoptr i64 %A to ptr"
+      "  %APtrPlus512 = getelementptr float, ptr %APtr, i32 128\n"
+      "  %c = icmp ugt ptr %APtrPlus512, inttoptr (i32 523 to ptr)\n"
       "  call void @llvm.assume(i1 %c)\n"
       "  ret void\n"
       "}\n"
@@ -2720,9 +2730,9 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load i64, ptr %p, !range !{i64 32, i64 64}\n"
-      "  %APtr = inttoptr i64 %A to float*"
-      "  %APtrPlus512 = getelementptr float, float* %APtr, i32 128\n"
-      "  %c = icmp ugt float* %APtrPlus512, inttoptr (i32 523 to float*)\n"
+      "  %APtr = inttoptr i64 %A to ptr"
+      "  %APtrPlus512 = getelementptr float, ptr %APtr, i32 128\n"
+      "  %c = icmp ugt ptr %APtrPlus512, inttoptr (i32 523 to ptr)\n"
       "  call void @llvm.assume(i1 %c)\n"
       "  ret void\n"
       "}\n"

@@ -278,6 +278,12 @@ class EnumAttrInfo<
   string parameterPrinter = ?;
 }
 
+// Decorates an enum attribute to have a default (unvalidated) default value
+// from a specific enum case if not present. The default value is constructed as
+// the fully-qualified enum case symbol.
+class DefaultValuedEnumAttr<EnumAttrInfo attr, EnumCase case>
+    : DefaultValuedAttr<attr, attr.cppType # "::" # case.symbol>;
+
 // An attribute holding a single integer value.
 class IntEnum<string name, string summary, list<EnumCase> cases, int width>
     : EnumInfo<name,

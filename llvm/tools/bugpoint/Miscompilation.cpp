@@ -28,21 +28,16 @@
 
 using namespace llvm;
 
-namespace llvm {
-extern cl::opt<std::string> OutputPrefix;
-extern cl::list<std::string> InputArgv;
-} // end namespace llvm
-
-namespace {
-static llvm::cl::opt<bool> DisableLoopExtraction(
+static cl::opt<bool> DisableLoopExtraction(
     "disable-loop-extraction",
     cl::desc("Don't extract loops when searching for miscompilations"),
     cl::init(false));
-static llvm::cl::opt<bool> DisableBlockExtraction(
+static cl::opt<bool> DisableBlockExtraction(
     "disable-block-extraction",
     cl::desc("Don't extract blocks when searching for miscompilations"),
     cl::init(false));
 
+namespace {
 class ReduceMiscompilingPasses : public ListReducer<std::string> {
   BugDriver &BD;
 
@@ -71,7 +66,7 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
     errs() << " Error running this sequence of passes"
            << " on the input program!\n";
     BD.setPassesToRun(Suffix);
-    BD.EmitProgressBitcode(BD.getProgram(), "pass-error", false);
+    BD.emitProgressBitcode(BD.getProgram(), "pass-error", false);
     // TODO: This should propagate the error instead of exiting.
     if (Error E = BD.debugOptimizerCrash())
       exit(1);
@@ -113,7 +108,7 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
     errs() << " Error running this sequence of passes"
            << " on the input program!\n";
     BD.setPassesToRun(Prefix);
-    BD.EmitProgressBitcode(BD.getProgram(), "pass-error", false);
+    BD.emitProgressBitcode(BD.getProgram(), "pass-error", false);
     // TODO: This should propagate the error instead of exiting.
     if (Error E = BD.debugOptimizerCrash())
       exit(1);
@@ -158,7 +153,7 @@ ReduceMiscompilingPasses::doTest(std::vector<std::string> &Prefix,
     errs() << " Error running this sequence of passes"
            << " on the input program!\n";
     BD.setPassesToRun(Suffix);
-    BD.EmitProgressBitcode(BD.getProgram(), "pass-error", false);
+    BD.emitProgressBitcode(BD.getProgram(), "pass-error", false);
     // TODO: This should propagate the error instead of exiting.
     if (Error E = BD.debugOptimizerCrash())
       exit(1);
@@ -253,7 +248,7 @@ ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function *> &Funcs) {
          << (Funcs.size() == 1 ? "this function is" : "these functions are")
          << " run through the pass"
          << (BD.getPassesToRun().size() == 1 ? "" : "es") << ":";
-  PrintFunctionList(Funcs);
+  printFunctionList(Funcs);
   outs() << '\n';
 
   // Create a clone for two reasons:
@@ -277,7 +272,7 @@ ReduceMiscompilingFunctions::TestFuncs(const std::vector<Function *> &Funcs) {
   VMap.clear();
   std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
   std::unique_ptr<Module> ToOptimize =
-      SplitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
+      splitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
 
   Expected<bool> Broken =
       TestFn(BD, std::move(ToOptimize), std::move(ToNotOptimize));
@@ -314,7 +309,7 @@ ExtractLoops(BugDriver &BD,
 
     ValueToValueMapTy VMap;
     std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
-    std::unique_ptr<Module> ToOptimize = SplitFunctionsOutOfModule(
+    std::unique_ptr<Module> ToOptimize = splitFunctionsOutOfModule(
         ToNotOptimize.get(), MiscompiledFunctions, VMap);
     std::unique_ptr<Module> ToOptimizeLoopExtracted =
         BD.extractLoop(ToOptimize.get());
@@ -517,7 +512,7 @@ ReduceMiscompiledBlocks::TestFuncs(const std::vector<BasicBlock *> &BBs) {
 
   std::unique_ptr<Module> ToNotOptimize = CloneModule(BD.getProgram(), VMap);
   std::unique_ptr<Module> ToOptimize =
-      SplitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
+      splitFunctionsOutOfModule(ToNotOptimize.get(), FuncsOnClone, VMap);
 
   // Try the extraction.  If it doesn't work, then the block extractor crashed
   // or something, in which case bugpoint can't chase down this possibility.
@@ -572,7 +567,7 @@ ExtractBlocks(BugDriver &BD,
   ValueToValueMapTy VMap;
   std::unique_ptr<Module> ProgClone = CloneModule(BD.getProgram(), VMap);
   std::unique_ptr<Module> ToExtract =
-      SplitFunctionsOutOfModule(ProgClone.get(), MiscompiledFunctions, VMap);
+      splitFunctionsOutOfModule(ProgClone.get(), MiscompiledFunctions, VMap);
   std::unique_ptr<Module> Extracted =
       BD.extractMappedBlocksFromModule(Blocks, ToExtract.get());
   if (!Extracted) {
@@ -638,7 +633,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
   outs() << "\n*** The following function"
          << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
          << " being miscompiled: ";
-  PrintFunctionList(MiscompiledFunctions);
+  printFunctionList(MiscompiledFunctions);
   outs() << '\n';
 
   // See if we can rip any loops out of the miscompiled functions and still
@@ -663,7 +658,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
       outs() << "\n*** The following function"
              << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
              << " being miscompiled: ";
-      PrintFunctionList(MiscompiledFunctions);
+      printFunctionList(MiscompiledFunctions);
       outs() << '\n';
     }
   }
@@ -686,7 +681,7 @@ static Expected<std::vector<Function *>> DebugAMiscompilation(
       outs() << "\n*** The following function"
              << (MiscompiledFunctions.size() == 1 ? " is" : "s are")
              << " being miscompiled: ";
-      PrintFunctionList(MiscompiledFunctions);
+      printFunctionList(MiscompiledFunctions);
       outs() << '\n';
     }
   }
@@ -708,7 +703,7 @@ static Expected<bool> TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
   if (!Optimized) {
     errs() << " Error running this sequence of passes"
            << " on the input program!\n";
-    BD.EmitProgressBitcode(*Test, "pass-error", false);
+    BD.emitProgressBitcode(*Test, "pass-error", false);
     BD.setNewProgram(std::move(Test));
     if (Error E = BD.debugOptimizerCrash())
       return std::move(E);
@@ -750,7 +745,7 @@ Error BugDriver::debugMiscompilation() {
   outs() << "\n*** Found miscompiling pass"
          << (getPassesToRun().size() == 1 ? "" : "es") << ": "
          << getPassesString(getPassesToRun()) << '\n';
-  EmitProgressBitcode(*Program, "passinput");
+  emitProgressBitcode(*Program, "passinput");
 
   Expected<std::vector<Function *>> MiscompiledFunctions =
       DebugAMiscompilation(*this, TestOptimizer);
@@ -762,15 +757,15 @@ Error BugDriver::debugMiscompilation() {
   ValueToValueMapTy VMap;
   Module *ToNotOptimize = CloneModule(getProgram(), VMap).release();
   Module *ToOptimize =
-      SplitFunctionsOutOfModule(ToNotOptimize, *MiscompiledFunctions, VMap)
+      splitFunctionsOutOfModule(ToNotOptimize, *MiscompiledFunctions, VMap)
           .release();
 
   outs() << "  Non-optimized portion: ";
-  EmitProgressBitcode(*ToNotOptimize, "tonotoptimize", true);
+  emitProgressBitcode(*ToNotOptimize, "tonotoptimize", true);
   delete ToNotOptimize; // Delete hacked module.
 
   outs() << "  Portion that is input to optimizer: ";
-  EmitProgressBitcode(*ToOptimize, "tooptimize");
+  emitProgressBitcode(*ToOptimize, "tooptimize");
   delete ToOptimize; // Delete hacked module.
 
   return Error::success();
@@ -842,23 +837,12 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
 
       // Don't forward functions which are external in the test module too.
       if (TestFn && !TestFn->isDeclaration()) {
-        // 1. Add a string constant with its name to the global file
+        // Add a string constant with its name to the global file
         Constant *InitArray =
             ConstantDataArray::getString(F->getContext(), F->getName());
         GlobalVariable *funcName = new GlobalVariable(
             *Safe, InitArray->getType(), true /*isConstant*/,
             GlobalValue::InternalLinkage, InitArray, F->getName() + "_name");
-
-        // 2. Use `GetElementPtr *funcName, 0, 0' to convert the string to an
-        // sbyte* so it matches the signature of the resolver function.
-
-        // GetElementPtr *funcName, ulong 0, ulong 0
-        std::vector<Constant *> GEPargs(
-            2, Constant::getNullValue(Type::getInt32Ty(F->getContext())));
-        Value *GEP = ConstantExpr::getGetElementPtr(InitArray->getType(),
-                                                    funcName, GEPargs);
-        std::vector<Value *> ResolverArgs;
-        ResolverArgs.push_back(GEP);
 
         // Rewrite uses of F in global initializers, etc. to uses of a wrapper
         // function that dynamically resolves the calls to F via our JIT API
@@ -890,8 +874,8 @@ CleanupAndPrepareModules(BugDriver &BD, std::unique_ptr<Module> Test,
 
           // Resolve the call to function F via the JIT API:
           //
-          // call resolver(GetElementPtr...)
-          CallInst *Resolver = CallInst::Create(resolverFunc, ResolverArgs,
+          // call resolver(funcName...)
+          CallInst *Resolver = CallInst::Create(resolverFunc, {funcName},
                                                 "resolver", LookupBB);
 
           // Save the value in our cache.
@@ -1028,7 +1012,7 @@ Error BugDriver::debugCodeGenerator() {
   ValueToValueMapTy VMap;
   std::unique_ptr<Module> ToNotCodeGen = CloneModule(getProgram(), VMap);
   std::unique_ptr<Module> ToCodeGen =
-      SplitFunctionsOutOfModule(ToNotCodeGen.get(), *Funcs, VMap);
+      splitFunctionsOutOfModule(ToNotCodeGen.get(), *Funcs, VMap);
 
   // Condition the modules
   ToCodeGen =
