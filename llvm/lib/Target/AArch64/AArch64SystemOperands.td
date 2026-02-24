@@ -899,7 +899,23 @@ multiclass TLBITableBase {
 }
 
 defm TLBI  : TLBITableBase;
-defm TLBIP : TLBITableBase;
+
+multiclass TLBIPTableBase {
+  def NAME # Table : GenericTable {
+    let FilterClass = NAME # "Entry";
+    let CppTypeName = NAME;
+    let Fields = ["Name", "Encoding", "NeedsReg", "OptionalReg", "RequiresStr",
+                  "d128orTLBID"];
+    let PrimaryKey = ["Encoding"];
+    let PrimaryKeyName = "lookup" # NAME # "ByEncoding";
+  }
+  def lookup # NAME # ByName : SearchIndex {
+    let Table = !cast<GenericTable>(NAME # "Table");
+    let Key = ["Name"];
+  }
+}
+
+defm TLBIP : TLBIPTableBase;
 
 class TLBI<string name, bits<3> op1, bits<4> crm, bits<3> op2,
            RegValue reguse, bit hasTLBIP = 0> {
