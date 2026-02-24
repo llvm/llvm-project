@@ -3264,7 +3264,7 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
 
   if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     /// There is no exp10 in GLSL. Use exp10(x) = exp2(x * log2(10)) instead
-    /// log2(10) ~= 3.3219280948874
+    /// log2(10) ~= 3.3219280948874l
 
     if (ResType->getOpcode() != SPIRV::OpTypeVector &&
         ResType->getOpcode() != SPIRV::OpTypeFloat)
@@ -3276,6 +3276,9 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
                                         ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
                                               ResType->getOperand(1).getReg()))
                                         : ResType;
+
+    assert(SpirvScalarType->getOperand(1).getImm() == 32 &&
+           "only float operands supported by GLSL extended math");
 
     Register ConstReg = GR.buildConstantFP(APFloat(3.3219280948874f),
                                            MIRBuilder, SpirvScalarType);
