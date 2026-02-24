@@ -66,6 +66,7 @@ def testIRDL():
         m.dump()
 
 
+# CHECK: TEST: testIRDLTypes
 @run
 def testIRDLTypes():
     with Context() as ctx, Location.unknown():
@@ -137,5 +138,83 @@ def testIRDLTypes():
         with InsertionPoint(m.body):
             Operation.create("irdl_type_test.op1", results=[t1])
 
+        assert m.operation.verify()
         # CHECK: %0 = "irdl_type_test.op1"() : () -> !irdl_type_test.type1<42 : i32>
+        m.dump()
+
+
+# CHECK: TEST: testIRDLAttrs
+@run
+def testIRDLAttrs():
+    with Context() as ctx, Location.unknown():
+        module = Module.create()
+        with InsertionPoint(module.body):
+            irdl_test = dialect("irdl_attr_test")
+            with InsertionPoint(irdl_test.body):
+                attr1 = attribute("attr1")
+                with InsertionPoint(attr1.body):
+                    iattr = base(base_name="#builtin.integer")
+                    parameters([iattr], ["val"])
+                attr2 = attribute("attr2")
+                with InsertionPoint(attr2.body):
+                    iattr = base(base_name="#builtin.integer")
+                    unit = is_(UnitAttr.get())
+                    parameters([iattr, unit], ["val1", "val2"])
+                op1 = operation_("op1")
+                with InsertionPoint(op1.body):
+                    a1 = base(base_ref=["irdl_attr_test", "attr1"])
+                    attributes_([a1], ["attr"])
+
+        # CHECK: module {
+        # CHECK:   irdl.dialect @irdl_attr_test {
+        # CHECK:     irdl.attribute @attr1 {
+        # CHECK:       %0 = irdl.base "#builtin.integer"
+        # CHECK:       irdl.parameters(val: %0)
+        # CHECK:     }
+        # CHECK:     irdl.attribute @attr2 {
+        # CHECK:       %0 = irdl.base "#builtin.integer"
+        # CHECK:       %1 = irdl.is unit
+        # CHECK:       irdl.parameters(val1: %0, val2: %1)
+        # CHECK:     }
+        # CHECK:     irdl.operation @op1 {
+        # CHECK:       %0 = irdl.base @irdl_attr_test::@attr1
+        # CHECK:       irdl.attributes {"attr" = %0}
+        # CHECK:     }
+        # CHECK:   }
+        # CHECK: }
+        module.operation.verify()
+        module.dump()
+
+        load_dialects(module)
+
+        i32 = IntegerType.get(32)
+        a1 = DynamicAttr.get("irdl_attr_test.attr1", [IntegerAttr.get(i32, 42)])
+        # CHECK: #irdl_attr_test.attr1<42 : i32>
+        a1.dump()
+        # CHECK: irdl_attr_test.attr1
+        print(a1.attr_name, file=sys.stderr)
+        # CHECK: 1
+        print(len(a1.params), file=sys.stderr)
+        # CHECK: 42 : i32
+        a1.params[0].dump()
+        a2 = DynamicAttr.get(
+            "irdl_attr_test.attr2", [IntegerAttr.get(i32, 33), UnitAttr.get()]
+        )
+        # CHECK: #irdl_attr_test.attr2<33 : i32, unit>
+        a2.dump()
+        # CHECK: irdl_attr_test.attr2
+        print(a2.attr_name, file=sys.stderr)
+        # CHECK: 2
+        print(len(a2.params), file=sys.stderr)
+        # CHECK: 33 : i32
+        a2.params[0].dump()
+        # CHECK: unit
+        a2.params[1].dump()
+
+        m = Module.create()
+        with InsertionPoint(m.body):
+            Operation.create("irdl_attr_test.op1", attributes={"attr": a1})
+
+        assert m.operation.verify()
+        # CHECK: "irdl_attr_test.op1"() {attr = #irdl_attr_test.attr1<42 : i32>} : () -> ()
         m.dump()
