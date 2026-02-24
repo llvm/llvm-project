@@ -5475,7 +5475,6 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
-    // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
     // fold (urem x, (lshr pow2, y)) -> (and x, (add (lshr pow2, y), -1))
     // TODO: We should sink the following into isKnownToBePowerOfTwo
     // using a OrZero parameter analogous to our handling in ValueTracking.
