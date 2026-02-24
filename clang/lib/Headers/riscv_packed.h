@@ -1,4 +1,4 @@
-/*===---- riscv_simd.h - RISC-V P intrinsics -------------------------------===
+/*===---- riscv_packed.h - RISC-V P intrinsics -----------------------------===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +7,8 @@
  *===-----------------------------------------------------------------------===
  */
 
-#ifndef __RISCV_SIMD_H
-#define __RISCV_SIMD_H
+#ifndef __RISCV_PACKED_H
+#define __RISCV_PACKED_H
 
 #include <stdint.h>
 
@@ -242,4 +242,4 @@ __riscv_psra_s_i32x2(int32x2_t __rs1, unsigned __shamt) {
 }
 #endif
 
-#endif /* __RISCV_SIMD_H */
+#endif /* __RISCV_PACKED_H */

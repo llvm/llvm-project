@@ -136,7 +136,7 @@ set(riscv_files
   riscv_mips.h
   riscv_nds.h
   riscv_ntlh.h
-  riscv_simd.h
+  riscv_packed.h
   sifive_vector.h
   )
 

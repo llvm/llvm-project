@@ -6,7 +6,7 @@
 // RUN:   -disable-O0-optnone -emit-llvm -o - %s \
 // RUN: | opt -S -passes=sroa,instcombine | FileCheck %s --check-prefix=RV64
 
-#include <riscv_simd.h>
+#include <riscv_packed.h>
 
 /* 32-bit Packed Addition and Subtraction */
 
