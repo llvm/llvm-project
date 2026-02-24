@@ -70,8 +70,8 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
-#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Program.h"
 #else
