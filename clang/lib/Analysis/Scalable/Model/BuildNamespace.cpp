@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <tuple>
 
@@ -68,6 +69,18 @@ bool NestedBuildNamespace::operator!=(const NestedBuildNamespace &Other) const {
 
 bool NestedBuildNamespace::operator<(const NestedBuildNamespace &Other) const {
   return Namespaces < Other.Namespaces;
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN) {
+  return OS << "BuildNamespace(" << toString(BN.Kind) << ", " << BN.Name << ")";
+}
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const NestedBuildNamespace &NBN) {
+  OS << "NestedBuildNamespace([";
+  llvm::interleaveComma(NBN.Namespaces, OS);
+  OS << "])";
+  return OS;
 }
 
 } // namespace clang::ssaf
