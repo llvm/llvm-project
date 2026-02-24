@@ -200,21 +200,3 @@ cir.func dso_local @invalid_unwind_with_catch_all() {
 }
 
 }
-
-// -----
-
-module {
-
-cir.func dso_local @handler_missing_eh_token_arg() {
-  cir.scope {
-    // expected-error @below {{handler region must have a single '!cir.eh_token' argument}}
-    cir.try {
-      cir.yield
-    } unwind {
-      cir.yield
-    }
-  }
-  cir.return
-}
-
-}

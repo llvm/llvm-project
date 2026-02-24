@@ -3834,19 +3834,12 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
       printer << "] ";
     }
 
-    // Print handler region block arguments (e.g. (%eh_token : !cir.eh_token))
-    // before the region body.
+    // Print the handler region's !cir.eh_token block argument.
     mlir::Region &region = handlerRegions[typeIdx];
-    if (!region.empty()) {
-      mlir::Block &entryBlock = region.front();
-      if (entryBlock.getNumArguments() > 0) {
-        printer << "(";
-        llvm::interleaveComma(entryBlock.getArguments(), printer,
-                              [&](mlir::BlockArgument arg) {
-                                printer.printRegionArgument(arg);
-                              });
-        printer << ") ";
-      }
+    if (!region.empty() && region.front().getNumArguments() > 0) {
+      printer << "(";
+      printer.printRegionArgument(region.front().getArgument(0));
+      printer << ") ";
     }
 
     printer.printRegion(region,
@@ -3865,18 +3858,16 @@ static mlir::ParseResult parseTryHandlerRegions(
 
     mlir::Region &currRegion = *handlerRegions.back();
 
-    // Parse optional region arguments: (%arg : type, ...)
+    // Parse the required region argument: (%eh_token : !cir.eh_token)
     llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
-    if (parser.parseOptionalLParen().succeeded()) {
-      do {
-        mlir::OpAsmParser::Argument arg;
-        if (parser.parseArgument(arg, /*allowType=*/true))
-          return failure();
-        regionArgs.push_back(arg);
-      } while (parser.parseOptionalComma().succeeded());
-      if (parser.parseRParen())
-        return failure();
-    }
+    if (parser.parseLParen())
+      return failure();
+    mlir::OpAsmParser::Argument arg;
+    if (parser.parseArgument(arg, /*allowType=*/true))
+      return failure();
+    regionArgs.push_back(arg);
+    if (parser.parseRParen())
+      return failure();
 
     mlir::SMLoc regionLoc = parser.getCurrentLocation();
     if (parser.parseRegion(currRegion, regionArgs)) {
