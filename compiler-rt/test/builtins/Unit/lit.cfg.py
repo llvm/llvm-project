@@ -165,6 +165,17 @@ builtins_is_msvc = get_required_attr(config, "builtins_is_msvc")
 if not builtins_is_msvc:
     config.available_features.add("int128")
 
+# Check if __int256 is supported by the target compiler
+import subprocess
+
+int256_check = subprocess.run(
+    [config.clang.strip(), "-x", "c", "-c", "-o", "/dev/null", "-"],
+    input=b"__int256_t x;",
+    capture_output=True,
+)
+if int256_check.returncode == 0:
+    config.available_features.add("int256")
+
 clang_wrapper = ""
 
 
