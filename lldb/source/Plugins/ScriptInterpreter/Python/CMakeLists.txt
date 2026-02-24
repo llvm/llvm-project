@@ -23,17 +23,17 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   PythonReadline.cpp
   ScriptInterpreterPython.cpp
 
-  Interface/OperatingSystemPythonInterface.cpp
-  Interface/ScriptInterpreterPythonInterfaces.cpp
-  Interface/ScriptedFramePythonInterface.cpp
-  Interface/ScriptedFrameProviderPythonInterface.cpp
-  Interface/ScriptedPlatformPythonInterface.cpp
-  Interface/ScriptedProcessPythonInterface.cpp
-  Interface/ScriptedPythonInterface.cpp
-  Interface/ScriptedStopHookPythonInterface.cpp
-  Interface/ScriptedBreakpointPythonInterface.cpp
-  Interface/ScriptedThreadPlanPythonInterface.cpp
-  Interface/ScriptedThreadPythonInterface.cpp
+  Interfaces/OperatingSystemPythonInterface.cpp
+  Interfaces/ScriptInterpreterPythonInterfaces.cpp
+  Interfaces/ScriptedFramePythonInterface.cpp
+  Interfaces/ScriptedFrameProviderPythonInterface.cpp
+  Interfaces/ScriptedPlatformPythonInterface.cpp
+  Interfaces/ScriptedProcessPythonInterface.cpp
+  Interfaces/ScriptedPythonInterface.cpp
+  Interfaces/ScriptedStopHookPythonInterface.cpp
+  Interfaces/ScriptedBreakpointPythonInterface.cpp
+  Interfaces/ScriptedThreadPlanPythonInterface.cpp
+  Interfaces/ScriptedThreadPythonInterface.cpp
 
   LINK_COMPONENTS
     Support
@@ -45,7 +45,6 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     lldbInterpreter
     lldbTarget
     lldbValueObject
-    lldbPluginScriptInterpreterPythonInterfaces
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
   )
