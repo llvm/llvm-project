@@ -999,7 +999,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
 
     if (Op.getOpcode() >= ISD::BUILTIN_OP_END)
       if (SDValue V = SimplifyMultipleUseDemandedBitsForTargetNode(
-              Op, DemandedBits, DemandedElts | DoNotPoisonEltMask, DAG, Depth))
+              Op, DemandedBits, DemandedElts, DoNotPoisonEltMask, DAG, Depth))
         return V;
     break;
   }
@@ -4103,7 +4103,7 @@ bool TargetLowering::SimplifyDemandedBitsForTargetNode(
 
 SDValue TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
     SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
-    SelectionDAG &DAG, unsigned Depth) const {
+    const APInt &DoNotPoisonEltMask, SelectionDAG &DAG, unsigned Depth) const {
   assert(
       (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
        Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
