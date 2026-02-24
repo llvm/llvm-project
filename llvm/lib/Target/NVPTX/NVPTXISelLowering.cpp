@@ -891,6 +891,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                        ISD::SIGN_EXTEND,
                        ISD::INTRINSIC_WO_CHAIN});
 
+  // If the vector operands require register coalescing, scalarize instead
+  if (STI.hasF32x2Instructions())
+    setTargetDAGCombine({ISD::FMA, ISD::FMUL, ISD::FSUB});
+
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
   if (STI.allowFP16Math() || STI.hasBF16Math())
@@ -6135,13 +6139,125 @@ static SDValue PerformADDCombine(SDNode *N,
   return PerformADDCombineWithOperands(N, N1, N0, DCI);
 }
 
+/// Check if a v2f32 BUILD_VECTOR provably packs values from non-adjacent
+/// register pairs (non-coalescable).
+static bool isNonCoalescableBuildVector(const SDValue &BV) {
+  if (BV.getOpcode() != ISD::BUILD_VECTOR || BV.getValueType() != MVT::v2f32)
+    return false;
+
+  SDValue Elt0 = BV.getOperand(0);
+  SDValue Elt1 = BV.getOperand(1);
+
+  bool IsExt0 = Elt0.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+  bool IsExt1 = Elt1.getOpcode() == ISD::EXTRACT_VECTOR_ELT;
+
+  // If neither element is an EXTRACT_VECTOR_ELT they are free-standing
+  // scalars and the register allocator can still place them side-by-side.
+  if (!IsExt0 && !IsExt1)
+    return false;
+
+  // If exactly one element is an EXTRACT_VECTOR_ELT, the other is a scalar
+  // that cannot generally occupy the adjacent register slot.
+  if (IsExt0 != IsExt1)
+    return true;
+
+  // At this point both sources are extracting from vectors. If they are from
+  // different vectors, then the BUILD_VECTOR is non-coalescable.
+  SDValue Src0 = Elt0.getOperand(0);
+  SDValue Src1 = Elt1.getOperand(0);
+  if (Src0 != Src1)
+    return true;
+
+  auto *Idx0 = dyn_cast<ConstantSDNode>(Elt0.getOperand(1));
+  auto *Idx1 = dyn_cast<ConstantSDNode>(Elt1.getOperand(1));
+  // If both indices are dynamic they will be lowered to
+  // loads and the vector will be spilled to local memory. The register
+  // allocator can easily place the results in adjacent registers.
+  if (!Idx0 && !Idx1)
+    return false;
+
+  // If one index is dynamic and the other is constant, the value from the
+  // constant load will result in an additional register to pair with the result
+  // from the dynamic load. We consider this non-coalescable.
+  if ((Idx0 && !Idx1) || (!Idx0 && Idx1))
+    return true;
+
+  // Both are constant, adjacent pairs are coalescable
+  return std::abs(Idx0->getSExtValue() - Idx1->getSExtValue()) != 1;
+}
+
+/// Scalarize a v2f32 arithmetic node (FADD, FMUL, FSUB, FMA) when at least
+/// one operand is a BUILD_VECTOR that repacks values from non-adjacent register
+/// pairs.  Without this combine the BUILD_VECTOR forces allocation of a
+/// temporary 64-bit register, increasing register pressure.
+///
+/// Example - before:
+///   t0: v2f32,v2f32,ch = LoadV2 ...
+///   t1: f32 = extract_vector_elt t0, 0
+///   t2: f32 = extract_vector_elt t0:1, 0
+///   t3: v2f32 = BUILD_VECTOR t1, t2       ;; non-coalescable repack
+///   t4: v2f32 = fma t_a, t3, t_c
+///
+/// After:
+///   t0: v2f32,v2f32,ch = LoadV2 ...
+///   t1: f32 = extract_vector_elt t0, 0
+///   t2: f32 = extract_vector_elt t0:1, 0
+///   a0: f32 = extract_vector_elt t_a, 0
+///   a1: f32 = extract_vector_elt t_a, 1
+///   c0: f32 = extract_vector_elt t_c, 0
+///   c1: f32 = extract_vector_elt t_c, 1
+///   r0: f32 = fma a0, t1, c0
+///   r1: f32 = fma a1, t2, c1
+///   t4: v2f32 = BUILD_VECTOR r0, r1
+static SDValue PerformScalarizeV2F32Op(SDNode *N,
+                                       TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+  if (VT != MVT::v2f32)
+    return SDValue();
+
+  // Only scalarize when at least one operand is a BUILD_VECTOR whose elements
+  // are guaranteed to reside in different register pairs.
+  if (none_of(N->ops(), isNonCoalescableBuildVector))
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+  EVT EltVT = VT.getVectorElementType();
+  unsigned Opc = N->getOpcode();
+
+  // For each operand, get the scalar element at the given index: if the operand
+  // is a BUILD_VECTOR, grab the element directly; otherwise, emit an
+  // EXTRACT_VECTOR_ELT.
+  auto GetElement = [&](SDValue Op, unsigned Index) -> SDValue {
+    if (Op.getOpcode() == ISD::BUILD_VECTOR)
+      return Op.getOperand(Index);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Op,
+                       DAG.getVectorIdxConstant(Index, DL));
+  };
+
+  // Build scalar operand lists for element 0 and element 1.
+  SmallVector<SDValue, 3> Ops0, Ops1;
+  for (const SDValue &Op : N->ops()) {
+    Ops0.push_back(GetElement(Op, 0));
+    Ops1.push_back(GetElement(Op, 1));
+  }
+
+  SDValue Res0 = DAG.getNode(Opc, DL, EltVT, Ops0, N->getFlags());
+  SDValue Res1 = DAG.getNode(Opc, DL, EltVT, Ops1, N->getFlags());
+
+  return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Res0, Res1);
+}
+
 /// PerformFADDCombine - Target-specific dag combine xforms for ISD::FADD.
 ///
 static SDValue PerformFADDCombine(SDNode *N,
-                                 TargetLowering::DAGCombinerInfo &DCI,
-                                 CodeGenOptLevel OptLevel) {
+                                  TargetLowering::DAGCombinerInfo &DCI,
+                                  CodeGenOptLevel OptLevel) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
+
+  if (SDValue Result = PerformScalarizeV2F32Op(N, DCI))
+    return Result;
 
   EVT VT = N0.getValueType();
   if (VT.isVector() || !(VT == MVT::f32 || VT == MVT::f64))
@@ -6993,6 +7109,10 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformEXTRACTCombine(N, DCI);
   case ISD::FADD:
     return PerformFADDCombine(N, DCI, OptLevel);
+  case ISD::FMA:
+  case ISD::FMUL:
+  case ISD::FSUB:
+    return PerformScalarizeV2F32Op(N, DCI);
   case ISD::FMAXNUM:
   case ISD::FMINNUM:
   case ISD::FMAXIMUM:
