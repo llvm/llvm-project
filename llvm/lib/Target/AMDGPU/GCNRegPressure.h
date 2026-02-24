@@ -324,7 +324,10 @@ protected:
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
-  GCNRPTracker(const LiveIntervals &LIS_) : LIS(LIS_) {}
+  GCNRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &Info)
+      : LIS(LIS), MRI(&Info) {
+    PhysLiveRegs.init(*MRI);
+  }
 
   // Copy constructor - PhysLiveRegs must be initialized then copied.
   GCNRPTracker(const GCNRPTracker &Other)
@@ -372,11 +375,6 @@ protected:
   bool insertAllNotLiveUnits(Register Reg);
 
 public:
-  // Initialize PhysLiveRegs capacity. Must be called before first use.
-  void initPhysLiveRegs(const MachineRegisterInfo &MRI) {
-    PhysLiveRegs.init(MRI);
-  }
-
   // Enable physical register tracking. Should only be called when GCNTrackers
   // are enabled to avoid changing behavior when using generic trackers.
   void enablePhysTracking() { TrackPhysRegs = true; }
@@ -423,7 +421,8 @@ getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNUpwardRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
+      : GCNRPTracker(LIS, MRI) {}
 
   using GCNRPTracker::reset;
 
@@ -474,7 +473,8 @@ class GCNDownwardRPTracker : public GCNRPTracker {
   MachineBasicBlock::const_iterator MBBEnd;
 
 public:
-  GCNDownwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNDownwardRPTracker(const LiveIntervals &LIS, const MachineRegisterInfo &MRI)
+      : GCNRPTracker(LIS, MRI) {}
 
   using GCNRPTracker::reset;
 

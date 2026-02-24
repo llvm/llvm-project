@@ -113,8 +113,8 @@ const unsigned ScheduleMetrics::ScaleFactor = 100;
 
 GCNSchedStrategy::GCNSchedStrategy(const MachineSchedContext *C)
     : GenericScheduler(C), TargetOccupancy(0), MF(nullptr),
-      DownwardTracker(*C->LIS), UpwardTracker(*C->LIS), HasHighPressure(false) {
-}
+      DownwardTracker(*C->LIS, C->MF->getRegInfo()),
+      UpwardTracker(*C->LIS, C->MF->getRegInfo()), HasHighPressure(false) {}
 
 void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   GenericScheduler::initialize(DAG);
@@ -993,8 +993,7 @@ GCNRegPressure
 GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
   if (Regions[RegionIdx].first == Regions[RegionIdx].second)
     return llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
-  GCNDownwardRPTracker RPTracker(*LIS);
-  RPTracker.initPhysLiveRegs(MF.getRegInfo());
+  GCNDownwardRPTracker RPTracker(*LIS, MF.getRegInfo());
   if (GCNTrackers && TrackPhysRegInTrackers)
     RPTracker.enablePhysTracking();
   RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
@@ -1010,8 +1009,7 @@ static MachineInstr *getLastMIForRegion(MachineBasicBlock::iterator RegionBegin,
 
 void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
                                                 const MachineBasicBlock *MBB) {
-  GCNDownwardRPTracker RPTracker(*LIS);
-  RPTracker.initPhysLiveRegs(MF.getRegInfo());
+  GCNDownwardRPTracker RPTracker(*LIS, MF.getRegInfo());
   if (GCNTrackers && TrackPhysRegInTrackers)
     RPTracker.enablePhysTracking();
 
@@ -1161,9 +1159,6 @@ void GCNScheduleDAGMILive::runSchedStages() {
 #endif
 
   GCNSchedStrategy &S = static_cast<GCNSchedStrategy &>(*SchedImpl);
-  // Initialize physical register tracking in GCN trackers.
-  S.getDownwardTracker()->initPhysLiveRegs(MF.getRegInfo());
-  S.getUpwardTracker()->initPhysLiveRegs(MF.getRegInfo());
   if (GCNTrackers && TrackPhysRegInTrackers) {
     S.getDownwardTracker()->enablePhysTracking();
     S.getUpwardTracker()->enablePhysTracking();
