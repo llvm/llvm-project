@@ -3458,16 +3458,17 @@ the change in behavior. There are four kinds of tests:
   emitted at specific source lines. Those tests are using ``-verify`` mode of
   ``-cc1``, which is described below in
   :ref:`"Verifying Diagnostics" <verifying-diagnostics>`. Additional
-  provisions for tests for C++ defect reports are described in ... section. 
-* AST dump tests: such tests pass AST dump to
+  provisions for tests for C++ defect reports are described in
+  :ref:`"C++ Defect Report Tests" <cxx-defect-report-tests>` section.
+* AST dump tests: such tests pass printable AST output to
   `FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
   which check presence of certain patterns (or lack of thereof).
-* LLVM IR tests: in such tests LLVM IR output of Clang is checked, which is
-  needed in cases when checking diagnostics is not sufficient (e.g. when
+* LLVM IR tests: in such tests, the LLVM IR output of Clang is checked, which
+  is needed in cases when checking diagnostics is not sufficient (e.g. when
   testing exception handling or object lifetime). Such tests pass LLVM IR
-  output to
+  output to the
   `FileCheck <https://llvm.org/docs/CommandGuide/FileCheck.html>`_ utility,
-  which check presence of certain IR patterns (or lack of thereof).
+  which check the presence of certain IR patterns (or lack of thereof).
 
 .. _verifying-diagnostics:
 
@@ -3494,24 +3495,51 @@ appear, the diagnostic verifier will fail and emit information as to why.
 
 Directive Syntax
 ~~~~~~~~~~~~~~~~
-EBNF syntax description of the directives is the following:
+Syntax description of the directives is the following:
 
-.. productionlist:: verify-grammar
-  directive: prefix , "-" , diagnostic-kind , [ regex-match ] , [ diagnotic-loc ] , [ " " , quantifier ] , "{" , [ delimiter-open ], "{", [ diagnostic-text ] , "}" , [ delimiter-close ], "}" ;
-  diagnostic-kind : "error" | "warning" | "note" | "remark" ;
-  regex-match : "-re" ;
-  diagnostic-loc : "@" , ( "+" | "-" ) , number
-                 : | "@" , line
-                 : | "@" , file-path , ":" , line
-                 : | "@" , "*" , [ ":" , "*" ]
-                 : | "@" , "#" , marker-name ;
-  line : number | "*" ;
-  number : digit, { digit } ;
-  quantifier : "+"
-             : | number , [ "+" ]
-             : | number , "-" , number ;
-  delimiter-open : { "{" } ;
-  delimiter-close : { "}" } ;
+.. parsed-literal::
+  
+  `directive`
+      `prefix` ``-`` `diagnostic-kind` `regex-match`:sub:`opt` `diagnostic-loc`:sub:`opt` `quantifier`:sub:`opt` ``{{`` `delimiter-open`:sub:`opt` `diagnostic-text` `delimiter-close`:sub:`opt` ``}}``
+
+  `diagnostic-kind`
+      ``error``
+      ``warning``
+      ``note``
+      ``remark``
+
+  `regex-match`
+      ``-re``
+
+  `diagnostic-loc`
+      ``@+`` `number`
+      ``@-`` `number`
+      ``@`` `line`
+      ``@`` `file-path` ``:`` `line`
+      ``@*``
+      ``@*:*``
+      ``@#`` `marker-name`
+
+  `line`
+      ``*``
+      `number`
+  
+  `quantifier`
+      ``+``
+      `number` ``+``
+      `number` ``-`` `number`
+
+  `delimiter-open`
+      ``{`` `delimiter-open`:sub:`opt`
+
+  `delimiter-close`
+      ``}`` `delimiter-close`:sub:`opt`
+
+  `number`
+      `digit` `number`:sub:`opt`
+
+  `digit`
+      ``0`` ``1`` ``2`` ``3`` ``4`` ``5`` ``6`` ``7`` ``8`` ``9``
 
 Where:
 
@@ -3521,7 +3549,7 @@ Where:
   (:ref:`Diagnostic Text <diagnostic-text>`).
 - ``file-path`` is relative or absolte path to a file
   (:ref:`Diagnostic Location <diagnostic-location>`).
-- ``marker-name`` is name of the marker somewhere in the source
+- ``marker-name`` is name of the marker placed somewhere in the source file
   (:ref:`Diagnostic Location <diagnostic-location>`).
 - ``diagnostic-text`` is text of the expected diagnostic
   (:ref:`Diagnostic Text <diagnostic-text>`).
@@ -3529,11 +3557,26 @@ Where:
 Examples:
 
 - ``// expected-note {{declared here}}``
+  One note ``declared here`` has to be issued on the same line as the
+  directive.
 - ``// expected-error@+1 0-1 {{{expected identifier or '{'}}}``
+  Zero or one error ``expected identifier or '{'`` has to be issued on the next
+  line after the directive zero or one time.
 - ``// cxx98-17-warning@#func-decl + {{target exception specification is not superset of source}}``
+  One or more warnings
+  ``target exception specification is not superset of source`` has to be issued
+  on the line that has ``// #func-decl`` comment one or more times when CLI
+  option ``-verify=cxx98-17`` is passed.
 - ``// expected-note@* 1 {{file entered}}``
+  One note ``file entered`` has to be issued somewhere in the source file.
 - ``// expected-note@decls.h:2 {{previous declaration is here}}``
+  One note ``previous declaration is here`` has to be issued at ``decl.h``
+  line 2.
 - ``// cxx11-17-error-re@-1 {{no matching constructor for initialization of 'A' (aka '(lambda at {{.+}})')}}``
+  One error
+  ``no matching constructor for initialization of 'A' (aka '(lambda at <source location>)')``
+  (ignoring the exact source location) has to be issued on the previous line
+  before the directive when CLI option ``-verify=cxx11-17`` is passed.
 
 .. _custom-prefixes:
 
@@ -3721,19 +3764,19 @@ and strives to improve readability of the expected compiler output
 for reviewers and future readers, but makes it a bit harder to write the test:
 
 - Diagnostic text specified in a directive has to be a full match.
-- Lexical order of directives has to match order in which diagnostics are
+- Lexical order of directives has to match the order in which diagnostics are
   emitted.
-- Each directive can match exactly one diagnostic.
-- Wildcards (``*``) are not allowed in diagnostic location.
+- Each directive has to match exactly one diagnostic.
+- Wildcards (``*``) are not allowed in the diagnostic location.
 
-It is recommended to write new tests with this mode enabled, but for some tests
+Most of the tests can be adapted to use this mode, but for some tests
 it's not possible. Typical problems and their solutions are listed below.
 
 - **Diagnostic is issued only sometimes.**
   The cause of variance needs to be identified and captured. Typically it is
-  either a compiler option like language mode, in which case additional custom
-  prefix should be sufficient, or platform, in which case triple has to be
-  explicitly passed in command-line arguments.
+  either a compiler option like language mode, in which case an additional
+  custom prefix should be sufficient, or platform, in which case a triple has
+  to be explicitly passed in command-line arguments.
 - **Template instantiations at the end of translation unit.**
   Instantiations at the end of the TU cause associated diagnostics to appear
   too late. Instantiations need to happen before the next directive, and when
@@ -3749,6 +3792,8 @@ it's not possible. Typical problems and their solutions are listed below.
   by its source location, which is typically not salient for the test,
   and would make it overspecified. In this case regex match can be used to skip
   over source location.
+
+.. _cxx-defect-report-tests:
 
 C++ Defect Report Tests
 ^^^^^^^^^^^^^^^^^^^^^^^

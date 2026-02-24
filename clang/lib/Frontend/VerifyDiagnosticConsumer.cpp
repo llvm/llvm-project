@@ -101,10 +101,10 @@ public:
 
   DiagnosticMatchResult match(StringRef S) const override {
     if (!S.contains(Text)) {
-      return DiagnosticMatchResult::NoMatch;
+      return DiagnosticMatchResult::None;
     }
     if (!FullMatchRequired) {
-      return DiagnosticMatchResult::Full;
+      return DiagnosticMatchResult::AtLeastPartial;
     }
     return S.trim() == Text ? DiagnosticMatchResult::Full
                             : DiagnosticMatchResult::Partial;
@@ -128,15 +128,15 @@ public:
 
   DiagnosticMatchResult match(StringRef S) const override {
     if (!FullMatchRequired) {
-      return Regex.match(S) ? DiagnosticMatchResult::Full
-                            : DiagnosticMatchResult::NoMatch;
+      return Regex.match(S) ? DiagnosticMatchResult::AtLeastPartial
+                            : DiagnosticMatchResult::None;
     }
 
     llvm::SmallVector<StringRef, 4> Matches;
     llvm::StringRef TrimmedText = S.trim();
     Regex.match(TrimmedText, &Matches);
     if (Matches.empty()) {
-      return DiagnosticMatchResult::NoMatch;
+      return DiagnosticMatchResult::None;
     }
     return Matches[0].size() == TrimmedText.size()
                ? DiagnosticMatchResult::Full
@@ -1080,11 +1080,11 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
 
         const std::string &RightText = II->second;
         DiagnosticMatchResult MatchResult = D.match(RightText);
-        if (MatchResult != DiagnosticMatchResult::NoMatch) {
-          if (D.FullMatchRequired &&
-              MatchResult == DiagnosticMatchResult::Partial) {
-            IncompleteMatches.push_back({&D, II->second});
-          }
+        if (MatchResult == DiagnosticMatchResult::Partial) {
+          assert(D.FullMatchRequired);
+          IncompleteMatches.push_back({&D, II->second});
+        }
+        if (MatchResult != DiagnosticMatchResult::None) {
           break;
         }
       }

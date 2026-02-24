@@ -31,8 +31,9 @@ class SourceManager;
 class TextDiagnosticBuffer;
 
 enum class DiagnosticMatchResult {
-  NoMatch,
-  Partial,
+  None,
+  Partial,        /// Match, but not a full match
+  AtLeastPartial, /// Match, but we didn't check for full match
   Full,
 };
 
