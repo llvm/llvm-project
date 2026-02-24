@@ -16,6 +16,6 @@ int bar(void) {
   return 0;
 }
 
-// CHECK: cir.func private @printf(!cir.ptr<!s8i>, ...) -> !s32i
-// CHECK: cir.call @printf({{.*}}, {{.*}}) : (!cir.ptr<!s8i>, !s32i) -> !s32i
-// CHECK: cir.call @printf({{.*}}) : (!cir.ptr<!s8i>) -> !s32i
+// CHECK: cir.func private @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
+// CHECK: cir.call @printf({{.*}}, {{.*}}) : (!cir.ptr<!s8i> {{.*}}, !s32i {{.*}}) -> !s32i
+// CHECK: cir.call @printf({{.*}}) : (!cir.ptr<!s8i> {{.*}}) -> !s32i
