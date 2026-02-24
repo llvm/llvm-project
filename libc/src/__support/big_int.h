@@ -38,6 +38,9 @@ template <> struct half_width<uint32_t> : cpp::type_identity<uint16_t> {};
 template <> struct half_width<uint64_t> : cpp::type_identity<uint32_t> {};
 #ifdef LIBC_TYPES_HAS_INT128
 template <> struct half_width<__uint128_t> : cpp::type_identity<uint64_t> {};
+#ifdef LIBC_TYPES_HAS_INT256
+template <> struct half_width<__uint256_t> : cpp::type_identity<__uint128_t> {};
+#endif // LIBC_TYPES_HAS_INT256
 #endif // LIBC_TYPES_HAS_INT128
 #endif // LIBC_TYPES_HAS_INT64
 template <typename T> using half_width_t = typename half_width<T>::type;

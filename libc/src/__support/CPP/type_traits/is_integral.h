@@ -28,6 +28,9 @@ private:
 public:
   LIBC_INLINE_VAR static constexpr bool value =
       __is_unqualified_any_of<T,
+#ifdef LIBC_TYPES_HAS_INT256
+                              __int256_t, __uint256_t,
+#endif
 #ifdef LIBC_TYPES_HAS_INT128
                               __int128_t, __uint128_t,
 #endif

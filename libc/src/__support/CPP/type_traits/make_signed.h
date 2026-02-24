@@ -33,6 +33,10 @@ struct make_signed<unsigned long long> : type_identity<long long> {};
 template <> struct make_signed<__int128_t> : type_identity<__int128_t> {};
 template <> struct make_signed<__uint128_t> : type_identity<__int128_t> {};
 #endif
+#ifdef LIBC_TYPES_HAS_INT256
+template <> struct make_signed<__int256_t> : type_identity<__int256_t> {};
+template <> struct make_signed<__uint256_t> : type_identity<__int256_t> {};
+#endif
 template <typename T> using make_signed_t = typename make_signed<T>::type;
 
 } // namespace cpp

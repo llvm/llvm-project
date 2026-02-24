@@ -20,4 +20,12 @@ using UInt128 = LIBC_NAMESPACE::UInt<128>;
 using Int128 = LIBC_NAMESPACE::Int<128>;
 #endif // LIBC_TYPES_HAS_INT128
 
+#ifdef LIBC_TYPES_HAS_INT256
+using UInt256 = __uint256_t;
+using Int256 = __int256_t;
+#else
+using UInt256 = LIBC_NAMESPACE::UInt<256>;
+using Int256 = LIBC_NAMESPACE::Int<256>;
+#endif // LIBC_TYPES_HAS_INT256
+
 #endif // LLVM_LIBC_SRC___SUPPORT_UINT128_H

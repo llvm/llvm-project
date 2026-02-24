@@ -46,6 +46,11 @@
 #define LIBC_TYPES_HAS_INT128
 #endif // defined(__SIZEOF_INT128__)
 
+// int256 / uint256 support
+#if defined(__SIZEOF_INT256__)
+#define LIBC_TYPES_HAS_INT256
+#endif // defined(__SIZEOF_INT256__)
+
 // -- float16 support ---------------------------------------------------------
 // LIBC_TYPES_HAS_FLOAT16 is provided by
 // "include/llvm-libc-macros/float16-macros.h"
