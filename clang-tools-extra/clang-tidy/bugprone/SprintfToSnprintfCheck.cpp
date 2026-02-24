@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SprintfToSnprintfCheck.h"
+#include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
@@ -15,14 +16,25 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::bugprone {
 
+SprintfToSnprintfCheck::SprintfToSnprintfCheck(StringRef Name,
+                                               ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      SprintfLikeFunctions(utils::options::parseStringList(
+          Options.get("SprintfLikeFunctions", "::sprintf;::std::sprintf"))) {}
+
+void SprintfToSnprintfCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "SprintfLikeFunctions",
+                utils::options::serializeStringList(SprintfLikeFunctions));
+}
+
 void SprintfToSnprintfCheck::registerMatchers(MatchFinder *Finder) {
-  // Match either ::sprintf or ::std::sprintf where the first argument is a
-  // constant array.
   Finder->addMatcher(
-      callExpr(callee(functionDecl(hasAnyName("::sprintf", "::std::sprintf"))),
-               hasArgument(0, ignoringParenImpCasts(declRefExpr(to(
-                                  varDecl(hasType(constantArrayType()))
-                                      .bind("buffer"))).bind("arg0"))))
+      callExpr(callee(functionDecl(hasAnyName(SprintfLikeFunctions))),
+               hasArgument(
+                   0, ignoringParenImpCasts(
+                          declRefExpr(to(varDecl(hasType(constantArrayType()))
+                                             .bind("buffer")))
+                              .bind("arg0"))))
           .bind("call"),
       this);
 }
@@ -34,20 +46,27 @@ void SprintfToSnprintfCheck::check(const MatchFinder::MatchResult &Result) {
   if (!Call || !Buffer)
     return;
 
-  StringRef BufferName = Buffer->getName();
+  const FunctionDecl *Callee = Call->getDirectCallee();
+  if (!Callee)
+    return;
 
-  auto Diag = diag(
-      Call->getBeginLoc(),
-      "use 'snprintf' instead of 'sprintf' for fixed-size character arrays");
+  const StringRef FuncName = Callee->getName();
+  const StringRef BufferName = Buffer->getName();
 
-  // 1. Fix-it: replace 'sprintf' with 'snprintf'
-  SourceLocation FuncNameLoc = Call->getExprLoc();
-  Diag << FixItHint::CreateReplacement(FuncNameLoc, "snprintf");
+  auto Diag = diag(Call->getBeginLoc(),
+                   "use 'snprintf' instead of '%0' for fixed-size "
+                   "character arrays")
+              << FuncName;
 
-  // 2. Fix-it: insert 'sizeof(buffer_name), ' as the new second argument
-  SourceLocation InsertLoc = Call->getArg(1)->getBeginLoc();
-  std::string SizeArg = "sizeof(" + BufferName.str() + "), ";
-  Diag << FixItHint::CreateInsertion(InsertLoc, SizeArg);
+  // Only provide an automated Fix-It if the function is exactly "sprintf"
+  if (FuncName == "sprintf") {
+    const SourceLocation FuncNameLoc = Call->getExprLoc();
+    Diag << FixItHint::CreateReplacement(FuncNameLoc, "snprintf");
+
+    const SourceLocation InsertLoc = Call->getArg(1)->getBeginLoc();
+    const std::string SizeArg = "sizeof(" + BufferName.str() + "), ";
+    Diag << FixItHint::CreateInsertion(InsertLoc, SizeArg);
+  }
 }
 
 } // namespace clang::tidy::bugprone

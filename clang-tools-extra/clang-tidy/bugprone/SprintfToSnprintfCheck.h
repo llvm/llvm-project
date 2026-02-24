@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SPRINTFTOSNPRINTFCHECK_H
 
 #include "../ClangTidyCheck.h"
+#include <vector>
 
 namespace clang::tidy::bugprone {
 
@@ -20,10 +21,13 @@ namespace clang::tidy::bugprone {
 /// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/sprintf-to-snprintf.html
 class SprintfToSnprintfCheck : public ClangTidyCheck {
 public:
-  SprintfToSnprintfCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  SprintfToSnprintfCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  const std::vector<StringRef> SprintfLikeFunctions;
 };
 
 } // namespace clang::tidy::bugprone

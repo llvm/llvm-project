@@ -11,6 +11,14 @@ the stack and then to ``printf`` into the buffer. This can easily lead to
 buffer overflows. This check recommends that the counted version of the
 function is used instead.
 
+Options
+-------
+
+.. option:: SprintfLikeFunctions
+
+   A semicolon-separated list of functions to check. The default is
+   `::sprintf;::std::sprintf`.
+
 Example
 -------
 
@@ -29,4 +37,3 @@ Becomes:
     char buff[80];
     snprintf(buff, sizeof(buff), "Hello, %s!\n", "world");
   }
-  
