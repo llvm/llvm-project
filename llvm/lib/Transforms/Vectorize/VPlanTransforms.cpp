@@ -201,8 +201,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   if (!MemLoc.AATags.Scope)
     return false;
 
-  const AAMDNodes &MemAA = MemLoc.AATags;
-
   for (VPBlockBase *Block = FirstBB; Block;
        Block = Block->getSingleSuccessor()) {
     assert(Block->getNumSuccessors() <= 1 &&
@@ -222,16 +220,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      // For reads, check if they don't alias in the reverse direction and
-      // skip if so.
-      if (CheckReads && R.mayReadFromMemory() &&
-          !ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
-                                                   MemAA.NoAlias))
-        continue;
-
-      // Check if the memory operations may alias in the forward direction.
-      if (ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
-                                                  Loc->AATags.NoAlias))
+      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
 
@@ -5057,6 +5046,10 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
+  // Note that after the transform, no further uses of Plan.getVF and
+  // Plan.getVFxUF should be added.
+  // TODO: Add assertions for this.
+
   VPValue *UF =
       Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
   Plan.getUF().replaceAllUsesWith(UF);
@@ -5083,10 +5076,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *MulByUF = Builder.createOverflowingOp(
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
-
-  assert(Plan.getVF().getNumUsers() == 0 && Plan.getUF().getNumUsers() == 0 &&
-         Plan.getVFxUF().getNumUsers() == 0 &&
-         "VF, UF, and VFxUF not expected to be used");
 }
 
 DenseMap<const SCEV *, Value *>
