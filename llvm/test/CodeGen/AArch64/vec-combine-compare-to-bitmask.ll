@@ -558,9 +558,10 @@ define i16 @convert_to_bitmask_without_knowing_type(<16 x i1> %vec) {
 define i2 @convert_to_bitmask_2xi32(<2 x i32> %vec) {
 ; CHECK-LABEL: convert_to_bitmask_2xi32:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    adrp x8, lCPI11_0@PAGE
+; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    cmeq.2s v0, v0, #0
-; CHECK-NEXT:    ldr d1, [x8, lCPI11_0@PAGEOFF]
+; CHECK-NEXT:    movk x8, #2, lsl #32
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    bic.8b v0, v1, v0
 ; CHECK-NEXT:    addp.2s v0, v0, v0
 ; CHECK-NEXT:    fmov w0, s0

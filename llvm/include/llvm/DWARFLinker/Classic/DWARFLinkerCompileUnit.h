@@ -167,8 +167,8 @@ public:
   uint64_t getNextUnitOffset() const { return NextUnitOffset; }
   void setStartOffset(uint64_t DebugInfoSize) {
     StartOffset = DebugInfoSize;
-    assert(NewUnit && "NewUnit should exist when setting start offset");
-    NewUnit->setDebugSectionOffset(DebugInfoSize);
+    if (NewUnit)
+      NewUnit->setDebugSectionOffset(DebugInfoSize);
   }
 
   std::optional<uint64_t> getLowPc() const { return LowPc; }

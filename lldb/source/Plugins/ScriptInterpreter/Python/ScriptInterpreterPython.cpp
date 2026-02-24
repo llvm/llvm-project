@@ -299,9 +299,12 @@ void ScriptInterpreterPython::Initialize() {
                                   ScriptInterpreterPythonImpl::GetPythonDir);
     ScriptInterpreterPythonImpl::Initialize();
   });
+  ScriptInterpreterPythonInterfaces::Initialize();
 }
 
-void ScriptInterpreterPython::Terminate() {}
+void ScriptInterpreterPython::Terminate() {
+  ScriptInterpreterPythonInterfaces::Terminate();
+}
 
 ScriptInterpreterPythonImpl::Locker::Locker(
     ScriptInterpreterPythonImpl *py_interpreter, uint16_t on_entry,
