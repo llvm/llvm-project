@@ -5158,6 +5158,9 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
     for (VPValue *Op : Ops)
       OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
 
+    if (canNarrowOps(OpsI))
+      continue;
+
     if (any_of(enumerate(OpsI), [WideMember0, Idx](const auto &P) {
           const auto &[OpIdx, OpV] = P;
           return !canNarrowLoad(WideMember0, Idx, OpV, OpIdx);

@@ -46,8 +46,9 @@ ifeq "$(OS)" "Windows_NT"
 	RM_F = del /f /q $(subst /,\,$(1))
 	RM_RF = rd /s /q $(subst /,\,$(1))
 	LN_SF = mklink /D "$(subst /,\,$(2))" "$(subst /,\,$(1))"
-	ECHO = echo $(1)
-	ECHO_TO_FILE = echo $(1) > $(subst /,\,$(2))
+	ECHO = echo $(1);
+	ECHO_TO_FILE = printf "%s\n" $(1) > "$(subst /,\,$(2))"
+	ECHO_APPEND_FILE = printf "%s\n" $(1) >> "$(subst /,\,$(2))"
 else
 	MKDIR_P = mkdir -p $(1)
 	CP = cp $(1) $(2)
@@ -56,8 +57,9 @@ else
 	RM_F = rm -f $(1)
 	RM_RF = rm -rf $(1)
 	LN_SF = ln -sf $(1) $(2)
-	ECHO = echo "$(1)"
-	ECHO_TO_FILE = echo $(1) > $(2)
+	ECHO = echo $(1);
+	ECHO_TO_FILE = printf '%s\n' $(1) > "$(2)"
+	ECHO_APPEND_FILE = printf '%s\n' $(1) >> "$(2)"
 endif
 
 # Suppress built-in suffix rules. We explicitly define rules for %.o.

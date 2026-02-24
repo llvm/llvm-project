@@ -49,3 +49,17 @@ add_integration_test(
   SRCS
     init_fini_array_test.cpp
 )
+
+add_integration_test(
+  startup_irelative_test
+  SUITE libc-startup-tests
+  SRCS
+    irelative_test.cpp
+)
+
+add_integration_test(
+  startup_irelative_no_ifunc_test
+  SUITE libc-startup-tests
+  SRCS
+    irelative_no_ifunc_test.cpp
+)

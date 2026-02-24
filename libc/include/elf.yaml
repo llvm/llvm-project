@@ -440,6 +440,15 @@ macros:
     macro_value: '0xc0000002'
   - macro_name: GNU_PROPERTY_X86_FEATURE_1_SHSTK
     macro_value: '0x00000002'
+  # Architecture-specific IRELATIVE relocation types
+  - macro_name: R_AARCH64_IRELATIVE
+    macro_value: 1032
+  - macro_name: R_ARM_IRELATIVE
+    macro_value: 160
+  - macro_name: R_RISCV_IRELATIVE
+    macro_value: 58
+  - macro_name: R_X86_64_IRELATIVE
+    macro_value: 37
 types:
   - type_name: Elf32_Addr
   - type_name: Elf32_Chdr

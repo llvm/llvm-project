@@ -6876,9 +6876,9 @@ ExprResult Sema::BuildCallExpr(Scope *Scope, Expr *Fn, SourceLocation LParenLoc,
                rewriteBuiltinFunctionDecl(this, Context, FDecl, ArgExprs))) {
         NDecl = FDecl;
         Fn = DeclRefExpr::Create(
-            Context, FDecl->getQualifierLoc(), SourceLocation(), FDecl, false,
-            SourceLocation(), FDecl->getType(), Fn->getValueKind(), FDecl,
-            nullptr, DRE->isNonOdrUse());
+            Context, DRE->getQualifierLoc(), SourceLocation(), FDecl, false,
+            SourceLocation(), Fn->getType() /* BuiltinFnTy */,
+            Fn->getValueKind(), FDecl, nullptr, DRE->isNonOdrUse());
       }
     }
   } else if (auto *ME = dyn_cast<MemberExpr>(NakedFn))
@@ -7075,24 +7075,26 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
     }
   }
 
+  // Extract the return type from the builtin function pointer type.
+  QualType ResultTy;
+  if (BuiltinID)
+    ResultTy = FDecl->getCallResultType();
+  else
+    ResultTy = Context.BoolTy;
+
   // Promote the function operand.
   // We special-case function promotion here because we only allow promoting
   // builtin functions to function pointers in the callee of a call.
   ExprResult Result;
-  QualType ResultTy;
   if (BuiltinID &&
       Fn->getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn)) {
-    // Extract the return type from the (builtin) function pointer type.
     // FIXME Several builtins still have setType in
     // Sema::CheckBuiltinFunctionCall. One should review their definitions in
     // Builtins.td to ensure they are correct before removing setType calls.
     QualType FnPtrTy = Context.getPointerType(FDecl->getType());
     Result = ImpCastExprToType(Fn, FnPtrTy, CK_BuiltinFnToFnPtr).get();
-    ResultTy = FDecl->getCallResultType();
-  } else {
+  } else
     Result = CallExprUnaryConversions(Fn);
-    ResultTy = Context.BoolTy;
-  }
   if (Result.isInvalid())
     return ExprError();
   Fn = Result.get();

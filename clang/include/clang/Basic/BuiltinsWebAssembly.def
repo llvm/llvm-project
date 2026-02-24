@@ -188,30 +188,34 @@ TARGET_BUILTIN(__builtin_wasm_extract_lane_f16x8, "fV8hIi", "nc", "fp16")
 TARGET_BUILTIN(__builtin_wasm_replace_lane_f16x8, "V8hV8hIif", "nc", "fp16")
 
 // Reference Types builtins
-// Some builtins are custom type-checked - see 't' as part of the third argument,
-// in which case the argument spec (second argument) is unused.
+// Some builtin are custom type-checked (see 't' as part of the third
+// argument), because we cannot currently specify the custom type required here
+// (essentially a templated union of funcref_t* and externref_t in the
+// __externref addrspace), in which case only the return type is used and the
+// pointers are `void*`. The `rewriteBuiltinFunctionDecl` will adjust any
+// addrspace 0 pointers to the argument address space.
 
-TARGET_BUILTIN(__builtin_wasm_ref_null_extern, "i", "nct", "reference-types")
-TARGET_BUILTIN(__builtin_wasm_ref_is_null_extern, "ii", "nct", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_ref_null_extern, "v*1", "nct", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_ref_is_null_extern, "iv*1", "nct", "reference-types")
 
 // A funcref represented as a function pointer with the funcref attribute
-// attached to the type, therefore SemaChecking will check for the right
-// return type.
-TARGET_BUILTIN(__builtin_wasm_ref_null_func, "i", "nct", "reference-types")
+// attached to the type, therefore SemaChecking will check for the right return
+// type.
+TARGET_BUILTIN(__builtin_wasm_ref_null_func, "v*1", "ct", "reference-types")
 
-// Check if the runtime type of a function pointer matches its static type. Used
-// to avoid "function signature mismatch" traps. Takes a function pointer, uses
-// table.get to look up the pointer in __indirect_function_table and then
+// Check if the runtime type of a function pointer matches its static type.
+// Used to avoid "function signature mismatch" traps. Takes a function pointer,
+// uses table.get to look up the pointer in __indirect_function_table and then
 // ref.test to test the type.
 TARGET_BUILTIN(__builtin_wasm_test_function_pointer_signature, "i.", "nct", "gc")
 
 // Table builtins
-TARGET_BUILTIN(__builtin_wasm_table_set,  "viii", "t", "reference-types")
-TARGET_BUILTIN(__builtin_wasm_table_get,  "iii", "t", "reference-types")
-TARGET_BUILTIN(__builtin_wasm_table_size, "zi", "nt", "reference-types")
-TARGET_BUILTIN(__builtin_wasm_table_grow, "iiii", "nt", "reference-types")
-TARGET_BUILTIN(__builtin_wasm_table_fill, "viiii", "t", "reference-types")
-TARGET_BUILTIN(__builtin_wasm_table_copy, "viiiii", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_set,  "vv*iv*1", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_get,  "v*1v*i", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_size, "zv*", "nt", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_grow, "iv*v*1i", "nt", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_fill, "vv*iv*1i", "t", "reference-types")
+TARGET_BUILTIN(__builtin_wasm_table_copy, "vv*v*iii", "t", "reference-types")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

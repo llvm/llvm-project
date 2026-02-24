@@ -17,9 +17,7 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::altera {
 
 void StructPackAlignCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(recordDecl(isStruct(), isDefinition(),
-                                unless(isExpansionInSystemHeader()))
-                         .bind("struct"),
+  Finder->addMatcher(recordDecl(isStruct(), isDefinition()).bind("struct"),
                      this);
 }
 

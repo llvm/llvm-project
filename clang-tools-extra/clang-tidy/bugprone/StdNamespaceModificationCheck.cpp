@@ -91,8 +91,7 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(decl(anyOf(BadNonTemplateSpecializationDecl,
                                 BadClassTemplateSpec, BadInnerClassTemplateSpec,
-                                BadFunctionTemplateSpec, BadMemberFunctionSpec),
-                          unless(isExpansionInSystemHeader()))
+                                BadFunctionTemplateSpec, BadMemberFunctionSpec))
                          .bind("decl"),
                      this);
 }

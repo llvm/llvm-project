@@ -41,8 +41,8 @@ void IncDecInConditionsCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       expr(
-          OperatorMatcher, unless(isExpansionInSystemHeader()),
-          unless(hasAncestor(OperatorMatcher)), expr().bind("parent"),
+          OperatorMatcher, unless(hasAncestor(OperatorMatcher)),
+          expr().bind("parent"),
 
           forEachDescendant(
               expr(anyOf(unaryOperator(isUnaryPrePostOperator(),

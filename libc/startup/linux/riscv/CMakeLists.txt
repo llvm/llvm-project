@@ -24,3 +24,20 @@ add_startup_object(
     -fno-omit-frame-pointer
     -ffreestanding # To avoid compiler warnings about calling the main function.
 )
+
+add_startup_object(
+  irelative
+  SRC
+    irelative.cpp
+  DEPENDS
+    libc.hdr.link_macros
+    libc.hdr.elf_macros
+    libc.hdr.elf_proxy
+    libc.hdr.stdint_proxy
+    libc.src.__support.macros.config
+  COMPILE_OPTIONS
+    -fno-stack-protector
+    -fno-omit-frame-pointer
+    -ffreestanding
+    -fno-builtin
+)

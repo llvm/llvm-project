@@ -177,7 +177,6 @@ void OperatorsRepresentationCheck::registerBinaryOperatorMatcher(
 
   Finder->addMatcher(
       binaryOperator(
-          unless(isExpansionInSystemHeader()),
           anyOf(hasInvalidBinaryOperatorRepresentation(
                     BO_LAnd, getRepresentation(BinaryOperators, "&&", "and")),
                 hasInvalidBinaryOperatorRepresentation(
@@ -210,7 +209,6 @@ void OperatorsRepresentationCheck::registerUnaryOperatorMatcher(
 
   Finder->addMatcher(
       unaryOperator(
-          unless(isExpansionInSystemHeader()),
           anyOf(hasInvalidUnaryOperatorRepresentation(
                     UO_LNot, getRepresentation(BinaryOperators, "!", "not")),
                 hasInvalidUnaryOperatorRepresentation(
@@ -227,7 +225,6 @@ void OperatorsRepresentationCheck::registerOverloadedOperatorMatcher(
 
   Finder->addMatcher(
       cxxOperatorCallExpr(
-          unless(isExpansionInSystemHeader()),
           anyOf(
               hasInvalidOverloadedOperatorRepresentation(
                   OO_AmpAmp,

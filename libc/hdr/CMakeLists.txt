@@ -266,6 +266,15 @@ add_proxy_header_library(
     libc.include.stdint
 )
 
+add_proxy_header_library(
+  elf_macros
+  HDRS
+    elf_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.elf_macros
+    libc.include.elf
+)
+
 add_gen_header(
   elf_proxy
   YAML_FILE

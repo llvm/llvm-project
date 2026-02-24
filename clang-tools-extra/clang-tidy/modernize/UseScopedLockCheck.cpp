@@ -137,7 +137,6 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   if (WarnOnSingleLocks) {
     Finder->addMatcher(
         compoundStmt(
-            unless(isExpansionInSystemHeader()),
             has(declStmt(has(LockVarDecl)).bind("lock-decl-single")),
             unless(has(declStmt(unless(equalsBoundNode("lock-decl-single")),
                                 has(LockVarDecl))))),
@@ -145,8 +144,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   Finder->addMatcher(
-      compoundStmt(unless(isExpansionInSystemHeader()),
-                   has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
+      compoundStmt(has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
                    has(declStmt(unless(equalsBoundNode("lock-decl-multiple")),
                                 has(LockVarDecl))))
           .bind("block-multiple"),
@@ -154,22 +152,19 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
   if (WarnOnUsingAndTypedef) {
     // Match 'typedef std::lock_guard<std::mutex> Lock'
-    Finder->addMatcher(typedefDecl(unless(isExpansionInSystemHeader()),
-                                   hasType(hasUnderlyingType(LockGuardType)))
+    Finder->addMatcher(typedefDecl(hasType(hasUnderlyingType(LockGuardType)))
                            .bind("lock-guard-typedef"),
                        this);
 
     // Match 'using Lock = std::lock_guard<std::mutex>'
-    Finder->addMatcher(typeAliasDecl(unless(isExpansionInSystemHeader()),
-                                     hasType(templateSpecializationType(
+    Finder->addMatcher(typeAliasDecl(hasType(templateSpecializationType(
                                          hasDeclaration(LockGuardClassDecl))))
                            .bind("lock-guard-using-alias"),
                        this);
 
     // Match 'using std::lock_guard'
     Finder->addMatcher(
-        usingDecl(unless(isExpansionInSystemHeader()),
-                  hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
+        usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
             .bind("lock-guard-using-decl"),
         this);
   }
