@@ -2977,7 +2977,6 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
 
   // Look through multiplies that scale a stride by a constant.
   match(V, m_scev_Mul(m_SCEVConstant(), m_SCEV(V)));
-  
   if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
     if (isa<SCEVUnknown>(C->getOperand()))
       return V;
