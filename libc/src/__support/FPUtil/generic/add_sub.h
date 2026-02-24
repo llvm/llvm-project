@@ -96,15 +96,11 @@ add_or_sub(InType x, InType y) {
 
     if (x_bits.is_zero()) {
       if (y_bits.is_zero()) {
-        if (is_effectively_add) {
+        switch (quick_get_round()) {
+        case FE_DOWNWARD:
+          return OutFPBits::zero(Sign::NEG).get_val();
+        default:
           return OutFPBits::zero(Sign::POS).get_val();
-        } else {
-          switch (quick_get_round()) {
-          case FE_DOWNWARD:
-            return OutFPBits::zero(Sign::NEG).get_val();
-          default:
-            return OutFPBits::zero(Sign::POS).get_val();
-          }
         }
       }
 
