@@ -3809,6 +3809,19 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyA);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_all_true: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    // Ensure input expr type is a scalar/vector
+    if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0))
+      return true;
+
+    // set return type to bool
+    TheCall->setType(getASTContext().BoolTy);
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_wave_active_max:
   case Builtin::BI__builtin_hlsl_wave_active_min:
   case Builtin::BI__builtin_hlsl_wave_active_sum: {
