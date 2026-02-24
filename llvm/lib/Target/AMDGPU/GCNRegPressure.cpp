@@ -469,7 +469,6 @@ LaneBitmask llvm::getLiveLaneMask(unsigned Reg, SlotIndex SI,
   return getLiveLaneMask(LIS.getInterval(Reg), SI, MRI, LaneMaskFilter);
 }
 
-// Helper to check if a register unit is live at a given slot index.
 bool GCNRPTracker::isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const {
   const LiveRange *LR = LIS.getCachedRegUnit(Unit);
   if (!LR)
@@ -477,7 +476,6 @@ bool GCNRPTracker::isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const {
   return LR->liveAt(SI);
 }
 
-// Check if all register units of Reg are currently live in PhysLiveRegs.
 bool GCNRPTracker::allRegUnitsLive(Register Reg) const {
   assert(MRI && "MRI not initialized");
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
@@ -486,8 +484,6 @@ bool GCNRPTracker::allRegUnitsLive(Register Reg) const {
   });
 }
 
-// Return true if Reg has any killed units at the given slot index. Otherwise
-// return false.
 bool GCNRPTracker::checkRegKilled(Register Reg, SlotIndex SI) const {
   assert(MRI && "MRI not initialized");
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
@@ -497,7 +493,6 @@ bool GCNRPTracker::checkRegKilled(Register Reg, SlotIndex SI) const {
   });
 }
 
-// Return true if Reg has any killed units and erase them from PhysLiveRegs.
 bool GCNRPTracker::eraseKilledUnits(Register Reg, SlotIndex SI) {
   assert(MRI && "MRI not initialized");
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
@@ -515,7 +510,6 @@ bool GCNRPTracker::eraseKilledUnits(Register Reg, SlotIndex SI) {
   return IsKilled;
 }
 
-// Erase all live units of Reg from PhysLiveRegs.
 bool GCNRPTracker::eraseAllLiveUnits(Register Reg) {
   assert(MRI && "MRI not initialized");
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
@@ -531,7 +525,6 @@ bool GCNRPTracker::eraseAllLiveUnits(Register Reg) {
   return WasLive;
 }
 
-// Insert a reg-unit into PhysLiveRegs if not already live.
 bool GCNRPTracker::insertAllNotLiveUnits(Register Reg) {
   assert(MRI && "MRI not initialized");
   const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();

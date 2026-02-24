@@ -313,7 +313,9 @@ protected:
   LiveRegSet VirtLiveRegs;
   GCNRegPressure CurVirtPressure, MaxVirtPressure;
 
-  // Physical register tracking
+  // Physical register tracking: Maintain clean separation between virtual and physical registers.
+  // Tracking physical registers can be turned OFF with an option. Using llvm::LiveRegSet for consistency
+  // with the generic tracker.
   llvm::LiveRegSet PhysLiveRegs;
   GCNRegPressure CurPhysPressure, MaxPhysPressure;
 
@@ -356,7 +358,7 @@ protected:
 
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
-  // Helper methods for physical register tracking
+  // Helper to check if a register unit is live at a given slot index.
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
   // Check if all register units of Reg are currently live in PhysLiveRegs.
