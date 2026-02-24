@@ -40,8 +40,19 @@ struct __lazy_compare_result {
                         _LIBCPP_CTOR_LIFETIMEBOUND const _RHS& __rhs)
       : __comp_(__comp), __lhs_(__lhs), __rhs_(__rhs) {}
 
-  _LIBCPP_HIDE_FROM_ABI bool __less() const { return __comp_(__lhs_, __rhs_); }
-  _LIBCPP_HIDE_FROM_ABI bool __greater() const { return __comp_(__rhs_, __lhs_); }
+  _LIBCPP_HIDE_FROM_ABI bool __less() const {
+    bool __result = __comp_(__lhs_, __rhs_);
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(__result ? !static_cast<bool>(__comp_(__rhs_, __lhs_)) : true,
+                                        "Comparator does not induce a strict weak ordering");
+    return __result;
+  }
+
+  _LIBCPP_HIDE_FROM_ABI bool __greater() const {
+    bool __result = __comp_(__rhs_, __lhs_);
+    _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(__result ? !static_cast<bool>(__comp_(__lhs_, __rhs_)) : true,
+                                        "Comparator does not induce a strict weak ordering");
+    return __result;
+  }
 };
 
 // This class provides three way comparison between _LHS and _RHS as efficiently as possible. This can be specialized if
