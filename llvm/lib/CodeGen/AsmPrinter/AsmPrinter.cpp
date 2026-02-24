@@ -1000,8 +1000,10 @@ void AsmPrinter::emitFunctionHeader() {
 
   emitLinkage(&F, CurrentFnSym);
   if (MAI->hasFunctionAlignment()) {
-    // The preferred alignment directive will not have the intended effect
-    // unless function sections are enabled.
+    // Make sure that the preferred alignment directive (.prefalign) is
+    // supported before using it. The preferred alignment directive will not
+    // have the intended effect unless function sections are enabled, so check
+    // for that as well.
     if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment() &&
         TM.getFunctionSections()) {
       Align Alignment = MF->getAlignment();
