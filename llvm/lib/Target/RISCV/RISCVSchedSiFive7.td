@@ -279,13 +279,11 @@ multiclass SiFive7ProcResources<bit dualVALU = false> {
     def FDiv      : ProcResource<1>; // FP Division/Sqrt
 
     // Arithmetic sequencer(s)
+    // VA1 can handle any vector airthmetic instruction.
+    def VA1     : ProcResource<1>;
     if dualVALU then {
-      // VA1 can handle any vector airthmetic instruction.
-      def VA1     : ProcResource<1>;
       // VA2 generally can only handle simple vector arithmetic.
       def VA2     : ProcResource<1>;
-    } else {
-      def VA      : ProcResource<1>;
     }
 
     def VL        : ProcResource<1>; // Load sequencer
@@ -1554,21 +1552,19 @@ multiclass SiFive7SchedResources<int vlen, bit dualVALU,
   defm SiFive7 : SiFive7ProcResources<dualVALU>;
 
   // Pull out defs from SiFive7ProcResources so we can refer to them by name.
-  defvar SiFive7PipeA = !cast<ProcResource>(NAME # SiFive7PipeA);
-  defvar SiFive7PipeB = !cast<ProcResource>(NAME # SiFive7PipeB);
-  defvar SiFive7PipeAB = !cast<ProcResGroup>(NAME # SiFive7PipeAB);
-  defvar SiFive7IDiv = !cast<ProcResource>(NAME # SiFive7IDiv);
-  defvar SiFive7FDiv = !cast<ProcResource>(NAME # SiFive7FDiv);
-  // Pass SiFive7VA for VA1 and VA1OrVA2 if there is only 1 VALU.
-  defvar SiFive7VA1 = !if (dualVALU,
-                            !cast<ProcResource>(NAME # SiFive7VA1),
-                            !cast<ProcResource>(NAME # SiFive7VA));
+  defvar SiFive7PipeA = !cast<ProcResource>(NAME # "SiFive7PipeA");
+  defvar SiFive7PipeB = !cast<ProcResource>(NAME # "SiFive7PipeB");
+  defvar SiFive7PipeAB = !cast<ProcResGroup>(NAME # "SiFive7PipeAB");
+  defvar SiFive7IDiv = !cast<ProcResource>(NAME # "SiFive7IDiv");
+  defvar SiFive7FDiv = !cast<ProcResource>(NAME # "SiFive7FDiv");
+  defvar SiFive7VA1 = !cast<ProcResource>(NAME # "SiFive7VA1");
+  // Use SiFive7VA1 for VA1OrVA2 if there is only 1 VALU.
   defvar SiFive7VA1OrVA2 = !if (dualVALU,
-                            !cast<ProcResGroup>(NAME # SiFive7VA1OrVA2),
-                            !cast<ProcResource>(NAME # SiFive7VA));
-  defvar SiFive7VL = !cast<ProcResource>(NAME # SiFive7VL);
-  defvar SiFive7VS = !cast<ProcResource>(NAME # SiFive7VS);
-  defvar SiFive7VCQ = !cast<ProcResource>(NAME # SiFive7VCQ);
+                                !cast<ProcResGroup>(NAME # "SiFive7VA1OrVA2"),
+                                !cast<ProcResource>(NAME # "SiFive7VA1"));
+  defvar SiFive7VL = !cast<ProcResource>(NAME # "SiFive7VL");
+  defvar SiFive7VS = !cast<ProcResource>(NAME # "SiFive7VS");
+  defvar SiFive7VCQ = !cast<ProcResource>(NAME # "SiFive7VCQ");
 
   // Define WriteRes records that are the same across all SiFive7 derived
   // SchedModels.

@@ -6324,6 +6324,9 @@ static bool validLookupTableConstant(Constant *C, const TargetTransformInfo &TTI
       !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
     return false;
 
+  if (C->getType()->isVectorTy())
+    return false;
+
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
     // Pointer casts and in-bounds GEPs will not prohibit the backend from
     // materializing the array of constants.
@@ -7724,7 +7727,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
     Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
-    I = SIW->removeCase(I);
+    I = SIW.removeCase(I);
     E = SIW->case_end();
   }
 

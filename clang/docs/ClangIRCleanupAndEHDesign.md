@@ -350,11 +350,22 @@ the destructor. Therefore, this cleanup handler is marked as eh_only.
 Try-catch blocks will be represented, as they are in the ClangIR
 incubator project, using a `cir.try` operation.
 
+The `cir.catch_param` operation is used to represent the capturing of the
+exception object in an ABI-independent way. When the catch handler includes
+a source variable representing the exception object, the result of the
+`cir.catch_param` operation will be stored to an alloca object for the
+source variable.  If the handler is a catch-all, the `cir.catch_param` operation
+will return a pointer to void, but this cannot be captured by a source variable.
+
+The first operation in a catch handler region must be a `cir.catch_param`
+operation.
+
 ```
 cir.try {
   cir.call exception @function() : () -> ()
   cir.yield
 } catch [type #cir.global_view<@_ZTIPf> : !cir.ptr<!u8i>] {
+  %1 = cir.catch_param : !cir.ptr<!cir.float>
   ...
   cir.yield
 } unwind {
@@ -385,11 +396,15 @@ void someFunc() {
 
 ```
 cir.func @someFunc(){
+  %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
     cir.try {
       cir.call exception @_Z1fv() : () -> ()
       cir.yield
     } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] {
+      %1 = cir.catch_param : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
+      %2 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, !cir.ptr<!rec_std3A3Aexception>
+      cir.store align(8) %2, %0 : !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
       cir.yield
     } unwind {
       cir.resume
@@ -429,13 +444,18 @@ void someFunc() {
 
 ```
 cir.func @someFunc(){
+  %0 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.scope {
     cir.try {
       cir.call exception @_Z1fv() : () -> ()
       cir.yield
     } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] {
+      %1 = cir.catch_param : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
+      %2 = cir.load align(8) %1 : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, !cir.ptr<!rec_std3A3Aexception>
+      cir.store align(8) %2, %0 : !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
       cir.yield
     } catch all {
+      %3 = cir.catch_param : !cir.ptr<!void>
       cir.yield
     }
   }
@@ -484,6 +504,7 @@ cir.func @someFunc(){
         cir.yield
       }
     } catch all {
+      %1 = cir.catch_param : !cir.ptr<!void>
       cir.yield
     }
   }
@@ -516,12 +537,17 @@ void someFunc() {
 ```
 cir.func @someFunc(){
   %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init]
+  %1 = cir.alloca !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, ["e"]
   cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
   cir.cleanup.scope {
     cir.scope {
       cir.try {
         cir.call @_ZN9SomeClass11doSomethingEv(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.yield
       } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] {
+        %2 = cir.catch_param : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
+        %3 = cir.load align(8) %2 : !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>, !cir.ptr<!rec_std3A3Aexception>
+        cir.store align(8) %3, %1 : !cir.ptr<!rec_std3A3Aexception>, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>
         cir.yield
       } unwind {
         cir.resume
@@ -731,7 +757,11 @@ of the catch handling block must be a `cir.begin_catch` operation.
 The `cir.begin_catch` operation returns two values: a new token that
 uniquely identify this catch handler, and a pointer to the exception
 object. All paths through the catch handler must converge on a single
-`cir.end_catch` operation, which marks the end of the handler.
+`cir.end_catch` operation, which marks the end of the handler. The
+`cir.begin_catch` replaces the `cir.catch_param` in the structured
+form, and the exception object extracted from its return value should
+be stored to the same alloca location as the return value of
+`cir.catch_param` was in the structured representation.
 
   `cir.end_catch %catch_token`
 
@@ -769,6 +799,7 @@ cir.func @someFunc(){
         cir.yield
       }
     } catch all {
+      %1 = cir.catch_param : !cir.ptr<!void>
       cir.yield
     }
   }
