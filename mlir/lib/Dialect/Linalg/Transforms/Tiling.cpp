@@ -827,6 +827,9 @@ mlir::linalg::tileLinalgOp(RewriterBase &b, LinalgOp op,
 
 namespace {
 /// Helper classes for type list expansion.
+/// TODO: Move this to a common header, so all dialects, passes and
+/// transforms can utilize this method to compose canonicalization
+/// patterns.
 template <typename... OpTypes>
 class CanonicalizationPatternList;
 
@@ -844,9 +847,11 @@ public:
     CanonicalizationPatternList<OpTypes...>::insert(patterns);
   }
 };
-} // namespace
 
-void mlir::linalg::populateLinalgCanonicalizationPatterns(
+/// TODO: Move this into `getCanonicalizationPattern` and do the same for all
+/// dialects, so that we don't need this hack to also get the operations'
+/// canonicalization patterns per dialect.
+static void populateLinalgCanonicalizationPatterns(
     RewritePatternSet &patterns) {
   auto *ctx = patterns.getContext();
   ctx->getLoadedDialect<LinalgDialect>()->getCanonicalizationPatterns(patterns);
@@ -856,6 +861,7 @@ void mlir::linalg::populateLinalgCanonicalizationPatterns(
 #include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.cpp.inc"
       >::insert(patterns);
 }
+} // namespace
 
 void mlir::linalg::populateLinalgTilingCanonicalizationPatterns(
     RewritePatternSet &patterns) {
