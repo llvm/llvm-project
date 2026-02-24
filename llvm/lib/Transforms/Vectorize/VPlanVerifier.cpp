@@ -141,15 +141,14 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
 
 static bool isKnownMonotonic(VPValue *V) {
   VPValue *X, *Y;
-  if (match(V, m_Add(m_VPValue(X), m_VPValue(Y))) &&
-      cast<VPRecipeWithIRFlags>(V)->hasNoUnsignedWrap())
-    return isKnownMonotonic(X) && isKnownMonotonic(Y);
+  if (match(V, m_Add(m_VPValue(X), m_VPValue(Y))))
+    cast<VPRecipeWithIRFlags>(V)->hasNoUnsignedWrap() && isKnownMonotonic(X) &&
+        isKnownMonotonic(Y);
   if (match(V, m_StepVector()))
     return true;
   // Only handle a subset of IVs until we can guarantee there's no overflow.
   if (auto *WidenIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(V))
-    return match(WidenIV->getStartValue(), m_ZeroInt()) &&
-           match(WidenIV->getStepValue(), m_One());
+    return WidenIV->isCanonical();
   if (auto *Steps = dyn_cast<VPScalarIVStepsRecipe>(V))
     return match(Steps->getOperand(0),
                  m_CombineOr(
