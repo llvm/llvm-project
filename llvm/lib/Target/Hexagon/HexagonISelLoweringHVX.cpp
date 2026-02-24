@@ -1177,11 +1177,10 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
   SDValue W0 = isUndef(PredV)
                   ? DAG.getUNDEF(MVT::i64)
                   : DAG.getNode(HexagonISD::P2D, dl, MVT::i64, PredV);
-  if (Bytes < BitBytes) {
-    Words[IdxW].push_back(HiHalf(W0, DAG));
-    Words[IdxW].push_back(LoHalf(W0, DAG));
-  } else
-    Words[IdxW].push_back(W0);
+  // Words must always contain i32 values (since they are inserted via
+  // VINSERTW0 below). Always split the i64 P2D result into two i32 halves.
+  Words[IdxW].push_back(HiHalf(W0, DAG));
+  Words[IdxW].push_back(LoHalf(W0, DAG));
 
   while (Bytes < BitBytes) {
     IdxW ^= 1;
@@ -1206,26 +1205,33 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     IdxW ^= 1;
     Words[IdxW].clear();
 
+    // contractPredicate takes an i64 and returns an i32.
+    // Pair adjacent i32 words back into i64 before contracting.
+    // This is the inverse of the expansion loop above, which splits
+    // each i64 (from expandPredicate) into two i32 halves.
+    auto &Src = Words[IdxW ^ 1];
     if (Bytes <= 4) {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        SDValue T = contractPredicate(W, dl, DAG);
+      for (unsigned i = 0, e = Src.size(); i < e; i += 2) {
+        SDValue Hi = Src[i];
+        SDValue Lo = i + 1 < e ? Src[i + 1] : DAG.getUNDEF(MVT::i32);
+        SDValue Pair = getCombine(Hi, Lo, dl, MVT::i64, DAG);
+        SDValue T = contractPredicate(Pair, dl, DAG);
         Words[IdxW].push_back(T);
       }
     } else {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        Words[IdxW].push_back(W);
+      for (unsigned i = 0, e = Src.size(); i < e; i += 2) {
+        Words[IdxW].push_back(Src[i]);
       }
     }
     Bytes /= 2;
   }
 
   assert(Bytes == BitBytes);
-  if (BitBytes == 1 && PredTy == MVT::v2i1)
-    ByteTy = MVT::getVectorVT(MVT::i16, HwLen);
 
   SDValue Vec = ZeroFill ? getZero(dl, ByteTy, DAG) : DAG.getUNDEF(ByteTy);
   SDValue S4 = DAG.getConstant(HwLen-4, dl, MVT::i32);
   for (const SDValue &W : Words[IdxW]) {
+    assert(ty(W).getSizeInBits() == 32 && "Words must be 32-bit values");
     Vec = DAG.getNode(HexagonISD::VROR, dl, ByteTy, Vec, S4);
     Vec = DAG.getNode(HexagonISD::VINSERTW0, dl, ByteTy, Vec, W);
   }
