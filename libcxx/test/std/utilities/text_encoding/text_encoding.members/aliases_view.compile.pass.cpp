@@ -21,3 +21,4 @@ static_assert(std::ranges::random_access_range<std::text_encoding::aliases_view>
 static_assert(std::ranges::borrowed_range<std::text_encoding::aliases_view>);
 static_assert(std::same_as<std::ranges::range_value_t<std::text_encoding::aliases_view>, const char*>);
 static_assert(std::same_as<std::ranges::range_reference_t<std::text_encoding::aliases_view>, const char*>);
+static_assert(noexcept(std::text_encoding().aliases()));

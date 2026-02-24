@@ -13,11 +13,12 @@
 // text_encoding::text_encoding() noexcept
 
 #include <cassert>
+#include <concepts>
 #include <text_encoding>
 #include <type_traits>
 
 constexpr bool test() {
-  std::text_encoding te = std::text_encoding();
+  std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding();
   assert(te.mib() == std::text_encoding::unknown);
   assert(std::string_view("") == te.name());
 

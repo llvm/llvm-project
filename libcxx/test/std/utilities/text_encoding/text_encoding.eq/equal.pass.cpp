@@ -20,9 +20,10 @@
 using id = std::text_encoding::id;
 
 constexpr bool test() {
-  // 1. operator==(const text_encoding&, const text_encoding&) must be noexcept
+  // 1. operator==(const text_encoding&, const text_encoding&) must be noexcept and returns bool
   {
     ASSERT_NOEXCEPT(std::text_encoding() == std::text_encoding());
+    ASSERT_SAME_TYPE(bool, decltype(std::text_encoding() == std::text_encoding()));
   }
 
   // 2. operator==(const text_encoding&, const text_encoding&) returns true if both text_encoding ids are equal

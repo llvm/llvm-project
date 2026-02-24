@@ -12,6 +12,7 @@
 
 // text_encoding::aliases_view::begin()
 
+#include "test_macros.h"
 #include <cassert>
 #include <ranges>
 #include <text_encoding>
@@ -23,6 +24,7 @@ constexpr bool test() {
 
     std::text_encoding::aliases_view view1 = te.aliases();
     std::text_encoding::aliases_view view2 = te.aliases();
+    ASSERT_NOEXCEPT(view1.begin());
 
     assert(std::ranges::begin(view1) == std::ranges::begin(view2));
     assert(view1.begin() == view2.begin());

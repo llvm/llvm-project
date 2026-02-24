@@ -14,6 +14,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <ranges>
 #include <text_encoding>
 #include <type_traits>
@@ -23,7 +24,7 @@
 using id = std::text_encoding::id;
 
 constexpr void id_ctor(id i, std::string_view expect_name) {
-  std::text_encoding te = std::text_encoding(i);
+  std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(i);
 
   assert(te.mib() == i);
   assert(expect_name == te.name());

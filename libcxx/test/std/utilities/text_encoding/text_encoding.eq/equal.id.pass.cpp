@@ -28,9 +28,10 @@ constexpr void test_primary_encodings() {
 }
 
 constexpr bool test() {
-  // 1. operator==(const text_encoding&, id) must be noexcept
+  // 1. operator==(const text_encoding&, id) must be noexcept and returns bool
   {
     std::text_encoding te = std::text_encoding();
+    ASSERT_SAME_TYPE(decltype(te == id::UTF8), bool);
     ASSERT_NOEXCEPT(te == id::UTF8);
   }
 

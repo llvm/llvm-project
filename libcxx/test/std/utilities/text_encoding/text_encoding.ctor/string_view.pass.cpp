@@ -15,6 +15,7 @@
 // text_encoding::text_encoding(string_view) noexcept
 
 #include <cassert>
+#include <concepts>
 #include <string_view>
 #include <text_encoding>
 #include <type_traits>
@@ -22,7 +23,7 @@
 #include "../test_text_encoding.h"
 
 constexpr void test_ctor(std::string_view str, std::text_encoding::id expect_id) {
-  std::text_encoding te = std::text_encoding(str);
+  std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(str);
 
   assert(te.mib() == expect_id);
   assert(te.name() == str);
@@ -30,7 +31,7 @@ constexpr void test_ctor(std::string_view str, std::text_encoding::id expect_id)
 
 constexpr void test_primary_encoding_spellings() {
   for (auto& data : unique_encoding_data) {
-    std::text_encoding te = std::text_encoding(data.name);
+    std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(data.name);
 
     assert(te.mib() == std::text_encoding::id(data.mib));
     assert(te.name() == data.name);
@@ -39,7 +40,7 @@ constexpr void test_primary_encoding_spellings() {
 
 constexpr void test_others() {
   for (auto& name : other_names) {
-    std::text_encoding te = std::text_encoding(name);
+    std::same_as<std::text_encoding> decltype(auto) te = std::text_encoding(name);
 
     assert(te.mib() == std::text_encoding::other);
     assert(te.name() == name);
