@@ -824,11 +824,7 @@ define i1 @allzeros_v4i64_sign(<4 x i64> %arg) {
 define i1 @allones_v8i64_sign(<8 x i64> %arg) {
 ; SSE-LABEL: allones_v8i64_sign:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    packssdw %xmm2, %xmm0
 ; SSE-NEXT:    packsswb %xmm0, %xmm0
@@ -2000,7 +1996,6 @@ define i1 @allones_v2i64_and1(<2 x i64> %arg) {
 ; SSE-LABEL: allones_v2i64_and1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psllq $63, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    movmskpd %xmm0, %eax
 ; SSE-NEXT:    cmpl $3, %eax
 ; SSE-NEXT:    sete %al
@@ -3214,7 +3209,6 @@ define i1 @allones_v2i64_and4(<2 x i64> %arg) {
 ; SSE-LABEL: allones_v2i64_and4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psllq $61, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    movmskpd %xmm0, %eax
 ; SSE-NEXT:    cmpl $3, %eax
 ; SSE-NEXT:    sete %al
@@ -3399,14 +3393,10 @@ define i1 @allones_v8i64_and4(<8 x i64> %arg) {
 ; SSE-LABEL: allones_v8i64_and4:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    psllq $61, %xmm3
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[1,1,3,3]
 ; SSE-NEXT:    psllq $61, %xmm2
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
 ; SSE-NEXT:    packssdw %xmm3, %xmm2
 ; SSE-NEXT:    psllq $61, %xmm1
-; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE-NEXT:    psllq $61, %xmm0
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE-NEXT:    packssdw %xmm1, %xmm0
 ; SSE-NEXT:    packssdw %xmm2, %xmm0
 ; SSE-NEXT:    packsswb %xmm0, %xmm0

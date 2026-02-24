@@ -103,18 +103,15 @@ define <4 x i64> @combine_shuffle_zero_pmuludq_256(<8 x i32> %a0, <8 x i32> %a1)
 define <8 x i64> @combine_zext_pmuludq_256(<8 x i32> %a) {
 ; SSE-LABEL: combine_zext_pmuludq_256:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    pxor %xmm3, %xmm3
+; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,1,3,3]
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm2 = xmm1[0],zero,xmm1[1],zero
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm1 = xmm1[2],xmm3[2],xmm1[3],xmm3[3]
+; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,1,3,3]
 ; SSE-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
-; SSE-NEXT:    punpckhdq {{.*#+}} xmm4 = xmm4[2],xmm3[2],xmm4[3],xmm3[3]
-; SSE-NEXT:    pmovsxdq {{.*#+}} xmm3 = [715827883,715827883]
-; SSE-NEXT:    pmuludq %xmm3, %xmm0
-; SSE-NEXT:    pmuludq %xmm3, %xmm4
-; SSE-NEXT:    pmuludq %xmm3, %xmm2
-; SSE-NEXT:    pmuludq %xmm1, %xmm3
-; SSE-NEXT:    movdqa %xmm4, %xmm1
+; SSE-NEXT:    pmovsxdq {{.*#+}} xmm4 = [715827883,715827883]
+; SSE-NEXT:    pmuludq %xmm4, %xmm0
+; SSE-NEXT:    pmuludq %xmm4, %xmm1
+; SSE-NEXT:    pmuludq %xmm4, %xmm2
+; SSE-NEXT:    pmuludq %xmm4, %xmm3
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_zext_pmuludq_256:
@@ -253,7 +250,7 @@ define i32 @PR43159(ptr %a0) {
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [344322273,344322273,1916962805,1916962805]
+; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [344322273,u,1916962805,u]
 ; AVX2-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; AVX2-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [1645975491,344322273,2164392969,1916962805]
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
@@ -276,7 +273,7 @@ define i32 @PR43159(ptr %a0) {
 ; AVX512VL:       # %bb.0: # %entry
 ; AVX512VL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [344322273,344322273,1916962805,1916962805]
+; AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [344322273,u,1916962805,u]
 ; AVX512VL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; AVX512VL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [1645975491,344322273,2164392969,1916962805]
 ; AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
@@ -299,7 +296,7 @@ define i32 @PR43159(ptr %a0) {
 ; AVX512DQVL:       # %bb.0: # %entry
 ; AVX512DQVL-NEXT:    vmovdqa (%rdi), %xmm0
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
-; AVX512DQVL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [344322273,344322273,1916962805,1916962805]
+; AVX512DQVL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1 # [344322273,u,1916962805,u]
 ; AVX512DQVL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm2
 ; AVX512DQVL-NEXT:    vpmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm2 # [1645975491,344322273,2164392969,1916962805]
 ; AVX512DQVL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
