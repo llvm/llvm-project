@@ -145,6 +145,11 @@ C23 Feature Support
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
+- Added ``__int256`` and ``__uint256`` as builtin extended integer types on all
+  64-bit targets, analogous to ``__int128``/``__uint128``. These types provide
+  native 256-bit integer arithmetic with compiler-rt runtime support for
+  arithmetic, division, shifts, and float conversions.
+
 - Added ``__builtin_stdc_rotate_left`` and ``__builtin_stdc_rotate_right``
   for bit rotation of unsigned integers including ``_BitInt`` types. Rotation
   counts are normalized modulo the bit-width and support negative values.

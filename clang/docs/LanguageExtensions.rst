@@ -451,6 +451,101 @@ favor of the standard type.
 Note: the ABI for ``_BitInt(N)`` is still in the process of being stabilized,
 so this type should not yet be used in interfaces that require ABI stability.
 
+``__int256``
+------------
+
+Clang supports ``__int256`` as a builtin 256-bit integer type on targets that
+opt in (currently x86-64 and AArch64). It is the 256-bit analogue of
+``__int128`` — a first-class builtin type with full type trait integration,
+proper alignment, and register-based calling conventions.
+
+**Type spellings:**
+
+- ``__int256``, ``signed __int256``, ``__int256_t`` — signed 256-bit integer
+- ``unsigned __int256``, ``__uint256_t`` — unsigned 256-bit integer
+
+**Feature detection:**
+
+Use ``__SIZEOF_INT256__`` (defined as ``32`` when available) or
+``__is_target_feature("int256")`` for preprocessor-level detection:
+
+.. code-block:: c
+
+  #ifdef __SIZEOF_INT256__
+  // __int256 is available
+  #endif
+
+**Properties:**
+
+- Size: 32 bytes (256 bits)
+- Alignment: 32 bytes (natural alignment, matching ``__m256i``)
+- ABI: register-based on x86-64 (arguments in GPRs, return via sret)
+- Integer rank: above ``__int128`` (correct implicit conversion rules)
+
+**Supported operations:**
+
+All standard integer operations work: arithmetic (``+``, ``-``, ``*``, ``/``,
+``%``), bitwise (``&``, ``|``, ``^``, ``~``, ``<<``, ``>>``), comparisons
+(``==``, ``!=``, ``<``, ``>``, ``<=``, ``>=``), and conversions to/from other
+integer and floating-point types.
+
+**Supported builtins:**
+
+- ``__builtin_popcountg``, ``__builtin_clzg``, ``__builtin_ctzg``
+- ``__builtin_add_overflow``, ``__builtin_sub_overflow``, ``__builtin_mul_overflow``
+- ``__builtin_ffs`` (expanded inline via ``cttz``)
+
+**C++ type traits:**
+
+In C++ mode, ``__int256`` is a full integral type:
+
+- ``__is_integral(__int256)`` is ``true``
+- ``__is_arithmetic``, ``__is_scalar``, ``__is_fundamental`` are ``true``
+- ``__is_signed(__int256)`` is ``true``; ``__is_unsigned(unsigned __int256)`` is ``true``
+- ``__make_signed(unsigned __int256)`` yields ``__int256``
+- ``__make_unsigned(__int256)`` yields ``unsigned __int256``
+- Enums with ``__int256_t`` or ``__uint256_t`` as underlying type are supported
+
+**Relationship to** ``_BitInt(256)``:
+
+Both ``__int256`` and ``_BitInt(256)`` produce identical ``i256`` IR operations,
+but they differ in ABI, alignment, and type trait behavior:
+
+.. list-table::
+   :header-rows: 1
+
+   * - Property
+     - ``__int256``
+     - ``_BitInt(256)``
+   * - Alignment
+     - 32 bytes
+     - 8 bytes
+   * - x86-64 SysV args
+     - Direct (4 GPRs)
+     - Indirect (byval)
+   * - x86-64 SysV return
+     - Indirect (sret)
+     - Indirect (sret)
+   * - AArch64 args
+     - Direct (4 GPRs: x0-x3)
+     - Indirect (byval)
+   * - AArch64 return
+     - Direct (4 GPRs: x0-x3)
+     - Indirect (sret)
+   * - Win64 ABI
+     - Indirect
+     - Indirect
+   * - ``__is_integral``
+     - ``true``
+     - ``false``
+   * - ``std::numeric_limits``
+     - Fully specialized
+     - Not specialized
+
+The ABI difference has measurable performance impact: the register-based
+calling convention avoids memory round-trips for ``__int256`` function
+arguments on x86-64 and both arguments and return values on AArch64.
+
 C keywords supported in all language modes
 ------------------------------------------
 
@@ -4561,7 +4656,8 @@ argument can be of any unsigned integer type or fixed boolean vector.
 
 ``__builtin_popcountg`` is meant to be a type-generic alternative to the
 ``__builtin_popcount{,l,ll}`` builtins, with support for other integer types,
-such as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
+such as ``unsigned __int128``, ``unsigned __int256``, and C23
+``unsigned _BitInt(N)``.
 
 ``__builtin_clzg`` and ``__builtin_ctzg``
 -----------------------------------------
@@ -4608,7 +4704,8 @@ only one argument is provided, then the behavior is undefined.
 ``__builtin_clzg`` (respectively ``__builtin_ctzg``) is meant to be a
 type-generic alternative to the ``__builtin_clz{,l,ll}`` (respectively
 ``__builtin_ctz{,l,ll}``) builtins, with support for other integer types, such
-as ``unsigned __int128`` and C23 ``unsigned _BitInt(N)``.
+as ``unsigned __int128``, ``unsigned __int256``, and C23
+``unsigned _BitInt(N)``.
 
 ``__builtin_counted_by_ref``
 ----------------------------
