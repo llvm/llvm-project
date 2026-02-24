@@ -242,6 +242,8 @@ public:
   bool hasBitIntType() const override { return true; }
 
   bool hasInt128Type() const override { return false; }
+
+  bool hasInt256Type() const override { return false; }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRTargetInfo : public BaseSPIRTargetInfo {
@@ -478,6 +480,8 @@ public:
   }
 
   bool hasInt128Type() const override { return TargetInfo::hasInt128Type(); }
+
+  bool hasInt256Type() const override { return TargetInfo::hasInt256Type(); }
 };
 
 class LLVM_LIBRARY_VISIBILITY SPIRV64IntelTargetInfo final

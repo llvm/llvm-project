@@ -70,6 +70,9 @@ NVPTXTargetInfo::NVPTXTargetInfo(const llvm::Triple &Triple,
   HasFastHalfType = true;
   HasFloat16 = true;
 
+  // NVPTX datalayout includes i256:256 (upstream), so match it.
+  Int256Align = 256;
+
   // TODO: Make shortptr a proper ABI?
   DataLayoutString =
       Triple.computeDataLayout(Opts.NVPTXUseShortPointers ? "shortptr" : "");

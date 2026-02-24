@@ -100,6 +100,7 @@ struct TransferrableTargetInfo {
   unsigned char LongWidth, LongAlign;
   unsigned char LongLongWidth, LongLongAlign;
   unsigned char Int128Align;
+  unsigned short Int256Align;
 
   // This is an optional parameter for targets that
   // don't use 'LongLongAlign' for '_BitInt' max alignment
@@ -543,6 +544,9 @@ public:
   /// getInt128Align() - Returns the alignment of Int128.
   unsigned getInt128Align() const { return Int128Align; }
 
+  /// getInt256Align() - Returns the alignment of Int256.
+  unsigned getInt256Align() const { return Int256Align; }
+
   /// getBitIntMaxAlign() - Returns the maximum possible alignment of
   /// '_BitInt' and 'unsigned _BitInt'.
   unsigned getBitIntMaxAlign() const {
@@ -679,6 +683,11 @@ public:
     return (getPointerWidth(LangAS::Default) >= 64) ||
            getTargetOpts().ForceEnableInt128;
   } // FIXME
+
+  /// Determine whether the __int256 type is supported on this target.
+  virtual bool hasInt256Type() const {
+    return getPointerWidth(LangAS::Default) >= 64;
+  }
 
   /// Determine whether the _BitInt type is supported on this target. This
   /// limitation is put into place for ABI reasons.

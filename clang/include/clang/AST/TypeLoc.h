@@ -605,7 +605,7 @@ public:
 
   bool needsExtraLocalData() const {
     BuiltinType::Kind bk = getTypePtr()->getKind();
-    return (bk >= BuiltinType::UShort && bk <= BuiltinType::UInt128) ||
+    return (bk >= BuiltinType::UShort && bk <= BuiltinType::UInt256) ||
            (bk >= BuiltinType::Short && bk <= BuiltinType::Ibm128) ||
            bk == BuiltinType::UChar || bk == BuiltinType::SChar;
   }

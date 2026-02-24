@@ -1935,7 +1935,7 @@ protected:
     unsigned : NumTypeBits;
 
     /// The kind (BuiltinType::Kind) of builtin type this is.
-    static constexpr unsigned NumOfBuiltinTypeBits = 9;
+    static constexpr unsigned NumOfBuiltinTypeBits = 10;
     unsigned Kind : NumOfBuiltinTypeBits;
   };
 
@@ -3230,16 +3230,14 @@ public:
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
 
-  bool isInteger() const {
-    return getKind() >= Bool && getKind() <= Int128;
-  }
+  bool isInteger() const { return getKind() >= Bool && getKind() <= Int256; }
 
   bool isSignedInteger() const {
-    return getKind() >= Char_S && getKind() <= Int128;
+    return getKind() >= Char_S && getKind() <= Int256;
   }
 
   bool isUnsignedInteger() const {
-    return getKind() >= Bool && getKind() <= UInt128;
+    return getKind() >= Bool && getKind() <= UInt256;
   }
 
   bool isFloatingPoint() const {

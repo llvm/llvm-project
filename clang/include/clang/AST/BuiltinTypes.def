@@ -95,6 +95,9 @@ UNSIGNED_TYPE(ULongLong, UnsignedLongLongTy)
 // '__uint128_t'
 UNSIGNED_TYPE(UInt128, UnsignedInt128Ty)
 
+// '__uint256_t'
+UNSIGNED_TYPE(UInt256, UnsignedInt256Ty)
+
 //===- Signed Types -------------------------------------------------------===//
 
 // 'char' for targets where it's signed
@@ -120,6 +123,9 @@ SIGNED_TYPE(LongLong, LongLongTy)
 
 // '__int128_t'
 SIGNED_TYPE(Int128, Int128Ty)
+
+// '__int256_t'
+SIGNED_TYPE(Int256, Int256Ty)
 
 //===- Fixed point types --------------------------------------------------===//
 

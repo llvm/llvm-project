@@ -62,6 +62,7 @@ namespace clang {
     TST_char32, // C++11 char32_t
     TST_int,
     TST_int128,
+    TST_int256,
     TST_bitint,  // Bit-precise integer types.
     TST_half,    // OpenCL half, ARM NEON __fp16
     TST_Float16, // C11 extension ISO/IEC TS 18661-3

@@ -53,6 +53,12 @@ enum PredefinedDeclIDs {
   /// The unsigned 128-bit integer type.
   PREDEF_DECL_UNSIGNED_INT_128_ID,
 
+  /// The signed 256-bit integer type.
+  PREDEF_DECL_INT_256_ID,
+
+  /// The unsigned 256-bit integer type.
+  PREDEF_DECL_UNSIGNED_INT_256_ID,
+
   /// The internal 'instancetype' typedef.
   PREDEF_DECL_OBJC_INSTANCETYPE_ID,
 
