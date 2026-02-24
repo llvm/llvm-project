@@ -398,7 +398,7 @@ public:
                         MachineFunctionAnalysisManager &MFAM);
 };
 
-FunctionPass *createX86PostLegalizerCombiner();
+FunctionPass *createX86PostLegalizerCombinerLegacy();
 FunctionPass *createX86PreLegalizerCombiner();
 
 class X86LoadValueInjectionLoadHardeningPass
@@ -485,7 +485,7 @@ void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
-void initializeX86PostLegalizerCombinerPass(PassRegistry &);
+void initializeX86PostLegalizerCombinerLegacyPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

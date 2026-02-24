@@ -115,13 +115,15 @@ bool X86PostLegalizerCombinerImpl::tryCombineAll(MachineInstr &MI) const {
   return tryCombineAllImpl(MI);
 }
 
-class X86PostLegalizerCombiner : public MachineFunctionPass {
+class X86PostLegalizerCombinerLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86PostLegalizerCombiner();
+  X86PostLegalizerCombinerLegacy();
 
-  StringRef getPassName() const override { return "X86PostLegalizerCombiner"; }
+  StringRef getPassName() const override {
+    return "X86PostLegalizerCombinerLegacy";
+  }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
@@ -131,7 +133,7 @@ private:
 };
 } // end anonymous namespace
 
-void X86PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
+void X86PostLegalizerCombinerLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetPassConfig>();
   AU.setPreservesCFG();
   getSelectionDAGFallbackAnalysisUsage(AU);
@@ -146,12 +148,13 @@ void X86PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-X86PostLegalizerCombiner::X86PostLegalizerCombiner() : MachineFunctionPass(ID) {
+X86PostLegalizerCombinerLegacy::X86PostLegalizerCombinerLegacy()
+    : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
     reportFatalInternalError("Invalid rule identifier");
 }
 
-bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
+bool X86PostLegalizerCombinerLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (MF.getProperties().hasFailedISel())
     return false;
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
@@ -173,13 +176,13 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   return Impl.combineMachineInstrs();
 }
 
-char X86PostLegalizerCombiner::ID = 0;
-INITIALIZE_PASS_BEGIN(X86PostLegalizerCombiner, DEBUG_TYPE,
+char X86PostLegalizerCombinerLegacy::ID = 0;
+INITIALIZE_PASS_BEGIN(X86PostLegalizerCombinerLegacy, DEBUG_TYPE,
                       "Combine X86 MachineInstrs after legalization", false,
                       false)
 INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
 INITIALIZE_PASS_DEPENDENCY(GISelValueTrackingAnalysisLegacy)
-INITIALIZE_PASS_END(X86PostLegalizerCombiner, DEBUG_TYPE,
+INITIALIZE_PASS_END(X86PostLegalizerCombinerLegacy, DEBUG_TYPE,
                     "Combine X86 MachineInstrs after legalization", false,
                     false)
 
@@ -214,7 +217,7 @@ X86PostLegalizerCombinerPass::run(MachineFunction &MF,
   return PA;
 }
 
-FunctionPass *createX86PostLegalizerCombiner() {
-  return new X86PostLegalizerCombiner();
+FunctionPass *createX86PostLegalizerCombinerLegacy() {
+  return new X86PostLegalizerCombinerLegacy();
 }
 } // end namespace llvm
