@@ -271,21 +271,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
                 env={**os.environ, "LLDB_DAP_RIT_TIMEOUT_IN_MS": "1000"},
             )
 
-        proc = subprocess.Popen(
-            [
-                self.lldbDAPExec,
-                "--comm-file",
-                comm_file,
-                "--launch-target",
-                "echo",
-                "foo",
-            ],
-            universal_newlines=True,
-            stderr=subprocess.PIPE,
-            env={**os.environ, "LLDB_DAP_RIT_TIMEOUT_IN_MS": "1000"},
-        )
-
-        self.read_pid_message(comm_file)
+            self.read_pid_message(comm_file, pipe)
 
         _, stderr = proc.communicate()
         self.assertIn("Timed out trying to get messages from the debug adapter", stderr)

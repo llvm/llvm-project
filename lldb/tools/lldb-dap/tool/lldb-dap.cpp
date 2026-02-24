@@ -285,12 +285,11 @@ SetupIORedirection(const llvm::SmallVectorImpl<llvm::StringRef> &files) {
 //
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adapter.
-static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                                             llvm::StringRef comm_file,
-                                             lldb::pid_t debugger_pid,
-                                             llvm::StringRef stdio,
-                                             char *argv[],
-                                             int argc) {
+static llvm::Expected<int> LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
+                                                     llvm::StringRef comm_file,
+                                                     lldb::pid_t debugger_pid,
+                                                     llvm::StringRef stdio,
+                                                     char *argv[], int argc) {
   // This env var should be used only for tests.
   const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
   int timeout_in_ms =
@@ -381,7 +380,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   if (!result)
     return notifyError(comm_channel, "Failed to launch target process");
 
-  auto cleanupAndReturn = [&](llvm::Error err) -> llvm::Error {
+  auto cleanupAndReturn = [&](llvm::Error err) -> llvm::Expected<int> {
     if (pi.hProcess)
       TerminateProcess(pi.hProcess, 1);
     if (pi.hThread)
@@ -407,9 +406,14 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
 
   // Wait for child to complete to match POSIX behavior.
   WaitForSingleObject(pi.hProcess, INFINITE);
+  DWORD code = 0;
+  if (!::GetExitCodeProcess(pi.hProcess, &code))
+    return cleanupAndReturn(notifyError(
+        comm_channel, "Failed to get the target's process return code"));
+
   CloseHandle(pi.hThread);
   CloseHandle(pi.hProcess);
-  return llvm::Error::success();
+  return code;
 #else
   if (!stdio.empty()) {
     constexpr size_t num_of_stdio = 3;
@@ -732,12 +736,16 @@ int main(int argc, char *argv[]) {
         }
       }
       llvm::StringRef stdio = input_args.getLastArgValue(OPT_stdio);
-      if (llvm::Error err =
-              LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
-                                        stdio, argv + target_args_pos, argc - target_args_pos)) {
-        llvm::errs() << llvm::toString(std::move(err)) << '\n';
+      auto return_code_or_err = LaunchRunInTerminalTarget(
+          *target_arg, comm_file->getValue(), pid, stdio,
+          argv + target_args_pos, argc - target_args_pos);
+      if (!return_code_or_err) {
+        llvm::errs() << llvm::toString(
+                            std::move(return_code_or_err.takeError()))
+                     << '\n';
         return EXIT_FAILURE;
       }
+      return *return_code_or_err;
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "
                       "specified\n";
