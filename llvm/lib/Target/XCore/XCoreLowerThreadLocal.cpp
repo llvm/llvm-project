@@ -62,15 +62,15 @@ static ArrayType *createLoweredType(Type *OriginalType) {
   return ArrayType::get(OriginalType, MaxThreads);
 }
 
-static Constant *
-createLoweredInitializer(ArrayType *NewType, Constant *OriginalInitializer) {
+static Constant *createLoweredInitializer(ArrayType *NewType,
+                                          Constant *OriginalInitializer,
+                                          const DataLayout *DL) {
   SmallVector<Constant *, 8> Elements(MaxThreads);
   for (unsigned i = 0; i != MaxThreads; ++i) {
     Elements[i] = OriginalInitializer;
   }
-  return ConstantArray::get(NewType, Elements);
+  return ConstantArray::get(NewType, Elements, DL);
 }
-
 
 static bool replaceConstantExprOp(ConstantExpr *CE, Pass *P) {
   do {
@@ -140,8 +140,8 @@ bool XCoreLowerThreadLocal::lowerGlobal(GlobalVariable *GV) {
   ArrayType *NewType = createLoweredType(GV->getValueType());
   Constant *NewInitializer = nullptr;
   if (GV->hasInitializer())
-    NewInitializer = createLoweredInitializer(NewType,
-                                              GV->getInitializer());
+    NewInitializer = createLoweredInitializer(NewType, GV->getInitializer(),
+                                              &M->getDataLayout());
   GlobalVariable *NewGV =
     new GlobalVariable(*M, NewType, GV->isConstant(), GV->getLinkage(),
                        NewInitializer, "", nullptr,

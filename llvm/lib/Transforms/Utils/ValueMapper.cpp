@@ -121,13 +121,15 @@ class Mapper {
   SmallVector<DelayedBasicBlock, 1> DelayedBBs;
   SmallVector<Constant *, 16> AppendingInits;
   const MetadataPredicate *IdentityMD;
+  const DataLayout *DL;
 
 public:
   Mapper(ValueToValueMapTy &VM, RemapFlags Flags,
          ValueMapTypeRemapper *TypeMapper, ValueMaterializer *Materializer,
-         const MetadataPredicate *IdentityMD)
+         const MetadataPredicate *IdentityMD, const DataLayout *DL)
       : Flags(Flags), TypeMapper(TypeMapper),
-        MCs(1, MappingContext(VM, Materializer)), IdentityMD(IdentityMD) {}
+        MCs(1, MappingContext(VM, Materializer)), IdentityMD(IdentityMD),
+        DL(DL) {}
 
   /// ValueMapper should explicitly call \a flush() before destruction.
   ~Mapper() { assert(!hasWorkToDo() && "Expected to be flushed"); }
@@ -520,11 +522,11 @@ Value *Mapper::mapValue(const Value *V) {
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C))
     return getVM()[V] = CE->getWithOperands(Ops, NewTy, false, NewSrcTy);
   if (isa<ConstantArray>(C))
-    return getVM()[V] = ConstantArray::get(cast<ArrayType>(NewTy), Ops);
+    return getVM()[V] = ConstantArray::get(cast<ArrayType>(NewTy), Ops, DL);
   if (isa<ConstantStruct>(C))
-    return getVM()[V] = ConstantStruct::get(cast<StructType>(NewTy), Ops);
+    return getVM()[V] = ConstantStruct::get(cast<StructType>(NewTy), Ops, DL);
   if (isa<ConstantVector>(C))
-    return getVM()[V] = ConstantVector::get(Ops);
+    return getVM()[V] = ConstantVector::get(Ops, DL);
   if (isa<ConstantPtrAuth>(C))
     return getVM()[V] =
                ConstantPtrAuth::get(Ops[0], cast<ConstantInt>(Ops[1]),
@@ -1130,7 +1132,7 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
       auto *E1 = cast<Constant>(mapValue(S->getOperand(0)));
       auto *E2 = cast<Constant>(mapValue(S->getOperand(1)));
       Constant *Null = Constant::getNullValue(VoidPtrTy);
-      NewV = ConstantStruct::get(cast<StructType>(EltTy), E1, E2, Null);
+      NewV = ConstantStruct::get(cast<StructType>(EltTy), {E1, E2, Null}, DL);
     } else {
       NewV = cast_or_null<Constant>(mapValue(V));
     }
@@ -1138,7 +1140,7 @@ void Mapper::mapAppendingVariable(GlobalVariable &GV, GlobalVariable *OldGV,
   }
 
   GV.setInitializer(
-      ConstantArray::get(cast<ArrayType>(GV.getValueType()), Elements));
+      ConstantArray::get(cast<ArrayType>(GV.getValueType()), Elements, DL));
 }
 
 void Mapper::scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
@@ -1228,8 +1230,9 @@ public:
 ValueMapper::ValueMapper(ValueToValueMapTy &VM, RemapFlags Flags,
                          ValueMapTypeRemapper *TypeMapper,
                          ValueMaterializer *Materializer,
-                         const MetadataPredicate *IdentityMD)
-    : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer, IdentityMD)) {}
+                         const MetadataPredicate *IdentityMD,
+                         const DataLayout *DL)
+    : pImpl(new Mapper(VM, Flags, TypeMapper, Materializer, IdentityMD, DL)) {}
 
 ValueMapper::~ValueMapper() { delete getAsMapper(pImpl); }
 

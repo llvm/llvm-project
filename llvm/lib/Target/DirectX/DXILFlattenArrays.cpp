@@ -417,7 +417,7 @@ static void collectElements(Constant *Init,
 
 static Constant *transformInitializer(Constant *Init, Type *OrigType,
                                       ArrayType *FlattenedType,
-                                      LLVMContext &Ctx) {
+                                      LLVMContext &Ctx, const DataLayout *DL) {
   // Handle ConstantAggregateZero (zero-initialized constants)
   if (isa<ConstantAggregateZero>(Init))
     return ConstantAggregateZero::get(FlattenedType);
@@ -433,7 +433,7 @@ static Constant *transformInitializer(Constant *Init, Type *OrigType,
   collectElements(Init, FlattenedElements);
   assert(FlattenedType->getNumElements() == FlattenedElements.size() &&
          "The number of collected elements should match the FlattenedType");
-  return ConstantArray::get(FlattenedType, FlattenedElements);
+  return ConstantArray::get(FlattenedType, FlattenedElements, DL);
 }
 
 static void flattenGlobalArrays(
@@ -465,8 +465,8 @@ static void flattenGlobalArrays(
 
     if (G.hasInitializer()) {
       Constant *Init = G.getInitializer();
-      Constant *NewInit =
-          transformInitializer(Init, OrigType, FattenedArrayType, Ctx);
+      Constant *NewInit = transformInitializer(
+          Init, OrigType, FattenedArrayType, Ctx, &M.getDataLayout());
       NewGlobal->setInitializer(NewInit);
     }
     GlobalMap[&G] = NewGlobal;

@@ -1199,6 +1199,7 @@ namespace {
 /// Handle the remapping of ptr addrspace(7) constants.
 class FatPtrConstMaterializer final : public ValueMaterializer {
   BufferFatPtrToStructTypeMap *TypeMap;
+  const DataLayout *DL;
   // An internal mapper that is used to recurse into the arguments of constants.
   // While the documentation for `ValueMapper` specifies not to use it
   // recursively, examination of the logic in mapValue() shows that it can
@@ -1211,9 +1212,11 @@ class FatPtrConstMaterializer final : public ValueMaterializer {
 public:
   // UnderlyingMap is the value map this materializer will be filling.
   FatPtrConstMaterializer(BufferFatPtrToStructTypeMap *TypeMap,
+                          const DataLayout *DL,
                           ValueToValueMapTy &UnderlyingMap)
-      : TypeMap(TypeMap),
-        InternalMapper(UnderlyingMap, RF_None, TypeMap, this) {}
+      : TypeMap(TypeMap), DL(DL),
+        InternalMapper(UnderlyingMap, RF_None, TypeMap, this,
+                       /*IdentityMD=*/nullptr, DL) {}
   ~FatPtrConstMaterializer() = default;
 
   Value *materialize(Value *V) override;
@@ -1228,12 +1231,14 @@ Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
   if (isa<PoisonValue>(C)) {
     return ConstantStruct::get(NewTy,
                                {PoisonValue::get(NewTy->getElementType(0)),
-                                PoisonValue::get(NewTy->getElementType(1))});
+                                PoisonValue::get(NewTy->getElementType(1))},
+                               DL);
   }
   if (isa<UndefValue>(C)) {
     return ConstantStruct::get(NewTy,
                                {UndefValue::get(NewTy->getElementType(0)),
-                                UndefValue::get(NewTy->getElementType(1))});
+                                UndefValue::get(NewTy->getElementType(1))},
+                               DL);
   }
 
   if (auto *VC = dyn_cast<ConstantVector>(C)) {
@@ -1243,8 +1248,10 @@ Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
         return nullptr;
       auto [Rsrc, Off] = splitLoweredFatBufferConst(NewS);
       auto EC = VC->getType()->getElementCount();
-      return ConstantStruct::get(NewTy, {ConstantVector::getSplat(EC, Rsrc),
-                                         ConstantVector::getSplat(EC, Off)});
+      return ConstantStruct::get(NewTy,
+                                 {ConstantVector::getSplat(EC, Rsrc, DL),
+                                  ConstantVector::getSplat(EC, Off, DL)},
+                                 DL);
     }
     SmallVector<Constant *> Rsrcs;
     SmallVector<Constant *> Offs;
@@ -1256,9 +1263,9 @@ Constant *FatPtrConstMaterializer::materializeBufferFatPtrConst(Constant *C) {
       Rsrcs.push_back(Rsrc);
       Offs.push_back(Off);
     }
-    Constant *RsrcVec = ConstantVector::get(Rsrcs);
-    Constant *OffVec = ConstantVector::get(Offs);
-    return ConstantStruct::get(NewTy, {RsrcVec, OffVec});
+    Constant *RsrcVec = ConstantVector::get(Rsrcs, DL);
+    Constant *OffVec = ConstantVector::get(Offs, DL);
+    return ConstantStruct::get(NewTy, {RsrcVec, OffVec}, DL);
   }
 
   if (isa<GlobalValue>(C))
@@ -2535,9 +2542,10 @@ bool AMDGPULowerBufferFatPointers::run(Module &M, const TargetMachine &TM) {
   SmallVector<Function *> Intrinsics;
   // Keep one big map so as to memoize constants across functions.
   ValueToValueMapTy CloneMap;
-  FatPtrConstMaterializer Materializer(&StructTM, CloneMap);
+  FatPtrConstMaterializer Materializer(&StructTM, &DL, CloneMap);
 
-  ValueMapper LowerInFuncs(CloneMap, RF_None, &StructTM, &Materializer);
+  ValueMapper LowerInFuncs(CloneMap, RF_None, &StructTM, &Materializer,
+                           /*IdentityMD=*/nullptr, &DL);
   for (auto [F, InterfaceChange] : NeedsRemap) {
     Function *NewF = F;
     if (InterfaceChange)

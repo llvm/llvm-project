@@ -1558,7 +1558,9 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
   SmallVector<Instruction *, 16> DeadInstructions;
   ValueToValueMapTy VMap;
-  ValueMapper VMapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
+  ValueMapper VMapper(VMap, RF_NoModuleLevelChanges | RF_IgnoreMissingLocals,
+                      /*TypeMapper=*/nullptr, /*Materializer=*/nullptr,
+                      /*IdentityMD=*/nullptr, DL);
 
   // Replaces the uses of the old address expressions with the new ones.
   for (const WeakTrackingVH &WVH : Postorder) {
