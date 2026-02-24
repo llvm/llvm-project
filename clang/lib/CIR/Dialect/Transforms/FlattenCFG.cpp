@@ -884,10 +884,9 @@ public:
   }
 
   // Collect all cir.resume operations in the body region that come from
-  // already-flattened inner cleanup scopes. These resume ops need to be
-  // chained through this cleanup's EH handler instead of unwinding directly
-  // to the caller. Skips resume ops inside nested TryOps because those will
-  // be handled by the TryOp's own flattening.
+  // already-flattened try or cleanup scope operations that were nested within
+  // this cleanup scope. These resume ops need to be chained through this
+  // cleanup's EH handler instead of unwinding directly to the caller.
   void collectResumeOps(
       mlir::Region &bodyRegion,
       llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) const {
@@ -1355,14 +1354,17 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
 
-    // Nested cleanup scopes must be lowered before the enclosing cleanup scope.
-    // Fail the match so the pattern rewriter will process inner cleanups first.
-    bool hasNestedCleanup = cleanupOp.getBodyRegion()
-                                .walk([&](cir::CleanupScopeOp) {
-                                  return mlir::WalkResult::interrupt();
-                                })
-                                .wasInterrupted();
-    if (hasNestedCleanup)
+    // Nested cleanup scopes and try operations must be flattened before the
+    // enclosing cleanup scope so that EH cleanup inside them is properly
+    // handled. Fail the match so the pattern rewriter processes them first.
+    bool hasNestedOps = cleanupOp.getBodyRegion()
+                            .walk([&](mlir::Operation *op) {
+                              if (isa<cir::CleanupScopeOp, cir::TryOp>(op))
+                                return mlir::WalkResult::interrupt();
+                              return mlir::WalkResult::advance();
+                            })
+                            .wasInterrupted();
+    if (hasNestedOps)
       return mlir::failure();
 
     cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();

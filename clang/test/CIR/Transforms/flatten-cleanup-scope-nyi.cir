@@ -205,6 +205,35 @@ cir.func @test_goto_in_nested_cleanup() {
   cir.return
 }
 
+// Test that a try op with handlers nested inside a cleanup scope produces
+// a diagnostic. The cleanup scope defers to the try op, which then fails
+// because handler flattening is not yet implemented.
+cir.func @test_try_with_handlers_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    // expected-error @below {{TryOp flattening with handlers is not yet implemented}}
+    cir.try {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
 // Test that we issue a diagnostic for throwing calls in the cleanup region
 // of an EH cleanup scope.
 cir.func @test_throwing_call_in_eh_cleanup() {
