@@ -1993,9 +1993,9 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVISD::WADDAU:
   case RISCVISD::WSUBAU: {
     assert(!Subtarget->is64Bit() && "Unexpected opcode");
-    assert((Node->getOpcode() != RISCVISD::PPAIRE_DB ||
-            Subtarget->hasStdExtP()) &&
-           "Unexpected opcode");
+    assert(
+        (Node->getOpcode() != RISCVISD::PPAIRE_DB || Subtarget->hasStdExtP()) &&
+        "Unexpected opcode");
 
     SDValue Op0Lo = Node->getOperand(0);
     SDValue Op0Hi = Node->getOperand(1);
