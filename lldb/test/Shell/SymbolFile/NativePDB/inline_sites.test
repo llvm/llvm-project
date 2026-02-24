@@ -165,11 +165,9 @@
 # CHECK-NEXT:  | `-FunctionDecl {{.*}} foo 'int (int)' inline
 # CHECK-NEXT:  |   `-ParmVarDecl {{.*}} x 'int'
 # CHECK-NEXT:  |-CXXRecordDecl {{.*}} <undeserialized declarations> class Class1
-# CHECK-NEXT:  | |-AccessSpecDecl {{.*}} public
 # CHECK-NEXT:  | `-CXXMethodDecl {{.*}} bar 'int (int)' static
 # CHECK-NEXT:  |   `-ParmVarDecl {{.*}} 'int'
 # CHECK-NEXT:  `-NamespaceDecl {{.*}} Namespace2
 # CHECK-NEXT:    `-CXXRecordDecl {{.*}} <undeserialized declarations> class Class2
-# CHECK-NEXT:      |-AccessSpecDecl {{.*}} public
 # CHECK-NEXT:      `-CXXMethodDecl {{.*}} func 'int (int)' static
 # CHECK-NEXT:        `-ParmVarDecl {{.*}} 'int'

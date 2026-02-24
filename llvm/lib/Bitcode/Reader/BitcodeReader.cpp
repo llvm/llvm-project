@@ -984,6 +984,11 @@ class ModuleSummaryIndexBitcodeReader : public BitcodeReaderBase {
   /// the CallStackRadixTreeBuilder class in ProfileData/MemProf.h for format.
   std::vector<uint64_t> RadixArray;
 
+  /// Map from the module's stack id index to the index in the
+  /// ModuleSummaryIndex's StackIds vector. Populated when the STACK_IDS record
+  /// is processed and used to avoid repeated hash lookups.
+  std::vector<unsigned> StackIdToIndex;
+
 public:
   ModuleSummaryIndexBitcodeReader(
       BitstreamCursor Stream, StringRef Strtab, ModuleSummaryIndex &TheIndex,
@@ -2271,6 +2276,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::NoCreateUndefOrPoison;
   case bitc::ATTR_KIND_DENORMAL_FPENV:
     return Attribute::DenormalFPEnv;
+  case bitc::ATTR_KIND_NOOUTLINE:
+    return Attribute::NoOutline;
   }
 }
 
@@ -4418,6 +4425,13 @@ Error BitcodeReader::parseFunctionRecord(ArrayRef<uint64_t> Record) {
   if (Record.size() > 18 && Strtab.data() &&
       Record[17] + Record[18] <= Strtab.size()) {
     Func->setPartition(StringRef(Strtab.data() + Record[17], Record[18]));
+  }
+
+  if (Record.size() > 19) {
+    MaybeAlign PrefAlignment;
+    if (Error Err = parseAlignmentValue(Record[19], PrefAlignment))
+      return Err;
+    Func->setPreferredAlignment(PrefAlignment);
   }
 
   ValueList.push_back(Func, getVirtualTypeID(Func->getType(), FTyID));
@@ -7634,8 +7648,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
     StackIdList.reserve(NumStackEntries);
     for (unsigned J = 0; J < NumStackEntries; J++) {
       assert(Record[I] < StackIds.size());
-      StackIdList.push_back(
-          TheIndex.addOrGetStackIdIndex(StackIds[Record[I++]]));
+      StackIdList.push_back(StackIdToIndex[Record[I++]]);
     }
   } else {
     unsigned RadixIndex = Record[I++];
@@ -7658,7 +7671,7 @@ SmallVector<unsigned> ModuleSummaryIndexBitcodeReader::parseAllocInfoContext(
         assert(static_cast<std::make_signed_t<unsigned>>(Elem) >= 0);
       }
       RadixIndex++;
-      StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[Elem]));
+      StackIdList.push_back(StackIdToIndex[Elem]);
     }
   }
   return StackIdList;
@@ -8121,16 +8134,22 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     case bitc::FS_STACK_IDS: { // [n x stackid]
       // Save stack ids in the reader to consult when adding stack ids from the
       // lists in the stack node and alloc node entries.
+      assert(StackIds.empty());
       if (Version <= 11) {
         StackIds = ArrayRef<uint64_t>(Record);
-        break;
+      } else {
+        // This is an array of 32-bit fixed-width values, holding each 64-bit
+        // context id as a pair of adjacent (most significant first) 32-bit
+        // words.
+        assert(Record.size() % 2 == 0);
+        StackIds.reserve(Record.size() / 2);
+        for (auto R = Record.begin(); R != Record.end(); R += 2)
+          StackIds.push_back(*R << 32 | *(R + 1));
       }
-      // This is an array of 32-bit fixed-width values, holding each 64-bit
-      // context id as a pair of adjacent (most significant first) 32-bit words.
-      assert(Record.size() % 2 == 0);
-      StackIds.reserve(Record.size() / 2);
-      for (auto R = Record.begin(); R != Record.end(); R += 2)
-        StackIds.push_back(*R << 32 | *(R + 1));
+      assert(StackIdToIndex.empty());
+      StackIdToIndex.reserve(StackIds.size());
+      for (uint64_t StackId : StackIds)
+        StackIdToIndex.push_back(TheIndex.addOrGetStackIdIndex(StackId));
       break;
     }
 
@@ -8144,7 +8163,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<unsigned> StackIdList;
       for (uint64_t R : drop_begin(Record)) {
         assert(R < StackIds.size());
-        StackIdList.push_back(TheIndex.addOrGetStackIdIndex(StackIds[R]));
+        StackIdList.push_back(StackIdToIndex[R]);
       }
       ValueInfo VI = std::get<0>(getValueInfoFromValueId(ValueID));
       PendingCallsites.push_back(CallsiteInfo({VI, std::move(StackIdList)}));
@@ -8160,8 +8179,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       SmallVector<unsigned> StackIdList;
       for (unsigned J = 0; J < NumStackIds; J++) {
         assert(*RecordIter < StackIds.size());
-        StackIdList.push_back(
-            TheIndex.addOrGetStackIdIndex(StackIds[*RecordIter++]));
+        StackIdList.push_back(StackIdToIndex[*RecordIter++]);
       }
       SmallVector<unsigned> Versions;
       for (unsigned J = 0; J < NumVersions; J++)
