@@ -1354,26 +1354,28 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                                              MachineInstr &I,
                                              const ExtInstList &Insts) const {
 
-  for (const auto &[InstructionSet, Opcode] : Insts) {
-    if (!STI.canUseExtInstSet(InstructionSet))
-      continue;
-    MachineBasicBlock &BB = *I.getParent();
-    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-                   .addDef(ResVReg)
-                   .addUse(GR.getSPIRVTypeID(ResType))
-                   .addImm(static_cast<uint32_t>(InstructionSet))
-                   .addImm(Opcode)
-                   .setMIFlags(I.getFlags());
-    const unsigned NumOps = I.getNumOperands();
-    unsigned Index = 1;
-    if (Index < NumOps &&
-        I.getOperand(Index).getType() ==
-            MachineOperand::MachineOperandType::MO_IntrinsicID)
-      Index = 2;
-    for (; Index < NumOps; ++Index)
-      MIB.add(I.getOperand(Index));
-    MIB.constrainAllUses(TII, TRI, RBI);
-    return true;
+  for (const auto &Ex : Insts) {
+    SPIRV::InstructionSet::InstructionSet Set = Ex.first;
+    uint32_t Opcode = Ex.second;
+    if (STI.canUseExtInstSet(Set)) {
+      MachineBasicBlock &BB = *I.getParent();
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType))
+                     .addImm(static_cast<uint32_t>(Set))
+                     .addImm(Opcode)
+                     .setMIFlags(I.getFlags());
+      const unsigned NumOps = I.getNumOperands();
+      unsigned Index = 1;
+      if (Index < NumOps &&
+          I.getOperand(Index).getType() ==
+              MachineOperand::MachineOperandType::MO_IntrinsicID)
+        Index = 2;
+      for (; Index < NumOps; ++Index)
+        MIB.add(I.getOperand(Index));
+      MIB.constrainAllUses(TII, TRI, RBI);
+      return true;
+    }
   }
   return false;
 }
@@ -1411,25 +1413,27 @@ bool SPIRVInstructionSelector::selectExtInstForLRound(
 bool SPIRVInstructionSelector::selectExtInstForLRound(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I,
     const ExtInstList &Insts) const {
-  for (const auto &[InstructionSet, Opcode] : Insts) {
-    if (!STI.canUseExtInstSet(InstructionSet))
-      continue;
-    MachineBasicBlock &BB = *I.getParent();
-    auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-                   .addDef(ResVReg)
-                   .addUse(GR.getSPIRVTypeID(ResType))
-                   .addImm(static_cast<uint32_t>(InstructionSet))
-                   .addImm(Opcode);
-    const unsigned NumOps = I.getNumOperands();
-    unsigned Index = 1;
-    if (Index < NumOps &&
-        I.getOperand(Index).getType() ==
-            MachineOperand::MachineOperandType::MO_IntrinsicID)
-      Index = 2;
-    for (; Index < NumOps; ++Index)
-      MIB.add(I.getOperand(Index));
-    MIB.constrainAllUses(TII, TRI, RBI);
-    return true;
+  for (const auto &Ex : Insts) {
+    SPIRV::InstructionSet::InstructionSet Set = Ex.first;
+    uint32_t Opcode = Ex.second;
+    if (STI.canUseExtInstSet(Set)) {
+      MachineBasicBlock &BB = *I.getParent();
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType))
+                     .addImm(static_cast<uint32_t>(Set))
+                     .addImm(Opcode);
+      const unsigned NumOps = I.getNumOperands();
+      unsigned Index = 1;
+      if (Index < NumOps &&
+          I.getOperand(Index).getType() ==
+              MachineOperand::MachineOperandType::MO_IntrinsicID)
+        Index = 2;
+      for (; Index < NumOps; ++Index)
+        MIB.add(I.getOperand(Index));
+      MIB.constrainAllUses(TII, TRI, RBI);
+      return true;
+    }
   }
   return false;
 }
@@ -1513,9 +1517,7 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         .addUse(PointerVReg)
         .constrainAllUses(TII, TRI, RBI);
     return true;
-  }
-
-  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+  } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     // GLSL.std.450 has no combined sincos; emit separate Sin and Cos.
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
         .addDef(ResVReg)
@@ -1533,14 +1535,13 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         .constrainAllUses(TII, TRI, RBI);
     return true;
   }
-
   return false;
 }
 
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
                                                 SPIRVTypeInst ResType,
                                                 MachineInstr &I,
-                                                ArrayRef<Register> Srcs,
+                                                std::vector<Register> Srcs,
                                                 unsigned Opcode) const {
   auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
                  .addDef(ResVReg)
@@ -2921,7 +2922,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
       [&](Register InputRegister, bool IsUnsigned) {
         const bool IsFloatTy =
             GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-        const auto IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMax
+        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMax
                                           : SPIRV::OpGroupNonUniformSMax;
         return IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntOp;
       });
@@ -2936,7 +2937,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
       [&](Register InputRegister, bool IsUnsigned) {
         const bool IsFloatTy =
             GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-        const auto IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMin
+        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMin
                                           : SPIRV::OpGroupNonUniformSMin;
         return IsFloatTy ? SPIRV::OpGroupNonUniformFMin : IntOp;
       });
@@ -2968,7 +2969,7 @@ bool SPIRVInstructionSelector::selectWaveReduce(
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVTypeInst IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  const auto Opcode = PickOpcode(InputRegister, IsUnsigned);
+  const unsigned Opcode = PickOpcode(InputRegister, IsUnsigned);
   BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
@@ -3279,10 +3280,10 @@ bool SPIRVInstructionSelector::selectExp10(Register ResVReg,
                       : SPIRV::OpFMulS;
 
     if (!selectOpWithSrcs(ArgReg, ResType, I,
-                          {ConstReg, I.getOperand(1).getReg()}, Opcode))
+                          {I.getOperand(1).getReg(), ConstReg}, Opcode))
       return false;
     if (!selectExtInstWithSrcs(
-        ResVReg, ResType, I, std::vector<Register>({ArgReg}),
+        ResVReg, ResType, I, {ArgReg},
         {{SPIRV::InstructionSet::GLSL_std_450, GL::Exp2}}))
       return false;
 
@@ -5351,50 +5352,46 @@ bool SPIRVInstructionSelector::selectLog10(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::log10);
   }
 
-  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
-    // There is no log10 instruction in the GLSL Extended Instruction set, so it
-    // is implemented as:
-    // log10(x) = log2(x) * (1 / log2(10))
-    //          = log2(x) * 0.30103
+  // There is no log10 instruction in the GLSL Extended Instruction set, so it
+  // is implemented as:
+  // log10(x) = log2(x) * (1 / log2(10))
+  //          = log2(x) * 0.30103
 
-    MachineIRBuilder MIRBuilder(I);
-    MachineBasicBlock &BB = *I.getParent();
+  MachineIRBuilder MIRBuilder(I);
+  MachineBasicBlock &BB = *I.getParent();
 
-    // Build log2(x).
-    Register VarReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-        .addDef(VarReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-        .addImm(GL::Log2)
-        .add(I.getOperand(1))
-        .constrainAllUses(TII, TRI, RBI);
+  // Build log2(x).
+  Register VarReg = MRI->createVirtualRegister(GR.getRegClass(ResType));
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+      .addDef(VarReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+      .addImm(GL::Log2)
+      .add(I.getOperand(1))
+      .constrainAllUses(TII, TRI, RBI);
 
-    // Build 0.30103.
-    assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
-          ResType->getOpcode() == SPIRV::OpTypeFloat);
-    // TODO: Add matrix implementation once supported by the HLSL frontend.
-    SPIRVTypeInst SpirvScalarType = ResType->getOpcode() == SPIRV::OpTypeVector
-                                        ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
-                                              ResType->getOperand(1).getReg()))
-                                        : ResType;
-    Register ScaleReg =
-        GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
+  // Build 0.30103.
+  assert(ResType->getOpcode() == SPIRV::OpTypeVector ||
+        ResType->getOpcode() == SPIRV::OpTypeFloat);
+  // TODO: Add matrix implementation once supported by the HLSL frontend.
+  SPIRVTypeInst SpirvScalarType = ResType->getOpcode() == SPIRV::OpTypeVector
+                                      ? SPIRVTypeInst(GR.getSPIRVTypeForVReg(
+                                            ResType->getOperand(1).getReg()))
+                                      : ResType;
+  Register ScaleReg =
+      GR.buildConstantFP(APFloat(0.30103f), MIRBuilder, SpirvScalarType);
 
-    // Multiply log2(x) by 0.30103 to get log10(x) result.
-    auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
-                      ? SPIRV::OpVectorTimesScalar
-                      : SPIRV::OpFMulS;
-    BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-        .addDef(ResVReg)
-        .addUse(GR.getSPIRVTypeID(ResType))
-        .addUse(VarReg)
-        .addUse(ScaleReg)
-        .constrainAllUses(TII, TRI, RBI);
-    return true;
-  }
-
-  return false;
+  // Multiply log2(x) by 0.30103 to get log10(x) result.
+  auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
+                    ? SPIRV::OpVectorTimesScalar
+                    : SPIRV::OpFMulS;
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(VarReg)
+      .addUse(ScaleReg)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectModf(Register ResVReg,
@@ -5466,14 +5463,11 @@ bool SPIRVInstructionSelector::selectModf(Register ResVReg,
 
     MIB.constrainAllUses(TII, TRI, RBI);
     return true;
-  }
-
-  if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
+  } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     assert(false && "GLSL::Modf is deprecated.");
     // FIXME: GL::Modf is deprecated, use Modfstruct instead.
     return false;
   }
-
   return false;
 }
 
