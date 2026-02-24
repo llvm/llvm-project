@@ -1514,7 +1514,9 @@ static bool compileModuleAndReadASTBehindLock(
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Lock->waitForUnlockFor(std::chrono::seconds(90))) {
+    unsigned Timeout =
+        ImportingInstance.getFrontendOpts().ImplicitModulesLockTimeoutSeconds;
+    switch (Lock->waitForUnlockFor(std::chrono::seconds(Timeout))) {
     case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
     case llvm::WaitForUnlockResult::OwnerDied:

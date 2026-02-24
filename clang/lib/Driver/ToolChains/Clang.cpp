@@ -3911,6 +3911,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
       Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
       CmdArgs.push_back(Args.MakeArgString(Path));
     }
+
+    Args.AddLastArg(CmdArgs, options::OPT_fimplicit_modules_lock_timeout_EQ);
   }
 
   if (HaveModules) {
