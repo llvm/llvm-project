@@ -22,7 +22,7 @@ entry:
 ; CHECK: %[[#access:]] = OpAccessChain {{.*}}
   %7 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2f64_12_1t(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %1, i32 0)
 ; CHECK: %[[#bitcast:]] = OpBitcast %[[#v2_double]] %[[#tmp]]
-; CHECK: OpStore %[[#access]] %[[#bitcast]] Aligned 16
+; CHECK: OpStore %[[#access]] %[[#bitcast]]
   store <4 x i32> %6, ptr addrspace(11) %7, align 16
   ret void
 }
