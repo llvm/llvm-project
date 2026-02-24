@@ -733,7 +733,15 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivS1, DivS16}, {{Vcc}, {Vgpr32AExt}, VgprToVccCopy}},
            !Has16bitCmp)
       .Any({{DivS1, DivS32}, {{Vcc}, {Vgpr32}, VgprToVccCopy}})
-      .Any({{DivS1, DivS64}, {{Vcc}, {Vgpr64}, VgprToVccCopy}});
+      .Any({{DivS1, DivS64}, {{Vcc}, {Vgpr64}, VgprToVccCopy}})
+      .Any({{UniS32, UniB160}, {{Sgpr32}, {SgprBRC}}})
+      .Any({{UniS32, UniB128}, {{Sgpr32}, {SgprB128}}})
+      .Any({{UniS32, UniB256}, {{Sgpr32}, {SgprB256}}})
+      .Any({{UniS32, UniB512}, {{Sgpr32}, {SgprB512}}})
+      .Any({{DivS32, DivB160}, {{Vgpr32}, {VgprB160}}})
+      .Any({{DivS32, DivB128}, {{Vgpr32}, {VgprB128}}})
+      .Any({{DivS32, DivB256}, {{Vgpr32}, {VgprB256}}})
+      .Any({{DivS32, DivB512}, {{Vgpr32}, {VgprB512}}});
 
   addRulesForGOpcs({G_ZEXT})
       .Any({{UniS16, S1}, {{Sgpr32Trunc}, {Sgpr32AExtBoolInReg}, UniExtToSel}})

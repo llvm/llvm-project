@@ -8,7 +8,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: uniform_in_vgpr
     ; OLD_RBS: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}
@@ -56,7 +55,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: back_to_back_uniform_in_vgpr
     ; OLD_RBS: liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}
@@ -112,7 +110,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: buffer_load_uniform
     ; OLD_RBS: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}
@@ -188,7 +185,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2
-
     ; OLD_RBS-LABEL: name: buffer_load_divergent
     ; OLD_RBS: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2
     ; OLD_RBS-NEXT: {{  $}}
@@ -256,7 +252,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
-
     ; OLD_RBS-LABEL: name: vgpr_and_i64
     ; OLD_RBS: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
     ; OLD_RBS-NEXT: {{  $}}
@@ -316,7 +311,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: abs_sgpr_i16
     ; OLD_RBS: liveins: $sgpr0, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}
@@ -477,7 +471,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: vcc_to_scc
     ; OLD_RBS: liveins: $sgpr0, $sgpr1, $sgpr2, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}
@@ -536,7 +529,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3
-
     ; OLD_RBS-LABEL: name: scc_to_vcc
     ; OLD_RBS: liveins: $sgpr0, $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; OLD_RBS-NEXT: {{  $}}
@@ -588,7 +580,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
-
     ; OLD_RBS-LABEL: name: vgpr_to_vcc_trunc
     ; OLD_RBS: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
     ; OLD_RBS-NEXT: {{  $}}
@@ -638,7 +629,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: zext
     ; OLD_RBS: liveins: $sgpr0, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}
@@ -687,7 +677,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: sext
     ; OLD_RBS: liveins: $sgpr0, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}
@@ -737,7 +726,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
-
     ; OLD_RBS-LABEL: name: and_i1_vcc
     ; OLD_RBS: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
     ; OLD_RBS-NEXT: {{  $}}
@@ -796,7 +784,6 @@ legalized: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
-
     ; OLD_RBS-LABEL: name: and_i1_scc
     ; OLD_RBS: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     ; OLD_RBS-NEXT: {{  $}}

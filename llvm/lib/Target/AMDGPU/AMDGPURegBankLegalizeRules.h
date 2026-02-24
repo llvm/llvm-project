@@ -167,6 +167,7 @@ enum RegBankLLTMappingApplyID {
   SgprB64,
   SgprB96,
   SgprB128,
+  SgprB160,
   SgprB256,
   SgprB512,
   SgprBRC,
