@@ -67,3 +67,24 @@ TEST_F(LlvmLibcBfloat16ConversionTest, FromInteger) {
     EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
   }
 }
+
+TEST_F(LlvmLibcBfloat16ConversionTest, MultiplyAssign) {
+
+  static constexpr BFloat16 val[] = {
+      zero,           neg_zero,        inf,
+      neg_inf,        min_normal,      max_normal,
+      bfloat16(1.0f), bfloat16(-1.0f), bfloat16(2.0f),
+      bfloat16(3.0f)};
+  for (const bfloat16 &x : val) {
+    for (const bfloat16 &y : val) {
+      BFloat16 a = x, b = y;
+      MPFRNumber mpfr_a{a}, mpfr_b{b};
+      MPFRNumber mpfr_c = mpfr_a;
+      mpfr_c.add(mpfr_b);
+      BFloat16 mpfr_bfloat = mpfr_c.as<BFloat16>();
+      BFloat16 c = a + b;
+      BFloat16 libc_bfloat = c;
+      EXPECT_FP_EQ_ALL_ROUNDING(mpfr_bfloat, libc_bfloat);
+    }
+  }
+}
