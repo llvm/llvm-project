@@ -1657,10 +1657,13 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
   }
   case SD_Thread:
   case SD_Static: {
-    cgf.cgm.errorNYI(
-        m->getSourceRange(),
-        "createReferenceTemporary: static/thread storage duration");
-    return Address::invalid();
+    auto addr =
+        mlir::cast<cir::GlobalOp>(cgf.cgm.getAddrOfGlobalTemporary(m, inner));
+    auto getGlobal = cgf.cgm.getBuilder().createGetGlobal(addr);
+    assert(addr.getAlignment().has_value() &&
+           "This should always have an alignment");
+    return Address(getGlobal,
+                   clang::CharUnits::fromQuantity(addr.getAlignment().value()));
   }
 
   case SD_Dynamic:

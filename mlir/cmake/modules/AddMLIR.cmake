@@ -675,6 +675,9 @@ function(add_mlir_public_c_api_library name)
     ENABLE_AGGREGATION
     ADDITIONAL_HEADER_DIRS
     ${MLIR_MAIN_INCLUDE_DIR}/mlir-c
+
+    # Disable PCH reuse due to non-default symbol visibility.
+    DISABLE_PCH_REUSE
   )
   # API libraries compile with hidden visibility and macros that enable
   # exporting from the DLL. Only apply to the obj lib, which only affects

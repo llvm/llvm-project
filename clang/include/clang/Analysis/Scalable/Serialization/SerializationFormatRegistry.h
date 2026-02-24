@@ -7,7 +7,24 @@
 //===----------------------------------------------------------------------===//
 //
 // Registry for SerializationFormats, and some helper functions.
-// To register some custom serialization format, insert this code:
+//
+// To register some custom serialization format, you will need to add some
+// declarations and defintions.
+//
+// Insert this code to the header file:
+//
+//   namespace llvm {
+//   extern template class CLANG_TEMPLATE_ABI
+//     Registry<clang::ssaf::MyFormat::FormatInfo>;
+//   } // namespace llvm
+//
+// Insert this declaration to the MyFormat class:
+//
+//   using FormatInfo = FormatInfoEntry<SerializerFn, DeserializerFn>;
+//
+// Insert this code to the cpp file:
+//
+//   LLVM_INSTANTIATE_REGISTRY(llvm::Registry<MyFormat::FormatInfo>)
 //
 //   static SerializationFormatRegistry::Add<MyFormat>
 //     RegisterFormat("MyFormat", "My awesome serialization format");
@@ -17,7 +34,7 @@
 //
 //   namespace {
 //   using FormatInfo = MyFormat::FormatInfo;
-//   struct MyAnalysisFormatInfo : FormatInfo {
+//   struct MyAnalysisFormatInfo final : FormatInfo {
 //     MyAnalysisFormatInfo() : FormatInfo{
 //               SummaryName("MyAnalysis"),
 //               serializeMyAnalysis,
