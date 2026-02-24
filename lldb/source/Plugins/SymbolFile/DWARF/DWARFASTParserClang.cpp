@@ -1752,7 +1752,7 @@ void DWARFASTParserClang::GetUniqueTypeNameAndDeclaration(
 TypeSP
 DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
                                            const DWARFDIE &die,
-                                           ParsedDWARFTypeAttributes &attrs) {
+                                           const ParsedDWARFTypeAttributes &attrs) {
   CompilerType clang_type;
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
