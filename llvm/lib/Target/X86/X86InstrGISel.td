@@ -45,3 +45,20 @@ def : GINodeEquiv<G_FILD, X86fild>;
 def : GINodeEquiv<G_FIST, X86fp_to_mem>;
 def : GINodeEquiv<G_FNSTCW16, X86fp_cwd_get16>;
 def : GINodeEquiv<G_FLDCW16, X86fp_cwd_set16>;
+
+// Nodes for vector shuffle operations. 
+def G_SHUFP : X86GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, untyped_imm_0:$imm);
+  let hasSideEffects = false;
+  let mayLoad = false;
+}
+def : GINodeEquiv<G_SHUFP, X86Shufp>;
+
+ def G_BLENDV : X86GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2, type0:$mask);
+  let hasSideEffects = false;
+  let mayLoad = false;
+ }
+def : GINodeEquiv<G_BLENDV, X86Blendv>;
