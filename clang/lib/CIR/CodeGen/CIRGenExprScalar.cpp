@@ -420,9 +420,7 @@ public:
   }
 
   mlir::Value VisitImplicitValueInitExpr(const ImplicitValueInitExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "ScalarExprEmitter: implicit value init");
-    return {};
+    return emitNullValue(e->getType(), cgf.getLoc(e->getSourceRange()));
   }
 
   mlir::Value VisitExplicitCastExpr(ExplicitCastExpr *e) {
@@ -1287,17 +1285,18 @@ public:
   mlir::Value VisitBinLAnd(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      mlir::Type vecTy = cgf.convertType(e->getType());
-      mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
+      mlir::Type lhsTy = cgf.convertType(e->getLHS()->getType());
+      mlir::Value zeroVec = builder.getNullValue(lhsTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
       auto cmpOpKind = cir::CmpOpKind::ne;
-      lhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, lhs, zeroVec);
-      rhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, rhs, zeroVec);
+      mlir::Type resTy = cgf.convertType(e->getType());
+      lhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, lhs, zeroVec);
+      rhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, rhs, zeroVec);
       mlir::Value vecOr = builder.createAnd(loc, lhs, rhs);
-      return builder.createIntCast(vecOr, vecTy);
+      return builder.createIntCast(vecOr, resTy);
     }
 
     assert(!cir::MissingFeatures::instrumentation());
@@ -1335,17 +1334,18 @@ public:
   mlir::Value VisitBinLOr(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      mlir::Type vecTy = cgf.convertType(e->getType());
-      mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
+      mlir::Type lhsTy = cgf.convertType(e->getLHS()->getType());
+      mlir::Value zeroVec = builder.getNullValue(lhsTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
 
       auto cmpOpKind = cir::CmpOpKind::ne;
-      lhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, lhs, zeroVec);
-      rhs = cir::VecCmpOp::create(builder, loc, vecTy, cmpOpKind, rhs, zeroVec);
+      mlir::Type resTy = cgf.convertType(e->getType());
+      lhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, lhs, zeroVec);
+      rhs = cir::VecCmpOp::create(builder, loc, resTy, cmpOpKind, rhs, zeroVec);
       mlir::Value vecOr = builder.createOr(loc, lhs, rhs);
-      return builder.createIntCast(vecOr, vecTy);
+      return builder.createIntCast(vecOr, resTy);
     }
 
     assert(!cir::MissingFeatures::instrumentation());
