@@ -16,6 +16,7 @@ using namespace mlir;
 
 DEFINE_C_API_PTR_METHODS(MlirDynamicOpTrait, DynamicOpTrait)
 DEFINE_C_API_PTR_METHODS(MlirDynamicTypeDefinition, DynamicTypeDefinition)
+DEFINE_C_API_PTR_METHODS(MlirDynamicAttrDefinition, DynamicAttrDefinition)
 
 bool mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
                               MlirStringRef opName, MlirContext context) {
@@ -136,4 +137,51 @@ mlirDynamicTypeDefinitionGetName(MlirDynamicTypeDefinition typeDef) {
 MlirDialect
 mlirDynamicTypeDefinitionGetDialect(MlirDynamicTypeDefinition typeDef) {
   return wrap(unwrap(typeDef)->getDialect());
+}
+
+MlirDynamicAttrDefinition
+mlirExtensibleDialectLookupAttrDefinition(MlirDialect dialect,
+                                          MlirStringRef attrName) {
+  return wrap(llvm::cast<mlir::ExtensibleDialect>(unwrap(dialect))
+                  ->lookupAttrDefinition(unwrap(attrName)));
+}
+
+bool mlirAttributeIsADynamicAttr(MlirAttribute attr) {
+  return llvm::isa<mlir::DynamicAttr>(unwrap(attr));
+}
+
+MlirTypeID mlirDynamicAttrGetTypeID(void) {
+  return wrap(mlir::DynamicAttr::getTypeID());
+}
+
+MlirAttribute mlirDynamicAttrGet(MlirDynamicAttrDefinition attrDef,
+                                 MlirAttribute *attrs, intptr_t numAttrs) {
+  llvm::SmallVector<mlir::Attribute> attributes;
+  attributes.reserve(numAttrs);
+  for (intptr_t i = 0; i < numAttrs; ++i)
+    attributes.push_back(unwrap(attrs[i]));
+
+  return wrap(mlir::DynamicAttr::get(unwrap(attrDef), attributes));
+}
+
+intptr_t mlirDynamicAttrGetNumParams(MlirAttribute attr) {
+  return llvm::cast<mlir::DynamicAttr>(unwrap(attr)).getParams().size();
+}
+
+MlirAttribute mlirDynamicAttrGetParam(MlirAttribute attr, intptr_t index) {
+  return wrap(llvm::cast<mlir::DynamicAttr>(unwrap(attr)).getParams()[index]);
+}
+
+MlirDynamicAttrDefinition mlirDynamicAttrGetAttrDef(MlirAttribute attr) {
+  return wrap(llvm::cast<mlir::DynamicAttr>(unwrap(attr)).getAttrDef());
+}
+
+MlirStringRef
+mlirDynamicAttrDefinitionGetName(MlirDynamicAttrDefinition attrDef) {
+  return wrap(unwrap(attrDef)->getName());
+}
+
+MlirDialect
+mlirDynamicAttrDefinitionGetDialect(MlirDynamicAttrDefinition attrDef) {
+  return wrap(unwrap(attrDef)->getDialect());
 }
