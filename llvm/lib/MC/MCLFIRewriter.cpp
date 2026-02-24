@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLFIRewriter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
-#include "llvm/MC/MCRegisterInfo.h"
 
 namespace llvm {
 
