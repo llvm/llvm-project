@@ -87,7 +87,7 @@ mlir::LogicalResult CIRGenFunction::emitCompoundStmtWithoutScope(
 
 mlir::LogicalResult
 CIRGenFunction::emitAttributedStmt(const AttributedStmt &s) {
-  for (const auto *attr : s.getAttrs()) {
+  for (const Attr *attr : s.getAttrs()) {
     switch (attr->getKind()) {
     default:
       break;
