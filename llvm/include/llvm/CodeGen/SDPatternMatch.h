@@ -1163,7 +1163,7 @@ struct ConstantInt_match {
 };
 
 template <typename T> struct Constant64_match {
-  static_assert(sizeof(T) == 8);
+  static_assert(sizeof(T) == 8, "T must be 64 bits wide");
 
   T &BindVal;
 
