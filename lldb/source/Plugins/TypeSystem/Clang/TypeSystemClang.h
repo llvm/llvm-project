@@ -304,6 +304,9 @@ public:
 
   // Structure, Unions, Classes
 
+  static clang::AccessSpecifier
+  ConvertAccessTypeToAccessSpecifier(lldb::AccessType access);
+
   uint32_t GetNumBaseClasses(const clang::CXXRecordDecl *cxx_record_decl,
                              bool omit_empty_base_classes);
 

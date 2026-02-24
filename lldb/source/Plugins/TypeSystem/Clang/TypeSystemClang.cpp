@@ -446,6 +446,23 @@ bool TypeSystemClang::IsOperator(llvm::StringRef name,
   return true;
 }
 
+clang::AccessSpecifier
+TypeSystemClang::ConvertAccessTypeToAccessSpecifier(AccessType access) {
+  switch (access) {
+  default:
+    break;
+  case eAccessNone:
+    return AS_none;
+  case eAccessPublic:
+    return AS_public;
+  case eAccessPrivate:
+    return AS_private;
+  case eAccessProtected:
+    return AS_protected;
+  }
+  return AS_none;
+}
+
 static void ParseLangArgs(LangOptions &Opts, ArchSpec arch) {
   // FIXME: Cleanup per-file based stuff.
 
@@ -7876,7 +7893,8 @@ TypeSystemClang::CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
     return nullptr;
 
   return std::make_unique<clang::CXXBaseSpecifier>(
-      clang::SourceRange(), is_virtual, base_of_class, AS_public,
+      clang::SourceRange(), is_virtual, base_of_class,
+      TypeSystemClang::ConvertAccessTypeToAccessSpecifier(access),
       getASTContext().getTrivialTypeSourceInfo(GetQualType(type)),
       clang::SourceLocation());
 }

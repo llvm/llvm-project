@@ -596,6 +596,19 @@ TEST_F(TestTypeSystemClang, TestRemoveFastQualifiers) {
   EXPECT_EQ(0u, qt.getLocalFastQualifiers());
 }
 
+TEST_F(TestTypeSystemClang, TestConvertAccessTypeToAccessSpecifier) {
+  EXPECT_EQ(AS_none,
+            TypeSystemClang::ConvertAccessTypeToAccessSpecifier(eAccessNone));
+  EXPECT_EQ(AS_none, TypeSystemClang::ConvertAccessTypeToAccessSpecifier(
+                         eAccessPackage));
+  EXPECT_EQ(AS_public,
+            TypeSystemClang::ConvertAccessTypeToAccessSpecifier(eAccessPublic));
+  EXPECT_EQ(AS_private, TypeSystemClang::ConvertAccessTypeToAccessSpecifier(
+                            eAccessPrivate));
+  EXPECT_EQ(AS_protected, TypeSystemClang::ConvertAccessTypeToAccessSpecifier(
+                              eAccessProtected));
+}
+
 TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType int_type = m_ast->GetBasicType(eBasicTypeInt);
 

@@ -1547,9 +1547,21 @@ TypeSP DWARFASTParserClang::ParsePointerToMemberType(
   return nullptr;
 }
 
+static AccessType GetDefaultAccessibility(const DWARFDIE &die) {
+  switch (die.Tag()) {
+  case DW_TAG_union_type:
+  case DW_TAG_structure_type:
+    return eAccessPublic;
+  case DW_TAG_class_type:
+    return eAccessPrivate;
+  default:
+    return eAccessNone;
+  }
+}
+
 void DWARFASTParserClang::ParseInheritance(
     const DWARFDIE &die, const DWARFDIE &parent_die,
-    const CompilerType class_clang_type, const AccessType default_accessibility,
+    const CompilerType class_clang_type, const AccessType,
     const lldb::ModuleSP &module_sp,
     std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
     ClangASTImporter::LayoutInfo &layout_info) {
@@ -1563,6 +1575,7 @@ void DWARFASTParserClang::ParseInheritance(
     return;
 
   DWARFFormValue encoding_form;
+  AccessType accessibility = GetDefaultAccessibility(parent_die);
   bool is_virtual = false;
   bool is_base_of_class = true;
   off_t member_byte_offset = 0;
@@ -1580,7 +1593,10 @@ void DWARFASTParserClang::ParseInheritance(
                 ExtractDataMemberLocation(die, form_value, module_sp))
           member_byte_offset = *maybe_offset;
         break;
-
+      case DW_AT_accessibility:
+        accessibility =
+            DWARFASTParser::GetAccessTypeFromDWARF(form_value.Unsigned());
+        break;
       case DW_AT_virtuality:
         is_virtual = form_value.Boolean();
         break;
@@ -1618,7 +1634,7 @@ void DWARFASTParserClang::ParseInheritance(
   }
   std::unique_ptr<clang::CXXBaseSpecifier> result =
       ast->CreateBaseClassSpecifier(base_class_clang_type.GetOpaqueQualType(),
-                                    /*access=*/{}, is_virtual,
+                                    accessibility, is_virtual,
                                     is_base_of_class);
   if (!result)
     return;
