@@ -2665,7 +2665,7 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   }
 
   if (OperatorDelete && !OperatorDelete->isReservedGlobalPlacementOperator() &&
-      Initializer && canThrow(Initializer))
+      Initializer && (getLangOpts().Exceptions || getLangOpts().CXXExceptions))
     Cleanup.setExprNeedsCleanups(true);
 
   return CXXNewExpr::Create(Context, UseGlobal, OperatorNew, OperatorDelete,
