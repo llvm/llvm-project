@@ -754,7 +754,6 @@ if (MSVC)
       -wd4458 # Suppress 'declaration of 'var' hides class member'
       -wd4459 # Suppress 'declaration of 'var' hides global declaration'
       -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
-      -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
       -wd4100 # Suppress 'unreferenced formal parameter'
       -wd4127 # Suppress 'conditional expression is constant'
       -wd4512 # Suppress 'assignment operator could not be generated'
