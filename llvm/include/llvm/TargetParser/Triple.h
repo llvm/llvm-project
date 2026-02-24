@@ -252,6 +252,7 @@ public:
     Serenity,
     Vulkan, // Vulkan SPIR-V
     CheriotRTOS,
+    OpenCL,
     ChipStar,
     Firmware,
     LastOSType = Firmware
@@ -314,7 +315,6 @@ public:
     Mesh,
     Amplification,
     RootSignature,
-    OpenCL,
     OpenHOS,
     Mlibc,
 
@@ -1057,6 +1057,8 @@ public:
                ? PointerWidth == 32
                : PointerWidth == 64;
   }
+
+  bool isAVR() const { return getArch() == Triple::avr; }
 
   /// Tests whether the target is 32-bit LoongArch.
   bool isLoongArch32() const { return getArch() == Triple::loongarch32; }

@@ -131,9 +131,9 @@ void ImplicitWideningOfMultiplicationResultCheck::handleImplicitCastExpr(
   QualType WideExprTy;
   // Get Ty of the same signedness as ExprTy, because we only want to suggest
   // to widen the computation, but not change it's signedness domain.
-  if (Ty->isSignedIntegerType() == ETy->isSignedIntegerType())
+  if (Ty->isSignedIntegerType() == ETy->isSignedIntegerType()) {
     WideExprTy = Ty;
-  else if (Ty->isSignedIntegerType()) {
+  } else if (Ty->isSignedIntegerType()) {
     assert(ETy->isUnsignedIntegerType() &&
            "Expected source type to be signed.");
     WideExprTy = Context->getCorrespondingUnsignedType(Ty);
@@ -179,8 +179,9 @@ void ImplicitWideningOfMultiplicationResultCheck::handlePointerOffsetting(
   } else if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(E)) {
     PointerExpr = ASE->getLHS();
     IndexExpr = ASE->getRHS();
-  } else
+  } else {
     return;
+  }
 
   if (IndexExpr->getType()->isPointerType())
     std::swap(PointerExpr, IndexExpr);

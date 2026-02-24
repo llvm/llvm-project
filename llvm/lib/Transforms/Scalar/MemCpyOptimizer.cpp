@@ -411,8 +411,10 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
 
       // Check to see if this stored value is of the same byte-splattable value.
       Value *StoredByte = isBytewiseValue(StoredVal, DL);
-      if (isa<UndefValue>(ByteVal) && StoredByte)
-        ByteVal = StoredByte;
+      // We can blindly merge this store into `StartInst` if it's being filled
+      // with an undef value but we don't because:
+      // 1. `StartInst` can be removed since it's storing an `undef`.
+      // 2. The resulting memset will be much larger than it needs to be.
       if (ByteVal != StoredByte)
         break;
 

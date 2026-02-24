@@ -35,24 +35,19 @@ using lldb_private::MainLoop;
 using lldb_private::Pipe;
 
 void TransportBase::SetUp() {
-  std::tie(to_client, to_server) = TestDAPTransport::createPair();
+  std::tie(to_client, to_server) = TestDAPTransport::createPair(loop);
 
   log = std::make_unique<Log>(llvm::outs(), log_mutex);
   dap = std::make_unique<DAP>(
       /*log=*/*log,
       /*default_repl_mode=*/ReplMode::Auto,
-      /*pre_init_commands=*/std::vector<std::string>(),
+      /*pre_init_commands=*/std::vector<String>(),
       /*no_lldbinit=*/false,
       /*client_name=*/"test_client",
       /*transport=*/*to_client, /*loop=*/loop);
 
-  auto server_handle = to_server->RegisterMessageHandler(loop, *dap);
-  EXPECT_THAT_EXPECTED(server_handle, Succeeded());
-  handles[0] = std::move(*server_handle);
-
-  auto client_handle = to_client->RegisterMessageHandler(loop, client);
-  EXPECT_THAT_EXPECTED(client_handle, Succeeded());
-  handles[1] = std::move(*client_handle);
+  EXPECT_THAT_ERROR(to_server->RegisterMessageHandler(*dap), Succeeded());
+  EXPECT_THAT_ERROR(to_client->RegisterMessageHandler(client), Succeeded());
 }
 
 void TransportBase::Run() {
