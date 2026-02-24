@@ -199,22 +199,30 @@ iota_range<InstCounterType> inst_counter_types(InstCounterType MaxCounter) {
 }
 
 StringLiteral instCounterTypeToStr(InstCounterType T) {
-  // clang-format off
   switch (T) {
-  case LOAD_CNT:   return "LoadCnt";
-  case DS_CNT:     return "DsCnt";
-  case EXP_CNT:    return "ExpCnt";
-  case STORE_CNT:  return "StoreCnt";
-  case SAMPLE_CNT: return "SampleCnt";
-  case BVH_CNT:    return "BvhCnt";
-  case KM_CNT:     return "KmCnt";
-  case X_CNT:      return "XCnt";
-  case VA_VDST:    return "VaVdst";
-  case VM_VSRC:    return "VmVsrc";
+  case LOAD_CNT:
+    return "LOAD_CNT";
+  case DS_CNT:
+    return "DS_CNT";
+  case EXP_CNT:
+    return "EXP_CNT";
+  case STORE_CNT:
+    return "STORE_CNT";
+  case SAMPLE_CNT:
+    return "SAMPLE_CNT";
+  case BVH_CNT:
+    return "BVH_CNT";
+  case KM_CNT:
+    return "KM_CNT";
+  case X_CNT:
+    return "X_CNT";
+  case VA_VDST:
+    return "VA_VDST";
+  case VM_VSRC:
+    return "VM_VSRC";
   default:
     return "Unknown T";
   }
-  // clang-format on
 }
 
 #ifndef NDEBUG
