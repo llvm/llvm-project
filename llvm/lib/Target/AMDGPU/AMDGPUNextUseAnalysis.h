@@ -104,11 +104,11 @@ public:
     const_iterator end() const { return NextUseMap.end(); }
 
     size_t size() const { return NextUseMap.size(); }
-    std::pair<bool, SortedRecords> get(unsigned Key) const {
+    const SortedRecords *get(unsigned Key) const {
       const_iterator It = NextUseMap.find(Key);
       if (It != NextUseMap.end())
-        return {true, It->second};
-      return {false, SortedRecords()};
+        return &It->second;
+      return nullptr;
     }
 
     SortedRecords &operator[](unsigned Key) { return NextUseMap[Key]; }
@@ -225,21 +225,21 @@ public:
       }
     }
 
-    bool operator==(const VRegDistances Other) const {
+    bool operator==(const VRegDistances &Other) const {
 
       if (Other.size() != size())
         return false;
 
       for (auto &[Key, Dists] : NextUseMap) {
 
-        std::pair<bool, SortedRecords> OtherDists = Other.get(Key);
-        if (!OtherDists.first)
+        const SortedRecords *OtherDists = Other.get(Key);
+        if (!OtherDists)
           return false;
 
-        if (Dists.size() != OtherDists.second.size())
+        if (Dists.size() != OtherDists->size())
           return false;
 
-        for (const Record &R : OtherDists.second) {
+        for (const Record &R : *OtherDists) {
           SortedRecords::const_iterator I = Dists.find(R);
           if (I == Dists.end())
             return false;
@@ -409,8 +409,10 @@ private:
     llvm::sort(Keys);
     bool Any = false;
     for (unsigned VReg : Keys) {
-      Any |= printSortedRecords(D.get(VReg).second, VReg, SnapshotOffset,
-                                EdgeWeight, O, Indent);
+      const auto *SR = D.get(VReg);
+      if (SR)
+        Any |= printSortedRecords(*SR, VReg, SnapshotOffset,
+                                  EdgeWeight, O, Indent);
     }
     return Any;
   }

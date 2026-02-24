@@ -1044,7 +1044,6 @@ machineFunctionInfo:
   dynLDSAlign:     1
   isEntryFunction: true
   isChainFunction: false
-  noSignedZerosFPMath: false
   memoryBound:     false
   waveLimiter:     false
   hasSpilledSGPRs: false

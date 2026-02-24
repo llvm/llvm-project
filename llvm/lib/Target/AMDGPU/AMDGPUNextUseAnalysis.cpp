@@ -275,12 +275,7 @@ void NextUseResult::analyze(const MachineFunction &MF) {
     for (const MachineBasicBlock *MBB : POT) {
       unsigned Offset = 0;
       unsigned MBBNum = MBB->getNumber();
-      VRegDistances Curr, Prev;
-      DenseMap<unsigned, VRegDistances>::iterator PrevIt =
-          UpwardNextUses.find(MBBNum);
-      if (PrevIt != UpwardNextUses.end()) {
-        Prev = PrevIt->second;
-      }
+      VRegDistances Curr;
 
       LLVM_DEBUG({
         dbgs() << "\nMerging successors for "
@@ -290,10 +285,11 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       for (MachineBasicBlock *Succ : successors(MBB)) {
         unsigned SuccNum = Succ->getNumber();
 
-        if (!UpwardNextUses.contains(SuccNum))
+        auto SuccIt = UpwardNextUses.find(SuccNum);
+        if (SuccIt == UpwardNextUses.end())
           continue;
 
-        VRegDistances SuccDist = UpwardNextUses[SuccNum];
+        VRegDistances SuccDist = SuccIt->second;
         LLVM_DEBUG({
           dbgs() << "\nMerging "
                  << "MBB_" << Succ->getNumber() << "." << Succ->getName()
@@ -362,12 +358,14 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         });
       }
 
-      NextUseMap[MBBNum].Bottom = Curr;
-      NextUseMap[MBBNum].VRegEvents.clear();
+      NextUseInfo &NUI = NextUseMap[MBBNum];
+      NUI.Bottom = Curr;
+      NUI.VRegEvents.clear();
       unsigned Seq = 0;
 
+      SmallDenseSet<unsigned, 8> TouchedVRegs;
       for (const MachineInstr &MI : reverse(*MBB)) {
-        SmallDenseSet<unsigned, 8> TouchedVRegs;
+        TouchedVRegs.clear();
 
         for (const MachineOperand &MO : MI.operands()) {
 
@@ -395,14 +393,13 @@ void NextUseResult::analyze(const MachineFunction &MF) {
         for (unsigned VReg : TouchedVRegs) {
           VRegDistances::iterator It = Curr.find(VReg);
           if (It != Curr.end())
-            NextUseMap[MBBNum].VRegEvents[VReg].push_back(
-                {Seq, It->second});
+            NUI.VRegEvents[VReg].push_back({Seq, It->second});
           else
-            NextUseMap[MBBNum].VRegEvents[VReg].push_back({Seq, {}});
+            NUI.VRegEvents[VReg].push_back({Seq, {}});
         }
 
-        NextUseMap[MBBNum].InstrOffset[&MI] = Offset;
-        NextUseMap[MBBNum].InstrSeq[&MI] = Seq;
+        NUI.InstrOffset[&MI] = Offset;
+        NUI.InstrSeq[&MI] = Seq;
         if (!MI.isPHI())
           ++Offset;
         ++Seq;
@@ -412,21 +409,30 @@ void NextUseResult::analyze(const MachineFunction &MF) {
       // distances while InstrOffset uses individual instruction offsets for
       // materialization
 
+      // EntryOff -offset of the first instruction in the block top-down walk
+      EntryOff[MBBNum] = Offset;
+
+      auto PrevIt = UpwardNextUses.find(MBBNum);
+
       LLVM_DEBUG({
         dbgs() << "\nFinal distances for " << printMBBReference(*MBB) << "\n";
         printVregDistances(Curr, Offset);
         dbgs() << "\nPrevious distances for " << printMBBReference(*MBB)
                << "\n";
-        printVregDistances(Prev, Offset);
+        if (PrevIt != UpwardNextUses.end())
+          printVregDistances(PrevIt->second, Offset);
+        else
+          dbgs() << "      (none)\n";
         dbgs() << "\nUsed in block:\n";
         dumpUsedInBlock();
       });
 
-      // EntryOff -offset of the first instruction in the block top-down walk
-      EntryOff[MBBNum] = Offset;
-      UpwardNextUses[MBBNum] = std::move(Curr);
+      bool Changed4MBB = (PrevIt != UpwardNextUses.end())
+                              ? (Curr != PrevIt->second)
+                              : (Curr.size() > 0);
 
-      bool Changed4MBB = (Prev != UpwardNextUses[MBBNum]);
+      if (Changed4MBB)
+        UpwardNextUses[MBBNum] = std::move(Curr);
 
       Changed |= Changed4MBB;
     }

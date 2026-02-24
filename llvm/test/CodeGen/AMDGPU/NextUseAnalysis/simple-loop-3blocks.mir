@@ -310,7 +310,6 @@ machineFunctionInfo:
   dynLDSAlign:     1
   isEntryFunction: true
   isChainFunction: false
-  noSignedZerosFPMath: false
   memoryBound:     true
   waveLimiter:     true
   hasSpilledSGPRs: false
