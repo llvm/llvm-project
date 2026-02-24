@@ -946,7 +946,7 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
                                                 semantics, see `LangRef
                                                 <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
- ET __builtin_reduce_assoc_fadd(VT a)           associative floating-point add reduction.                              floating point types
+ ET __builtin_reduce_assoc_fadd(VT a[, ET s])   associative floating-point add reduction.                              floating point types
  ET __builtin_reduce_in_order_fadd(VT a, ET s)  in order floating-point add reduction, initializing the accumulator    floating point types
                                                 with `(ET)s`, then adding each lane of the `a` in-order, starting
                                                 from lane 0. The additions cannot be reassociated.
