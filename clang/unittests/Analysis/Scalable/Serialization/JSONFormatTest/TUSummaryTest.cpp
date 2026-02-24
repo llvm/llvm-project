@@ -404,7 +404,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryLinkageInvalidType) {
           HasSubstr("reading LinkageTable from field 'linkage_table'"),
           HasSubstr("reading LinkageTable entry from index '0'"),
           HasSubstr("reading EntityLinkage from field 'linkage'"),
-          HasSubstr("invalid 'linkage' EntityLinkage value 'invalid_type'"))));
+          HasSubstr("invalid 'type' EntityLinkageType value 'invalid_type'"))));
 }
 
 // ============================================================================
@@ -546,13 +546,12 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableExtraId) {
   })");
 
   EXPECT_THAT_EXPECTED(
-      Result,
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading LinkageTable from field 'linkage_table'"),
-          HasSubstr("reading LinkageTable entry from index '0'"),
-          HasSubstr(
-              "linkage_table contains EntityId '0' not present in id_table"))));
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("reading LinkageTable from field 'linkage_table'"),
+                  HasSubstr("reading LinkageTable entry from index '0'"),
+                  HasSubstr("failed to deserialize LinkageTable"),
+                  HasSubstr("extra EntityId '0' not present in IdTable"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, LinkageTableMissingId) {
@@ -581,11 +580,11 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableMissingId) {
   })");
 
   EXPECT_THAT_EXPECTED(
-      Result,
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr(
-              "linkage_table is missing EntityId '0' present in id_table"))));
+      Result, FailedWithMessage(AllOf(
+                  HasSubstr("reading TUSummary from file"),
+                  HasSubstr("reading LinkageTable from field 'linkage_table'"),
+                  HasSubstr("failed to deserialize LinkageTable"),
+                  HasSubstr("missing EntityId '0' present in IdTable"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, LinkageTableDuplicateId) {
@@ -1145,11 +1144,11 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "internal" }
       },
       {
         "id": 1,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "external" }
       }
     ],
     "data": []

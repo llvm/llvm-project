@@ -76,13 +76,15 @@ constexpr const char *InvalidBuildNamespaceKind =
     "invalid 'kind' BuildNamespaceKind value '{0}'";
 
 constexpr const char *InvalidEntityLinkageType =
-    "invalid 'linkage' EntityLinkage value '{0}'";
+    "invalid 'type' EntityLinkageType value '{0}'";
 
-constexpr const char *LinkageTableExtraId =
-    "linkage_table contains EntityId '{0}' not present in id_table";
+constexpr const char *FailedToDeserializeLinkageTableExtraId =
+    "failed to deserialize LinkageTable: extra EntityId '{0}' not present in "
+    "IdTable";
 
-constexpr const char *LinkageTableMissingId =
-    "linkage_table is missing EntityId '{0}' present in id_table";
+constexpr const char *FailedToDeserializeLinkageTableMissingId =
+    "failed to deserialize LinkageTable: missing EntityId '{0}' present in "
+    "IdTable";
 
 } // namespace ErrorMessages
 
@@ -399,22 +401,25 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
                                   ErrorMessages::FailedInsertionOnDuplication,
                                   "LinkageTable entry", Index, "EntityId",
                                   getIndex(It->first))
+          .context(ErrorMessages::ReadingFromIndex, "LinkageTable entry", Index)
           .build();
     }
 
     if (EntityIds.erase(EI) == 0) {
-      return ErrorBuilder::create(std::errc::invalid_argument,
-                                  ErrorMessages::LinkageTableExtraId,
-                                  getIndex(EI))
+      return ErrorBuilder::create(
+                 std::errc::invalid_argument,
+                 ErrorMessages::FailedToDeserializeLinkageTableExtraId,
+                 getIndex(EI))
           .context(ErrorMessages::ReadingFromIndex, "LinkageTable entry", Index)
           .build();
     }
   }
 
   if (!EntityIds.empty()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::LinkageTableMissingId,
-                                getIndex(*EntityIds.begin()))
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeLinkageTableMissingId,
+               getIndex(*EntityIds.begin()))
         .build();
   }
 
