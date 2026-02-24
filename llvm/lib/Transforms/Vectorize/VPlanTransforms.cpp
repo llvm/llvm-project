@@ -5676,7 +5676,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // If there's a header mask the backedge select will not be the find-last
+    // If there's a header mask, the backedge select will not be the find-last
     // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
     VPValue *CondSelect = BackedgeVal;

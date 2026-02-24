@@ -63,7 +63,7 @@ define i32 @find_last_trunc_iv(ptr %src, i64 %n) {
 ; CHECK:       [[PRED_LOAD_CONTINUE7]]:
 ; CHECK-NEXT:    [[TMP26:%.*]] = phi <4 x i32> [ [[TMP20]], %[[PRED_LOAD_CONTINUE5]] ], [ [[TMP25]], %[[PRED_LOAD_IF6]] ]
 ; CHECK-NEXT:    [[TMP27:%.*]] = icmp eq <4 x i32> [[TMP26]], zeroinitializer
-; CHECK-NEXT:    [[TMP28:%.*]] = and <4 x i1> [[TMP27]], [[TMP2]]
+; CHECK-NEXT:    [[TMP28:%.*]] = select <4 x i1> [[TMP27]], <4 x i1> [[TMP2]], <4 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP29:%.*]] = freeze <4 x i1> [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31]] = select i1 [[TMP30]], <4 x i1> [[TMP28]], <4 x i1> [[TMP1]]

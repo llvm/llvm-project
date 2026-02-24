@@ -1431,11 +1431,18 @@ public:
 
   /// Returns true if the predicated reduction select should be used to set the
   /// incoming value for the reduction phi.
-  bool usePredicatedReductionSelect() const {
+  bool usePredicatedReductionSelect(RecurKind RecurrenceKind) const {
     // Force to use predicated reduction select since the EVL of the
     // second-to-last iteration might not be VF*UF.
     if (foldTailWithEVL())
       return true;
+
+    // Note: For FindLast recurrences we prefer a predicated select to simplify
+    // matching in handleFindLastReductions(), rather than handle multiple
+    // cases.
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind))
+      return true;
+
     return PreferPredicatedReductionSelect ||
            TTI.preferPredicatedReductionSelect();
   }
@@ -8507,11 +8514,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
                     m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       });
 
-      // Note: For FindLast recurrences we prefer a predicated select to
-      // simplify matching in handleFindLastReductions(), rather than handle
-      // multiple cases.
-      if (CM.usePredicatedReductionSelect() ||
-          RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind))
+      if (CM.usePredicatedReductionSelect(RecurrenceKind))
         PhiR->setOperand(1, NewExitingVPV);
     }
 

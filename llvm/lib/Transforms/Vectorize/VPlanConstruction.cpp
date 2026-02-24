@@ -1361,7 +1361,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     VPValue *BackedgeSelect = PhiR->getBackedgeRecipe().getVPSingleValue();
     VPValue *CondSelect = BackedgeSelect;
 
-    // If there's a header mask the backedge select will not be the find-last
+    // If there's a header mask, the backedge select will not be the find-last
     // select.
     if (HeaderMask && !match(BackedgeSelect,
                              m_Select(m_Specific(HeaderMask),
@@ -1405,8 +1405,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     auto *RdxResult =
         vputils::findUserOf<VPInstruction::ComputeReductionResult>(
             BackedgeSelect);
-    if (!RdxResult)
-      return false;
+    assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
     VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
@@ -1425,7 +1424,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     assert(Op2 == PhiR && "data value must be selected if Cond is true");
 
     if (HeaderMask)
-      Cond = Builder.createAnd(Cond, HeaderMask);
+      Cond = Builder.createLogicalAnd(Cond, HeaderMask);
 
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
