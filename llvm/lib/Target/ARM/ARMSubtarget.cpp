@@ -200,7 +200,7 @@ void ARMSubtarget::initLibcallLoweringInfo(LibcallLoweringInfo &Info) const {
 }
 
 bool ARMSubtarget::isXRaySupported() const {
-  // We don't currently suppport Thumb, but Windows requires Thumb.
+  // We don't currently support Thumb, but Windows requires Thumb.
   return hasV6Ops() && hasARMOps() && !isTargetWindows();
 }
 
@@ -429,7 +429,7 @@ bool ARMSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel() && useMachinePipeliner();
 }
 
-bool ARMSubtarget::useDFAforSMS() const { return false; }
+bool ARMSubtarget::useDFForSMS() const { return false; }
 
 // This overrides the PostRAScheduler bit in the SchedModel for any CPU.
 bool ARMSubtarget::enablePostRAScheduler() const {
