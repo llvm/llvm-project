@@ -352,27 +352,27 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 #else
 
 #define ptrauth_strip(__value, __key)                                          \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__key;                                                               \
     __value;                                                                   \
   })
 
 #define ptrauth_blend_discriminator(__pointer, __integer)                      \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__pointer;                                                           \
     (void)__integer;                                                           \
     ((ptrauth_extra_data_t)0);                                                 \
   })
 
 #define ptrauth_sign_constant(__value, __key, __data)                          \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__key;                                                               \
     (void)__data;                                                              \
     __value;                                                                   \
   })
 
 #define ptrauth_sign_unauthenticated(__value, __key, __data)                   \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__key;                                                               \
     (void)__data;                                                              \
     __value;                                                                   \
@@ -380,7 +380,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
 #define ptrauth_auth_and_resign(__value, __old_key, __old_data, __new_key,     \
                                 __new_data)                                    \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     (void)__new_key;                                                           \
@@ -390,7 +390,7 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
 
 #define ptrauth_auth_load_relative_and_sign(__value, __old_key, __old_data,    \
                                             __new_key, __new_data, __offset)   \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     (void)__new_key;                                                           \
@@ -400,21 +400,21 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   })
 
 #define ptrauth_auth_function(__value, __old_key, __old_data)                  \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     __value;                                                                   \
   })
 
 #define ptrauth_auth_data(__value, __old_key, __old_data)                      \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__old_key;                                                           \
     (void)__old_data;                                                          \
     __value;                                                                   \
   })
 
 #define ptrauth_string_discriminator(__string)                                 \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__string;                                                            \
     ((ptrauth_extra_data_t)0);                                                 \
   })
@@ -424,12 +424,11 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   ((ptrauth_extra_data_t)0)
 
 #define ptrauth_sign_generic_data(__value, __data)                             \
-  ({                                                                           \
+  __extension__({                                                              \
     (void)__value;                                                             \
     (void)__data;                                                              \
     ((ptrauth_generic_signature_t)0);                                          \
   })
-
 
 #define ptrauth_cxx_vtable_pointer(key, address_discrimination,                \
                                    extra_discrimination...)
