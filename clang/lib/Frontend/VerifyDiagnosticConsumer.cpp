@@ -107,7 +107,7 @@ public:
       return DiagnosticMatchResult::AtLeastPartial;
     }
     return S.trim() == Text ? DiagnosticMatchResult::Full
-                            : DiagnosticMatchResult::Partial;
+                            : DiagnosticMatchResult::OnlyPartial;
   }
 };
 
@@ -140,7 +140,7 @@ public:
     }
     return Matches[0].size() == TrimmedText.size()
                ? DiagnosticMatchResult::Full
-               : DiagnosticMatchResult::Partial;
+               : DiagnosticMatchResult::OnlyPartial;
   }
 
 private:
@@ -1080,8 +1080,9 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
 
         const std::string &RightText = II->second;
         DiagnosticMatchResult MatchResult = D.match(RightText);
-        if (MatchResult == DiagnosticMatchResult::Partial) {
-          assert(D.FullMatchRequired);
+        if (MatchResult == DiagnosticMatchResult::OnlyPartial) {
+          assert(D.FullMatchRequired && "Partial match was checked for full "
+                                        "match when it is not needed!");
           IncompleteMatches.push_back({&D, II->second});
         }
         if (MatchResult != DiagnosticMatchResult::None) {
@@ -1155,7 +1156,7 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
                                        SourceManager &SourceMgr,
                                        const TextDiagnosticBuffer &Buffer,
                                        const ExpectedData &ED) {
-  // Building a set of all directives ordered by their location
+  // Building a set of all directives ordered by their location.
   auto directiveComparator = [](const Directive *LHS, const Directive *RHS) {
     return LHS->DirectiveLoc < RHS->DirectiveLoc;
   };

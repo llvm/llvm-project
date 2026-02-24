@@ -3559,7 +3559,9 @@ Examples:
 - ``// expected-note {{declared here}}``
   One note ``declared here`` has to be issued on the same line as the
   directive.
-- ``// expected-error@+1 0-1 {{{expected identifier or '{'}}}``
+- ``// expected-note {{{declared here}}}``
+  Same as above, but uses additional delimiters for diagnostic text.
+- ``// expected-error@+1 0-1 {{expected identifier or '{'}}``
   Zero or one error ``expected identifier or '{'`` has to be issued on the next
   line after the directive zero or one time.
 - ``// cxx98-17-warning@#func-decl + {{target exception specification is not superset of source}}``

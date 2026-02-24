@@ -32,8 +32,8 @@ class TextDiagnosticBuffer;
 
 enum class DiagnosticMatchResult {
   None,
-  Partial,        /// Match, but not a full match
-  AtLeastPartial, /// Match, but we didn't check for full match
+  OnlyPartial,    /// Match, but not a full match.
+  AtLeastPartial, /// Match, but we didn't check for full match.
   Full,
 };
 

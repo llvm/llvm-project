@@ -193,9 +193,10 @@ def err_verify_directive_out_of_order : Error<
   "all diagnostics were successfully matched, but out-of-order directives "
   "were found: %0">;
 def err_verify_non_singular_match : Error<
-  "exactly one diagnostic can be matched">;
+  "diagnostic verification mode disallows use of diagnostic quantifier">;
 def err_verify_wildcard_loc : Error<
-  "cannot use wildcard for diagnostic location">;
+  "diagnostic verification mode disallows use of wildcard for diagnostic "
+  "location">;
 
 def note_fixit_applied : Note<"FIX-IT applied suggested code changes">;
 def note_fixit_in_macro : Note<
