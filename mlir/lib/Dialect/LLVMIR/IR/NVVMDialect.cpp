@@ -1917,7 +1917,8 @@ LogicalResult MmaBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k64.mxf4nvf4");
     } else {
@@ -2185,7 +2186,8 @@ LogicalResult MmaSpBlockScaleOp::verify() {
       if (!((getScaleVecSize() == NVVM::ScaleVecSize::X2 &&
              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0) ||
             (getScaleVecSize() == NVVM::ScaleVecSize::X4 &&
-             getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3)))
+             (getBlockScaleFormat() == NVVM::BlockScaleFormat::UE4M3 ||
+              getBlockScaleFormat() == NVVM::BlockScaleFormat::UE8M0))))
         result = emitOpError("unsupported ScaleVecSize and BlockScaleFormat "
                              "attributes for mma.m16n8k128.mxf4nvf4");
     } else {
@@ -2731,18 +2733,7 @@ bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
   return true; // Has manual mapping
 }
 
-LogicalResult NVVM::FenceSyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-  return success();
-}
-
 LogicalResult NVVM::FenceProxyOp::verify() {
-  if (getKind() == NVVM::ProxyKind::TENSORMAP)
-    return emitOpError() << "tensormap proxy is not a supported proxy kind";
-  if (getKind() == NVVM::ProxyKind::GENERIC)
-    return emitOpError() << "generic proxy not a supported proxy kind";
   if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
     return emitOpError() << "async_shared fence requires space attribute";
   }
@@ -2775,10 +2766,6 @@ LogicalResult NVVM::FenceProxyReleaseOp::verify() {
 }
 
 LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-
   if (getFromProxy() != NVVM::ProxyKind::GENERIC)
     return emitOpError("only generic is support for from_proxy attribute");
 
