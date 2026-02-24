@@ -144,6 +144,131 @@ void function(T x) {}
 // HTML-NEXT:      <p>Defined at line [[# @LINE - 59]] of file {{.*}}templates.cpp</p>
 // HTML-NEXT:  </div>
 
+template <typename A, typename B, typename C, typename D, typename E>
+void longFunction(A a, B b, C c, D d, E e) {}
+
+// YAML-NEXT:   - USR:             '{{([0-9A-F]{40})}}'
+// YAML-NEXT:     Name:            'longFunction'
+// YAML-NEXT:     DefLocation:
+// YAML-NEXT:       LineNumber:      [[# @LINE - 5]]
+// YAML-NEXT:       Filename:        '{{.*}}'
+// YAML-NEXT:     Params:
+// YAML-NEXT:       - Type:
+// YAML-NEXT:           Name:            'A'
+// YAML-NEXT:           QualName:        'A'
+// YAML-NEXT:         Name:            'a'
+// YAML-NEXT:       - Type:
+// YAML-NEXT:           Name:            'B'
+// YAML-NEXT:           QualName:        'B'
+// YAML-NEXT:         Name:            'b'
+// YAML-NEXT:       - Type:
+// YAML-NEXT:           Name:            'C'
+// YAML-NEXT:           QualName:        'C'
+// YAML-NEXT:         Name:            'c'
+// YAML-NEXT:       - Type:
+// YAML-NEXT:           Name:            'D'
+// YAML-NEXT:           QualName:        'D'
+// YAML-NEXT:         Name:            'd'
+// YAML-NEXT:       - Type:
+// YAML-NEXT:           Name:            'E'
+// YAML-NEXT:           QualName:        'E'
+// YAML-NEXT:         Name:            'e'
+// YAML-NEXT:     ReturnType:
+// YAML-NEXT:       Type:
+// YAML-NEXT:         Name:            'void'
+// YAML-NEXT:         QualName:        'void'
+// YAML-NEXT:     Template:
+// YAML-NEXT:         Params:
+// YAML-NEXT:           - Contents:        'typename A'
+// YAML-NEXT:           - Contents:        'typename B'
+// YAML-NEXT:           - Contents:        'typename C'
+// YAML-NEXT:           - Contents:        'typename D'
+// YAML-NEXT:           - Contents:        'typename E'
+
+// MD: ### longFunction
+// MD: *void longFunction(A a, B b, C c, D d, E e)*
+// MD: *Defined at {{.*}}templates.cpp#[[# @LINE - 42]]*
+
+// JSON:           "Name": "longFunction",
+// JSON-NEXT:      "Params": [
+// JSON-NEXT:        {
+// JSON-NEXT:          "Name": "a",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "A",
+// JSON-NEXT:            "QualName": "A",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        },
+// JSON-NEXT:        {
+// JSON-NEXT:          "Name": "b",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "B",
+// JSON-NEXT:            "QualName": "B",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        },
+// JSON-NEXT:        {
+// JSON-NEXT:          "Name": "c",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "C",
+// JSON-NEXT:            "QualName": "C",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        },
+// JSON-NEXT:       {
+// JSON-NEXT:          "Name": "d",
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "D",
+// JSON-NEXT:            "QualName": "D",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        },
+// JSON-NEXT:        {
+// JSON-NEXT:          "Name": "e",
+// JSON-NEXT:          "ParamEnd": true,
+// JSON-NEXT:          "Type": {
+// JSON-NEXT:            "Name": "E",
+// JSON-NEXT:            "QualName": "E",
+// JSON-NEXT:            "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:          }
+// JSON-NEXT:        }
+// JSON-NEXT:      ],
+// JSON-NEXT:      "ReturnType": {
+// JSON-NEXT:        "IsBuiltIn": true,
+// JSON-NEXT:        "IsTemplate": false,
+// JSON-NEXT:        "Name": "void",
+// JSON-NEXT:        "QualName": "void",
+// JSON-NEXT:        "USR": "0000000000000000000000000000000000000000"
+// JSON-NEXT:      },
+// JSON-NEXT:      "Template": {
+// JSON-NEXT:          "Parameters": [
+// JSON-NEXT:            {
+// JSON-NEXT:              "Param": "typename A"
+// JSON-NEXT:            },
+// JSON-NEXT:            {
+// JSON-NEXT:              "Param": "typename B"
+// JSON-NEXT:            },
+// JSON-NEXT:            {
+// JSON-NEXT:              "Param": "typename C"
+// JSON-NEXT:            },
+// JSON-NEXT:            {
+// JSON-NEXT:              "Param": "typename D"
+// JSON-NEXT:            },
+// JSON-NEXT:            {
+// JSON-NEXT:              "End": true,
+// JSON-NEXT:              "Param": "typename E"
+// JSON-NEXT:            }
+// JSON-NEXT:          ],
+// JSON-NEXT:          "VerticalDisplay": true
+// JSON-NEXT:        },
+// JSON-NEXT:        "USR": "{{([0-9A-F]{40})}}",
+// JSON-NEXT:        "VerticalDisplay": true
+// JSON-NEXT:      }
+
+// HTML:           <pre><code class="language-cpp code-clang-doc">template &lt;</code><span class="param-container"><span class="param"><code class="language-cpp code-clang-doc">typename A, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename B, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename C, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename D, </code></span><span class="param"><code class="language-cpp code-clang-doc">typename E</code></span></span><code class="language-cpp code-clang-doc">&gt;</code></pre>
+// HTML-NEXT:      <pre><code class="language-cpp code-clang-doc">void longFunction (</code><span class="param-container"><span class="param"><code class="language-cpp code-clang-doc">A</code> <code class="language-cpp code-clang-doc">a, </code></span><span class="param"><code class="language-cpp code-clang-doc">B</code> <code class="language-cpp code-clang-doc">b, </code></span><span class="param"><code class="language-cpp code-clang-doc">C</code> <code class="language-cpp code-clang-doc">c, </code></span><span class="param"><code class="language-cpp code-clang-doc">D</code> <code class="language-cpp code-clang-doc">d, </code></span><span class="param"><code class="language-cpp code-clang-doc">E</code> <code class="language-cpp code-clang-doc">e</code></span></span><code class="language-cpp code-clang-doc">)</code></pre>
+// HTML-NEXT:      <p>Defined at line [[# @LINE - 122]] of file {{.*}}templates.cpp</p>
+// HTML-NEXT:  </div>
 
 template <>
 void function<bool, 0>(bool x) {}

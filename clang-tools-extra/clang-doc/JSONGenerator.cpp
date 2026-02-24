@@ -39,6 +39,8 @@ static void serializeArray(
     SerializationFunc SerializeInfo, const StringRef EndKey = "End",
     function_ref<void(Object &)> UpdateJson = [](Object &Obj) {});
 
+constexpr static unsigned getMaxParamWrapLimit() { return 2; }
+
 // Convenience lambda to pass to serializeArray.
 // If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
 // the optional.
@@ -480,7 +482,8 @@ static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
     TemplateSpecializationObj["SpecializationOf"] =
         toHex(toStringRef(Template.Specialization->SpecializationOf));
     if (!Template.Specialization->Params.empty()) {
-      bool VerticalDisplay = Template.Specialization->Params.size() > 2;
+      bool VerticalDisplay =
+          Template.Specialization->Params.size() > getMaxParamWrapLimit();
       serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
                      "Parameters", SerializeTemplateParam, "End",
                      [VerticalDisplay](Object &JsonObj) {
@@ -491,7 +494,7 @@ static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
   }
 
   if (!Template.Params.empty()) {
-    bool VerticalDisplay = Template.Params.size() > 2;
+    bool VerticalDisplay = Template.Params.size() > getMaxParamWrapLimit();
     serializeArray(Template.Params, TemplateObj, "Parameters",
                    SerializeTemplateParam, "End",
                    [VerticalDisplay](Object &JsonObj) {
@@ -543,7 +546,7 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   Obj["ReturnType"] = std::move(ReturnTypeObj);
 
   if (!F.Params.empty()) {
-    const bool VerticalDisplay = F.Params.size() > 2;
+    const bool VerticalDisplay = F.Params.size() > getMaxParamWrapLimit();
     serializeArray(F.Params, Obj, "Params", SerializeInfoLambda, "ParamEnd",
                    [VerticalDisplay](Object &JsonObj) {
                      JsonObj["VerticalDisplay"] = VerticalDisplay;
