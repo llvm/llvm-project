@@ -86,6 +86,14 @@ SIntMax Value::getSIntValue() const {
   if (getType().getIntegerBitWidth() == 128)
     UNREACHABLE("libclang_rt.ubsan was built without __int128 support");
 #endif
+#if HAVE_INT256_T
+  if (getType().getIntegerBitWidth() == 256)
+    return SIntMax(UIntMax(*reinterpret_cast<s256 *>(Val)) << ExtraBits) >>
+           ExtraBits;
+#else
+  if (getType().getIntegerBitWidth() == 256)
+    UNREACHABLE("libclang_rt.ubsan was built without __int256 support");
+#endif
   UNREACHABLE("unexpected bit width");
 }
 
@@ -101,6 +109,13 @@ UIntMax Value::getUIntValue() const {
 #else
   if (getType().getIntegerBitWidth() == 128)
     UNREACHABLE("libclang_rt.ubsan was built without __int128 support");
+#endif
+#if HAVE_INT256_T
+  if (getType().getIntegerBitWidth() == 256)
+    return *reinterpret_cast<u256 *>(Val);
+#else
+  if (getType().getIntegerBitWidth() == 256)
+    UNREACHABLE("libclang_rt.ubsan was built without __int256 support");
 #endif
   UNREACHABLE("unexpected bit width");
 }

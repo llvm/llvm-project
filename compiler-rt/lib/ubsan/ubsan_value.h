@@ -25,10 +25,21 @@ __extension__ typedef unsigned __int128 u128;
 #define HAVE_INT128_T 0
 #endif
 
+#if __SIZEOF_INT256__
+__extension__ typedef __int256_t s256;
+__extension__ typedef __uint256_t u256;
+#define HAVE_INT256_T 1
+#else
+#define HAVE_INT256_T 0
+#endif
+
 namespace __ubsan {
 
 /// \brief Largest integer types we support.
-#if HAVE_INT128_T
+#if HAVE_INT256_T
+typedef s256 SIntMax;
+typedef u256 UIntMax;
+#elif HAVE_INT128_T
 typedef s128 SIntMax;
 typedef u128 UIntMax;
 #else

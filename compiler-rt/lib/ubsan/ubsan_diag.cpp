@@ -133,7 +133,22 @@ Diag &Diag::operator<<(const Value &V) {
 
 /// Hexadecimal printing for numbers too large for Printf to handle directly.
 static void RenderHex(InternalScopedString *Buffer, UIntMax Val) {
-#if HAVE_INT128_T
+#if HAVE_INT256_T
+  // Use 256-bit format only when the value doesn't fit in 128 bits.
+  // For signed negative values, the upper 128 bits are all-ones (sign
+  // extension), which still fits in the 128-bit representation.
+  UIntMax Upper = Val >> 128;
+  if (Upper && Upper != ~(UIntMax)0 >> 128)
+    Buffer->AppendF("0x%08x%08x%08x%08x%08x%08x%08x%08x",
+                    (unsigned int)(Val >> 224), (unsigned int)(Val >> 192),
+                    (unsigned int)(Val >> 160), (unsigned int)(Val >> 128),
+                    (unsigned int)(Val >> 96), (unsigned int)(Val >> 64),
+                    (unsigned int)(Val >> 32), (unsigned int)(Val));
+  else
+    Buffer->AppendF("0x%08x%08x%08x%08x", (unsigned int)(Val >> 96),
+                    (unsigned int)(Val >> 64), (unsigned int)(Val >> 32),
+                    (unsigned int)(Val));
+#elif HAVE_INT128_T
   Buffer->AppendF("0x%08x%08x%08x%08x", (unsigned int)(Val >> 96),
                   (unsigned int)(Val >> 64), (unsigned int)(Val >> 32),
                   (unsigned int)(Val));
