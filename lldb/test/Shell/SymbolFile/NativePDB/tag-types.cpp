@@ -240,7 +240,7 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:     OneMember &&RValueRefMember;
 // CHECK:      }
 // CHECK-NEXT: (lldb) type lookup -- Derived2
-// CHECK-NEXT: class Derived2 : protected Class, private Struct {
+// CHECK-NEXT: class Derived2 : public Class, public Struct {
 // CHECK-NEXT:     static unsigned int StaticDataMember;
 // CHECK-NEXT: }
 // CHECK-NEXT: (lldb) type lookup -- DerivedVirtual1
