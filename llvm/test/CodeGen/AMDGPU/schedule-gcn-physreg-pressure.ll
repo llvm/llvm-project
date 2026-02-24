@@ -1,7 +1,9 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=GCN-DEBUG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=0 -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=GENERIC-DEBUG %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 -amdgpu-trackers-physical-register-tracking=0 -debug-only=machine-scheduler < %s 2>&1 | FileCheck --check-prefix=GCN-NOPHYS-DEBUG %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 < %s | FileCheck --check-prefix=GCN %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=0 < %s | FileCheck --check-prefix=NO-GCN %s
+; RUN: llc -mtriple=amdgcn -mcpu=tahiti -amdgpu-use-amdgpu-trackers=1 -amdgpu-trackers-physical-register-tracking=0 < %s | FileCheck --check-prefix=GCN-NOPHYS %s
 ; REQUIRES: asserts
 
 ; Test that GCN trackers correctly track physical register pressure from inline asm
@@ -13,6 +15,10 @@
 ; GENERIC-DEBUG-LABEL: test_single_physreg
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
 ; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
+
+; GCN-NOPHYS-DEBUG-LABEL: test_single_physreg
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
 
 define amdgpu_kernel void @test_single_physreg(ptr addrspace(1) %out) {
 entry:
@@ -31,6 +37,10 @@ entry:
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
 ; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
 
+; GCN-NOPHYS-DEBUG-LABEL: test_multiple_physregs
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
+
 define amdgpu_kernel void @test_multiple_physregs(ptr addrspace(1) %out) {
 entry:
   %result = call { i32, i32 } asm sideeffect "s_mov_b32 $0, 0; s_mov_b32 $1, 1", "={s10},={s11}"()
@@ -48,6 +58,10 @@ entry:
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 12
 ; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 12
 
+; GCN-NOPHYS-DEBUG-LABEL: test_physreg_with_vreg
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 8, LVGPR WT: 0, LSGPR WT: 12
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 7, LVGPR WT: 0, LSGPR WT: 12
+
 define amdgpu_kernel void @test_physreg_with_vreg(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 entry:
   %asm_val = call i32 asm sideeffect "s_mov_b32 $0, 0", "={s10}"()
@@ -61,6 +75,8 @@ entry:
 ; GCN-DEBUG-LABEL: test_no_inflation
 
 ; GENERIC-DEBUG-LABEL: test_no_inflation
+
+; GCN-NOPHYS-DEBUG-LABEL: test_no_inflation
 
 define amdgpu_kernel void @test_no_inflation() {
 entry:
@@ -76,6 +92,10 @@ entry:
 ; GENERIC-DEBUG-LABEL: test_early_clobber
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
 ; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+
+; GCN-NOPHYS-DEBUG-LABEL: test_early_clobber
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 5, LVGPR WT: 0, LSGPR WT: 6
 
 define amdgpu_kernel void @test_early_clobber(ptr addrspace(1) %out) {
 entry:
@@ -94,6 +114,10 @@ entry:
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
 ; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
 
+; GCN-NOPHYS-DEBUG-LABEL: test_physreg_input
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 1 AGPRs: 0, SGPRs: 4, LVGPR WT: 0, LSGPR WT: 6
+
 define amdgpu_kernel void @test_physreg_input(ptr addrspace(1) %out) {
 entry:
   %val = call i32 asm sideeffect "s_mov_b32 s10, 5; s_add_u32 $0, s10, 1", "={s11}"()
@@ -110,6 +134,10 @@ entry:
 ; GENERIC-DEBUG-LABEL: test_vreg_and_physreg_overlap
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
 ; GENERIC-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 10, LVGPR WT: 0, LSGPR WT: 16
+
+; GCN-NOPHYS-DEBUG-LABEL: test_vreg_and_physreg_overlap
+; GCN-NOPHYS-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
+; GCN-NOPHYS-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 10, LVGPR WT: 0, LSGPR WT: 16
 
 define amdgpu_kernel void @test_vreg_and_physreg_overlap(ptr addrspace(1) %in1, ptr addrspace(1) %in2, ptr addrspace(1) %out) {
 entry:
@@ -241,6 +269,127 @@ entry:
 ; GCN: .set test_vreg_and_physreg_overlap.numbered_sgpr, 12
 ; GCN: TotalNumSgprs: 14
 ; GCN: NumVgprs: 2
+
+; Verify assembly output with GCN trackers but physical register tracking disabled (same as GCN)
+; GCN-NOPHYS-LABEL: test_single_physreg:
+; GCN-NOPHYS-NEXT: ; %bb.0:
+; GCN-NOPHYS-NEXT: s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NOPHYS-NEXT: s_mov_b32 s3, 0xf000
+; GCN-NOPHYS-NEXT: s_mov_b32 s2, -1
+; GCN-NOPHYS-NEXT: v_mov_b32_e32 v0, 0
+; GCN-NOPHYS-NEXT: ;;#ASMSTART
+; GCN-NOPHYS-NEXT: s_mov_b32 s10, 0
+; GCN-NOPHYS-NEXT: ;;#ASMEND
+; GCN-NOPHYS-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NOPHYS-NEXT: buffer_store_dword v0, off, s[0:3], 0
+; GCN-NOPHYS-NEXT: s_endpgm
+; GCN-NOPHYS: .set test_single_physreg.numbered_sgpr, 11
+; GCN-NOPHYS: TotalNumSgprs: 11
+; GCN-NOPHYS: NumVgprs: 1
+
+; GCN-NOPHYS-LABEL: test_multiple_physregs:
+; GCN-NOPHYS-NEXT: ; %bb.0:
+; GCN-NOPHYS-NEXT: s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NOPHYS-NEXT: s_mov_b32 s3, 0xf000
+; GCN-NOPHYS-NEXT: s_mov_b32 s2, -1
+; GCN-NOPHYS-NEXT: v_mov_b32_e32 v0, 0
+; GCN-NOPHYS-NEXT: ;;#ASMSTART
+; GCN-NOPHYS-NEXT: s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; GCN-NOPHYS-NEXT: ;;#ASMEND
+; GCN-NOPHYS-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NOPHYS-NEXT: buffer_store_dword v0, off, s[0:3], 0
+; GCN-NOPHYS-NEXT: s_endpgm
+; GCN-NOPHYS: .set test_multiple_physregs.numbered_sgpr, 12
+; GCN-NOPHYS: TotalNumSgprs: 12
+; GCN-NOPHYS: NumVgprs: 1
+
+; GCN-NOPHYS-LABEL: test_physreg_with_vreg:
+; GCN-NOPHYS-NEXT: ; %bb.0:
+; GCN-NOPHYS-NEXT: s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NOPHYS-NEXT: s_mov_b32 s7, 0xf000
+; GCN-NOPHYS-NEXT: s_mov_b32 s6, -1
+; GCN-NOPHYS-NEXT: ;;#ASMSTART
+; GCN-NOPHYS-NEXT: s_mov_b32 s10, 0
+; GCN-NOPHYS-NEXT: ;;#ASMEND
+; GCN-NOPHYS-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NOPHYS-NEXT: s_mov_b32 s4, s0
+; GCN-NOPHYS-NEXT: s_mov_b32 s5, s1
+; GCN-NOPHYS-NEXT: buffer_load_dword v0, off, s[4:7], 0
+; GCN-NOPHYS-NEXT: s_mov_b32 s4, s2
+; GCN-NOPHYS-NEXT: s_mov_b32 s5, s3
+; GCN-NOPHYS-NEXT: s_waitcnt vmcnt(0)
+; GCN-NOPHYS-NEXT: buffer_store_dword v0, off, s[4:7], 0
+; GCN-NOPHYS-NEXT: s_endpgm
+; GCN-NOPHYS: .set test_physreg_with_vreg.numbered_sgpr, 11
+; GCN-NOPHYS: TotalNumSgprs: 11
+; GCN-NOPHYS: NumVgprs: 1
+
+; GCN-NOPHYS-LABEL: test_no_inflation:
+; GCN-NOPHYS-NEXT: ; %bb.0:
+; GCN-NOPHYS-NEXT: s_endpgm
+; GCN-NOPHYS: .set test_no_inflation.numbered_sgpr, 0
+; GCN-NOPHYS: TotalNumSgprs: 0
+; GCN-NOPHYS: NumVgprs: 0
+
+; GCN-NOPHYS-LABEL: test_early_clobber:
+; GCN-NOPHYS-NEXT: ; %bb.0:
+; GCN-NOPHYS-NEXT: s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NOPHYS-NEXT: s_mov_b32 s3, 0xf000
+; GCN-NOPHYS-NEXT: s_mov_b32 s2, -1
+; GCN-NOPHYS-NEXT: ;;#ASMSTART
+; GCN-NOPHYS-NEXT: s_mov_b32 s10, 0
+; GCN-NOPHYS-NEXT: ;;#ASMEND
+; GCN-NOPHYS-NEXT: v_mov_b32_e32 v0, s10
+; GCN-NOPHYS-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NOPHYS-NEXT: buffer_store_dword v0, off, s[0:3], 0
+; GCN-NOPHYS-NEXT: s_endpgm
+; GCN-NOPHYS: .set test_early_clobber.numbered_sgpr, 11
+; GCN-NOPHYS: TotalNumSgprs: 11
+; GCN-NOPHYS: NumVgprs: 1
+
+; GCN-NOPHYS-LABEL: test_physreg_input:
+; GCN-NOPHYS-NEXT: ; %bb.0:
+; GCN-NOPHYS-NEXT: s_load_dwordx2 s[0:1], s[4:5], 0x9
+; GCN-NOPHYS-NEXT: s_mov_b32 s3, 0xf000
+; GCN-NOPHYS-NEXT: s_mov_b32 s2, -1
+; GCN-NOPHYS-NEXT: v_mov_b32_e32 v0, 0
+; GCN-NOPHYS-NEXT: ;;#ASMSTART
+; GCN-NOPHYS-NEXT: s_mov_b32 s10, 5; s_add_u32 s11, s10, 1
+; GCN-NOPHYS-NEXT: ;;#ASMEND
+; GCN-NOPHYS-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NOPHYS-NEXT: buffer_store_dword v0, off, s[0:3], 0
+; GCN-NOPHYS-NEXT: s_endpgm
+; GCN-NOPHYS: .set test_physreg_input.numbered_sgpr, 12
+; GCN-NOPHYS: TotalNumSgprs: 12
+; GCN-NOPHYS: NumVgprs: 1
+
+; GCN-NOPHYS-LABEL: test_vreg_and_physreg_overlap:
+; GCN-NOPHYS-NEXT: ; %bb.0:
+; GCN-NOPHYS-NEXT: s_load_dwordx4 s[0:3], s[4:5], 0x9
+; GCN-NOPHYS-NEXT: s_load_dwordx2 s[8:9], s[4:5], 0xd
+; GCN-NOPHYS-NEXT: s_mov_b32 s7, 0xf000
+; GCN-NOPHYS-NEXT: s_mov_b32 s6, -1
+; GCN-NOPHYS-NEXT: ;;#ASMSTART
+; GCN-NOPHYS-NEXT: s_mov_b32 s10, 0; s_mov_b32 s11, 1
+; GCN-NOPHYS-NEXT: ;;#ASMEND
+; GCN-NOPHYS-NEXT: s_waitcnt lgkmcnt(0)
+; GCN-NOPHYS-NEXT: s_mov_b32 s4, s0
+; GCN-NOPHYS-NEXT: s_mov_b32 s5, s1
+; GCN-NOPHYS-NEXT: s_mov_b32 s0, s2
+; GCN-NOPHYS-NEXT: s_mov_b32 s1, s3
+; GCN-NOPHYS-NEXT: s_mov_b32 s2, s6
+; GCN-NOPHYS-NEXT: s_mov_b32 s3, s7
+; GCN-NOPHYS-NEXT: buffer_load_dword v0, off, s[4:7], 0
+; GCN-NOPHYS-NEXT: buffer_load_dword v1, off, s[0:3], 0
+; GCN-NOPHYS-NEXT: s_mov_b32 s10, s6
+; GCN-NOPHYS-NEXT: s_mov_b32 s11, s7
+; GCN-NOPHYS-NEXT: s_waitcnt vmcnt(0)
+; GCN-NOPHYS-NEXT: v_add_i32_e32 v0, vcc, v0, v1
+; GCN-NOPHYS-NEXT: buffer_store_dword v0, off, s[8:11], 0
+; GCN-NOPHYS-NEXT: s_endpgm
+; GCN-NOPHYS: .set test_vreg_and_physreg_overlap.numbered_sgpr, 12
+; GCN-NOPHYS: TotalNumSgprs: 14
+; GCN-NOPHYS: NumVgprs: 2
 
 ; Verify assembly output without GCN trackers (should be identical)
 ; NO-GCN-LABEL: test_single_physreg:

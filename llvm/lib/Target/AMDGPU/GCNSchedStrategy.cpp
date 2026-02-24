@@ -78,6 +78,12 @@ static cl::opt<bool> GCNTrackers(
     cl::desc("Use the AMDGPU specific RPTrackers during scheduling"),
     cl::init(false));
 
+static cl::opt<bool> TrackPhysRegInTrackers(
+    "amdgpu-trackers-physical-register-tracking", cl::Hidden,
+    cl::desc("When using GCN trackers, count physical registers (e.g. from "
+             "inline asm) in pressure."),
+    cl::init(true));
+
 static cl::opt<unsigned> PendingQueueLimit(
     "amdgpu-scheduler-pending-queue-limit", cl::Hidden,
     cl::desc(
@@ -989,7 +995,7 @@ GCNScheduleDAGMILive::getRealRegPressure(unsigned RegionIdx) const {
     return llvm::getRegPressure(MRI, LiveIns[RegionIdx]);
   GCNDownwardRPTracker RPTracker(*LIS);
   RPTracker.initPhysLiveRegs(MF.getRegInfo());
-  if (GCNTrackers)
+  if (GCNTrackers && TrackPhysRegInTrackers)
     RPTracker.enablePhysTracking();
   RPTracker.advance(Regions[RegionIdx].first, Regions[RegionIdx].second,
                     &LiveIns[RegionIdx]);
@@ -1006,7 +1012,7 @@ void GCNScheduleDAGMILive::computeBlockPressure(unsigned RegionIdx,
                                                 const MachineBasicBlock *MBB) {
   GCNDownwardRPTracker RPTracker(*LIS);
   RPTracker.initPhysLiveRegs(MF.getRegInfo());
-  if (GCNTrackers)
+  if (GCNTrackers && TrackPhysRegInTrackers)
     RPTracker.enablePhysTracking();
 
   // If the block has the only successor then live-ins of that successor are
@@ -1158,7 +1164,7 @@ void GCNScheduleDAGMILive::runSchedStages() {
   // Initialize physical register tracking in GCN trackers.
   S.getDownwardTracker()->initPhysLiveRegs(MF.getRegInfo());
   S.getUpwardTracker()->initPhysLiveRegs(MF.getRegInfo());
-  if (GCNTrackers) {
+  if (GCNTrackers && TrackPhysRegInTrackers) {
     S.getDownwardTracker()->enablePhysTracking();
     S.getUpwardTracker()->enablePhysTracking();
   }
