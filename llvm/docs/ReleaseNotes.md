@@ -224,9 +224,6 @@ Changes to LLDB
 ### Linux
 
 * On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
-
-### Linux
-
 * Thread local variables are now supported on Arm Linux if the program being debugged is using glibc.
 
 Changes to BOLT
