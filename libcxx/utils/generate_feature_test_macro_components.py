@@ -3,6 +3,7 @@
 import os
 from builtins import range
 from dataclasses import dataclass
+from difflib import unified_diff
 from functools import reduce
 from typing import (
     Any,
@@ -2043,6 +2044,25 @@ class FtmHeaderTest:
     implemented: bool = None
     condition: str = None
 
+class DataNotSorted(Exception):
+    pass
+
+def validate_sorted(name:str, data: List[str]) -> None:
+    sorted_data = sorted(data)
+    if data != sorted_data:
+        raise DataNotSorted(
+            f"The {name} are not sorted.\n"
+            + "\n".join(
+                unified_diff(
+                    data,
+                    sorted_data,
+                    "input data",
+                    "sorted data",
+                    lineterm="",
+                )
+            ) + "\n"
+        )
+
 def get_ftms(
     data, std_dialects: List[Std], use_implemented_status: bool
 ) -> Dict[Ftm, Dict[Std, Optional[Value]]]:
@@ -2052,6 +2072,7 @@ def get_ftms(
         last = None
         entry = dict()
         implemented = True
+        validate_sorted(f"C++ standard version numbers of ftm '{feature['name']}'", list(feature["values"].keys()))
         for std in std_dialects:
             if std not in feature["values"].keys():
                 if last == None:
@@ -2062,6 +2083,7 @@ def get_ftms(
                 if implemented:
                     values = feature["values"][std]
                     assert len(values) > 0, f"{feature['name']}[{std}] has no entries"
+                    validate_sorted(f"value of the fmt '{feature['name']}' in {std}", list(values.keys()))
                     for value in values:
                         papers = list(values[value])
                         assert (
@@ -2080,6 +2102,7 @@ def get_ftms(
                     entry[std] = last
         result[feature["name"]] = entry
 
+    validate_sorted("ftm names", list(result))
     return result
 
 
