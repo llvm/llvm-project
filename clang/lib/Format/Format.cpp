@@ -4475,9 +4475,19 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
       return Style;
   }
 
-  SmallString<128> Path(FileName);
+  using namespace llvm::sys::path;
+  using String = SmallString<128>;
+
+  String Path(FileName);
   if (std::error_code EC = FS->makeAbsolute(Path))
     return make_string_error(EC.message());
+
+  auto Normalize = [](String &Path) {
+    Path = convert_to_slash(Path);
+    remove_dots(Path, /*remove_dot_dot=*/true, Style::posix);
+  };
+
+  Normalize(Path);
 
   // Reset possible inheritance
   Style.InheritConfig.clear();
@@ -4502,20 +4512,22 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
 
   llvm::StringSet<> Directories; // Inherited directories.
   bool Redirected = false;
-  llvm::SmallString<128> Dir, UnsuitableConfigFiles;
+  String Dir, UnsuitableConfigFiles;
   for (StringRef Directory = Path; !Directory.empty();
-       Directory = Redirected ? Dir.str()
-                              : llvm::sys::path::parent_path(Directory)) {
+       Directory = Redirected ? Dir.str() : parent_path(Directory)) {
     auto Status = FS->status(Directory);
     if (!Status ||
         Status->getType() != llvm::sys::fs::file_type::directory_file) {
-      continue;
+      if (!Redirected)
+        continue;
+      return make_string_error("Failed to inherit configuration directory " +
+                               Directory);
     }
 
     for (const auto &F : FilesToLookFor) {
-      SmallString<128> ConfigFile(Directory);
+      String ConfigFile(Directory);
 
-      llvm::sys::path::append(ConfigFile, F);
+      append(ConfigFile, F);
       LLVM_DEBUG(llvm::dbgs() << "Trying " << ConfigFile << "...\n");
 
       Status = FS->status(ConfigFile);
@@ -4560,20 +4572,15 @@ Expected<FormatStyle> getStyle(StringRef StyleName, StringRef FileName,
         Redirected = false;
       } else {
         Redirected = true;
-        switch (Style.InheritConfig[0]) {
-        case '/':
-          Dir = Style.InheritConfig;
-          break;
-        case '~':
-          llvm::sys::fs::expand_tilde(Style.InheritConfig, Dir);
-          break;
-        default: {
-          Dir = Directory;
-          Dir.append("/");
-          Dir.append(Style.InheritConfig);
+        String ExpandedDir;
+        llvm::sys::fs::expand_tilde(Style.InheritConfig, ExpandedDir);
+        Normalize(ExpandedDir);
+        if (is_absolute(ExpandedDir, Style::posix)) {
+          Dir = ExpandedDir;
+        } else {
+          Dir = Directory.str();
+          append(Dir, Style::posix, ExpandedDir);
         }
-        }
-        llvm::sys::fs::make_absolute(Dir);
       }
 
       // Reset inheritance of style

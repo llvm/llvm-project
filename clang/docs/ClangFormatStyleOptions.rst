@@ -188,7 +188,7 @@ the configuration (without a prefix: ``Auto``).
     ``--style={BasedOnStyle: InheritParentConfig, ColumnLimit: 20}``
   * ``InheritParentConfig=<directory-path>``
     Same as the above except that the inheritance is redirected to
-    ``<directory-path``. This is only supported in configuration files.
+    ``<directory-path>``. This is only supported in configuration files.
 
 .. START_FORMAT_STYLE_OPTIONS
 
