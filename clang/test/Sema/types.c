@@ -39,6 +39,31 @@ typedef unsigned __int128 check_uint_128;
 typedef __uint128_t check_uint_128; // expected-note {{here}}
 typedef int check_uint_128; // expected-error {{different types ('int' vs '__uint128_t' (aka 'unsigned __int128'))}}
 
+#ifdef __SIZEOF_INT256__
+// __int256_t / __uint256_t are available (mirrors __int128_t tests above).
+void a256(void) {
+  __int256_t s;
+  __uint256_t t;
+}
+
+// __int256 is a keyword
+int c256(void) {
+  __int256 i;
+  unsigned __int256 j;
+  long unsigned __int256 k; // expected-error {{'long __int256' is invalid}}
+  int __int256; // expected-error {{cannot combine with previous}} expected-warning {{does not declare anything}}
+}
+
+// __int256_t is __int256; __uint256_t is unsigned __int256.
+typedef __int256 check_int_256;
+typedef __int256_t check_int_256; // expected-note {{here}}
+typedef int check_int_256; // expected-error {{different types ('int' vs '__int256_t' (aka '__int256'))}}
+
+typedef unsigned __int256 check_uint_256;
+typedef __uint256_t check_uint_256; // expected-note {{here}}
+typedef int check_uint_256; // expected-error {{different types ('int' vs '__uint256_t' (aka 'unsigned __int256'))}}
+#endif
+
 // Array type merging should convert array size to whatever matches the target
 // pointer size.
 extern int i[1LL];

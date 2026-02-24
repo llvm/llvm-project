@@ -545,6 +545,8 @@ namespace cwg425 { // cwg425: 2.7
   //   expected-note-re@-11 {{built-in candidate operator*{{.*}}}}
   //   expected-note-re@-12 {{built-in candidate operator*{{.*}}}}
   //   expected-note-re@-13 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-14 {{built-in candidate operator*{{.*}}}}
+  //   expected-note-re@-15 {{built-in candidate operator*{{.*}}}}
 
   template<typename T> struct is_float;
   template<> struct is_float<float> { typedef void type; };

@@ -486,6 +486,11 @@ int main(void)
   if (i128 == -1) // used to crash
       return 0;
 #endif
+#if __SIZEOF_INT256__
+  __int256 i256 = value();
+  if (i256 == -1) // mirrors __int128 test above
+      return 0;
+#endif
 
 
   enum E {

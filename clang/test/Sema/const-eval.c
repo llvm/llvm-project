@@ -143,6 +143,11 @@ void *PR28739b = &PR28739b + (__int128)(unsigned long)-1;                  // ex
 __int128 PR28739c = (&PR28739c + (__int128)(unsigned long)-1) - &PR28739c; // expected-warning {{refers past the last possible element}}
 void *PR28739d = &(&PR28739d)[(__int128)(unsigned long)-1];                // expected-warning {{refers past the last possible element}}
 
+#ifdef __SIZEOF_INT256__
+// __int256 pointer arithmetic -- same pattern as __int128 above.
+__int256 PR28739_256 = (&PR28739_256 + (__int256)(unsigned long)-1) - &PR28739_256; // expected-warning {{refers past the last possible element}}
+#endif
+
 struct PR35214_X {
   int k;
   int arr[];

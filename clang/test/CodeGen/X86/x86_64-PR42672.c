@@ -61,10 +61,12 @@ void odd_struct(void) {
 // CHECK-IMPOSSIBLE_ODD: impossible constraint in asm: cannot store value into a register
 
 // Check Clang reports an error if attempting to return a big structure via a register.
+// Use 5 x long long (40 bytes / 320 bits) since 4 x long long (32 bytes / 256 bits)
+// can be represented as __uint256_t on targets with __int256 support.
 void big_struct(void) {
 #ifdef IMPOSSIBLE_BIG
   struct {
-    long long int v1, v2, v3, v4;
+    long long int v1, v2, v3, v4, v5;
   } str;
   asm("nop"
       : "=r"(str));

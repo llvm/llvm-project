@@ -315,6 +315,12 @@ char clz55[__builtin_clzg((unsigned __int128)0xf, 42) == BITSIZE(__int128) - 4 ?
 char clz56[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1))) == 0 ? 1 : -1]; // expected-error {{variable length array declaration not allowed at file scope}}
 char clz57[__builtin_clzg((unsigned __int128)(1 << (BITSIZE(__int128) - 1)), 42) == 0 ? 1 : -1]; // expected-error {{variable length array declaration not allowed at file scope}}
 #endif
+#ifdef __SIZEOF_INT256__
+int clz256_0 = __builtin_clzg((unsigned __int256)0); // expected-error {{not a compile-time constant}}
+char clz256_1[__builtin_clzg((unsigned __int256)0, 42) == 42 ? 1 : -1];
+char clz256_2[__builtin_clzg((unsigned __int256)0x1) == BITSIZE(__int256) - 1 ? 1 : -1];
+char clz256_3[__builtin_clzg((unsigned __int256)0xf) == BITSIZE(__int256) - 4 ? 1 : -1];
+#endif
 int clz58 = __builtin_clzg((unsigned _BitInt(128))0); // expected-error {{not a compile-time constant}}
 char clz59[__builtin_clzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
 char clz60[__builtin_clzg((unsigned _BitInt(128))0x1) == BITSIZE(_BitInt(128)) - 1 ? 1 : -1];
@@ -381,6 +387,12 @@ char ctz53[__builtin_ctzg((unsigned __int128)0x10, 42) == 4 ? 1 : -1];
 char ctz54[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1)) == BITSIZE(__int128) - 1 ? 1 : -1];
 char ctz55[__builtin_ctzg((unsigned __int128)1 << (BITSIZE(__int128) - 1), 42) == BITSIZE(__int128) - 1 ? 1 : -1];
 #endif
+#ifdef __SIZEOF_INT256__
+int ctz256_0 = __builtin_ctzg((unsigned __int256)0); // expected-error {{not a compile-time constant}}
+char ctz256_1[__builtin_ctzg((unsigned __int256)0, 42) == 42 ? 1 : -1];
+char ctz256_2[__builtin_ctzg((unsigned __int256)0x1) == 0 ? 1 : -1];
+char ctz256_3[__builtin_ctzg((unsigned __int256)0x10) == 4 ? 1 : -1];
+#endif
 int ctz56 = __builtin_ctzg((unsigned _BitInt(128))0); // expected-error {{not a compile-time constant}}
 char ctz57[__builtin_ctzg((unsigned _BitInt(128))0, 42) == 42 ? 1 : -1];
 char ctz58[__builtin_ctzg((unsigned _BitInt(128))0x1) == 0 ? 1 : -1];
@@ -407,6 +419,9 @@ char popcount14[__builtin_popcountg(~0UL) == BITSIZE(long) ? 1 : -1];
 char popcount15[__builtin_popcountg(~0ULL) == BITSIZE(long long) ? 1 : -1];
 #ifdef __SIZEOF_INT128__
 char popcount16[__builtin_popcountg(~(unsigned __int128)0) == BITSIZE(__int128) ? 1 : -1];
+#endif
+#ifdef __SIZEOF_INT256__
+char popcount256[__builtin_popcountg(~(unsigned __int256)0) == BITSIZE(__int256) ? 1 : -1];
 #endif
 char popcount17[__builtin_popcountg(~(unsigned _BitInt(128))0) == BITSIZE(_BitInt(128)) ? 1 : -1];
 

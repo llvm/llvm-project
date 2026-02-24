@@ -206,7 +206,9 @@ _Static_assert(
     long long : 0,
     unsigned long long : 0,
     __int128_t : 0,
-    __uint128_t : 1
+    __uint128_t : 1,
+    __int256_t : 0,
+    __uint256_t : 0
     )
 );
 

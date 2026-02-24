@@ -128,6 +128,52 @@ W(int)->W<1>;
 // CHECK-NEXT:     "end": {}
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
+// CHECK-NEXT:    "name": "__int256_t",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "__int256"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "__int256"
+// CHECK-NEXT:      }
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "TypedefDecl",
+// CHECK-NEXT:    "loc": {},
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {},
+// CHECK-NEXT:     "end": {}
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "isImplicit": true,
+// CHECK-NEXT:    "name": "__uint256_t",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "unsigned __int256"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "BuiltinType",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "unsigned __int256"
+// CHECK-NEXT:      }
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "TypedefDecl",
+// CHECK-NEXT:    "loc": {},
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {},
+// CHECK-NEXT:     "end": {}
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "isImplicit": true,
 // CHECK-NEXT:    "name": "__NSConstantString",
 // CHECK-NEXT:    "type": {
 // CHECK-NEXT:     "qualType": "__NSConstantString_tag"

@@ -343,6 +343,52 @@ namespace TestAbbreviatedTemplateDecls {
 // JSON-NEXT:     "end": {}
 // JSON-NEXT:    },
 // JSON-NEXT:    "isImplicit": true,
+// JSON-NEXT:    "name": "__int256_t",
+// JSON-NEXT:    "type": {
+// JSON-NEXT:     "qualType": "__int256"
+// JSON-NEXT:    },
+// JSON-NEXT:    "inner": [
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "BuiltinType",
+// JSON-NEXT:      "type": {
+// JSON-NEXT:       "qualType": "__int256"
+// JSON-NEXT:      }
+// JSON-NEXT:     }
+// JSON-NEXT:    ]
+// JSON-NEXT:   },
+// JSON-NEXT:   {
+// JSON-NEXT:    "id": "0x{{.*}}",
+// JSON-NEXT:    "kind": "TypedefDecl",
+// JSON-NEXT:    "loc": {},
+// JSON-NEXT:    "range": {
+// JSON-NEXT:     "begin": {},
+// JSON-NEXT:     "end": {}
+// JSON-NEXT:    },
+// JSON-NEXT:    "isImplicit": true,
+// JSON-NEXT:    "name": "__uint256_t",
+// JSON-NEXT:    "type": {
+// JSON-NEXT:     "qualType": "unsigned __int256"
+// JSON-NEXT:    },
+// JSON-NEXT:    "inner": [
+// JSON-NEXT:     {
+// JSON-NEXT:      "id": "0x{{.*}}",
+// JSON-NEXT:      "kind": "BuiltinType",
+// JSON-NEXT:      "type": {
+// JSON-NEXT:       "qualType": "unsigned __int256"
+// JSON-NEXT:      }
+// JSON-NEXT:     }
+// JSON-NEXT:    ]
+// JSON-NEXT:   },
+// JSON-NEXT:   {
+// JSON-NEXT:    "id": "0x{{.*}}",
+// JSON-NEXT:    "kind": "TypedefDecl",
+// JSON-NEXT:    "loc": {},
+// JSON-NEXT:    "range": {
+// JSON-NEXT:     "begin": {},
+// JSON-NEXT:     "end": {}
+// JSON-NEXT:    },
+// JSON-NEXT:    "isImplicit": true,
 // JSON-NEXT:    "name": "__NSConstantString",
 // JSON-NEXT:    "type": {
 // JSON-NEXT:     "qualType": "__NSConstantString_tag"
