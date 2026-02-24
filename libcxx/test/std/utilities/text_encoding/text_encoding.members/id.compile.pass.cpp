@@ -13,7 +13,7 @@
 // std::text_encoding::id;
 // Test that every member of the id enumeration has the correct value.
 
-#include <cstddef>
+#include <cstdint>
 #include <text_encoding>
 
 static_assert(int_least32_t(std::text_encoding::id::other) == 1);
