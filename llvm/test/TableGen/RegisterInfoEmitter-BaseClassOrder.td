@@ -28,7 +28,7 @@ def BaseC : RegisterClass<"MyTarget", [i32], 32, (sequence "R%u", 2, 3)> {
 
 def MyTarget : Target;
 
-// CHECK:      static const uint16_t Mapping[8] = {
+// CHECK:      static constexpr uint16_t Mapping[8] = {
 // CHECK-NEXT:   InvalidRegClassID,  // NoRegister
 // CHECK-NEXT:   MyTarget::BaseARegClassID,  // R0
 // CHECK-NEXT:   MyTarget::BaseARegClassID,  // R1
