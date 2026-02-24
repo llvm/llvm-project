@@ -1911,6 +1911,29 @@ TEST_F(JSONFormatTUSummaryTest, WriteNotJsonExtension) {
                 HasSubstr("file does not end with '.json' extension"))));
 }
 
+TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
+  TUSummary Summary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+
+  // Register an entity so we have a valid EntityId to use as the map key.
+  EntityId EI =
+      getIdTable(Summary).getId(EntityName{"c:@F@foo", "", /*Namespace=*/{}});
+
+  // Inject an EntitySummary under a SummaryName that has no registered
+  // FormatInfo, so that entitySummaryToJSON fails during serialization.
+  SummaryName UnknownSN("unknown_summary_type");
+  getData(Summary)[UnknownSN][EI] = nullptr;
+
+  auto Result = writeTUSummary(Summary, "output.json");
+
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(AllOf(HasSubstr("writing TUSummary to file"),
+                              HasSubstr("failed to serialize EntitySummary"),
+                              HasSubstr("no FormatInfo registered for summary "
+                                        "'unknown_summary_type'"))));
+}
+
 TEST_F(JSONFormatTUSummaryTest, WriteStreamOpenFailure) {
 #ifdef _WIN32
   GTEST_SKIP() << "Permission model differs on Windows";
