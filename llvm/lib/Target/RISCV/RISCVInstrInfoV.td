@@ -671,7 +671,7 @@ multiclass VMAC_MV_V_X<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV in
+  let VS1VS2Constraint = WidenV in
   def X : VMACVX<funct6, OPMVX, opcodestr # ".vx", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddX", "ReadVIWMulAddV", "ReadVIWMulAddX",
                          "ReadVIWMulAddV">;
@@ -679,7 +679,7 @@ multiclass VWMAC_MV_X<string opcodestr, bits<6> funct6> {
 
 multiclass VWMAC_MV_V_X<string opcodestr, bits<6> funct6>
    : VWMAC_MV_X<opcodestr, funct6> {
-  let RVVConstraint = WidenV in
+  let VS1VS2Constraint = WidenV in
   def V : VMACVV<funct6, OPMVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVIWMulAddV", "ReadVIWMulAddV", "ReadVIWMulAddV",
                          "ReadVIWMulAddV">;
@@ -799,7 +799,7 @@ multiclass VMAC_FV_V_F<string opcodestr, bits<6> funct6> {
 }
 
 multiclass VWMAC_FV_V_F<string opcodestr, bits<6> funct6> {
-  let RVVConstraint = WidenV in {
+  let VS1VS2Constraint = WidenV in {
   def V : VMACVV<funct6, OPFVV, opcodestr # ".vv", EarlyClobber=1>,
           SchedTernaryMC<"WriteVFWMulAddV", "ReadVFWMulAddV", "ReadVFWMulAddV",
                          "ReadVFWMulAddV">;
@@ -1179,22 +1179,22 @@ def : InstAlias<"vneg.v $vd, $vs", (VRSUB_VX VR:$vd, VR:$vs, X0, zero_reg)>;
 // register group of a different element width (including the mask register
 // if masked), otherwise an illegal instruction exception is raised.
 let Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx2 in {
-let RVVConstraint = WidenV in {
+let VS1VS2Constraint = WidenV in {
 defm VWADDU_V : VALU_MV_V_X<"vwaddu", 0b110000, "v">;
 defm VWSUBU_V : VALU_MV_V_X<"vwsubu", 0b110010, "v">;
 defm VWADD_V : VALU_MV_V_X<"vwadd", 0b110001, "v">;
 defm VWSUB_V : VALU_MV_V_X<"vwsub", 0b110011, "v">;
-} // RVVConstraint = WidenV
+} // VS1VS2Constraint = WidenV
 // Set earlyclobber for following instructions for second and mask operands.
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
 // overlap with the first (wide) operand.
-let RVVConstraint = WidenW in {
+let VS1VS2Constraint = WidenW in {
 defm VWADDU_W : VALU_MV_V_X<"vwaddu", 0b110100, "w">;
 defm VWSUBU_W : VALU_MV_V_X<"vwsubu", 0b110110, "w">;
 defm VWADD_W : VALU_MV_V_X<"vwadd", 0b110101, "w">;
 defm VWSUB_W : VALU_MV_V_X<"vwsub", 0b110111, "w">;
-} // RVVConstraint = WidenW
+} // VS1VS2Constraint = WidenW
 } // Constraints = "@earlyclobber $vd", DestEEW = EEWSEWx2
 
 def : InstAlias<"vwcvt.x.x.v $vd, $vs$vm",
@@ -1340,12 +1340,12 @@ defm VREMU_V : VDIV_MV_V_X<"vremu", 0b100010>;
 defm VREM_V : VDIV_MV_V_X<"vrem", 0b100011>;
 
 // Vector Widening Integer Multiply Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV,
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV,
     DestEEW = EEWSEWx2 in {
 defm VWMUL_V : VWMUL_MV_V_X<"vwmul", 0b111011>;
 defm VWMULU_V : VWMUL_MV_V_X<"vwmulu", 0b111000>;
 defm VWMULSU_V : VWMUL_MV_V_X<"vwmulsu", 0b111010>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV, DestEEW = EEWSEWx2
 
 // Vector Single-Width Integer Multiply-Add Instructions
 defm VMACC_V : VMAC_MV_V_X<"vmacc", 0b101101>;
@@ -1407,18 +1407,18 @@ let Constraints = "@earlyclobber $vd",
     Uses = [FRM, VL, VTYPE],
     mayRaiseFPException = true,
     DestEEW = EEWSEWx2 in {
-let RVVConstraint = WidenV in {
+let VS1VS2Constraint = WidenV in {
 defm VFWADD_V : VWALU_FV_V_F<"vfwadd", 0b110000, "v">;
 defm VFWSUB_V : VWALU_FV_V_F<"vfwsub", 0b110010, "v">;
-} // RVVConstraint = WidenV
+} // VS1VS2Constraint = WidenV
 // Set earlyclobber for following instructions for second and mask operands.
 // This has the downside that the earlyclobber constraint is too coarse and
 // will impose unnecessary restrictions by not allowing the destination to
 // overlap with the first (wide) operand.
-let RVVConstraint = WidenW in {
+let VS1VS2Constraint = WidenW in {
 defm VFWADD_W : VWALU_FV_V_F<"vfwadd", 0b110100, "w">;
 defm VFWSUB_W : VWALU_FV_V_F<"vfwsub", 0b110110, "w">;
-} // RVVConstraint = WidenW
+} // VS1VS2Constraint = WidenW
 } // Constraints = "@earlyclobber $vd", Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Single-Width Floating-Point Multiply/Divide Instructions
@@ -1429,10 +1429,10 @@ defm VFRDIV_V : VDIV_FV_F<"vfrdiv", 0b100001>;
 }
 
 // Vector Widening Floating-Point Multiply
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenV,
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV,
     Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
 defm VFWMUL_V : VWMUL_FV_V_F<"vfwmul", 0b111000>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Single-Width Floating-Point Fused Multiply-Add Instructions
 let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
@@ -1452,7 +1452,7 @@ defm VFWMACC_V : VWMAC_FV_V_F<"vfwmacc", 0b111100>;
 defm VFWNMACC_V : VWMAC_FV_V_F<"vfwnmacc", 0b111101>;
 defm VFWMSAC_V : VWMAC_FV_V_F<"vfwmsac", 0b111110>;
 defm VFWNMSAC_V : VWMAC_FV_V_F<"vfwnmsac", 0b111111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenV, Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
+} // Uses = [FRM, VL, VTYPE], mayRaiseFPException = true, DestEEW = EEWSEWx2
 
 // Vector Floating-Point Square-Root Instruction
 let Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in {
@@ -1538,7 +1538,7 @@ def VFCVT_F_X_V : VCVTF_IV_VS2<"vfcvt.f.x.v", 0b010010, 0b00011>;
 } // mayRaiseFPException = true
 
 // Widening Floating-Point/Integer Type-Convert Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt,
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenCvt,
     mayRaiseFPException = true, DestEEW = EEWSEWx2 in {
 let Uses = [FRM, VL, VTYPE] in {
 def VFWCVT_XU_F_V : VWCVTI_FV_VS2<"vfwcvt.xu.f.v", 0b010010, 0b01000>;
@@ -1549,7 +1549,7 @@ def VFWCVT_RTZ_X_F_V : VWCVTI_FV_VS2<"vfwcvt.rtz.x.f.v", 0b010010, 0b01111>;
 def VFWCVT_F_XU_V : VWCVTF_IV_VS2<"vfwcvt.f.xu.v", 0b010010, 0b01010>;
 def VFWCVT_F_X_V : VWCVTF_IV_VS2<"vfwcvt.f.x.v", 0b010010, 0b01011>;
 def VFWCVT_F_F_V : VWCVTF_FV_VS2<"vfwcvt.f.f.v", 0b010010, 0b01100>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = WidenCvt, DestEEW = EEWSEWx2
+} // Constraints = "@earlyclobber $vd", VS1VS2Constraint = WidenCvt, DestEEW = EEWSEWx2
 
 // Narrowing Floating-Point/Integer Type-Convert Instructions
 let Constraints = "@earlyclobber $vd", mayRaiseFPException = true in {
@@ -1669,7 +1669,7 @@ def VFIRST_M : RVInstVUnaryRd<0b010000, 0b10001, OPMVV, (outs GPR:$rd),
 
 def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
-let Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask in {
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = Iota, ElementsDependOn = EltDepsMask in {
 
 let DestEEW = EEW1 in {
 // vmsbf.m set-before-first mask bit
@@ -1682,7 +1682,7 @@ def VMSOF_M : VMSFS_MV_VS2<"vmsof.m", 0b010100, 0b00010>;
 // Vector Iota Instruction
 def VIOTA_M : VIOTA_MV_VS2<"viota.m", 0b010100, 0b10000>;
 
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Iota, ElementsDependOn = EltDepsMask
+} // Constraints = "@earlyclobber $vd", VS1VS2Constraint = Iota, ElementsDependOn = EltDepsMask
 
 // Vector Element Index Instruction
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
@@ -1738,10 +1738,10 @@ def VFMV_S_F : RVInstVX<0b010000, OPFVF, (outs VR:$vd_wb),
 
 let Predicates = [HasVInstructions] in {
 // Vector Slide Instructions
-let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp in {
 defm VSLIDEUP_V : VSLD_IV_X_I<"vslideup", 0b001110, /*slidesUp=*/true>;
 defm VSLIDE1UP_V : VSLD1_MV_X<"vslide1up", 0b001110>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
+} // Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp
 let ReadsPastVL = 1 in
 defm VSLIDEDOWN_V : VSLD_IV_X_I<"vslidedown", 0b001111, /*slidesUp=*/false>;
 let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
@@ -1749,27 +1749,27 @@ defm VSLIDE1DOWN_V : VSLD1_MV_X<"vslide1down", 0b001111>;
 } // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructionsAnyF] in {
-let Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp in {
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp in {
 defm VFSLIDE1UP_V : VSLD1_FV_F<"vfslide1up", 0b001110>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = SlideUp
+} // Constraints = "@earlyclobber $vd", VS1VS2Constraint = SlideUp
 let ElementsDependOn = EltDepsVL, ReadsPastVL = 1 in
 defm VFSLIDE1DOWN_V : VSLD1_FV_F<"vfslide1down", 0b001111>;
 } // Predicates = [HasVInstructionsAnyF]
 
 let Predicates = [HasVInstructions] in {
 // Vector Register Gather Instruction
-let Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather, ReadsPastVL = 1 in {
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = Vrgather, ReadsPastVL = 1 in {
 defm VRGATHER_V : VGTR_IV_V_X_I<"vrgather", 0b001100>;
 def VRGATHEREI16_VV : VALUVV<0b001110, OPIVV, "vrgatherei16.vv">,
                       SchedBinaryMC<"WriteVRGatherEI16VV",
                                     "ReadVRGatherEI16VV_data",
                                     "ReadVRGatherEI16VV_index">;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Vrgather, ReadsPastVL = 1
+} // Constraints = "@earlyclobber $vd", VS1VS2Constraint = Vrgather, ReadsPastVL = 1
 
 // Vector Compress Instruction
-let Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDependOn = EltDepsVLMask in {
+let Constraints = "@earlyclobber $vd", VS1VS2Constraint = Vcompress,
+    ElementsDependOn = EltDepsVLMask in
 defm VCOMPRESS_V : VCPR_MV_Mask<"vcompress", 0b010111>;
-} // Constraints = "@earlyclobber $vd", RVVConstraint = Vcompress, ElementsDependOn = EltDepsVLMask
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, isMoveReg = 1 in {
 // A future extension may relax the vector register alignment restrictions.

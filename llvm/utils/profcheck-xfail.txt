@@ -1,5 +1,3 @@
-Bitcode/fcmp-fast.ll
-Bitcode/flags.ll
 CodeGen/AArch64/selectopt-cast.ll
 CodeGen/AArch64/selectopt.ll
 CodeGen/ARM/sjljeh-swifterror.ll
@@ -52,9 +50,6 @@ Transforms/Coroutines/coro-split-tbaa-md-neg-2.ll
 Transforms/Coroutines/coro-split-tbaa-md-neg.ll
 Transforms/Coroutines/coro-split-tbaa-md.ll
 Transforms/Coroutines/no-suspend.ll
-Transforms/CorrelatedValuePropagation/cond-at-use.ll
-Transforms/CorrelatedValuePropagation/urem-expansion.ll
-Transforms/CorrelatedValuePropagation/urem.ll
 Transforms/CrossDSOCFI/basic.ll
 Transforms/CrossDSOCFI/cfi_functions.ll
 Transforms/CrossDSOCFI/thumb.ll

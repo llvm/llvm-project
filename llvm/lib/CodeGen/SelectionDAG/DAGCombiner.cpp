@@ -4079,7 +4079,7 @@ static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
 
   APInt AndMask;
   APInt XorMask;
-  APInt BitWidthDiff;
+  uint64_t BitWidthDiff;
 
   SDValue CtlzOp;
   SDValue Src;
@@ -4100,9 +4100,9 @@ static SDValue foldSubCtlzNot(SDNode *N, SelectionDAG &DAG) {
                                     m_ConstInt(AndMask)))) {
     // Type Legalisation Pattern:
     // (sub (ctlz (and (xor Op XorMask) AndMask)) BitWidthDiff)
-    if (BitWidthDiff.getZExtValue() >= BitWidth)
+    if (BitWidthDiff >= BitWidth)
       return SDValue();
-    unsigned AndMaskWidth = BitWidth - BitWidthDiff.getZExtValue();
+    unsigned AndMaskWidth = BitWidth - BitWidthDiff;
     if (!(AndMask.isMask(AndMaskWidth) && XorMask.countr_one() >= AndMaskWidth))
       return SDValue();
   } else
@@ -12025,7 +12025,8 @@ SDValue DAGCombiner::visitBITREVERSE(SDNode *N) {
     return DAG.getNode(ISD::SRL, DL, VT, X, Y);
 
   // fold bitreverse(clmul(bitreverse(x), bitreverse(y))) -> clmulr(x, y)
-  if (sd_match(N0, m_Clmul(m_BitReverse(m_Value(X)), m_BitReverse(m_Value(Y)))))
+  if ((!LegalOperations || TLI.isOperationLegalOrCustom(ISD::CLMULR, VT)) &&
+      sd_match(N0, m_Clmul(m_BitReverse(m_Value(X)), m_BitReverse(m_Value(Y)))))
     return DAG.getNode(ISD::CLMULR, DL, VT, X, Y);
 
   return SDValue();
