@@ -21,14 +21,14 @@ static constexpr uint16_t SUBNORM_NEG_START = 0x8001U;
 static constexpr uint16_t SUBNORM_NEG_STOP = 0x807FU;
 
 TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
-  static constexpr bfloat16 z_values[] = {zero,    neg_zero,   inf,
-                               neg_inf, min_normal, max_normal};
+  constexpr bfloat16 Z_VALUES[] = {zero,    neg_zero,   inf,
+                                          neg_inf, min_normal, max_normal};
   for (uint16_t v1 = SUBNORM_NEG_START; v1 <= SUBNORM_NEG_STOP; v1++) {
     for (uint16_t v2 = SUBNORM_NEG_START; v2 <= SUBNORM_NEG_STOP; v2++) {
 
       bfloat16 x = FPBits(v1).get_val();
       bfloat16 y = FPBits(v2).get_val();
-      for (const bfloat16 &z : z_values) {
+      for (const bfloat16 &z : Z_VALUES) {
         mpfr::TernaryInput<bfloat16> input{x, y, z};
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
@@ -44,16 +44,16 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
 }
 
 TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
-  static constexpr bfloat16 z_values[] = {zero,    neg_zero,   inf,
-                               neg_inf, min_normal, max_normal};
-  static constexpr bfloat16 x_values[] = {zero,    neg_zero,   inf,
-                               neg_inf, min_normal, max_normal};
-  static constexpr bfloat16 y_values[] = {zero,    neg_zero,   inf,
-                               neg_inf, min_normal, max_normal};
+  constexpr bfloat16 Z_VALUES[] = {zero,    neg_zero,   inf,
+                                          neg_inf, min_normal, max_normal};
+  constexpr bfloat16 X_VALUES[] = {zero,    neg_zero,   inf,
+                                          neg_inf, min_normal, max_normal};
+  constexpr bfloat16 Y_VALUES[] = {zero,    neg_zero,   inf,
+                                          neg_inf, min_normal, max_normal};
 
-  for (const bfloat16 &x : x_values) {
-    for (const bfloat16 &y : y_values) {
-      for (const bfloat16 &z : z_values) {
+  for (const bfloat16 &x : X_VALUES) {
+    for (const bfloat16 &y : Y_VALUES) {
+      for (const bfloat16 &z : Z_VALUES) {
         mpfr::TernaryInput<bfloat16> input{x, y, z};
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
