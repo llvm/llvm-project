@@ -2732,10 +2732,6 @@ static bool HasExtraNeonArgument(unsigned BuiltinID) {
   case ARM::BI__builtin_arm_vcvtr_d:
     mask = 1;
   }
-  switch (BuiltinID) {
-  default:
-    break;
-  }
 
   if (mask)
     return true;

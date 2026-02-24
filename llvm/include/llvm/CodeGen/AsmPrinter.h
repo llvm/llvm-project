@@ -180,6 +180,7 @@ public:
   std::function<void(Module &)> BeginGCAssembly;
   std::function<void(Module &)> FinishGCAssembly;
   std::function<void(Module &)> EmitStackMaps;
+  std::function<void()> AssertDebugEHFinalized;
 
 private:
   MCSymbol *CurrentFnEnd = nullptr;
