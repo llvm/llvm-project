@@ -14,7 +14,7 @@
 // Returns: a converted from int32_t to float
 COMPILER_RT_ABI float __floatsisf(int32_t a);
 
-int test__floatsisf(int line, uint32_t a, uint32_t expected_rep) {
+int test__floatsisf(uint32_t a, uint32_t expected_rep, int line) {
   float x = __floatsisf(a);
   int ret = compareResultF(x, expected_rep);
 
@@ -26,7 +26,7 @@ int test__floatsisf(int line, uint32_t a, uint32_t expected_rep) {
   return ret;
 }
 
-#define test__floatsisf(a, x) test__floatsisf(__LINE__, a, x)
+#define test__floatsisf(a, x) test__floatsisf(a, x, __LINE__)
 
 int main(void) {
   int status = 0;

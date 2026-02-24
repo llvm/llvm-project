@@ -14,7 +14,7 @@
 // Returns: a converted from uint64_t to float
 COMPILER_RT_ABI float __floatunsdisf(uint64_t a);
 
-int test__floatunsdisf(int line, uint64_t a, uint32_t expected_rep) {
+int test__floatunsdisf(uint64_t a, uint32_t expected_rep, int line) {
   float x = __floatunsdisf(a);
   int ret = compareResultF(x, expected_rep);
 
@@ -26,7 +26,7 @@ int test__floatunsdisf(int line, uint64_t a, uint32_t expected_rep) {
   return ret;
 }
 
-#define test__floatunsdisf(a, x) test__floatunsdisf(__LINE__, a, x)
+#define test__floatunsdisf(a, x) test__floatunsdisf(a, x, __LINE__)
 
 int main(void) {
   int status = 0;

@@ -14,7 +14,7 @@
 // Returns: a converted from int32_t to double
 COMPILER_RT_ABI double __floatsidf(int32_t a);
 
-int test__floatsidf(int line, uint32_t a, uint64_t expected_rep) {
+int test__floatsidf(uint32_t a, uint64_t expected_rep, int line) {
   double x = __floatsidf(a);
   int ret = compareResultD(x, expected_rep);
 
@@ -26,7 +26,7 @@ int test__floatsidf(int line, uint32_t a, uint64_t expected_rep) {
   return ret;
 }
 
-#define test__floatsidf(a, x) test__floatsidf(__LINE__, a, x)
+#define test__floatsidf(a, x) test__floatsidf(a, x, __LINE__)
 
 int main(void) {
   int status = 0;
