@@ -399,12 +399,15 @@ public:
   bool isDivergent(ConstValueRefT V) const {
     if (ContextT::isNeverDivergent(V))
       return false;
-    // If UniformValues is empty (before finalization), use original logic.
-    // If UniformValues is populated (after finalization), unknown values
-    // are conservatively treated as divergent.
-    if (UniformValues.empty())
-      return DivergentValues.count(V);
-    return !UniformValues.count(V);
+    return DivergentValues.count(V);
+  }
+
+  /// \brief Whether \p V was not present during analysis (not in uniform or
+  /// divergent set).
+  bool isValueUnknown(ConstValueRefT V) const {
+    if (ContextT::isNeverDivergent(V))
+      return false;
+    return !UniformValues.count(V) && !DivergentValues.count(V);
   }
 
   bool isDivergentUse(const UseT &U) const;
@@ -431,7 +434,8 @@ protected:
   SmallPtrSet<const BlockT *, 32> DivergentTermBlocks;
 
   // Known uniform values (populated after analysis by finalizeUniformValues).
-  // Values NOT in this set are conservatively treated as divergent.
+  // Used by isValueUnknown() to check if value was present during analysis.
+  // unknown values not present during analysis.
   DenseSet<ConstValueRefT> UniformValues;
 
   // Internal worklist for divergence propagation.
@@ -1279,6 +1283,11 @@ bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(const InstructionT *I) const {
   return DA->isDivergent(*I);
+}
+
+template <typename ContextT>
+bool GenericUniformityInfo<ContextT>::isValueUnknown(ConstValueRefT V) const {
+  return DA->isValueUnknown(V);
 }
 
 template <typename ContextT>
