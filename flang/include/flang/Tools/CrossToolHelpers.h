@@ -88,6 +88,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
       const Fortran::common::MathOptionsBase &mathOpts) {
     OptLevel = level;
     StackArrays = opts.StackArrays;
+    EnableSafeTrampoline = opts.EnableSafeTrampoline;
     Underscoring = opts.Underscoring;
     LoopVersioning = opts.LoopVersioning;
     DebugInfo = opts.getDebugInfo();
@@ -114,6 +115,7 @@ struct MLIRToLLVMPassPipelineConfig : public FlangEPCallBacks {
 
   llvm::OptimizationLevel OptLevel; ///< optimisation level
   bool StackArrays = false; ///< convert memory allocations to alloca.
+  bool EnableSafeTrampoline{false}; ///< Use runtime trampoline pool (W^X).
   bool Underscoring = true; ///< add underscores to function names.
   bool LoopVersioning = false; ///< Run the version loop pass.
   bool AliasAnalysis = false; ///< Add TBAA tags to generated LLVMIR.

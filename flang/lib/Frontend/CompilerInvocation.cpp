@@ -284,6 +284,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                    clang::options::OPT_fno_stack_arrays, false))
     opts.StackArrays = 1;
 
+  if (args.hasFlag(clang::options::OPT_fsafe_trampoline,
+                   clang::options::OPT_fno_safe_trampoline, false))
+    opts.EnableSafeTrampoline = 1;
+
   if (args.getLastArg(clang::options::OPT_floop_interchange))
     opts.InterchangeLoops = 1;
 
