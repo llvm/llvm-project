@@ -263,6 +263,12 @@ td_library(
 )
 
 td_library(
+    name = "BuiltinsAMDGPUDocsTdFiles",
+    srcs = ["include/clang/Basic/BuiltinsAMDGPUDocs.td"],
+    includes = ["include"],
+)
+
+td_library(
     name = "BuiltinsSPIRVBaseTdFiles",
     srcs = ["include/clang/Basic/BuiltinsSPIRVBase.td"],
     includes = ["include"],
@@ -297,7 +303,10 @@ gentbl_cc_library(
     tbl_outs = {"include/clang/Basic/BuiltinsAMDGPU.inc": ["-gen-clang-builtins"]},
     tblgen = ":clang-tblgen",
     td_file = "include/clang/Basic/BuiltinsAMDGPU.td",
-    deps = [":BuiltinsBaseTdFiles"],
+    deps = [
+        ":BuiltinsAMDGPUDocsTdFiles",
+        ":BuiltinsBaseTdFiles",
+    ],
 )
 
 gentbl_cc_library(
