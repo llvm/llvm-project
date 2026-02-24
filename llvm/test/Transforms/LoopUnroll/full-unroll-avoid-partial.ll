@@ -8,18 +8,18 @@
 
 
 ; LOOP-UNROLL-LABEL: Loop Unroll: F[pragma_unroll] Loop %for.body
-; LOOP-UNROLL-NEXT: Loop Size = 9
-; LOOP-UNROLL-NEXT: runtime unrolling with count: 8
-; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
+; LOOP-UNROLL-NEXT:    Loop Size = 9
+; LOOP-UNROLL:         Runtime unrolling with count: 8
+; LOOP-UNROLL-NEXT:    Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; LOOP-UNROLL-NEXT: Trying runtime unrolling on Loop:
 ; LOOP-UNROLL-NEXT: Loop at depth 1 containing: %for.body<header><latch><exiting>
 ; LOOP-UNROLL-NEXT: Using epilog remainder.
 ; LOOP-UNROLL-NEXT: UNROLLING loop %for.body by 8 with run-time trip count!
 
 ; LOOP-UNROLL-FULL-LABEL: Loop Unroll: F[pragma_unroll] Loop %for.body
-; LOOP-UNROLL-FULL-NEXT: Loop Size = 9
-; LOOP-UNROLL-FULL-NEXT:  runtime unrolling with count: 8
-; LOOP-UNROLL-FULL-NEXT: Not attempting partial/runtime unroll in FullLoopUnroll
+; LOOP-UNROLL-FULL-NEXT:    Loop Size = 9
+; LOOP-UNROLL-FULL:         Runtime unrolling with count: 8
+; LOOP-UNROLL-FULL-NEXT: Not attempting partial/runtime unroll in FullLoopUnroll.
 define void @pragma_unroll(ptr %queue, i32 %num_elements) {
 entry:
   %cmp5 = icmp sgt i32 %num_elements, 0
@@ -48,16 +48,16 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 ; LOOP-UNROLL-LABEL: Loop Unroll: F[pragma_unroll_count1] Loop %for.body
-; LOOP-UNROLL-NEXT: Loop Size = 9
-; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
+; LOOP-UNROLL-NEXT:    Loop Size = 9
+; LOOP-UNROLL:         Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; LOOP-UNROLL-NEXT: Trying runtime unrolling on Loop:
 ; LOOP-UNROLL-NEXT: Loop at depth 1 containing: %for.body<header><latch><exiting>
 ; LOOP-UNROLL-NEXT: Using epilog remainder.
 ; LOOP-UNROLL-NEXT: UNROLLING loop %for.body by 5 with run-time trip count!
 
 ; LOOP-UNROLL-FULL-LABEL: Loop Unroll: F[pragma_unroll_count1] Loop %for.body
-; LOOP-UNROLL-FULL-NEXT: Loop Size = 9
-; LOOP-UNROLL-FULL-NEXT: Not attempting partial/runtime unroll in FullLoopUnroll
+; LOOP-UNROLL-FULL-NEXT:    Loop Size = 9
+; LOOP-UNROLL-FULL:      Not attempting partial/runtime unroll in FullLoopUnroll.
 define void @pragma_unroll_count1(ptr %queue, i32 %num_elements) {
 entry:
   %cmp5 = icmp sgt i32 %num_elements, 0
@@ -86,17 +86,17 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 ; LOOP-UNROLL-LABEL: Loop Unroll: F[pragma_unroll_count2] Loop %for.body
-; LOOP-UNROLL-NEXT: Loop Size = 4
-; LOOP-UNROLL-NEXT: Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
+; LOOP-UNROLL-NEXT:    Loop Size = 4
+; LOOP-UNROLL:         Exiting block %for.body: TripCount=0, TripMultiple=1, BreakoutTrip=1
 ; LOOP-UNROLL-NEXT: Trying runtime unrolling on Loop:
-; LOOP-UNROLL-NEXT: Loop at depth 1 containing: %for.body<header><exiting>,%for.cond<latch>
+; LOOP-UNROLL-NEXT: Parallel Loop at depth 1 containing: %for.body<header><exiting>,%for.cond<latch>
 ; LOOP-UNROLL-NEXT: Using epilog remainder.
 ; LOOP-UNROLL-NEXT: Loop latch not terminated by a conditional branch.
 ; LOOP-UNROLL-NEXT: UNROLLING loop %for.body by 5!
 
 ; LOOP-UNROLL-FULL-LABEL: Loop Unroll: F[pragma_unroll_count2] Loop %for.body
-; LOOP-UNROLL-FULL-NEXT: Loop Size = 4
-; LOOP-UNROLL-FULL-NEXT: Not attempting partial/runtime unroll in FullLoopUnroll
+; LOOP-UNROLL-FULL-NEXT:    Loop Size = 4
+; LOOP-UNROLL-FULL:      Not attempting partial/runtime unroll in FullLoopUnroll.
 define void @pragma_unroll_count2(i64 %n) {
 entry:
   br label %for.body
