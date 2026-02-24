@@ -1021,7 +1021,8 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ResumeOp : CIR_Op<"resume", [
-  ReturnLike, Terminator,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+  Terminator,
   ParentOneOf<["cir::TryOp", "cir::CleanupScopeOp", "cir::FuncOp"]>
 ]> {
   let summary = "Resumes execution after not catching exceptions";

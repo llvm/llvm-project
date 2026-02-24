@@ -339,6 +339,12 @@ cir::ConditionOp::getMutableSuccessorOperands(RegionSuccessor point) {
   return MutableOperandRange(getOperation(), 0, 0);
 }
 
+MutableOperandRange
+cir::ResumeOp::getMutableSuccessorOperands(RegionSuccessor point) {
+  // The eh_token operand is not forwarded to the parent region.
+  return MutableOperandRange(getOperation(), 0, 0);
+}
+
 LogicalResult cir::ConditionOp::verify() {
   if (!isa<LoopOpInterface, AwaitOp>(getOperation()->getParentOp()))
     return emitOpError("condition must be within a conditional region");
