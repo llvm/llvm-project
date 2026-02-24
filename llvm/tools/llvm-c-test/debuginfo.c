@@ -179,9 +179,8 @@ int llvm_test_dibuilder(void) {
       LLVMAppendBasicBlockInContext(C, FooFunction, "vars");
   LLVMMetadataRef FooVarsLocation =
       LLVMDIBuilderCreateDebugLocation(C, 43, 0, FunctionMetadata, NULL);
-  LLVMMetadataRef FooVar1 =
-    LLVMDIBuilderCreateAutoVariable(DIB, FooLexicalBlock, "d", 1, File,
-                                    43, Int64Ty, true, 0, 0, 0);
+  LLVMMetadataRef FooVar1 = LLVMDIBuilderCreateAutoVariable(
+      DIB, FooLexicalBlock, "d", 1, File, 43, Int64Ty, true, 0, 0, 0);
   LLVMValueRef FooVal1 = LLVMConstInt(I64Ty, 0, false);
   LLVMMetadataRef FooVarValueExpr1 =
       LLVMDIBuilderCreateConstantValueExpression(DIB, 0);

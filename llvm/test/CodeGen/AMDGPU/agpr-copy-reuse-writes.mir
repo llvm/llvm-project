@@ -11,7 +11,6 @@ body:             |
     ; GFX908-LABEL: name: standard
     ; GFX908: liveins: $vgpr0, $vgpr1
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr0
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
@@ -84,7 +83,6 @@ body:             |
     ; GFX908-LABEL: name: overlapping_agpr
     ; GFX908: liveins: $agpr0_agpr1_agpr2_agpr3
     ; GFX908-NEXT: {{  $}}
-    ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_def_aspace_cfa <badreg>, 0, 6
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION llvm_register_pair $pc_reg, $sgpr30, 32, $sgpr31, 32
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr1
     ; GFX908-NEXT: frame-setup CFI_INSTRUCTION undefined $agpr2
