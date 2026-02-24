@@ -505,7 +505,6 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
     MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
   assert(MI.getOpcode() == AMDGPU::COPY);
 
-  // TODO: Add a heuristic to determine whether the combine is profitable.
   Register VgprDst = MI.getOperand(0).getReg();
   Register SgprSrc = MI.getOperand(1).getReg();
 
@@ -513,6 +512,18 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
     return false;
 
   if (!isVgprRegBank(VgprDst))
+    return false;
+
+  // FIXME: Handle s64 types.
+  if (MRI.getType(VgprDst) != LLT::scalar(32))
+    return false;
+
+  // TODO: Use a heuristic to determine when we should combine instead.
+  // Only combine when the G_SELECT result has a single use (this COPY).
+  // With multiple uses the SGPR G_SELECT cannot be erased after the
+  // transformation, so a new VGPR G_SELECT would be added on top of the
+  // existing SGPR one.
+  if (!MRI.hasOneNonDBGUse(SgprSrc))
     return false;
 
   MachineInstr *CondDef;
