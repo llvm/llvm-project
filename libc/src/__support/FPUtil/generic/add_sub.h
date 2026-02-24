@@ -96,7 +96,7 @@ add_or_sub(InType x, InType y) {
 
     if (x_bits.is_zero()) {
       if (y_bits.is_zero()) {
-         if (is_effectively_add) {
+        if (is_effectively_add) {
           return OutFPBits::zero(x_bits.sign()).get_val();
         } else {
           switch (quick_get_round()) {
