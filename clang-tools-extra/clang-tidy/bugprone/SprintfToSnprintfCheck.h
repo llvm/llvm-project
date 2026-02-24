@@ -25,6 +25,7 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+  bool isLanguageVersionSupported(const LangOptions &LangOpts) const override;
 
 private:
   const std::vector<StringRef> SprintfLikeFunctions;
