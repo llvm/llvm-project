@@ -301,7 +301,7 @@ D::D() {}
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[B_VPTR]], %[[BASE_VPTR_ADDR]]
 
-// LLVM-COMMON: define {{.*}} void @_ZN1BC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]])
+// LLVM-COMMON: define {{.*}} void @_ZN1BC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   %[[VTT_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
@@ -367,7 +367,7 @@ D::D() {}
 // CIR-COMMON:        %[[BASE_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[BASE_CAST]]
 // CIR-COMMON:        cir.store{{.*}} %[[C_VPTR]], %[[BASE_VPTR_ADDR]]
 
-// LLVM-COMMON: define {{.*}} void @_ZN1CC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]])
+// LLVM-COMMON: define {{.*}} void @_ZN1CC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]])
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   %[[VTT_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
@@ -414,10 +414,10 @@ D::D() {}
 // CIR-COMMON:        %[[VTT:.*]] = cir.load{{.*}} %[[VTT_ADDR]]
 // CIR-COMMON:        %[[B_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [0] -> !cir.ptr<!rec_B>
 // CIR-COMMON:        %[[B_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        cir.call @_ZN1BC2Ev(%[[B_ADDR]], %[[B_VTT]]) nothrow : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR-COMMON:        cir.call @_ZN1BC2Ev(%[[B_ADDR]], %[[B_VTT]]) nothrow : (!cir.ptr<!rec_B> {{.*}}, !cir.ptr<!cir.ptr<!void>> {{.*}}) -> ()
 // CIR-COMMON:        %[[C_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [16] -> !cir.ptr<!rec_C>
 // CIR-COMMON:        %[[C_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 3 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        cir.call @_ZN1CC2Ev(%[[C_ADDR]], %[[C_VTT]]) nothrow : (!cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR-COMMON:        cir.call @_ZN1CC2Ev(%[[C_ADDR]], %[[C_VTT]]) nothrow : (!cir.ptr<!rec_C> {{.*}}, !cir.ptr<!cir.ptr<!void>> {{.*}}) -> ()
 // CIR-COMMON:        %[[D_VTT:.*]] = cir.vtt.address_point %[[VTT]] : !cir.ptr<!cir.ptr<!void>>, offset = 0 -> !cir.ptr<!cir.ptr<!void>>
 // CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.cast bitcast %[[D_VTT]] : !cir.ptr<!cir.ptr<!void>> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        %[[VPTR:.*]] = cir.load{{.*}} %[[VPTR_ADDR]] : !cir.ptr<!cir.vptr>, !cir.vptr
@@ -445,7 +445,7 @@ D::D() {}
 // CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[C_ADDR]] : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[C_VPTR]], %[[C_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM-COMMON: define {{.*}} void @_ZN1DC2Ev(ptr %[[THIS_ARG:.*]], ptr %[[VTT_ARG:.*]]){{.*}} {
+// LLVM-COMMON: define {{.*}} void @_ZN1DC2Ev(ptr {{.*}} %[[THIS_ARG:.*]], ptr {{.*}} %[[VTT_ARG:.*]]){{.*}} {
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   %[[VTT_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
@@ -453,10 +453,10 @@ D::D() {}
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVM-COMMON:   %[[VTT:.*]] = load ptr, ptr %[[VTT_ADDR]]
 // LLVM-COMMON:   %[[B_VTT:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 1
-// LLVM-COMMON:   call void @_ZN1BC2Ev(ptr %[[THIS]], ptr %[[B_VTT]])
+// LLVM-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} %[[B_VTT]])
 // LLVM-COMMON:   %[[C_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
 // LLVM-COMMON:   %[[C_VTT:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 3
-// LLVM-COMMON:   call void @_ZN1CC2Ev(ptr %[[C_ADDR]], ptr %[[C_VTT]])
+// LLVM-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} %[[C_VTT]])
 // LLVM-COMMON:   %[[VPTR:.*]] = load ptr, ptr %[[VTT]]
 // LLVM-COMMON:   store ptr %[[VPTR]], ptr %[[THIS]]
 // LLVM-COMMON:   %[[D_VPTR_ADDR:.*]] = getelementptr inbounds ptr, ptr %[[VTT]], i32 5
@@ -484,7 +484,7 @@ D::D() {}
 // CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_A> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr %[[THIS_ARG:.*]]){{.*}} {
+// LLVM-COMMON: define {{.*}} void @_ZN1AC2Ev(ptr {{.*}} %[[THIS_ARG:.*]]){{.*}} {
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]], align 8
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
@@ -500,13 +500,13 @@ D::D() {}
 // CIR-COMMON:        cir.store %[[THIS_ARG]], %[[THIS_ADDR]]
 // CIR-COMMON:        %[[THIS:.*]] = cir.load %[[THIS_ADDR]]
 // CIR-COMMON:        %[[A_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [40] -> !cir.ptr<!rec_A>
-// CIR-COMMON:        cir.call @_ZN1AC2Ev(%[[A_ADDR]]) nothrow : (!cir.ptr<!rec_A>) -> ()
+// CIR-COMMON:        cir.call @_ZN1AC2Ev(%[[A_ADDR]]) nothrow : (!cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR-COMMON:        %[[B_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [0] -> !cir.ptr<!rec_B>
 // CIR-COMMON:        %[[B_VTT:.*]] = cir.vtt.address_point @_ZTT1D, offset = 1 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        cir.call @_ZN1BC2Ev(%[[B_ADDR]], %[[B_VTT]]) nothrow : (!cir.ptr<!rec_B>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR-COMMON:        cir.call @_ZN1BC2Ev(%[[B_ADDR]], %[[B_VTT]]) nothrow : (!cir.ptr<!rec_B> {{.*}}, !cir.ptr<!cir.ptr<!void>> {{.*}}) -> ()
 // CIR-COMMON:        %[[C_ADDR:.*]] = cir.base_class_addr %[[THIS]] : !cir.ptr<!rec_D> nonnull [16] -> !cir.ptr<!rec_C>
 // CIR-COMMON:        %[[C_VTT:.*]] = cir.vtt.address_point @_ZTT1D, offset = 3 -> !cir.ptr<!cir.ptr<!void>>
-// CIR-COMMON:        cir.call @_ZN1CC2Ev(%[[C_ADDR]], %[[C_VTT]]) nothrow : (!cir.ptr<!rec_C>, !cir.ptr<!cir.ptr<!void>>) -> ()
+// CIR-COMMON:        cir.call @_ZN1CC2Ev(%[[C_ADDR]], %[[C_VTT]]) nothrow : (!cir.ptr<!rec_C> {{.*}}, !cir.ptr<!cir.ptr<!void>> {{.*}}) -> ()
 // CIR-COMMON:        %[[D_VPTR:.*]] = cir.vtable.address_point(@_ZTV1D, address_point = <index = 0, offset = 3>) : !cir.vptr
 // CIR-COMMON:        %[[VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[THIS]] : !cir.ptr<!rec_D> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[D_VPTR]], %[[VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
@@ -519,15 +519,15 @@ D::D() {}
 // CIR-COMMON:        %[[C_VPTR_ADDR:.*]] = cir.vtable.get_vptr %[[C_ADDR]] : !cir.ptr<!rec_C> -> !cir.ptr<!cir.vptr>
 // CIR-COMMON:        cir.store{{.*}} %[[C_VPTR]], %[[C_VPTR_ADDR]] : !cir.vptr, !cir.ptr<!cir.vptr>
 
-// LLVM-COMMON: define {{.*}} void @_ZN1DC1Ev(ptr %[[THIS_ARG:.*]])
+// LLVM-COMMON: define {{.*}} void @_ZN1DC1Ev(ptr {{.*}} %[[THIS_ARG:.*]])
 // LLVM-COMMON:   %[[THIS_ADDR:.*]] = alloca ptr
 // LLVM-COMMON:   store ptr %[[THIS_ARG]], ptr %[[THIS_ADDR]]
 // LLVM-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // LLVM-COMMON:   %[[A_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 40
-// LLVM-COMMON:   call void @_ZN1AC2Ev(ptr %[[A_ADDR]])
-// LLVM-COMMON:   call void @_ZN1BC2Ev(ptr %[[THIS]], ptr getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 8))
+// LLVM-COMMON:   call void @_ZN1AC2Ev(ptr {{.*}} %[[A_ADDR]])
+// LLVM-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 8))
 // LLVM-COMMON:   %[[C_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 16
-// LLVM-COMMON:   call void @_ZN1CC2Ev(ptr %[[C_ADDR]], ptr getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 24))
+// LLVM-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds nuw (i8, ptr @_ZTT1D, i64 24))
 // LLVM-COMMON:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 24), ptr %[[THIS]]
 // LLVM-COMMON:   %[[A_ADDR:.*]] = getelementptr i8, ptr %[[THIS]], i32 40
 // LLVM-COMMON:   store ptr getelementptr inbounds nuw (i8, ptr @_ZTV1D, i64 96), ptr %[[A_ADDR]]

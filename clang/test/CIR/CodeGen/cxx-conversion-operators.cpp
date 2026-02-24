@@ -62,7 +62,7 @@ void test() {
 // CIR:   cir.return
 // CIR: }
 
-// LLVM: define dso_local noundef i32 @_ZN20out_of_line_operatorcviEv(ptr %[[PARAM0:.+]])
+// LLVM: define dso_local noundef i32 @_ZN20out_of_line_operatorcviEv(ptr {{.*}} %[[PARAM0:.+]])
 // LLVM:   %[[THIS_ALLOCA:.+]] = alloca ptr, i64 1
 // LLVM:   %[[RETVAL:.+]] = alloca i32, i64 1
 // LLVM:   store ptr %[[PARAM0]], ptr %[[THIS_ALLOCA]]
@@ -72,7 +72,7 @@ void test() {
 // LLVM:   ret i32 %[[RET_LOAD]]
 // LLVM: }
 
-// LLVM: define linkonce_odr noundef i32 @_ZNK15inline_operatorcviEv(ptr %[[INLINE_PARAM0:.+]])
+// LLVM: define linkonce_odr noundef i32 @_ZNK15inline_operatorcviEv(ptr {{.*}} %[[INLINE_PARAM0:.+]])
 // LLVM:   %[[INLINE_THIS_ALLOCA:.+]] = alloca ptr, i64 1
 // LLVM:   %[[INLINE_RETVAL:.+]] = alloca i32, i64 1
 // LLVM:   store ptr %[[INLINE_PARAM0]], ptr %[[INLINE_THIS_ALLOCA]]
@@ -87,9 +87,9 @@ void test() {
 // LLVM:   %[[I_ALLOCA:.+]] = alloca {{.*}}, i64 1
 // LLVM:   %[[O_ALLOCA:.+]] = alloca {{.*}}, i64 1
 // LLVM:   store i32 42, ptr %[[X_ALLOCA]]
-// LLVM:   %[[INLINE_CALL:.+]] = call noundef i32 @_ZNK15inline_operatorcviEv(ptr %[[I_ALLOCA]])
+// LLVM:   %[[INLINE_CALL:.+]] = call noundef i32 @_ZNK15inline_operatorcviEv(ptr {{.*}} %[[I_ALLOCA]])
 // LLVM:   store i32 %[[INLINE_CALL]], ptr %[[X_ALLOCA]]
-// LLVM:   %[[OUTLINE_CALL:.+]] = call noundef i32 @_ZN20out_of_line_operatorcviEv(ptr %[[O_ALLOCA]])
+// LLVM:   %[[OUTLINE_CALL:.+]] = call noundef i32 @_ZN20out_of_line_operatorcviEv(ptr {{.*}} %[[O_ALLOCA]])
 // LLVM:   store i32 %[[OUTLINE_CALL]], ptr %[[X_ALLOCA]]
 // LLVM:   ret void
 // LLVM: }

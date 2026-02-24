@@ -27,7 +27,7 @@ int init(S* s) {
 //CIR:   [[TMP2:%.*]] = cir.get_member [[TMP1]][0] {name = "c"} : !cir.ptr<!rec_S> -> !cir.ptr<!u32i>
 //CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u32i>) -> !s32i
 
-//LLVM: define dso_local i32 @init(ptr %0){{.*}} {
+//LLVM: define dso_local i32 @init
 //LLVM:   [[TMP0:%.*]] = alloca ptr, i64 1, align 8
 //LLVM:   [[TMP1:%.*]] = alloca i32, i64 1, align 4
 //LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8

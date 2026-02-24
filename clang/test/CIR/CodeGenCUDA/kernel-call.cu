@@ -50,12 +50,12 @@
 //
 // Check cudaLaunchKernel is called with all 6 arguments:
 // func ptr, gridDim, blockDim, args, sharedMem, stream
-// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>, !u64i, !cir.ptr<!rec_cudaStream>) -> (!u32i {llvm.noundef})
+// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>{{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_cudaStream>{{.*}}) -> (!u32i {llvm.noundef})
 //
 // HIP-NEW: cir.global constant external @_Z6kernelif = #cir.global_view<@_Z21__device_stub__kernelif> : !cir.func<(!s32i, !cir.float)>
 // HIP-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
 // HIP-NEW: cir.alloca !cir.ptr<!rec_hipStream>, {{.*}} ["stream"]
 // HIP-NEW: cir.call @__hipPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_hipStream>>) -> !s32i
 // HIP-NEW: cir.get_global @_Z6kernelif : !cir.ptr<!cir.func<(!s32i, !cir.float)>>
-// HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void>, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>, !u64i, !cir.ptr<!rec_hipStream>) -> (!u32i {llvm.noundef})
+// HIP-NEW: cir.call @hipLaunchKernel({{.*}}) : (!cir.ptr<!void> {{.*}}, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>{{.*}}, !u64i{{.*}}, !cir.ptr<!rec_hipStream>{{.*}}) -> (!u32i {llvm.noundef})
 __global__ void kernel(int x, float y) {}

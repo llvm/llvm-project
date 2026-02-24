@@ -216,7 +216,7 @@ char f3(int a) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define{{.*}} i8 @f3(i32 %[[ARG_A:.*]])
+// LLVM:      define{{.*}} i8 @f3(i32{{.*}} %[[ARG_A:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1
 // LLVM-NEXT:   store i32 %[[ARG_A]], ptr %[[A_ADDR]], align 4
@@ -258,7 +258,7 @@ char f4(int a, struct CompleteS *p) {
 // CIR-NEXT:   %[[RETVAL:.*]] = cir.load{{.*}} %[[RETVAL_ADDR]]
 // CIR-NEXT:   cir.return %[[RETVAL]]
 
-// LLVM:      define{{.*}} i8 @f4(i32 %[[ARG_A:.*]], ptr %[[ARG_P:.*]])
+// LLVM:      define{{.*}} i8 @f4(i32{{.*}} %[[ARG_A:.*]], ptr{{.*}} %[[ARG_P:.*]])
 // LLVM-NEXT:   %[[A_ADDR:.*]] = alloca i32, i64 1, align 4
 // LLVM-NEXT:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
 // LLVM-NEXT:   %[[RETVAL_ADDR:.*]] = alloca i8, i64 1, align 1

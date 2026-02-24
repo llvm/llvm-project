@@ -16,7 +16,7 @@ void f() {
 
 // CIR-BEFORE-LPP: cir.global "private" internal dso_local static_local_guard<"_ZGVZ1fvE1a"> @_ZZ1fvE1a = ctor : !rec_A {
 // CIR-BEFORE-LPP:   %[[ADDR:.*]] = cir.get_global static_local @_ZZ1fvE1a : !cir.ptr<!rec_A>
-// CIR-BEFORE-LPP:   cir.call @_ZN1AC1Ev(%[[ADDR]]) : (!cir.ptr<!rec_A>) -> ()
+// CIR-BEFORE-LPP:   cir.call @_ZN1AC1Ev(%[[ADDR]]) : (!cir.ptr<!rec_A> {{.*}}) -> ()
 // CIR-BEFORE-LPP: } {alignment = 1 : i64, ast = #cir.var.decl.ast}
 
 // CIR-BEFORE-LPP: cir.func no_inline dso_local @_Z1fv()
@@ -48,7 +48,7 @@ void f() {
 // LLVM: call i32 @__cxa_guard_acquire
 // LLVM: call void @_ZN1AC1Ev
 // LLVM: call void @__cxa_guard_release
-// LLVM: call void @_Z3useP1A(ptr @_ZZ1fvE1a)
+// LLVM: call void @_Z3useP1A(ptr {{.*}}@_ZZ1fvE1a)
 // LLVM: ret void
 
 // OGCG: @_ZGVZ1fvE1a = internal global i64 0

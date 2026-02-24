@@ -19,7 +19,7 @@ unsigned __int64 __shiftright128(unsigned __int64 low, unsigned __int64 high,
 // CIR: cir.return
 
 // LLVM-LABEL: define {{.*}} i64 @test_shiftleft128
-// LLVM-SAME: (i64 %{{.*}}, i64 %{{.*}}, i8 %{{.*}})
+// LLVM-SAME: (i64 {{.*}} %{{.*}}, i64 {{.*}} %{{.*}}, i8 {{.*}} %{{.*}})
 // LLVM: [[TMP1:%.*]] = zext i8 %{{.*}} to i64
 // LLVM-NEXT: {{.*}} = call i64 @llvm.fshl.i64(i64 %{{.*}}, i64 %{{.*}}, i64 [[TMP1]])
 
@@ -41,7 +41,7 @@ unsigned __int64 test_shiftleft128(unsigned __int64 l, unsigned __int64 h,
 // CIR: cir.return
 
 // LLVM-LABEL: define {{.*}} i64 @test_shiftright128
-// LLVM-SAME: (i64 %{{.*}}, i64 %{{.*}}, i8 %{{.*}})
+// LLVM-SAME: (i64 {{.*}} %{{.*}}, i64 {{.*}} %{{.*}}, i8 {{.*}} %{{.*}})
 // LLVM: [[TMP1:%.*]] = zext i8 %{{.*}} to i64
 // LLVM-NEXT: {{.*}} = call i64 @llvm.fshr.i64(i64 %{{.*}}, i64 %{{.*}}, i64 [[TMP1]])
 

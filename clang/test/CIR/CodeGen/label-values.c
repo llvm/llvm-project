@@ -119,7 +119,7 @@ LABEL_B:
 // CIR:    cir.label "LABEL_B"
 // CIR:    cir.br ^bb3
 
-// LLVM: define dso_local void @C(i32 %0)
+// LLVM: define dso_local void @C
 // LLVM:   [[COND:%.*]] = select i1 [[CMP:%.*]], ptr blockaddress(@C, %[[LABEL_A:.*]]), ptr blockaddress(@C, %[[LABEL_B:.*]])
 // LLVM:   store ptr [[COND]], ptr [[PTR:%.*]], align 8
 // LLVM:   [[BLOCKADD:%.*]] = load ptr, ptr [[PTR]], align 8
