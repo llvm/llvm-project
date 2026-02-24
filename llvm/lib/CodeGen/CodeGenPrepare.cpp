@@ -8942,14 +8942,14 @@ bool CodeGenPrepare::optimizeInst(Instruction *I, ModifyDT &ModifiedDT) {
     // evaluation in a block other than then one that uses it (e.g. to hoist
     // the address of globals out of a loop).  If this is the case, we don't
     // want to forward-subst the cast.
-    
-    // If this is a bitcast from an illegal integer type to a legal vector type,
-    // try to hoist it to the source's basic block to avoid register splitting.
+
     if (auto *BCI = dyn_cast<BitCastInst>(CI)) {
+       // If this is a bitcast from an illegal integer type to a legal vector type,
+      // try to hoist it to the source's basic block to avoid register splitting.
       if (optimizeBitCast(BCI, *TLI, *DL))
         return true;
     }
-    
+
     if (isa<Constant>(CI->getOperand(0)))
       return AnyChange;
 
