@@ -382,6 +382,24 @@ def warn_profile_data_misexpect : Warning<
 def err_extract_api_ignores_file_not_found :
   Error<"file '%0' specified by '--extract-api-ignores=' not found">, DefaultFatal;
 
+def err__ssaf_extract_tu_summary_file_unknown_output_format :
+  Error<"unknown output summary file format '%0' "
+  "specified by '--ssaf-tu-summary-file=%1'">, DefaultFatal;
+
+def err__ssaf_extract_tu_summary_file_unknown_format :
+  Error<"failed to parse the value of '--ssaf-tu-summary-file=%0' "
+  "the value must follow the '<path>.<format>' pattern">, DefaultFatal;
+
+def err__ssaf_must_enable_summary_extractors :
+  Error<"must enable some summary extractors using the "
+        "'--ssaf-extract-summaries=' option">, DefaultFatal;
+
+def err__ssaf_extract_summary_unknown_extractor_name :
+  Error<"no summary extractor%s0 %plural{1:was|:were}0 registered with name: %1">, DefaultFatal;
+
+def err__ssaf_write_tu_summary_failed :
+  Error<"failed to write TU summary to '%0': %1">, DefaultFatal;
+
 def warn_missing_symbol_graph_dir : Warning<
   "missing symbol graph output directory, defaulting to working directory">,
   InGroup<ExtractAPIMisuse>;
