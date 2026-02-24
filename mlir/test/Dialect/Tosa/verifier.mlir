@@ -170,6 +170,56 @@ func.func @test_scalar_slice(%arg0: tensor<f32>) -> tensor<f32> {
 
 // -----
 
+func.func @test_slice_invalid_start_values(%arg0: tensor<4x31x31xf32>) {
+  %start = tosa.const_shape {values = dense<[-2, 0, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[1, 1, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op start values must be non-negative, got [-2, 0, 0]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x1x1xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_size_values(%arg0: tensor<4x31x31xf32>) {
+  %start = tosa.const_shape {values = dense<[0, 0, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[1, 0, 1]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op size values must be > 0, got [1, 0, 1]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<4x31x31xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x?x?xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_output_shape_mismatch(%arg0: tensor<4x5x6xf32>) {
+  %start = tosa.const_shape {values = dense<[0, 0, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[1, 2, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op expected output shape to match size values, got 'tensor<1x2x4xf32>' vs [1, 2, 3]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<4x5x6xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<1x2x4xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_invalid_start_plus_size(%arg0: tensor<?x2xf32>) {
+  %start = tosa.const_shape {values = dense<[-1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %size = tosa.const_shape {values = dense<[3, 2]> : tensor<2xindex>} : () -> !tosa.shape<2>
+  // expected-error@+1 {{'tosa.slice' op start + size must be less than or equal to input dimension size, got start=1, size=2 vs input dim size=2 at dimension 1}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<?x2xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<?x2xf32>
+  return
+}
+
+// -----
+
+func.func @test_slice_output_shape_mismatch_dynamic(%arg0: tensor<?x5x6xf32>) {
+  %start = tosa.const_shape {values = dense<[0, 0, 0]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  %size = tosa.const_shape {values = dense<[1, 2, 3]> : tensor<3xindex>} : () -> !tosa.shape<3>
+  // expected-error@+1 {{'tosa.slice' op expected output shape to match size values, got 'tensor<?x2x4xf32>' vs [1, 2, 3]}}
+  %1 = tosa.slice %arg0, %start, %size : (tensor<?x5x6xf32>, !tosa.shape<3>, !tosa.shape<3>) -> tensor<?x2x4xf32>
+  return
+}
+
+// -----
+
 func.func @test_depthwise_conv2d_invalid_padding(%arg0: tensor<1x4x4x4xf32>, %arg1: tensor<1x1x8x4xf32>, %arg2: tensor<8xf32>, %arg3: tensor<1xf32>, %arg4: tensor<1xf32>) -> tensor<1x4x4x8xf32> {
   // expected-error@+1 {{'tosa.depthwise_conv2d' op expect all padding values to be >= 0, got 0, 0, -1, 0}}
   %0 = tosa.depthwise_conv2d %arg0, %arg1, %arg2, %arg3, %arg4 {acc_type = f32, dilation = array<i64: 1, 1>, pad = array<i64: 0, 0, -1, 0>, stride = array<i64: 1, 1>, local_bound = true}

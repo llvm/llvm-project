@@ -2190,5 +2190,5 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
 
 !0 = !{}
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }

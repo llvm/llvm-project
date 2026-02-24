@@ -31,6 +31,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
+#include "llvm/Support/SipHash.h"
 #include <optional>
 using namespace clang;
 using namespace CodeGen;
@@ -905,6 +906,32 @@ bool ConstStructBuilder::Build(const APValue &Val, const RecordDecl *RD,
     if (!EltInit)
       return false;
 
+    if (CGM.getContext().isPFPField(*Field)) {
+      llvm::ConstantInt *Disc;
+      llvm::Constant *AddrDisc;
+      if (CGM.getContext().arePFPFieldsTriviallyCopyable(RD)) {
+        uint64_t FieldSignature =
+            llvm::getPointerAuthStableSipHash(CGM.getPFPFieldName(*Field));
+        Disc = llvm::ConstantInt::get(CGM.Int64Ty, FieldSignature);
+        AddrDisc = llvm::ConstantPointerNull::get(CGM.VoidPtrTy);
+      } else if (Emitter.isAbstract()) {
+        // isAbstract means that we don't know the global's address. Since we
+        // can only form a pointer without knowing the address if the fields are
+        // trivially copyable, we need to return false otherwise.
+        return false;
+      } else {
+        Disc = llvm::ConstantInt::get(CGM.Int64Ty,
+                                      -(Layout.getFieldOffset(FieldNo) / 8));
+        AddrDisc = Emitter.getCurrentAddrPrivate();
+      }
+      EltInit = llvm::ConstantPtrAuth::get(
+          EltInit, llvm::ConstantInt::get(CGM.Int32Ty, 2), Disc, AddrDisc,
+          CGM.getPFPDeactivationSymbol(*Field));
+      if (!CGM.getContext().arePFPFieldsTriviallyCopyable(RD))
+        Emitter.registerCurrentAddrPrivate(EltInit,
+                                           cast<llvm::GlobalValue>(AddrDisc));
+    }
+
     if (ZeroInitPadding) {
       if (!DoZeroInitPadding(Layout, FieldNo, **Field, AllowOverwrite,
                              SizeSoFar, ZeroFieldSize))
@@ -1224,13 +1251,11 @@ public:
     }
 
     case CK_AddressSpaceConversion: {
-      auto C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
+      llvm::Constant *C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
       if (!C)
         return nullptr;
-      LangAS srcAS = subExpr->getType()->getPointeeType().getAddressSpace();
       llvm::Type *destTy = ConvertType(E->getType());
-      return CGM.getTargetCodeGenInfo().performAddrSpaceCast(CGM, C, srcAS,
-                                                             destTy);
+      return CGM.performAddrSpaceCast(C, destTy);
     }
 
     case CK_LValueToRValue: {
@@ -1656,7 +1681,20 @@ ConstantEmitter::emitAbstract(SourceLocation loc, const APValue &value,
 
 llvm::Constant *ConstantEmitter::tryEmitForInitializer(const VarDecl &D) {
   initializeNonAbstract(D.getType().getAddressSpace());
-  return markIfFailed(tryEmitPrivateForVarInit(D));
+  llvm::Constant *Init = tryEmitPrivateForVarInit(D);
+
+  // If a placeholder address was needed for a TLS variable, implying that the
+  // initializer's value depends on its address, then the object may not be
+  // initialized in .tdata because the initializer will be memcpy'd to the
+  // thread's TLS. Instead the initialization must be done in code.
+  if (!PlaceholderAddresses.empty() && D.getTLSKind() != VarDecl::TLS_None) {
+    for (auto [_, GV] : PlaceholderAddresses)
+      GV->eraseFromParent();
+    PlaceholderAddresses.clear();
+    Init = nullptr;
+  }
+
+  return markIfFailed(Init);
 }
 
 llvm::Constant *ConstantEmitter::tryEmitForInitializer(const Expr *E,
@@ -2123,7 +2161,7 @@ private:
     if (!hasNonZeroOffset())
       return C;
 
-    return llvm::ConstantExpr::getGetElementPtr(CGM.Int8Ty, C, getOffset());
+    return llvm::ConstantExpr::getPtrAdd(C, getOffset());
   }
 };
 
@@ -2611,6 +2649,7 @@ CodeGenModule::getMemberPointerConstant(const UnaryOperator *uo) {
     return getCXXABI().EmitMemberFunctionPointer(method);
 
   // Otherwise, a member data pointer.
+  getContext().recordMemberDataPointerEvaluation(decl);
   uint64_t fieldOffset = getContext().getFieldOffset(decl);
   CharUnits chars = getContext().toCharUnitsFromBits((int64_t) fieldOffset);
   return getCXXABI().EmitMemberDataPointer(type, chars);

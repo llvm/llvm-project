@@ -503,6 +503,41 @@ static bool HasNoThrowOperator(CXXRecordDecl *RD, OverloadedOperatorKind Op,
   return false;
 }
 
+static bool equalityComparisonIsDefaulted(Sema &S, const TagDecl *Decl,
+                                          SourceLocation KeyLoc) {
+  CanQualType T = S.Context.getCanonicalTagType(Decl);
+
+  EnterExpressionEvaluationContext UnevaluatedContext(
+      S, Sema::ExpressionEvaluationContext::Unevaluated);
+  Sema::SFINAETrap SFINAE(S, /*WithAccessChecking=*/true);
+  Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
+
+  // const ClassT& obj;
+  OpaqueValueExpr Operand(KeyLoc, T.withConst(), ExprValueKind::VK_LValue);
+  UnresolvedSet<16> Functions;
+  // obj == obj;
+  S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
+
+  ExprResult Result = S.CreateOverloadedBinOp(KeyLoc, BinaryOperatorKind::BO_EQ,
+                                              Functions, &Operand, &Operand);
+  if (Result.isInvalid() || SFINAE.hasErrorOccurred())
+    return false;
+
+  const auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(Result.get());
+  if (!CallExpr)
+    return isa<EnumDecl>(Decl);
+  const auto *Callee = CallExpr->getDirectCallee();
+  auto ParamT = Callee->getParamDecl(0)->getType();
+  if (!Callee->isDefaulted())
+    return false;
+  if (!ParamT->isReferenceType()) {
+    const CXXRecordDecl *RD = dyn_cast<CXXRecordDecl>(Decl);
+    if (RD && !RD->isTriviallyCopyable())
+      return false;
+  }
+  return S.Context.hasSameUnqualifiedType(ParamT.getNonReferenceType(), T);
+}
+
 static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
                                                      const CXXRecordDecl *Decl,
                                                      SourceLocation KeyLoc) {
@@ -511,36 +546,8 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
   if (Decl->isLambda())
     return Decl->isCapturelessLambda();
 
-  CanQualType T = S.Context.getCanonicalTagType(Decl);
-  {
-    EnterExpressionEvaluationContext UnevaluatedContext(
-        S, Sema::ExpressionEvaluationContext::Unevaluated);
-    Sema::SFINAETrap SFINAE(S, /*ForValidityCheck=*/true);
-    Sema::ContextRAII TUContext(S, S.Context.getTranslationUnitDecl());
-
-    // const ClassT& obj;
-    OpaqueValueExpr Operand(KeyLoc, T.withConst(), ExprValueKind::VK_LValue);
-    UnresolvedSet<16> Functions;
-    // obj == obj;
-    S.LookupBinOp(S.TUScope, {}, BinaryOperatorKind::BO_EQ, Functions);
-
-    auto Result = S.CreateOverloadedBinOp(KeyLoc, BinaryOperatorKind::BO_EQ,
-                                          Functions, &Operand, &Operand);
-    if (Result.isInvalid() || SFINAE.hasErrorOccurred())
-      return false;
-
-    const auto *CallExpr = dyn_cast<CXXOperatorCallExpr>(Result.get());
-    if (!CallExpr)
-      return false;
-    const auto *Callee = CallExpr->getDirectCallee();
-    auto ParamT = Callee->getParamDecl(0)->getType();
-    if (!Callee->isDefaulted())
-      return false;
-    if (!ParamT->isReferenceType() && !Decl->isTriviallyCopyable())
-      return false;
-    if (!S.Context.hasSameUnqualifiedType(ParamT.getNonReferenceType(), T))
-      return false;
-  }
+  if (!equalityComparisonIsDefaulted(S, Decl, KeyLoc))
+    return false;
 
   return llvm::all_of(Decl->bases(),
                       [&](const CXXBaseSpecifier &BS) {
@@ -555,9 +562,13 @@ static bool HasNonDeletedDefaultedEqualityComparison(Sema &S,
              Type = Type->getBaseElementTypeUnsafe()
                         ->getCanonicalTypeUnqualified();
 
-           if (Type->isReferenceType() || Type->isEnumeralType())
+           if (Type->isReferenceType())
              return false;
-           if (const auto *RD = Type->getAsCXXRecordDecl())
+           if (Type->isEnumeralType()) {
+             EnumDecl *ED =
+                 Type->castAs<EnumType>()->getDecl()->getDefinitionOrSelf();
+             return equalityComparisonIsDefaulted(S, ED, KeyLoc);
+           } else if (const auto *RD = Type->getAsCXXRecordDecl())
              return HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc);
            return true;
          });
@@ -567,8 +578,14 @@ static bool isTriviallyEqualityComparableType(Sema &S, QualType Type,
                                               SourceLocation KeyLoc) {
   QualType CanonicalType = Type.getCanonicalType();
   if (CanonicalType->isIncompleteType() || CanonicalType->isDependentType() ||
-      CanonicalType->isEnumeralType() || CanonicalType->isArrayType())
+      CanonicalType->isArrayType())
     return false;
+
+  if (CanonicalType->isEnumeralType()) {
+    EnumDecl *ED =
+        CanonicalType->castAs<EnumType>()->getDecl()->getDefinitionOrSelf();
+    return equalityComparisonIsDefaulted(S, ED, KeyLoc);
+  }
 
   if (const auto *RD = CanonicalType->getAsCXXRecordDecl()) {
     if (!HasNonDeletedDefaultedEqualityComparison(S, RD, KeyLoc))
