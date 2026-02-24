@@ -515,6 +515,10 @@ private:
                              SelectionDAG &DAG) const;
 
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
+
+  SDValue combineConcatOfShuffles(SDValue Op, SelectionDAG &DAG) const;
+  SDValue combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
+                                     SelectionDAG &DAG) const;
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
   SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
