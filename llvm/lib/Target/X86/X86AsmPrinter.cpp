@@ -55,7 +55,19 @@ using namespace llvm;
 
 X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
                              std::unique_ptr<MCStreamer> Streamer)
-    : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {}
+    : AsmPrinter(TM, std::move(Streamer), ID), FM(*this) {
+  GetPSI = [this](Module &M) -> ProfileSummaryInfo * {
+    if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
+      return &PSIW->getPSI();
+    return nullptr;
+  };
+  GetSDPI = [this](Module &M) -> StaticDataProfileInfo * {
+    if (auto *SDPIW =
+            getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
+      return &SDPIW->getStaticDataProfileInfo();
+    return nullptr;
+  };
+}
 
 //===----------------------------------------------------------------------===//
 // Primitive Helper Functions.
@@ -64,10 +76,8 @@ X86AsmPrinter::X86AsmPrinter(TargetMachine &TM,
 /// runOnMachineFunction - Emit the function body.
 ///
 bool X86AsmPrinter::runOnMachineFunction(MachineFunction &MF) {
-  if (auto *PSIW = getAnalysisIfAvailable<ProfileSummaryInfoWrapperPass>())
-    PSI = &PSIW->getPSI();
-  if (auto *SDPIW = getAnalysisIfAvailable<StaticDataProfileInfoWrapperPass>())
-    SDPI = &SDPIW->getStaticDataProfileInfo();
+  PSI = GetPSI(*MF.getFunction().getParent());
+  SDPI = GetSDPI(*MF.getFunction().getParent());
 
   Subtarget = &MF.getSubtarget<X86Subtarget>();
 
@@ -155,7 +165,7 @@ void X86AsmPrinter::EmitKCFITypePadding(const MachineFunction &MF,
   if (HasType)
     PrefixBytes += 5;
 
-  emitNops(offsetToAlignment(PrefixBytes, MF.getAlignment()));
+  emitNops(offsetToAlignment(PrefixBytes, MF.getPreferredAlignment()));
 }
 
 /// emitKCFITypeId - Emit the KCFI type information in architecture specific
@@ -1129,4 +1139,50 @@ INITIALIZE_PASS(X86AsmPrinter, "x86-asm-printer", "X86 Assembly Printer", false,
 extern "C" LLVM_C_ABI void LLVMInitializeX86AsmPrinter() {
   RegisterAsmPrinter<X86AsmPrinter> X(getTheX86_32Target());
   RegisterAsmPrinter<X86AsmPrinter> Y(getTheX86_64Target());
+}
+
+PreservedAnalyses X86AsmPrinterBeginPass::run(Module &M,
+                                              ModuleAnalysisManager &MAM) {
+  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+  if (!Streamer)
+    reportFatalInternalError("Failed to create MCStreamer");
+  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  AsmPrinter.GetPSI = [&MAM](Module &M) {
+    return &MAM.getResult<ProfileSummaryAnalysis>(M);
+  };
+  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doInitialization(M);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses X86AsmPrinterPass::run(MachineFunction &MF,
+                                         MachineFunctionAnalysisManager &MFAM) {
+  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+  if (!Streamer)
+    reportFatalInternalError("Failed to create MCStreamer");
+  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  AsmPrinter.GetPSI = [&MFAM, &MF](Module &M) {
+    return MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+        .getCachedResult<ProfileSummaryAnalysis>(M);
+  };
+  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  setupMachineFunctionAsmPrinter(MFAM, MF, AsmPrinter);
+  AsmPrinter.runOnMachineFunction(MF);
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses X86AsmPrinterEndPass::run(Module &M,
+                                            ModuleAnalysisManager &MAM) {
+  Expected<std::unique_ptr<MCStreamer>> Streamer = CreateStreamer(TM);
+  if (!Streamer)
+    reportFatalInternalError("Failed to create MCStreamer");
+  X86AsmPrinter AsmPrinter(TM, std::move(*Streamer));
+  AsmPrinter.GetPSI = [&MAM](Module &M) {
+    return &MAM.getResult<ProfileSummaryAnalysis>(M);
+  };
+  AsmPrinter.GetSDPI = [](Module &M) { return nullptr; };
+  setupModuleAsmPrinter(M, MAM, AsmPrinter);
+  AsmPrinter.doFinalization(M);
+  return PreservedAnalyses::all();
 }
