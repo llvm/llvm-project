@@ -622,7 +622,6 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
 
   for (const auto &[Index, LinkageTableEntryValue] :
        llvm::enumerate(LinkageTableArray)) {
-
     const Object *OptLinkageTableEntryObject =
         LinkageTableEntryValue.getAsObject();
     if (!OptLinkageTableEntryObject) {
@@ -634,10 +633,11 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
 
     auto ExpectedLinkageTableEntry =
         linkageTableEntryFromJSON(*OptLinkageTableEntryObject);
-    if (!ExpectedLinkageTableEntry)
+    if (!ExpectedLinkageTableEntry) {
       return ErrorBuilder::wrap(ExpectedLinkageTableEntry.takeError())
           .context(ErrorMessages::ReadingFromIndex, "LinkageTable entry", Index)
           .build();
+    }
 
     const EntityId EI = ExpectedLinkageTableEntry->first;
 
@@ -648,7 +648,6 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
                                   ErrorMessages::FailedInsertionOnDuplication,
                                   "LinkageTable entry", Index, "EntityId",
                                   getIndex(It->first))
-          .context(ErrorMessages::ReadingFromIndex, "LinkageTable entry", Index)
           .build();
     }
 
