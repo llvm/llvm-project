@@ -830,3 +830,57 @@ func.func @fusion_non_constant_bounds_1(%N: index, %M: memref<?xf32>, %cst: f32)
 
   return
 }
+
+// No fusion here as the cost models computing slice costs run out of 64-bit precision.
+
+// PRODUCER-CONSUMER-LABEL: func @high_trip_count
+func.func @high_trip_count(%arg0: memref<1024x4096xf32>, %arg1: memref<8192x4096xf32>) -> memref<1024x8192xf32> {
+  %cst_0 = arith.constant 1.000000e+00 : f32
+  %alloc = memref.alloc() : memref<1024x8192xf32>
+  affine.for %arg2 = 0 to 16 {
+    affine.for %arg4 = 0 to 512 {
+      affine.for %arg5 = 0 to 64 {
+        affine.for %arg6 = 0 to 16 {
+          affine.for %arg7 = 0 to 2048 {
+            %0 = affine.load %arg0[%arg5 + %arg2 * 64, %arg7] : memref<1024x4096xf32>
+            %1 = affine.load %arg1[%arg6 + %arg4 * 16, %arg7] : memref<8192x4096xf32>
+            %2 = affine.load %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
+            %3 = arith.mulf %0, %1 : f32
+            %4 = arith.addf %2, %3 : f32
+            // PRODUCER-CONSUMER: affine.store
+            affine.store %4, %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
+          }
+        }
+      }
+    }
+
+    affine.for %arg4 = 0 to 512 {
+      affine.for %arg5 = 0 to 64 {
+        affine.for %arg6 = 0 to 16 {
+          affine.for %arg7 = 0 to 2048 {
+            %0 = affine.load %arg0[%arg5 + %arg2 * 64, %arg7 + 2048] : memref<1024x4096xf32>
+            %1 = affine.load %arg1[%arg6 + %arg4 * 16, %arg7 + 2048] : memref<8192x4096xf32>
+            %2 = affine.load %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
+            %3 = arith.mulf %0, %1 : f32
+            %4 = arith.addf %2, %3 : f32
+            // PRODUCER-CONSUMER: affine.store
+            affine.store %4, %alloc[%arg5 + %arg2 * 64, %arg6 + %arg4 * 16] : memref<1024x8192xf32>
+          }
+        }
+      }
+    }
+
+  }
+  // PRODUCER-CONSUMER: affine.for {{.*}} = 0 to 16
+  affine.for %arg2 = 0 to 16 {
+    affine.for %arg3 = 0 to 512 {
+      affine.for %arg4 = 0 to 64 {
+        affine.for %arg5 = 0 to 16 {
+          %0 = affine.load %alloc[%arg4 + %arg2 * 64, %arg5 + %arg3 * 16] : memref<1024x8192xf32>
+          affine.store %0, %alloc[%arg4 + %arg2 * 64, %arg5 + %arg3 * 16] : memref<1024x8192xf32>
+        }
+      }
+    }
+  }
+  return %alloc : memref<1024x8192xf32>
+}

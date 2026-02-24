@@ -519,3 +519,76 @@ def testExtDialectWithRegion():
             # CHECK: Verification failed:
             # CHECK: result type mismatch
             print(e)
+
+
+# CHECK: TEST: testExtDialectWithType
+@run
+def testExtDialectWithType():
+    class TestType(Dialect, name="ext_type"):
+        pass
+
+    class Array(TestType.Type, name="array"):
+        elem_type: IntegerType[32] | IntegerType[64]
+        length: IntegerAttr
+
+    class MakeArrayOp(TestType.Operation, name="make_array"):
+        arr: Result[Array]
+
+    class MakeArray3Op(TestType.Operation, name="make_array3"):
+        arr: Result[Array[IntegerType[32], IntegerAttr[IntegerType[32], 3]]]
+
+    with Context(), Location.unknown():
+        TestType.load()
+        # CHECK: irdl.dialect @ext_type {
+        # CHECK:   irdl.type @array {
+        # CHECK:     %0 = irdl.is i32
+        # CHECK:     %1 = irdl.is i64
+        # CHECK:     %2 = irdl.any_of(%0, %1)
+        # CHECK:     %3 = irdl.base "#builtin.integer"
+        # CHECK:     irdl.parameters(elem_type: %2, length: %3)
+        # CHECK:   }
+        # CHECK:   irdl.operation @make_array {
+        # CHECK:     %0 = irdl.base @ext_type::@array
+        # CHECK:     irdl.results(arr: %0)
+        # CHECK:   }
+        # CHECK:   irdl.operation @make_array3 {
+        # CHECK:     %0 = irdl.is i32
+        # CHECK:     %1 = irdl.is 3 : i32
+        # CHECK:     %2 = irdl.parametric @ext_type::@array<%0, %1>
+        # CHECK:     irdl.results(arr: %2)
+        # CHECK:   }
+        # CHECK: }
+        print(TestType._mlir_module)
+
+        # CHECK: ext_type.array
+        print(Array.type_name)
+
+        i32 = IntegerType.get_signless(32)
+        i64 = IntegerType.get_signless(64)
+        a4 = Array.get(i32, IntegerAttr.get(i32, 4))
+        a6 = Array.get(i64, IntegerAttr.get(i32, 6))
+        # CHECK: !ext_type.array<i32, 4 : i32>
+        print(a4)
+        # CHECK: !ext_type.array<i64, 6 : i32>
+        print(a6)
+
+        # CHECK: i32
+        print(a4.elem_type)
+        # CHECK: 4 : i32
+        print(a4.length)
+        # CHECK: i64
+        print(a6.elem_type)
+        # CHECK: 6 : i32
+        print(a6.length)
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            MakeArrayOp(a4)
+            MakeArrayOp(a6)
+            MakeArray3Op()
+
+        # CHECK: %0 = "ext_type.make_array"() : () -> !ext_type.array<i32, 4 : i32>
+        # CHECK: %1 = "ext_type.make_array"() : () -> !ext_type.array<i64, 6 : i32>
+        # CHECK: %2 = "ext_type.make_array3"() : () -> !ext_type.array<i32, 3 : i32>
+        assert module.operation.verify()
+        print(module)
