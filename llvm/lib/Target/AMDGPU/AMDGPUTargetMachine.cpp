@@ -147,7 +147,9 @@ public:
   void addCodeGenPrepare(PassManagerWrapper &PMW) const;
   void addPreISel(PassManagerWrapper &PMW) const;
   void addILPOpts(PassManagerWrapper &PMWM) const;
+  void addAsmPrinterBegin(PassManagerWrapper &PMW, CreateMCStreamer) const;
   void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const;
+  void addAsmPrinterEnd(PassManagerWrapper &PMW, CreateMCStreamer) const;
   Error addInstSelector(PassManagerWrapper &PMW) const;
   void addPreRewrite(PassManagerWrapper &PMW) const;
   void addMachineSSAOptimization(PassManagerWrapper &PMW) const;
@@ -1226,10 +1228,10 @@ GCNTargetMachine::getTargetTransformInfo(const Function &F) const {
 
 Error GCNTargetMachine::buildCodeGenPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, const CGPassBuilderOption &Opts,
+    CodeGenFileType FileType, const CGPassBuilderOption &Opts, MCContext &Ctx,
     PassInstrumentationCallbacks *PIC) {
   AMDGPUCodeGenPassBuilder CGPB(*this, Opts, PIC);
-  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType);
+  return CGPB.buildPipeline(MPM, Out, DwoOut, FileType, Ctx);
 }
 
 ScheduleDAGInstrs *
@@ -2332,9 +2334,19 @@ void AMDGPUCodeGenPassBuilder::addILPOpts(PassManagerWrapper &PMW) const {
   Base::addILPOpts(PMW);
 }
 
-void AMDGPUCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW,
-                                             CreateMCStreamer) const {
+void AMDGPUCodeGenPassBuilder::addAsmPrinterBegin(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+  // TODO: Add AsmPrinterBegin
+}
+
+void AMDGPUCodeGenPassBuilder::addAsmPrinter(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
   // TODO: Add AsmPrinter.
+}
+
+void AMDGPUCodeGenPassBuilder::addAsmPrinterEnd(
+    PassManagerWrapper &PMW, CreateMCStreamer CreateStreamer) const {
+  // TODO: Add AsmPrinterEnd
 }
 
 Error AMDGPUCodeGenPassBuilder::addInstSelector(PassManagerWrapper &PMW) const {
