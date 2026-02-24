@@ -220,7 +220,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc))
+      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
 

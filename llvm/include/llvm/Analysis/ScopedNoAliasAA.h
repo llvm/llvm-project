@@ -37,8 +37,8 @@ public:
     return false;
   }
 
-  LLVM_ABI static bool alias(const MemoryLocation &LocA,
-                             const MemoryLocation &LocB);
+  LLVM_ABI static AliasResult alias(const MemoryLocation &LocA,
+                                    const MemoryLocation &LocB);
   LLVM_ABI AliasResult alias(const MemoryLocation &LocA,
                              const MemoryLocation &LocB, AAQueryInfo &AAQI,
                              const Instruction *CtxI);
