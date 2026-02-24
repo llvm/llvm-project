@@ -425,6 +425,16 @@ void CIRGenModule::constructAttributeList(
     // TODO(cir): Quite a few CUDA and OpenCL attributes are added here, like
     // uniform-work-group-size.
 
+    if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
+        targetDecl->hasAttr<CUDAGlobalAttr>()) {
+      GlobalDecl kernel(calleeInfo.getCalleeDecl());
+      llvm::StringRef kernelName = getMangledName(
+          kernel.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
+      auto attr =
+          cir::CUDAKernelNameAttr::get(&getMLIRContext(), kernelName.str());
+      attrs.set(attr.getMnemonic(), attr);
+    }
+
     // TODO(cir): we should also do 'aarch64_pstate_sm_body' here.
 
     if (auto *modularFormat = targetDecl->getAttr<ModularFormatAttr>()) {

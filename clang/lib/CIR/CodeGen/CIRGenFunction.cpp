@@ -67,6 +67,7 @@ cir::TypeEvaluationKind CIRGenFunction::getEvaluationKind(QualType type) {
     case Type::ObjCObjectPointer:
     case Type::Pipe:
     case Type::BitInt:
+    case Type::OverflowBehavior:
     case Type::HLSLAttributedResource:
     case Type::HLSLInlineSpirv:
       return cir::TEK_Scalar;
@@ -270,6 +271,8 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // Leverage and defers to RunCleanupsScope's dtor and scope handling.
     applyCleanup();
 
+    mlir::Block *currentBlock = builder.getBlock();
+
     // If we now have one after `applyCleanup`, hook it up properly.
     if (!cleanupBlock && localScope->getCleanupBlock(builder)) {
       cleanupBlock = localScope->getCleanupBlock(builder);
@@ -309,7 +312,7 @@ void CIRGenFunction::LexicalScope::cleanup() {
     // End of any local scope != function
     // Ternary ops have to deal with matching arms for yielding types
     // and do return a value, it must do its own cir.yield insertion.
-    if (!localScope->isTernary() && !insPt->mightHaveTerminator()) {
+    if (!localScope->isTernary() && !currentBlock->mightHaveTerminator()) {
       !retVal ? cir::YieldOp::create(builder, localScope->endLoc)
               : cir::YieldOp::create(builder, localScope->endLoc, retVal);
     }
@@ -1372,6 +1375,7 @@ void CIRGenFunction::emitVariablyModifiedType(QualType type) {
     case Type::ObjCInterface:
     case Type::ObjCObjectPointer:
     case Type::BitInt:
+    case Type::OverflowBehavior:
       llvm_unreachable("type class is never variably-modified!");
 
     case Type::Adjusted:
