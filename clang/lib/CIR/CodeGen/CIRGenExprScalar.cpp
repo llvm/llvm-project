@@ -1287,10 +1287,8 @@ public:
   mlir::Value VisitBinLAnd(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      auto vecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      mlir::Value zeroValue = builder.getNullValue(vecTy.getElementType(), loc);
-      SmallVector<mlir::Value, 16> elements(vecTy.getSize(), zeroValue);
-      auto zeroVec = cir::VecCreateOp::create(builder, loc, vecTy, elements);
+      mlir::Type vecTy = cgf.convertType(e->getType());
+      mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
@@ -1318,6 +1316,10 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup();
           cir::YieldOp::create(b, loc, res);
+          if (res.getParentBlock() != builder.getInsertionBlock())
+            cgf.cgm.errorNYI(
+                e->getSourceRange(),
+                "ScalarExprEmitter: VisitBinLAnd ternary with cleanup");
         },
         /*falseBuilder*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
@@ -1333,10 +1335,8 @@ public:
   mlir::Value VisitBinLOr(const clang::BinaryOperator *e) {
     if (e->getType()->isVectorType()) {
       mlir::Location loc = cgf.getLoc(e->getExprLoc());
-      auto vecTy = mlir::cast<cir::VectorType>(cgf.convertType(e->getType()));
-      mlir::Value zeroValue = builder.getNullValue(vecTy.getElementType(), loc);
-      SmallVector<mlir::Value, 16> elements(vecTy.getSize(), zeroValue);
-      auto zeroVec = cir::VecCreateOp::create(builder, loc, vecTy, elements);
+      mlir::Type vecTy = cgf.convertType(e->getType());
+      mlir::Value zeroVec = builder.getNullValue(vecTy, loc);
 
       mlir::Value lhs = Visit(e->getLHS());
       mlir::Value rhs = Visit(e->getRHS());
@@ -1372,6 +1372,10 @@ public:
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
           lexScope.forceCleanup();
           cir::YieldOp::create(b, loc, res);
+          if (res.getParentBlock() != builder.getInsertionBlock())
+            cgf.cgm.errorNYI(
+                e->getSourceRange(),
+                "ScalarExprEmitter: VisitBinLOr ternary with cleanup");
         });
 
     return maybePromoteBoolResult(resOp.getResult(), resTy);

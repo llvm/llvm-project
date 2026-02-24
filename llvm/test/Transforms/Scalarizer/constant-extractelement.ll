@@ -16,3 +16,13 @@ define i32 @f1(ptr %src, i32 %index) {
   %val2 = extractelement <4 x i32> %val1, i32 3
   ret i32 %val2
 }
+
+; Test that out-of-bounds extractelement doesn't crash the scalarizer.
+define ptr @oob_extract() {
+; ALL-LABEL: @oob_extract(
+; ALL-NEXT:    [[E:%.*]] = extractelement <4 x ptr> zeroinitializer, i32 100
+; ALL-NEXT:    ret ptr [[E]]
+;
+  %E = extractelement <4 x ptr> zeroinitializer, i32 100
+  ret ptr %E
+}

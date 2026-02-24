@@ -1499,7 +1499,7 @@ HexagonTargetLowering::extractHvxSubvectorPred(SDValue VecV, SDValue IdxV,
   unsigned Rep = 8 / ResLen;
   // Make sure the output fill the entire vector register, so repeat the
   // 8-byte groups as many times as necessary.
-  for (unsigned r = 0; r != HwLen/ResLen; ++r) {
+  for (unsigned r = 0; r != HwLen / 8; ++r) {
     // This will generate the indexes of the 8 interesting bytes.
     for (unsigned i = 0; i != ResLen; ++i) {
       for (unsigned j = 0; j != Rep; ++j)
@@ -3855,6 +3855,15 @@ HexagonTargetLowering::LegalizeHvxResize(SDValue Op, SelectionDAG &DAG) const {
     SDValue T = ExpandHvxResizeIntoSteps(S, DAG);
     return extractSubvector(T, typeLegalize(ResTy, DAG), 0, DAG);
   } else if (shouldSplitToHvx(InpWidth < ResWidth ? ResTy : InpTy, DAG)) {
+    // For multi-step extends/truncates (e.g., i8->i32), expand into
+    // single-step operations first. Splitting a multi-step TL_EXTEND
+    // would halve the operand type to a sub-HVX size (e.g., v128i8 ->
+    // v64i8), creating illegal types that cause issues in the type
+    // legalizer's map tracking. Single-step operations (e.g., i16->i32)
+    // are safe to split because their halved operand types remain legal.
+    SDValue T = ExpandHvxResizeIntoSteps(Op, DAG);
+    if (T != Op)
+      return T;
     return opJoin(SplitVectorOp(Op, DAG), SDLoc(Op), DAG);
   } else {
     assert(isTypeLegal(InpTy) && isTypeLegal(ResTy));
