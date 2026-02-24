@@ -300,24 +300,45 @@ private:
 public:
   Expected<uint32_t> getPhNum() const {
     if (!RealPhNum) {
-      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero())
+      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero()) {
+        // If RealPhNum is set, the error is not emitted because PhNum is being
+        // read.
+        if (RealPhNum) {
+          llvm::consumeError(std::move(E));
+          return *RealPhNum;
+        }
         return std::move(E);
+      }
     }
     return *RealPhNum;
   }
 
   Expected<uint64_t> getShNum() const {
     if (!RealShNum) {
-      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero())
+      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero()) {
+        // If RealShNum is set, the error is not emitted because ShNum is being
+        // read.
+        if (RealShNum) {
+          llvm::consumeError(std::move(E));
+          return *RealShNum;
+        }
         return std::move(E);
+      }
     }
     return *RealShNum;
   }
 
   Expected<uint32_t> getShStrNdx() const {
     if (!RealShStrNdx) {
-      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero())
+      if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero()) {
+        // If RealShStrNdx is set, the error is not emitted because of reading
+        // ShStrNdx
+        if (RealShStrNdx) {
+          llvm::consumeError(std::move(E));
+          return *RealShStrNdx;
+        }
         return std::move(E);
+      }
     }
     return *RealShStrNdx;
   }
@@ -951,7 +972,14 @@ template <class ELFT> Error ELFFile<ELFT>::readShdrZero() {
     RealShNum = 1;
     auto SecOrErr = getSection(0);
     if (!SecOrErr) {
-      RealShNum = std::nullopt;
+      if (Header.e_shnum != 0)
+        RealShNum = Header.e_shnum;
+      else
+        RealShNum = std::nullopt;
+      if (Header.e_phnum != ELF::PN_XNUM)
+        RealPhNum = Header.e_phnum;
+      if (Header.e_shstrndx != ELF::SHN_XINDEX)
+        RealShStrNdx = Header.e_shstrndx;
       return SecOrErr.takeError();
     }
 
