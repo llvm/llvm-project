@@ -539,18 +539,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.enablePExtSIMDCodeGen()) {
     setTargetDAGCombine(ISD::TRUNCATE);
-    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
-    setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
     static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
     static const MVT RV64VTs[] = {MVT::v2i32, MVT::v4i16, MVT::v8i8};
     ArrayRef<MVT> VTs;
     if (Subtarget.is64Bit()) {
       VTs = RV64VTs;
-      setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
-      setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
-      setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
-      setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
-      setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
       // There's no instruction for vector shamt in P extension so we unroll to
       // scalar instructions. Vector VTs that are 32-bit are widened to 64-bit
       // vector, e.g. v2i16 -> v4i16, before getting unrolled, so we need custom
@@ -563,6 +556,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // By default everything must be expanded.
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
       setOperationAction(Op, VTs, Expand);
+
+    for (MVT VT : VTs) {
+      for (MVT OtherVT : MVT::integer_fixedlen_vector_valuetypes()) {
+        setTruncStoreAction(VT, OtherVT, Expand);
+        setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, VT,
+                         OtherVT, Expand);
+      }
+    }
+
     setOperationAction({ISD::LOAD, ISD::STORE}, VTs, Legal);
     setOperationAction({ISD::ADD, ISD::SUB}, VTs, Legal);
     setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VTs, Legal);

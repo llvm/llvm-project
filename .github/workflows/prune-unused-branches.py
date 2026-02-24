@@ -64,10 +64,13 @@ def query_prs(github_token, extra_query_criteria) -> list[str]:
 
 def get_branches_from_open_prs(github_token) -> list[str]:
     pr_data = []
+    # We will only ever be looking to delete branches with a `users/` prefix or
+    # a revert- prefix as a contract with get_branches.
     pr_data.extend(query_prs(github_token, "head:users/"))
+    pr_data.extend(query_prs(github_token, "head:revert-"))
     # We need to explicitly check cases where the base is a user branch to
     # ensure we capture branches that are used as a diff base for cross-repo
-    # PRs.
+    # PRs. Revert branches should never be the base branch of a PR.
     pr_data.extend(query_prs(github_token, "base:users/"))
 
     user_branches = []
@@ -141,10 +144,6 @@ def generate_patches_for_all_branches(branches_to_remove: list[str], patches_pat
 
 def delete_branches(branches_to_remove: list[str]):
     for branch in branches_to_remove:
-        # TODO(boomanaiden154): Only delete my branches for now to verify that
-        # everything is working in the production environment.
-        if "boomanaiden154" not in branch:
-            continue
         command_vector = ["git", "push", "-d", "origin", branch]
         try:
             subprocess.run(
