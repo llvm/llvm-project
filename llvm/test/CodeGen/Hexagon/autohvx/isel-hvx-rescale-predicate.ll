@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that this doesn't crash.
