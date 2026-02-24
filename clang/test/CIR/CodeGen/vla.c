@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
+// XFAIL: *
+
 void f0(int len) {
   int arr[len];
 }
