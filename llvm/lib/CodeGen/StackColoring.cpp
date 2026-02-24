@@ -402,7 +402,7 @@ STATISTIC(EscapedAllocas, "Number of allocas that escaped the lifetime region");
 //
 // If tmp2 slot is merged with volatile_counter slot, then the stack slot will
 // be potentially overwritten in the call to foo function. After longjmp is
-// performed the value of volatilve_counter should still be 100, but because of
+// performed the value of volatile_counter should still be 100, but because of
 // merging it may be overwritten.
 //
 // To handle this we collect all MBBs that have a call with return twice
@@ -761,8 +761,8 @@ unsigned StackColoring::collectMarkers(unsigned NumSlot) {
   if (MF->exposesReturnsTwice()) {
     df_iterator_default_set<const MachineBasicBlock *> Visited;
 
-    for (auto *SetJmpBlok : SetjmpBlocks) {
-      for (auto *MBB : depth_first_ext(SetJmpBlok, Visited)) {
+    for (auto *SetJmpBlock : SetjmpBlocks) {
+      for (auto *MBB : depth_first_ext(SetJmpBlock, Visited)) {
         for (const MachineInstr &MI : *MBB) {
           if (MI.isDebugInstr())
             continue;
