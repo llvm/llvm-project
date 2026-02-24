@@ -512,6 +512,8 @@ AtomicRMWOpPattern::matchAndRewrite(memref::AtomicRMWOp atomicOp,
   if (!accessChainOp)
     return failure();
 
+  // Compute the bit offset within the storage element and adjust the pointer
+  // to address the containing storage element.
   assert(accessChainOp.getIndices().size() == 2);
   Value lastDim = accessChainOp->getOperand(accessChainOp.getNumOperands() - 1);
   Value offset = getOffsetForBitwidth(loc, lastDim, srcBits, dstBits, rewriter);
