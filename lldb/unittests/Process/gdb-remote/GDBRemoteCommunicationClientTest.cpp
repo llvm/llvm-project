@@ -101,7 +101,7 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_C) {
   ASSERT_FALSE(client.GetVContSupported("A"));
 }
 
-TEST_F(GDBRemoteCommunicationClientTest, vCont_cC) {
+TEST_F(GDBRemoteCommunicationClientTest, vCont_c_C) {
   std::future<bool> write_result = std::async(
       std::launch::async, [&] { return client.GetVContSupported("c"); });
   HandlePacket(server, "vCont?", "$vCont;c;C#16");
@@ -110,6 +110,18 @@ TEST_F(GDBRemoteCommunicationClientTest, vCont_cC) {
   ASSERT_FALSE(client.GetVContSupported("s"));
   ASSERT_FALSE(client.GetVContSupported("S"));
   ASSERT_TRUE(client.GetVContSupported("a"));
+  ASSERT_FALSE(client.GetVContSupported("A"));
+}
+
+TEST_F(GDBRemoteCommunicationClientTest, vCont_cC_notAFeature) {
+  std::future<bool> write_result = std::async(
+      std::launch::async, [&] { return client.GetVContSupported("c"); });
+  HandlePacket(server, "vCont?", "$vCont;cC;notAFeature#16");
+  ASSERT_FALSE(write_result.get());
+  ASSERT_FALSE(client.GetVContSupported("C"));
+  ASSERT_FALSE(client.GetVContSupported("s"));
+  ASSERT_FALSE(client.GetVContSupported("S"));
+  ASSERT_FALSE(client.GetVContSupported("a"));
   ASSERT_FALSE(client.GetVContSupported("A"));
 }
 
