@@ -609,44 +609,6 @@ TEST_F(TestTypeSystemClang, TestConvertAccessTypeToAccessSpecifier) {
                               eAccessProtected));
 }
 
-TEST_F(TestTypeSystemClang, TestUnifyAccessSpecifiers) {
-  // Unifying two of the same type should return the same type
-  EXPECT_EQ(AS_public,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_public));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_private));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_protected));
-
-  // Otherwise the result should be the strictest of the two.
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_public));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_protected));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_private));
-  EXPECT_EQ(AS_private,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_private));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_public));
-  EXPECT_EQ(AS_protected,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_protected));
-
-  // None is stricter than everything (by convention)
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_public));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_protected));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_none, AS_private));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_public, AS_none));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_protected, AS_none));
-  EXPECT_EQ(AS_none,
-            TypeSystemClang::UnifyAccessSpecifiers(AS_private, AS_none));
-}
-
 TEST_F(TestTypeSystemClang, TestRecordHasFields) {
   CompilerType int_type = m_ast->GetBasicType(eBasicTypeInt);
 
@@ -1088,7 +1050,7 @@ TEST_F(TestTypeSystemClang, TestFunctionTemplateConstruction) {
 
   EXPECT_EQ(TU, func_template->getDeclContext());
   EXPECT_EQ("foo", func_template->getName());
-  EXPECT_EQ(clang::AccessSpecifier::AS_none, func_template->getAccess());
+  EXPECT_EQ(clang::AccessSpecifier::AS_public, func_template->getAccess());
 }
 
 TEST_F(TestTypeSystemClang, TestFunctionTemplateInRecordConstruction) {
