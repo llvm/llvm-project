@@ -1872,7 +1872,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX10_1-GCNTRACKERS-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GFX10_1-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
-; GFX10_1-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_1-GCNTRACKERS-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
 ; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
 ; GFX10_1-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
@@ -1932,7 +1932,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX10_3-GCNTRACKERS-NEXT:    buffer_store_dword v21, off, s[0:3], s5 ; 4-byte Folded Spill
 ; GFX10_3-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s4
 ; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
-; GFX10_3-GCNTRACKERS-NEXT:    s_and_b32 s4, 0, exec_lo
+; GFX10_3-GCNTRACKERS-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
 ; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
 ; GFX10_3-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
@@ -1991,7 +1991,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX11-GCNTRACKERS-NEXT:    scratch_store_b32 off, v21, s1 ; 4-byte Folded Spill
 ; GFX11-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
-; GFX11-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX11-GCNTRACKERS-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
 ; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
 ; GFX11-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
@@ -2056,7 +2056,7 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX12-GCNTRACKERS-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-GCNTRACKERS-NEXT:    s_mov_b32 exec_lo, s0
 ; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s30, 0
-; GFX12-GCNTRACKERS-NEXT:    s_and_b32 s0, 0, exec_lo
+; GFX12-GCNTRACKERS-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s31, 1
 ; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s33, 2
 ; GFX12-GCNTRACKERS-NEXT:    v_writelane_b32 v21, s34, 3
