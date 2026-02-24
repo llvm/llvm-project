@@ -8,8 +8,7 @@ define float @select_fp_const() {
 ; CHECK: movi v0.2s, #79, lsl #24
 ; GISEL-LABEL: select_fp_const:
 ; GISEL:       // %bb.0: // %entry
-; GISEL-NEXT:    mov w8, #1325400064 // =0x4f000000
-; GISEL-NEXT:    fmov s0, w8
+; GISEL-NEXT:    movi v0.2s, #79, lsl #24
 ; GISEL-NEXT:    ret
 ;
 ; FISEL-LABEL: select_fp_const:

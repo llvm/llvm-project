@@ -407,8 +407,7 @@ define float @frem9223372036854775808_abs(float %x) {
 ; CHECK-GI-LABEL: frem9223372036854775808_abs:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    fabs s0, s0
-; CHECK-GI-NEXT:    mov w8, #1593835520 // =0x5f000000
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.2s, #95, lsl #24
 ; CHECK-GI-NEXT:    b fmodf
 entry:
   %a = tail call float @llvm.fabs.f32(float %x)

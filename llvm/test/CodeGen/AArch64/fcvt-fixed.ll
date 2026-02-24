@@ -14,8 +14,7 @@ define i32 @fcvtzs_f32_i32_7(float %flt) {
 ;
 ; CHECK-GI-LABEL: fcvtzs_f32_i32_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzs w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -50,8 +49,7 @@ define i64 @fcvtzs_f32_i64_7(float %flt) {
 ;
 ; CHECK-GI-LABEL: fcvtzs_f32_i64_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzs x0, s0
 ; CHECK-GI-NEXT:    ret
@@ -151,31 +149,20 @@ define i64 @fcvtzs_f64_i64_64(double %dbl) {
 }
 
 define i32 @fcvtzs_f16_i32_7(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzs_f16_i32_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_f16_i32_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_f16_i32_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs w0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_f16_i32_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -190,31 +177,20 @@ define i32 @fcvtzs_f16_i32_7(half %flt) {
 }
 
 define i32 @fcvtzs_f16_i32_15(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzs_f16_i32_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_f16_i32_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_f16_i32_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs w0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_f16_i32_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -229,31 +205,20 @@ define i32 @fcvtzs_f16_i32_15(half %flt) {
 }
 
 define i64 @fcvtzs_f16_i64_7(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzs_f16_i64_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_f16_i64_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_f16_i64_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs x0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_f16_i64_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -268,31 +233,20 @@ define i64 @fcvtzs_f16_i64_7(half %flt) {
 }
 
 define i64 @fcvtzs_f16_i64_15(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzs_f16_i64_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_f16_i64_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_f16_i64_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs x0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_f16_i64_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -316,8 +270,7 @@ define i32 @fcvtzu_f32_i32_7(float %flt) {
 ;
 ; CHECK-GI-LABEL: fcvtzu_f32_i32_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzu w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -352,8 +305,7 @@ define i64 @fcvtzu_f32_i64_7(float %flt) {
 ;
 ; CHECK-GI-LABEL: fcvtzu_f32_i64_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzu x0, s0
 ; CHECK-GI-NEXT:    ret
@@ -453,31 +405,20 @@ define i64 @fcvtzu_f64_i64_64(double %dbl) {
 }
 
 define i32 @fcvtzu_f16_i32_7(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzu_f16_i32_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_f16_i32_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_f16_i32_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu w0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_f16_i32_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -492,31 +433,20 @@ define i32 @fcvtzu_f16_i32_7(half %flt) {
 }
 
 define i32 @fcvtzu_f16_i32_15(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzu_f16_i32_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_f16_i32_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_f16_i32_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu w0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_f16_i32_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -531,31 +461,20 @@ define i32 @fcvtzu_f16_i32_15(half %flt) {
 }
 
 define i64 @fcvtzu_f16_i64_7(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzu_f16_i64_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_f16_i64_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_f16_i64_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu x0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_f16_i64_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -570,31 +489,20 @@ define i64 @fcvtzu_f16_i64_7(half %flt) {
 }
 
 define i64 @fcvtzu_f16_i64_15(half %flt) {
-; CHECK-SD-NO16-LABEL: fcvtzu_f16_i64_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_f16_i64_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_f16_i64_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu x0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_f16_i64_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -618,10 +526,9 @@ define float @scvtf_f32_i32_7(i32 %int) {
 ;
 ; CHECK-GI-LABEL: scvtf_f32_i32_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    scvtf s0, w0
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NEXT:    scvtf s1, w0
+; CHECK-GI-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NEXT:    ret
   %cvt = sitofp i32 %int to float
   %fix = fdiv float %cvt, 128.0
@@ -654,10 +561,9 @@ define float @scvtf_f32_i64_7(i64 %long) {
 ;
 ; CHECK-GI-LABEL: scvtf_f32_i64_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    scvtf s0, x0
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NEXT:    scvtf s1, x0
+; CHECK-GI-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NEXT:    ret
   %cvt = sitofp i64 %long to float
   %fix = fdiv float %cvt, 128.0
@@ -772,12 +678,11 @@ define half @scvtf_f16_i32_7(i32 %int) {
 ;
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    scvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    scvtf s1, w0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -811,12 +716,11 @@ define half @scvtf_f16_i32_15(i32 %int) {
 ;
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    scvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    scvtf s1, w0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -850,12 +754,11 @@ define half @scvtf_f16_i64_7(i64 %long) {
 ;
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    scvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    scvtf s1, x0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -889,12 +792,11 @@ define half @scvtf_f16_i64_15(i64 %long) {
 ;
 ; CHECK-GI-NO16-LABEL: scvtf_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    scvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    scvtf s1, x0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -920,10 +822,9 @@ define float @ucvtf_f32_i32_7(i32 %int) {
 ;
 ; CHECK-GI-LABEL: ucvtf_f32_i32_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ucvtf s0, w0
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NEXT:    ucvtf s1, w0
+; CHECK-GI-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NEXT:    ret
   %cvt = uitofp i32 %int to float
   %fix = fdiv float %cvt, 128.0
@@ -956,10 +857,9 @@ define float @ucvtf_f32_i64_7(i64 %long) {
 ;
 ; CHECK-GI-LABEL: ucvtf_f32_i64_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ucvtf s0, x0
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
-; CHECK-GI-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NEXT:    ucvtf s1, x0
+; CHECK-GI-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NEXT:    ret
   %cvt = uitofp i64 %long to float
   %fix = fdiv float %cvt, 128.0
@@ -1074,12 +974,11 @@ define half @ucvtf_f16_i32_7(i32 %int) {
 ;
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i32_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    ucvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    ucvtf s1, w0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -1113,12 +1012,11 @@ define half @ucvtf_f16_i32_15(i32 %int) {
 ;
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i32_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    ucvtf s0, w0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    ucvtf s1, w0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -1152,12 +1050,11 @@ define half @ucvtf_f16_i64_7(i64 %long) {
 ;
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i64_7:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    ucvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    ucvtf s1, x0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #67, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -1191,12 +1088,11 @@ define half @ucvtf_f16_i64_15(i64 %long) {
 ;
 ; CHECK-GI-NO16-LABEL: ucvtf_f16_i64_15:
 ; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    ucvtf s0, x0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fdiv s0, s0, s1
+; CHECK-GI-NO16-NEXT:    ucvtf s1, x0
+; CHECK-GI-NO16-NEXT:    movi v0.2s, #71, lsl #24
+; CHECK-GI-NO16-NEXT:    fcvt h1, s1
+; CHECK-GI-NO16-NEXT:    fcvt s1, h1
+; CHECK-GI-NO16-NEXT:    fdiv s0, s1, s0
 ; CHECK-GI-NO16-NEXT:    fcvt h0, s0
 ; CHECK-GI-NO16-NEXT:    ret
 ;
@@ -1230,8 +1126,7 @@ define i32 @fcvtzs_sat_f32_i32_7(float %flt) {
 ;
 ; CHECK-GI-LABEL: fcvtzs_sat_f32_i32_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzs w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -1349,31 +1244,20 @@ define i64 @fcvtzs_sat_f64_i64_64(double %dbl) {
 }
 
 define i32 @fcvtzs_sat_f16_i32_7(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzs_sat_f16_i32_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_sat_f16_i32_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_sat_f16_i32_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs w0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i32_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1388,31 +1272,20 @@ define i32 @fcvtzs_sat_f16_i32_7(half %dbl) {
 }
 
 define i32 @fcvtzs_sat_f16_i32_15(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzs_sat_f16_i32_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_sat_f16_i32_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_sat_f16_i32_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs w0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i32_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1427,31 +1300,20 @@ define i32 @fcvtzs_sat_f16_i32_15(half %dbl) {
 }
 
 define i64 @fcvtzs_sat_f16_i64_7(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzs_sat_f16_i64_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_sat_f16_i64_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_sat_f16_i64_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs x0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i64_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1466,31 +1328,20 @@ define i64 @fcvtzs_sat_f16_i64_7(half %dbl) {
 }
 
 define i64 @fcvtzs_sat_f16_i64_15(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzs_sat_f16_i64_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzs_sat_f16_i64_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzs x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzs_sat_f16_i64_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzs x0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzs_sat_f16_i64_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzs x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzs_sat_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1521,8 +1372,7 @@ define i32 @fcvtzu_sat_f32_i32_7(float %flt) {
 ;
 ; CHECK-GI-LABEL: fcvtzu_sat_f32_i32_7:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    movi v1.2s, #67, lsl #24
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fcvtzu w0, s0
 ; CHECK-GI-NEXT:    ret
@@ -1640,31 +1490,20 @@ define i64 @fcvtzu_sat_f64_i64_64(double %dbl) {
 }
 
 define i32 @fcvtzu_sat_f16_i32_7(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzu_sat_f16_i32_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_sat_f16_i32_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_sat_f16_i32_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu w0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i32_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i32_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1679,31 +1518,20 @@ define i32 @fcvtzu_sat_f16_i32_7(half %dbl) {
 }
 
 define i32 @fcvtzu_sat_f16_i32_15(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzu_sat_f16_i32_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_sat_f16_i32_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu w0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_sat_f16_i32_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu w0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i32_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu w0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i32_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1718,31 +1546,20 @@ define i32 @fcvtzu_sat_f16_i32_15(half %dbl) {
 }
 
 define i64 @fcvtzu_sat_f16_i64_7(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzu_sat_f16_i64_7:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #67, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_sat_f16_i64_7:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #67, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_sat_f16_i64_7:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu x0, h0, #7
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i64_7:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1124073472 // =0x43000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i64_7:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1757,31 +1574,20 @@ define i64 @fcvtzu_sat_f16_i64_7(half %dbl) {
 }
 
 define i64 @fcvtzu_sat_f16_i64_15(half %dbl) {
-; CHECK-SD-NO16-LABEL: fcvtzu_sat_f16_i64_15:
-; CHECK-SD-NO16:       // %bb.0:
-; CHECK-SD-NO16-NEXT:    movi v1.2s, #71, lsl #24
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-SD-NO16-NEXT:    fcvt h0, s0
-; CHECK-SD-NO16-NEXT:    fcvt s0, h0
-; CHECK-SD-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-SD-NO16-NEXT:    ret
+; CHECK-NO16-LABEL: fcvtzu_sat_f16_i64_15:
+; CHECK-NO16:       // %bb.0:
+; CHECK-NO16-NEXT:    movi v1.2s, #71, lsl #24
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fmul s0, s0, s1
+; CHECK-NO16-NEXT:    fcvt h0, s0
+; CHECK-NO16-NEXT:    fcvt s0, h0
+; CHECK-NO16-NEXT:    fcvtzu x0, s0
+; CHECK-NO16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: fcvtzu_sat_f16_i64_15:
 ; CHECK-SD-FP16:       // %bb.0:
 ; CHECK-SD-FP16-NEXT:    fcvtzu x0, h0, #15
 ; CHECK-SD-FP16-NEXT:    ret
-;
-; CHECK-GI-NO16-LABEL: fcvtzu_sat_f16_i64_15:
-; CHECK-GI-NO16:       // %bb.0:
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    mov w8, #1191182336 // =0x47000000
-; CHECK-GI-NO16-NEXT:    fmov s1, w8
-; CHECK-GI-NO16-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NO16-NEXT:    fcvt h0, s0
-; CHECK-GI-NO16-NEXT:    fcvt s0, h0
-; CHECK-GI-NO16-NEXT:    fcvtzu x0, s0
-; CHECK-GI-NO16-NEXT:    ret
 ;
 ; CHECK-GI-FP16-LABEL: fcvtzu_sat_f16_i64_15:
 ; CHECK-GI-FP16:       // %bb.0:
@@ -1797,4 +1603,3 @@ define i64 @fcvtzu_sat_f16_i64_15(half %dbl) {
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}
 ; CHECK-FP16: {{.*}}
-; CHECK-NO16: {{.*}}

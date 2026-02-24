@@ -71,9 +71,9 @@ define half @add_v3HalfH(<3 x half> %bin.rdx)  {
 ;
 ; CHECK-GI-NOFP16-LABEL: add_v3HalfH:
 ; CHECK-GI-NOFP16:       // %bb.0:
+; CHECK-GI-NOFP16-NEXT:    movi v1.2s, #128, lsl #24
 ; CHECK-GI-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NOFP16-NEXT:    mov w8, #-2147483648 // =0x80000000
-; CHECK-GI-NOFP16-NEXT:    mov v0.s[3], w8
+; CHECK-GI-NOFP16-NEXT:    mov v0.s[3], v1.s[0]
 ; CHECK-GI-NOFP16-NEXT:    faddp v0.4s, v0.4s, v0.4s
 ; CHECK-GI-NOFP16-NEXT:    faddp s0, v0.2s
 ; CHECK-GI-NOFP16-NEXT:    fcvt h0, s0
