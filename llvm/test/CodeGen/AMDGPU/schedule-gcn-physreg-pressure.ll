@@ -104,8 +104,8 @@ entry:
 ; Test virtual and physical register overlap
 
 ; GCN-DEBUG-LABEL: test_vreg_and_physreg_overlap
-; GCN-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 14, LVGPR WT: 0, LSGPR WT: 16
-; GCN-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
+; GCN-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 44, LVGPR WT: 0, LSGPR WT: 18
+; GCN-DEBUG: Pressure after scheduling: VGPRs: 3 AGPRs: 0, SGPRs: 42, LVGPR WT: 0, LSGPR WT: 18
 
 ; GENERIC-DEBUG-LABEL: test_vreg_and_physreg_overlap
 ; GENERIC-DEBUG: Region register pressure: VGPRs: 3 AGPRs: 0, SGPRs: 12, LVGPR WT: 0, LSGPR WT: 16
