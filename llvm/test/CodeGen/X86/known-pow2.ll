@@ -894,6 +894,12 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
 define i32 @pow2_blsi_add_fail(i32 %x, i32 %a) {
 ; CHECK-LABEL: pow2_blsi_add_fail:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    orl $1, %esi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
   %y = or i32 %a, 1
   %x_add_y = add i32 %x, %y
   %r = and i32 %x_add_y, %y
