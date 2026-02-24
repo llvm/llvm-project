@@ -964,3 +964,17 @@ define <8 x bfloat> @fsub_v8bf16(<8 x bfloat> %a, <8 x bfloat> %b) {
   %res = fsub <8 x bfloat> %a, %b
   ret <8 x bfloat> %res
 }
+
+define <4 x float> @partial_reduce_to_v4f32(<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b) {
+; CHECK-LABEL: partial_reduce_to_v4f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    bfmlalb v0.4s, v1.8h, v2.8h
+; CHECK-NEXT:    bfmlalt v0.4s, v1.8h, v2.8h
+; CHECK-NEXT:    ret
+entry:
+  %a.wide = fpext <8 x bfloat> %a to <8 x float>
+  %b.wide = fpext <8 x bfloat> %b to <8 x float>
+  %mult = fmul <8 x float> %a.wide, %b.wide
+  %partial.reduce = call <4 x float> @llvm.vector.partial.reduce.fadd(<4 x float> %acc, <8 x float> %mult)
+  ret <4 x float> %partial.reduce
+}
