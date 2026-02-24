@@ -1012,6 +1012,13 @@ protected:
   }
 };
 
+void setupModuleAsmPrinter(Module &M, ModuleAnalysisManager &MAM,
+                           AsmPrinter &AsmPrinter);
+
+void setupMachineFunctionAsmPrinter(MachineFunctionAnalysisManager &MFAM,
+                                    MachineFunction &MF,
+                                    AsmPrinter &AsmPrinter);
+
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_ASMPRINTER_H
