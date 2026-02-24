@@ -1341,13 +1341,15 @@ ConstantArray::ConstantArray(ArrayType *T, ArrayRef<Constant *> V,
          "Invalid initializer for constant array");
 }
 
-Constant *ConstantArray::get(ArrayType *Ty, ArrayRef<Constant*> V) {
-  if (Constant *C = getImpl(Ty, V))
+Constant *ConstantArray::get(ArrayType *Ty, ArrayRef<Constant *> V,
+                             const DataLayout *DL) {
+  if (Constant *C = getImpl(Ty, V, DL))
     return C;
   return Ty->getContext().pImpl->ArrayConstants.getOrCreate(Ty, V);
 }
 
-Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant*> V) {
+Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant *> V,
+                                 const DataLayout *DL) {
   // Empty arrays are canonicalized to ConstantAggregateZero.
   if (V.empty())
     return ConstantAggregateZero::get(Ty);
@@ -1368,7 +1370,7 @@ Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant*> V) {
   if (isa<UndefValue>(C) && rangeOnlyContains(V.begin(), V.end(), C))
     return UndefValue::get(Ty);
 
-  if (C->isZeroValue() && rangeOnlyContains(V.begin(), V.end(), C))
+  if (C->isZeroValue(DL) && rangeOnlyContains(V.begin(), V.end(), C))
     return ConstantAggregateZero::get(Ty);
 
   // Check to see if all of the elements are ConstantFP or ConstantInt and if
@@ -1407,7 +1409,8 @@ ConstantStruct::ConstantStruct(StructType *T, ArrayRef<Constant *> V,
 }
 
 // ConstantStruct accessors.
-Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
+Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant *> V,
+                              const DataLayout *DL) {
   assert((ST->isOpaque() || ST->getNumElements() == V.size()) &&
          "Incorrect # elements specified to ConstantStruct::get");
 
@@ -1419,11 +1422,11 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   if (!V.empty()) {
     isUndef = isa<UndefValue>(V[0]);
     isPoison = isa<PoisonValue>(V[0]);
-    isZero = V[0]->isZeroValue();
+    isZero = V[0]->isZeroValue(DL);
     // PoisonValue inherits UndefValue, so its check is not necessary.
     if (isUndef || isZero) {
       for (Constant *C : V) {
-        if (!C->isZeroValue())
+        if (!C->isZeroValue(DL))
           isZero = false;
         if (!isa<PoisonValue>(C))
           isPoison = false;
@@ -1450,21 +1453,22 @@ ConstantVector::ConstantVector(VectorType *T, ArrayRef<Constant *> V,
 }
 
 // ConstantVector accessors.
-Constant *ConstantVector::get(ArrayRef<Constant*> V) {
-  if (Constant *C = getImpl(V))
+Constant *ConstantVector::get(ArrayRef<Constant *> V, const DataLayout *DL) {
+  if (Constant *C = getImpl(V, DL))
     return C;
   auto *Ty = FixedVectorType::get(V.front()->getType(), V.size());
   return Ty->getContext().pImpl->VectorConstants.getOrCreate(Ty, V);
 }
 
-Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
+Constant *ConstantVector::getImpl(ArrayRef<Constant *> V,
+                                  const DataLayout *DL) {
   assert(!V.empty() && "Vectors can't be empty");
   auto *T = FixedVectorType::get(V.front()->getType(), V.size());
 
   // If this is an all-undef or all-zero vector, return a
   // ConstantAggregateZero or UndefValue.
   Constant *C = V[0];
-  bool isZero = C->isZeroValue();
+  bool isZero = C->isZeroValue(DL);
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
@@ -1501,7 +1505,8 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   return nullptr;
 }
 
-Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
+Constant *ConstantVector::getSplat(ElementCount EC, Constant *V,
+                                   const DataLayout *DL) {
   if (!EC.isScalable()) {
     // Maintain special handling of zero.
     if (!V->isNullValue()) {
@@ -1520,7 +1525,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
       return ConstantDataVector::getSplat(EC.getKnownMinValue(), V);
 
     SmallVector<Constant *, 32> Elts(EC.getKnownMinValue(), V);
-    return get(Elts);
+    return get(Elts, DL);
   }
 
   // Maintain special handling of zero.
@@ -1535,7 +1540,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   Type *VTy = VectorType::get(V->getType(), EC);
 
-  if (V->isZeroValue())
+  if (V->isZeroValue(DL))
     return ConstantAggregateZero::get(VTy);
   if (isa<PoisonValue>(V))
     return PoisonValue::get(VTy);
