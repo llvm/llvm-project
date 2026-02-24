@@ -4913,8 +4913,10 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
     return true;
   // Space before parentheses common for all languages
   if (Right.is(tok::l_paren)) {
-    if (Left.is(TT_TemplateCloser) && Right.isNot(TT_FunctionTypeLParen))
+    if (Left.is(TT_TemplateCloser) && Right.isNot(TT_FunctionTypeLParen) &&
+        !Line.MightBeFunctionDecl) {
       return spaceRequiredBeforeParens(Right);
+    }
     if (Left.isOneOf(TT_RequiresClause,
                      TT_RequiresClauseInARequiresExpression)) {
       return Style.SpaceBeforeParensOptions.AfterRequiresInClause ||
