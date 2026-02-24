@@ -71,13 +71,12 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // If the module specified a filespec, use that.
   FileSpec fspec = module_sp->GetSymbolFileFileSpec();
+  // Otherwise, use the PDB path from CodeView.
+  if (!fspec)
+    fspec = obj_file->GetPDBPath().value_or(FileSpec());
   // Otherwise, try gnu_debuglink, if one exists.
   if (!fspec)
     fspec = obj_file->GetDebugLink().value_or(FileSpec());
-  // For MSVC PE files, fall back to the PDB path from the CodeView debug
-  // directory so that symbol locators can use the filename for server lookups.
-  if (!fspec)
-    fspec = obj_file->GetPDBPath().value_or(FileSpec());
 
   LLDB_SCOPED_TIMERF("SymbolVendorPECOFF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());

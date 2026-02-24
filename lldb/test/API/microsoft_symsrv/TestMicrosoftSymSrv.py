@@ -5,45 +5,10 @@ import tempfile
 
 import lldb
 from lldbsuite.test.decorators import *
-import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-
-
-"""
-Test support for the Microsoft symbol server (symsrv) protocol.
-
-LLDB's SymbolLocatorMicrosoft plugin locates PDB files from symbol servers
-that follow the Microsoft symsrv directory layout:
-
-  <store>/<pdb-name>/<GUID-uppercase-no-dashes><age-decimal>/<pdb-name>
-
-The symstore-urls setting accepts entries in SRV*<cache>*<server> notation,
-matching the _NT_SYMBOL_PATH convention used by WinDbg and other Microsoft
-debuggers.
-"""
-
-import debugpy
-debugpy.listen(("127.0.0.1", 5678))
-debugpy.wait_for_client()
-debugpy.breakpoint()
 
 class MicrosoftSymSrvTests(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
-
-    @skipUnlessPlatform(["windows"])
-    def test_local_folder(self):
-        """Verify that LLDB fetches the PDB from a local SymStore directory."""
-        tmp_dir = tempfile.mkdtemp()
-        symstore_dir = self.populate_symstore(tmp_dir)
-        
-        self.runCmd(
-            "settings set plugin.symbol-locator.microsoft.symstore-urls %s" %
-            symstore_dir.replace("\\", "/")
-        )
-
-        self.try_breakpoint(should_have_loc=True)
-        #shutil.rmtree(tmp_dir)
-        print(tmp_dir)
 
     def try_breakpoint(self, should_have_loc):
         target = self.dbg.CreateTarget(self.aout)
@@ -73,7 +38,7 @@ class MicrosoftSymSrvTests(TestBase):
 
     def populate_symstore(self, tmp):
         """
-        Build test binary, mock local symstore directory tree:
+        Build test binary and mock local symstore directory tree:
           tmp/test/a.out                 binary (no PDB in search path)
           tmp/server/<pdb>/<key>/<pdb>   PDB in symstore
         """
@@ -86,11 +51,9 @@ class MicrosoftSymSrvTests(TestBase):
 
         binary_name = "a.out"
         pdb_name = "a.pdb"
-        uuid_str = self._get_uuid(binary_name)
-        if uuid_str is None:
+        key = self.symstore_key(binary_name)
+        if key is None:
             self.skipTest("Could not obtain a 20-byte PDB UUID from the binary")
-
-        symsrv_key = self._uuid_to_symsrv_key(uuid_str)
 
         # Set up test directory with just the binary (no PDB).
         test_dir = os.path.join(tmp, "test")
@@ -100,7 +63,7 @@ class MicrosoftSymSrvTests(TestBase):
 
         # SymStore directory tree: <pdb>/<key>/<pdb>
         server_dir = os.path.join(tmp, "server")
-        pdb_key_dir = os.path.join(server_dir, pdb_name, symsrv_key)
+        pdb_key_dir = os.path.join(server_dir, pdb_name, key)
         os.makedirs(pdb_key_dir)
         shutil.move(
             self.getBuildArtifact(pdb_name),
@@ -109,34 +72,33 @@ class MicrosoftSymSrvTests(TestBase):
 
         return server_dir
 
-    # -----------------------------------------------------------------------
-    # Private helpers
-    # -----------------------------------------------------------------------
-
-    #def _get_pdb_name(self):
-    #    """Return the basename of the first PDB in the build directory."""
-    #    pdbs = glob.glob(os.path.join(self.getBuildDir(), "*.pdb"))
-    #    return os.path.basename(pdbs[0]) if pdbs else None
-
-    def _get_uuid(self, binary_name):
-        """Return the UUID string (dashes removed, lowercase) for binary_name,
-        or None if it is not a 20-byte PDB UUID."""
+    def symstore_key(self, exe):
+        """Load module UUID like: 12345678-1234-5678-9ABC-DEF012345678-00000001
+           and transform to SymStore key: 12345678123456789ABCDEF0123456781"""
         try:
             spec = lldb.SBModuleSpec()
-            spec.SetFileSpec(
-                lldb.SBFileSpec(self.getBuildArtifact(binary_name))
-            )
+            spec.SetFileSpec(lldb.SBFileSpec(self.getBuildArtifact(exe)))
             module = lldb.SBModule(spec)
-            raw = module.GetUUIDString().replace("-", "").lower()
-            return raw if len(raw) == 40 else None
+            raw = module.GetUUIDString().replace("-", "").upper()
+            if len(raw) != 40:
+                return None
+            guid_hex = raw[:32]
+            age = int(raw[32:], 16)
+            return guid_hex + str(age)
         except Exception:
             return None
 
-    @staticmethod
-    def _uuid_to_symsrv_key(uuid_lower_40):
-        """Convert a 40-char lowercase hex UUID string to a Microsoft symsrv
-        key: uppercase GUID (32 chars) followed by decimal age."""
-        upper = uuid_lower_40.upper()
-        guid_hex = upper[:32]
-        age = int(upper[32:], 16)
-        return guid_hex + str(age)
+    # TODO: Check on other platforms, it should work in theory
+    @skipUnlessPlatform(["windows"])
+    def test_local_folder(self):
+        """Check that LLDB can fetch PDB from local SymStore directory"""
+        tmp_dir = tempfile.mkdtemp()
+        symstore_dir = self.populate_symstore(tmp_dir)
+        
+        self.runCmd(
+            "settings set plugin.symbol-locator.microsoft.symstore-urls %s" %
+            symstore_dir.replace("\\", "/")
+        )
+
+        self.try_breakpoint(should_have_loc=True)
+        shutil.rmtree(tmp_dir)

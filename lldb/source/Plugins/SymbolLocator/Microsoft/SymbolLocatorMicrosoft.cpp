@@ -65,20 +65,17 @@ static PluginProperties &GetGlobalPluginProperties() {
 SymbolLocatorMicrosoft::SymbolLocatorMicrosoft() : SymbolLocator() {}
 
 void SymbolLocatorMicrosoft::Initialize() {
-  static llvm::once_flag g_once_flag;
-
-  llvm::call_once(g_once_flag, []() {
-    PluginManager::RegisterPlugin(
-        GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
-        nullptr, LocateExecutableSymbolFile, nullptr,
-        nullptr, SymbolLocatorMicrosoft::DebuggerInitialize);
-  });
+  // First version can only locate PDB in local SymStore (no download yet)
+  PluginManager::RegisterPlugin(
+      GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
+      nullptr, LocateExecutableSymbolFile, nullptr,
+      nullptr, SymbolLocatorMicrosoft::DebuggerInitialize);
 }
 
 void SymbolLocatorMicrosoft::DebuggerInitialize(Debugger &debugger) {
   if (!PluginManager::GetSettingForSymbolLocatorPlugin(
           debugger, PluginProperties::GetSettingName())) {
-    const bool is_global_setting = true;
+    constexpr bool is_global_setting = true;
     PluginManager::CreateSettingForSymbolLocatorPlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
         "Properties for the Microsoft Symbol Locator plug-in.",
@@ -98,30 +95,13 @@ SymbolLocator *SymbolLocatorMicrosoft::CreateInstance() {
   return new SymbolLocatorMicrosoft();
 }
 
-static llvm::StringRef getFileName(const ModuleSpec &module_spec,
-                                   std::string url_path) {
-  // Check if the URL path requests an executable file or a symbol file
-  bool is_executable = url_path.find("debuginfo") == std::string::npos;
-  if (is_executable)
-    return module_spec.GetFileSpec().GetFilename().GetStringRef();
-  llvm::StringRef symbol_file =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef();
-  // Remove llvmcache- prefix and hash, keep origin file name
-  if (symbol_file.starts_with("llvmcache-")) {
-    size_t pos = symbol_file.rfind('-');
-    if (pos != llvm::StringRef::npos) {
-      symbol_file = symbol_file.substr(pos + 1);
-    }
-  }
-  return symbol_file;
-}
-
-// LLDB stores PDB identity as a 20-byte UUID:
-//   bytes  0-15  GUID in big-endian canonical form
-//   bytes 16-19  Age as big-endian uint32
+// LLDB stores PDB identity as a 20-byte UUID composed of 16-byte GUID and
+// 4-byte age:
+//   12345678-1234-5678-9ABC-DEF012345678-00000001
 //
-// The symsrv key is: <GUID-uppercase-hex><decimal-age>
-// e.g. "A0586BA32F284960B536A424603C76891" (age 1)
+// SymStore key is a string with no separators and age as decimal:
+//   12345678123456789ABCDEF0123456781
+//
 static std::string formatSymStoreKey(const UUID &uuid) {
   llvm::ArrayRef<uint8_t> bytes = uuid.GetBytes();
   uint32_t age = llvm::support::endian::read32be(bytes.data() + 16);
@@ -131,34 +111,45 @@ static std::string formatSymStoreKey(const UUID &uuid) {
 
 std::optional<FileSpec> SymbolLocatorMicrosoft::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
-  // Bail out if we don't have a valid UUID for PDB or
-  // 'symbols.enable-external-lookup' is disabled
-  const UUID &module_uuid = module_spec.GetUUID();
-  if (!module_uuid.IsValid() || module_uuid.GetBytes().size() != 20 ||
+  const UUID &uuid = module_spec.GetUUID();
+  if (!uuid.IsValid() ||
       !ModuleList::GetGlobalModuleListProperties().GetEnableExternalLookup())
     return {};
 
   Log *log = GetLog(LLDBLog::Symbols);
-
-  std::string key = formatSymStoreKey(module_uuid);
-  llvm::StringRef pdb_name =
-      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef();
+  std::string pdb_name =
+      module_spec.GetSymbolFileSpec().GetFilename().GetStringRef().str();
   if (pdb_name.empty()) {
     LLDB_LOGV(log, "Failed to resolve symbol PDB module: PDB name empty");
     return {};
   }
 
-  llvm::StringRef src_dir = GetGlobalPluginProperties().GetURLs().entries().front().ref();
-  Args SymStoreURLs = GetGlobalPluginProperties().GetURLs();
-  for (const Args::ArgEntry &URL : SymStoreURLs) {
-    llvm::SmallString<256> src;
-    llvm::sys::path::append(src, src_dir, pdb_name, URL.ref(), pdb_name);
-    FileSpec src_spec(src);
-    if (!FileSystem::Instance().Exists(src_spec)) {
-      LLDB_LOGV(log, "SymbolLocatorMicrosoft: {0} not found in symstore", src);
-      continue;
+  LLDB_LOGV(log, "LocateExecutableSymbolFile {0} with UUID {1}", pdb_name,
+            uuid.GetAsString());
+  if (uuid.GetBytes().size() != 20) {
+    LLDB_LOGV(log, "  Failed to resolve symbol PDB module: UUID invalid");
+    return {};
+  }
+
+  // FIXME: We need this for the test executable, because it is loaded as DWARF
+  if (!llvm::StringRef(pdb_name).ends_with(".pdb")) {
+    auto last_dot = pdb_name.find_last_of('.');
+    if (last_dot != llvm::StringRef::npos) {
+      pdb_name = pdb_name.substr(0, last_dot);
     }
-    return src_spec;
+    pdb_name += ".pdb";
+  }
+
+  std::string key = formatSymStoreKey(uuid);
+  Args sym_store_urls = GetGlobalPluginProperties().GetURLs();
+  for (const Args::ArgEntry &url : sym_store_urls) {
+    llvm::SmallString<256> path;
+    llvm::sys::path::append(path, url.ref(), pdb_name, key, pdb_name);
+    FileSpec spec(path);
+    if (FileSystem::Instance().Exists(spec)) {
+      LLDB_LOGV(log, "  Found {0} in SymStore {1}", pdb_name, url.ref());
+      return spec;
+    }
   }
 
   return {};
