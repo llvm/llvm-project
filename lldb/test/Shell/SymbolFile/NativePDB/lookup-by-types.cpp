@@ -34,13 +34,11 @@ int main(int argc, char **argv) {
 // CHECK-NEXT:     static const A constA;
 // CHECK-NEXT:     static A a;
 // CHECK-NEXT:     static B b;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     int val;
 // CHECK-NEXT: }"
 // CHECK:      image lookup -type B
 // CHECK-NEXT: 1 match found in {{.*}}.exe
 // CHECK-NEXT:  compiler_type = "class B {
 // CHECK-NEXT:     static A a;
-// CHECK-NEXT: public:
 // CHECK-NEXT:     int val;
 // CHECK-NEXT: }"
