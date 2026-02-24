@@ -4186,6 +4186,9 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
   if (!m_ast_context_up->SearchPathOpts.getSDKPath().empty() ||
       TargetHasNoSDK()) {
     auto importer_diags = getScopedDiagnosticConsumer();
+    // Since swift::ClangImporter::create() may kick off the import of
+    // the bridging header, we need to switch to explicit mode if
+    // applicable.
     DisableImplicitImportsRAII(*this);
     clang_importer_up = swift::ClangImporter::create(
         *m_ast_context_up, &GetCompilerInvocation().getIRGenOptions(), "",
