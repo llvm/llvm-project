@@ -27,6 +27,7 @@
 #include "swift/AST/Import.h"
 #include "swift/AST/Module.h"
 #include "swift/Demangling/ManglingFlavor.h"
+#include "swift/Frontend/ModuleInterfaceLoader.h"
 #include "swift/Parse/ParseVersion.h"
 #include "swift/Serialization/SerializationOptions.h"
 #include "swift/SymbolGraphGen/SymbolGraphOptions.h"
@@ -41,21 +42,21 @@
 
 namespace swift {
 enum class IRGenDebugInfoLevel : unsigned;
+class CASOptions;
 class CanType;
 class DependencyTracker;
-struct ImplicitImportInfo;
 class IRGenOptions;
-class NominalTypeDecl;
-class SearchPathOptions;
-class SILModule;
-struct TBDGenOptions;
-class VarDecl;
-class ModuleDecl;
-class SourceFile;
-class CASOptions;
-struct PrintOptions;
 class MemoryBufferSerializedModuleLoader;
+class ModuleDecl;
 class ModuleInterfaceLoader;
+class NominalTypeDecl;
+class SILModule;
+class SearchPathOptions;
+class SourceFile;
+class VarDecl;
+struct ImplicitImportInfo;
+struct PrintOptions;
+struct TBDGenOptions;
 namespace Demangle {
 class Demangler;
 class Node;
@@ -260,12 +261,16 @@ public:
 
   swift::SerializationOptions &GetSerializationOptions();
 
-  void InitializeSearchPathOptions(
-      llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths,
+  void InitializeSearchPathOptions();
+  void AddModuleSearchPaths(
+      llvm::ArrayRef<std::pair<std::string, bool>> module_search_paths);
+  void AddFrameworkSearchPaths(
       llvm::ArrayRef<std::pair<std::string, bool>> framework_search_paths);
 
   swift::ClangImporterOptions &GetClangImporterOptions();
-
+  swift::ModuleInterfaceLoader *GetModuleInterfaceLoader() {
+    return m_module_interface_loader;
+  }
   swift::CompilerInvocation &GetCompilerInvocation();
 
   swift::SILOptions &GetSILOptions();
@@ -285,8 +290,13 @@ public:
 
   void ConfigureModuleValidation(std::vector<std::string> &extra_args);
 
+  /// Check whether the resource at \c path is available in CAS or the file
+  /// system.
+  bool IsModuleAvailable(llvm::StringRef path) const;
+
   /// Check whether a module with key \c key is available in CAS.
-  bool IsModuleAvailableInCAS(const std::string &key);
+  bool IsModuleAvailableInCAS(llvm::StringRef key) const;
+  bool HasNonexistentExplicitModule(llvm::ArrayRef<std::string> args);
 
   /// Add a list of Clang arguments to the ClangImporter options and
   /// apply the working directory to any relative paths.
@@ -305,8 +315,8 @@ public:
                                 std::vector<std::string>& dest);
   static std::string GetPluginServer(llvm::StringRef plugin_library_path);
   /// Removes nonexisting VFS overlay options.
-  static void FilterClangImporterOptions(std::vector<std::string> &extra_args,
-                                         SwiftASTContext *ctx = nullptr);
+  void FilterClangImporterOptions(std::vector<std::string> &extra_args,
+                                  SwiftASTContext *ctx = nullptr);
 
   /// Add the target's swift-extra-clang-flags to the ClangImporter options.
   void AddUserClangArgs(TargetProperties &props);
@@ -490,7 +500,10 @@ public:
   /// indicate what went wrong.
   CompilerType ImportType(CompilerType &type, Status &error);
 
-  swift::ClangImporter *GetClangImporter();
+  swift::ClangImporter *GetClangImporter() { return m_clangimporter; }
+  swift::DWARFImporterDelegate *GetDWARFImporterDelegate() {
+    return m_dwarfimporter_delegate_up.get();
+  }
 
   CompilerType
   CreateTupleType(const std::vector<TupleElement> &elements) override;
@@ -576,6 +589,7 @@ public:
   bool HasTarget();
   bool HasExplicitModules() const { return m_has_explicit_modules; }
   bool ImplicitModulesDisabled() const { return m_implicit_modules_disabled; }
+  void SetImplicitModulesDisabled(bool b) { m_implicit_modules_disabled = b; }
   bool HasCAS() const { return m_cas_initialized; }
   bool CheckProcessChanged();
 
@@ -904,6 +918,18 @@ protected:
   /// This function implements various heuristics to find a CAS
   /// configuration file.
   void ConfigureCASStorage(const SymbolContext &sc);
+  /// Extract the bridging PCH from debug info an set the ClangImporter option.
+  void ConfigureBridgingHeader(const SymbolContext &sc);
+
+  /// Get the contents of a file or CAS path.
+  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
+  GetModuleContents(llvm::StringRef path);
+
+  bool DiscoverExplicitMainModule(const SymbolContext &sc, const Module &image);
+
+  void DiscoverImplicitlyTrackedModules(const ModuleList &modules,
+                                        lldb::ModuleSP module_sp,
+                                        std::vector<std::string> &module_names);
 
   llvm::Error GetCompileUnitImportsImpl(
       const SymbolContext &sc, lldb::ProcessSP process_sp,
@@ -988,6 +1014,10 @@ protected:
   swift::ModuleDecl *m_scratch_module = nullptr;
   std::unique_ptr<swift::Lowering::TypeConverter> m_sil_types_up;
   std::unique_ptr<swift::SILModule> m_sil_module_up;
+  ConstString m_main_swift_module;
+  std::unique_ptr<swift::ExplicitSwiftModuleMap> m_main_swift_module_map;
+  std::unique_ptr<swift::ExplicitSwiftModuleMap> m_explicit_swift_module_map;
+  std::unique_ptr<swift::ExplicitClangModuleMap> m_explicit_clang_module_map;
   /// Owned by the AST.
   swift::MemoryBufferSerializedModuleLoader *m_memory_buffer_module_loader =
       nullptr;
@@ -1022,14 +1052,15 @@ protected:
   // FIXME: this vector is needed because the LLDBNameLookup debugger clients
   // are being put into the Module for the SourceFile that we compile the
   // expression into, and so have to live as long as the Module. But it's too
-  // late to change swift to get it to take ownership of these DebuggerClients.
-  // Since we use the same Target SwiftASTContext for all our compilations,
-  // holding them here will keep them alive as long as we need.
+  // late to change swift to get it to take ownership of these
+  // DebuggerClients. Since we use the same Target SwiftASTContext for all our
+  // compilations, holding them here will keep them alive as long as we need.
   std::vector<std::unique_ptr<swift::DebuggerClient>> m_debugger_clients;
   bool m_initialized_language_options = false;
   bool m_initialized_search_path_options = false;
   bool m_initialized_clang_importer_options = false;
   bool m_has_explicit_modules = false;
+  bool m_downgraded_to_implicit_modules = false;
   bool m_implicit_modules_disabled = false;
   bool m_cas_initialized = false;
   mutable bool m_reported_fatal_error = false;

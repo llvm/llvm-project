@@ -289,7 +289,8 @@ TEST_F(TestSwiftASTContext, IVFS) {
   expected.push_back("-ivfsstatcache");
   expected.push_back(valid);
 
-  SwiftASTContext::FilterClangImporterOptions(args);
+  auto context = std::make_shared<SwiftASTContextTester>();
+  context->FilterClangImporterOptions(args);
 
   // Check that all ignored arguments got removed.
   EXPECT_EQ(args, expected);
