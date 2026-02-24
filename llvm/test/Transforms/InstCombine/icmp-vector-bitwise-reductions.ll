@@ -99,3 +99,33 @@ define i1 @scalable(<vscale x 4 x i8> %v) {
   %cmp = icmp eq i8 %red, -1
   ret i1 %cmp
 }
+
+declare void @use(i16)
+
+define i1 @multiuse.or(<4 x i16> %v) {
+; CHECK-LABEL: define i1 @multiuse.or(
+; CHECK-SAME: <4 x i16> [[V:%.*]]) {
+; CHECK-NEXT:    [[RED:%.*]] = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> [[V]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[RED]], 0
+; CHECK-NEXT:    call void @use(i16 [[RED]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %red = call i16 @llvm.vector.reduce.or.v4i16(<4 x i16> %v)
+  %cmp = icmp ne i16 %red, 0
+  call void @use(i16 %red)
+  ret i1 %cmp
+}
+
+define i1 @multiuse.and(<4 x i16> %v) {
+; CHECK-LABEL: define i1 @multiuse.and(
+; CHECK-SAME: <4 x i16> [[V:%.*]]) {
+; CHECK-NEXT:    [[RED:%.*]] = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> [[V]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i16 [[RED]], 0
+; CHECK-NEXT:    call void @use(i16 [[RED]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %red = call i16 @llvm.vector.reduce.and.v4i16(<4 x i16> %v)
+  %cmp = icmp ne i16 %red, 0
+  call void @use(i16 %red)
+  ret i1 %cmp
+}

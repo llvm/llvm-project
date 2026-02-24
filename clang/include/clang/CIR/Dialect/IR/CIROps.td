@@ -1021,24 +1021,42 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ResumeOp : CIR_Op<"resume", [
-  ReturnLike, Terminator, HasParent<"cir::TryOp">
+  ReturnLike, Terminator,
+  ParentOneOf<["cir::TryOp", "cir::CleanupScopeOp", "cir::FuncOp"]>
 ]> {
   let summary = "Resumes execution after not catching exceptions";
   let description = [{
     The `cir.resume` operation handles an uncaught exception scenario.
 
-    Used as the terminator of a `CatchUnwind` region of `cir.try`, where it
-    does not receive any arguments (implied from the `cir.try` scope).
+    Before CFG flattening, this operation is used as the terminator of a
+    `CatchUnwind` region of `cir.try`, where it does not receive any arguments
+    (implied from the `cir.try` scope).
 
-    This operation is used only before the CFG flatterning pass.
+    During CFG flattening, this operartion may appear within a `cir.try`
+    operation where it indicates that exception unwinding should continue
+    from that point. When the `cir.try` operation is flattened, the resume
+    operation will be replaced with a branch to the flattened try operation's
+    dispatch block.
+
+    After CFG flattening, this operation appears at the function level (inside
+    `cir.func`) to indicate that the exception should be re-thrown to the
+    caller after cleanup code has been executed.
 
     Examples:
     ```mlir
+    // Before CFG flattening (in try unwind region)
     cir.try {
       cir.yield
     } unwind {
       cir.resume
     }
+
+    // After CFG flattening (at function level, after cleanup)
+    ^eh_cleanup(%eh_token : !cir.eh_token):
+      %ct = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
+      cir.call @destructor() : () -> ()
+      cir.end_cleanup %ct : !cir.cleanup_token
+      cir.resume
     ```
   }];
 

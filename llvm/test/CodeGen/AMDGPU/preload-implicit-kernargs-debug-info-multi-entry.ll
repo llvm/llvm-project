@@ -27,8 +27,7 @@ define amdgpu_kernel void @preload_block_count_x(ptr addrspace(1) inreg noundef 
 ; GFX942-NEXT:    .loc 0 1 0 is_stmt 1 ; <stdin>:1
 ; GFX942-NEXT:    s_ashr_i32 s13, s12, 31
 ; GFX942-NEXT:    s_or_b64 s[8:9], s[6:7], s[12:13]
-; GFX942-NEXT:    s_mov_b32 s8, 0
-; GFX942-NEXT:    s_cmp_lg_u64 s[8:9], 0
+; GFX942-NEXT:    s_cmp_lg_u32 s9, 0
 ; GFX942-NEXT:    s_cbranch_scc0 .LBB0_4
 ; GFX942-NEXT:  .Ltmp2:
 ; GFX942-NEXT:  ; %bb.1:
