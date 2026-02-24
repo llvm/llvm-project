@@ -766,7 +766,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
       if (!checkCompatible(aOffset, bOffset))
         return false;
       for (const auto &[index, aStride] : enumerate(aStrides)) {
-        if (aT.getDimSize(index) == 1)
+        if (aT.getDimSize(index) == 1 || bT.getDimSize(index) == 1)
           continue;
         if (!checkCompatible(aStride, bStrides[index]))
           return false;
@@ -2521,6 +2521,12 @@ LogicalResult ExpandShapeOp::verify() {
            << llvm::count(getStaticOutputShape(), ShapedType::kDynamic)
            << " dynamic dims while output_shape has " << getOutputShape().size()
            << " values";
+
+  // Verify that the number of dynamic dims in output_shape matches the number
+  // of dynamic dims in the result type.
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOutputShape())))
+    return failure();
 
   // Verify if provided output shapes are in agreement with output type.
   DenseI64ArrayAttr staticOutputShapes = getStaticOutputShapeAttr();

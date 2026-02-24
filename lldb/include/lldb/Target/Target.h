@@ -308,8 +308,7 @@ private:
 
 class EvaluateExpressionOptions {
 public:
-  EvaluateExpressionOptions()
-      : m_language_options_sp(std::make_shared<StructuredData::Dictionary>()) {}
+  EvaluateExpressionOptions();
 
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
@@ -493,6 +492,10 @@ public:
   /// Otherwise returns the boolean value of the option.
   llvm::Expected<bool>
   GetBooleanLanguageOption(llvm::StringRef option_name) const;
+
+  void SetCppIgnoreContextQualifiers(bool value);
+
+  bool GetCppIgnoreContextQualifiers() const;
 
 private:
   const StructuredData::Dictionary &GetLanguageOptions() const;
@@ -797,6 +800,12 @@ public:
   const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
   GetScriptedFrameProviderDescriptors() const;
 
+protected:
+  /// Invalidate all potentially cached frame providers for all threads
+  /// and trigger a stack changed event for all threads.
+  void InvalidateThreadFrameProviders();
+
+public:
   // This part handles the breakpoints.
 
   BreakpointList &GetBreakpointList(bool internal = false);
