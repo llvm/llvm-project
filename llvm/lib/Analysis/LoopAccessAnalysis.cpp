@@ -202,7 +202,7 @@ static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
 /// Returns \p A * \p B, if it is guaranteed not to unsigned wrap. Otherwise
 /// return nullptr. \p A and \p B must have the same type.
 static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
-                                   ScalarEvolution &SE) {
+                                     ScalarEvolution &SE) {
   if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getMulExpr(A, B);
