@@ -197,7 +197,6 @@ private:
   ArraySpec arraySpec_;
 
   template <typename T> void Analyze(const std::list<T> &list) {
-    printf("Calling Analyze for each item in list\n");
     for (const auto &elem : list) {
       Analyze(elem);
     }
@@ -348,15 +347,83 @@ void ArraySpecAnalyzer::Analyze(const parser::AssumedShapeSpec &x) {
   arraySpec_.push_back(ShapeSpec::MakeAssumedShape(GetBound(x.v)));
 }
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x) {
-  printf("called ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeSpec &x)\n");
   MakeExplicit(std::get<std::optional<parser::SpecificationExpr>>(x.t),
       std::get<parser::SpecificationExpr>(x.t));
 }
 
 void ArraySpecAnalyzer::checkExplicitShapeBoundsSpec(const parser::ExplicitShapeBoundsSpec &x) {
-  printf("called new function checkExplicitShapeBoundsSpec\n");
-  
+  const auto &lowerBoundOpt{std::get<0>(x.t)};
+  const auto &upperBound{std::get<1>(x.t)};
+
+  // Analyze and fold the upper bound expression
+  MaybeExpr ubExpr{AnalyzeExpr(context_, upperBound.thing)};
+  if (!ubExpr) {
+    return;
+  }
+  auto ubFolded{evaluate::Fold(context_.foldingContext(), std::move(*ubExpr))};
+  int ubRank{ubFolded.Rank()};
+
+  bool constError_{false};
+  // Check that upper bound is a constant expression if it's an array
+  if (ubRank > 0 && !evaluate::IsActuallyConstant(ubFolded)) {
+    parser::CharBlock at{parser::FindSourceLocation(upperBound)};
+    context_.Say(at, 
+        "Array (upper) bound must be a constant expression"_err_en_US);
+    // Push a dummy extent so arraySpec_ won't be empty
+    arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+    // hadError_ = true;
+    constError_ = true;
+  }
+
+  // Analyze and fold the lower bound expression if present
+  int lbRank{0};
+  std::optional<SomeExpr> lbFolded;
+  if (lowerBoundOpt) {
+    MaybeExpr lbExpr{AnalyzeExpr(context_, lowerBoundOpt->thing)};
+    if (lbExpr) {
+      lbFolded = evaluate::Fold(context_.foldingContext(), std::move(*lbExpr));
+      lbRank = lbFolded->Rank();
+      // Check that lower bound is a constant expression if it's an array
+      if (lbRank > 0 && !evaluate::IsActuallyConstant(*lbFolded)) {
+        parser::CharBlock at{parser::FindSourceLocation(*lowerBoundOpt)};
+        context_.Say(at,
+            "Array (lower) bound must be a constant expression"_err_en_US);
+        arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+        constError_ = true;
+      }
+    }
+  }
+
+  if(constError_) return;
+
+  // Check: if both lower and upper bounds are arrays, they must have the same
+  // number of elements
+  if (lbRank > 0 && ubRank > 0) {
+    auto lbShape{evaluate::GetShape(context_.foldingContext(), *lbFolded)};
+    auto ubShape{evaluate::GetShape(context_.foldingContext(), ubFolded)};
+    if (lbShape && ubShape) {
+      auto lbSize{evaluate::GetSize(*lbShape)};
+      auto ubSize{evaluate::GetSize(*ubShape)};
+      if (lbSize && ubSize) {
+        auto lbSizeFolded{evaluate::Fold(context_.foldingContext(), std::move(*lbSize))};
+        auto ubSizeFolded{evaluate::Fold(context_.foldingContext(), std::move(*ubSize))};
+        auto lbSizeVal{evaluate::ToInt64(lbSizeFolded)};
+        auto ubSizeVal{evaluate::ToInt64(ubSizeFolded)};
+        if (lbSizeVal && ubSizeVal && *lbSizeVal != *ubSizeVal) {
+          parser::CharBlock at{parser::FindSourceLocation(x)};
+            context_.Say(at, "DECLARATION bounds integer rank-1 arrays must have the same size; "
+                "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
+                static_cast<std::intmax_t>(*lbSizeVal), 
+                static_cast<std::intmax_t>(*ubSizeVal));
+          arraySpec_.push_back(ShapeSpec::MakeExplicit(Bound{1}));
+          // hadError_ = true;
+          return;
+        }
+      }
+    }
+  }
 }
+
 
 void ArraySpecAnalyzer::Analyze(const parser::ExplicitShapeBoundsSpec &x) {
   // TODO: reuse the work done when checking for semantic errors
