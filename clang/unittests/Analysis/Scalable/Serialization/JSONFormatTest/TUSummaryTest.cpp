@@ -300,9 +300,6 @@ TEST_F(JSONFormatTUSummaryTest, BrokenSymlink) {
 }
 
 TEST_F(JSONFormatTUSummaryTest, NoReadPermission) {
-#ifdef _WIN32
-  GTEST_SKIP() << "Permission model differs on Windows";
-#endif
   if (!permissionsAreEnforced()) {
     GTEST_SKIP() << "File permission checks are not enforced in this "
                     "environment";
@@ -1916,9 +1913,6 @@ TEST_F(JSONFormatTUSummaryTest, WriteNotJsonExtension) {
 }
 
 TEST_F(JSONFormatTUSummaryTest, WriteStreamOpenFailure) {
-#ifdef _WIN32
-  GTEST_SKIP() << "Permission model differs on Windows";
-#endif
   if (!permissionsAreEnforced()) {
     GTEST_SKIP() << "File permission checks are not enforced in this "
                     "environment";
