@@ -2587,11 +2587,11 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (IsSigned &&
-      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned && !match(VariantLHS, m_NSWAddLike(m_Value(VariantOp),
+                                                  m_Value(InvariantOp))))
     return false;
-  if (!IsSigned &&
-      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (!IsSigned && !match(VariantLHS, m_NUWAddLike(m_Value(VariantOp),
+                                                   m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:
