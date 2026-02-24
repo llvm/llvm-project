@@ -179,9 +179,8 @@ if(LLVM_ENABLE_PIC)
 
       EXCLUDE_FROM_LIBMLIR
 
-      # Link against LLVMSupport.
-      LINK_COMPONENTS
-      Support
+      # Disable PCH reuse due to non-default symbol visibility.
+      DISABLE_PCH_REUSE
       )
     set_target_properties(
       mlir_apfloat_wrappers
