@@ -10902,37 +10902,29 @@ let Predicates = [HasFullFP16] in {
 
 defm : PairwiseZIPBinOp<umax, v2i32, FPR64,  UMAXPv2i32>;
 defm : PairwiseUZPBinOp<umax, v4i32, FPR128, UMAXPv4i32>;
-
 defm : PairwiseUZPBinOp<umax, v4i16, FPR64,  UMAXPv4i16>;
 defm : PairwiseUZPBinOp<umax, v8i16, FPR128, UMAXPv8i16>;
-
 defm : PairwiseUZPBinOp<umax, v8i8,  FPR64,  UMAXPv8i8>;
 defm : PairwiseUZPBinOp<umax, v16i8, FPR128, UMAXPv16i8>;
 
 defm : PairwiseZIPBinOp<umin, v2i32, FPR64,  UMINPv2i32>;
 defm : PairwiseUZPBinOp<umin, v4i32, FPR128, UMINPv4i32>;
-
 defm : PairwiseUZPBinOp<umin, v4i16, FPR64,  UMINPv4i16>;
 defm : PairwiseUZPBinOp<umin, v8i16, FPR128, UMINPv8i16>;
-
 defm : PairwiseUZPBinOp<umin, v8i8,  FPR64,  UMINPv8i8>;
 defm : PairwiseUZPBinOp<umin, v16i8, FPR128, UMINPv16i8>;
 
 defm : PairwiseZIPBinOp<smax, v2i32, FPR64,  SMAXPv2i32>;
 defm : PairwiseUZPBinOp<smax, v4i32, FPR128, SMAXPv4i32>;
-
 defm : PairwiseUZPBinOp<smax, v4i16, FPR64,  SMAXPv4i16>;
 defm : PairwiseUZPBinOp<smax, v8i16, FPR128, SMAXPv8i16>;
-
 defm : PairwiseUZPBinOp<smax, v8i8,  FPR64,  SMAXPv8i8>;
 defm : PairwiseUZPBinOp<smax, v16i8, FPR128, SMAXPv16i8>;
 
 defm : PairwiseZIPBinOp<smin, v2i32, FPR64,  SMINPv2i32>;
 defm : PairwiseUZPBinOp<smin, v4i32, FPR128, SMINPv4i32>;
-
 defm : PairwiseUZPBinOp<smin, v4i16, FPR64,  SMINPv4i16>;
 defm : PairwiseUZPBinOp<smin, v8i16, FPR128, SMINPv8i16>;
-
 defm : PairwiseUZPBinOp<smin, v8i8,  FPR64,  SMINPv8i8>;
 defm : PairwiseUZPBinOp<smin, v16i8, FPR128, SMINPv16i8>;
 
