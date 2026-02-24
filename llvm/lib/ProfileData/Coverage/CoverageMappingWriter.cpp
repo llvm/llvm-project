@@ -174,7 +174,14 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
                   : 2 * Kind);
     };
 
-    return getKindKey(LHS.Kind) < getKindKey(RHS.Kind);
+    auto LHSKindKey = getKindKey(LHS.Kind);
+    auto RHSKindKey = getKindKey(RHS.Kind);
+    if (LHSKindKey != RHSKindKey)
+      return LHSKindKey < RHSKindKey;
+
+    // Compares endLoc in descending order,
+    // to prioritize wider Regions with the same startLoc.
+    return LHS.endLoc() > RHS.endLoc();
   });
 
   // Write out the fileid -> filename mapping.
@@ -292,7 +299,7 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
 
 void TestingFormatWriter::write(raw_ostream &OS, TestingFormatVersion Version) {
   auto ByteSwap = [](uint64_t N) {
-    return support::endian::byte_swap<uint64_t, llvm::endianness::little>(N);
+    return support::endian::byte_swap<uint64_t>(N, llvm::endianness::little);
   };
 
   // Output a 64bit magic number.

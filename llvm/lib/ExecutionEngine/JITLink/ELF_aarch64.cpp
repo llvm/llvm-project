@@ -523,7 +523,7 @@ private:
     case ELFTLSDescCall:
       return "ELFTLSDescCall";
     default:
-      return getGenericEdgeKindName(static_cast<Edge::Kind>(R));
+      return getGenericEdgeKindName(R);
     }
   }
 
@@ -659,8 +659,8 @@ const uint8_t TLSDescTableManager_ELF_aarch64::TLSDescEntryContent[16] = {
 Error buildTables_ELF_aarch64(LinkGraph &G) {
   LLVM_DEBUG(dbgs() << "Visiting edges in graph:\n");
 
-  aarch64::GOTTableManager GOT;
-  aarch64::PLTTableManager PLT(GOT);
+  aarch64::GOTTableManager GOT(G);
+  aarch64::PLTTableManager PLT(G, GOT);
   TLSInfoTableManager_ELF_aarch64 TLSInfo;
   TLSDescTableManager_ELF_aarch64 TLSDesc(TLSInfo);
   visitExistingEdges(G, GOT, PLT, TLSDesc, TLSInfo);

@@ -104,7 +104,7 @@ def FileLineColRange : DialectAttribute<(attr
     WithPrinter<"writeFileLineColRangeLocs($_writer, $_name)">>>>:$rawLocData
 )> {
   let cBuilder = "getFileLineColRange(context, filename, rawLocData)";
-  let printerPredicate = "!::llvm::isa<FileLineColLoc>($_val)";
+  let printerPredicate = "!isStrictFileLineColLoc($_val)";
 }
 
 def FileLineColLoc : DialectAttribute<(attr
@@ -112,7 +112,7 @@ def FileLineColLoc : DialectAttribute<(attr
   VarInt:$start_line,
   VarInt:$start_column
 )> {
-  let printerPredicate = "::llvm::isa<FileLineColLoc>($_val)";
+  let printerPredicate = "isStrictFileLineColLoc($_val)";
 }
 }
 
@@ -175,10 +175,11 @@ def DenseArrayAttr : DialectAttribute<(attr
 def DenseElementsAttr : WithType<"DenseElementsAttr", Attribute>;
 def DenseIntOrFPElementsAttr : DialectAttribute<(attr
   ShapedType:$type,
-  Blob:$rawData
-)> {
-  let cBuilder = "cast<$_resultType>($_resultType::getFromRawBuffer($_args))";
-}
+  WithBuilder<"$_args",
+    WithType<"SmallVector<char>",
+    WithParser<"succeeded(readDenseIntOrFPElementsAttr($_reader, type, $_var))",
+    WithPrinter<"writeDenseIntOrFPElementsAttr($_writer, $_name)">>>>:$rawData
+)>;
 
 def DenseStringElementsAttr : DialectAttribute<(attr
   ShapedType:$type,

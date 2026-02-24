@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -run-pass hexagon-bit-simplify %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass hexagon-bit-simplify %s -o - | FileCheck %s
 
 # Hexagon bit tracker incorrectly calculated address alignment and removed
 # a necessary A2_andir instruction. Make sure it remains.

@@ -92,6 +92,8 @@ private:
   bool m_pac_mask_is_valid;
   bool m_tls_is_valid;
   size_t m_tls_size;
+  bool m_gcs_is_valid;
+  bool m_poe_is_valid;
 
   struct user_pt_regs m_gpr_arm64; // 64-bit general purpose registers.
 
@@ -136,6 +138,18 @@ private:
 
   uint64_t m_fpmr_reg;
 
+  struct poe_regs {
+    uint64_t por_reg;
+  };
+
+  struct poe_regs m_poe_regs;
+
+  struct gcs_regs {
+    uint64_t features_enabled;
+    uint64_t features_locked;
+    uint64_t gcspr_e0;
+  } m_gcs_regs;
+
   bool IsGPR(unsigned reg) const;
 
   bool IsFPR(unsigned reg) const;
@@ -166,6 +180,10 @@ private:
 
   Status WriteZA();
 
+  Status ReadGCS();
+
+  Status WriteGCS();
+
   // No WriteZAHeader because writing only the header will disable ZA.
   // Instead use WriteZA and ensure you have the correct ZA buffer size set
   // beforehand if you wish to disable it.
@@ -181,12 +199,18 @@ private:
 
   Status WriteFPMR();
 
+  Status ReadPOE();
+
+  Status WritePOE();
+
   bool IsSVE(unsigned reg) const;
   bool IsSME(unsigned reg) const;
   bool IsPAuth(unsigned reg) const;
   bool IsMTE(unsigned reg) const;
   bool IsTLS(unsigned reg) const;
   bool IsFPMR(unsigned reg) const;
+  bool IsGCS(unsigned reg) const;
+  bool IsPOE(unsigned reg) const;
 
   uint64_t GetSVERegVG() { return m_sve_header.vl / 8; }
 
@@ -212,6 +236,10 @@ private:
 
   void *GetFPMRBuffer() { return &m_fpmr_reg; }
 
+  void *GetGCSBuffer() { return &m_gcs_regs; }
+
+  void *GetPOEBuffer() { return &m_poe_regs; }
+
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 
   size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
@@ -233,6 +261,10 @@ private:
   size_t GetZTBufferSize() { return m_zt_reg.size(); }
 
   size_t GetFPMRBufferSize() { return sizeof(m_fpmr_reg); }
+
+  size_t GetGCSBufferSize() { return sizeof(m_gcs_regs); }
+
+  size_t GetPOEBufferSize() { return sizeof(m_poe_regs); }
 
   llvm::Error ReadHardwareDebugInfo() override;
 

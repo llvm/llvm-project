@@ -19,6 +19,9 @@
 #include "lldb/Utility/Iterable.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-private.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace lldb_private {
 
@@ -90,15 +93,6 @@ public:
   /// Resets all pointer members to nullptr, and clears any class objects to
   /// their default state.
   void Clear(bool clear_target);
-
-  /// Dump a description of this object to a Stream.
-  ///
-  /// Dump a description of the contents of this object to the supplied stream
-  /// \a s.
-  ///
-  /// \param[in] s
-  ///     The stream to which to dump the object description.
-  void Dump(Stream *s, Target *target) const;
 
   /// Dump the stop context in this object to a Stream.
   ///
@@ -174,8 +168,8 @@ public:
   ///     eSymbolContextSymbol is set in \a scope
   ///
   /// \param[in] scope
-  ///     A mask of symbol context bits telling this function which
-  ///     address ranges it can use when trying to extract one from
+  ///     A mask bits from the \b SymbolContextItem enum telling this function
+  ///     which address ranges it can use when trying to extract one from
   ///     the valid (non-nullptr) symbol context classes.
   ///
   /// \param[in] range_idx
@@ -200,6 +194,13 @@ public:
   ///     an address range, \b false otherwise.
   bool GetAddressRange(uint32_t scope, uint32_t range_idx,
                        bool use_inline_block_range, AddressRange &range) const;
+
+  /// Get the address of the function or symbol represented by this symbol
+  /// context.
+  ///
+  /// If both fields are present, the address of the function is returned. If
+  /// both are empty, the result is an invalid address.
+  Address GetFunctionOrSymbolAddress() const;
 
   llvm::Error GetAddressRangeFromHereToEndLine(uint32_t end_line,
                                                AddressRange &range);
@@ -232,6 +233,20 @@ public:
   uint32_t GetResolvedMask() const;
 
   lldb::LanguageType GetLanguage() const;
+
+  /// Compares the two symbol contexts, considering that the symbol may or may
+  /// not be present. If both symbols are present, compare them, if one of the
+  /// symbols is not present, consider the symbol contexts as equal as long as
+  /// the other fields are equal.
+  ///
+  /// This function exists because SymbolContexts are often created without the
+  /// symbol, which is filled in later on, after its creation.
+  static bool CompareConsideringPossiblyNullSymbol(const SymbolContext &lhs,
+                                                   const SymbolContext &rhs);
+
+  /// Compares the two symbol contexts, except for the symbol field.
+  static bool CompareWithoutSymbol(const SymbolContext &lhs,
+                                   const SymbolContext &rhs);
 
   /// Find a block that defines the function represented by this symbol
   /// context.
@@ -308,6 +323,12 @@ public:
   bool GetParentOfInlinedScope(const Address &curr_frame_pc,
                                SymbolContext &next_frame_sc,
                                Address &inlined_frame_addr) const;
+
+  /// If available, will return the function name according to the specified
+  /// mangling preference. If this object represents an inlined function,
+  /// returns the name of the inlined function. Returns nullptr if no function
+  /// name could be determined.
+  Mangled GetPossiblyInlinedFunctionName() const;
 
   // Member variables
   lldb::TargetSP target_sp; ///< The Target for a given query
@@ -426,7 +447,7 @@ public:
   ///     otherwise.
   bool GetContextAtIndex(size_t idx, SymbolContext &sc) const;
 
-  /// Direct reference accessor for a symbol context at index \a idx.
+  /// Direct const reference accessor for a symbol context at index \a idx.
   ///
   /// The index \a idx must be a valid index, no error checking will be done
   /// to ensure that it is valid.
@@ -435,11 +456,18 @@ public:
   ///     The zero based index into the symbol context list.
   ///
   /// \return
-  ///     A const reference to the symbol context to fill in.
-  SymbolContext &operator[](size_t idx) { return m_symbol_contexts[idx]; }
-
+  ///     A const reference to the symbol context.
   const SymbolContext &operator[](size_t idx) const {
     return m_symbol_contexts[idx];
+  }
+
+  /// Replace the symbol in the symbol context at index \a idx.
+  ///
+  /// The symbol field is excluded from the hash and equality used by the
+  /// internal set, so this is the only mutation that is safe to perform on
+  /// an element that is already in the list.
+  void SetSymbolAtIndex(size_t idx, Symbol *symbol) {
+    const_cast<SymbolContext &>(m_symbol_contexts[idx]).symbol = symbol;
   }
 
   bool RemoveContextAtIndex(size_t idx);
@@ -457,10 +485,10 @@ public:
   void GetDescription(Stream *s, lldb::DescriptionLevel level,
                       Target *target) const;
 
-protected:
-  typedef std::vector<SymbolContext>
-      collection; ///< The collection type for the list.
-  typedef collection::const_iterator const_iterator;
+private:
+  using collection =
+      llvm::SetVector<SymbolContext, llvm::SmallVector<SymbolContext>>;
+  using const_iterator = collection::const_iterator;
 
   // Member variables.
   collection m_symbol_contexts; ///< The list of symbol contexts.
@@ -469,10 +497,10 @@ public:
   const_iterator begin() const { return m_symbol_contexts.begin(); }
   const_iterator end() const { return m_symbol_contexts.end(); }
 
-  typedef AdaptedIterable<collection, SymbolContext, vector_adapter>
-      SymbolContextIterable;
+  typedef llvm::iterator_range<const_iterator> SymbolContextIterable;
   SymbolContextIterable SymbolContexts() {
-    return SymbolContextIterable(m_symbol_contexts);
+    return SymbolContextIterable(m_symbol_contexts.begin(),
+                                 m_symbol_contexts.end());
   }
 };
 
@@ -483,5 +511,59 @@ bool operator==(const SymbolContextList &lhs, const SymbolContextList &rhs);
 bool operator!=(const SymbolContextList &lhs, const SymbolContextList &rhs);
 
 } // namespace lldb_private
+
+namespace llvm {
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<lldb_private::SymbolContext> {
+  static inline lldb_private::SymbolContext getEmptyKey() {
+    lldb_private::SymbolContext sc;
+    sc.function = DenseMapInfo<lldb_private::Function *>::getEmptyKey();
+    return sc;
+  }
+
+  static inline lldb_private::SymbolContext getTombstoneKey() {
+    lldb_private::SymbolContext sc;
+    sc.function = DenseMapInfo<lldb_private::Function *>::getTombstoneKey();
+    return sc;
+  }
+
+  static unsigned getHashValue(const lldb_private::SymbolContext &sc) {
+    // Hash all fields EXCEPT symbol, since
+    // CompareConsideringPossiblyNullSymbol ignores it.
+    auto line_entry_hash =
+        sc.line_entry.IsValid()
+            ? hash_combine(
+                  sc.line_entry.range.GetBaseAddress().GetFileAddress(),
+                  sc.line_entry.range.GetByteSize(),
+                  sc.line_entry.is_terminal_entry, sc.line_entry.line,
+                  sc.line_entry.column)
+            : hash_value(0);
+    return static_cast<unsigned>(hash_combine(
+        sc.function, sc.module_sp.get(), sc.comp_unit, sc.target_sp.get(),
+        line_entry_hash, sc.variable, sc.block));
+  }
+
+  static bool isEqual(const lldb_private::SymbolContext &lhs,
+                      const lldb_private::SymbolContext &rhs) {
+    // Check for empty/tombstone keys first, since these are invalid pointers we
+    // don't want to accidentally dereference them in
+    // CompareConsideringPossiblyNullSymbol.
+    if (lhs.function == DenseMapInfo<lldb_private::Function *>::getEmptyKey() ||
+        rhs.function == DenseMapInfo<lldb_private::Function *>::getEmptyKey() ||
+        lhs.function ==
+            DenseMapInfo<lldb_private::Function *>::getTombstoneKey() ||
+        rhs.function ==
+            DenseMapInfo<lldb_private::Function *>::getTombstoneKey())
+      return lhs.function == rhs.function;
+
+    return lldb_private::SymbolContext::CompareConsideringPossiblyNullSymbol(
+        lhs, rhs);
+  }
+};
+/// \}
+
+} // namespace llvm
 
 #endif // LLDB_SYMBOL_SYMBOLCONTEXT_H

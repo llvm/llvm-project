@@ -10,16 +10,14 @@
 #ifndef LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 #define LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H
 
-#include <cstdint>
-
-#include <vector>
-
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/UUID.h"
 #include "lldb/lldb-private.h"
 #include "llvm/Object/XCOFFObjectFile.h"
+#include <cstdint>
+#include <vector>
 
 /// \class ObjectFileXCOFF
 /// Generic XCOFF object file reader.
@@ -40,23 +38,24 @@ public:
   }
 
   static lldb_private::ObjectFile *
-  CreateInstance(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
-                 lldb::offset_t data_offset, const lldb_private::FileSpec *file,
-                 lldb::offset_t file_offset, lldb::offset_t length);
+  CreateInstance(const lldb::ModuleSP &module_sp,
+                 lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset,
+                 const lldb_private::FileSpec *file, lldb::offset_t file_offset,
+                 lldb::offset_t length);
 
   static lldb_private::ObjectFile *CreateMemoryInstance(
       const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
       const lldb::ProcessSP &process_sp, lldb::addr_t header_addr);
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t length,
                                         lldb_private::ModuleSpecList &specs);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP &data_sp, lldb::addr_t offset,
-                              lldb::addr_t length);
+  static bool MagicBytesMatch(lldb::DataExtractorSP &extractor_sp,
+                              lldb::addr_t offset, lldb::addr_t length);
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -69,6 +68,8 @@ public:
   bool IsExecutable() const override;
 
   uint32_t GetAddressByteSize() const override;
+
+  lldb_private::AddressClass GetAddressClass(lldb::addr_t file_addr) override;
 
   void ParseSymtab(lldb_private::Symtab &symtab) override;
 
@@ -88,7 +89,8 @@ public:
 
   ObjectFile::Strata CalculateStrata() override;
 
-  ObjectFileXCOFF(const lldb::ModuleSP &module_sp, lldb::DataBufferSP data_sp,
+  ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
+                  lldb::DataExtractorSP extractor_sp,
                   lldb::offset_t data_offset,
                   const lldb_private::FileSpec *file, lldb::offset_t offset,
                   lldb::offset_t length);
@@ -101,6 +103,23 @@ protected:
   static lldb::WritableDataBufferSP
   MapFileDataWritable(const lldb_private::FileSpec &file, uint64_t Size,
                       uint64_t Offset);
+
+private:
+  bool CreateBinary();
+  template <typename T>
+  void
+  CreateSectionsWithBitness(lldb_private::SectionList &unified_section_list);
+
+  struct XCOFF32 {
+    using SectionHeader = llvm::object::XCOFFSectionHeader32;
+    static constexpr bool Is64Bit = false;
+  };
+  struct XCOFF64 {
+    using SectionHeader = llvm::object::XCOFFSectionHeader64;
+    static constexpr bool Is64Bit = true;
+  };
+
+  std::unique_ptr<llvm::object::XCOFFObjectFile> m_binary;
 };
 
-#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILE_H
+#endif // LLDB_SOURCE_PLUGINS_OBJECTFILE_XCOFF_OBJECTFILEXCOFF_H

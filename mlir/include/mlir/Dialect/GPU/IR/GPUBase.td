@@ -61,10 +61,10 @@ def GPU_Dialect : Dialect {
     /// attribute with value 'workgroup`.
     static bool isWorkgroupMemoryAddressSpace(Attribute memorySpace);
   }];
-
   let discardableAttrs = (ins
     "::mlir::DenseI32ArrayAttr":$known_block_size,
-    "::mlir::DenseI32ArrayAttr":$known_grid_size
+    "::mlir::DenseI32ArrayAttr":$known_grid_size,
+    "::mlir::DenseI32ArrayAttr":$known_cluster_size
   );
 
   let dependentDialects = ["arith::ArithDialect"];
@@ -99,6 +99,8 @@ def GPU_AddressSpaceEnum : GPU_I32Enum<
 def GPU_AddressSpaceAttr :
   GPU_I32EnumAttr<"address_space", GPU_AddressSpaceEnum>;
 
+def GPU_AddressSpaceAttrArray : TypedArrayAttrBase<GPU_AddressSpaceAttr, "GPU Address Space array">;
+
 //===----------------------------------------------------------------------===//
 // GPU Types.
 //===----------------------------------------------------------------------===//
@@ -114,7 +116,7 @@ def GPU_MMAMatrix : DialectType<
   GPU_Dialect, IsMMAMatrixTypePred, "MMAMatrix type">;
 
 // Memref type acceptable to gpu.subgroup_mma_{load|store}_matrix ops.
-def GPU_MMAMemRef : MemRefOf<[I8, I32, F16, F32, VectorOfRankAndType<[1], [I8, I32, F16, F32]>]>;
+def GPU_MMAMemRef : MemRefOf<[I8, I32, F16, F32, F64, VectorOfRankAndType<[1], [I8, I32, F16, F32, F64]>]>;
 
 class MMAMatrixOf<list<Type> allowedTypes> :
   ContainerType<AnyTypeOf<allowedTypes>, IsMMAMatrixTypePred,

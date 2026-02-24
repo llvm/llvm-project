@@ -3,10 +3,10 @@
 --- |
   define amdgpu_kernel void @optimize_if_and_saveexec_xor(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:                                               ; preds = %main_body
-    %v.if = load volatile i32, ptr addrspace(1) undef
+    %v.if = load volatile i32, ptr addrspace(1) poison
     br label %end
 
   end:                                              ; preds = %if, %main_body
@@ -15,7 +15,7 @@
 
   define amdgpu_kernel void @optimize_if_and_saveexec(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -26,7 +26,7 @@
 
   define amdgpu_kernel void @optimize_if_or_saveexec(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -37,7 +37,7 @@
 
   define amdgpu_kernel void @optimize_if_and_saveexec_xor_valu_middle(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:                                               ; preds = %main_body
     br label %end
@@ -48,7 +48,7 @@
 
   define amdgpu_kernel void @optimize_if_and_saveexec_xor_wrong_reg(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -59,7 +59,7 @@
 
   define amdgpu_kernel void @optimize_if_and_saveexec_xor_modify_copy_to_exec(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -70,7 +70,7 @@
 
   define amdgpu_kernel void @optimize_if_and_saveexec_xor_live_out_setexec(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -81,7 +81,7 @@
 
   define amdgpu_kernel void @optimize_if_unknown_saveexec(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -92,7 +92,7 @@
 
   define amdgpu_kernel void @optimize_if_andn2_saveexec(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -103,7 +103,7 @@
 
   define amdgpu_kernel void @optimize_if_andn2_saveexec_no_commute(i32 %z, i32 %v) {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:
     br label %end
@@ -114,7 +114,7 @@
 
   define amdgpu_kernel void @if_and_xor_read_exec_copy_subreg() {
   main_body:
-    br i1 undef, label %if, label %end
+    br i1 poison, label %if, label %end
 
   if:                                               ; preds = %main_body
     br label %end

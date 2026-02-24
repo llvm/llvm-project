@@ -33,10 +33,6 @@
 
 using namespace llvm;
 
-namespace llvm {
-void initializeNVPTXLowerAllocaPass(PassRegistry &);
-}
-
 namespace {
 class NVPTXLowerAlloca : public FunctionPass {
   bool runOnFunction(Function &F) override;
@@ -68,21 +64,18 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
       if (auto allocaInst = dyn_cast<AllocaInst>(&I)) {
         Changed = true;
 
-        PointerType *AllocInstPtrTy =
-            cast<PointerType>(allocaInst->getType()->getScalarType());
-        unsigned AllocAddrSpace = AllocInstPtrTy->getAddressSpace();
+        unsigned AllocAddrSpace = allocaInst->getAddressSpace();
         assert((AllocAddrSpace == ADDRESS_SPACE_GENERIC ||
                 AllocAddrSpace == ADDRESS_SPACE_LOCAL) &&
                "AllocaInst can only be in Generic or Local address space for "
                "NVPTX.");
 
         Instruction *AllocaInLocalAS = allocaInst;
-        auto ETy = allocaInst->getAllocatedType();
 
         // We need to make sure that LLVM has info that alloca needs to go to
         // ADDRESS_SPACE_LOCAL for InferAddressSpace pass.
         //
-        // For allocas in ADDRESS_SPACE_LOCAL, we add addrspacecast to
+        // For allocas in ADDRESS_SPACE_GENERIC, we add addrspacecast to
         // ADDRESS_SPACE_LOCAL and back to ADDRESS_SPACE_GENERIC, so that
         // the alloca's users still use a generic pointer to operate on.
         //
@@ -90,14 +83,18 @@ bool NVPTXLowerAlloca::runOnFunction(Function &F) {
         // addrspacecast to ADDRESS_SPACE_GENERIC.
         if (AllocAddrSpace == ADDRESS_SPACE_GENERIC) {
           auto ASCastToLocalAS = new AddrSpaceCastInst(
-              allocaInst, PointerType::get(ETy, ADDRESS_SPACE_LOCAL), "");
-          ASCastToLocalAS->insertAfter(allocaInst);
+              allocaInst,
+              PointerType::get(allocaInst->getContext(), ADDRESS_SPACE_LOCAL),
+              "");
+          ASCastToLocalAS->insertAfter(allocaInst->getIterator());
           AllocaInLocalAS = ASCastToLocalAS;
         }
 
         auto AllocaInGenericAS = new AddrSpaceCastInst(
-            AllocaInLocalAS, PointerType::get(ETy, ADDRESS_SPACE_GENERIC), "");
-        AllocaInGenericAS->insertAfter(AllocaInLocalAS);
+            AllocaInLocalAS,
+            PointerType::get(allocaInst->getContext(), ADDRESS_SPACE_GENERIC),
+            "");
+        AllocaInGenericAS->insertAfter(AllocaInLocalAS->getIterator());
 
         for (Use &AllocaUse : llvm::make_early_inc_range(allocaInst->uses())) {
           // Check Load, Store, GEP, and BitCast Uses on alloca and make them

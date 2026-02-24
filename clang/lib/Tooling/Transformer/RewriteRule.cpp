@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include <map>
@@ -259,9 +258,9 @@ template <typename T>
 ast_matchers::internal::Matcher<T>
 forEachDescendantDynamically(ast_matchers::BoundNodes Nodes,
                              DynTypedMatcher M) {
-  return ast_matchers::internal::makeMatcher(new BindingsMatcher<T>(
+  return ast_matchers::internal::Matcher(new BindingsMatcher<T>(
       std::move(Nodes),
-      ast_matchers::internal::makeMatcher(
+      ast_matchers::internal::Matcher(
           new DynamicForEachDescendantMatcher<T>(std::move(M)))));
 }
 

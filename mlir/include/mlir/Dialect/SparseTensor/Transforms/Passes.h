@@ -13,10 +13,10 @@
 #ifndef MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES_H_
 #define MLIR_DIALECT_SPARSETENSOR_TRANSFORMS_PASSES_H_
 
+#include "mlir/Dialect/Bufferization/Transforms/OneShotAnalysis.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
-#include "mlir/Transforms/OneToNTypeConversion.h"
 
 //===----------------------------------------------------------------------===//
 // Include the generated pass header (which needs some early definitions).
@@ -55,6 +55,17 @@ enum class SparseEmitStrategy {
   kDebugInterface, // generate only place-holder for sparse iteration
 };
 
+namespace sparse_tensor {
+
+/// Defines a strategy for loop ordering during sparse code generation.
+/// See Passes.td for strategy descriptions.
+enum class LoopOrderingStrategy : unsigned {
+  kDefault,
+  kDenseOuter,
+};
+
+} // namespace sparse_tensor
+
 #define GEN_PASS_DECL
 #include "mlir/Dialect/SparseTensor/Transforms/Passes.h.inc"
 
@@ -71,11 +82,16 @@ std::unique_ptr<Pass> createSparseAssembler(bool directOut);
 // The SparseReinterpretMap pass.
 //===----------------------------------------------------------------------===//
 
-void populateSparseReinterpretMap(RewritePatternSet &patterns,
-                                  ReinterpretMapScope scope);
+void populateSparseReinterpretMap(
+    RewritePatternSet &patterns, ReinterpretMapScope scope,
+    sparse_tensor::LoopOrderingStrategy strategy =
+        sparse_tensor::LoopOrderingStrategy::kDefault);
 
 std::unique_ptr<Pass> createSparseReinterpretMapPass();
 std::unique_ptr<Pass> createSparseReinterpretMapPass(ReinterpretMapScope scope);
+std::unique_ptr<Pass>
+createSparseReinterpretMapPass(ReinterpretMapScope scope,
+                               sparse_tensor::LoopOrderingStrategy strategy);
 
 //===----------------------------------------------------------------------===//
 // The PreSparsificationRewriting pass.

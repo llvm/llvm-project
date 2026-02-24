@@ -1,0 +1,24 @@
+header: sys/random.h
+header_template: random.h.def
+macros: []
+types:
+  - type_name: ssize_t
+  - type_name: size_t
+enums: []
+objects: []
+functions:
+  - name: getrandom
+    standards:
+      - Linux
+    return_type: ssize_t
+    arguments:
+      - type: void *
+      - type: size_t
+      - type: unsigned int
+  - name: getentropy
+    standards:
+      - GNUExtensions
+    return_type: int
+    arguments:
+      - type: void *
+      - type: size_t

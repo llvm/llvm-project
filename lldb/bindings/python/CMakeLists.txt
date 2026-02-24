@@ -14,6 +14,7 @@ add_custom_command(
   DEPENDS lldb-sbapi-dwarf-enums
   COMMAND ${SWIG_EXECUTABLE}
       ${SWIG_COMMON_FLAGS}
+      -doxygen
       -I${CMAKE_CURRENT_SOURCE_DIR}
       ${SWIG_EXTRA_FLAGS}
       -outdir ${CMAKE_CURRENT_BINARY_DIR}
@@ -59,8 +60,10 @@ endfunction()
 function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_target_dir)
   # Add a Post-Build Event to copy over Python files and create the symlink to
   # liblldb.so for the Python API(hardlink on Windows).
+  # Note that Swig-generated code is located one level deeper in the `native`
+  # module, in order to avoid cyclic importing.
   add_custom_target(${swig_target} ALL VERBATIM
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_target_dir}
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${lldb_python_target_dir}/native/
     DEPENDS ${lldb_python_bindings_dir}/lldb.py
     COMMENT "Python script sym-linking LLDB Python API")
 
@@ -73,6 +76,8 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     COMMAND ${CMAKE_COMMAND} -E copy
       "${LLDB_SOURCE_DIR}/source/Interpreter/embedded_interpreter.py"
       "${lldb_python_target_dir}")
+
+  create_python_package(${swig_target} ${lldb_python_target_dir} "native" FILES)
 
   # Distribute the examples as python packages.
   create_python_package(
@@ -106,6 +111,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
     "plugins"
     FILES
     "${LLDB_SOURCE_DIR}/examples/python/templates/parsed_cmd.py"
+    "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_frame_provider.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_process.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/scripted_platform.py"
     "${LLDB_SOURCE_DIR}/examples/python/templates/operating_system.py"
@@ -141,7 +147,7 @@ function(finish_swig_python swig_target lldb_python_bindings_dir lldb_python_tar
   endif()
   set(LIBLLDB_SYMLINK_OUTPUT_FILE "_lldb${LLDB_PYTHON_EXT_SUFFIX}")
   create_relative_symlink(${swig_target} ${LIBLLDB_SYMLINK_DEST}
-                          ${lldb_python_target_dir} ${LIBLLDB_SYMLINK_OUTPUT_FILE})
+                          ${lldb_python_target_dir}/native/ ${LIBLLDB_SYMLINK_OUTPUT_FILE})
 
 
   if (NOT WIN32)

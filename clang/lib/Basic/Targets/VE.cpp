@@ -21,13 +21,16 @@ using namespace clang::targets;
 static constexpr int NumBuiltins =
     clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin;
 
-static constexpr auto BuiltinStorage = Builtin::Storage<NumBuiltins>::Make(
+static constexpr llvm::StringTable BuiltinStrings =
+    CLANG_BUILTIN_STR_TABLE_START
 #define BUILTIN CLANG_BUILTIN_STR_TABLE
 #include "clang/Basic/BuiltinsVE.def"
-    , {
+    ;
+
+static constexpr auto BuiltinInfos = Builtin::MakeInfos<NumBuiltins>({
 #define BUILTIN CLANG_BUILTIN_ENTRY
 #include "clang/Basic/BuiltinsVE.def"
-      });
+});
 
 void VETargetInfo::getTargetDefines(const LangOptions &Opts,
                                     MacroBuilder &Builder) const {
@@ -44,7 +47,6 @@ void VETargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
-std::pair<const char *, ArrayRef<Builtin::Info>>
-VETargetInfo::getTargetBuiltinStorage() const {
-  return {BuiltinStorage.StringTable, BuiltinStorage.Infos};
+llvm::SmallVector<Builtin::InfosShard> VETargetInfo::getTargetBuiltins() const {
+  return {{&BuiltinStrings, BuiltinInfos}};
 }

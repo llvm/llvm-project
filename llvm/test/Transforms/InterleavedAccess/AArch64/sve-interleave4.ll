@@ -8,9 +8,7 @@ define void @interleave4(ptr %dst, <vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; CHECK-NEXT:    call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[C]], <vscale x 4 x i32> [[D]], <vscale x 4 x i1> splat (i1 true), ptr [[DST]])
 ; CHECK-NEXT:    ret void
 ;
-  %interleaved.half1 = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %c)
-  %interleaved.half2 = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %b, <vscale x 4 x i32> %d)
-  %interleaved.vec = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %interleaved.half1, <vscale x 8 x i32> %interleaved.half2)
+  %interleaved.vec = tail call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d)
   store <vscale x 16 x i32> %interleaved.vec, ptr %dst, align 4
   ret void
 }
@@ -32,9 +30,7 @@ define void @wide_interleave4(ptr %dst, <vscale x 8 x i32> %a, <vscale x 8 x i32
 ; CHECK-NEXT:    call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> [[TMP7]], <vscale x 4 x i32> [[TMP8]], <vscale x 4 x i32> [[TMP9]], <vscale x 4 x i32> [[TMP10]], <vscale x 4 x i1> splat (i1 true), ptr [[TMP6]])
 ; CHECK-NEXT:    ret void
 ;
-  %interleaved.half1 = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %c)
-  %interleaved.half2 = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %b, <vscale x 8 x i32> %d)
-  %interleaved.vec = tail call <vscale x 32 x i32> @llvm.vector.interleave2.nxv32i32(<vscale x 16 x i32> %interleaved.half1, <vscale x 16 x i32> %interleaved.half2)
+  %interleaved.vec = tail call <vscale x 32 x i32> @llvm.vector.interleave4.nxv32i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %b, <vscale x 8 x i32> %c, <vscale x 8 x i32> %d)
   store <vscale x 32 x i32> %interleaved.vec, ptr %dst, align 4
   ret void
 }
@@ -46,12 +42,23 @@ define void @mix_interleave4_interleave2(ptr %dst1, ptr %dst2, <vscale x 4 x i32
 ; CHECK-NEXT:    call void @llvm.aarch64.sve.st2.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[C]], <vscale x 4 x i1> splat (i1 true), ptr [[DST2]])
 ; CHECK-NEXT:    ret void
 ;
-  %interleaved.half1 = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %c)
-  %interleaved.half2 = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %b, <vscale x 4 x i32> %d)
-  %interleaved.vec = tail call <vscale x 16 x i32> @llvm.vector.interleave2.nxv16i32(<vscale x 8 x i32> %interleaved.half1, <vscale x 8 x i32> %interleaved.half2)
+  %interleaved.vec = tail call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, <vscale x 4 x i32> %c, <vscale x 4 x i32> %d)
   store <vscale x 16 x i32> %interleaved.vec, ptr %dst1, align 4
 
   %interleaved = tail call <vscale x 8 x i32> @llvm.vector.interleave2.nxv8i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %c)
   store <vscale x 8 x i32> %interleaved, ptr %dst2, align 4
+  ret void
+}
+
+; This case tests when the interleave is using same parameter twice,
+; the dead parameter will not get deleted twice.
+define void @duplicate_by_interleave(<vscale x 4 x i32> %A, <vscale x 4 x i32> %B, ptr writeonly %AB_duplicate) {
+; CHECK-LABEL: define void @duplicate_by_interleave
+; CHECK-SAME: (<vscale x 4 x i32> [[A:%.*]], <vscale x 4 x i32> [[B:%.*]], ptr writeonly [[AB_DUPLICATE:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    call void @llvm.aarch64.sve.st4.nxv4i32(<vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[A]], <vscale x 4 x i32> [[B]], <vscale x 4 x i32> [[B]], <vscale x 4 x i1> splat (i1 true), ptr [[AB_DUPLICATE]])
+; CHECK-NEXT:    ret void
+;
+  %interleave = tail call <vscale x 16 x i32> @llvm.vector.interleave4.nxv16i32(<vscale x 4 x i32> %A, <vscale x 4 x i32> %A, <vscale x 4 x i32> %B, <vscale x 4 x i32> %B)
+  store <vscale x 16 x i32> %interleave, ptr %AB_duplicate, align 4
   ret void
 }

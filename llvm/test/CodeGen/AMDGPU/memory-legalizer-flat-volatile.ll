@@ -7,10 +7,14 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1100 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX11-CU %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 < %s | FileCheck --check-prefixes=GFX12-WGP %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1200 -mattr=+cumode < %s | FileCheck --check-prefixes=GFX12-CU %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -O0 -mcpu=gfx1250 < %s | FileCheck --check-prefixes=GFX1250 %s
 
 define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX7-LABEL: flat_nontemporal_load_0:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -26,6 +30,10 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_load_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-WGP-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -41,6 +49,10 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_load_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-CU-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -132,6 +144,19 @@ define amdgpu_kernel void @flat_nontemporal_load_0(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: flat_nontemporal_load_0:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3] scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load volatile i32, ptr %in, align 4
@@ -142,13 +167,14 @@ entry:
 define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX7-LABEL: flat_nontemporal_load_1:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
 ; GFX7-NEXT:    s_mov_b32 s6, 2
 ; GFX7-NEXT:    v_lshlrev_b32_e64 v1, s6, v0
-; GFX7-NEXT:    s_mov_b32 s6, 0
-; GFX7-NEXT:    ; implicit-def: $sgpr6
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX7-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v0
@@ -172,14 +198,16 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_load_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-WGP-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-WGP-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; GFX10-WGP-NEXT:    s_nop 0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x8
 ; GFX10-WGP-NEXT:    s_mov_b32 s6, 2
 ; GFX10-WGP-NEXT:    v_lshlrev_b32_e64 v1, s6, v0
-; GFX10-WGP-NEXT:    s_mov_b32 s6, 0
-; GFX10-WGP-NEXT:    ; implicit-def: $sgpr6
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WGP-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v2, v0
@@ -202,14 +230,16 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_load_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-CU-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-CU-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; GFX10-CU-NEXT:    s_nop 0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x8
 ; GFX10-CU-NEXT:    s_mov_b32 s6, 2
 ; GFX10-CU-NEXT:    v_lshlrev_b32_e64 v1, s6, v0
-; GFX10-CU-NEXT:    s_mov_b32 s6, 0
-; GFX10-CU-NEXT:    ; implicit-def: $sgpr6
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-CU-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, v0
@@ -237,8 +267,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; SKIP-CACHE-INV-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x2
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, 2
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; SKIP-CACHE-INV-NEXT:    s_mov_b32 s2, 0
-; SKIP-CACHE-INV-NEXT:    ; implicit-def: $sgpr2
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, 0
 ; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v2, v0
@@ -269,8 +297,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-WGP-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX11-WGP-NEXT:    s_mov_b32 s2, 2
 ; GFX11-WGP-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX11-WGP-NEXT:    s_mov_b32 s2, 0
-; GFX11-WGP-NEXT:    ; implicit-def: $sgpr2
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-WGP-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v2, v0
@@ -300,8 +326,6 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX11-CU-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX11-CU-NEXT:    s_mov_b32 s2, 2
 ; GFX11-CU-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX11-CU-NEXT:    s_mov_b32 s2, 0
-; GFX11-CU-NEXT:    ; implicit-def: $sgpr2
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-CU-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, v0
@@ -325,29 +349,24 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX12-WGP-LABEL: flat_nontemporal_load_1:
 ; GFX12-WGP:       ; %bb.0: ; %entry
 ; GFX12-WGP-NEXT:    s_mov_b64 s[0:1], s[4:5]
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
 ; GFX12-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, 2
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
+; GFX12-WGP-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-WGP-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX12-WGP-NEXT:    s_mov_b32 s2, 0
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
-; GFX12-WGP-NEXT:    ; implicit-def: $sgpr2
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX12-WGP-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-WGP-NEXT:    s_mov_b32 s3, s4
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-WGP-NEXT:    s_mov_b32 s2, s5
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, v2
+; GFX12-WGP-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-WGP-NEXT:    v_add_co_u32 v0, s3, s3, v0
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_add_co_ci_u32_e64 v2, s2, s2, v1, s3
 ; GFX12-WGP-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, v2
@@ -364,29 +383,24 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX12-CU-LABEL: flat_nontemporal_load_1:
 ; GFX12-CU:       ; %bb.0: ; %entry
 ; GFX12-CU-NEXT:    s_mov_b64 s[0:1], s[4:5]
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    s_load_b64 s[4:5], s[0:1], 0x0
 ; GFX12-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX12-CU-NEXT:    s_mov_b32 s2, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_and_b32_e64 v0, v0, s2
 ; GFX12-CU-NEXT:    s_mov_b32 s2, 2
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
+; GFX12-CU-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-CU-NEXT:    v_lshlrev_b32_e64 v1, s2, v0
-; GFX12-CU-NEXT:    s_mov_b32 s2, 0
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
-; GFX12-CU-NEXT:    ; implicit-def: $sgpr2
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    ; kill: def $vgpr1 killed $vgpr1 def $vgpr1_vgpr2 killed $exec
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX12-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-CU-NEXT:    s_mov_b32 s3, s4
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-CU-NEXT:    s_mov_b32 s2, s5
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, v2
+; GFX12-CU-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-CU-NEXT:    v_add_co_u32 v0, s3, s3, v0
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_add_co_ci_u32_e64 v2, s2, s2, v1, s3
 ; GFX12-CU-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, v2
@@ -399,6 +413,23 @@ define amdgpu_kernel void @flat_nontemporal_load_1(
 ; GFX12-CU-NEXT:    s_wait_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: flat_nontemporal_load_1:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_mov_b32_e32 v1, v0
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s4, 0x3ff
+; GFX1250-NEXT:    v_and_b32_e64 v1, v1, s4
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v1, v1, s[2:3] scale_offset scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -411,6 +442,9 @@ entry:
 define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX7-LABEL: flat_nontemporal_store_0:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -426,6 +460,10 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_store_0:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-WGP-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -441,6 +479,10 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_store_0:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-CU-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -536,6 +578,20 @@ define amdgpu_kernel void @flat_nontemporal_store_0(
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: flat_nontemporal_store_0:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load i32, ptr %in, align 4
@@ -546,6 +602,9 @@ entry:
 define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX7-LABEL: flat_nontemporal_store_1:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -554,8 +613,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX7-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX7-NEXT:    s_mov_b32 s4, 2
 ; GFX7-NEXT:    v_lshlrev_b32_e64 v3, s4, v0
-; GFX7-NEXT:    s_mov_b32 s4, 0
-; GFX7-NEXT:    ; implicit-def: $sgpr4
 ; GFX7-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX7-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v0
@@ -575,6 +632,10 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; GFX10-WGP-LABEL: flat_nontemporal_store_1:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-WGP-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -583,8 +644,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX10-WGP-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX10-WGP-NEXT:    s_mov_b32 s4, 2
 ; GFX10-WGP-NEXT:    v_lshlrev_b32_e64 v3, s4, v0
-; GFX10-WGP-NEXT:    s_mov_b32 s4, 0
-; GFX10-WGP-NEXT:    ; implicit-def: $sgpr4
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-WGP-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX10-WGP-NEXT:    v_mov_b32_e32 v4, v0
@@ -603,6 +662,10 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ;
 ; GFX10-CU-LABEL: flat_nontemporal_store_1:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-CU-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -611,8 +674,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX10-CU-NEXT:    flat_load_dword v2, v[1:2]
 ; GFX10-CU-NEXT:    s_mov_b32 s4, 2
 ; GFX10-CU-NEXT:    v_lshlrev_b32_e64 v3, s4, v0
-; GFX10-CU-NEXT:    s_mov_b32 s4, 0
-; GFX10-CU-NEXT:    ; implicit-def: $sgpr4
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-CU-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v4, v0
@@ -639,8 +700,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; SKIP-CACHE-INV-NEXT:    flat_load_dword v2, v[1:2]
 ; SKIP-CACHE-INV-NEXT:    s_mov_b32 s0, 2
 ; SKIP-CACHE-INV-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; SKIP-CACHE-INV-NEXT:    s_mov_b32 s0, 0
-; SKIP-CACHE-INV-NEXT:    ; implicit-def: $sgpr0
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v0, 0
 ; SKIP-CACHE-INV-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; SKIP-CACHE-INV-NEXT:    v_mov_b32_e32 v4, v0
@@ -670,8 +729,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-WGP-NEXT:    v_and_b32_e64 v0, v0, s0
 ; GFX11-WGP-NEXT:    s_mov_b32 s0, 2
 ; GFX11-WGP-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX11-WGP-NEXT:    s_mov_b32 s0, 0
-; GFX11-WGP-NEXT:    ; implicit-def: $sgpr0
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-WGP-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v4, v0
@@ -700,8 +757,6 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX11-CU-NEXT:    v_and_b32_e64 v0, v0, s0
 ; GFX11-CU-NEXT:    s_mov_b32 s0, 2
 ; GFX11-CU-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX11-CU-NEXT:    s_mov_b32 s0, 0
-; GFX11-CU-NEXT:    ; implicit-def: $sgpr0
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-CU-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v4, v0
@@ -727,24 +782,21 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-WGP-NEXT:    flat_load_b32 v2, v[1:2]
 ; GFX12-WGP-NEXT:    s_mov_b32 s0, 0x3ff
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
+; GFX12-WGP-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-WGP-NEXT:    v_and_b32_e64 v0, v0, s0
 ; GFX12-WGP-NEXT:    s_mov_b32 s0, 2
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
+; GFX12-WGP-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-WGP-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX12-WGP-NEXT:    s_mov_b32 s0, 0
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
-; GFX12-WGP-NEXT:    ; implicit-def: $sgpr0
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-WGP-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX12-WGP-NEXT:    s_mov_b32 s1, s2
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-WGP-NEXT:    s_mov_b32 s0, s3
-; GFX12-WGP-NEXT:    s_wait_alu 0xfffe
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-WGP-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-WGP-NEXT:    v_add_co_u32 v0, s1, s1, v0
+; GFX12-WGP-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-WGP-NEXT:    v_add_co_ci_u32_e64 v3, s0, s0, v1, s1
 ; GFX12-WGP-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX12-WGP-NEXT:    v_mov_b32_e32 v1, v3
@@ -766,24 +818,21 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s0
 ; GFX12-CU-NEXT:    flat_load_b32 v2, v[1:2]
 ; GFX12-CU-NEXT:    s_mov_b32 s0, 0x3ff
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
+; GFX12-CU-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-CU-NEXT:    v_and_b32_e64 v0, v0, s0
 ; GFX12-CU-NEXT:    s_mov_b32 s0, 2
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
+; GFX12-CU-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-CU-NEXT:    v_lshlrev_b32_e64 v3, s0, v0
-; GFX12-CU-NEXT:    s_mov_b32 s0, 0
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
-; GFX12-CU-NEXT:    ; implicit-def: $sgpr0
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX12-CU-NEXT:    ; kill: def $vgpr3 killed $vgpr3 def $vgpr3_vgpr4 killed $exec
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX12-CU-NEXT:    s_mov_b32 s1, s2
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX12-CU-NEXT:    s_mov_b32 s0, s3
-; GFX12-CU-NEXT:    s_wait_alu 0xfffe
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, v4
+; GFX12-CU-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-CU-NEXT:    v_add_co_u32 v0, s1, s1, v0
+; GFX12-CU-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-CU-NEXT:    v_add_co_ci_u32_e64 v3, s0, s0, v1, s1
 ; GFX12-CU-NEXT:    ; kill: def $vgpr0 killed $vgpr0 def $vgpr0_vgpr1 killed $exec
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, v3
@@ -795,6 +844,23 @@ define amdgpu_kernel void @flat_nontemporal_store_1(
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2 scope:SCOPE_SYS
 ; GFX12-CU-NEXT:    s_wait_storecnt 0x0
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: flat_nontemporal_store_1:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_mov_b32_e32 v1, 0
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v1, v1, s[2:3]
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_mov_b32 s2, 0x3ff
+; GFX1250-NEXT:    v_and_b32_e64 v0, v0, s2
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1] scale_offset scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -807,6 +873,9 @@ entry:
 define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ; GFX7-LABEL: flat_volatile_workgroup_acquire_load:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -822,6 +891,10 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ;
 ; GFX10-WGP-LABEL: flat_volatile_workgroup_acquire_load:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-WGP-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -837,6 +910,10 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ;
 ; GFX10-CU-LABEL: flat_volatile_workgroup_acquire_load:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-CU-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
@@ -924,6 +1001,18 @@ define amdgpu_kernel void @flat_volatile_workgroup_acquire_load(
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: flat_volatile_workgroup_acquire_load:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    flat_load_b32 v1, v0, s[2:3]
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_endpgm
     ptr %in, ptr %out) {
 entry:
   %val = load atomic volatile i32, ptr %in syncscope("workgroup") acquire, align 4
@@ -934,6 +1023,9 @@ entry:
 define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX7-LABEL: flat_volatile_workgroup_release_store:
 ; GFX7:       ; %bb.0: ; %entry
+; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
+; GFX7-NEXT:    s_add_i32 s12, s12, s17
+; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -946,6 +1038,10 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ;
 ; GFX10-WGP-LABEL: flat_volatile_workgroup_release_store:
 ; GFX10-WGP:       ; %bb.0: ; %entry
+; GFX10-WGP-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-WGP-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-WGP-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-WGP-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX10-WGP-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8
 ; GFX10-WGP-NEXT:    s_waitcnt lgkmcnt(0)
@@ -959,13 +1055,18 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ;
 ; GFX10-CU-LABEL: flat_volatile_workgroup_release_store:
 ; GFX10-CU:       ; %bb.0: ; %entry
+; GFX10-CU-NEXT:    s_add_u32 s12, s12, s17
+; GFX10-CU-NEXT:    s_addc_u32 s13, s13, 0
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_LO), s12
+; GFX10-CU-NEXT:    s_setreg_b32 hwreg(HW_REG_FLAT_SCR_HI), s13
 ; GFX10-CU-NEXT:    s_load_dword s4, s[8:9], 0x0
 ; GFX10-CU-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x8
 ; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v1, s7
 ; GFX10-CU-NEXT:    v_mov_b32_e32 v2, s4
-; GFX10-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX10-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CU-NEXT:    flat_store_dword v[0:1], v2
 ; GFX10-CU-NEXT:    s_endpgm
 ;
@@ -1002,7 +1103,8 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v2, s0
-; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX11-CU-NEXT:    s_endpgm
 ;
@@ -1029,9 +1131,26 @@ define amdgpu_kernel void @flat_volatile_workgroup_release_store(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s3
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v2, s0
-; GFX12-CU-NEXT:    s_wait_dscnt 0x0
+; GFX12-CU-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
+; GFX12-CU-NEXT:    s_wait_storecnt 0x0
+; GFX12-CU-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-CU-NEXT:    flat_store_b32 v[0:1], v2
 ; GFX12-CU-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: flat_volatile_workgroup_release_store:
+; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b32 s2, s[4:5], 0x0
+; GFX1250-NEXT:    s_load_b64 s[0:1], s[4:5], 0x8
+; GFX1250-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    v_mov_b32_e32 v1, s2
+; GFX1250-NEXT:    s_wait_storecnt 0x0
+; GFX1250-NEXT:    s_wait_xcnt 0x0
+; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1250-NEXT:    flat_store_b32 v0, v1, s[0:1]
+; GFX1250-NEXT:    s_endpgm
    i32 %in, ptr %out) {
 entry:
   store atomic volatile i32 %in, ptr %out syncscope("workgroup") release, align 4

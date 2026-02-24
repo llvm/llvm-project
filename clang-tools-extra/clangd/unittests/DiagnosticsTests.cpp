@@ -823,6 +823,40 @@ TEST(DiagnosticTest, ClangTidyNoLiteralDataInMacroToken) {
   EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
 }
 
+TEST(DiagnosticTest, BadSignalToKillThreadInPreamble) {
+  Annotations Main(R"cpp(
+    #include "signal.h"
+    using pthread_t = int;
+    int pthread_kill(pthread_t thread, int sig);
+    int func() {
+      pthread_t thread;
+      return pthread_kill(thread, 15);
+    }
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  TU.HeaderFilename = "signal.h";
+  TU.HeaderCode = "#define SIGTERM 15";
+  TU.ClangTidyProvider = addTidyChecks("bugprone-bad-signal-to-kill-thread");
+  EXPECT_THAT(TU.build().getDiagnostics(),
+              ifTidyChecks(UnorderedElementsAre(
+                  diagName("bugprone-bad-signal-to-kill-thread"))));
+}
+
+TEST(DiagnosticTest, ClangTidyMacroToEnumCheck) {
+  Annotations Main(R"cpp(
+    #if 1
+    auto foo();
+    #endif
+  )cpp");
+  TestTU TU = TestTU::withCode(Main.code());
+  std::vector<TidyProvider> Providers;
+  Providers.push_back(
+      addTidyChecks("cppcoreguidelines-macro-to-enum,modernize-macro-to-enum"));
+  Providers.push_back(disableUnusableChecks());
+  TU.ClangTidyProvider = combine(std::move(Providers));
+  EXPECT_THAT(TU.build().getDiagnostics(), UnorderedElementsAre()); // no-crash
+}
+
 TEST(DiagnosticTest, ElseAfterReturnRange) {
   Annotations Main(R"cpp(
     int foo(int cond) {

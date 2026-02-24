@@ -1,6 +1,7 @@
 # Build for the runtime interception helper library.
 
 set(INTERCEPTION_SOURCES
+  interception_aix.cpp
   interception_linux.cpp
   interception_mac.cpp
   interception_win.cpp
@@ -9,6 +10,7 @@ set(INTERCEPTION_SOURCES
 
 set(INTERCEPTION_HEADERS
   interception.h
+  interception_aix.h
   interception_linux.h
   interception_mac.h
   interception_win.h

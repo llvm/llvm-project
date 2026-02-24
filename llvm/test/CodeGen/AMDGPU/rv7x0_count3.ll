@@ -7,7 +7,7 @@ bb:
   %tmp1 = extractelement <4 x float> %reg1, i32 1
   %tmp2 = extractelement <4 x float> %reg1, i32 2
   %tmp3 = extractelement <4 x float> %reg1, i32 3
-  %tmp4 = insertelement <4 x float> undef, float %tmp, i32 0
+  %tmp4 = insertelement <4 x float> poison, float %tmp, i32 0
   %tmp5 = insertelement <4 x float> %tmp4, float %tmp1, i32 1
   %tmp6 = insertelement <4 x float> %tmp5, float %tmp2, i32 2
   %tmp7 = insertelement <4 x float> %tmp6, float %tmp3, i32 3

@@ -3,7 +3,7 @@
 ; though the load/stores alias with instructions that occur later in the block.
 ; The order of memory operations remains unchanged.
 
-; RUN: llc -march=hexagon -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -verify-machineinstrs < %s | FileCheck %s
 
 target triple = "hexagon"
 

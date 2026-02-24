@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "Hexagon.h"
+
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/GraphTraits.h"
@@ -58,12 +60,6 @@ static cl::opt<bool> OptEnableInv("commgep-inv", cl::init(true), cl::Hidden);
 static cl::opt<bool> OptEnableConst("commgep-const", cl::init(true),
                                     cl::Hidden);
 
-namespace llvm {
-
-  void initializeHexagonCommonGEPPass(PassRegistry&);
-
-} // end namespace llvm
-
 namespace {
 
   struct GepNode;
@@ -97,9 +93,7 @@ namespace {
   public:
     static char ID;
 
-    HexagonCommonGEP() : FunctionPass(ID) {
-      initializeHexagonCommonGEPPass(*PassRegistry::getPassRegistry());
-    }
+    HexagonCommonGEP() : FunctionPass(ID) {}
 
     bool runOnFunction(Function &F) override;
     StringRef getPassName() const override { return "Hexagon Common GEP"; }
@@ -278,15 +272,14 @@ namespace {
       OS << *I << ' ' << **I << '\n';
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeVect &S) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS, const NodeVect &S);
   raw_ostream &operator<< (raw_ostream &OS, const NodeVect &S) {
     dump_node_container(OS, S);
     return OS;
   }
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const NodeToUsesMap &M) LLVM_ATTRIBUTE_UNUSED;
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const NodeToUsesMap &M);
   raw_ostream &operator<< (raw_ostream &OS, const NodeToUsesMap &M){
     for (const auto &I : M) {
       const UseSet &Us = I.second;
@@ -336,7 +329,7 @@ bool HexagonCommonGEP::isHandledGepForm(GetElementPtrInst *GepI) {
   if (!GepI->getType()->isPointerTy())
     return false;
   // No GEPs without any indices.  (Is this possible?)
-  if (GepI->idx_begin() == GepI->idx_end())
+  if (GepI->indices().empty())
     return false;
   return true;
 }
@@ -399,7 +392,7 @@ void HexagonCommonGEP::processGepInst(GetElementPtrInst *GepI,
   // After last node has been created, update the use information.
   if (!Us.empty()) {
     PN->Flags |= GepNode::Used;
-    Uses[PN].insert(Us.begin(), Us.end());
+    Uses[PN].insert_range(Us);
   }
 
   // Link the last node with the originating GEP instruction. This is to
@@ -604,8 +597,10 @@ void HexagonCommonGEP::common() {
       uint32_t NF = N->Flags;
       // If N is used, append all original values of N to the list of
       // original values of Min.
-      if (NF & GepNode::Used)
-        MinUs.insert(Uses[N].begin(), Uses[N].end());
+      if (NF & GepNode::Used) {
+        auto &U = Uses[N];
+        MinUs.insert_range(U);
+      }
       Flags |= NF;
     }
     if (MinUs.empty())
@@ -918,9 +913,8 @@ namespace {
     const NodeToValueMap &Map;
   };
 
-  raw_ostream &operator<< (raw_ostream &OS,
-                           const LocationAsBlock &Loc) LLVM_ATTRIBUTE_UNUSED ;
-  raw_ostream &operator<< (raw_ostream &OS, const LocationAsBlock &Loc) {
+  [[maybe_unused]] raw_ostream &operator<<(raw_ostream &OS,
+                                           const LocationAsBlock &Loc) {
     for (const auto &I : Loc.Map) {
       OS << I.first << " -> ";
       if (BasicBlock *B = cast_or_null<BasicBlock>(I.second))

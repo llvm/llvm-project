@@ -124,6 +124,8 @@ LLVMBinaryType LLVMBinaryGetType(LLVMBinaryRef BR) {
         return LLVMBinaryTypeOffload;
       case ID_Wasm:
         return LLVMBinaryTypeWasm;
+      case ID_DXContainer:
+        return LLVMBinaryTypeDXcontainer;
       case ID_StartObjects:
       case ID_EndObjects:
         llvm_unreachable("Marker types are not valid binary kinds!");
@@ -182,7 +184,6 @@ LLVMObjectFileRef LLVMCreateObjectFile(LLVMMemoryBufferRef MemBuf) {
   std::unique_ptr<MemoryBuffer> Buf(unwrap(MemBuf));
   Expected<std::unique_ptr<ObjectFile>> ObjOrErr(
       ObjectFile::createObjectFile(Buf->getMemBufferRef()));
-  std::unique_ptr<ObjectFile> Obj;
   if (!ObjOrErr) {
     // TODO: Actually report errors helpfully.
     consumeError(ObjOrErr.takeError());

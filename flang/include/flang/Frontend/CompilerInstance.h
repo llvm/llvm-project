@@ -15,11 +15,12 @@
 
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendAction.h"
+#include "flang/Frontend/ParserActions.h"
 #include "flang/Frontend/PreprocessorOptions.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Parser/provenance.h"
 #include "flang/Semantics/runtime-type-info.h"
 #include "flang/Semantics/semantics.h"
+#include "flang/Support/StringOstream.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -60,6 +61,9 @@ class CompilerInstance {
 
   std::unique_ptr<llvm::TargetMachine> targetMachine;
 
+  /// LLVM pass plugins.
+  std::vector<std::unique_ptr<llvm::PassPlugin>> passPlugins;
+
   /// The stream for diagnostics from Semantics
   llvm::raw_ostream *semaOutputStream = &llvm::errs();
 
@@ -84,6 +88,27 @@ class CompilerInstance {
   /// stream. If they want to provide their own output stream, this field will
   /// facilitate this. It is optional and will normally be just a nullptr.
   std::unique_ptr<llvm::raw_pwrite_stream> outputStream;
+
+  /// @name Timing
+  /// Objects needed when timing is enabled.
+  /// @{
+  /// The timing manager.
+  mlir::DefaultTimingManager timingMgr;
+
+  /// The root of the timingScope. This will be reset in @ref executeAction if
+  /// timers have been enabled.
+  mlir::TimingScope timingScopeRoot;
+
+  /// @name Timing stream
+  /// The output streams to capture the timing. Three different streams are
+  /// needed because the timing classes all work slightly differently. We create
+  /// these streams so we have control over when and how the timing is
+  /// displayed. Otherwise, the timing is only displayed when the corresponding
+  /// managers/timers go out of scope.
+  std::unique_ptr<Fortran::support::string_ostream> timingStreamMLIR;
+  std::unique_ptr<Fortran::support::string_ostream> timingStreamLLVM;
+  std::unique_ptr<Fortran::support::string_ostream> timingStreamCodeGen;
+  /// @}
 
 public:
   explicit CompilerInstance();
@@ -125,6 +150,12 @@ public:
   /// }
   /// @name Semantic analysis
   /// {
+
+  Fortran::semantics::SemanticsContext &createNewSemanticsContext() {
+    semaContext =
+        getInvocation().getSemanticsCtx(*allCookedSources, getTargetMachine());
+    return *semaContext;
+  }
 
   Fortran::semantics::SemanticsContext &getSemanticsContext() {
     return *semaContext;
@@ -234,7 +265,19 @@ public:
   createDefaultOutputFile(bool binary = true, llvm::StringRef baseInput = "",
                           llvm::StringRef extension = "");
 
-  /// {
+  /// }
+  /// @name LLVM Pass Plugins
+  /// @{
+
+  void addPassPlugin(std::unique_ptr<llvm::PassPlugin> plugin) {
+    passPlugins.emplace_back(std::move(plugin));
+  }
+
+  llvm::ArrayRef<std::unique_ptr<llvm::PassPlugin>> getPassPlugins() const {
+    return passPlugins;
+  }
+
+  /// }
   /// @name Target Machine
   /// {
 
@@ -253,6 +296,42 @@ public:
 
   /// Produces the string which represents target feature
   std::string getTargetFeatures();
+
+  /// {
+  /// @name Timing
+  /// @{
+  bool isTimingEnabled() const { return timingMgr.isEnabled(); }
+
+  mlir::DefaultTimingManager &getTimingManager() { return timingMgr; }
+  const mlir::DefaultTimingManager &getTimingManager() const {
+    return timingMgr;
+  }
+
+  mlir::TimingScope &getTimingScopeRoot() { return timingScopeRoot; }
+  const mlir::TimingScope &getTimingScopeRoot() const {
+    return timingScopeRoot;
+  }
+
+  /// Get the timing stream for the MLIR pass manager.
+  llvm::raw_ostream &getTimingStreamMLIR() {
+    assert(timingStreamMLIR && "Timing stream for MLIR was not set");
+    return *timingStreamMLIR;
+  }
+
+  /// Get the timing stream for the new LLVM pass manager.
+  llvm::raw_ostream &getTimingStreamLLVM() {
+    assert(timingStreamLLVM && "Timing stream for LLVM was not set");
+    return *timingStreamLLVM;
+  }
+
+  /// Get the timing stream fro the legacy LLVM pass manager.
+  /// NOTE: If the codegen is updated to use the new pass manager, this should
+  /// no longer be needed.
+  llvm::raw_ostream &getTimingStreamCodeGen() {
+    assert(timingStreamCodeGen && "Timing stream for codegen was not set");
+    return *timingStreamCodeGen;
+  }
+  /// @}
 
 private:
   /// Create a new output file
@@ -284,7 +363,7 @@ public:
   ///
   /// \return The new object on success, or null on failure.
   static clang::IntrusiveRefCntPtr<clang::DiagnosticsEngine>
-  createDiagnostics(clang::DiagnosticOptions *opts,
+  createDiagnostics(clang::DiagnosticOptions &opts,
                     clang::DiagnosticConsumer *client = nullptr,
                     bool shouldOwnClient = true);
   void createDiagnostics(clang::DiagnosticConsumer *client = nullptr,

@@ -27,7 +27,7 @@
 #include "../MinimalElementType.h"
 
 struct Base {};
-struct Derived: public Base {};
+struct Derived : public Base {};
 
 template <class FromT, class ToT>
 constexpr void test_conversion() {
@@ -52,7 +52,8 @@ constexpr bool test() {
   // MinimalElementType is constructible from int, but accessors should not be convertible
   static_assert(!std::is_constructible_v<std::default_accessor<MinimalElementType>, std::default_accessor<int>>);
   // don't allow conversion from const elements to non-const
-  static_assert(!std::is_constructible_v<std::default_accessor<MinimalElementType>, std::default_accessor<const MinimalElementType>>);
+  static_assert(!std::is_constructible_v<std::default_accessor<MinimalElementType>,
+                                         std::default_accessor<const MinimalElementType>>);
   // don't allow conversion from Base to Derived
   static_assert(!std::is_constructible_v<std::default_accessor<Derived>, std::default_accessor<Base>>);
   // don't allow conversion from Derived to Base

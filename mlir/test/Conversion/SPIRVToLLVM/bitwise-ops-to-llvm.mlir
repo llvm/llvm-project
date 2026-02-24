@@ -92,12 +92,12 @@ spirv.func @bitfield_insert_scalar_greater_bit_width(%base: i16, %insert: i16, %
 // CHECK-LABEL: @bitfield_insert_vector
 //  CHECK-SAME: %[[BASE:.*]]: vector<2xi32>, %[[INSERT:.*]]: vector<2xi32>, %[[OFFSET:.*]]: i32, %[[COUNT:.*]]: i32
 spirv.func @bitfield_insert_vector(%base: vector<2xi32>, %insert: vector<2xi32>, %offset: i32, %count: i32) "None" {
-  // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.poison : vector<2xi32>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[OFFSET_V1:.*]] = llvm.insertelement %[[OFFSET]], %[[OFFSET_V0]][%[[ZERO]] : i32] : vector<2xi32>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[OFFSET_V2:.*]] = llvm.insertelement  %[[OFFSET]], %[[OFFSET_V1]][%[[ONE]] : i32] : vector<2xi32>
-  // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.poison : vector<2xi32>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[COUNT_V1:.*]] = llvm.insertelement %[[COUNT]], %[[COUNT_V0]][%[[ZERO]] : i32] : vector<2xi32>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
@@ -164,12 +164,12 @@ spirv.func @bitfield_sextract_scalar_greater_bit_width(%base: i32, %offset: i64,
 // CHECK-LABEL: @bitfield_sextract_vector
 //  CHECK-SAME: %[[BASE:.*]]: vector<2xi32>, %[[OFFSET:.*]]: i32, %[[COUNT:.*]]: i32
 spirv.func @bitfield_sextract_vector(%base: vector<2xi32>, %offset: i32, %count: i32) "None" {
-  // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.poison : vector<2xi32>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[OFFSET_V1:.*]] = llvm.insertelement %[[OFFSET]], %[[OFFSET_V0]][%[[ZERO]] : i32] : vector<2xi32>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[OFFSET_V2:.*]] = llvm.insertelement  %[[OFFSET]], %[[OFFSET_V1]][%[[ONE]] : i32] : vector<2xi32>
-  // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.poison : vector<2xi32>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[COUNT_V1:.*]] = llvm.insertelement %[[COUNT]], %[[COUNT_V0]][%[[ZERO]] : i32] : vector<2xi32>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
@@ -230,12 +230,12 @@ spirv.func @bitfield_uextract_scalar_greater_bit_width(%base: i8, %offset: i16, 
 // CHECK-LABEL: @bitfield_uextract_vector
 //  CHECK-SAME: %[[BASE:.*]]: vector<2xi32>, %[[OFFSET:.*]]: i32, %[[COUNT:.*]]: i32
 spirv.func @bitfield_uextract_vector(%base: vector<2xi32>, %offset: i32, %count: i32) "None" {
-  // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK: %[[OFFSET_V0:.*]] = llvm.mlir.poison : vector<2xi32>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[OFFSET_V1:.*]] = llvm.insertelement %[[OFFSET]], %[[OFFSET_V0]][%[[ZERO]] : i32] : vector<2xi32>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
   // CHECK: %[[OFFSET_V2:.*]] = llvm.insertelement  %[[OFFSET]], %[[OFFSET_V1]][%[[ONE]] : i32] : vector<2xi32>
-  // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.undef : vector<2xi32>
+  // CHECK: %[[COUNT_V0:.*]] = llvm.mlir.poison : vector<2xi32>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[COUNT_V1:.*]] = llvm.insertelement %[[COUNT]], %[[COUNT_V0]][%[[ZERO]] : i32] : vector<2xi32>
   // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32

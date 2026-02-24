@@ -14,6 +14,15 @@
 #ifndef MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS
 #define MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS
 
+class SPIRV_AttrIs<string operand, string type, string value> : PredOpTrait<
+  operand # " must be " # type # " of value " # value,
+  CPred<"::llvm::cast<::mlir::spirv::" # type # "Attr>(getProperties()." # operand # ").getValue() == ::mlir::spirv::" # type # "::" # value>
+  >;
+
+class SPIRV_ExecutionScopeAttrIs<string operand, string value> : SPIRV_AttrIs<operand, "Scope", value>;
+
+// -----
+
 class SPIRV_GroupNonUniformArithmeticOp<string mnemonic, Type type,
       list<Trait> traits = []> : SPIRV_Op<mnemonic, traits> {
 
@@ -230,8 +239,8 @@ def SPIRV_GroupNonUniformBroadcastOp : SPIRV_Op<"GroupNonUniformBroadcast",
     %scalar_value = ... : f32
     %vector_value = ... : vector<4xf32>
     %id = ... : i32
-    %0 = spirv.GroupNonUniformBroadcast "Subgroup" %scalar_value, %id : f32, i32
-    %1 = spirv.GroupNonUniformBroadcast "Workgroup" %vector_value, %id :
+    %0 = spirv.GroupNonUniformBroadcast <Subgroup> %scalar_value, %id : f32, i32
+    %1 = spirv.GroupNonUniformBroadcast <Workgroup> %vector_value, %id :
       vector<4xf32>, i32
     ```
   }];
@@ -274,7 +283,7 @@ def SPIRV_GroupNonUniformElectOp : SPIRV_Op<"GroupNonUniformElect", []> {
     #### Example:
 
     ```mlir
-    %0 = spirv.GroupNonUniformElect : i1
+    %0 = spirv.GroupNonUniformElect <Workgroup> : i1
     ```
   }];
 
@@ -1286,5 +1295,395 @@ def SPIRV_GroupNonUniformLogicalXorOp :
 }
 
 // -----
+
+def SPIRV_GroupNonUniformBallotBitCountOp : SPIRV_Op<"GroupNonUniformBallotBitCount", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">,
+]> {
+  let summary = [{
+    Result is the number of bits that are set to 1 in Value, considering
+    only the bits in Value required to represent all bits of the scope
+    restricted tangle.
+  }];
+
+  let description = [{
+    Result Type must be a scalar of integer type, whose Signedness operand
+    is 0.
+
+    Execution is the scope defining the scope restricted tangle affected by
+    this command. It must be Subgroup.
+
+    The identity I for Operation is 0.
+
+    Value must be a vector of four components of integer type scalar, whose
+    Width operand is 32 and whose Signedness operand is 0.
+
+    Value is a set of bitfields where the first invocation is represented in
+    the lowest bit of the first vector component and the last (up to the
+    size of the scope) is the higher bit number of the last bitmask needed
+    to represent all bits of the invocations in the scope restricted tangle.
+
+    An invocation will not execute a dynamic instance of this instruction
+    (X') until all invocations in its scope restricted tangle have executed
+    all dynamic instances that are program-ordered before X'.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %count = spirv.GroupNonUniformBallotBitCount <Subgroup> <Reduce> %val : vector<4xi32> -> i32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformBallot]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_GroupOperationAttr:$group_operation,
+    SPIRV_Vec4<SignlessOrUnsignedIntOfWidths<[32]>>:$value
+  );
+
+  let results = (outs
+    SPIRV_SignlessOrUnsignedInt:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope $group_operation $value attr-dict `:` type($value) `->` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformRotateKHROp : SPIRV_Op<"GroupNonUniformRotateKHR", [
+  Pure, AllTypesMatch<["value", "result"]>]> {
+  let summary = [{
+    Rotate values across invocations within a subgroup.
+  }];
+
+  let description = [{
+    Return the Value of the invocation whose id within the group is calculated
+    as follows:
+
+    LocalId = SubgroupLocalInvocationId if Execution is Subgroup or
+              LocalInvocationId if Execution is Workgroup
+    RotationGroupSize = ClusterSize when ClusterSize is present, otherwise
+    RotationGroupSize = SubgroupMaxSize if the Kernel capability is declared
+                        and SubgroupSize if not.
+    Invocation ID = ( (LocalId + Delta) & (RotationGroupSize - 1) ) +
+                    (LocalId & ~(RotationGroupSize - 1))
+
+    Result Type must be a scalar or vector of floating-point type, integer
+    type, or Boolean type.
+
+    Execution is a Scope. It must be either Workgroup or Subgroup.
+
+    The type of Value must be the same as Result Type.
+
+    Delta must be a scalar of integer type, whose Signedness operand is 0.
+    Delta must be dynamically uniform within Execution.
+
+    Delta is treated as unsigned and the resulting value is undefined if the
+    selected lane is inactive.
+
+    ClusterSize is the size of cluster to use. ClusterSize must be a scalar of
+    integer type, whose Signedness operand is 0. ClusterSize must come from a
+    constant instruction. Behavior is undefined unless ClusterSize is at least
+    1 and a power of 2. If ClusterSize is greater than the declared
+    SubGroupSize, executing this instruction results in undefined behavior.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %four = spirv.Constant 4 : i32
+    %0 = spirv.GroupNonUniformRotateKHR <Subgroup> %value, %delta : f32, i32 -> f32
+    %1 = spirv.GroupNonUniformRotateKHR <Workgroup> %value, %delta,
+         cluster_size(%four) : f32, i32, i32 -> f32
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformRotateKHR]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
+    SPIRV_SignlessOrUnsignedInt:$delta,
+    Optional<SPIRV_SignlessOrUnsignedInt>:$cluster_size
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+  );
+
+  let assemblyFormat = [{
+    $execution_scope $value `,` $delta (`,` `cluster_size` `(` $cluster_size^ `)`)? attr-dict `:` type($value) `,` type($delta) (`,` type($cluster_size)^)? `->` type(results)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformAllOp : SPIRV_Op<"GroupNonUniformAll", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">
+]> {
+  let summary = [{
+    Evaluates a predicate for all tangled invocations within the Execution
+    scope, resulting in true if predicate evaluates to true for all tangled
+    invocations within the Execution scope, otherwise the result is false.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type.
+
+    Execution is the scope defining the scope restricted tangle affected by
+    this command. It must be Subgroup.
+
+    Predicate must be a Boolean type.
+
+    An invocation will not execute a dynamic instance of this instruction
+    (X') until all invocations in its scope restricted tangle have executed
+    all dynamic instances that are program-ordered before X'.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %predicate = ... : i1
+    %0 = spirv.GroupNonUniformAll <Subgroup> %predicate : i1
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformVote]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_Bool:$predicate
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope $predicate attr-dict `:` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformAnyOp : SPIRV_Op<"GroupNonUniformAny", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">
+]> {
+  let summary = [{
+    Evaluates a predicate for all tangled invocations within the Execution
+    scope, resulting in true if predicate evaluates to true for any tangled
+    invocations within the Execution scope, otherwise the result is false.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type.
+
+    Execution is the scope defining the scope restricted tangle affected by
+    this command. It must be Subgroup.
+
+    Predicate must be a Boolean type.
+
+    An invocation will not execute a dynamic instance of this instruction
+    (X') until all invocations in its scope restricted tangle have executed
+    all dynamic instances that are program-ordered before X'.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %predicate = ... : i1
+    %0 = spirv.GroupNonUniformAny <Subgroup> %predicate : i1
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformVote]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    SPIRV_Bool:$predicate
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope $predicate attr-dict `:` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformAllEqualOp : SPIRV_Op<"GroupNonUniformAllEqual", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">
+]> {
+  let summary = [{
+    Evaluates a value for all tangled invocations within the Execution
+    scope. The result is true if Value is equal for all tangled invocations
+    within the Execution scope. Otherwise, the result is false.
+  }];
+
+  let description = [{
+    Result Type must be a Boolean type.
+
+    Execution is the scope defining the scope restricted tangle affected by
+    this command. It must be Subgroup.
+
+    Value must be a scalar or vector of floating-point type, integer type,
+    or Boolean type. The compare operation is based on this type, and if it
+    is a floating-point type, an ordered-and-equal compare is used.
+
+    An invocation will not execute a dynamic instance of this instruction
+    (X') until all invocations in its scope restricted tangle have executed
+    all dynamic instances that are program-ordered before X'.
+
+    <!-- End of AutoGen section -->
+
+    #### Example:
+
+    ```mlir
+    %scalar_value = ... : f32
+    %vector_value = ... : vector<4xf32>
+    %0 = spirv.GroupNonUniformAllEqual <Subgroup> %scalar_value : f32, i1
+    %1 = spirv.GroupNonUniformAllEqual <Subgroup> %vector_value : vector<4xf32>, i1
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformVote]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value
+  );
+
+  let results = (outs
+    SPIRV_Bool:$result
+  );
+
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope $value attr-dict `:` type($value) `,` type($result)
+  }];
+}
+
+// -----
+
+def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
+  SPIRV_ExecutionScopeAttrIs<"execution_scope", "Subgroup">, AllTypesMatch<["value", "result"]>
+]> {
+  let summary = [{
+    Swap the Value of the invocation within the quad with another invocation
+    in the quad using Direction.
+  }];
+
+  let description = [{
+    Result Type must be a scalar or vector of floating-point type, integer type,
+    or Boolean type.
+
+    Execution is a Scope, but has no effect on the behavior of this instruction.
+    It must be Subgroup.
+
+    The type of Value must be the same as Result Type.
+
+    Direction is the kind of swap to perform.
+
+    Direction must be a scalar of integer type, whose Signedness operand is 0.
+
+    Direction must come from a constant instruction.
+
+    The value returned in Result is the value provided to Value by another invocation
+    in the same quad scope instance. The invocation providing this value is
+    determined according to Direction.
+
+    A Direction of 0 indicates a horizontal swap;
+    - Invocations with quad indices of 0 and 1 swap values
+    - Invocations with quad indices of 2 and 3 swap values
+    A Direction of 1 indicates a vertical swap;
+    - Invocations with quad indices of 0 and 2 swap values
+    - Invocations with quad indices of 1 and 3 swap values
+    A Direction of 2 indicates a diagonal swap;
+    - Invocations with quad indices of 0 and 3 swap values
+    - Invocations with quad indices of 1 and 2 swap values
+
+    Direction must be one of the above values.
+
+    If a tangled invocation within the quad reads Value from an invocation not part
+    of the tangled invocation within the same quad, the resulting value is undefined.
+
+    An invocation will not execute a dynamic instance of this instruction (X') until
+    all invocations in its quad have executed all dynamic instances that are program-ordered
+    before X'.
+
+    #### Example:
+
+    ```mlir
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %value : f32
+    %1 = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %value : vector<4xf32>
+    ```
+  }];
+
+  let availability = [
+    MinVersion<SPIRV_V_1_3>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_GroupNonUniformQuad]>
+  ];
+
+  let arguments = (ins
+    SPIRV_ScopeAttr:$execution_scope,
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$value,
+    SPIRV_QuadSwapDirectionAttr:$direction
+  );
+
+  let results = (outs
+    AnyTypeOf<[SPIRV_ScalarOrVectorOf<SPIRV_Float>, SPIRV_ScalarOrVectorOf<SPIRV_Integer>, SPIRV_ScalarOrVectorOf<SPIRV_Bool>]>:$result
+  );
+
+  let hasVerifier = 0;
+
+  let assemblyFormat = [{
+    $execution_scope $direction $value attr-dict `:` type($value)
+  }];
+}
 
 #endif // MLIR_DIALECT_SPIRV_IR_NON_UNIFORM_OPS

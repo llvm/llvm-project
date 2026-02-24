@@ -14,22 +14,21 @@
 # CHECK-EMPTY: 
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 RSI)
-# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg4 RSI))
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+0)
 # CHECK-EMPTY: 
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
 # CHECK-NEXT:       DW_AT_location      (DW_OP_reg5 RDI)
-# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_GNU_entry_value(DW_OP_reg4 RSI))
+# CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_breg15 R15+0)
 # CHECK-EMPTY:
 # CHECK:        DW_TAG_GNU_call_site
 # CHECK-NEXT:     DW_AT_abstract_origin {{.*}}"foo"
 # CHECK-NEXT:     DW_AT_low_pc
 # CHECK-EMPTY:
 # CHECK-NEXT:     DW_TAG_GNU_call_site_parameter
-# RCX loads memory location. We can't rely that memory location won't be changed.
-# CHECK-NOT:       DW_AT_location      (DW_OP_reg2 RCX)
 # CHECK-NEXT:       DW_AT_location      (DW_OP_reg4 RSI)
 # CHECK-NEXT:       DW_AT_GNU_call_site_value   (DW_OP_lit4)
 # CHECK-EMPTY:
+# RCX loads memory location. We can't rely that memory location won't be changed.
 # CHECK-NOT:      DW_TAG_GNU_call_site_parameter
 #
 # Check that call site interpretation analysis can interpret instructions such
@@ -37,6 +36,7 @@
 # instructions. Last negative check should verify that we are not producing
 # interpretation for RDX register since its loaded value is call clobberable.
 # Also check that we are generating proper call site debug entities.
+# The MIR has been hand-modified in order to test those cases.
 --- |
   ; ModuleID = 'dbgcall-site-interpretation.c'
   source_filename = "dbgcall-site-interpretation.c"

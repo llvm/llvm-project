@@ -18,6 +18,8 @@ namespace interp {
 
 enum class Endian { Little, Big };
 
+struct Bytes;
+
 /// A quantity in bits.
 struct Bits {
   size_t N = 0;
@@ -30,6 +32,7 @@ struct Bits {
   bool isFullByte() const { return N % 8 == 0; }
   bool nonZero() const { return N != 0; }
   bool isZero() const { return N == 0; }
+  Bytes toBytes() const;
 
   Bits operator-(Bits Other) const { return Bits(N - Other.N); }
   Bits operator+(Bits Other) const { return Bits(N + Other.N); }
@@ -56,6 +59,11 @@ struct Bytes {
   Bits toBits() const { return Bits(N * 8); }
 };
 
+inline Bytes Bits::toBytes() const {
+  assert(isFullByte());
+  return Bytes(N / 8);
+}
+
 /// A bit range. Both Start and End are inclusive.
 struct BitRange {
   Bits Start;
@@ -81,8 +89,15 @@ struct BitcastBuffer {
     Data = std::make_unique<std::byte[]>(ByteSize);
   }
 
+  /// Returns the byte at the given offset.
+  std::byte *atByte(unsigned Offset) {
+    assert(Offset < FinalBitSize.roundToBytes());
+    return Data.get() + Offset;
+  }
+
   /// Returns the buffer size in bits.
   Bits size() const { return FinalBitSize; }
+  Bytes byteSize() const { return FinalBitSize.toBytes(); }
 
   /// Returns \c true if all bits in the buffer have been initialized.
   bool allInitialized() const;
@@ -104,6 +119,13 @@ struct BitcastBuffer {
   std::unique_ptr<std::byte[]> copyBits(Bits BitOffset, Bits BitWidth,
                                         Bits FullBitWidth,
                                         Endian TargetEndianness) const;
+
+  /// Dereferences the value at the given offset.
+  template <typename T> T deref(Bytes Offset) const {
+    assert(Offset.getQuantity() < FinalBitSize.roundToBytes());
+    assert((Offset.getQuantity() + sizeof(T)) <= FinalBitSize.roundToBytes());
+    return *reinterpret_cast<T *>(Data.get() + Offset.getQuantity());
+  }
 };
 
 } // namespace interp

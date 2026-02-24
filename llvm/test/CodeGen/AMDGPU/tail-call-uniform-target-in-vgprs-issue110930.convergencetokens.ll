@@ -6,8 +6,6 @@
 ; because all functions involving convergence tokens will fail the
 ; machine verifier after register allocation.
 
-target triple = "amdgcn-amd-amdhsa"
-
 define void @tail_call_uniform_vgpr_value_convergence_tokens() #0 {
   ; CHECK-LABEL: name: tail_call_uniform_vgpr_value_convergence_tokens
   ; CHECK: bb.0 (%ir-block.0):
@@ -28,11 +26,11 @@ define void @tail_call_uniform_vgpr_value_convergence_tokens() #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[DS_READ_B64_gfx9_]].sub1
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[COPY9]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY10]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY10]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[DS_READ_B64_gfx9_]].sub0
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[COPY11]]
-  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
+  ; CHECK-NEXT:   [[V_READFIRSTLANE_B32_1:%[0-9]+]]:sreg_32_xm0 = V_READFIRSTLANE_B32 killed [[COPY12]], implicit $exec, implicit [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:ccr_sgpr_64 = REG_SEQUENCE killed [[V_READFIRSTLANE_B32_1]], %subreg.sub0, killed [[V_READFIRSTLANE_B32_]], %subreg.sub1
   ; CHECK-NEXT:   $sgpr4_sgpr5 = COPY [[COPY8]]
   ; CHECK-NEXT:   $sgpr6_sgpr7 = COPY [[COPY7]]
@@ -46,7 +44,7 @@ define void @tail_call_uniform_vgpr_value_convergence_tokens() #0 {
   ; CHECK-NEXT:   CONVERGENCECTRL_GLUE [[CONVERGENCECTRL_ENTRY]]
   ; CHECK-NEXT:   SI_TCRETURN killed [[REG_SEQUENCE]], 0, 0, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit [[CONVERGENCECTRL_ENTRY]]
   %t = call token @llvm.experimental.convergence.entry()
-  %fptr = load ptr, ptr addrspace(3) null, align 8
+  %fptr = load ptr, ptr addrspace(3) zeroinitializer, align 8
   tail call void %fptr() #0 [ "convergencectrl"(token %t) ]
   ret void
 }

@@ -320,7 +320,7 @@ int collectStats(MlirOperation operation) {
   // clang-format off
   // CHECK-LABEL: @stats
   // CHECK: Number of operations: 12
-  // CHECK: Number of attributes: 6
+  // CHECK: Number of attributes: 5
   // CHECK: Number of blocks: 3
   // CHECK: Number of regions: 3
   // CHECK: Number of values: 9
@@ -2389,6 +2389,9 @@ void testDiagnostics(void) {
   MlirLocation fileLineColLoc = mlirLocationFileLineColGet(
       ctx, mlirStringRefCreateFromCString("file.c"), 1, 2);
   mlirEmitError(fileLineColLoc, "test diagnostics");
+  MlirLocation fileLineColRange = mlirLocationFileLineColRangeGet(
+      ctx, mlirStringRefCreateFromCString("other-file.c"), 1, 2, 3, 4);
+  mlirEmitError(fileLineColRange, "test diagnostics");
   MlirLocation callSiteLoc = mlirLocationCallSiteGet(
       mlirLocationFileLineColGet(
           ctx, mlirStringRefCreateFromCString("other-file.c"), 2, 3),
@@ -2418,6 +2421,10 @@ void testDiagnostics(void) {
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
   // CHECK:   test diagnostics
+  // CHECK:   loc("other-file.c":1:2 to 3:4)
+  // CHECK: >> end of diagnostic (userData: 42)
+  // CHECK: processing diagnostic (userData: 42) <<
+  // CHECK:   test diagnostics
   // CHECK:   loc(callsite("other-file.c":2:3 at "file.c":1:2))
   // CHECK: >> end of diagnostic (userData: 42)
   // CHECK: processing diagnostic (userData: 42) <<
@@ -2431,6 +2438,74 @@ void testDiagnostics(void) {
   // CHECK-NOT: processing diagnostic
   // CHECK:     more test diagnostics
   mlirContextDestroy(ctx);
+}
+
+int testBlockPredecessorsSuccessors(MlirContext ctx) {
+  // CHECK-LABEL: @testBlockPredecessorsSuccessors
+  fprintf(stderr, "@testBlockPredecessorsSuccessors\n");
+
+  const char *moduleString = "module {\n"
+                             "  func.func @test(%arg0: i32, %arg1: i16) {\n"
+                             "    cf.br ^bb1(%arg1 : i16)\n"
+                             "  ^bb1(%0: i16):  // pred: ^bb0\n"
+                             "    cf.br ^bb2(%arg0 : i32)\n"
+                             "  ^bb2(%1: i32):  // pred: ^bb1\n"
+                             "    return\n"
+                             "  }\n"
+                             "}\n";
+
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+
+  MlirOperation moduleOp = mlirModuleGetOperation(module);
+  MlirRegion moduleRegion = mlirOperationGetRegion(moduleOp, 0);
+  MlirBlock moduleBlock = mlirRegionGetFirstBlock(moduleRegion);
+  MlirOperation function = mlirBlockGetFirstOperation(moduleBlock);
+  MlirRegion funcRegion = mlirOperationGetRegion(function, 0);
+  MlirBlock entryBlock = mlirRegionGetFirstBlock(funcRegion);
+  MlirBlock middleBlock = mlirBlockGetNextInRegion(entryBlock);
+  MlirBlock successorBlock = mlirBlockGetNextInRegion(middleBlock);
+
+#define FPRINTF_OP(OP, FMT) fprintf(stderr, #OP ": " FMT "\n", OP)
+
+  // CHECK: mlirBlockGetNumPredecessors(entryBlock): 0
+  FPRINTF_OP(mlirBlockGetNumPredecessors(entryBlock), "%ld");
+
+  // CHECK: mlirBlockGetNumSuccessors(entryBlock): 1
+  FPRINTF_OP(mlirBlockGetNumSuccessors(entryBlock), "%ld");
+  // CHECK: mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)): 1
+  FPRINTF_OP(mlirBlockEqual(middleBlock, mlirBlockGetSuccessor(entryBlock, 0)),
+             "%d");
+  // CHECK: mlirBlockGetNumPredecessors(middleBlock): 1
+  FPRINTF_OP(mlirBlockGetNumPredecessors(middleBlock), "%ld");
+  // CHECK: mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0))
+  FPRINTF_OP(
+      mlirBlockEqual(entryBlock, mlirBlockGetPredecessor(middleBlock, 0)),
+      "%d");
+
+  // CHECK: mlirBlockGetNumSuccessors(middleBlock): 1
+  FPRINTF_OP(mlirBlockGetNumSuccessors(middleBlock), "%ld");
+  // CHECK: BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): 1
+  fprintf(
+      stderr,
+      "BlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)): %d\n",
+      mlirBlockEqual(successorBlock, mlirBlockGetSuccessor(middleBlock, 0)));
+  // CHECK: mlirBlockGetNumPredecessors(successorBlock): 1
+  FPRINTF_OP(mlirBlockGetNumPredecessors(successorBlock), "%ld");
+  // CHECK: Equal(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)): 1
+  fprintf(
+      stderr,
+      "Equal(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)): %d\n",
+      mlirBlockEqual(middleBlock, mlirBlockGetPredecessor(successorBlock, 0)));
+
+  // CHECK: mlirBlockGetNumSuccessors(successorBlock): 0
+  FPRINTF_OP(mlirBlockGetNumSuccessors(successorBlock), "%ld");
+
+#undef FPRINTF_OP
+
+  mlirModuleDestroy(module);
+
+  return 0;
 }
 
 int main(void) {
@@ -2478,6 +2553,9 @@ int main(void) {
 
   testExplicitThreadPools();
   testDiagnostics();
+
+  if (testBlockPredecessorsSuccessors(ctx))
+    return 17;
 
   // CHECK: DESTROY MAIN CONTEXT
   // CHECK: reportResourceDelete: resource_i64_blob

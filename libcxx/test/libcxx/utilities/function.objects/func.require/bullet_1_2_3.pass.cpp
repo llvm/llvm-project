@@ -254,16 +254,17 @@ struct ReferenceWrapper {
     static void fun(Type&) noexcept;
     static void fun(Type&&) = delete;
 
-    template <class Type2,
-              class = typename std::enable_if<!std::__is_same_uncvref<Type2, ReferenceWrapper>::value>::type>
+    template <
+        class Type2,
+        class = typename std::enable_if<!std::is_same<std::__remove_cvref_t<Type2>, ReferenceWrapper>::value>::type>
     constexpr ReferenceWrapper(Type2&& t) noexcept : ptr(&t) {}
 
     constexpr Type& get() const noexcept { return *ptr; }
     constexpr operator Type&() const noexcept { return *ptr; }
 
     template <class... _ArgTypes>
-    constexpr typename std::__invoke_of<Type&, _ArgTypes...>::type operator() (_ArgTypes&&... __args) const {
-        return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
+    constexpr std::__invoke_result_t<Type&, _ArgTypes...> operator()(_ArgTypes&&... __args) const {
+      return std::__invoke(get(), std::forward<_ArgTypes>(__args)...);
     }
 };
 

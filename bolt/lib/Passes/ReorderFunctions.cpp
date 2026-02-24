@@ -28,7 +28,8 @@ extern cl::OptionCategory BoltOptCategory;
 extern cl::opt<unsigned> Verbosity;
 extern cl::opt<uint32_t> RandomSeed;
 
-extern size_t padFunction(const bolt::BinaryFunction &Function);
+extern size_t padFunctionBefore(const bolt::BinaryFunction &Function);
+extern size_t padFunctionAfter(const bolt::BinaryFunction &Function);
 
 extern cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions;
 cl::opt<bolt::ReorderFunctions::ReorderType> ReorderFunctions(
@@ -295,7 +296,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   case RT_NONE:
     break;
   case RT_EXEC_COUNT: {
-    std::vector<BinaryFunction *> SortedFunctions(BFs.size());
+    BinaryFunctionListType SortedFunctions(BFs.size());
     llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
                     [](BinaryFunction &BF) { return &BF; });
     llvm::stable_sort(SortedFunctions,
@@ -304,8 +305,10 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
                           return false;
                         if (B->isIgnored())
                           return true;
-                        const size_t PadA = opts::padFunction(*A);
-                        const size_t PadB = opts::padFunction(*B);
+                        const size_t PadA = opts::padFunctionBefore(*A) +
+                                            opts::padFunctionAfter(*A);
+                        const size_t PadB = opts::padFunctionBefore(*B) +
+                                            opts::padFunctionAfter(*B);
                         if (!PadA || !PadB) {
                           if (PadA)
                             return true;
@@ -468,7 +471,7 @@ Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
   }
 
   if (FuncsFile || LinkSectionsFile) {
-    std::vector<BinaryFunction *> SortedFunctions(BFs.size());
+    BinaryFunctionListType SortedFunctions(BFs.size());
     llvm::transform(llvm::make_second_range(BFs), SortedFunctions.begin(),
                     [](BinaryFunction &BF) { return &BF; });
 

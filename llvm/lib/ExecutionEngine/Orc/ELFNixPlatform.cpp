@@ -1,5 +1,4 @@
-//===------ ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc
-//-----===//
+//===----- ELFNixPlatform.cpp - Utilities for executing ELFNix in Orc -----===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -10,7 +9,9 @@
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/loongarch.h"
 #include "llvm/ExecutionEngine/JITLink/ppc64.h"
+#include "llvm/ExecutionEngine/JITLink/systemz.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/AbsoluteSymbols.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -40,34 +41,10 @@ getArgDataBufferType(const ArgTs &...Args) {
 
 std::unique_ptr<jitlink::LinkGraph> createPlatformGraph(ELFNixPlatform &MOP,
                                                         std::string Name) {
-  unsigned PointerSize;
-  llvm::endianness Endianness;
-  const auto &TT = MOP.getExecutionSession().getTargetTriple();
-
-  switch (TT.getArch()) {
-  case Triple::x86_64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  case Triple::aarch64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  case Triple::ppc64:
-    PointerSize = 8;
-    Endianness = llvm::endianness::big;
-    break;
-  case Triple::ppc64le:
-    PointerSize = 8;
-    Endianness = llvm::endianness::little;
-    break;
-  default:
-    llvm_unreachable("Unrecognized architecture");
-  }
-
+  auto &ES = MOP.getExecutionSession();
   return std::make_unique<jitlink::LinkGraph>(
-      std::move(Name), MOP.getExecutionSession().getSymbolStringPool(), TT,
-      PointerSize, Endianness, jitlink::getGenericEdgeKindName);
+      std::move(Name), ES.getSymbolStringPool(), ES.getTargetTriple(),
+      SubtargetFeatures(), jitlink::getGenericEdgeKindName);
 }
 
 // Creates a Bootstrap-Complete LinkGraph to run deferred actions.
@@ -156,31 +133,29 @@ public:
   StringRef getName() const override { return "DSOHandleMU"; }
 
   void materialize(std::unique_ptr<MaterializationResponsibility> R) override {
-    unsigned PointerSize;
-    llvm::endianness Endianness;
-    jitlink::Edge::Kind EdgeKind;
-    const auto &TT = ENP.getExecutionSession().getTargetTriple();
 
-    switch (TT.getArch()) {
+    auto &ES = ENP.getExecutionSession();
+
+    jitlink::Edge::Kind EdgeKind;
+
+    switch (ES.getTargetTriple().getArch()) {
     case Triple::x86_64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::x86_64::Pointer64;
       break;
     case Triple::aarch64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::aarch64::Pointer64;
       break;
     case Triple::ppc64:
-      PointerSize = 8;
-      Endianness = llvm::endianness::big;
       EdgeKind = jitlink::ppc64::Pointer64;
       break;
     case Triple::ppc64le:
-      PointerSize = 8;
-      Endianness = llvm::endianness::little;
       EdgeKind = jitlink::ppc64::Pointer64;
+      break;
+    case Triple::loongarch64:
+      EdgeKind = jitlink::loongarch::Pointer64;
+      break;
+    case Triple::systemz:
+      EdgeKind = jitlink::systemz::Pointer64;
       break;
     default:
       llvm_unreachable("Unrecognized architecture");
@@ -188,13 +163,13 @@ public:
 
     // void *__dso_handle = &__dso_handle;
     auto G = std::make_unique<jitlink::LinkGraph>(
-        "<DSOHandleMU>", ENP.getExecutionSession().getSymbolStringPool(), TT,
-        PointerSize, Endianness, jitlink::getGenericEdgeKindName);
+        "<DSOHandleMU>", ES.getSymbolStringPool(), ES.getTargetTriple(),
+        SubtargetFeatures(), jitlink::getGenericEdgeKindName);
     auto &DSOHandleSection =
         G->createSection(".data.__dso_handle", MemProt::Read);
     auto &DSOHandleBlock = G->createContentBlock(
-        DSOHandleSection, getDSOHandleContent(PointerSize), orc::ExecutorAddr(),
-        8, 0);
+        DSOHandleSection, getDSOHandleContent(G->getPointerSize()),
+        orc::ExecutorAddr(), 8, 0);
     auto &DSOHandleSymbol = G->addDefinedSymbol(
         DSOHandleBlock, 0, *R->getInitializerSymbol(), DSOHandleBlock.getSize(),
         jitlink::Linkage::Strong, jitlink::Scope::Default, false, true);
@@ -395,6 +370,8 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   // FIXME: jitlink for ppc64 hasn't been well tested, leave it unsupported
   // right now.
   case Triple::ppc64le:
+  case Triple::loongarch64:
+  case Triple::systemz:
     return true;
   default:
     return false;
@@ -430,6 +407,7 @@ ELFNixPlatform::ELFNixPlatform(
                        {PlatformBootstrap.Name, PlatformShutdown.Name,
                         RegisterJITDylib.Name, DeregisterJITDylib.Name,
                         RegisterInitSections.Name, DeregisterInitSections.Name,
+                        RegisterFiniSections.Name, DeregisterFiniSections.Name,
                         RegisterObjectSections.Name,
                         DeregisterObjectSections.Name, CreatePThreadKey.Name}))
                  .takeError()))
@@ -497,11 +475,12 @@ void ELFNixPlatform::pushInitializersLoop(
       Worklist.pop_back();
 
       // If we've already visited this JITDylib on this iteration then continue.
-      if (JDDepMap.count(DepJD))
+      auto [It, Inserted] = JDDepMap.try_emplace(DepJD);
+      if (!Inserted)
         continue;
 
       // Add dep info.
-      auto &DM = JDDepMap[DepJD];
+      auto &DM = It->second;
       DepJD->withLinkOrderDo([&](const JITDylibSearchOrder &O) {
         for (auto &KV : O) {
           if (KV.first == DepJD)
@@ -668,6 +647,8 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::
       {*MP.DeregisterObjectSections.Name, &MP.DeregisterObjectSections.Addr},
       {*MP.RegisterInitSections.Name, &MP.RegisterInitSections.Addr},
       {*MP.DeregisterInitSections.Name, &MP.DeregisterInitSections.Addr},
+      {*MP.RegisterFiniSections.Name, &MP.RegisterFiniSections.Addr},
+      {*MP.DeregisterFiniSections.Name, &MP.DeregisterFiniSections.Addr},
       {*MP.CreatePThreadKey.Name, &MP.CreatePThreadKey.Addr}};
 
   bool RegisterELFNixHeader = false;
@@ -796,6 +777,12 @@ void ELFNixPlatform::ELFNixPlatformPlugin::modifyPassConfig(
     return registerInitSections(G, JD, InBootstrapPhase);
   });
 
+  // If the object contains finalizers then add passes to record them.
+  Config.PostFixupPasses.push_back([this, &JD = MR.getTargetJITDylib(),
+                                    InBootstrapPhase](jitlink::LinkGraph &G) {
+    return registerFiniSections(G, JD, InBootstrapPhase);
+  });
+
   // If we're in the bootstrap phase then steal allocation actions and then
   // decrement the active graphs.
   if (InBootstrapPhase)
@@ -919,6 +906,31 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::preserveInitSections(
         InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
       }
     }
+
+    // Also preserve fini sections (.fini_array, .fini, .dtors)
+    for (auto &FiniSection : G.sections()) {
+      // Skip non-fini sections.
+      if (!isELFFinalizerSection(FiniSection.getName()) || FiniSection.empty())
+        continue;
+
+      // Create the init symbol if it has not been created already and attach it
+      // to the first fini block.
+      if (!InitSym) {
+        auto &B = **FiniSection.blocks().begin();
+        InitSym = &G.addDefinedSymbol(
+            B, 0, *InitSymName, B.getSize(), jitlink::Linkage::Strong,
+            jitlink::Scope::SideEffectsOnly, false, true);
+      }
+
+      // Add keep-alive edges to anonymous symbols in all fini blocks.
+      for (auto *B : FiniSection.blocks()) {
+        if (B == &InitSym->getBlock())
+          continue;
+
+        auto &S = G.addAnonymousSymbol(*B, 0, B->getSize(), false, true);
+        InitSym->getBlock().addEdge(jitlink::Edge::KeepAlive, 0, S, 0);
+      }
+    }
   }
 
   return Error::success();
@@ -934,34 +946,66 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
     if (isELFInitializerSection(Sec.getName()))
       OrderedInitSections.push_back(&Sec);
 
-  // FIXME: This handles priority order within the current graph, but we'll need
-  //        to include priority information in the initializer allocation
-  //        actions in order to respect the ordering across multiple graphs.
-  llvm::sort(OrderedInitSections, [](const jitlink::Section *LHS,
-                                     const jitlink::Section *RHS) {
-    if (LHS->getName().starts_with(".init_array")) {
-      if (RHS->getName().starts_with(".init_array")) {
-        StringRef LHSPrioStr(LHS->getName());
-        StringRef RHSPrioStr(RHS->getName());
-        uint64_t LHSPriority;
-        bool LHSHasPriority = LHSPrioStr.consume_front(".init_array.") &&
-                              !LHSPrioStr.getAsInteger(10, LHSPriority);
-        uint64_t RHSPriority;
-        bool RHSHasPriority = RHSPrioStr.consume_front(".init_array.") &&
-                              !RHSPrioStr.getAsInteger(10, RHSPriority);
-        if (LHSHasPriority)
-          return RHSHasPriority ? LHSPriority < RHSPriority : true;
-        else if (RHSHasPriority)
-          return false;
-        // If we get here we'll fall through to the
-        // LHS->getName() < RHS->getName() test below.
-      } else {
-        // .init_array[.N] comes before any non-.init_array[.N] section.
-        return true;
-      }
+  // Helper to get section type and priority for sorting.
+  // Returns: {type_order, priority, has_priority}
+  // type_order: 0 = .init_array, 1 = .init, 2 = .ctors
+  auto getInitSectionInfo =
+      [](const jitlink::Section *Sec) -> std::tuple<int, uint64_t, bool> {
+    StringRef Name = Sec->getName();
+    if (Name.starts_with(".init_array")) {
+      StringRef PrioStr = Name;
+      uint64_t Prio = 0;
+      bool HasPrio = PrioStr.consume_front(".init_array.") &&
+                     !PrioStr.getAsInteger(10, Prio);
+      return {0, Prio, HasPrio};
     }
-    return LHS->getName() < RHS->getName();
-  });
+    if (Name.starts_with(".init"))
+      return {1, 0, false};
+    if (Name.starts_with(".ctors")) {
+      StringRef PrioStr = Name;
+      uint64_t Prio = 0;
+      bool HasPrio =
+          PrioStr.consume_front(".ctors.") && !PrioStr.getAsInteger(10, Prio);
+      return {2, Prio, HasPrio};
+    }
+    return {3, 0, false};
+  };
+
+  // Sort init sections:
+  // 1. .init_array sections first (ascending priority - lower runs first)
+  // 2. .init sections next
+  // 3. .ctors sections last (descending priority - higher runs first, legacy
+  // behavior)
+  llvm::sort(OrderedInitSections,
+             [&](const jitlink::Section *LHS, const jitlink::Section *RHS) {
+               auto [LType, LPrio, LHasPrio] = getInitSectionInfo(LHS);
+               auto [RType, RPrio, RHasPrio] = getInitSectionInfo(RHS);
+
+               if (LType != RType)
+                 return LType < RType;
+
+               // Same type - sort by priority
+               if (LType == 0) {
+                 // .init_array: ascending priority (lower priority number runs
+                 // first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio < RPrio;
+                 if (LHasPrio)
+                   return true;
+                 if (RHasPrio)
+                   return false;
+               } else if (LType == 2) {
+                 // .ctors: descending priority (higher priority number runs
+                 // first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio > RPrio;
+                 if (LHasPrio)
+                   return true;
+                 if (RHasPrio)
+                   return false;
+               }
+               return LHS->getName() < RHS->getName();
+             });
 
   for (auto &Sec : OrderedInitSections)
     ELFNixPlatformSecs.push_back(jitlink::SectionRange(*Sec).getRange());
@@ -1006,10 +1050,128 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::registerInitSections(
   return Error::success();
 }
 
+Error ELFNixPlatform::ELFNixPlatformPlugin::registerFiniSections(
+    jitlink::LinkGraph &G, JITDylib &JD, bool IsBootstrapping) {
+  SmallVector<ExecutorAddrRange> ELFNixFiniSecs;
+  LLVM_DEBUG(dbgs() << "ELFNixPlatform::registerFiniSections\n");
+
+  SmallVector<jitlink::Section *> OrderedFiniSections;
+  for (auto &Sec : G.sections())
+    if (isELFFinalizerSection(Sec.getName()))
+      OrderedFiniSections.push_back(&Sec);
+
+  // Helper to get section type and priority for sorting.
+  // Returns: {type_order, priority, has_priority}
+  // type_order: 0 = .dtors, 1 = .fini, 2 = .fini_array
+  auto getFiniSectionInfo =
+      [](const jitlink::Section *Sec) -> std::tuple<int, uint64_t, bool> {
+    StringRef Name = Sec->getName();
+    if (Name.starts_with(".dtors")) {
+      StringRef PrioStr = Name;
+      uint64_t Prio = 0;
+      bool HasPrio =
+          PrioStr.consume_front(".dtors.") && !PrioStr.getAsInteger(10, Prio);
+      return {0, Prio, HasPrio};
+    }
+    if (Name.starts_with(".fini"))
+      if (!Name.starts_with(".fini_array"))
+        return {1, 0, false};
+    if (Name.starts_with(".fini_array")) {
+      StringRef PrioStr = Name;
+      uint64_t Prio = 0;
+      bool HasPrio = PrioStr.consume_front(".fini_array.") &&
+                     !PrioStr.getAsInteger(10, Prio);
+      return {2, Prio, HasPrio};
+    }
+    return {3, 0, false};
+  };
+
+  // Sort fini sections:
+  // 1. .dtors sections first (ascending priority, as they appear)
+  // 2. .fini sections next
+  // 3. .fini_array sections last (descending priority - higher runs first)
+  llvm::sort(OrderedFiniSections,
+             [&](const jitlink::Section *LHS, const jitlink::Section *RHS) {
+               auto [LType, LPrio, LHasPrio] = getFiniSectionInfo(LHS);
+               auto [RType, RPrio, RHasPrio] = getFiniSectionInfo(RHS);
+
+               if (LType != RType)
+                 return LType < RType;
+
+               // Same type - sort by priority
+               if (LType == 0) {
+                 // .dtors: no-priority first, then ascending priority (lower
+                 // runs first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio < RPrio;
+                 if (LHasPrio)
+                   return false;
+                 if (RHasPrio)
+                   return true;
+               } else if (LType == 2) {
+                 // .fini_array: no-priority first, then descending priority
+                 // (higher runs first)
+                 if (LHasPrio && RHasPrio)
+                   return LPrio > RPrio;
+                 if (LHasPrio)
+                   return false;
+                 if (RHasPrio)
+                   return true;
+               }
+               return LHS->getName() < RHS->getName();
+             });
+
+  for (auto *Sec : OrderedFiniSections)
+    ELFNixFiniSecs.push_back(jitlink::SectionRange(*Sec).getRange());
+
+  if (ELFNixFiniSecs.empty())
+    return Error::success();
+
+  // Dump the scraped finis.
+  LLVM_DEBUG({
+    dbgs() << "ELFNixPlatform: Scraped " << G.getName() << " fini sections:\n";
+    for (auto *Sec : OrderedFiniSections) {
+      jitlink::SectionRange R(*Sec);
+      dbgs() << "  " << Sec->getName() << ": " << R.getRange() << "\n";
+    }
+  });
+
+  ExecutorAddr HeaderAddr;
+  {
+    std::lock_guard<std::mutex> Lock(MP.PlatformMutex);
+    auto I = MP.JITDylibToHandleAddr.find(&JD);
+    assert(I != MP.JITDylibToHandleAddr.end() && "No header registered for JD");
+    assert(I->second && "Null header registered for JD");
+    HeaderAddr = I->second;
+  }
+
+  using SPSRegisterFiniSectionsArgs =
+      SPSArgList<SPSExecutorAddr, SPSSequence<SPSExecutorAddrRange>>;
+
+  if (LLVM_UNLIKELY(IsBootstrapping)) {
+    MP.Bootstrap.load()->addArgumentsToRTFnMap(
+        &MP.RegisterFiniSections, &MP.DeregisterFiniSections,
+        getArgDataBufferType<SPSRegisterFiniSectionsArgs>(HeaderAddr,
+                                                          ELFNixFiniSecs),
+        getArgDataBufferType<SPSRegisterFiniSectionsArgs>(HeaderAddr,
+                                                          ELFNixFiniSecs));
+    return Error::success();
+  }
+
+  G.allocActions().push_back(
+      {cantFail(WrapperFunctionCall::Create<SPSRegisterFiniSectionsArgs>(
+           MP.RegisterFiniSections.Addr, HeaderAddr, ELFNixFiniSecs)),
+       cantFail(WrapperFunctionCall::Create<SPSRegisterFiniSectionsArgs>(
+           MP.DeregisterFiniSections.Addr, HeaderAddr, ELFNixFiniSecs))});
+
+  return Error::success();
+}
+
 Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     jitlink::LinkGraph &G, JITDylib &JD) {
   auto TLSGetAddrSymbolName = G.intern("__tls_get_addr");
   auto TLSDescResolveSymbolName = G.intern("__tlsdesc_resolver");
+  auto TLSGetOffsetSymbolName = G.intern("__tls_get_offset");
   for (auto *Sym : G.external_symbols()) {
     if (Sym->getName() == TLSGetAddrSymbolName) {
       auto TLSGetAddr =
@@ -1018,6 +1180,10 @@ Error ELFNixPlatform::ELFNixPlatformPlugin::fixTLVSectionsAndEdges(
     } else if (Sym->getName() == TLSDescResolveSymbolName) {
       auto TLSGetAddr =
           MP.getExecutionSession().intern("___orc_rt_elfnix_tlsdesc_resolver");
+      Sym->setName(std::move(TLSGetAddr));
+    } else if (Sym->getName() == TLSGetOffsetSymbolName) {
+      auto TLSGetAddr =
+          MP.getExecutionSession().intern("___orc_rt_elfnix_tls_get_offset");
       Sym->setName(std::move(TLSGetAddr));
     }
   }

@@ -11,7 +11,27 @@
    :maxdepth: 1
 
    LLVM/OpenMP Documentation <self>
+   Building
 
+
+Getting Started
+===============
+
+Building LLVM/OpenMP is fully documented on the
+:doc:`Building` page. For a quick start, we recommend the following template
+for building OpenMP with offloading support.
+
+.. code-block:: console
+
+  $ git clone https://github.com/llvm/llvm-project.git
+  $ cd llvm-project
+  $ mkdir build
+  $ cd build
+  $ cmake ../llvm -G Ninja                      \
+       -C ../offload/cmake/caches/Offload.cmake \
+       -DCMAKE_BUILD_TYPE=Release               \
+       -DCMAKE_INSTALL_PREFIX=<PATH>
+  $ ninja install    # Builds all files and installs files to <PATH>/bin, <PATH>/lib, etc
 
 LLVM/OpenMP Design & Overview
 =============================

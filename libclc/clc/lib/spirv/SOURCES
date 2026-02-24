@@ -1,2 +1,2 @@
-../generic/geometric/clc_dot.cl
-
+math/clc_fmax.cl
+math/clc_fmin.cl

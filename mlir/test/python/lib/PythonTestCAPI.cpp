@@ -11,6 +11,8 @@
 #include "mlir-c/BuiltinTypes.h"
 #include "mlir/CAPI/Registration.h"
 #include "mlir/CAPI/Wrap.h"
+#include "mlir/IR/Diagnostics.h"
+#include "mlir/IR/Location.h"
 
 MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(PythonTest, python_test,
                                       python_test::PythonTestDialect)
@@ -41,4 +43,10 @@ MlirTypeID mlirPythonTestTestTypeGetTypeID(void) {
 
 bool mlirTypeIsAPythonTestTestTensorValue(MlirValue value) {
   return mlirTypeIsATensor(wrap(unwrap(value).getType()));
+}
+
+void mlirPythonTestEmitDiagnosticWithNote(MlirContext ctx) {
+  auto diag =
+      mlir::emitError(unwrap(mlirLocationUnknownGet(ctx)), "created error");
+  diag.attachNote() << "attached note";
 }

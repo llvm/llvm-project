@@ -1,0 +1,26 @@
+# RUN: llc -verify-machineinstrs -O0 -mtriple spirv-unknown-unknown -run-pass=spirv-prelegalizer-combiner %s -o - | FileCheck %s
+# REQUIRES: asserts
+---
+name:            distance_instcombine_float4
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.1.entry:
+    ; CHECK-LABEL: name: distance_instcombine_float4
+    ; CHECK-NOT: %6:_(<4 x s32>) = G_FSUB %2, %3
+    ; CHECK-NOT: %7:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.length), %6(<4 x s32>)
+    ; CHECK: %7:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.distance), %2(<4 x s32>), %3(<4 x s32>)
+    %0:type(s64) = OpTypeFloat 32
+    %1:type(s64) = OpTypeVector %0(s64), 4
+    OpName %2(<4 x s32>), 97
+    OpName %3(<4 x s32>), 98
+    %4:type(s64) = OpTypeFunction %0(s64), %1(s64), %1(s64)
+    %5:iid(s64) = OpFunction %0(s64), 0, %4(s64)
+    %2:vfid(<4 x s32>) = OpFunctionParameter %1(s64)
+    %3:vfid(<4 x s32>) = OpFunctionParameter %1(s64)
+    OpName %5(s64), 1953720676, 1701015137, 1936615775, 1836016500, 1701734754, 1869375071, 3437665
+    OpDecorate %5(s64), 41, 1953720676, 1701015137, 1936615775, 1836016500, 1701734754, 1869375071, 3437665, 0
+    %6:_(<4 x s32>) = G_FSUB %2, %3
+    %7:id(s32) = G_INTRINSIC intrinsic(@llvm.spv.length), %6(<4 x s32>)
+    OpReturnValue %7(s32)
+    

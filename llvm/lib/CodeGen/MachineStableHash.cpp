@@ -68,7 +68,7 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     }
 
     // Register operands don't have target flags.
-    return stable_hash_combine(MO.getType(), MO.getReg(), MO.getSubReg(),
+    return stable_hash_combine(MO.getType(), MO.getReg().id(), MO.getSubReg(),
                                MO.isDef());
   case MachineOperand::MO_Immediate:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(), MO.getImm());
@@ -136,7 +136,8 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
           const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
           unsigned RegMaskSize =
               MachineOperand::getRegMaskSize(TRI->getNumRegs());
-          const uint32_t *RegMask = MO.getRegMask();
+          const uint32_t *RegMask =
+              MO.isRegMask() ? MO.getRegMask() : MO.getRegLiveOut();
           std::vector<llvm::stable_hash> RegMaskHashes(RegMask,
                                                        RegMask + RegMaskSize);
           return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
@@ -163,6 +164,10 @@ stable_hash llvm::stableHashValue(const MachineOperand &MO) {
     auto SymbolName = MO.getMCSymbol()->getName();
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
                                stable_hash_name(SymbolName));
+  }
+  case MachineOperand::MO_LaneMask: {
+    return stable_hash_combine(MO.getType(), MO.getTargetFlags(),
+                               MO.getLaneMask().getAsInteger());
   }
   case MachineOperand::MO_CFIIndex:
     return stable_hash_combine(MO.getType(), MO.getTargetFlags(),

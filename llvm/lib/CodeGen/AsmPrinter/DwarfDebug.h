@@ -394,9 +394,6 @@ class DwarfDebug : public DebugHandlerBase {
   /// table for the same directory as DW_AT_comp_dir.
   StringRef CompilationDir;
 
-  /// Holder for the file specific debug information.
-  DwarfFile InfoHolder;
-
   /// Holders for the various debug information flags that we might need to
   /// have exposed. See accessor functions below for description.
 
@@ -464,6 +461,10 @@ public:
   };
 
 private:
+  /// Instructions which should get is_stmt applied because they implement key
+  /// functionality for a source atom.
+  SmallDenseSet<const MachineInstr *> KeyInstructions;
+
   /// Force the use of DW_AT_ranges even for single-entry range lists.
   MinimizeAddrInV5 MinimizeAddr = MinimizeAddrInV5::Disabled;
 
@@ -527,10 +528,6 @@ private:
   DebuggerKind DebuggerTuning = DebuggerKind::Default;
 
   MCDwarfDwoLineTable *getDwoLineTable(const DwarfCompileUnit &);
-
-  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
-    return InfoHolder.getUnits();
-  }
 
   using InlinedEntity = DbgValueHistoryMap::InlinedEntity;
 
@@ -679,7 +676,7 @@ private:
   /// label that was emitted and which provides correspondence to the
   /// source line list.
   void recordSourceLine(unsigned Line, unsigned Col, const MDNode *Scope,
-                        unsigned Flags);
+                        unsigned Flags, StringRef Location = {});
 
   /// Populate LexicalScope entries with variables' info.
   void collectEntityInfo(DwarfCompileUnit &TheCU, const DISubprogram *SP,
@@ -701,7 +698,14 @@ private:
 
   void findForceIsStmtInstrs(const MachineFunction *MF);
 
+  /// Compute instructions which should get is_stmt applied because they
+  /// implement key functionality for a source location atom, store results in
+  /// DwarfDebug::KeyInstructions.
+  void computeKeyInstructions(const MachineFunction *MF);
+
 protected:
+  /// Holder for the file specific debug information.
+  DwarfFile InfoHolder;
   /// Gather pre-function debug information.
   void beginFunctionImpl(const MachineFunction *MF) override;
 
@@ -712,6 +716,17 @@ protected:
   unsigned getDwarfCompileUnitIDForLineTable(const DwarfCompileUnit &CU);
 
   void skippedNonDebugFunction() override;
+
+  /// Target-specific debug info initialization at function start.
+  /// Default implementation is empty, overridden by NVPTX target.
+  virtual void initializeTargetDebugInfo(const MachineFunction &MF) {}
+
+  /// Target-specific source line recording.
+  virtual void recordTargetSourceLine(const DebugLoc &DL, unsigned Flags);
+
+  const SmallVectorImpl<std::unique_ptr<DwarfCompileUnit>> &getUnits() {
+    return InfoHolder.getUnits();
+  }
 
 public:
   //===--------------------------------------------------------------------===//
@@ -896,6 +911,10 @@ public:
   const DwarfCompileUnit *lookupCU(const DIE *Die) const {
     return CUDieMap.lookup(Die);
   }
+
+  /// Find the matching DwarfCompileUnit for the given SP referenced from SrcCU.
+  DwarfCompileUnit &getOrCreateAbstractSubprogramCU(const DISubprogram *SP,
+                                                    DwarfCompileUnit &SrcCU);
 
   unsigned getStringTypeLoc(const DIStringType *ST) const {
     return StringTypeLocMap.lookup(ST);

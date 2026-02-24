@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/stdio/clearerr.h"
-#include "file.h"
-#include "src/__support/macros/config.h"
 
+#include "file.h"
 #include "hdr/types/FILE.h"
+#include "src/__support/common.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -21,7 +21,6 @@ LLVM_LIBC_FUNCTION(void, clearerr, (::FILE * stream)) {
         buffer->data[0] = file::from_stream(stream);
       },
       [&](rpc::Buffer *, uint32_t) {});
-  port.close();
 }
 
 } // namespace LIBC_NAMESPACE_DECL

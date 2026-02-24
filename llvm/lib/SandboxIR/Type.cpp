@@ -15,20 +15,20 @@ Type *Type::getScalarType() const {
   return Ctx.getType(LLVMTy->getScalarType());
 }
 
-Type *Type::getInt64Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt64Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt64Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt64Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt32Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt32Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt32Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt32Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt16Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt16Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt16Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt16Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt8Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt8Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt8Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt8Ty(Ctx.LLVMCtx)));
 }
-Type *Type::getInt1Ty(Context &Ctx) {
-  return Ctx.getType(llvm::Type::getInt1Ty(Ctx.LLVMCtx));
+IntegerType *Type::getInt1Ty(Context &Ctx) {
+  return cast<IntegerType>(Ctx.getType(llvm::Type::getInt1Ty(Ctx.LLVMCtx)));
 }
 Type *Type::getDoubleTy(Context &Ctx) {
   return Ctx.getType(llvm::Type::getDoubleTy(Ctx.LLVMCtx));
@@ -36,10 +36,17 @@ Type *Type::getDoubleTy(Context &Ctx) {
 Type *Type::getFloatTy(Context &Ctx) {
   return Ctx.getType(llvm::Type::getFloatTy(Ctx.LLVMCtx));
 }
-PointerType *PointerType::get(Type *ElementType, unsigned AddressSpace) {
-  return cast<PointerType>(ElementType->getContext().getType(
-      llvm::PointerType::get(ElementType->LLVMTy, AddressSpace)));
+Type *Type::getHalfTy(Context &Ctx) {
+  return Ctx.getType(llvm::Type::getHalfTy(Ctx.LLVMCtx));
 }
+
+#ifndef NDEBUG
+void Type::dumpOS(raw_ostream &OS) { LLVMTy->print(OS); }
+void Type::dump() {
+  dumpOS(dbgs());
+  dbgs() << "\n";
+}
+#endif
 
 PointerType *PointerType::get(Context &Ctx, unsigned AddressSpace) {
   return cast<PointerType>(

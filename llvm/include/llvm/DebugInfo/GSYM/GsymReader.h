@@ -15,6 +15,7 @@
 #include "llvm/DebugInfo/GSYM/Header.h"
 #include "llvm/DebugInfo/GSYM/LineEntry.h"
 #include "llvm/DebugInfo/GSYM/StringTable.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorOr.h"
@@ -66,15 +67,15 @@ class GsymReader {
   std::unique_ptr<SwappedData> Swap;
 
 public:
-  GsymReader(GsymReader &&RHS);
-  ~GsymReader();
+  LLVM_ABI GsymReader(GsymReader &&RHS);
+  LLVM_ABI ~GsymReader();
 
   /// Construct a GsymReader from a file on disk.
   ///
   /// \param Path The file path the GSYM file to read.
   /// \returns An expected GsymReader that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  static llvm::Expected<GsymReader> openFile(StringRef Path);
+  LLVM_ABI static llvm::Expected<GsymReader> openFile(StringRef Path);
 
   /// Construct a GsymReader from a buffer.
   ///
@@ -82,11 +83,11 @@ public:
   /// returned object on success.
   /// \returns An expected GsymReader that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  static llvm::Expected<GsymReader> copyBuffer(StringRef Bytes);
+  LLVM_ABI static llvm::Expected<GsymReader> copyBuffer(StringRef Bytes);
 
   /// Access the GSYM header.
   /// \returns A native endian version of the GSYM header.
-  const Header &getHeader() const;
+  LLVM_ABI const Header &getHeader() const;
 
   /// Get the full function info for an address.
   ///
@@ -104,7 +105,7 @@ public:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing to lookup the
   /// address.
-  llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
+  LLVM_ABI llvm::Expected<FunctionInfo> getFunctionInfo(uint64_t Addr) const;
 
   /// Get the full function info given an address index.
   ///
@@ -113,7 +114,8 @@ public:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing get the function
   /// info object.
-  llvm::Expected<FunctionInfo> getFunctionInfoAtIndex(uint64_t AddrIdx) const;
+  LLVM_ABI llvm::Expected<FunctionInfo>
+  getFunctionInfoAtIndex(uint64_t AddrIdx) const;
 
   /// Lookup an address in the a GSYM.
   ///
@@ -127,10 +129,30 @@ public:
   /// is much faster for lookups.
   ///
   /// \param Addr A virtual address from the orignal object file to lookup.
+  ///
+  /// \param MergedFuncsData A pointer to an optional DataExtractor that, if
+  /// non-null, will be set to the raw data of the MergedFunctionInfo, if
+  /// present.
+  ///
   /// \returns An expected LookupResult that contains only the information
   /// needed for the current address, or an error object that indicates reason
   /// for failing to lookup the address.
-  llvm::Expected<LookupResult> lookup(uint64_t Addr) const;
+  LLVM_ABI llvm::Expected<LookupResult>
+  lookup(uint64_t Addr,
+         std::optional<DataExtractor> *MergedFuncsData = nullptr) const;
+
+  /// Lookup all merged functions for a given address.
+  ///
+  /// This function performs a lookup for the specified address and then
+  /// retrieves additional LookupResults from any merged functions associated
+  /// with the primary LookupResult.
+  ///
+  /// \param Addr The address to lookup.
+  ///
+  /// \returns A vector of LookupResult objects, where the first element is the
+  /// primary result, followed by results for any merged functions
+  LLVM_ABI llvm::Expected<std::vector<LookupResult>>
+  lookupAll(uint64_t Addr) const;
 
   /// Get a string from the string table.
   ///
@@ -156,7 +178,7 @@ public:
   /// Dump the entire Gsym data contained in this object.
   ///
   /// \param  OS The output stream to dump to.
-  void dump(raw_ostream &OS);
+  LLVM_ABI void dump(raw_ostream &OS);
 
   /// Dump a FunctionInfo object.
   ///
@@ -169,7 +191,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item within MergedFunctionsInfo.
-  void dump(raw_ostream &OS, const FunctionInfo &FI, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const FunctionInfo &FI,
+                     uint32_t Indent = 0);
 
   /// Dump a MergedFunctionsInfo object.
   ///
@@ -179,7 +202,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param MFI The object to dump.
-  void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
+  LLVM_ABI void dump(raw_ostream &OS, const MergedFunctionsInfo &MFI);
 
   /// Dump a CallSiteInfo object.
   ///
@@ -189,7 +212,7 @@ public:
   /// \param OS The output stream to dump to.
   ///
   /// \param CSI The CallSiteInfo object to dump.
-  void dump(raw_ostream &OS, const CallSiteInfo &CSI);
+  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfo &CSI);
 
   /// Dump a CallSiteInfoCollection object.
   ///
@@ -199,7 +222,11 @@ public:
   /// \param OS The output stream to dump to.
   ///
   /// \param CSIC The CallSiteInfoCollection object to dump.
-  void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC);
+  ///
+  /// \param Indent The indentation as number of spaces. Used when dumping as an
+  /// item from within MergedFunctionsInfo.
+  LLVM_ABI void dump(raw_ostream &OS, const CallSiteInfoCollection &CSIC,
+                     uint32_t Indent = 0);
 
   /// Dump a LineTable object.
   ///
@@ -213,7 +240,7 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used when dumping as an
   /// item from within MergedFunctionsInfo.
-  void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const LineTable &LT, uint32_t Indent = 0);
 
   /// Dump a InlineInfo object.
   ///
@@ -226,7 +253,8 @@ public:
   ///
   /// \param Indent The indentation as number of spaces. Used for recurive
   /// dumping.
-  void dump(raw_ostream &OS, const InlineInfo &II, uint32_t Indent = 0);
+  LLVM_ABI void dump(raw_ostream &OS, const InlineInfo &II,
+                     uint32_t Indent = 0);
 
   /// Dump a FileEntry object.
   ///
@@ -236,7 +264,7 @@ public:
   /// \param  OS The output stream to dump to.
   ///
   /// \param FE The object to dump.
-  void dump(raw_ostream &OS, std::optional<FileEntry> FE);
+  LLVM_ABI void dump(raw_ostream &OS, std::optional<FileEntry> FE);
 
   /// Get the number of addresses in this Gsym file.
   uint32_t getNumAddresses() const {
@@ -250,7 +278,7 @@ public:
   /// \param Index A index into the address table.
   /// \returns A resolved virtual address for adddress in the address table
   /// or std::nullopt if Index is out of bounds.
-  std::optional<uint64_t> getAddress(size_t Index) const;
+  LLVM_ABI std::optional<uint64_t> getAddress(size_t Index) const;
 
 protected:
 
@@ -336,9 +364,8 @@ protected:
   /// GsymReader.
   /// \returns An expected GsymReader that contains the object or an error
   /// object that indicates reason for failing to read the GSYM.
-  static llvm::Expected<llvm::gsym::GsymReader>
+  LLVM_ABI static llvm::Expected<llvm::gsym::GsymReader>
   create(std::unique_ptr<MemoryBuffer> &MemBuffer);
-
 
   /// Given an address, find the address index.
   ///
@@ -349,7 +376,7 @@ protected:
   /// \returns An index into the address table. This index can be used to
   /// extract the FunctionInfo data's offset from the AddrInfoOffsets array.
   /// Returns an error if the address isn't in the GSYM with details of why.
-  Expected<uint64_t> getAddressIndex(const uint64_t Addr) const;
+  LLVM_ABI Expected<uint64_t> getAddressIndex(const uint64_t Addr) const;
 
   /// Given an address index, get the offset for the FunctionInfo.
   ///
@@ -360,7 +387,7 @@ protected:
   /// \param Index An index into the address table.
   /// \returns An optional GSYM data offset for the offset of the FunctionInfo
   /// that needs to be decoded.
-  std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
+  LLVM_ABI std::optional<uint64_t> getAddressInfoOffset(size_t Index) const;
 
   /// Given an address, find the correct function info data and function
   /// address.
@@ -381,7 +408,7 @@ protected:
   ///
   /// \returns An valid data extractor on success, or an error if we fail to
   /// find the address in a function info or corrrectly decode the data
-  llvm::Expected<llvm::DataExtractor>
+  LLVM_ABI llvm::Expected<llvm::DataExtractor>
   getFunctionInfoDataForAddress(uint64_t Addr, uint64_t &FuncStartAddr) const;
 
   /// Get the function data and address given an address index.
@@ -391,7 +418,7 @@ protected:
   /// \returns An expected FunctionInfo that contains the function info object
   /// or an error object that indicates reason for failing to lookup the
   /// address.
-  llvm::Expected<llvm::DataExtractor>
+  LLVM_ABI llvm::Expected<llvm::DataExtractor>
   getFunctionInfoDataAtIndex(uint64_t AddrIdx, uint64_t &FuncStartAddr) const;
 };
 

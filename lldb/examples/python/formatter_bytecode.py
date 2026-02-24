@@ -35,6 +35,7 @@ define_opcode(6, "rot", "rot")
 define_opcode(0x10, "{", "begin")
 define_opcode(0x11, "if", "if")
 define_opcode(0x12, "ifelse", "ifelse")
+define_opcode(0x13, "return", "return")
 
 define_opcode(0x20, None, "lit_uint")
 define_opcode(0x21, None, "lit_int")
@@ -94,6 +95,8 @@ define_selector(0x13, "get_child_index")
 define_selector(0x15, "get_type")
 define_selector(0x16, "get_template_argument_type")
 define_selector(0x17, "cast")
+define_selector(0x18, "get_synthetic_value")
+define_selector(0x19, "get_non_synthetic_value")
 define_selector(0x20, "get_value")
 define_selector(0x21, "get_value_as_unsigned")
 define_selector(0x22, "get_value_as_signed")
@@ -342,6 +345,9 @@ def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = Fa
             else:
                 frame.append(control.pop())
                 control.pop()
+        elif b == op_return:
+            control.clear()
+            return data[-1]
 
         # Literals.
         elif b == op_lit_uint:
@@ -433,6 +439,10 @@ def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = Fa
                 n = data.pop()
                 valobj = data.pop()
                 data.append(valobj.GetTemplateArgumentType(n))
+            elif sel == sel_get_synthetic_value:
+                data.append(data.pop().GetSyntheticValue())
+            elif sel == sel_get_non_synthetic_value:
+                data.append(data.pop().GetNonSyntheticValue())
             elif sel == sel_get_value:
                 data.append(data.pop().GetValue())
             elif sel == sel_get_value_as_unsigned:

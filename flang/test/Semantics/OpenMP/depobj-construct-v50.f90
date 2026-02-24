@@ -26,3 +26,20 @@ subroutine f03
 !WARNING: The object parameter in DESTROY clause on DEPOPJ construct is not allowed in OpenMP v5.0, try -fopenmp-version=52
   !$omp depobj(obj) destroy(jbo)
 end
+
+subroutine f04
+  integer :: obj1, obj2
+!ERROR: The DEPOBJ directive requires a single argument
+  !$omp depobj(ob1, obj2) destroy
+end
+
+subroutine f05
+!ERROR: The DEPOBJ directive requires a single argument
+  !$omp depobj update(in)
+end
+
+subroutine f06
+  integer :: obj
+!ERROR: The DEPOBJ construct requires a single clause
+  !$omp depobj(obj) update(in) destroy
+end

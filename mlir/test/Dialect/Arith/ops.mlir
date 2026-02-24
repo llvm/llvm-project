@@ -151,6 +151,12 @@ func.func @test_divui(%arg0 : i64, %arg1 : i64) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: test_divui_exact
+func.func @test_divui_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.divui %arg0, %arg1 exact : i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: test_divui_tensor
 func.func @test_divui_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
   %0 = arith.divui %arg0, %arg1 : tensor<8x8xi64>
@@ -172,6 +178,12 @@ func.func @test_divui_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8
 // CHECK-LABEL: test_divsi
 func.func @test_divsi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.divsi %arg0, %arg1 : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_divsi_exact
+func.func @test_divsi_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.divsi %arg0, %arg1 exact : i64
   return %0 : i64
 }
 
@@ -391,6 +403,12 @@ func.func @test_shrui(%arg0 : i64, %arg1 : i64) -> i64 {
   return %0 : i64
 }
 
+// CHECK-LABEL: test_shrui_exact
+func.func @test_shrui_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.shrui %arg0, %arg1 exact : i64
+  return %0 : i64
+}
+
 // CHECK-LABEL: test_shrui_tensor
 func.func @test_shrui_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) -> tensor<8x8xi64> {
   %0 = arith.shrui %arg0, %arg1 : tensor<8x8xi64>
@@ -412,6 +430,12 @@ func.func @test_shrui_scalable_vector(%arg0 : vector<[8]xi64>, %arg1 : vector<[8
 // CHECK-LABEL: test_shrsi
 func.func @test_shrsi(%arg0 : i64, %arg1 : i64) -> i64 {
   %0 = arith.shrsi %arg0, %arg1 : i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_shrsi_exact
+func.func @test_shrsi_exact(%arg0 : i64, %arg1 : i64) -> i64 {
+  %0 = arith.shrsi %arg0, %arg1 exact : i64
   return %0 : i64
 }
 
@@ -1159,77 +1183,7 @@ func.func @intflags_func(%arg0: i64, %arg1: i64) {
   %2 = arith.muli %arg0, %arg1 overflow<nsw, nuw> : i64
   // CHECK: %{{.*}} = arith.shli %{{.*}}, %{{.*}} overflow<nsw, nuw> : i64
   %3 = arith.shli %arg0, %arg1 overflow<nsw, nuw> : i64
-  return
-}
-
-// CHECK-LABEL: check_denorm_modes(
-// CHECK-SAME: %[[ARG0:.+]]: f32, %[[ARG1:.+]]: f32, %[[ARG2:.+]]: f32)
-func.func @check_denorm_modes(%arg0: f32, %arg1: f32, %arg2: f32) {
-  // CHECK: %[[CST:.+]] = arith.constant 1.401300e-45 : f32
-  %c_denorm = arith.constant 1.4e-45 : f32
-  // CHECK: %{{.+}} = arith.subf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %sub_preserve_sign = arith.subf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.subf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %sub_positive_zero = arith.subf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.subf %[[ARG2]], %[[CST]] : f32
-  %sub_ieee = arith.subf %arg2, %c_denorm denormal<ieee> : f32
-
-  // CHECK: %{{.+}} = arith.addf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %add_preserve_sign = arith.addf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.addf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %add_positive_zero = arith.addf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.addf %[[ARG2]], %[[CST]] : f32
-  %add_ieee = arith.addf %arg2, %c_denorm denormal<ieee> : f32
-
-  // CHECK: %{{.+}} = arith.mulf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %mul_preserve_sign = arith.mulf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.mulf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %mul_positive_zero = arith.mulf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.mulf %[[ARG2]], %[[CST]] : f32
-  %mul_ieee = arith.mulf %arg2, %c_denorm denormal<ieee> : f32
-
-  // CHECK: %{{.+}} = arith.divf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %div_preserve_sign = arith.divf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.divf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %div_positive_zero = arith.divf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.divf %[[ARG2]], %[[CST]] : f32
-  %div_ieee = arith.divf %arg2, %c_denorm denormal<ieee> : f32
-
-  // CHECK: %{{.+}} = arith.maximumf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %maximumf_preserve_sign = arith.maximumf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.maximumf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %maximumf_positive_zero = arith.maximumf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.maximumf %[[ARG2]], %[[CST]] : f32
-  %maximumf_ieee = arith.maximumf %arg2, %c_denorm denormal<ieee> : f32
-
-  // CHECK: %{{.+}} = arith.maxnumf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %maxnumf_preserve_sign = arith.maxnumf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.maxnumf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %maxnumf_positive_zero = arith.maxnumf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.maxnumf %[[ARG2]], %[[CST]] : f32
-  %maxnumf_ieee = arith.maxnumf %arg2, %c_denorm denormal<ieee> : f32
-
-  // CHECK: %{{.+}} = arith.minimumf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %minimumf_preserve_sign = arith.minimumf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.minimumf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %minimumf_positive_zero = arith.minimumf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.minimumf %[[ARG2]], %[[CST]] : f32
-  %minimumf_ieee = arith.minimumf %arg2, %c_denorm denormal<ieee> : f32
-
-  // CHECK: %{{.+}} = arith.minnumf %{{.+}}, %{{.+}} denormal<preserve_sign> : f32
-  %minnumf_preserve_sign = arith.minnumf %arg0, %c_denorm denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.minnumf %{{.+}}, %{{.+}} denormal<positive_zero> : f32
-  %minnumf_positive_zero = arith.minnumf %arg1, %c_denorm denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.minnumf %[[ARG2]], %[[CST]] : f32
-  %minnumf_ieee = arith.minnumf %arg2, %c_denorm denormal<ieee> : f32
-
-
-  // CHECK: %{{.+}} = arith.negf %{{.+}} denormal<preserve_sign> : f32
-  %negf_preserve_sign = arith.negf %arg0 denormal<preserve_sign> : f32
-  // CHECK: %{{.+}} = arith.negf %{{.+}} denormal<positive_zero> : f32
-  %negf_positive_sign = arith.negf %arg0 denormal<positive_zero> : f32
-  // CHECK: %{{.+}} = arith.negf %[[ARG0]] : f32
-  %negf_ieee = arith.negf %arg0 denormal<ieee> : f32
-
+  // CHECK: %{{.*}} = arith.trunci %{{.*}} overflow<nsw, nuw> : i64 to i32
+  %4 = arith.trunci %arg0 overflow<nsw, nuw> : i64 to i32
   return
 }

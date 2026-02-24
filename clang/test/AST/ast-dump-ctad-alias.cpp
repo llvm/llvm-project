@@ -39,15 +39,14 @@ Out2<double>::AInner t(1.0);
 // CHECK-NEXT: |     |   |-DeducedTemplateSpecializationType {{.*}} 'Out2<double>::AInner' dependent
 // CHECK-NEXT: |     |   | `-name: 'Out2<double>::AInner'
 // CHECK-NEXT: |     |   |   `-TypeAliasTemplateDecl {{.+}} AInner{{$}}
-// CHECK-NEXT: |     |   `-ElaboratedType {{.*}} 'Inner<Y>' sugar dependent
-// CHECK-NEXT: |     |     `-TemplateSpecializationType {{.*}} 'Inner<Y>' dependent
-// CHECK-NEXT: |     |       |-name: 'Inner':'Out<int>::Inner' qualified
-// CHECK-NEXT: |     |       | `-ClassTemplateDecl {{.+}} Inner{{$}}
-// CHECK-NEXT: |     |       `-TemplateArgument type 'Y'
-// CHECK-NEXT: |     |         `-SubstTemplateTypeParmType {{.*}} 'Y'
-// CHECK-NEXT: |     |           |-FunctionTemplate {{.*}} '<deduction guide for Inner>'
-// CHECK-NEXT: |     |           `-TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
-// CHECK-NEXT: |     |             `-TemplateTypeParm {{.*}} 'Y'
+// CHECK-NEXT: |     |   `-TemplateSpecializationType {{.*}} 'Inner<Y>' dependent
+// CHECK-NEXT: |     |     |-name: 'Inner':'Out<int>::Inner' qualified
+// CHECK-NEXT: |     |     | `-ClassTemplateDecl {{.+}} Inner{{$}}
+// CHECK-NEXT: |     |     `-TemplateArgument type 'Y'
+// CHECK-NEXT: |     |       `-SubstTemplateTypeParmType {{.*}} 'Y'
+// CHECK-NEXT: |     |         |-FunctionTemplate {{.*}} '<deduction guide for Inner>'
+// CHECK-NEXT: |     |         `-TemplateTypeParmType {{.*}} 'Y' dependent depth 1 index 0
+// CHECK-NEXT: |     |           `-TemplateTypeParm {{.*}} 'Y'
 // CHECK-NEXT: |     |-CXXDeductionGuideDecl {{.*}} <deduction guide for AInner> 'auto (Y) -> Inner<Y>'
 // CHECK-NEXT: |     | `-ParmVarDecl {{.*}} 'Y'
 // CHECK-NEXT: |     `-CXXDeductionGuideDecl {{.*}} used <deduction guide for AInner> 'auto (double) -> Inner<double>' implicit_instantiation
@@ -156,3 +155,50 @@ ATemplatedClass2 test2(list);
 // CHECK-NEXT: |-TypeTraitExpr {{.*}} 'bool' __is_deducible
 
 } // namespace GH90209
+
+namespace GH124715 {
+
+template <class T, class... Args>
+concept invocable = true;
+
+template <class T, class... Args> struct Struct {
+  template <class U>
+    requires invocable<U, Args...>
+  Struct(U, Args...) {}
+};
+
+template <class...> struct Packs {};
+
+template <class Lambda, class... Args>
+Struct(Lambda lambda, Args... args) -> Struct<Lambda, Args...>;
+
+template <class T, class... Ts> using Alias = Struct<T, Packs<Ts...>>;
+
+void foo() {
+  Alias([](int) {}, Packs<int>());
+}
+
+// CHECK:      |-FunctionTemplateDecl {{.*}} implicit <deduction guide for Alias>
+// CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} class depth 0 index 0 T
+// CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} class depth 0 index 1 ... Ts
+// CHECK-NEXT: | |-TemplateTypeParmDecl {{.*}} class depth 0 index 2 U
+// CHECK-NEXT: | |-BinaryOperator {{.*}} 'bool' '&&'
+// CHECK-NEXT: | | |-ConceptSpecializationExpr {{.*}} 'bool' Concept {{.*}} 'invocable'
+// CHECK-NEXT: | | | |-ImplicitConceptSpecializationDecl {{.*}}
+// CHECK-NEXT: | | | | |-TemplateArgument type 'U'
+// CHECK-NEXT: | | | | | `-TemplateTypeParmType {{.*}} 'U' dependent depth 0 index 2
+// CHECK-NEXT: | | | | |   `-TemplateTypeParm {{.*}} 'U'
+// CHECK-NEXT: | | | | `-TemplateArgument pack '<Packs<Ts...>>'
+// CHECK-NEXT: | | | |   `-TemplateArgument type 'Packs<Ts...>'
+// CHECK-NEXT: | | | |     `-TemplateSpecializationType {{.*}} 'Packs<Ts...>' dependent
+// CHECK-NEXT: | | | |       |-name: 'Packs':'GH124715::Packs' qualified
+// CHECK-NEXT: | | | |       | `-ClassTemplateDecl {{.*}} Packs
+// CHECK-NEXT: | | | |       `-TemplateArgument type 'Ts...'
+// CHECK-NEXT: | | | |         `-PackExpansionType {{.*}} 'Ts...' dependent
+// CHECK-NEXT: | | | |           `-TemplateTypeParmType {{.*}} 'Ts' dependent contains_unexpanded_pack depth 0 index 1 pack
+// CHECK-NEXT: | | | |             `-TemplateTypeParm {{.*}} 'Ts'
+// CHECK-NEXT: | | | |-TemplateArgument {{.*}} type 'U':'type-parameter-0-2'
+// CHECK-NEXT: | | | | `-TemplateTypeParmType {{.*}} 'U' dependent depth 0 index 2
+// CHECK-NEXT: | | | |   `-TemplateTypeParm {{.*}} 'U'
+
+} // namespace GH124715

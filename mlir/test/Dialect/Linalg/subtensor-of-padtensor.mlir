@@ -129,6 +129,26 @@ func.func @static_mixed_data_low_high_pad(%arg0 : tensor<4x5xf32>, %pad : f32)
 
 // -----
 
+// CHECK-LABEL: @static_rank_reduce
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<8x16x4xf32>, %[[PADVAL:.*]]: f32
+//       CHECK:   %[[SLICE:.*]] = tensor.extract_slice %[[ARG0]][0, 0, 0] [1, 14, 4] [1, 1, 1] : tensor<8x16x4xf32> to tensor<1x14x4xf32>
+//       CHECK:   %[[PADDED:.*]] = tensor.pad %[[SLICE]] low[0, 2, 0] high[0, 0, 0] {
+//       CHECK:   } : tensor<1x14x4xf32> to tensor<1x16x4xf32>
+//       CHECK:   %[[RESULT:.*]] = tensor.extract_slice %[[PADDED]][0, 0, 0] [1, 16, 4] [1, 1, 1] : tensor<1x16x4xf32> to tensor<16x4xf32>
+//       CHECK: return %[[RESULT]]
+func.func @static_rank_reduce(%arg0: tensor<8x16x4xf32>, %pad: f32)
+    -> tensor<16x4xf32> {
+  %0 = tensor.pad %arg0 low[0, 2, 0] high[0, 0, 0] {
+    ^bb0(%i: index, %j: index, %k: index):
+      tensor.yield %pad : f32
+  } : tensor<8x16x4xf32> to tensor<8x18x4xf32>
+  %1 = tensor.extract_slice %0[0, 0, 0] [1, 16, 4] [1, 1, 1]
+      : tensor<8x18x4xf32> to tensor<16x4xf32>
+  return %1 : tensor<16x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: @dynamic_high_pad
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<?x5xf32>
 //   CHECK-NOT:   tensor.pad
@@ -215,4 +235,42 @@ func.func @dynamic_zero_high_padding(%arg0 : tensor<?x?xf32>, %pad : f32,
     } : tensor<?x?xf32> to tensor<?x?xf32>
   %1 = tensor.extract_slice %0[%o1, %o2] [%s1, %s2] [1, 1] : tensor<?x?xf32> to tensor<?x?xf32>
   return %1 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @dynamic_rank_reduce
+//       CHECK:   %[[TEMP:.*]] = scf.if %{{.*}} -> (tensor<1x4xf32>) {
+//       CHECK:     tensor.generate
+//       CHECK:   } else {
+//       CHECK:     %[[SLICE:.*]] = tensor.extract_slice %{{.*}} : tensor<?x5xf32> to tensor<?x1xf32>
+//       CHECK:     tensor.pad %[[SLICE]] low[0, 0] high[%{{.*}}, 3] {
+//       CHECK:     } : tensor<?x1xf32> to tensor<1x4xf32>
+//       CHECK:   }
+//       CHECK:   %[[RESULT:.*]] = tensor.extract_slice %[[TEMP]]{{.*}} : tensor<1x4xf32> to tensor<4xf32>
+//       CHECK:   return %[[RESULT]]
+func.func @dynamic_rank_reduce(%arg0 : tensor<?x5xf32>, %s1: index, %pad : f32) -> tensor<4xf32> {
+  %0 = tensor.pad %arg0 low[0, 0] high[7, 8] {
+    ^bb0(%arg1: index, %arg2: index):
+      tensor.yield %pad : f32
+    } : tensor<?x5xf32> to tensor<?x13xf32>
+  %1 = tensor.extract_slice %0[2, 4] [1, 4] [1, 1] : tensor<?x13xf32> to tensor<4xf32>
+  return %1 : tensor<4xf32>
+}
+
+// -----
+// CHECK-LABEL: @nopaddim_with_dynamic_extract(
+//  CHECK-SAME:     %[[ARG0:.*]]: tensor<3x4x5xf32>
+//  CHECK-SAME:     %[[ARG1:.*]]: f32
+//  CHECK-SAME:     %[[ARG2:.*]]: index
+//       CHECK:   %[[RESULT:.*]] = tensor.extract_slice %[[ARG0]][%[[ARG2]], 1, 2] [%[[ARG2]], 2, 1] [1, 1, 1] : tensor<3x4x5xf32> to tensor<?x2x1xf32>
+//       CHECK:   return %[[RESULT]]
+func.func @nopaddim_with_dynamic_extract(%arg0 : tensor<3x4x5xf32>, %pad : f32, %index : index)
+    -> tensor<?x2x1xf32> {
+  %0 = tensor.pad %arg0 low[0, 0, 0] high[0, 7, 8] {
+    ^bb0(%arg1: index, %arg2: index, %arg3: index):
+      tensor.yield %pad : f32
+    } : tensor<3x4x5xf32> to tensor<3x11x13xf32>
+  %1 = tensor.extract_slice %0[%index, 1, 2] [%index, 2, 1] [1, 1, 1] : tensor<3x11x13xf32> to tensor<?x2x1xf32>
+  return %1 : tensor<?x2x1xf32>
 }

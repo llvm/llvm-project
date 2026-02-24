@@ -4,10 +4,10 @@
 subroutine foo()
   integer :: i, j
   j = 0
-! CHECK: !$OMP DO  REDUCTION(TASK, *:j)
+! CHECK: !$OMP DO  REDUCTION(TASK, *: j)
 ! PARSE-TREE: | | ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
 ! PARSE-TREE: | | | OmpBeginLoopDirective
-! PARSE-TREE: | | | | OmpLoopDirective -> llvm::omp::Directive = do
+! PARSE-TREE: | | | | OmpDirectiveName -> llvm::omp::Directive = do
 ! PARSE-TREE: | | | | OmpClauseList -> OmpClause -> Reduction -> OmpReductionClause
 ! PARSE-TREE: | | | | | Modifier -> OmpReductionModifier -> Value = Task
 ! PARSE-TREE: | | | | | Modifier -> OmpReductionIdentifier -> DefinedOperator -> IntrinsicOperator = Multiply

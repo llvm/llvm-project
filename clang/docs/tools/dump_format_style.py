@@ -79,6 +79,8 @@ def to_yaml_type(typestr: str):
         return "Unsigned"
     elif typestr == "std::string":
         return "String"
+    elif typestr == "tok::TokenKind":
+        return "String"
 
     match = re.match(r"std::vector<(.*)>$", typestr)
     if match:
@@ -152,7 +154,7 @@ class NestedField(object):
 
     def __str__(self):
         if self.version:
-            return "\n* ``%s`` :versionbadge:`clang-format %s`\n%s" % (
+            return "\n* ``%s`` :versionbadge:`clang-format %s` %s" % (
                 self.name,
                 self.version,
                 doxygen2rst(indent(self.comment, 2, indent_first_line=False)),
@@ -399,9 +401,32 @@ class OptionsReader:
                             )
                         )
                     else:
-                        nested_struct.values.append(
-                            NestedField(field_type + " " + field_name, comment, version)
-                        )
+                        vec_match = re.match(r"std::vector<(.*)>$", field_type)
+                        if vec_match and vec_match.group(1) in nested_structs:
+                            inner_struct = nested_structs[vec_match.group(1)]
+                            display = "List of %ss %s" % (
+                                vec_match.group(1),
+                                field_name,
+                            )
+                            nested_struct.values.append(
+                                NestedField(display, comment, version)
+                            )
+                            nested_struct.values.extend(inner_struct.values)
+                        else:
+                            vec_match = re.match(r"std::vector<(.*)>$", field_type)
+                            if vec_match:
+                                display_type = "List of " + pluralize(
+                                    to_yaml_type(vec_match.group(1))
+                                )
+                            else:
+                                display_type = field_type
+                            nested_struct.values.append(
+                                NestedField(
+                                    display_type + " " + field_name,
+                                    comment,
+                                    version,
+                                )
+                            )
                     version = None
             elif state == State.InEnum:
                 if line.startswith("///"):
@@ -411,8 +436,8 @@ class OptionsReader:
                     state = State.InStruct
                     enums[enum.name] = enum
                 else:
-                    # Enum member without documentation. Must be documented where the enum
-                    # is used.
+                    # Enum member without documentation. Must be documented
+                    # where the enum is used.
                     pass
             elif state == State.InNestedEnum:
                 if line.startswith("///"):
@@ -492,5 +517,7 @@ with open(DOC_FILE, encoding="utf-8") as f:
 
 contents = substitute(contents, "FORMAT_STYLE_OPTIONS", options_text)
 
-with open(args.output if args.output else DOC_FILE, "wb") as output:
-    output.write(contents.encode())
+with open(
+    args.output if args.output else DOC_FILE, "w", newline="", encoding="utf-8"
+) as f:
+    f.write(contents)

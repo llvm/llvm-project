@@ -24,6 +24,8 @@
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-defines.h"
@@ -223,10 +225,16 @@ uint64_t Value::GetValueByteSize(Status *error_ptr, ExecutionContext *exe_ctx) {
   case ContextType::Variable: // Variable *
   {
     auto *scope = exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr;
-    if (std::optional<uint64_t> size = GetCompilerType().GetByteSize(scope)) {
+    auto size_or_err = GetCompilerType().GetByteSize(scope);
+    if (!size_or_err) {
+      if (error_ptr && error_ptr->Success())
+        *error_ptr = Status::FromError(size_or_err.takeError());
+      else
+        LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    } else {
       if (error_ptr)
         error_ptr->Clear();
-      return *size;
+      return *size_or_err;
     }
     break;
   }
@@ -321,8 +329,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
   AddressType address_type = eAddressTypeFile;
   Address file_so_addr;
   const CompilerType &ast_type = GetCompilerType();
-  std::optional<uint64_t> type_size = ast_type.GetByteSize(
-      exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr);
+  std::optional<uint64_t> type_size =
+      llvm::expectedToOptional(ast_type.GetByteSize(
+          exe_ctx ? exe_ctx->GetBestExecutionContextScope() : nullptr));
   // Nothing to be done for a zero-sized type.
   if (type_size && *type_size == 0)
     return error;
@@ -338,15 +347,12 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     else
       data.SetAddressByteSize(sizeof(void *));
 
-    uint32_t limit_byte_size = UINT32_MAX;
+    if (!type_size)
+      return Status::FromErrorString("type does not have a size");
 
-    if (type_size)
-      limit_byte_size = *type_size;
-
-    if (limit_byte_size <= m_value.GetByteSize()) {
-      if (m_value.GetData(data, limit_byte_size))
-        return error; // Success;
-    }
+    uint32_t result_byte_size = *type_size;
+    if (m_value.GetData(data, result_byte_size))
+      return error; // Success;
 
     error = Status::FromErrorString("extracting data from value failed");
     break;
@@ -364,10 +370,9 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
           // memory sections loaded. This allows you to use "target modules
           // load" to load your executable and any shared libraries, then
           // execute commands where you can look at types in data sections.
-          const SectionLoadList &target_sections = target->GetSectionLoadList();
-          if (!target_sections.IsEmpty()) {
+          if (target->HasLoadedSections()) {
             address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
-            if (target_sections.ResolveLoadAddress(address, file_so_addr)) {
+            if (target->ResolveLoadAddress(address, file_so_addr)) {
               address_type = eAddressTypeLoad;
               data.SetByteOrder(target->GetArchitecture().GetByteOrder());
               data.SetAddressByteSize(
@@ -486,9 +491,11 @@ Status Value::GetValueAsData(ExecutionContext *exe_ctx, DataExtractor &data,
     address = m_value.ULongLong(LLDB_INVALID_ADDRESS);
     address_type = eAddressTypeHost;
     if (exe_ctx) {
-      Target *target = exe_ctx->GetTargetPtr();
-      if (target) {
-        data.SetByteOrder(target->GetArchitecture().GetByteOrder());
+      if (Target *target = exe_ctx->GetTargetPtr()) {
+        // Registers are always stored in host endian.
+        data.SetByteOrder(m_context_type == ContextType::RegisterInfo
+                              ? endian::InlHostByteOrder()
+                              : target->GetArchitecture().GetByteOrder());
         data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
         break;
       }

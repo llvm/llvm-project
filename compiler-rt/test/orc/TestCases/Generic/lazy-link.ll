@@ -6,12 +6,15 @@
 ; RUN: rm -rf %t && mkdir -p %t
 ; RUN: %clang -c -o %t/foo.o %S/Inputs/foo-ret-42.ll
 ; RUN: %clang -c -o %t/x.o %S/Inputs/var-x-42.ll
+; RUN: %clang -c -o %t/bar.o %S/Inputs/bar-ret-void-weak.ll
+; RUN: %clang -c -o %t/baz.o %S/Inputs/baz-ret-void-hidden.ll
 ; RUN: %clang -c -o %t/main.o %s
-; RUN: %llvm_jitlink -noexec -show-linked-files %t/main.o -lazy %t/foo.o \
-; RUN:     -lazy %t/x.o | FileCheck %s
+; RUN: %llvm_jitlink -num-threads=0 -noexec -show-linked-files %t/main.o \
+; RUN:               -lazy %t/foo.o -lazy %t/x.o -lazy %t/bar.o -lazy %t/baz.o \
+; RUN:     | FileCheck %s
 ;
 ; UNSUPPORTED: system-windows
-; REQUIRES: target={{(arm|aarch)64.*}}
+; REQUIRES: target={{(arm|aarch|x86_)64.*}}
 ;
 ; CHECK: Linking {{.*}}main.o
 ; CHECK-DAG: Linking <indirect stubs graph #1>
@@ -21,9 +24,15 @@
 declare i32 @foo()
 @x = external global i32
 
+declare void @bar()
+declare hidden void @baz()
+
+
 define i32 @main(i32 %argc, ptr %argv) {
 entry:
   %foo_result = call i32 @foo()
+  call void @bar()
+  call void @baz()
   %x_val = load i32, ptr @x
   %result = add nsw i32 %foo_result, %x_val
   ret i32 %result

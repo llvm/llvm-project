@@ -35,7 +35,7 @@ static_assert(!CanAt<NonTransparentMap>);
 static_assert(!CanAt<const NonTransparentMap>);
 
 template <class KeyContainer, class ValueContainer>
-void test() {
+constexpr void test() {
   using P = std::pair<int, double>;
   P ar[]  = {
       P(1, 1.5),
@@ -60,10 +60,12 @@ void test() {
     assert(m.at(Transparent<int>{4}) == 4.5);
     assert(m.at(Transparent<int>{5}) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try {
-      TEST_IGNORE_NODISCARD m.at(Transparent<int>{6});
-      assert(false);
-    } catch (std::out_of_range&) {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      try {
+        TEST_IGNORE_NODISCARD m.at(Transparent<int>{6});
+        assert(false);
+      } catch (std::out_of_range&) {
+      }
     }
 #endif
     assert(m.at(Transparent<int>{7}) == 7.5);
@@ -81,10 +83,12 @@ void test() {
     assert(m.at(Transparent<int>{4}) == 4.5);
     assert(m.at(Transparent<int>{5}) == 5.5);
 #ifndef TEST_HAS_NO_EXCEPTIONS
-    try {
-      TEST_IGNORE_NODISCARD m.at(Transparent<int>{6});
-      assert(false);
-    } catch (std::out_of_range&) {
+    if (!TEST_IS_CONSTANT_EVALUATED) {
+      try {
+        TEST_IGNORE_NODISCARD m.at(Transparent<int>{6});
+        assert(false);
+      } catch (std::out_of_range&) {
+      }
     }
 #endif
     assert(m.at(Transparent<int>{7}) == 7.5);
@@ -93,9 +97,14 @@ void test() {
   }
 }
 
-int main(int, char**) {
+constexpr bool test() {
   test<std::vector<int>, std::vector<double>>();
-  test<std::deque<int>, std::vector<double>>();
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
+  {
+    test<std::deque<int>, std::vector<double>>();
+  }
   test<MinSequenceContainer<int>, MinSequenceContainer<double>>();
   test<std::vector<int, min_allocator<int>>, std::vector<double, min_allocator<double>>>();
   {
@@ -103,9 +112,25 @@ int main(int, char**) {
     TransparentComparator c(transparent_used);
     std::flat_map<int, int, TransparentComparator> m(std::sorted_unique, {{1, 1}, {2, 2}, {3, 3}}, c);
     assert(!transparent_used);
-    m.at(Transparent<int>{3});
+    TEST_IGNORE_NODISCARD m.at(Transparent<int>{3});
     assert(transparent_used);
   }
+  {
+    // LWG4239 std::string and C string literal
+    using M = std::flat_map<std::string, int, std::less<>>;
+    M m{{"alpha", 1}, {"beta", 2}, {"epsilon", 1}, {"eta", 3}, {"gamma", 3}};
+    int& x = m.at("alpha");
+    assert(x == 1);
+  }
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef liblldb_ScriptInterpreterLua_h_
-#define liblldb_ScriptInterpreterLua_h_
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H
 
 #include <vector>
 
@@ -47,7 +47,8 @@ public:
                            const LoadScriptOptions &options,
                            lldb_private::Status &error,
                            StructuredData::ObjectSP *module_sp = nullptr,
-                           FileSpec extra_search_dir = {}) override;
+                           FileSpec extra_search_dir = {},
+                           lldb::TargetSP loaded_into_target_sp = {}) override;
 
   StructuredData::DictionarySP GetInterpreterInfo() override;
 
@@ -114,4 +115,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // liblldb_ScriptInterpreterLua_h_
+#endif // LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_SCRIPTINTERPRETERLUA_H

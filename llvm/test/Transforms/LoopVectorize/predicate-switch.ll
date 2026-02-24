@@ -22,8 +22,9 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC1-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 1
 ; IC1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP1]]
 ; IC1-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP2]]
-; IC1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP3]], align 1
+; IC1-NEXT:    [[TMP12:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP]], i32 0
+; IC1-NEXT:    [[TMP16:%.*]] = insertelement <2 x ptr> [[TMP12]], ptr [[NEXT_GEP3]], i32 1
+; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP]], align 1
 ; IC1-NEXT:    [[TMP7:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 -12)
 ; IC1-NEXT:    [[TMP4:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 13)
 ; IC1-NEXT:    [[TMP11:%.*]] = or <2 x i1> [[TMP7]], [[TMP4]]
@@ -118,11 +119,14 @@ define void @switch4_default_common_dest_with_case(ptr %start, ptr %end) {
 ; IC2-NEXT:    [[TMP4:%.*]] = add i64 [[INDEX]], 3
 ; IC2-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP1]]
 ; IC2-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP2]]
+; IC2-NEXT:    [[TMP23:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP]], i32 0
+; IC2-NEXT:    [[TMP24:%.*]] = insertelement <2 x ptr> [[TMP23]], ptr [[NEXT_GEP3]], i32 1
 ; IC2-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP3]]
 ; IC2-NEXT:    [[NEXT_GEP5:%.*]] = getelementptr i8, ptr [[START]], i64 [[TMP4]]
-; IC2-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 0
-; IC2-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i32 2
-; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[TMP5]], align 1
+; IC2-NEXT:    [[TMP30:%.*]] = insertelement <2 x ptr> poison, ptr [[NEXT_GEP4]], i32 0
+; IC2-NEXT:    [[TMP31:%.*]] = insertelement <2 x ptr> [[TMP30]], ptr [[NEXT_GEP5]], i32 1
+; IC2-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 2
+; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i8>, ptr [[NEXT_GEP]], align 1
 ; IC2-NEXT:    [[WIDE_LOAD6:%.*]] = load <2 x i8>, ptr [[TMP6]], align 1
 ; IC2-NEXT:    [[TMP13:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD]], splat (i8 -12)
 ; IC2-NEXT:    [[TMP14:%.*]] = icmp eq <2 x i8> [[WIDE_LOAD6]], splat (i8 -12)
@@ -340,21 +344,21 @@ define void @switch_to_header(ptr %start) {
 ; IC1-NEXT:  [[ENTRY:.*]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC1:       [[LOOP_HEADER]]:
-; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
+; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN:.*]] ]
 ; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC1-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC1-NEXT:      i64 120, label %[[IF_THEN1]]
+; IC1-NEXT:      i64 120, label %[[IF_THEN]]
 ; IC1-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC1-NEXT:    ]
-; IC1:       [[IF_THEN1]]:
+; IC1:       [[IF_THEN]]:
 ; IC1-NEXT:    br label %[[LOOP_HEADER]]
-; IC1:       [[IF_THEN:.*:]]
+; IC1:       [[IF_THEN1:.*:]]
 ; IC1-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
 ; IC1-NEXT:    store i64 42, ptr [[GEP]], align 1
 ; IC1-NEXT:    unreachable
 ; IC1:       [[LOOP_LATCH]]:
 ; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
+; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
@@ -363,21 +367,21 @@ define void @switch_to_header(ptr %start) {
 ; IC2-NEXT:  [[ENTRY:.*]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; IC2:       [[LOOP_HEADER]]:
-; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN1:.*]] ]
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[IF_THEN:.*]] ]
 ; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
 ; IC2-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH:.*]] [
-; IC2-NEXT:      i64 120, label %[[IF_THEN1]]
+; IC2-NEXT:      i64 120, label %[[IF_THEN]]
 ; IC2-NEXT:      i64 100, label %[[LOOP_LATCH]]
 ; IC2-NEXT:    ]
-; IC2:       [[IF_THEN1]]:
+; IC2:       [[IF_THEN]]:
 ; IC2-NEXT:    br label %[[LOOP_HEADER]]
-; IC2:       [[IF_THEN:.*:]]
+; IC2:       [[IF_THEN1:.*:]]
 ; IC2-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 poison
 ; IC2-NEXT:    store i64 42, ptr [[GEP]], align 1
 ; IC2-NEXT:    unreachable
 ; IC2:       [[LOOP_LATCH]]:
 ; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN1]]
+; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT:.*]], label %[[IF_THEN]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;
@@ -408,73 +412,39 @@ exit:
 define void @switch_all_to_default(ptr %start) {
 ; IC1-LABEL: define void @switch_all_to_default(
 ; IC1-SAME: ptr [[START:%.*]]) {
-; IC1-NEXT:  [[ENTRY:.*]]:
-; IC1-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; IC1-NEXT:  [[ENTRY:.*:]]
+; IC1-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IC1:       [[VECTOR_PH]]:
 ; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1:       [[VECTOR_BODY]]:
 ; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[TMP0]]
-; IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
-; IC1-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP2]], align 1
+; IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[INDEX]]
+; IC1-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP1]], align 1
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC1:       [[MIDDLE_BLOCK]]:
-; IC1-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; IC1:       [[SCALAR_PH]]:
-; IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; IC1-NEXT:    br label %[[LOOP_HEADER:.*]]
-; IC1:       [[LOOP_HEADER]]:
-; IC1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; IC1-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH]] [
-; IC1-NEXT:      i64 120, label %[[LOOP_LATCH]]
-; IC1-NEXT:      i64 100, label %[[LOOP_LATCH]]
-; IC1-NEXT:    ]
-; IC1:       [[LOOP_LATCH]]:
-; IC1-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[IV]]
-; IC1-NEXT:    store i64 42, ptr [[GEP]], align 1
-; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; IC1-NEXT:    br label %[[EXIT:.*]]
 ; IC1:       [[EXIT]]:
 ; IC1-NEXT:    ret void
 ;
 ; IC2-LABEL: define void @switch_all_to_default(
 ; IC2-SAME: ptr [[START:%.*]]) {
-; IC2-NEXT:  [[ENTRY:.*]]:
-; IC2-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; IC2-NEXT:  [[ENTRY:.*:]]
+; IC2-NEXT:    br label %[[VECTOR_PH:.*]]
 ; IC2:       [[VECTOR_PH]]:
 ; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC2:       [[VECTOR_BODY]]:
 ; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC2-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[TMP0]]
-; IC2-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 0
-; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 2
-; IC2-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP4]], align 1
+; IC2-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[INDEX]]
+; IC2-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i64 2
+; IC2-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP2]], align 1
 ; IC2-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP5]], align 1
 ; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; IC2:       [[MIDDLE_BLOCK]]:
-; IC2-NEXT:    br i1 true, label %[[EXIT:.*]], label %[[SCALAR_PH]]
-; IC2:       [[SCALAR_PH]]:
-; IC2-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 100, %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
-; IC2-NEXT:    br label %[[LOOP_HEADER:.*]]
-; IC2:       [[LOOP_HEADER]]:
-; IC2-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
-; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; IC2-NEXT:    switch i64 [[IV]], label %[[LOOP_LATCH]] [
-; IC2-NEXT:      i64 120, label %[[LOOP_LATCH]]
-; IC2-NEXT:      i64 100, label %[[LOOP_LATCH]]
-; IC2-NEXT:    ]
-; IC2:       [[LOOP_LATCH]]:
-; IC2-NEXT:    [[GEP:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[IV]]
-; IC2-NEXT:    store i64 42, ptr [[GEP]], align 1
-; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP_HEADER]], !llvm.loop [[LOOP5:![0-9]+]]
+; IC2-NEXT:    br label %[[EXIT:.*]]
 ; IC2:       [[EXIT]]:
 ; IC2-NEXT:    ret void
 ;
@@ -498,18 +468,236 @@ loop.latch:
 exit:
   ret void
 }
+
+define void @switch_unconditional(ptr %start) {
+; IC1-LABEL: define void @switch_unconditional(
+; IC1-SAME: ptr [[START:%.*]]) {
+; IC1-NEXT:  [[ENTRY:.*:]]
+; IC1-NEXT:    br label %[[VECTOR_PH:.*]]
+; IC1:       [[VECTOR_PH]]:
+; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC1:       [[VECTOR_BODY]]:
+; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[START]], i64 [[INDEX]]
+; IC1-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
+; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; IC1-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; IC1-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IC1:       [[MIDDLE_BLOCK]]:
+; IC1-NEXT:    br label %[[EXIT:.*]]
+; IC1:       [[EXIT]]:
+; IC1-NEXT:    ret void
+;
+; IC2-LABEL: define void @switch_unconditional(
+; IC2-SAME: ptr [[START:%.*]]) {
+; IC2-NEXT:  [[ENTRY:.*:]]
+; IC2-NEXT:    br label %[[VECTOR_PH:.*]]
+; IC2:       [[VECTOR_PH]]:
+; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC2:       [[VECTOR_BODY]]:
+; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[TMP2:%.*]] = getelementptr i32, ptr [[START]], i64 [[INDEX]]
+; IC2-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[TMP2]], i64 2
+; IC2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP2]], align 4
+; IC2-NEXT:    store <2 x i32> zeroinitializer, ptr [[TMP1]], align 4
+; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; IC2-NEXT:    [[TMP0:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; IC2-NEXT:    br i1 [[TMP0]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; IC2:       [[MIDDLE_BLOCK]]:
+; IC2-NEXT:    br label %[[EXIT:.*]]
+; IC2:       [[EXIT]]:
+; IC2-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep = getelementptr i32, ptr %start, i64 %iv
+  %x = load i32, ptr %gep
+  switch i32 %x, label %foo []
+
+foo:
+  br label %loop.latch
+
+loop.latch:
+  store i32 0, ptr %gep
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp eq i64 %iv.next, 100
+  br i1 %cmp, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
+define void @switch_unconditional_duplicate_target(ptr %start, ptr %dest) {
+; IC1-LABEL: define void @switch_unconditional_duplicate_target(
+; IC1-SAME: ptr [[START:%.*]], ptr [[DEST:%.*]]) {
+; IC1-NEXT:  [[ENTRY:.*:]]
+; IC1-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; IC1:       [[VECTOR_MEMCHECK]]:
+; IC1-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DEST]], i64 4
+; IC1-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[START]], i64 400
+; IC1-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DEST]], [[SCEVGEP1]]
+; IC1-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[START]], [[SCEVGEP]]
+; IC1-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; IC1-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; IC1:       [[VECTOR_PH]]:
+; IC1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[DEST]], i64 0
+; IC1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC1:       [[VECTOR_BODY]]:
+; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC1-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[VEC_IND]]
+; IC1-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
+; IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP4]], align 4, !alias.scope [[META6:![0-9]+]]
+; IC1-NEXT:    [[TMP5:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], splat (i32 10)
+; IC1-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
+; IC1-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP5]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
+; IC1-NEXT:    [[TMP1:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 0
+; IC1-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 1
+; IC1-NEXT:    store i32 0, ptr [[TMP1]], align 4
+; IC1-NEXT:    store i32 0, ptr [[TMP2]], align 4
+; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
+; IC1-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; IC1-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; IC1-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; IC1:       [[MIDDLE_BLOCK]]:
+; IC1-NEXT:    br label %[[EXIT:.*]]
+; IC1:       [[SCALAR_PH]]:
+; IC1-NEXT:    br label %[[LOOP:.*]]
+; IC1:       [[LOOP]]:
+; IC1-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; IC1-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[START]], i64 [[IV]]
+; IC1-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
+; IC1-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], 10
+; IC1-NEXT:    br i1 [[COND]], label %[[FORWARD:.*]], label %[[LATCH]]
+; IC1:       [[FORWARD]]:
+; IC1-NEXT:    switch i32 [[X]], label %[[LATCH]] [
+; IC1-NEXT:      i32 0, label %[[LATCH]]
+; IC1-NEXT:    ]
+; IC1:       [[LATCH]]:
+; IC1-NEXT:    [[GEP_1:%.*]] = phi ptr [ [[GEP]], %[[LOOP]] ], [ [[DEST]], %[[FORWARD]] ], [ [[DEST]], %[[FORWARD]] ]
+; IC1-NEXT:    store i32 0, ptr [[GEP_1]], align 4
+; IC1-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; IC1-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; IC1-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; IC1:       [[EXIT]]:
+; IC1-NEXT:    ret void
+;
+; IC2-LABEL: define void @switch_unconditional_duplicate_target(
+; IC2-SAME: ptr [[START:%.*]], ptr [[DEST:%.*]]) {
+; IC2-NEXT:  [[ENTRY:.*:]]
+; IC2-NEXT:    br label %[[VECTOR_MEMCHECK:.*]]
+; IC2:       [[VECTOR_MEMCHECK]]:
+; IC2-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[DEST]], i64 4
+; IC2-NEXT:    [[SCEVGEP1:%.*]] = getelementptr i8, ptr [[START]], i64 400
+; IC2-NEXT:    [[BOUND0:%.*]] = icmp ult ptr [[DEST]], [[SCEVGEP1]]
+; IC2-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[START]], [[SCEVGEP]]
+; IC2-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
+; IC2-NEXT:    br i1 [[FOUND_CONFLICT]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; IC2:       [[VECTOR_PH]]:
+; IC2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[DEST]], i64 0
+; IC2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
+; IC2-NEXT:    br label %[[VECTOR_BODY:.*]]
+; IC2:       [[VECTOR_BODY]]:
+; IC2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; IC2-NEXT:    [[STEP_ADD:%.*]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
+; IC2-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[VEC_IND]]
+; IC2-NEXT:    [[TMP7:%.*]] = extractelement <2 x ptr> [[TMP0]], i32 0
+; IC2-NEXT:    [[TMP1:%.*]] = getelementptr i32, ptr [[START]], <2 x i64> [[STEP_ADD]]
+; IC2-NEXT:    [[TMP8:%.*]] = getelementptr i32, ptr [[TMP7]], i64 2
+; IC2-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP7]], align 4, !alias.scope [[META6:![0-9]+]]
+; IC2-NEXT:    [[WIDE_LOAD2:%.*]] = load <2 x i32>, ptr [[TMP8]], align 4, !alias.scope [[META6]]
+; IC2-NEXT:    [[TMP9:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD]], splat (i32 10)
+; IC2-NEXT:    [[TMP10:%.*]] = icmp ult <2 x i32> [[WIDE_LOAD2]], splat (i32 10)
+; IC2-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP0]]
+; IC2-NEXT:    [[PREDPHI2:%.*]] = select <2 x i1> [[TMP9]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI]]
+; IC2-NEXT:    [[TMP2:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 0
+; IC2-NEXT:    [[TMP3:%.*]] = extractelement <2 x ptr> [[PREDPHI2]], i32 1
+; IC2-NEXT:    [[PREDPHI5:%.*]] = select <2 x i1> [[TMP10]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[TMP1]]
+; IC2-NEXT:    [[PREDPHI4:%.*]] = select <2 x i1> [[TMP10]], <2 x ptr> [[BROADCAST_SPLAT]], <2 x ptr> [[PREDPHI5]]
+; IC2-NEXT:    [[TMP4:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i32 0
+; IC2-NEXT:    [[TMP5:%.*]] = extractelement <2 x ptr> [[PREDPHI4]], i32 1
+; IC2-NEXT:    store i32 0, ptr [[TMP2]], align 4
+; IC2-NEXT:    store i32 0, ptr [[TMP3]], align 4
+; IC2-NEXT:    store i32 0, ptr [[TMP4]], align 4
+; IC2-NEXT:    store i32 0, ptr [[TMP5]], align 4
+; IC2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; IC2-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[STEP_ADD]], splat (i64 2)
+; IC2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; IC2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP9:![0-9]+]]
+; IC2:       [[MIDDLE_BLOCK]]:
+; IC2-NEXT:    br label %[[EXIT:.*]]
+; IC2:       [[SCALAR_PH]]:
+; IC2-NEXT:    br label %[[LOOP:.*]]
+; IC2:       [[LOOP]]:
+; IC2-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; IC2-NEXT:    [[GEP:%.*]] = getelementptr i32, ptr [[START]], i64 [[IV]]
+; IC2-NEXT:    [[X:%.*]] = load i32, ptr [[GEP]], align 4
+; IC2-NEXT:    [[COND:%.*]] = icmp ult i32 [[X]], 10
+; IC2-NEXT:    br i1 [[COND]], label %[[FORWARD:.*]], label %[[LATCH]]
+; IC2:       [[FORWARD]]:
+; IC2-NEXT:    switch i32 [[X]], label %[[LATCH]] [
+; IC2-NEXT:      i32 0, label %[[LATCH]]
+; IC2-NEXT:    ]
+; IC2:       [[LATCH]]:
+; IC2-NEXT:    [[GEP_1:%.*]] = phi ptr [ [[GEP]], %[[LOOP]] ], [ [[DEST]], %[[FORWARD]] ], [ [[DEST]], %[[FORWARD]] ]
+; IC2-NEXT:    store i32 0, ptr [[GEP_1]], align 4
+; IC2-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; IC2-NEXT:    [[CMP:%.*]] = icmp eq i64 [[IV_NEXT]], 100
+; IC2-NEXT:    br i1 [[CMP]], label %[[EXIT]], label %[[LOOP]], !llvm.loop [[LOOP10:![0-9]+]]
+; IC2:       [[EXIT]]:
+; IC2-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
+  %gep = getelementptr i32, ptr %start, i64 %iv
+  %x = load i32, ptr %gep
+  %cond = icmp ult i32 %x, 10
+  br i1 %cond, label %forward, label %latch
+
+forward:
+  switch i32 %x, label %latch [ i32 0, label %latch ]
+
+latch:
+  %gep.1 = phi ptr [ %gep, %loop ], [ %dest, %forward ], [ %dest, %forward ]
+  store i32 0, ptr %gep.1
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp eq i64 %iv.next, 100
+  br i1 %cmp, label %exit, label %loop
+
+exit:
+  ret void
+}
+
 ;.
 ; IC1: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC1: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; IC1: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IC1: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; IC1: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; IC1: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; IC1: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; IC1: [[META6]] = !{[[META7:![0-9]+]]}
+; IC1: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; IC1: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; IC1: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; IC1: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.
 ; IC2: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; IC2: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
 ; IC2: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IC2: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
 ; IC2: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META2]], [[META1]]}
+; IC2: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
+; IC2: [[META6]] = !{[[META7:![0-9]+]]}
+; IC2: [[META7]] = distinct !{[[META7]], [[META8:![0-9]+]]}
+; IC2: [[META8]] = distinct !{[[META8]], !"LVerDomain"}
+; IC2: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]]}
+; IC2: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ;.

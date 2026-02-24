@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__verbose_abort>
+#include <exception>
 
 namespace std {
 

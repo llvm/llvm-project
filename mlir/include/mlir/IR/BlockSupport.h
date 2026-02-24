@@ -106,13 +106,13 @@ class BlockRange final
           Block *, Block *, Block *> {
 public:
   using RangeBaseT::RangeBaseT;
-  BlockRange(ArrayRef<Block *> blocks = std::nullopt);
+  BlockRange(ArrayRef<Block *> blocks = {});
   BlockRange(SuccessorRange successors);
   template <typename Arg, typename = std::enable_if_t<std::is_constructible<
                               ArrayRef<Block *>, Arg>::value>>
-  BlockRange(Arg &&arg)
+  BlockRange(Arg &&arg LLVM_LIFETIME_BOUND)
       : BlockRange(ArrayRef<Block *>(std::forward<Arg>(arg))) {}
-  BlockRange(std::initializer_list<Block *> blocks)
+  BlockRange(std::initializer_list<Block *> blocks LLVM_LIFETIME_BOUND)
       : BlockRange(ArrayRef<Block *>(blocks)) {}
 
 private:
@@ -185,7 +185,7 @@ struct DenseMapInfo<mlir::SuccessorRange> {
     return mlir::SuccessorRange(pointer, 0);
   }
   static unsigned getHashValue(mlir::SuccessorRange value) {
-    return llvm::hash_combine_range(value.begin(), value.end());
+    return llvm::hash_combine_range(value);
   }
   static bool isEqual(mlir::SuccessorRange lhs, mlir::SuccessorRange rhs) {
     if (rhs.getBase() == getEmptyKey().getBase())
@@ -206,12 +206,12 @@ namespace ilist_detail {
 // operations to have trailing Regions without a circular include
 // dependence.
 template <>
-struct SpecificNodeAccess<
-    typename compute_node_options<::mlir::Operation>::type> : NodeAccess {
+struct SpecificNodeAccess<compute_node_options<::mlir::Operation>::type>
+    : NodeAccess {
 protected:
-  using OptionsT = typename compute_node_options<mlir::Operation>::type;
-  using pointer = typename OptionsT::pointer;
-  using const_pointer = typename OptionsT::const_pointer;
+  using OptionsT = compute_node_options<mlir::Operation>::type;
+  using pointer = OptionsT::pointer;
+  using const_pointer = OptionsT::const_pointer;
   using node_type = ilist_node_impl<OptionsT>;
 
   static node_type *getNodePtr(pointer N);

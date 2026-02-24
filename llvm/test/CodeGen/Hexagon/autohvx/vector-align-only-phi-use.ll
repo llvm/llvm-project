@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; One of the loads is only used in a PHI instruction. Make sure the PHI use
 ; still counts as a user of the load (and that the load is not removed).

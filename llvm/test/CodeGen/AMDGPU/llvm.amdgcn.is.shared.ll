@@ -2,10 +2,12 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=tahiti < %s | FileCheck -check-prefixes=SI,SI-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-SDAG %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-SDAG %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=hawaii < %s | FileCheck -check-prefixes=CI,CI-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GFX9,GFX9-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck -check-prefixes=GFX10,GFX10-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11,GFX11-GISEL %s
+; RUN: llc -global-isel=1 -new-reg-bank-select -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1250 < %s | FileCheck -check-prefixes=GFX1250,GFX1250-GISEL %s
 
 define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; CIT-LABEL: is_local_vgpr:
@@ -63,9 +65,12 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; CI-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x33
 ; CI-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
+; CI-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; CI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-SDAG-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
+; CI-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-SDAG-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-SDAG-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc
 ; CI-SDAG-NEXT:    s_waitcnt vmcnt(0)
@@ -76,26 +81,43 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ;
 ; GFX9-LABEL: is_local_vgpr:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX9-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1] glc
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_cmp_eq_u32_e32 vcc, s1, v1
 ; GFX9-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc
 ; GFX9-NEXT:    global_store_dword v[0:1], v0, off
 ; GFX9-NEXT:    s_endpgm
+;
+; GFX1250-LABEL: is_local_vgpr:
+; GFX1250:       ; %bb.0:
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; GFX1250-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-NEXT:    global_load_b64 v[0:1], v0, s[2:3] scale_offset scope:SCOPE_SYS
+; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
+; GFX1250-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX1250-NEXT:    s_endpgm
 ;
 ; CI-GISEL-LABEL: is_local_vgpr:
 ; CI-GISEL:       ; %bb.0:
 ; CI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-GISEL-NEXT:    s_load_dword s2, s[8:9], 0x33
 ; CI-GISEL-NEXT:    v_lshlrev_b32_e32 v2, 3, v0
+; CI-GISEL-NEXT:    s_add_i32 s12, s12, s17
+; CI-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    v_mov_b32_e32 v0, s0
 ; CI-GISEL-NEXT:    v_mov_b32_e32 v1, s1
 ; CI-GISEL-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
+; CI-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; CI-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
 ; CI-GISEL-NEXT:    flat_load_dwordx2 v[0:1], v[0:1] glc
 ; CI-GISEL-NEXT:    s_waitcnt vmcnt(0)
@@ -106,13 +128,12 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ;
 ; GFX10-LABEL: is_local_vgpr:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
 ; GFX10-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
-; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[0:1] glc dlc
-; GFX10-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX10-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    global_load_dwordx2 v[0:1], v0, s[2:3] glc dlc
+; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
 ; GFX10-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX10-NEXT:    global_store_dword v[0:1], v0, off
@@ -120,14 +141,14 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ;
 ; GFX11-LABEL: is_local_vgpr:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
+; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[0:1] glc dlc
+; GFX11-NEXT:    global_load_b64 v[0:1], v0, s[2:3] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
@@ -137,7 +158,7 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
   %ptr = load volatile ptr, ptr addrspace(1) %gep
   %val = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %ext = zext i1 %val to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -200,6 +221,9 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; CI-SDAG:       ; %bb.0:
 ; CI-SDAG-NEXT:    s_load_dword s0, s[8:9], 0x1
 ; CI-SDAG-NEXT:    s_load_dword s1, s[8:9], 0x33
+; CI-SDAG-NEXT:    s_add_i32 s12, s12, s17
+; CI-SDAG-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CI-SDAG-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
 ; CI-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
@@ -214,10 +238,10 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ;
 ; GFX9-SDAG-LABEL: is_local_sgpr:
 ; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x4
 ; GFX9-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX9-SDAG-NEXT:    s_load_dword s0, s[8:9], 0x4
 ; GFX9-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-SDAG-NEXT:    s_cmp_eq_u32 s2, s1
+; GFX9-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
 ; GFX9-SDAG-NEXT:    s_cselect_b64 s[0:1], -1, 0
 ; GFX9-SDAG-NEXT:    s_andn2_b64 vcc, exec, s[0:1]
 ; GFX9-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
@@ -228,11 +252,32 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX9-SDAG-NEXT:  .LBB1_2: ; %bb1
 ; GFX9-SDAG-NEXT:    s_endpgm
 ;
+; GFX1250-SDAG-LABEL: is_local_sgpr:
+; GFX1250-SDAG:       ; %bb.0:
+; GFX1250-SDAG-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-SDAG-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-SDAG-NEXT:    s_load_b32 s0, s[4:5], 0x4
+; GFX1250-SDAG-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-SDAG-NEXT:    s_cmp_eq_u32 s0, s1
+; GFX1250-SDAG-NEXT:    s_cselect_b32 s0, -1, 0
+; GFX1250-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX1250-SDAG-NEXT:    s_and_not1_b32 vcc_lo, exec_lo, s0
+; GFX1250-SDAG-NEXT:    s_cbranch_vccnz .LBB1_2
+; GFX1250-SDAG-NEXT:  ; %bb.1: ; %bb0
+; GFX1250-SDAG-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-SDAG-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; GFX1250-SDAG-NEXT:    s_wait_storecnt 0x0
+; GFX1250-SDAG-NEXT:  .LBB1_2: ; %bb1
+; GFX1250-SDAG-NEXT:    s_endpgm
+;
 ; CI-GISEL-LABEL: is_local_sgpr:
 ; CI-GISEL:       ; %bb.0:
 ; CI-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    s_load_dword s0, s[8:9], 0x33
+; CI-GISEL-NEXT:    s_add_i32 s12, s12, s17
+; CI-GISEL-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
+; CI-GISEL-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; CI-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; CI-GISEL-NEXT:    s_cmp_lg_u32 s1, s0
 ; CI-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
@@ -245,10 +290,10 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ;
 ; GFX9-GISEL-LABEL: is_local_sgpr:
 ; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX9-GISEL-NEXT:    s_mov_b64 s[2:3], src_shared_base
+; GFX9-GISEL-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
+; GFX9-GISEL-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX9-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX9-GISEL-NEXT:    s_cmp_lg_u32 s3, s1
 ; GFX9-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX9-GISEL-NEXT:  ; %bb.1: ; %bb0
 ; GFX9-GISEL-NEXT:    v_mov_b32_e32 v0, 0
@@ -259,10 +304,10 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ;
 ; GFX10-LABEL: is_local_sgpr:
 ; GFX10:       ; %bb.0:
-; GFX10-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
-; GFX10-NEXT:    s_mov_b64 s[2:3], src_shared_base
+; GFX10-NEXT:    s_load_dwordx2 s[2:3], s[8:9], 0x0
+; GFX10-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX10-NEXT:    s_cmp_lg_u32 s3, s1
 ; GFX10-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX10-NEXT:  ; %bb.1: ; %bb0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 0
@@ -273,10 +318,10 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ;
 ; GFX11-LABEL: is_local_sgpr:
 ; GFX11:       ; %bb.0:
-; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
-; GFX11-NEXT:    s_mov_b64 s[2:3], src_shared_base
+; GFX11-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX11-NEXT:    s_mov_b64 s[0:1], src_shared_base
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-NEXT:    s_cmp_lg_u32 s1, s3
+; GFX11-NEXT:    s_cmp_lg_u32 s3, s1
 ; GFX11-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GFX11-NEXT:  ; %bb.1: ; %bb0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
@@ -284,19 +329,32 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB1_2: ; %bb1
 ; GFX11-NEXT:    s_endpgm
+;
+; GFX1250-GISEL-LABEL: is_local_sgpr:
+; GFX1250-GISEL:       ; %bb.0:
+; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
+; GFX1250-GISEL-NEXT:    s_load_b64 s[2:3], s[4:5], 0x0
+; GFX1250-GISEL-NEXT:    s_mov_b64 s[0:1], src_shared_base
+; GFX1250-GISEL-NEXT:    s_wait_kmcnt 0x0
+; GFX1250-GISEL-NEXT:    s_cmp_lg_u32 s3, s1
+; GFX1250-GISEL-NEXT:    s_cbranch_scc1 .LBB1_2
+; GFX1250-GISEL-NEXT:  ; %bb.1: ; %bb0
+; GFX1250-GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1250-GISEL-NEXT:    global_store_b32 v[0:1], v0, off scope:SCOPE_SYS
+; GFX1250-GISEL-NEXT:    s_wait_storecnt 0x0
+; GFX1250-GISEL-NEXT:  .LBB1_2: ; %bb1
+; GFX1250-GISEL-NEXT:    s_endpgm
   %val = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   br i1 %val, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %bb1
 
 bb1:
   ret void
 }
 
-!llvm.module.flags = !{!0}
-!0 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CI: {{.*}}
 ; GFX10-GISEL: {{.*}}

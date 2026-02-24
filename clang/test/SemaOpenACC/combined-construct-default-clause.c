@@ -5,19 +5,19 @@ void SingleOnly() {
   for(int i = 5; i < 10;++i);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'serial loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc serial loop default(present) self default(none)
   for(int i = 5; i < 10;++i);
 
   int i;
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'kernels loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc kernels loop self default(present) present(i) default(none) copy(i)
   for(int i = 5; i < 10;++i);
 
   // expected-error@+2{{OpenACC 'default' clause cannot appear more than once on a 'parallel loop' directive}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-note@+1{{previous 'default' clause is here}}
   #pragma acc parallel loop self default(present) private(i) default(none) copy(i)
   for(int i = 0; i < 5; ++i);
 
@@ -28,8 +28,6 @@ void SingleOnly() {
   #pragma acc kernels loop default(none)
   for(int i = 0; i < 5; ++i);
 
-  // expected-warning@+2{{OpenACC construct 'data' not yet implemented}}
-  // expected-warning@+1{{OpenACC clause 'default' not yet implemented}}
   #pragma acc data default(none)
   while(0);
 
@@ -37,7 +35,6 @@ void SingleOnly() {
   #pragma acc loop default(none)
   for(int i = 5; i < 10;++i);
 
-  // expected-warning@+2{{OpenACC construct 'wait' not yet implemented}}
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'wait' directive}}
   #pragma acc wait default(none)
   while(0);
