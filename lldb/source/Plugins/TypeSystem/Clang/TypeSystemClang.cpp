@@ -1267,7 +1267,7 @@ TypeSystemClang::GetOrCreateClangModule(llvm::StringRef name,
 
 CompilerType TypeSystemClang::CreateRecordType(
     clang::DeclContext *decl_ctx, OptionalClangModuleID owning_module,
-    lldb::AccessType access_type, llvm::StringRef name, int kind,
+    AccessType access_type, llvm::StringRef name, int kind,
     LanguageType language, std::optional<ClangASTMetadata> metadata,
     bool exports_symbols) {
   ASTContext &ast = getASTContext();
@@ -7383,7 +7383,7 @@ TypeSystemClang::GetAsObjCInterfaceDecl(const CompilerType &type) {
 
 clang::FieldDecl *TypeSystemClang::AddFieldToRecordType(
     const CompilerType &type, llvm::StringRef name,
-    const CompilerType &field_clang_type, lldb::AccessType access,
+    const CompilerType &field_clang_type, AccessType access,
     uint32_t bitfield_bit_size) {
   if (!type.IsValid() || !field_clang_type.IsValid())
     return nullptr;
@@ -7601,7 +7601,7 @@ void TypeSystemClang::SetIsPacked(const CompilerType &type) {
 
 clang::VarDecl *TypeSystemClang::AddVariableToRecordType(
     const CompilerType &type, llvm::StringRef name,
-    const CompilerType &var_type, lldb::AccessType access) {
+    const CompilerType &var_type, AccessType access) {
   if (!type.IsValid() || !var_type.IsValid())
     return nullptr;
 
@@ -7887,8 +7887,8 @@ void TypeSystemClang::AddMethodOverridesForCXXRecordType(
 
 std::unique_ptr<clang::CXXBaseSpecifier>
 TypeSystemClang::CreateBaseClassSpecifier(lldb::opaque_compiler_type_t type,
-                                          lldb::AccessType access,
-                                          bool is_virtual, bool base_of_class) {
+                                          AccessType access, bool is_virtual,
+                                          bool base_of_class) {
   if (!type)
     return nullptr;
 
