@@ -1311,9 +1311,9 @@ void LoweringPreparePass::lowerThreeWayCmpOp(CmpThreeWayOp op) {
     cir::ConstantOp unorderedRes = builder.getConstantInt(
         loc, op.getType(), cmpInfo.getUnordered().value());
 
+    mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
     mlir::Value gt =
         builder.createCompare(loc, CmpOpKind::gt, op.getLhs(), op.getRhs());
-    mlir::Value selectOnEq = builder.createSelect(loc, eq, eqRes, unorderedRes);
     mlir::Value selectOnGt = builder.createSelect(loc, gt, gtRes, selectOnEq);
     transformedResult = builder.createSelect(loc, lt, ltRes, selectOnGt);
   }
