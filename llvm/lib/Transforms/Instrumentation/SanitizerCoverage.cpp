@@ -520,7 +520,7 @@ bool ModuleSanitizerCoverage::instrumentModule() {
         M.getOrInsertGlobal(SanCovCallbackGateName, Int64Ty));
     SanCovCallbackGate->setSection(
         getSectionName(SanCovCallbackGateSectionName));
-    SanCovCallbackGate->setInitializer(Constant::getNullValue(Int64Ty));
+    SanCovCallbackGate->setInitializer(Constant::getNullValue(Int64Ty, DL));
     SanCovCallbackGate->setLinkage(GlobalVariable::LinkOnceAnyLinkage);
     SanCovCallbackGate->setVisibility(GlobalVariable::HiddenVisibility);
     appendToCompilerUsed(M, SanCovCallbackGate);
@@ -759,7 +759,7 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
   ArrayType *ArrayTy = ArrayType::get(Ty, NumElements);
   auto Array = new GlobalVariable(
       *CurModule, ArrayTy, false, GlobalVariable::PrivateLinkage,
-      Constant::getNullValue(ArrayTy), "__sancov_gen_");
+      Constant::getNullValue(ArrayTy, DL), "__sancov_gen_");
 
   if (TargetTriple.supportsCOMDAT() &&
       (F.hasComdat() || TargetTriple.isOSBinFormatELF() || !F.isInterposable()))
@@ -800,7 +800,7 @@ ModuleSanitizerCoverage::CreatePCArray(Function &F,
     } else {
       PCs.push_back((Constant *)IRB.CreatePointerCast(
           BlockAddress::get(AllBlocks[i]), PtrTy));
-      PCs.push_back(Constant::getNullValue(PtrTy));
+      PCs.push_back(Constant::getNullValue(PtrTy, DL));
     }
   }
   auto *PCArray =
@@ -1148,7 +1148,7 @@ void ModuleSanitizerCoverage::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
       // Check stack depth.  If it's the deepest so far, record it.
       auto FrameAddrPtr = IRB.CreateIntrinsic(
           Intrinsic::frameaddress, IRB.getPtrTy(DL.getAllocaAddrSpace()),
-          {Constant::getNullValue(Int32Ty)});
+          {Constant::getNullValue(Int32Ty, &DL)});
       auto FrameAddrInt = IRB.CreatePtrToInt(FrameAddrPtr, IntptrTy);
       auto LowestStack = IRB.CreateLoad(IntptrTy, SanCovLowestStack);
       auto IsStackLower = IRB.CreateICmpULT(FrameAddrInt, LowestStack);
@@ -1213,7 +1213,7 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
           (Constant *)IRB.CreatePointerCast(BlockAddress::get(SuccBB), PtrTy));
     }
 
-    CFs.push_back((Constant *)Constant::getNullValue(PtrTy));
+    CFs.push_back((Constant *)Constant::getNullValue(PtrTy, DL));
 
     for (auto &Inst : BB) {
       if (CallBase *CB = dyn_cast<CallBase>(&Inst)) {
@@ -1229,7 +1229,7 @@ void ModuleSanitizerCoverage::createFunctionControlFlow(Function &F) {
       }
     }
 
-    CFs.push_back((Constant *)Constant::getNullValue(PtrTy));
+    CFs.push_back((Constant *)Constant::getNullValue(PtrTy, DL));
   }
 
   FunctionCFsArray = CreateFunctionLocalArrayInSection(CFs.size(), F, PtrTy,

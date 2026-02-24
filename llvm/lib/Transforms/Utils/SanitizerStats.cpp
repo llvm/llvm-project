@@ -49,7 +49,7 @@ void SanitizerStatReport::create(IRBuilder<> &B, SanitizerStatKind SK) {
   const auto &DL = M->getDataLayout();
   Inits.push_back(ConstantArray::get(
       StatTy,
-      {Constant::getNullValue(PtrTy),
+      {Constant::getNullValue(PtrTy, &DL),
        ConstantExpr::getIntToPtr(
            ConstantInt::get(IntPtrTy, uint64_t(SK) << (IntPtrTy->getBitWidth() -
                                                        kSanitizerStatKindBits)),
@@ -85,7 +85,7 @@ void SanitizerStatReport::finish() {
   auto NewModuleStatsGV = new GlobalVariable(
       *M, makeModuleStatsTy(), false, GlobalValue::InternalLinkage,
       ConstantStruct::getAnon(
-          {Constant::getNullValue(Int8PtrTy),
+          {Constant::getNullValue(Int8PtrTy, &DL),
            ConstantInt::get(Int32Ty, Inits.size()),
            ConstantArray::get(makeModuleStatsArrayTy(), Inits, &DL)},
           /*Packed=*/false, &DL));

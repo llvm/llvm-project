@@ -897,7 +897,8 @@ bool GCOVProfiler::emitProfileNotes(
         ArrayType *CounterTy = ArrayType::get(Type::getInt64Ty(*Ctx), Measured);
         GlobalVariable *Counters = new GlobalVariable(
             *M, CounterTy, false, GlobalValue::InternalLinkage,
-            Constant::getNullValue(CounterTy), "__llvm_gcov_ctr");
+            Constant::getNullValue(CounterTy, &M->getDataLayout()),
+            "__llvm_gcov_ctr");
         const llvm::Triple &Triple = M->getTargetTriple();
         if (Triple.getObjectFormat() == llvm::Triple::XCOFF)
           Counters->setSection("__llvm_gcov_ctr_section");
@@ -1348,10 +1349,11 @@ Function *GCOVProfiler::insertReset(
   for (const auto &I : CountersBySP) {
     GlobalVariable *GV = I.first;
     auto *GVTy = cast<ArrayType>(GV->getValueType());
-    Builder.CreateMemSet(GV, Constant::getNullValue(Type::getInt8Ty(C)),
-                         GVTy->getNumElements() *
-                             GVTy->getElementType()->getScalarSizeInBits() / 8,
-                         GV->getAlign());
+    Builder.CreateMemSet(
+        GV, Constant::getNullValue(Type::getInt8Ty(C), &M->getDataLayout()),
+        GVTy->getNumElements() * GVTy->getElementType()->getScalarSizeInBits() /
+            8,
+        GV->getAlign());
   }
 
   Type *RetTy = ResetF->getReturnType();

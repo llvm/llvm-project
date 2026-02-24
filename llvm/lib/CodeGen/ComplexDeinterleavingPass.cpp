@@ -2432,12 +2432,14 @@ void ComplexDeinterleavingGraph::processReductionSingle(
   Value *NewInit = nullptr;
   if (auto *C = dyn_cast<Constant>(Init)) {
     if (C->isNullValue())
-      NewInit = Constant::getNullValue(NewVTy);
+      NewInit = Constant::getNullValue(NewVTy,
+                                       &Incoming->getModule()->getDataLayout());
   }
 
   if (!NewInit)
-    NewInit =
-        Builder.CreateVectorInterleave({Init, Constant::getNullValue(VTy)});
+    NewInit = Builder.CreateVectorInterleave(
+        {Init,
+         Constant::getNullValue(VTy, &Incoming->getModule()->getDataLayout())});
 
   NewPHI->addIncoming(NewInit, Incoming);
   NewPHI->addIncoming(OperationReplacement, BackEdge);

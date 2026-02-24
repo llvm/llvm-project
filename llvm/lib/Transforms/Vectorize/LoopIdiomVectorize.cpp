@@ -1329,7 +1329,7 @@ Value *LoopIdiomVectorize::expandFindFirstByte(
   PredSearch = Builder.CreateAnd(PredVF, PredSearch, "search_masked");
   Value *LoadSearch = Builder.CreateMaskedLoad(
       CharVTy, Search, Align(1), PredSearch, Passthru, "search_load_vec");
-  Value *MatchInit = Constant::getNullValue(PredVTy);
+  Value *MatchInit = Constant::getNullValue(PredVTy, DL);
   Builder.CreateBr(BB2);
   DTU.applyUpdates({{DominatorTree::Insert, BB1, BB2}});
 

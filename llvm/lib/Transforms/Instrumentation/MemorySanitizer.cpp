@@ -2004,7 +2004,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Type *ShadowTy = getShadowTy(OrigTy);
     if (!ShadowTy)
       return nullptr;
-    return Constant::getNullValue(ShadowTy);
+    return Constant::getNullValue(ShadowTy, &F.getDataLayout());
   }
 
   /// Create a clean shadow value for a given value.
@@ -2042,7 +2042,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   /// Create a clean (zero) origin.
-  Value *getCleanOrigin() { return Constant::getNullValue(MS.OriginTy); }
+  Value *getCleanOrigin() {
+    return Constant::getNullValue(MS.OriginTy, &F.getDataLayout());
+  }
 
   /// Get the shadow value for a given Value.
   ///
@@ -2108,9 +2110,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                    /*isStore*/ true);
             if (!PropagateShadow || Overflow) {
               // ParamTLS overflow.
-              EntryIRB.CreateMemSet(
-                  CpShadowPtr, Constant::getNullValue(EntryIRB.getInt8Ty()),
-                  Size, ArgAlign);
+              EntryIRB.CreateMemSet(CpShadowPtr,
+                                    Constant::getNullValue(EntryIRB.getInt8Ty(),
+                                                           &F->getDataLayout()),
+                                    Size, ArgAlign);
             } else {
               Value *Base = getShadowPtrForArgument(EntryIRB, ArgOffset);
               const Align CopyAlign = std::min(ArgAlign, kShadowTLSAlignment);
@@ -2461,7 +2464,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // * there is a defined 1 bit in C
     // * C is fully defined
     // Si = !(C & ~Sc) && Sc
-    Value *Zero = Constant::getNullValue(Sc->getType());
+    Value *Zero = Constant::getNullValue(Sc->getType(), &F.getDataLayout());
     Value *MinusOne = Constant::getAllOnesValue(Sc->getType());
     Value *LHS = IRB.CreateICmpNE(Sc, Zero);
     Value *RHS =
@@ -3889,10 +3892,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       S1 = IRB.CreateBitCast(S1, T);
       S2 = IRB.CreateBitCast(S2, T);
     }
-    Value *S1_ext =
-        IRB.CreateSExt(IRB.CreateICmpNE(S1, Constant::getNullValue(T)), T);
-    Value *S2_ext =
-        IRB.CreateSExt(IRB.CreateICmpNE(S2, Constant::getNullValue(T)), T);
+    Value *S1_ext = IRB.CreateSExt(
+        IRB.CreateICmpNE(S1, Constant::getNullValue(T, &F.getDataLayout())), T);
+    Value *S2_ext = IRB.CreateSExt(
+        IRB.CreateICmpNE(S2, Constant::getNullValue(T, &F.getDataLayout())), T);
     if (MMXEltSizeInBits) {
       S1_ext = IRB.CreateBitCast(S1_ext, getMMXVectorTy(64));
       S2_ext = IRB.CreateBitCast(S2_ext, getMMXVectorTy(64));
@@ -3925,14 +3928,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     const unsigned Width =
         cast<FixedVectorType>(S->getType())->getNumElements();
 
-    S = IRB.CreateSelect(createDppMask(Width, SrcMask), S,
-                         Constant::getNullValue(S->getType()));
+    S = IRB.CreateSelect(
+        createDppMask(Width, SrcMask), S,
+        Constant::getNullValue(S->getType(), &F.getDataLayout()));
     Value *SElem = IRB.CreateOrReduce(S);
     Value *IsClean = IRB.CreateIsNull(SElem, "_msdpp");
     Value *DstMaskV = createDppMask(Width, DstMask);
 
     return IRB.CreateSelect(
-        IsClean, Constant::getNullValue(DstMaskV->getType()), DstMaskV);
+        IsClean,
+        Constant::getNullValue(DstMaskV->getType(), &F.getDataLayout()),
+        DstMaskV);
   }
 
   // See `Intel Intrinsics Guide` for `_dp_p*` instructions.
@@ -4020,8 +4026,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     auto *Shadow1 = getShadow(&I, 1);
     Value *S = IRB.CreateOr(Shadow0, Shadow1);
     S = IRB.CreateBitCast(S, ResTy);
-    S = IRB.CreateSExt(IRB.CreateICmpNE(S, Constant::getNullValue(ResTy)),
-                       ResTy);
+    S = IRB.CreateSExt(
+        IRB.CreateICmpNE(S, Constant::getNullValue(ResTy, &F.getDataLayout())),
+        ResTy);
     S = IRB.CreateLShr(S, ZeroBitsPerResultElement);
     S = IRB.CreateBitCast(S, getShadowTy(&I));
     setShadow(&I, S);
@@ -4178,8 +4185,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     // Compute <4 x i1>, then extend back to <4 x i32>.
     Value *OutShadow = IRB.CreateSExt(
-        IRB.CreateICmpNE(Horizontal,
-                         Constant::getNullValue(Horizontal->getType())),
+        IRB.CreateICmpNE(
+            Horizontal,
+            Constant::getNullValue(Horizontal->getType(), &F.getDataLayout())),
         ImplicitReturnType);
 
     // Cast it back to the required fake return type (if MMX: <1 x i64>; for
@@ -4226,7 +4234,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     auto *Shadow1 = getShadow(&I, 1);
     Value *S0 = IRB.CreateOr(Shadow0, Shadow1);
     Value *S = IRB.CreateSExt(
-        IRB.CreateICmpNE(S0, Constant::getNullValue(ResTy)), ResTy);
+        IRB.CreateICmpNE(S0, Constant::getNullValue(ResTy, &F.getDataLayout())),
+        ResTy);
     setShadow(&I, S);
     setOriginForNaryOp(I);
   }
@@ -4423,7 +4432,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClCheckAccessAddress) {
       insertCheckShadowOf(Mask, &I);
       Value *MaskedPtrShadow = IRB.CreateSelect(
-          Mask, getShadow(Ptrs), Constant::getNullValue((PtrsShadowTy)),
+          Mask, getShadow(Ptrs),
+          Constant::getNullValue((PtrsShadowTy), &F.getDataLayout()),
           "_msmaskedptrs");
       insertCheckShadow(MaskedPtrShadow, getOrigin(Ptrs), &I);
     }
@@ -4460,7 +4470,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (ClCheckAccessAddress) {
       insertCheckShadowOf(Mask, &I);
       Value *MaskedPtrShadow = IRB.CreateSelect(
-          Mask, getShadow(Ptrs), Constant::getNullValue((PtrsShadowTy)),
+          Mask, getShadow(Ptrs),
+          Constant::getNullValue((PtrsShadowTy), &F.getDataLayout()),
           "_msmaskedptrs");
       insertCheckShadow(MaskedPtrShadow, getOrigin(Ptrs), &I);
     }
@@ -4942,7 +4953,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Shadow0 = getShadow(&I, 0);
     Value *Shadow1 = getShadow(&I, 1);
     Value *Or = IRB.CreateOr(Shadow0, Shadow1);
-    Value *NZ = IRB.CreateICmpNE(Or, Constant::getNullValue(Or->getType()));
+    Value *NZ = IRB.CreateICmpNE(
+        Or, Constant::getNullValue(Or->getType(), &F.getDataLayout()));
     Value *Scalar = convertShadowToScalar(NZ, IRB);
     Value *Shadow = IRB.CreateZExt(Scalar, getShadowTy(&I));
 
@@ -7347,9 +7359,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
               getShadowOriginPtr(A, IRB, IRB.getInt8Ty(), Alignment,
                                  /*isStore*/ false);
           if (!PropagateShadow) {
-            Store = IRB.CreateMemSet(ArgShadowBase,
-                                     Constant::getNullValue(IRB.getInt8Ty()),
-                                     Size, Alignment);
+            Store = IRB.CreateMemSet(
+                ArgShadowBase,
+                Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()),
+                Size, Alignment);
           } else {
             Store = IRB.CreateMemCpy(ArgShadowBase, Alignment, AShadowPtr,
                                      Alignment, Size);
@@ -7922,8 +7935,9 @@ struct VarArgHelperBase : public VarArgHelper {
     auto [ShadowPtr, OriginPtr] = MSV.getShadowOriginPtr(
         VAListTag, IRB, IRB.getInt8Ty(), Alignment, /*isStore*/ true);
     // Unpoison the whole __va_list_tag.
-    IRB.CreateMemSet(ShadowPtr, Constant::getNullValue(IRB.getInt8Ty()),
-                     VAListTagSize, Alignment, false);
+    IRB.CreateMemSet(
+        ShadowPtr, Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()),
+        VAListTagSize, Alignment, false);
   }
 
   void visitVAStartInst(VAStartInst &I) override {
@@ -8104,8 +8118,10 @@ struct VarArgAMD64Helper : public VarArgHelperBase {
           ConstantInt::get(MS.IntptrTy, AMD64FpEndOffset), VAArgOverflowSize);
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
+      IRB.CreateMemSet(
+          VAArgTLSCopy,
+          Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()), CopySize,
+          kShadowTLSAlignment, false);
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
@@ -8296,8 +8312,10 @@ struct VarArgAArch64Helper : public VarArgHelperBase {
           ConstantInt::get(MS.IntptrTy, AArch64VAEndOffset), VAArgOverflowSize);
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
+      IRB.CreateMemSet(
+          VAArgTLSCopy,
+          Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()), CopySize,
+          kShadowTLSAlignment, false);
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
@@ -8508,8 +8526,10 @@ struct VarArgPowerPC64Helper : public VarArgHelperBase {
 
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
+      IRB.CreateMemSet(
+          VAArgTLSCopy,
+          Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()), CopySize,
+          kShadowTLSAlignment, false);
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
@@ -8644,8 +8664,10 @@ struct VarArgPowerPC32Helper : public VarArgHelperBase {
 
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
+      IRB.CreateMemSet(
+          VAArgTLSCopy,
+          Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()), CopySize,
+          kShadowTLSAlignment, false);
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
@@ -8980,8 +9002,10 @@ struct VarArgSystemZHelper : public VarArgHelperBase {
                         VAArgOverflowSize);
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
+      IRB.CreateMemSet(
+          VAArgTLSCopy,
+          Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()), CopySize,
+          kShadowTLSAlignment, false);
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
@@ -9083,8 +9107,10 @@ struct VarArgI386Helper : public VarArgHelperBase {
       // va_arg_tls somewhere in the function entry block.
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
+      IRB.CreateMemSet(
+          VAArgTLSCopy,
+          Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()), CopySize,
+          kShadowTLSAlignment, false);
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,
@@ -9168,8 +9194,10 @@ struct VarArgGenericHelper : public VarArgHelperBase {
       // va_arg_tls somewhere in the function entry block.
       VAArgTLSCopy = IRB.CreateAlloca(Type::getInt8Ty(*MS.C), CopySize);
       VAArgTLSCopy->setAlignment(kShadowTLSAlignment);
-      IRB.CreateMemSet(VAArgTLSCopy, Constant::getNullValue(IRB.getInt8Ty()),
-                       CopySize, kShadowTLSAlignment, false);
+      IRB.CreateMemSet(
+          VAArgTLSCopy,
+          Constant::getNullValue(IRB.getInt8Ty(), &F.getDataLayout()), CopySize,
+          kShadowTLSAlignment, false);
 
       Value *SrcSize = IRB.CreateBinaryIntrinsic(
           Intrinsic::umin, CopySize,

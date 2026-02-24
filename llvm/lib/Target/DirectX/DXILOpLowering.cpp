@@ -855,7 +855,7 @@ public:
 
       auto ZeroOrUndef = [&](Type *Ty) {
         return MMDI.ValidatorVersion < VersionTuple(1, 6)
-                   ? Constant::getNullValue(Ty)
+                   ? Constant::getNullValue(Ty, &M.getDataLayout())
                    : UndefValue::get(Ty);
       };
 

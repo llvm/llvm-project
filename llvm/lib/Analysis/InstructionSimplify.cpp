@@ -610,7 +610,7 @@ static Value *simplifyAddInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 
   // If two operands are negative, return 0.
   if (isKnownNegation(Op0, Op1))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // X + (Y - X) -> Y
   // (Y - X) + X -> Y
@@ -724,7 +724,7 @@ static Value *simplifyByDomEq(unsigned Opcode, Value *Op0, Value *Op1,
     case Instruction::Xor:
     case Instruction::URem:
     case Instruction::SRem:
-      return Constant::getNullValue(Ty);
+      return Constant::getNullValue(Ty, &Q.DL);
 
     case Instruction::SDiv:
     case Instruction::UDiv:
@@ -764,20 +764,20 @@ static Value *simplifySubInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
 
   // X - X -> 0
   if (Op0 == Op1)
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // Is this a negation?
   if (match(Op0, m_Zero())) {
     // 0 - X -> 0 if the sub is NUW.
     if (IsNUW)
-      return Constant::getNullValue(Op0->getType());
+      return Constant::getNullValue(Op0->getType(), &Q.DL);
 
     KnownBits Known = computeKnownBits(Op1, Q);
     if (Known.Zero.isMaxSignedValue()) {
       // Op1 is either 0 or the minimum signed value. If the sub is NSW, then
       // Op1 must be 0 because negating the minimum signed value is undefined.
       if (IsNSW)
-        return Constant::getNullValue(Op0->getType());
+        return Constant::getNullValue(Op0->getType(), &Q.DL);
 
       // 0 - X -> X if X is 0 or the minimum signed value.
       return Op1;
@@ -908,7 +908,7 @@ static Value *simplifyMulInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   // X * undef -> 0
   // X * 0 -> 0
   if (Q.isUndefValue(Op1) || match(Op1, m_Zero()))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // X * 1 -> X
   if (match(Op1, m_One()))
@@ -1070,17 +1070,17 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
   // undef / X -> 0
   // undef % X -> 0
   if (Q.isUndefValue(Op0))
-    return Constant::getNullValue(Ty);
+    return Constant::getNullValue(Ty, &Q.DL);
 
   // 0 / X -> 0
   // 0 % X -> 0
   if (match(Op0, m_Zero()))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // X / X -> 1
   // X % X -> 0
   if (Op0 == Op1)
-    return IsDiv ? ConstantInt::get(Ty, 1) : Constant::getNullValue(Ty);
+    return IsDiv ? ConstantInt::get(Ty, 1) : Constant::getNullValue(Ty, &Q.DL);
 
   KnownBits Known = computeKnownBits(Op1, Q);
   // X / 0 -> poison
@@ -1097,7 +1097,7 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
   // or remainder-by-zero, so assume the divisor is 1.
   //   e.g. 1, zext (i8 X), sdiv X (Y and 1)
   if (Known.countMinLeadingZeros() == Known.getBitWidth() - 1)
-    return IsDiv ? Op0 : Constant::getNullValue(Ty);
+    return IsDiv ? Op0 : Constant::getNullValue(Ty, &Q.DL);
 
   // If X * Y does not overflow, then:
   //   X * Y / Y -> X
@@ -1111,12 +1111,12 @@ static Value *simplifyDivRem(Instruction::BinaryOps Opcode, Value *Op0,
         (!IsSigned && Q.IIQ.hasNoUnsignedWrap(Mul)) ||
         (IsSigned && match(X, m_SDiv(m_Value(), m_Specific(Op1)))) ||
         (!IsSigned && match(X, m_UDiv(m_Value(), m_Specific(Op1))))) {
-      return IsDiv ? X : Constant::getNullValue(Op0->getType());
+      return IsDiv ? X : Constant::getNullValue(Op0->getType(), &Q.DL);
     }
   }
 
   if (isDivZero(Op0, Op1, Q, MaxRecurse, IsSigned))
-    return IsDiv ? Constant::getNullValue(Op0->getType()) : Op0;
+    return IsDiv ? Constant::getNullValue(Op0->getType(), &Q.DL) : Op0;
 
   if (Value *V = simplifyByDomEq(Opcode, Op0, Op1, Q, MaxRecurse))
     return V;
@@ -1186,7 +1186,7 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
          match(Op0, m_NSWShl(m_Specific(Op1), m_Value()))) ||
         (Opcode == Instruction::URem &&
          match(Op0, m_NUWShl(m_Specific(Op1), m_Value()))))
-      return Constant::getNullValue(Op0->getType());
+      return Constant::getNullValue(Op0->getType(), &Q.DL);
 
     const APInt *C0;
     if (match(Op1, m_APInt(C0))) {
@@ -1201,7 +1201,7 @@ static Value *simplifyRem(Instruction::BinaryOps Opcode, Value *Op0, Value *Op1,
                       m_NUWMul(m_Value(), m_CheckedInt([C0](const APInt &C) {
                                  return C.urem(*C0).isZero();
                                }))))
-        return Constant::getNullValue(Op0->getType());
+        return Constant::getNullValue(Op0->getType(), &Q.DL);
     }
   }
   return nullptr;
@@ -1311,7 +1311,7 @@ static Value *simplifyShift(Instruction::BinaryOps Opcode, Value *Op0,
 
   // 0 shift by X -> 0
   if (match(Op0, m_Zero()))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // X shift by 0 -> X
   // Shift-by-sign-extended bool must be shift-by-0 because shift-by-all-ones
@@ -1378,12 +1378,12 @@ static Value *simplifyRightShift(Instruction::BinaryOps Opcode, Value *Op0,
 
   // X >> X -> 0
   if (Op0 == Op1)
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // undef >> X -> 0
   // undef >> X -> undef (if it's exact)
   if (Q.isUndefValue(Op0))
-    return IsExact ? Op0 : Constant::getNullValue(Op0->getType());
+    return IsExact ? Op0 : Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // The low bit cannot be shifted out of an exact shift if it is set.
   // TODO: Generalize by counting trailing zeros (see fold for exact division).
@@ -1408,7 +1408,7 @@ static Value *simplifyShlInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   // undef << X -> 0
   // undef << X -> undef if (if it's NSW/NUW)
   if (Q.isUndefValue(Op0))
-    return IsNSW || IsNUW ? Op0 : Constant::getNullValue(Ty);
+    return IsNSW || IsNUW ? Op0 : Constant::getNullValue(Ty, &Q.DL);
 
   // (X >> A) << A -> X
   Value *X;
@@ -1427,7 +1427,7 @@ static Value *simplifyShlInst(Value *Op0, Value *Op1, bool IsNSW, bool IsNUW,
   // produce poison is 0, and "0 << (bitwidth-1) --> 0".
   if (IsNSW && IsNUW &&
       match(Op1, m_SpecificInt(Ty->getScalarSizeInBits() - 1)))
-    return Constant::getNullValue(Ty);
+    return Constant::getNullValue(Ty, &Q.DL);
 
   return nullptr;
 }
@@ -2022,7 +2022,7 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
                                      unsigned MaxRecurse) {
   // ~A & A =  0
   if (match(Op0, m_Not(m_Specific(Op1))))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // (A | ?) & A = A
   if (match(Op0, m_c_Or(m_Specific(Op1), m_Value())))
@@ -2049,7 +2049,7 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
   // (A - 1) & A --> 0 (if A is a power-of-2 or 0)
   if (match(Op0, m_Add(m_Specific(Op1), m_AllOnes())) &&
       isKnownToBeAPowerOfTwo(Op1, Q.DL, /*OrZero*/ true, Q.AC, Q.CxtI, Q.DT))
-    return Constant::getNullValue(Op1->getType());
+    return Constant::getNullValue(Op1->getType(), &Q.DL);
 
   // (x << N) & ((x << M) - 1) --> 0, where x is known to be a power of 2 and
   // M <= N.
@@ -2058,7 +2058,7 @@ static Value *simplifyAndCommutative(Value *Op0, Value *Op1,
       match(Op1, m_Add(m_Shl(m_Specific(X), m_APInt(Shift2)), m_AllOnes())) &&
       isKnownToBeAPowerOfTwo(X, Q.DL, /*OrZero*/ true, Q.AC, Q.CxtI) &&
       Shift1->uge(*Shift2))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   if (Value *V =
           simplifyAndOrWithICmpEq(Instruction::And, Op0, Op1, Q, MaxRecurse))
@@ -2080,7 +2080,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
   // X & undef -> 0
   if (Q.isUndefValue(Op1))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // X & X = X
   if (Op0 == Op1)
@@ -2088,7 +2088,7 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
   // X & 0 = 0
   if (match(Op1, m_Zero()))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // X & -1 = X
   if (match(Op1, m_AllOnes()))
@@ -2214,14 +2214,14 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
                          m_CombineAnd(m_BinOp(Or),
                                       m_c_Or(m_Deferred(X), m_Value(Y))))) &&
       match(Op1, m_c_Xor(m_Specific(Or), m_Specific(Y))))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   const APInt *C1;
   Value *A;
   // (A ^ C) & (A ^ ~C) -> 0
   if (match(Op0, m_Xor(m_Value(A), m_APInt(C1))) &&
       match(Op1, m_Xor(m_Specific(A), m_SpecificInt(~*C1))))
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   if (Op0->getType()->isIntOrIntVectorTy(1)) {
     if (std::optional<bool> Implied = isImpliedCondition(Op0, Op1, Q.DL)) {
@@ -2547,7 +2547,7 @@ static Value *simplifyXorInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
 
   // A ^ A = 0
   if (Op0 == Op1)
-    return Constant::getNullValue(Op0->getType());
+    return Constant::getNullValue(Op0->getType(), &Q.DL);
 
   // A ^ ~A  =  ~A ^ A  =  -1
   if (match(Op0, m_Not(m_Specific(Op1))) || match(Op1, m_Not(m_Specific(Op0))))
@@ -3385,16 +3385,16 @@ static Value *simplifyICmpWithBinOp(CmpPredicate Pred, Value *LHS, Value *RHS,
 
     // icmp (X+Y), X -> icmp Y, 0 for equalities or if there is no overflow.
     if ((A == RHS || B == RHS) && NoLHSWrapProblem)
-      if (Value *V = simplifyICmpInst(Pred, A == RHS ? B : A,
-                                      Constant::getNullValue(RHS->getType()), Q,
-                                      MaxRecurse - 1))
+      if (Value *V = simplifyICmpInst(
+              Pred, A == RHS ? B : A,
+              Constant::getNullValue(RHS->getType(), &Q.DL), Q, MaxRecurse - 1))
         return V;
 
     // icmp X, (X+Y) -> icmp 0, Y for equalities or if there is no overflow.
     if ((C == LHS || D == LHS) && NoRHSWrapProblem)
-      if (Value *V =
-              simplifyICmpInst(Pred, Constant::getNullValue(LHS->getType()),
-                               C == LHS ? D : C, Q, MaxRecurse - 1))
+      if (Value *V = simplifyICmpInst(
+              Pred, Constant::getNullValue(LHS->getType(), &Q.DL),
+              C == LHS ? D : C, Q, MaxRecurse - 1))
         return V;
 
     // icmp (X+Y), (X+Z) -> icmp Y,Z for equalities or if there is no overflow.
@@ -3980,7 +3980,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
           case ICmpInst::ICMP_EQ:
           case ICmpInst::ICMP_UGT:
           case ICmpInst::ICMP_UGE:
-            return Constant::getNullValue(ITy);
+            return Constant::getNullValue(ITy, &Q.DL);
 
           case ICmpInst::ICMP_NE:
           case ICmpInst::ICMP_ULT:
@@ -3992,13 +3992,13 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
           case ICmpInst::ICMP_SGT:
           case ICmpInst::ICMP_SGE:
             return ConstantFoldCompareInstOperands(
-                ICmpInst::ICMP_SLT, C, Constant::getNullValue(C->getType()),
-                Q.DL);
+                ICmpInst::ICMP_SLT, C,
+                Constant::getNullValue(C->getType(), &Q.DL), Q.DL);
           case ICmpInst::ICMP_SLT:
           case ICmpInst::ICMP_SLE:
             return ConstantFoldCompareInstOperands(
-                ICmpInst::ICMP_SGE, C, Constant::getNullValue(C->getType()),
-                Q.DL);
+                ICmpInst::ICMP_SGE, C,
+                Constant::getNullValue(C->getType(), &Q.DL), Q.DL);
           }
         }
       }
@@ -4054,7 +4054,7 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
           default:
             llvm_unreachable("Unknown ICmp predicate!");
           case ICmpInst::ICMP_EQ:
-            return Constant::getNullValue(ITy);
+            return Constant::getNullValue(ITy, &Q.DL);
           case ICmpInst::ICMP_NE:
             return Constant::getAllOnesValue(ITy);
 
@@ -4063,13 +4063,13 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
           case ICmpInst::ICMP_SGT:
           case ICmpInst::ICMP_SGE:
             return ConstantFoldCompareInstOperands(
-                ICmpInst::ICMP_SLT, C, Constant::getNullValue(C->getType()),
-                Q.DL);
+                ICmpInst::ICMP_SLT, C,
+                Constant::getNullValue(C->getType(), &Q.DL), Q.DL);
           case ICmpInst::ICMP_SLT:
           case ICmpInst::ICMP_SLE:
             return ConstantFoldCompareInstOperands(
-                ICmpInst::ICMP_SGE, C, Constant::getNullValue(C->getType()),
-                Q.DL);
+                ICmpInst::ICMP_SGE, C,
+                Constant::getNullValue(C->getType(), &Q.DL), Q.DL);
 
           // If LHS is non-negative then LHS <u RHS.  If LHS is negative then
           // LHS >u RHS.
@@ -4077,18 +4077,18 @@ static Value *simplifyICmpInst(CmpPredicate Pred, Value *LHS, Value *RHS,
           case ICmpInst::ICMP_UGE:
             // Comparison is true iff the LHS <s 0.
             if (MaxRecurse)
-              if (Value *V = simplifyICmpInst(ICmpInst::ICMP_SLT, SrcOp,
-                                              Constant::getNullValue(SrcTy), Q,
-                                              MaxRecurse - 1))
+              if (Value *V = simplifyICmpInst(
+                      ICmpInst::ICMP_SLT, SrcOp,
+                      Constant::getNullValue(SrcTy, &Q.DL), Q, MaxRecurse - 1))
                 return V;
             break;
           case ICmpInst::ICMP_ULT:
           case ICmpInst::ICMP_ULE:
             // Comparison is true iff the LHS >=s 0.
             if (MaxRecurse)
-              if (Value *V = simplifyICmpInst(ICmpInst::ICMP_SGE, SrcOp,
-                                              Constant::getNullValue(SrcTy), Q,
-                                              MaxRecurse - 1))
+              if (Value *V = simplifyICmpInst(
+                      ICmpInst::ICMP_SGE, SrcOp,
+                      Constant::getNullValue(SrcTy, &Q.DL), Q, MaxRecurse - 1))
                 return V;
             break;
           }
@@ -4499,7 +4499,7 @@ static Value *simplifyWithOpsReplaced(Value *V,
       if ((Opcode == Instruction::Sub || Opcode == Instruction::Xor) &&
           NewOps[0] == NewOps[1] &&
           any_of(Ops, [=](const auto &Rep) { return NewOps[0] == Rep.second; }))
-        return Constant::getNullValue(I->getType());
+        return Constant::getNullValue(I->getType(), &Q.DL);
 
       // If we are substituting an absorber constant into a binop and extra
       // poison can't leak if we remove the select -- because both operands of
@@ -6027,7 +6027,7 @@ simplifyFSubInst(Value *Op0, Value *Op1, FastMathFlags FMF,
   if (FMF.noNaNs()) {
     // fsub nnan x, x ==> 0.0
     if (Op0 == Op1)
-      return Constant::getNullValue(Op0->getType());
+      return Constant::getNullValue(Op0->getType(), &Q.DL);
 
     // With nnan: {+/-}Inf - X --> {+/-}Inf
     if (match(Op0, m_Inf()))
@@ -6882,14 +6882,14 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     if (match(Op0, m_LShr(m_Negative(), m_Value(X))))
       return X;
     if (match(Op0, m_AShr(m_Negative(), m_Value())))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
     break;
   }
   case Intrinsic::ptrmask: {
     // NOTE: We can't apply this simplifications based on the value of Op1
     // because we need to preserve provenance.
     if (Q.isUndefValue(Op0) || match(Op0, m_Zero()))
-      return Constant::getNullValue(Op0->getType());
+      return Constant::getNullValue(Op0->getType(), &Q.DL);
 
     assert(Op1->getType()->getScalarSizeInBits() ==
                Q.DL.getIndexTypeSizeInBits(Op0->getType()) &&
@@ -6985,7 +6985,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // Fold to a constant if the relationship between operands can be
     // established with certainty
     if (isICmpTrue(CmpInst::ICMP_EQ, Op0, Op1, Q, RecursionLimit))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
 
     ICmpInst::Predicate PredGT =
         IID == Intrinsic::scmp ? ICmpInst::ICMP_SGT : ICmpInst::ICMP_UGT;
@@ -7005,7 +7005,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // X - undef -> { 0, false }
     // undef - X -> { 0, false }
     if (Op0 == Op1 || Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
     break;
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow:
@@ -7015,7 +7015,7 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
       return ConstantStruct::get(
           cast<StructType>(ReturnType),
           {Constant::getAllOnesValue(ReturnType->getStructElementType(0)),
-           Constant::getNullValue(ReturnType->getStructElementType(1))});
+           Constant::getNullValue(ReturnType->getStructElementType(1), &Q.DL)});
     }
     break;
   case Intrinsic::umul_with_overflow:
@@ -7023,11 +7023,11 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
     // 0 * X -> { 0, false }
     // X * 0 -> { 0, false }
     if (match(Op0, m_Zero()) || match(Op1, m_Zero()))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
     // undef * X -> { 0, false }
     // X * undef -> { 0, false }
     if (Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
     break;
   case Intrinsic::uadd_sat:
     // sat(MAX + X) -> MAX
@@ -7053,12 +7053,12 @@ Value *llvm::simplifyBinaryIntrinsic(Intrinsic::ID IID, Type *ReturnType,
   case Intrinsic::usub_sat:
     // sat(0 - X) -> 0, sat(X - MAX) -> 0
     if (match(Op0, m_Zero()) || match(Op1, m_AllOnes()))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
     [[fallthrough]];
   case Intrinsic::ssub_sat:
     // X - X -> 0, X - undef -> 0, undef - X -> 0
     if (Op0 == Op1 || Q.isUndefValue(Op0) || Q.isUndefValue(Op1))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
     // X - 0 -> X
     if (match(Op1, m_Zero()))
       return Op0;
@@ -7318,11 +7318,11 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
 
     // X * 0 -> 0
     if (match(Op1, m_Zero()))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
 
     // X * undef -> 0
     if (Q.isUndefValue(Op1))
-      return Constant::getNullValue(ReturnType);
+      return Constant::getNullValue(ReturnType, &Q.DL);
 
     // X * (1 << Scale) -> X
     APInt ScaledOne =

@@ -1626,7 +1626,8 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   TID = Builder.CreateAdd(TID, TIdZ);
 
   LLVMContext &Context = Mod->getContext();
-  Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Context)), TID};
+  Value *Indices[] = {Constant::getNullValue(Type::getInt32Ty(Context), &DL),
+                      TID};
 
   Value *Offset = Builder.CreateInBoundsGEP(GVTy, GV, Indices);
   AA.Alloca->mutateType(Offset->getType());
@@ -1644,10 +1645,10 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
 
         Type *NewTy = LHS->getType()->getWithNewType(NewPtrTy);
         if (isa<ConstantPointerNull, ConstantAggregateZero>(LHS))
-          CI->setOperand(0, Constant::getNullValue(NewTy));
+          CI->setOperand(0, Constant::getNullValue(NewTy, &DL));
 
         if (isa<ConstantPointerNull, ConstantAggregateZero>(RHS))
-          CI->setOperand(1, Constant::getNullValue(NewTy));
+          CI->setOperand(1, Constant::getNullValue(NewTy, &DL));
 
         continue;
       }
@@ -1665,15 +1666,15 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
       // Adjust the types of any constant operands.
       if (SelectInst *SI = dyn_cast<SelectInst>(V)) {
         if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(1)))
-          SI->setOperand(1, Constant::getNullValue(NewTy));
+          SI->setOperand(1, Constant::getNullValue(NewTy, &DL));
 
         if (isa<ConstantPointerNull, ConstantAggregateZero>(SI->getOperand(2)))
-          SI->setOperand(2, Constant::getNullValue(NewTy));
+          SI->setOperand(2, Constant::getNullValue(NewTy, &DL));
       } else if (PHINode *Phi = dyn_cast<PHINode>(V)) {
         for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I) {
           if (isa<ConstantPointerNull, ConstantAggregateZero>(
                   Phi->getIncomingValue(I)))
-            Phi->setIncomingValue(I, Constant::getNullValue(NewTy));
+            Phi->setIncomingValue(I, Constant::getNullValue(NewTy, &DL));
         }
       }
 

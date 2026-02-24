@@ -221,7 +221,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
   SmallVector<Constant*, 32> Result;
   if (NumDstElt < NumSrcElt) {
     // Handle: bitcast (<4 x i32> <i32 0, i32 1, i32 2, i32 3> to <2 x i64>)
-    Constant *Zero = Constant::getNullValue(DstEltTy);
+    Constant *Zero = Constant::getNullValue(DstEltTy, &DL);
     unsigned Ratio = NumSrcElt/NumDstElt;
     unsigned SrcBitSize = SrcEltTy->getPrimitiveSizeInBits();
     unsigned SrcElt = 0;
@@ -233,7 +233,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
         Constant *Src = C->getAggregateElement(SrcElt++);
         if (isa_and_nonnull<UndefValue>(Src))
           Src = Constant::getNullValue(
-              cast<VectorType>(C->getType())->getElementType());
+              cast<VectorType>(C->getType())->getElementType(), &DL);
         else
           Src = dyn_cast_or_null<ConstantInt>(Src);
         if (!Src)  // Reject constantexpr elements.
@@ -586,13 +586,13 @@ Constant *FoldReinterpretLoadFromConst(Constant *C, Type *LoadTy,
     if (Constant *Res = FoldReinterpretLoadFromConst(C, MapTy, Offset, DL)) {
       if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
         // Materializing a zero can be done trivially without a bitcast
-        return Constant::getNullValue(LoadTy);
+        return Constant::getNullValue(LoadTy, &DL);
       Type *CastTy = LoadTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(LoadTy) : LoadTy;
       Res = FoldBitCast(Res, CastTy, DL);
       if (LoadTy->isPtrOrPtrVectorTy()) {
         // For vector of pointer, we needed to first convert to a vector of integer, then do vector inttoptr
         if (Res->isNullValue() && !LoadTy->isX86_AMXTy())
-          return Constant::getNullValue(LoadTy);
+          return Constant::getNullValue(LoadTy, &DL);
         if (DL.isNonIntegralPointerType(LoadTy->getScalarType()))
           // Be careful not to replace a load of an addrspace value with an inttoptr here
           return nullptr;
@@ -783,7 +783,7 @@ Constant *llvm::ConstantFoldLoadFromUniformValue(Constant *C, Type *Ty,
   if (!DL.typeSizeEqualsStoreSize(C->getType()))
     return nullptr;
   if (C->isNullValue() && !Ty->isX86_AMXTy())
-    return Constant::getNullValue(Ty);
+    return Constant::getNullValue(Ty, &DL);
   if (C->isAllOnesValue() &&
       (Ty->isIntOrIntVectorTy() || Ty->isFPOrFPVectorTy()))
     return Constant::getAllOnesValue(Ty);
@@ -1219,7 +1219,7 @@ Constant *llvm::ConstantFoldCompareInstOperands(
         // proper extension or truncation.
         if (Constant *C = ConstantFoldIntegerCast(CE0->getOperand(0), IntPtrTy,
                                                   /*IsSigned*/ false, DL)) {
-          Constant *Null = Constant::getNullValue(C->getType());
+          Constant *Null = Constant::getNullValue(C->getType(), &DL);
           return ConstantFoldCompareInstOperands(Predicate, C, Null, DL, TLI);
         }
       }
@@ -1231,7 +1231,7 @@ Constant *llvm::ConstantFoldCompareInstOperands(
         Type *AddrTy = DL.getAddressType(CE0->getOperand(0)->getType());
         if (CE0->getType() == AddrTy) {
           Constant *C = CE0->getOperand(0);
-          Constant *Null = Constant::getNullValue(C->getType());
+          Constant *Null = Constant::getNullValue(C->getType(), &DL);
           return ConstantFoldCompareInstOperands(Predicate, C, Null, DL, TLI);
         }
       }
@@ -1591,7 +1591,7 @@ Constant *llvm::ConstantFoldCastOperand(unsigned Opcode, Constant *C,
       unsigned AS = SrcIsPtr ? C->getType()->getPointerAddressSpace()
                              : DestTy->getPointerAddressSpace();
       if (DL.isNullPointerAllZeroes(AS))
-        return Constant::getNullValue(DestTy);
+        return Constant::getNullValue(DestTy, &DL);
     }
   }
 

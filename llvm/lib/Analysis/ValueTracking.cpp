@@ -6283,7 +6283,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
 
   // Handle 'null' ConstantArrayZero etc.
   if (C->isNullValue())
-    return Constant::getNullValue(Type::getInt8Ty(Ctx));
+    return Constant::getNullValue(Type::getInt8Ty(Ctx), &DL);
 
   // Constant floating-point values can be handled as integer values if the
   // corresponding integer value is "byteable".  An important case is 0.0.

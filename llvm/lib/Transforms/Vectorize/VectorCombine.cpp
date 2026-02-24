@@ -1662,8 +1662,8 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
         InsertPt = std::next(CondInst->getIterator());
 
     Builder.SetInsertPoint(InsertPt);
-    Value *VecSel =
-        Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
+    Value *VecSel = Builder.CreateSelect(Cond, SrcVec,
+                                         Constant::getNullValue(SrcVecTy, DL));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
 
     // Replace each scalar select with an extract from the new bitcast.

@@ -1772,9 +1772,10 @@ SPIRVInstructionSelector::getOrCreateMemSetGlobal(MachineInstr &I) const {
   Function &CurFunction = GR.CurMF->getFunction();
   Type *LLVMArrTy =
       ArrayType::get(IntegerType::get(CurFunction.getContext(), 8), Num);
-  GlobalVariable *GV = new GlobalVariable(*CurFunction.getParent(), LLVMArrTy,
-                                          true, GlobalValue::InternalLinkage,
-                                          Constant::getNullValue(LLVMArrTy));
+  GlobalVariable *GV = new GlobalVariable(
+      *CurFunction.getParent(), LLVMArrTy, true, GlobalValue::InternalLinkage,
+      Constant::getNullValue(LLVMArrTy,
+                             &CurFunction.getParent()->getDataLayout()));
 
   Type *ValTy = Type::getInt8Ty(I.getMF()->getFunction().getContext());
   Type *ArrTy = ArrayType::get(ValTy, Num);

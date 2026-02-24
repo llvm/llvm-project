@@ -282,7 +282,8 @@ void IntrinsicLowering::LowerIntrinsicCall(CallInst *CI) {
                "save" : "restore") << " intrinsic.\n";
     Warned = true;
     if (Callee->getIntrinsicID() == Intrinsic::stacksave)
-      CI->replaceAllUsesWith(Constant::getNullValue(CI->getType()));
+      CI->replaceAllUsesWith(Constant::getNullValue(
+          CI->getType(), &CI->getModule()->getDataLayout()));
     break;
   }
 

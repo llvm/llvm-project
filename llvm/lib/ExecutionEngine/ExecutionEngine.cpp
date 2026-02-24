@@ -892,7 +892,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
   if (auto *TETy = dyn_cast<TargetExtType>(C->getType())) {
     assert(TETy->hasProperty(TargetExtType::HasZeroInit) && C->isNullValue() &&
            "TargetExtType only supports null constant value");
-    C = Constant::getNullValue(TETy->getLayoutType());
+    C = Constant::getNullValue(TETy->getLayoutType(), &DL);
   }
 
   // Otherwise, we have a simple constant.

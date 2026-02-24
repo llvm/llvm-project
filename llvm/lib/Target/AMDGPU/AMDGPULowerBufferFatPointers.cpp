@@ -2031,13 +2031,14 @@ PtrParts SplitPtrStructs::visitAddrSpaceCastInst(AddrSpaceCastInst &I) {
   auto *ResTy = cast<StructType>(I.getType());
   Type *RsrcTy = ResTy->getElementType(0);
   Type *OffTy = ResTy->getElementType(1);
-  Value *ZeroOff = Constant::getNullValue(OffTy);
+  const auto &DL = I.getDataLayout();
+  Value *ZeroOff = Constant::getNullValue(OffTy, &DL);
 
   // Special case for null pointers, undef, and poison, which can be created by
   // address space propagation.
   auto *InConst = dyn_cast<Constant>(In);
   if (InConst && InConst->isNullValue()) {
-    Value *NullRsrc = Constant::getNullValue(RsrcTy);
+    Value *NullRsrc = Constant::getNullValue(RsrcTy, &DL);
     SplitUsers.insert(&I);
     return {NullRsrc, ZeroOff};
   }
@@ -2240,7 +2241,7 @@ PtrParts SplitPtrStructs::visitIntrinsicInst(IntrinsicInst &I) {
                                       {Base, Stride, NumRecords, Flags});
     copyMetadata(Rsrc, &I);
     Rsrc->takeName(&I);
-    Value *Zero = Constant::getNullValue(OffType);
+    Value *Zero = Constant::getNullValue(OffType, &I.getDataLayout());
     SplitUsers.insert(&I);
     return {Rsrc, Zero};
   }

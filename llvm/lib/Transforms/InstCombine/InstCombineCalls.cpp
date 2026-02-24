@@ -2070,7 +2070,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(I1, m_One())) {
       assert(II->getType()->getScalarSizeInBits() != 1 &&
              "Expected simplify of umin with max constant");
-      Value *Zero = Constant::getNullValue(I0->getType());
+      Value *Zero = Constant::getNullValue(I0->getType(), &DL);
       Value *Cmp = Builder.CreateICmpNE(I0, Zero);
       return CastInst::Create(Instruction::ZExt, Cmp, II->getType());
     }
@@ -4221,7 +4221,8 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(II->getArgOperand(0), m_ExtractValue<0>(m_Value(X)))) {
       if (match(X, m_Intrinsic<Intrinsic::frexp>(m_Value()))) {
         X = Builder.CreateInsertValue(
-            X, Constant::getNullValue(II->getType()->getStructElementType(1)),
+            X,
+            Constant::getNullValue(II->getType()->getStructElementType(1), &DL),
             1);
         return replaceInstUsesWith(*II, X);
       }
@@ -4236,7 +4237,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(
           *II, Builder.CreateIntrinsic(
                    II->getType(), Intrinsic::get_active_lane_mask,
-                   {Constant::getNullValue(OpTy),
+                   {Constant::getNullValue(OpTy, &DL),
                     ConstantInt::get(OpTy, Op1->usub_sat(*Op0))}));
     }
     break;
@@ -4756,7 +4757,7 @@ Instruction *InstCombinerImpl::visitCallBase(CallBase &Call) {
       // CFG, just change the callee to a null pointer.
       cast<CallBase>(OldCall)->setCalledFunction(
           CalleeF->getFunctionType(),
-          Constant::getNullValue(CalleeF->getType()));
+          Constant::getNullValue(CalleeF->getType(), &DL));
       return nullptr;
     }
   }
@@ -5127,7 +5128,7 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
   // If the function takes more arguments than the call was taking, add them
   // now.
   for (unsigned i = NumCommonArgs; i != FT->getNumParams(); ++i) {
-    Args.push_back(Constant::getNullValue(FT->getParamType(i)));
+    Args.push_back(Constant::getNullValue(FT->getParamType(i), &DL));
     ArgAttrs.push_back(AttributeSet());
   }
 

@@ -847,14 +847,14 @@ void LazyValueInfoImpl::intersectAssumeOrGuardBlockValueConstantRange(
         switch (RK.AttrKind) {
         case Attribute::NonNull:
           BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-              Constant::getNullValue(RK.WasOn->getType())));
+              Constant::getNullValue(RK.WasOn->getType(), &DL)));
           break;
 
         case Attribute::Dereferenceable:
           if (auto *CI = dyn_cast<ConstantInt>(RK.IRArgValue);
               CI && !CI->isZero())
             BBLV = BBLV.intersect(ValueLatticeElement::getNot(
-                Constant::getNullValue(RK.WasOn->getType())));
+                Constant::getNullValue(RK.WasOn->getType(), &DL)));
           break;
 
         default:
@@ -1449,7 +1449,7 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
     match(X, m_PtrToIntSameSize(DL, m_Value(X)));
     match(Y, m_PtrToIntSameSize(DL, m_Value(Y)));
     if ((X == LHS && Y == RHS) || (X == RHS && Y == LHS)) {
-      Constant *NullVal = Constant::getNullValue(Val->getType());
+      Constant *NullVal = Constant::getNullValue(Val->getType(), &DL);
       if (EdgePred == ICmpInst::ICMP_EQ)
         return ValueLatticeElement::get(NullVal);
       return ValueLatticeElement::getNot(NullVal);
@@ -1472,11 +1472,11 @@ ValueLatticeElement LazyValueInfoImpl::getValueFromTrunc(Value *Val,
   if (Trunc->hasNoUnsignedWrap()) {
     if (IsTrueDest)
       return ValueLatticeElement::get(ConstantInt::get(Ty, 1));
-    return ValueLatticeElement::get(Constant::getNullValue(Ty));
+    return ValueLatticeElement::get(Constant::getNullValue(Ty, &DL));
   }
 
   if (IsTrueDest)
-    return ValueLatticeElement::getNot(Constant::getNullValue(Ty));
+    return ValueLatticeElement::getNot(Constant::getNullValue(Ty, &DL));
   return ValueLatticeElement::getNot(Constant::getAllOnesValue(Ty));
 }
 

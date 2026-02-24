@@ -139,9 +139,10 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
 #undef _MUTEXDECL
 
   const auto &DL = M.getDataLayout();
-#define _PTRDECL(_, __) Constant::getNullValue(PointerTy),
+#define _PTRDECL(_, __) Constant::getNullValue(PointerTy, &M.getDataLayout()),
 #define _VOLATILE_PTRDECL(_, __) _PTRDECL(_, __)
-#define _MUTEXDECL(_) Constant::getNullValue(SanitizerMutexType),
+#define _MUTEXDECL(_)                                                          \
+  Constant::getNullValue(SanitizerMutexType, &M.getDataLayout()),
 #define _CONTEXT_ROOT                                                          \
   Constant::getIntegerValue(                                                   \
       PointerTy, APInt(DL.getPointerTypeSizeInBits(PointerTy), 1U)),
@@ -303,8 +304,9 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       // treated as a "can't be set as root".
       TheRootFunctionData = new GlobalVariable(
           M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
-          HasMusttail ? CannotBeRootInitializer
-                      : Constant::getNullValue(FunctionDataTy));
+          HasMusttail
+              ? CannotBeRootInitializer
+              : Constant::getNullValue(FunctionDataTy, &M.getDataLayout()));
 
       if (ContextRootSet.contains(&F)) {
         Context = Builder.CreateCall(

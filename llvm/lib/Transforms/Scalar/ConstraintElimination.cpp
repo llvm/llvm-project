@@ -780,7 +780,7 @@ ConstraintInfo::getConstraint(CmpInst::Predicate Pred, Value *Op0, Value *Op1,
 ConstraintTy ConstraintInfo::getConstraintForSolving(CmpInst::Predicate Pred,
                                                      Value *Op0,
                                                      Value *Op1) const {
-  Constant *NullC = Constant::getNullValue(Op0->getType());
+  Constant *NullC = Constant::getNullValue(Op0->getType(), &DL);
   // Handle trivially true compares directly to avoid adding V UGE 0 constraints
   // for all variables in the unsigned system.
   if ((Pred == CmpInst::ICMP_ULE && Op0 == NullC) ||

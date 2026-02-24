@@ -4539,8 +4539,8 @@ struct AAKernelInfoFunction : AAKernelInfo {
 
     Instruction *IsDone =
         ICmpInst::Create(ICmpInst::ICmp, llvm::CmpInst::ICMP_EQ, WorkFn,
-                         Constant::getNullValue(VoidPtrTy), "worker.is_done",
-                         StateMachineBeginBB);
+                         Constant::getNullValue(VoidPtrTy, &DL),
+                         "worker.is_done", StateMachineBeginBB);
     IsDone->setDebugLoc(DLoc);
     BranchInst::Create(StateMachineFinishedBB, StateMachineIsActiveCheckBB,
                        IsDone, StateMachineBeginBB)
@@ -4552,7 +4552,7 @@ struct AAKernelInfoFunction : AAKernelInfo {
         ->setDebugLoc(DLoc);
 
     Value *ZeroArg =
-        Constant::getNullValue(ParallelRegionFnTy->getParamType(0));
+        Constant::getNullValue(ParallelRegionFnTy->getParamType(0), &DL);
 
     const unsigned int WrapperFunctionArgNo = 6;
 

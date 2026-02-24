@@ -480,7 +480,7 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
     Cmp = B.CreateLogicalAnd(And, Cmp);
   }
 
-  Value *NullPtr = Constant::getNullValue(CI->getType());
+  Value *NullPtr = Constant::getNullValue(CI->getType(), &DL);
   return B.CreateSelect(Cmp, Src, NullPtr);
 }
 
@@ -517,7 +517,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
   }
 
   if (CharC->isZero()) {
-    Value *NullPtr = Constant::getNullValue(CI->getType());
+    Value *NullPtr = Constant::getNullValue(CI->getType(), &DL);
     if (isOnlyUsedInEqualityComparison(CI, NullPtr))
       // Pre-empt the transformation to strlen below and fold
       // strchr(A, '\0') == null to false.
@@ -540,7 +540,7 @@ Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
                  ? Str.size()
                  : Str.find(CharC->getSExtValue());
   if (I == StringRef::npos) // Didn't find the char.  strchr returns null.
-    return Constant::getNullValue(CI->getType());
+    return Constant::getNullValue(CI->getType(), &DL);
 
   // strchr(s+n,c)  -> gep(s+n+i,c)
   return B.CreateInBoundsGEP(B.getInt8Ty(), SrcStr, B.getInt64(I), "strchr");
@@ -1088,13 +1088,13 @@ Value *LibCallSimplifier::optimizeStrPBrk(CallInst *CI, IRBuilderBase &B) {
   // strpbrk(s, "") -> nullptr
   // strpbrk("", s) -> nullptr
   if ((HasS1 && S1.empty()) || (HasS2 && S2.empty()))
-    return Constant::getNullValue(CI->getType());
+    return Constant::getNullValue(CI->getType(), &DL);
 
   // Constant folding.
   if (HasS1 && HasS2) {
     size_t I = S1.find_first_of(S2);
     if (I == StringRef::npos) // No match.
-      return Constant::getNullValue(CI->getType());
+      return Constant::getNullValue(CI->getType(), &DL);
 
     return B.CreateInBoundsGEP(B.getInt8Ty(), CI->getArgOperand(0),
                                B.getInt64(I), "strpbrk");
@@ -1127,7 +1127,7 @@ Value *LibCallSimplifier::optimizeStrSpn(CallInst *CI, IRBuilderBase &B) {
   // strspn(s, "") -> 0
   // strspn("", s) -> 0
   if ((HasS1 && S1.empty()) || (HasS2 && S2.empty()))
-    return Constant::getNullValue(CI->getType());
+    return Constant::getNullValue(CI->getType(), &DL);
 
   // Constant folding.
   if (HasS1 && HasS2) {
@@ -1147,7 +1147,7 @@ Value *LibCallSimplifier::optimizeStrCSpn(CallInst *CI, IRBuilderBase &B) {
 
   // strcspn("", s) -> 0
   if (HasS1 && S1.empty())
-    return Constant::getNullValue(CI->getType());
+    return Constant::getNullValue(CI->getType(), &DL);
 
   // Constant folding.
   if (HasS1 && HasS2) {
@@ -1202,7 +1202,7 @@ Value *LibCallSimplifier::optimizeStrStr(CallInst *CI, IRBuilderBase &B) {
     size_t Offset = SearchStr.find(ToFindStr);
 
     if (Offset == StringRef::npos) // strstr("foo", "bar") -> null
-      return Constant::getNullValue(CI->getType());
+      return Constant::getNullValue(CI->getType(), &DL);
 
     // strstr("abcd", "bc") -> gep((char*)"abcd", 1)
     return B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), CI->getArgOperand(0),
@@ -1224,7 +1224,7 @@ Value *LibCallSimplifier::optimizeMemRChr(CallInst *CI, IRBuilderBase &B) {
   annotateNonNullAndDereferenceable(CI, 0, Size, DL);
   Value *CharVal = CI->getArgOperand(1);
   ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
-  Value *NullPtr = Constant::getNullValue(CI->getType());
+  Value *NullPtr = Constant::getNullValue(CI->getType(), &DL);
 
   if (LenC) {
     if (LenC->isZero())
@@ -1319,7 +1319,7 @@ Value *LibCallSimplifier::optimizeMemChr(CallInst *CI, IRBuilderBase &B) {
   Value *CharVal = CI->getArgOperand(1);
   ConstantInt *CharC = dyn_cast<ConstantInt>(CharVal);
   ConstantInt *LenC = dyn_cast<ConstantInt>(Size);
-  Value *NullPtr = Constant::getNullValue(CI->getType());
+  Value *NullPtr = Constant::getNullValue(CI->getType(), &DL);
 
   // memchr(x, y, 0) -> null
   if (LenC) {
@@ -1505,7 +1505,7 @@ static Value *optimizeMemCmpVarSize(CallInst *CI, Value *LHS, Value *RHS,
                                     Value *Size, bool StrNCmp,
                                     IRBuilderBase &B, const DataLayout &DL) {
   if (LHS == RHS) // memcmp(s,s,x) -> 0
-    return Constant::getNullValue(CI->getType());
+    return Constant::getNullValue(CI->getType(), &DL);
 
   StringRef LStr, RStr;
   if (!getConstantStringInfo(LHS, LStr, /*TrimAtNul=*/false) ||
@@ -1547,7 +1547,7 @@ static Value *optimizeMemCmpConstantSize(CallInst *CI, Value *LHS, Value *RHS,
                                          uint64_t Len, IRBuilderBase &B,
                                          const DataLayout &DL) {
   if (Len == 0) // memcmp(s1,s2,0) -> 0
-    return Constant::getNullValue(CI->getType());
+    return Constant::getNullValue(CI->getType(), &DL);
 
   // memcmp(S1,S2,1) -> *(unsigned char*)LHS - *(unsigned char*)RHS
   if (Len == 1) {
@@ -1655,7 +1655,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
   // memccpy(d, s, c, 0) -> nullptr
   if (N) {
     if (N->isNullValue())
-      return Constant::getNullValue(CI->getType());
+      return Constant::getNullValue(CI->getType(), &DL);
     if (!getConstantStringInfo(Src, SrcStr, /*TrimAtNul=*/false) ||
         // TODO: Handle zeroinitializer.
         !StopChar)
@@ -1670,7 +1670,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
     if (N->getZExtValue() <= SrcStr.size()) {
       copyFlags(*CI, B.CreateMemCpy(Dst, Align(1), Src, Align(1),
                                     CI->getArgOperand(3)));
-      return Constant::getNullValue(CI->getType());
+      return Constant::getNullValue(CI->getType(), &DL);
     }
     return nullptr;
   }
@@ -1681,7 +1681,7 @@ Value *LibCallSimplifier::optimizeMemCCpy(CallInst *CI, IRBuilderBase &B) {
   copyFlags(*CI, B.CreateMemCpy(Dst, Align(1), Src, Align(1), NewN));
   return Pos + 1 <= N->getZExtValue()
              ? B.CreateInBoundsGEP(B.getInt8Ty(), Dst, NewN)
-             : Constant::getNullValue(CI->getType());
+             : Constant::getNullValue(CI->getType(), &DL);
 }
 
 Value *LibCallSimplifier::optimizeMemPCpy(CallInst *CI, IRBuilderBase &B) {
@@ -3207,7 +3207,7 @@ Value *LibCallSimplifier::optimizeFFS(CallInst *CI, IRBuilderBase &B) {
   V = B.CreateAdd(V, ConstantInt::get(V->getType(), 1));
   V = B.CreateIntCast(V, RetType, false);
 
-  Value *Cond = B.CreateICmpNE(Op, Constant::getNullValue(ArgType));
+  Value *Cond = B.CreateICmpNE(Op, Constant::getNullValue(ArgType, &DL));
   return B.CreateSelect(Cond, V, ConstantInt::get(RetType, 0));
 }
 

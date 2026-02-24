@@ -1803,7 +1803,9 @@ simplifySVEIntrinsic(InstCombiner &IC, IntrinsicInst &II,
 
     if (IInfo.inactiveLanesAreUnused()) {
       if (IInfo.resultIsZeroInitialized())
-        IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
+        IC.replaceInstUsesWith(
+            II, Constant::getNullValue(II.getType(),
+                                       &II.getModule()->getDataLayout()));
 
       return IC.eraseInstFromFunction(II);
     }
@@ -2047,7 +2049,8 @@ static std::optional<Instruction *> instCombineSVECmpNE(InstCombiner &IC,
 
   // If all bits are zero bail early with an empty predicate
   if (PredicateBits == 0) {
-    auto *PFalse = Constant::getNullValue(II.getType());
+    auto *PFalse =
+        Constant::getNullValue(II.getType(), &II.getModule()->getDataLayout());
     PFalse->takeName(&II);
     return IC.replaceInstUsesWith(II, PFalse);
   }

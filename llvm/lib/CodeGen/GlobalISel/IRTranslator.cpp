@@ -377,7 +377,7 @@ bool IRTranslator::translateCompare(const User &U,
     MIRBuilder.buildICmp(Pred, Res, Op0, Op1, Flags);
   else if (Pred == CmpInst::FCMP_FALSE)
     MIRBuilder.buildCopy(
-        Res, getOrCreateVReg(*Constant::getNullValue(U.getType())));
+        Res, getOrCreateVReg(*Constant::getNullValue(U.getType(), DL)));
   else if (Pred == CmpInst::FCMP_TRUE)
     MIRBuilder.buildCopy(
         Res, getOrCreateVReg(*Constant::getAllOnesValue(U.getType())));

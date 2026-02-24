@@ -1652,8 +1652,8 @@ bool DevirtModule::tryEvaluateFunctionsWithArgs(
 
     Evaluator Eval(M.getDataLayout(), nullptr);
     SmallVector<Constant *, 2> EvalArgs;
-    EvalArgs.push_back(
-        Constant::getNullValue(Fn->getFunctionType()->getParamType(0)));
+    EvalArgs.push_back(Constant::getNullValue(
+        Fn->getFunctionType()->getParamType(0), &M.getDataLayout()));
     for (unsigned I = 0; I != Args.size(); ++I) {
       auto *ArgTy =
           dyn_cast<IntegerType>(Fn->getFunctionType()->getParamType(I + 1));

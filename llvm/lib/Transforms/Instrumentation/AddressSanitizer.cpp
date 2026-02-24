@@ -2647,7 +2647,8 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
 
     StructType *NewTy = StructType::get(Ty, RightRedZoneTy);
     Constant *NewInitializer = ConstantStruct::get(
-        NewTy, G->getInitializer(), Constant::getNullValue(RightRedZoneTy));
+        NewTy, G->getInitializer(),
+        Constant::getNullValue(RightRedZoneTy, &M.getDataLayout()));
 
     // Create a new global variable with enough space for a redzone.
     GlobalValue::LinkageTypes Linkage = G->getLinkage();
@@ -2681,7 +2682,8 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     G->eraseFromParent();
     NewGlobals[i] = NewGlobal;
 
-    Constant *ODRIndicator = Constant::getNullValue(IntptrTy);
+    Constant *ODRIndicator =
+        Constant::getNullValue(IntptrTy, &M.getDataLayout());
     GlobalValue *InstrumentedGlobal = NewGlobal;
 
     bool CanUsePrivateAliases =
@@ -2700,11 +2702,11 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
     } else if (UseOdrIndicator) {
       // With local aliases, we need to provide another externally visible
       // symbol __odr_asan_XXX to detect ODR violation.
-      auto *ODRIndicatorSym =
-          new GlobalVariable(M, IRB.getInt8Ty(), false, Linkage,
-                             Constant::getNullValue(IRB.getInt8Ty()),
-                             kODRGenPrefix + NameForGlobal, nullptr,
-                             NewGlobal->getThreadLocalMode());
+      auto *ODRIndicatorSym = new GlobalVariable(
+          M, IRB.getInt8Ty(), false, Linkage,
+          Constant::getNullValue(IRB.getInt8Ty(), &M.getDataLayout()),
+          kODRGenPrefix + NameForGlobal, nullptr,
+          NewGlobal->getThreadLocalMode());
 
       // Set meaningful attributes for indicator symbol.
       ODRIndicatorSym->setVisibility(NewGlobal->getVisibility());
@@ -2721,7 +2723,7 @@ void ModuleAddressSanitizer::instrumentGlobals(IRBuilder<> &IRB,
         ConstantExpr::getPointerCast(Name, IntptrTy),
         ConstantExpr::getPointerCast(getOrCreateModuleName(), IntptrTy),
         ConstantInt::get(IntptrTy, MD.IsDynInit),
-        Constant::getNullValue(IntptrTy), ODRIndicator);
+        Constant::getNullValue(IntptrTy, &M.getDataLayout()), ODRIndicator);
 
     LLVM_DEBUG(dbgs() << "NEW GLOBAL: " << *NewGlobal << "\n");
 
@@ -3407,7 +3409,8 @@ void FunctionStackPoisoner::createDynamicAllocasInitStorage() {
   BasicBlock &FirstBB = *F.begin();
   IRBuilder<> IRB(dyn_cast<Instruction>(FirstBB.begin()));
   DynamicAllocaLayout = IRB.CreateAlloca(IntptrTy, nullptr);
-  IRB.CreateStore(Constant::getNullValue(IntptrTy), DynamicAllocaLayout);
+  IRB.CreateStore(Constant::getNullValue(IntptrTy, &F.getDataLayout()),
+                  DynamicAllocaLayout);
   DynamicAllocaLayout->setAlignment(Align(32));
 }
 
@@ -3635,7 +3638,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
           kAsanOptionDetectUseAfterReturn, IRB.getInt32Ty());
       Value *UseAfterReturnIsEnabled = IRB.CreateICmpNE(
           IRB.CreateLoad(IRB.getInt32Ty(), OptionDetectUseAfterReturn),
-          Constant::getNullValue(IRB.getInt32Ty()));
+          Constant::getNullValue(IRB.getInt32Ty(), &F.getDataLayout()));
       Instruction *Term =
           SplitBlockAndInsertIfThen(UseAfterReturnIsEnabled, InsBefore, false);
       IRBuilder<> IRBIf(Term);
@@ -3658,8 +3661,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
                                  ConstantInt::get(IntptrTy, LocalStackSize));
     }
     FakeStackPtr = IRB.CreateIntToPtr(FakeStackInt, PtrTy);
-    Value *NoFakeStack =
-        IRB.CreateICmpEQ(FakeStackInt, Constant::getNullValue(IntptrTy));
+    Value *NoFakeStack = IRB.CreateICmpEQ(
+        FakeStackInt, Constant::getNullValue(IntptrTy, &F.getDataLayout()));
     Instruction *Term =
         SplitBlockAndInsertIfThen(NoFakeStack, InsBefore, false);
     IRBuilder<> IRBIf(Term);
@@ -3674,8 +3677,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
   } else {
     // void *FakeStack = nullptr;
     // void *LocalStackBase = alloca(LocalStackSize);
-    FakeStackInt = Constant::getNullValue(IntptrTy);
-    FakeStackPtr = Constant::getNullValue(PtrTy);
+    FakeStackInt = Constant::getNullValue(IntptrTy, &F.getDataLayout());
+    FakeStackPtr = Constant::getNullValue(PtrTy, &F.getDataLayout());
     LocalStackBase =
         DoDynamicAlloca ? createAllocaForLayout(IRB, L, true) : StaticAlloca;
     LocalStackBaseAlloca = LocalStackBase;
@@ -3765,8 +3768,8 @@ void FunctionStackPoisoner::processStaticAllocas() {
       //         __asan_stack_free_N(FakeStack, LocalStackSize)
       // else
       //     <This is not a fake stack; unpoison the redzones>
-      Value *Cmp =
-          IRBRet.CreateICmpNE(FakeStackInt, Constant::getNullValue(IntptrTy));
+      Value *Cmp = IRBRet.CreateICmpNE(
+          FakeStackInt, Constant::getNullValue(IntptrTy, &F.getDataLayout()));
       Instruction *ThenTerm, *ElseTerm;
       SplitBlockAndInsertIfThenElse(Cmp, Ret, &ThenTerm, &ElseTerm);
 
@@ -3782,7 +3785,7 @@ void FunctionStackPoisoner::processStaticAllocas() {
             ConstantInt::get(IntptrTy, ClassSize - ASan.LongSize / 8));
         Value *SavedFlagPtr = IRBPoison.CreateLoad(IntptrTy, SavedFlagPtrPtr);
         IRBPoison.CreateStore(
-            Constant::getNullValue(IRBPoison.getInt8Ty()),
+            Constant::getNullValue(IRBPoison.getInt8Ty(), &F.getDataLayout()),
             IRBPoison.CreateIntToPtr(SavedFlagPtr, IRBPoison.getPtrTy()));
       } else {
         // For larger frames call __asan_stack_free_*.
@@ -3827,7 +3830,7 @@ void FunctionStackPoisoner::handleDynamicAllocaCall(AllocaInst *AI) {
   const Align Alignment = std::max(Align(kAllocaRzSize), AI->getAlign());
   const uint64_t AllocaRedzoneMask = kAllocaRzSize - 1;
 
-  Value *Zero = Constant::getNullValue(IntptrTy);
+  Value *Zero = Constant::getNullValue(IntptrTy, &F.getDataLayout());
   Value *AllocaRzSize = ConstantInt::get(IntptrTy, kAllocaRzSize);
   Value *AllocaRzMask = ConstantInt::get(IntptrTy, AllocaRedzoneMask);
 

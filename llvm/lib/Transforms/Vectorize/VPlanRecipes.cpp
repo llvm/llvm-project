@@ -2564,8 +2564,12 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
     StartLane = State.Lane->getKnownLane();
     EndLane = StartLane + 1;
   }
-  Value *StartIdx0 = getStartIndex() ? State.get(getStartIndex(), true)
-                                     : Constant::getNullValue(BaseIVTy);
+  Value *StartIdx0 =
+      getStartIndex()
+          ? State.get(getStartIndex(), true)
+          : Constant::getNullValue(
+                BaseIVTy,
+                &State.Builder.GetInsertBlock()->getModule()->getDataLayout());
 
   for (unsigned Lane = StartLane; Lane < EndLane; ++Lane) {
     // It is okay if the induction variable type cannot hold the lane number,
