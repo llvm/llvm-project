@@ -292,7 +292,7 @@ red7_part_##T##_##OP(T x) \
     GENRED7_PART(T,OP,ID,IDZ)
 
 #define GENRED89(T,OP,ID,IDZ) \
-__attribute__((target("dpp"))) static T \
+__attribute__((target("dpp,dpp-wavefront-shifts"))) static T \
 red89_##T##_##OP(T x) \
 { \
     T r, v; \
@@ -386,7 +386,7 @@ iscan7_##T##_##OP(T x, uint l) \
 }
 
 #define GENISCAN89(T,OP,ID,IDZ) \
-__attribute__((target("dpp"))) static T \
+__attribute__((target("dpp,dpp-row-bcast"))) static T \
 iscan89_##T##_##OP(T x, uint l) \
 { \
     T s, v; \
@@ -471,7 +471,7 @@ sr1_7_##T##_##OP(T s, uint l) \
 
 
 #define GENSR1_89(T,OP,ID,IDZ) \
-__attribute__((target("dpp"))) static T \
+__attribute__((target("dpp,dpp-wavefront-shifts"))) static T \
 sr1_89_##T##_##OP(T s, uint l) \
 { \
     return T##_dpp(ID, s, DPP_WF_SR1, 0xf, 0xf, IDZ); \
@@ -602,4 +602,3 @@ GEN(int,xor,0,1)
 GEN(uint,xor,0u,1)
 GEN(long,xor,0L,1)
 GEN(ulong,xor,0UL,1)
-
