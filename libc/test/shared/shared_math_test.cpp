@@ -99,6 +99,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   float16 setpayloadf16_res = 0.0f16;
   EXPECT_EQ(0,
             LIBC_NAMESPACE::shared::setpayloadf16(&setpayloadf16_res, 0.0f16));
+
+  float16 setpayloadsigf16_res = 0.0f16;
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf16(&setpayloadsigf16_res,
+                                                        0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, setpayloadsigf16_res);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT16
@@ -170,6 +175,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
 
   float setpayloadf_res = 0.0f;
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadf(&setpayloadf_res, 0.0f));
+
+  float setpayloadsigf_res = 0.0f;
+  EXPECT_EQ(1,
+            LIBC_NAMESPACE::shared::setpayloadsigf(&setpayloadsigf_res, 0.0f));
+  EXPECT_FP_EQ(0x0p+0f, setpayloadsigf_res);
 }
 
 TEST(LlvmLibcSharedMathTest, AllDouble) {
@@ -217,6 +227,10 @@ TEST(LlvmLibcSharedMathTest, AllDouble) {
 
   double setpayload_res = 0.0;
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayload(&setpayload_res, 0.0));
+
+  double setpayloadsig_res = 0.0;
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsig(&setpayloadsig_res, 0.0));
+  EXPECT_FP_EQ(0.0, setpayloadsig_res);
 }
 
 TEST(LlvmLibcSharedMathTest, AllLongDouble) {
@@ -243,6 +257,11 @@ TEST(LlvmLibcSharedMathTest, AllLongDouble) {
 
   long double setpayloadl_res = 0.0L;
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadl(&setpayloadl_res, 0.0L));
+
+  long double setpayloadsigl_res = 0.0L;
+  EXPECT_EQ(1,
+            LIBC_NAMESPACE::shared::setpayloadsigl(&setpayloadsigl_res, 0.0L));
+  EXPECT_FP_EQ(0x0p+0L, setpayloadsigl_res);
 }
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
@@ -296,6 +315,11 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
   float128 setpayloadf128_res = float128(0.0);
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadf128(&setpayloadf128_res,
                                                       float128(0.0)));
+
+  float128 setpayloadsigf128_res = float128(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigf128(&setpayloadsigf128_res,
+                                                         float128(0.0)));
+  EXPECT_FP_EQ(float128(0.0), setpayloadsigf128_res);
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
@@ -328,4 +352,9 @@ TEST(LlvmLibcSharedMathTest, AllBFloat16) {
   bfloat16 setpayloadbf16_res = bfloat16(0.0);
   EXPECT_EQ(0, LIBC_NAMESPACE::shared::setpayloadbf16(&setpayloadbf16_res,
                                                       bfloat16(0.0)));
+
+  bfloat16 setpayloadsigbf16_res = bfloat16(0.0);
+  EXPECT_EQ(1, LIBC_NAMESPACE::shared::setpayloadsigbf16(&setpayloadsigbf16_res,
+                                                         bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.0), setpayloadsigbf16_res);
 }

@@ -2471,6 +2471,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_setpayloadsig",
+    hdrs = ["src/__support/math/setpayloadsig.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigbf16",
+    hdrs = ["src/__support/math/setpayloadsigbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigf",
+    hdrs = ["src/__support/math/setpayloadsigf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigf128",
+    hdrs = ["src/__support/math/setpayloadsigf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigf16",
+    hdrs = ["src/__support/math/setpayloadsigf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigl",
+    hdrs = ["src/__support/math/setpayloadsigl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sqrtf16",
     hdrs = ["src/__support/math/sqrtf16.h"],
     deps = [
@@ -6183,15 +6240,40 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "setpayloadsig")
+libc_math_function(
+    name = "setpayloadsig",
+    additional_deps = [
+        ":__support_math_setpayloadsig",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigf")
+libc_math_function(
+    name = "setpayloadsigf",
+    additional_deps = [
+        ":__support_math_setpayloadsigf",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigl")
+libc_math_function(
+    name = "setpayloadsigl",
+    additional_deps = [
+        ":__support_math_setpayloadsigl",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigf128")
+libc_math_function(
+    name = "setpayloadsigf128",
+    additional_deps = [
+        ":__support_math_setpayloadsigf128",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigf16")
+libc_math_function(
+    name = "setpayloadsigf16",
+    additional_deps = [
+        ":__support_math_setpayloadsigf16",
+    ],
+)
 
 libc_math_function(
     name = "sin",
