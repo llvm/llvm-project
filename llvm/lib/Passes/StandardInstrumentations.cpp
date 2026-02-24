@@ -237,7 +237,7 @@ void printIR(raw_ostream &OS, const MachineFunction *MF) {
   MF->print(OS);
 }
 
-std::string getIRName(Any IR) {
+std::string getIRName(Any IR, ExtendedIRContext *Ctx = nullptr) {
   if (unwrapIR<Module>(IR))
     return "[module]";
 
@@ -254,8 +254,13 @@ std::string getIRName(Any IR) {
   if (const auto *MF = unwrapIR<MachineFunction>(IR))
     return MF->getName().str();
 
-  if (auto IRName = ExtendedIRType::getExtendedIRName(IR))
-    return *IRName;
+  if (Ctx) {
+    // Go through the traits and check if any of them apply
+    for (const auto& extendedIRTraits : Ctx->traits) {
+      if (auto IRName = extendedIRTraits->getIRName(IR))
+        return *IRName;
+    }
+  }
 
   llvm_unreachable("Unknown wrapped IR type");
 }
@@ -415,7 +420,7 @@ void ChangeReporter<T>::handleIRAfterPass(Any IR, StringRef PassID,
                                           StringRef PassName) {
   assert(!BeforeStack.empty() && "Unexpected empty stack encountered.");
 
-  std::string Name = getIRName(IR);
+  std::string Name = getIRName(IR, this);
 
   if (isIgnored(PassID)) {
     if (VerboseMode)
@@ -2529,7 +2534,6 @@ void StandardInstrumentations::registerCallbacks(
   ChangeTester.registerCallbacks(PIC);
   PrintCrashIR.registerCallbacks(PIC);
   DroppedStatsIR.registerCallbacks(PIC);
-  ExtendedIR.registerCallbacks(PIC);
   if (MAM)
     PreservedCFGChecker.registerCallbacks(PIC, *MAM);
 
@@ -2540,32 +2544,6 @@ void StandardInstrumentations::registerCallbacks(
   // AfterCallbacks by its `registerCallbacks`. This is necessary
   // to ensure that other callbacks are not included in the timings.
   TimeProfilingPasses.registerCallbacks(PIC);
-}
-
-// ExtendedIRType implementation
-llvm::SmallVector<std::function<std::optional<std::string>(Any)>> ExtendedIRType::ExtendedIRTypeHandlers;
-
-std::optional<std::string> ExtendedIRType::getIRName(Any IR) {
-  // Default implementation returns nullopt.
-  return std::nullopt;
-}
-
-void ExtendedIRType::registerCallbacks(PassInstrumentationCallbacks &PIC) {
-  registerExtendedIRTypeHandler([this](Any IR) -> std::optional<std::string> {
-    return this->getIRName(IR);
-  });
-}
-
-void ExtendedIRType::registerExtendedIRTypeHandler(std::function<std::optional<std::string>(Any)> Handler) {
-  ExtendedIRTypeHandlers.push_back(std::move(Handler));
-}
-
-std::optional<std::string> ExtendedIRType::getExtendedIRName(Any IR) {
-  for (const auto &Handler : ExtendedIRTypeHandlers) {
-    if (auto IRName = Handler(IR))
-      return IRName;
-  }
-  return std::nullopt;
 }
 
 template class ChangeReporter<std::string>;

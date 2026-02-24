@@ -41,6 +41,34 @@ class Function;
 class MachineFunction;
 class PassInstrumentationCallbacks;
 
+class ExtendedIRTraits {
+  public:
+  ExtendedIRTraits() = default;
+  ExtendedIRTraits(const ExtendedIRTraits&) = delete;
+  ExtendedIRTraits& operator=(const ExtendedIRTraits&) = delete;
+
+  ExtendedIRTraits(ExtendedIRTraits&&) = delete;
+  ExtendedIRTraits& operator=(ExtendedIRTraits&&) = delete;
+
+  virtual ~ExtendedIRTraits() = default;
+  virtual std::optional<std::string> getIRName(Any IR) = 0;
+};
+
+struct ExtendedIRContext {
+  ExtendedIRContext() = default;
+  ExtendedIRContext(const ExtendedIRContext&) = delete;
+  ExtendedIRContext& operator=(const ExtendedIRContext&) = delete;
+
+  ExtendedIRContext(ExtendedIRContext&&) = delete;
+  ExtendedIRContext& operator=(ExtendedIRContext&&) = delete;
+
+  llvm::SmallVector<std::unique_ptr<ExtendedIRTraits>> traits;
+  // Add an ExtendedIRTraits to the traits vector
+  void addTrait(std::unique_ptr<ExtendedIRTraits> trait) {
+    traits.push_back(std::move(trait));
+  }
+};
+
 /// Instrumentation to print IR before/after passes.
 ///
 /// Needs state to be able to print module after pass that invalidates IR unit
@@ -209,9 +237,9 @@ public:
 // 6.  When a pass is run on an IR that is not interesting (based on options).
 // 7.  When a pass is ignored (pass manager or adapter pass).
 // 8.  To compare two IR representations (of type \p T).
-template <typename IRUnitT> class LLVM_ABI ChangeReporter {
+template <typename IRUnitT> class LLVM_ABI ChangeReporter : public ExtendedIRContext {
 protected:
-  ChangeReporter(bool RunInVerboseMode) : VerboseMode(RunInVerboseMode) {}
+  ChangeReporter(bool RunInVerboseMode) : ExtendedIRContext(), VerboseMode(RunInVerboseMode) {}
 
 public:
   virtual ~ChangeReporter();
@@ -594,31 +622,6 @@ private:
   static void SignalHandler(void *);
 };
 
-
-class ExtendedIRType {
-public:
-  ExtendedIRType() = default;
-
-  ExtendedIRType(const ExtendedIRType&) = delete;
-  ExtendedIRType& operator=(const ExtendedIRType&) = delete;
-
-  ExtendedIRType(ExtendedIRType&&) = delete;
-  ExtendedIRType& operator=(ExtendedIRType&&) = delete;
-
-  virtual ~ExtendedIRType() = default;
-  virtual std::optional<std::string> getIRName(Any IR);
-  LLVM_ABI void registerCallbacks(PassInstrumentationCallbacks &PIC);
-
-  // Register an extended IR type handler.
-  static LLVM_ABI void registerExtendedIRTypeHandler(std::function<std::optional<std::string>(Any)> Handler);
-
-  // Get IR name using registered handlers.
-  static LLVM_ABI std::optional<std::string> getExtendedIRName(Any IR);
-
-private:
-  static llvm::SmallVector<std::function<std::optional<std::string>(Any)>> ExtendedIRTypeHandlers;
-};
-
 /// This class provides an interface to register all the standard pass
 /// instrumentations and manages their state (if any).
 class StandardInstrumentations {
@@ -637,7 +640,6 @@ class StandardInstrumentations {
   IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
   DroppedVariableStatsIR DroppedStatsIR;
-  ExtendedIRType ExtendedIR;
 
   bool VerifyEach;
 
