@@ -1402,11 +1402,14 @@ bool VPValue::isDefinedOutsideLoopRegions() const {
 }
 void VPValue::replaceAllUsesWith(VPValue *New) {
   replaceUsesWithIf(New, [](VPUser &, unsigned) { return true; });
+  if (auto *SV = dyn_cast<VPSymbolicValue>(this))
+    SV->markMaterialized();
 }
 
 void VPValue::replaceUsesWithIf(
     VPValue *New,
     llvm::function_ref<bool(VPUser &U, unsigned Idx)> ShouldReplace) {
+  assertNotMaterialized();
   // Note that this early exit is required for correctness; the implementation
   // below relies on the number of users for this VPValue to decrease, which
   // isn't the case if this == New.

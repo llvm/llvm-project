@@ -23,8 +23,8 @@ define void @load_store_interleave_group_with_metadata(ptr noalias %data) {
 ; VF2-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
+; VF2:       [[SCALAR_PH]]:
 ;
 entry:
   br label %loop

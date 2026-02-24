@@ -23,8 +23,8 @@ define void @test_2xi64_unary_op_load_interleave_group(ptr noalias %data, ptr no
 ; VF2-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
 ; VF2-NEXT:    br i1 [[TMP6]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
+; VF2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @test_2xi64_unary_op_load_interleave_group(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -172,10 +172,10 @@ define void @test_2xi64(ptr noalias %data, ptr noalias %factor) {
 ; VF2-NEXT:    store <2 x i64> [[TMP8]], ptr [[TMP7]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
-; VF2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
+; VF2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @test_2xi64(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[FACTOR:%.*]]) {
@@ -952,10 +952,10 @@ define void @test_2xi64_sub_of_wide_loads(ptr noalias %data, ptr noalias %A, ptr
 ; VF2-NEXT:    store <2 x i64> [[TMP13]], ptr [[DATA_1]], align 8
 ; VF2-NEXT:    [[IV_NEXT]] = add nuw i64 [[TMP0]], 1
 ; VF2-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], 100
-; VF2-NEXT:    br i1 [[EC]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP16:![0-9]+]]
+; VF2-NEXT:    br i1 [[EC]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP18:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
+; VF2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @test_2xi64_sub_of_wide_loads(
 ; VF4-SAME: ptr noalias [[DATA:%.*]], ptr noalias [[A:%.*]], ptr noalias [[B:%.*]]) {
@@ -1189,10 +1189,10 @@ define void @multiple_store_groups_storing_same_wide_bin_op(ptr noalias %A, ptr 
 ; VF2-NEXT:    store <2 x double> [[TMP2]], ptr [[TMP4]], align 8
 ; VF2-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 1
 ; VF2-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
-; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
+; VF2-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; VF2:       [[MIDDLE_BLOCK]]:
-; VF2-NEXT:    br [[EXIT:label %.*]]
-; VF2:       [[SCALAR_PH:.*:]]
+; VF2-NEXT:    br i1 true, [[EXIT:label %.*]], label %[[SCALAR_PH:.*]]
+; VF2:       [[SCALAR_PH]]:
 ;
 ; VF4-LABEL: define void @multiple_store_groups_storing_same_wide_bin_op(
 ; VF4-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]]) {
