@@ -1,4 +1,4 @@
-//===-- Implementation of bf16mull function -------------------------------===//
+//===-- Shared bf16mulf function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/bf16mull.h"
-#include "src/__support/math/bf16mull.h"
+#ifndef LLVM_LIBC_SHARED_MATH_BF16MULF_H
+#define LLVM_LIBC_SHARED_MATH_BF16MULF_H
+
+#include "src/__support/math/bf16mulf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, bf16mull, (long double x, long double y)) {
-  return math::bf16mull(x, y);
-}
+using math::bf16mulf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_BF16MULF_H
