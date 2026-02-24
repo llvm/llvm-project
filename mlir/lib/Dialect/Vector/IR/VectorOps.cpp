@@ -2591,9 +2591,31 @@ struct ToElementsOfBroadcast final : OpRewritePattern<ToElementsOp> {
   }
 };
 
+/// Pattern to rewrite Y = ToElements(ShapeCast(X)) as Y = ToElements(X)
+///
+/// BEFORE:
+///    %1 = vector.shape_cast %0 : vector<6xf32> to vector<2x3xf32>
+///    %2:6 = vector.to_elements %1 : vector<2x3xf32>
+/// AFTER:
+///    %2:6 = vector.to_elements %0 : vector<6xf32>
+struct FoldToElementsOfShapeCast final : public OpRewritePattern<ToElementsOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ToElementsOp toElementsOp,
+                                PatternRewriter &rewriter) const override {
+    auto shapeCast = toElementsOp.getSource().getDefiningOp<ShapeCastOp>();
+    if (!shapeCast)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<ToElementsOp>(toElementsOp,
+                                              shapeCast.getSource());
+    return success();
+  }
+};
+
 void ToElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<ToElementsOfBroadcast>(context);
+  results.add<ToElementsOfBroadcast, FoldToElementsOfShapeCast>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6660,13 +6682,36 @@ public:
   }
 };
 
+/// Pattern to rewrite Y = ShapeCast(FromElements(X)) as Y = FromElements(X)
+///
+/// BEFORE:
+///    %1 = vector.from_elements %c1, %c2, %c3 : vector<3xf32>
+///    %2 = vector.shape_cast %1 : vector<3xf32> to vector<1x3xf32>
+/// AFTER:
+///    %2 = vector.from_elements %c1, %c2, %c3 : vector<1x3xf32>
+class FoldShapeCastOfFromElements final : public OpRewritePattern<ShapeCastOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ShapeCastOp shapeCastOp,
+                                PatternRewriter &rewriter) const override {
+    auto fromElements = shapeCastOp.getSource().getDefiningOp<FromElementsOp>();
+    if (!fromElements)
+      return failure();
+
+    rewriter.replaceOpWithNewOp<FromElementsOp>(
+        shapeCastOp, shapeCastOp.getResultVectorType(),
+        fromElements.getElements());
+    return success();
+  }
+};
+
 } // namespace
 
 void ShapeCastOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
-  results
-      .add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder>(
-          context);
+  results.add<ShapeCastCreateMaskFolderTrailingOneDim, ShapeCastBroadcastFolder,
+              FoldShapeCastOfFromElements>(context);
 }
 
 //===----------------------------------------------------------------------===//

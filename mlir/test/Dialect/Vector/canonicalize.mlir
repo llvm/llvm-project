@@ -3209,6 +3209,19 @@ func.func @fold_shape_cast_with_constant_mask() -> vector<4xi1>{
 
 // -----
 
+// CHECK-LABEL:   func.func @fold_shape_cast_from_elements(
+// CHECK-SAME:    %[[C1:.*]]: f32, %[[C2:.*]]: f32, %[[C3:.*]]: f32, %[[C4:.*]]: f32
+func.func @fold_shape_cast_from_elements(%c1: f32, %c2: f32, %c3: f32, %c4: f32) -> vector<2x2xf32>{
+// CHECK:           %[[VAL_0:.*]] = vector.from_elements %[[C1]], %[[C2]], %[[C3]], %[[C4]] : vector<2x2xf32>
+// CHECK:           return %[[VAL_0]] : vector<2x2xf32>
+// CHECK-NOT: vector.shape_cast
+  %1 = vector.from_elements %c1, %c2, %c3, %c4 : vector<4xf32>
+  %2 = vector.shape_cast %1 : vector<4xf32> to vector<2x2xf32>
+  return %2 : vector<2x2xf32>
+}
+
+// -----
+
 // TODO: This IR could be canonicalized but the canonicalization pattern is not
 // smart enough. For now, just make sure that we do not crash.
 
@@ -3349,6 +3362,19 @@ func.func @to_elements_of_scalar_broadcast_folds(%s: f32) -> (f32, f32, f32, f32
   // CHECK-NOT: vector.broadcast
   // CHECK-NOT: vector.to_elements
   // CHECK: return %[[S]], %[[S]], %[[S]], %[[S]]
+  return %e#0, %e#1, %e#2, %e#3 : f32, f32, f32, f32
+}
+
+// -----
+
+// CHECK-LABEL: func @fold_to_elements_of_shape_cast
+// CHECK-SAME: (%[[VEC:.*]]: vector<4xf32>) -> (f32, f32, f32, f32)
+func.func @fold_to_elements_of_shape_cast(%v: vector<4xf32>) -> (f32, f32, f32, f32) {
+  %sc = vector.shape_cast %v : vector<4xf32> to vector<2x2xf32>
+  %e:4 = vector.to_elements %sc : vector<2x2xf32>
+  // CHECK-NOT: vector.shape_cast
+  // CHECK: %[[E:.*]]:4 = vector.to_elements %[[VEC]] : vector<4xf32>
+  // CHECK: return %[[E]]#0, %[[E]]#1, %[[E]]#2, %[[E]]#3 : f32, f32, f32, f32
   return %e#0, %e#1, %e#2, %e#3 : f32, f32, f32, f32
 }
 
