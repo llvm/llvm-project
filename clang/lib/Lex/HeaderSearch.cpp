@@ -1797,9 +1797,17 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
       }
     }
 
-    // Add all umbrella header modules. We don't know which headers these
-    // umbrella headers apply to, so we add all that could possibly apply.
-    // `ModuleMap::findModuleForHeader` will select the correct one.
+    // Add all modules corresponding to an umbrella header. We don't know which
+    // other headers these umbrella headers include, so it's possible any one of
+    // them includes `FileName`. `ModuleMap::findModuleForHeader` will select
+    // the correct module, accounting for any already known headers from other
+    // module maps or loaded PCMs.
+    //
+    // TODO: Clang should strictly enforce that umbrella headers include the
+    //       other headers in their directory, or that they are referenced in
+    //       the module map. The current behavior can be order of include/import
+    //       dependent. This would allow treating umbrella headers the same as
+    //       umbrella directories here.
     ModulesToLoad.append(MMState.UmbrellaHeaderModules.begin(),
                          MMState.UmbrellaHeaderModules.end());
 
