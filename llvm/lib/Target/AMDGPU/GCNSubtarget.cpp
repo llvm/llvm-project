@@ -145,6 +145,40 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   HasFminFmaxLegacy = getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS;
   HasSMulHi = getGeneration() >= AMDGPUSubtarget::GFX9;
 
+  // Different generations have different instruction cache line sizes and fetch
+  // granularities. Empirical testing (thread trace analysis on gfx942, gfx1030,
+  // gfx1100, gfx1200) showed that only GFX9 exhibits measurable fetch stalls
+  // when functions are not aligned to the 32-byte fetch window boundary.
+  // GFX10+ showed no alignment sensitivity in any test.
+  switch (Gen) {
+  case AMDGPUSubtarget::GFX9:
+    InstCacheLineSize = 64;
+    InstFetchAlignment = 32;
+    break;
+  case AMDGPUSubtarget::GFX10:
+    InstCacheLineSize = 64;
+    InstFetchAlignment = 4;
+    break;
+  case AMDGPUSubtarget::GFX11:
+    InstCacheLineSize = 128;
+    InstFetchAlignment = 4;
+    break;
+  case AMDGPUSubtarget::GFX12:
+    InstCacheLineSize = 128;
+    InstFetchAlignment = 4;
+    break;
+  default:
+    // Covers legacy pre-GFX9 and any future post-GFX12 architectures.
+    InstCacheLineSize = Gen >= AMDGPUSubtarget::GFX11 ? 128 : 64;
+    InstFetchAlignment = 4;
+    break;
+  }
+
+  assert(llvm::isPowerOf2_32(InstCacheLineSize) &&
+         "InstCacheLineSize must be a power of 2");
+  assert(llvm::isPowerOf2_32(InstFetchAlignment) &&
+         "InstFetchAlignment must be a power of 2");
+
   TargetID.setTargetIDFromFeaturesString(FS);
 
   LLVM_DEBUG(dbgs() << "xnack setting for subtarget: "
