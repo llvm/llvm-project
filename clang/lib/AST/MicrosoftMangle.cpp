@@ -2723,6 +2723,12 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
   case BuiltinType::UInt128:
     Out << "_M";
     break;
+  case BuiltinType::Int256:
+    Out << "$$_L";
+    break;
+  case BuiltinType::UInt256:
+    Out << "$$_M";
+    break;
   case BuiltinType::Bool:
     Out << "_N";
     break;

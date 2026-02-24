@@ -3177,6 +3177,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
         Out << "u4i128";
         addSubstitution(BuiltinType::Int128);
         break;
+      case 256:
+        if (mangleSubstitution(BuiltinType::Int256))
+          break;
+        Out << "u4i256";
+        addSubstitution(BuiltinType::Int256);
+        break;
       default:
         llvm_unreachable("Unknown integer size for normalization");
       }
@@ -3211,6 +3217,12 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
           break;
         Out << "u4u128";
         addSubstitution(BuiltinType::UInt128);
+        break;
+      case 256:
+        if (mangleSubstitution(BuiltinType::UInt256))
+          break;
+        Out << "u4u256";
+        addSubstitution(BuiltinType::UInt256);
         break;
       default:
         llvm_unreachable("Unknown integer size for normalization");
@@ -3247,6 +3259,9 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
   case BuiltinType::UInt128:
     Out << 'o';
     break;
+  case BuiltinType::UInt256:
+    Out << "u8__uint256";
+    break;
   case BuiltinType::SChar:
     Out << 'a';
     break;
@@ -3277,6 +3292,9 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     break;
   case BuiltinType::Int128:
     Out << 'n';
+    break;
+  case BuiltinType::Int256:
+    Out << "u7__int256";
     break;
   case BuiltinType::Float16:
     Out << "DF16_";

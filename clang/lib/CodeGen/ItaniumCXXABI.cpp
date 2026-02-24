@@ -3726,6 +3726,8 @@ static bool TypeInfoIsInStandardLibrary(const BuiltinType *Ty) {
     case BuiltinType::Char32:
     case BuiltinType::Int128:
     case BuiltinType::UInt128:
+    case BuiltinType::Int256:
+    case BuiltinType::UInt256:
       return true;
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
@@ -4667,21 +4669,33 @@ llvm::Constant *ItaniumCXXABI::getAddrOfRTTIDescriptor(QualType Ty) {
 
 void ItaniumCXXABI::EmitFundamentalRTTIDescriptors(const CXXRecordDecl *RD) {
   // Types added here must also be added to TypeInfoIsInStandardLibrary.
-  QualType FundamentalTypes[] = {
-      getContext().VoidTy,             getContext().NullPtrTy,
-      getContext().BoolTy,             getContext().WCharTy,
-      getContext().CharTy,             getContext().UnsignedCharTy,
-      getContext().SignedCharTy,       getContext().ShortTy,
-      getContext().UnsignedShortTy,    getContext().IntTy,
-      getContext().UnsignedIntTy,      getContext().LongTy,
-      getContext().UnsignedLongTy,     getContext().LongLongTy,
-      getContext().UnsignedLongLongTy, getContext().Int128Ty,
-      getContext().UnsignedInt128Ty,   getContext().HalfTy,
-      getContext().FloatTy,            getContext().DoubleTy,
-      getContext().LongDoubleTy,       getContext().Float128Ty,
-      getContext().Char8Ty,            getContext().Char16Ty,
-      getContext().Char32Ty
-  };
+  QualType FundamentalTypes[] = {getContext().VoidTy,
+                                 getContext().NullPtrTy,
+                                 getContext().BoolTy,
+                                 getContext().WCharTy,
+                                 getContext().CharTy,
+                                 getContext().UnsignedCharTy,
+                                 getContext().SignedCharTy,
+                                 getContext().ShortTy,
+                                 getContext().UnsignedShortTy,
+                                 getContext().IntTy,
+                                 getContext().UnsignedIntTy,
+                                 getContext().LongTy,
+                                 getContext().UnsignedLongTy,
+                                 getContext().LongLongTy,
+                                 getContext().UnsignedLongLongTy,
+                                 getContext().Int128Ty,
+                                 getContext().UnsignedInt128Ty,
+                                 getContext().Int256Ty,
+                                 getContext().UnsignedInt256Ty,
+                                 getContext().HalfTy,
+                                 getContext().FloatTy,
+                                 getContext().DoubleTy,
+                                 getContext().LongDoubleTy,
+                                 getContext().Float128Ty,
+                                 getContext().Char8Ty,
+                                 getContext().Char16Ty,
+                                 getContext().Char32Ty};
   llvm::GlobalValue::DLLStorageClassTypes DLLStorageClass =
       RD->hasAttr<DLLExportAttr>() || CGM.shouldMapVisibilityToDLLExport(RD)
           ? llvm::GlobalValue::DLLExportStorageClass

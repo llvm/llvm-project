@@ -1148,6 +1148,15 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     else
       Result = Context.Int128Ty;
     break;
+  case DeclSpec::TST_int256:
+    if (!S.Context.getTargetInfo().hasInt256Type() &&
+        !(S.getLangOpts().isTargetDevice()))
+      S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__int256";
+    if (DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned)
+      Result = Context.UnsignedInt256Ty;
+    else
+      Result = Context.Int256Ty;
+    break;
   case DeclSpec::TST_float16:
     // CUDA host and device may have different _Float16 support, therefore
     // do not diagnose _Float16 usage to avoid false alarm.
@@ -10201,18 +10210,21 @@ static QualType ChangeIntegralSignedness(Sema &S, QualType BaseType,
   }
 
   bool Int128Unsupported = !S.Context.getTargetInfo().hasInt128Type();
-  std::array<CanQualType *, 6> AllSignedIntegers = {
+  bool Int256Unsupported = !S.Context.getTargetInfo().hasInt256Type();
+  unsigned IntSkip = Int128Unsupported ? 2 : Int256Unsupported ? 1 : 0;
+  std::array<CanQualType *, 7> AllSignedIntegers = {
       &S.Context.SignedCharTy, &S.Context.ShortTy,    &S.Context.IntTy,
-      &S.Context.LongTy,       &S.Context.LongLongTy, &S.Context.Int128Ty};
+      &S.Context.LongTy,       &S.Context.LongLongTy, &S.Context.Int128Ty,
+      &S.Context.Int256Ty};
   ArrayRef<CanQualType *> AvailableSignedIntegers(
-      AllSignedIntegers.data(), AllSignedIntegers.size() - Int128Unsupported);
-  std::array<CanQualType *, 6> AllUnsignedIntegers = {
+      AllSignedIntegers.data(), AllSignedIntegers.size() - IntSkip);
+  std::array<CanQualType *, 7> AllUnsignedIntegers = {
       &S.Context.UnsignedCharTy,     &S.Context.UnsignedShortTy,
       &S.Context.UnsignedIntTy,      &S.Context.UnsignedLongTy,
-      &S.Context.UnsignedLongLongTy, &S.Context.UnsignedInt128Ty};
-  ArrayRef<CanQualType *> AvailableUnsignedIntegers(AllUnsignedIntegers.data(),
-                                                    AllUnsignedIntegers.size() -
-                                                        Int128Unsupported);
+      &S.Context.UnsignedLongLongTy, &S.Context.UnsignedInt128Ty,
+      &S.Context.UnsignedInt256Ty};
+  ArrayRef<CanQualType *> AvailableUnsignedIntegers(
+      AllUnsignedIntegers.data(), AllUnsignedIntegers.size() - IntSkip);
   ArrayRef<CanQualType *> *Consider =
       IsMakeSigned ? &AvailableSignedIntegers : &AvailableUnsignedIntegers;
 

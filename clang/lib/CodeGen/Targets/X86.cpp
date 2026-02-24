@@ -1821,6 +1821,10 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
     } else if (k == BuiltinType::Int128 || k == BuiltinType::UInt128) {
       Lo = Integer;
       Hi = Integer;
+    } else if (k == BuiltinType::Int256 || k == BuiltinType::UInt256) {
+      // Exceeds 2 eightbytes; cannot be classified in registers per SysV ABI.
+      Lo = Memory;
+      Hi = Memory;
     } else if (k >= BuiltinType::Bool && k <= BuiltinType::LongLong) {
       Current = Integer;
     } else if (k == BuiltinType::Float || k == BuiltinType::Double ||
@@ -1926,7 +1930,9 @@ void X86_64ABIInfo::classify(QualType Ty, uint64_t OffsetBase, Class &Lo,
       // gcc passes 256 and 512 bit <X x __int128> vectors in memory. :(
       if (passInt128VectorsInMem() && Size != 128 &&
           (ElementType->isSpecificBuiltinType(BuiltinType::Int128) ||
-           ElementType->isSpecificBuiltinType(BuiltinType::UInt128)))
+           ElementType->isSpecificBuiltinType(BuiltinType::UInt128) ||
+           ElementType->isSpecificBuiltinType(BuiltinType::Int256) ||
+           ElementType->isSpecificBuiltinType(BuiltinType::UInt256)))
         return;
 
       // Arguments of 256-bits are split into four eightbyte chunks. The
@@ -2186,7 +2192,12 @@ ABIArgInfo X86_64ABIInfo::getIndirectReturnResult(QualType Ty) const {
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
 
-    if (Ty->isBitIntType())
+    // Scalar integer types that exceed two eightbytes (128 bits) cannot be
+    // returned in registers per the SysV ABI.  Route them through the indirect
+    // path just like _BitInt.  Exclude vector and matrix types (handled by
+    // classify()).
+    if ((Ty->isBitIntType() || getContext().getTypeSize(Ty) > 128) &&
+        !Ty->isVectorType() && !Ty->isMatrixType())
       return getNaturalAlignIndirect(Ty, getDataLayout().getAllocaAddrSpace());
 
     return (isPromotableIntegerTypeForABI(Ty) ? ABIArgInfo::getExtend(Ty)
@@ -2205,7 +2216,9 @@ bool X86_64ABIInfo::IsIllegalVectorType(QualType Ty) const {
     QualType EltTy = VecTy->getElementType();
     if (passInt128VectorsInMem() &&
         (EltTy->isSpecificBuiltinType(BuiltinType::Int128) ||
-         EltTy->isSpecificBuiltinType(BuiltinType::UInt128)))
+         EltTy->isSpecificBuiltinType(BuiltinType::UInt128) ||
+         EltTy->isSpecificBuiltinType(BuiltinType::Int256) ||
+         EltTy->isSpecificBuiltinType(BuiltinType::UInt256)))
       return true;
   }
 
@@ -2222,8 +2235,14 @@ ABIArgInfo X86_64ABIInfo::getIndirectResult(QualType Ty,
   // the argument in the free register. This does not seem to happen currently,
   // but this code would be much safer if we could mark the argument with
   // 'onstack'. See PR12193.
+  // Scalar types that fit in two eightbytes (128 bits) can be passed in
+  // registers naturally.  Larger scalar integer types (e.g. __int256) exceed
+  // the SysV ABI register-passing limit and must go through the indirect
+  // path.  Vector and matrix types are excluded (handled by classify()).
   if (!isAggregateTypeForABI(Ty) && !IsIllegalVectorType(Ty) &&
-      !Ty->isBitIntType()) {
+      !Ty->isBitIntType() &&
+      (Ty->isVectorType() || Ty->isMatrixType() ||
+       getContext().getTypeSize(Ty) <= 128)) {
     // Treat an enum type as its underlying type.
     if (const auto *ED = Ty->getAsEnumDecl())
       Ty = ED->getIntegerType();
@@ -3419,6 +3438,13 @@ ABIArgInfo WinX86_64ABIInfo::classify(QualType Ty, unsigned &FreeSSERegs,
       // See https://gcc.gnu.org/bugzilla/show_bug.cgi?id=115054#c8.
       return ABIArgInfo::getDirect(llvm::FixedVectorType::get(
           llvm::Type::getInt64Ty(getVMContext()), 2));
+
+    case BuiltinType::Int256:
+    case BuiltinType::UInt256:
+      // > 8 bytes non-float/vector: passed indirectly on Win64.
+      return ABIArgInfo::getIndirect(
+          Align, /*AddrSpace=*/getDataLayout().getAllocaAddrSpace(),
+          /*ByVal=*/false);
 
     default:
       break;

@@ -375,6 +375,11 @@ static void checkDataLayoutConsistency(const TargetInfo &Target,
       Triple.getArch() != llvm::Triple::ve)
     Check("__int128", llvm::Type::getIntNTy(Context, 128), Target.Int128Align);
 
+  if (Target.hasInt256Type() && !Triple.isAMDGPU() && !Triple.isSPIRV() &&
+      Triple.getArch() != llvm::Triple::ve &&
+      Triple.getArch() != llvm::Triple::systemz)
+    Check("__int256", llvm::Type::getIntNTy(Context, 256), Target.Int256Align);
+
   if (Target.hasFloat16Type())
     Check("half", llvm::Type::getFloatingPointTy(Context, *Target.HalfFormat),
           Target.HalfAlign);

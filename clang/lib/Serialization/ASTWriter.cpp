@@ -5641,6 +5641,8 @@ void ASTWriter::PrepareWritingSpecialDecls(Sema &SemaRef) {
                      PREDEF_DECL_OBJC_PROTOCOL_ID);
   RegisterPredefDecl(Context.Int128Decl, PREDEF_DECL_INT_128_ID);
   RegisterPredefDecl(Context.UInt128Decl, PREDEF_DECL_UNSIGNED_INT_128_ID);
+  RegisterPredefDecl(Context.Int256Decl, PREDEF_DECL_INT_256_ID);
+  RegisterPredefDecl(Context.UInt256Decl, PREDEF_DECL_UNSIGNED_INT_256_ID);
   RegisterPredefDecl(Context.ObjCInstanceTypeDecl,
                      PREDEF_DECL_OBJC_INSTANCETYPE_ID);
   RegisterPredefDecl(Context.BuiltinVaListDecl, PREDEF_DECL_BUILTIN_VA_LIST_ID);

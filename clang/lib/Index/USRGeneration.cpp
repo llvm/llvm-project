@@ -714,6 +714,9 @@ void USRGenerator::VisitType(QualType T) {
           Out << 'k'; break;
         case BuiltinType::UInt128:
           Out << 'j'; break;
+        case BuiltinType::UInt256:
+          Out << "@BT@UInt256";
+          break;
         case BuiltinType::Char_U:
         case BuiltinType::Char_S:
           Out << 'C'; break;
@@ -732,6 +735,9 @@ void USRGenerator::VisitType(QualType T) {
           Out << 'K'; break;
         case BuiltinType::Int128:
           Out << 'J'; break;
+        case BuiltinType::Int256:
+          Out << "@BT@Int256";
+          break;
         case BuiltinType::Float16:
         case BuiltinType::Half:
           Out << 'h'; break;

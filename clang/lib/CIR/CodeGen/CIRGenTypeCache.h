@@ -35,6 +35,7 @@ struct CIRGenTypeCache {
   cir::IntType sInt32Ty;
   cir::IntType sInt64Ty;
   cir::IntType sInt128Ty;
+  cir::IntType sInt256Ty;
 
   // ClangIR unsigned integral type of common sizes
   cir::IntType uInt8Ty;
@@ -42,6 +43,7 @@ struct CIRGenTypeCache {
   cir::IntType uInt32Ty;
   cir::IntType uInt64Ty;
   cir::IntType uInt128Ty;
+  cir::IntType uInt256Ty;
 
   // ClangIR floating-point types with fixed formats
   cir::FP16Type fP16Ty;

@@ -669,6 +669,8 @@ static bool typeInfoIsInStandardLibrary(const BuiltinType *ty) {
   case BuiltinType::Char32:
   case BuiltinType::Int128:
   case BuiltinType::UInt128:
+  case BuiltinType::Int256:
+  case BuiltinType::UInt256:
     return true;
 
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix)                   \

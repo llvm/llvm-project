@@ -419,11 +419,11 @@ static bool BuiltinOverflow(Sema &S, CallExpr *TheCall, unsigned BuiltinID) {
     // bool, a bit-precise type, or an enumeration type.
     if (const auto *BT = QT.getCanonicalType()->getAs<BuiltinType>())
       return (BT->getKind() >= BuiltinType::Short &&
-           BT->getKind() <= BuiltinType::Int128) || (
-           BT->getKind() >= BuiltinType::UShort &&
-           BT->getKind() <= BuiltinType::UInt128) ||
-           BT->getKind() == BuiltinType::UChar ||
-           BT->getKind() == BuiltinType::SChar;
+              BT->getKind() <= BuiltinType::Int256) ||
+             (BT->getKind() >= BuiltinType::UShort &&
+              BT->getKind() <= BuiltinType::UInt256) ||
+             BT->getKind() == BuiltinType::UChar ||
+             BT->getKind() == BuiltinType::SChar;
     return false;
   };
 

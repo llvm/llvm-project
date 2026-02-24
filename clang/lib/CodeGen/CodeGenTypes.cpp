@@ -520,6 +520,11 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       ResultType = llvm::IntegerType::get(getLLVMContext(), 128);
       break;
 
+    case BuiltinType::UInt256:
+    case BuiltinType::Int256:
+      ResultType = llvm::IntegerType::get(getLLVMContext(), 256);
+      break;
+
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
     case BuiltinType::Id:
 #include "clang/Basic/OpenCLImageTypes.def"

@@ -1331,6 +1331,7 @@ Parser::ParseCastExpression(CastParseKind ParseKind, bool isAddressOfOperand,
   case tok::kw_long:
   case tok::kw___int64:
   case tok::kw___int128:
+  case tok::kw___int256:
   case tok::kw__ExtInt:
   case tok::kw__BitInt:
   case tok::kw_signed:

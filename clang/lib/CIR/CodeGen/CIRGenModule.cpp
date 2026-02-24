@@ -82,6 +82,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   sInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/true);
   sInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/true);
   sInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/true);
+  sInt256Ty = cir::IntType::get(&getMLIRContext(), 256, /*isSigned=*/true);
   uInt8Ty = cir::IntType::get(&getMLIRContext(), 8, /*isSigned=*/false);
   uInt8PtrTy = cir::PointerType::get(uInt8Ty);
   cirAllocaAddressSpace = getTargetCIRGenInfo().getCIRAllocaAddressSpace();
@@ -89,6 +90,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
   uInt32Ty = cir::IntType::get(&getMLIRContext(), 32, /*isSigned=*/false);
   uInt64Ty = cir::IntType::get(&getMLIRContext(), 64, /*isSigned=*/false);
   uInt128Ty = cir::IntType::get(&getMLIRContext(), 128, /*isSigned=*/false);
+  uInt256Ty = cir::IntType::get(&getMLIRContext(), 256, /*isSigned=*/false);
   fP16Ty = cir::FP16Type::get(&getMLIRContext());
   bFloat16Ty = cir::BF16Type::get(&getMLIRContext());
   floatTy = cir::SingleType::get(&getMLIRContext());

@@ -184,6 +184,8 @@ llvm::MDNode *CodeGenTBAA::getTypeInfoHelper(const Type *Ty) {
       return getTypeInfo(Context.LongLongTy);
     case BuiltinType::UInt128:
       return getTypeInfo(Context.Int128Ty);
+    case BuiltinType::UInt256:
+      return getTypeInfo(Context.Int256Ty);
 
     case BuiltinType::UShortFract:
       return getTypeInfo(Context.ShortFractTy);

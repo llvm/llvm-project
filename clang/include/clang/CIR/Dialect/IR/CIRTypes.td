@@ -76,7 +76,7 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
     /// Returns a maximum bitwidth of cir::IntType
-    static unsigned maxBitwidth() { return 128; }
+    static unsigned maxBitwidth() { return 256; }
   }];
   let genVerifyDecl = 1;
 }

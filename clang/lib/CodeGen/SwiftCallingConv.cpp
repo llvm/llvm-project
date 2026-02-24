@@ -679,6 +679,9 @@ bool swiftcall::isLegalIntegerType(CodeGenModule &CGM,
   case 128:
     return CGM.getContext().getTargetInfo().hasInt128Type();
 
+  case 256:
+    return CGM.getContext().getTargetInfo().hasInt256Type();
+
   default:
     return false;
   }

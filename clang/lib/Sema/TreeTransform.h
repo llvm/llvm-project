@@ -17510,10 +17510,10 @@ QualType TreeTransform<Derived>::RebuildArrayType(
                                   getDerived().getBaseEntity());
 
   QualType Types[] = {
-    SemaRef.Context.UnsignedCharTy, SemaRef.Context.UnsignedShortTy,
-    SemaRef.Context.UnsignedIntTy, SemaRef.Context.UnsignedLongTy,
-    SemaRef.Context.UnsignedLongLongTy, SemaRef.Context.UnsignedInt128Ty
-  };
+      SemaRef.Context.UnsignedCharTy,     SemaRef.Context.UnsignedShortTy,
+      SemaRef.Context.UnsignedIntTy,      SemaRef.Context.UnsignedLongTy,
+      SemaRef.Context.UnsignedLongLongTy, SemaRef.Context.UnsignedInt128Ty,
+      SemaRef.Context.UnsignedInt256Ty};
   QualType SizeType;
   for (const auto &T : Types)
     if (Size->getBitWidth() == SemaRef.Context.getIntWidth(T)) {

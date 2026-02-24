@@ -9480,6 +9480,10 @@ class BuiltinOperatorOverloadBuilder {
         (S.Context.getAuxTargetInfo() &&
          S.Context.getAuxTargetInfo()->hasInt128Type()))
       ArithmeticTypes.push_back(S.Context.Int128Ty);
+    if (S.Context.getTargetInfo().hasInt256Type() ||
+        (S.Context.getAuxTargetInfo() &&
+         S.Context.getAuxTargetInfo()->hasInt256Type()))
+      ArithmeticTypes.push_back(S.Context.Int256Ty);
     ArithmeticTypes.push_back(S.Context.UnsignedIntTy);
     ArithmeticTypes.push_back(S.Context.UnsignedLongTy);
     ArithmeticTypes.push_back(S.Context.UnsignedLongLongTy);
@@ -9487,6 +9491,10 @@ class BuiltinOperatorOverloadBuilder {
         (S.Context.getAuxTargetInfo() &&
          S.Context.getAuxTargetInfo()->hasInt128Type()))
       ArithmeticTypes.push_back(S.Context.UnsignedInt128Ty);
+    if (S.Context.getTargetInfo().hasInt256Type() ||
+        (S.Context.getAuxTargetInfo() &&
+         S.Context.getAuxTargetInfo()->hasInt256Type()))
+      ArithmeticTypes.push_back(S.Context.UnsignedInt256Ty);
 
     /// We add candidates for the unique, unqualified _BitInt types present in
     /// the candidate type set. The candidate set already handled ensuring the

@@ -1470,6 +1470,7 @@ void ItaniumRecordLayoutBuilder::LayoutWideBitField(uint64_t FieldSize,
       Context.UnsignedCharTy,     Context.UnsignedShortTy,
       Context.UnsignedIntTy,      Context.UnsignedLongTy,
       Context.UnsignedLongLongTy, Context.UnsignedInt128Ty,
+      Context.UnsignedInt256Ty,
   };
 
   QualType Type;

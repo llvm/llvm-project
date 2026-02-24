@@ -7771,6 +7771,9 @@ QualType ASTReader::GetType(TypeID ID) {
     case PREDEF_TYPE_UINT128_ID:
       T = Context.UnsignedInt128Ty;
       break;
+    case PREDEF_TYPE_UINT256_ID:
+      T = Context.UnsignedInt256Ty;
+      break;
     case PREDEF_TYPE_SCHAR_ID:
       T = Context.SignedCharTy;
       break;
@@ -7791,6 +7794,9 @@ QualType ASTReader::GetType(TypeID ID) {
       break;
     case PREDEF_TYPE_INT128_ID:
       T = Context.Int128Ty;
+      break;
+    case PREDEF_TYPE_INT256_ID:
+      T = Context.Int256Ty;
       break;
     case PREDEF_TYPE_BFLOAT16_ID:
       T = Context.BFloat16Ty;
@@ -8358,6 +8364,18 @@ Decl *ASTReader::getPredefinedDecl(PredefinedDeclIDs ID) {
     if (Context.UInt128Decl)
       return Context.UInt128Decl;
     NewLoaded = Context.getUInt128Decl();
+    break;
+
+  case PREDEF_DECL_INT_256_ID:
+    if (Context.Int256Decl)
+      return Context.Int256Decl;
+    NewLoaded = Context.getInt256Decl();
+    break;
+
+  case PREDEF_DECL_UNSIGNED_INT_256_ID:
+    if (Context.UInt256Decl)
+      return Context.UInt256Decl;
+    NewLoaded = Context.getUInt256Decl();
     break;
 
   case PREDEF_DECL_OBJC_INSTANCETYPE_ID:

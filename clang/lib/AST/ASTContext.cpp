@@ -1215,6 +1215,18 @@ TypedefDecl *ASTContext::getUInt128Decl() const {
   return UInt128Decl;
 }
 
+TypedefDecl *ASTContext::getInt256Decl() const {
+  if (!Int256Decl)
+    Int256Decl = buildImplicitTypedef(Int256Ty, "__int256_t");
+  return Int256Decl;
+}
+
+TypedefDecl *ASTContext::getUInt256Decl() const {
+  if (!UInt256Decl)
+    UInt256Decl = buildImplicitTypedef(UnsignedInt256Ty, "__uint256_t");
+  return UInt256Decl;
+}
+
 void ASTContext::InitBuiltinType(CanQualType &R, BuiltinType::Kind K) {
   auto *Ty = new (*this, alignof(BuiltinType)) BuiltinType(K);
   R = CanQualType::CreateUnsafe(QualType(Ty, 0));
@@ -1300,6 +1312,10 @@ void ASTContext::InitBuiltinTypes(const TargetInfo &Target,
   // GNU extension, 128-bit integers.
   InitBuiltinType(Int128Ty,            BuiltinType::Int128);
   InitBuiltinType(UnsignedInt128Ty,    BuiltinType::UInt128);
+
+  // Extension, 256-bit integers.
+  InitBuiltinType(Int256Ty, BuiltinType::Int256);
+  InitBuiltinType(UnsignedInt256Ty, BuiltinType::UInt256);
 
   // C++ 3.9.1p5
   if (TargetInfo::isTypeSigned(Target.getWCharType()))
@@ -2173,6 +2189,11 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
     case BuiltinType::UInt128:
       Width = 128;
       Align = Target->getInt128Align();
+      break;
+    case BuiltinType::Int256:
+    case BuiltinType::UInt256:
+      Width = 256;
+      Align = Target->getInt256Align();
       break;
     case BuiltinType::ShortAccum:
     case BuiltinType::UShortAccum:
@@ -8233,6 +8254,11 @@ unsigned ASTContext::getIntegerRank(const Type *T) const {
   case BuiltinType::UInt128:
     return 7 + (getIntWidth(Int128Ty) << 3);
 
+  case BuiltinType::Int256:
+  case BuiltinType::UInt256:
+    // Base rank > 7 is fine: only the total ordering matters, not the low bits.
+    return 8 + (getIntWidth(Int256Ty) << 3);
+
   // "The ranks of char8_t, char16_t, char32_t, and wchar_t equal the ranks of
   // their underlying types" [c++20 conv.rank]
   case BuiltinType::Char8:
@@ -9165,6 +9191,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
     case BuiltinType::ULong:
         return C->getTargetInfo().getLongWidth() == 32 ? 'L' : 'Q';
     case BuiltinType::UInt128:    return 'T';
+    case BuiltinType::UInt256:
+      return 'W';
     case BuiltinType::ULongLong:  return 'Q';
     case BuiltinType::Char_S:
     case BuiltinType::SChar:      return 'c';
@@ -9176,6 +9204,8 @@ static char getObjCEncodingForPrimitiveType(const ASTContext *C,
       return C->getTargetInfo().getLongWidth() == 32 ? 'l' : 'q';
     case BuiltinType::LongLong:   return 'q';
     case BuiltinType::Int128:     return 't';
+    case BuiltinType::Int256:
+      return 'w';
     case BuiltinType::Float:      return 'f';
     case BuiltinType::Double:     return 'd';
     case BuiltinType::LongDouble: return 'D';
@@ -12388,6 +12418,8 @@ QualType ASTContext::getCorrespondingUnsignedType(QualType T) const {
     return UnsignedLongLongTy;
   case BuiltinType::Int128:
     return UnsignedInt128Ty;
+  case BuiltinType::Int256:
+    return UnsignedInt256Ty;
   // wchar_t is special. It is either signed or not, but when it's signed,
   // there's no matching "unsigned wchar_t". Therefore we return the unsigned
   // version of its underlying type instead.
@@ -12462,6 +12494,8 @@ QualType ASTContext::getCorrespondingSignedType(QualType T) const {
     return LongLongTy;
   case BuiltinType::UInt128:
     return Int128Ty;
+  case BuiltinType::UInt256:
+    return Int256Ty;
   // wchar_t is special. It is either unsigned or not, but when it's unsigned,
   // there's no matching "signed wchar_t". Therefore we return the signed
   // version of its underlying type instead.
@@ -13466,6 +13500,8 @@ QualType ASTContext::getIntTypeForBitwidth(unsigned DestWidth,
   CanQualType QualTy = getFromTargetType(Ty);
   if (!QualTy && DestWidth == 128)
     return Signed ? Int128Ty : UnsignedInt128Ty;
+  if (!QualTy && DestWidth == 256)
+    return Signed ? Int256Ty : UnsignedInt256Ty;
   return QualTy;
 }
 

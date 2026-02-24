@@ -315,6 +315,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::Char_S:
     case BuiltinType::Int:
     case BuiltinType::Int128:
+    case BuiltinType::Int256:
     case BuiltinType::Long:
     case BuiltinType::LongLong:
     case BuiltinType::SChar:
@@ -387,6 +388,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     case BuiltinType::UChar:
     case BuiltinType::UInt:
     case BuiltinType::UInt128:
+    case BuiltinType::UInt256:
     case BuiltinType::ULong:
     case BuiltinType::ULongLong:
     case BuiltinType::UShort:

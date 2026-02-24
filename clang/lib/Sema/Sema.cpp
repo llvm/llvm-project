@@ -406,6 +406,18 @@ void Sema::Initialize() {
       PushOnScopeChains(Context.getUInt128Decl(), TUScope);
   }
 
+  // Initialize predefined 256-bit integer types, if needed.
+  if (Context.getTargetInfo().hasInt256Type() ||
+      (Context.getAuxTargetInfo() &&
+       Context.getAuxTargetInfo()->hasInt256Type())) {
+    DeclarationName Int256 = &Context.Idents.get("__int256_t");
+    if (IdResolver.begin(Int256) == IdResolver.end())
+      PushOnScopeChains(Context.getInt256Decl(), TUScope);
+
+    DeclarationName UInt256 = &Context.Idents.get("__uint256_t");
+    if (IdResolver.begin(UInt256) == IdResolver.end())
+      PushOnScopeChains(Context.getUInt256Decl(), TUScope);
+  }
 
   // Initialize predefined Objective-C types:
   if (getLangOpts().ObjC) {
@@ -2206,6 +2218,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         (Ty->isIbm128Type() && !Context.getTargetInfo().hasIbm128Type()) ||
         (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
          !Context.getTargetInfo().hasInt128Type()) ||
+        (Ty->isIntegerType() && Context.getTypeSize(Ty) == 256 &&
+         !Context.getTargetInfo().hasInt256Type()) ||
         (Ty->isBFloat16Type() && !Context.getTargetInfo().hasBFloat16Type() &&
          !LangOpts.CUDAIsDevice) ||
         LongDoubleMismatched) {

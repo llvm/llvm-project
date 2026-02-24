@@ -433,6 +433,12 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// The typedef for the __uint128_t type.
   mutable TypedefDecl *UInt128Decl = nullptr;
 
+  /// The typedef for the __int256_t type.
+  mutable TypedefDecl *Int256Decl = nullptr;
+
+  /// The typedef for the __uint256_t type.
+  mutable TypedefDecl *UInt256Decl = nullptr;
+
   /// The typedef for the target specific predefined
   /// __builtin_va_list type.
   mutable TypedefDecl *BuiltinVaListDecl = nullptr;
@@ -1296,9 +1302,10 @@ public:
   CanQualType Char8Ty;  // [C++20 proposal]
   CanQualType Char16Ty; // [C++0x 3.9.1p5], integer type in C99.
   CanQualType Char32Ty; // [C++0x 3.9.1p5], integer type in C99.
-  CanQualType SignedCharTy, ShortTy, IntTy, LongTy, LongLongTy, Int128Ty;
+  CanQualType SignedCharTy, ShortTy, IntTy, LongTy, LongLongTy, Int128Ty,
+      Int256Ty;
   CanQualType UnsignedCharTy, UnsignedShortTy, UnsignedIntTy, UnsignedLongTy;
-  CanQualType UnsignedLongLongTy, UnsignedInt128Ty;
+  CanQualType UnsignedLongLongTy, UnsignedInt128Ty, UnsignedInt256Ty;
   CanQualType FloatTy, DoubleTy, LongDoubleTy, Float128Ty, Ibm128Ty;
   CanQualType ShortAccumTy, AccumTy,
       LongAccumTy;  // ISO/IEC JTC1 SC22 WG14 N1169 Extension
@@ -1447,6 +1454,12 @@ public:
 
   /// Retrieve the declaration for the 128-bit unsigned integer type.
   TypedefDecl *getUInt128Decl() const;
+
+  /// Retrieve the declaration for the 256-bit signed integer type.
+  TypedefDecl *getInt256Decl() const;
+
+  /// Retrieve the declaration for the 256-bit unsigned integer type.
+  TypedefDecl *getUInt256Decl() const;
 
   //===--------------------------------------------------------------------===//
   //                           Type Constructors
