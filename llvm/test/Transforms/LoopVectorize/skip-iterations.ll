@@ -59,12 +59,9 @@ end:                                              ; preds = %end.loopexit, %entr
 ;   }
 ;   return false;
 ; }
-; TODO: Today we do not vectorize this, but we could teach the vectorizer, once
-; the hard part of proving/speculating A[i:VF - 1] loads does not fault is handled by the
-; compiler/hardware.
 
 ; CHECK-LABEL: test2(
-; CHECK-NOT: <4 x i32>
+; CHECK: <4 x i32>
 define i32 @test2(ptr nocapture %A, i32 %Length, i32 %K) {
 entry:
   %cmp8 = icmp sgt i32 %Length, 0
@@ -103,10 +100,8 @@ end:                                              ; preds = %end.loopexit, %entr
 ;   }
 ;   return -1;
 ; }
-; TODO: Today we do not vectorize this, but we could teach the vectorizer (once
-; we handle the speculation safety of the widened load).
 ; CHECK-LABEL: test3(
-; CHECK-NOT: <4 x i32>
+; CHECK: <4 x i32>
 define i32 @test3(ptr nocapture %A, i32 %Length, i32 %K) {
 entry:
   %cmp8 = icmp sgt i32 %Length, 0

@@ -1994,6 +1994,9 @@ public:
       // The cost of materialising a constant integer vector.
       return TargetTransformInfo::TCC_Basic;
     }
+    case Intrinsic::speculative_load:
+      // Delegate to base; targets must opt-in with a valid cost.
+      return BaseT::getIntrinsicInstrCost(ICA, CostKind);
     case Intrinsic::vector_extract: {
       // FIXME: Handle case where a scalable vector is extracted from a scalable
       // vector
