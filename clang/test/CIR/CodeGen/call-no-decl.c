@@ -19,3 +19,4 @@ int bar(void) {
 // CHECK: cir.func private @printf(!cir.ptr<!s8i> {{.*}}, ...) -> !s32i
 // CHECK: cir.call @printf({{.*}}, {{.*}}) : (!cir.ptr<!s8i> {{.*}}, !s32i {{.*}}) -> !s32i
 // CHECK: cir.call @printf({{.*}}) : (!cir.ptr<!s8i> {{.*}}) -> !s32i
+
