@@ -1282,7 +1282,7 @@ bool WebAssemblyFastISel::selectBitCast(const Instruction *I) {
 static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
   switch (Opc) {
   default:
-    return 0;
+    return WebAssembly::INSTRUCTION_LIST_END;
   case WebAssembly::I32_EXTEND8_S_I32:
     Opc = A64 ? WebAssembly::LOAD8_S_I32_A64 : WebAssembly::LOAD8_S_I32_A32;
     break;
@@ -1316,8 +1316,9 @@ bool WebAssemblyFastISel::WebAssemblyEmitLoad(unsigned Opc, Register &ResultReg,
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
-  unsigned TargetOpc;
-  if (!(TargetOpc = getSExtLoadOpcode(MI->getOpcode(), A64)))
+  unsigned NewOpc;
+  if ((NewOpc = getSExtLoadOpcode(MI->getOpcode(), A64)) ==
+      WebAssembly::INSTRUCTION_LIST_END)
     return false;
 
   Address Addr;
@@ -1325,7 +1326,7 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
     return false;
 
   Register ResultReg = MI->getOperand(0).getReg();
-  if (!WebAssemblyEmitLoad(TargetOpc, ResultReg, Addr,
+  if (!WebAssemblyEmitLoad(NewOpc, ResultReg, Addr,
                            createMachineMemOperandFor(LI)))
     return false;
 
