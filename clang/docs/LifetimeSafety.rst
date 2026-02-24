@@ -357,28 +357,35 @@ To avoid these warnings and prevent potential bugs, follow the
 created *after* a potential move, sourcing them from the new owner rather than
 aliasing an object that is about to be moved.
 
-For example, when initializing fields in a constructor, moving from a parameter *after* using it to initialize a view field can lead to warnings:
+For example:
 
 .. code-block:: c++
 
-  #include <string>
-  #include <string_view>
-  #include <utility>
+  #include <memory>
 
-  struct BadFieldOrder {
-    std::string_view view;
-    std::string s_owned;
-    // WARNING: 'view' is initialized from 's', then 's' is moved-from,
-    // leaving 'view' pointing to a moved-from string.
-    BadFieldOrder(std::string s) : view(s), s_owned(std::move(s)) {} // -Wlifetime-safety-dangling-field-moved
-  };
+  void use(int*);
+  void take(std::unique_ptr<int>&&);
 
-  // CORRECT: Move 's' into 's_owned' first, then initialize 'view' from 's_owned'.
-  struct GoodFieldOrder {
-    std::string s_owned;
-    std::string_view view;
-    GoodFieldOrder(std::string s) : s_owned(std::move(s)), view(s_owned) {} // OK
-  };
+  void bar() {
+    std::unique_ptr<int> b;
+    int* p;
+    {
+      auto a = std::make_unique<int>(42);
+      p = a.get(); // p aliases a's content
+      b = std::move(a); // a is moved-from
+    }
+    use(p); // WARNING: -Wlifetime-safety-use-after-scope-moved
+  }
+
+  void foo() {
+    int* p;
+    {
+      auto a = std::make_unique<int>(42);
+      p = a.get(); // p aliases a's content
+      take(std::move(a)); // a is moved-from and goes out of scope
+    }
+    use(p); // WARNING: -Wlifetime-safety-use-after-scope-moved
+  }
 
 The same principle applies when creating other aliases via ``get()`` or ``release()`` before moving or releasing ownership:
 
