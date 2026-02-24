@@ -3189,11 +3189,20 @@ static void addCurrentIterationPhi(VPlan &Plan, VPValue *NewStep) {
         &Plan.getVF(), Type::getInt32Ty(Plan.getContext()), CanIVTy,
         DebugLoc::getUnknown());
 
-    VPRecipeBase *StepR = NewStep->getDefiningRecipe();
-    Builder.setInsertPoint(StepR->getParent(), std::next(StepR->getIterator()));
-    VPValue *StepI32 = Builder.createScalarZExtOrTrunc(
-        NewStep, Type::getInt32Ty(Plan.getContext()), CanIVTy,
-        DebugLoc::getUnknown());
+    VPValue *StepI32;
+    VPValue *StepSource;
+    if (match(NewStep, m_ZExt(m_VPValue(StepSource))) &&
+        TypeInfo.inferScalarType(StepSource) ==
+            Type::getInt32Ty(Plan.getContext())) {
+      StepI32 = StepSource;
+    } else {
+      VPRecipeBase *StepR = NewStep->getDefiningRecipe();
+      Builder.setInsertPoint(StepR->getParent(),
+                             std::next(StepR->getIterator()));
+      StepI32 = Builder.createScalarZExtOrTrunc(
+          NewStep, Type::getInt32Ty(Plan.getContext()), CanIVTy,
+          DebugLoc::getUnknown());
+    }
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
     VPValue *PrevStep = Builder.createScalarPhi(

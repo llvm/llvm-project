@@ -28,12 +28,11 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[PREV_EVL:%.+]]> = phi [ vp<[[VF32]]>, vector.ph ], [ vp<[[CAST:%.+]]>, vector.body ]
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
 ; IF-EVL-NEXT:     EMIT-SCALAR vp<[[CAST:%.+]]> = zext vp<%evl> to i64
-; IF-EVL-NEXT:     EMIT-SCALAR vp<[[TRUNC:%.+]]> = trunc vp<[[CAST]]> to i32
 ; IF-EVL-NEXT:     vp<[[ST:%[0-9]+]]> = SCALAR-STEPS vp<[[EVL_PHI]]>, ir<1>
 ; IF-EVL-NEXT:     CLONE ir<[[GEP1:%.+]]> = getelementptr inbounds nuw ir<%A>, vp<[[ST]]
 ; IF-EVL-NEXT:     vp<[[PTR1:%[0-9]+]]> = vector-pointer inbounds nuw ir<[[GEP1]]>
 ; IF-EVL-NEXT:     WIDEN ir<[[LD]]> = vp.load vp<[[PTR1]]>, vp<[[EVL]]>
-; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE:%[0-9]+]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[TRUNC]]>)
+; IF-EVL-NEXT:     WIDEN-INTRINSIC vp<[[SPLICE:%[0-9]+]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[EVL]]>)
 ; IF-EVL-NEXT:     WIDEN ir<[[ADD:%.+]]> = add nsw vp<[[SPLICE]]>, ir<[[LD]]>
 ; IF-EVL-NEXT:     CLONE ir<[[GEP2:%.+]]> = getelementptr inbounds nuw ir<%B>, vp<[[ST]]>
 ; IF-EVL-NEXT:     vp<[[PTR2:%[0-9]+]]> = vector-pointer inbounds nuw ir<[[GEP2]]>
@@ -50,7 +49,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): ir-bb<for.end>
 
 ; IF-EVL: Cost of 0 for VF vscale x 4: FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI]]> = phi ir<33>, ir<[[LD]]>
-; IF-EVL: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC vp<[[SPLICE]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[TRUNC]]>)
+; IF-EVL: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC vp<[[SPLICE]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[EVL]]>)
 entry:
   br label %for.body
 
