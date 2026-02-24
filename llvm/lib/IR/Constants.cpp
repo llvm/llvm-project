@@ -1163,12 +1163,12 @@ void ConstantFP::destroyConstantImpl() {
 
 Constant *ConstantAggregateZero::getSequentialElement() const {
   if (auto *AT = dyn_cast<ArrayType>(getType()))
-    return Constant::getNullValue(AT->getElementType());
-  return Constant::getNullValue(cast<VectorType>(getType())->getElementType());
+    return Constant::getZeroValue(AT->getElementType());
+  return Constant::getZeroValue(cast<VectorType>(getType())->getElementType());
 }
 
 Constant *ConstantAggregateZero::getStructElement(unsigned Elt) const {
-  return Constant::getNullValue(getType()->getStructElementType(Elt));
+  return Constant::getZeroValue(getType()->getStructElementType(Elt));
 }
 
 Constant *ConstantAggregateZero::getElementValue(Constant *C) const {
@@ -1368,7 +1368,7 @@ Constant *ConstantArray::getImpl(ArrayType *Ty, ArrayRef<Constant*> V) {
   if (isa<UndefValue>(C) && rangeOnlyContains(V.begin(), V.end(), C))
     return UndefValue::get(Ty);
 
-  if (C->isNullValue() && rangeOnlyContains(V.begin(), V.end(), C))
+  if (C->isZeroValue() && rangeOnlyContains(V.begin(), V.end(), C))
     return ConstantAggregateZero::get(Ty);
 
   // Check to see if all of the elements are ConstantFP or ConstantInt and if
@@ -1419,11 +1419,11 @@ Constant *ConstantStruct::get(StructType *ST, ArrayRef<Constant*> V) {
   if (!V.empty()) {
     isUndef = isa<UndefValue>(V[0]);
     isPoison = isa<PoisonValue>(V[0]);
-    isZero = V[0]->isNullValue();
+    isZero = V[0]->isZeroValue();
     // PoisonValue inherits UndefValue, so its check is not necessary.
     if (isUndef || isZero) {
       for (Constant *C : V) {
-        if (!C->isNullValue())
+        if (!C->isZeroValue())
           isZero = false;
         if (!isa<PoisonValue>(C))
           isPoison = false;
@@ -1464,7 +1464,7 @@ Constant *ConstantVector::getImpl(ArrayRef<Constant*> V) {
   // If this is an all-undef or all-zero vector, return a
   // ConstantAggregateZero or UndefValue.
   Constant *C = V[0];
-  bool isZero = C->isNullValue();
+  bool isZero = C->isZeroValue();
   bool isUndef = isa<UndefValue>(C);
   bool isPoison = isa<PoisonValue>(C);
   bool isSplatFP = UseConstantFPForFixedLengthSplat && isa<ConstantFP>(C);
@@ -1535,7 +1535,7 @@ Constant *ConstantVector::getSplat(ElementCount EC, Constant *V) {
 
   Type *VTy = VectorType::get(V->getType(), EC);
 
-  if (V->isNullValue())
+  if (V->isZeroValue())
     return ConstantAggregateZero::get(VTy);
   if (isa<PoisonValue>(V))
     return PoisonValue::get(VTy);
@@ -1745,7 +1745,7 @@ Constant *Constant::getSplatValue(bool AllowPoison) const {
   if (isa<PoisonValue>(this))
     return PoisonValue::get(cast<VectorType>(getType())->getElementType());
   if (isa<ConstantAggregateZero>(this))
-    return getNullValue(cast<VectorType>(getType())->getElementType());
+    return getZeroValue(cast<VectorType>(getType())->getElementType());
   if (auto *CI = dyn_cast<ConstantInt>(this))
     return ConstantInt::get(getContext(), CI->getValue());
   if (auto *CFP = dyn_cast<ConstantFP>(this))
@@ -3350,7 +3350,7 @@ Value *ConstantArray::handleOperandChangeImpl(Value *From, Value *To) {
     AllSame &= Val == ToC;
   }
 
-  if (AllSame && ToC->isNullValue())
+  if (AllSame && ToC->isZeroValue())
     return ConstantAggregateZero::get(getType());
 
   if (AllSame && isa<UndefValue>(ToC))
@@ -3390,7 +3390,7 @@ Value *ConstantStruct::handleOperandChangeImpl(Value *From, Value *To) {
     AllSame &= Val == ToC;
   }
 
-  if (AllSame && ToC->isNullValue())
+  if (AllSame && ToC->isZeroValue())
     return ConstantAggregateZero::get(getType());
 
   if (AllSame && isa<UndefValue>(ToC))

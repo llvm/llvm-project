@@ -21,6 +21,7 @@
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -122,14 +123,16 @@ static Constant *FoldBitCast(Constant *V, Type *DestTy) {
 }
 
 static Constant *foldMaybeUndesirableCast(unsigned opc, Constant *V,
-                                          Type *DestTy) {
+                                          Type *DestTy,
+                                          const DataLayout *DL = nullptr) {
   return ConstantExpr::isDesirableCastOp(opc)
              ? ConstantExpr::getCast(opc, V, DestTy)
-             : ConstantFoldCastInstruction(opc, V, DestTy);
+             : ConstantFoldCastInstruction(opc, V, DestTy, DL);
 }
 
 Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
-                                            Type *DestTy) {
+                                            Type *DestTy,
+                                            const DataLayout *DL) {
   if (isa<PoisonValue>(V))
     return PoisonValue::get(DestTy);
 
@@ -144,8 +147,22 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
   }
 
   if (V->isNullValue() && !DestTy->isX86_AMXTy() &&
-      opc != Instruction::AddrSpaceCast)
+      opc != Instruction::AddrSpaceCast) {
+    // If the source or destination involves pointers and DL tells us that
+    // null is not zero for the relevant address space, we cannot fold here.
+    // Defer to the DL-aware folding in Analysis/ConstantFolding.cpp.
+    if (DL) {
+      bool SrcIsPtr = V->getType()->isPtrOrPtrVectorTy();
+      bool DstIsPtr = DestTy->isPtrOrPtrVectorTy();
+      if (SrcIsPtr || DstIsPtr) {
+        unsigned AS = SrcIsPtr ? V->getType()->getPointerAddressSpace()
+                               : DestTy->getPointerAddressSpace();
+        if (!DL->isNullPointerAllZeroes(AS))
+          return nullptr;
+      }
+    }
     return Constant::getNullValue(DestTy);
+  }
 
   // If the cast operand is a constant expression, there's a few things we can
   // do to try to simplify it.
@@ -153,7 +170,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     if (CE->isCast()) {
       // Try hard to fold cast of cast because they are often eliminable.
       if (unsigned newOpc = foldConstantCastPair(opc, CE, DestTy))
-        return foldMaybeUndesirableCast(newOpc, CE->getOperand(0), DestTy);
+        return foldMaybeUndesirableCast(newOpc, CE->getOperand(0), DestTy, DL);
     }
   }
 
@@ -167,7 +184,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
     Type *DstEltTy = DestVecTy->getElementType();
     // Fast path for splatted constants.
     if (Constant *Splat = V->getSplatValue()) {
-      Constant *Res = foldMaybeUndesirableCast(opc, Splat, DstEltTy);
+      Constant *Res = foldMaybeUndesirableCast(opc, Splat, DstEltTy, DL);
       if (!Res)
         return nullptr;
       return ConstantVector::getSplat(
@@ -181,7 +198,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
                   e = cast<FixedVectorType>(V->getType())->getNumElements();
          i != e; ++i) {
       Constant *C = ConstantExpr::getExtractElement(V, ConstantInt::get(Ty, i));
-      Constant *Casted = foldMaybeUndesirableCast(opc, C, DstEltTy);
+      Constant *Casted = foldMaybeUndesirableCast(opc, C, DstEltTy, DL);
       if (!Casted)
         return nullptr;
       res.push_back(Casted);
@@ -1101,7 +1118,8 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2) {
 }
 
 Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
-                                               Constant *C1, Constant *C2) {
+                                               Constant *C1, Constant *C2,
+                                               const DataLayout *DL) {
   Type *ResultTy;
   if (VectorType *VT = dyn_cast<VectorType>(C1->getType()))
     ResultTy = VectorType::get(Type::getInt1Ty(C1->getContext()),
@@ -1139,14 +1157,25 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   }
 
   if (C2->isNullValue()) {
-    // The caller is expected to commute the operands if the constant expression
-    // is C2.
-    // C1 >= 0 --> true
-    if (Predicate == ICmpInst::ICMP_UGE)
-      return Constant::getAllOnesValue(ResultTy);
-    // C1 < 0 --> false
-    if (Predicate == ICmpInst::ICMP_ULT)
-      return Constant::getNullValue(ResultTy);
+    // If DL tells us that null is not zero for this pointer's address space,
+    // we cannot rely on the null value being the unsigned minimum. Defer.
+    bool CanFoldNullCmp = true;
+    if (DL && C2->getType()->isPtrOrPtrVectorTy()) {
+      unsigned AS = C2->getType()->getPointerAddressSpace();
+      if (!DL->isNullPointerAllZeroes(AS))
+        CanFoldNullCmp = false;
+    }
+
+    if (CanFoldNullCmp) {
+      // The caller is expected to commute the operands if the constant
+      // expression is C2.
+      // C1 >= 0 --> true
+      if (Predicate == ICmpInst::ICMP_UGE)
+        return Constant::getAllOnesValue(ResultTy);
+      // C1 < 0 --> false
+      if (Predicate == ICmpInst::ICMP_ULT)
+        return Constant::getNullValue(ResultTy);
+    }
   }
 
   // If the comparison is a comparison between two i1's, simplify it.
@@ -1177,7 +1206,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
     if (Constant *C1Splat = C1->getSplatValue())
       if (Constant *C2Splat = C2->getSplatValue())
         if (Constant *Elt =
-                ConstantFoldCompareInstruction(Predicate, C1Splat, C2Splat))
+                ConstantFoldCompareInstruction(Predicate, C1Splat, C2Splat, DL))
           return ConstantVector::getSplat(C1VTy->getElementCount(), Elt);
 
     // Do not iterate on scalable vector. The number of elements is unknown at
@@ -1196,7 +1225,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
           ConstantExpr::getExtractElement(C1, ConstantInt::get(Ty, I));
       Constant *C2E =
           ConstantExpr::getExtractElement(C2, ConstantInt::get(Ty, I));
-      Constant *Elt = ConstantFoldCompareInstruction(Predicate, C1E, C2E);
+      Constant *Elt = ConstantFoldCompareInstruction(Predicate, C1E, C2E, DL);
       if (!Elt)
         return nullptr;
 
@@ -1308,7 +1337,7 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
       // other way if possible.
       // Also, if C1 is null and C2 isn't, flip them around.
       Predicate = ICmpInst::getSwappedPredicate(Predicate);
-      return ConstantFoldCompareInstruction(Predicate, C2, C1);
+      return ConstantFoldCompareInstruction(Predicate, C2, C1, DL);
     }
   }
   return nullptr;
@@ -1316,7 +1345,8 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
 
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           std::optional<ConstantRange> InRange,
-                                          ArrayRef<Value *> Idxs) {
+                                          ArrayRef<Value *> Idxs,
+                                          const DataLayout *DL) {
   if (Idxs.empty()) return C;
 
   Type *GEPTy = GetElementPtrInst::getGEPReturnType(

@@ -29,14 +29,15 @@ namespace llvm {
 template <typename T> class ArrayRef;
 class Value;
 class Constant;
+class DataLayout;
 class Type;
 
 // Constant fold various types of instruction...
 LLVM_ABI Constant *
 ConstantFoldCastInstruction(unsigned opcode, ///< The opcode of the cast
                             Constant *V,     ///< The source constant
-                            Type *DestTy     ///< The destination type
-);
+                            Type *DestTy,    ///< The destination type
+                            const DataLayout *DL = nullptr);
 
 /// Attempt to constant fold a select instruction with the specified
 /// operands. The constant result is returned if successful; if not, null is
@@ -80,12 +81,12 @@ LLVM_ABI Constant *ConstantFoldInsertValueInstruction(Constant *Agg,
 LLVM_ABI Constant *ConstantFoldUnaryInstruction(unsigned Opcode, Constant *V);
 LLVM_ABI Constant *ConstantFoldBinaryInstruction(unsigned Opcode, Constant *V1,
                                                  Constant *V2);
-LLVM_ABI Constant *ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
-                                                  Constant *C1, Constant *C2);
 LLVM_ABI Constant *
-ConstantFoldGetElementPtr(Type *Ty, Constant *C,
-                          std::optional<ConstantRange> InRange,
-                          ArrayRef<Value *> Idxs);
+ConstantFoldCompareInstruction(CmpInst::Predicate Predicate, Constant *C1,
+                               Constant *C2, const DataLayout *DL = nullptr);
+LLVM_ABI Constant *ConstantFoldGetElementPtr(
+    Type *Ty, Constant *C, std::optional<ConstantRange> InRange,
+    ArrayRef<Value *> Idxs, const DataLayout *DL = nullptr);
 } // namespace llvm
 
 #endif
