@@ -389,8 +389,6 @@ static bool foldTruncOfI32Constant(MachineInstr &MI, unsigned OpIdx,
                                    MachineRegisterInfo &MRI,
                                    const AArch64RegisterBankInfo &RBI) {
   MachineOperand &Op = MI.getOperand(OpIdx);
-  if (!Op.isReg())
-    return false;
 
   Register ScalarReg = Op.getReg();
   MachineInstr *TruncMI = MRI.getVRegDef(ScalarReg);
@@ -462,11 +460,12 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     Register Dst = MI.getOperand(0).getReg();
     LLT Ty = MRI.getType(Dst);
 
-    if (foldTruncOfI32Constant(MI, 0, MRI, *this))
-      return applyDefaultMapping(OpdMapper);
-
     if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank && Ty.isScalar() &&
         Ty.getSizeInBits() < 32) {
+
+      if (foldTruncOfI32Constant(MI, 0, MRI, *this))
+        return applyDefaultMapping(OpdMapper);
+
       Builder.setInsertPt(*MI.getParent(), MI.getIterator());
       auto Ext = Builder.buildAnyExt(LLT::scalar(32), Dst);
       MI.getOperand(0).setReg(Ext.getReg(0));
