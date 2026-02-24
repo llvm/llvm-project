@@ -16,19 +16,19 @@
 
 define void @main() local_unnamed_addr #0 {
 entry:
-  %0 = tail call target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v2i32_12_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
-  %1 = tail call target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v2f64_12_1t(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.2)
-  %2 = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2i32_12_0t(target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) %0, i32 0)
-  %3 = load <2 x i32>, ptr addrspace(11) %2, align 8
-  %4 = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2i32_12_0t(target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) %0, i32 1)
-  %5 = load <2 x i32>, ptr addrspace(11) %4, align 8
+  %in_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
+  %out_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) @llvm.spv.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.2)
+  %src0_ptr = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) %in_buffer_handle, i32 0)
+  %src0 = load <2 x i32>, ptr addrspace(11) %src0_ptr, align 8
+  %src1_ptr = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) %in_buffer_handle, i32 1)
+  %src1 = load <2 x i32>, ptr addrspace(11) %src1_ptr, align 8
 ; CHECK: %[[#tmp:]] = OpVectorShuffle %[[#v4_uint]] {{%[0-9]+}} {{%[0-9]+}} 0 2 1 3
-  %6 = shufflevector <2 x i32> %3, <2 x i32> %5, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
+  %shuffled = shufflevector <2 x i32> %src0, <2 x i32> %src1, <4 x i32> <i32 0, i32 2, i32 1, i32 3>
 ; CHECK: %[[#access:]] = OpAccessChain {{.*}}
-  %7 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2f64_12_1t(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %1, i32 0)
+  %dst_ptr = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %out_buffer_handle, i32 0)
 ; CHECK: %[[#bitcast:]] = OpBitcast %[[#v2_double]] %[[#tmp]]
 ; CHECK: OpStore %[[#access]] %[[#bitcast]]
-  store <4 x i32> %6, ptr addrspace(11) %7, align 16
+  store <4 x i32> %shuffled, ptr addrspace(11) %dst_ptr, align 16
   ret void
 }
 
@@ -44,11 +44,11 @@ entry:
 ; CHECK:  %[[BITCAST2:[0-9]+]] = OpBitcast %[[#v2_double]] %[[BITCAST1]]
 ; CHECK: OpStore {{%[0-9]+}} %[[BITCAST2]] {{.*}}
 
-  %0 = tail call target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v2f64_12_1t(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.2)
-  %2 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2f64_12_1t(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %0, i32 0)
-  %3 = load <4 x i32>, ptr addrspace(11) %2
-  %4 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2f64_12_1t(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %0, i32 1)
-  store <4 x i32> %3, ptr addrspace(11) %4
+  %out_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) @llvm.spv.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, ptr nonnull @.str.2)
+  %src_ptr = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %out_buffer_handle, i32 0)
+  %loaded_v4i32 = load <4 x i32>, ptr addrspace(11) %src_ptr
+  %dst_ptr = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x double>], 12, 1) %out_buffer_handle, i32 1)
+  store <4 x i32> %loaded_v4i32, ptr addrspace(11) %dst_ptr
   ret void
 }
 
@@ -62,12 +62,12 @@ entry:
 ; CHECK-NEXT:  %[[SHUFFLE3:[0-9]+]] = OpVectorShuffle %[[#v2_uint]] %[[BITCAST3]] %[[BITCAST3]] 0 1
 ; CHECK:       OpStore {{%[0-9]+}} %[[SHUFFLE3]] {{.*}}
 
-  %0 = tail call target("spirv.VulkanBuffer", [0 x <4 x float>], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v4f32_12_0t(i32 1, i32 0, i32 1, i32 0, ptr nonnull @.str.3)
-  %1 = tail call target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v2i32_12_0t(i32 1, i32 1, i32 1, i32 0, ptr nonnull @.str.4)
-  %2 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v4f32_12_0t(target("spirv.VulkanBuffer", [0 x <4 x float>], 12, 0) %0, i32 0)
-  %3 = load <2 x i32>, ptr addrspace(11) %2, align 16
-  %4 = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v2i32_12_0t(target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) %1, i32 0)
-  store <2 x i32> %3, ptr addrspace(11) %4, align 8
+  %in_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <4 x float>], 12, 0) @llvm.spv.resource.handlefrombinding(i32 1, i32 0, i32 1, i32 0, ptr nonnull @.str.3)
+  %out_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) @llvm.spv.resource.handlefrombinding(i32 1, i32 1, i32 1, i32 0, ptr nonnull @.str.4)
+  %src_ptr = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <4 x float>], 12, 0) %in_buffer_handle, i32 0)
+  %loaded_v2i32 = load <2 x i32>, ptr addrspace(11) %src_ptr, align 16
+  %dst_ptr = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x i32>], 12, 0) %out_buffer_handle, i32 0)
+  store <2 x i32> %loaded_v2i32, ptr addrspace(11) %dst_ptr, align 8
   ret void
 }
 
@@ -84,12 +84,12 @@ entry:
 ; CHECK-NEXT:  %[[BITCAST:[0-9]+]] = OpBitcast %[[#v2_ulong]] %[[SHUFFLE]]{{.*}}
 ; CHECK:       OpStore {{%[0-9]+}} %[[BITCAST]] {{.*}}
 
-  %0 = tail call target("spirv.VulkanBuffer", [0 x <3 x i32>], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v3i32_12_0t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str.in)
-  %1 = tail call target("spirv.VulkanBuffer", [0 x <2 x i64>], 12, 0) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v1i64_12_0t(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.out)
-  %2 = tail call noundef align 16 dereferenceable(12) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v3i32_12_0t(target("spirv.VulkanBuffer", [0 x <3 x i32>], 12, 0) %0, i32 0)
-  %3 = load <2 x i64>, ptr addrspace(11) %2, align 16
-  %4 = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v1i64_12_0t(target("spirv.VulkanBuffer", [0 x <2 x i64>], 12, 0) %1, i32 0)
-  store <2 x i64> %3, ptr addrspace(11) %4, align 8
+  %in_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <3 x i32>], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str.in)
+  %out_buffer_handle = tail call target("spirv.VulkanBuffer", [0 x <2 x i64>], 12, 0) @llvm.spv.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, ptr nonnull @.str.out)
+  %src_ptr = tail call noundef align 16 dereferenceable(12) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <3 x i32>], 12, 0) %in_buffer_handle, i32 0)
+  %loaded_v2i64 = load <2 x i64>, ptr addrspace(11) %src_ptr, align 16
+  %dst_ptr = tail call noundef align 8 dereferenceable(8) ptr addrspace(11) @llvm.spv.resource.getpointer(target("spirv.VulkanBuffer", [0 x <2 x i64>], 12, 0) %out_buffer_handle, i32 0)
+  store <2 x i64> %loaded_v2i64, ptr addrspace(11) %dst_ptr, align 8
   ret void
 }
 
