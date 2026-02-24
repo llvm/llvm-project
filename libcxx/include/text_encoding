@@ -103,7 +103,7 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static consteval text_encoding literal() noexcept {
     return text_encoding(__te_impl::__literal());
   }
-#    if _LIBCPP_HAS_LOCALIZATION && !defined(__ANDROID__)
+#  if _LIBCPP_HAS_LOCALIZATION && !defined(__ANDROID__)
   [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static text_encoding environment() {
     return text_encoding(__te_impl::__environment());
   };
@@ -112,12 +112,12 @@ public:
   [[nodiscard]] _LIBCPP_AVAILABILITY_TE_ENVIRONMENT _LIBCPP_HIDE_FROM_ABI static bool environment_is() {
     return __te_impl::__environment_is<_Id>();
   }
-#    else
+#  else
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static text_encoding environment() = delete;
 
   template <id _Id>
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static bool environment_is() = delete;
-#    endif
+#  endif
 };
 
 template <>
@@ -132,6 +132,6 @@ inline constexpr bool ranges::enable_borrowed_range<text_encoding::aliases_view>
 
 _LIBCPP_END_NAMESPACE_STD
 
-#  endif // _LIBCPP_STD_VER >= 26
+#endif // _LIBCPP_STD_VER >= 26
 
 #endif // _LIBCPP_TEXT_ENCODING

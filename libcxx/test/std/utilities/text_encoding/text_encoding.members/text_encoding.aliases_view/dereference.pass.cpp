@@ -22,13 +22,16 @@
 constexpr bool test() {
   std::text_encoding te(std::text_encoding::id::UTF8);
   std::text_encoding::aliases_view aliases = te.aliases();
-  auto iter = aliases.begin();
+  auto iter                                = aliases.begin();
 
   ASSERT_SAME_TYPE(decltype(aliases[0]), const char*);
-  assert(std::string_view(aliases[0]) == "US-ASCII");
+  assert(std::string_view(aliases[0]) == *iter);
   assert(std::string_view(aliases[1]) == std::string_view(*(iter + 1)));
+
+  return true;
 }
 
 int main(int, char**) {
-
+  test();
+  static_assert(test());
 }
