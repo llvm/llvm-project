@@ -612,7 +612,7 @@ std::unique_ptr<CSEConfigBase> AArch64PassConfig::getCSEConfig() const {
   return getStandardCSEConfigForOpt(TM->getOptLevel());
 }
 
-// This function checks whether the opt level is explictly set to none,
+// This function checks whether the opt level is explicitly set to none,
 // or whether GlobalISel was enabled due to SDAG encountering an optnone
 // function. If the opt level is greater than the level we automatically enable
 // globalisel at, and it wasn't enabled via CLI, we know that it must be because
