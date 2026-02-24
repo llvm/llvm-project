@@ -1403,7 +1403,7 @@ struct WgToSgMultiDimReductionOp
                                   originalSrcShape.end());
     // for reduction dimension, SLM stores partial results from each subgroup
     for (int64_t dim : reductionDims)
-      slmShape[dim] = originalSrcShape[dim] / sgSrcShape[dim];
+      slmShape[dim] = sgLayout[dim];
 
     // Allocate SLM
     auto bitWidth = elemTy.getIntOrFloatBitWidth();
@@ -1440,15 +1440,25 @@ struct WgToSgMultiDimReductionOp
       return failure();
     SmallVector<Value> sgIds = *sgIdsResult;
 
-    SmallVector<OpFoldResult> slmStoreOffsets;
-    for (int i = 0; i < srcVecRank; ++i) {
-      Value dimVal = sgIds[i];
-      int64_t stride =
-          (llvm::is_contained(reductionDims, i)) ? 1 : sgSrcShape[i];
-      Value strideVal = arith::ConstantIndexOp::create(rewriter, loc, stride);
-      Value offsetVal = arith::MulIOp::create(rewriter, loc, dimVal, strideVal);
-      slmStoreOffsets.push_back(offsetVal);
-    }
+    auto getSlmOffsets = [&](int64_t reductionDimStride) {
+      SmallVector<OpFoldResult> offsets;
+      offsets.reserve(srcVecRank);
+      for (int i = 0; i < srcVecRank; ++i) {
+        Value dimVal = sgIds[i];
+        int64_t sgDataStride = (llvm::is_contained(reductionDims, i))
+                                   ? reductionDimStride
+                                   : sgSrcShape[i];
+        Value strideVal =
+            arith::ConstantIndexOp::create(rewriter, loc, sgDataStride);
+        Value offsetVal =
+            arith::MulIOp::create(rewriter, loc, dimVal, strideVal);
+        offsets.push_back(offsetVal);
+      }
+      return offsets;
+    };
+
+    SmallVector<OpFoldResult> slmStoreOffsets =
+        getSlmOffsets(/*reductionDimStride=*/1);
 
     xegpu::StoreMatrixOp::create(rewriter, loc, slmStoreData,
                                  memDesc.getResult(), slmStoreOffsets,
@@ -1461,15 +1471,8 @@ struct WgToSgMultiDimReductionOp
     for (int64_t dim : reductionDims)
       slmLoadDataShape[dim] = slmShape[dim];
 
-    SmallVector<OpFoldResult> slmLoadOffsets;
-    for (int i = 0; i < srcVecRank; ++i) {
-      Value dimVal = sgIds[i];
-      int64_t stride =
-          (llvm::is_contained(reductionDims, i)) ? 0 : sgSrcShape[i];
-      Value strideVal = arith::ConstantIndexOp::create(rewriter, loc, stride);
-      Value offsetVal = arith::MulIOp::create(rewriter, loc, dimVal, strideVal);
-      slmLoadOffsets.push_back(offsetVal);
-    }
+    SmallVector<OpFoldResult> slmLoadOffsets =
+        getSlmOffsets(/*reductionDimStride=*/0);
 
     VectorType slmLoadType = VectorType::get(slmLoadDataShape, elemTy);
     auto slmLoadOp = xegpu::LoadMatrixOp::create(
@@ -1485,11 +1488,9 @@ struct WgToSgMultiDimReductionOp
         neutralFinalAcc, reductionDims);
 
     // Step 7: Add the original accumulator at the end
-    Value originalAcc = adaptor.getAcc()[0];
-    Value accToAdd = originalAcc;
-
-    auto finalResult = vector::makeArithReduction(
-        rewriter, loc, op.getKind(), finalReduce.getResult(), accToAdd);
+    auto finalResult = vector::makeArithReduction(rewriter, loc, op.getKind(),
+                                                  finalReduce.getResult(),
+                                                  adaptor.getAcc()[0]);
 
     rewriter.replaceOp(op, finalResult);
     return success();
