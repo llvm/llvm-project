@@ -58,9 +58,13 @@ protected:
   lldb::addr_t FindSymbol(const char *name);
 
 private:
-  kvm_t *m_kvm;
+  void PrintUnreadMessage();
 
   const char *GetError();
+
+  bool m_printed_unread_message = false;
+
+  kvm_t *m_kvm;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNEL_H
