@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
+#include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
@@ -73,7 +74,7 @@ void GCNRegPressure::inc(unsigned Reg,
   // regs. Hence, cap to the register's actual size so e.g. a 32-bit SGPR counts
   // as 1 and VCC (64-bit) counts as 2, not 32.
   if (Register(Reg).isPhysical() && RegKind == SGPR) {
-    unsigned MaxCovered = TRI->getRegSizeInBits(*RC) / 32;
+    unsigned MaxCovered = divideCeil(TRI->getRegSizeInBits(*RC), 32);
     NewNumCoveredRegs = std::min(NewNumCoveredRegs, MaxCovered);
     PrevNumCoveredRegs = std::min(PrevNumCoveredRegs, MaxCovered);
   }
