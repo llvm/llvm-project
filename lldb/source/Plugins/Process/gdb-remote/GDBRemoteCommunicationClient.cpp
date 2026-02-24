@@ -482,7 +482,7 @@ bool GDBRemoteCommunicationClient::GetThreadSuffixSupported() {
 }
 
 bool GDBRemoteCommunicationClient::GetVContSupported(llvm::StringRef flavor) {
-  assert(flavor.size() > 0);
+  assert(!flavor.empty());
   if (m_supports_vCont_c == eLazyBoolCalculate) {
     StringExtractorGDBRemote response;
     m_supports_vCont_any = eLazyBoolNo;
