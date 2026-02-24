@@ -1207,8 +1207,8 @@ emitInfo(const EnumDecl *D, const FullComment *FC, Location Loc,
     return {};
 
   Enum.Scoped = D->isScoped();
-  if (D->isFixed()) {
-    auto Name = D->getIntegerType().getAsString();
+  if (const TypeSourceInfo *TSI = D->getIntegerTypeSourceInfo()) {
+    auto Name = TSI->getType().getAsString();
     Enum.BaseType = TypeInfo(Name, Name);
   }
   parseEnumerators(Enum, D);

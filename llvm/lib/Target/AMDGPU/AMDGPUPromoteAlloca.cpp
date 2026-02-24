@@ -367,12 +367,11 @@ void AMDGPUPromoteAllocaImpl::setFunctionLimits(const Function &F) {
 }
 
 bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
+  if (DisablePromoteAllocaToLDS && DisablePromoteAllocaToVector)
+    return false;
+
   Mod = F.getParent();
   DL = &Mod->getDataLayout();
-
-  const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-  if (!ST.enablePromoteAlloca())
-    return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
   MaxVGPRs = getMaxVGPRs(CurrentLocalMemUsage, TM, F);

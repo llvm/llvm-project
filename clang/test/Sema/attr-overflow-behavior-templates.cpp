@@ -1,8 +1,5 @@
 // RUN: %clang_cc1 %s -fexperimental-overflow-behavior-types -verify -fsyntax-only -Wimplicit-overflow-behavior-conversion
 
-#define __wrap __attribute__((overflow_behavior(wrap)))
-#define __trap __attribute__((overflow_behavior(trap)))
-
 template<typename T>
 constexpr int template_overload_test(T) {
   return 10;

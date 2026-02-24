@@ -2773,7 +2773,7 @@ llvm::Constant *CGObjCCommonMac::getBitmapBlockLayout(bool ComputeByrefLayout) {
     }
   }
 
-  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::ClassName,
+  auto *Entry = CreateCStringLiteral(BitMap, ObjCLabelType::LayoutBitMap,
                                      /*ForceNonFragileABI=*/true,
                                      /*NullTerminate=*/false);
   return getConstantGEP(VMContext, Entry, 0, 0);

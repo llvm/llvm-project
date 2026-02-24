@@ -1499,7 +1499,7 @@ HexagonTargetLowering::extractHvxSubvectorPred(SDValue VecV, SDValue IdxV,
   unsigned Rep = 8 / ResLen;
   // Make sure the output fill the entire vector register, so repeat the
   // 8-byte groups as many times as necessary.
-  for (unsigned r = 0; r != HwLen/ResLen; ++r) {
+  for (unsigned r = 0; r != HwLen / 8; ++r) {
     // This will generate the indexes of the 8 interesting bytes.
     for (unsigned i = 0; i != ResLen; ++i) {
       for (unsigned j = 0; j != Rep; ++j)
