@@ -172,5 +172,5 @@ For LLVM-libc, `tdelete` returns bit-casted `uintptr_t`'s maximum value.
 `twalk/twalk_r/tdestroy` with Null Function Pointer
 ------------------------------------------------------
 The standard requires that ``twalk``, ``twalk_r``, and ``tdestroy``
-to be used with a valid function pointer. LLVM-libc does not apply any
-checks for null function pointers and will likely to crash on null values.
+to be used with a valid function pointer. LLVM-libc follows the behavior of
+configured via the `LIBC_ADD_NULL_CHECKS` option.

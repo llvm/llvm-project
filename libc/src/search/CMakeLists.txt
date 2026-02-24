@@ -169,6 +169,7 @@ add_entrypoint_object(
     libc.hdr.types.posix_tnode
     libc.hdr.types.VISIT
     libc.src.__support.weak_avl
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -181,6 +182,7 @@ add_entrypoint_object(
     libc.hdr.types.posix_tnode
     libc.hdr.types.VISIT
     libc.src.__support.weak_avl
+    libc.src.__support.macros.null_check
 )
 
 add_entrypoint_object(
@@ -192,4 +194,5 @@ add_entrypoint_object(
   DEPENDS
     libc.hdr.types.posix_tnode
     libc.src.__support.weak_avl
+    libc.src.__support.macros.null_check
 )

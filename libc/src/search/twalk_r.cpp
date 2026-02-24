@@ -10,6 +10,7 @@
 #include "hdr/types/posix_tnode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/macros/null_check.h"
 #include "src/__support/weak_avl.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -23,6 +24,7 @@ LLVM_LIBC_FUNCTION(void, twalk_r,
   if (!root)
     return;
   const Node *node = reinterpret_cast<const Node *>(root);
+  LIBC_CRASH_ON_NULLPTR(action);
   Node::walk(node, [action, closure](const Node *n, Node::WalkType type, int) {
     VISIT v = (type == Node::WalkType::PreOrder)    ? preorder
               : (type == Node::WalkType::InOrder)   ? postorder
