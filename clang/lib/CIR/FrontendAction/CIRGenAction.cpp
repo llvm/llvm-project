@@ -114,10 +114,14 @@ public:
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
 
     if (!FEOptions.ClangIRDisablePasses) {
+      std::string libOptOptions = FEOptions.clangIRLibOptOptions;
+
       // Setup and run CIR pipeline.
-      if (runCIRToCIRPasses(MlirModule, MlirCtx, C,
-                            !FEOptions.ClangIRDisableCIRVerifier,
-                            CGO.OptimizationLevel > 0)
+      const bool enableLibOpt =
+          FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
+      if (runCIRToCIRPasses(
+              MlirModule, MlirCtx, C, !FEOptions.ClangIRDisableCIRVerifier,
+              CGO.OptimizationLevel > 0, enableLibOpt, libOptOptions)
               .failed()) {
         CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
         return;
