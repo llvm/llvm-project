@@ -12,11 +12,6 @@ LLVM_VERSION_MAJOR=$(grep -w "set(LLVM_VERSION_MAJOR" "${_ver_file}" | awk -F' '
 LLVM_VERSION_MINOR=$(grep -w "set(LLVM_VERSION_MINOR" "${_ver_file}" | awk -F' ' '{print $NF}' | tr -d ')')
 LLVM_VERSION_PATCH=$(grep -w "set(LLVM_VERSION_PATCH" "${_ver_file}" | awk -F' ' '{print $NF}' | tr -d ')')
 
-if test "${LLVM_VERSION_MAJOR}" -gt 21
-then
-  export AOCC_GCC_VER="11.4.0"
-fi
-
 mod_cmd=". ${ess_dir}/build_essentials/linux/aocc_env.sh"
 echo "${mod_cmd}"
 ${mod_cmd}
