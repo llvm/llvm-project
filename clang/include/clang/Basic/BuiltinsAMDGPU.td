@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 include "clang/Basic/BuiltinsBase.td"
+include "clang/Basic/BuiltinsAMDGPUDocs.td"
 
 //===----------------------------------------------------------------------===//
 // AMDGPU builtin base classes
@@ -27,40 +28,112 @@ class AMDGPUBuiltin<string prototype, list<Attribute> Attr = [], string Feat = "
 // SI+ only builtins.
 //===----------------------------------------------------------------------===//
 
-def __builtin_amdgcn_dispatch_ptr : AMDGPUBuiltin<"void address_space<4> *()", [Const]>;
-def __builtin_amdgcn_kernarg_segment_ptr : AMDGPUBuiltin<"void address_space<4> *()", [Const]>;
-def __builtin_amdgcn_implicitarg_ptr : AMDGPUBuiltin<"void address_space<4> *()", [Const]>;
-def __builtin_amdgcn_queue_ptr : AMDGPUBuiltin<"void address_space<4> *()", [Const]>;
+def __builtin_amdgcn_dispatch_ptr
+    : AMDGPUBuiltin<"void address_space<4> *()", [Const]> {
+  let Documentation = [DocABIDispatchPtr];
+}
+def __builtin_amdgcn_kernarg_segment_ptr
+    : AMDGPUBuiltin<"void address_space<4> *()", [Const]> {
+  let Documentation = [DocABIKernargSegmentPtr];
+}
+def __builtin_amdgcn_implicitarg_ptr
+    : AMDGPUBuiltin<"void address_space<4> *()", [Const]> {
+  let Documentation = [DocABIImplicitargPtr];
+}
+def __builtin_amdgcn_queue_ptr
+    : AMDGPUBuiltin<"void address_space<4> *()", [Const]> {
+  let Documentation = [DocABIQueuePtr];
+}
 
-def __builtin_amdgcn_workgroup_id_x : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_amdgcn_workgroup_id_y : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_amdgcn_workgroup_id_z : AMDGPUBuiltin<"unsigned int()", [Const]>;
+def __builtin_amdgcn_workgroup_id_x : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIWorkgroupIdX];
+}
+def __builtin_amdgcn_workgroup_id_y : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIWorkgroupIdY];
+}
+def __builtin_amdgcn_workgroup_id_z : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIWorkgroupIdZ];
+}
 
-def __builtin_amdgcn_cluster_id_x : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_id_y : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_id_z : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_cluster_id_x
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterIdX];
+}
+def __builtin_amdgcn_cluster_id_y
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterIdY];
+}
+def __builtin_amdgcn_cluster_id_z
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterIdZ];
+}
 
-def __builtin_amdgcn_cluster_workgroup_id_x : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_workgroup_id_y : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_workgroup_id_z : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_workgroup_flat_id : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_cluster_workgroup_id_x
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupIdX];
+}
+def __builtin_amdgcn_cluster_workgroup_id_y
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupIdY];
+}
+def __builtin_amdgcn_cluster_workgroup_id_z
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupIdZ];
+}
+def __builtin_amdgcn_cluster_workgroup_flat_id
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupFlatId];
+}
 
-def __builtin_amdgcn_cluster_workgroup_max_id_x : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_workgroup_max_id_y : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_workgroup_max_id_z : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
-def __builtin_amdgcn_cluster_workgroup_max_flat_id : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts">;
+def __builtin_amdgcn_cluster_workgroup_max_id_x
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupMaxIdX];
+}
+def __builtin_amdgcn_cluster_workgroup_max_id_y
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupMaxIdY];
+}
+def __builtin_amdgcn_cluster_workgroup_max_id_z
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupMaxIdZ];
+}
+def __builtin_amdgcn_cluster_workgroup_max_flat_id
+    : AMDGPUBuiltin<"unsigned int()", [Const], "gfx1250-insts"> {
+  let Documentation = [DocABIClusterWorkgroupMaxFlatId];
+}
 
-def __builtin_amdgcn_workitem_id_x : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_amdgcn_workitem_id_y : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_amdgcn_workitem_id_z : AMDGPUBuiltin<"unsigned int()", [Const]>;
+def __builtin_amdgcn_workitem_id_x : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIWorkitemIdX];
+}
+def __builtin_amdgcn_workitem_id_y : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIWorkitemIdY];
+}
+def __builtin_amdgcn_workitem_id_z : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIWorkitemIdZ];
+}
 
-def __builtin_amdgcn_workgroup_size_x : AMDGPUBuiltin<"unsigned short()", [Const]>;
-def __builtin_amdgcn_workgroup_size_y : AMDGPUBuiltin<"unsigned short()", [Const]>;
-def __builtin_amdgcn_workgroup_size_z : AMDGPUBuiltin<"unsigned short()", [Const]>;
+def __builtin_amdgcn_workgroup_size_x
+    : AMDGPUBuiltin<"unsigned short()", [Const]> {
+  let Documentation = [DocABIWorkgroupSizeX];
+}
+def __builtin_amdgcn_workgroup_size_y
+    : AMDGPUBuiltin<"unsigned short()", [Const]> {
+  let Documentation = [DocABIWorkgroupSizeY];
+}
+def __builtin_amdgcn_workgroup_size_z
+    : AMDGPUBuiltin<"unsigned short()", [Const]> {
+  let Documentation = [DocABIWorkgroupSizeZ];
+}
 
-def __builtin_amdgcn_grid_size_x : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_amdgcn_grid_size_y : AMDGPUBuiltin<"unsigned int()", [Const]>;
-def __builtin_amdgcn_grid_size_z : AMDGPUBuiltin<"unsigned int()", [Const]>;
+def __builtin_amdgcn_grid_size_x : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIGridSizeX];
+}
+def __builtin_amdgcn_grid_size_y : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIGridSizeY];
+}
+def __builtin_amdgcn_grid_size_z : AMDGPUBuiltin<"unsigned int()", [Const]> {
+  let Documentation = [DocABIGridSizeZ];
+}
 
 def __builtin_amdgcn_mbcnt_hi : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int)", [Const]>;
 def __builtin_amdgcn_mbcnt_lo : AMDGPUBuiltin<"unsigned int(unsigned int, unsigned int)", [Const]>;
