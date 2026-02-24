@@ -2543,8 +2543,8 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ArrayRef<int> OldMask;
   Instruction *LHS, *RHS;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Instruction(LHS)),
-                           m_OneUse(m_Instruction(RHS)), m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Instruction(LHS), m_Instruction(RHS),
+                           m_Mask(OldMask))))
     return false;
 
   // TODO: Add support for addlike etc.
@@ -2575,6 +2575,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   if (!ShuffleDstTy || !BinResTy || !BinOpTy || X->getType() != Z->getType())
     return false;
 
+  bool SameBinOp = LHS == RHS;
   unsigned NumSrcElts = BinOpTy->getNumElements();
 
   // If we have something like "add X, Y" and "add Z, X", swap ops to match.
@@ -2605,12 +2606,17 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   }
 
   // Try to replace a binop with a shuffle if the shuffle is not costly.
-  InstructionCost OldCost =
-      TTI.getInstructionCost(LHS, CostKind) +
-      TTI.getInstructionCost(RHS, CostKind) +
-      TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc, ShuffleDstTy,
-                         BinResTy, OldMask, CostKind, 0, nullptr, {LHS, RHS},
-                         &I);
+  // When SameBinOp, only count the binop cost once.
+  InstructionCost LHSCost = TTI.getInstructionCost(LHS, CostKind);
+  InstructionCost RHSCost = TTI.getInstructionCost(RHS, CostKind);
+
+  InstructionCost OldCost = LHSCost;
+  if (!SameBinOp) {
+    OldCost += RHSCost;
+  }
+  OldCost += TTI.getShuffleCost(TargetTransformInfo::SK_PermuteTwoSrc,
+                                ShuffleDstTy, BinResTy, OldMask, CostKind, 0,
+                                nullptr, {LHS, RHS}, &I);
 
   // Handle shuffle(binop(shuffle(x),y),binop(z,shuffle(w))) style patterns
   // where one use shuffles have gotten split across the binop/cmp. These
@@ -2642,7 +2648,9 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ReducedInstCount |= MergeInner(Z, NumSrcElts, NewMask0, CostKind);
   ReducedInstCount |= MergeInner(W, NumSrcElts, NewMask1, CostKind);
   bool SingleSrcBinOp = (X == Y) && (Z == W) && (NewMask0 == NewMask1);
-  ReducedInstCount |= SingleSrcBinOp;
+  // SingleSrcBinOp only reduces instruction count if we also eliminate the
+  // original binop(s). If binops have multiple uses, they won't be eliminated.
+  ReducedInstCount |= SingleSrcBinOp && LHS->hasOneUser() && RHS->hasOneUser();
 
   auto *ShuffleCmpTy =
       FixedVectorType::get(BinOpTy->getElementType(), ShuffleDstTy);
@@ -2660,6 +2668,12 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
         TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy, ShuffleDstTy,
                                PredLHS, CostKind, Op0Info, Op1Info);
   }
+  // If LHS/RHS have other uses, we need to account for the cost of keeping
+  // the original instructions. When SameBinOp, only add the cost once.
+  if (!LHS->hasOneUser())
+    NewCost += LHSCost;
+  if (!SameBinOp && !RHS->hasOneUser())
+    NewCost += RHSCost;
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
@@ -4198,8 +4212,12 @@ bool VectorCombine::foldCastFromReductions(Instruction &I) {
 ///   - reduce.{and,umin}: 1 if all elements are negative, 0 if any isn't
 ///   - reduce.add: count of negative elements (0 to NumElts)
 ///
-/// We transform to a direct sign check on reduce.{or,umax} or
-/// reduce.{and,umin} without explicit sign-bit extraction.
+/// Both lshr and ashr are supported:
+///   - lshr produces 0 or 1, so reduce.add range is [0, N]
+///   - ashr produces 0 or -1, so reduce.add range is [-N, 0]
+///
+/// We transform to a direct sign check on the original vector using
+/// reduce.{or,umax} or reduce.{and,umin}.
 ///
 /// In spirit, it's similar to foldSignBitCheck in InstCombine.
 bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
@@ -4234,12 +4252,15 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
     return false;
 
   unsigned BitWidth = VecTy->getScalarSizeInBits();
+  if (BitWidth == 1)
+    return false;
+
   unsigned NumElts = VecTy->getNumElements();
 
-  // For reduce.add, the result is the count of negative elements
-  // (0 to NumElts). This must fit in the scalar type without overflow.
-  // Otherwise, reduce.add can wrap and identity doesn't hold.
-  if (OrigIID == Intrinsic::vector_reduce_add && !isUIntN(BitWidth, NumElts))
+  // For reduce.add, NumElts must fit as a signed integer for the range
+  // calculations to be correct. Both lshr [0, N] and ashr [-N, 0] require
+  // N to be representable as a positive signed value.
+  if (OrigIID == Intrinsic::vector_reduce_add && !isIntN(BitWidth, NumElts))
     return false;
 
   // Match sign-bit extraction: shr X, (bitwidth-1)
@@ -4247,29 +4268,64 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
   if (!match(ReductionSrc, m_Shr(m_Value(X), m_SpecificInt(BitWidth - 1))))
     return false;
 
-  // MaxVal: 1 for or/and/umax/umin, NumElts for add
-  APInt MaxVal(CmpVal->getBitWidth(),
-               OrigIID == Intrinsic::vector_reduce_add ? NumElts : 1);
+  // Compute the boundary value when all elements are negative:
+  // - Per-element contribution: 1 for lshr, -1 for ashr
+  // - For add: N * per-element; for others: just per-element
+  bool IsAShr = isa<AShrOperator>(ReductionSrc);
+  unsigned Count = (OrigIID == Intrinsic::vector_reduce_add) ? NumElts : 1;
+  APInt NegativeVal(CmpVal->getBitWidth(), Count);
+  if (IsAShr)
+    NegativeVal.negate();
 
-  // In addition to direct comparisons EQ 0, NE 0, EQ 1, NE 1, etc. we support
-  // inequalities that can be interpreted as either EQ or NE considering a
-  // rather narrow range of possible value of sign-bit reductions.
-  bool IsEq;
-  bool TestsHigh;
-  if (ICmpInst::isEquality(Pred)) {
-    // EQ/NE: comparison must be against 0 or MaxVal
-    if (!CmpVal->isZero() && *CmpVal != MaxVal)
+  // Range is [min(0, AllNegVal), max(0, AllNegVal)]
+  APInt Zero = APInt::getZero(CmpVal->getBitWidth());
+  APInt RangeLow = APIntOps::smin(Zero, NegativeVal);
+  APInt RangeHigh = APIntOps::smax(Zero, NegativeVal);
+
+  // Determine comparison semantics:
+  // - IsEq: true for equality test, false for inequality
+  // - TestsNegative: true if testing against AllNegVal, false for zero
+  //
+  // In addition to EQ/NE against 0 or AllNegVal, we support inequalities
+  // that fold to boundary tests given the narrow value range:
+  //   < RangeHigh  -> != RangeHigh
+  //   > RangeHigh-1 -> == RangeHigh
+  //   > RangeLow   -> != RangeLow
+  //   < RangeLow+1 -> == RangeLow
+  //
+  // For inequalities, we work with signed predicates only. Unsigned predicates
+  // are canonicalized to signed when the range is non-negative (where they are
+  // equivalent). When the range includes negative values, unsigned predicates
+  // would have different semantics due to wrap-around, so we reject them.
+  if (!ICmpInst::isEquality(Pred) && !ICmpInst::isSigned(Pred)) {
+    if (RangeLow.isNegative())
       return false;
+    Pred = ICmpInst::getSignedPredicate(Pred);
+  }
+
+  bool IsEq;
+  bool TestsNegative;
+  if (ICmpInst::isEquality(Pred)) {
+    if (CmpVal->isZero()) {
+      TestsNegative = false;
+    } else if (*CmpVal == NegativeVal) {
+      TestsNegative = true;
+    } else {
+      return false;
+    }
     IsEq = Pred == ICmpInst::ICMP_EQ;
-    TestsHigh = *CmpVal == MaxVal;
-  } else if (ICmpInst::isLT(Pred) && *CmpVal == MaxVal) {
-    // s/ult MaxVal -> ne MaxVal
+  } else if (Pred == ICmpInst::ICMP_SLT && *CmpVal == RangeHigh) {
     IsEq = false;
-    TestsHigh = true;
-  } else if (ICmpInst::isGT(Pred) && *CmpVal == MaxVal - 1) {
-    // s/ugt MaxVal-1 -> eq MaxVal
+    TestsNegative = (RangeHigh == NegativeVal);
+  } else if (Pred == ICmpInst::ICMP_SGT && *CmpVal == RangeHigh - 1) {
     IsEq = true;
-    TestsHigh = true;
+    TestsNegative = (RangeHigh == NegativeVal);
+  } else if (Pred == ICmpInst::ICMP_SGT && *CmpVal == RangeLow) {
+    IsEq = false;
+    TestsNegative = (RangeLow == NegativeVal);
+  } else if (Pred == ICmpInst::ICMP_SLT && *CmpVal == RangeLow + 1) {
+    IsEq = true;
+    TestsNegative = (RangeLow == NegativeVal);
   } else {
     return false;
   }
@@ -4329,14 +4385,14 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
   switch (OrigIID) {
   case Intrinsic::vector_reduce_or:
   case Intrinsic::vector_reduce_umax:
-    Base = TestsHigh ? AnyNeg : AllNonNeg;
+    Base = TestsNegative ? AnyNeg : AllNonNeg;
     break;
   case Intrinsic::vector_reduce_and:
   case Intrinsic::vector_reduce_umin:
-    Base = TestsHigh ? AllNeg : AnyNonNeg;
+    Base = TestsNegative ? AllNeg : AnyNonNeg;
     break;
   case Intrinsic::vector_reduce_add:
-    Base = TestsHigh ? AllNeg : AllNonNeg;
+    Base = TestsNegative ? AllNeg : AllNonNeg;
     break;
   default:
     llvm_unreachable("Unexpected intrinsic");
@@ -4603,6 +4659,10 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
     return false;
 
   const auto IsValidOrUmaxCmp = [&]() {
+    // or === umax for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
     // Cases a and e
     bool IsEquality =
         (CmpVal->isZero() || CmpVal->isOne()) && ICmpInst::isEquality(Pred);
@@ -4615,6 +4675,10 @@ bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
   };
 
   const auto IsValidAndUminCmp = [&]() {
+    // and === umin for i1
+    if (CmpVal->getBitWidth() == 1)
+      return true;
+
     const auto LeadingOnes = CmpVal->countl_one();
 
     // Cases g and k
@@ -5446,6 +5510,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+
+        // Ignore shufflevector instructions that have no uses.
+        if (Shuffle->use_empty())
+          continue;
+
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
