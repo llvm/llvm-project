@@ -12,8 +12,10 @@
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/OwningOpRef.h"
 #include "gtest/gtest.h"
 
 using namespace mlir;
@@ -132,8 +134,12 @@ TEST_F(InferConvolutionDimsTest, Conv2DPairing) {
   // Use non-square kernel to ensure dimension swapping is tested properly.
   const int64_t oh = 6, ow = 12, kh = 3, kw = 5;
 
-  // Create Conv2DOp where the standard loop order is (oh, ow, kh, kw).
+  // Create a module to own all test operations and ensure proper cleanup.
   OpBuilder builder(ctx.get());
+  OwningOpRef<ModuleOp> module = ModuleOp::create(builder.getUnknownLoc());
+  builder.setInsertionPointToStart(module->getBody());
+
+  // Create Conv2DOp where the standard loop order is (oh, ow, kh, kw).
   linalg::Conv2DOp conv2DOp = createConv2DOp(builder, oh, ow, kh, kw);
   FailureOr<ConvolutionDimensions> origDims = inferConvolutionDims(conv2DOp);
   ASSERT_TRUE(succeeded(origDims));

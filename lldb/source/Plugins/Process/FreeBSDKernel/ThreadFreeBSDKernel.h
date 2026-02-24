@@ -20,11 +20,6 @@ public:
 
   void RefreshStateAfterStop() override;
 
-  lldb::RegisterContextSP GetRegisterContext() override;
-
-  lldb::RegisterContextSP
-  CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
-
   const char *GetName() override {
     if (m_thread_name.empty())
       return nullptr;
@@ -38,9 +33,13 @@ public:
       m_thread_name.clear();
   }
 
+  lldb::RegisterContextSP GetRegisterContext() override;
+
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
+
   void SetIsCrashedThread(bool is_crashed) { m_is_crashed = is_crashed; }
 
-protected:
   bool CalculateStopInfo() override;
 
 private:
