@@ -28896,7 +28896,7 @@ static SDValue performCTPOPCombine(SDNode *N,
 
   // ctpop(zext(bitcast(vector_mask))) -> neg(signed_reduce_add(vector_mask))
   SDValue Mask;
-  if (!sd_match(N->getOperand(0), m_ZExt(m_BitCast(m_Value(Mask)))))
+  if (!sd_match(N->getOperand(0), m_ZExtOrSelf(m_BitCast(m_Value(Mask)))))
     return SDValue();
 
   EVT VT = N->getValueType(0);

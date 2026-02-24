@@ -1,5 +1,5 @@
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown %p/Inputs/call-indirect.s -o %t2.o
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp -o %t.o %s
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -mcpu=mvp %p/Inputs/call-indirect.s -o %t2.o
 # RUN: wasm-ld --export-dynamic -o %t.wasm %t2.o %t.o
 # RUN: obj2yaml %t.wasm | FileCheck %s
 

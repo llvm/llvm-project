@@ -313,3 +313,19 @@ define i32 @non_vmask_popcount_2(<8 x i16> %a) {
   %t3 = zext i16 %t2 to i32
   ret i32 %t3
 }
+
+define i32 @vmask_negate_popcount(<16 x i8> %a, <16 x i8> %b)  {
+; CHECK-LABEL: vmask_negate_popcount:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cmeq v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    saddlp v0.8h, v0.16b
+; CHECK-NEXT:    addv h0, v0.8h
+; CHECK-NEXT:    smov w0, v0.h[0]
+; CHECK-NEXT:    ret
+  %mask = icmp eq <16 x i8> %a, %b
+  %t1 = bitcast <16 x i1> %mask to i16
+  %t2 = tail call i16 @llvm.ctpop.i16(i16 %t1)
+  %t3 = sub i16 0, %t2
+  %t4 = sext i16 %t3 to i32
+  ret i32 %t4
+}
