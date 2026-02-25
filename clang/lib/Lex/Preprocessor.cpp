@@ -129,6 +129,7 @@ Preprocessor::Preprocessor(const PreprocessorOptions &PPOpts,
   SetPoisonReason(Ident__VA_ARGS__,diag::ext_pp_bad_vaargs_use);
   (Ident__VA_OPT__ = getIdentifierInfo("__VA_OPT__"))->setIsPoisoned();
   SetPoisonReason(Ident__VA_OPT__,diag::ext_pp_bad_vaopt_use);
+  Ident__THIS_MACRO__ = getIdentifierInfo("__THIS_MACRO__");
 
   // Initialize the pragma handlers.
   RegisterBuiltinPragmas();

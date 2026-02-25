@@ -218,6 +218,7 @@ class Preprocessor {
   IdentifierInfo *Ident__identifier;               // __identifier
   IdentifierInfo *Ident__VA_ARGS__;                // __VA_ARGS__
   IdentifierInfo *Ident__VA_OPT__;                 // __VA_OPT__
+  IdentifierInfo *Ident__THIS_MACRO__;             // __THIS_MACRO__
   IdentifierInfo *Ident__has_feature;              // __has_feature
   IdentifierInfo *Ident__has_extension;            // __has_extension
   IdentifierInfo *Ident__has_builtin;              // __has_builtin

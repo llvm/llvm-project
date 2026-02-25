@@ -903,26 +903,26 @@ bool Lexer::isAtEndOfMacroExpansion(SourceLocation loc,
                                     const SourceManager &SM,
                                     const LangOptions &LangOpts,
                                     SourceLocation *MacroEnd) {
-  assert(loc.isValid() && loc.isMacroID() && "Expected a valid macro loc");
+  for (SourceLocation expansionLoc; true; loc = expansionLoc) {
+    assert(loc.isValid() && loc.isMacroID() && "Expected a valid macro loc");
 
-  SourceLocation spellLoc = SM.getSpellingLoc(loc);
-  unsigned tokLen = MeasureTokenLength(spellLoc, SM, LangOpts);
-  if (tokLen == 0)
-    return false;
+    SourceLocation spellLoc = SM.getSpellingLoc(loc);
+    unsigned tokLen = MeasureTokenLength(spellLoc, SM, LangOpts);
+    if (tokLen == 0)
+      return false;
 
-  SourceLocation afterLoc = loc.getLocWithOffset(tokLen);
-  SourceLocation expansionLoc;
-  if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
-    return false;
+    SourceLocation afterLoc = loc.getLocWithOffset(tokLen);
+    if (!SM.isAtEndOfImmediateMacroExpansion(afterLoc, &expansionLoc))
+      return false;
 
-  if (expansionLoc.isFileID()) {
-    // No other macro expansions.
-    if (MacroEnd)
-      *MacroEnd = expansionLoc;
-    return true;
+    if (expansionLoc.isFileID()) {
+      // No other macro expansions.
+      if (MacroEnd)
+        *MacroEnd = expansionLoc;
+      return true;
+    }
   }
-
-  return isAtEndOfMacroExpansion(expansionLoc, SM, LangOpts, MacroEnd);
+  llvm_unreachable("");
 }
 
 static CharSourceRange makeRangeFromFileLocs(CharSourceRange Range,
