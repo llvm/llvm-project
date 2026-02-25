@@ -289,7 +289,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                            // Memory management
                                            "reserve", "resize", "shrink_to_fit",
                                            // Assignment
-                                           "swap", "assign", "assign_range"};
+                                           "assign", "assign_range"};
 
   // `pop_*` methods are excluded: they only invalidate references to the
   // removed element, not to other elements.
@@ -301,7 +301,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                           // Memory management
                                           "resize", "shrink_to_fit",
                                           // Assignment
-                                          "swap", "assign", "assign_range"};
+                                          "assign", "assign_range"};
 
   static const llvm::StringSet<> String = {
       // Insertion
@@ -320,18 +320,14 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                                   "push", "emplace",
                                                   "push_range",
                                                   // Removal
-                                                  "pop",
-                                                  // Assignment
-                                                  "swap"};
+                                                  "pop"};
 
   // `erase` and `extract` are excluded: they only affect the removed element,
   // not to other elements.
   // https://en.cppreference.com/w/cpp/container/map/erase.html
   // https://en.cppreference.com/w/cpp/container/map/extract.html
   static const llvm::StringSet<> NodeBased = {// Removal
-                                              "clear",
-                                              // Assignment
-                                              "swap"};
+                                              "clear"};
 
   // For `flat_*` container adaptors, `try_emplace` and `insert_or_assign`
   // only exist on `flat_map`. Listing them here is harmless since the methods
