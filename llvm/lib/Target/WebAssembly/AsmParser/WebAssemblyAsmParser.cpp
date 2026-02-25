@@ -523,8 +523,7 @@ public:
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
             Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
       }
-      if (IsAtomic && !InstName.contains("fence") &&
-          !InstName.contains("notify") && !InstName.contains("wait")) {
+      if (IsAtomic && !InstName.contains("fence")) {
         if (!parseMemOrderMaybe(Operands)) {
           auto Tok = Lexer.getTok();
           Operands.push_back(std::make_unique<WebAssemblyOperand>(
@@ -1189,6 +1188,18 @@ public:
 
 bool isAtomic(unsigned Opc) {
   switch (Opc) {
+  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A32:
+  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A32_S:
+  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A64:
+  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A64_S:
+  case WebAssembly::MEMORY_ATOMIC_WAIT32_A32:
+  case WebAssembly::MEMORY_ATOMIC_WAIT32_A32_S:
+  case WebAssembly::MEMORY_ATOMIC_WAIT32_A64:
+  case WebAssembly::MEMORY_ATOMIC_WAIT32_A64_S:
+  case WebAssembly::MEMORY_ATOMIC_WAIT64_A32:
+  case WebAssembly::MEMORY_ATOMIC_WAIT64_A32_S:
+  case WebAssembly::MEMORY_ATOMIC_WAIT64_A64:
+  case WebAssembly::MEMORY_ATOMIC_WAIT64_A64_S:
   case WebAssembly::ATOMIC_FENCE:
   case WebAssembly::ATOMIC_FENCE_S:
   case WebAssembly::ATOMIC_LOAD16_U_I32_A32:

@@ -13,6 +13,7 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
@@ -47,6 +48,13 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
 
+  void encodeMemArg(const MCInst &MI, unsigned I, const MCInstrDesc &Desc,
+                    const MCSubtargetInfo &STI, raw_ostream &OS,
+                    SmallSet<unsigned, 4> &HandledOperands,
+                    SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const;
+
+  uint8_t getEncodedMemOrder(uint8_t Order, unsigned Opcode) const;
+
 public:
   WebAssemblyMCCodeEmitter(const MCInstrInfo &MCII, MCContext &Ctx)
       : MCII(MCII), Ctx{Ctx} {}
@@ -56,6 +64,88 @@ public:
 MCCodeEmitter *llvm::createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
                                                     MCContext &Ctx) {
   return new WebAssemblyMCCodeEmitter(MCII, Ctx);
+}
+
+uint8_t WebAssemblyMCCodeEmitter::getEncodedMemOrder(uint8_t Order,
+                                                     unsigned Opcode) const {
+  if (Order == wasm::WASM_MEM_ORDER_ACQ_REL) {
+    StringRef Name = MCII.getName(Opcode);
+    if (Name.contains("RMW") || Name.contains("CMPXCHG"))
+      return wasm::WASM_MEM_ORDER_RMW_ACQ_REL;
+  }
+  return Order;
+}
+
+void WebAssemblyMCCodeEmitter::encodeMemArg(
+    const MCInst &MI, unsigned I, const MCInstrDesc &Desc,
+    const MCSubtargetInfo &STI, raw_ostream &OS,
+    SmallSet<unsigned, 4> &HandledOperands,
+    SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const {
+  unsigned P2AlignIdx = I;
+  std::optional<unsigned> OffsetIdx;
+  std::optional<unsigned> MemOrderIdx;
+
+  for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
+    if (J < Desc.getNumOperands()) {
+      auto OT = Desc.operands()[J].OperandType;
+      if (OT == WebAssembly::OPERAND_OFFSET32 ||
+          OT == WebAssembly::OPERAND_OFFSET64)
+        OffsetIdx = J;
+      else if (OT == WebAssembly::OPERAND_MEMORDER)
+        MemOrderIdx = J;
+    }
+  }
+
+  uint64_t P2Align = MI.getOperand(P2AlignIdx).getImm();
+  uint8_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+
+  // Memory instructions always have an ordering, but if it's SEQ_CST then we
+  // don't use the shared-everything encoding (even if shared everything is
+  // enabled) because the original encoding is smaller.
+  if (MemOrderIdx) {
+    Order = MI.getOperand(*MemOrderIdx).getImm();
+    if (Order != wasm::WASM_MEM_ORDER_SEQ_CST) {
+      assert(STI.getFeatureBits()[WebAssembly::FeatureSharedEverything] &&
+             "Non-default atomic ordering but feature not enabled");
+      P2Align |= wasm::WASM_MEMARG_HAS_MEM_ORDER;
+    }
+  }
+
+  encodeULEB128(P2Align, OS);
+
+  // Memory index will go here once we support multi-memory.
+
+  if (P2Align & wasm::WASM_MEMARG_HAS_MEM_ORDER) {
+    support::endian::write<uint8_t>(
+        OS, getEncodedMemOrder(Order, MI.getOpcode()),
+        llvm::endianness::little);
+  }
+
+  // We handled the MemOrder operand, even if we didn't encode it explicitly
+  if (MemOrderIdx)
+    HandledOperands.insert(*MemOrderIdx);
+
+  if (OffsetIdx) {
+    const MCOperand &MO = MI.getOperand(*OffsetIdx);
+    if (MO.isImm()) {
+      if (Desc.operands()[*OffsetIdx].OperandType == WebAssembly::OPERAND_OFFSET32)
+        encodeULEB128(uint32_t(MO.getImm()), OS);
+      else
+        encodeULEB128(uint64_t(MO.getImm()), OS);
+    } else {
+      assert(MO.isExpr());
+      llvm::MCFixupKind FixupKind =
+          Desc.operands()[*OffsetIdx].OperandType == WebAssembly::OPERAND_OFFSET32
+              ? WebAssembly::fixup_uleb128_i32
+              : WebAssembly::fixup_uleb128_i64;
+      raw_svector_ostream &SOS = static_cast<raw_svector_ostream &>(OS);
+      Fixups.push_back(
+          MCFixup::create(SOS.tell() - Start, MO.getExpr(), FixupKind));
+      ++MCNumFixups;
+      encodeULEB128(0, OS, FixupKind == WebAssembly::fixup_uleb128_i32 ? 5 : 10);
+    }
+    HandledOperands.insert(*OffsetIdx);
+  }
 }
 
 void WebAssemblyMCCodeEmitter::encodeInstruction(
@@ -89,7 +179,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     encodeULEB128(MI.getNumOperands() - 2, OS);
 
   const MCInstrDesc &Desc = MCII.get(Opcode);
+  SmallSet<unsigned, 4> HandledOperands;
   for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
+    if (HandledOperands.count(I))
+      continue;
     const MCOperand &MO = MI.getOperand(I);
     if (MO.isReg()) {
       /* nothing to encode */
@@ -103,34 +196,9 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
         case WebAssembly::OPERAND_I32IMM:
           encodeSLEB128(int32_t(MO.getImm()), OS);
           break;
-        case WebAssembly::OPERAND_P2ALIGN: {
-          uint64_t P2Align = MO.getImm();
-          if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
-            for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
-              if (J < Desc.getNumOperands() &&
-                  Desc.operands()[J].OperandType ==
-                      WebAssembly::OPERAND_MEMORDER) {
-                uint8_t Val = MI.getOperand(J).getImm();
-                if (Val != wasm::WASM_MEM_ORDER_SEQ_CST) {
-                  P2Align |= 0x20;
-                  encodeULEB128(P2Align, OS);
-                  if (Val == wasm::WASM_MEM_ORDER_ACQ_REL) {
-                    StringRef Name = MCII.getName(Opcode);
-                    if (Name.contains("RMW") || Name.contains("CMPXCHG"))
-                      Val = wasm::WASM_MEM_ORDER_RMW_ACQ_REL;
-                  }
-                  support::endian::write<uint8_t>(OS, Val,
-                                                  llvm::endianness::little);
-                  goto DoneP2Align;
-                }
-                break;
-              }
-            }
-          }
-          encodeULEB128(P2Align, OS);
-        DoneP2Align:
+        case WebAssembly::OPERAND_P2ALIGN:
+          encodeMemArg(MI, I, Desc, STI, OS, HandledOperands, Fixups, Start);
           break;
-        }
         case WebAssembly::OPERAND_OFFSET32:
           encodeULEB128(uint32_t(MO.getImm()), OS);
           break;
@@ -143,20 +211,6 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                                           llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_MEMORDER: {
-          bool IsMemoryInst = false;
-          for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
-            if (J < Desc.getNumOperands() &&
-                Desc.operands()[J].OperandType ==
-                    WebAssembly::OPERAND_P2ALIGN) {
-              IsMemoryInst = true;
-              break;
-            }
-          }
-          if (IsMemoryInst) {
-            // Already encoded in P2ALIGN case if non-default.
-            // If it was default (seqcst), nothing was encoded.
-            break;
-          }
           uint8_t Val = MO.getImm();
           if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
             if (Val == wasm::WASM_MEM_ORDER_ACQ_REL) {
