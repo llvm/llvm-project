@@ -67,6 +67,7 @@
 #include "llvm/Transforms/Vectorize/LoopIdiomVectorize.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
@@ -74,6 +75,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -123,6 +125,9 @@ class LoopIdiomVectorize {
   const TargetTransformInfo *TTI;
   const DataLayout *DL;
 
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter &ORE;
+
   // Blocks that will be used for inserting vectorized code.
   BasicBlock *EndBlock = nullptr;
   BasicBlock *VectorLoopPreheaderBlock = nullptr;
@@ -133,9 +138,9 @@ class LoopIdiomVectorize {
 public:
   LoopIdiomVectorize(LoopIdiomVectorizeStyle S, unsigned VF, DominatorTree *DT,
                      LoopInfo *LI, const TargetTransformInfo *TTI,
-                     const DataLayout *DL)
-      : VectorizeStyle(S), ByteCompareVF(VF), DT(DT), LI(LI), TTI(TTI), DL(DL) {
-  }
+                     const DataLayout *DL, OptimizationRemarkEmitter &ORE)
+      : VectorizeStyle(S), ByteCompareVF(VF), DT(DT), LI(LI), TTI(TTI), DL(DL),
+        ORE(ORE) {}
 
   bool run(Loop *L);
 
@@ -199,7 +204,17 @@ PreservedAnalyses LoopIdiomVectorizePass::run(Loop &L, LoopAnalysisManager &AM,
   if (ByteCmpVF.getNumOccurrences())
     BCVF = ByteCmpVF;
 
-  LoopIdiomVectorize LIV(VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, DL);
+  Function &F = *L.getHeader()->getParent();
+  auto &FAMP = AM.getResult<FunctionAnalysisManagerLoopProxy>(L, AR);
+  auto *ORE = FAMP.getCachedResult<OptimizationRemarkEmitterAnalysis>(F);
+
+  std::optional<OptimizationRemarkEmitter> ORELocal;
+  if (!ORE) {
+    ORELocal.emplace(&F);
+    ORE = &*ORELocal;
+  }
+
+  LoopIdiomVectorize LIV(VecStyle, BCVF, &AR.DT, &AR.LI, &AR.TTI, DL, *ORE);
   if (!LIV.run(&L))
     return PreservedAnalyses::all();
 
@@ -218,6 +233,14 @@ bool LoopIdiomVectorize::run(Loop *L) {
   Function &F = *L->getHeader()->getParent();
   if (DisableAll || F.hasOptSize())
     return false;
+
+  // Bail if vectorization is disabled on loop.
+  LoopVectorizeHints Hints(L, /*InterleaveOnlyWhenForced=*/true, ORE);
+  if (!Hints.allowVectorization(&F, L, /*VectorizeOnlyWhenForced=*/false)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on " << L->getName()
+                      << " due to vectorization hints\n");
+    return false;
+  }
 
   if (F.hasFnAttribute(Attribute::NoImplicitFloat)) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on " << F.getName()
@@ -1004,6 +1027,18 @@ bool LoopIdiomVectorize::recognizeFindFirstByte() {
     return false;
 
   auto *InnerLoop = CurLoop->getSubLoops().front();
+  Function &F = *InnerLoop->getHeader()->getParent();
+
+  // Bail if vectorization is disabled on inner loop.
+  LoopVectorizeHints Hints(InnerLoop, /*InterleaveOnlyWhenForced=*/true, ORE);
+  if (!Hints.allowVectorization(&F, InnerLoop,
+                                /*VectorizeOnlyWhenForced=*/false)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE << " is disabled on inner loop "
+                      << InnerLoop->getName()
+                      << " due to vectorization hints\n");
+    return false;
+  }
+
   PHINode *IndPhi = dyn_cast<PHINode>(&Header->front());
   if (!IndPhi || IndPhi->getNumIncomingValues() != 2)
     return false;

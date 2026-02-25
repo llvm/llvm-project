@@ -109,7 +109,31 @@ public:
   RT_API_ATTRS pointer_type operator->() const { return get(); }
 
 private:
-  RT_API_ATTRS void delete_ptr(pointer_type p) { FreeMemory(p); }
+  RT_API_ATTRS void delete_ptr(pointer_type p) {
+#if RT_USE_LIBCUDACXX && defined(RT_DEVICE_COMPILATION)
+    // FIXME: Calling the destructor here introduces an SCC call chain
+    // like this:
+    //
+    // |------------|
+    // |            V
+    // |    ChildIo::~ChildIo()
+    // |            |
+    // |            V
+    // | -> OwningPtr<Fortran::runtime::io::ChildIo>::~OwningPtr()
+    // |            |
+    // |            V
+    // | OwningPtr<Fortran::runtime::io::ChildIo>::delete_ptr(
+    // |   Fortran::runtime::io::ChildIo*)
+    // |____________|
+    //
+    // This prevents computing static stack size in CUDA kernels.
+    // This code is temporarily disabled for RT_USE_LIBCUDACXX builds
+    // on the device.
+#else
+    p->~A();
+#endif
+    FreeMemory(p);
+  }
   pointer_type ptr_{};
 };
 

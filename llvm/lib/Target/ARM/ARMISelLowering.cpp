@@ -2052,8 +2052,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     GuardWithBTI = AFI->branchTargetEnforcement();
 
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   // Determine whether this is a non-secure function call.
   if (CLI.CB && CLI.CB->getAttributes().hasFnAttr("cmse_nonsecure_call"))
@@ -20272,6 +20271,10 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
 
   if (StringRef("{cc}").equals_insensitive(Constraint))
     return std::make_pair(unsigned(ARM::CPSR), &ARM::CCRRegClass);
+
+  // r14 is an alias of lr.
+  if (StringRef("{r14}").equals_insensitive(Constraint))
+    return std::make_pair(unsigned(ARM::LR), getRegClassFor(MVT::i32));
 
   auto RCP = TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
   if (isIncompatibleReg(RCP.first, VT))

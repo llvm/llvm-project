@@ -40,6 +40,7 @@
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 
 using namespace llvm;
@@ -200,8 +201,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   if (!MemLoc.AATags.Scope)
     return false;
 
-  const AAMDNodes &MemAA = MemLoc.AATags;
-
   for (VPBlockBase *Block = FirstBB; Block;
        Block = Block->getSingleSuccessor()) {
     assert(Block->getNumSuccessors() <= 1 &&
@@ -221,16 +220,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      // For reads, check if they don't alias in the reverse direction and
-      // skip if so.
-      if (CheckReads && R.mayReadFromMemory() &&
-          !ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
-                                                   MemAA.NoAlias))
-        continue;
-
-      // Check if the memory operations may alias in the forward direction.
-      if (ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
-                                                  Loc->AATags.NoAlias))
+      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
 
@@ -4193,30 +4183,6 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
   }
 
-  // For exit blocks that also have the middle block as predecessor (latch
-  // exits to the same block as an early exit), extract the last lane of the
-  // first operand for the middle block's incoming value.
-  VPBuilder MiddleBuilder(MiddleVPBB);
-  VPBasicBlock *MiddleSuccVPBB =
-      cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
-  if (MiddleSuccVPBB->getNumPredecessors() > 1) {
-    assert(all_of(MiddleSuccVPBB->getPredecessors(),
-                  [&](VPBlockBase *Pred) {
-                    return Pred == MiddleVPBB ||
-                           is_contained(VectorEarlyExitVPBBs, Pred);
-                  }) &&
-           "All predecessors must be either the middle block or early exit "
-           "blocks");
-
-    for (VPRecipeBase &R : MiddleSuccVPBB->phis()) {
-      auto *ExitIRI = cast<VPIRPhi>(&R);
-      assert(ExitIRI->getIncomingValueForBlock(MiddleVPBB) ==
-                 ExitIRI->getOperand(0) &&
-             "First operand must come from middle block");
-      ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
-    }
-  }
-
   // Chain through exits: for each exit, check if its condition is true at
   // the first active lane. If so, take that exit; otherwise, try the next.
   // The last exit needs no check since it must be taken if all others fail.
@@ -5082,6 +5048,10 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
+  // Note that after the transform, no further uses of Plan.getVF and
+  // Plan.getVFxUF should be added.
+  // TODO: Add assertions for this.
+
   VPValue *UF =
       Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
   Plan.getUF().replaceAllUsesWith(UF);
@@ -5108,10 +5078,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *MulByUF = Builder.createOverflowingOp(
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
-
-  assert(Plan.getVF().getNumUsers() == 0 && Plan.getUF().getNumUsers() == 0 &&
-         Plan.getVFxUF().getNumUsers() == 0 &&
-         "VF, UF, and VFxUF not expected to be used");
 }
 
 DenseMap<const SCEV *, Value *>
@@ -5174,6 +5140,37 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(Member0OpR))
     return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
   return false;
+}
+
+static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
+  SmallVector<VPValue *> Ops0;
+  auto *WideMember0 = dyn_cast<VPWidenRecipe>(Ops[0]);
+  if (!WideMember0)
+    return false;
+
+  for (const auto &[_, V] : enumerate(Ops)) {
+    auto *R = dyn_cast<VPWidenRecipe>(V);
+    if (!R || R->getOpcode() != WideMember0->getOpcode() ||
+        R->getNumOperands() > 2)
+      return false;
+  }
+
+  for (unsigned Idx = 0; Idx != WideMember0->getNumOperands(); ++Idx) {
+    SmallVector<VPValue *> OpsI;
+    for (VPValue *Op : Ops)
+      OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
+
+    if (canNarrowOps(OpsI))
+      continue;
+
+    if (any_of(enumerate(OpsI), [WideMember0, Idx](const auto &P) {
+          const auto &[OpIdx, OpV] = P;
+          return !canNarrowLoad(WideMember0, Idx, OpV, OpIdx);
+        }))
+      return false;
+  }
+
+  return true;
 }
 
 /// Returns VF from \p VFs if \p IR is a full interleave group with factor and
@@ -5377,22 +5374,8 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
 
     // Check if all values feeding InterleaveR are matching wide recipes, which
     // operands that can be narrowed.
-    auto *WideMember0 =
-        dyn_cast_or_null<VPWidenRecipe>(InterleaveR->getStoredValues()[0]);
-    if (!WideMember0)
+    if (!canNarrowOps(InterleaveR->getStoredValues()))
       return nullptr;
-    for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast_or_null<VPWidenRecipe>(V);
-      if (!R || R->getOpcode() != WideMember0->getOpcode() ||
-          R->getNumOperands() > 2)
-        return nullptr;
-      if (any_of(enumerate(R->operands()),
-                 [WideMember0, Idx = I](const auto &P) {
-                   const auto &[OpIdx, OpV] = P;
-                   return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
-                 }))
-        return nullptr;
-    }
     StoreGroups.push_back(InterleaveR);
   }
 
@@ -5703,12 +5686,12 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Get the IV from the backedge value of the reduction phi.
+    // Get the IV and condition from the backedge value of the reduction phi.
     // The backedge value should be a select between the phi and the IV.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
-    VPValue *TrueVal, *FalseVal;
-    if (!match(BackedgeVal,
-               m_Select(m_VPValue(), m_VPValue(TrueVal), m_VPValue(FalseVal))))
+    VPValue *Cond, *TrueVal, *FalseVal;
+    if (!match(BackedgeVal, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
+                                     m_VPValue(FalseVal))))
       continue;
 
     // The non-phi operand of the select is the IV.
@@ -5732,36 +5715,78 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/true);
     if (!SentinelVal) {
       SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/false);
-      if (!SentinelVal)
-        continue;
       UseSigned = false;
     }
 
-    auto *RdxResult = cast<VPInstruction>(vputils::findRecipe(
+    // If no sentinel was found, fall back to a boolean AnyOf reduction to track
+    // if the condition was ever true. Requires the IV to not wrap, otherwise we
+    // cannot use min/max.
+    if (!SentinelVal) {
+      auto *AR = cast<SCEVAddRecExpr>(IVSCEV);
+      if (AR->hasNoSignedWrap())
+        UseSigned = true;
+      else if (AR->hasNoUnsignedWrap())
+        UseSigned = false;
+      else
+        continue;
+    }
+
+    VPInstruction *RdxResult = cast<VPInstruction>(vputils::findRecipe(
         BackedgeVal,
         match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
 
-    // Create the reduction result in the middle block using sentinel directly.
     RecurKind MinMaxKind =
         UseMax ? (UseSigned ? RecurKind::SMax : RecurKind::UMax)
                : (UseSigned ? RecurKind::SMin : RecurKind::UMin);
     VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
                     FastMathFlags());
-    VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
     VPValue *ReducedIV =
         MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
                                    RdxResult->getOperand(0), Flags, ExitDL);
-    auto *Cmp =
-        MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
-    VPInstruction *NewRdxResult = MiddleBuilder.createSelect(
-        Cmp, ReducedIV, PhiR->getStartValue(), ExitDL);
+
+    VPValue *NewRdxResult;
+    VPValue *StartVPV = PhiR->getStartValue();
+    if (SentinelVal) {
+      // Sentinel-based approach: reduce IVs with min/max, compare against
+      // sentinel to detect if condition was ever true, select accordingly.
+      VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
+      auto *Cmp = MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV,
+                                           Sentinel, ExitDL);
+      NewRdxResult =
+          MiddleBuilder.createSelect(Cmp, ReducedIV, StartVPV, ExitDL);
+      StartVPV = Sentinel;
+    } else {
+      // Introduce a boolean AnyOf reduction to track if the condition was ever
+      // true in the loop. Use it to select the initial start value, if it was
+      // never true.
+      auto *AnyOfPhi = new VPReductionPHIRecipe(
+          /*Phi=*/nullptr, RecurKind::Or, *Plan.getFalse(), *Plan.getFalse(),
+          RdxUnordered{1}, {}, /*HasUsesOutsideReductionChain=*/false);
+      AnyOfPhi->insertAfter(PhiR);
+
+      VPBuilder LoopBuilder(BackedgeVal->getDefiningRecipe());
+      VPValue *AnyOfCond = Cond;
+      if (TrueVal == PhiR)
+        AnyOfCond = LoopBuilder.createNot(Cond);
+      VPValue *OrVal = LoopBuilder.createOr(AnyOfPhi, AnyOfCond);
+      AnyOfPhi->setOperand(1, OrVal);
+
+      NewRdxResult =
+          MiddleBuilder.createNaryOp(VPInstruction::ComputeAnyOfResult,
+                                     {StartVPV, ReducedIV, OrVal}, {}, ExitDL);
+
+      // Initialize the IV reduction phi with the neutral element, not the
+      // original start value, to ensure correct min/max reduction results.
+      StartVPV = Plan.getOrAddLiveIn(
+          getRecurrenceIdentity(MinMaxKind, IVSCEV->getType(), {}));
+    }
     RdxResult->replaceAllUsesWith(NewRdxResult);
     RdxResult->eraseFromParent();
 
     auto *NewPhiR = new VPReductionPHIRecipe(
-        cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *Sentinel,
+        cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
         *BackedgeVal, RdxUnordered{1}, {},
         PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
