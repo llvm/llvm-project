@@ -36,44 +36,44 @@ def C1UltraModel : SchedMachineModel {
 let SchedModel = C1UltraModel in {
 
 // Define the issue ports.
-def C1UUnitB   : ProcResource<3>;  // Branch 0/1/2
-def C1UUnitS0  : ProcResource<1>;  // Integer single-cycle 0
-def C1UUnitS1  : ProcResource<1>;  // Integer single-cycle 1
-def C1UUnitS2  : ProcResource<1>;  // Integer single-cycle 2
-def C1UUnitS3  : ProcResource<1>;  // Integer single-cycle 3
-def C1UUnitS4  : ProcResource<1>;  // Integer single-cycle 4
-def C1UUnitS5  : ProcResource<1>;  // Integer single-cycle 5
-def C1UUnitM0  : ProcResource<1>;  // Integer single/multicycle 0
-def C1UUnitM1  : ProcResource<1>;  // Integer single/multicycle 1
-def C1UUnitV0  : ProcResource<1>;  // FP/ASIMD 0
-def C1UUnitV1  : ProcResource<1>;  // FP/ASIMD 1
-def C1UUnitV2  : ProcResource<1>;  // FP/ASIMD 2
-def C1UUnitC1U  : ProcResource<1>;  // FP/ASIMD 3
-def C1UUnitV4  : ProcResource<1>;  // FP/ASIMD 4
-def C1UUnitV5  : ProcResource<1>;  // FP/ASIMD 5
-def C1UUnitLS0 : ProcResource<1>;  // Load/Store 0
-def C1UUnitLS1 : ProcResource<1>;  // Load/Store 1
-def C1UUnitL23 : ProcResource<2>;  // Load 2/3
-def C1UUnitD   : ProcResource<2>;  // Store data 0/1
-def C1UUnitCME : ProcResource<1>;  // CME operations block
-def C1UUnitFlg : ProcResource<4>;  // Flags
+def C1UUnitB      : ProcResource<3>;  // Branch 0/1/2
+def C1UUnitS0     : ProcResource<1>;  // Integer single-cycle 0
+def C1UUnitS1     : ProcResource<1>;  // Integer single-cycle 1
+def C1UUnitS2     : ProcResource<1>;  // Integer single-cycle 2
+def C1UUnitS3     : ProcResource<1>;  // Integer single-cycle 3
+def C1UUnitS4     : ProcResource<1>;  // Integer single-cycle 4
+def C1UUnitS5     : ProcResource<1>;  // Integer single-cycle 5
+def C1UUnitM0     : ProcResource<1>;  // Integer single/multicycle 0
+def C1UUnitM1     : ProcResource<1>;  // Integer single/multicycle 1
+def C1UUnitV0     : ProcResource<1>;  // FP/ASIMD 0
+def C1UUnitV1     : ProcResource<1>;  // FP/ASIMD 1
+def C1UUnitV2     : ProcResource<1>;  // FP/ASIMD 2
+def C1UUnitV3     : ProcResource<1>;  // FP/ASIMD 3
+def C1UUnitV4     : ProcResource<1>;  // FP/ASIMD 4
+def C1UUnitV5     : ProcResource<1>;  // FP/ASIMD 5
+def C1UUnitLS0    : ProcResource<1>;  // Load/Store 0
+def C1UUnitLS1    : ProcResource<1>;  // Load/Store 1
+def C1UUnitL23    : ProcResource<2>;  // Load 2/3
+def C1UUnitD      : ProcResource<2>;  // Store data 0/1
+def C1UUnitCME    : ProcResource<1>;  // CME operations block
+def C1UUnitFlg    : ProcResource<4>;  // Flags
 
-def C1UUnitS   : ProcResGroup<[C1UUnitS0, C1UUnitS1, C1UUnitS2, C1UUnitS3,
-                               C1UUnitS4, C1UUnitS5]>;
-def C1UUnitI   : ProcResGroup<[C1UUnitS0, C1UUnitS1, C1UUnitS2, C1UUnitS3,
-                               C1UUnitS4, C1UUnitS5, C1UUnitM0, C1UUnitM1]>;
-def C1UUnitI4  : ProcResGroup<[C1UUnitS0, C1UUnitS2, C1UUnitS4, C1UUnitM0]>;
-def C1UUnitM   : ProcResGroup<[C1UUnitM0, C1UUnitM1]>;
-def C1UUnitL   : ProcResGroup<[C1UUnitLS0, C1UUnitLS1, C1UUnitL23]>;
-def C1UUnitSA  : ProcResGroup<[C1UUnitLS0, C1UUnitLS1]>;
-def C1UUnitV   : ProcResGroup<[C1UUnitV0, C1UUnitV1, C1UUnitV2, 
-                               C1UUnitC1U, C1UUnitV4, C1UUnitV5]>;
-def C1UUnitV01 : ProcResGroup<[C1UUnitV0, C1UUnitV1]>;
-def C1UUnitV02 : ProcResGroup<[C1UUnitV0, C1UUnitV2]>;
-def C1UUnitV13 : ProcResGroup<[C1UUnitV1, C1UUnitC1U]>;
-def C1UUnitV0123 : ProcResGroup<[C1UUnitV0, C1UUnitV1, 
-                                 C1UUnitV2, C1UUnitC1U]>;
-def C1UUnitV0134 : ProcResGroup<[C1UUnitV0, C1UUnitV1, C1UUnitC1U, C1UUnitV4]>;
+def C1UUnitS      : ProcResGroup<[C1UUnitS0, C1UUnitS1, C1UUnitS2, C1UUnitS3,
+                                  C1UUnitS4, C1UUnitS5]>;
+def C1UUnitI      : ProcResGroup<[C1UUnitS0, C1UUnitS1, C1UUnitS2, C1UUnitS3,
+                                  C1UUnitS4, C1UUnitS5, C1UUnitM0, C1UUnitM1]>;
+def C1UUnitI4     : ProcResGroup<[C1UUnitS0, C1UUnitS2, C1UUnitS4, C1UUnitM0]>;
+def C1UUnitM      : ProcResGroup<[C1UUnitM0, C1UUnitM1]>;
+def C1UUnitL      : ProcResGroup<[C1UUnitLS0, C1UUnitLS1, C1UUnitL23]>;
+def C1UUnitSA     : ProcResGroup<[C1UUnitLS0, C1UUnitLS1]>;
+def C1UUnitV      : ProcResGroup<[C1UUnitV0, C1UUnitV1, C1UUnitV2, 
+                                  C1UUnitV3, C1UUnitV4, C1UUnitV5]>;
+def C1UUnitV01    : ProcResGroup<[C1UUnitV0, C1UUnitV1]>;
+def C1UUnitV02    : ProcResGroup<[C1UUnitV0, C1UUnitV2]>;
+def C1UUnitV13    : ProcResGroup<[C1UUnitV1, C1UUnitV3]>;
+def C1UUnitV0123  : ProcResGroup<[C1UUnitV0, C1UUnitV1, 
+                                  C1UUnitV2, C1UUnitV3]>;
+def C1UUnitV0134  : ProcResGroup<[C1UUnitV0, C1UUnitV1, C1UUnitV3, C1UUnitV4]>;
 
 // Define commonly used read types.
 def : ReadAdvance<ReadI,       0>;
@@ -126,110 +126,26 @@ def C1UWrite_2c_1V0     : SchedWriteRes<[C1UUnitV0]> { let Latency = 2; }
 def C1UWrite_4c_1V0     : SchedWriteRes<[C1UUnitV0]> { let Latency = 4; }
 def C1UWrite_6c_1V0     : SchedWriteRes<[C1UUnitV0]> { let Latency = 6; }
 def C1UWrite_10c_1V0    : SchedWriteRes<[C1UUnitV0]> { let Latency = 10;}
-def C1UWrite_12c_1V0 : SchedWriteRes<[C1UUnitV0]> { let Latency = 12; }
-def C1UWrite_20c_1V0 : SchedWriteRes<[C1UUnitV0]> { let Latency = 20; }
+def C1UWrite_12c_1V0    : SchedWriteRes<[C1UUnitV0]> { let Latency = 12; }
+def C1UWrite_20c_1V0    : SchedWriteRes<[C1UUnitV0]> { let Latency = 20; }
 def C1UWrite_3c_1V1     : SchedWriteRes<[C1UUnitV1]> { let Latency = 3; }
 def C1UWrite_5c_1V1     : SchedWriteRes<[C1UUnitV1]> { let Latency = 5; }
 def C1UWrite_8c_1V1     : SchedWriteRes<[C1UUnitV1]> { let Latency = 8; }
 def C1UWrite_12c_1V1    : SchedWriteRes<[C1UUnitV1]> { let Latency = 12; }
-def C1UWrite_2c_V01    : SchedWriteRes<[C1UUnitV01]>  { let Latency = 2; }
-def C1UWrite_3c_V01    : SchedWriteRes<[C1UUnitV01]>  { let Latency = 3; }
-def C1UWrite_2c_V0134  : SchedWriteRes<[ C1UUnitV01, C1UUnitC1U,
+def C1UWrite_2c_V01     : SchedWriteRes<[C1UUnitV01]>  { let Latency = 2; }
+def C1UWrite_3c_V01     : SchedWriteRes<[C1UUnitV01]>  { let Latency = 3; }
+def C1UWrite_2c_V0134   : SchedWriteRes<[ C1UUnitV01, C1UUnitV3,
                                           C1UUnitV4]>  { let Latency = 2; }
-def C1UWrite_3c_V0134  : SchedWriteRes<[ C1UUnitV01, C1UUnitC1U,
-                                          C1UUnitV4]>  { let Latency = 3; }
-def C1UWrite_4c_V0134  : SchedWriteRes<[ C1UUnitV01, C1UUnitC1U,
-                                          C1UUnitV4]>  { let Latency = 4; }
-def C1UWrite_6c_V0134  : SchedWriteRes<[ C1UUnitV01, C1UUnitC1U,
+def C1UWrite_3c_V0134   : SchedWriteRes<[ C1UUnitV01, C1UUnitV3,
+                                           C1UUnitV4]>  { let Latency = 3; }
+def C1UWrite_4c_V0134   : SchedWriteRes<[ C1UUnitV01, C1UUnitV3,
+                                           C1UUnitV4]>  { let Latency = 4; }
+def C1UWrite_6c_V0134   : SchedWriteRes<[ C1UUnitV01, C1UUnitV3,
                                           C1UUnitV4]>  { let Latency = 6; }
 def C1UWrite_1c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 1; }
 def C1UWrite_4c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 4; }
 def C1UWrite_6c_1L      : SchedWriteRes<[C1UUnitL]>  { let Latency = 6; }
 def C1UWrite_1c_1SA     : SchedWriteRes<[C1UUnitSA]> { let Latency = 1; }
-
-// Forwarded types
-def C1UWr_FMA : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_FMA : SchedReadAdvance<2, [WriteFMul, C1UWr_FMA]>;
-
-def C1UWr_VA : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_VA : SchedReadAdvance<3, [C1UWr_VA]>;
-
-def C1UWr_VDOT : SchedWriteRes<[C1UUnitV]> { let Latency = 3; }
-def C1URd_VDOT : SchedReadAdvance<2, [C1UWr_VDOT]>;
-
-def C1UWr_VMMA : SchedWriteRes<[C1UUnitV]> { let Latency = 3; }
-def C1URd_VMMA : SchedReadAdvance<2, [C1UWr_VMMA]>;
-
-
-def C1UWr_VMA : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
-def C1URd_VMA : SchedReadAdvance<3, [C1UWr_VMA]>;
-
-def C1UWr_VMAH : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
-def C1URd_VMAH : SchedReadAdvance<2, [C1UWr_VMAH]>;
-
-def C1UWr_VPA : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_VPA : SchedReadAdvance<3, [C1UWr_VPA]>;
-
-def C1UWr_VSA : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_VSA : SchedReadAdvance<3, [C1UWr_VSA]>;
-
-def C1UWr_VFCMA : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
-def C1URd_VFCMA : SchedReadAdvance<3, [C1UWr_VFCMA]>;
-
-def C1UWr_VFMA : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_VFMA : SchedReadAdvance<2, [C1UWr_VFMA]>;
-
-def C1UWr_VBFDOT : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_VBFDOT : SchedReadAdvance<2, [C1UWr_VBFDOT]>;
-
-def C1UWr_VBFMMA : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
-def C1URd_VBFMMA : SchedReadAdvance<1, [C1UWr_VBFMMA]>;
-
-def C1UWr_VBFMAL : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
-def C1URd_VBFMAL : SchedReadAdvance<3, [C1UWr_VBFMAL]>;
-
-def C1UWr_ZA  : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_ZA  : SchedReadAdvance<3, [C1UWr_ZA]>;
-def C1UWr_ZPA : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_ZPA : SchedReadAdvance<3, [C1UWr_ZPA]>;
-def C1UWr_ZSA : SchedWriteRes<[C1UUnitV13]> { let Latency = 4; }
-def C1URd_ZSA : SchedReadAdvance<3, [C1UWr_ZSA]>;
-
-def C1UWr_ZDOTB : SchedWriteRes<[C1UUnitV]>   { let Latency = 3; }
-def C1URd_ZDOTB : SchedReadAdvance<2, [C1UWr_ZDOTB]>;
-def C1UWr_ZDOTH : SchedWriteRes<[C1UUnitV0134]> { let Latency = 3; }
-def C1URd_ZDOTH : SchedReadAdvance<2, [C1UWr_ZDOTH]>;
-
-def C1UWr_ZCMABHS : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
-def C1URd_ZCMABHS : SchedReadAdvance<3, [C1UWr_ZCMABHS]>;
-
-def C1UWr_ZMMA : SchedWriteRes<[C1UUnitV]> { let Latency = 3; }
-def C1URd_ZMMA : SchedReadAdvance<2, [C1UWr_ZMMA]>;
-
-def C1UWr_ZMA : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
-def C1URd_ZMA : SchedReadAdvance<3, [C1UWr_ZMA]>;
-
-def C1UWr_ZMASQL : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
-def C1URd_ZMASQL : SchedReadAdvance<2, [C1UWr_ZMASQL]>;
-
-def C1UWr_ZFCMA : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
-def C1URd_ZFCMA : SchedReadAdvance<3, [C1UWr_ZFCMA]>;
-
-def C1UWr_ZFMA : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_ZFMA : SchedReadAdvance<2, [C1UWr_ZFMA]>;
-
-def C1UWr_ZFMAL : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
-def C1URd_ZFMAL : SchedReadAdvance<3, [C1UWr_ZFMAL]>;
-
-
-def C1UWr_ZBFDOT : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
-def C1URd_ZBFDOT : SchedReadAdvance<2, [C1UWr_ZBFDOT]>;
-def C1UWr_ZBFMMA : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
-def C1URd_ZBFMMA : SchedReadAdvance<2, [C1UWr_ZBFMMA]>;
-def C1UWr_ZBFMAL : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
-def C1URd_ZBFMAL : SchedReadAdvance<3, [C1UWr_ZBFMAL]>;
-
-
 
 def C1UWrite_2c_1B_1S : SchedWriteRes<[C1UUnitB, C1UUnitS]> {
   let Latency     = 2;
@@ -299,7 +215,7 @@ def C1UWrite_5c_1M0_1V : SchedWriteRes<[C1UUnitM0, C1UUnitV]> {
   let NumMicroOps = 2;
 }
 
-def C1UWrite_4c_V0134_1V : SchedWriteRes<[C1UUnitV01, C1UUnitC1U, C1UUnitV4, C1UUnitV]> {
+def C1UWrite_4c_V0134_1V : SchedWriteRes<[C1UUnitV01, C1UUnitV3, C1UUnitV4, C1UUnitV]> {
   let Latency = 4;
 }
 
@@ -606,6 +522,88 @@ def C1UWrite_4c_1M0_1M : SchedWriteRes<[C1UUnitM0, C1UUnitM]> {
   let Latency = 4;
   let NumMicroOps = 2;
 }
+
+// Forwarded types
+def C1UWr_FMA     : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_FMA     : SchedReadAdvance<2, [WriteFMul, C1UWr_FMA]>;
+
+def C1UWr_VA      : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_VA      : SchedReadAdvance<3, [C1UWr_VA]>;
+
+def C1UWr_VDOT    : SchedWriteRes<[C1UUnitV]> { let Latency = 3; }
+def C1URd_VDOT    : SchedReadAdvance<2, [C1UWr_VDOT]>;
+
+def C1UWr_VMMA    : SchedWriteRes<[C1UUnitV]> { let Latency = 3; }
+def C1URd_VMMA    : SchedReadAdvance<2, [C1UWr_VMMA]>;
+
+
+def C1UWr_VMA     : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
+def C1URd_VMA     : SchedReadAdvance<3, [C1UWr_VMA]>;
+
+def C1UWr_VMAH    : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
+def C1URd_VMAH    : SchedReadAdvance<2, [C1UWr_VMAH]>;
+
+def C1UWr_VPA     : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_VPA     : SchedReadAdvance<3, [C1UWr_VPA]>;
+
+def C1UWr_VSA     : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_VSA     : SchedReadAdvance<3, [C1UWr_VSA]>;
+
+def C1UWr_VFCMA   : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
+def C1URd_VFCMA   : SchedReadAdvance<3, [C1UWr_VFCMA]>;
+
+def C1UWr_VFMA    : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_VFMA    : SchedReadAdvance<2, [C1UWr_VFMA]>;
+
+def C1UWr_VBFDOT  : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_VBFDOT  : SchedReadAdvance<2, [C1UWr_VBFDOT]>;
+
+def C1UWr_VBFMMA  : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
+def C1URd_VBFMMA  : SchedReadAdvance<1, [C1UWr_VBFMMA]>;
+
+def C1UWr_VBFMAL  : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
+def C1URd_VBFMAL  : SchedReadAdvance<3, [C1UWr_VBFMAL]>;
+
+def C1UWr_ZA      : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_ZA      : SchedReadAdvance<3, [C1UWr_ZA]>;
+def C1UWr_ZPA     : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_ZPA     : SchedReadAdvance<3, [C1UWr_ZPA]>;
+def C1UWr_ZSA     : SchedWriteRes<[C1UUnitV13]> { let Latency = 4; }
+def C1URd_ZSA     : SchedReadAdvance<3, [C1UWr_ZSA]>;
+
+def C1UWr_ZDOTB   : SchedWriteRes<[C1UUnitV]>   { let Latency = 3; }
+def C1URd_ZDOTB   : SchedReadAdvance<2, [C1UWr_ZDOTB]>;
+def C1UWr_ZDOTH   : SchedWriteRes<[C1UUnitV0134]> { let Latency = 3; }
+def C1URd_ZDOTH   : SchedReadAdvance<2, [C1UWr_ZDOTH]>;
+
+def C1UWr_ZCMABHS : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
+def C1URd_ZCMABHS : SchedReadAdvance<3, [C1UWr_ZCMABHS]>;
+
+def C1UWr_ZMMA    : SchedWriteRes<[C1UUnitV]> { let Latency = 3; }
+def C1URd_ZMMA    : SchedReadAdvance<2, [C1UWr_ZMMA]>;
+
+def C1UWr_ZMA     : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
+def C1URd_ZMA     : SchedReadAdvance<3, [C1UWr_ZMA]>;
+
+def C1UWr_ZMASQL  : SchedWriteRes<[C1UUnitV0134]> { let Latency = 4; }
+def C1URd_ZMASQL  : SchedReadAdvance<2, [C1UWr_ZMASQL]>;
+
+def C1UWr_ZFCMA   : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
+def C1URd_ZFCMA   : SchedReadAdvance<3, [C1UWr_ZFCMA]>;
+
+def C1UWr_ZFMA    : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_ZFMA    : SchedReadAdvance<2, [C1UWr_ZFMA]>;
+
+def C1UWr_ZFMAL   : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
+def C1URd_ZFMAL   : SchedReadAdvance<3, [C1UWr_ZFMAL]>;
+
+
+def C1UWr_ZBFDOT  : SchedWriteRes<[C1UUnitV]> { let Latency = 4; }
+def C1URd_ZBFDOT  : SchedReadAdvance<2, [C1UWr_ZBFDOT]>;
+def C1UWr_ZBFMMA  : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
+def C1URd_ZBFMMA  : SchedReadAdvance<2, [C1UWr_ZBFMMA]>;
+def C1UWr_ZBFMAL  : SchedWriteRes<[C1UUnitV]> { let Latency = 5; }
+def C1URd_ZBFMAL  : SchedReadAdvance<3, [C1UWr_ZBFMAL]>;
 
 // Predicate controlled types
 def C1UWrite_ArithI : SchedWriteVariant<[
