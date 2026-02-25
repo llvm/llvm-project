@@ -8133,8 +8133,6 @@ multiclass SIMDTwoScalarBHSD<bit U, bits<5> opc, string asm,
     def v1i8   : BaseSIMDTwoScalar<U, 0b00, 0b00, opc, FPR8 , FPR8 , asm, []>;
   }
 
-  def : Pat<(v1i64 (G_OpNode (v1i64 FPR64:$Rn))),
-            (!cast<Instruction>(NAME # v1i64) FPR64:$Rn)>;
   def : Pat<(f32 (OpNode (f32 FPR32:$Rn))),
             (!cast<Instruction>(NAME # v1i32) FPR32:$Rn)>;
   def : Pat<(f64 (OpNode (f64 FPR64:$Rn))),
@@ -8152,8 +8150,6 @@ multiclass SIMDTwoScalarBHSDTied<bit U, bits<5> opc, string asm,
     def v1i8   : BaseSIMDTwoScalarTied<U, 0b00, opc, FPR8 , FPR8 , asm, []>;
   }
 
-  def : Pat<(v1i64 (G_OpNode (v1i64 FPR64:$Rd), (v1i64 FPR64:$Rn))),
-            (!cast<Instruction>(NAME # v1i64) FPR64:$Rd, FPR64:$Rn)>;
   def : Pat<(f32 (OpNode (f32 FPR32:$Rd), (f32 FPR32:$Rn))),
             (!cast<Instruction>(NAME # v1i32) FPR32:$Rd, FPR32:$Rn)>;
   def : Pat<(f64 (OpNode (f64 FPR64:$Rd), (f64 FPR64:$Rn))),
