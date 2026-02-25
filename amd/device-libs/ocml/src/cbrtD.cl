@@ -15,10 +15,6 @@ MATH_MANGLE(cbrt)(double x)
 
     c = BUILTIN_FLDEXP_F64(c, e);
 
-    if (!FINITE_ONLY_OPT()) {
-        // Is normal or subnormal.
-        c = x == 0.0 || BUILTIN_ISINF_F64(x) ? x : c;
-    }
-
+    c = x == 0.0 || BUILTIN_ISINF_F64(x) ? x : c;
     return BUILTIN_COPYSIGN_F64(c, x);
 }
