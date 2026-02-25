@@ -1619,7 +1619,7 @@ StringRef HeaderSearch::getIncludeNameForHeader(const FileEntry *File) const {
   return It->second;
 }
 
-void HeaderSearch::buildHeaderToModuleCache(DirectoryEntryRef Dir,
+void HeaderSearch::buildModuleMapIndex(DirectoryEntryRef Dir,
                                             ModuleMapDirectoryState &MMState) {
   if (!MMState.ModuleMapFile)
     return;
@@ -1631,12 +1631,12 @@ void HeaderSearch::buildHeaderToModuleCache(DirectoryEntryRef Dir,
   if (MMState.PrivateModuleMapFile)
     ParsedPrivateMM = ModMap.getParsedModuleMap(*MMState.PrivateModuleMapFile);
 
-  processModuleMapForHeaderToModuleCache(*ParsedMM, Dir, "", MMState);
+  processModuleMapForIndex(*ParsedMM, Dir, "", MMState);
   if (ParsedPrivateMM)
-    processModuleMapForHeaderToModuleCache(*ParsedPrivateMM, Dir, "", MMState);
+    processModuleMapForIndex(*ParsedPrivateMM, Dir, "", MMState);
 }
 
-void HeaderSearch::addToHeaderToModuleCache(StringRef RelPath,
+void HeaderSearch::addToModuleMapIndex(StringRef RelPath,
                                             StringRef ModuleName,
                                             StringRef PathPrefix,
                                             ModuleMapDirectoryState &MMState) {
@@ -1646,7 +1646,7 @@ void HeaderSearch::addToHeaderToModuleCache(StringRef RelPath,
   MMState.HeaderToModules[RelFromRootPath].push_back(ModuleName);
 }
 
-void HeaderSearch::processExternModuleDeclForHeaderToModuleCache(
+void HeaderSearch::processExternModuleDeclForIndex(
     const modulemap::ExternModuleDecl &EMD, DirectoryEntryRef MMDir,
     StringRef PathPrefix, ModuleMapDirectoryState &MMState) {
   StringRef FileNameRef = EMD.Path;
@@ -1666,62 +1666,63 @@ void HeaderSearch::processExternModuleDeclForHeaderToModuleCache(
         llvm::sys::path::append(NewPrefix, ExternDir);
         llvm::sys::path::native(NewPrefix);
       }
-      processModuleMapForHeaderToModuleCache(*ExtMMF, EFile->getDir(),
+      processModuleMapForIndex(*ExtMMF, EFile->getDir(),
                                              NewPrefix, MMState);
     }
   }
 }
 
-void HeaderSearch::processModuleDeclForHeaderToModuleCache(
+void HeaderSearch::processModuleDeclForIndex(
     const modulemap::ModuleDecl &MD, StringRef ModuleName,
     DirectoryEntryRef MMDir, StringRef PathPrefix,
     ModuleMapDirectoryState &MMState) {
   // Skip inferred submodules (module *)
   if (MD.Id.front().first == "*")
     return;
+
+  auto ProcessDecl = llvm::makeVisitor(
+      [&](const modulemap::HeaderDecl &HD) {
+        if (HD.Umbrella) {
+          MMState.UmbrellaHeaderModules.push_back(ModuleName);
+        } else {
+          addToModuleMapIndex(HD.Path, ModuleName, PathPrefix, MMState);
+        }
+      },
+      [&](const modulemap::UmbrellaDirDecl &UDD) {
+        SmallString<128> FullPath(PathPrefix);
+        llvm::sys::path::append(FullPath, UDD.Path);
+        llvm::sys::path::native(FullPath);
+        MMState.UmbrellaDirModules.push_back(
+            std::make_pair(std::string(FullPath), ModuleName));
+      },
+      [&](const modulemap::ModuleDecl &SubMD) {
+        processModuleDeclForIndex(SubMD, ModuleName, MMDir,
+                                                PathPrefix, MMState);
+      },
+      [&](const modulemap::ExternModuleDecl &EMD) {
+        processExternModuleDeclForIndex(EMD, MMDir, PathPrefix,
+                                                      MMState);
+      },
+      [](const auto &) {
+        // Ignore other decls.
+      });
+
   for (const auto &Decl : MD.Decls) {
-    std::visit(llvm::makeVisitor(
-                   [&](const modulemap::HeaderDecl &HD) {
-                     if (HD.Umbrella) {
-                       MMState.UmbrellaHeaderModules.push_back(ModuleName);
-                     } else {
-                       addToHeaderToModuleCache(HD.Path, ModuleName, PathPrefix,
-                                                MMState);
-                     }
-                   },
-                   [&](const modulemap::UmbrellaDirDecl &UDD) {
-                     SmallString<128> FullPath(PathPrefix);
-                     llvm::sys::path::append(FullPath, UDD.Path);
-                     llvm::sys::path::native(FullPath);
-                     MMState.UmbrellaDirModules.push_back(
-                         std::make_pair(std::string(FullPath), ModuleName));
-                   },
-                   [&](const modulemap::ModuleDecl &SubMD) {
-                     processModuleDeclForHeaderToModuleCache(
-                         SubMD, ModuleName, MMDir, PathPrefix, MMState);
-                   },
-                   [&](const modulemap::ExternModuleDecl &EMD) {
-                     processExternModuleDeclForHeaderToModuleCache(
-                         EMD, MMDir, PathPrefix, MMState);
-                   },
-                   [](const auto &) {
-                     // Ignore other decls.
-                   }),
-               Decl);
+    std::visit(ProcessDecl, Decl);
   }
 }
 
-void HeaderSearch::processModuleMapForHeaderToModuleCache(
+void HeaderSearch::processModuleMapForIndex(
     const modulemap::ModuleMapFile &MMF, DirectoryEntryRef MMDir,
     StringRef PathPrefix, ModuleMapDirectoryState &MMState) {
   for (const auto &Decl : MMF.Decls) {
     std::visit(llvm::makeVisitor(
                    [&](const modulemap::ModuleDecl &MD) {
-                     processModuleDeclForHeaderToModuleCache(
+                     processModuleDeclForIndex(
                          MD, MD.Id.front().first, MMDir, PathPrefix, MMState);
                    },
                    [&](const modulemap::ExternModuleDecl &EMD) {
-                     processExternModuleDeclForHeaderToModuleCache(
+                     processExternModuleDeclForIndex(
                          EMD, MMDir, PathPrefix, MMState);
                    }),
                Decl);
@@ -1763,10 +1764,10 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
 
     auto &MMState = DirState->second;
 
-    // Build cache if not already built
+    // Build index if not already built
     if (MMState.HeaderToModules.empty() && MMState.UmbrellaDirModules.empty() &&
         MMState.UmbrellaHeaderModules.empty()) {
-      buildHeaderToModuleCache(*Dir, MMState);
+      buildModuleMapIndex(*Dir, MMState);
     }
 
     // Compute relative path from directory to the file. Use DirName (which
@@ -1781,7 +1782,7 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
     llvm::sys::path::native(RelativePathNative);
     RelativePath = RelativePathNative;
 
-    // Check for exact matches in cache
+    // Check for exact matches in index
     llvm::SmallVector<StringRef, 4> ModulesToLoad;
     auto CachedMods = MMState.HeaderToModules.find(RelativePath);
     if (CachedMods != MMState.HeaderToModules.end()) {

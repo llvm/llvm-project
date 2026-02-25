@@ -381,27 +381,27 @@ class HeaderSearch {
   /// map their keys to the SearchDir index of their header map.
   void indexInitialHeaderMaps();
 
-  /// Build the header to module cache for a directory's module map.
+  /// Build the module map index for a directory's module map.
   ///
-  /// This fills a ModuleMapDirectoryState with information from its directory's
-  /// module map.
-  void buildHeaderToModuleCache(DirectoryEntryRef Dir,
+  /// This fills a ModuleMapDirectoryState with index information from its
+  /// directory's module map.
+  void buildModuleMapIndex(DirectoryEntryRef Dir,
                                 ModuleMapDirectoryState &MMState);
 
-  void processModuleMapForHeaderToModuleCache(
+  void processModuleMapForIndex(
       const modulemap::ModuleMapFile &MMF, DirectoryEntryRef MMDir,
       StringRef PathPrefix, ModuleMapDirectoryState &MMState);
 
-  void processExternModuleDeclForHeaderToModuleCache(
+  void processExternModuleDeclForIndex(
       const modulemap::ExternModuleDecl &EMD, DirectoryEntryRef MMDir,
       StringRef PathPrefix, ModuleMapDirectoryState &MMState);
 
-  void processModuleDeclForHeaderToModuleCache(
+  void processModuleDeclForIndex(
       const modulemap::ModuleDecl &MD, StringRef ModuleName,
       DirectoryEntryRef MMDir, StringRef PathPrefix,
       ModuleMapDirectoryState &MMState);
 
-  void addToHeaderToModuleCache(StringRef RelPath, StringRef ModuleName,
+  void addToModuleMapIndex(StringRef RelPath, StringRef ModuleName,
                                 StringRef PathPrefix,
                                 ModuleMapDirectoryState &MMState);
 
