@@ -45,6 +45,10 @@ if (LLVM_USE_SANITIZER)
   serialize_lit_string_param(SERIALIZED_LIT_PARAMS use_sanitizer "${LLVM_USE_SANITIZER}")
 endif()
 
+if (DEFINED LIBCXX_PFP)
+  serialize_lit_string_param(SERIALIZED_LIT_PARAMS pfp "${LIBCXX_PFP}")
+endif()
+
 if (CMAKE_CXX_COMPILER_TARGET)
   serialize_lit_string_param(SERIALIZED_LIT_PARAMS target_triple "${CMAKE_CXX_COMPILER_TARGET}")
 else()

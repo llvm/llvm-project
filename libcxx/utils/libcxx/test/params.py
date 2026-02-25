@@ -344,6 +344,24 @@ DEFAULT_PARAMETERS = [
         )
     ),
     Parameter(
+        name="pfp",
+        choices=["none", "untagged", "tagged"],
+        type=str,
+        default="none",
+        help="Whether to build with pointer field protection.",
+        actions=lambda pfp: [] if pfp == "none" else [
+            AddCompileFlag("-fexperimental-pointer-field-protection-abi"),
+            AddCompileFlag("-fexperimental-pointer-field-protection-tagged") if pfp == "tagged" else None,
+            # Requires support for new relocations which are only implemented in lld for now.
+            AddLinkFlag("-fuse-ld=lld"),
+            # Requires emulated PAC support in compiler-rt.
+            AddCompileFlag("--rtlib=compiler-rt"),
+            AddLinkFlag("--rtlib=compiler-rt"),
+            AddLinkFlag("--unwindlib=libunwind"),
+            AddFeature("pfp"),
+        ],
+    ),
+    Parameter(
         name="enable_experimental",
         choices=[True, False],
         type=bool,
