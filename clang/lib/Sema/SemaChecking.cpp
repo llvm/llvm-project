@@ -1147,8 +1147,7 @@ class FortifiedBufferChecker {
 public:
   FortifiedBufferChecker(Sema &S, FunctionDecl *FD, CallExpr *TheCall)
       : S(S), TheCall(TheCall), FD(FD),
-        DABAttr(FD ? FD->getAttr<DiagnoseAsBuiltinAttr>() : nullptr),
-        UseDABAttr(DABAttr != nullptr) {
+        DABAttr(FD ? FD->getAttr<DiagnoseAsBuiltinAttr>() : nullptr) {
     const TargetInfo &TI = S.getASTContext().getTargetInfo();
     SizeTypeWidth = TI.getTypeWidth(TI.getSizeType());
   }
@@ -1158,7 +1157,7 @@ public:
     // argument index to refer to the arguments of the called function. Unless
     // the index is out of bounds, which presumably means it's a variadic
     // function.
-    if (!UseDABAttr)
+    if (DABAttr == nullptr) // Not using DABAttr.
       return Index;
     unsigned DABIndices = DABAttr->argIndices_size();
     unsigned NewIndex = Index < DABIndices
@@ -1232,19 +1231,30 @@ public:
   const DiagnoseAsBuiltinAttr *getDABAttr() const { return DABAttr; }
   unsigned getSizeTypeWidth() const { return SizeTypeWidth; }
 
+  /// Return function name after stripping __builtin_ and _chk affixes.
+  std::string GetFunctionName(unsigned BuiltinID, bool IsChkVariant) const {
+    std::string Name = S.getASTContext().BuiltinInfo.getName(BuiltinID);
+    llvm::StringRef Ref = Name;
+    if (IsChkVariant) {
+      Ref = Ref.drop_front(std::strlen("__builtin___"));
+      Ref = Ref.drop_back(std::strlen("_chk"));
+    } else {
+      Ref.consume_front("__builtin_");
+    }
+    return Ref.str();
+  }
+
 private:
   Sema &S;
   CallExpr *TheCall;
   FunctionDecl *FD;
   const DiagnoseAsBuiltinAttr *DABAttr;
-  bool UseDABAttr;
   unsigned SizeTypeWidth;
 };
 } // anonymous namespace
 
 void Sema::checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
-                                     unsigned SrcArgIdx, unsigned SizeArgIdx,
-                                     StringRef FunctionName) {
+                                     unsigned SrcArgIdx, unsigned SizeArgIdx) {
   if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
       isConstantEvaluatedContext())
     return;
@@ -1263,14 +1273,14 @@ void Sema::checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
   if (llvm::APSInt::compareValues(*CopyLen, *SrcBufSize) <= 0)
     return;
 
-  std::string FuncName;
-  if (FunctionName.empty()) {
-    if (const FunctionDecl *CalleeDecl = TheCall->getDirectCallee())
-      FuncName = CalleeDecl->getName().str();
-    else
-      FuncName = "memory function";
-  } else {
-    FuncName = FunctionName.str();
+  llvm::StringRef FuncName = "memory function";
+  if (const FunctionDecl *CalleeDecl = TheCall->getDirectCallee()) {
+    FuncName = CalleeDecl->getName();
+    // __builtin___memcpy_chk -> memcpy, __builtin_memcpy -> memcpy.
+    // The _chk variants have a different prefix so try that one first.
+    if (!(FuncName.consume_front("__builtin___") &&
+          FuncName.consume_back("_chk")))
+      FuncName.consume_front("__builtin_");
   }
 
   DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
@@ -1437,8 +1447,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     if (BuiltinID == Builtin::BI__builtin___memcpy_chk ||
         BuiltinID == Builtin::BI__builtin___memmove_chk ||
         BuiltinID == Builtin::BI__builtin___mempcpy_chk) {
-      checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2,
-                                GetFunctionName());
+      checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     }
     break;
   }
@@ -1486,8 +1495,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     // Buffer overread doesn't make sense for memset.
     if (BuiltinID != Builtin::BImemset &&
         BuiltinID != Builtin::BI__builtin_memset) {
-      checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2,
-                                GetFunctionName());
+      checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     }
     break;
   }
@@ -1495,8 +1503,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   // memchr(buf, val, size)
   case Builtin::BImemchr:
   case Builtin::BI__builtin_memchr: {
-    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2,
-                              GetFunctionName());
+    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     return;
   }
 
@@ -1506,11 +1513,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
   case Builtin::BI__builtin_memcmp:
   case Builtin::BIbcmp:
   case Builtin::BI__builtin_bcmp: {
-    std::string Name = GetFunctionName();
-    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2,
-                              Name);
-    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2,
-                              Name);
+    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
+    checkSourceBufferOverread(FD, TheCall, /*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     return;
   }
 

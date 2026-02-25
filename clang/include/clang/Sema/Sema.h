@@ -2929,8 +2929,7 @@ public:
 
   /// Check for source buffer overread in memory functions.
   void checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
-                                 unsigned SrcArgIdx, unsigned SizeArgIdx,
-                                 StringRef FunctionName = "");
+                                 unsigned SrcArgIdx, unsigned SizeArgIdx);
 
 private:
   void CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
