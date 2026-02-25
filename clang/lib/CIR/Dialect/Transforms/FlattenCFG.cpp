@@ -1596,7 +1596,7 @@ public:
     if (!callsToRewrite.empty()) {
       // Create a shared unwind block for all throwing calls.
       mlir::Block *unwindBlock = buildUnwindBlock(
-          dispatchBlock, hasCleanup, loc, continueBlock, rewriter);
+          dispatchBlock, hasCleanup, loc, dispatchBlock, rewriter);
 
       for (cir::CallOp callOp : callsToRewrite)
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
