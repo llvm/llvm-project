@@ -65,7 +65,7 @@ static PluginProperties &GetGlobalPluginProperties() {
 SymbolLocatorSymStore::SymbolLocatorSymStore() : SymbolLocator() {}
 
 void SymbolLocatorSymStore::Initialize() {
-  // First version can only locate PDB in local SymStore (no download yet)
+  // First version can only locate PDB in local SymStore (no download yet).
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
       nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
