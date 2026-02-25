@@ -7,16 +7,13 @@
 // Standard TSAN rarely detects this race; simulation finds it quickly.
 
 #include <atomic>
-#include <condition_variable>
-#include <mutex>
 #include <pthread.h>
-#include <vector>
 
 extern "C" int __tsan_simulate(void (*callback)(void *), void *arg);
 
 struct TestData {
-  std::mutex mtx;
-  std::condition_variable cv;
+  pthread_mutex_t mtx;
+  pthread_cond_t cv;
   int x = 0;
   std::atomic<int> ref{2};
   std::atomic<int> *value = new std::atomic<int>{0};
@@ -26,11 +23,10 @@ struct TestData {
 static void *thread1_func(void *arg) {
   TestData *data = (TestData *)arg;
 
-  {
-    std::unique_lock<std::mutex> lg(data->mtx);
-    data->x = 1;
-    data->cv.notify_one();
-  }
+  pthread_mutex_lock(&data->mtx);
+  data->x = 1;
+  pthread_cond_signal(&data->cv);
+  pthread_mutex_unlock(&data->mtx);
 
   int new_ref_count = data->ref.fetch_sub(1) - 1;
   if (new_ref_count == 0) {
@@ -44,10 +40,11 @@ static void *thread1_func(void *arg) {
 static void *thread2_func(void *arg) {
   TestData *data = (TestData *)arg;
 
-  {
-    std::unique_lock<std::mutex> lg(data->mtx);
-    data->cv.wait(lg, [&] { return data->x != 0; });
+  pthread_mutex_lock(&data->mtx);
+  while (data->x == 0) {
+    pthread_cond_wait(&data->cv, &data->mtx);
   }
+  pthread_mutex_unlock(&data->mtx);
 
   int new_ref_count = data->ref.fetch_sub(1) - 1;
   if (new_ref_count == 1) {
@@ -59,6 +56,8 @@ static void *thread2_func(void *arg) {
 
 void test_callback(void *arg) {
   TestData data;
+  pthread_mutex_init(&data.mtx, nullptr);
+  pthread_cond_init(&data.cv, nullptr);
 
   pthread_t t1, t2;
   pthread_create(&t1, nullptr, thread1_func, &data);
@@ -67,6 +66,8 @@ void test_callback(void *arg) {
   pthread_join(t2, nullptr);
 
   delete data.value;
+  pthread_mutex_destroy(&data.mtx);
+  pthread_cond_destroy(&data.cv);
 }
 
 int main() { return __tsan_simulate(test_callback, nullptr); }

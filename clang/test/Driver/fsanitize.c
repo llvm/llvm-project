@@ -321,6 +321,19 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-thread-atomics -fno-sanitize-thread-atomics %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-ATOMICS-BOTH-OFF
 // CHECK-TSAN-ATOMICS-BOTH-OFF: -cc1{{.*}}tsan-instrument-atomics=0
 
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-thread-simulate-main %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-SIMULATE-MAIN
+// CHECK-TSAN-SIMULATE-MAIN-NOT: error:
+// CHECK-TSAN-SIMULATE-MAIN-NOT: unsupported option
+
+// RUN: not %clang --target=x86_64-apple-darwin -fsanitize=thread -fsanitize-thread-simulate-main %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-SIMULATE-MAIN-DARWIN
+// CHECK-TSAN-SIMULATE-MAIN-DARWIN: error: unsupported option '-fsanitize-thread-simulate-main' for target 'x86_64-apple-darwin'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-thread-simulate-main -Wl,--wrap=main %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-SIMULATE-MAIN-WRAP
+// CHECK-TSAN-SIMULATE-MAIN-WRAP: error: invalid argument '-fsanitize-thread-simulate-main' not allowed with '-Wl,--wrap=main'
+
+// RUN: not %clang --target=x86_64-linux-gnu -fsanitize=thread -fsanitize-thread-simulate-main -Xlinker --wrap=main %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-TSAN-SIMULATE-MAIN-XLINKER
+// CHECK-TSAN-SIMULATE-MAIN-XLINKER: error: invalid argument '-fsanitize-thread-simulate-main' not allowed with '-Xlinker --wrap=main'
+
 // RUN: not %clang --target=x86_64-apple-darwin10 -mmacos-version-min=10.8 -fsanitize=vptr %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-VPTR-DARWIN-OLD
 // CHECK-VPTR-DARWIN-OLD: unsupported option '-fsanitize=vptr' for target 'x86_64-apple-darwin10'
 
