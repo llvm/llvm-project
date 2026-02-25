@@ -37,12 +37,10 @@ void LiveStacksWrapperLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 void LiveStacks::releaseMemory() {
-  for (int Idx = 0; Idx < (int)S2LI.size(); ++Idx)
-    S2LI[Idx]->~LiveInterval();
   // Release VNInfo memory regions, VNInfo objects don't need to be dtor'd.
   VNInfoAllocator.Reset();
-  S2LI.clear();
-  S2RC.clear();
+  S2IMap.clear();
+  S2RCMap.clear();
 }
 
 void LiveStacks::init(MachineFunction &MF) {
@@ -54,22 +52,20 @@ void LiveStacks::init(MachineFunction &MF) {
 LiveInterval &
 LiveStacks::getOrCreateInterval(int Slot, const TargetRegisterClass *RC) {
   assert(Slot >= 0 && "Spill slot indice must be >= 0");
-  if (StartIdx == -1)
-    StartIdx = Slot;
-
-  int Idx = Slot - StartIdx;
-  assert(Idx >= 0 && "Slot not in order ?");
-  if (Idx < (int)S2LI.size()) {
-    S2RC[Idx] = TRI->getCommonSubClass(S2RC[Idx], RC);
+  SS2IntervalMap::iterator I = S2IMap.find(Slot);
+  if (I == S2IMap.end()) {
+    I = S2IMap
+            .emplace(
+                std::piecewise_construct, std::forward_as_tuple(Slot),
+                std::forward_as_tuple(Register::index2StackSlot(Slot), 0.0F))
+            .first;
+    S2RCMap.insert(std::make_pair(Slot, RC));
   } else {
-    S2RC.resize(Idx + 1);
-    S2LI.resize(Idx + 1);
-    S2LI[Idx] = this->VNInfoAllocator.Allocate<LiveInterval>();
-    new (S2LI[Idx]) LiveInterval(Register::index2StackSlot(Slot), 0.0F);
-    S2RC[Idx] = RC;
+    // Use the largest common subclass register class.
+    const TargetRegisterClass *&OldRC = S2RCMap[Slot];
+    OldRC = TRI->getCommonSubClass(OldRC, RC);
   }
-  assert(S2RC.size() == S2LI.size());
-  return *S2LI[Idx];
+  return I->second;
 }
 
 AnalysisKey LiveStacksAnalysis::Key;
@@ -100,12 +96,13 @@ void LiveStacksWrapperLegacy::print(raw_ostream &OS, const Module *) const {
 }
 
 /// print - Implement the dump method.
-void LiveStacks::print(raw_ostream &OS, const Module *) const {
+void LiveStacks::print(raw_ostream &OS, const Module*) const {
 
   OS << "********** INTERVALS **********\n";
-  for (int Idx = 0; Idx < (int)S2LI.size(); ++Idx) {
-    S2LI[Idx]->print(OS);
-    const TargetRegisterClass *RC = S2RC[Idx];
+  for (const_iterator I = begin(), E = end(); I != E; ++I) {
+    I->second.print(OS);
+    int Slot = I->first;
+    const TargetRegisterClass *RC = getIntervalRegClass(Slot);
     if (RC)
       OS << " [" << TRI->getRegClassName(RC) << "]\n";
     else

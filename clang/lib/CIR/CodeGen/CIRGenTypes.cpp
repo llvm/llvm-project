@@ -374,6 +374,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cir::VectorType::get(builder.getDoubleTy(), 2,
                                         /*is_scalable=*/true);
       break;
+    case BuiltinType::SveBool:
+      resultType = cir::VectorType::get(builder.getUIntNTy(1), 16,
+                                        /*is_scalable=*/true);
+      break;
 
     // Unsigned integral types.
     case BuiltinType::Char8:
@@ -536,13 +540,17 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::MemberPointer: {
     const auto *mpt = cast<MemberPointerType>(ty);
 
-    mlir::Type memberTy = convertType(mpt->getPointeeType());
+    NestedNameSpecifier mptNNS = mpt->getQualifier();
     auto clsTy = mlir::cast<cir::RecordType>(
-        convertType(QualType(mpt->getQualifier().getAsType(), 0)));
+        convertType(QualType(mptNNS.getAsType(), 0)));
     if (mpt->isMemberDataPointer()) {
+      mlir::Type memberTy = convertType(mpt->getPointeeType());
       resultType = cir::DataMemberType::get(memberTy, clsTy);
     } else {
-      auto memberFuncTy = mlir::cast<cir::FuncType>(memberTy);
+      auto memberFuncTy = getFunctionType(cgm.getTypes().arrangeCXXMethodType(
+          mptNNS.getAsRecordDecl(),
+          mpt->getPointeeType()->getAs<clang::FunctionProtoType>(),
+          /*methodDecl=*/nullptr));
       resultType = cir::MethodType::get(memberFuncTy, clsTy);
     }
     break;
@@ -594,7 +602,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
+  if (qualType->isConstantMatrixType()) {
+    cgm.errorNYI("Matrix type conversion");
+    return cgm.sInt32Ty;
+  }
 
   mlir::Type convertedType = convertType(qualType);
 
@@ -659,13 +670,15 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
-    FunctionType::ExtInfo info, RequiredArgs required) {
+    CanQualType returnType, bool isInstanceMethod,
+    llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
+    RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, info, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
+                              argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -682,7 +695,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
+  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
+                                  required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;
@@ -737,4 +751,14 @@ void CIRGenTypes::updateCompletedType(const TagDecl *td) {
   // If necessary, provide the full definition of a type only used with a
   // declaration so far.
   assert(!cir::MissingFeatures::generateDebugInfo());
+}
+
+unsigned CIRGenTypes::getTargetAddressSpace(QualType ty) const {
+  // Return the address space for the type. If the type is a
+  // function type without an address space qualifier, the
+  // program address space is used. Otherwise, the target picks
+  // the best address space based on the type information
+  return ty->isFunctionType() && !ty.hasAddressSpace()
+             ? cgm.getDataLayout().getProgramAddressSpace()
+             : getASTContext().getTargetAddressSpace(ty.getAddressSpace());
 }
