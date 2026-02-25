@@ -24,7 +24,8 @@ local:
 .long local + 16
 .long .Ltemp + 16
 
-## =all (default): all eligible local binding symbols are converted to section symbols.
+## =all (default): relocations to all eligible local binding symbols are
+## converted to relocations to section symbols.
 # ALL:      .rela.text1
 # ALL:      R_X86_64_PLT32 {{.*}} .text - 3
 # ALL-NEXT: R_X86_64_PLT32 {{.*}} .text - 2
