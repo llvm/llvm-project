@@ -34,6 +34,7 @@
 #include "llvm/Analysis/MemoryLocation.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/MDBuilder.h"
@@ -1532,6 +1533,25 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))))
     return Def->replaceAllUsesWith(IRV);
 
+  // Fold EVL(const_avl) -> const_avl when const_avl is known to be <= VF *
+  // vscale_min.
+  const APInt *AVL;
+  if (match(Def, m_EVL(m_APInt(AVL))) && size(Plan->vectorFactors()) == 1) {
+    ElementCount VF = *Plan->vectorFactors().begin();
+    uint64_t MinVScale = 1;
+    if (VF.isScalable()) {
+      const Function *F =
+          Plan->getScalarHeader()->getIRBasicBlock()->getParent();
+      MinVScale =
+          getVScaleRange(F, /*BitWidth=*/64).getUnsignedMin().getZExtValue();
+    }
+    unsigned MaxLanes = VF.getKnownMinValue() * MinVScale;
+    if (AVL->ule(MaxLanes)) {
+      return Def->replaceAllUsesWith(
+          Plan->getConstantInt(AVL->zextOrTrunc(32)));
+    }
+  }
+
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
   if (!Plan->isUnrolled())
@@ -2166,35 +2186,6 @@ static bool simplifyBranchConditionForVFAndUF(VPlan &Plan, ElementCount BestVF,
   return true;
 }
 
-/// From the definition of llvm.experimental.get.vector.length,
-/// VPInstruction::ExplicitVectorLength(%AVL) = %AVL when %AVL <= VF.
-static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
-                             PredicatedScalarEvolution &PSE) {
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_deep(Plan.getEntry()))) {
-    for (VPRecipeBase &R : *VPBB) {
-      VPValue *AVL;
-      if (!match(&R, m_EVL(m_VPValue(AVL))))
-        continue;
-
-      const SCEV *AVLSCEV = vputils::getSCEVExprForVPValue(AVL, PSE);
-      if (isa<SCEVCouldNotCompute>(AVLSCEV))
-        continue;
-      ScalarEvolution &SE = *PSE.getSE();
-      const SCEV *VFSCEV = SE.getElementCount(AVLSCEV->getType(), VF);
-      if (!SE.isKnownPredicate(CmpInst::ICMP_ULE, AVLSCEV, VFSCEV))
-        continue;
-
-      VPValue *Trunc = VPBuilder(&R).createScalarZExtOrTrunc(
-          AVL, Type::getInt32Ty(Plan.getContext()), AVLSCEV->getType(),
-          R.getDebugLoc());
-      R.getVPSingleValue()->replaceAllUsesWith(Trunc);
-      return true;
-    }
-  }
-  return false;
-}
-
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -2204,7 +2195,6 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   bool MadeChange = tryToReplaceALMWithWideALM(Plan, BestVF, BestUF);
   MadeChange |= simplifyBranchConditionForVFAndUF(Plan, BestVF, BestUF, PSE);
   MadeChange |= optimizeVectorInductionWidthForTCAndVFUF(Plan, BestVF, BestUF);
-  MadeChange |= simplifyKnownEVL(Plan, BestVF, PSE);
 
   if (MadeChange) {
     Plan.setVF(BestVF);
