@@ -8935,7 +8935,7 @@ ParseStatus AArch64AsmParser::tryParseAdjImm0_63(OperandVector &Operands) {
     return ParseStatus::NoMatch;
 
   const MCConstantExpr *Value = dyn_cast<MCConstantExpr>(Ex);
-  if(check(!Value, S, "expected constant expression"))
+  if (check(!Value, S, "expected constant expression"))
     return ParseStatus::Failure;
   int64_t Imm = Value->getValue();
   if (IsNegative)
