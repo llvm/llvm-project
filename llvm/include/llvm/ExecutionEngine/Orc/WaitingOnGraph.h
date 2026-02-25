@@ -130,8 +130,6 @@ private:
       auto NewSN =
           std::make_unique<SuperNode>(std::move(Defs), std::move(Deps));
       CanonicalSNs[H].push_back(NewSN.get());
-      assert(!SNHashes.count(NewSN.get()));
-      SNHashes[NewSN.get()] = H;
       return NewSN;
     }
 
@@ -139,8 +137,6 @@ private:
                   ElemToSuperNodeMap &ElemToSN) {
       for (size_t I = 0; I != SNs.size();) {
         auto &SN = SNs[I];
-        assert(!SNHashes.count(SN.get()) &&
-               "Elements of SNs should be new to the coalescer");
         auto H = getHash(SN->Deps);
         if (auto *CanonicalSN = findCanonicalSuperNode(H, SN->Deps)) {
           for (auto &[Container, Elems] : SN->Defs) {
@@ -153,39 +149,26 @@ private:
           SNs.pop_back();
         } else {
           CanonicalSNs[H].push_back(SN.get());
-          SNHashes[SN.get()] = H;
           ++I;
         }
       }
     }
 
-    void remove(SuperNode *SN) {
-      hash_code H;
-
-      {
-        // Look up hash. We expect to find it in SNHashes.
-        auto I = SNHashes.find(SN);
-        assert(I != SNHashes.end() && "SN not tracked by coalescer");
-        H = I->second;
-        SNHashes.erase(I);
+    template <typename Pred> void remove(Pred &&Remove) {
+      std::vector<hash_code> HashesToErase;
+      for (auto &[Hash, SNs] : CanonicalSNs) {
+        for (size_t I = 0; I != SNs.size();) {
+          if (Remove(SNs[I])) {
+            std::swap(SNs[I], SNs.back());
+            SNs.pop_back();
+          } else
+            ++I;
+        }
+        if (SNs.empty())
+          HashesToErase.push_back(Hash);
       }
-
-      // Now remove from CanonicalSNs.
-      auto I = CanonicalSNs.find(H);
-      assert(I != CanonicalSNs.end() && "Hash not in CanonicalSNs");
-      auto &SNs = I->second;
-
-      size_t J = 0;
-      for (; J != SNs.size(); ++J)
-        if (SNs[J] == SN)
-          break;
-
-      assert(J < SNs.size() && "SN not in CanonicalSNs map");
-      std::swap(SNs[J], SNs.back());
-      SNs.pop_back();
-
-      if (SNs.empty())
-        CanonicalSNs.erase(I);
+      for (auto Hash : HashesToErase)
+        CanonicalSNs.erase(Hash);
     }
 
   private:
@@ -215,7 +198,6 @@ private:
     }
 
     DenseMap<hash_code, SmallVector<SuperNode *>> CanonicalSNs;
-    DenseMap<SuperNode *, hash_code> SNHashes;
   };
 
 public:
@@ -344,9 +326,8 @@ public:
     SuperNodeDepsMap SuperNodeDeps;
     hoistDeps(SuperNodeDeps, ModifiedPendingSNs, ElemToNewSN);
 
-    // If SN's deps are about to be modified then remove it from the coalescer.
-    for (auto &[SN, Deps] : SuperNodeDeps)
-      CoalesceToPendingSNs.remove(SN);
+    CoalesceToPendingSNs.remove(
+        [&](SuperNode *SN) { return SuperNodeDeps.count(SN); });
 
     hoistDeps(SuperNodeDeps, NewSNs, ElemToPendingSN);
     propagateSuperNodeDeps(SuperNodeDeps);
@@ -413,8 +394,12 @@ public:
         ++I;
     }
 
-    for (auto &FailedSN : FailedSNs)
-      CoalesceToPendingSNs.remove(FailedSN.get());
+    CoalesceToPendingSNs.remove([&](SuperNode *SN) {
+      for (auto &E : FailedSNs)
+        if (E.get() == SN)
+          return true;
+      return false;
+    });
 
     for (auto &SN : FailedSNs) {
       for (auto &[Container, Elems] : SN->Defs) {
