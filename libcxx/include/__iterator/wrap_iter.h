@@ -220,19 +220,19 @@ private:
   }
 
 #else
-template <class _Iter1, class _Iter2>
-_LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
-operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept {
-  if constexpr (three_way_comparable_with<_Iter1, _Iter2, strong_ordering>) {
-    return __x.__i_ <=> __y.__i_;
-  } else {
-    if (__x.__i_ < __y.__i_)
-      return strong_ordering::less;
+  template <class _Iter1, class _Iter2>
+  _LIBCPP_HIDE_FROM_ABI friend constexpr strong_ordering
+  operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noexcept {
+    if constexpr (three_way_comparable_with<_Iter1, _Iter2, strong_ordering>) {
+      return __x.__i_ <=> __y.__i_;
+    } else {
+      if (__x.__i_ < __y.__i_)
+        return strong_ordering::less;
 
-    if (__x.__i_ == __y.__i_)
-      return strong_ordering::equal;
+      if (__x.__i_ == __y.__i_)
+        return strong_ordering::equal;
 
-    return strong_ordering::greater;
+      return strong_ordering::greater;
     }
   }
 #endif // _LIBCPP_STD_VER >= 20
@@ -246,9 +246,9 @@ operator<=>(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) noex
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
   typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
-{
-  return __x.__i_ - __y.__i_;
-}
+  {
+    return __x.__i_ - __y.__i_;
+  }
 
   _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter
   operator+(typename __wrap_iter::difference_type __n, __wrap_iter __x) _NOEXCEPT {
