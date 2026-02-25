@@ -998,11 +998,6 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                               << ", TripMultiple=" << TripMultiple << "\n");
 
   UnrollPragmaInfo PInfo(L);
-  // If a user provided an explicit unroll pragma, it should override expensive
-  // trip count checks
-  if (PInfo.ExplicitUnroll) {
-    UP.AllowExpensiveTripCount = true;
-  }
   LLVM_DEBUG({
     if (PInfo.ExplicitUnroll) {
       dbgs().indent(1) << "Explicit unroll requested:";
@@ -1030,6 +1025,12 @@ void llvm::computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     UP.Count = 1;
     UP.Runtime = false;
     return;
+  }
+  // If explicit unroll pragma is present, override expensive trip count checks.
+  // This applies to full unroll, partial unroll with a trip count, and partial
+  // unroll without a trip count.
+  if (PInfo.ExplicitUnroll) {
+    UP.AllowExpensiveTripCount = true;
   }
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
