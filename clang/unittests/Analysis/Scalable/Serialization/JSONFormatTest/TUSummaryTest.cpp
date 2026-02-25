@@ -1652,8 +1652,6 @@ TEST_F(JSONFormatTUSummaryTest, EntityIDNotUInt64) {
 }
 
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
-  // NullEntitySummaryForJSONFormatTest's deserializer returns
-  // nullptr, triggering FailedToDeserializeEntitySummaryMissingData.
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -2142,14 +2140,11 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
   TUSummary Summary(
       BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
 
-  // Register an entity so we have a valid EntityId to use as the map key.
   NestedBuildNamespace Namespace =
       NestedBuildNamespace::makeCompilationUnit("test.cpp");
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
-  // Inject an EntitySummary under the SummaryName matching its getSummaryName()
-  // but with no registered FormatInfo, so that entitySummaryToJSON fails.
   SummaryName UnknownSN("UnregisteredEntitySummaryForJSONFormatTest");
   getData(Summary)[UnknownSN][EI] =
       std::make_unique<UnregisteredEntitySummaryForJSONFormatTest>();
