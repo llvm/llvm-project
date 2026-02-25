@@ -563,8 +563,6 @@ public:
                               SDValue Chain, SDValue InGlue, unsigned Condition,
                               bool InsertVectorLengthCheck = false) const;
 
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return true; }
-
   /// Returns true if \p RdxOp should be lowered to a SVE reduction. If a SVE2
   /// pairwise operation can be used for the reduction \p PairwiseOpIID is set
   /// to its intrinsic ID.
