@@ -1313,10 +1313,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
       result.linearVars.push_back(variable);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
-    }
-    result.linearVarTypes =
-        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
-    if (objects.size()) {
+
       if (auto &mod =
               std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
                   clause.t)) {
@@ -1331,11 +1328,14 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
         mlir::Location currentLocation = converter.getCurrentLocation();
-        mlir::Value operand = firOpBuilder.createIntegerConstant(
-            currentLocation, firOpBuilder.getI32Type(), 1);
+        mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
+        mlir::Value operand =
+            firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
         result.linearStepVars.append(objects.size(), operand);
       }
     }
+    result.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
   });
 }
 
