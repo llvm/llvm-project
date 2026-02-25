@@ -4,6 +4,12 @@
 cmake_minimum_required(VERSION 3.20.0)
 set(LLVM_SUBPROJECT_TITLE "libc++")
 
+# Unset the C++ Standard: other projects sometimes override this global property, which
+# is incompatible with libc++ (since we set our own standard via other means).
+# TODO: Figure out which other part of the build is setting this and resolve the issue
+#       at the root.
+unset(CMAKE_CXX_STANDARD)
+
 set(LLVM_COMMON_CMAKE_UTILS "${CMAKE_CURRENT_SOURCE_DIR}/../cmake")
 
 # Add path for custom modules
