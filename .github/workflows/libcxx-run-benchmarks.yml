@@ -67,7 +67,7 @@ jobs:
           repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
           pr = repo.get_pull(${{ github.event.issue.number }})
           comment = pr.get_issue_comment(${{ github.event.comment.id }})
-          add_text = "> _Running benchmarks in ${{ env.GITHUB_SERVER_URL }}/${{ env.GITHUB_REPOSITORY }}/actions/runs/${{ env.GITHUB_RUN_ID }}/job/${{ env.GITHUB_JOB }}_"
+          add_text = "> _Running benchmarks in ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ github.job }}_"
           comment.edit('\n\n'.join([comment.body, add_text]))
           EOF
 
