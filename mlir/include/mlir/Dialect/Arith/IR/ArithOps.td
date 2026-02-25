@@ -160,7 +160,8 @@ class Arith_IntBinaryOpWithOverflowFlags<string mnemonic, list<Trait> traits = [
 
 class Arith_IntBinaryOpWithExactFlag<string mnemonic, list<Trait> traits = []> :
     Arith_BinaryOp<mnemonic, traits #
-      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]>,
+      [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+       DeclareOpInterfaceMethods<ArithExactFlagInterface>]>,
     Arguments<(ins SignlessIntegerOrIndexLike:$lhs,
                SignlessIntegerOrIndexLike:$rhs,
                UnitAttr:$isExact)>,
