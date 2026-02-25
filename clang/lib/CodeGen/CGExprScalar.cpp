@@ -2459,7 +2459,7 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
       MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
                 LangOptions::MatrixMemoryLayout::MatrixColMajor) {
     llvm::MatrixBuilder MB(Builder);
-    V = MB.CreateRowMajorToColumnMajorShuffle(
+    V = MB.CreateMatrixTransposeVectorShuffle(
         V, MT->getNumRows(), MT->getNumColumns(), "matrix.rowmajor2colmajor");
   }
 
