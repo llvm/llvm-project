@@ -88,10 +88,10 @@ float3x2 case2() {
 //
 float3x2 case3(float3 a, float3 b) {
  // vec[0] = A[0]
- // vec[1] = A[2]
- // vec[2] = B[1]
- // vec[3] = A[1]
- // vec[4] = B[0]
+ // vec[1] = A[1]
+ // vec[2] = A[2]
+ // vec[3] = B[0]
+ // vec[4] = B[1]
  // vec[5] = B[2]
   return float3x2(a,b);
 }
