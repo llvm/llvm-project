@@ -14,6 +14,7 @@ supposed to work cross-platform. The test can run on all platforms that can link
 debug info in a PDB file with clang.
 """
 
+
 class SymStoreLocalPDBTests(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -99,7 +100,7 @@ class SymStoreLocalPDBTests(TestBase):
         """Check that breakpoint hits if LLDB fetches PDB from local SymStore"""
         if not self.build_inferior_with_pdb():
             self.skipTest("Build did not produce a PDB file")
-            
+
         tmp_dir = tempfile.mkdtemp()
         symstore_dir = self.populate_symstore(tmp_dir)
 
