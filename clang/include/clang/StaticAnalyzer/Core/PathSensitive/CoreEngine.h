@@ -176,6 +176,9 @@ public:
 
   auto aborted_blocks() const { return llvm::iterator_range(blocksAborted); }
 
+  ExplodedNode *makeNode(const ProgramPoint &Loc, ProgramStateRef State,
+                         ExplodedNode *Pred, bool MarkAsSink = false) const;
+
   /// Enqueue the given set of nodes onto the work list.
   void enqueue(ExplodedNodeSet &Set);
 
@@ -235,6 +238,17 @@ public:
 /// be propagated to the next step / builder. They are the nodes which have been
 /// added to the builder (either as the input node set or as the newly
 /// constructed nodes) but did not have any outgoing transitions added.
+///
+/// TODO: This "main benefit" is often useless, in fact the only significant
+/// use is within `CheckerManager::ExpandGraphWithCheckers`. There this logic
+/// ensures that if a checker performs multiple transitions on the same path,
+/// then only the last of them is "built upon" by other checkers or the engine.
+///
+/// However, there are also many short-lived temporary `NodeBuilder` instances
+/// where the `generateNode` is called in a very predictable manner (once, or
+/// once for each source node) and the frontier management is overkill.
+/// These locations should be gradually simplified by using the method
+/// `CoreEngine::makeNode()` instead of the temporary `NodeBuilder`s.
 class NodeBuilder {
 protected:
   const NodeBuilderContext &C;
@@ -244,11 +258,6 @@ protected:
   /// The frontier set - a set of nodes which need to be propagated after
   /// the builder dies.
   ExplodedNodeSet &Frontier;
-
-  ExplodedNode *generateNodeImpl(const ProgramPoint &PP,
-                                 ProgramStateRef State,
-                                 ExplodedNode *Pred,
-                                 bool MarkAsSink = false);
 
 public:
   NodeBuilder(ExplodedNodeSet &DstSet, const NodeBuilderContext &Ctx)
@@ -267,13 +276,8 @@ public:
   }
 
   /// Generates a node in the ExplodedGraph.
-  ExplodedNode *generateNode(const ProgramPoint &PP,
-                             ProgramStateRef State,
-                             ExplodedNode *Pred) {
-    return generateNodeImpl(
-        PP, State, Pred,
-        /*MarkAsSink=*/State->isPosteriorlyOverconstrained());
-  }
+  ExplodedNode *generateNode(const ProgramPoint &PP, ProgramStateRef State,
+                             ExplodedNode *Pred, bool MarkAsSink = false);
 
   /// Generates a sink in the ExplodedGraph.
   ///
@@ -283,7 +287,7 @@ public:
   ExplodedNode *generateSink(const ProgramPoint &PP,
                              ProgramStateRef State,
                              ExplodedNode *Pred) {
-    return generateNodeImpl(PP, State, Pred, true);
+    return generateNode(PP, State, Pred, true);
   }
 
   ExplodedNode *generateNode(const Stmt *S,
