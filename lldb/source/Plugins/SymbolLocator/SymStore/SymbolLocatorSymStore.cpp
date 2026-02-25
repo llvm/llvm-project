@@ -134,9 +134,8 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
   // FIXME: We need this for the test executable, because it is loaded as DWARF
   if (!llvm::StringRef(pdb_name).ends_with(".pdb")) {
     auto last_dot = pdb_name.find_last_of('.');
-    if (last_dot != llvm::StringRef::npos) {
+    if (last_dot != llvm::StringRef::npos) 
       pdb_name = pdb_name.substr(0, last_dot);
-    }
     pdb_name += ".pdb";
   }
 
