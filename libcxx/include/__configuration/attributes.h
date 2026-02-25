@@ -463,4 +463,10 @@
 #  define _LIBCPP_DISABLE_POINTER_FIELD_PROTECTION
 #endif
 
+#if defined(__POINTER_FIELD_PROTECTION_ABI__)
+#  define _LIBCPP_PFP [[_Clang::__pointer_field_protection__]]
+#else
+#  define _LIBCPP_PFP
+#endif
+
 #endif // _LIBCPP___CONFIGURATION_ATTRIBUTES_H
