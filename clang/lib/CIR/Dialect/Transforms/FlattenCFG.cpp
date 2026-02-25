@@ -1385,44 +1385,176 @@ class CIRTryOpFlattening : public mlir::OpRewritePattern<cir::TryOp> {
 public:
   using OpRewritePattern<cir::TryOp>::OpRewritePattern;
 
-  mlir::Block *buildTryBody(cir::TryOp tryOp,
-                            mlir::PatternRewriter &rewriter) const {
-    // Split the current block before the TryOp to create the inlining
-    // point.
-    mlir::Block *beforeTryScopeBlock = rewriter.getInsertionBlock();
-    mlir::Block *afterTry =
-        rewriter.splitBlock(beforeTryScopeBlock, rewriter.getInsertionPoint());
-
-    // Inline body region.
-    mlir::Block *beforeBody = &tryOp.getTryRegion().front();
-    rewriter.inlineRegionBefore(tryOp.getTryRegion(), afterTry);
-
-    // Branch into the body of the region.
-    rewriter.setInsertionPointToEnd(beforeTryScopeBlock);
-    cir::BrOp::create(rewriter, tryOp.getLoc(), mlir::ValueRange(), beforeBody);
-    return afterTry;
+  // Collect all non-nothrow calls in the try body region that need to be
+  // rewritten to try_call. Skips calls inside nested TryOps.
+  void collectThrowingCalls(
+      mlir::Region &tryBodyRegion,
+      llvm::SmallVectorImpl<cir::CallOp> &callsToRewrite) const {
+    tryBodyRegion.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+      if (isa<cir::TryOp>(op))
+        return mlir::WalkResult::skip();
+      if (auto callOp = dyn_cast<cir::CallOp>(op)) {
+        if (!callOp.getNothrow())
+          callsToRewrite.push_back(callOp);
+      }
+      return mlir::WalkResult::advance();
+    });
   }
 
-  void buildHandlers(cir::TryOp tryOp, mlir::PatternRewriter &rewriter,
-                     mlir::Block *afterBody, mlir::Block *afterTry,
-                     SmallVectorImpl<cir::CallOp> &callsToRewrite,
-                     SmallVectorImpl<mlir::Block *> &landingPads) const {
-    // Replace the tryOp return with a branch that jumps out of the body.
-    rewriter.setInsertionPointToEnd(afterBody);
+  // Collect all cir.resume operations in the try body region that come from
+  // already-flattened cleanup scopes. These need to be chained to the catch
+  // dispatch block. Skips resumes inside nested TryOps.
+  void collectResumeOps(
+      mlir::Region &tryBodyRegion,
+      llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) const {
+    tryBodyRegion.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+      if (isa<cir::TryOp>(op))
+        return mlir::WalkResult::skip();
+      if (auto resumeOp = dyn_cast<cir::ResumeOp>(op))
+        resumeOps.push_back(resumeOp);
+      return mlir::WalkResult::advance();
+    });
+  }
 
-    mlir::Block *beforeCatch = rewriter.getInsertionBlock();
-    rewriter.setInsertionPointToEnd(beforeCatch);
+  // Replace a cir.call with a cir.try_call that unwinds to the given block.
+  void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
+                              mlir::Location loc,
+                              mlir::PatternRewriter &rewriter) const {
+    mlir::Block *callBlock = callOp->getBlock();
+    assert(!callOp.getNothrow() && "call is not expected to throw");
 
-    // Check if the terminator is a YieldOp because there could be another
-    // terminator, e.g. unreachable
-    if (auto tryBodyYield = dyn_cast<cir::YieldOp>(afterBody->getTerminator()))
-      rewriter.replaceOpWithNewOp<cir::BrOp>(tryBodyYield, afterTry);
+    // Split the block after the call — remaining ops become the normal dest.
+    mlir::Block *normalDest =
+        rewriter.splitBlock(callBlock, std::next(callOp->getIterator()));
 
-    mlir::ArrayAttr handlers = tryOp.getHandlerTypesAttr();
-    if (!handlers || handlers.empty())
-      return;
+    // Build the try_call to replace the original call.
+    rewriter.setInsertionPoint(callOp);
+    mlir::Type resType = callOp->getNumResults() > 0
+                             ? callOp->getResult(0).getType()
+                             : mlir::Type();
+    auto tryCallOp =
+        cir::TryCallOp::create(rewriter, loc, callOp.getCalleeAttr(), resType,
+                               normalDest, unwindDest, callOp.getArgOperands());
 
-    llvm_unreachable("TryOpFlattening buildHandlers with CallsOp is NYI");
+    // Replace uses of the call result with the try_call result.
+    if (callOp->getNumResults() > 0)
+      callOp->getResult(0).replaceAllUsesWith(tryCallOp.getResult());
+
+    rewriter.eraseOp(callOp);
+  }
+
+  // Build an unwind block that initiates exception handling and branches to the
+  // catch dispatch block. If `hasCleanup` is true, the initiate op will be
+  // marked with the cleanup attribute.
+  mlir::Block *buildUnwindBlock(mlir::Block *catchDispatchBlock,
+                                bool hasCleanup, mlir::Location loc,
+                                mlir::Block *insertBefore,
+                                mlir::PatternRewriter &rewriter) const {
+    mlir::Block *unwindBlock = rewriter.createBlock(insertBefore);
+    rewriter.setInsertionPointToEnd(unwindBlock);
+    auto ehInitiate =
+        cir::EhInitiateOp::create(rewriter, loc, /*cleanup=*/hasCleanup);
+    cir::BrOp::create(rewriter, loc, mlir::ValueRange{ehInitiate.getEhToken()},
+                      catchDispatchBlock);
+    return unwindBlock;
+  }
+
+  // Build the catch dispatch block with a cir.eh.dispatch operation.
+  // The dispatch block receives an !cir.eh_token argument and dispatches
+  // to the appropriate catch handler blocks based on exception types.
+  mlir::Block *buildCatchDispatchBlock(
+      cir::TryOp tryOp, mlir::ArrayAttr handlerTypes,
+      llvm::SmallVectorImpl<mlir::Block *> &catchHandlerBlocks,
+      mlir::Location loc, mlir::Block *insertBefore,
+      mlir::PatternRewriter &rewriter) const {
+    mlir::Block *dispatchBlock = rewriter.createBlock(insertBefore);
+    auto ehTokenType = cir::EhTokenType::get(rewriter.getContext());
+    mlir::Value ehToken = dispatchBlock->addArgument(ehTokenType, loc);
+
+    rewriter.setInsertionPointToEnd(dispatchBlock);
+
+    // Build the catch types and destinations for the dispatch.
+    llvm::SmallVector<mlir::Attribute> catchTypeAttrs;
+    llvm::SmallVector<mlir::Block *> catchDests;
+    mlir::Block *defaultDest = nullptr;
+    bool defaultIsCatchAll = false;
+
+    for (const auto &[idx, typeAttr] : llvm::enumerate(handlerTypes)) {
+      if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
+        defaultDest = catchHandlerBlocks[idx];
+        defaultIsCatchAll = true;
+      } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
+        defaultDest = catchHandlerBlocks[idx];
+        defaultIsCatchAll = false;
+      } else {
+        // This is a typed catch handler (GlobalViewAttr with type info).
+        catchTypeAttrs.push_back(typeAttr);
+        catchDests.push_back(catchHandlerBlocks[idx]);
+      }
+    }
+
+    assert(defaultDest && "dispatch must have a catch_all or unwind handler");
+
+    mlir::ArrayAttr catchTypesArrayAttr;
+    if (!catchTypeAttrs.empty())
+      catchTypesArrayAttr = rewriter.getArrayAttr(catchTypeAttrs);
+
+    cir::EhDispatchOp::create(rewriter, loc, ehToken, catchTypesArrayAttr,
+                              defaultIsCatchAll, defaultDest, catchDests);
+
+    return dispatchBlock;
+  }
+
+  // Flatten a single catch handler region. Each handler region has an
+  // !cir.eh_token argument and starts with cir.begin_catch, followed by
+  // a cir.cleanup.scope containing the handler body (with cir.end_catch in
+  // its cleanup region), and ending with cir.yield.
+  //
+  // After flattening, the handler region becomes a block that receives the
+  // eh_token, calls begin_catch, runs the handler body inline, calls
+  // end_catch, and branches to the continue block.
+  //
+  // The cleanup scope inside the catch handler is expected to have been
+  // flattened before we get here, so what we see in the handler region is
+  // already flat code with begin_catch at the top and end_catch somewhere
+  // in the middle (from the flattened cleanup). We just need to inline
+  // the region and fix up terminators.
+  mlir::Block *flattenCatchHandler(mlir::Region &handlerRegion,
+                                   mlir::Block *continueBlock,
+                                   mlir::Location loc,
+                                   mlir::Block *insertBefore,
+                                   mlir::PatternRewriter &rewriter) const {
+    // The handler region entry block has the !cir.eh_token argument.
+    mlir::Block *handlerEntry = &handlerRegion.front();
+
+    // Inline the handler region before insertBefore.
+    rewriter.inlineRegionBefore(handlerRegion, insertBefore);
+
+    // Replace yield terminators in the handler with branches to continue.
+    for (mlir::Block &block : llvm::make_range(handlerEntry->getIterator(),
+                                               insertBefore->getIterator())) {
+      if (auto yieldOp = dyn_cast<cir::YieldOp>(block.getTerminator())) {
+        rewriter.setInsertionPoint(yieldOp);
+        rewriter.replaceOpWithNewOp<cir::BrOp>(yieldOp, continueBlock);
+      }
+    }
+
+    return handlerEntry;
+  }
+
+  // Flatten an unwind handler region. The unwind region just contains a
+  // cir.resume that continues unwinding. We inline it and leave the resume
+  // in place — it will unwind to the caller.
+  mlir::Block *flattenUnwindHandler(mlir::Region &unwindRegion,
+                                    mlir::Location loc,
+                                    mlir::Block *insertBefore,
+                                    mlir::PatternRewriter &rewriter) const {
+    mlir::Block *unwindEntry = &unwindRegion.front();
+
+    // Inline the unwind region.
+    rewriter.inlineRegionBefore(unwindRegion, insertBefore);
+
+    return unwindEntry;
   }
 
   mlir::LogicalResult
@@ -1439,51 +1571,96 @@ public:
     if (hasNestedCleanup)
       return mlir::failure();
 
-    mlir::ArrayAttr handlers = tryOp.getHandlerTypesAttr();
-    if (handlers && !handlers.empty())
-      return tryOp->emitError(
-          "TryOp flattening with handlers is not yet implemented");
-
     mlir::OpBuilder::InsertionGuard guard(rewriter);
-    mlir::Block *afterBody = &tryOp.getTryRegion().back();
+    mlir::Location loc = tryOp.getLoc();
 
-    // Grab the collection of `cir.call exception`s to rewrite to
-    // `cir.try_call`.
+    mlir::ArrayAttr handlerTypes = tryOp.getHandlerTypesAttr();
+    mlir::MutableArrayRef<mlir::Region> handlerRegions =
+        tryOp.getHandlerRegions();
+
+    // Collect throwing calls in the try body.
     llvm::SmallVector<cir::CallOp, 4> callsToRewrite;
-    tryOp.getTryRegion().walk([&](CallOp op) {
-      if (op.getNothrow())
-        return;
+    collectThrowingCalls(tryOp.getTryRegion(), callsToRewrite);
 
-      // Only grab calls within immediate closest TryOp scope.
-      if (op->getParentOfType<cir::TryOp>() != tryOp)
-        return;
-      callsToRewrite.push_back(op);
-    });
+    // Collect resume ops from already-flattened cleanup scopes in the try body.
+    llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
+    collectResumeOps(tryOp.getTryRegion(), resumeOpsToChain);
 
-    if (!callsToRewrite.empty())
-      llvm_unreachable(
-          "TryOpFlattening with try block that contains CallOps is NYI");
+    // ---- Step 1: Split the current block and inline the try body ----
+    mlir::Block *currentBlock = rewriter.getInsertionBlock();
+    mlir::Block *continueBlock =
+        rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
 
-    // Build try body.
-    mlir::Block *afterTry = buildTryBody(tryOp, rewriter);
+    // Get reference to try body blocks before inlining.
+    mlir::Block *bodyEntry = &tryOp.getTryRegion().front();
+    mlir::Block *bodyExit = &tryOp.getTryRegion().back();
 
-    // Build handlers.
-    llvm::SmallVector<mlir::Block *, 4> landingPads;
-    buildHandlers(tryOp, rewriter, afterBody, afterTry, callsToRewrite,
-                  landingPads);
+    // Inline the try body region before the continue block.
+    rewriter.inlineRegionBefore(tryOp.getTryRegion(), continueBlock);
 
-    rewriter.eraseOp(tryOp);
+    // Branch from the current block to the body entry.
+    rewriter.setInsertionPointToEnd(currentBlock);
+    cir::BrOp::create(rewriter, loc, bodyEntry);
 
-    assert((landingPads.size() == callsToRewrite.size()) &&
-           "expected matching number of entries");
-
-    // Quick block cleanup: no indirection to the post try block.
-    auto brOp = dyn_cast<cir::BrOp>(afterTry->getTerminator());
-    if (brOp && brOp.getDest()->hasNoPredecessors()) {
-      mlir::Block *srcBlock = brOp.getDest();
-      rewriter.eraseOp(brOp);
-      rewriter.mergeBlocks(srcBlock, afterTry);
+    // Replace the try body's yield terminator with a branch to continue.
+    if (auto bodyYield = dyn_cast<cir::YieldOp>(bodyExit->getTerminator())) {
+      rewriter.setInsertionPoint(bodyYield);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(bodyYield, continueBlock);
     }
+
+    // ---- Step 2: If there are no handlers, just inline the body ----
+    if (!handlerTypes || handlerTypes.empty()) {
+      rewriter.eraseOp(tryOp);
+      return mlir::success();
+    }
+
+    // ---- Step 3: Build catch handler blocks ----
+    // First, flatten all handler regions and collect the entry blocks.
+    llvm::SmallVector<mlir::Block *> catchHandlerBlocks;
+
+    for (const auto &[idx, typeAttr] : llvm::enumerate(handlerTypes)) {
+      mlir::Region &handlerRegion = handlerRegions[idx];
+
+      if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
+        // Unwind handler: inline and leave cir.resume in place.
+        mlir::Block *unwindEntry = flattenUnwindHandler(
+            handlerRegion, loc, continueBlock, rewriter);
+        catchHandlerBlocks.push_back(unwindEntry);
+      } else {
+        // Catch handler (typed or catch-all): flatten inline.
+        mlir::Block *handlerEntry = flattenCatchHandler(
+            handlerRegion, continueBlock, loc, continueBlock, rewriter);
+        catchHandlerBlocks.push_back(handlerEntry);
+      }
+    }
+
+    // ---- Step 4: Build the catch dispatch block ----
+    mlir::Block *dispatchBlock = buildCatchDispatchBlock(
+        tryOp, handlerTypes, catchHandlerBlocks, loc, continueBlock, rewriter);
+
+    // ---- Step 5: Build unwind block(s) and replace throwing calls ----
+    bool hasCleanup = tryOp.getCleanup();
+    if (!callsToRewrite.empty()) {
+      // Create a shared unwind block for all throwing calls.
+      mlir::Block *unwindBlock = buildUnwindBlock(
+          dispatchBlock, hasCleanup, loc, continueBlock, rewriter);
+
+      for (cir::CallOp callOp : callsToRewrite)
+        replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
+    }
+
+    // ---- Step 6: Chain resume ops from inner cleanup scopes ----
+    // Resume ops from already-flattened cleanup scopes within the try body
+    // should branch to the catch dispatch block instead of unwinding directly.
+    for (cir::ResumeOp resumeOp : resumeOpsToChain) {
+      mlir::Value ehToken = resumeOp.getEhToken();
+      rewriter.setInsertionPoint(resumeOp);
+      rewriter.replaceOpWithNewOp<cir::BrOp>(
+          resumeOp, mlir::ValueRange{ehToken}, dispatchBlock);
+    }
+
+    // ---- Step 7: Erase the original try op ----
+    rewriter.eraseOp(tryOp);
 
     return mlir::success();
   }
