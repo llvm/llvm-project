@@ -317,5 +317,6 @@ def libc_math_function(
         deps = [
             ":__support_common",
             ":__support_macros_config",
+            ":__support_macros_properties_types",
         ] + OLD_FPUTIL_DEPS + additional_deps,
     )
