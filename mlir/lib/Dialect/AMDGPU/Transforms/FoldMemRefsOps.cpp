@@ -66,7 +66,7 @@ static LogicalResult foldMemrefViewOp(PatternRewriter &rewriter, Location loc,
 }
 
 struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(GatherToLDSOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
@@ -102,16 +102,15 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
 
 struct FoldMemRefOpsIntoTransposeLoadOp final
     : OpRewritePattern<TransposeLoadOp> {
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
   LogicalResult matchAndRewrite(TransposeLoadOp op,
                                 PatternRewriter &rewriter) const override {
-    Location loc = op.getLoc();
-
     SmallVector<Value> sourceIndices;
     Value memrefSource;
 
-    if (failed(foldMemrefViewOp(rewriter, loc, op.getSrc(), op.getSrcIndices(),
-                                sourceIndices, memrefSource, "source")))
+    if (failed(foldMemrefViewOp(rewriter, op.getLoc(), op.getSrc(),
+                                op.getSrcIndices(), sourceIndices, memrefSource,
+                                "source")))
       return failure();
 
     rewriter.replaceOpWithNewOp<TransposeLoadOp>(op, op.getResult().getType(),
