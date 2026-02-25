@@ -951,11 +951,6 @@ bool llvm::computeUnrollCount(
 
   const bool ExplicitUnroll = PragmaCount > 0 || PragmaFullUnroll ||
                               PragmaEnableUnroll || UserUnrollCount;
-  // If a user provided an explicit unroll pragma, it should override expensive
-  // trip count checks
-  if (ExplicitUnroll) {
-    UP.AllowExpensiveTripCount = true;
-  }
 
   PragmaInfo PInfo(UserUnrollCount, PragmaFullUnroll, PragmaCount,
                    PragmaEnableUnroll);
@@ -970,15 +965,19 @@ bool llvm::computeUnrollCount(
     UP.Runtime = false;
     return true;
   }
+  // If explicit unroll pragma is present, override expensive trip count checks.
+  // This applies to full unroll, partial unroll with a trip count, and partial
+  // unroll without a trip count.
+  if (ExplicitUnroll) {
+    UP.AllowExpensiveTripCount = true;
+  }
   // Check for explicit Count.
   // 1st priority is unroll count set by "unroll-count" option.
   // 2nd priority is unroll count set by pragma.
   if (auto UnrollFactor = shouldPragmaUnroll(L, PInfo, TripMultiple, TripCount,
                                              MaxTripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
-
     if (UserUnrollCount || (PragmaCount > 0)) {
-      UP.AllowExpensiveTripCount = true;
       UP.Force = true;
     }
     UP.Runtime |= (PragmaCount > 0);
