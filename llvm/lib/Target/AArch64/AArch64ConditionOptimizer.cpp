@@ -278,7 +278,6 @@ AArch64ConditionOptimizer::CmpInfo
 AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
                                      AArch64CC::CondCode Cmp) {
   unsigned Opc = CmpMI->getOpcode();
-  unsigned OldOpc = Opc;
 
   bool IsSigned = Cmp == AArch64CC::GT || Cmp == AArch64CC::GE ||
                   Cmp == AArch64CC::LT || Cmp == AArch64CC::LE;
@@ -299,28 +298,17 @@ AArch64ConditionOptimizer::adjustCmp(MachineInstr *CmpMI,
   // Bail out on cmn 0 (ADDS with immediate 0). It is a valid instruction but
   // doesn't set flags in a way we can safely transform, so skip optimization.
   if (OldImm == 0 && Negative)
-    return CmpInfo(OldImm, OldOpc, Cmp);
+    return CmpInfo(OldImm, Opc, Cmp);
 
-  // Handle cmn 1 -> cmp 0 transitions by adjusting compare instruction opcode.
-  // This happens when adjusting from "compare with -1" (cmn #1) to "compare
-  // with 0" (cmp #0) for signed comparisons.
-  if (OldImm == 1 && Negative && Correction == -1) {
-    // If we are adjusting from -1 to 0, we need to change the opcode.
+  if ((OldImm == 1 && Negative && Correction == -1) ||
+      (OldImm == 0 && Correction == -1)) {
+    // If we change opcodes for unsigned comparisons, this means we did an
+    // unsigned wrap (e.g., 0 wrapping to 0xFFFFFFFF), so return the old cmp.
+    // Note: For signed comparisons, opcode changes (cmn 1 ↔ cmp 0) are valid.
+    if (!IsSigned)
+      return CmpInfo(OldImm, Opc, Cmp);
     Opc = getComplementOpc(Opc);
   }
-
-  // Handle cmp 0 -> cmn 1 transitions by adjusting compare instruction opcode.
-  // This happens when adjusting from "compare with 0" (cmp #0) to "compare with
-  // -1" (cmn #1) for signed comparisons. (If we had cmn 0 we already bailed
-  // out.)
-  if (OldImm == 0 && Correction == -1)
-    Opc = getComplementOpc(Opc);
-
-  // If we change opcodes for unsigned comparisons, this means we did an
-  // unsigned wrap (e.g., 0 wrapping to 0xFFFFFFFF), so return the old cmp.
-  // Note: For signed comparisons, opcode changes (cmn 1 ↔ cmp 0) are valid.
-  if (!IsSigned && Opc != OldOpc)
-    return CmpInfo(OldImm, OldOpc, Cmp);
 
   return CmpInfo(NewImm, Opc, getAdjustedCmp(Cmp));
 }
