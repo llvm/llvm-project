@@ -26,6 +26,11 @@ CastToStructCheck::CastToStructCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoredCasts(
           utils::options::parseStringList(Options.get("IgnoredCasts", ""))) {
+  if (IgnoredCasts.size() % 2)
+    configurationDiag(
+        "'IgnoredCasts' does not contain even number of string items, "
+        "the last value will be ignored.");
+
   IgnoredCastsRegex.reserve(IgnoredCasts.size());
   for (const auto &Str : IgnoredCasts) {
     std::string WholeWordRegex;
@@ -45,13 +50,10 @@ void CastToStructCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void CastToStructCheck::registerMatchers(MatchFinder *Finder) {
   auto FromPointee =
       qualType(hasUnqualifiedDesugaredType(type().bind("FromType")),
-               unless(voidType()), unless(charType()), unless(unionType()))
-          .bind("FromPointee");
-  auto ToPointee =
-      qualType(hasUnqualifiedDesugaredType(
-                   recordType(unless(hasDeclaration(recordDecl(isUnion()))))
-                       .bind("ToType")))
-          .bind("ToPointee");
+               unless(voidType()), unless(charType()), unless(unionType()));
+  auto ToPointee = qualType(hasUnqualifiedDesugaredType(
+      recordType(unless(hasDeclaration(recordDecl(isUnion()))))
+          .bind("ToType")));
   auto FromPtrType = qualType(pointsTo(FromPointee)).bind("FromPtr");
   auto ToPtrType = qualType(pointsTo(ToPointee)).bind("ToPtr");
   Finder->addMatcher(cStyleCastExpr(hasSourceExpression(hasType(FromPtrType)),
