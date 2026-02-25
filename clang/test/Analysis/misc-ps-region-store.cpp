@@ -525,7 +525,8 @@ MyEnum rdar10892489_positive() {
     throw MyEnumValue;
   } catch (MyEnum e) {
     int *p = 0;
-    *p = 0xDEADBEEF; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+    // FALSE NEGATIVE
+    *p = 0xDEADBEEF; // {{null}}
     return e;
   }
   return MyEnumValue;
@@ -550,7 +551,8 @@ void PR11545_positive() {
   catch (...)
   {
     int *p = 0;
-    *p = 0xDEADBEEF; // expected-warning {{Dereference of null pointer (loaded from variable 'p')}}
+    // FALSE NEGATIVE
+    *p = 0xDEADBEEF; // {{null}}
   }
 }
 

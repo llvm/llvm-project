@@ -545,6 +545,7 @@ public:
 
         collectFusionCandidates(LV);
         Changed |= fuseCandidates();
+        FusionCandidates.clear();
       }
 
       // Finished analyzing candidates at this level.
@@ -555,7 +556,6 @@ public:
       // with all of the candidates collected so far.
       LLVM_DEBUG(dbgs() << "Descend one level!\n");
       LDT.descend();
-      FusionCandidates.clear();
     }
 
     if (Changed)

@@ -1313,18 +1313,21 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .clampScalar(0, MinScalarFPTy, S32)
     .lower();
 
-  auto &Log2Ops = getActionDefinitionsBuilder({G_FLOG2, G_FEXP2});
-  Log2Ops.customFor({S32});
-  if (ST.has16BitInsts())
-    Log2Ops.legalFor({S16});
-  else
-    Log2Ops.customFor({S16});
-  Log2Ops.scalarize(0)
-    .lower();
+  getActionDefinitionsBuilder(G_FLOG2)
+      .legalFor(ST.has16BitInsts(), {S16})
+      .customFor({S32, S16})
+      .scalarize(0)
+      .lower();
+
+  getActionDefinitionsBuilder(G_FEXP2)
+      .legalFor(ST.has16BitInsts(), {S16})
+      .customFor({S32, S64, S16})
+      .scalarize(0)
+      .lower();
 
   auto &LogOps =
       getActionDefinitionsBuilder({G_FLOG, G_FLOG10, G_FEXP, G_FEXP10});
-  LogOps.customFor({S32, S16});
+  LogOps.customFor({S32, S16, S64});
   LogOps.clampScalar(0, MinScalarFPTy, S32)
         .scalarize(0);
 
@@ -3707,6 +3710,10 @@ bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
   LLT Ty = B.getMRI()->getType(Dst);
   const LLT F16 = LLT::scalar(16);
   const LLT F32 = LLT::scalar(32);
+  const LLT F64 = LLT::scalar(64);
+
+  if (Ty == F64)
+    return legalizeFEXPF64(MI, B);
 
   if (Ty == F16) {
     // Nothing in half is a denormal when promoted to f32.
@@ -3858,6 +3865,103 @@ bool AMDGPULegalizerInfo::legalizeFExp10Unsafe(MachineIRBuilder &B,
   return true;
 }
 
+// This expansion gives a result slightly better than 1ulp.
+bool AMDGPULegalizerInfo::legalizeFEXPF64(MachineInstr &MI,
+                                          MachineIRBuilder &B) const {
+
+  Register X = MI.getOperand(1).getReg();
+  LLT S64 = LLT::scalar(64);
+  LLT S32 = LLT::scalar(32);
+  LLT S1 = LLT::scalar(1);
+
+  // TODO: Check if reassoc is safe. There is an output change in exp2 and
+  // exp10, which slightly increases ulp.
+  unsigned Flags = MI.getFlags() & ~MachineInstr::FmReassoc;
+
+  Register Dn, F, T;
+
+  if (MI.getOpcode() == TargetOpcode::G_FEXP2) {
+    // Dn = rint(X)
+    Dn = B.buildFRint(S64, X, Flags).getReg(0);
+    // F = X - Dn
+    F = B.buildFSub(S64, X, Dn, Flags).getReg(0);
+    // T = F*C1 + F*C2
+    auto C1 = B.buildFConstant(S64, APFloat(0x1.62e42fefa39efp-1));
+    auto C2 = B.buildFConstant(S64, APFloat(0x1.abc9e3b39803fp-56));
+    auto Mul2 = B.buildFMul(S64, F, C2, Flags).getReg(0);
+    T = B.buildFMA(S64, F, C1, Mul2, Flags).getReg(0);
+
+  } else if (MI.getOpcode() == TargetOpcode::G_FEXP10) {
+    auto C1 = B.buildFConstant(S64, APFloat(0x1.a934f0979a371p+1));
+    auto Mul = B.buildFMul(S64, X, C1, Flags).getReg(0);
+    Dn = B.buildFRint(S64, Mul, Flags).getReg(0);
+
+    auto NegDn = B.buildFNeg(S64, Dn, Flags).getReg(0);
+    auto C2 = B.buildFConstant(S64, APFloat(-0x1.9dc1da994fd21p-59));
+    auto C3 = B.buildFConstant(S64, APFloat(0x1.34413509f79ffp-2));
+    auto Inner = B.buildFMA(S64, NegDn, C3, X, Flags).getReg(0);
+    F = B.buildFMA(S64, NegDn, C2, Inner, Flags).getReg(0);
+
+    auto C4 = B.buildFConstant(S64, APFloat(0x1.26bb1bbb55516p+1));
+    auto C5 = B.buildFConstant(S64, APFloat(-0x1.f48ad494ea3e9p-53));
+    auto MulF = B.buildFMul(S64, F, C5, Flags).getReg(0);
+    T = B.buildFMA(S64, F, C4, MulF, Flags).getReg(0);
+
+  } else { // G_FEXP
+    auto C1 = B.buildFConstant(S64, APFloat(0x1.71547652b82fep+0));
+    auto Mul = B.buildFMul(S64, X, C1, Flags).getReg(0);
+    Dn = B.buildFRint(S64, Mul, Flags).getReg(0);
+
+    auto NegDn = B.buildFNeg(S64, Dn, Flags).getReg(0);
+    auto C2 = B.buildFConstant(S64, APFloat(0x1.abc9e3b39803fp-56));
+    auto C3 = B.buildFConstant(S64, APFloat(0x1.62e42fefa39efp-1));
+    auto Inner = B.buildFMA(S64, NegDn, C3, X, Flags).getReg(0);
+    T = B.buildFMA(S64, NegDn, C2, Inner, Flags).getReg(0);
+  }
+
+  // Polynomial chain for P
+  auto P = B.buildFConstant(S64, 0x1.ade156a5dcb37p-26);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.28af3fca7ab0cp-22),
+                 Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.71dee623fde64p-19),
+                 Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.a01997c89e6b0p-16),
+                 Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.a01a014761f6ep-13),
+                 Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.6c16c1852b7b0p-10),
+                 Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.1111111122322p-7), Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.55555555502a1p-5), Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.5555555555511p-3), Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.000000000000bp-1), Flags);
+
+  auto One = B.buildFConstant(S64, 1.0);
+  P = B.buildFMA(S64, T, P, One, Flags);
+  P = B.buildFMA(S64, T, P, One, Flags);
+
+  // Z = FLDEXP(P, (int)Dn)
+  auto DnInt = B.buildFPTOSI(S32, Dn);
+  auto Z = B.buildFLdexp(S64, P, DnInt, Flags);
+
+  if (!(Flags & MachineInstr::FmNoInfs)) {
+    // Overflow guard: if X <= 1024.0 then Z else +inf
+    auto CondHi = B.buildFCmp(CmpInst::FCMP_ULE, S1, X,
+                              B.buildFConstant(S64, APFloat(1024.0)));
+    auto PInf = B.buildFConstant(S64, APFloat::getInf(APFloat::IEEEdouble()));
+    Z = B.buildSelect(S64, CondHi, Z, PInf, Flags);
+  }
+
+  // Underflow guard: if X >= -1075.0 then Z else 0.0
+  auto CondLo = B.buildFCmp(CmpInst::FCMP_UGE, S1, X,
+                            B.buildFConstant(S64, APFloat(-1075.0)));
+  auto Zero = B.buildFConstant(S64, APFloat(0.0));
+  B.buildSelect(MI.getOperand(0).getReg(), CondLo, Z, Zero, Flags);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
                                        MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
@@ -3866,6 +3970,12 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   MachineFunction &MF = B.getMF();
   MachineRegisterInfo &MRI = *B.getMRI();
   LLT Ty = MRI.getType(Dst);
+
+  const LLT F64 = LLT::scalar(64);
+
+  if (Ty == F64)
+    return legalizeFEXPF64(MI, B);
+
   const LLT F16 = LLT::scalar(16);
   const LLT F32 = LLT::scalar(32);
   const bool IsExp10 = MI.getOpcode() == TargetOpcode::G_FEXP10;
