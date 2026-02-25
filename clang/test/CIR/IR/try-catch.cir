@@ -130,7 +130,7 @@ cir.func @empty_try_block_with_catch_unwind_contains_resume() {
     cir.try {
       cir.yield
     } unwind (%eh_token : !cir.eh_token) {
-      cir.resume
+      cir.resume %eh_token : !cir.eh_token
     }
   }
   cir.return
@@ -140,8 +140,8 @@ cir.func @empty_try_block_with_catch_unwind_contains_resume() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } unwind (%{{.*}}: !cir.eh_token) {
-// CHECK:       cir.resume
+// CHECK:     } unwind (%[[ET:.*]]: !cir.eh_token) {
+// CHECK:       cir.resume %[[ET]] : !cir.eh_token
 // CHECK:     }
 // CHECK:   }
 // CHECK:   cir.return

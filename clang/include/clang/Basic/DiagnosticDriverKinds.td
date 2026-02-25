@@ -611,6 +611,18 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">, InGroup<ModulesDriver>;
+def remark_modules_manifest_not_found : Remark<
+  "standard modules manifest file not found; import of standard library "
+  "modules not supported">,
+  InGroup<ModulesDriver>;
+def remark_using_modules_manifest : Remark<
+  "using standard modules manifest file '%0'">,
+  InGroup<ModulesDriver>;
+def err_modules_manifest_failed_parse : Error<
+  "failure while parsing standard modules manifest: '%0'">;
+
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;

@@ -78,7 +78,7 @@ void call_function_inside_try_catch_with_exception_type() {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
-// CIR:     cir.resume
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 
@@ -144,7 +144,7 @@ void call_function_inside_try_catch_with_complex_exception_type() {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
-// CIR:     cir.resume
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 
@@ -215,7 +215,7 @@ void call_function_inside_try_catch_with_array_exception_type() {
 // CIR:     }
 // CIR:     cir.yield
 // CIR:   } unwind (%{{.*}}: !cir.eh_token{{.*}}) {
-// CIR:     cir.resume
+// CIR:     cir.resume %{{.*}} : !cir.eh_token
 // CIR:   }
 // CIR: }
 

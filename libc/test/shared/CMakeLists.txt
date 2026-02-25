@@ -101,13 +101,19 @@ add_fp_unittest(
     libc.src.__support.math.f16sqrt
     libc.src.__support.math.f16sqrtf
     libc.src.__support.math.f16sqrtl
-    libc.src.__support.math.fadd
-    libc.src.__support.math.faddf128
-    libc.src.__support.math.faddl
     libc.src.__support.math.f16sub
     libc.src.__support.math.f16subf
     libc.src.__support.math.f16subf128
     libc.src.__support.math.f16subl
+    libc.src.__support.math.fadd
+    libc.src.__support.math.faddf128
+    libc.src.__support.math.faddl
+    libc.src.__support.math.fdim
+    libc.src.__support.math.fdimbf16
+    libc.src.__support.math.fdimf
+    libc.src.__support.math.fdimf128
+    libc.src.__support.math.fdimf16
+    libc.src.__support.math.fdiml
     libc.src.__support.math.ffma
     libc.src.__support.math.ffmal
     libc.src.__support.math.fmax

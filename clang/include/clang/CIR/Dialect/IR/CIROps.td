@@ -1021,7 +1021,8 @@ def CIR_ContinueOp : CIR_Op<"continue", [Terminator]> {
 //===----------------------------------------------------------------------===//
 
 def CIR_ResumeOp : CIR_Op<"resume", [
-  ReturnLike, Terminator,
+  DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+  Terminator,
   ParentOneOf<["cir::TryOp", "cir::CleanupScopeOp", "cir::FuncOp"]>
 ]> {
   let summary = "Resumes execution after not catching exceptions";
@@ -1029,10 +1030,10 @@ def CIR_ResumeOp : CIR_Op<"resume", [
     The `cir.resume` operation handles an uncaught exception scenario.
 
     Before CFG flattening, this operation is used as the terminator of a
-    `CatchUnwind` region of `cir.try`, where it does not receive any arguments
-    (implied from the `cir.try` scope).
+    `CatchUnwind` region of `cir.try`, where it receives an `!cir.eh_token`
+    argument representing the in-flight exception.
 
-    During CFG flattening, this operartion may appear within a `cir.try`
+    During CFG flattening, this operation may appear within a `cir.try`
     operation where it indicates that exception unwinding should continue
     from that point. When the `cir.try` operation is flattened, the resume
     operation will be replaced with a branch to the flattened try operation's
@@ -1047,8 +1048,8 @@ def CIR_ResumeOp : CIR_Op<"resume", [
     // Before CFG flattening (in try unwind region)
     cir.try {
       cir.yield
-    } unwind {
-      cir.resume
+    } unwind (%eh_token : !cir.eh_token) {
+      cir.resume %eh_token : !cir.eh_token
     }
 
     // After CFG flattening (at function level, after cleanup)
@@ -1056,11 +1057,12 @@ def CIR_ResumeOp : CIR_Op<"resume", [
       %ct = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
       cir.call @destructor() : () -> ()
       cir.end_cleanup %ct : !cir.cleanup_token
-      cir.resume
+      cir.resume %eh_token : !cir.eh_token
     ```
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins CIR_EhTokenType:$eh_token);
+  let assemblyFormat = "$eh_token `:` type($eh_token) attr-dict";
   let hasLLVMLowering = false;
 }
 
@@ -6287,7 +6289,7 @@ def CIR_TryOp : CIR_Op<"try",[
       }
       cir.yield
     } unwind (%eh_token : !cir.eh_token) {
-      cir.resume
+      cir.resume %eh_token : !cir.eh_token
     }
     ```
   }];
