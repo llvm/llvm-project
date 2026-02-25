@@ -513,12 +513,10 @@ public:
         // index. We need to avoid parsing an extra alignment operand for the
         // lane index.
         auto IsLoadStoreLane = InstName.contains("_lane");
-        if (IsLoadStoreLane && Operands.size() == 4)
+        if (IsLoadStoreLane && Operands.size() == 4) {
           return false;
+        }
         // Alignment not specified (or atomics, must use default alignment).
-        // We can't just call WebAssembly::GetDefaultP2Align since we don't have
-        // an opcode until after the assembly matcher, so set a default to fix
-        // up later.
         auto Tok = Lexer.getTok();
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
             Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
@@ -527,7 +525,8 @@ public:
         if (!parseMemOrderMaybe(Operands)) {
           auto Tok = Lexer.getTok();
           Operands.push_back(std::make_unique<WebAssemblyOperand>(
-              Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
+              Tok.getLoc(), Tok.getEndLoc(),
+              WebAssemblyOperand::IntOp{wasm::WASM_MEM_ORDER_SEQ_CST}));
         }
       }
     }
@@ -680,7 +679,8 @@ public:
       if (!parseMemOrderMaybe(Operands)) {
         auto Tok = Lexer.getTok();
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
-            Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
+            Tok.getLoc(), Tok.getEndLoc(),
+            WebAssemblyOperand::IntOp{wasm::WASM_MEM_ORDER_SEQ_CST}));
       }
     } else if (Name == "end_loop") {
       if (pop(Name, Loop))
@@ -1186,280 +1186,6 @@ public:
     }
   }
 
-bool isAtomic(unsigned Opc) {
-  switch (Opc) {
-  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A32:
-  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A32_S:
-  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A64:
-  case WebAssembly::MEMORY_ATOMIC_NOTIFY_A64_S:
-  case WebAssembly::MEMORY_ATOMIC_WAIT32_A32:
-  case WebAssembly::MEMORY_ATOMIC_WAIT32_A32_S:
-  case WebAssembly::MEMORY_ATOMIC_WAIT32_A64:
-  case WebAssembly::MEMORY_ATOMIC_WAIT32_A64_S:
-  case WebAssembly::MEMORY_ATOMIC_WAIT64_A32:
-  case WebAssembly::MEMORY_ATOMIC_WAIT64_A32_S:
-  case WebAssembly::MEMORY_ATOMIC_WAIT64_A64:
-  case WebAssembly::MEMORY_ATOMIC_WAIT64_A64_S:
-  case WebAssembly::ATOMIC_FENCE:
-  case WebAssembly::ATOMIC_FENCE_S:
-  case WebAssembly::ATOMIC_LOAD16_U_I32_A32:
-  case WebAssembly::ATOMIC_LOAD16_U_I32_A32_S:
-  case WebAssembly::ATOMIC_LOAD16_U_I32_A64:
-  case WebAssembly::ATOMIC_LOAD16_U_I32_A64_S:
-  case WebAssembly::ATOMIC_LOAD16_U_I64_A32:
-  case WebAssembly::ATOMIC_LOAD16_U_I64_A32_S:
-  case WebAssembly::ATOMIC_LOAD16_U_I64_A64:
-  case WebAssembly::ATOMIC_LOAD16_U_I64_A64_S:
-  case WebAssembly::ATOMIC_LOAD32_U_I64_A32:
-  case WebAssembly::ATOMIC_LOAD32_U_I64_A32_S:
-  case WebAssembly::ATOMIC_LOAD32_U_I64_A64:
-  case WebAssembly::ATOMIC_LOAD32_U_I64_A64_S:
-  case WebAssembly::ATOMIC_LOAD8_U_I32_A32:
-  case WebAssembly::ATOMIC_LOAD8_U_I32_A32_S:
-  case WebAssembly::ATOMIC_LOAD8_U_I32_A64:
-  case WebAssembly::ATOMIC_LOAD8_U_I32_A64_S:
-  case WebAssembly::ATOMIC_LOAD8_U_I64_A32:
-  case WebAssembly::ATOMIC_LOAD8_U_I64_A32_S:
-  case WebAssembly::ATOMIC_LOAD8_U_I64_A64:
-  case WebAssembly::ATOMIC_LOAD8_U_I64_A64_S:
-  case WebAssembly::ATOMIC_LOAD_I32_A32:
-  case WebAssembly::ATOMIC_LOAD_I32_A32_S:
-  case WebAssembly::ATOMIC_LOAD_I32_A64:
-  case WebAssembly::ATOMIC_LOAD_I32_A64_S:
-  case WebAssembly::ATOMIC_LOAD_I64_A32:
-  case WebAssembly::ATOMIC_LOAD_I64_A32_S:
-  case WebAssembly::ATOMIC_LOAD_I64_A64:
-  case WebAssembly::ATOMIC_LOAD_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I32_A32:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I32_A64:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I64_A32:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I64_A64:
-  case WebAssembly::ATOMIC_RMW16_U_ADD_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I32_A32:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I32_A64:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I64_A32:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I64_A64:
-  case WebAssembly::ATOMIC_RMW16_U_AND_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32_A32:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32_A64:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW16_U_CMPXCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I32_A32:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I32_A64:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I64_A32:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I64_A64:
-  case WebAssembly::ATOMIC_RMW16_U_OR_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I32_A32:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I32_A64:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I64_A32:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I64_A64:
-  case WebAssembly::ATOMIC_RMW16_U_SUB_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I32_A32:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I32_A64:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW16_U_XCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I32_A32:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I32_A64:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I64_A32:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I64_A64:
-  case WebAssembly::ATOMIC_RMW16_U_XOR_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW32_U_ADD_I64_A32:
-  case WebAssembly::ATOMIC_RMW32_U_ADD_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW32_U_ADD_I64_A64:
-  case WebAssembly::ATOMIC_RMW32_U_ADD_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW32_U_AND_I64_A32:
-  case WebAssembly::ATOMIC_RMW32_U_AND_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW32_U_AND_I64_A64:
-  case WebAssembly::ATOMIC_RMW32_U_AND_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW32_U_CMPXCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW32_U_OR_I64_A32:
-  case WebAssembly::ATOMIC_RMW32_U_OR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW32_U_OR_I64_A64:
-  case WebAssembly::ATOMIC_RMW32_U_OR_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW32_U_SUB_I64_A32:
-  case WebAssembly::ATOMIC_RMW32_U_SUB_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW32_U_SUB_I64_A64:
-  case WebAssembly::ATOMIC_RMW32_U_SUB_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW32_U_XCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW32_U_XCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW32_U_XCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW32_U_XCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW32_U_XOR_I64_A32:
-  case WebAssembly::ATOMIC_RMW32_U_XOR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW32_U_XOR_I64_A64:
-  case WebAssembly::ATOMIC_RMW32_U_XOR_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I32_A32:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I32_A64:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I64_A32:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I64_A64:
-  case WebAssembly::ATOMIC_RMW8_U_ADD_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I32_A32:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I32_A64:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I64_A32:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I64_A64:
-  case WebAssembly::ATOMIC_RMW8_U_AND_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32_A32:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32_A64:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW8_U_CMPXCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I32_A32:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I32_A64:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I64_A32:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I64_A64:
-  case WebAssembly::ATOMIC_RMW8_U_OR_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I32_A32:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I32_A64:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I64_A32:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I64_A64:
-  case WebAssembly::ATOMIC_RMW8_U_SUB_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I32_A32:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I32_A64:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW8_U_XCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I32_A32:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I32_A64:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I64_A32:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I64_A64:
-  case WebAssembly::ATOMIC_RMW8_U_XOR_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW_ADD_I32_A32:
-  case WebAssembly::ATOMIC_RMW_ADD_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW_ADD_I32_A64:
-  case WebAssembly::ATOMIC_RMW_ADD_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW_ADD_I64_A32:
-  case WebAssembly::ATOMIC_RMW_ADD_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW_ADD_I64_A64:
-  case WebAssembly::ATOMIC_RMW_ADD_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW_AND_I32_A32:
-  case WebAssembly::ATOMIC_RMW_AND_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW_AND_I32_A64:
-  case WebAssembly::ATOMIC_RMW_AND_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW_AND_I64_A32:
-  case WebAssembly::ATOMIC_RMW_AND_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW_AND_I64_A64:
-  case WebAssembly::ATOMIC_RMW_AND_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I32_A32:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I32_A64:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW_CMPXCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW_OR_I32_A32:
-  case WebAssembly::ATOMIC_RMW_OR_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW_OR_I32_A64:
-  case WebAssembly::ATOMIC_RMW_OR_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW_OR_I64_A32:
-  case WebAssembly::ATOMIC_RMW_OR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW_OR_I64_A64:
-  case WebAssembly::ATOMIC_RMW_OR_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW_SUB_I32_A32:
-  case WebAssembly::ATOMIC_RMW_SUB_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW_SUB_I32_A64:
-  case WebAssembly::ATOMIC_RMW_SUB_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW_SUB_I64_A32:
-  case WebAssembly::ATOMIC_RMW_SUB_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW_SUB_I64_A64:
-  case WebAssembly::ATOMIC_RMW_SUB_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW_XCHG_I32_A32:
-  case WebAssembly::ATOMIC_RMW_XCHG_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW_XCHG_I32_A64:
-  case WebAssembly::ATOMIC_RMW_XCHG_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW_XCHG_I64_A32:
-  case WebAssembly::ATOMIC_RMW_XCHG_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW_XCHG_I64_A64:
-  case WebAssembly::ATOMIC_RMW_XCHG_I64_A64_S:
-  case WebAssembly::ATOMIC_RMW_XOR_I32_A32:
-  case WebAssembly::ATOMIC_RMW_XOR_I32_A32_S:
-  case WebAssembly::ATOMIC_RMW_XOR_I32_A64:
-  case WebAssembly::ATOMIC_RMW_XOR_I32_A64_S:
-  case WebAssembly::ATOMIC_RMW_XOR_I64_A32:
-  case WebAssembly::ATOMIC_RMW_XOR_I64_A32_S:
-  case WebAssembly::ATOMIC_RMW_XOR_I64_A64:
-  case WebAssembly::ATOMIC_RMW_XOR_I64_A64_S:
-  case WebAssembly::ATOMIC_STORE16_I32_A32:
-  case WebAssembly::ATOMIC_STORE16_I32_A32_S:
-  case WebAssembly::ATOMIC_STORE16_I32_A64:
-  case WebAssembly::ATOMIC_STORE16_I32_A64_S:
-  case WebAssembly::ATOMIC_STORE16_I64_A32:
-  case WebAssembly::ATOMIC_STORE16_I64_A32_S:
-  case WebAssembly::ATOMIC_STORE16_I64_A64:
-  case WebAssembly::ATOMIC_STORE16_I64_A64_S:
-  case WebAssembly::ATOMIC_STORE32_I64_A32:
-  case WebAssembly::ATOMIC_STORE32_I64_A32_S:
-  case WebAssembly::ATOMIC_STORE32_I64_A64:
-  case WebAssembly::ATOMIC_STORE32_I64_A64_S:
-  case WebAssembly::ATOMIC_STORE8_I32_A32:
-  case WebAssembly::ATOMIC_STORE8_I32_A32_S:
-  case WebAssembly::ATOMIC_STORE8_I32_A64:
-  case WebAssembly::ATOMIC_STORE8_I32_A64_S:
-  case WebAssembly::ATOMIC_STORE8_I64_A32:
-  case WebAssembly::ATOMIC_STORE8_I64_A32_S:
-  case WebAssembly::ATOMIC_STORE8_I64_A64:
-  case WebAssembly::ATOMIC_STORE8_I64_A64_S:
-  case WebAssembly::ATOMIC_STORE_I32_A32:
-  case WebAssembly::ATOMIC_STORE_I32_A32_S:
-  case WebAssembly::ATOMIC_STORE_I32_A64:
-  case WebAssembly::ATOMIC_STORE_I32_A64_S:
-  case WebAssembly::ATOMIC_STORE_I64_A32:
-  case WebAssembly::ATOMIC_STORE_I64_A32_S:
-  case WebAssembly::ATOMIC_STORE_I64_A64:
-  case WebAssembly::ATOMIC_STORE_I64_A64_S:
-    return true;
-  default:
-    return false;
-  }
-}
-
   bool matchAndEmitInstruction(SMLoc IDLoc, unsigned & /*Opcode*/,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
@@ -1487,14 +1213,6 @@ bool isAtomic(unsigned Opc) {
             static_cast<uint16_t>(Inst.getOpcode()));
         if (Opc64 >= 0) {
           Inst.setOpcode(Opc64);
-        }
-      }
-      // Fix unknown memory ordering operands.
-      if (isAtomic(Inst.getOpcode())) {
-        for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
-          auto &Op = Inst.getOperand(i);
-          if (Op.isImm() && Op.getImm() == -1)
-            Op.setImm(wasm::WASM_MEM_ORDER_SEQ_CST);
         }
       }
       if (!SkipTypeCheck)

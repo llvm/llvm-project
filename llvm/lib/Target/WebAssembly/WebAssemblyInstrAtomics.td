@@ -35,43 +35,43 @@ multiclass ATOMIC_NRI<dag oops, dag iops, list<dag> pattern, string asmstr = "",
 let hasSideEffects = 1 in {
 defm MEMORY_ATOMIC_NOTIFY_A32 :
   ATOMIC_I<(outs I32:$dst),
-           (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order, I32:$addr, I32:$count),
-           (outs), (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order), [],
+           (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off, I32:$addr, I32:$count),
+           (outs), (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off), [],
            "memory.atomic.notify \t$dst, ${off}(${addr})${p2align}${order}, $count",
            "memory.atomic.notify \t${off}${p2align}${order}", 0x00, false>;
 defm MEMORY_ATOMIC_NOTIFY_A64 :
   ATOMIC_I<(outs I32:$dst),
-           (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order, I64:$addr, I32:$count),
-           (outs), (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order), [],
+           (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off, I64:$addr, I32:$count),
+           (outs), (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off), [],
            "memory.atomic.notify \t$dst, ${off}(${addr})${p2align}${order}, $count",
            "memory.atomic.notify \t${off}${p2align}${order}", 0x00, true>;
 let mayLoad = 1 in {
 defm MEMORY_ATOMIC_WAIT32_A32 :
   ATOMIC_I<(outs I32:$dst),
-           (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order, I32:$addr, I32:$exp,
+           (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off, I32:$addr, I32:$exp,
                 I64:$timeout),
-           (outs), (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order), [],
+           (outs), (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off), [],
            "memory.atomic.wait32 \t$dst, ${off}(${addr})${p2align}${order}, $exp, $timeout",
            "memory.atomic.wait32 \t${off}${p2align}${order}", 0x01, false>;
 defm MEMORY_ATOMIC_WAIT32_A64 :
   ATOMIC_I<(outs I32:$dst),
-           (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order, I64:$addr, I32:$exp,
+           (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off, I64:$addr, I32:$exp,
                 I64:$timeout),
-           (outs), (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order), [],
+           (outs), (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off), [],
            "memory.atomic.wait32 \t$dst, ${off}(${addr})${p2align}${order}, $exp, $timeout",
            "memory.atomic.wait32 \t${off}${p2align}${order}", 0x01, true>;
 defm MEMORY_ATOMIC_WAIT64_A32 :
   ATOMIC_I<(outs I32:$dst),
-           (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order, I32:$addr, I64:$exp,
+           (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off, I32:$addr, I64:$exp,
                 I64:$timeout),
-           (outs), (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order), [],
+           (outs), (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off), [],
            "memory.atomic.wait64 \t$dst, ${off}(${addr})${p2align}${order}, $exp, $timeout",
            "memory.atomic.wait64 \t${off}${p2align}${order}", 0x02, false>;
 defm MEMORY_ATOMIC_WAIT64_A64 :
   ATOMIC_I<(outs I32:$dst),
-           (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order, I64:$addr, I64:$exp,
+           (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off, I64:$addr, I64:$exp,
                 I64:$timeout),
-           (outs), (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order), [],
+           (outs), (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off), [],
            "memory.atomic.wait64 \t$dst, ${off}(${addr})${p2align}${order}, $exp, $timeout",
            "memory.atomic.wait64 \t${off}${p2align}${order}", 0x02, true>;
 } // mayLoad = 1
@@ -79,22 +79,22 @@ defm MEMORY_ATOMIC_WAIT64_A64 :
 
 def NotifyPat_A32 :
   Pat<(i32 (int_wasm_memory_atomic_notify (AddrOps32 offset32_op:$offset, I32:$addr), I32:$count)),
-      (MEMORY_ATOMIC_NOTIFY_A32 0, $offset, 0, $addr, $count)>,
+      (MEMORY_ATOMIC_NOTIFY_A32 0, 0, $offset, $addr, $count)>,
   Requires<[HasAddr32, HasAtomics]>;
 def NotifyPat_A64 :
   Pat<(i32 (int_wasm_memory_atomic_notify (AddrOps64 offset64_op:$offset, I64:$addr), I32:$count)),
-      (MEMORY_ATOMIC_NOTIFY_A64 0, $offset, 0, $addr, $count)>,
+      (MEMORY_ATOMIC_NOTIFY_A64 0, 0, $offset, $addr, $count)>,
   Requires<[HasAddr64, HasAtomics]>;
 
 
 multiclass WaitPat<ValueType ty, Intrinsic kind, string inst> {
   def WaitPat_A32 :
     Pat<(i32 (kind (AddrOps32 offset32_op:$offset, I32:$addr), ty:$exp, I64:$timeout)),
-        (!cast<NI>(inst#_A32) 0, $offset, 0, $addr, $exp, $timeout)>,
+        (!cast<NI>(inst#_A32) 0, 0, $offset, $addr, $exp, $timeout)>,
     Requires<[HasAddr32, HasAtomics]>;
   def WaitPat_A64 :
     Pat<(i32 (kind (AddrOps64 offset64_op:$offset, I64:$addr), ty:$exp, I64:$timeout)),
-        (!cast<NI>(inst#_A64) 0, $offset, 0, $addr, $exp, $timeout)>,
+        (!cast<NI>(inst#_A64) 0, 0, $offset, $addr, $exp, $timeout)>,
     Requires<[HasAddr64, HasAtomics]>;
 }
 
@@ -121,14 +121,14 @@ defm ATOMIC_FENCE : ATOMIC_NRI<(outs), (ins MemOrder:$order), [],
 multiclass WebAssemblyAtomicLoad<WebAssemblyRegClass rc, string name, int Opcode> {
   let mayLoad = 1, UseNamedOperandTable = 1 in {
   defm "_A32": I<(outs rc:$dst),
-                 (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order, I32:$addr),
-                 (outs), (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order),
+                 (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off, I32:$addr),
+                 (outs), (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off),
                  [], !strconcat(name, "\t$dst, ${off}(${addr})${p2align}${order}"),
                  !strconcat(name, "\t${off}${p2align}${order}"), Opcode, false>,
                Requires<[HasAtomics]>;
   defm "_A64": I<(outs rc:$dst),
-                 (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order, I64:$addr),
-                 (outs), (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order),
+                 (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off, I64:$addr),
+                 (outs), (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off),
                  [], !strconcat(name, "\t$dst, ${off}(${addr})${p2align}${order}"),
                  !strconcat(name, "\t${off}${p2align}${order}"), Opcode, true>,
                Requires<[HasAtomics]>;
@@ -141,10 +141,10 @@ multiclass AtomicLoad<WebAssemblyRegClass rc, string name, int atomic_op> {
 
 multiclass AtomicLoadPat<ValueType ty, SDPatternOperator kind, string Name> {
   def : Pat<(ty (kind (AddrOps32 offset32_op:$offset, I32:$addr))),
-            (!cast<NI>(Name # "_A32") 0, offset32_op:$offset, 0, I32:$addr)>,
+            (!cast<NI>(Name # "_A32") 0, 0, offset32_op:$offset, I32:$addr)>,
         Requires<[HasAddr32, HasAtomics]>;
   def : Pat<(ty (kind (AddrOps64 offset64_op:$offset, I64:$addr))),
-            (!cast<NI>(Name # "_A64") 0, offset64_op:$offset, 0, I64:$addr)>,
+            (!cast<NI>(Name # "_A64") 0, 0, offset64_op:$offset, I64:$addr)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 
@@ -212,14 +212,14 @@ defm : AtomicLoadPat<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 multiclass WebAssemblyAtomicStore<WebAssemblyRegClass rc, string name, int Opcode> {
   let mayStore = 1, UseNamedOperandTable = 1 in {
   defm "_A32" : I<(outs),
-                  (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order, I32:$addr, rc:$val),
-                  (outs), (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order), [],
+                  (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off, I32:$addr, rc:$val),
+                  (outs), (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off), [],
                   !strconcat(name, "\t${off}(${addr})${p2align}${order}, $val"),
                   !strconcat(name, "\t${off}${p2align}${order}"), Opcode, false>,
                 Requires<[HasAtomics]>;
   defm "_A64" : I<(outs),
-                  (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order, I64:$addr, rc:$val),
-                  (outs), (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order), [],
+                  (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off, I64:$addr, rc:$val),
+                  (outs), (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off), [],
                   !strconcat(name, "\t${off}(${addr})${p2align}${order}, $val"),
                   !strconcat(name, "\t${off}${p2align}${order}"), Opcode, true>,
                 Requires<[HasAtomics]>;
@@ -241,10 +241,10 @@ defm ATOMIC_STORE_I64 : AtomicStore<I64, "i64.atomic.store", 0x18>;
 
 multiclass AStorePat<ValueType ty, PatFrag kind, string inst> {
   def : Pat<(kind ty:$val, (AddrOps32 offset32_op:$offset, I32:$addr)),
-            (!cast<NI>(inst#_A32) 0, $offset, 0, $addr, $val)>,
+            (!cast<NI>(inst#_A32) 0, 0, $offset, $addr, $val)>,
         Requires<[HasAddr32, HasAtomics]>;
   def : Pat<(kind ty:$val, (AddrOps64 offset64_op:$offset, I64:$addr)),
-            (!cast<NI>(inst#_A64) 0, $offset, 0, $addr, $val)>,
+            (!cast<NI>(inst#_A64) 0, 0, $offset, $addr, $val)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 defm : AStorePat<i32, atomic_store_32, "ATOMIC_STORE_I32">;
@@ -284,14 +284,14 @@ multiclass WebAssemblyBinRMW<WebAssemblyRegClass rc, string name,
                              int atomic_op> {
   defm "_A32" :
     ATOMIC_I<(outs rc:$dst),
-             (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order, I32:$addr, rc:$val),
-             (outs), (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order), [],
+             (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off, I32:$addr, rc:$val),
+             (outs), (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}${order}, $val"),
              !strconcat(name, "\t${off}${p2align}${order}"), atomic_op, false>;
   defm "_A64" :
     ATOMIC_I<(outs rc:$dst),
-             (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order, I64:$addr, rc:$val),
-             (outs), (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order), [],
+             (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off, I64:$addr, rc:$val),
+             (outs), (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}${order}, $val"),
              !strconcat(name, "\t${off}${p2align}${order}"), atomic_op, true>;
 }
@@ -378,10 +378,10 @@ defm ATOMIC_RMW32_U_XCHG_I64 :
 
 multiclass BinRMWPat<ValueType ty, PatFrag kind, string inst> {
   def : Pat<(ty (kind (AddrOps32 offset32_op:$offset, I32:$addr), ty:$val)),
-            (!cast<NI>(inst#_A32) 0, $offset, 0, $addr, $val)>,
+            (!cast<NI>(inst#_A32) 0, 0, $offset, $addr, $val)>,
         Requires<[HasAddr32, HasAtomics]>;
   def : Pat<(ty (kind (AddrOps64 offset64_op:$offset, I64:$addr), ty:$val)),
-            (!cast<NI>(inst#_A64) 0, $offset, 0, $addr, $val)>,
+            (!cast<NI>(inst#_A64) 0, 0, $offset, $addr, $val)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 
@@ -488,16 +488,16 @@ multiclass WebAssemblyTerRMW<WebAssemblyRegClass rc, string name,
                              int atomic_op> {
   defm "_A32" :
     ATOMIC_I<(outs rc:$dst),
-             (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order, I32:$addr, rc:$exp,
+             (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off, I32:$addr, rc:$exp,
                   rc:$new_),
-             (outs), (ins P2Align:$p2align, offset32_op:$off, MemOrder:$order), [],
+             (outs), (ins P2Align:$p2align, MemOrder:$order, offset32_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}${order}, $exp, $new_"),
              !strconcat(name, "\t${off}${p2align}${order}"), atomic_op, false>;
   defm "_A64" :
     ATOMIC_I<(outs rc:$dst),
-             (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order, I64:$addr, rc:$exp,
+             (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off, I64:$addr, rc:$exp,
                   rc:$new_),
-             (outs), (ins P2Align:$p2align, offset64_op:$off, MemOrder:$order), [],
+             (outs), (ins P2Align:$p2align, MemOrder:$order, offset64_op:$off), [],
              !strconcat(name, "\t$dst, ${off}(${addr})${p2align}${order}, $exp, $new_"),
              !strconcat(name, "\t${off}${p2align}${order}"), atomic_op, true>;
 }
@@ -519,10 +519,10 @@ defm ATOMIC_RMW32_U_CMPXCHG_I64 :
 
 multiclass TerRMWPat<ValueType ty, PatFrag kind, string inst> {
   def : Pat<(ty (kind (AddrOps32 offset32_op:$offset, I32:$addr), ty:$exp, ty:$new)),
-            (!cast<NI>(inst#_A32) 0, $offset, 0, $addr, $exp, $new)>,
+            (!cast<NI>(inst#_A32) 0, 0, $offset, $addr, $exp, $new)>,
         Requires<[HasAddr32, HasAtomics]>;
   def : Pat<(ty (kind (AddrOps64 offset64_op:$offset, I64:$addr), ty:$exp, ty:$new)),
-            (!cast<NI>(inst#_A64) 0, $offset, 0, $addr, $exp, $new)>,
+            (!cast<NI>(inst#_A64) 0, 0, $offset, $addr, $exp, $new)>,
         Requires<[HasAddr64, HasAtomics]>;
 }
 

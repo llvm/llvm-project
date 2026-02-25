@@ -82,24 +82,16 @@ void WebAssemblyMCCodeEmitter::encodeMemArg(
     SmallSet<unsigned, 4> &HandledOperands,
     SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const {
   unsigned P2AlignIdx = I;
-  std::optional<unsigned> OffsetIdx;
   std::optional<unsigned> MemOrderIdx;
 
-  for (unsigned J = 0; J < MI.getNumOperands(); ++J) {
-    if (J < Desc.getNumOperands()) {
-      auto OT = Desc.operands()[J].OperandType;
-      if (OT == WebAssembly::OPERAND_OFFSET32 ||
-          OT == WebAssembly::OPERAND_OFFSET64)
-        OffsetIdx = J;
-      else if (OT == WebAssembly::OPERAND_MEMORDER)
-        MemOrderIdx = J;
-    }
-  }
+  if (I + 1 < Desc.getNumOperands() &&
+      Desc.operands()[I + 1].OperandType == WebAssembly::OPERAND_MEMORDER)
+    MemOrderIdx = I + 1;
 
   uint64_t P2Align = MI.getOperand(P2AlignIdx).getImm();
   uint8_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
 
-  // Memory instructions always have an ordering, but if it's SEQ_CST then we
+  // Atomic instructions always have an ordering, but if it's SEQ_CST then we
   // don't use the shared-everything encoding (even if shared everything is
   // enabled) because the original encoding is smaller.
   if (MemOrderIdx) {
@@ -124,28 +116,6 @@ void WebAssemblyMCCodeEmitter::encodeMemArg(
   // We handled the MemOrder operand, even if we didn't encode it explicitly
   if (MemOrderIdx)
     HandledOperands.insert(*MemOrderIdx);
-
-  if (OffsetIdx) {
-    const MCOperand &MO = MI.getOperand(*OffsetIdx);
-    if (MO.isImm()) {
-      if (Desc.operands()[*OffsetIdx].OperandType == WebAssembly::OPERAND_OFFSET32)
-        encodeULEB128(uint32_t(MO.getImm()), OS);
-      else
-        encodeULEB128(uint64_t(MO.getImm()), OS);
-    } else {
-      assert(MO.isExpr());
-      llvm::MCFixupKind FixupKind =
-          Desc.operands()[*OffsetIdx].OperandType == WebAssembly::OPERAND_OFFSET32
-              ? WebAssembly::fixup_uleb128_i32
-              : WebAssembly::fixup_uleb128_i64;
-      raw_svector_ostream &SOS = static_cast<raw_svector_ostream &>(OS);
-      Fixups.push_back(
-          MCFixup::create(SOS.tell() - Start, MO.getExpr(), FixupKind));
-      ++MCNumFixups;
-      encodeULEB128(0, OS, FixupKind == WebAssembly::fixup_uleb128_i32 ? 5 : 10);
-    }
-    HandledOperands.insert(*OffsetIdx);
-  }
 }
 
 void WebAssemblyMCCodeEmitter::encodeInstruction(

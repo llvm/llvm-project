@@ -380,6 +380,7 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
     return;
 
   switch (Imm) {
+  case wasm::WASM_MEM_ORDER_RMW_ACQ_REL:
   case wasm::WASM_MEM_ORDER_ACQ_REL:
     O << " acqrel";
     break;
