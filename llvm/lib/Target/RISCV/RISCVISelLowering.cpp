@@ -16145,6 +16145,7 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
     case ISD::FMAXNUM:
     case ISD::FMAXIMUMNUM:
       return RISCVISD::VECREDUCE_FMAX_VL;
+    case ISD::FMINNUM:
     case ISD::FMINIMUMNUM:
       return RISCVISD::VECREDUCE_FMIN_VL;
     }
