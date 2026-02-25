@@ -120,8 +120,6 @@ public:
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerREADSTEADYCOUNTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
@@ -485,6 +483,7 @@ private:
   SDValue LowerHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred32ToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxPred64ToFp(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerHvxPartialReduceMLA(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const;
   SDValue ExpandHvxIntToFp(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerHvxStore(SDValue Op, SelectionDAG &DAG) const;
@@ -517,12 +516,20 @@ private:
                              SelectionDAG &DAG) const;
 
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
+
+  SDValue combineConcatOfShuffles(SDValue Op, SelectionDAG &DAG) const;
+  SDValue combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
+                                     SelectionDAG &DAG) const;
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
-  SDValue combineVectorShuffleBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
-      const;
-
-  SDValue PerformHvxDAGCombine(SDNode * N, DAGCombinerInfo & DCI) const;
+  SDValue expandVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
+  SDValue createExtendingPartialReduceMLA(
+      unsigned Opcode, EVT AccEltType, unsigned AccNumElements, EVT InputType,
+      const SDValue &A, const SDValue &B, unsigned &RemainingReductionRatio,
+      const SDLoc &DL, SelectionDAG &DAG) const;
+  SDValue splitVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;
+  SDValue splitExtendingPartialReduceMLA(SDNode *N, SelectionDAG &DAG) const;
+  SDValue PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 };
 
 } // end namespace llvm

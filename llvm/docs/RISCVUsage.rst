@@ -350,8 +350,8 @@ The primary goal of experimental support is to assist in the process of ratifica
 ``experimental-svukte``
   LLVM implements the `0.3 draft specification <https://github.com/riscv/riscv-isa-manual/pull/1564>`__.
 
-``experimental-zvqdotq``
-  LLVM implements the `0.0.1 draft specification <https://github.com/riscv/riscv-dot-product/releases/tag/v0.0.1>`__.
+``experimental-zvdot4a8i``
+  LLVM implements the `0.1 draft specification <https://github.com/riscv/riscv-isa-manual/pull/2576>`__.
 
 ``experimental-smpmpmt``
   LLVM implements the `0.6 draft specification <https://github.com/riscv/riscv-isa-manual/blob/smpmpmt/src/smpmpmt.adoc>`__.

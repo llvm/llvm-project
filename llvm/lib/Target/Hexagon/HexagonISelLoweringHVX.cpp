@@ -40,6 +40,8 @@ static const MVT LegalW64[] =  { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
 static const MVT LegalV128[] = { MVT::v128i8, MVT::v64i16,  MVT::v32i32 };
 static const MVT LegalW128[] = { MVT::v256i8, MVT::v128i16, MVT::v64i32 };
 
+static const unsigned MaxExpandMLA = 8;
+
 static std::tuple<unsigned, unsigned, unsigned> getIEEEProperties(MVT Ty) {
   // For a float scalar type, return (exp-bits, exp-bias, fraction-bits)
   MVT ElemTy = Ty.getScalarType();
@@ -504,6 +506,69 @@ HexagonTargetLowering::initializeHVXLowering() {
   setOperationAction(ISD::SINT_TO_FP, MVT::v32i1, Custom);
 
   setTargetDAGCombine({ISD::CONCAT_VECTORS, ISD::TRUNCATE, ISD::VSELECT});
+
+  setTargetDAGCombine({ISD::PARTIAL_REDUCE_SMLA, ISD::PARTIAL_REDUCE_UMLA,
+                       ISD::PARTIAL_REDUCE_SUMLA});
+
+  // Partial MLA reductions.
+  {
+    static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
+                                      ISD::PARTIAL_REDUCE_UMLA,
+                                      ISD::PARTIAL_REDUCE_SUMLA};
+
+    auto HvxType = [=](MVT ScalarT, unsigned Factor = 1) {
+      return MVT::getVectorVT(ScalarT, Subtarget.getVectorLength() * Factor *
+                                           8 / ScalarT.getSizeInBits());
+    };
+
+    // Tuple of (Acc element type, input element type, vector pair).
+    // The assumption is both the input and reduction result are of the same
+    // size so the reduction ratio is the same as the ratio of element type
+    // sizes. This may not hold for all available instructions.
+    typedef std::tuple<MVT, MVT, bool> ReductionSignature;
+
+    static const std::vector<ReductionSignature> NativeReductions = {
+        {MVT::i32, MVT::i8, false},
+    };
+
+    for (const auto &R : NativeReductions) {
+
+      MVT AccType = std::get<0>(R);
+      MVT InputType = std::get<1>(R);
+      unsigned Factor = std::get<2>(R) ? 2 : 1;
+
+      // The native size is legal.
+      setPartialReduceMLAAction(MLAOps, HvxType(AccType), HvxType(InputType),
+                                Legal);
+
+      // Allow custom partial MLA reductions on larger vectors than legally
+      // supported. These reduction must be declared as Custom (or Legal)
+      // for foldPartialReduceMLAMulOp() to fold the multiply by one pattern
+      // inserted when the partial reduction intrinsic is converted to
+      // PARTIAL_REDUCE_U/S/SUMLA. Otherwise, the Split action will apply
+      // on the original pattern, including the extensions and multiplies,
+      // which will make it impossible to match.
+      // There are two independent ways to extend the
+      // input size: 1. to concatenate the result - output vector is
+      // proportionally extended, 2) to reduce the result - the output vector
+      // size stays the same. We limit allowed combinations so that the total
+      // number of generated reduction instructions is limited by a constant
+      // number. This limit is arbitrary and can be revised. On one hand, it is
+      // convenient to have more choices; on the other hand, there is a
+      // diminishing benefit of very long sequences, which should probably be
+      // written as loops instead.
+      for (unsigned ConcatFactor = 1; ConcatFactor <= MaxExpandMLA;
+           ConcatFactor <<= 1)
+        for (unsigned ReductionFactor = 1; ReductionFactor <= MaxExpandMLA;
+             ReductionFactor <<= 1)
+          if (ConcatFactor * ReductionFactor != 1 &&
+              ConcatFactor * ReductionFactor <= MaxExpandMLA)
+            setPartialReduceMLAAction(
+                MLAOps, HvxType(AccType, Factor * ConcatFactor),
+                HvxType(InputType, Factor * ConcatFactor * ReductionFactor),
+                Custom);
+    }
+  }
 }
 
 unsigned
@@ -1112,11 +1177,8 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
   SDValue W0 = isUndef(PredV)
                   ? DAG.getUNDEF(MVT::i64)
                   : DAG.getNode(HexagonISD::P2D, dl, MVT::i64, PredV);
-  if (Bytes < BitBytes) {
-    Words[IdxW].push_back(HiHalf(W0, DAG));
-    Words[IdxW].push_back(LoHalf(W0, DAG));
-  } else
-    Words[IdxW].push_back(W0);
+  Words[IdxW].push_back(HiHalf(W0, DAG));
+  Words[IdxW].push_back(LoHalf(W0, DAG));
 
   while (Bytes < BitBytes) {
     IdxW ^= 1;
@@ -1137,27 +1199,7 @@ HexagonTargetLowering::createHvxPrefixPred(SDValue PredV, const SDLoc &dl,
     Bytes *= 2;
   }
 
-  while (Bytes > BitBytes) {
-    IdxW ^= 1;
-    Words[IdxW].clear();
-
-    if (Bytes <= 4) {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        SDValue T = contractPredicate(W, dl, DAG);
-        Words[IdxW].push_back(T);
-      }
-    } else {
-      for (const SDValue &W : Words[IdxW ^ 1]) {
-        Words[IdxW].push_back(W);
-      }
-    }
-    Bytes /= 2;
-  }
-
   assert(Bytes == BitBytes);
-  if (BitBytes == 1 && PredTy == MVT::v2i1)
-    ByteTy = MVT::getVectorVT(MVT::i16, HwLen);
-
   SDValue Vec = ZeroFill ? getZero(dl, ByteTy, DAG) : DAG.getUNDEF(ByteTy);
   SDValue S4 = DAG.getConstant(HwLen-4, dl, MVT::i32);
   for (const SDValue &W : Words[IdxW]) {
@@ -1434,7 +1476,7 @@ HexagonTargetLowering::extractHvxSubvectorPred(SDValue VecV, SDValue IdxV,
   unsigned Rep = 8 / ResLen;
   // Make sure the output fill the entire vector register, so repeat the
   // 8-byte groups as many times as necessary.
-  for (unsigned r = 0; r != HwLen/ResLen; ++r) {
+  for (unsigned r = 0; r != HwLen / 8; ++r) {
     // This will generate the indexes of the 8 interesting bytes.
     for (unsigned i = 0; i != ResLen; ++i) {
       for (unsigned j = 0; j != Rep; ++j)
@@ -1841,13 +1883,17 @@ HexagonTargetLowering::LowerHvxConcatVectors(SDValue Op, SelectionDAG &DAG)
   // corresponds to.
   unsigned BitBytes = HwLen / VecTy.getVectorNumElements();
 
+  // Make sure that createHvxPrefixPred will only ever need to expand
+  // the predicate, i.e. bytes-per-bit in the input is not greater than
+  // the target bytes-per-bit in the result.
+  SDValue Combined = combineConcatOfScalarPreds(Op, BitBytes, DAG);
   SmallVector<SDValue,8> Prefixes;
-  for (SDValue V : Op.getNode()->op_values()) {
+  for (SDValue V : Combined.getNode()->op_values()) {
     SDValue P = createHvxPrefixPred(V, dl, BitBytes, true, DAG);
     Prefixes.push_back(P);
   }
 
-  unsigned InpLen = ty(Op.getOperand(0)).getVectorNumElements();
+  unsigned InpLen = ty(Combined.getOperand(0)).getVectorNumElements();
   MVT ByteTy = MVT::getVectorVT(MVT::i8, HwLen);
   SDValue S = DAG.getConstant(HwLen - InpLen*BitBytes, dl, MVT::i32);
   SDValue Res = getZero(dl, ByteTy, DAG);
@@ -3678,6 +3724,11 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case HexagonISD::SMUL_LOHI:
     case HexagonISD::UMUL_LOHI:
     case HexagonISD::USMUL_LOHI:       return LowerHvxMulLoHi(Op, DAG);
+
+    case ISD::PARTIAL_REDUCE_SMLA:
+    case ISD::PARTIAL_REDUCE_UMLA:
+    case ISD::PARTIAL_REDUCE_SUMLA:
+      return LowerHvxPartialReduceMLA(Op, DAG);
       // clang-format on
   }
 #ifndef NDEBUG
@@ -3785,6 +3836,15 @@ HexagonTargetLowering::LegalizeHvxResize(SDValue Op, SelectionDAG &DAG) const {
     SDValue T = ExpandHvxResizeIntoSteps(S, DAG);
     return extractSubvector(T, typeLegalize(ResTy, DAG), 0, DAG);
   } else if (shouldSplitToHvx(InpWidth < ResWidth ? ResTy : InpTy, DAG)) {
+    // For multi-step extends/truncates (e.g., i8->i32), expand into
+    // single-step operations first. Splitting a multi-step TL_EXTEND
+    // would halve the operand type to a sub-HVX size (e.g., v128i8 ->
+    // v64i8), creating illegal types that cause issues in the type
+    // legalizer's map tracking. Single-step operations (e.g., i16->i32)
+    // are safe to split because their halved operand types remain legal.
+    SDValue T = ExpandHvxResizeIntoSteps(Op, DAG);
+    if (T != Op)
+      return T;
     return opJoin(SplitVectorOp(Op, DAG), SDLoc(Op), DAG);
   } else {
     assert(isTypeLegal(InpTy) && isTypeLegal(ResTy));
@@ -3955,8 +4015,8 @@ HexagonTargetLowering::combineTruncateBeforeLegal(SDValue Op,
 }
 
 SDValue
-HexagonTargetLowering::combineConcatVectorsBeforeLegal(
-    SDValue Op, DAGCombinerInfo &DCI) const {
+HexagonTargetLowering::combineConcatOfShuffles(SDValue Op,
+                                               SelectionDAG &DAG) const {
   // Fold
   //   concat (shuffle x, y, m1), (shuffle x, y, m2)
   // into
@@ -3964,7 +4024,6 @@ HexagonTargetLowering::combineConcatVectorsBeforeLegal(
   if (Op.getNumOperands() != 2)
     return SDValue();
 
-  SelectionDAG &DAG = DCI.DAG;
   const SDLoc &dl(Op);
   SDValue V0 = Op.getOperand(0);
   SDValue V1 = Op.getOperand(1);
@@ -4020,6 +4079,247 @@ HexagonTargetLowering::combineConcatVectorsBeforeLegal(
   return DAG.getVectorShuffle(LongTy, dl, Cat, DAG.getUNDEF(LongTy), LongMask);
 }
 
+// Reassociate concat(p1, p2, ...) into
+//   concat(concat(p1, ...), concat(pi, ...), ...)
+// where each inner concat produces a predicate where each bit corresponds
+// to at most BitBytes bytes.
+// Concatenating predicates decreases the number of bytes per each predicate
+// bit.
+SDValue
+HexagonTargetLowering::combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
+                                                  SelectionDAG &DAG) const {
+  const SDLoc &dl(Op);
+  SmallVector<SDValue> Ops(Op->ops());
+  MVT ResTy = ty(Op);
+  MVT InpTy = ty(Ops[0]);
+  unsigned InpLen = InpTy.getVectorNumElements(); // Scalar predicate
+  unsigned ResLen = ResTy.getVectorNumElements(); // HVX vector predicate
+  assert(InpLen <= 8 && "Too long for scalar predicate");
+  assert(ResLen > 8 && "Too short for HVX vector predicate");
+
+  unsigned Bytes = 8 / InpLen; // Bytes-per-bit in input
+
+  // Already in the right form?
+  if (Bytes <= BitBytes)
+    return Op;
+
+  ArrayRef<SDValue> Inputs(Ops);
+  unsigned SliceLen = Bytes / BitBytes;
+
+  SmallVector<SDValue> Cats;
+  // (8 / BitBytes) is the desired length of the result of the inner concat.
+  for (unsigned i = 0; i != ResLen / (8 / BitBytes); ++i) {
+    SDValue Cat = DAG.getNode(ISD::CONCAT_VECTORS, dl, MVT::v8i1,
+                              Inputs.slice(SliceLen * i, SliceLen));
+    Cats.push_back(Cat);
+  }
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, dl, ResTy, Cats);
+}
+
+SDValue HexagonTargetLowering::combineConcatVectorsBeforeLegal(
+    SDValue Op, DAGCombinerInfo &DCI) const {
+  MVT ResTy = ty(Op);
+  MVT ElemTy = ResTy.getVectorElementType();
+
+  if (ElemTy != MVT::i1) {
+    return combineConcatOfShuffles(Op, DCI.DAG);
+  }
+  return SDValue();
+}
+
+// Create the inner partial reduction MLA that can be efficiently lowered. This
+// function is used by partial and full reductions.
+SDValue HexagonTargetLowering::createExtendingPartialReduceMLA(
+    unsigned Opcode, EVT AccEltType, unsigned AccNumElements, EVT InputType,
+    const SDValue &A, const SDValue &B, unsigned &RemainingReductionRatio,
+    const SDLoc &DL, SelectionDAG &DAG) const {
+  const auto &Subtarget = DAG.getSubtarget<HexagonSubtarget>();
+  if (!Subtarget.useHVXOps())
+    return SDValue();
+
+  EVT InputEltType = InputType.getVectorElementType();
+
+  // Find if an optimized instruction for the sub-reduction is available.
+  unsigned NativeRatio;
+  if (AccEltType == MVT::i32 && InputEltType == MVT::i8)
+    NativeRatio = 4;
+  else
+    return SDValue();
+
+  // We only handle the case when additional reduction will be needed, i.e.
+  // input is longer by a larger factor than the result.
+  ElementCount InputEC = InputType.getVectorElementCount();
+  if (!InputEC.isKnownMultipleOf(AccNumElements * NativeRatio))
+    return SDValue();
+
+  unsigned InputNumElements = InputEC.getFixedValue();
+  RemainingReductionRatio = InputNumElements / (AccNumElements * NativeRatio);
+  if (RemainingReductionRatio == 1)
+    return SDValue();
+
+  // Create a reduction by the natively supported factor.
+  EVT IntermediateType = EVT::getVectorVT(*DAG.getContext(), AccEltType,
+                                          InputNumElements / NativeRatio);
+
+  SDValue Zero = DAG.getConstant(0, DL, IntermediateType);
+  return DAG.getNode(Opcode, DL, IntermediateType, Zero, A, B);
+}
+
+static bool DetectExtendingMultiply(const SDValue &N, EVT ScalarType,
+                                    unsigned &Opcode, SDValue &A, SDValue &B) {
+  SDValue Mul = N;
+  EVT AccType = Mul.getValueType(); // Vector input type after extension.
+  if (ScalarType != AccType.getVectorElementType())
+    return false;
+  bool swap = false;
+  if (Mul->getOpcode() != ISD::MUL)
+    return false;
+  A = Mul->getOperand(0);
+  B = Mul->getOperand(1);
+  if (A.getOpcode() == ISD::ZERO_EXTEND) {
+    if (B.getOpcode() == ISD::ZERO_EXTEND)
+      Opcode = ISD::PARTIAL_REDUCE_UMLA;
+    else if (B.getOpcode() == ISD::SIGN_EXTEND) {
+      swap = true;
+      Opcode = ISD::PARTIAL_REDUCE_SUMLA;
+    } else
+      return false;
+  } else if (A.getOpcode() == ISD::SIGN_EXTEND) {
+    if (B.getOpcode() == ISD::ZERO_EXTEND)
+      Opcode = ISD::PARTIAL_REDUCE_SUMLA;
+    else if (B.getOpcode() == ISD::SIGN_EXTEND)
+      Opcode = ISD::PARTIAL_REDUCE_SMLA;
+    else
+      return false;
+  } else
+    return false;
+
+  // Get multiplication arguments before extension.
+  A = A->getOperand(0);
+  B = B->getOperand(0);
+  if (A.getValueType() != B.getValueType())
+    return false;
+
+  if (swap)
+    std::swap(A, B);
+
+  return true;
+}
+
+SDValue HexagonTargetLowering::splitVecReduceAdd(SDNode *N,
+                                                 SelectionDAG &DAG) const {
+  if (!Subtarget.useHVXOps())
+    return SDValue();
+
+  EVT ScalarType = N->getValueType(0);
+  unsigned Opcode;
+  SDValue A, B;
+  if (!DetectExtendingMultiply(N->getOperand(0), ScalarType, Opcode, A, B))
+    return SDValue();
+
+  SDLoc DL(N);
+  unsigned RemainingReductionRatio;
+  SDValue Partial =
+      createExtendingPartialReduceMLA(Opcode, ScalarType, 1, A.getValueType(),
+                                      A, B, RemainingReductionRatio, DL, DAG);
+  if (!Partial)
+    return SDValue();
+
+  // We could have inserted a trivial MLA and rely on the folding action,
+  // similar to how vector_partial_reduce_add is lowered to an MLA in
+  // SelectionDAGBuilder. However, we just replace the final result since we
+  // have analyzed the input completely.
+  return DAG.getNode(ISD::VECREDUCE_ADD, DL, ScalarType, Partial);
+}
+
+// When possible, separate an MLA reduction with extended operands but
+// unsupported reduction factor into an extending partial reduction that
+// can be efficiently lowered, and a follow-up partial reduction.
+// partial_reduce_mla(a, x, y) ->
+//     partial_reduce_mla(a, partial_reduce_mla(0, x, y), 1)
+SDValue
+HexagonTargetLowering::splitExtendingPartialReduceMLA(SDNode *N,
+                                                      SelectionDAG &DAG) const {
+  if (!Subtarget.useHVXOps())
+    return SDValue();
+
+  SDValue Acc = N->getOperand(0);
+  SDValue A = N->getOperand(1);
+  SDValue B = N->getOperand(2);
+  if (A.getValueType() != B.getValueType())
+    return SDValue();
+
+  // The types should be declared as custom, but do not split already legal
+  // operation.
+  EVT AccType = Acc.getValueType();
+  EVT InputType = A.getValueType();
+  if (getPartialReduceMLAAction(N->getOpcode(), AccType, InputType) != Custom)
+    return SDValue();
+
+  SDLoc DL(N);
+  unsigned RemainingReductionRatio;
+  SDValue Partial = createExtendingPartialReduceMLA(
+      N->getOpcode(), AccType.getVectorElementType(),
+      AccType.getVectorNumElements(), InputType, A, B, RemainingReductionRatio,
+      DL, DAG);
+  if (!Partial)
+    return SDValue();
+  assert(RemainingReductionRatio <= MaxExpandMLA);
+
+  // Create the reduction for the remaining ratio.
+  EVT IntermediateType = Partial->getOperand(0).getValueType();
+  SDValue One = DAG.getConstant(1, DL, IntermediateType);
+  return DAG.getNode(N->getOpcode() == ISD::PARTIAL_REDUCE_UMLA
+                         ? ISD::PARTIAL_REDUCE_UMLA
+                         : ISD::PARTIAL_REDUCE_SUMLA,
+                     DL, AccType, Acc, Partial, One);
+}
+
+SDValue
+HexagonTargetLowering::LowerHvxPartialReduceMLA(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  const SDLoc &DL(Op);
+  SDValue Acc = Op.getOperand(0);
+  SDValue A = Op.getOperand(1);
+  SDValue B = Op.getOperand(2);
+
+  // Split the input vectors into units of one HVX vector length.
+  unsigned HwVectorSizeInBits = Subtarget.getVectorLength() * 8;
+
+  EVT AccType = Acc.getValueType();
+  EVT AccEltType = AccType.getVectorElementType();
+  unsigned AccSubvectorNumElements =
+      HwVectorSizeInBits / AccEltType.getSizeInBits();
+  EVT AccSubvectorType =
+      EVT::getVectorVT(*DAG.getContext(), AccEltType, AccSubvectorNumElements);
+
+  EVT InputType = A.getValueType();
+  assert(InputType.getSizeInBits() % HwVectorSizeInBits == 0);
+  EVT InputEltType = InputType.getVectorElementType();
+  unsigned InputSubvectorNumElements =
+      HwVectorSizeInBits / InputEltType.getSizeInBits();
+  EVT InputSubvectorType = EVT::getVectorVT(*DAG.getContext(), InputEltType,
+                                            InputSubvectorNumElements);
+
+  unsigned SubvectorNum = InputType.getFixedSizeInBits() / HwVectorSizeInBits;
+  SmallVector<SDValue, MaxExpandMLA> Subvectors;
+
+  for (unsigned I = 0; I != SubvectorNum; ++I) {
+    SDValue SubvectorAcc = DAG.getExtractSubvector(DL, AccSubvectorType, Acc,
+                                                   I * AccSubvectorNumElements);
+    SDValue SubvectorA = DAG.getExtractSubvector(DL, InputSubvectorType, A,
+                                                 I * InputSubvectorNumElements);
+    SDValue SubvectorB = DAG.getExtractSubvector(DL, InputSubvectorType, B,
+                                                 I * InputSubvectorNumElements);
+    SDValue SubvectorMLA = DAG.getNode(Op.getOpcode(), DL, AccSubvectorType,
+                                       SubvectorAcc, SubvectorA, SubvectorB);
+    Subvectors.push_back(SubvectorMLA);
+  }
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, AccType, Subvectors);
+}
+
 SDValue
 HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
       const {
@@ -4039,43 +4339,33 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return SDValue();
 
   switch (Opc) {
-    case ISD::VSELECT: {
-      // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)
-      SDValue Cond = Ops[0];
-      if (Cond->getOpcode() == ISD::XOR) {
-        SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
-        if (C1->getOpcode() == HexagonISD::QTRUE)
-          return DAG.getNode(ISD::VSELECT, dl, ty(Op), C0, Ops[2], Ops[1]);
-      }
-      break;
+  case HexagonISD::V2Q:
+    if (Ops[0].getOpcode() == ISD::SPLAT_VECTOR) {
+      if (const auto *C = dyn_cast<ConstantSDNode>(Ops[0].getOperand(0)))
+        return C->isZero() ? DAG.getNode(HexagonISD::QFALSE, dl, ty(Op))
+                           : DAG.getNode(HexagonISD::QTRUE, dl, ty(Op));
     }
-    case HexagonISD::V2Q:
-      if (Ops[0].getOpcode() == ISD::SPLAT_VECTOR) {
-        if (const auto *C = dyn_cast<ConstantSDNode>(Ops[0].getOperand(0)))
-          return C->isZero() ? DAG.getNode(HexagonISD::QFALSE, dl, ty(Op))
-                             : DAG.getNode(HexagonISD::QTRUE, dl, ty(Op));
-      }
-      break;
-    case HexagonISD::Q2V:
-      if (Ops[0].getOpcode() == HexagonISD::QTRUE)
-        return DAG.getNode(ISD::SPLAT_VECTOR, dl, ty(Op),
-                           DAG.getAllOnesConstant(dl, MVT::i32));
-      if (Ops[0].getOpcode() == HexagonISD::QFALSE)
-        return getZero(dl, ty(Op), DAG);
-      break;
-    case HexagonISD::VINSERTW0:
-      if (isUndef(Ops[1]))
-        return Ops[0];
-      break;
-    case HexagonISD::VROR: {
-      if (Ops[0].getOpcode() == HexagonISD::VROR) {
-        SDValue Vec = Ops[0].getOperand(0);
-        SDValue Rot0 = Ops[1], Rot1 = Ops[0].getOperand(1);
-        SDValue Rot = DAG.getNode(ISD::ADD, dl, ty(Rot0), {Rot0, Rot1});
-        return DAG.getNode(HexagonISD::VROR, dl, ty(Op), {Vec, Rot});
-      }
-      break;
+    break;
+  case HexagonISD::Q2V:
+    if (Ops[0].getOpcode() == HexagonISD::QTRUE)
+      return DAG.getNode(ISD::SPLAT_VECTOR, dl, ty(Op),
+                         DAG.getAllOnesConstant(dl, MVT::i32));
+    if (Ops[0].getOpcode() == HexagonISD::QFALSE)
+      return getZero(dl, ty(Op), DAG);
+    break;
+  case HexagonISD::VINSERTW0:
+    if (isUndef(Ops[1]))
+      return Ops[0];
+    break;
+  case HexagonISD::VROR: {
+    if (Ops[0].getOpcode() == HexagonISD::VROR) {
+      SDValue Vec = Ops[0].getOperand(0);
+      SDValue Rot0 = Ops[1], Rot1 = Ops[0].getOperand(1);
+      SDValue Rot = DAG.getNode(ISD::ADD, dl, ty(Rot0), {Rot0, Rot1});
+      return DAG.getNode(HexagonISD::VROR, dl, ty(Op), {Vec, Rot});
     }
+    break;
+  }
   }
 
   return SDValue();

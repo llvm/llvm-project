@@ -53,14 +53,15 @@ using namespace clang::CIRGen;
 // comparison
 // - Just emit the intrinsics call instead of calling this helper, see how the
 // LLVM lowering handles this.
-static mlir::Value emitVectorFCmp(CIRGenBuilderTy &builder,
+static mlir::Value emitVectorFCmp(CIRGenFunction &cgf, const CallExpr &expr,
                                   llvm::SmallVector<mlir::Value> &ops,
-                                  mlir::Location loc, cir::CmpOpKind pred,
-                                  bool shouldInvert) {
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+                                  cir::CmpOpKind pred, bool shouldInvert) {
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(cgf, &expr);
   // TODO(cir): Add isSignaling boolean once emitConstrainedFPCall implemented
   assert(!cir::MissingFeatures::emitConstrainedFPCall());
-  mlir::Value cmp = builder.createVecCompare(loc, pred, ops[0], ops[1]);
+  clang::CIRGen::CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Value cmp = builder.createVecCompare(cgf.getLoc(expr.getExprLoc()),
+                                             pred, ops[0], ops[1]);
   mlir::Value bitCast = builder.createBitcast(
       shouldInvert ? builder.createNot(cmp) : cmp, ops[0].getType());
   return bitCast;
@@ -860,11 +861,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI_m_prefetchw:
     return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "x86.rdtsc",
+                                       builder.getUInt64Ty());
   case X86::BI__builtin_ia32_rdtscp: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Type i64Ty = builder.getUInt64Ty();
+    mlir::Type i32Ty = builder.getUInt32Ty();
+    mlir::Type structTy = builder.getAnonRecordTy({i64Ty, i32Ty});
+    mlir::Value result =
+        builder.emitIntrinsicCallOp(loc, "x86.rdtscp", structTy);
+
+    // Extract and store processor_id (element 1 of the returned struct)
+    mlir::Value processorId =
+        cir::ExtractMemberOp::create(builder, loc, i32Ty, result, 1);
+    // ops[0] is the address to store the processor ID
+    builder.createStore(loc, processorId, Address{ops[0], CharUnits::One()});
+
+    // Return timestamp (element 0 of the returned struct)
+    return cir::ExtractMemberOp::create(builder, loc, i64Ty, result, 0);
   }
   case X86::BI__builtin_ia32_lzcnt_u16:
   case X86::BI__builtin_ia32_lzcnt_u32:
@@ -2302,12 +2316,12 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     return mlir::Value{};
   case X86::BI__builtin_ia32_cmpnltps:
   case X86::BI__builtin_ia32_cmpnltpd:
-    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
-                          cir::CmpOpKind::lt, /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::lt,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpnleps:
   case X86::BI__builtin_ia32_cmpnlepd:
-    return emitVectorFCmp(builder, ops, getLoc(expr->getExprLoc()),
-                          cir::CmpOpKind::le, /*shouldInvert=*/true);
+    return emitVectorFCmp(*this, *expr, ops, cir::CmpOpKind::le,
+                          /*shouldInvert=*/true);
   case X86::BI__builtin_ia32_cmpordps:
   case X86::BI__builtin_ia32_cmpordpd:
   case X86::BI__builtin_ia32_cmpph128_mask:
