@@ -9,27 +9,31 @@
 #define LLVM_CLANG_ANALYSIS_SCALABLE_ANALYSES_UNSAFEBUFFERUSAGE_EXTRACTOR_H
 
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
-#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsageBuilder.h"
+#include "clang/Analysis/Scalable/Model/EntityId.h"
+#include "clang/Analysis/Scalable/Model/EntityName.h"
+#include "clang/Analysis/Scalable/TUSummary/TUSummaryBuilder.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummaryExtractor.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 
 namespace clang::ssaf {
 class UnsafeBufferUsageTUSummaryExtractor : public TUSummaryExtractor {
-
-  UnsafeBufferUsageTUSummaryBuilder &getBuilder() {
-    return static_cast<UnsafeBufferUsageTUSummaryBuilder &>(SummaryBuilder);
-  }
-
 public:
-  explicit UnsafeBufferUsageTUSummaryExtractor(
-      UnsafeBufferUsageTUSummaryBuilder &Builder)
+  UnsafeBufferUsageTUSummaryExtractor(TUSummaryBuilder &Builder)
       : TUSummaryExtractor(Builder) {}
 
-  // FIXME: need some general traversal in the Base class
+  static EntityPointerLevel buildEntityPointerLevel(EntityId Entity,
+                                                    unsigned PointerLevel) {
+    return {Entity, PointerLevel};
+  }
+
+  EntityId addEntity(EntityName EN) { return SummaryBuilder.addEntity(EN); }
+
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
-  extractEntitySummary(EntityId Contributor, const Decl *ContributorDefn,
-                       ASTContext &Ctx, llvm::Error &Error);
+  extractEntitySummary(const Decl *Contributor, ASTContext &Ctx,
+                       llvm::Error &Error);
+
+  virtual void HandleTranslationUnit(ASTContext &Ctx) override;
 };
 } // namespace clang::ssaf
 

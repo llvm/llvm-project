@@ -30,5 +30,6 @@ FIELD(TUSummary, Data)
 FIELD(TUSummary, IdTable)
 FIELD(TUSummary, LinkageTable)
 FIELD(TUSummary, TUNamespace)
+FIELD(UnsafeBufferUsageEntitySummary, UnsafeBuffers)
 
 #undef FIELD

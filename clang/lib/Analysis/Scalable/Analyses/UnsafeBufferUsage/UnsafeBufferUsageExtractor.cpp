@@ -15,8 +15,6 @@
 #include "clang/Analysis/Analyses/UnsafeBufferUsage.h"
 #include "clang/Analysis/Scalable/ASTEntityMapping.h"
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
-#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsageBuilder.h"
-#include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
@@ -33,7 +31,7 @@ static bool hasPointerType(const Expr *E) {
 }
 
 constexpr inline auto buildEntityPointerLevel =
-    UnsafeBufferUsageTUSummaryBuilder::buildEntityPointerLevel;
+    UnsafeBufferUsageTUSummaryExtractor::buildEntityPointerLevel;
 
 // Translate a pointer type expression 'E' to a (set of) EntityPointerLevel(s)
 // associated with the declared type of the base address of `E`. If the base
@@ -67,8 +65,6 @@ class EntityPointerLevelTranslator
         E->getStmtClassName());
   }
 
-  UnsafeBufferUsageTUSummaryBuilder &Builder;
-
   static EntityPointerLevel incrementPointerLevel(const EntityPointerLevel &E) {
     return buildEntityPointerLevel(E.getEntity(), E.getPointerLevel() + 1);
   }
@@ -79,7 +75,7 @@ class EntityPointerLevelTranslator
   }
 
   EntityPointerLevel createEntityPointerLevelFor(const EntityName &Name) {
-    return buildEntityPointerLevel(Builder.addEntity(Name), 1);
+    return buildEntityPointerLevel(Extractor.addEntity(Name), 1);
   }
 
   // The common helper function for Translate(*base):
@@ -95,9 +91,11 @@ class EntityPointerLevelTranslator
     return EntityPointerLevelSet{Incremented.begin(), Incremented.end()};
   }
 
+  UnsafeBufferUsageTUSummaryExtractor &Extractor;
+
 public:
-  EntityPointerLevelTranslator(UnsafeBufferUsageTUSummaryBuilder &Builder)
-      : Builder(Builder) {}
+  EntityPointerLevelTranslator(UnsafeBufferUsageTUSummaryExtractor &Extractor)
+      : Extractor(Extractor) {}
 
   Expected<EntityPointerLevelSet> translate(const Expr *E) { return Visit(E); }
 
@@ -235,9 +233,9 @@ private:
 
 Expected<EntityPointerLevelSet>
 buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
-                         UnsafeBufferUsageTUSummaryBuilder &Builder) {
+                         UnsafeBufferUsageTUSummaryExtractor &Extractor) {
   EntityPointerLevelSet Result{};
-  EntityPointerLevelTranslator Translator{Builder};
+  EntityPointerLevelTranslator Translator{Extractor};
   llvm::Error AllErrors = llvm::ErrorSuccess();
 
   for (const Expr *Ptr : UnsafePointers) {
@@ -263,13 +261,18 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
 
 std::unique_ptr<UnsafeBufferUsageEntitySummary>
 UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
-    EntityId Contributor, const Decl *ContributorDefn, ASTContext &Ctx,
-    llvm::Error &Error) {
-  Expected<EntityPointerLevelSet> EPLs = buildEntityPointerLevels(
-      findUnsafePointers(ContributorDefn), getBuilder());
+    const Decl *ContributorDefn, ASTContext &Ctx, llvm::Error &Error) {
+  Expected<EntityPointerLevelSet> EPLs =
+      buildEntityPointerLevels(findUnsafePointers(ContributorDefn), *this);
 
   if (EPLs)
-    return getBuilder().buildUnsafeBufferUsageEntitySummary(std::move(*EPLs));
+    return std::make_unique<UnsafeBufferUsageEntitySummary>(
+        UnsafeBufferUsageEntitySummary(std::move(*EPLs)));
   Error = EPLs.takeError();
   return nullptr;
+}
+
+void UnsafeBufferUsageTUSummaryExtractor::HandleTranslationUnit(
+    ASTContext &Ctx) {
+  // FIXME: impl me!
 }

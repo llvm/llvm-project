@@ -12,7 +12,6 @@
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
-#include "llvm/ADT/iterator_range.h"
 #include <set>
 #include <tuple>
 
@@ -39,8 +38,7 @@ class EntityPointerLevel {
   EntityId Entity;
   unsigned PointerLevel;
 
-  friend class UnsafeBufferUsageTUSummaryBuilder;
-  friend class UnsafeBufferUsageEntitySummary;
+  friend class UnsafeBufferUsageTUSummaryExtractor;
 
   EntityPointerLevel(EntityId Entity, unsigned PointerLevel)
       : Entity(Entity), PointerLevel(PointerLevel) {}
@@ -88,29 +86,14 @@ using EntityPointerLevelSet =
 class UnsafeBufferUsageEntitySummary final : public EntitySummary {
   const EntityPointerLevelSet UnsafeBuffers;
 
-  friend class UnsafeBufferUsageTUSummaryBuilder;
+  friend class TestFixture;
+  friend class SerializationFormat;
+  friend class UnsafeBufferUsageTUSummaryExtractor;
 
   UnsafeBufferUsageEntitySummary(EntityPointerLevelSet UnsafeBuffers)
       : EntitySummary(), UnsafeBuffers(std::move(UnsafeBuffers)) {}
 
 public:
-  using const_iterator = EntityPointerLevelSet::const_iterator;
-
-  const_iterator begin() const { return UnsafeBuffers.begin(); }
-  const_iterator end() const { return UnsafeBuffers.end(); }
-
-  const_iterator find(const EntityPointerLevel &V) const {
-    return UnsafeBuffers.find(V);
-  }
-
-  llvm::iterator_range<const_iterator> getSubsetOf(EntityId Entity) const {
-    return llvm::make_range(UnsafeBuffers.equal_range(Entity));
-  }
-
-  /// \return the size of the set of EntityLevelPointers, which represents the
-  /// set of unsafe buffers
-  size_t getNumUnsafeBuffers() { return UnsafeBuffers.size(); }
-
   SummaryName getSummaryName() const override {
     return SummaryName{"UnsafeBufferUsage"};
   };

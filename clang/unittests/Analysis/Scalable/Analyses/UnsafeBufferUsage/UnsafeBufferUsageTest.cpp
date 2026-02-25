@@ -7,22 +7,27 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsage.h"
+#include "TestFixture.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/Analysis/Scalable/ASTEntityMapping.h"
-#include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsageBuilder.h"
 #include "clang/Analysis/Scalable/Analyses/UnsafeBufferUsage/UnsafeBufferUsageExtractor.h"
 #include "clang/Analysis/Scalable/Model/EntityId.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
+#include "clang/Analysis/Scalable/TUSummary/TUSummaryBuilder.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <utility>
 
 using namespace clang;
 using namespace ssaf;
+using testing::UnorderedElementsAre;
 
 namespace {
 
@@ -56,22 +61,25 @@ const FunctionDecl *findFnByName(StringRef Name, ASTContext &Ctx) {
   return findDeclByName<FunctionDecl>(Name, Ctx);
 }
 
-class UnsafeBufferUsageTest : public testing::Test {
+constexpr inline auto buildEntityPointerLevel =
+    UnsafeBufferUsageTUSummaryExtractor::buildEntityPointerLevel;
+
+class UnsafeBufferUsageTest : public TestFixture {
 protected:
   TUSummary TUSummary;
-  UnsafeBufferUsageTUSummaryBuilder Builder;
+  TUSummaryBuilder TUSummaryBuilder;
   UnsafeBufferUsageTUSummaryExtractor Extractor;
   std::unique_ptr<ASTUnit> AST;
 
   UnsafeBufferUsageTest()
       : TUSummary(
             BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
-        Builder(TUSummary),
-        Extractor(UnsafeBufferUsageTUSummaryExtractor(Builder)) {}
+        TUSummaryBuilder(TUSummary), Extractor(TUSummaryBuilder) {}
 
   std::unique_ptr<UnsafeBufferUsageEntitySummary>
   setUpTest(StringRef Code, StringRef ContributorName) {
-    AST = tooling::buildASTFromCodeWithArgs(Code, {"-Wno-unused-value"});
+    AST = tooling::buildASTFromCodeWithArgs(
+        Code, {"-Wno-unused-value -Wno-int-to-pointer-cast"});
 
     const auto *ContributorDefn =
         findDeclByName(ContributorName, AST->getASTContext());
@@ -81,8 +89,8 @@ protected:
       return nullptr;
 
     llvm::Error Error = llvm::ErrorSuccess();
-    auto Sum = Extractor.extractEntitySummary(
-        Builder.addEntity(*EN), ContributorDefn, AST->getASTContext(), Error);
+    auto Sum = Extractor.extractEntitySummary(ContributorDefn,
+                                              AST->getASTContext(), Error);
 
     if (Error) {
       llvm::consumeError(std::move(Error));
@@ -94,34 +102,54 @@ protected:
   std::optional<EntityId> getEntityId(StringRef Name) {
     if (const auto *D = findDeclByName(Name, AST->getASTContext()))
       if (auto EntityName = getEntityName(D))
-        return Builder.addEntity(*EntityName);
+        return Extractor.addEntity(*EntityName);
     return std::nullopt;
   }
 
   std::optional<EntityId> getEntityIdForReturn(StringRef FunName) {
     if (const auto *D = findFnByName(FunName, AST->getASTContext()))
       if (auto EntityName = getEntityNameForReturn(D))
-        return Builder.addEntity(*EntityName);
+        return Extractor.addEntity(*EntityName);
     return std::nullopt;
   }
-};
 
-constexpr inline auto buildEntityPointerLevel =
-    UnsafeBufferUsageTUSummaryBuilder::buildEntityPointerLevel;
-constexpr inline auto buildUnsafeBufferUsageEntitySummary =
-    UnsafeBufferUsageTUSummaryBuilder::buildUnsafeBufferUsageEntitySummary;
+  // Same as std::pair<StringRef, unsigned> for the raw pair of EPLs except with
+  // the extra 'isFunRet' flag:
+  struct EPLPair {
+    EPLPair(StringRef Name, unsigned Lv, bool isFunRet = false)
+        : Name(Name), Lv(Lv), isFunRet(isFunRet) {}
+
+    StringRef Name;
+    unsigned Lv;
+    bool isFunRet;
+  };
+
+  EntityPointerLevelSet makeSet(unsigned Line, ArrayRef<EPLPair> Pairs) {
+    auto EPLs = llvm::map_range(
+        Pairs, [this, Line](const EPLPair &Pair) -> EntityPointerLevel {
+          std::optional<EntityId> Entity = Pair.isFunRet
+                                               ? getEntityIdForReturn(Pair.Name)
+                                               : getEntityId(Pair.Name);
+          if (!Entity)
+            ADD_FAILURE_AT(__FILE__, Line) << "Entity not found: " << Pair.Name;
+          return buildEntityPointerLevel(*Entity, Pair.Lv);
+        });
+    return EntityPointerLevelSet{EPLs.begin(), EPLs.end()};
+  }
+};
 
 //////////////////////////////////////////////////////////////
 //                   Data Structure Tests                   //
 //////////////////////////////////////////////////////////////
 
-MATCHER_P2(EXPECT_CONTAINS, Set, Elt, "Check a set contains an element") {
-  return (Set).find(Elt) != (Set).end();
+static llvm::iterator_range<EntityPointerLevelSet::iterator>
+getSubsetOf(const EntityPointerLevelSet &Set, EntityId Entity) {
+  return llvm::make_range(Set.equal_range(Entity));
 }
 
 TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
-  EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
-  EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
+  EntityId E1 = Extractor.addEntity({"c:@F@foo", "", {}});
+  EntityId E2 = Extractor.addEntity({"c:@F@bar", "", {}});
 
   auto P1 = buildEntityPointerLevel(E1, 2);
   auto P2 = buildEntityPointerLevel(E1, 2);
@@ -139,9 +167,9 @@ TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
 }
 
 TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
-  EntityId E1 = Builder.addEntity({"c:@F@foo", "", {}});
-  EntityId E2 = Builder.addEntity({"c:@F@bar", "", {}});
-  EntityId E3 = Builder.addEntity({"c:@F@baz", "", {}});
+  EntityId E1 = Extractor.addEntity({"c:@F@foo", "", {}});
+  EntityId E2 = Extractor.addEntity({"c:@F@bar", "", {}});
+  EntityId E3 = Extractor.addEntity({"c:@F@baz", "", {}});
 
   auto P1 = buildEntityPointerLevel(E1, 1);
   auto P2 = buildEntityPointerLevel(E1, 2);
@@ -150,57 +178,16 @@ TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
   auto P5 = buildEntityPointerLevel(E3, 1);
 
   EntityPointerLevelSet Set{P1, P2, P3, P4, P5};
-  auto ES = buildUnsafeBufferUsageEntitySummary(std::move(Set));
-  ASSERT_TRUE(ES);
 
-  EXPECT_CONTAINS(*ES, P1);
-  EXPECT_CONTAINS(*ES, P2);
-  EXPECT_CONTAINS(*ES, P3);
-  EXPECT_CONTAINS(*ES, P4);
-  EXPECT_CONTAINS(*ES, P5);
-  EXPECT_EQ(ES->getNumUnsafeBuffers(), 5U);
-
-  EntityPointerLevelSet Subset1{ES->getSubsetOf(E1).begin(),
-                                ES->getSubsetOf(E1).end()};
-
-  EXPECT_CONTAINS(Subset1, P1);
-  EXPECT_CONTAINS(Subset1, P2);
-  EXPECT_EQ(Subset1.size(), 2U);
-
-  EntityPointerLevelSet Subset2{ES->getSubsetOf(E2).begin(),
-                                ES->getSubsetOf(E2).end()};
-
-  EXPECT_CONTAINS(Subset2, P3);
-  EXPECT_CONTAINS(Subset2, P4);
-  EXPECT_EQ(Subset2.size(), 2U);
-
-  EntityPointerLevelSet Subset3{ES->getSubsetOf(E3).begin(),
-                                ES->getSubsetOf(E3).end()};
-
-  EXPECT_CONTAINS(Subset3, P5);
-  EXPECT_EQ(Subset3.size(), 1U);
+  EXPECT_THAT(Set, UnorderedElementsAre(P1, P2, P3, P4, P5));
+  EXPECT_THAT(getSubsetOf(Set, E1), UnorderedElementsAre(P1, P2));
+  EXPECT_THAT(getSubsetOf(Set, E2), UnorderedElementsAre(P3, P4));
+  EXPECT_THAT(getSubsetOf(Set, E3), UnorderedElementsAre(P5));
 }
 
 //////////////////////////////////////////////////////////////
 //                   Extractor Tests                        //
 //////////////////////////////////////////////////////////////
-
-MATCHER_P3(CHECK_HAS_ENTITY_POINTER_LEVEL, Name, PtrLv, Summary,
-           "Check Summary contains EntityPointerLevel") {
-  std::optional<EntityId> Entity = getEntityId(Name);
-
-  EXPECT_NE(Entity, std::nullopt);
-  EXPECT_CONTAINS((Summary), buildEntityPointerLevel(*Entity, PtrLv));
-}
-
-MATCHER_P3(CHECK_HAS_ENTITY_POINTER_LEVEL_FOR_RETURN, Name, PtrLv, Summary,
-           "Check Summary contains EntityPointerLevel representing function "
-           "return value") {
-  std::optional<EntityId> Entity = getEntityIdForReturn(Name);
-
-  EXPECT_NE(Entity, std::nullopt);
-  EXPECT_CONTAINS((Summary), buildEntityPointerLevel(*Entity, PtrLv));
-}
 
 TEST_F(UnsafeBufferUsageTest, SimpleFunctionWithUnsafePointer) {
   auto Sum = setUpTest(R"cpp(
@@ -211,8 +198,7 @@ TEST_F(UnsafeBufferUsageTest, SimpleFunctionWithUnsafePointer) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerArithmetic) {
@@ -225,9 +211,7 @@ TEST_F(UnsafeBufferUsageTest, PointerArithmetic) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
@@ -242,11 +226,8 @@ TEST_F(UnsafeBufferUsageTest, PointerIncrementDecrement) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("r", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("s", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 4U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum),
+            makeSet(__LINE__, {{"p", 1U}, {"q", 1U}, {"r", 1U}, {"s", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerAssignment) {
@@ -258,9 +239,7 @@ TEST_F(UnsafeBufferUsageTest, PointerAssignment) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
@@ -273,9 +252,7 @@ TEST_F(UnsafeBufferUsageTest, CompoundAssignment) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
@@ -290,11 +267,8 @@ TEST_F(UnsafeBufferUsageTest, MultiLevelPointer) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 2, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("r", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("r", 2, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 4U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum),
+            makeSet(__LINE__, {{"p", 2U}, {"q", 1U}, {"r", 1U}, {"r", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, ConditionalOperator) {
@@ -307,11 +281,8 @@ TEST_F(UnsafeBufferUsageTest, ConditionalOperator) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 2, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 2, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 4U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum),
+            makeSet(__LINE__, {{"p", 1U}, {"q", 1U}, {"p", 2U}, {"q", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CastExpression) {
@@ -324,8 +295,7 @@ TEST_F(UnsafeBufferUsageTest, CastExpression) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, CommaOperator) {
@@ -337,8 +307,7 @@ TEST_F(UnsafeBufferUsageTest, CommaOperator) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
@@ -350,8 +319,7 @@ TEST_F(UnsafeBufferUsageTest, ParenthesizedExpression) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, ArrayParameter) {
@@ -365,10 +333,8 @@ TEST_F(UnsafeBufferUsageTest, ArrayParameter) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("arr", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("arr2", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("arr2", 2, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 3U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum),
+            makeSet(__LINE__, {{"arr", 1U}, {"arr2", 1U}, {"arr2", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, FunctionCall) {
@@ -383,9 +349,8 @@ TEST_F(UnsafeBufferUsageTest, FunctionCall) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL_FOR_RETURN("foo", 1, *Sum);
   // No (foo, 2) becasue indirect calls are ignored.
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"foo", 1U, true}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
@@ -403,9 +368,8 @@ TEST_F(UnsafeBufferUsageTest, StructMemberAccess) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("ptr", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("ptr_to_arr", 2, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum),
+            makeSet(__LINE__, {{"ptr", 1U}, {"ptr_to_arr", 2U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, StringLiteralSubscript) {
@@ -418,7 +382,7 @@ TEST_F(UnsafeBufferUsageTest, StringLiteralSubscript) {
 
   EXPECT_NE(Sum, nullptr);
   // String literals should not generate pointer kind variables
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 0U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {}));
 }
 
 TEST_F(UnsafeBufferUsageTest, OpaqueValueExpr) {
@@ -430,9 +394,7 @@ TEST_F(UnsafeBufferUsageTest, OpaqueValueExpr) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1U}, {"q", 1U}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, AddressOfOperator) {
@@ -445,7 +407,7 @@ TEST_F(UnsafeBufferUsageTest, AddressOfOperator) {
 
   EXPECT_NE(Sum, nullptr);
   // Address-of should not generate pointer kind variables for 'x'
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 0U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {}));
 }
 
 TEST_F(UnsafeBufferUsageTest, AddressOfThenDereference) {
@@ -458,9 +420,7 @@ TEST_F(UnsafeBufferUsageTest, AddressOfThenDereference) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 1, *Sum);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("q", 1, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 2U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 1}, {"q", 1}}));
 }
 
 TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
@@ -476,7 +436,6 @@ TEST_F(UnsafeBufferUsageTest, PointerToArrayOfPointers) {
                        "foo");
 
   EXPECT_NE(Sum, nullptr);
-  CHECK_HAS_ENTITY_POINTER_LEVEL("p", 3, *Sum);
-  EXPECT_EQ(Sum->getNumUnsafeBuffers(), 1U);
+  EXPECT_EQ(getUnsafeBuffers(*Sum), makeSet(__LINE__, {{"p", 3}}));
 }
 } // namespace
