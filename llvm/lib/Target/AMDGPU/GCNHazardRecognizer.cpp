@@ -2183,7 +2183,7 @@ bool GCNHazardRecognizer::hasWMMAToVALURegOverlap(
   }
 
   auto *ValuDst = TII.getNamedOperand(MI, AMDGPU::OpName::vdst);
-  if (!ValuDst || !ValuDst->isReg())
+  if (!ValuDst)
     return false;
   Register D1 = ValuDst->getReg();
 
