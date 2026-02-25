@@ -184,7 +184,9 @@ static const std::map<StringRef, SPIRV::Extension::Extension>
         {"SPV_EXT_image_raw10_raw12",
          SPIRV::Extension::Extension::SPV_EXT_image_raw10_raw12},
         {"SPV_INTEL_unstructured_loop_controls",
-         SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls}};
+         SPIRV::Extension::Extension::SPV_INTEL_unstructured_loop_controls},
+        {"SPV_KHR_relaxed_extended_instruction",
+         SPIRV::Extension::Extension::SPV_KHR_relaxed_extended_instruction}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
                                   StringRef ArgValue,

@@ -638,6 +638,7 @@ static void collectOtherInstr(MachineInstr &MI, SPIRV::ModuleAnalysisInfo &MAI,
 // be correctly collected until these registers are globally numbered.
 void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
   InstrTraces IS;
+  DenseMap<InstrSignature, MCRegister> GlobalDIMap;
   for (const Function &F : M) {
     if (F.isDeclaration())
       continue;
@@ -649,23 +650,80 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
         if (MAI.getSkipEmission(&MI))
           continue;
         const unsigned OpCode = MI.getOpcode();
+        bool IsGlobalInstruction = false;
+        SPIRV::ModuleSectionType TargetSection;
         if (OpCode == SPIRV::OpString) {
-          collectOtherInstr(MI, MAI, SPIRV::MB_DebugStrings, IS);
-        } else if (OpCode == SPIRV::OpExtInst && MI.getOperand(2).isImm() &&
+          IsGlobalInstruction = true;
+          TargetSection = SPIRV::MB_DebugStrings;
+        } else if ((OpCode == SPIRV::OpExtInst ||
+                    OpCode == SPIRV::OpExtInstWithForwardRefsKHR) &&
+                   MI.getOperand(2).isImm() &&
                    MI.getOperand(2).getImm() ==
                        SPIRV::InstructionSet::
                            NonSemantic_Shader_DebugInfo_100) {
           MachineOperand Ins = MI.getOperand(3);
           namespace NS = SPIRV::NonSemanticExtInst;
           static constexpr int64_t GlobalNonSemanticDITy[] = {
-              NS::DebugSource, NS::DebugCompilationUnit, NS::DebugInfoNone,
-              NS::DebugTypeBasic, NS::DebugTypePointer};
-          bool IsGlobalDI = false;
+              NS::DebugSource,
+              NS::DebugCompilationUnit,
+              NS::DebugInfoNone,
+              NS::DebugTypeBasic,
+              NS::DebugTypePointer,
+              NS::DebugBuildIdentifier,
+              NS::DebugStoragePath,
+              NS::DebugSourceContinued,
+              NS::DebugFunction,
+              NS::DebugTypeFunction,
+              NS::DebugFunctionDeclaration,
+              NS::DebugLexicalBlock,
+              NS::DebugLexicalBlockDiscriminator,
+              NS::DebugTypeQualifier,
+              NS::DebugImportedEntity,
+              NS::DebugTypedef,
+              NS::DebugGlobalVariable,
+              NS::DebugTypeArray,
+              NS::DebugTypeComposite,
+              NS::DebugTypeTemplate,
+              NS::DebugTypeTemplateParameter,
+              NS::DebugTypeMember,
+              NS::DebugMacroDef,
+              NS::DebugMacroUndef,
+              NS::DebugTypePtrToMember,
+              NS::DebugTypeEnum,
+              NS::DebugExpression,
+              NS::DebugOperation,
+              NS::DebugLocalVariable,
+              NS::DebugInlinedAt,
+              NS::DebugEntryPoint};
           for (unsigned Idx = 0; Idx < std::size(GlobalNonSemanticDITy); ++Idx)
-            IsGlobalDI |= Ins.getImm() == GlobalNonSemanticDITy[Idx];
-          if (IsGlobalDI)
-            collectOtherInstr(MI, MAI, SPIRV::MB_NonSemanticGlobalDI, IS);
-        } else if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
+            if (Ins.getImm() == GlobalNonSemanticDITy[Idx]) {
+              IsGlobalInstruction = true;
+              TargetSection = SPIRV::MB_NonSemanticGlobalDI;
+              break;
+            }
+        }
+        if (IsGlobalInstruction) {
+          InstrSignature Sig = instrToSignature(MI, MAI, false);
+          auto It = GlobalDIMap.find(Sig);
+          if (It != GlobalDIMap.end()) {
+            if (MI.getNumOperands() > 0 && MI.getOperand(0).isReg() &&
+                MI.getOperand(0).isDef()) {
+              MAI.setRegisterAlias(MF, MI.getOperand(0).getReg(), It->second);
+            }
+            MAI.setSkipEmission(&MI);
+            continue;
+          } else {
+            if (MI.getNumOperands() > 0 && MI.getOperand(0).isReg() &&
+                MI.getOperand(0).isDef()) {
+              MCRegister GReg =
+                  MAI.getRegisterAlias(MF, MI.getOperand(0).getReg());
+              GlobalDIMap[Sig] = GReg;
+            }
+            collectOtherInstr(MI, MAI, TargetSection, IS);
+            continue;
+          }
+        }
+        if (OpCode == SPIRV::OpName || OpCode == SPIRV::OpMemberName) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
@@ -2268,6 +2326,16 @@ void addInstrRequirements(const MachineInstr &MI,
         SPIRV::Extension::SPV_INTEL_subgroup_matrix_multiply_accumulate);
     Reqs.addCapability(
         SPIRV::Capability::SubgroupMatrixMultiplyAccumulateINTEL);
+    break;
+  }
+  case SPIRV::OpExtInstWithForwardRefsKHR: {
+    if (!ST.canUseExtension(
+            SPIRV::Extension::SPV_KHR_relaxed_extended_instruction))
+      report_fatal_error("OpExtInstWithForwardRefsKHR instruction requires the "
+                         "following SPIR-V "
+                         "extension: SPV_KHR_relaxed_extended_instruction",
+                         false);
+    Reqs.addExtension(SPIRV::Extension::SPV_KHR_relaxed_extended_instruction);
     break;
   }
   case SPIRV::OpBitwiseFunctionINTEL: {
