@@ -502,12 +502,16 @@ public:
   struct Key {
     const CodeGenRegister::Vec *Members;
     RegSizeInfoByHwMode RSI;
+    bool IgnoreArtificialMembers;
 
-    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I)
-        : Members(M), RSI(I) {}
+    Key(const CodeGenRegister::Vec *M, const RegSizeInfoByHwMode &I,
+        bool IgnoreArtificialMembers = false)
+        : Members(M), RSI(I), IgnoreArtificialMembers(IgnoreArtificialMembers) {
+    }
 
-    Key(const CodeGenRegisterClass &RC)
-        : Members(&RC.getMembers()), RSI(RC.RSI) {}
+    Key(const CodeGenRegisterClass &RC, bool IgnoreArtificialMembers = false)
+        : Members(&RC.getMembers()), RSI(RC.RSI),
+          IgnoreArtificialMembers(IgnoreArtificialMembers) {}
 
     // Lexicographical order of (Members, RegSizeInfoByHwMode).
     bool operator<(const Key &) const;
