@@ -6088,7 +6088,7 @@ class OMPSplitDirective final
   };
 
   explicit OMPSplitDirective(SourceLocation StartLoc, SourceLocation EndLoc,
-                            unsigned NumLoops)
+                             unsigned NumLoops)
       : OMPCanonicalLoopNestTransformationDirective(
             OMPSplitDirectiveClass, llvm::omp::OMPD_split, StartLoc, EndLoc,
             NumLoops) {}
@@ -6112,18 +6112,16 @@ public:
   /// \param TransformedStmt The loop nest after splitting, or nullptr in
   ///                        dependent contexts.
   /// \param PreInits   Helper preinits statements for the loop nest.
-  static OMPSplitDirective *Create(const ASTContext &C,
-                                   SourceLocation StartLoc,
-                                   SourceLocation EndLoc,
-                                   Stmt *AssociatedStmt, unsigned NumLoops,
-                                   Stmt *TransformedStmt, Stmt *PreInits);
+  static OMPSplitDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation EndLoc, Stmt *AssociatedStmt,
+                                   unsigned NumLoops, Stmt *TransformedStmt,
+                                   Stmt *PreInits);
 
   /// Build an empty '#pragma omp split' AST node for deserialization.
   ///
   /// \param C          Context of the AST.
   /// \param NumLoops   Number of associated loops to allocate
-  static OMPSplitDirective *CreateEmpty(const ASTContext &C,
-                                        unsigned NumLoops);
+  static OMPSplitDirective *CreateEmpty(const ASTContext &C, unsigned NumLoops);
 
   /// Gets/sets the associated loops after the transformation, i.e. after
   /// de-sugaring.
