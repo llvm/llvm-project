@@ -401,8 +401,8 @@ static bool preferGPRForFPImm(const MachineInstr &MI,
 
 // Some of the instructions in applyMappingImpl attempt to anyext small values.
 // It may be that these values come from a G_CONSTANT that has been expanded to
-// 32 bits and then truncated. If this is the case, we shouldn't insert an anyext
-// and should instead make use of the G_CONSTANT directly, deleting the
+// 32 bits and then truncated. If this is the case, we shouldn't insert an
+// anyext and should instead make use of the G_CONSTANT directly, deleting the
 // trunc if possible.
 static bool foldTruncOfI32Constant(MachineInstr &MI, unsigned OpIdx,
                                    MachineRegisterInfo &MRI,
