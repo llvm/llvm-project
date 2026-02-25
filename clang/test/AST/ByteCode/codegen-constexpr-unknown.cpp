@@ -1,5 +1,23 @@
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s                                         | FileCheck %s
-// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s                                                  | FileCheck %s --check-prefix=CHECK
+// RUN: %clang_cc1 -triple x86_64-linux -emit-llvm -fcxx-exceptions -o - %s -fexperimental-new-constant-interpreter -DINTERP | FileCheck %s --check-prefix=CHECK,INTERP
+
+/// CodeGenFunction::ConstantFoldsToSimpleInteger() for the if condition
+/// needs to succeed and return true.
+extern void abort2();
+constexpr const int* to_address(const int *p) {
+  return p;
+}
+void rightscope() {
+  const int p = 0;
+  if (to_address(&p) == &p)
+    return;
+  abort2();
+}
+// CHECK:      define dso_local void @_Z10rightscopev()
+// CHECK-NEXT: entry:
+// CHECK-NEXT: %p = alloca i32
+// CHECK-NEXT: store i32 0, ptr %p
+// INTERP-NEXT: call noundef ptr @_Z10to_addressPKi(ptr noundef %p)
 
 
 /// In the if expression below, the read from s.i should fail.
@@ -39,7 +57,7 @@ int main() {
 /// Similarly, here we revisit the BindingDecl.
 struct F { int x; };
 int main2() {
-  const F const s{99};
+  const F s{99};
   const auto& [r1] = s;
   if (&r1 != &s.x)
     __builtin_abort();
@@ -70,3 +88,4 @@ X test24() {
 // CHECK: define dso_local void @_Z6test24v
 // CHECK-NOT: lpad
 // CHECK-NOT: eh.resume
+
