@@ -2496,6 +2496,13 @@ LogicalResult ToElementsOp::fold(FoldAdaptor adaptor,
                                  SmallVectorImpl<OpFoldResult> &results) {
   if (succeeded(foldToElementsFromElements(*this, results)))
     return success();
+
+  // Y = ToElements(ShapeCast(X)) -> Y = ToElements(X)
+  if (auto shapeCast = getSource().getDefiningOp<ShapeCastOp>()) {
+    setOperand(shapeCast.getSource());
+    return success();
+  }
+
   return foldToElementsOfBroadcast(*this, results);
 }
 
@@ -2591,31 +2598,9 @@ struct ToElementsOfBroadcast final : OpRewritePattern<ToElementsOp> {
   }
 };
 
-/// Pattern to rewrite Y = ToElements(ShapeCast(X)) as Y = ToElements(X)
-///
-/// BEFORE:
-///    %1 = vector.shape_cast %0 : vector<6xf32> to vector<2x3xf32>
-///    %2:6 = vector.to_elements %1 : vector<2x3xf32>
-/// AFTER:
-///    %2:6 = vector.to_elements %0 : vector<6xf32>
-struct FoldToElementsOfShapeCast final : public OpRewritePattern<ToElementsOp> {
-  using Base::Base;
-
-  LogicalResult matchAndRewrite(ToElementsOp toElementsOp,
-                                PatternRewriter &rewriter) const override {
-    auto shapeCast = toElementsOp.getSource().getDefiningOp<ShapeCastOp>();
-    if (!shapeCast)
-      return failure();
-
-    rewriter.replaceOpWithNewOp<ToElementsOp>(toElementsOp,
-                                              shapeCast.getSource());
-    return success();
-  }
-};
-
 void ToElementsOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                MLIRContext *context) {
-  results.add<ToElementsOfBroadcast, FoldToElementsOfShapeCast>(context);
+  results.add<ToElementsOfBroadcast>(context);
 }
 
 //===----------------------------------------------------------------------===//
