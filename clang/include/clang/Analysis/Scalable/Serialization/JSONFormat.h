@@ -116,6 +116,10 @@ private:
   entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
                              const SummaryName &SN,
                              EntityIdTable &IdTable) const;
+  llvm::Expected<Object>
+  entityDataMapEntryToJSON(const EntityId EI,
+                           const std::unique_ptr<EntitySummary> &EntitySummary,
+                           const SummaryName &SN) const;
   llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummary>>>
   entityDataMapFromJSON(const SummaryName &SN, const Array &EntityDataArray,
                         EntityIdTable &IdTable) const;
