@@ -190,41 +190,10 @@ define void @add_from_same_base(ptr %a, ptr %s) {
 define <4 x i32> @combine_with_constant(<8 x i16> %v) {
 ; CHECK-LABEL: combine_with_constant:
 ; CHECK:         .functype combine_with_constant (v128) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32x4.extract_lane 0
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32x4.extract_lane 2
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extend_high_i16x8_s
-; CHECK-NEXT:    local.tee 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extract_lane 0
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extract_lane 2
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.tee 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    v128.const 4096, 1, 4096, 1, 4096, 1, 4096, 1
+; CHECK-NEXT:    i32x4.dot_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
   %sext = sext <8 x i16> %v to <8 x i32>
   %1 = mul nsw <8 x i32> %sext, <i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1, i32 4096, i32 1>
@@ -237,41 +206,10 @@ define <4 x i32> @combine_with_constant(<8 x i16> %v) {
 define <4 x i32> @combine_with_shl(<8 x i16> %v) {
 ; CHECK-LABEL: combine_with_shl:
 ; CHECK:         .functype combine_with_shl (v128) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extend_low_i16x8_s
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32x4.extract_lane 0
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 0
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    i32x4.extract_lane 2
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.tee 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extend_high_i16x8_s
-; CHECK-NEXT:    local.tee 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extract_lane 0
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extract_lane 2
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.shl
-; CHECK-NEXT:    i32x4.replace_lane 2
-; CHECK-NEXT:    local.tee 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    v128.const 4096, 1, 4096, 1, 4096, 1, 4096, 1
+; CHECK-NEXT:    i32x4.dot_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
   %sext = sext <8 x i16> %v to <8 x i32>
   %1 = shl nsw <8 x i32> %sext, <i32 12, i32 0, i32 12, i32 0, i32 12, i32 0, i32 12, i32 0>

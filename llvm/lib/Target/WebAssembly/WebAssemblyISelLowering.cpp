@@ -224,6 +224,7 @@ WebAssemblyTargetLowering::WebAssemblyTargetLowering(
                          ISD::CONCAT_VECTORS});
 
     setTargetDAGCombine(ISD::TRUNCATE);
+    setTargetDAGCombine(ISD::ADD);
 
     // Support saturating add/sub for i8x16 and i16x8
     for (auto Op : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
@@ -3714,6 +3715,112 @@ SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Considering follwing pattern
+// t := (v8i32 mul (sext (v8i16 x0), (sext (v8i16 x1))))
+//      (add
+//        (build_vector (extract_elt t, 0),
+//                      (extract_elt t, 2),
+//                      (extract_elt t, 4),
+//                      (extract_elt t, 6)),
+//        (build_vector (extract_elt t, 1),
+//                      (extract_elt t, 3),
+//                      (extract_elt t, 5),
+//                      (extract_elt t, 7)))
+// will combine into
+// (v4i32 dot (x0, x1))
+static SDValue combineToDOT(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
+  using namespace SDPatternMatch;
+  SelectionDAG &DAG = DCI.DAG;
+  if (!DAG.getSubtarget<WebAssemblySubtarget>().hasSIMD128())
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  if (LHS.getOpcode() != ISD::BUILD_VECTOR ||
+      RHS.getOpcode() != ISD::BUILD_VECTOR || LHS.getNumOperands() != 4 ||
+      RHS.getNumOperands() != 4)
+    return SDValue();
+
+  SDValue BaseVec;
+  for (unsigned I = 0; I < 4; ++I) {
+    SDValue OpL = LHS.getOperand(I);
+    SDValue OpR = RHS.getOperand(I);
+    SDValue VecL, VecR;
+    APInt IdxL, IdxR;
+    if (!sd_match(OpL, m_ExtractElt(m_Value(VecL), m_ConstInt(IdxL))) ||
+        !sd_match(OpR, m_ExtractElt(m_Value(VecR), m_ConstInt(IdxR))))
+      return SDValue();
+
+    if (!BaseVec) {
+      BaseVec = VecL;
+      unsigned Opc = BaseVec.getOpcode();
+      if ((Opc != ISD::MUL && Opc != ISD::SHL) ||
+          BaseVec.getValueType().getVectorNumElements() != 8)
+        return SDValue();
+    }
+
+    if (BaseVec != VecL || BaseVec != VecR)
+      return SDValue();
+
+    if (IdxL.getZExtValue() > IdxR.getZExtValue())
+      std::swap(IdxL, IdxR);
+    if (!(IdxL == I * 2 && IdxR == I * 2 + 1))
+      return SDValue();
+  }
+
+  SDValue DotLHS, DotRHS;
+  SDValue BaseLHS, BaseRHS;
+  unsigned BaseOpc = BaseVec.getOpcode();
+  if (BaseOpc == ISD::MUL &&
+      sd_match(BaseVec, m_Mul(m_UnaryOp(ISD::SIGN_EXTEND, m_Value(BaseLHS)),
+                              m_UnaryOp(ISD::SIGN_EXTEND, m_Value(BaseRHS))))) {
+    DotLHS = BaseLHS;
+    DotRHS = BaseRHS;
+  } else if (sd_match(BaseVec,
+                      m_Mul(m_UnaryOp(ISD::SIGN_EXTEND, m_Value(BaseLHS)),
+                            m_Value(BaseRHS))) ||
+             sd_match(BaseVec,
+                      m_Shl(m_UnaryOp(ISD::SIGN_EXTEND, m_Value(BaseLHS)),
+                            m_Value(BaseRHS)))) {
+    // (mul | shl) (sext(v8i16v LHS), v8i16 <C, ...>)
+    if (auto *BV = dyn_cast<BuildVectorSDNode>(BaseRHS)) {
+      SmallVector<SDValue, 8> DotMultipliers;
+      for (unsigned I = 0; I < 8; ++I) {
+        auto *C = dyn_cast<ConstantSDNode>(BV->getOperand(I));
+        if (!C)
+          return SDValue();
+
+        uint64_t Val = C->getZExtValue();
+        if (BaseOpc == ISD::SHL)
+          Val = 1ULL << Val;
+        // A large multiplier (e.g. a shift by 15 or more) would overflow a
+        // signed i16.
+        if (!isInt<16>(Val))
+          return SDValue();
+
+        DotMultipliers.push_back(DAG.getConstant(Val, DL, MVT::i16));
+      }
+
+      DotLHS = BaseLHS;
+      DotRHS = DAG.getBuildVector(MVT::v8i16, DL, DotMultipliers);
+    }
+  }
+
+  if (!DotLHS || !DotRHS)
+    return SDValue();
+
+  return DAG.getNode(WebAssemblyISD::DOT, DL, MVT::v4i32, DotLHS, DotRHS);
+}
+
+static SDValue performADDCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  if (SDValue DotCombine = combineToDOT(N, DCI))
+    return DotCombine;
+
+  return SDValue();
+}
+
 SDValue
 WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
                                              DAGCombinerInfo &DCI) const {
@@ -3749,5 +3856,7 @@ WebAssemblyTargetLowering::PerformDAGCombine(SDNode *N,
     return performAnyAllCombine(N, DCI.DAG);
   case ISD::MUL:
     return performMulCombine(N, DCI);
+  case ISD::ADD:
+    return performADDCombine(N, DCI);
   }
 }
