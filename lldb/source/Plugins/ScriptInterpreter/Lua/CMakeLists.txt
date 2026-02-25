@@ -1,5 +1,5 @@
 add_lldb_library(lldbPluginScriptInterpreterLua PLUGIN
-  Lua.cpp
+  LuaState.cpp
   ScriptInterpreterLua.cpp
 
   LINK_LIBS
