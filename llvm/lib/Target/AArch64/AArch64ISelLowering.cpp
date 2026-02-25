@@ -9944,8 +9944,7 @@ AArch64TargetLowering::LowerCall(CallLoweringInfo &CLI,
   RetCCInfo.AnalyzeCallResult(Ins, RetCC);
 
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   // Check callee args/returns for SVE registers and set calling convention
   // accordingly.
@@ -12518,7 +12517,7 @@ SDValue AArch64TargetLowering::LowerSELECT_CC(
           return true;
         }
       })) {
-    bool NoNaNs = getTargetMachine().Options.NoNaNsFPMath || Flags.hasNoNaNs();
+    bool NoNaNs = Flags.hasNoNaNs();
     SDValue VectorCmp =
         emitFloatCompareMask(LHS, RHS, TVal, FVal, CC, NoNaNs, DL, DAG);
     if (VectorCmp)
@@ -16168,12 +16167,20 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   SmallMapVector<SDValue, unsigned, 16> DifferentValueMap;
   unsigned ConsecutiveValCount = 0;
   SDValue PrevVal;
+  auto IsZero = [&](SDValue V) {
+    return isNullConstant(V) || isNullFPConstant(V);
+  };
+  bool MaybeLowHalfZeroHigh =
+      VT.isFixedLengthVector() && VT.getSizeInBits() == 128;
+  unsigned HalfElts = MaybeLowHalfZeroHigh ? (NumElts >> 1) : 0;
+  SDValue LowHalfFirstVal = MaybeLowHalfZeroHigh ? Op.getOperand(0) : SDValue();
   for (unsigned i = 0; i < NumElts; ++i) {
     SDValue V = Op.getOperand(i);
     if (V.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
       AllLanesExtractElt = false;
     if (V.isUndef()) {
       ++NumUndefLanes;
+      MaybeLowHalfZeroHigh = false;
       continue;
     }
     if (i > 0)
@@ -16199,6 +16206,14 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     if (PrevVal != V) {
       ConsecutiveValCount = 0;
       PrevVal = V;
+    }
+    if (MaybeLowHalfZeroHigh) {
+      if (i < HalfElts) {
+        if (V != LowHalfFirstVal)
+          MaybeLowHalfZeroHigh = false;
+      } else if (!IsZero(V)) {
+        MaybeLowHalfZeroHigh = false;
+      }
     }
 
     // Keep different values and its last consecutive count. For example,
@@ -16228,6 +16243,22 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
     LLVM_DEBUG(dbgs() << "LowerBUILD_VECTOR: only low element used, creating 1 "
                          "SCALAR_TO_VECTOR node\n");
     return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, VT, Value);
+  }
+
+  if (MaybeLowHalfZeroHigh && LowHalfFirstVal.getNode() &&
+      !LowHalfFirstVal.isUndef() && !isIntOrFPConstant(LowHalfFirstVal)) {
+    EVT LaneVT = VT.getVectorElementType();
+    EVT HalfVT = VT.getHalfNumVectorElementsVT(*DAG.getContext());
+
+    SDValue HiZero = LaneVT.isInteger() ? DAG.getConstant(0, DL, HalfVT)
+                                        : DAG.getConstantFP(0.0, DL, HalfVT);
+
+    SDValue LoHalf =
+        LaneVT.getSizeInBits() == 64
+            ? DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, HalfVT, LowHalfFirstVal)
+            : DAG.getNode(AArch64ISD::DUP, DL, HalfVT, LowHalfFirstVal);
+
+    return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, LoHalf, HiZero);
   }
 
   if (AllLanesExtractElt) {
@@ -16377,6 +16408,45 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
         Val = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Val, V, LaneIdx);
     }
     return Val;
+  }
+
+  // Handle 64-bit constant BUILD_VECTORs by packing them into an i64 immediate.
+  // This is cheaper than a load if the immediate can be materialized in a few
+  // mov instructions. This optimization is disabled for big-endian targets for
+  // now.
+  if (BVN->isConstant() && VT.isFixedLengthVector() &&
+      VT.getSizeInBits() == 64 && !DAG.getDataLayout().isBigEndian()) {
+    const SDLoc DL(Op);
+    APInt PackedVal(64, 0);
+    unsigned BitPos = 0;
+
+    unsigned EltSizeInBits = VT.getScalarSizeInBits();
+    for (unsigned i = 0, e = BVN->getNumOperands(); i != e; ++i) {
+      const SDValue &LaneOp = BVN->getOperand(i);
+      APInt LaneBits;
+      if (LaneOp.getOpcode() == ISD::UNDEF)
+        LaneBits = APInt(EltSizeInBits, 0);
+      else if (auto *C = dyn_cast<ConstantSDNode>(LaneOp))
+        LaneBits = C->getAPIntValue();
+      else if (auto *CFP = dyn_cast<ConstantFPSDNode>(LaneOp))
+        LaneBits = CFP->getValueAPF().bitcastToAPInt();
+      else
+        return SDValue();
+
+      PackedVal |= LaneBits.trunc(VT.getScalarSizeInBits()).zext(64) << BitPos;
+      BitPos += EltSizeInBits;
+    }
+
+    // This optimization kicks in if the number of mov instructions
+    // is under 2
+    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insns;
+    AArch64_IMM::expandMOVImm(PackedVal.getZExtValue(), 64, Insns);
+    if (Insns.size() > 2)
+      return SDValue();
+
+    SDValue ScalarConst = DAG.getConstant(PackedVal, DL, MVT::i64);
+    // Use BITCAST to reinterpret the scalar constant's bits as a vector.
+    return DAG.getNode(ISD::BITCAST, DL, VT, ScalarConst);
   }
 
   // This will generate a load from the constant pool.
@@ -17184,8 +17254,7 @@ SDValue AArch64TargetLowering::LowerVSETCC(SDValue Op,
   bool ShouldInvert;
   changeVectorFPCCToAArch64CC(CC, CC1, CC2, ShouldInvert);
 
-  bool NoNaNs =
-      getTargetMachine().Options.NoNaNsFPMath || Op->getFlags().hasNoNaNs();
+  bool NoNaNs = Op->getFlags().hasNoNaNs();
   SDValue Cmp = emitVectorComparison(LHS, RHS, CC1, NoNaNs, CmpVT, DL, DAG);
   if (!Cmp.getNode())
     return SDValue();
@@ -28857,7 +28926,7 @@ static SDValue performCTPOPCombine(SDNode *N,
 
   // ctpop(zext(bitcast(vector_mask))) -> neg(signed_reduce_add(vector_mask))
   SDValue Mask;
-  if (!sd_match(N->getOperand(0), m_ZExt(m_BitCast(m_Value(Mask)))))
+  if (!sd_match(N->getOperand(0), m_ZExtOrSelf(m_BitCast(m_Value(Mask)))))
     return SDValue();
 
   EVT VT = N->getValueType(0);

@@ -26,6 +26,8 @@ STATISTIC(TotalBlocks, "Number of basic blocks");
 STATISTIC(TotalFuncs, "Number of non-external functions");
 STATISTIC(LargestFunctionSize,
           "Largest number of instructions in a single function");
+STATISTIC(LargestFunctionBBCount,
+          "Largest number of basic blocks in a single function");
 
 #define HANDLE_INST(N, OPCODE, CLASS)                                          \
   STATISTIC(Num##OPCODE##Inst, "Number of " #OPCODE " insts");
@@ -39,6 +41,7 @@ class InstCount : public InstVisitor<InstCount> {
   void visitFunction(Function &F) {
     ++TotalFuncs;
     LargestFunctionSize.updateMax(F.getInstructionCount());
+    LargestFunctionBBCount.updateMax(F.size());
   }
   void visitBasicBlock(BasicBlock &BB) { ++TotalBlocks; }
 

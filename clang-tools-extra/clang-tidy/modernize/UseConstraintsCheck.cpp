@@ -42,8 +42,6 @@ AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
 void UseConstraintsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionTemplateDecl(
-          // Skip external libraries included as system headers
-          unless(isExpansionInSystemHeader()),
           has(functionDecl(unless(hasOtherDeclarations()), isDefinition(),
                            hasReturnTypeLoc(typeLoc().bind("return")))
                   .bind("function")))
