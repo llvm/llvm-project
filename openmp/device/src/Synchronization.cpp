@@ -190,33 +190,17 @@ void namedBarrierInit() {
 
 void namedBarrier() {
   uint32_t NumThreads = omp_get_num_threads();
+  uint32_t ThreadId = mapping::getThreadIdInBlock();
+  if (ThreadId < NumThreads) {
+    uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst);
 
-  // Uses two 16 bit unsigned counters. One for the number of threads to have
-  // reached the barrier, and one to count how many times the barrier has been
-  // passed. These are packed in a single atomically accessed 32 bit integer.
-  // Low bits for the number of threads, assumed zero before this call.
-  // High bits to count the number of times the barrier has been passed.
-
-  // Increment the low 16 bits once.
-
-  uint32_t load = atomic::add(&namedBarrierTracker, 1, atomic::seq_cst);
-
-  // Record the number of times the barrier has been passed
-  uint32_t generation = load & 0xffff0000u;
-
-  if ((load & 0x0000ffffu) == (NumThreads - 1)) {
-    // Reached NumWaves in low bits so this is the last wave.
-    // Set low bits to zero and increment high bits
-    load += 0x00010000u; // wrap is safe
-    load &= 0xffff0000u; // because bits zeroed second
-
-    // Reset the wave counter and release the waiting waves
-    atomic::store(&namedBarrierTracker, load, atomic::seq_cst);
-  } else {
-    // more waves still to go, spin until generation counter changes
-    do {
-      load = atomic::load(&namedBarrierTracker, atomic::seq_cst);
-    } while ((load & 0xffff0000u) == generation);
+    if (load == NumThreads - 1) {
+      atomic::store(&namedBarrierTracker, 0, atomic::seq_cst);
+    } else {
+      do {
+        load = atomic::load(&namedBarrierTracker, atomic::seq_cst);
+      } while (load != 0);
+    }
   }
   __gpu_sync_threads();
 }
