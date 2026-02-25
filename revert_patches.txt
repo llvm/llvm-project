@@ -8,7 +8,6 @@ Revert "Revert "Revert "Reland "Revert "[clang][CGRecordLayout] Remove dependenc
 breaks build of aqlprofiler
 [AMDGPU][AsmParser] Forbid Fake16 instructions in Real16 mode (#176934)
 ---
-fails 2 JSON tests in merge
-disable JSON NoReadPermission and WriteStreamOpenFailure
-clang/unittests/Analysis/Scalable/Serialization/JSONFormatTest.cpp
+breaks clang-358841
+[SimplifyLibCalls] Avoid simplifying pow(x, 2.0) -> x * x with math-errno. (#183099)
 ---
