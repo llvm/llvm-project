@@ -160,45 +160,49 @@ size_t ConnectionGenericFile::Read(void *dst, size_t dst_len,
   if (!IsConnected())
     return finish(0, eConnectionStatusNoConnection, ERROR_INVALID_HANDLE);
 
-  DWORD bytes_read = 0;
+  BOOL read_result;
+  DWORD read_error;
   if (!m_read_pending) {
     m_overlapped.hEvent = m_event_handles[kBytesAvailableEvent];
+    read_result = ::ReadFile(m_file, dst, dst_len, NULL, &m_overlapped);
+    read_error = ::GetLastError();
+  }
 
-    BOOL read_result = ::ReadFile(m_file, dst, dst_len, NULL, &m_overlapped);
-    if (read_result || ::GetLastError() == ERROR_IO_PENDING) {
-      if (!read_result) {
-        // The expected return path.  The operation is pending.  Wait for the
-        // operation to complete or be interrupted.
-        DWORD milliseconds =
-            timeout ? std::chrono::duration_cast<std::chrono::milliseconds>(
-                          *timeout)
-                          .count()
-                    : INFINITE;
-        DWORD wait_result = ::WaitForMultipleObjects(
-            std::size(m_event_handles), m_event_handles, FALSE, milliseconds);
-        // All of the events are manual reset events, so make sure we reset them
-        // to non-signalled.
-        switch (wait_result) {
-        case WAIT_OBJECT_0 + kBytesAvailableEvent:
-          break;
-        case WAIT_OBJECT_0 + kInterruptEvent:
-          return finish(0, eConnectionStatusInterrupted, 0);
-        case WAIT_TIMEOUT:
-          return finish(0, eConnectionStatusTimedOut, 0);
-        case WAIT_FAILED:
-          return finish(0, eConnectionStatusError, ::GetLastError());
-        }
-      }
-    } else if (::GetLastError() == ERROR_BROKEN_PIPE) {
+  if (!m_read_pending && !read_result && read_error != ERROR_IO_PENDING) {
+    if (read_error == ERROR_BROKEN_PIPE) {
       // The write end of a pipe was closed.  This is equivalent to EOF.
       return finish(0, eConnectionStatusEndOfFile, 0);
-    } else {
-      // An unknown error occurred.  Fail out.
+    }
+    // An unknown error occurred.  Fail out.
+    return finish(0, eConnectionStatusError, ::GetLastError());
+  }
+
+  if (!read_result || m_read_pending) {
+    // The expected return path.  The operation is pending.  Wait for the
+    // operation to complete or be interrupted.
+    DWORD milliseconds =
+        timeout
+            ? std::chrono::duration_cast<std::chrono::milliseconds>(*timeout)
+                  .count()
+            : INFINITE;
+    DWORD wait_result = ::WaitForMultipleObjects(
+        std::size(m_event_handles), m_event_handles, FALSE, milliseconds);
+    // All of the events are manual reset events, so make sure we reset them
+    // to non-signalled.
+    switch (wait_result) {
+    case WAIT_OBJECT_0 + kBytesAvailableEvent:
+      break;
+    case WAIT_OBJECT_0 + kInterruptEvent:
+      return finish(0, eConnectionStatusInterrupted, 0);
+    case WAIT_TIMEOUT:
+      return finish(0, eConnectionStatusTimedOut, 0);
+    case WAIT_FAILED:
       return finish(0, eConnectionStatusError, ::GetLastError());
     }
   }
 
   // The data is ready.  Figure out how much was read and return;
+  DWORD bytes_read = 0;
   if (!::GetOverlappedResult(m_file, &m_overlapped, &bytes_read, FALSE)) {
     DWORD result_error = ::GetLastError();
     // ERROR_OPERATION_ABORTED occurs when someone calls Disconnect() during
