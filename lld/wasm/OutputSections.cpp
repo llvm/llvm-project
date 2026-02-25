@@ -240,7 +240,7 @@ void CustomSection::finalizeInputSections() {
     return;
 
   mergedSection->finalizeContents();
-  inputSections = std::move(newSections);
+  inputSections = newSections;
 }
 
 void CustomSection::finalizeContents() {

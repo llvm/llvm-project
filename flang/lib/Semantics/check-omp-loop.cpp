@@ -446,8 +446,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
     //                    ordered-clause
 
     // nesting check
-    HasInvalidWorksharingNesting(
-        beginName.source, llvm::omp::nestedWorkshareErrSet);
+    HasInvalidWorksharingNesting(beginName, llvm::omp::nestedWorkshareErrSet);
   }
   SetLoopInfo(x);
 
@@ -457,7 +456,7 @@ void OmpStructureChecker::Enter(const parser::OpenMPLoopConstruct &x) {
       CheckNoBranching(doBlock, beginName.v, beginName.source);
     }
   }
-  CheckLoopItrVariableIsInt(x);
+  CheckIterationVariableType(x);
   CheckNestedConstruct(x);
   CheckAssociatedLoopConstraints(x);
   HasInvalidDistributeNesting(x);
@@ -487,29 +486,23 @@ void OmpStructureChecker::SetLoopInfo(const parser::OpenMPLoopConstruct &x) {
   }
 }
 
-void OmpStructureChecker::CheckLoopItrVariableIsInt(
+void OmpStructureChecker::CheckIterationVariableType(
     const parser::OpenMPLoopConstruct &x) {
-  for (auto &construct : std::get<parser::Block>(x.t)) {
-    for (const parser::DoConstruct *loop{
-             parser::omp::GetDoConstruct(construct)};
-        loop;) {
+  using LoopRange = parser::omp::LoopRange;
+  auto &body{std::get<parser::Block>(x.t)};
+  for (auto &construct : LoopRange(body, LoopRange::Step::Into)) {
+    // 'construct' can also be OpenMPLoopConstruct
+    if (auto *loop{parser::Unwrap<parser::DoConstruct>(construct)}) {
       if (loop->IsDoNormal()) {
-        const parser::Name &itrVal{GetLoopIndex(loop)};
-        if (itrVal.symbol) {
-          const auto *type{itrVal.symbol->GetType()};
+        if (const parser::Name &iv{GetLoopIndex(loop)}; iv.symbol) {
+          const auto *type{iv.symbol->GetType()};
           if (!type->IsNumeric(TypeCategory::Integer)) {
-            context_.Say(itrVal.source,
-                "The DO loop iteration"
-                " variable must be of the type integer."_err_en_US,
-                itrVal.ToString());
+            context_.Say(iv.source,
+                "The DO loop iteration variable must be of integer type"_err_en_US,
+                iv.ToString());
           }
         }
       }
-      // Get the next DoConstruct if block is not empty.
-      const auto &block{std::get<parser::Block>(loop->t)};
-      const auto it{block.begin()};
-      loop = it != block.end() ? parser::Unwrap<parser::DoConstruct>(*it)
-                               : nullptr;
     }
   }
 }
@@ -718,6 +711,12 @@ void OmpStructureChecker::Leave(const parser::OmpEndLoopDirective &x) {
       (GetContext().directive == llvm::omp::Directive::OMPD_end_do_simd)) {
     dirContext_.pop_back();
   }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::Depth &x) {
+  CheckAllowedClause(llvm::omp::Clause::OMPC_depth);
+
+  RequiresConstantPositiveParameter(llvm::omp::Clause::OMPC_depth, x.v);
 }
 
 void OmpStructureChecker::Enter(const parser::OmpClause::Ordered &x) {

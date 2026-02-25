@@ -1451,7 +1451,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_SVEAES,       AArch64::AEK_SME_MOP4,
       AArch64::AEK_SME_TMOP,     AArch64::AEK_SVEBITPERM,
       AArch64::AEK_SSVE_BITPERM, AArch64::AEK_SVESHA3,
-      AArch64::AEK_SVESM4,       AArch64::AEK_CMH,
       AArch64::AEK_LSCP,         AArch64::AEK_TLBID,
       AArch64::AEK_MPAMV2,       AArch64::AEK_MTETC,
       AArch64::AEK_GCIE,         AArch64::AEK_SME2P3,
@@ -1460,7 +1459,7 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
       AArch64::AEK_F16F32MM,     AArch64::AEK_MOPS_GO,
       AArch64::AEK_POE2,         AArch64::AEK_TEV,
       AArch64::AEK_BTIE,         AArch64::AEK_F64MM,
-      AArch64::AEK_POPS,
+      AArch64::AEK_POPS,         AArch64::AEK_SVESM4,
   };
 
   std::vector<StringRef> Features;
@@ -1570,7 +1569,6 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   EXPECT_TRUE(llvm::is_contained(Features, "+pops"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-mop4"));
   EXPECT_TRUE(llvm::is_contained(Features, "+sme-tmop"));
-  EXPECT_TRUE(llvm::is_contained(Features, "+cmh"));
   EXPECT_TRUE(llvm::is_contained(Features, "+lscp"));
   EXPECT_TRUE(llvm::is_contained(Features, "+tlbid"));
   EXPECT_TRUE(llvm::is_contained(Features, "+mpamv2"));
@@ -1750,7 +1748,6 @@ TEST(TargetParserTest, AArch64ArchExtFeature) {
       {"pops", "nopops", "+pops", "-pops"},
       {"sme-mop4", "nosme-mop4", "+sme-mop4", "-sme-mop4"},
       {"sme-tmop", "nosme-tmop", "+sme-tmop", "-sme-tmop"},
-      {"cmh", "nocmh", "+cmh", "-cmh"},
       {"lscp", "nolscp", "+lscp", "-lscp"},
       {"tlbid", "notlbid", "+tlbid", "-tlbid"},
       {"mpamv2", "nompamv2", "+mpamv2", "-mpamv2"},
