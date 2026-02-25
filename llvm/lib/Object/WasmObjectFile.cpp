@@ -1475,7 +1475,7 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
   uint32_t Count = readVaruint32(Ctx);
   Exports.reserve(Count);
   Symbols.reserve(Count);
-  
+
   // Build hash map of export flags for faster cross-referencing
   llvm::DenseMap<StringRef, uint32_t> ExportFlags;
   if (HasDylinkSection) {
@@ -1483,7 +1483,7 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
       ExportFlags[ExportInfo.Name] = ExportInfo.Flags;
     }
   }
-  
+
   for (uint32_t I = 0; I < Count; I++) {
     wasm::WasmExport Ex;
     Ex.Name = readString(Ctx);
@@ -1495,7 +1495,8 @@ Error WasmObjectFile::parseExportSection(ReadContext &Ctx) {
     wasm::WasmSymbolInfo Info;
     Info.Name = Ex.Name;
     Info.Flags = 0;
-    // For shared objects, symbol flags may be specified in the dylink section instead of the export section
+    // For shared objects, symbol flags may be specified in the dylink section
+    // instead of the export section
     if (HasDylinkSection) {
       auto It = ExportFlags.find(Ex.Name);
       if (It != ExportFlags.end()) {
