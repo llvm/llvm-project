@@ -723,7 +723,7 @@ public:
     return IsFunctionTrivial(Callee);
   }
 
-  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator* Op) {
+  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *Op) {
     auto *SemanticExpr = Op->getSemanticForm();
     return SemanticExpr && Visit(SemanticExpr);
   }
