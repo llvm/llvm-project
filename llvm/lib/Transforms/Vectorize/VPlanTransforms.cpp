@@ -5171,7 +5171,7 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
   if (!Member0)
     return false;
   for (VPValue *V : Ops) {
-    if (!isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe>(V))
+    if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
       return false;
     auto *R = cast<VPSingleDefRecipe>(V);
     if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(Member0))
@@ -5264,7 +5264,7 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
   if (isAlreadyNarrow(V))
     return V;
 
-  if (isa<VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe>(R)) {
+  if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
     auto *Member0 = cast<VPSingleDefRecipe>(R);
     for (unsigned Idx = 0, E = Member0->getNumOperands(); Idx != E; ++Idx)
       Member0->setOperand(
