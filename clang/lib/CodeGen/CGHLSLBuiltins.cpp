@@ -300,23 +300,8 @@ static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
   llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
-// Not sure where would be best for this to live
-// AtomicBinOp uses an i32 to determine the operation mode as follows
-enum AtomicOperationCode : uint {
-  Add = 0,
-  And = 1,
-  Or = 2,
-  Xor = 3,
-  IMin = 4,
-  IMax = 5,
-  UMin = 6,
-  UMax = 7,
-  Exchange = 8
-};
-
-static Value *handleAtomicBinOp(CodeGenFunction &CGF, const CallExpr *E,
-                                const AtomicOperationCode OpCode,
-                                const bool HasReturn, const bool Is32Bit) {
+static Value *handleInterlockedOr(CodeGenFunction &CGF, const CallExpr *E,
+                                  const bool HasReturn, const bool Is32Bit) {
   Value *HandleOp = CGF.EmitScalarExpr(E->getArg(0));
   Value *IndexOp = CGF.EmitScalarExpr(E->getArg(1));
   Value *StructuredBufIndexOp;
@@ -349,18 +334,13 @@ static Value *handleAtomicBinOp(CodeGenFunction &CGF, const CallExpr *E,
     const HLSLAttributedResourceType *ResourceTy =
         HandleTy->getAs<HLSLAttributedResourceType>();
 
-    // AtomicBinOp uses an i32 to determine the operation mode as follows
-    // Add: 0, And: 1, Or: 2, Xor: 3, IMin: 4, IMax: 5, UMin: 6, UMax: 7,
-    // Exchange: 8
-    Value *ModeConstant = ConstantInt::get(CGF.Int32Ty, OpCode);
-
     // AtomicBinOp has 3 coordinate params which must be handled differently
     // depending on the resource type being accessed.
     // Initially undef all the coordinates then fill as required
-    Value *Undef = UndefValue::get(CGF.Int32Ty);
-    Value *C0 = Undef;
-    Value *C1 = Undef;
-    Value *C2 = Undef;
+    Value *Poison = PoisonValue::get(CGF.Int32Ty);
+    Value *C0 = Poison;
+    Value *C1 = Poison;
+    Value *C2 = Poison;
     if (!ResourceTy->getAttrs().RawBuffer) {
       assert(
           (ResourceTy->getContainedType() == CGF.getContext().IntTy ||
@@ -381,23 +361,23 @@ static Value *handleAtomicBinOp(CodeGenFunction &CGF, const CallExpr *E,
       C0 = IndexOp;
       C1 = StructuredBufIndexOp;
     }
-    assert(C0 != Undef && "Failed to identify coordinates for Interlocked");
+    assert(C0 != Poison && "Failed to identify coordinates for Interlocked");
     // TODO: Add coordinate logic for texture and groupshared
 
     // atomicBinOp
     // opcode, handle, binary operation code, coordinates c0, c1, c2, new val
     if (Is32Bit) {
-      Intrinsic::ID ID = Intrinsic::dx_resource_atomicbinop;
+      Intrinsic::ID ID = Intrinsic::dx_interlocked_or;
       OldValueOp = CGF.Builder.CreateIntrinsic(
           /*ReturnType=*/CGF.Int32Ty, ID,
-          ArrayRef<Value *>{HandleOp, ModeConstant, C0, C1, C2, NewValueOp},
-          nullptr, "hlsl.interlocked.or");
+          ArrayRef<Value *>{HandleOp, C0, C1, C2, NewValueOp}, nullptr,
+          "hlsl.interlocked.or");
     } else {
-      Intrinsic::ID ID = Intrinsic::dx_resource_atomicbinop64;
+      Intrinsic::ID ID = Intrinsic::dx_interlocked_or;
       OldValueOp = CGF.Builder.CreateIntrinsic(
           /*ReturnType=*/CGF.Int64Ty, ID,
-          ArrayRef<Value *>{HandleOp, ModeConstant, C0, C1, C2, NewValueOp},
-          nullptr, "hlsl.interlocked.or");
+          ArrayRef<Value *>{HandleOp, C0, C1, C2, NewValueOp}, nullptr,
+          "hlsl.interlocked.or");
     }
     break;
   }
@@ -1298,16 +1278,16 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(SpecConstantFn, Args);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or: {
-    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, false, true);
+    return handleInterlockedOr(*this, E, false, true);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or64: {
-    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, false, false);
+    return handleInterlockedOr(*this, E, false, false);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or_ret: {
-    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, true, true);
+    return handleInterlockedOr(*this, E, true, true);
   }
   case Builtin::BI__builtin_hlsl_interlocked_or_ret64: {
-    return handleAtomicBinOp(*this, E, AtomicOperationCode::Or, true, false);
+    return handleInterlockedOr(*this, E, true, false);
   }
   }
   return nullptr;

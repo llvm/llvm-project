@@ -94,8 +94,7 @@ def int_dx_resource_sample_clamp
 // Cast between target extension handle types and dxil-style opaque handles
 def int_dx_resource_casthandle : Intrinsic<[llvm_any_ty], [llvm_any_ty]>;
 
-def int_dx_resource_atomicbinop: DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrWriteMem]>;
-def int_dx_resource_atomicbinop64: DefaultAttrsIntrinsic<[llvm_i64_ty], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i64_ty], [IntrWriteMem]>;
+def int_dx_interlocked_or: DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_any_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_anyint_ty], [IntrWriteMem]>;
 
 def int_dx_all : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;
 def int_dx_any : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem]>;

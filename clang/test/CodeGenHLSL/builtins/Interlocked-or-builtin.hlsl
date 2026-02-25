@@ -32,9 +32,9 @@ struct CustomResource {
 #ifndef STRUCTURED
 
 // CHECK-LABEL: define {{.*}} i32 @_Z11test_return14CustomResource(
-// CHECK-BYTEADDRESS: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) {{%.*}}, i32 2, i32 1, i32 undef, i32 undef, i32 0)
-// CHECK-INTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) {{%.*}}, i32 2, i32 1, i32 undef, i32 undef, i32 0)
-// CHECK-UINTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.TypedBuffer_i32_1_0_0t(target("dx.TypedBuffer", i32, 1, 0, 0) {{%.*}}, i32 2, i32 1, i32 undef, i32 undef, i32 0)
+// CHECK-BYTEADDRESS: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) {{%.*}}, i32 1, i32 poison, i32 poison, i32 0)
+// CHECK-INTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) {{%.*}}, i32 1, i32 poison, i32 poison, i32 0)
+// CHECK-UINTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_0t.i32(target("dx.TypedBuffer", i32, 1, 0, 0) {{%.*}}, i32 1, i32 poison, i32 poison, i32 0)
 // CHECK-NEXT: store i32 %hlsl.interlocked.or, ptr [[returnVal:%.*]], align 4
 // CHECK-NEXT: [[loadedReturnVal:%.*]] = load i32, ptr [[returnVal]], align 4
 // CHECK-NEXT: ret i32 [[loadedReturnVal]]
@@ -45,9 +45,9 @@ unsigned int test_return(CustomResource cr) {
 }
 
 // CHECK-LABEL: define {{.*}} void @_Z14test_no_return14CustomResource(
-// CHECK-BYTEADDRESS: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.RawBuffer_i8_1_0t(target("dx.RawBuffer", i8, 1, 0) {{%.*}}, i32 2, i32 1, i32 undef, i32 undef, i32 0)
-// CHECK-INTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.TypedBuffer_i32_1_0_1t(target("dx.TypedBuffer", i32, 1, 0, 1) {{%.*}}, i32 2, i32 1, i32 undef, i32 undef, i32 0)
-// CHECK-UINTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.TypedBuffer_i32_1_0_0t(target("dx.TypedBuffer", i32, 1, 0, 0) {{%.*}}, i32 2, i32 1, i32 undef, i32 undef, i32 0)
+// CHECK-BYTEADDRESS: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_i8_1_0t.i32(target("dx.RawBuffer", i8, 1, 0) {{%.*}}, i32 1, i32 poison, i32 poison, i32 0)
+// CHECK-INTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_1t.i32(target("dx.TypedBuffer", i32, 1, 0, 1) {{%.*}}, i32 1, i32 poison, i32 poison, i32 0)
+// CHECK-UINTBUF: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.TypedBuffer_i32_1_0_0t.i32(target("dx.TypedBuffer", i32, 1, 0, 0) {{%.*}}, i32 1, i32 poison, i32 poison, i32 0)
 // CHECK-NEXT: ret void
 void test_no_return(CustomResource h) {
   __builtin_hlsl_interlocked_or(h.h, 1u, 0u);
@@ -56,7 +56,7 @@ void test_no_return(CustomResource h) {
 #else
 
 // CHECK-STRUCTURED-LABEL: define {{.*}} i32 @_Z11test_return14CustomResource(
-// CHECK-STRUCTURED: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.RawBuffer_s_struct.TestStructs_1_0t(target("dx.RawBuffer", %struct.TestStruct, 1, 0) %0, i32 2, i32 1, i32 4, i32 undef, i32 0)
+// CHECK-STRUCTURED: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_s_struct.TestStructs_1_0t.i32(target("dx.RawBuffer", %struct.TestStruct, 1, 0) %0, i32 1, i32 4, i32 poison, i32 0)
 // CHECK-STRUCTURED-NEXT: store i32 %hlsl.interlocked.or, ptr [[returnVal:%.*]], align 4
 // CHECK-STRUCTURED-NEXT: [[loadedReturnVal:%.*]] = load i32, ptr [[returnVal]], align 4
 // CHECK-STRUCTURED-NEXT: ret i32 [[loadedReturnVal]]
@@ -67,7 +67,7 @@ unsigned int test_return(CustomResource cr) {
 }
 
 // CHECK-STRUCTURED-LABEL: define {{.*}} void @_Z14test_no_return14CustomResource(
-// CHECK-STRUCTURED: %hlsl.interlocked.or = call i32 @llvm.dx.resource.atomicbinop.tdx.RawBuffer_s_struct.TestStructs_1_0t(target("dx.RawBuffer", %struct.TestStruct, 1, 0) %0, i32 2, i32 1, i32 4, i32 undef, i32 0)
+// CHECK-STRUCTURED: %hlsl.interlocked.or = call i32 @llvm.dx.interlocked.or.i32.tdx.RawBuffer_s_struct.TestStructs_1_0t.i32(target("dx.RawBuffer", %struct.TestStruct, 1, 0) %0, i32 1, i32 4, i32 poison, i32 0)
 // CHECK-STRUCTURED-NEXT: ret void
 void test_no_return(CustomResource h) {
   __builtin_hlsl_interlocked_or(h.h, 1u, 4u, 0u);

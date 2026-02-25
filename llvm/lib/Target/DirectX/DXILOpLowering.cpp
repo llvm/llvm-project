@@ -119,6 +119,10 @@ public:
           case IntrinArgSelect::Type::Index:
             Args.push_back(CI->getArgOperand(A.Value));
             break;
+          case IntrinArgSelect::Type::HandleIndex:
+            Args.push_back(createTmpHandleCast(CI->getArgOperand(A.Value),
+                                               OpBuilder.getHandleType()));
+            break;
           case IntrinArgSelect::Type::I8:
             Args.push_back(OpBuilder.getIRB().getInt8((uint8_t)A.Value));
             break;
@@ -920,60 +924,6 @@ public:
     });
   }
 
-  [[nodiscard]] bool lowerAtomicBinOp(Function &F) {
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-    Type *RetTy = IRB.getInt32Ty();
-
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      IRB.SetInsertPoint(CI);
-      Value *Handle =
-          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
-      Value *OperationMode = CI->getArgOperand(1);
-      Value *Index1 = CI->getArgOperand(2);
-      Value *Index2 = CI->getArgOperand(3);
-      Value *Index3 = CI->getArgOperand(4);
-      Value *NewVal = CI->getArgOperand(5);
-      SmallVector<Value *> Args{Handle, OperationMode, Index1,
-                                Index2, Index3,        NewVal};
-
-      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          dxil::OpCode::AtomicBinOp, Args, CI->getName(), RetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
-  [[nodiscard]] bool lowerAtomicBinOp64(Function &F) {
-    IRBuilder<> &IRB = OpBuilder.getIRB();
-    Type *RetTy = IRB.getInt64Ty();
-
-    return replaceFunction(F, [&](CallInst *CI) -> Error {
-      IRB.SetInsertPoint(CI);
-      Value *Handle =
-          createTmpHandleCast(CI->getArgOperand(0), OpBuilder.getHandleType());
-      Value *OperationMode = CI->getArgOperand(1);
-      Value *Index1 = CI->getArgOperand(2);
-      Value *Index2 = CI->getArgOperand(3);
-      Value *Index3 = CI->getArgOperand(4);
-      Value *NewVal = CI->getArgOperand(5);
-      SmallVector<Value *> Args{Handle, OperationMode, Index1,
-                                Index2, Index3,        NewVal};
-
-      Expected<CallInst *> OpCall = OpBuilder.tryCreateOp(
-          dxil::OpCode::AtomicBinOp, Args, CI->getName(), RetTy);
-      if (Error E = OpCall.takeError())
-        return E;
-
-      CI->replaceAllUsesWith(*OpCall);
-      CI->eraseFromParent();
-      return Error::success();
-    });
-  }
-
   bool lowerIntrinsics() {
     bool Updated = false;
     bool HasErrors = false;
@@ -1059,12 +1009,6 @@ public:
         break;
       case Intrinsic::is_fpclass:
         HasErrors |= lowerIsFPClass(F);
-        break;
-      case Intrinsic::dx_resource_atomicbinop:
-        HasErrors |= lowerAtomicBinOp(F);
-        break;
-      case Intrinsic::dx_resource_atomicbinop64:
-        HasErrors |= lowerAtomicBinOp64(F);
         break;
       }
       Updated = true;
