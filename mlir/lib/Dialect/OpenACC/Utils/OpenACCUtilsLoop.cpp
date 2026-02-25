@@ -143,8 +143,13 @@ static Block::iterator cloneACCRegionInto(Region *src, Block *dest,
   return newInsertionPoint;
 }
 
+} // namespace
+
+namespace mlir {
+namespace acc {
+
 /// Wrap a multi-block region with scf.execute_region.
-static scf::ExecuteRegionOp
+scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
                                          Location loc, RewriterBase &rewriter) {
   auto exeRegionOp = scf::ExecuteRegionOp::create(rewriter, loc, TypeRange{});
@@ -169,11 +174,6 @@ wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
   scf::YieldOp::create(rewriter, loc);
   return exeRegionOp;
 }
-
-} // namespace
-
-namespace mlir {
-namespace acc {
 
 scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
                                   bool enableCollapse) {

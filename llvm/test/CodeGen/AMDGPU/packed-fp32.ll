@@ -3492,10 +3492,10 @@ define amdgpu_kernel void @fadd_fadd_fsub_0(<2 x float> %arg) {
 ; GFX942-GISEL-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; GFX942-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX942-GISEL-NEXT:    v_pk_add_f32 v[0:1], s[0:1], 0
-; GFX942-GISEL-NEXT:    s_nop 0
+; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX942-GISEL-NEXT:    v_pk_add_f32 v[0:1], v[0:1], 0
-; GFX942-GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GFX942-GISEL-NEXT:    s_nop 0
 ; GFX942-GISEL-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX942-GISEL-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GFX942-GISEL-NEXT:    s_endpgm

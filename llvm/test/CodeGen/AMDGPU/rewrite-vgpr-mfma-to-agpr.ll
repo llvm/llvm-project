@@ -509,10 +509,9 @@ define void @test_rewrite_mfma_subreg_insert1(float %arg0, float %arg1, ptr addr
 ; CHECK-NEXT:    v_mfma_f32_4x4x1_16b_f32 v[0:3], v0, v1, v[2:5]
 ; CHECK-NEXT:    s_nop 3
 ; CHECK-NEXT:    v_pk_mov_b32 v[0:1], v[0:1], v[2:3] op_sel:[1,0]
-; CHECK-NEXT:    s_nop 0
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v3
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, v1
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v3
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; use a[0:7]
 ; CHECK-NEXT:    ;;#ASMEND

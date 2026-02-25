@@ -63,10 +63,6 @@ MCAsmInfo::MCAsmInfo() {
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
   if (UseLEB128Directives != cl::BOU_UNSET)
     HasLEB128Directives = UseLEB128Directives == cl::BOU_TRUE;
-  UseIntegratedAssembler = true;
-  ParseInlineAsmUsingAsmParser = false;
-  PreserveAsmComments = true;
-  PPCUseFullRegisterNames = false;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;

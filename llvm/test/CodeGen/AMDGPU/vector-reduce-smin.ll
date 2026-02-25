@@ -4221,12 +4221,12 @@ define i64 @test_vector_reduce_smin_v16i64(<16 x i64> %v) {
 ; GFX9-GISEL-NEXT:    v_cmp_lt_i64_e64 s[0:1], v[2:3], v[10:11]
 ; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-GISEL-NEXT:    v_cmp_lt_i64_e32 vcc, v[14:15], v[30:31]
-; GFX9-GISEL-NEXT:    s_nop 1
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v10, v2, s[0:1]
+; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v3, v11, v3, s[0:1]
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v4, v30, v14, vcc
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v5, v31, v15, vcc
 ; GFX9-GISEL-NEXT:    v_cmp_lt_i64_e32 vcc, v[6:7], v[4:5]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v2, v10, v2, s[0:1]
-; GFX9-GISEL-NEXT:    v_cndmask_b32_e64 v3, v11, v3, s[0:1]
+; GFX9-GISEL-NEXT:    s_nop 1
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v4, v4, v6, vcc
 ; GFX9-GISEL-NEXT:    v_cndmask_b32_e32 v5, v5, v7, vcc
 ; GFX9-GISEL-NEXT:    v_cmp_lt_i64_e32 vcc, v[2:3], v[4:5]

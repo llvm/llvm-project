@@ -2736,13 +2736,12 @@ define void @freeze_v18i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v21, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[20:21], v[4:7]
-; GFX8-GISEL-NEXT:    s_nop 0
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(3)
+; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[12:15]
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 32, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, 48, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v7, vcc, 0, v3, vcc
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(3)
-; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[12:15]
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v2, vcc, 64, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v3, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[4:5], v[8:11]
@@ -3499,11 +3498,10 @@ define void @freeze_v21i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(5)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[24:25], v[4:7]
-; GFX8-GISEL-NEXT:    s_nop 0
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, 0x50, v2
 ; GFX8-GISEL-NEXT:    v_add_u32_e64 v8, s[4:5], 64, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, v3, s[4:5]
@@ -3780,11 +3778,10 @@ define void @freeze_v22i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(5)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[26:27], v[4:7]
-; GFX8-GISEL-NEXT:    s_nop 0
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(4)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, 0x50, v2
 ; GFX8-GISEL-NEXT:    v_add_u32_e64 v8, s[4:5], 64, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, v3, s[4:5]
@@ -4091,7 +4088,8 @@ define void @freeze_v30i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v33, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[32:33], v[4:7]
-; GFX8-GISEL-NEXT:    s_nop 0
+; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
+; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 32, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, 48, v2
@@ -4100,10 +4098,8 @@ define void @freeze_v30i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_add_u32_e64 v34, s[4:5], 64, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e64 v35, s[4:5], 0, v3, s[4:5]
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], vcc
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
-; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
-; GFX8-GISEL-NEXT:    v_addc_u32_e64 v33, s[4:5], 0, v3, s[4:5]
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v8, vcc, 0x60, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e64 v33, s[4:5], 0, v3, s[4:5]
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v2, vcc, 0x70, v2
 ; GFX8-GISEL-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, v3, s[4:5]
@@ -4807,13 +4803,12 @@ define void @freeze_v32i32(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[36:37], v[4:7]
-; GFX8-GISEL-NEXT:    s_nop 0
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, v2, v38
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e64 v8, s[4:5], 64, v2
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, v2, v38
 ; GFX8-GISEL-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, v3, s[4:5]
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v10, vcc, 0x60, v2
@@ -8881,13 +8876,12 @@ define void @freeze_v16p0(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[36:37], v[4:7]
-; GFX8-GISEL-NEXT:    s_nop 0
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, v2, v38
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e64 v8, s[4:5], 64, v2
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, v2, v38
 ; GFX8-GISEL-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, v3, s[4:5]
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v10, vcc, 0x60, v2
@@ -9915,13 +9909,12 @@ define void @freeze_v16p1(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb) {
 ; GFX8-GISEL-NEXT:    v_addc_u32_e32 v1, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[36:37], v[4:7]
-; GFX8-GISEL-NEXT:    s_nop 0
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
-; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(7)
 ; GFX8-GISEL-NEXT:    flat_store_dwordx4 v[2:3], v[8:11]
-; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, v2, v38
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v4, vcc, 48, v2
+; GFX8-GISEL-NEXT:    v_addc_u32_e32 v5, vcc, 0, v3, vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e64 v8, s[4:5], 64, v2
+; GFX8-GISEL-NEXT:    v_add_u32_e32 v6, vcc, v2, v38
 ; GFX8-GISEL-NEXT:    v_addc_u32_e64 v9, s[4:5], 0, v3, s[4:5]
 ; GFX8-GISEL-NEXT:    s_mov_b64 s[4:5], vcc
 ; GFX8-GISEL-NEXT:    v_add_u32_e32 v10, vcc, 0x60, v2
