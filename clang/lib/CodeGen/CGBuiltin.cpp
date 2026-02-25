@@ -4082,26 +4082,40 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Result;
-    assert(Op0->getType()->isIntOrIntVectorTy());
-    QualType Ty = E->getArg(0)->getType();
-    if (auto *VecTy = Ty->getAs<VectorType>())
-      Ty = VecTy->getElementType();
-    Result = Builder.CreateBinaryIntrinsic(
-        Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0, Op1,
-        nullptr, "elt.max");
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      QualType Ty = E->getArg(0)->getType();
+      if (auto *VecTy = Ty->getAs<VectorType>())
+        Ty = VecTy->getElementType();
+      Result = Builder.CreateBinaryIntrinsic(
+          Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
+          Op1, nullptr, "elt.max");
+    } else {
+      DiagnosticsEngine &Diags = CGM.getDiags();
+      Diags.Report(E->getBeginLoc(), diag::warn_deprecated_float_builtin)
+          << "__builtin_elementwise_max"
+          << "__builtin_elementwise_maxnum/maximum/maximumnum";
+      Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
+    }
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     Value *Op1 = EmitScalarExpr(E->getArg(1));
     Value *Result;
-    assert(Op0->getType()->isIntOrIntVectorTy());
-    QualType Ty = E->getArg(0)->getType();
-    if (auto *VecTy = Ty->getAs<VectorType>())
-      Ty = VecTy->getElementType();
-    Result = Builder.CreateBinaryIntrinsic(
-        Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0, Op1,
-        nullptr, "elt.min");
+    if (Op0->getType()->isIntOrIntVectorTy()) {
+      QualType Ty = E->getArg(0)->getType();
+      if (auto *VecTy = Ty->getAs<VectorType>())
+        Ty = VecTy->getElementType();
+      Result = Builder.CreateBinaryIntrinsic(
+          Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
+          Op1, nullptr, "elt.min");
+    } else {
+      DiagnosticsEngine &Diags = CGM.getDiags();
+      Diags.Report(E->getBeginLoc(), diag::warn_deprecated_float_builtin)
+          << "__builtin_elementwise_min"
+          << "__builtin_elementwise_minnum/minimum/minimumnum";
+      Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
+    }
     return RValue::get(Result);
   }
 
