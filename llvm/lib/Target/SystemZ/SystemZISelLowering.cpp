@@ -9016,15 +9016,16 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
                                                 DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
 
+  // Combine BR_CCMASK (ICMP (SELECT_CCMASK)) into a single BR_CCMASK.
   auto *CCValid = dyn_cast<ConstantSDNode>(N->getOperand(1));
   auto *CCMask = dyn_cast<ConstantSDNode>(N->getOperand(2));
   if (!CCValid || !CCMask)
     return SDValue();
+
   int CCValidVal = CCValid->getZExtValue();
   int CCMaskVal = CCMask->getZExtValue();
   SDValue Chain = N->getOperand(0);
   SDValue CCReg = N->getOperand(4);
-
   // If combineCMask was able to merge or simplify ccvalid or ccmask, re-emit
   // the modified BR_CCMASK with the new values.
   // In order to avoid conditional branches with full or empty cc masks, do not
@@ -9036,16 +9037,6 @@ SDValue SystemZTargetLowering::combineBR_CCMASK(SDNode *N,
                        DAG.getTargetConstant(CCValidVal, SDLoc(N), MVT::i32),
                        DAG.getTargetConstant(CCMaskVal, SDLoc(N), MVT::i32),
                        N->getOperand(3), CCReg);
-
-  SDLoc DL(N);
-
-  // Combine BR_CCMASK (ICMP (SELECT_CCMASK)) into a single BR_CCMASK.
-  if (combineCCMask(CCReg, CCValidVal, CCMaskVal, DAG))
-    return DAG.getNode(SystemZISD::BR_CCMASK, DL, N->getValueType(0), Chain,
-                       DAG.getTargetConstant(CCValidVal, DL, MVT::i32),
-                       DAG.getTargetConstant(CCMaskVal, DL, MVT::i32),
-                       N->getOperand(3), CCReg);
-
   return SDValue();
 }
 
