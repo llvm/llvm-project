@@ -232,7 +232,7 @@ if(LLVM_ENABLE_PIC)
     AsyncRuntime.cpp
 
     EXCLUDE_FROM_LIBMLIR
-
+    DISABLE_PCH_REUSE
     LINK_LIBS PUBLIC
     ${LLVM_PTHREAD_LIB}
   )
@@ -247,6 +247,7 @@ if(LLVM_ENABLE_PIC)
 
   add_mlir_library(mlir_arm_sme_abi_stubs
     SHARED
+    DISABLE_PCH_REUSE
     ArmSMEStubs.cpp)
   target_compile_definitions(mlir_arm_sme_abi_stubs PRIVATE mlir_arm_sme_abi_stubs_EXPORTS)
 
