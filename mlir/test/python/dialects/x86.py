@@ -21,9 +21,7 @@ def testAvxOp():
 
         @func.FuncOp.from_py_func(MemRefType.get((1,), BF16Type.get()))
         def avx_op(arg):
-            return x86.BcstToPackedF32Op(
-                a=arg, dst=VectorType.get((8,), F32Type.get())
-            )
+            return x86.BcstToPackedF32Op(a=arg, dst=VectorType.get((8,), F32Type.get()))
 
     # CHECK-LABEL: func @avx_op(
     # CHECK-SAME:      %[[ARG:.+]]: memref<1xbf16>) -> vector<8xf32> {
