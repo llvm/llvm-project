@@ -14611,7 +14611,7 @@ static SDValue PerformORCombineToShiftInsert(SelectionDAG &DAG, SDValue AndOp,
   SDValue X = AndOp.getOperand(0);
   SDValue Mask = AndOp.getOperand(1);
 
-  ConstantSDNode *MaskC = isConstOrConstSplat(Mask);
+  ConstantSDNode *MaskC = isConstOrConstSplat(Mask, false, true);
   if (!MaskC)
     return SDValue();
   APInt MaskBits = MaskC->getAPIntValue();
@@ -14622,18 +14622,15 @@ static SDValue PerformORCombineToShiftInsert(SelectionDAG &DAG, SDValue AndOp,
   SDValue Y;
   SDValue CntOp;
 
-  if (ShiftOp.getOpcode() == ISD::SRL) {
+  if (ShiftOp.getOpcode() == ARMISD::VSHRuIMM) {
     IsShiftRight = true;
     Y = ShiftOp.getOperand(0);
     CntOp = ShiftOp.getOperand(1);
-    if (!isVShiftRImm(CntOp, VT, /*isNarrow=*/false,
-                      /*isIntrinsic=*/false, Cnt))
-      return SDValue();
-  } else if (ShiftOp.getOpcode() == ISD::SHL) {
+    Cnt = cast<ConstantSDNode>(CntOp)->getZExtValue();
+  } else if (ShiftOp.getOpcode() == ARMISD::VSHLIMM) {
     Y = ShiftOp.getOperand(0);
     CntOp = ShiftOp.getOperand(1);
-    if (!isVShiftLImm(CntOp, VT, /*isLong=*/false, Cnt))
-      return SDValue();
+    Cnt = cast<ConstantSDNode>(CntOp)->getZExtValue();
   } else {
     return SDValue();
   }
@@ -14642,7 +14639,7 @@ static SDValue PerformORCombineToShiftInsert(SelectionDAG &DAG, SDValue AndOp,
   APInt RequiredMask = IsShiftRight
                            ? APInt::getHighBitsSet(ElemBits, (unsigned)Cnt)
                            : APInt::getLowBitsSet(ElemBits, (unsigned)Cnt);
-  if (MaskBits != RequiredMask)
+  if (MaskBits.zextOrTrunc(ElemBits) != RequiredMask)
     return SDValue();
 
   unsigned Opc = IsShiftRight ? ARMISD::VSRIIMM : ARMISD::VSLIIMM;
