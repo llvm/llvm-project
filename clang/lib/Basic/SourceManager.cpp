@@ -358,6 +358,17 @@ bool SourceManager::isMainFile(const FileEntry &SourceFile) {
   return false;
 }
 
+void SourceManager::invalidateCache(FileID FID) {
+  OptionalFileEntryRef Entry = getFileEntryRefForID(FID);
+  if (!Entry)
+    return;
+  if (ContentCache *&E = FileInfos[*Entry]) {
+    E->setBuffer(nullptr);
+    E = 0;
+  }
+  getFileManager().invalidateCache(*Entry);
+}
+
 void SourceManager::initializeForReplay(const SourceManager &Old) {
   assert(MainFileID.isInvalid() && "expected uninitialized SourceManager");
 

@@ -217,7 +217,25 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   // See if there is already an entry in the map.
   auto SeenFileInsertResult =
       SeenFileEntries.insert({Filename, std::errc::no_such_file_or_directory});
-  if (!SeenFileInsertResult.second) {
+
+  auto *NamedFileEnt = &*SeenFileInsertResult.first;
+
+  const FileEntry *StaleFileEntry = 0;
+  bool needsRereading = false;
+  if (NamedFileEnt && NamedFileEnt->getValue()) {
+    FileEntryRef::MapValue Value = *NamedFileEnt->getValue();
+    if (isa<FileEntry *>(Value.V)) {
+      auto found = FileEntriesToReread.find(cast<FileEntry *>(Value.V));
+      if (found != FileEntriesToReread.end()) {
+        needsRereading = true;
+        StaleFileEntry = *found;
+        FileEntriesToReread.erase(found);
+      }
+    }
+  }
+
+  // See if there is already an entry in the map.
+  if (!SeenFileInsertResult.second && !needsRereading) {
     if (!SeenFileInsertResult.first->second)
       return llvm::errorCodeToError(
           SeenFileInsertResult.first->second.getError());
@@ -226,8 +244,6 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
 
   // We've not seen this before. Fill it in.
   ++NumFileCacheMisses;
-  auto *NamedFileEnt = &*SeenFileInsertResult.first;
-  assert(!NamedFileEnt->second && "should be newly-created");
 
   // Get the null-terminated file name as stored as the key of the
   // SeenFileEntries map.
@@ -353,6 +369,20 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
     // We should still fill the path even if we aren't opening the file.
     fillRealPathName(UFE, InterndFileName);
   }
+
+  if (StaleFileEntry) {
+    // Find occurrences of old FileEntry; update with new one:
+    for (auto &fe : SeenFileEntries) {
+      if (fe.getValue()) {
+        FileEntryRef::MapValue Value = *fe.getValue();
+        if (isa<FileEntry *>(Value.V) &&
+            cast<FileEntry *>(Value.V) == StaleFileEntry) {
+          fe.setValue(FileEntryRef::MapValue(*UFE, DirInfo));
+        }
+      }
+    }
+  }
+
   return ReturnedRef;
 }
 
@@ -612,6 +642,11 @@ FileManager::getNoncachedStatValue(StringRef Path,
     return S.getError();
   Result = *S;
   return std::error_code();
+}
+
+void FileManager::invalidateCache(FileEntryRef Entry) {
+  assert(Entry && "Cannot invalidate a NULL FileEntry");
+  FileEntriesToReread.insert(Entry);
 }
 
 void FileManager::GetUniqueIDMapping(
