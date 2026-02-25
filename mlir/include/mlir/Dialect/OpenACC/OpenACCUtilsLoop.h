@@ -14,6 +14,9 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSLOOP_H_
 
 namespace mlir {
+class IRMapping;
+class Location;
+class Region;
 class RewriterBase;
 namespace scf {
 class ForOp;
@@ -23,6 +26,21 @@ class ExecuteRegionOp;
 namespace acc {
 class LoopOp;
 
+/// Wrap a multi-block region in an scf.execute_region.
+/// Clones the given region into a new scf.execute_region, replacing
+/// acc.yield/acc.terminator with scf.yield. Use this to convert unstructured
+/// control flow (e.g. multiple blocks with branches) into a single SCF region.
+/// @param region The region to wrap (cloned into the execute_region; not
+/// modified).
+/// @param mapping IR mapping for the clone; updated with block and value
+/// mappings.
+/// @param loc Location for the created execute_region op.
+/// @param rewriter RewriterBase for creating and erasing operations.
+/// @return The created scf.execute_region operation, or nullptr if the region
+///         has an acc.yield with operands (results not yet supported).
+scf::ExecuteRegionOp
+wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
+                                         Location loc, RewriterBase &rewriter);
 /// Convert a structured acc.loop to scf.for.
 /// The loop arguments are converted to index type. If enableCollapse is true,
 /// nested loops are collapsed into a single loop.
