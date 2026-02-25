@@ -147,6 +147,8 @@ public:
     return &TLInfo;
   }
 
+  void mirFileLoaded(MachineFunction &MF) const override;
+
   bool enableMachineScheduler() const override { return true; }
 
   bool enablePostRAScheduler() const override { return UsePostRAScheduler; }
@@ -329,7 +331,6 @@ public:
     }
   }
 
-  bool enablePExtSIMDCodeGen() const;
   bool isPExtPackedType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the

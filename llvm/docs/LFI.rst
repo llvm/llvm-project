@@ -398,6 +398,33 @@ In certain cases, guards may be hoisted outside of loops.
 |                       |                               |
 +-----------------------+-------------------------------+
 
+Assembler Directives
+====================
+
+The LFI assembler supports the following directives for controlling the
+rewriter.
+
+``.lfi_rewrite_disable``
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disables LFI assembly rewrites for all subsequent instructions, until
+``.lfi_rewrite_enable`` is used. This can be useful for hand-written assembly
+that is already safe and should not be modified by the rewriter.
+
+``.lfi_rewrite_enable``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Re-enables LFI assembly rewrites after a previous ``.lfi_rewrite_disable``.
+
+Example:
+
+.. code-block:: gas
+
+  .lfi_rewrite_disable
+  // No rewrites applied here.
+  ldr x0, [x27, w1, uxtw]
+  .lfi_rewrite_enable
+
 References
 ++++++++++
 

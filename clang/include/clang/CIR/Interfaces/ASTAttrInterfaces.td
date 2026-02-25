@@ -14,13 +14,6 @@ include "mlir/IR/OpBase.td"
 let cppNamespace = "::cir" in {
   def ASTVarDeclInterface : AttrInterface<"ASTVarDeclInterface"> {
     let methods = [
-      InterfaceMethod<"", "void", "mangleStaticGuardVariable",
-                      (ins "llvm::raw_ostream&":$out), [{}],
-                      /*defaultImplementation=*/[{
-        std::unique_ptr<clang::MangleContext> mangleCtx(
-          $_attr.getAst()->getASTContext().createMangleContext());
-        mangleCtx->mangleStaticGuardVariable($_attr.getAst(), out);
-      }]>,
       InterfaceMethod<"", "bool", "isLocalVarDecl", (ins), [{}],
                       /*defaultImplementation=*/[{
         return $_attr.getAst()->isLocalVarDecl();
@@ -38,11 +31,6 @@ let cppNamespace = "::cir" in {
                       "getTemplateSpecializationKind", (ins), [{}],
                       /*defaultImplementation=*/[{
         return $_attr.getAst()->getTemplateSpecializationKind();
-      }]>,
-      InterfaceMethod<"Get the underlying VarDecl pointer.",
-                      "const clang::VarDecl *", "getVarDecl", (ins), [{}],
-                      /*defaultImplementation=*/[{
-        return $_attr.getAst();
       }]>
     ];
   }

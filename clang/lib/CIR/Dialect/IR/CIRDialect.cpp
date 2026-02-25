@@ -885,13 +885,12 @@ static mlir::ParseResult parseCallCommon(mlir::OpAsmParser &parser,
   return mlir::success();
 }
 
-static void printCallCommon(mlir::Operation *op,
-                            mlir::FlatSymbolRefAttr calleeSym,
-                            mlir::Value indirectCallee,
-                            mlir::OpAsmPrinter &printer, bool isNothrow,
-                            cir::SideEffect sideEffect,
-                            mlir::Block *normalDest = nullptr,
-                            mlir::Block *unwindDest = nullptr) {
+static void
+printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
+                mlir::Value indirectCallee, mlir::OpAsmPrinter &printer,
+                bool isNothrow, cir::SideEffect sideEffect, ArrayAttr argAttrs,
+                ArrayAttr resAttrs, mlir::Block *normalDest = nullptr,
+                mlir::Block *unwindDest = nullptr) {
   printer << ' ';
 
   auto callLikeOp = mlir::cast<cir::CIRCallOpInterface>(op);
@@ -927,13 +926,32 @@ static void printCallCommon(mlir::Operation *op,
   }
 
   llvm::SmallVector<::llvm::StringRef> elidedAttrs = {
-      CIRDialect::getCalleeAttrName(), CIRDialect::getNoThrowAttrName(),
+      CIRDialect::getCalleeAttrName(),
+      CIRDialect::getNoThrowAttrName(),
       CIRDialect::getSideEffectAttrName(),
-      CIRDialect::getOperandSegmentSizesAttrName()};
+      CIRDialect::getOperandSegmentSizesAttrName(),
+      llvm::StringRef("res_attrs"),
+      llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
-  printer.printFunctionalType(op->getOperands().getTypes(),
-                              op->getResultTypes());
+  if (calleeSym || !argAttrs) {
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(), argAttrs,
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  } else {
+    // indirect function calls use an 'arg' type for the type of its indirect
+    // argument.  However, we don't store a similar attribute collection.  In
+    // order to make `printFunctionSignature` have the attributes line up, we
+    // have to make a 'shimmed' copy of the attributes that have a blank set of
+    // attributes for the indirect argument.
+    llvm::SmallVector<Attribute> shimmedArgAttrs;
+    shimmedArgAttrs.push_back(mlir::DictionaryAttr::get(op->getContext(), {}));
+    shimmedArgAttrs.append(argAttrs.begin(), argAttrs.end());
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(),
+        mlir::ArrayAttr::get(op->getContext(), shimmedArgAttrs),
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  }
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -945,7 +963,7 @@ void cir::CallOp::print(mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect);
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr());
 }
 
 static LogicalResult
@@ -1061,7 +1079,8 @@ void cir::TryCallOp::print(::mlir::OpAsmPrinter &p) {
   mlir::Value indirectCallee = isIndirect() ? getIndirectCall() : nullptr;
   cir::SideEffect sideEffect = getSideEffect();
   printCallCommon(*this, getCalleeAttr(), indirectCallee, p, getNothrow(),
-                  sideEffect, getNormalDest(), getUnwindDest());
+                  sideEffect, getArgAttrsAttr(), getResAttrsAttr(),
+                  getNormalDest(), getUnwindDest());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1854,9 +1873,13 @@ cir::GetGlobalOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     // be marked with tls bits.
     if (getTls() && !g.getTlsModel())
       return emitOpError("access to global not marked thread local");
-    // Verify that the static_local attribute matches between get_global and
-    // global. Skip when inside a GlobalOp region (e.g., ctor/dtor regions).
-    if (getStaticLocal() != g.getStaticLocal() &&
+
+    // Verify that the static_local attribute on GetGlobalOp matches the
+    // static_local_guard attribute on GlobalOp. GetGlobalOp uses a UnitAttr,
+    // GlobalOp uses StaticLocalGuardAttr. Both should be present, or neither.
+    bool getGlobalIsStaticLocal = getStaticLocal();
+    bool globalIsStaticLocal = g.getStaticLocalGuard().has_value();
+    if (getGlobalIsStaticLocal != globalIsStaticLocal &&
         !getOperation()->getParentOfType<cir::GlobalOp>())
       return emitOpError("static_local attribute mismatch");
   } else if (auto f = dyn_cast<FuncOp>(op)) {
@@ -3766,6 +3789,44 @@ mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
+LogicalResult cir::TryOp::verify() {
+  mlir::ArrayAttr handlerTypes = getHandlerTypes();
+  if (!handlerTypes) {
+    if (!getHandlerRegions().empty())
+      return emitOpError(
+          "handler regions must be empty when no handler types are present");
+    return success();
+  }
+
+  mlir::MutableArrayRef<mlir::Region> handlerRegions = getHandlerRegions();
+
+  // The parser and builder won't allow this to happen, but the loop below
+  // relies on the sizes being the same, so we check it here.
+  if (handlerRegions.size() != handlerTypes.size())
+    return emitOpError(
+        "number of handler regions and handler types must match");
+
+  for (const auto &[typeAttr, handlerRegion] :
+       llvm::zip(handlerTypes, handlerRegions)) {
+    // Verify that handler regions have a !cir.eh_token block argument.
+    mlir::Block &entryBlock = handlerRegion.front();
+    if (entryBlock.getNumArguments() != 1 ||
+        !mlir::isa<cir::EhTokenType>(entryBlock.getArgument(0).getType()))
+      return emitOpError(
+          "handler region must have a single '!cir.eh_token' argument");
+
+    // The unwind region does not require a cir.begin_catch.
+    if (mlir::isa<cir::UnwindAttr>(typeAttr))
+      continue;
+
+    if (entryBlock.empty() || !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
+      return emitOpError(
+          "catch handler region must start with 'cir.begin_catch'");
+  }
+
+  return success();
+}
+
 static void
 printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
                        mlir::MutableArrayRef<mlir::Region> handlerRegions,
@@ -3787,7 +3848,15 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
       printer << "] ";
     }
 
-    printer.printRegion(handlerRegions[typeIdx],
+    // Print the handler region's !cir.eh_token block argument.
+    mlir::Region &region = handlerRegions[typeIdx];
+    if (!region.empty() && region.front().getNumArguments() > 0) {
+      printer << "(";
+      printer.printRegionArgument(region.front().getArgument(0));
+      printer << ") ";
+    }
+
+    printer.printRegion(region,
                         /*printEntryBLockArgs=*/false,
                         /*printBlockTerminators=*/true);
   }
@@ -3802,8 +3871,20 @@ static mlir::ParseResult parseTryHandlerRegions(
     handlerRegions.emplace_back(new mlir::Region);
 
     mlir::Region &currRegion = *handlerRegions.back();
+
+    // Parse the required region argument: (%eh_token : !cir.eh_token)
+    llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
+    if (parser.parseLParen())
+      return failure();
+    mlir::OpAsmParser::Argument arg;
+    if (parser.parseArgument(arg, /*allowType=*/true))
+      return failure();
+    regionArgs.push_back(arg);
+    if (parser.parseRParen())
+      return failure();
+
     mlir::SMLoc regionLoc = parser.getCurrentLocation();
-    if (parser.parseRegion(currRegion)) {
+    if (parser.parseRegion(currRegion, regionArgs)) {
       handlerRegions.clear();
       return failure();
     }

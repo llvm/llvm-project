@@ -7,12 +7,12 @@
 // RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
-// RUN: %clang_cc1 -emit-llvm %s -DEXPR -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -emit-llvm %s -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
 // RUN: FileCheck -check-prefix=EVAL -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-STATIC -input-file=%t.ll %s
 // RUN: FileCheck -check-prefix=EVAL-FN -input-file=%t.ll %s
 //
-// RUN: %clang_cc1 -emit-llvm %s -DEXPR -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
+// RUN: %clang_cc1 -emit-llvm %s -Dconsteval="" -std=c++2a -triple x86_64-unknown-linux-gnu -o %t.ll -fexperimental-new-constant-interpreter
 // RUN: FileCheck -check-prefix=EXPR -input-file=%t.ll %s
 
 // there is two version of symbol checks to ensure
@@ -260,7 +260,6 @@ int test_UserConvOverload_ceval() {
   return test_UserConvOverload_helper_ceval(UserConv());
 }
 
-#ifndef EXPR
 namespace virt {
 struct A { alignas(32) char a[32]; };
 struct B : virtual A {
@@ -280,7 +279,6 @@ long long f() { return c().y; }
 // EVAL-FN-NONEXPR-NEXT: load i64, ptr getelementptr inbounds nuw (%"struct.virt::B", ptr getelementptr (i8, ptr @_ZN4virt1dE, i64 8), i32 0, i32 2), align 8
 // EVAL-FN-NONEXPR-NEXT: ret i64
 } // namespace virt
-#endif
 
 consteval void void_test() {}
 void void_call() { // EVAL-FN-LABEL: define {{.*}} @_Z9void_call

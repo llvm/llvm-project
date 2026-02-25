@@ -5272,6 +5272,8 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitCallExpr(const CallExpr *E) {
+  if (E->containsErrors())
+    return false;
   const FunctionDecl *FuncDecl = E->getDirectCallee();
 
   if (FuncDecl) {
@@ -6998,7 +7000,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
   };
 
   switch (E->getOpcode()) {
-  case UO_Minus:
+  case UO_Minus: // -x
     if (!prepareResult())
       return false;
     if (!createTemp())
@@ -7047,7 +7049,7 @@ bool Compiler<Emitter>::VisitComplexUnaryOperator(const UnaryOperator *E) {
     return this->emitArrayElemPop(classifyPrim(E->getType()), 1, E);
 
   case UO_Not: // ~x
-    if (!this->visit(SubExpr))
+    if (!this->delegate(SubExpr))
       return false;
     // Negate the imaginary component.
     if (!this->emitArrayElem(ElemT, 1, E))
@@ -7330,9 +7332,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // evaluate the initializer.
   if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
       VD->getInit() && !VD->getInit()->isValueDependent()) {
-
-    if (VD->evaluateValue())
+    if (VD->evaluateValue()) {
+      // Revisit the variable declaration, but make sure it's associated with a
+      // different evaluation, so e.g. mutable reads don't work on it.
+      EvalIDScope _(Ctx);
       return revisit(VD);
+    }
 
     if (!IsReference)
       return this->emitDummyPtr(D, E);

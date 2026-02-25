@@ -1289,6 +1289,26 @@ def CIR_SideEffect : CIR_I32EnumAttr<
 }
 
 //===----------------------------------------------------------------------===//
+// StaticLocalGuardAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_StaticLocalGuardAttr : CIR_Attr<"StaticLocalGuard",
+                                         "static_local_guard"> {
+  let summary = "Guard variable name for static local variables";
+  let description = [{
+    Contains the mangled guard variable name for static local variable
+    initialization.
+
+    Example:
+    ```mlir
+    cir.global internal static_local_guard<"_ZGVZ3foovE1x"> @_ZZ3foovE1x = ...
+    ```
+  }];
+  let parameters = (ins "mlir::StringAttr":$name);
+  let assemblyFormat = "`<` $name `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // AST Wrappers
 //===----------------------------------------------------------------------===//
 
@@ -1327,5 +1347,7 @@ class CIR_AST<string name, string prefix, list<Trait> traits = []>
 def CIR_ASTVarDeclAttr : CIR_AST<"VarDecl", "var.decl", [
   ASTVarDeclInterface
 ]>;
+
+include "clang/CIR/Dialect/IR/CIRCUDAAttrs.td"
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

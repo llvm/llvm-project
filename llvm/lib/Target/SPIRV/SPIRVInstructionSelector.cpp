@@ -258,6 +258,9 @@ private:
   bool selectWaveExclusiveScanSum(Register ResVReg, SPIRVTypeInst ResType,
                                   MachineInstr &I) const;
 
+  bool selectWaveExclusiveScanProduct(Register ResVReg, SPIRVTypeInst ResType,
+                                      MachineInstr &I) const;
+
   bool selectConst(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
 
@@ -357,6 +360,8 @@ private:
   bool selectSampleCmpLevelZeroIntrinsic(Register &ResVReg,
                                          SPIRVTypeInst ResType,
                                          MachineInstr &I) const;
+  bool selectGatherIntrinsic(Register &ResVReg, SPIRVTypeInst ResType,
+                             MachineInstr &I) const;
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, SPIRVTypeInst ResType,
                                 MachineInstr &I) const;
@@ -502,59 +507,61 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   }
 }
 
-// Return true if the type represents a constant register
-static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef,
-                       SmallPtrSet<SPIRVType *, 4> &Visited) {
-  OpDef = passCopy(OpDef, MRI);
+// Return true if the MachineInstr represents a constant register
+static bool isConstReg(MachineRegisterInfo *MRI, MachineInstr *OpDef) {
 
-  if (Visited.contains(OpDef))
-    return true;
-  Visited.insert(OpDef);
+  SmallVector<MachineInstr *> Stack = {OpDef};
+  SmallPtrSet<MachineInstr *, 4> Visited;
 
-  unsigned Opcode = OpDef->getOpcode();
-  switch (Opcode) {
-  case TargetOpcode::G_CONSTANT:
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_IMPLICIT_DEF:
-    return true;
-  case TargetOpcode::G_INTRINSIC:
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-  case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
-    return cast<GIntrinsic>(*OpDef).getIntrinsicID() ==
-           Intrinsic::spv_const_composite;
-  case TargetOpcode::G_BUILD_VECTOR:
-  case TargetOpcode::G_SPLAT_VECTOR: {
-    for (unsigned i = OpDef->getNumExplicitDefs(); i < OpDef->getNumOperands();
-         i++) {
-      MachineInstr *OpNestedDef =
-          OpDef->getOperand(i).isReg()
-              ? MRI->getVRegDef(OpDef->getOperand(i).getReg())
-              : nullptr;
-      if (OpNestedDef && !isConstReg(MRI, OpNestedDef, Visited))
+  while (!Stack.empty()) {
+    MachineInstr *MI = Stack.pop_back_val();
+    MI = passCopy(MI, MRI);
+    if (!Visited.insert(MI).second)
+      continue;
+    switch (MI->getOpcode()) {
+    case TargetOpcode::G_INTRINSIC:
+    case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
+      if (cast<GIntrinsic>(*OpDef).getIntrinsicID() !=
+          Intrinsic::spv_const_composite)
         return false;
+      continue;
+    case TargetOpcode::G_BUILD_VECTOR:
+    case TargetOpcode::G_SPLAT_VECTOR:
+      for (unsigned i = OpDef->getNumExplicitDefs();
+           i < OpDef->getNumOperands(); i++) {
+        if (!OpDef->getOperand(i).isReg())
+          continue;
+        MachineInstr *OpNestedDef =
+            MRI->getVRegDef(OpDef->getOperand(i).getReg());
+        Stack.push_back(OpNestedDef);
+      }
+      continue;
+    case TargetOpcode::G_CONSTANT:
+    case TargetOpcode::G_FCONSTANT:
+    case TargetOpcode::G_IMPLICIT_DEF:
+    case SPIRV::OpConstantTrue:
+    case SPIRV::OpConstantFalse:
+    case SPIRV::OpConstantI:
+    case SPIRV::OpConstantF:
+    case SPIRV::OpConstantComposite:
+    case SPIRV::OpConstantCompositeContinuedINTEL:
+    case SPIRV::OpConstantSampler:
+    case SPIRV::OpConstantNull:
+    case SPIRV::OpUndef:
+    case SPIRV::OpConstantFunctionPointerINTEL:
+      continue;
+    default:
+      return false;
     }
-    return true;
-  case SPIRV::OpConstantTrue:
-  case SPIRV::OpConstantFalse:
-  case SPIRV::OpConstantI:
-  case SPIRV::OpConstantF:
-  case SPIRV::OpConstantComposite:
-  case SPIRV::OpConstantCompositeContinuedINTEL:
-  case SPIRV::OpConstantSampler:
-  case SPIRV::OpConstantNull:
-  case SPIRV::OpUndef:
-  case SPIRV::OpConstantFunctionPointerINTEL:
-    return true;
   }
-  }
-  return false;
+  return true;
 }
 
 // Return true if the virtual register represents a constant
 static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
-  SmallPtrSet<SPIRVType *, 4> Visited;
   if (MachineInstr *OpDef = MRI->getVRegDef(OpReg))
-    return isConstReg(MRI, OpDef, Visited);
+    return isConstReg(MRI, OpDef);
   return false;
 }
 
@@ -843,7 +850,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       for (unsigned i = 0; i < I.getNumDefs(); ++i)
         MRI->setType(I.getOperand(i).getReg(), LLT::scalar(64));
     GR.invalidateMachineInstr(&I);
-    I.removeFromParent();
+    I.eraseFromParent();
     return true;
   }
   return false;
@@ -1581,18 +1588,19 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
                               MachineInstrBuilder &MIB,
                               MachineIRBuilder &MIRBuilder,
                               SPIRVGlobalRegistry &GR) {
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
   if (MemOp->isVolatile())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
   if (MemOp->isNonTemporal())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Nontemporal);
-  if (MemOp->getAlign().value())
+  // Aligned memory operand requires the Kernel capability.
+  if (!ST->isShader() && MemOp->getAlign().value())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned);
 
   [[maybe_unused]] MachineInstr *AliasList = nullptr;
   [[maybe_unused]] MachineInstr *NoAliasList = nullptr;
-  const SPIRVSubtarget *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
   if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
     if (auto *MD = MemOp->getAAInfo().Scope) {
       AliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
@@ -2956,6 +2964,18 @@ bool SPIRVInstructionSelector::selectWaveExclusiveScanSum(
                                  });
 }
 
+bool SPIRVInstructionSelector::selectWaveExclusiveScanProduct(
+    Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I) const {
+  return selectWaveExclusiveScan(ResVReg, ResType, I, /*IsUnsigned*/ false,
+                                 [&](Register InputRegister, bool IsUnsigned) {
+                                   bool IsFloatTy = GR.isScalarOrVectorOfType(
+                                       InputRegister, SPIRV::OpTypeFloat);
+                                   return IsFloatTy
+                                              ? SPIRV::OpGroupNonUniformFMul
+                                              : SPIRV::OpGroupNonUniformIMul;
+                                 });
+}
+
 template <typename PickOpcodeFn>
 bool SPIRVInstructionSelector::selectWaveExclusiveScan(
     Register ResVReg, SPIRVTypeInst ResType, MachineInstr &I, bool IsUnsigned,
@@ -3123,7 +3143,7 @@ bool SPIRVInstructionSelector::selectDiscard(Register ResVReg,
     // OpKill must be the last operation of any basic block.
     if (MachineInstr *NextI = I.getNextNode()) {
       GR.invalidateMachineInstr(NextI);
-      NextI->removeFromParent();
+      NextI->eraseFromParent();
     }
   }
 
@@ -3638,8 +3658,7 @@ bool SPIRVInstructionSelector::wrapIntoSpecConstantOp(
     Register OpReg = I.getOperand(i).getReg();
     MachineInstr *OpDefine = MRI->getVRegDef(OpReg);
     SPIRVTypeInst OpType = GR.getSPIRVTypeForVReg(OpReg);
-    SmallPtrSet<SPIRVType *, 4> Visited;
-    if (!OpDefine || !OpType || isConstReg(MRI, OpDefine, Visited) ||
+    if (!OpDefine || !OpType || isConstReg(MRI, OpDefine) ||
         OpDefine->getOpcode() == TargetOpcode::G_ADDRSPACE_CAST ||
         OpDefine->getOpcode() == TargetOpcode::G_INTTOPTR ||
         GR.isAggregateType(OpType)) {
@@ -3764,7 +3783,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     // the duplicated definition.
     if (MI->getOpcode() == TargetOpcode::G_GLOBAL_VALUE) {
       GR.invalidateMachineInstr(MI);
-      MI->removeFromParent();
+      MI->eraseFromParent();
     }
     return true;
   }
@@ -4092,6 +4111,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
                             SPIRV::OpGroupNonUniformShuffle);
   case Intrinsic::spv_wave_prefix_sum:
     return selectWaveExclusiveScanSum(ResVReg, ResType, I);
+  case Intrinsic::spv_wave_prefix_product:
+    return selectWaveExclusiveScanProduct(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:
@@ -4135,6 +4156,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectSampleCmpIntrinsic(ResVReg, ResType, I);
   case Intrinsic::spv_resource_samplecmplevelzero:
     return selectSampleCmpLevelZeroIntrinsic(ResVReg, ResType, I);
+  case Intrinsic::spv_resource_gather:
+  case Intrinsic::spv_resource_gather_cmp:
+    return selectGatherIntrinsic(ResVReg, ResType, I);
   case Intrinsic::spv_resource_getpointer: {
     return selectResourceGetPointer(ResVReg, ResType, I);
   }
@@ -4504,6 +4528,93 @@ bool SPIRVInstructionSelector::selectSampleCmpLevelZeroIntrinsic(
   ImOps.Lod = GR.getOrCreateConstFP(APFloat(0.0f), I, FloatTy, TII);
   return generateSampleImage(ResVReg, ResType, ImageReg, SamplerReg,
                              CoordinateReg, ImOps, I.getDebugLoc(), I);
+}
+
+bool SPIRVInstructionSelector::selectGatherIntrinsic(Register &ResVReg,
+                                                     SPIRVTypeInst ResType,
+                                                     MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  SPIRVTypeInst ImageType = GR.getSPIRVTypeForVReg(ImageReg);
+  assert(ImageType && ImageType->getOpcode() == SPIRV::OpTypeImage &&
+         "ImageReg is not an image type.");
+
+  Register ComponentOrCompareReg;
+  Register OffsetReg;
+
+  ComponentOrCompareReg = I.getOperand(5).getReg();
+  OffsetReg = I.getOperand(6).getReg();
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, ImageType, *ImageDef, I)) {
+    return false;
+  }
+
+  auto Dim = static_cast<SPIRV::Dim::Dim>(ImageType->getOperand(2).getImm());
+  if (Dim != SPIRV::Dim::DIM_2D && Dim != SPIRV::Dim::DIM_Cube &&
+      Dim != SPIRV::Dim::DIM_Rect) {
+    I.emitGenericError(
+        "Gather operations are only supported for 2D, Cube, and Rect images.");
+    return false;
+  }
+
+  auto *SamplerDef = cast<GIntrinsic>(getVRegDef(*MRI, SamplerReg));
+  Register NewSamplerReg =
+      MRI->createVirtualRegister(MRI->getRegClass(SamplerReg));
+  if (!loadHandleBeforePosition(
+          NewSamplerReg, GR.getSPIRVTypeForVReg(SamplerReg), *SamplerDef, I)) {
+    return false;
+  }
+
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVTypeInst SampledImageType =
+      GR.getOrCreateOpTypeSampledImage(ImageType, MIRBuilder);
+  Register SampledImageReg =
+      MRI->createVirtualRegister(GR.getRegClass(SampledImageType));
+
+  BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpSampledImage))
+      .addDef(SampledImageReg)
+      .addUse(GR.getSPIRVTypeID(SampledImageType))
+      .addUse(NewImageReg)
+      .addUse(NewSamplerReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  auto IntrId = cast<GIntrinsic>(I).getIntrinsicID();
+  bool IsGatherCmp = IntrId == Intrinsic::spv_resource_gather_cmp;
+  unsigned Opcode =
+      IsGatherCmp ? SPIRV::OpImageDrefGather : SPIRV::OpImageGather;
+
+  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(SampledImageReg)
+                 .addUse(CoordinateReg)
+                 .addUse(ComponentOrCompareReg);
+
+  uint32_t ImageOperands = 0;
+  if (OffsetReg && !isScalarOrVectorIntConstantZero(OffsetReg)) {
+    if (Dim == SPIRV::Dim::DIM_Cube) {
+      I.emitGenericError(
+          "Gather operations with offset are not supported for Cube images.");
+      return false;
+    }
+    if (isConstReg(MRI, OffsetReg))
+      ImageOperands |= SPIRV::ImageOperand::ConstOffset;
+    else {
+      ImageOperands |= SPIRV::ImageOperand::Offset;
+    }
+  }
+
+  if (ImageOperands != 0) {
+    MIB.addImm(ImageOperands);
+    if (ImageOperands &
+        (SPIRV::ImageOperand::ConstOffset | SPIRV::ImageOperand::Offset))
+      MIB.addUse(OffsetReg);
+  }
+
+  MIB.constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 bool SPIRVInstructionSelector::generateImageReadOrFetch(
