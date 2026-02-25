@@ -6312,12 +6312,6 @@ static void ReferenceDllExportedMembers(Sema &S, CXXRecordDecl *Class) {
 
       S.MarkFunctionReferenced(Class->getLocation(), MD);
 
-      // Inherited constructors are synthesized, not written in source, so
-      // their definitions won't be encountered later.
-      if (auto *CD = dyn_cast<CXXConstructorDecl>(MD))
-        if (CD->getInheritedConstructor())
-          S.Consumer.HandleTopLevelDecl(DeclGroupRef(MD));
-
       // The function will be passed to the consumer when its definition is
       // encountered.
     } else if (MD->isExplicitlyDefaulted()) {
@@ -14385,17 +14379,6 @@ Sema::findInheritingConstructor(SourceLocation Loc,
   DerivedCtor->setAccess(BaseCtor->getAccess());
   DerivedCtor->setParams(ParamDecls);
   Derived->addDecl(DerivedCtor);
-
-  // Propagate the class-level DLLExport attribute to the new inherited
-  // constructor so it gets exported. DLLImport is not propagated because the
-  // inherited ctor is an inline definition synthesized by the compiler.
-  if (Derived->hasAttr<DLLExportAttr>() &&
-      !DerivedCtor->hasAttr<DLLExportAttr>()) {
-    auto *NewAttr = DLLExportAttr::CreateImplicit(
-        getASTContext(), *Derived->getAttr<DLLExportAttr>());
-    NewAttr->setInherited(true);
-    DerivedCtor->addAttr(NewAttr);
-  }
 
   if (ShouldDeleteSpecialMember(DerivedCtor,
                                 CXXSpecialMemberKind::DefaultConstructor, &ICI))

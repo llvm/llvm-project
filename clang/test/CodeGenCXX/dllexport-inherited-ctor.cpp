@@ -15,9 +15,13 @@ struct __declspec(dllexport) Child : public Base {
 };
 
 // The inherited constructors Child(int) and Child(double) should be exported.
+// Verify the thunk bodies delegate to the base constructor with the correct
+// arguments, ensuring ABI compatibility with MSVC-compiled callers.
 
-// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@H@Z"
-// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@N@Z"
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@H@Z"(ptr {{.*}} %this, i32 %0)
+// MSVC-DAG: call {{.*}} @"??0Base@@QEAA@H@Z"(ptr {{.*}} %this{{.*}}, i32
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@N@Z"(ptr {{.*}} %this, double %0)
+// MSVC-DAG: call {{.*}} @"??0Base@@QEAA@N@Z"(ptr {{.*}} %this{{.*}}, double
 
 // M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QAE@H@Z"
 // M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QAE@N@Z"

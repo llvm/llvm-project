@@ -13018,8 +13018,13 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
     // Our approach to inheriting constructors is fundamentally different from
     // that used by the MS ABI, so keep our inheriting constructor thunks
     // internal rather than trying to pick an unambiguous mangling for them.
+    //
     // However, dllexport inherited constructors must be externally visible
-    // to match MSVC's behavior.
+    // to match MSVC's behavior. This is ABI-compatible because the MS ABI
+    // mangles inherited constructors identically to regular constructors
+    // (only class name + parameter types, no "inherited from" encoding),
+    // and Clang's forwarding thunks produce an equivalent calling sequence
+    // for the common case (no virtual bases).
     return GVA_Internal;
 
   return GVA_DiscardableODR;
