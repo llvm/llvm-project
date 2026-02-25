@@ -5,7 +5,7 @@
 ; RUN: -mcpu=pwr10 -disable-output < %s 2>&1 | FileCheck %s
 
 define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
-; CHECK-LABEL: VPlan 'Initial VPlan for VF={2,4},UF>=1' {
+; CHECK-LABEL: VPlan 'Initial VPlan for VF={2},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%.+]]> = VF
 ; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in vp<[[VTC:%.+]]> = vector-trip-count
