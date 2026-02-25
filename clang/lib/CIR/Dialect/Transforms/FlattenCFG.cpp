@@ -887,9 +887,8 @@ public:
   // already-flattened try or cleanup scope operations that were nested within
   // this cleanup scope. These resume ops need to be chained through this
   // cleanup's EH handler instead of unwinding directly to the caller.
-  void collectResumeOps(
-      mlir::Region &bodyRegion,
-      llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) const {
+  void collectResumeOps(mlir::Region &bodyRegion,
+                        llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) const {
     bodyRegion.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
       // Skip resume ops inside nested TryOps - those are handled by TryOp
       // flattening.
@@ -1190,9 +1189,8 @@ public:
     // cleanup exists but no unwind block is needed), or before the continue
     // block.
     mlir::Block *normalInsertPt =
-        unwindBlock
-            ? unwindBlock
-            : (ehCleanupEntry ? ehCleanupEntry : continueBlock);
+        unwindBlock ? unwindBlock
+                    : (ehCleanupEntry ? ehCleanupEntry : continueBlock);
 
     // Inline the body region.
     rewriter.inlineRegionBefore(cleanupOp.getBodyRegion(), normalInsertPt);
