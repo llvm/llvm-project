@@ -12,7 +12,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDSYMBOLS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDSYMBOLS_H
 
-#include "Protocol.h"
 #include "index/Symbol.h"
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/StringRef.h"
@@ -25,15 +24,6 @@ class ParsedAST;
 class SymbolIndex;
 struct Symbol;
 struct SymbolLocation;
-
-/// A bitmask type representing symbol tags supported by LSP.
-/// \see
-/// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#symbolTag
-using SymbolTags = uint32_t;
-/// Ensure we have enough bits to represent all SymbolTag values.
-static_assert(static_cast<unsigned>(SymbolTag::LastTag) <= 32,
-              "Too many SymbolTags to fit in uint32_t. Change to uint64_t if "
-              "we ever have more than 32 tags.");
 
 /// Helper function for deriving an LSP Location from an index SymbolLocation.
 llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
@@ -73,8 +63,8 @@ SymbolTags computeSymbolTags(const NamedDecl &ND);
 /// \p ND The declaration to get tags for.
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
 
-/// Returns the symbol tags for an index `Symbol`.
-std::vector<SymbolTag> getSymbolTags(const Symbol &S);
+/// Returns the symbol tags for the given declaration as a bitmask.
+std::vector<SymbolTag> expandTagBitmask(SymbolTags symbolTags);
 
 } // namespace clangd
 } // namespace clang

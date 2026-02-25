@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 #include "Annotations.h"
 #include "FindSymbols.h"
+#include "SyncAPI.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "index/FileIndex.h"
 #include "llvm/ADT/StringRef.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -1329,6 +1331,78 @@ TEST(DocumentSymbolsTest, SymbolTagsCompilation) {
               children(AllOf(withName("f1"),
                              withSymbolTags(SymbolTag::Public, SymbolTag::Final,
                                             SymbolTag::Implements))))));
+}
+
+TEST(DocumentSymbolsTest, SymbolTagsWithIndexing) {
+  // Test that verifies symbol tags are correctly set when the AST is indexed
+  // through FileIndex, which triggers the full indexing path through
+  // SymbolCollector::addDeclaration where S.Tags = computeSymbolTags(ND)
+  TestTU TU;
+  Annotations Main(R"cpp(
+    class A {
+      public:
+        virtual ~A() = default;
+        virtual void f1() = 0;
+        void f2() const;
+      protected:
+        void f3(){}
+      private:
+        static void f4(){}
+    };
+
+    void A::f2() const {}
+
+    class B final: public A {
+      public:
+        void f1() final {}
+    };
+    )cpp");
+
+  TU.Code = Main.code().str();
+  auto AST = TU.build();
+
+  // This path goes through:
+  //   FileIndex::updateMain() -> indexMainDecls() -> indexSymbols() ->
+  //   SymbolCollector -> addDeclaration() -> S.Tags = computeSymbolTags(ND)
+
+  FileIndex Index{false};
+  Index.updateMain(testPath(TU.Filename), AST);
+  // Verify that the index contains symbols with correct tags
+  // Note: We can't directly inspect Symbol.Tags from the index in this test,
+  // but the fact that updateMain() completes successfully demonstrates that:
+  // 1. SymbolCollector::addDeclaration() was called for each decl
+  // 2. computeSymbolTags() was executed and S.Tags was set
+  // 3. The full indexing pipeline works with our tag implementation
+
+  auto Indexed = runFuzzyFind(Index, "");
+  EXPECT_FALSE(Indexed.empty());
+
+  auto FindByQName = [&](llvm::StringRef QName) -> const Symbol * {
+    for (const auto &S : Indexed) {
+      if ((S.Scope + S.Name).str() == QName.str())
+        return &S;
+    }
+    return nullptr;
+  };
+
+  const Symbol *A = FindByQName("A");
+  ASSERT_TRUE(A);
+  EXPECT_THAT(expandTagBitmask(A->Tags),
+              UnorderedElementsAre(SymbolTag::Abstract, SymbolTag::Declaration,
+                                   SymbolTag::Definition));
+
+  const Symbol *B = FindByQName("B");
+  ASSERT_TRUE(B);
+  EXPECT_THAT(expandTagBitmask(B->Tags),
+              UnorderedElementsAre(SymbolTag::Final, SymbolTag::Declaration,
+                                   SymbolTag::Definition));
+  const Symbol *Bf1 = FindByQName("B::f1");
+  ASSERT_TRUE(Bf1);
+  EXPECT_THAT(expandTagBitmask(Bf1->Tags),
+              UnorderedElementsAre(SymbolTag::Public, SymbolTag::Final,
+                                   SymbolTag::Virtual, SymbolTag::Declaration,
+                                   SymbolTag::Definition,
+                                   SymbolTag::Implements));
 }
 
 } // namespace

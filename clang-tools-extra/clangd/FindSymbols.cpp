@@ -322,6 +322,29 @@ SymbolTags filterSymbolTags(const NamedDecl &ND, const SymbolTags ST) {
   return Result;
 }
 
+std::vector<SymbolTag> expandTagBitmask(const SymbolTags symbolTags) {
+  std::vector<SymbolTag> Tags;
+
+  if (symbolTags == 0)
+    return Tags;
+
+  // No filtering required since this function is only used for Symbols from the
+  // index, which have already been filtered in getSymbolTags(const NamedDecl
+  // &ND).
+
+  // Iterate through SymbolTag enum values and collect any that are present in
+  // the bitmask. SymbolTag values are in the numeric range
+  // [FirstTag .. LastTag].
+  constexpr unsigned MinTag = static_cast<unsigned>(SymbolTag::FirstTag);
+  constexpr unsigned MaxTag = static_cast<unsigned>(SymbolTag::LastTag);
+  for (unsigned I = MinTag; I <= MaxTag; ++I) {
+    auto ST = static_cast<SymbolTag>(I);
+    if (symbolTags & toSymbolTagBitmask(ST))
+      Tags.push_back(ST);
+  }
+  return Tags;
+}
+
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
   const auto symbolTags = computeSymbolTags(ND);
   std::vector<SymbolTag> Tags;
@@ -342,20 +365,6 @@ std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND) {
     if (filteredTags & toSymbolTagBitmask(ST))
       Tags.push_back(ST);
   }
-  return Tags;
-}
-
-std::vector<SymbolTag> getSymbolTags(const Symbol &S) {
-  std::vector<SymbolTag> Tags;
-
-  if (S.Flags & Symbol::Deprecated)
-    Tags.push_back(SymbolTag::Deprecated);
-
-  if (S.Definition)
-    Tags.push_back(SymbolTag::Definition);
-  else
-    Tags.push_back(SymbolTag::Declaration);
-
   return Tags;
 }
 
@@ -490,7 +499,7 @@ getWorkspaceSymbols(llvm::StringRef Query, int Limit,
     Info.score = Relevance.NameMatch > std::numeric_limits<float>::epsilon()
                      ? Score / Relevance.NameMatch
                      : QualScore;
-    Info.tags = getSymbolTags(Sym);
+    Info.tags = expandTagBitmask(Sym.Tags);
     Top.push({Score, std::move(Info)});
   });
   for (auto &R : std::move(Top).items())

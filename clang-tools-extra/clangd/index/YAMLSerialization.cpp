@@ -246,6 +246,7 @@ template <> struct MappingTraits<Symbol> {
     IO.mapOptional("Documentation", Sym.Documentation);
     IO.mapOptional("ReturnType", Sym.ReturnType);
     IO.mapOptional("Type", Sym.Type);
+    IO.mapOptional("Tags", Sym.Tags, clang::clangd::SymbolTags(0));
     IO.mapOptional("IncludeHeaders", NIncludeHeaders->Headers);
   }
 };
