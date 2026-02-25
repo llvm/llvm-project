@@ -259,6 +259,7 @@ bool ClauseProcessor::processCollapse(
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
 
   int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               getNestedDoConstruct(eval),
                                                clauses, loopResult, iv);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   collapseResult.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
@@ -512,6 +513,21 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
     for (const ExprTy &vv : clause->v)
       result.sizes.push_back(fir::getBase(converter.genExprValue(vv, stmtCtx)));
 
+    return true;
+  }
+
+  return false;
+}
+
+bool ClauseProcessor::processLooprange(StatementContext &stmtCtx,
+                                       mlir::omp::LooprangeClauseOps &result,
+                                       int64_t &count) const {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  if (auto *clause = findUniqueClause<omp::clause::Looprange>()) {
+    int64_t first = evaluate::ToInt64(std::get<0>(clause->t)).value();
+    count = evaluate::ToInt64(std::get<1>(clause->t)).value();
+    result.first = firOpBuilder.getI64IntegerAttr(first);
+    result.count = firOpBuilder.getI64IntegerAttr(count);
     return true;
   }
 
@@ -1297,10 +1313,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
       result.linearVars.push_back(variable);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
-    }
-    result.linearVarTypes =
-        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
-    if (objects.size()) {
+
       if (auto &mod =
               std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
                   clause.t)) {
@@ -1315,11 +1328,14 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
         mlir::Location currentLocation = converter.getCurrentLocation();
-        mlir::Value operand = firOpBuilder.createIntegerConstant(
-            currentLocation, firOpBuilder.getI32Type(), 1);
+        mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
+        mlir::Value operand =
+            firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
         result.linearStepVars.append(objects.size(), operand);
       }
     }
+    result.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
   });
 }
 
