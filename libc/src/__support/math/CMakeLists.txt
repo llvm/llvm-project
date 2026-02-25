@@ -407,6 +407,7 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16fmaf128
   HDRS
@@ -1094,6 +1095,7 @@ add_header_library(
     libc.src.__support.FPUtil.fma
     libc.src.__support.macros.config
 )
+
 add_header_library(
   floor
   HDRS
@@ -1104,6 +1106,7 @@ add_header_library(
   FLAGS
     ROUND_OPT
 )
+
 add_header_library(
   floorbf16
   HDRS
@@ -1115,6 +1118,7 @@ add_header_library(
   FLAGS
     ROUND_OPT
 )
+
 add_header_library(
   floorf
   HDRS
@@ -1125,6 +1129,7 @@ add_header_library(
   FLAGS
     ROUND_OPT
 )
+
 add_header_library(
   floorf128
   HDRS
@@ -1134,6 +1139,7 @@ add_header_library(
     libc.src.__support.FPUtil.nearest_integer_operations
     libc.src.__support.macros.config
 )
+
 add_header_library(
   floorf16
   HDRS
@@ -1146,6 +1152,7 @@ add_header_library(
   FLAGS
     ROUND_OPT
 )
+
 add_header_library(
   floorl
   HDRS
