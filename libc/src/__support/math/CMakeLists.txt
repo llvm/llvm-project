@@ -1642,6 +1642,63 @@ add_header_library(
 )
 
 add_header_library(
+  nextdown
+  HDRS
+    nextdown.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownbf16
+  HDRS
+    nextdownbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownf
+  HDRS
+    nextdownf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownf128
+  HDRS
+    nextdownf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownf16
+  HDRS
+    nextdownf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextdownl
+  HDRS
+    nextdownl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   range_reduction_double
   HDRS
     range_reduction_double_common.h
