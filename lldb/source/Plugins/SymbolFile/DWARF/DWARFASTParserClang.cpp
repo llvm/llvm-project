@@ -1847,7 +1847,7 @@ bool DWARFASTParserClang::IsSwiftInteropType(const DWARFDIE &die) {
 // END SWIFT
 
 static void adjustArgPassing(TypeSystemClang &ast,
-                             ParsedDWARFTypeAttributes const &attrs,
+                             const ParsedDWARFTypeAttributes const &attrs,
                              CompilerType const &clang_type) {
   // If we made a clang type, set the trivial abi if applicable: We only
   // do this for pass by value - which implies the Trivial ABI. There
@@ -1870,10 +1870,9 @@ static void adjustArgPassing(TypeSystemClang &ast,
   }
 }
 
-TypeSP
-DWARFASTParserClang::ParseStructureLikeDIE(const SymbolContext &sc,
-                                           const DWARFDIE &die,
-                                           ParsedDWARFTypeAttributes &attrs) {
+TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
+    const SymbolContext &sc, const DWARFDIE &die,
+    const ParsedDWARFTypeAttributes &attrs) {
   CompilerType clang_type;
   const dw_tag_t tag = die.Tag();
   SymbolFileDWARF *dwarf = die.GetDWARF();
