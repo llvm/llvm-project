@@ -792,13 +792,11 @@ static bool isGEPNonNegative(const GetElementPtrInst *GEP,
   int64_t Offset = 0;
   const Value *Base = GetPointerBaseWithConstantOffset(
       const_cast<Value *>(Ptr), Offset, DL, /*AllowNonInbounds=*/false);
+
   if (!Base || Offset != 0)
     return false;
 
-  if (!isa<AllocaInst>(Base) && !isa<GlobalObject>(Base))
-    return false;
-
-  return Base == getUnderlyingObject(Ptr);
+  return isa<AllocaInst>(Base) || isa<GlobalObject>(Base);
 }
 
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
