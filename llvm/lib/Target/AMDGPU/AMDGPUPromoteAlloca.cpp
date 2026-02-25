@@ -556,7 +556,7 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (VarOffsets.size() > 1)
     return {};
 
-  // We support vector indices of the form ((A * stride) >> shift) + B.
+  // We support vector indices of the form ((VarIndex * stride) >> shift) + B.
   // IndexQuot represents B. Check that the constant offset is a multiple
   // of the vector element size.
   if (ConstOffset.srem(VecElemSize) != 0)
@@ -585,29 +585,29 @@ computeGEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
   if (!OffsetType)
     return {};
 
-  // The vector index for the variable part is: A * Scale / VecElemSize.
+  // The vector index for the variable part is: VarIndex * Scale / VecElemSize.
   if (Scale >= (uint64_t)VecElemSize) {
-    // Scale is a multiple of VecElemSize, so the index is just A * (Scale /
-    // VecElemSize).
     if (Scale % VecElemSize != 0)
       return {};
 
+    // Scale is a multiple of VecElemSize, so the index is just: VarIndex *
+    // (Scale / VecElemSize).
     uint64_t VarMul = Scale / VecElemSize;
     // Only the multiplier is needed.
     if (VarMul != 1)
       Result.VarMul = ConstantInt::get(Ctx, APInt(BW, VarMul));
   } else {
-    // VecElemSize is a multiple of Scale, so the index is A / (VecElemSize /
-    // Scale).
     if ((uint64_t)VecElemSize % Scale != 0)
       return {};
 
+    // VecElemSize is a multiple of Scale, so the index is just: VarIndex /
+    // (VecElemSize / Scale).
     uint64_t Divisor = VecElemSize / Scale;
     // The divisor must be a power of 2 so we can use a right shift.
     if (!isPowerOf2_64(Divisor))
       return {};
 
-    // A must be known to be divisible by that divisor.
+    // VarIndex must be known to be divisible by that divisor.
     KnownBits KB = computeKnownBits(VarOffset.first, DL);
     if (KB.countMinTrailingZeros() < Log2_64(Divisor))
       return {};
