@@ -11,6 +11,7 @@ static_library("Debugging") {
     "DebugInfoSupport.cpp",
     "DebuggerSupport.cpp",
     "DebuggerSupportPlugin.cpp",
+    "ELFDebugObjectPlugin.cpp",
     "LLJITUtilsCBindings.cpp",
     "PerfSupportPlugin.cpp",
     "VTuneSupportPlugin.cpp",

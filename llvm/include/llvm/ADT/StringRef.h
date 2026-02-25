@@ -90,15 +90,7 @@ namespace llvm {
 
     /// Construct a string ref from a cstring.
     /*implicit*/ constexpr StringRef(const char *Str LLVM_LIFETIME_BOUND)
-        : Data(Str), Length(Str ?
-    // GCC 7 doesn't have constexpr char_traits. Fall back to __builtin_strlen.
-#if defined(_GLIBCXX_RELEASE) && _GLIBCXX_RELEASE < 8
-                                __builtin_strlen(Str)
-#else
-                                std::char_traits<char>::length(Str)
-#endif
-                                : 0) {
-    }
+        : StringRef(Str ? std::string_view(Str) : std::string_view()) {}
 
     /// Construct a string ref from a pointer and length.
     /*implicit*/ constexpr StringRef(const char *data LLVM_LIFETIME_BOUND,
@@ -331,6 +323,30 @@ namespace llvm {
     [[nodiscard]] size_t find_if_not(function_ref<bool(char)> F,
                                      size_t From = 0) const {
       return find_if([F](char c) { return !F(c); }, From);
+    }
+
+    /// Search for the last character satisfying the predicate \p F
+    ///
+    /// \returns The index of the last character satisfying \p F before \p End,
+    /// or npos if not found.
+    [[nodiscard]] size_t rfind_if(function_ref<bool(char)> F,
+                                  size_t End = npos) const {
+      size_t I = std::min(End, size());
+      while (I) {
+        --I;
+        if (F(data()[I]))
+          return I;
+      }
+      return npos;
+    }
+
+    /// Search for the last character not satisfying the predicate \p F
+    ///
+    /// \returns The index of the last character not satisfying \p F before \p
+    /// End, or npos if not found.
+    [[nodiscard]] size_t rfind_if_not(function_ref<bool(char)> F,
+                                      size_t End = npos) const {
+      return rfind_if(std::not_fn(F), End);
     }
 
     /// Search for the first string \p Str in the string.
@@ -642,6 +658,16 @@ namespace llvm {
 
     /// Returns true if this StringRef has the given prefix and removes that
     /// prefix.
+    bool consume_front(char Prefix) {
+      if (!starts_with(Prefix))
+        return false;
+
+      *this = drop_front();
+      return true;
+    }
+
+    /// Returns true if this StringRef has the given prefix and removes that
+    /// prefix.
     bool consume_front(StringRef Prefix) {
       if (!starts_with(Prefix))
         return false;
@@ -725,8 +751,8 @@ namespace llvm {
     split(StringRef Separator) const {
       size_t Idx = find(Separator);
       if (Idx == npos)
-        return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
+        return {*this, StringRef()};
+      return {slice(0, Idx), substr(Idx + Separator.size())};
     }
 
     /// Split into two substrings around the last occurrence of a separator
@@ -743,8 +769,8 @@ namespace llvm {
     rsplit(StringRef Separator) const {
       size_t Idx = rfind(Separator);
       if (Idx == npos)
-        return std::make_pair(*this, StringRef());
-      return std::make_pair(slice(0, Idx), substr(Idx + Separator.size()));
+        return {*this, StringRef()};
+      return {slice(0, Idx), substr(Idx + Separator.size())};
     }
 
     /// Split into substrings around the occurrences of a separator string.

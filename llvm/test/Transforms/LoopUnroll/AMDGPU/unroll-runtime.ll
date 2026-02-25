@@ -14,7 +14,7 @@ define amdgpu_kernel void @unroll_when_cascaded_gep(i32 %arg) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[ARG:%.*]], 1
 ; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[ARG]], 7
-; CHECK-NEXT:    br i1 [[TMP1]], label [[BB2_UNR_LCSSA:%.*]], label [[BB_NEW:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1]], label [[BB1_EPIL_PREHEADER:%.*]], label [[BB_NEW:%.*]]
 ; CHECK:       bb.new:
 ; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[TMP0]], [[XTRAITER]]
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -24,18 +24,18 @@ define amdgpu_kernel void @unroll_when_cascaded_gep(i32 %arg) {
 ; CHECK-NEXT:    [[ADD_7]] = add i32 [[PHI]], 8
 ; CHECK-NEXT:    [[NITER_NEXT_7]] = add i32 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i32 [[NITER_NEXT_7]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[BB2_UNR_LCSSA_LOOPEXIT:%.*]], label [[BB1]]
-; CHECK:       bb2.unr-lcssa.loopexit:
-; CHECK-NEXT:    [[PHI_UNR_PH:%.*]] = phi i32 [ [[ADD_7]], [[BB1]] ]
-; CHECK-NEXT:    br label [[BB2_UNR_LCSSA]]
+; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[BB2_UNR_LCSSA:%.*]], label [[BB1]]
 ; CHECK:       bb2.unr-lcssa:
-; CHECK-NEXT:    [[PHI_UNR:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[PHI_UNR_PH]], [[BB2_UNR_LCSSA_LOOPEXIT]] ]
+; CHECK-NEXT:    [[PHI_UNR:%.*]] = phi i32 [ [[ADD_7]], [[BB1]] ]
 ; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[BB1_EPIL_PREHEADER:%.*]], label [[BB2:%.*]]
+; CHECK-NEXT:    br i1 [[LCMP_MOD]], label [[BB1_EPIL_PREHEADER]], label [[BB2:%.*]]
 ; CHECK:       bb1.epil.preheader:
+; CHECK-NEXT:    [[PHI_EPIL_INIT:%.*]] = phi i32 [ 0, [[BB:%.*]] ], [ [[PHI_UNR]], [[BB2_UNR_LCSSA]] ]
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    br label [[BB1_EPIL:%.*]]
 ; CHECK:       bb1.epil:
-; CHECK-NEXT:    [[PHI_EPIL:%.*]] = phi i32 [ [[PHI_UNR]], [[BB1_EPIL_PREHEADER]] ], [ [[ADD_EPIL:%.*]], [[BB1_EPIL]] ]
+; CHECK-NEXT:    [[PHI_EPIL:%.*]] = phi i32 [ [[PHI_EPIL_INIT]], [[BB1_EPIL_PREHEADER]] ], [ [[ADD_EPIL:%.*]], [[BB1_EPIL]] ]
 ; CHECK-NEXT:    [[EPIL_ITER:%.*]] = phi i32 [ 0, [[BB1_EPIL_PREHEADER]] ], [ [[EPIL_ITER_NEXT:%.*]], [[BB1_EPIL]] ]
 ; CHECK-NEXT:    [[GETELEMENTPTR_EPIL:%.*]] = getelementptr [1024 x i32], ptr addrspace(3) getelementptr inbounds nuw (i8, ptr addrspace(3) @global, i32 8), i32 0, i32 0
 ; CHECK-NEXT:    [[ADD_EPIL]] = add i32 [[PHI_EPIL]], 1

@@ -866,7 +866,7 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; SVE-NEXT:    stp q1, q0, [sp, #32] // 32-byte Folded Spill
 ; SVE-NEXT:    ldp q1, q3, [x0]
 ; SVE-NEXT:    movi v0.2d, #0000000000000000
-; SVE-NEXT:    str d8, [sp, #64] // 8-byte Folded Spill
+; SVE-NEXT:    str d8, [sp, #64] // 8-byte Spill
 ; SVE-NEXT:    fmov d8, d2
 ; SVE-NEXT:    stp x30, x19, [sp, #80] // 16-byte Folded Spill
 ; SVE-NEXT:    mov x19, x0
@@ -878,14 +878,14 @@ define void @test_masked_store_intervening(<8 x i32> %x, ptr %ptr, <8 x i1> %mas
 ; SVE-NEXT:    ldp q3, q2, [sp, #16] // 32-byte Folded Reload
 ; SVE-NEXT:    zip1 v1.8b, v8.8b, v0.8b
 ; SVE-NEXT:    ushll v0.4s, v0.4h, #0
-; SVE-NEXT:    ldr d8, [sp, #64] // 8-byte Folded Reload
+; SVE-NEXT:    ldr d8, [sp, #64] // 8-byte Reload
 ; SVE-NEXT:    shl v0.4s, v0.4s, #31
 ; SVE-NEXT:    ushll v1.4s, v1.4h, #0
 ; SVE-NEXT:    cmlt v0.4s, v0.4s, #0
 ; SVE-NEXT:    shl v1.4s, v1.4s, #31
 ; SVE-NEXT:    bsl v0.16b, v2.16b, v3.16b
-; SVE-NEXT:    ldr q2, [sp, #48] // 16-byte Folded Reload
-; SVE-NEXT:    ldr q3, [sp] // 16-byte Folded Reload
+; SVE-NEXT:    ldr q2, [sp, #48] // 16-byte Reload
+; SVE-NEXT:    ldr q3, [sp] // 16-byte Reload
 ; SVE-NEXT:    cmlt v1.4s, v1.4s, #0
 ; SVE-NEXT:    bsl v1.16b, v2.16b, v3.16b
 ; SVE-NEXT:    stp q1, q0, [x19]
@@ -1133,5 +1133,21 @@ define void @test_masked_store_unaligned_v8i64(<8 x i64> %data, ptr %ptr, <8 x i
   %load = load <8 x i64>, ptr %ptr_vec, align 1
   %sel = select <8 x i1> %mask, <8 x i64> %data, <8 x i64> %load
   store <8 x i64> %sel, ptr %ptr_vec, align 1
+  ret void
+}
+
+define void @PR159912(<1 x i1> %arg, ptr %ptr) #0 {
+; SVE-LABEL: PR159912:
+; SVE:       // %bb.0:
+; SVE-NEXT:    tst w0, #0x1
+; SVE-NEXT:    ldr d0, [x1]
+; SVE-NEXT:    csetm x8, ne
+; SVE-NEXT:    fmov d1, x8
+; SVE-NEXT:    bic v0.8b, v0.8b, v1.8b
+; SVE-NEXT:    str d0, [x1]
+; SVE-NEXT:    ret
+  %load = load <1 x i64>, ptr %ptr, align 8
+  %select = select <1 x i1> %arg, <1 x i64> zeroinitializer, <1 x i64> %load
+  store <1 x i64> %select, ptr %ptr, align 8
   ret void
 }

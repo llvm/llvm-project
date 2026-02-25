@@ -28,6 +28,7 @@ static_library("Parse") {
     "ParseOpenACC.cpp",
     "ParseOpenMP.cpp",
     "ParsePragma.cpp",
+    "ParseReflect.cpp",
     "ParseStmt.cpp",
     "ParseStmtAsm.cpp",
     "ParseTemplate.cpp",

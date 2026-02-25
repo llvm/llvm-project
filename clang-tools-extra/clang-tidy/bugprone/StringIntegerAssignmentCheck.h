@@ -16,7 +16,7 @@ namespace clang::tidy::bugprone {
 /// Finds instances where an integer is assigned to a string.
 ///
 /// For more details see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/string-integer-assignment.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/string-integer-assignment.html
 class StringIntegerAssignmentCheck : public ClangTidyCheck {
 public:
   StringIntegerAssignmentCheck(StringRef Name, ClangTidyContext *Context)

@@ -142,12 +142,16 @@ if( LLVM_ENABLE_ASSERTIONS )
   else()
     set(LIBCXX_HARDENING_MODE "extensive")
   endif()
-endif()
 
-# If we are targeting a GPU architecture in a runtimes build we want to ignore
-# all the standard flag handling.
-if(LLVM_RUNTIMES_GPU_BUILD)
-  return()
+  string(TOUPPER "_LIBCPP_HARDENING_MODE_${LIBCXX_HARDENING_MODE}" LIBCXX_HARDENING_MODE_SPELLING)
+  CHECK_CXX_SOURCE_COMPILES("
+  #define _LIBCPP_HARDENING_MODE ${LIBCXX_HARDENING_MODE_SPELLING}
+  #include <string>
+  int main() { return 0; }
+  " SUPPORTS_LIBCXX_HARDENING_MODE)
+  if(SUPPORTS_LIBCXX_HARDENING_MODE)
+    add_compile_definitions(_LIBCPP_HARDENING_MODE=${LIBCXX_HARDENING_MODE_SPELLING})
+  endif()
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -238,25 +242,17 @@ if( LLVM_REVERSE_ITERATION )
   set( LLVM_ENABLE_REVERSE_ITERATION 1 )
 endif()
 
-if(WIN32 OR CYGWIN)
+if(WIN32)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
-  if(CYGWIN)
-    set(LLVM_ON_WIN32 0)
-    set(LLVM_ON_UNIX 1)
-  else()
-    set(LLVM_ON_WIN32 1)
-    set(LLVM_ON_UNIX 0)
-  endif()
-elseif(FUCHSIA OR UNIX)
-  set(LLVM_ON_WIN32 0)
+  set(LLVM_ON_UNIX 0)
+elseif(FUCHSIA OR UNIX OR CYGWIN)
   set(LLVM_ON_UNIX 1)
-  if(APPLE OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+  if(APPLE OR CYGWIN OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
   else()
     set(LLVM_HAVE_LINK_VERSION_SCRIPT 1)
   endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Generic")
-  set(LLVM_ON_WIN32 0)
   set(LLVM_ON_UNIX 0)
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
 else()
@@ -456,13 +452,16 @@ if( LLVM_ENABLE_PIC )
     # Enable interprocedural optimizations for non-inline functions which would
     # otherwise be disabled due to GCC -fPIC's default.
     # Note: GCC<10.3 has a bug on SystemZ.
-    #
+    # Note: Default on AIX is "no semantic interposition".
     # Note: Clang allows IPO for -fPIC so this optimization is less effective.
     # Clang 13 has a bug related to -fsanitize-coverage
     # -fno-semantic-interposition (https://reviews.llvm.org/D117183).
-    if ((CMAKE_COMPILER_IS_GNUCXX AND
-         NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
-       OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14))
+    if ((NOT ("${CMAKE_SYSTEM_NAME}" MATCHES "AIX"))
+        AND ((CMAKE_COMPILER_IS_GNUCXX AND
+              NOT (LLVM_NATIVE_ARCH STREQUAL "SystemZ"
+                   AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10.3))
+             OR (CMAKE_CXX_COMPILER_ID MATCHES "Clang"
+                 AND CMAKE_CXX_COMPILER_VERSION GREATER_EQUAL 14)))
       add_flag_if_supported("-fno-semantic-interposition" FNO_SEMANTIC_INTERPOSITION)
     endif()
   endif()
@@ -637,7 +636,14 @@ if( MSVC )
   # PDBs without changing codegen.
   option(LLVM_ENABLE_PDB OFF)
   if (LLVM_ENABLE_PDB AND uppercase_CMAKE_BUILD_TYPE STREQUAL "RELEASE")
-    append("/Zi" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    # Add /Zi to CMAKE_*_FLAGS_RELEASE instead of CMAKE_*_FLAGS, because CMake
+    # runs additional logic when PCH are enabled, but only extracts flags from
+    # these variables. See:
+    # https://gitlab.kitware.com/cmake/cmake/-/blob/315042dfd0d/Source/cmLocalGenerator.cxx#L2811-2813
+    #
+    # For CMake 3.25+, this should change according to:
+    # https://cmake.org/cmake/help/latest/policy/CMP0141.html
+    append("/Zi" CMAKE_C_FLAGS_RELEASE CMAKE_CXX_FLAGS_RELEASE)
     # /DEBUG disables linker GC and ICF, but we want those in Release mode.
     append("/DEBUG /OPT:REF /OPT:ICF"
           CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS
@@ -716,16 +722,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
-  # LLVM data structures like llvm::User and llvm::MDNode rely on
-  # the value of object storage persisting beyond the lifetime of the
-  # object (#24952).  This is not standard compliant and causes a runtime
-  # crash if LLVM is built with GCC and LTO enabled (#57740).  Until
-  # these bugs are fixed, we need to disable dead store eliminations
-  # based on object lifetime.
-  append("-fno-lifetime-dse" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-endif ()
-
 # Modules enablement for GCC-compatible compilers:
 if ( LLVM_COMPILER_IS_GCC_COMPATIBLE AND LLVM_ENABLE_MODULES )
   set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
@@ -749,49 +745,26 @@ if (MSVC)
   if (NOT CLANG_CL)
     set(msvc_warning_flags
       # Disabled warnings.
-      -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
       -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
-      -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
-      -wd4351 # Suppress 'new behavior: elements of array 'array' will be default initialized'
       -wd4456 # Suppress 'declaration of 'var' hides local variable'
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
       -wd4459 # Suppress 'declaration of 'var' hides global declaration'
-      -wd4503 # Suppress ''identifier' : decorated name length exceeded, name was truncated'
       -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
-      -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
       -wd4100 # Suppress 'unreferenced formal parameter'
       -wd4127 # Suppress 'conditional expression is constant'
-      -wd4512 # Suppress 'assignment operator could not be generated'
       -wd4505 # Suppress 'unreferenced local function has been removed'
-      -wd4610 # Suppress '<class> can never be instantiated'
-      -wd4510 # Suppress 'default constructor could not be generated'
       -wd4702 # Suppress 'unreachable code'
       -wd4245 # Suppress ''conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch'
-      -wd4706 # Suppress 'assignment within conditional expression'
       -wd4310 # Suppress 'cast truncates constant value'
       -wd4701 # Suppress 'potentially uninitialized local variable'
       -wd4703 # Suppress 'potentially uninitialized local pointer variable'
       -wd4389 # Suppress 'signed/unsigned mismatch'
-      -wd4611 # Suppress 'interaction between '_setjmp' and C++ object destruction is non-portable'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
-      -wd4204 # Suppress 'nonstandard extension used : non-constant aggregate initializer'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-      -wd4091 # Suppress 'typedef: ignored on left of '' when no variable is declared'
-          # C4592 is disabled because of false positives in Visual Studio 2015
-          # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-      -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
-          # C4709 is disabled because of a bug with Visual Studio 2017 as of
-          # v15.8.8. Re-evaluate the usefulness of this diagnostic when the bug
-          # is fixed.
-      -wd4709 # Suppress comma operator within array index expression
-
-      # We'd like this warning to be enabled, but it triggers from code in
-      # WinBase.h that we don't have control over.
-      -wd5105 # Suppress macro expansion producing 'defined' has undefined behavior
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
       # support the 'aligned' attribute in the way that clang sources requires (for
@@ -954,6 +927,15 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   # Enable -Wstring-conversion to catch misuse of string literals.
   if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     append("-Wstring-conversion" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+
+    # Disable -Wno-pass-failed flag, which reports failure to perform
+    # optimizations suggested by pragmas. This warning is not relevant for LLVM
+    # projects and may be injected by pragmas in libstdc++.
+    # FIXME: Reconsider this choice if warnings from STL headers can be reliably
+    # avoided (https://github.com/llvm/llvm-project/issues/157666).
+    # This option has been available since Clang 3.5, and we do require a newer
+    # version.
+    append("-Wno-pass-failed" CMAKE_CXX_FLAGS)
   endif()
 
   if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
@@ -1147,7 +1129,7 @@ if (UNIX AND
 endif()
 
 # lld doesn't print colored diagnostics when invoked from Ninja
-if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja")
+if (UNIX AND CMAKE_GENERATOR MATCHES "Ninja" AND NOT "${LLVM_RUNTIMES_TARGET}" MATCHES "^nvptx64")
   include(CheckLinkerFlag)
   check_linker_flag(CXX "-Wl,--color-diagnostics" LINKER_SUPPORTS_COLOR_DIAGNOSTICS)
   append_if(LINKER_SUPPORTS_COLOR_DIAGNOSTICS "-Wl,--color-diagnostics"
@@ -1177,8 +1159,8 @@ endif()
 if(MSVC)
   # Remove flags here, for exceptions and RTTI.
   # Each target property or source property should be responsible to control
-  # them.
-  # CL.EXE complains to override flags like "/GR /GR-".
+  # them (see llvm_update_compile_flags).
+  # CL.EXE complains to override flags like "/GR /GR-". CMake adds them by default.
   string(REGEX REPLACE "(^| ) */EH[-cs]+ *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
   string(REGEX REPLACE "(^| ) */GR-? *( |$)" "\\1 \\2" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
@@ -1190,7 +1172,7 @@ if(LLVM_ENABLE_EH AND NOT LLVM_ENABLE_RTTI)
   message(FATAL_ERROR "Exception handling requires RTTI. You must set LLVM_ENABLE_RTTI to ON")
 endif()
 
-set(LLVM_BUILD_INSTRUMENTED OFF CACHE STRING "Build LLVM and tools with PGO instrumentation. May be specified as IR or Frontend")
+set(LLVM_BUILD_INSTRUMENTED OFF CACHE STRING "Build LLVM and tools with PGO instrumentation. May be specified as IR, Frontend, CSIR, CSSPGO")
 set(LLVM_VP_COUNTERS_PER_SITE "1.5" CACHE STRING "Value profile counters to use per site for IR PGO with Clang")
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED LLVM_VP_COUNTERS_PER_SITE)
 string(TOUPPER "${LLVM_BUILD_INSTRUMENTED}" uppercase_LLVM_BUILD_INSTRUMENTED)
@@ -1222,6 +1204,19 @@ if (LLVM_BUILD_INSTRUMENTED)
       append("-fcs-profile-generate=\"${LLVM_CSPROFILE_DATA_DIR}\""
         CMAKE_EXE_LINKER_FLAGS
         CMAKE_SHARED_LINKER_FLAGS)
+    endif()
+  elseif(uppercase_LLVM_BUILD_INSTRUMENTED STREQUAL "CSSPGO")
+    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling -fdebug-info-for-profiling"
+        CMAKE_CXX_FLAGS
+        CMAKE_C_FLAGS)
+      if(NOT LINKER_IS_LLD_LINK)
+        append("-fno-omit-frame-pointer -mno-omit-leaf-frame-pointer -fno-optimize-sibling-calls -fpseudo-probe-for-profiling -fdebug-info-for-profiling"
+          CMAKE_EXE_LINKER_FLAGS
+          CMAKE_SHARED_LINKER_FLAGS)
+      endif()
+    else()
+      message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED=CSSPGO can only be specified when compiling with clang")
     endif()
   else()
     append("-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\""
@@ -1275,6 +1270,21 @@ elseif(LLVM_PROFDATA_FILE)
   message(WARNING "LLVM_PROFDATA_FILE specified, but ${LLVM_PROFDATA_FILE} not found")
 endif()
 
+if(LLVM_SPROFDATA_FILE AND EXISTS ${LLVM_SPROFDATA_FILE})
+  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
+    append("-fpseudo-probe-for-profiling -fprofile-sample-use=\"${LLVM_SPROFDATA_FILE}\""
+      CMAKE_CXX_FLAGS
+      CMAKE_C_FLAGS)
+    if(NOT LINKER_IS_LLD_LINK)
+      append("-fpseudo-probe-for-profiling -fprofile-sample-use=\"${LLVM_SPROFDATA_FILE}\""
+        CMAKE_EXE_LINKER_FLAGS
+        CMAKE_SHARED_LINKER_FLAGS)
+    endif()
+  else()
+    message(FATAL_ERROR "LLVM_SPROFDATA_FILE can only be specified when compiling with clang")
+  endif()
+endif()
+
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
 option(LLVM_INDIVIDUAL_TEST_COVERAGE "Emit individual coverage file for each test case." OFF)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
@@ -1288,9 +1298,80 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
   message(FATAL_ERROR "LLVM_BUILD_INSTRUMENTED and LLVM_BUILD_INSTRUMENTED_COVERAGE cannot both be specified")
 endif()
 
+if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if(LLVM_ENABLE_MODULES)
+    # PCH with modules is difficult to get right and modules should make PCH
+    # obsolete from a compile-time perspective anyway (at least, in principle).
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    # PCH is working in principle on AIX, but due to transitive includes,
+    # sys/mode.h ends up in the LLVMSupport PCH, which happens to define macros
+    # named S_RESERVED{1,2,3,4}, which cause collisions in CodeViewSymbols.def.
+    # AIX systems are not easily accessible, which makes identifying and
+    # debugging such cases rather difficult. Therefore, disable PCH on AIX by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on AIX. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Pre-compiled headers with GCC (tested versions 14+15) provide very little
+    # compile-time improvements, but substantially increase the build dir size.
+    # Therefore, disable PCH with GCC by default.
+    message(NOTICE "Precompiled headers are disabled by default with GCC. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND NOT CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 18)
+    # Clang before version 18 has problems with mixed default visibility.
+    # Therefore, disable PCH with older Clang versions by default.
+    message(NOTICE "Precompiled headers are disabled by default with Clang <18. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+
+  # Warn on possibly unintended interactions with ccache/sccache if the user
+  # sets this via CMAKE_CXX_COMPILER_LAUNCHER (and not using LLVM_CCACHE_BUILD).
+  if(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "sccache")
+    # sccache doesn't support PCH, this can lead to false-positives when only
+    # a macro definition changes. For Clang, this sometimes even works
+    # correctly, but not always, so disable by default to be safe.
+    # See: https://github.com/mozilla/sccache/issues/615
+    # See: https://github.com/mozilla/sccache/issues/2562
+    message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # ccache with PCH can lead to false-positives when only a macro
+    # definition changes with non-Clang compilers, because macro definitions
+    # are not compared in preprocessed mode.
+    # See: https://github.com/ccache/ccache/issues/1668
+    message(WARNING "Using ccache with precompiled headers with non-Clang "
+      "compilers is not supported and may lead to false positives. "
+      "Set CMAKE_DISABLE_PRECOMPILE_HEADERS to ON/OFF to silence this warning.")
+  endif()
+endif()
+if(NOT CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  message(STATUS "Precompiled headers enabled.")
+  # CMake weirdly marks all PCH as system headers. This undocumented variable
+  # can be used to suppress the "#pragma clang system_header".
+  # See: https://gitlab.kitware.com/cmake/cmake/-/issues/21219
+  set(CMAKE_PCH_PROLOGUE "")
+  if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    # Clang requires this flag in order for precompiled headers to work with ccache.
+    append("-Xclang -fno-pch-timestamp" CMAKE_CXX_FLAGS)
+  elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # GCC requires this flag in order for precompiled headers to work with ccache.
+    append("-fpch-preprocess" CMAKE_CXX_FLAGS)
+  endif()
+else()
+  message(STATUS "Precompiled headers disabled.")
+endif()
+
 set(LLVM_THINLTO_CACHE_PATH "${PROJECT_BINARY_DIR}/lto.cache" CACHE STRING "Set ThinLTO cache path. This can be used when building LLVM from several different directiories.")
 
-if(LLVM_ENABLE_LTO AND LLVM_ON_WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
+if(LLVM_ENABLE_LTO AND WIN32 AND NOT LINKER_IS_LLD_LINK AND NOT MINGW)
   message(FATAL_ERROR "When compiling for Windows, LLVM_ENABLE_LTO requires using lld as the linker (point CMAKE_LINKER at lld-link.exe)")
 endif()
 if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
@@ -1304,6 +1385,9 @@ if(uppercase_LLVM_ENABLE_LTO STREQUAL "THIN")
   # FIXME: We should move all this logic into the clang driver.
   if(APPLE)
     append("-Wl,-cache_path_lto,${LLVM_THINLTO_CACHE_PATH}"
+           CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
+  elseif("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    append("-bplugin_opt:-legacy-thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
            CMAKE_EXE_LINKER_FLAGS CMAKE_SHARED_LINKER_FLAGS)
   elseif((UNIX OR MINGW) AND LLVM_USE_LINKER STREQUAL "lld")
     append("-Wl,--thinlto-cache-dir=${LLVM_THINLTO_CACHE_PATH}"
@@ -1472,7 +1556,7 @@ endif()
 
 check_symbol_exists(flock "sys/file.h" HAVE_FLOCK)
 set(LLVM_ENABLE_ONDISK_CAS_default OFF)
-if(HAVE_FLOCK OR LLVM_ON_WIN32)
+if(HAVE_FLOCK OR WIN32)
   # LLVM OnDisk CAS currently requires flock on Unix.
   set(LLVM_ENABLE_ONDISK_CAS_default ON)
 endif()

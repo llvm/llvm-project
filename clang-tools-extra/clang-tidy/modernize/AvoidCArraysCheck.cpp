@@ -15,6 +15,14 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+template <typename TargetType, typename NodeType>
+static const TargetType *getAs(const NodeType *Node) {
+  if constexpr (std::is_same_v<NodeType, clang::DynTypedNode>)
+    return Node->template get<TargetType>();
+  else
+    return llvm::dyn_cast<TargetType>(Node);
+}
+
 namespace {
 
 AST_MATCHER(clang::TypeLoc, hasValidBeginLoc) {
@@ -37,14 +45,6 @@ AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
   const clang::DeclContext *DC = Node.getDeclContext();
   const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(DC);
   return FD ? FD->isMain() : false;
-}
-
-template <typename TargetType, typename NodeType>
-const TargetType *getAs(const NodeType *Node) {
-  if constexpr (std::is_same_v<NodeType, clang::DynTypedNode>)
-    return Node->template get<TargetType>();
-  else
-    return llvm::dyn_cast<TargetType>(Node);
 }
 
 AST_MATCHER(clang::TypeLoc, isWithinImplicitTemplateInstantiation) {
@@ -147,9 +147,9 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
   } else if (ArrayTypeLoc.getTypePtr()->isIncompleteArrayType() && IsInParam) {
     // in function parameter, we also don't know the size of
     // IncompleteArrayType.
-    if (Result.Context->getLangOpts().CPlusPlus20)
+    if (Result.Context->getLangOpts().CPlusPlus20) {
       RecommendTypes.push_back("'std::span'");
-    else {
+    } else {
       RecommendTypes.push_back("'std::array'");
       RecommendTypes.push_back("'std::vector'");
     }

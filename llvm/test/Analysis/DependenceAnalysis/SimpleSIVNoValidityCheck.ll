@@ -210,7 +210,7 @@ define void @t3(i64 %n, i64 %m, i64 %lb, ptr %a) {
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: %2 = load i32, ptr %arrayidx6, align 4
 ; CHECK-NEXT:    da analyze - none!
 ; CHECK-NEXT:  Src: %2 = load i32, ptr %arrayidx6, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
-; CHECK-NEXT:    da analyze - consistent anti [1 -2]!
+; CHECK-NEXT:    da analyze - anti [1 *]!
 ; CHECK-NEXT:  Src: store i32 %2, ptr %arrayidx8, align 4 --> Dst: store i32 %2, ptr %arrayidx8, align 4
 ; CHECK-NEXT:    da analyze - none!
 ;

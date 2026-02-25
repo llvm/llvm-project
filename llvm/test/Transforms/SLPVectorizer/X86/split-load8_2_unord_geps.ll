@@ -5,16 +5,16 @@ define void @test(ptr noalias %p, ptr noalias %addr, ptr noalias %s) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i32, ptr [[ADDR:%.*]], i32 1
-; CHECK-NEXT:    [[TMP0:%.*]] = call <15 x i32> @llvm.masked.load.v15i32.p0(ptr [[ADDR]], i32 8, <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x i32> poison)
+; CHECK-NEXT:    [[TMP0:%.*]] = call <15 x i32> @llvm.masked.load.v15i32.p0(ptr align 8 [[ADDR]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x i32> poison)
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <15 x i32> [[TMP0]], <15 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[P:%.*]], i32 0
 ; CHECK-NEXT:    [[SHUFFLE2:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i32, <8 x ptr> [[SHUFFLE2]], <8 x i32> [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP5]], i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
-; CHECK-NEXT:    [[TMP11:%.*]] = call <15 x i32> @llvm.masked.load.v15i32.p0(ptr [[GEP2]], i32 8, <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x i32> poison)
+; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP5]], <8 x i1> splat (i1 true), <8 x i32> poison)
+; CHECK-NEXT:    [[TMP11:%.*]] = call <15 x i32> @llvm.masked.load.v15i32.p0(ptr align 8 [[GEP2]], <15 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <15 x i32> poison)
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <15 x i32> [[TMP11]], <15 x i32> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i32, <8 x ptr> [[SHUFFLE2]], <8 x i32> [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> [[TMP8]], i32 4, <8 x i1> splat (i1 true), <8 x i32> poison)
+; CHECK-NEXT:    [[TMP9:%.*]] = call <8 x i32> @llvm.masked.gather.v8i32.v8p0(<8 x ptr> align 4 [[TMP8]], <8 x i1> splat (i1 true), <8 x i32> poison)
 ; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <8 x i32> [[TMP9]], [[TMP6]]
 ; CHECK-NEXT:    store <8 x i32> [[TMP10]], ptr [[S:%.*]], align 4
 ; CHECK-NEXT:    ret void

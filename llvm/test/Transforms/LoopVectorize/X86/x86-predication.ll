@@ -21,7 +21,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr [[TMP3]], i32 4, <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> poison)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <2 x i32> @llvm.masked.load.v2i32.p0(ptr align 4 [[TMP3]], <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> poison)
 ; CHECK-NEXT:    br i1 [[C]], label [[PRED_SDIV_IF:%.*]], label [[PRED_SDIV_CONTINUE:%.*]]
 ; CHECK:       pred.sdiv.if:
 ; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[WIDE_MASKED_LOAD]], i32 0
@@ -39,7 +39,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; CHECK:       pred.sdiv.continue2:
 ; CHECK-NEXT:    [[TMP14:%.*]] = phi <2 x i32> [ [[TMP9]], [[PRED_SDIV_CONTINUE]] ], [ [[TMP13]], [[PRED_SDIV_IF1]] ]
 ; CHECK-NEXT:    [[TMP15:%.*]] = add nsw <2 x i32> [[TMP14]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP15]], <2 x i32> [[WIDE_LOAD]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <2 x i32> [[TMP15]], <2 x i32> [[WIDE_LOAD]]
 ; CHECK-NEXT:    [[TMP17]] = add <2 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
@@ -50,7 +50,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ;
 ; SINK-GATHER-LABEL: @predicated_sdiv_masked_load(
 ; SINK-GATHER-NEXT:  entry:
-; SINK-GATHER-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; SINK-GATHER-NEXT:    br label [[VECTOR_PH:%.*]]
 ; SINK-GATHER:       vector.ph:
 ; SINK-GATHER-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <8 x i1> poison, i1 [[C:%.*]], i64 0
 ; SINK-GATHER-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT]], <8 x i1> poison, <8 x i32> zeroinitializer
@@ -61,7 +61,7 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; SINK-GATHER-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; SINK-GATHER-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i32>, ptr [[TMP1]], align 4
 ; SINK-GATHER-NEXT:    [[TMP3:%.*]] = getelementptr i32, ptr [[B:%.*]], i64 [[INDEX]]
-; SINK-GATHER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr [[TMP3]], i32 4, <8 x i1> [[BROADCAST_SPLAT]], <8 x i32> poison)
+; SINK-GATHER-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i32> @llvm.masked.load.v8i32.p0(ptr align 4 [[TMP3]], <8 x i1> [[BROADCAST_SPLAT]], <8 x i32> poison)
 ; SINK-GATHER-NEXT:    br i1 [[C]], label [[PRED_SDIV_IF:%.*]], label [[PRED_SDIV_CONTINUE:%.*]]
 ; SINK-GATHER:       pred.sdiv.if:
 ; SINK-GATHER-NEXT:    [[TMP6:%.*]] = extractelement <8 x i32> [[WIDE_MASKED_LOAD]], i32 0
@@ -127,37 +127,16 @@ define i32 @predicated_sdiv_masked_load(ptr %a, ptr %b, i32 %x, i1 %c) {
 ; SINK-GATHER:       pred.sdiv.continue14:
 ; SINK-GATHER-NEXT:    [[TMP44:%.*]] = phi <8 x i32> [ [[TMP39]], [[PRED_SDIV_CONTINUE12]] ], [ [[TMP43]], [[PRED_SDIV_IF13]] ]
 ; SINK-GATHER-NEXT:    [[TMP45:%.*]] = add nsw <8 x i32> [[TMP44]], [[WIDE_LOAD]]
-; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[BROADCAST_SPLAT]], <8 x i32> [[TMP45]], <8 x i32> [[WIDE_LOAD]]
+; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select i1 [[C]], <8 x i32> [[TMP45]], <8 x i32> [[WIDE_LOAD]]
 ; SINK-GATHER-NEXT:    [[TMP47]] = add <8 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; SINK-GATHER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; SINK-GATHER-NEXT:    [[TMP48:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; SINK-GATHER-NEXT:    br i1 [[TMP48]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; SINK-GATHER:       middle.block:
 ; SINK-GATHER-NEXT:    [[TMP49:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP47]])
-; SINK-GATHER-NEXT:    br label [[FOR_END:%.*]]
-; SINK-GATHER:       scalar.ph:
-; SINK-GATHER-NEXT:    br label [[FOR_BODY:%.*]]
-; SINK-GATHER:       for.body:
-; SINK-GATHER-NEXT:    [[I:%.*]] = phi i64 [ 0, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
-; SINK-GATHER-NEXT:    [[R:%.*]] = phi i32 [ 0, [[SCALAR_PH]] ], [ [[T7:%.*]], [[FOR_INC]] ]
-; SINK-GATHER-NEXT:    [[T0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[I]]
-; SINK-GATHER-NEXT:    [[T1:%.*]] = load i32, ptr [[T0]], align 4
-; SINK-GATHER-NEXT:    br i1 [[C]], label [[IF_THEN:%.*]], label [[FOR_INC]]
-; SINK-GATHER:       if.then:
-; SINK-GATHER-NEXT:    [[T2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[I]]
-; SINK-GATHER-NEXT:    [[T3:%.*]] = load i32, ptr [[T2]], align 4
-; SINK-GATHER-NEXT:    [[T4:%.*]] = sdiv i32 [[T3]], [[X]]
-; SINK-GATHER-NEXT:    [[T5:%.*]] = add nsw i32 [[T4]], [[T1]]
-; SINK-GATHER-NEXT:    br label [[FOR_INC]]
-; SINK-GATHER:       for.inc:
-; SINK-GATHER-NEXT:    [[T6:%.*]] = phi i32 [ [[T1]], [[FOR_BODY]] ], [ [[T5]], [[IF_THEN]] ]
-; SINK-GATHER-NEXT:    [[T7]] = add i32 [[R]], [[T6]]
-; SINK-GATHER-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
-; SINK-GATHER-NEXT:    [[COND:%.*]] = icmp eq i64 [[I_NEXT]], 10000
-; SINK-GATHER-NEXT:    br i1 [[COND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; SINK-GATHER-NEXT:    br label [[FOR_INC:%.*]]
 ; SINK-GATHER:       for.end:
-; SINK-GATHER-NEXT:    [[T8:%.*]] = phi i32 [ [[T7]], [[FOR_INC]] ], [ [[TMP49]], [[MIDDLE_BLOCK]] ]
-; SINK-GATHER-NEXT:    ret i32 [[T8]]
+; SINK-GATHER-NEXT:    ret i32 [[TMP49]]
 ;
 entry:
   br label %for.body
@@ -200,19 +179,16 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT4:%.*]] = insertelement <2 x i1> poison, i1 [[TMP1:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x i1> [[BROADCAST_SPLATINSERT4]], <2 x i1> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[X:%.*]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_UDIV_CONTINUE4:%.*]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i64> [ <i64 0, i64 1>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_UDIV_CONTINUE4]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[PRED_UDIV_CONTINUE4]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = mul <2 x i64> [[VEC_IND]], splat (i64 777)
-; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; CHECK-NEXT:    br i1 [[TMP1:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; CHECK:       pred.udiv.if:
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP0]], 777
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[TMP5:%.*]] = udiv i32 [[TMP4]], [[X]]
@@ -221,19 +197,19 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; CHECK:       pred.udiv.continue:
 ; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_UDIV_IF]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF3:%.*]], label [[PRED_UDIV_CONTINUE4]]
-; CHECK:       pred.udiv.if3:
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[TMP0]], i32 1
+; CHECK:       pred.udiv.if1:
+; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[TMP7]], 777
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 4
 ; CHECK-NEXT:    [[TMP13:%.*]] = udiv i32 [[TMP12]], [[X]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i32> [[TMP8]], i32 [[TMP13]], i32 1
 ; CHECK-NEXT:    br label [[PRED_UDIV_CONTINUE4]]
-; CHECK:       pred.udiv.continue4:
+; CHECK:       pred.udiv.continue2:
 ; CHECK-NEXT:    [[TMP16:%.*]] = phi <2 x i32> [ [[TMP8]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP14]], [[PRED_UDIV_IF3]] ]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <2 x i1> [[BROADCAST_SPLAT]], <2 x i32> [[TMP16]], <2 x i32> [[BROADCAST_SPLAT4]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <2 x i32> [[TMP16]], <2 x i32> [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[TMP18]] = add <2 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <2 x i64> [[VEC_IND]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
@@ -272,8 +248,6 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER:       vector.ph:
 ; SINK-GATHER-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[SMAX]], 8
 ; SINK-GATHER-NEXT:    [[N_VEC:%.*]] = sub i64 [[SMAX]], [[N_MOD_VF]]
-; SINK-GATHER-NEXT:    [[BROADCAST_SPLATINSERT16:%.*]] = insertelement <8 x i1> poison, i1 [[TMP1:%.*]], i64 0
-; SINK-GATHER-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <8 x i1> [[BROADCAST_SPLATINSERT16]], <8 x i1> poison, <8 x i32> zeroinitializer
 ; SINK-GATHER-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <8 x i32> poison, i32 [[X:%.*]], i64 0
 ; SINK-GATHER-NEXT:    [[BROADCAST_SPLAT16:%.*]] = shufflevector <8 x i32> [[BROADCAST_SPLATINSERT1]], <8 x i32> poison, <8 x i32> zeroinitializer
 ; SINK-GATHER-NEXT:    br label [[VECTOR_BODY:%.*]]
@@ -282,7 +256,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[PRED_UDIV_CONTINUE16]] ]
 ; SINK-GATHER-NEXT:    [[VEC_PHI:%.*]] = phi <8 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP66:%.*]], [[PRED_UDIV_CONTINUE16]] ]
 ; SINK-GATHER-NEXT:    [[TMP0:%.*]] = mul <8 x i64> [[VEC_IND]], splat (i64 777)
-; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
+; SINK-GATHER-NEXT:    br i1 [[TMP1:%.*]], label [[PRED_UDIV_IF:%.*]], label [[PRED_UDIV_CONTINUE:%.*]]
 ; SINK-GATHER:       pred.udiv.if:
 ; SINK-GATHER-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> [[TMP0]], i32 0
 ; SINK-GATHER-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[TMP2]]
@@ -293,81 +267,81 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER:       pred.udiv.continue:
 ; SINK-GATHER-NEXT:    [[TMP8:%.*]] = phi <8 x i32> [ poison, [[VECTOR_BODY]] ], [ [[TMP6]], [[PRED_UDIV_IF]] ]
 ; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF5:%.*]], label [[PRED_UDIV_CONTINUE4:%.*]]
-; SINK-GATHER:       pred.udiv.if3:
+; SINK-GATHER:       pred.udiv.if1:
 ; SINK-GATHER-NEXT:    [[TMP10:%.*]] = extractelement <8 x i64> [[TMP0]], i32 1
 ; SINK-GATHER-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP10]]
 ; SINK-GATHER-NEXT:    [[TMP12:%.*]] = load i32, ptr [[TMP11]], align 4
 ; SINK-GATHER-NEXT:    [[TMP13:%.*]] = udiv i32 [[TMP12]], [[X]]
 ; SINK-GATHER-NEXT:    [[TMP14:%.*]] = insertelement <8 x i32> [[TMP8]], i32 [[TMP13]], i32 1
 ; SINK-GATHER-NEXT:    br label [[PRED_UDIV_CONTINUE4]]
-; SINK-GATHER:       pred.udiv.continue4:
+; SINK-GATHER:       pred.udiv.continue2:
 ; SINK-GATHER-NEXT:    [[TMP16:%.*]] = phi <8 x i32> [ [[TMP8]], [[PRED_UDIV_CONTINUE]] ], [ [[TMP14]], [[PRED_UDIV_IF5]] ]
 ; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF6:%.*]], label [[PRED_UDIV_CONTINUE6:%.*]]
-; SINK-GATHER:       pred.udiv.if5:
+; SINK-GATHER:       pred.udiv.if3:
 ; SINK-GATHER-NEXT:    [[TMP18:%.*]] = extractelement <8 x i64> [[TMP0]], i32 2
 ; SINK-GATHER-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP18]]
 ; SINK-GATHER-NEXT:    [[TMP20:%.*]] = load i32, ptr [[TMP19]], align 4
 ; SINK-GATHER-NEXT:    [[TMP21:%.*]] = udiv i32 [[TMP20]], [[X]]
 ; SINK-GATHER-NEXT:    [[TMP22:%.*]] = insertelement <8 x i32> [[TMP16]], i32 [[TMP21]], i32 2
 ; SINK-GATHER-NEXT:    br label [[PRED_UDIV_CONTINUE6]]
-; SINK-GATHER:       pred.udiv.continue6:
+; SINK-GATHER:       pred.udiv.continue4:
 ; SINK-GATHER-NEXT:    [[TMP24:%.*]] = phi <8 x i32> [ [[TMP16]], [[PRED_UDIV_CONTINUE4]] ], [ [[TMP22]], [[PRED_UDIV_IF6]] ]
 ; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF7:%.*]], label [[PRED_UDIV_CONTINUE8:%.*]]
-; SINK-GATHER:       pred.udiv.if7:
+; SINK-GATHER:       pred.udiv.if5:
 ; SINK-GATHER-NEXT:    [[TMP26:%.*]] = extractelement <8 x i64> [[TMP0]], i32 3
 ; SINK-GATHER-NEXT:    [[TMP27:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP26]]
 ; SINK-GATHER-NEXT:    [[TMP28:%.*]] = load i32, ptr [[TMP27]], align 4
 ; SINK-GATHER-NEXT:    [[TMP29:%.*]] = udiv i32 [[TMP28]], [[X]]
 ; SINK-GATHER-NEXT:    [[TMP30:%.*]] = insertelement <8 x i32> [[TMP24]], i32 [[TMP29]], i32 3
 ; SINK-GATHER-NEXT:    br label [[PRED_UDIV_CONTINUE8]]
-; SINK-GATHER:       pred.udiv.continue8:
+; SINK-GATHER:       pred.udiv.continue6:
 ; SINK-GATHER-NEXT:    [[TMP32:%.*]] = phi <8 x i32> [ [[TMP24]], [[PRED_UDIV_CONTINUE6]] ], [ [[TMP30]], [[PRED_UDIV_IF7]] ]
 ; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF9:%.*]], label [[PRED_UDIV_CONTINUE10:%.*]]
-; SINK-GATHER:       pred.udiv.if9:
+; SINK-GATHER:       pred.udiv.if7:
 ; SINK-GATHER-NEXT:    [[TMP34:%.*]] = extractelement <8 x i64> [[TMP0]], i32 4
 ; SINK-GATHER-NEXT:    [[TMP35:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP34]]
 ; SINK-GATHER-NEXT:    [[TMP36:%.*]] = load i32, ptr [[TMP35]], align 4
 ; SINK-GATHER-NEXT:    [[TMP37:%.*]] = udiv i32 [[TMP36]], [[X]]
 ; SINK-GATHER-NEXT:    [[TMP38:%.*]] = insertelement <8 x i32> [[TMP32]], i32 [[TMP37]], i32 4
 ; SINK-GATHER-NEXT:    br label [[PRED_UDIV_CONTINUE10]]
-; SINK-GATHER:       pred.udiv.continue10:
+; SINK-GATHER:       pred.udiv.continue8:
 ; SINK-GATHER-NEXT:    [[TMP40:%.*]] = phi <8 x i32> [ [[TMP32]], [[PRED_UDIV_CONTINUE8]] ], [ [[TMP38]], [[PRED_UDIV_IF9]] ]
 ; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF11:%.*]], label [[PRED_UDIV_CONTINUE12:%.*]]
-; SINK-GATHER:       pred.udiv.if11:
+; SINK-GATHER:       pred.udiv.if9:
 ; SINK-GATHER-NEXT:    [[TMP42:%.*]] = extractelement <8 x i64> [[TMP0]], i32 5
 ; SINK-GATHER-NEXT:    [[TMP43:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP42]]
 ; SINK-GATHER-NEXT:    [[TMP44:%.*]] = load i32, ptr [[TMP43]], align 4
 ; SINK-GATHER-NEXT:    [[TMP45:%.*]] = udiv i32 [[TMP44]], [[X]]
 ; SINK-GATHER-NEXT:    [[TMP46:%.*]] = insertelement <8 x i32> [[TMP40]], i32 [[TMP45]], i32 5
 ; SINK-GATHER-NEXT:    br label [[PRED_UDIV_CONTINUE12]]
-; SINK-GATHER:       pred.udiv.continue12:
+; SINK-GATHER:       pred.udiv.continue10:
 ; SINK-GATHER-NEXT:    [[TMP48:%.*]] = phi <8 x i32> [ [[TMP40]], [[PRED_UDIV_CONTINUE10]] ], [ [[TMP46]], [[PRED_UDIV_IF11]] ]
 ; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF13:%.*]], label [[PRED_UDIV_CONTINUE14:%.*]]
-; SINK-GATHER:       pred.udiv.if13:
+; SINK-GATHER:       pred.udiv.if11:
 ; SINK-GATHER-NEXT:    [[TMP50:%.*]] = extractelement <8 x i64> [[TMP0]], i32 6
 ; SINK-GATHER-NEXT:    [[TMP51:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP50]]
 ; SINK-GATHER-NEXT:    [[TMP52:%.*]] = load i32, ptr [[TMP51]], align 4
 ; SINK-GATHER-NEXT:    [[TMP53:%.*]] = udiv i32 [[TMP52]], [[X]]
 ; SINK-GATHER-NEXT:    [[TMP54:%.*]] = insertelement <8 x i32> [[TMP48]], i32 [[TMP53]], i32 6
 ; SINK-GATHER-NEXT:    br label [[PRED_UDIV_CONTINUE14]]
-; SINK-GATHER:       pred.udiv.continue14:
+; SINK-GATHER:       pred.udiv.continue12:
 ; SINK-GATHER-NEXT:    [[TMP56:%.*]] = phi <8 x i32> [ [[TMP48]], [[PRED_UDIV_CONTINUE12]] ], [ [[TMP54]], [[PRED_UDIV_IF13]] ]
 ; SINK-GATHER-NEXT:    br i1 [[TMP1]], label [[PRED_UDIV_IF15:%.*]], label [[PRED_UDIV_CONTINUE16]]
-; SINK-GATHER:       pred.udiv.if15:
+; SINK-GATHER:       pred.udiv.if13:
 ; SINK-GATHER-NEXT:    [[TMP58:%.*]] = extractelement <8 x i64> [[TMP0]], i32 7
 ; SINK-GATHER-NEXT:    [[TMP59:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[TMP58]]
 ; SINK-GATHER-NEXT:    [[TMP60:%.*]] = load i32, ptr [[TMP59]], align 4
 ; SINK-GATHER-NEXT:    [[TMP61:%.*]] = udiv i32 [[TMP60]], [[X]]
 ; SINK-GATHER-NEXT:    [[TMP62:%.*]] = insertelement <8 x i32> [[TMP56]], i32 [[TMP61]], i32 7
 ; SINK-GATHER-NEXT:    br label [[PRED_UDIV_CONTINUE16]]
-; SINK-GATHER:       pred.udiv.continue16:
+; SINK-GATHER:       pred.udiv.continue14:
 ; SINK-GATHER-NEXT:    [[TMP64:%.*]] = phi <8 x i32> [ [[TMP56]], [[PRED_UDIV_CONTINUE14]] ], [ [[TMP62]], [[PRED_UDIV_IF15]] ]
-; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select <8 x i1> [[BROADCAST_SPLAT]], <8 x i32> [[TMP64]], <8 x i32> [[BROADCAST_SPLAT16]]
+; SINK-GATHER-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <8 x i32> [[TMP64]], <8 x i32> [[BROADCAST_SPLAT16]]
 ; SINK-GATHER-NEXT:    [[TMP66]] = add <8 x i32> [[VEC_PHI]], [[PREDPHI]]
 ; SINK-GATHER-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; SINK-GATHER-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
+; SINK-GATHER-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i64> [[VEC_IND]], splat (i64 8)
 ; SINK-GATHER-NEXT:    [[TMP67:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
-; SINK-GATHER-NEXT:    br i1 [[TMP67]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; SINK-GATHER-NEXT:    br i1 [[TMP67]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; SINK-GATHER:       middle.block:
 ; SINK-GATHER-NEXT:    [[TMP68:%.*]] = call i32 @llvm.vector.reduce.add.v8i32(<8 x i32> [[TMP66]])
 ; SINK-GATHER-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[SMAX]], [[N_VEC]]
@@ -391,7 +365,7 @@ define i32 @scalarize_and_sink_gather(ptr %a, i1 %c, i32 %x, i64 %n) {
 ; SINK-GATHER-NEXT:    [[T6]] = add i32 [[R]], [[T5]]
 ; SINK-GATHER-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
 ; SINK-GATHER-NEXT:    [[COND:%.*]] = icmp slt i64 [[I_NEXT]], [[N]]
-; SINK-GATHER-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP5:![0-9]+]]
+; SINK-GATHER-NEXT:    br i1 [[COND]], label [[FOR_BODY]], label [[FOR_END]], !llvm.loop [[LOOP4:![0-9]+]]
 ; SINK-GATHER:       for.end:
 ; SINK-GATHER-NEXT:    [[T7:%.*]] = phi i32 [ [[T6]], [[FOR_INC]] ], [ [[TMP68]], [[MIDDLE_BLOCK]] ]
 ; SINK-GATHER-NEXT:    ret i32 [[T7]]

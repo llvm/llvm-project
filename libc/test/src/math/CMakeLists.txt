@@ -17,6 +17,20 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cosf_float_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cosf_float_test.cpp
+  DEPENDS
+    libc.src.__support.math.sincosf_utils
+    libc.src.__support.FPUtil.fp_bits
+  FLAGS
+    FMA_OPT__ONLY
+)
+
+add_fp_unittest(
   cos_test
   NEED_MPFR
   SUITE
@@ -94,6 +108,20 @@ add_fp_unittest(
     libc.src.math.sinf
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  sinf_float_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    sinf_float_test.cpp
+  DEPENDS
+    libc.src.__support.math.sincosf_utils
+    libc.src.__support.FPUtil.fp_bits
+  FLAGS
+    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
@@ -367,6 +395,21 @@ add_fp_unittest(
     CeilTest.h
   DEPENDS
     libc.src.math.ceil
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
+  ceilf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ceilf128_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf128
     libc.src.__support.CPP.algorithm
     libc.src.__support.FPUtil.fp_bits
 )
@@ -1679,6 +1722,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  rsqrtf_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    rsqrtf_test.cpp
+  DEPENDS
+    libc.src.math.rsqrtf
+)
+
+add_fp_unittest(
   rsqrtf16_test
   NEED_MPFR
   SUITE
@@ -2039,6 +2093,18 @@ add_fp_unittest(
     logf16_test.cpp
   DEPENDS
     libc.src.math.logf16
+)
+
+add_fp_unittest(
+  log_bf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    log_bf16_test.cpp
+  DEPENDS
+    libc.src.math.log_bf16
+    libc.src.__support.FPUtil.bfloat16
 )
 
 add_fp_unittest(

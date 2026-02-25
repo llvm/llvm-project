@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include "lldb/Core/PluginManager.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
@@ -45,6 +46,10 @@ struct HighlightStyle {
 
     /// Sets the prefix and suffix strings.
     void Set(llvm::StringRef prefix, llvm::StringRef suffix);
+
+    explicit operator bool() const {
+      return !m_prefix.empty() && !m_suffix.empty();
+    }
   };
 
   /// The style for the token which is below the cursor of the user. Note that
@@ -88,7 +93,7 @@ struct HighlightStyle {
 };
 
 /// Annotates source code with color attributes.
-class Highlighter {
+class Highlighter : public PluginInterface {
 public:
   Highlighter() = default;
   virtual ~Highlighter() = default;
@@ -122,23 +127,11 @@ public:
                         llvm::StringRef previous_lines = "") const;
 };
 
-/// A default highlighter that only highlights the user cursor, but doesn't
-/// do any other highlighting.
-class DefaultHighlighter : public Highlighter {
-public:
-  llvm::StringRef GetName() const override { return "none"; }
-
-  void Highlight(const HighlightStyle &options, llvm::StringRef line,
-                 std::optional<size_t> cursor_pos,
-                 llvm::StringRef previous_lines, Stream &s) const override;
-};
-
 /// Manages the available highlighters.
 class HighlighterManager {
-  DefaultHighlighter m_default;
-
 public:
   /// Queries all known highlighter for one that can highlight some source code.
+  ///
   /// \param language_type
   ///     The language type that the caller thinks the source code was given in.
   /// \param path
@@ -149,9 +142,35 @@ public:
   ///     empty highlighter that does nothing.
   const Highlighter &getHighlighterFor(lldb::LanguageType language_type,
                                        llvm::StringRef path) const;
-  const Highlighter &getDefaultHighlighter() const { return m_default; }
+
+private:
+  mutable std::mutex m_mutex;
+  mutable llvm::DenseMap<lldb::LanguageType, std::unique_ptr<Highlighter>>
+      m_highlighters;
 };
 
 } // namespace lldb_private
+
+namespace llvm {
+
+/// DenseMapInfo implementation.
+/// \{
+template <> struct DenseMapInfo<lldb::LanguageType> {
+  static inline lldb::LanguageType getEmptyKey() {
+    return lldb::eNumLanguageTypes;
+  }
+  static inline lldb::LanguageType getTombstoneKey() {
+    return lldb::eNumLanguageTypes;
+  }
+  static unsigned getHashValue(lldb::LanguageType language_type) {
+    return static_cast<unsigned>(language_type);
+  }
+  static bool isEqual(lldb::LanguageType LHS, lldb::LanguageType RHS) {
+    return LHS == RHS;
+  }
+};
+/// \}
+
+} // namespace llvm
 
 #endif // LLDB_CORE_HIGHLIGHTER_H

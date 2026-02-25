@@ -22,12 +22,8 @@ if (CMAKE_CROSSCOMPILING)
   return ()
 endif ()
 
-if (NOT TARGET llvm_gtest)
-  message(WARNING "Flang-RT unittests disabled due to GTest being unavailable; "
-                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
-  return ()
-endif ()
-
+# Make the targets default_gtest and default_gtest_main available.
+build_gtest()
 
 add_dependencies(flang-rt-test-depends
   FlangRTUnitTests
@@ -78,6 +74,15 @@ function(add_flangrt_dependent_libs target)
         instead falls back to builtins from Compiler-RT. Linking with ${tgtname}
         may result in a linker error.")
     endif ()
+  elseif (APPLE)
+    # Clang on Darwin enables non-POSIX extensions by default.
+    # This causes some macros to leak, such as HUGE from <math.h>, which
+    # causes some conflicts with Flang symbols (but not with Flang-RT, for
+    # now).
+    # It also causes some Flang-RT extensions to be disabled, such as fdate,
+    # that checks for _POSIX_C_SOURCE.
+    # Setting _POSIX_C_SOURCE avoids these issues.
+    target_compile_options(${target} PRIVATE "-D_POSIX_C_SOURCE=200809")
   endif ()
 endfunction()
 

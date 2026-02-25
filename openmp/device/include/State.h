@@ -219,7 +219,7 @@ lookup32(ValueKind Kind, bool IsReadonly, IdentTy *Ident, bool ForceTeamState) {
   __builtin_unreachable();
 }
 
-[[gnu::always_inline, gnu::flatten]] inline void *&
+[[gnu::always_inline, gnu::flatten]] inline FnPtrTy &
 lookupPtr(ValueKind Kind, bool IsReadonly, bool ForceTeamState) {
   switch (Kind) {
   case state::VK_ParallelRegionFn:
@@ -327,6 +327,8 @@ private:
   Ty Val;
   bool Active;
 };
+template <typename VTy, typename Ty>
+ValueRAII(VTy &, Ty, Ty, bool, IdentTy *, bool) -> ValueRAII<VTy, Ty>;
 
 /// TODO
 inline state::Value<uint32_t, state::VK_RunSchedChunk> RunSchedChunk;

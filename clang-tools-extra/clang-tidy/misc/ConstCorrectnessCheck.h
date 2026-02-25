@@ -18,7 +18,7 @@ namespace clang::tidy::misc {
 /// This check warns on variables which could be declared const but are not.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/misc/const-correctness.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/misc/const-correctness.html
 class ConstCorrectnessCheck : public ClangTidyCheck {
 public:
   ConstCorrectnessCheck(StringRef Name, ClangTidyContext *Context);
@@ -34,13 +34,17 @@ public:
 private:
   void registerScope(const Stmt *LocalScope, ASTContext *Context);
 
+  bool isMutated(const VarDecl *Variable, const Stmt *Scope,
+                 const FunctionDecl *Func, ASTContext *Context);
   using MutationAnalyzer = std::unique_ptr<ExprMutationAnalyzer>;
   llvm::DenseMap<const Stmt *, MutationAnalyzer> ScopesCache;
   llvm::DenseSet<SourceLocation> TemplateDiagnosticsCache;
+  ExprMutationAnalyzer::Memoized ParamMutationAnalyzerMemoized;
 
   const bool AnalyzePointers;
   const bool AnalyzeReferences;
   const bool AnalyzeValues;
+  const bool AnalyzeParameters;
 
   const bool WarnPointersAsPointers;
   const bool WarnPointersAsValues;

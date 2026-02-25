@@ -1,3 +1,4 @@
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,6 +8,7 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // XFAIL: !has-64-bit-atomics
+// XFAIL: target={{x86_64-.*}} && tsan
 
 // integral-type fetch_sub(integral-type, memory_order = memory_order::seq_cst) const noexcept;
 // floating-point-type fetch_sub(floating-point-type, memory_order = memory_order::seq_cst) const noexcept;
@@ -37,7 +39,7 @@ template <typename T>
 struct TestFetchSub {
   void operator()() const {
     if constexpr (std::is_arithmetic_v<T>) {
-      T x(T(7));
+      alignas(std::atomic_ref<T>::required_alignment) T x(T(7));
       std::atomic_ref<T> const a(x);
 
       {

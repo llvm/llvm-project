@@ -534,7 +534,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
                                                    /*maxTransferRank=*/1);
     // Transform N-D vector.from_elements to 1-D vector.from_elements before
     // conversion.
-    vector::populateVectorFromElementsLoweringPatterns(patterns);
+    vector::populateVectorFromElementsUnrollPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
@@ -549,7 +549,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   // Populate all patterns from all dialects that implement the
   // `ConvertToLLVMPatternInterface` interface.
   for (Dialect *dialect : context->getLoadedDialects()) {
-    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
     if (!iface)
       continue;
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);

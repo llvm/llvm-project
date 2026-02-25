@@ -18,7 +18,7 @@ namespace clang::tidy::altera {
 /// degradation.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/altera/id-dependent-backward-branch.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/altera/id-dependent-backward-branch.html
 class IdDependentBackwardBranchCheck : public ClangTidyCheck {
 private:
   enum LoopType { UnknownLoop = -1, DoLoop = 0, WhileLoop = 1, ForLoop = 2 };
@@ -39,15 +39,15 @@ private:
     std::string Message;
   };
   // Stores the locations where ID-dependent variables are created.
-  std::map<const VarDecl *, IdDependencyRecord> IdDepVarsMap;
+  llvm::DenseMap<const VarDecl *, IdDependencyRecord> IdDepVarsMap;
   // Stores the locations where ID-dependent fields are created.
-  std::map<const FieldDecl *, IdDependencyRecord> IdDepFieldsMap;
+  llvm::DenseMap<const FieldDecl *, IdDependencyRecord> IdDepFieldsMap;
   /// Returns an IdDependencyRecord if the Expression contains an ID-dependent
   /// variable, returns a nullptr otherwise.
-  IdDependencyRecord *hasIdDepVar(const Expr *Expression);
+  const IdDependencyRecord *hasIdDepVar(const Expr *Expression);
   /// Returns an IdDependencyRecord if the Expression contains an ID-dependent
   /// field, returns a nullptr otherwise.
-  IdDependencyRecord *hasIdDepField(const Expr *Expression);
+  const IdDependencyRecord *hasIdDepField(const Expr *Expression);
   /// Stores the location an ID-dependent variable is created from a call to
   /// an ID function in IdDepVarsMap.
   void saveIdDepVar(const Stmt *Statement, const VarDecl *Variable);

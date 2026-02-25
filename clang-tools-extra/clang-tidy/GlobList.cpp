@@ -23,16 +23,17 @@ static bool consumeNegativeIndicator(StringRef &GlobList) {
 // removes it and the trailing comma from the GlobList and
 // returns the extracted glob.
 static llvm::StringRef extractNextGlob(StringRef &GlobList) {
-  StringRef UntrimmedGlob = GlobList.substr(0, GlobList.find_first_of(",\n"));
-  StringRef Glob = UntrimmedGlob.trim();
+  const StringRef UntrimmedGlob =
+      GlobList.substr(0, GlobList.find_first_of(",\n"));
+  const StringRef Glob = UntrimmedGlob.trim();
   GlobList = GlobList.substr(UntrimmedGlob.size() + 1);
   return Glob;
 }
 
 static llvm::Regex createRegexFromGlob(StringRef &Glob) {
-  SmallString<128> RegexText("^");
-  StringRef MetaChars("()^$|*+?.[]\\{}");
-  for (char C : Glob) {
+  llvm::SmallString<128> RegexText("^");
+  const StringRef MetaChars("()^$|*+?.[]\\{}");
+  for (const char C : Glob) {
     if (C == '*')
       RegexText.push_back('.');
     else if (MetaChars.contains(C))
@@ -58,10 +59,9 @@ GlobList::GlobList(StringRef Globs, bool KeepNegativeGlobs /* =true */) {
 bool GlobList::contains(StringRef S) const {
   // Iterating the container backwards as the last match determins if S is in
   // the list.
-  for (const GlobListItem &Item : llvm::reverse(Items)) {
+  for (const GlobListItem &Item : llvm::reverse(Items))
     if (Item.Regex.match(S))
       return Item.IsPositive;
-  }
   return false;
 }
 

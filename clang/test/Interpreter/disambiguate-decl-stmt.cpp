@@ -70,11 +70,10 @@ class PrivateUsingFriendVar { static PrivateUsingFriend::T i; };
 PrivateUsingFriend::T PrivateUsingFriendVar::i = 42;
 
 // The following should still diagnose (inspired by PR13642)
-// FIXME: Should not be diagnosed twice!
 class PR13642 { class Inner { public: static int i; }; };
-// expected-note@-1 2 {{implicitly declared private here}}
+// expected-note@-1 {{implicitly declared private here}}
 PR13642::Inner::i = 5;
-// expected-error@-1 2 {{'Inner' is a private member of 'PR13642'}}
+// expected-error@-1 {{'Inner' is a private member of 'PR13642'}}
 
 // Deduction guide
 template<typename T> struct A { A(); A(T); };
@@ -102,3 +101,16 @@ __attribute((noreturn)) Attrs2::Attrs2() = default;
 
 // Extra semicolon
 namespace N {};
+
+// Test C keywords supported in all language modes.
+// https://clang.llvm.org/docs/LanguageExtensions.html#c-keywords-supported-in-all-language-modes
+
+_Alignas(16) int aligned_var;
+int align = _Alignof(double);
+_Atomic int atomic_var = 0;
+_Complex double complex_val = 1.0 + 2.0i;
+_Float16 f = 1.5; // expected-error 0-1{{_Float16 is not supported on this target}}
+_Thread_local int counter = 0;
+_Static_assert(sizeof(int) == 4, "int must be 4 bytes");
+_Imaginary float i = 2.0f; // expected-error {{imaginary types are not supported}}
+_Noreturn void noreturn_func() { while (true) {} }
