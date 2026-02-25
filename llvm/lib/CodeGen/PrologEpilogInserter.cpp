@@ -1403,15 +1403,7 @@ bool PEIImpl::replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
            "Frame indices can only appear as a debug operand in a DBG_VALUE*"
            " machine instruction");
     Register Reg;
-    int FrameIdx = Op.getIndex();
-
-    // If the frame object has been removed (e.g., dead object elimination),
-    // the debug value is undefined. Replace with $noreg.
-    if (MF.getFrameInfo().isDeadObjectIndex(FrameIdx)) {
-      Op.ChangeToRegister(0, false /*isDef*/);
-      return true;
-    }
-
+    unsigned FrameIdx = Op.getIndex();
     unsigned Size = MF.getFrameInfo().getObjectSize(FrameIdx);
 
     StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
