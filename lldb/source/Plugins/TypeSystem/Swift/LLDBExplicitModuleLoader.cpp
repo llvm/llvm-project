@@ -45,22 +45,40 @@ LLDBExplicitSwiftModuleLoader::create(
     std::unique_ptr<swift::ExplicitClangModuleMap> ExplicitClangModuleMap) {
   if (!MainSwiftModuleMap || !ExplicitSwiftModuleMap || !ExplicitClangModuleMap)
     return {};
+
+  auto swift_mm = std::make_unique<swift::ExplicitSwiftModuleMap>();
+  auto cas_swift_mm = std::make_unique<swift::ExplicitSwiftModuleMap>();
+  auto clang_mm = std::make_unique<swift::ExplicitClangModuleMap>();
+  auto cas_clang_mm = std::make_unique<swift::ExplicitClangModuleMap>();
+
+  auto addSwiftEntry = [&](const auto &entry) {
+    if (entry.getValue().moduleCacheKey)
+      cas_swift_mm->insert({entry.getKey(), entry.getValue()});
+    else
+      swift_mm->insert({entry.getKey(), entry.getValue()});
+  };
+  auto addClangEntry = [&](const auto &entry) {
+    if (entry.getValue().moduleCacheKey)
+      cas_clang_mm->insert({entry.getKey(), entry.getValue()});
+    else
+      clang_mm->insert({entry.getKey(), entry.getValue()});
+  };
+
+  llvm::for_each(*MainSwiftModuleMap, addSwiftEntry);
+  llvm::for_each(*ExplicitSwiftModuleMap, addSwiftEntry);
+  llvm::for_each(*ExplicitClangModuleMap, addClangEntry);
+
   std::unique_ptr<swift::ExplicitCASModuleLoader> casml;
   if (cas && action_cache) {
     casml = swift::ExplicitCASModuleLoader::create(
         ctx, *cas, *action_cache, tracker, loadMode, ExplicitSwiftModuleMapPath,
         ExplicitSwiftModuleInputs, IgnoreSwiftSourceInfoFile,
-        std::move(ExplicitSwiftModuleMap), std::move(ExplicitClangModuleMap));
+        std::move(cas_swift_mm), std::move(cas_clang_mm));
   }
-  if (!ExplicitSwiftModuleMap)
-    ExplicitSwiftModuleMap = std::move(MainSwiftModuleMap);
-  else
-    for (auto &entry : *MainSwiftModuleMap)
-      ExplicitSwiftModuleMap->insert({entry.getKey(), entry.getValue()});
   auto esml = swift::ExplicitSwiftModuleLoader::create(
       ctx, tracker, loadMode, ExplicitSwiftModuleMapPath,
       ExplicitSwiftModuleInputs, IgnoreSwiftSourceInfoFile,
-      std::move(ExplicitSwiftModuleMap), std::move(ExplicitClangModuleMap));
+      std::move(swift_mm), std::move(clang_mm));
   return std::make_unique<LLDBExplicitSwiftModuleLoader>(
       ctx, cas, action_cache, tracker, loadMode, IgnoreSwiftSourceInfoFile,
       std::move(casml), std::move(esml));

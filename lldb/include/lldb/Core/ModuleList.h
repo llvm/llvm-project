@@ -579,6 +579,9 @@ public:
   /// operation does a lot of file system stat calls.
   static llvm::Expected<CAS> GetOrCreateCAS(const lldb::ModuleSP &module_sp);
 
+  /// Check if a string is a CASID.
+  static bool IsCASID(const lldb::ModuleSP &module_sp, llvm::StringRef id);
+
   /// Gets the shared module from CAS. It works the same as `GetSharedModule`
   /// but the lookup is done inside the CAS.
   ///

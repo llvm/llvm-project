@@ -43,6 +43,11 @@ ifneq "$(SWIFT_ENABLE_EXPLICIT_MODULES)" "NO"
 SWIFTFLAGS += -explicit-module-build
 endif
 
+SWIFT_ENABLE_COMPILE_CACHE ?= NO
+ifneq "$(SWIFT_ENABLE_COMPILE_CACHE)" "NO"
+SWIFTFLAGS += -cache-compile-job -cas-path $(BUILDDIR)/cas
+endif
+
 # Swift bridging headers.
 ifneq "$(SWIFT_BRIDGING_HEADER)" ""
 # These are incompatible.

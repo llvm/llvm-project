@@ -53,6 +53,7 @@
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingFlavor.h"
 #include "swift/Demangling/ManglingMacros.h"
+#include "swift/Frontend/CachingUtils.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/ModuleInterfaceLoader.h"
 #include "swift/IRGen/Linking.h"
@@ -2887,29 +2888,18 @@ static lldb::ModuleSP GetUnitTestModule(lldb_private::ModuleList &modules) {
 }
 
 llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-SwiftASTContext::GetModuleContents(StringRef path) {
-  auto read_from_cas =
-      [&]() -> llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> {
-    if (!m_cas)
-      return std::unique_ptr<llvm::MemoryBuffer>();
-    llvm::Expected<llvm::cas::CASID> id = m_cas->parseID(path);
-    if (!id) {
-      LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), id.takeError(),
-                      "'{1}' is not valid CASID: {0}", path);
-      return std::unique_ptr<llvm::MemoryBuffer>();
-    }
-    llvm::Expected<llvm::cas::ObjectProxy> module_proxy = m_cas->getProxy(*id);
-    if (!module_proxy)
-      return module_proxy.takeError();
-
-    return module_proxy->getMemoryBuffer();
-  };
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> buffer = read_from_cas();
-  if (!buffer)
-    return buffer.takeError();
-  if (*buffer)
-    return buffer;
-  return llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(path));
+SwiftASTContext::GetModuleContentsFromCAS(StringRef maybe_id) {
+  if (!m_cas || !m_action_cache)
+    return std::unique_ptr<llvm::MemoryBuffer>();
+  llvm::Expected<llvm::cas::CASID> id = m_cas->parseID(maybe_id);
+  if (!id) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), id.takeError(),
+                    "'{1}' is not valid CASID: {0}", maybe_id);
+    return std::unique_ptr<llvm::MemoryBuffer>();
+  }
+  return swift::loadCachedCompileResultFromCacheKey(
+      *m_cas, *m_action_cache, GetDiagnosticEngine(), maybe_id,
+      swift::file_types::TY_SwiftModuleFile, maybe_id);
 }
 
 bool SwiftASTContext::DiscoverExplicitMainModule(const SymbolContext &sc,
@@ -2923,16 +2913,27 @@ bool SwiftASTContext::DiscoverExplicitMainModule(const SymbolContext &sc,
   if (!cu_imports.size())
     return false;
   const SourceModule &module = cu_imports.front();
-  llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> buffer =
-      GetModuleContents(module.search_path);
-  if (!buffer) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), buffer.takeError(),
+  std::unique_ptr<llvm::MemoryBuffer> buffer;
+  std::optional<std::string> moduleCacheKey;
+  if (auto E = GetModuleContentsFromCAS(module.search_path).moveInto(buffer)) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(E),
                    "Could not open {1}: {0}", module.search_path);
     return false;
+  } 
+  if (!buffer) {
+    if (auto E = llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(
+                                             module.search_path.GetStringRef()))
+                     .moveInto(buffer)) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(E),
+                     "Could not open {1}: {0}", module.search_path);
+      return false;
+    }
+  } else {
+    moduleCacheKey = module.search_path.GetString();
   }
-  if (!*buffer) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), buffer.takeError(),
-                   "Could not open {1}: {0}", module.search_path);
+  if (!buffer) {
+    LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to load module: %s",
+               module.search_path.GetString().c_str());
     return false;
   }
   LOG_PRINTF(GetLog(LLDBLog::Types), "Discovered main module %s",
@@ -2950,15 +2951,24 @@ bool SwiftASTContext::DiscoverExplicitMainModule(const SymbolContext &sc,
   swift::CompilerInvocation fresh_invocation;
   m_main_swift_module = module.search_path;
   m_main_swift_module_map = std::make_unique<swift::ExplicitSwiftModuleMap>();
+  // Add main module to explicit module map.
   m_main_swift_module_map->insert(
       {module_name, swift::ExplicitSwiftModuleInputInfo{
-                        (std::string)module.search_path, {}, {}, {}, {}}});
+                        moduleCacheKey ? module_name.str() + ".swiftmodule"
+                                       : (std::string)module.search_path,
+                        {},
+                        {},
+                        {},
+                        {},
+                        /*isFramework=*/false,
+                        /*isSystem=*/false,
+                        moduleCacheKey}});
   m_explicit_swift_module_map =
       std::make_unique<swift::ExplicitSwiftModuleMap>();
   m_explicit_clang_module_map =
       std::make_unique<swift::ExplicitClangModuleMap>();
   bool found_errors = DeserializeAllCompilerFlags(
-      fresh_invocation, module_name, {}, {(*buffer)->getBuffer()},
+      fresh_invocation, module_name, {}, {buffer->getBuffer()},
       image.GetSourceMappingList(), discover_implicit_search_paths,
       m_description, errs, got_serialized_options, found_swift_modules,
       /*search_paths_only=*/false, m_explicit_swift_module_map.get(),
@@ -9725,8 +9735,10 @@ llvm::Error SwiftASTContextForExpressions::CacheUserImports(
     if (IsSerializedAST(*module_decl)) {
       // Parse additional search paths from the module.
       StringRef path = module_decl->getModuleLoadedFilename();
+      // Load module content from file system and path should always be full
+      // path on real file system.
       llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> file =
-          GetModuleContents(path);
+          llvm::errorOrToExpected(llvm::MemoryBuffer::getFile(path));
       if (!file) {
         LLDB_LOG_ERROR(GetLog(LLDBLog::Types), file.takeError(),
                        "User import: could not open Swift module for search "

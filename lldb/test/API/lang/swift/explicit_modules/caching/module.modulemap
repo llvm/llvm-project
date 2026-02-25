@@ -1,0 +1,7 @@
+module ClangA {
+  header "a.h"
+}
+
+module ClangB {
+  header "b.h"
+}

@@ -1227,10 +1227,14 @@ bool SymbolFileDWARF::ParseImportedModules(
       }
       std::reverse(module.path.begin(), module.path.end());
       if (include_path) {
-        FileSpec include_spec(include_path, dwarf_cu->GetPathStyle());
-        MakeAbsoluteAndRemap(include_spec, *dwarf_cu,
-                             m_objfile_sp->GetModule());
-        module.search_path = ConstString(include_spec.GetPath());
+        if (ModuleList::IsCASID(m_objfile_sp->GetModule(), include_path)) {
+          module.search_path = ConstString(include_path);
+        } else {
+          FileSpec include_spec(include_path, dwarf_cu->GetPathStyle());
+          MakeAbsoluteAndRemap(include_spec, *dwarf_cu,
+                               m_objfile_sp->GetModule());
+          module.search_path = ConstString(include_spec.GetPath());
+        }
       }
       if (const char *sysroot = dwarf_cu->DIE().GetAttributeValueAsString(
               DW_AT_LLVM_sysroot, nullptr))

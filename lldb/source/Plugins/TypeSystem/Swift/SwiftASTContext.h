@@ -923,9 +923,9 @@ protected:
   /// Extract the bridging PCH from debug info an set the ClangImporter option.
   void ConfigureBridgingHeader(const SymbolContext &sc);
 
-  /// Get the contents of a file or CAS path.
+  /// Get the contents of a module from CAS.
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
-  GetModuleContents(llvm::StringRef path);
+  GetModuleContentsFromCAS(llvm::StringRef maybe_id);
 
   bool DiscoverExplicitMainModule(const SymbolContext &sc, const Module &image);
 

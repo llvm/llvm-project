@@ -1856,6 +1856,23 @@ ModuleList::GetOrCreateCAS(const ModuleSP &module_sp) {
   return ModuleList::CAS{cas_config, cas->first, cas->second};
 }
 
+bool ModuleList::IsCASID(const ModuleSP &module_sp,
+                         llvm::StringRef id) {
+  auto cas = GetOrCreateCAS(module_sp);
+  if (!cas) {
+    consumeError(cas.takeError());
+    return false;
+  }
+
+  auto ref = cas->object_store->parseID(id);
+  if (!ref) {
+    consumeError(ref.takeError());
+    return false;
+  }
+  return true;
+}
+
+
 llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
     llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
     const lldb::ModuleSP &nearby, ModuleSpec &module_spec,
