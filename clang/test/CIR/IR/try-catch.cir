@@ -13,8 +13,14 @@ cir.func dso_local @empty_try_block_with_catch_all() {
   cir.scope {
     cir.try {
       cir.yield
-    } catch all {
-      %0 = cir.catch_param : !cir.ptr<!void>
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %0 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
       cir.yield
     }
   }
@@ -25,8 +31,14 @@ cir.func dso_local @empty_try_block_with_catch_all() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } catch all {
-// CHECK:       %[[CP:.*]] = cir.catch_param : !cir.ptr<!void>
+// CHECK:     } catch all (%[[EH_TOKEN:.*]]: !cir.eh_token) {
+// CHECK:       %[[CATCH_TOKEN:.*]], %[[EXN_PTR:.*]] = cir.begin_catch %[[EH_TOKEN]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:       cir.cleanup.scope {
+// CHECK:         cir.yield
+// CHECK:       } cleanup eh {
+// CHECK:         cir.end_catch %[[CATCH_TOKEN]] : !cir.catch_token
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
@@ -37,7 +49,7 @@ cir.func dso_local @empty_try_block_with_catch_unwind() {
   cir.scope {
     cir.try {
       cir.yield
-    } unwind {
+    } unwind (%eh_token : !cir.eh_token) {
       cir.yield
     }
   }
@@ -48,7 +60,7 @@ cir.func dso_local @empty_try_block_with_catch_unwind() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } unwind {
+// CHECK:     } unwind (%{{.*}}: !cir.eh_token) {
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
@@ -59,13 +71,25 @@ cir.func dso_local @empty_try_block_with_catch_ist() {
   cir.scope {
     cir.try {
       cir.yield
-    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
-      %0 = cir.catch_param : !cir.ptr<!s32i>
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %0 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
       cir.yield
-    } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
-      %0 = cir.catch_param : !cir.ptr<!cir.ptr<!u8i>>
+    } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] (%eh_token_1 : !cir.eh_token) {
+      %catch_token_1, %1 = cir.begin_catch %eh_token_1 : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!u8i>>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup eh {
+        cir.end_catch %catch_token_1 : !cir.catch_token
+        cir.yield
+      }
       cir.yield
-    } unwind {
+    } unwind (%eh_token_2 : !cir.eh_token) {
       cir.yield
     }
   }
@@ -76,13 +100,25 @@ cir.func dso_local @empty_try_block_with_catch_ist() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] {
-// CHECK:       %[[CP1:.*]] = cir.catch_param : !cir.ptr<!s32i>
+// CHECK:     } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%[[EH1:.*]]: !cir.eh_token) {
+// CHECK:       %[[CT1:.*]], %{{.*}} = cir.begin_catch %[[EH1]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:       cir.cleanup.scope {
+// CHECK:         cir.yield
+// CHECK:       } cleanup eh {
+// CHECK:         cir.end_catch %[[CT1]] : !cir.catch_token
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
-// CHECK:     } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] {
-// CHECK:       %[[CP2:.*]] = cir.catch_param : !cir.ptr<!cir.ptr<!u8i>>
+// CHECK:     } catch [type #cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>] (%[[EH2:.*]]: !cir.eh_token) {
+// CHECK:       %[[CT2:.*]], %{{.*}} = cir.begin_catch %[[EH2]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!u8i>>)
+// CHECK:       cir.cleanup.scope {
+// CHECK:         cir.yield
+// CHECK:       } cleanup eh {
+// CHECK:         cir.end_catch %[[CT2]] : !cir.catch_token
+// CHECK:         cir.yield
+// CHECK:       }
 // CHECK:       cir.yield
-// CHECK:     } unwind {
+// CHECK:     } unwind (%{{.*}}: !cir.eh_token) {
 // CHECK:       cir.yield
 // CHECK:     }
 // CHECK:   }
@@ -93,7 +129,7 @@ cir.func @empty_try_block_with_catch_unwind_contains_resume() {
   cir.scope {
     cir.try {
       cir.yield
-    } unwind {
+    } unwind (%eh_token : !cir.eh_token) {
       cir.resume
     }
   }
@@ -104,7 +140,7 @@ cir.func @empty_try_block_with_catch_unwind_contains_resume() {
 // CHECK:   cir.scope {
 // CHECK:     cir.try {
 // CHECK:       cir.yield
-// CHECK:     } unwind {
+// CHECK:     } unwind (%{{.*}}: !cir.eh_token) {
 // CHECK:       cir.resume
 // CHECK:     }
 // CHECK:   }

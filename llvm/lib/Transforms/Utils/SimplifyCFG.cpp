@@ -6324,6 +6324,9 @@ static bool validLookupTableConstant(Constant *C, const TargetTransformInfo &TTI
       !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
     return false;
 
+  if (C->getType()->isVectorTy())
+    return false;
+
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
     // Pointer casts and in-bounds GEPs will not prohibit the backend from
     // materializing the array of constants.
