@@ -187,21 +187,29 @@ TEST_F(VariablesTest, VariablesStore) {
 
   EXPECT_EQ(vars.GetVariableStore(var_ref_t(9999)), nullptr);
 
+  ASSERT_TRUE(vars.FindVariable(local_ref, "rect").IsValid());
+
   auto variables = locals_store->GetVariables(vars, {}, {});
   ASSERT_EQ(variables.size(), 1u);
   auto rect = variables[0];
   ASSERT_EQ(rect.name, "rect");
-  auto *store = vars.GetVariableStore(rect.variablesReference);
-  ASSERT_NE(store, nullptr);
 
   VariablesArguments args;
   args.variablesReference = rect.variablesReference;
+
+  auto *store = vars.GetVariableStore(args.variablesReference);
+  ASSERT_NE(store, nullptr);
+
   variables = store->GetVariables(vars, {}, args);
   ASSERT_EQ(variables.size(), 4u);
-  ASSERT_EQ(variables[0].name, "x");
-  ASSERT_EQ(variables[1].name, "y");
-  ASSERT_EQ(variables[2].name, "height");
-  ASSERT_EQ(variables[3].name, "width");
+  EXPECT_EQ(variables[0].name, "x");
+  EXPECT_EQ(variables[0].value, "5");
+  EXPECT_EQ(variables[1].name, "y");
+  EXPECT_EQ(variables[1].value, "5");
+  EXPECT_EQ(variables[2].name, "height");
+  EXPECT_EQ(variables[2].value, "25");
+  EXPECT_EQ(variables[3].name, "width");
+  EXPECT_EQ(variables[3].value, "30");
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {

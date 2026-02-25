@@ -18,15 +18,73 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
 #include <optional>
 #include <vector>
 
+using namespace llvm;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
 namespace {
+
+template <typename T> StringMap<uint32_t> distinct_names(T &container) {
+  StringMap<uint32_t> variable_name_counts;
+  for (auto variable : container) {
+    if (!variable.IsValid())
+      break;
+    variable_name_counts[GetNonNullVariableName(variable)]++;
+  }
+  return variable_name_counts;
+}
+
+template <typename T>
+std::vector<Variable> make_variables(VariableReferenceStorage &storage,
+                                     const Configuration &config,
+                                     const VariablesArguments &args,
+                                     T &container, bool is_permanent) {
+  std::vector<Variable> variables;
+
+  // We first find out which variable names are duplicated.
+  StringMap<uint32_t> variable_name_counts = distinct_names(container);
+
+  const bool format_hex = args.format ? args.format->hex : false;
+  auto start_it = begin(container) + args.start;
+  auto end_it = args.count == 0 ? end(container) : start_it + args.count;
+
+  // Now we construct the result with unique display variable names.
+  for (; start_it != end_it; start_it++) {
+    lldb::SBValue variable = *start_it;
+    if (!variable.IsValid())
+      break;
+
+    const var_ref_t var_ref =
+        variable.MightHaveChildren()
+            ? storage.Insert(variable, /*is_permanent=*/is_permanent)
+            : var_ref_t(var_ref_t::k_no_child);
+    if (LLVM_UNLIKELY(var_ref.AsUInt32() >=
+                      var_ref_t::k_variables_reference_threshold)) {
+      DAP_LOG(storage.log,
+              "warning: variablesReference threshold reached. "
+              "current: {} threshold: {}, maximum {}.",
+              var_ref.AsUInt32(), var_ref_t::k_variables_reference_threshold,
+              var_ref_t::k_max_variables_references);
+      break;
+    }
+
+    if (LLVM_UNLIKELY(var_ref.Kind() == eReferenceKindInvalid))
+      break;
+
+    variables.emplace_back(CreateVariable(
+        variable, var_ref, format_hex, config.enableAutoVariableSummaries,
+        config.enableSyntheticChildDebugging,
+        variable_name_counts[GetNonNullVariableName(variable)] > 1));
+  }
+
+  return variables;
+}
 
 /// A Variable store for fetching variables within a specific scope (locals,
 /// globals, or registers) for a given stack frame.
@@ -35,62 +93,35 @@ public:
   explicit ScopeStore(ScopeKind kind, const lldb::SBFrame &frame)
       : m_frame(frame), m_kind(kind) {}
 
-  std::vector<protocol::Variable>
-  GetVariables(VariableReferenceStorage &storage,
-               const protocol::Configuration &config,
-               const protocol::VariablesArguments &args) override {
+  std::vector<Variable> GetVariables(VariableReferenceStorage &storage,
+                                     const Configuration &config,
+                                     const VariablesArguments &args) override {
     LoadVariables();
-    if (m_kind == lldb_dap::eScopeKindRegisters)
-      SetRegistersFormat();
-
-    const bool format_hex = args.format ? args.format->hex : false;
-    std::vector<Variable> variables;
-    if (m_kind == eScopeKindLocals)
-      AddReturnValue(storage, config, variables, format_hex);
-
-    const uint64_t count = args.count;
-    const uint32_t start_idx = 0;
-    const uint32_t num_children = m_children.GetSize();
-    const uint32_t end_idx = start_idx + ((count == 0) ? num_children : count);
-
-    // We first find out which variable names are duplicated.
-    std::map<llvm::StringRef, uint32_t> variable_name_counts;
-    for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = m_children.GetValueAtIndex(i);
-      if (!variable.IsValid())
-        break;
-      variable_name_counts[GetNonNullVariableName(variable)]++;
-    }
-
-    // Now we construct the result with unique display variable names.
-    for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = m_children.GetValueAtIndex(i);
-
-      if (!variable.IsValid())
-        break;
-
-      const var_ref_t frame_var_ref =
-          storage.Insert(variable, /*is_permanent=*/false);
-      if (LLVM_UNLIKELY(frame_var_ref.AsUInt32() >=
-                        var_ref_t::k_variables_reference_threshold)) {
-        DAP_LOG(storage.log,
-                "warning: scopes variablesReference threshold reached. "
-                "current: {} threshold: {}, maximum {}.",
-                frame_var_ref.AsUInt32(),
-                var_ref_t::k_variables_reference_threshold,
-                var_ref_t::k_max_variables_references);
+    if (m_children.GetSize() == 0) {
+      // Check for an error in the SBValueList that might explain why we don't
+      // have locals. If we have an error display it as the sole value in the
+      // the locals.
+      // "error" owns the error string so we must keep it alive as long as we
+      // want to use the returns "const char *".
+      lldb::SBError error = m_children.GetError();
+      if (const char *var_err = error.GetCString()) {
+        // Create a fake variable named "<error>" to explain why variables were
+        // not available. This new error will help let users know when there
+        // was a problem that kept variables from being available for display
+        // and allow users to fix this issue instead of seeing no variables.
+        // The errors are only set when there is a problem that the user could
+        // fix, so no error will show up when you have no debug info, only
+        // when we do have debug info and something that is fixable can be
+        // done.
+        Variable err_var;
+        err_var.name = "<error>";
+        err_var.type = "const char *";
+        err_var.value = var_err;
+        return {err_var};
       }
-
-      if (LLVM_UNLIKELY(frame_var_ref.Kind() == eReferenceKindInvalid))
-        break;
-
-      variables.emplace_back(CreateVariable(
-          variable, frame_var_ref, format_hex,
-          config.enableAutoVariableSummaries,
-          config.enableSyntheticChildDebugging,
-          variable_name_counts[GetNonNullVariableName(variable)] > 1));
     }
-    return variables;
+    return make_variables(storage, config, args, m_children,
+                          /*is_permanent=*/false);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
@@ -129,6 +160,16 @@ private:
                                         /*locals=*/true,
                                         /*statics=*/false,
                                         /*in_scope_only=*/true);
+      // Show return value if there is any ( in the local top frame )
+      if (m_frame.GetFrameID() == 0) {
+        lldb::SBValue stop_return_value =
+            m_frame.GetThread().GetStopReturnValue();
+        if (stop_return_value.IsValid()) {
+          auto renamed_return_value = stop_return_value.Clone("(Return Value)");
+          m_children.Append(renamed_return_value);
+        }
+      }
+
       break;
     case eScopeKindGlobals:
       m_children = m_frame.GetVariables(/*arguments=*/false,
@@ -138,75 +179,20 @@ private:
       break;
     case eScopeKindRegisters:
       m_children = m_frame.GetRegisters();
-    }
-  }
-
-  void SetRegistersFormat() {
-    // Change the default format of any pointer sized registers in the first
-    // register set to be the lldb::eFormatAddressInfo so we show the pointer
-    // and resolve what the pointer resolves to. Only change the format if the
-    // format was set to the default format or if it was hex as some registers
-    // have formats set for them.
-    const uint32_t addr_size =
-        m_frame.GetThread().GetProcess().GetAddressByteSize();
-    for (lldb::SBValue reg : m_children.GetValueAtIndex(0)) {
-      const lldb::Format format = reg.GetFormat();
-      if (format == lldb::eFormatDefault || format == lldb::eFormatHex) {
-        if (reg.GetByteSize() == addr_size)
-          reg.SetFormat(lldb::eFormatAddressInfo);
+      // Change the default format of any pointer sized registers in the first
+      // register set to be the lldb::eFormatAddressInfo so we show the pointer
+      // and resolve what the pointer resolves to. Only change the format if the
+      // format was set to the default format or if it was hex as some registers
+      // have formats set for them.
+      const uint32_t addr_size =
+          m_frame.GetThread().GetProcess().GetAddressByteSize();
+      for (lldb::SBValue reg : m_children.GetValueAtIndex(0)) {
+        const lldb::Format format = reg.GetFormat();
+        if (format == lldb::eFormatDefault || format == lldb::eFormatHex) {
+          if (reg.GetByteSize() == addr_size)
+            reg.SetFormat(lldb::eFormatAddressInfo);
+        }
       }
-    }
-  }
-
-  void AddReturnValue(VariableReferenceStorage &storage,
-                      const protocol::Configuration &config,
-                      std::vector<protocol::Variable> &variables,
-                      bool format_hex) {
-    assert(m_kind == eScopeKindLocals &&
-           "Return Value Should only be in local scope");
-    if (m_children.GetSize() == 0) {
-      // Check for an error in the SBValueList that might explain why we don't
-      // have locals. If we have an error display it as the sole value in the
-      // the locals.
-
-      // "error" owns the error string so we must keep it alive as long as we
-      // want to use the returns "const char *".
-      lldb::SBError error = m_children.GetError();
-      if (const char *var_err = error.GetCString()) {
-        // Create a fake variable named "error" to explain why variables were
-        // not available. This new error will help let users know when there was
-        // a problem that kept variables from being available for display and
-        // allow users to fix this issue instead of seeing no variables. The
-        // errors are only set when there is a problem that the user could
-        // fix, so no error will show up when you have no debug info, only when
-        // we do have debug info and something that is fixable can be done.
-        Variable err_var;
-        err_var.name = "<error>";
-        err_var.type = "const char *";
-        err_var.value = var_err;
-        variables.push_back(std::move(err_var));
-      }
-      return;
-    }
-
-    // Show return value if there is any ( in the local top frame )
-    lldb::SBThread selected_thread = m_frame.GetThread();
-    lldb::SBValue stop_return_value = selected_thread.GetStopReturnValue();
-
-    if (stop_return_value.IsValid() &&
-        (selected_thread.GetSelectedFrame().GetFrameID() == 0)) {
-      auto renamed_return_value = stop_return_value.Clone("(Return Value)");
-      var_ref_t return_var_ref{var_ref_t::k_no_child};
-
-      if (stop_return_value.MightHaveChildren() ||
-          stop_return_value.IsSynthetic()) {
-        return_var_ref = storage.Insert(stop_return_value,
-                                        /*is_permanent=*/false);
-      }
-      variables.emplace_back(
-          CreateVariable(renamed_return_value, return_var_ref, format_hex,
-                         config.enableAutoVariableSummaries,
-                         config.enableSyntheticChildDebugging, false));
     }
   }
 
@@ -229,81 +215,40 @@ public:
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
-    const var_ref_t var_ref = args.variablesReference;
-    const uint64_t count = args.count;
-    const uint64_t start = args.start;
-    const bool hex = args.format ? args.format->hex : false;
+    lldb::SBValueList list;
+    for (auto inner : m_value)
+      list.Append(inner);
 
-    lldb::SBValue variable = storage.GetVariable(var_ref);
-    if (!variable)
-      return {};
-
-    // We are expanding a variable that has children, so we will return its
-    // children.
-    std::vector<Variable> variables;
-    const bool is_permanent = var_ref.Kind() == eReferenceKindPermanent;
-    auto addChild = [&](lldb::SBValue child,
-                        std::optional<llvm::StringRef> custom_name = {}) {
-      if (!child.IsValid())
-        return;
-
-      const var_ref_t child_var_ref = storage.Insert(child, is_permanent);
-      if (LLVM_UNLIKELY(child_var_ref.AsUInt32() ==
-                        var_ref_t::k_variables_reference_threshold)) {
-        DAP_LOG(storage.log,
-                "warning: {} variablesReference threshold reached. "
-                "current: {} threshold: {}, maximum {}.",
-                (is_permanent ? "permanent" : "temporary"),
-                child_var_ref.AsUInt32(),
-                var_ref_t::k_variables_reference_threshold,
-                var_ref_t::k_max_variables_references);
-      }
-
-      if (LLVM_UNLIKELY(child_var_ref.Kind() == eReferenceKindInvalid)) {
-        DAP_LOG(storage.log,
-                "error: invalid variablesReference created for {} variable {}.",
-                (is_permanent ? "permanent" : "temporary"), variable.GetName());
-        return;
-      }
-
-      variables.emplace_back(CreateVariable(
-          child, child_var_ref, hex, config.enableAutoVariableSummaries,
-          config.enableSyntheticChildDebugging,
-          /*is_name_duplicated=*/false, custom_name));
-    };
-
-    const uint32_t num_children = variable.GetNumChildren();
-    const uint32_t end_idx = start + ((count == 0) ? num_children : count);
-    uint32_t i = start;
-    for (; i < end_idx && i < num_children; ++i)
-      addChild(variable.GetChildAtIndex(i));
-
-    // If we haven't filled the count quota from the request, we insert a new
-    // "[raw]" child that can be used to inspect the raw version of a
-    // synthetic member. That eliminates the need for the user to go to the
+    // We insert a new "[raw]" child that can be used to inspect the raw version
+    // of a synthetic member. That eliminates the need for the user to go to the
     // debug console and type `frame var <variable> to get these values.
-    if (config.enableSyntheticChildDebugging && variable.IsSynthetic() &&
-        i == num_children)
-      addChild(variable.GetNonSyntheticValue(), "[raw]");
+    if (config.enableSyntheticChildDebugging && m_value.IsSynthetic())
+      list.Append(m_value.GetSyntheticValue().Clone("[raw]"));
 
-    return variables;
+    const bool is_permanent =
+        args.variablesReference.Kind() == eReferenceKindPermanent;
+    return make_variables(storage, config, args, list, is_permanent);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
+    if (name == "[raw]" && m_value.IsSynthetic())
+      return m_value.GetSyntheticValue();
+
+    // Handle mapped index
     lldb::SBValue variable = m_value.GetChildMemberWithName(name.data());
     if (variable.IsValid())
       return variable;
 
-    if (name.consume_front('[') && name.consume_back("]")) {
-      uint64_t index = 0;
-      if (!name.consumeInteger(0, index)) {
-        variable = m_value.GetChildAtIndex(index);
-      }
-    }
+    // Handle array indexes
+    uint64_t index = 0;
+    if (name.consume_front('[') && name.consume_back("]") &&
+        !name.consumeInteger(0, index))
+      variable = m_value.GetChildAtIndex(index);
+
     return variable;
   }
 
-  [[nodiscard]] lldb::SBValue GetVariable() const override { return m_value; };
+  [[nodiscard]] lldb::SBValue GetVariable() const override { return m_value; }
 
 private:
   lldb::SBValue m_value;
@@ -319,51 +264,8 @@ public:
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
-    const bool format_hex = args.format ? args.format->hex : false;
-    const uint64_t count = args.count;
-    const uint32_t start_idx = 0;
-    const uint32_t num_children = m_value_list.GetSize();
-    const uint32_t end_idx = start_idx + ((count == 0) ? num_children : count);
-    std::vector<Variable> variables;
-
-    // We first find out which variable names are duplicated.
-    std::map<llvm::StringRef, uint32_t> variable_name_counts;
-    for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = m_value_list.GetValueAtIndex(i);
-      if (!variable.IsValid())
-        break;
-      variable_name_counts[GetNonNullVariableName(variable)]++;
-    }
-
-    // Now we construct the result with unique display variable names.
-    for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = m_value_list.GetValueAtIndex(i);
-
-      if (!variable.IsValid() || !variable.IsInScope())
-        continue;
-
-      const var_ref_t frame_var_ref =
-          storage.Insert(variable, /*is_permanent=*/true);
-      if (LLVM_UNLIKELY(frame_var_ref.AsUInt32() >=
-                        var_ref_t::k_variables_reference_threshold)) {
-        DAP_LOG(storage.log,
-                "warning: scopes variablesReference threshold reached. "
-                "current: {} threshold: {}, maximum {}.",
-                frame_var_ref.AsUInt32(),
-                var_ref_t::k_variables_reference_threshold,
-                var_ref_t::k_max_variables_references);
-      }
-
-      if (LLVM_UNLIKELY(frame_var_ref.Kind() == eReferenceKindInvalid))
-        break;
-
-      variables.emplace_back(CreateVariable(
-          variable, frame_var_ref, format_hex,
-          config.enableAutoVariableSummaries,
-          config.enableSyntheticChildDebugging,
-          variable_name_counts[GetNonNullVariableName(variable)] > 1));
-    }
-    return variables;
+    return make_variables(storage, config, args, m_value_list,
+                          /*is_permanent=*/true);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
@@ -376,7 +278,7 @@ public:
 
   [[nodiscard]] lldb::SBValue GetVariable() const override {
     return lldb::SBValue();
-  };
+  }
 
 private:
   lldb::SBValueList m_value_list;
