@@ -23,7 +23,7 @@ define <vscale x 1 x bfloat> @vfmax_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vsca
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 1 x bfloat> @llvm.vp.maximumnum.nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x bfloat> @llvm.vp.maxnum.nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x bfloat> %v
 }
 
@@ -38,7 +38,7 @@ define <vscale x 1 x bfloat> @vfmax_vv_nxv1bf16_unmasked(<vscale x 1 x bfloat> %
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 1 x bfloat> @llvm.vp.maximumnum.nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 1 x bfloat> @llvm.vp.maxnum.nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x bfloat> %v
 }
 
@@ -53,7 +53,7 @@ define <vscale x 2 x bfloat> @vfmax_vv_nxv2bf16(<vscale x 2 x bfloat> %va, <vsca
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x bfloat> @llvm.vp.maximumnum.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x bfloat> @llvm.vp.maxnum.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x bfloat> %v
 }
 
@@ -68,7 +68,7 @@ define <vscale x 2 x bfloat> @vfmax_vv_nxv2bf16_unmasked(<vscale x 2 x bfloat> %
 ; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x bfloat> @llvm.vp.maximumnum.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 2 x bfloat> @llvm.vp.maxnum.nxv2bf16(<vscale x 2 x bfloat> %va, <vscale x 2 x bfloat> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x bfloat> %v
 }
 
@@ -83,7 +83,7 @@ define <vscale x 4 x bfloat> @vfmax_vv_nxv4bf16(<vscale x 4 x bfloat> %va, <vsca
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x bfloat> @llvm.vp.maximumnum.nxv4bf16(<vscale x 4 x bfloat> %va, <vscale x 4 x bfloat> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x bfloat> @llvm.vp.maxnum.nxv4bf16(<vscale x 4 x bfloat> %va, <vscale x 4 x bfloat> %vb, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x bfloat> %v
 }
 
@@ -98,7 +98,7 @@ define <vscale x 4 x bfloat> @vfmax_vv_nxv4bf16_unmasked(<vscale x 4 x bfloat> %
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x bfloat> @llvm.vp.maximumnum.nxv4bf16(<vscale x 4 x bfloat> %va, <vscale x 4 x bfloat> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 4 x bfloat> @llvm.vp.maxnum.nxv4bf16(<vscale x 4 x bfloat> %va, <vscale x 4 x bfloat> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x bfloat> %v
 }
 
@@ -113,7 +113,7 @@ define <vscale x 8 x bfloat> @vfmax_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vsca
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v12, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 8 x bfloat> @llvm.vp.maximumnum.nxv8bf16(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x bfloat> @llvm.vp.maxnum.nxv8bf16(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x bfloat> %v
 }
 
@@ -128,7 +128,7 @@ define <vscale x 8 x bfloat> @vfmax_vv_nxv8bf16_unmasked(<vscale x 8 x bfloat> %
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v12
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 8 x bfloat> @llvm.vp.maximumnum.nxv8bf16(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 8 x bfloat> @llvm.vp.maxnum.nxv8bf16(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x bfloat> %v
 }
 
@@ -143,7 +143,7 @@ define <vscale x 16 x bfloat> @vfmax_vv_nxv16bf16(<vscale x 16 x bfloat> %va, <v
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 16 x bfloat> @llvm.vp.maximumnum.nxv16bf16(<vscale x 16 x bfloat> %va, <vscale x 16 x bfloat> %vb, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x bfloat> @llvm.vp.maxnum.nxv16bf16(<vscale x 16 x bfloat> %va, <vscale x 16 x bfloat> %vb, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x bfloat> %v
 }
 
@@ -158,7 +158,7 @@ define <vscale x 16 x bfloat> @vfmax_vv_nxv16bf16_unmasked(<vscale x 16 x bfloat
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; CHECK-NEXT:    vfncvtbf16.f.f.w v8, v16
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 16 x bfloat> @llvm.vp.maximumnum.nxv16bf16(<vscale x 16 x bfloat> %va, <vscale x 16 x bfloat> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 16 x bfloat> @llvm.vp.maxnum.nxv16bf16(<vscale x 16 x bfloat> %va, <vscale x 16 x bfloat> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x bfloat> %v
 }
 
@@ -211,7 +211,7 @@ define <vscale x 32 x bfloat> @vfmax_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <v
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 32 x bfloat> @llvm.vp.maximumnum.nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x bfloat> %vb, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x bfloat> @llvm.vp.maxnum.nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x bfloat> %vb, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x bfloat> %v
 }
 
@@ -264,7 +264,7 @@ define <vscale x 32 x bfloat> @vfmax_vv_nxv32bf16_unmasked(<vscale x 32 x bfloat
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 32 x bfloat> @llvm.vp.maximumnum.nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x bfloat> %vb, <vscale x 32 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 32 x bfloat> @llvm.vp.maxnum.nxv32bf16(<vscale x 32 x bfloat> %va, <vscale x 32 x bfloat> %vb, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x bfloat> %v
 }
 
@@ -285,7 +285,7 @@ define <vscale x 1 x half> @vfmax_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9, v0.t
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 1 x half> @llvm.vp.maximumnum.nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x half> @llvm.vp.maxnum.nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x half> %v
 }
 
@@ -306,7 +306,7 @@ define <vscale x 1 x half> @vfmax_vv_nxv1f16_unmasked(<vscale x 1 x half> %va, <
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 1 x half> @llvm.vp.maximumnum.nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 1 x half> @llvm.vp.maxnum.nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x half> %v
 }
 
@@ -327,7 +327,7 @@ define <vscale x 2 x half> @vfmax_vv_nxv2f16(<vscale x 2 x half> %va, <vscale x 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9, v0.t
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 2 x half> @llvm.vp.maximumnum.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x half> @llvm.vp.maxnum.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x half> %v
 }
 
@@ -348,7 +348,7 @@ define <vscale x 2 x half> @vfmax_vv_nxv2f16_unmasked(<vscale x 2 x half> %va, <
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v9
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 2 x half> @llvm.vp.maximumnum.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 2 x half> @llvm.vp.maxnum.nxv2f16(<vscale x 2 x half> %va, <vscale x 2 x half> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x half> %v
 }
 
@@ -369,7 +369,7 @@ define <vscale x 4 x half> @vfmax_vv_nxv4f16(<vscale x 4 x half> %va, <vscale x 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10, v0.t
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 4 x half> @llvm.vp.maximumnum.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x half> @llvm.vp.maxnum.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x half> %v
 }
 
@@ -390,7 +390,7 @@ define <vscale x 4 x half> @vfmax_vv_nxv4f16_unmasked(<vscale x 4 x half> %va, <
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v10
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 4 x half> @llvm.vp.maximumnum.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 4 x half> @llvm.vp.maxnum.nxv4f16(<vscale x 4 x half> %va, <vscale x 4 x half> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x half> %v
 }
 
@@ -411,7 +411,7 @@ define <vscale x 8 x half> @vfmax_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12, v0.t
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 8 x half> @llvm.vp.maximumnum.nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x half> @llvm.vp.maxnum.nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x half> %v
 }
 
@@ -432,7 +432,7 @@ define <vscale x 8 x half> @vfmax_vv_nxv8f16_unmasked(<vscale x 8 x half> %va, <
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v12
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 8 x half> @llvm.vp.maximumnum.nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 8 x half> @llvm.vp.maxnum.nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x half> %v
 }
 
@@ -453,7 +453,7 @@ define <vscale x 16 x half> @vfmax_vv_nxv16f16(<vscale x 16 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16, v0.t
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 16 x half> @llvm.vp.maximumnum.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x half> @llvm.vp.maxnum.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x half> %v
 }
 
@@ -474,7 +474,7 @@ define <vscale x 16 x half> @vfmax_vv_nxv16f16_unmasked(<vscale x 16 x half> %va
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
 ; ZVFHMIN-NEXT:    vfncvt.f.f.w v8, v16
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 16 x half> @llvm.vp.maximumnum.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 16 x half> @llvm.vp.maxnum.nxv16f16(<vscale x 16 x half> %va, <vscale x 16 x half> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x half> %v
 }
 
@@ -533,7 +533,7 @@ define <vscale x 32 x half> @vfmax_vv_nxv32f16(<vscale x 32 x half> %va, <vscale
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 32 x half> @llvm.vp.maximumnum.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x i1> %m, i32 %evl)
+  %v = call <vscale x 32 x half> @llvm.vp.maxnum.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x i1> %m, i32 %evl)
   ret <vscale x 32 x half> %v
 }
 
@@ -592,7 +592,7 @@ define <vscale x 32 x half> @vfmax_vv_nxv32f16_unmasked(<vscale x 32 x half> %va
 ; ZVFHMIN-NEXT:    addi sp, sp, 16
 ; ZVFHMIN-NEXT:    .cfi_def_cfa_offset 0
 ; ZVFHMIN-NEXT:    ret
-  %v = call <vscale x 32 x half> @llvm.vp.maximumnum.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 32 x half> @llvm.vp.maxnum.nxv32f16(<vscale x 32 x half> %va, <vscale x 32 x half> %vb, <vscale x 32 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 32 x half> %v
 }
 
@@ -602,7 +602,7 @@ define <vscale x 1 x float> @vfmax_vv_nxv1f32(<vscale x 1 x float> %va, <vscale 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 1 x float> @llvm.vp.maximumnum.nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x float> @llvm.vp.maxnum.nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x float> %v
 }
 
@@ -612,7 +612,7 @@ define <vscale x 1 x float> @vfmax_vv_nxv1f32_unmasked(<vscale x 1 x float> %va,
 ; CHECK-NEXT:    vsetvli zero, a0, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 1 x float> @llvm.vp.maximumnum.nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 1 x float> @llvm.vp.maxnum.nxv1f32(<vscale x 1 x float> %va, <vscale x 1 x float> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x float> %v
 }
 
@@ -622,7 +622,7 @@ define <vscale x 2 x float> @vfmax_vv_nxv2f32(<vscale x 2 x float> %va, <vscale 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x float> @llvm.vp.maximumnum.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x float> @llvm.vp.maxnum.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x float> %v
 }
 
@@ -632,7 +632,7 @@ define <vscale x 2 x float> @vfmax_vv_nxv2f32_unmasked(<vscale x 2 x float> %va,
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x float> @llvm.vp.maximumnum.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 2 x float> @llvm.vp.maxnum.nxv2f32(<vscale x 2 x float> %va, <vscale x 2 x float> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x float> %v
 }
 
@@ -642,7 +642,7 @@ define <vscale x 4 x float> @vfmax_vv_nxv4f32(<vscale x 4 x float> %va, <vscale 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x float> @llvm.vp.maximumnum.nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x float> @llvm.vp.maxnum.nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x float> %v
 }
 
@@ -652,7 +652,7 @@ define <vscale x 4 x float> @vfmax_vv_nxv4f32_unmasked(<vscale x 4 x float> %va,
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x float> @llvm.vp.maximumnum.nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 4 x float> @llvm.vp.maxnum.nxv4f32(<vscale x 4 x float> %va, <vscale x 4 x float> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x float> %v
 }
 
@@ -662,7 +662,7 @@ define <vscale x 8 x float> @vfmax_vv_nxv8f32(<vscale x 8 x float> %va, <vscale 
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 8 x float> @llvm.vp.maximumnum.nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x float> @llvm.vp.maxnum.nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x float> %v
 }
 
@@ -672,7 +672,7 @@ define <vscale x 8 x float> @vfmax_vv_nxv8f32_unmasked(<vscale x 8 x float> %va,
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 8 x float> @llvm.vp.maximumnum.nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 8 x float> @llvm.vp.maxnum.nxv8f32(<vscale x 8 x float> %va, <vscale x 8 x float> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x float> %v
 }
 
@@ -682,7 +682,7 @@ define <vscale x 16 x float> @vfmax_vv_nxv16f32(<vscale x 16 x float> %va, <vsca
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 16 x float> @llvm.vp.maximumnum.nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x i1> %m, i32 %evl)
+  %v = call <vscale x 16 x float> @llvm.vp.maxnum.nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x float> %v
 }
 
@@ -692,7 +692,7 @@ define <vscale x 16 x float> @vfmax_vv_nxv16f32_unmasked(<vscale x 16 x float> %
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 16 x float> @llvm.vp.maximumnum.nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 16 x float> @llvm.vp.maxnum.nxv16f32(<vscale x 16 x float> %va, <vscale x 16 x float> %vb, <vscale x 16 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 16 x float> %v
 }
 
@@ -702,7 +702,7 @@ define <vscale x 1 x double> @vfmax_vv_nxv1f64(<vscale x 1 x double> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 1 x double> @llvm.vp.maximumnum.nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x i1> %m, i32 %evl)
+  %v = call <vscale x 1 x double> @llvm.vp.maxnum.nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x double> %v
 }
 
@@ -712,7 +712,7 @@ define <vscale x 1 x double> @vfmax_vv_nxv1f64_unmasked(<vscale x 1 x double> %v
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v9
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 1 x double> @llvm.vp.maximumnum.nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 1 x double> @llvm.vp.maxnum.nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 1 x double> %v
 }
 
@@ -722,7 +722,7 @@ define <vscale x 2 x double> @vfmax_vv_nxv2f64(<vscale x 2 x double> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x double> @llvm.vp.maximumnum.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb, <vscale x 2 x i1> %m, i32 %evl)
+  %v = call <vscale x 2 x double> @llvm.vp.maxnum.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb, <vscale x 2 x i1> %m, i32 %evl)
   ret <vscale x 2 x double> %v
 }
 
@@ -732,7 +732,7 @@ define <vscale x 2 x double> @vfmax_vv_nxv2f64_unmasked(<vscale x 2 x double> %v
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m2, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v10
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 2 x double> @llvm.vp.maximumnum.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 2 x double> @llvm.vp.maxnum.nxv2f64(<vscale x 2 x double> %va, <vscale x 2 x double> %vb, <vscale x 2 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 2 x double> %v
 }
 
@@ -742,7 +742,7 @@ define <vscale x 4 x double> @vfmax_vv_nxv4f64(<vscale x 4 x double> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v12, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x double> @llvm.vp.maximumnum.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb, <vscale x 4 x i1> %m, i32 %evl)
+  %v = call <vscale x 4 x double> @llvm.vp.maxnum.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb, <vscale x 4 x i1> %m, i32 %evl)
   ret <vscale x 4 x double> %v
 }
 
@@ -752,7 +752,7 @@ define <vscale x 4 x double> @vfmax_vv_nxv4f64_unmasked(<vscale x 4 x double> %v
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m4, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 4 x double> @llvm.vp.maximumnum.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 4 x double> @llvm.vp.maxnum.nxv4f64(<vscale x 4 x double> %va, <vscale x 4 x double> %vb, <vscale x 4 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 4 x double> %v
 }
 
@@ -762,7 +762,7 @@ define <vscale x 8 x double> @vfmax_vv_nxv8f64(<vscale x 8 x double> %va, <vscal
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16, v0.t
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 8 x double> @llvm.vp.maximumnum.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x i1> %m, i32 %evl)
+  %v = call <vscale x 8 x double> @llvm.vp.maxnum.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x double> %v
 }
 
@@ -772,6 +772,6 @@ define <vscale x 8 x double> @vfmax_vv_nxv8f64_unmasked(<vscale x 8 x double> %v
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, ma
 ; CHECK-NEXT:    vfmax.vv v8, v8, v16
 ; CHECK-NEXT:    ret
-  %v = call <vscale x 8 x double> @llvm.vp.maximumnum.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
+  %v = call <vscale x 8 x double> @llvm.vp.maxnum.nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x i1> splat (i1 true), i32 %evl)
   ret <vscale x 8 x double> %v
 }

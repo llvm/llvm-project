@@ -2034,12 +2034,10 @@ RISCVTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
     Opcodes = {RISCV::VREDMINU_VS, RISCV::VMV_X_S};
     break;
   case Intrinsic::maxnum:
-  case Intrinsic::maximumnum:
     SplitOp = RISCV::VFMAX_VV;
     Opcodes = {RISCV::VFREDMAX_VS, RISCV::VFMV_F_S};
     break;
   case Intrinsic::minnum:
-  case Intrinsic::minimumnum:
     SplitOp = RISCV::VFMIN_VV;
     Opcodes = {RISCV::VFREDMIN_VS, RISCV::VFMV_F_S};
     break;
