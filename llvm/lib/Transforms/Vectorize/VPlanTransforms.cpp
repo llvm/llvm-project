@@ -5152,9 +5152,9 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
 /// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
 /// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
 /// is defined at \p Idx of a load interleave group.
-static bool canNarrowLoad(VPSingleDefRecipe *Member0, unsigned OpIdx,
+static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
                           VPValue *OpV, unsigned Idx) {
-  VPValue *Member0Op = Member0->getOperand(OpIdx);
+  VPValue *Member0Op = WideMember0->getOperand(OpIdx);
   VPRecipeBase *Member0OpR = Member0Op->getDefiningRecipe();
   if (!Member0OpR)
     return Member0Op == OpV;
@@ -5167,18 +5167,18 @@ static bool canNarrowLoad(VPSingleDefRecipe *Member0, unsigned OpIdx,
 
 static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
   SmallVector<VPValue *> Ops0;
-  auto *Member0 = dyn_cast<VPSingleDefRecipe>(Ops[0]);
-  if (!Member0)
+  auto *WideMember0 = dyn_cast<VPSingleDefRecipe>(Ops[0]);
+  if (!WideMember0)
     return false;
   for (VPValue *V : Ops) {
     if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
       return false;
     auto *R = cast<VPSingleDefRecipe>(V);
-    if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(Member0))
+    if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(WideMember0))
       return false;
   }
 
-  for (unsigned Idx = 0; Idx != Member0->getNumOperands(); ++Idx) {
+  for (unsigned Idx = 0; Idx != WideMember0->getNumOperands(); ++Idx) {
     SmallVector<VPValue *> OpsI;
     for (VPValue *Op : Ops)
       OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
@@ -5186,9 +5186,9 @@ static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
     if (canNarrowOps(OpsI))
       continue;
 
-    if (any_of(enumerate(OpsI), [Member0, Idx](const auto &P) {
+    if (any_of(enumerate(OpsI), [WideMember0, Idx](const auto &P) {
           const auto &[OpIdx, OpV] = P;
-          return !canNarrowLoad(Member0, Idx, OpV, OpIdx);
+          return !canNarrowLoad(WideMember0, Idx, OpV, OpIdx);
         }))
       return false;
   }
@@ -5265,11 +5265,11 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
     return V;
 
   if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
-    auto *Member0 = cast<VPSingleDefRecipe>(R);
-    for (unsigned Idx = 0, E = Member0->getNumOperands(); Idx != E; ++Idx)
-      Member0->setOperand(
-          Idx, narrowInterleaveGroupOp(Member0->getOperand(Idx), NarrowedOps));
-    NarrowedOps.insert(V);
+    auto *WideMember0 = cast<VPSingleDefRecipe>(R);
+    for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
+      WideMember0->setOperand(
+          Idx,
+          narrowInterleaveGroupOp(WideMember0->getOperand(Idx), NarrowedOps));
     return V;
   }
 
