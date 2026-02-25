@@ -444,5 +444,4 @@ TEST_F(VPIRVerifierTest, testVerifyIRPhiInExitVPIRBB) {
       ::testing::internal::GetCapturedStderr().c_str());
 #endif
 }
-
 } // namespace
