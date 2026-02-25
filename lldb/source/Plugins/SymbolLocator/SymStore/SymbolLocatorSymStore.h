@@ -1,4 +1,4 @@
-//===-- SymbolLocatorMicrosoft.h -------------------------------*- C++ -*-===//
+//===-- SymbolLocatorSymStore.h ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SYMBOLLOCATOR_MICROSOFT_SYMBOLLOCATORMICROSOFT_H
-#define LLDB_SOURCE_PLUGINS_SYMBOLLOCATOR_MICROSOFT_SYMBOLLOCATORMICROSOFT_H
+#ifndef LLDB_SOURCE_PLUGINS_SYMBOLLOCATOR_SYMSTORE_SYMBOLLOCATORSYMSTORE_H
+#define LLDB_SOURCE_PLUGINS_SYMBOLLOCATOR_SYMSTORE_SYMBOLLOCATORSYMSTORE_H
 
 #include "lldb/Core/Debugger.h"
 #include "lldb/Symbol/SymbolLocator.h"
@@ -15,15 +15,15 @@
 
 namespace lldb_private {
 
-class SymbolLocatorMicrosoft : public SymbolLocator {
+class SymbolLocatorSymStore : public SymbolLocator {
 public:
-  SymbolLocatorMicrosoft();
+  SymbolLocatorSymStore();
 
   static void Initialize();
   static void Terminate();
   static void DebuggerInitialize(Debugger &debugger);
 
-  static llvm::StringRef GetPluginNameStatic() { return "microsoft"; }
+  static llvm::StringRef GetPluginNameStatic() { return "symstore"; }
   static llvm::StringRef GetPluginDescriptionStatic();
 
   static lldb_private::SymbolLocator *CreateInstance();
@@ -44,4 +44,4 @@ public:
 
 } // namespace lldb_private
 
-#endif // LLDB_SOURCE_PLUGINS_SYMBOLLOCATOR_MICROSOFT_SYMBOLLOCATORMICROSOFT_H
+#endif // LLDB_SOURCE_PLUGINS_SYMBOLLOCATOR_SYMSTORE_SYMBOLLOCATORSYMSTORE_H

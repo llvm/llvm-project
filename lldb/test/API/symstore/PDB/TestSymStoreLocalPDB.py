@@ -7,8 +7,14 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
+"""
+Test debug symbol acquisition from a local SymStore repository. We populate the
+respective file structure in a temporary directory and run LLDB on it. This is
+supposed to work cross-platform. The test can run on all platforms that can link
+debug info in a PDB file with clang.
+"""
 
-class MicrosoftSymSrvTests(TestBase):
+class SymStoreLocalPDBTests(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
     def try_breakpoint(self, should_have_loc):
@@ -37,32 +43,31 @@ class MicrosoftSymSrvTests(TestBase):
             )
         self.dbg.DeleteTarget(target)
 
-    def populate_symstore(self, tmp):
-        """
-        Build test binary and mock local symstore directory tree:
-          tmp/test/a.out                 binary (no PDB in search path)
-          tmp/server/<pdb>/<key>/<pdb>   PDB in symstore
-        """
+    def build_inferior_with_pdb(self):
+        self.main_source_file = lldb.SBFileSpec("main.c")
         self.build()
         pdbs = glob.glob(os.path.join(self.getBuildDir(), "*.pdb"))
-        if len(pdbs) == 0:
-            self.skipTest("Build did not produce a PDB file")
+        return len(pdbs) > 0
 
-        self.main_source_file = lldb.SBFileSpec("main.c")
-
+    def populate_symstore(self, tmp):
+        """
+        Mock local symstore directory tree and fill in build artifacts:
+        * tmp/test/<exe>
+        * tmp/server/<pdb>/<key>/<pdb>
+        """
         binary_name = "a.out"
         pdb_name = "a.pdb"
         key = self.symstore_key(binary_name)
         if key is None:
-            self.skipTest("Could not obtain a 20-byte PDB UUID from the binary")
+            self.skipTest("Binary has no valid UUID for PDB")
 
-        # Set up test directory with just the binary (no PDB).
+        # Move exe to isolated directory
         test_dir = os.path.join(tmp, "test")
         os.makedirs(test_dir)
         shutil.move(self.getBuildArtifact(binary_name), test_dir)
         self.aout = os.path.join(test_dir, binary_name)
 
-        # SymStore directory tree: <pdb>/<key>/<pdb>
+        # Move PDB to SymStore directory
         server_dir = os.path.join(tmp, "server")
         pdb_key_dir = os.path.join(server_dir, pdb_name, key)
         os.makedirs(pdb_key_dir)
@@ -89,15 +94,17 @@ class MicrosoftSymSrvTests(TestBase):
         except Exception:
             return None
 
-    # TODO: Check on other platforms, it should work in theory
-    @skipUnlessPlatform(["windows"])
-    def test_local_folder(self):
-        """Check that LLDB can fetch PDB from local SymStore directory"""
+    # TODO: Add a test that fails if we don't set the URL
+    def test_basic(self):
+        """Check that breakpoint hits if LLDB fetches PDB from local SymStore"""
+        if not self.build_inferior_with_pdb():
+            self.skipTest("Build did not produce a PDB file")
+            
         tmp_dir = tempfile.mkdtemp()
         symstore_dir = self.populate_symstore(tmp_dir)
 
         self.runCmd(
-            "settings set plugin.symbol-locator.microsoft.symstore-urls %s"
+            "settings set plugin.symbol-locator.symstore.urls %s"
             % symstore_dir.replace("\\", "/")
         )
 

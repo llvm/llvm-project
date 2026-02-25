@@ -1,4 +1,4 @@
-//===-- SymbolLocatorMicrosoft.cpp ---------------------------------------===//
+//===-- SymbolLocatorSymStore.cpp ---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SymbolLocatorMicrosoft.h"
+#include "SymbolLocatorSymStore.h"
 
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Core/PluginManager.h"
@@ -25,27 +25,27 @@
 using namespace lldb;
 using namespace lldb_private;
 
-LLDB_PLUGIN_DEFINE(SymbolLocatorMicrosoft)
+LLDB_PLUGIN_DEFINE(SymbolLocatorSymStore)
 
 namespace {
 
-#define LLDB_PROPERTIES_symbollocatormicrosoft
-#include "SymbolLocatorMicrosoftProperties.inc"
+#define LLDB_PROPERTIES_symbollocatorsymstore
+#include "SymbolLocatorSymStoreProperties.inc"
 
 enum {
-#define LLDB_PROPERTIES_symbollocatormicrosoft
-#include "SymbolLocatorMicrosoftPropertiesEnum.inc"
+#define LLDB_PROPERTIES_symbollocatorsymstore
+#include "SymbolLocatorSymStorePropertiesEnum.inc"
 };
 
 class PluginProperties : public Properties {
 public:
   static llvm::StringRef GetSettingName() {
-    return SymbolLocatorMicrosoft::GetPluginNameStatic();
+    return SymbolLocatorSymStore::GetPluginNameStatic();
   }
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_symbollocatormicrosoft_properties_def);
+    m_collection_sp->Initialize(g_symbollocatorsymstore_properties_def);
   }
 
   Args GetURLs() const {
@@ -62,37 +62,37 @@ static PluginProperties &GetGlobalPluginProperties() {
   return g_settings;
 }
 
-SymbolLocatorMicrosoft::SymbolLocatorMicrosoft() : SymbolLocator() {}
+SymbolLocatorSymStore::SymbolLocatorSymStore() : SymbolLocator() {}
 
-void SymbolLocatorMicrosoft::Initialize() {
+void SymbolLocatorSymStore::Initialize() {
   // First version can only locate PDB in local SymStore (no download yet)
   PluginManager::RegisterPlugin(
       GetPluginNameStatic(), GetPluginDescriptionStatic(), CreateInstance,
       nullptr, LocateExecutableSymbolFile, nullptr, nullptr,
-      SymbolLocatorMicrosoft::DebuggerInitialize);
+      SymbolLocatorSymStore::DebuggerInitialize);
 }
 
-void SymbolLocatorMicrosoft::DebuggerInitialize(Debugger &debugger) {
+void SymbolLocatorSymStore::DebuggerInitialize(Debugger &debugger) {
   if (!PluginManager::GetSettingForSymbolLocatorPlugin(
           debugger, PluginProperties::GetSettingName())) {
     constexpr bool is_global_setting = true;
     PluginManager::CreateSettingForSymbolLocatorPlugin(
         debugger, GetGlobalPluginProperties().GetValueProperties(),
-        "Properties for the Microsoft Symbol Locator plug-in.",
+        "Properties for the SymStore Symbol Locator plug-in.",
         is_global_setting);
   }
 }
 
-void SymbolLocatorMicrosoft::Terminate() {
+void SymbolLocatorSymStore::Terminate() {
   PluginManager::UnregisterPlugin(CreateInstance);
 }
 
-llvm::StringRef SymbolLocatorMicrosoft::GetPluginDescriptionStatic() {
-  return "Symbol locator for PDB in Microsoft SymStore";
+llvm::StringRef SymbolLocatorSymStore::GetPluginDescriptionStatic() {
+  return "Symbol locator for PDB in SymStore SymStore";
 }
 
-SymbolLocator *SymbolLocatorMicrosoft::CreateInstance() {
-  return new SymbolLocatorMicrosoft();
+SymbolLocator *SymbolLocatorSymStore::CreateInstance() {
+  return new SymbolLocatorSymStore();
 }
 
 // LLDB stores PDB identity as a 20-byte UUID composed of 16-byte GUID and
@@ -109,7 +109,7 @@ static std::string formatSymStoreKey(const UUID &uuid) {
   return llvm::toHex(bytes.slice(0, 16), LowerCase) + std::to_string(age);
 }
 
-std::optional<FileSpec> SymbolLocatorMicrosoft::LocateExecutableSymbolFile(
+std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     const ModuleSpec &module_spec, const FileSpecList &default_search_paths) {
   const UUID &uuid = module_spec.GetUUID();
   if (!uuid.IsValid() ||
