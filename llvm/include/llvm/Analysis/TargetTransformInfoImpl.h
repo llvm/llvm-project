@@ -1115,7 +1115,7 @@ public:
 
   virtual bool isLegalToVectorizeReduction(const RecurrenceDescriptor &RdxDesc,
                                            ElementCount VF) const {
-    return RdxDesc.getRecurrenceKind() != RecurKind::FFindLast;
+    return true;
   }
 
   virtual bool isElementTypeLegalForScalableVector(Type *Ty) const {
