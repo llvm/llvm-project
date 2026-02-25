@@ -1154,6 +1154,7 @@ def SWMMACSparseInTypes : AnyTypeOf<[
     VectorOfLengthAndType<[4, 8, 16], [F16]>,
     VectorOfLengthAndType<[4, 8, 16], [BF16]>,
     VectorOfLengthAndType<[4, 8, 32], [I8]>,
+    VectorOfLengthAndType<[8, 16], [I<4>]>,
     VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FN, F8E5M2]>,
     VectorOfLengthAndType<[4, 8, 16, 32], [F8E4M3FNUZ, F8E5M2FNUZ]>
 ]>;
@@ -1162,6 +1163,7 @@ def SWMMACDenseInTypes : AnyTypeOf<[
     VectorOfLengthAndType<[8, 16, 32], [F16]>,
     VectorOfLengthAndType<[8, 16, 32], [BF16]>,
     VectorOfLengthAndType<[4, 8, 16, 64], [I8]>,
+    VectorOfLengthAndType<[8, 16, 32], [I<4>]>,
     VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FN, F8E5M2]>,
     VectorOfLengthAndType<[4, 8, 16, 64], [F8E4M3FNUZ, F8E5M2FNUZ]>
 ]>;
@@ -1239,7 +1241,7 @@ def AMDGPU_SparseWMMAOp :
     attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
-  let hasVerifier = 0;
+  let hasVerifier = 1;
 }
 
 def AMDGPU_GatherToLDSOp :
