@@ -855,3 +855,25 @@ define float @ret_fmul__not_inf__2(float nofpclass(inf) %x) {
   %mul = fmul float %x, 2.0
   ret float %mul
 }
+
+; Negative test
+define float @ret_fmul__not_inf__nextup_1(float nofpclass(inf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_inf__nextup_1(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 0x3FF0000020000000
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 0x3ff0000020000000
+  ret float %mul
+}
+
+; Negative test
+define float @ret_fmul__not_inf__1.5(float nofpclass(inf) %x) {
+; CHECK-LABEL: define float @ret_fmul__not_inf__1.5(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[X]], 1.500000e+00
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %mul = fmul float %x, 1.5
+  ret float %mul
+}
