@@ -27,7 +27,9 @@
                 {{^Value}}
                 <td>{{ValueExpr}}</td>
                 {{/Value}}
-                {{#HasComments}}<td>{{#Description}}{{>Comments}}{{/Description}}{{^Description}} -- {{/Description}}</td>{{/HasComments}}
+                {{#HasComments}}
+                <td>{{#Description}}{{>Comments}}{{/Description}}{{^Description}} -- {{/Description}}</td>
+                {{/HasComments}}
             </tr>
             {{/Members}}
         </tbody>

@@ -179,20 +179,20 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
     writeLine("| enum " + I.Name + " |", OS);
   writeLine("--", OS);
 
-  OS << "| Name | Value |";
-  bool HasComments = false;
-  for (const auto &Member : I.Members) {
-    if (!Member.Description.empty()) {
-      HasComments = true;
-      break;
-    }
-  }
-  if (HasComments)
-    OS << " Comments |";
-  OS << "\n\n";
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
-  if (!I.Members.empty())
+  if (!I.Members.empty()) {
+    OS << "| Name | Value |";
+    bool HasComments = false;
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        HasComments = true;
+        break;
+      }
+    }
+    if (HasComments)
+      OS << " Comments |";
+    OS << "\n\n";
     for (const auto &N : I.Members) {
       Members << "| " << N.Name << " ";
       if (!N.Value.empty())
@@ -205,6 +205,7 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
       }
       Members << "|\n";
     }
+  }
   writeLine(Members.str(), OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);

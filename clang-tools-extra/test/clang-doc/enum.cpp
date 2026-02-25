@@ -133,18 +133,25 @@ public:
 // HTML-ANIMAL-NEXT:                 <tr>
 // HTML-ANIMAL-NEXT:                     <th>Name</th>
 // HTML-ANIMAL-NEXT:                     <th>Value</th>
+// HTML-ANIMAL-NEXT:                     <th>Comments</th>
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:                 <tr>
 // HTML-ANIMAL-NEXT:                     <td>Dog</td>
 // HTML-ANIMAL-NEXT:                     <td>0</td>
+// HTML-ANIMAL-NEXT:                     <td> Man&#39;s best friend
+// HTML-ANIMAL-NEXT:                     </td>
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:                 <tr>
 // HTML-ANIMAL-NEXT:                     <td>Cat</td>
 // HTML-ANIMAL-NEXT:                     <td>1</td>
+// HTML-ANIMAL-NEXT:                     <td>  Man&#39;s other best friend
+// HTML-ANIMAL-NEXT:                     </td>
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:                 <tr>
 // HTML-ANIMAL-NEXT:                     <td>Iguana</td>
 // HTML-ANIMAL-NEXT:                     <td>2</td>
+// HTML-ANIMAL-NEXT:                     <td> A lizard
+// HTML-ANIMAL-NEXT:                     </td>
 // HTML-ANIMAL-NEXT:                 </tr>
 // HTML-ANIMAL-NEXT:             </tbody>
 // HTML-ANIMAL-NEXT:         </table>
@@ -161,9 +168,10 @@ public:
 // MD-ANIMAL: ## Enums
 // MD-ANIMAL: | enum AnimalType |
 // MD-ANIMAL: --
-// MD-ANIMAL: | Dog |
-// MD-ANIMAL: | Cat |
-// MD-ANIMAL: | Iguana |
+// MD-ANIMAL: | Name | Value | Comments |
+// MD-ANIMAL: | Dog | 0 | Man's best friend |
+// MD-ANIMAL: | Cat | 1 | Man's other best friend |
+// MD-ANIMAL: | Iguana | 2 | A lizard |
 // MD-ANIMAL: **brief** specify what animal the class is
 
 namespace Vehicles {
