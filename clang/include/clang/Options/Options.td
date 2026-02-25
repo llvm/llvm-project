@@ -1572,6 +1572,11 @@ defm access_control : BoolFOption<"access-control",
   PosFlag<SetTrue>>;
 def falign_functions : Flag<["-"], "falign-functions">, Group<f_Group>;
 def falign_functions_EQ : Joined<["-"], "falign-functions=">, Group<f_Group>;
+def fpreferred_function_alignment_EQ :
+  Joined<["-"], "fpreferred-function-alignment=">, Group<f_Group>,
+  HelpText<"preferred alignment for functions">,
+  Visibility<[ClangOption, CC1Option]>,
+  MarshallingInfoInt<LangOpts<"PreferredFunctionAlignment">>;
 def falign_loops_EQ : Joined<["-"], "falign-loops=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>, MetaVarName<"<N>">,
   HelpText<"N must be a power of two. Align loops to the boundary">,
@@ -3292,6 +3297,11 @@ def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"ClangIR: Disable MLIR module verifier">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
+
+def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recognizer">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Enable Idiom Recognizer pass">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
 
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,

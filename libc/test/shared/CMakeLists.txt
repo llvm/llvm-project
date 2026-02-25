@@ -7,6 +7,7 @@ add_fp_unittest(
   SRCS
     shared_math_test.cpp
   DEPENDS
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.math.acos
     libc.src.__support.math.acosf
     libc.src.__support.math.acosf16
@@ -18,6 +19,7 @@ add_fp_unittest(
     libc.src.__support.math.asinf16
     libc.src.__support.math.asinhf
     libc.src.__support.math.asinhf16
+    libc.src.__support.math.asinpif16
     libc.src.__support.math.atan
     libc.src.__support.math.atan2
     libc.src.__support.math.atan2f
@@ -146,10 +148,28 @@ add_fp_unittest(
     libc.src.__support.math.logbl
     libc.src.__support.math.logf16
     libc.src.__support.math.llogbl
+    libc.src.__support.math.nextdown
+    libc.src.__support.math.nextdownbf16
+    libc.src.__support.math.nextdownf
+    libc.src.__support.math.nextdownf128
+    libc.src.__support.math.nextdownf16
+    libc.src.__support.math.nextdownl
     libc.src.__support.math.pow
     libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf
     libc.src.__support.math.rsqrtf16
+    libc.src.__support.math.setpayload
+    libc.src.__support.math.setpayloadbf16
+    libc.src.__support.math.setpayloadf
+    libc.src.__support.math.setpayloadf128
+    libc.src.__support.math.setpayloadf16
+    libc.src.__support.math.setpayloadl
+    libc.src.__support.math.setpayloadsig
+    libc.src.__support.math.setpayloadsigbf16
+    libc.src.__support.math.setpayloadsigf
+    libc.src.__support.math.setpayloadsigf128
+    libc.src.__support.math.setpayloadsigf16
+    libc.src.__support.math.setpayloadsigl
     libc.src.__support.math.sqrtf16
     libc.src.__support.math.sin
     libc.src.__support.math.sincos

@@ -80,6 +80,9 @@ Changes to LLVM infrastructure
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 
+* Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
+  `llvm/utils/reduce_pipeline.py`.
+
 Changes to building LLVM
 ------------------------
 
@@ -211,6 +214,8 @@ Changes to LLDB
 
 #### Kernel Debugging
 
+* The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin. 
 * Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
   available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
   from any platform.
