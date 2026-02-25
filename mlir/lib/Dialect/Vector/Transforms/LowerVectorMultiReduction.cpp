@@ -549,15 +549,6 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
                                                     benefit);
 }
 
-void mlir::vector::populateVectorMultiReductionLoweringPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit) {
-  populateVectorMultiReductionReorderAndExpandPatterns(patterns, options,
-                                                       benefit);
-  populateVectorMultiReductionFlatteningPatterns(patterns, options, benefit);
-  populateVectorMultiReductionUnrollingPatterns(patterns, options, benefit);
-}
-
 std::unique_ptr<Pass> vector::createLowerVectorMultiReductionPass(
     vector::VectorMultiReductionLowering option) {
   return std::make_unique<LowerVectorMultiReductionPass>(option);
