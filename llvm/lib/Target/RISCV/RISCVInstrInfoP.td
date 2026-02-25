@@ -1628,13 +1628,13 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : InstAlias<"pmsgtu.dw $rd, $rs, $rt",
                   (PMSLTU_DW GPRPairRV32:$rd, GPRPairRV32:$rt, GPRPairRV32:$rs), 0>;
 
-  def : InstAlias<"pwcvt.b $rd, $rs", (PWADD_B GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvt.h $rd, $rs", (PWADD_H GPR:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvt.b $rd, $rs", (PWADD_B GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvt.h $rd, $rs", (PWADD_H GPRPairRV32:$rd, GPR:$rs, X0)>;
 
-  def : InstAlias<"pwcvtu.b $rd, $rs", (WZIP8P GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvtu.h $rd, $rs", (WZIP16P GPR:$rd, GPR:$rs, X0)>;
-  def : InstAlias<"pwcvth.b $rd, $rs", (WZIP8P GPR:$rd, X0, GPR:$rs)>;
-  def : InstAlias<"pwcvth.h $rd, $rs", (WZIP16P GPR:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvtu.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvtu.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, GPR:$rs, X0)>;
+  def : InstAlias<"pwcvth.b $rd, $rs", (WZIP8P GPRPairRV32:$rd, X0, GPR:$rs)>;
+  def : InstAlias<"pwcvth.h $rd, $rs", (WZIP16P GPRPairRV32:$rd, X0, GPR:$rs)>;
 
   def : InstAlias<"pncvt.b $rd, $rs", (PNSRLI_B GPR:$rd, GPRPairRV32:$rs, 0)>;
   def : InstAlias<"pncvt.h $rd, $rs", (PNSRLI_H GPR:$rd, GPRPairRV32:$rs, 0)>;

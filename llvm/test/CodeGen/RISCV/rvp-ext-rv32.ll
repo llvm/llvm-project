@@ -1068,7 +1068,7 @@ define <2 x i16> @test_pmul_h(<2 x i16> %a, <2 x i16> %b) {
 ; CHECK-RV32-LABEL: test_pmul_h:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    pwmul.h a0, a0, a1
-; CHECK-RV32-NEXT:    pnsrli.h a0, a0, 0
+; CHECK-RV32-NEXT:    pncvt.h a0, a0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_pmul_h:
@@ -1086,7 +1086,7 @@ define <4 x i8> @test_pmul_b(<4 x i8> %a, <4 x i8> %b) {
 ; CHECK-RV32-LABEL: test_pmul_b:
 ; CHECK-RV32:       # %bb.0:
 ; CHECK-RV32-NEXT:    pwmul.b a0, a0, a1
-; CHECK-RV32-NEXT:    pnsrli.b a0, a0, 0
+; CHECK-RV32-NEXT:    pncvt.b a0, a0
 ; CHECK-RV32-NEXT:    ret
 ;
 ; CHECK-RV64-LABEL: test_pmul_b:

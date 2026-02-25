@@ -124,3 +124,35 @@ pmsgt.w a0, a1, a2
 # CHECK-S-OBJ-NOALIAS: pmsltu.w a3, a5, a4
 # CHECK-S-OBJ: pmsltu.w a3, a5, a4
 pmsgtu.w a3, a4, a5
+
+# CHECK-S-OBJ-NOALIAS: zip8p a4, a5, zero
+# CHECK-S-OBJ: pwcvtu.b a4, a5
+pwcvtu.b a4, a5
+
+# CHECK-S-OBJ-NOALIAS: zip16p a6, a7, zero
+# CHECK-S-OBJ: pwcvtu.h a6, a7
+pwcvtu.h a6, a7
+
+# CHECK-S-OBJ-NOALIAS: zip8p s0, zero, s1
+# CHECK-S-OBJ: pwcvth.b s0, s1
+pwcvth.b s0, s1
+
+# CHECK-S-OBJ-NOALIAS: zip16p s2, zero, s3
+# CHECK-S-OBJ: pwcvth.h s2, s3
+pwcvth.h s2, s3
+
+# CHECK-S-OBJ-NOALIAS: unzip8p s3, s4, zero
+# CHECK-S-OBJ: pncvt.b s3, s4
+pncvt.b s3, s4
+
+# CHECK-S-OBJ-NOALIAS: unzip16p s5, s6, zero
+# CHECK-S-OBJ: pncvt.h s5, s6
+pncvt.h s5, s6
+
+# CHECK-S-OBJ-NOALIAS: unzip8hp s7, s8, zero
+# CHECK-S-OBJ: pncvth.b s7, s8
+pncvth.b s7, s8
+
+# CHECK-S-OBJ-NOALIAS: unzip16hp s9, s10, zero
+# CHECK-S-OBJ: pncvth.h s9, s10
+pncvth.h s9, s10
