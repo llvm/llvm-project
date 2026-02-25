@@ -125,7 +125,7 @@ module attributes {
     // CHECK-SAME:    !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>
     gpu.func @gpu_wmma_elementwise_op_default(%A: !gpu.mma_matrix<16x16xf16, "COp">,
                                               %B: !gpu.mma_matrix<16x16xf16, "COp">,
-                                              %ptr: memref<16x16xf32, #spirv.storage_class<StorageBuffer>>) kernel
+                                              %ptr: memref<16x16xf16, #spirv.storage_class<StorageBuffer>>) kernel
       attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 4, 1]>} {
       // CHECK:  {{%.*}} = spirv.FAdd {{%.*}}, {{%.*}} : !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>
       %C = gpu.subgroup_mma_elementwise addf %A, %B :
@@ -143,11 +143,15 @@ module attributes {
       // CHECK-SAME: !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc> to !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc>
       %G = gpu.subgroup_mma_elementwise extf %F :
         (!gpu.mma_matrix<16x16xf16, "COp">) -> !gpu.mma_matrix<16x16xf32, "COp">
+      // CHECK:  {{%.*}} = spirv.FConvert {{%.*}} :
+      // CHECK-SAME: !spirv.coopmatrix<16x16xf32, Subgroup, MatrixAcc> to !spirv.coopmatrix<16x16xf16, Subgroup, MatrixAcc>
+      %H = gpu.subgroup_mma_elementwise truncf %G :
+        (!gpu.mma_matrix<16x16xf32, "COp">) -> !gpu.mma_matrix<16x16xf16, "COp">
 
       %i = arith.constant 0 : index
       // CHECK: spirv.KHR.CooperativeMatrixStore %{{.+}}, %{{.+}}, %{{.+}}, <RowMajor>
-      gpu.subgroup_mma_store_matrix %G, %ptr[%i,%i] {leadDimension = 32 : index} :
-        !gpu.mma_matrix<16x16xf32, "COp">, memref<16x16xf32, #spirv.storage_class<StorageBuffer>>
+      gpu.subgroup_mma_store_matrix %H, %ptr[%i,%i] {leadDimension = 32 : index} :
+        !gpu.mma_matrix<16x16xf16, "COp">, memref<16x16xf16, #spirv.storage_class<StorageBuffer>>
       // CHECK: spirv.Return
       gpu.return
     }

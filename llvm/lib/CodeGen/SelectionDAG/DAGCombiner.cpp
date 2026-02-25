@@ -8596,6 +8596,40 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
       // do not return N1, because undef node may exist in N1
       return DAG.getAllOnesConstant(DL, N1.getValueType());
 
+    // fold (or buildvector(x,0,-1,w), buildvector(0,y,z,w))
+    // --> buildvector(x,y,-1,w)
+    auto *BV0 = dyn_cast<BuildVectorSDNode>(N0);
+    auto *BV1 = dyn_cast<BuildVectorSDNode>(N1);
+    if (BV0 && BV1 && !BV0->getSplatValue() && !BV1->getSplatValue() &&
+        N0.hasOneUse() && N1.hasOneUse() &&
+        BV0->getOperand(0).getValueType() ==
+            BV1->getOperand(0).getValueType()) {
+      SmallVector<SDValue> MergedOps;
+      unsigned NumElts = VT.getVectorNumElements();
+      EVT EltVT = BV0->getOperand(0).getValueType();
+      for (unsigned I = 0; I != NumElts; ++I) {
+        auto *C0 = dyn_cast<ConstantSDNode>(BV0->getOperand(I));
+        auto *C1 = dyn_cast<ConstantSDNode>(BV1->getOperand(I));
+        if (C0 && C1)
+          MergedOps.push_back(DAG.getConstant(
+              C0->getAPIntValue() | C1->getAPIntValue(), DL, EltVT));
+        else if (C0 && C0->isZero())
+          MergedOps.push_back(BV1->getOperand(I));
+        else if (C1 && C1->isZero())
+          MergedOps.push_back(BV0->getOperand(I));
+        else if (C0 && C0->isAllOnes())
+          MergedOps.push_back(BV0->getOperand(I));
+        else if (C1 && C1->isAllOnes())
+          MergedOps.push_back(BV1->getOperand(I));
+        else if (BV0->getOperand(I) == BV1->getOperand(I))
+          MergedOps.push_back(BV0->getOperand(I));
+        else
+          break;
+      }
+      if (MergedOps.size() == NumElts)
+        return DAG.getBuildVector(VT, DL, MergedOps);
+    }
+
     // fold (or (shuf A, V_0, MA), (shuf B, V_0, MB)) -> (shuf A, B, Mask)
     // Do this only if the resulting type / shuffle is legal.
     auto *SV0 = dyn_cast<ShuffleVectorSDNode>(N0);
