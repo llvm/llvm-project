@@ -1592,6 +1592,20 @@ struct WMMAOpLowering : public ConvertOpToLLVMPattern<WMMAOp> {
   }
 };
 
+struct SparseWMMAOpLowering : public ConvertOpToLLVMPattern<SparseWMMAOp> {
+  SparseWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<SparseWMMAOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(SparseWMMAOp op, SparseWMMAOpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    // TODO (Ravil)
+    return success();
+  }
+};
+
 struct ScaledWMMAOpLowering : public ConvertOpToLLVMPattern<ScaledWMMAOp> {
   ScaledWMMAOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<ScaledWMMAOp>(converter), chipset(chipset) {}
