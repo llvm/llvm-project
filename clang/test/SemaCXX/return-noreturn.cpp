@@ -262,3 +262,10 @@ int functionTryBlock3(int s) try {
 } catch (...) {
   return 0;
 } // ok, both paths return.
+
+namespace GH174822 {
+[[noreturn]] void t() {
+  throw 1;
+  try {} catch(...) {}
+}
+}
