@@ -4,57 +4,75 @@
 ; RUN: opt -p instcombine -mtriple=riscv32 -mattr=+zve32x -S %s | FileCheck %s --check-prefixes=CHECK,ZVE32X
 ; RUN: opt -p instcombine -mtriple=riscv64 -mattr=+zve32x -S %s | FileCheck %s --check-prefixes=CHECK,ZVE32X
 
-define <vscale x 1 x i64> @scalable() {
-; CHECK-LABEL: define <vscale x 1 x i64> @scalable(
+define <vscale x 2 x i32> @target_vl_one() {
+; CHECK-LABEL: define <vscale x 2 x i32> @target_vl_one(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 1431655765, i64 1)
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 2 x i32> [[TMP1]] to <vscale x 1 x i64>
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 ;
   %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
-  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
-  ret <vscale x 1 x i64> %b
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %b
 }
 
-define <vscale x 1 x i64> @small_scalar() {
-; CHECK-LABEL: define <vscale x 1 x i64> @small_scalar(
+define <vscale x 4 x i16> @target_vl_two() {
+; CHECK-LABEL: define <vscale x 4 x i16> @target_vl_two(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i16> @llvm.riscv.vmv.v.x.nxv4i16.i64(<vscale x 4 x i16> poison, i16 21845, i64 2)
+; CHECK-NEXT:    ret <vscale x 4 x i16> [[TMP1]]
+;
+  %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 4 x i16>
+  ret <vscale x 4 x i16> %b
+}
+
+define <vscale x 2 x i32> @target_vl_32() {
+; CHECK-LABEL: define <vscale x 2 x i32> @target_vl_32(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 1431655765, i64 32)
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
+;
+  %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 128)
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %b
+}
+
+define <vscale x 2 x i32> @small_scalar() {
+; CHECK-LABEL: define <vscale x 2 x i32> @small_scalar(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 50529027, i64 1)
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 2 x i32> [[TMP1]] to <vscale x 1 x i64>
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 ;
   %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 3, i64 4)
-  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
-  ret <vscale x 1 x i64> %b
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %b
 }
 
-define <vscale x 1 x i64> @negative_scalar() {
-; CHECK-LABEL: define <vscale x 1 x i64> @negative_scalar(
+define <vscale x 2 x i32> @negative_scalar() {
+; CHECK-LABEL: define <vscale x 2 x i32> @negative_scalar(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 -50529028, i64 1)
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 2 x i32> [[TMP1]] to <vscale x 1 x i64>
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP1]]
 ;
   %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 -4, i64 4)
-  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
-  ret <vscale x 1 x i64> %b
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %b
 }
 
-define <vscale x 64 x i1> @users() {
-; CHECK-LABEL: define <vscale x 64 x i1> @users(
+define <vscale x 2 x i32> @users() {
+; CHECK-LABEL: define <vscale x 2 x i32> @users(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 1431655765, i64 1)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 -1431655766, i64 1)
 ; CHECK-NEXT:    [[RET1:%.*]] = xor <vscale x 2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[RET:%.*]] = bitcast <vscale x 2 x i32> [[RET1]] to <vscale x 64 x i1>
-; CHECK-NEXT:    ret <vscale x 64 x i1> [[RET]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[RET1]]
 ;
   %vmv.1 = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
-  %cast.1 = bitcast <vscale x 8 x i8> %vmv.1 to <vscale x 64 x i1>
+  %cast.1 = bitcast <vscale x 8 x i8> %vmv.1 to <vscale x 2 x i32>
   %vmv.2 = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 -86, i64 4)
-  %cast.2 = bitcast <vscale x 8 x i8> %vmv.2 to <vscale x 64 x i1>
-  %ret = xor <vscale x 64 x i1> %cast.1, %cast.2
-  ret <vscale x 64 x i1> %ret
+  %cast.2 = bitcast <vscale x 8 x i8> %vmv.2 to <vscale x 2 x i32>
+  %ret = xor <vscale x 2 x i32> %cast.1, %cast.2
+  ret <vscale x 2 x i32> %ret
 }
 
 define <vscale x 8 x i8> @no_bitcast() {
@@ -67,62 +85,74 @@ define <vscale x 8 x i8> @no_bitcast() {
   ret <vscale x 8 x i8> %a
 }
 
-define <vscale x 1 x i64> @passthru_non_poison(<vscale x 8 x i8> %x) {
-; CHECK-LABEL: define <vscale x 1 x i64> @passthru_non_poison(
+define <vscale x 1 x i64> @bitcast_target_elt_type_too_large() {
+; CHECK-LABEL: define <vscale x 1 x i64> @bitcast_target_elt_type_too_large(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> poison, i8 85, i64 4)
+; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 1 x i64>
+; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
+;
+  %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
+  ret <vscale x 1 x i64> %b
+}
+
+define <vscale x 64 x i1> @bitcast_target_elt_type_too_small() {
+; CHECK-LABEL: define <vscale x 64 x i1> @bitcast_target_elt_type_too_small(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> poison, i8 85, i64 4)
+; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 64 x i1>
+; CHECK-NEXT:    ret <vscale x 64 x i1> [[B]]
+;
+  %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 64 x i1>
+  ret <vscale x 64 x i1> %b
+}
+
+define <vscale x 2 x i32> @passthru_non_poison(<vscale x 8 x i8> %x) {
+; CHECK-LABEL: define <vscale x 2 x i32> @passthru_non_poison(
 ; CHECK-SAME: <vscale x 8 x i8> [[X:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> [[X]], i8 85, i64 4)
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 1 x i64>
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
 ;
   %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> %x, i8 85, i64 4)
-  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
-  ret <vscale x 1 x i64> %b
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %b
 }
 
-define <vscale x 1 x i64> @scalar_non_constant(i8 %scalar) {
-; CHECK-LABEL: define <vscale x 1 x i64> @scalar_non_constant(
+define <vscale x 2 x i32> @scalar_non_constant(i8 %scalar) {
+; CHECK-LABEL: define <vscale x 2 x i32> @scalar_non_constant(
 ; CHECK-SAME: i8 [[SCALAR:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> poison, i8 [[SCALAR]], i64 4)
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 1 x i64>
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
 ;
   %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 %scalar, i64 4)
-  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
-  ret <vscale x 1 x i64> %b
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %b
 }
 
-define <vscale x 1 x i64> @vl_non_constant(i64 %vl) {
-; CHECK-LABEL: define <vscale x 1 x i64> @vl_non_constant(
+define <vscale x 2 x i32> @vl_non_constant(i64 %vl) {
+; CHECK-LABEL: define <vscale x 2 x i32> @vl_non_constant(
 ; CHECK-SAME: i64 [[VL:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[A:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> poison, i8 85, i64 [[VL]])
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 1 x i64>
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
+; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 2 x i32>
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[B]]
 ;
   %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 %vl)
-  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
-  ret <vscale x 1 x i64> %b
-}
-
-define <vscale x 1 x i64> @vl_too_large() {
-; CHECK-LABEL: define <vscale x 1 x i64> @vl_too_large(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> poison, i8 85, i64 128)
-; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 8 x i8> [[A]] to <vscale x 1 x i64>
-; CHECK-NEXT:    ret <vscale x 1 x i64> [[B]]
-;
-  %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 128)
-  %b = bitcast <vscale x 8 x i8> %a to <vscale x 1 x i64>
-  ret <vscale x 1 x i64> %b
+  %b = bitcast <vscale x 8 x i8> %a to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %b
 }
 
 define <vscale x 1 x i32> @vl_not_divisible() {
 ; CHECK-LABEL: define <vscale x 1 x i32> @vl_not_divisible(
 ; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vmv.v.x.nxv4i8.i64(<vscale x 4 x i8> poison, i8 85, i64 8)
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 4 x i8> @llvm.riscv.vmv.v.x.nxv4i8.i64(<vscale x 4 x i8> poison, i8 85, i64 7)
 ; CHECK-NEXT:    [[B:%.*]] = bitcast <vscale x 4 x i8> [[A]] to <vscale x 1 x i32>
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[B]]
 ;
-  %a = call <vscale x 4 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 4 x i8> poison, i8 85, i64 8)
+  %a = call <vscale x 4 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 4 x i8> poison, i8 85, i64 7)
   %b = bitcast <vscale x 4 x i8> %a to <vscale x 1 x i32>
   ret <vscale x 1 x i32> %b
 }

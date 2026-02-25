@@ -3562,39 +3562,51 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
 
 std::optional<Instruction *>
 RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
-  // If all operands are constant, constant-fold with bitcast: make sure that
-  // all users are bitcasts, to avoid introducing new bitcasts. The rationale
-  // for this is to optimize the number of inserted vsetvli instructions, by
-  // RISCVInsertVSETVLI.
+  // If all operands of a vmv.v.vx are constant, fold a bitcast(vmv.v.vx) to
+  // scale the vmv.v.vx, enabling removal of the bitcast. The transform helps
+  // avoid creating redundant masks.
   const DataLayout &DL = IC.getDataLayout();
+  auto *TargetVecTy = dyn_cast<ScalableVectorType>(II.user_back()->getType());
+  if (!TargetVecTy)
+    return {};
   const APInt *Scalar;
   uint64_t VL;
   if (!match(&II, m_Intrinsic<Intrinsic::riscv_vmv_v_x>(
                       m_Poison(), m_APInt(Scalar), m_ConstantInt(VL))) ||
-      VL == 1 || !all_of(II.users(), match_fn(m_BitCast(m_Value()))))
+      !all_of(II.users(), [TargetVecTy](User *U) {
+        return U->getType() == TargetVecTy && match(U, m_BitCast(m_Value()));
+      }))
     return {};
-  auto *VecTy = cast<ScalableVectorType>(II.getType());
-  ElementCount EC = VecTy->getElementCount();
-  ElementCount ScaleFactor = ElementCount::getScalable(VL);
-  auto *EltTy = cast<IntegerType>(VecTy->getElementType());
-  unsigned NewEltBW = DL.getTypeSizeInBits(EltTy) * VL;
-  if (!EC.hasKnownScalarFactor(ScaleFactor) || !DL.fitsInLegalInteger(NewEltBW))
+  auto *SourceVecTy = cast<ScalableVectorType>(II.getType());
+  unsigned TargetEltBW = DL.getTypeSizeInBits(TargetVecTy->getElementType());
+  unsigned SourceEltBW = DL.getTypeSizeInBits(SourceVecTy->getElementType());
+  if (TargetEltBW % SourceEltBW)
+    return {};
+  unsigned TargetScale = TargetEltBW / SourceEltBW;
+  if (VL % TargetScale)
+    return {};
+  Type *VLTy = II.getOperand(2)->getType();
+  ElementCount ScaleEC = ElementCount::getScalable(TargetScale);
+  ElementCount SourceEC = SourceVecTy->getElementCount();
+  unsigned NewEltBW = SourceEltBW * TargetScale;
+  if (!SourceEC.hasKnownScalarFactor(ScaleEC) ||
+      !DL.fitsInLegalInteger(NewEltBW))
     return {};
   auto *NewEltTy = IntegerType::get(II.getContext(), NewEltBW);
   if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, NewEltTy)))
     return {};
   ElementCount NewEC =
-      ElementCount::getScalable(EC.getKnownScalarFactor(ScaleFactor));
+      ElementCount::getScalable(SourceEC.getKnownScalarFactor(ScaleEC));
   Type *RetTy = VectorType::get(NewEltTy, NewEC);
-  assert(VecTy->canLosslesslyBitCastTo(RetTy) &&
+  assert(SourceVecTy->canLosslesslyBitCastTo(RetTy) &&
          "Lossless bitcast between types expected");
   APInt NewScalar = APInt::getSplat(NewEltBW, *Scalar);
-  Type *VLTy = II.getOperand(2)->getType();
   return IC.replaceInstUsesWith(
-      II, IC.Builder.CreateBitCast(
-              IC.Builder.CreateIntrinsic(RetTy, Intrinsic::riscv_vmv_v_x,
-                                         {PoisonValue::get(RetTy),
-                                          ConstantInt::get(NewEltTy, NewScalar),
-                                          ConstantInt::get(VLTy, 1)}),
-              VecTy));
+      II,
+      IC.Builder.CreateBitCast(
+          IC.Builder.CreateIntrinsic(
+              RetTy, Intrinsic::riscv_vmv_v_x,
+              {PoisonValue::get(RetTy), ConstantInt::get(NewEltTy, NewScalar),
+               ConstantInt::get(VLTy, VL / TargetScale)}),
+          SourceVecTy));
 }
