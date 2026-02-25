@@ -911,14 +911,14 @@ void PyDynamicType::bindDerived(ClassTy &c) {
            std::string(name.data, name.length);
   });
   c.def_static(
-      "get_typeid",
+      "lookup_typeid",
       [](const std::string &fullTypeName, DefaultingPyMlirContext context) {
         MlirDynamicTypeDefinition typeDef =
             getDynamicTypeDef(fullTypeName, context);
         return PyTypeID(mlirDynamicTypeDefinitionGetTypeID(typeDef));
       },
       nb::arg("full_type_name"), nb::arg("context") = nb::none(),
-      "Returns the TypeID for the given dynamic type name.");
+      "Look up the TypeID for the given dynamic type name.");
 }
 
 void populateIRTypes(nb::module_ &m) {

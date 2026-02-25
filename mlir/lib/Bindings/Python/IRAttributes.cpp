@@ -1444,14 +1444,14 @@ void PyDynamicAttribute::bindDerived(ClassTy &c) {
            std::string(name.data, name.length);
   });
   c.def_static(
-      "get_typeid",
+      "lookup_typeid",
       [](const std::string &fullAttrName, DefaultingPyMlirContext context) {
         MlirDynamicAttrDefinition attrDef =
             getDynamicAttrDef(fullAttrName, context);
         return PyTypeID(mlirDynamicAttrDefinitionGetTypeID(attrDef));
       },
       nb::arg("full_attr_name"), nb::arg("context") = nb::none(),
-      "Returns the TypeID for the given dynamic attribute name.");
+      "Look up the TypeID for the given dynamic attribute name.");
 }
 
 void populateIRAttributes(nb::module_ &m) {

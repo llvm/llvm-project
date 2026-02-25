@@ -680,5 +680,5 @@ class Dialect(ir.Dialect):
                 register_dialect_operation(op)
 
             for type_ in cls.types:
-                typeid = ir.DynamicType.get_typeid(type_.type_name)
+                typeid = ir.DynamicType.lookup_typeid(type_.type_name)
                 _cext.register_type_caster(typeid)(type_)
