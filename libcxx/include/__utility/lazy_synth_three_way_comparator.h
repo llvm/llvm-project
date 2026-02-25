@@ -9,6 +9,7 @@
 #ifndef _LIBCPP___UTILITY_LAZY_SYNTH_THREE_WAY_COMPARATOR_H
 #define _LIBCPP___UTILITY_LAZY_SYNTH_THREE_WAY_COMPARATOR_H
 
+#include <__assert>
 #include <__config>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/desugars_to.h>
