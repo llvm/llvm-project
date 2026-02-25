@@ -9,24 +9,19 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_ASINPIF_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_ASINPIF_H
 
+#include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/cast.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/FPUtil/sqrt.h"
-#include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
-#include "src/__support/macros/properties/types.h"
-
-#include "hdr/errno_macros.h"
-#include "hdr/fenv_macros.h"
-#include "src/__support/FPUtil/FEnvImpl.h"
-#include "src/__support/FPUtil/except_value_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-LIBC_INLINE constexpr float asinpif(float x) {
+LIBC_INLINE float asinpif(float x) {
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   constexpr size_t N_EXCEPTS = 5;
   constexpr fputil::ExceptValues<float, N_EXCEPTS> ASINPIF_EXCEPTS = {
