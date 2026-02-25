@@ -65,6 +65,15 @@ void AmdgpuMemFuncs::NotifyAmdgpuRuntimeShutdown() {
   }
 }
 
+// Clear shutdown state when hsa_init() succeeds again (re-init after shutdown).
+// Resets amdgpu_runtime_shutdown so allocator operations are enabled, and
+// amdgpu_event_registered so RegisterSystemEventHandlers() will register the
+// shutdown callback for the new runtime instance.
+void AmdgpuMemFuncs::ClearAmdgpuRuntimeShutdownState() {
+  atomic_store(&amdgpu_runtime_shutdown, 0, memory_order_release);
+  atomic_store(&amdgpu_event_registered, 0, memory_order_release);
+}
+
 bool AmdgpuMemFuncs::Init() {
   bool success = true;
   LOAD_HSA_FUNC_WITH_ERROR_CHECK(hsa_amd.memory_pool_allocate,

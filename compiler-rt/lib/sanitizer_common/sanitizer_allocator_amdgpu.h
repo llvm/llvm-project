@@ -24,6 +24,7 @@ class AmdgpuMemFuncs {
   static uptr GetPageSize();
   static void RegisterSystemEventHandlers();
   static bool IsAmdgpuRuntimeShutdown();
+  static void ClearAmdgpuRuntimeShutdownState();
 
  private:
   static void NotifyAmdgpuRuntimeShutdown();
