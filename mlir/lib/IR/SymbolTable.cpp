@@ -132,8 +132,6 @@ SymbolTable::SymbolTable(Operation *symbolTableOp)
 
     auto inserted = symbolTable.insert({name, &op});
     (void)inserted;
-    assert(inserted.second &&
-           "expected region to contain uniquely named symbol operations");
   }
 }
 

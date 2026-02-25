@@ -166,4 +166,34 @@ TEST(SymbolOpInterface, Visibility) {
   ASSERT_EQ(diagStr, expectedDiag);
 }
 
+TEST(SymbolOpInterface, Duplicate) {
+  DialectRegistry registry;
+  ::test::registerTestDialect(registry);
+  MLIRContext context(registry);
+
+  constexpr static StringLiteral kInput = R"MLIR(
+    "test.overridden_symbol_visibility"() {sym_name = "duplicate_symbol_name"} : () -> ()
+    "test.overridden_symbol_visibility"() {sym_name = "duplicate_symbol_name"} : () -> ()
+  )MLIR";
+
+  constexpr bool verifyAfterParse = false;
+  ParserConfig parserConfig(&context, verifyAfterParse);
+  OwningOpRef<ModuleOp> module =
+      parseSourceString<ModuleOp>(kInput, parserConfig);
+
+  // copying an existing symboltable instance should not crash
+  SymbolTable symbolTable(module.get());
+
+  std::string diagStr;
+  constexpr static StringLiteral expectedDiag =
+      "redefinition of symbol named 'duplicate_symbol_name'";
+  context.getDiagEngine().registerHandler(
+      [&diagStr](Diagnostic &diag) { diagStr += diag.str(); });
+
+  LogicalResult res = mlir::verify(module.get(), true);
+
+  ASSERT_FALSE(succeeded(res));
+  ASSERT_EQ(diagStr, expectedDiag);
+}
+
 } // namespace
