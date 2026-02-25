@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
@@ -92,8 +91,20 @@ void ProcessFreeBSDKernelCore::Initialize() {
 
   llvm::call_once(g_once_flag, []() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
-                                  GetPluginDescriptionStatic(), CreateInstance);
+                                  GetPluginDescriptionStatic(), CreateInstance,
+                                  DebuggerInitialize);
   });
+}
+
+void ProcessFreeBSDKernelCore::DebuggerInitialize(Debugger &debugger) {
+  if (!PluginManager::GetSettingForProcessPlugin(
+          debugger, PluginProperties::GetSettingName())) {
+    const bool is_global_setting = true;
+    PluginManager::CreateSettingForProcessPlugin(
+        debugger, GetGlobalPluginProperties().GetValueProperties(),
+        "Properties for the freebsd-kernel process plug-in.",
+        is_global_setting);
+  }
 }
 
 void ProcessFreeBSDKernelCore::Terminate() {
