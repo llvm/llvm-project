@@ -417,10 +417,8 @@ public:
 
   StringRef expectStringOrIdent() {
     if (Lexer.is(AsmToken::String)) {
-      auto Str = Lexer.getTok().getString();
+      auto Str = Lexer.getTok().getStringContents();
       Parser.Lex();
-      Str.consume_front("\"");
-      Str.consume_back("\"");
       return Str;
     }
     if (Lexer.is(AsmToken::Identifier)) {

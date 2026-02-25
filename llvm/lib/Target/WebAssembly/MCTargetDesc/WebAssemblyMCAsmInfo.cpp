@@ -57,5 +57,7 @@ WebAssemblyMCAsmInfo::WebAssemblyMCAsmInfo(const Triple &T,
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::None;
 
+  AllowDollarAtStartOfIdentifier = true;
+
   initializeAtSpecifiers(atSpecifiers);
 }
