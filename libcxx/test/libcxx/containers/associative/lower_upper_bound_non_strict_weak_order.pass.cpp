@@ -11,7 +11,7 @@
 
 // This test ensures that libc++ maintains its historical behavior when std::set
 // or std::map are used with a comparator that isn't quite a strict weak ordering
-// when _LIBCPP_ENABLE_LEGACY_TREE_SEARCH_ALGORITHM is defined.
+// when _LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND is defined.
 //
 // This escape hatch is only supported as a temporary means to give a bit more time
 // for codebases to fix incorrect usages of associative containers.
@@ -20,7 +20,7 @@
 // for discrete right-open intervals: it orders disjoint intervals but treats
 // overlapping intervals as equivalent, which is incorrect but was relied upon.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_LEGACY_TREE_SEARCH_ALGORITHM
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_LEGACY_TREE_LOWER_UPPER_BOUND
 // UNSUPPORTED: c++03, c++11, c++14
 
 #include <cassert>
