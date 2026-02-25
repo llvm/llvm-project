@@ -4757,11 +4757,9 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
                                   Depth + 1);
 
   case ISD::VSCALE:
-    // vscale(power-of-two) is a power-of-two for some targets
-    if (getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
-        isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false, Depth + 1))
-      return true;
-    break;
+    // vscale(power-of-two) is a power-of-two
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
   }
 
   // More could be done here, though the above checks are enough

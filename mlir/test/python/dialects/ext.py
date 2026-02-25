@@ -581,6 +581,9 @@ def testExtDialectWithType():
         # CHECK: 6 : i32
         print(a6.length)
 
+        # CHECK: <locals>.Array
+        print(type(Type(a4).maybe_downcast()))
+
         module = Module.create()
         with InsertionPoint(module.body):
             MakeArrayOp(a4)
