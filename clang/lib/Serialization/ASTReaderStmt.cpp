@@ -1236,6 +1236,13 @@ void ASTStmtReader::VisitExtVectorElementExpr(ExtVectorElementExpr *E) {
   E->setAccessorLoc(readSourceLocation());
 }
 
+void ASTStmtReader::VisitMatrixElementExpr(MatrixElementExpr *E) {
+  VisitExpr(E);
+  E->setBase(Record.readSubExpr());
+  E->setAccessor(Record.readIdentifier());
+  E->setAccessorLoc(readSourceLocation());
+}
+
 void ASTStmtReader::VisitInitListExpr(InitListExpr *E) {
   VisitExpr(E);
   if (auto *SyntForm = cast_or_null<InitListExpr>(Record.readSubStmt()))
@@ -3380,6 +3387,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_EXT_VECTOR_ELEMENT:
       S = new (Context) ExtVectorElementExpr(Empty);
+      break;
+
+    case EXPR_MATRIX_ELEMENT:
+      S = new (Context) MatrixElementExpr(Empty);
       break;
 
     case EXPR_INIT_LIST:

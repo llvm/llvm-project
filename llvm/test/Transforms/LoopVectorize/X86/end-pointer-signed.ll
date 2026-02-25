@@ -22,10 +22,8 @@ define void @test(ptr %dest, i32 %n) "target-cpu"="pentium4" {
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[N]], [[INDEX]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[DEST]], i32 [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP3]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP4]], i32 -1
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -2
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP6]], i32 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP3]], i32 -3
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    store <2 x i8> zeroinitializer, ptr [[TMP7]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4

@@ -1729,10 +1729,10 @@ std::error_code DataAggregator::parseMemEvents() {
     if (std::error_code EC = Sample.getError())
       return EC;
 
-    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC))
+    if (BinaryFunction *BF = getBinaryFunctionContainingAddress(Sample->PC)) {
       BF->setHasProfileAvailable();
-
-    MemSamples.emplace_back(std::move(Sample.get()));
+      MemSamples.emplace_back(std::move(Sample.get()));
+    }
   }
 
   return std::error_code();

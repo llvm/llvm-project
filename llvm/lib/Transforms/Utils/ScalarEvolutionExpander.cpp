@@ -1278,7 +1278,8 @@ Value *SCEVExpander::tryToReuseLCSSAPhi(const SCEVAddRecExpr *S) {
       continue;
     Type *PhiTy = PN.getType();
     const SCEV *Diff = nullptr;
-    if (STy->isIntegerTy() && PhiTy->isPointerTy()) {
+    if (STy->isIntegerTy() && PhiTy->isPointerTy() &&
+        DL.getAddressType(PhiTy) == STy) {
       // Prefer ptrtoaddr over ptrtoint.
       const SCEV *AddrSCEV = SE.getPtrToAddrExpr(ExitSCEV);
       Diff = CanReuse(AddrSCEV);
@@ -1449,7 +1450,21 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
 
 Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
   Value *V = expand(S->getOperand());
-  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToAddr,
+  Type *Ty = S->getType();
+
+  // ptrtoaddr and ptrtoint produce the same value, so try to reuse either.
+  if (!isa<Constant>(V)) {
+    BasicBlock::iterator BIP = Builder.GetInsertPoint();
+    for (User *U : V->users()) {
+      auto *CI = dyn_cast<CastInst>(U);
+      if (CI && CI->getType() == Ty &&
+          (CI->getOpcode() == CastInst::PtrToAddr ||
+           CI->getOpcode() == CastInst::PtrToInt) &&
+          &*BIP != CI && SE.DT.dominates(CI, &*BIP))
+        return CI;
+    }
+  }
+  return ReuseOrCreateCast(V, Ty, CastInst::PtrToAddr,
                            GetOptimalInsertionPointForCastOf(V));
 }
 
