@@ -17941,6 +17941,18 @@ static SDValue performSETCCCombine(SDNode *N,
                             DAG.getSignedConstant(NewC, dl, OpVT), Cond);
       }
     }
+
+    // Fold (and X, Mask) ==/!= C -> X ==/!= sext(C, countr_one(Mask)) if the
+    // Mask is only clearing redundant sign bits.
+    if (isMask_64(AndRHSInt)) {
+      unsigned TrailingOnes = llvm::countr_one(AndRHSInt);
+      unsigned N1Width = llvm::bit_width(N1Int);
+      int64_t N1SExt = SignExtend64(N1Int, TrailingOnes);
+      if (N1Width <= TrailingOnes && isInt<12>(N1SExt) &&
+          DAG.ComputeMaxSignificantBits(N0.getOperand(0)) <= TrailingOnes)
+        return DAG.getSetCC(dl, VT, N0.getOperand(0),
+                            DAG.getSignedConstant(N1SExt, dl, OpVT), Cond);
+    }
   }
 
   // Replace (seteq (i64 (and X, 0xffffffff)), C1) with
