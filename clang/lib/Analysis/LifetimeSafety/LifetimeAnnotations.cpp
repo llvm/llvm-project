@@ -339,7 +339,7 @@ bool isContainerInvalidationMethod(const CXXMethodDecl &MD) {
                                          // Removal
                                          "extract", "erase", "clear",
                                          // Assignment
-                                         "swap", "replace"};
+                                         "replace"};
 
   const StringRef ContainerName = getName(*RD);
   const llvm::StringSet<> *InvalidatingMethods =
