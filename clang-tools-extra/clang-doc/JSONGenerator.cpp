@@ -34,9 +34,10 @@ static void serializeInfo(const RecordInfo &I, Object &Obj,
 static void serializeReference(const Reference &Ref, Object &ReferenceObj);
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo);
+static void serializeArray(
+    const Container &Records, Object &Obj, const StringRef Key,
+    SerializationFunc SerializeInfo, const StringRef EndKey = "End",
+    function_ref<void(Object &)> UpdateJson = [](Object &Obj) {});
 
 // Convenience lambda to pass to serializeArray.
 // If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
@@ -442,9 +443,9 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
 }
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo) {
+static void serializeArray(const Container &Records, Object &Obj, StringRef Key,
+                           SerializationFunc SerializeInfo, StringRef EndKey,
+                           function_ref<void(Object &)> UpdateJson) {
   json::Value RecordsArray = Array();
   auto &RecordsArrayRef = *RecordsArray.getAsArray();
   RecordsArrayRef.reserve(Records.size());
@@ -457,6 +458,7 @@ static void serializeArray(const Container &Records, Object &Obj,
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
+  UpdateJson(Obj);
 }
 
 static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
@@ -588,7 +590,15 @@ static void serializeInfo(const EnumInfo &I, json::Object &Obj,
   }
 
   if (!I.Members.empty())
-    serializeArray(I.Members, Obj, "Members", SerializeInfoLambda);
+    serializeArray(I.Members, Obj, "Members", SerializeInfoLambda, "End",
+                   [&I](Object &JsonObj) {
+                     for (const auto &Member : I.Members) {
+                       if (!Member.Description.empty()) {
+                         JsonObj["HasComments"] = true;
+                         break;
+                       }
+                     }
+                   });
 }
 
 static void
