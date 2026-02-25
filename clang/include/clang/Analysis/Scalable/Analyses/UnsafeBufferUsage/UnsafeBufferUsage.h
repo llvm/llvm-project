@@ -13,7 +13,6 @@
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/EntitySummary.h"
 #include <set>
-#include <tuple>
 
 namespace clang::ssaf {
 

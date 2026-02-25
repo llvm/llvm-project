@@ -166,7 +166,7 @@ TEST_F(UnsafeBufferUsageTest, EntityPointerLevelComparison) {
   EXPECT_FALSE(P2 < P1);
 }
 
-TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntitySummaryTest) {
+TEST_F(UnsafeBufferUsageTest, UnsafeBufferUsageEntityPointerLevelSetTest) {
   EntityId E1 = Extractor.addEntity({"c:@F@foo", "", {}});
   EntityId E2 = Extractor.addEntity({"c:@F@bar", "", {}});
   EntityId E3 = Extractor.addEntity({"c:@F@baz", "", {}});
