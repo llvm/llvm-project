@@ -177,12 +177,9 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
     if (!DbgCu)
       return false;
-    CompileUnits =
-        map_to_vector(make_filter_range(DbgCu->operands(),
-                                        [](const MDNode *Op) {
-                                          return isa<DICompileUnit>(Op);
-                                        }),
-                      [](const MDNode *Op) { return cast<DICompileUnit>(Op); });
+    CompileUnits = map_to_vector(
+        make_filter_range(DbgCu->operands(), llvm::IsaPred<DICompileUnit>),
+        llvm::CastTo<DICompileUnit>);
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
     assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
