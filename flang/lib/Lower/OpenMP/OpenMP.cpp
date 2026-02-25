@@ -1589,7 +1589,7 @@ genOrderedRegionClauses(lower::AbstractConverter &converter,
                         const List<Clause> &clauses, mlir::Location loc,
                         mlir::omp::OrderedRegionOperands &clauseOps) {
   ClauseProcessor cp(converter, semaCtx, clauses);
-  cp.processSimd(clauseOps);
+  cp.processTODO<clause::Simd>(loc, llvm::omp::Directive::OMPD_ordered);
 }
 
 static void genParallelClauses(
