@@ -1093,6 +1093,5 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                SubgroupOpWorkitemOpToOCLPattern<LaneIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupIdOp>,
                SubgroupOpWorkitemOpToOCLPattern<SubgroupSizeOp>,
-               AllocaToGlobalPattern>(
-      patterns.getContext());
+               AllocaToGlobalPattern>(patterns.getContext());
 }
