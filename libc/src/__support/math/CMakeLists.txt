@@ -915,6 +915,129 @@ add_header_library(
 )
 
 add_header_library(
+  f16div
+  HDRS
+    f16div.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16divf
+  HDRS
+    f16divf.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16divf128
+  HDRS
+    f16divf128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16divl
+  HDRS
+    f16divl.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.div
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16mul
+  HDRS
+    f16mul.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16mulf
+  HDRS
+    f16mulf.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16mulf128
+  HDRS
+    f16mulf128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16mull
+  HDRS
+    f16mull.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.mul
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16sub
+  HDRS
+    f16sub.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16subf
+  HDRS
+    f16subf.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16subf128
+  HDRS
+    f16subf128.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  f16subl
+  HDRS
+    f16subl.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.generic.add_sub
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   faddl
   HDRS
     faddl.h
