@@ -100,8 +100,30 @@ struct FoldMemRefOpsIntoGatherToLDSOp final : OpRewritePattern<GatherToLDSOp> {
   }
 };
 
+struct FoldMemRefOpsIntoTransposeLoadOp final
+    : OpRewritePattern<TransposeLoadOp> {
+  using OpRewritePattern::OpRewritePattern;
+  LogicalResult matchAndRewrite(TransposeLoadOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    SmallVector<Value> sourceIndices;
+    Value memrefSource;
+
+    if (failed(foldMemrefViewOp(rewriter, loc, op.getSrc(), op.getSrcIndices(),
+                                sourceIndices, memrefSource, "source")))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<TransposeLoadOp>(op, op.getResult().getType(),
+                                                 memrefSource, sourceIndices);
+    return success();
+  }
+};
+
 void populateAmdgpuFoldMemRefOpsPatterns(RewritePatternSet &patterns,
                                          PatternBenefit benefit) {
-  patterns.add<FoldMemRefOpsIntoGatherToLDSOp>(patterns.getContext(), benefit);
+  patterns
+      .add<FoldMemRefOpsIntoGatherToLDSOp, FoldMemRefOpsIntoTransposeLoadOp>(
+          patterns.getContext(), benefit);
 }
 } // namespace mlir::amdgpu
