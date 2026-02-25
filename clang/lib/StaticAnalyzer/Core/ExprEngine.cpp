@@ -1190,9 +1190,8 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
       // The field was directly constructed, so there is no need to bind.
       // But we still need to stop tracking the object under construction.
       State = finishObjectConstruction(State, BMI, LC);
-      NodeBuilder Bldr(Pred, Tmp, *currBldrCtx);
       PostStore PS(Init, LC, /*Loc*/ nullptr, /*tag*/ nullptr);
-      Bldr.generateNode(PS, State, Pred);
+      Tmp.Add(Engine.makeNode(PS, State, Pred));
     } else {
       const ValueDecl *Field;
       if (BMI->isIndirectMemberInitializer()) {
