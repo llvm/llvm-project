@@ -1897,6 +1897,19 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  hypotbf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    hypotbf16_test.cpp
+  DEPENDS
+    libc.src.math.hypotbf16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
+)
+
+add_fp_unittest(
   hypotf16_test
   NEED_MPFR
   SUITE
