@@ -3618,9 +3618,11 @@ HexagonTargetLowering::WidenHvxSetCC(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue HexagonTargetLowering::WidenHvxTruncateToBool(SDValue Op,
                                                       SelectionDAG &DAG) const {
-  // Handle truncation to boolean vector (e.g., v64i8 -> v64i1) by widening
-  // the input to HVX width, performing the truncate, then extracting the
-  // result.
+  // Handle truncation to boolean vector where the result boolean type
+  // needs widening (e.g., v16i32 -> v16i1 where v16i1 is not a standard
+  // HVX predicate type, or v16i8 -> v16i1 in 128-byte mode).
+  // Widen the input to HVX width, perform the truncate to the widened
+  // boolean type, then extract the result.
   const SDLoc &dl(Op);
   SDValue Inp = Op.getOperand(0);
   MVT InpTy = ty(Inp);
@@ -3635,11 +3637,12 @@ SDValue HexagonTargetLowering::WidenHvxTruncateToBool(SDValue Op,
   // Calculate the widened input type that fills the HVX register.
   unsigned WideLen = (8 * HwLen) / ElemTy.getSizeInBits();
   MVT WideInpTy = MVT::getVectorVT(ElemTy, WideLen);
-  if (!Subtarget.isHVXVectorType(WideInpTy, true))
+  if (!Subtarget.isHVXVectorType(WideInpTy, false))
     return SDValue();
 
-  // Widen the input.
-  SDValue WideInp = appendUndef(Inp, WideInpTy, DAG);
+  // Widen the input if it's not already at HVX width.
+  SDValue WideInp =
+      (InpTy == WideInpTy) ? Inp : appendUndef(Inp, WideInpTy, DAG);
 
   // Perform the truncate to widened boolean type.
   MVT WideBoolTy = MVT::getVectorVT(MVT::i1, WideLen);
@@ -3907,10 +3910,15 @@ HexagonTargetLowering::LowerHvxOperationWrapper(SDNode *N,
       }
       break;
     case ISD::TRUNCATE:
-      // Handle truncate to boolean vector that needs widening
-      // (e.g., v64i8 -> v64i1 in 128-byte HVX mode).
+      // Handle truncate to boolean vector when the input is not a
+      // standard HVX vector type (single or pair). This covers cases
+      // where the input needs widening (e.g., v64i8 -> v64i1 in
+      // 128-byte mode) and cases where the result boolean type itself
+      // needs widening (e.g., v16i32 -> v16i1). When the input is
+      // already an HVX type, tablegen patterns handle the truncation
+      // directly (e.g., v64i16 -> v64i1 via V6_vandvrt).
       if (ty(Op).getVectorElementType() == MVT::i1 &&
-          shouldWidenToHvx(ty(Inp0), DAG)) {
+          !Subtarget.isHVXVectorType(ty(Inp0), false)) {
         if (SDValue T = WidenHvxTruncateToBool(Op, DAG))
           Results.push_back(T);
       } else if (Subtarget.isHVXElementType(ty(Op)) &&
@@ -3984,10 +3992,10 @@ HexagonTargetLowering::ReplaceHvxNodeResults(SDNode *N,
       }
       break;
     case ISD::TRUNCATE:
-      // Handle truncate to boolean vector that needs widening
-      // (e.g., v64i8 -> v64i1 in 128-byte HVX mode).
+      // Handle truncate to boolean vector when the input is not a
+      // standard HVX vector type. See comment in LowerHvxOperationWrapper.
       if (ty(Op).getVectorElementType() == MVT::i1 &&
-          shouldWidenToHvx(ty(Inp0), DAG)) {
+          !Subtarget.isHVXVectorType(ty(Inp0), false)) {
         if (SDValue T = WidenHvxTruncateToBool(Op, DAG))
           Results.push_back(T);
       } else if (Subtarget.isHVXElementType(ty(Op)) &&
