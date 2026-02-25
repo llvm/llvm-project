@@ -1397,17 +1397,20 @@ public:
     mlir::Block *defaultDest = nullptr;
     bool defaultIsCatchAll = false;
 
-    for (const auto &[idx, typeAttr] : llvm::enumerate(handlerTypes)) {
+    for (auto [typeAttr, handlerBlock] :
+         llvm::zip(handlerTypes, catchHandlerBlocks)) {
       if (mlir::isa<cir::CatchAllAttr>(typeAttr)) {
-        defaultDest = catchHandlerBlocks[idx];
+        assert(!defaultDest && "multiple catch_all or unwind handlers");
+        defaultDest = handlerBlock;
         defaultIsCatchAll = true;
       } else if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
-        defaultDest = catchHandlerBlocks[idx];
+        assert(!defaultDest && "multiple catch_all or unwind handlers");
+        defaultDest = handlerBlock;
         defaultIsCatchAll = false;
       } else {
         // This is a typed catch handler (GlobalViewAttr with type info).
         catchTypeAttrs.push_back(typeAttr);
-        catchDests.push_back(catchHandlerBlocks[idx]);
+        catchDests.push_back(handlerBlock);
       }
     }
 
@@ -1434,9 +1437,9 @@ public:
   //
   // The cleanup scope inside the catch handler is expected to have been
   // flattened before we get here, so what we see in the handler region is
-  // already flat code with begin_catch at the top and end_catch somewhere
-  // in the middle (from the flattened cleanup). We just need to inline
-  // the region and fix up terminators.
+  // already flat code with begin_catch at the top and end_catch in any place
+  // that we would exit the catch handler. We just need to inline the region
+  // and fix up terminators.
   mlir::Block *flattenCatchHandler(mlir::Region &handlerRegion,
                                    mlir::Block *continueBlock,
                                    mlir::Location loc,
@@ -1462,31 +1465,34 @@ public:
 
   // Flatten an unwind handler region. The unwind region just contains a
   // cir.resume that continues unwinding. We inline it and leave the resume
-  // in place — it will unwind to the caller.
+  // in place. If this try op is nested inside an EH cleanup or another try op,
+  // the enclosing op will rewrite the resume as a branch to its cleanup or
+  // dispatch block when it is flattened. Otherwise, the resume will unwind to
+  // the caller.
   mlir::Block *flattenUnwindHandler(mlir::Region &unwindRegion,
                                     mlir::Location loc,
                                     mlir::Block *insertBefore,
                                     mlir::PatternRewriter &rewriter) const {
     mlir::Block *unwindEntry = &unwindRegion.front();
-
-    // Inline the unwind region.
     rewriter.inlineRegionBefore(unwindRegion, insertBefore);
-
     return unwindEntry;
   }
 
   mlir::LogicalResult
   matchAndRewrite(cir::TryOp tryOp,
                   mlir::PatternRewriter &rewriter) const override {
-    // Cleanup scopes must be lowered before the enclosing try so that
-    // EH cleanup inside them is properly handled.
-    // Fail the match so the pattern rewriter will process cleanup scopes first.
-    bool hasNestedCleanup = tryOp
-                                ->walk([&](cir::CleanupScopeOp) {
-                                  return mlir::WalkResult::interrupt();
-                                })
-                                .wasInterrupted();
-    if (hasNestedCleanup)
+    // Nested try ops and cleanup scopes must be flattened before the enclosing
+    // try so that EH cleanup inside them is properly handled. Fail the match so
+    // the pattern rewriter will process nested ops first.
+    bool hasNestedOps = tryOp
+                            ->walk([&](mlir::Operation *op) {
+                              if (isa<cir::CleanupScopeOp, cir::TryOp>(op) &&
+                                  op != tryOp)
+                                return mlir::WalkResult::interrupt();
+                              return mlir::WalkResult::advance();
+                            })
+                            .wasInterrupted();
+    if (hasNestedOps)
       return mlir::failure();
 
     mlir::OpBuilder::InsertionGuard guard(rewriter);
