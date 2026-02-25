@@ -154,6 +154,9 @@ TEST(AnsiTerminal, TrimAtWordBoundary) {
   EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m🦊  🐱", 2), "\x1B[0m🦊");
   EXPECT_EQ(ansi::TrimAtWordBoundary("🦊\x1B[0m\x1B[0m🐱 🐈", 4),
             "🦊\x1B[0m\x1B[0m🐱");
+  // If there's more than one, include all of them.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m\x1B[0m\x1B[0mab cd", 2),
+            "\x1B[0m\x1B[0m\x1B[0mab");
   // Proceeding ANSI codes are included.
   EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0mab\x1B[0m cd", 2),
             "\x1B[0mab\x1B[0m");
@@ -163,6 +166,12 @@ TEST(AnsiTerminal, TrimAtWordBoundary) {
             "\x1B[0m🦊\x1B[0m");
   EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m🦊\x1B[0m", 4),
             "\x1B[0m🦊\x1B[0m");
+  // Include all if more than one.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0mab\x1B[0m\x1B[0m\x1B[0m cd", 2),
+            "\x1B[0mab\x1B[0m\x1B[0m\x1B[0m");
+  // Mutliple pre and proceding ANSI codes.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m\x1B[0mab\x1B[0m\x1B[0m cd", 2),
+            "\x1B[0m\x1B[0mab\x1B[0m\x1B[0m");
 
   // When multiple words fit, include as many as we can while still ending on
   // a word boundary.

@@ -251,10 +251,10 @@ inline size_t ColumnWidth(llvm::StringRef str) {
 /// The string can include ANSI codes and Unicode.
 ///
 /// For a single word string, that word is returned in its entirety regardless
-/// of it's visible length.
+/// of its visible length.
 ///
 /// This function is similar to TrimAndPad, except that it must split on a word
-/// boundary. So there are some noteable differences:
+/// boundary. So there are some notable differences:
 /// * Has a special case for single words that exceed desired visible
 ///   length.
 /// * Must track whether the most recent modifications was on a word boundary
@@ -276,8 +276,7 @@ inline std::string TrimAtWordBoundary(llvm::StringRef str,
   // word only.
   auto to_first_word_boundary = str.substr(0, first_whitespace);
   // We use ansi::ColumnWidth here because it can handle ANSI and Unicode.
-  if (static_cast<size_t>(ansi::ColumnWidth(to_first_word_boundary)) >
-      visible_length)
+  if (ansi::ColumnWidth(to_first_word_boundary) > visible_length)
     return to_first_word_boundary.str();
 
   std::string result;
@@ -292,7 +291,7 @@ inline std::string TrimAtWordBoundary(llvm::StringRef str,
   bool at_word_boundary = false;
 
   // Trim the string to the given visible length.
-  while (!str.empty() && result_visible_length < visible_length) {
+  while (!str.empty()) {
     auto [left, escape, right] = FindNextAnsiSequence(str);
     str = right;
 
@@ -308,7 +307,7 @@ inline std::string TrimAtWordBoundary(llvm::StringRef str,
     }
 
     // The string might contain unicode which means it's not safe to truncate.
-    // Repeatedly trim the string until it its valid unicode and fits.
+    // Repeatedly trim the string until it is valid unicode and fits.
     llvm::StringRef trimmed = left;
 
     // A word break can happen at the character we trim to, or the one we
@@ -420,13 +419,10 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
 
   while (!text.empty()) {
     std::string split = TrimAtWordBoundary(text, max_text_width);
-
-    llvm::StringRef split_ref(split);
-    split_ref = split_ref.rtrim();
     if (!first_line)
       strm.EOL();
     first_line = false;
-    strm.Indent(split_ref);
+    strm.Indent(split);
 
     text = text.drop_front(split.size()).ltrim();
   }
