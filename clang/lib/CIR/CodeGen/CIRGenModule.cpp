@@ -1820,7 +1820,10 @@ cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
       cast<FunctionDecl>(gd.getDecl())->hasAttr<CUDAGlobalAttr>()) {
     mlir::Operation *handle = getCUDARuntime().getKernelHandle(func, gd);
 
-    if (isForDefinition)
+    // For HIP the kernel handle is a GlobalOp, which cannot be cast to
+    // FuncOp. Return the stub directly in that case.
+    bool isHIPHandle = mlir::isa<cir::GlobalOp>(*handle);
+    if (isForDefinition || isHIPHandle)
       return func;
     return mlir::dyn_cast<cir::FuncOp>(*handle);
   }
