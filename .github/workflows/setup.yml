@@ -40,7 +40,7 @@ jobs:
   setup:
     runs-on: ubuntu-24.04
     env:
-      BASE_REF: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
+      BASE_REF: '0efc7532e43c16b532fdd2887e00aec8eb69e10f'
     outputs:
       enable_build_jobs: true
       linux_variants: >
@@ -56,7 +56,9 @@ jobs:
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           repository: "ROCm/TheRock"
-          ref: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
+          ref: 'compiler/amd-staging'
+          fetch-depth: 0
+
       - name: SHA of TheRock
         run: |
              git rev-parse HEAD

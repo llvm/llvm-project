@@ -11,6 +11,9 @@ on:
       amdgpu_families:
         type: string
         default: ""
+      amdgpu_targets:
+        type: string
+        default: ""
       test_runs_on:
         type: string
       platform:
@@ -23,6 +26,9 @@ on:
         type: string
         default: ""
       amdgpu_families:
+        type: string
+        default: ""
+      amdgpu_targets:
         type: string
         default: ""
       test_runs_on:
@@ -38,7 +44,7 @@ permissions:
 
 jobs:
   test_sanity_check:
-    name: "Sanity ROCM Test"
+    name: "Sanity ROCM Test (${{ inputs.amdgpu_families }})"
     runs-on: ${{ inputs.test_runs_on }}
     # Running docker with cap-add and -v /lib/modiles, by recommendation of Github: https://rocm.docs.amd.com/projects/amdsmi/en/amd-staging/how-to/setup-docker-container.html
     container:
@@ -51,6 +57,7 @@ jobs:
         --group-add video
         --device /dev/kfd
         --device /dev/dri
+        --group-add 992
         --group-add 110
         --cap-add SYS_MODULE
         -v /lib/modules:/lib/modules
@@ -67,27 +74,31 @@ jobs:
       OUTPUT_ARTIFACTS_DIR: ${{ github.workspace }}/build
       THEROCK_BIN_DIR: ${{ github.workspace }}/build/bin
       AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+      AMDGPU_TARGETS: ${{ inputs.amdgpu_targets }}
+      ARTIFACT_GROUP: ${{ inputs.artifact_group }}
     steps:
       - name: "Fetch 'build_tools' from repository"
         if: ${{ runner.os == 'Windows' }}
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           sparse-checkout: build_tools
           path: prejob
 
       - name: Pre-job cleanup processes on Windows
         if: ${{ runner.os == 'Windows' }}
+        timeout-minutes: 5
         shell: powershell
         run: . '${{ github.workspace }}\prejob\build_tools\github_actions\cleanup_processes.ps1'
 
       - name: Checkout Repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
+          ref: 'compiler/amd-staging'
 
       - name: Pre-job cleanup Docker containers on Linux
         if: ${{ runner.os == 'Linux' }}
+        timeout-minutes: 5
         shell: bash
         run: |
           # Remove any stopped containers
@@ -96,18 +107,29 @@ jobs:
           docker network prune -f || true
 
       - name: Run setup test environment workflow
+        timeout-minutes: 15
         uses: './.github/actions/setup_test_environment'
         with:
           ARTIFACT_GROUP: ${{ inputs.artifact_group }}
+          AMDGPU_TARGETS: ${{ inputs.amdgpu_targets }}
           ARTIFACT_RUN_ID: ${{ env.ARTIFACT_RUN_ID }}
           OUTPUT_ARTIFACTS_DIR: ${{ env.OUTPUT_ARTIFACTS_DIR }}
           VENV_DIR: ${{ env.VENV_DIR }}
           FETCH_ARTIFACT_ARGS: "--base-only"
           IS_PR_FROM_FORK: ${{ github.event.pull_request.head.repo.fork }}
 
-      - name: Set HIP_CLANG_PATH for windows
+      # The sanity checks run tools like 'offload-arch' which may search for
+      # DLLs on multiple search paths (PATH, CWD, system32, etc.).
+      # For typical "installs" of ROCm, the rocm/bin/ dir can be expected to be
+      # added to PATH, so we do that here. If we don't do this, DLLs on test
+      # runners in system32 may be picked up instead and the tests may not be
+      # representative, see https://github.com/ROCm/TheRock/issues/2019 and
+      # https://github.com/ROCm/TheRock/pull/3230#issuecomment-3844854922.
+      - name: Set PATH and HIP_CLANG_PATH for windows
         if: ${{ runner.os == 'Windows' }}
-        run: echo "HIP_CLANG_PATH=${OUTPUT_ARTIFACTS_DIR}\lib\llvm\bin" >> $GITHUB_ENV
+        run: |
+          echo "HIP_CLANG_PATH=${OUTPUT_ARTIFACTS_DIR}\lib\llvm\bin" >> $GITHUB_ENV
+          echo "${OUTPUT_ARTIFACTS_DIR}\bin" >> $GITHUB_PATH
 
       - name: Driver / GPU sanity check
         timeout-minutes: 3
@@ -125,5 +147,6 @@ jobs:
 
       - name: Post-job cleanup processes on Windows
         if: ${{ always() && runner.os == 'Windows' }}
+        timeout-minutes: 5
         shell: powershell
         run: . '${{ github.workspace }}\build_tools\github_actions\cleanup_processes.ps1'

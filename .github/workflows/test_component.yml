@@ -18,6 +18,10 @@ on:
         type: string
       test_retry_count:
         type: number
+      default_container_image:
+        type: string
+        default: "ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:4150afe4759d14822f0e3f8930e1124f26e11f68b5c7b91ec9a02b20b1ebbb98"
+
 
 permissions:
   contents: read
@@ -26,13 +30,20 @@ jobs:
   test_component:
     name: >-
       Test ${{ fromJSON(inputs.component).job_name }}
-      (shard ${{ matrix.shard }} of ${{ fromJSON(inputs.component).total_shards }})
+      (shard ${{ matrix.shard }}/${{ fromJSON(inputs.component).total_shards }})
+      (${{ inputs.amdgpu_families }})
       ${{ fromJSON(inputs.component).expect_failure == true && '(xfail)' || '' }}
     runs-on: ${{ inputs.test_runs_on }}
     continue-on-error: ${{ fromJSON(inputs.component).expect_failure == true }}
     timeout-minutes: 210
     container:
-      image: ${{ inputs.platform == 'linux' && 'ghcr.io/rocm/no_rocm_image_ubuntu24_04@sha256:4150afe4759d14822f0e3f8930e1124f26e11f68b5c7b91ec9a02b20b1ebbb98' || null }}
+      # If the component has specified an alternate image, honor that option.
+      # Otherwise use the default image.
+      image: >-
+        ${{ inputs.platform == 'linux' &&
+            (fromJSON(inputs.component).container_image || inputs.default_container_image)
+            || null
+        }}
       # --ulimit memlock=-1:-1 - Prevents memory allocation issues with ROCm inside container
       # --security-opt seccomp=unconfined - enables memory mapping, and is recommended for containers running in HPC environments
       # --env-file /etc/podinfo/gha-gpu-isolation-settings - Required for GPU isolation on OSSCI MIXXX runners
@@ -41,6 +52,7 @@ jobs:
         --group-add video
         --device /dev/kfd
         --device /dev/dri
+        --group-add 992
         --group-add 110
         --ulimit memlock=-1:-1
         --security-opt seccomp=unconfined
@@ -61,6 +73,8 @@ jobs:
       OUTPUT_ARTIFACTS_DIR: "./build"
       THEROCK_BIN_DIR: "./build/bin"
       AMDGPU_FAMILIES: ${{ inputs.amdgpu_families }}
+      AMDGPU_TARGETS: ${{ inputs.amdgpu_targets }}
+      ARTIFACT_GROUP: ${{ inputs.artifact_group }}
       # Benchmark results database API endpoints for performance metrics collection
       # NOTE: These secrets are only required for benchmark results submission in nightly CI runs.
       # For PR/push workflows, secret retrieval will fail gracefully and benchmarks will skip API submission.
@@ -68,29 +82,32 @@ jobs:
       BENCHMARK_DB_FALLBACK_URL: ${{ secrets.BENCHMARK_DB_FALLBACK_URL }}
     steps:
       - name: "Fetch 'build_tools' from repository"
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
+          ref: 'compiler/amd-staging'
           sparse-checkout: build_tools
           path: "prejob"
 
       - name: Pre-job cleanup processes on Windows
         if: ${{ runner.os == 'Windows' }}
+        timeout-minutes: 5
         shell: powershell
         run: . '${{ github.workspace }}\prejob\build_tools\github_actions\cleanup_processes.ps1'
 
       - name: Checkout Repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           repository: "ROCm/TheRock"
-          ref: 'c3d5aeef808e099b9de06fc901af2de24d0b143d'
+          ref: 'compiler/amd-staging'
 
       - name: Run setup test environment workflow
+        timeout-minutes: 15
         uses: './.github/actions/setup_test_environment'
         with:
           ARTIFACT_RUN_ID: ${{ env.ARTIFACT_RUN_ID }}
-          ARTIFACT_GROUP: ${{ inputs.artifact_group }}
+          ARTIFACT_GROUP: ${{ inputs.amdgpu_families }}
+          AMDGPU_TARGETS: ${{ inputs.amdgpu_targets }}
           OUTPUT_ARTIFACTS_DIR: ${{ env.OUTPUT_ARTIFACTS_DIR }}
           VENV_DIR: ${{ env.VENV_DIR }}
           FETCH_ARTIFACT_ARGS: ${{ fromJSON(inputs.component).fetch_artifact_args }}
@@ -107,6 +124,7 @@ jobs:
           python ./build_tools/health_status.py
 
       - name: Driver / GPU sanity check
+        timeout-minutes: 3
         run: |
           python ./build_tools/print_driver_gpu_info.py
 
@@ -144,5 +162,6 @@ jobs:
       # and will fail to clean up orphan processes.
       - name: Post-job cleanup processes on Windows
         if: ${{ always() && runner.os == 'Windows' }}
+        timeout-minutes: 5
         shell: powershell
         run: . '${{ github.workspace }}\build_tools\github_actions\cleanup_processes.ps1'
