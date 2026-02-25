@@ -189,7 +189,7 @@ std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
 initVFSForByNameScanning(IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
                          ArrayRef<std::string> CommandLine,
-                         StringRef WorkingDirectory, StringRef ModuleName);
+                         StringRef WorkingDirectory);
 
 } // end namespace dependencies
 } // end namespace clang

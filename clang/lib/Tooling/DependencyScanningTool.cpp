@@ -324,8 +324,8 @@ bool DependencyScanningTool::initializeWorkerCIWithContextFromCommandline(
   // The input command line is either a driver-style command line, or
   // ill-formed. In this case, we will first call the Driver to build a -cc1
   // command line for this compilation or diagnose any ill-formed input.
-  auto [OverlayFS, ModifiedCommandLine] = initVFSForByNameScanning(
-      &Worker.getVFS(), CommandLine, CWD, "ScanningByName");
+  auto [OverlayFS, ModifiedCommandLine] =
+      initVFSForByNameScanning(&Worker.getVFS(), CommandLine, CWD);
   auto DiagEngineWithCmdAndOpts =
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
                                                       OverlayFS, DC);

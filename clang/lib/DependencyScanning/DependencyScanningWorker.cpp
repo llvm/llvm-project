@@ -112,7 +112,7 @@ bool DependencyScanningWorker::computeDependencies(
 bool DependencyScanningWorker::initializeCompilerInstanceWithContext(
     StringRef CWD, ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC) {
   auto [OverlayFS, ModifiedCommandLine] =
-      initVFSForByNameScanning(DepFS, CommandLine, CWD, "ScanningByName");
+      initVFSForByNameScanning(DepFS, CommandLine, CWD);
   auto DiagEngineWithCmdAndOpts =
       std::make_unique<DiagnosticsEngineWithDiagOpts>(ModifiedCommandLine,
                                                       OverlayFS, DC);
@@ -166,8 +166,7 @@ std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
           std::vector<std::string>>
 dependencies::initVFSForByNameScanning(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    StringRef ModuleName) {
+    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory) {
   // Reset what might have been modified in the previous worker invocation.
   BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
 
@@ -180,7 +179,8 @@ dependencies::initVFSForByNameScanning(
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
   SmallString<128> FakeInputPath;
   // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
+  llvm::sys::fs::createUniquePath("module-includes-%%%%%%%%.input",
+                                  FakeInputPath,
                                   /*MakeAbsolute=*/false);
   InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
