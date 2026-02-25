@@ -6822,7 +6822,8 @@ SDValue DAGTypeLegalizer::convertMask(SDValue InMask, EVT MaskVT,
     ReplaceValueWith(InMask.getValue(1), Mask.getValue(1));
   }
   else
-    Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops);
+    Mask = DAG.getNode(InMask->getOpcode(), SDLoc(InMask), MaskVT, Ops,
+                       InMask->getFlags());
 
   // If MaskVT has smaller or bigger elements than ToMaskVT, a vector sign
   // extend or truncate is needed.
