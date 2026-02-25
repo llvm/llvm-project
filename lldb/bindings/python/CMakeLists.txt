@@ -234,3 +234,35 @@ if(NOT ${LLDB_USE_STATIC_BINDINGS})
     DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/lldb.py
     COMMENT "Diff the static bindings")
 endif()
+
+function(add_python_wrapper target)
+  get_target_property(python_bindings_dir swig_wrapper_python BINARY_DIR)
+  set(lldb_python_wrapper ${python_bindings_dir}/LLDBWrapPython.cpp)
+
+  add_dependencies(${target} swig_wrapper_python)
+  add_swig_wrapper(${target} ${lldb_python_wrapper})
+
+  # lib/pythonX.Y/dist-packages/lldb/_lldb.so is a symlink to lib/liblldb.so,
+  # which depends on lib/libLLVM*.so (BUILD_SHARED_LIBS) or lib/libLLVM-10git.so
+  # (LLVM_LINK_LLVM_DYLIB). Add an additional rpath $ORIGIN/../../../../lib so
+  # that _lldb.so can be loaded from Python.
+  if(LLDB_ENABLE_PYTHON AND (BUILD_SHARED_LIBS OR LLVM_LINK_LLVM_DYLIB) AND UNIX AND NOT APPLE)
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "\$ORIGIN/../../../../lib${LLVM_LIBDIR_SUFFIX}")
+  endif()
+
+  if(Python3_RPATH)
+    lldb_setup_rpaths(liblldb
+      BUILD_RPATH
+        "${Python3_RPATH}"
+      INSTALL_RPATH
+        "@loader_path/../../../../../../../../Library/Frameworks/"
+        "@loader_path/../../../../../Developer/Library/Frameworks/"
+        "@loader_path/../../../../Developer/Library/Frameworks/"
+        "@loader_path/../../../../Frameworks"
+        "@loader_path/../../../"
+        "/Library/Developer/CommandLineTools/Library/Frameworks"
+        "/Applications/Xcode.app/Contents/Developer/Library/Frameworks/"
+      )
+  endif()
+
+endfunction()
