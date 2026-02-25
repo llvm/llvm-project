@@ -4609,6 +4609,7 @@ add_entrypoint_object(
     ../setpayload.h
   DEPENDS
     libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.setpayload
 )
 
 add_entrypoint_object(
@@ -4618,7 +4619,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadf.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.setpayloadf
 )
 
 add_entrypoint_object(
@@ -4628,7 +4629,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadl.h
   DEPENDS
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.setpayloadl
 )
 
 add_entrypoint_object(
@@ -4638,8 +4639,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.setpayloadf16
 )
 
 add_entrypoint_object(
@@ -4649,8 +4649,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.basic_operations
+    libc.src.__support.math.setpayloadf128
 )
 
 add_entrypoint_object(
@@ -4660,11 +4659,7 @@ add_entrypoint_object(
   HDRS
     ../setpayloadbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.setpayloadbf16
 )
 
 add_entrypoint_object(
