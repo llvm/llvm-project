@@ -1,4 +1,4 @@
-//===-- ScriptInterpreterLua.h ----------------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_LUA_H
-#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_LUA_H
+#ifndef LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_LUASTATE_H
+#define LLDB_SOURCE_PLUGINS_SCRIPTINTERPRETER_LUA_LUASTATE_H
 
-#include "lldb/API/SBBreakpointLocation.h"
-#include "lldb/API/SBFrame.h"
 #include "lldb/Core/StructuredDataImpl.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/StringRef.h"
@@ -18,18 +16,16 @@
 
 #include "lua.hpp"
 
-#include <mutex>
-
 namespace lldb_private {
 
 extern "C" {
 int luaopen_lldb(lua_State *L);
 }
 
-class Lua {
+class LuaState {
 public:
-  Lua();
-  ~Lua();
+  LuaState();
+  ~LuaState();
 
   llvm::Error Run(llvm::StringRef buffer);
   llvm::Error RegisterBreakpointCallback(void *baton, const char *body);
