@@ -855,7 +855,6 @@ class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
     auto addrSpace = ptrType.getAddressSpace();
     if (addrSpace != 3)
       return failure();
-    auto alignment = op.getAlignment();
     auto val = op.getArraySize();
     APInt cst;
     if (!matchPattern(val, m_ConstantInt(&cst)))
@@ -865,6 +864,7 @@ class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
         rewriter.getContext(), op.getElemType(), cst.getZExtValue());
     auto saveIP = rewriter.saveInsertionPoint();
     rewriter.setInsertionPointToStart(moduleOp.getBody());
+    auto alignment = op.getAlignment();
     auto globalVar = LLVM::GlobalOp::create(
         rewriter, loc, globalType, /*isConstant=*/false,
         /*linkage=*/LLVM::Linkage::Internal,
