@@ -27759,13 +27759,10 @@ hold:
 2. Accessing the byte through ``ptr`` does not violate any ``noalias``
    constraints.
 
-For accessible bytes, the intrinsic returns the stored value. For inaccessible
-bytes, the intrinsic returns ``poison`` and the bytes are not considered accessed
-for the purpose of data races or ``noalias`` constraints. At least the first
-byte must be accessible; otherwise the behavior is undefined.
-
-The behavior is undefined if program execution depends on any byte in the
-result that may not be accessible.
+For each byte of the result, if the corresponding byte is accessible through
+``ptr``, the result contains the value stored in memory at that byte. Otherwise,
+the corresponding byte of the result is ``freeze poison`` and the byte is not
+considered accessed for the purpose of data races or ``noalias`` constraints.
 
 The behavior is undefined if this intrinsic is used to load from a pointer
 for which ``llvm.can.load.speculatively`` would return false.
