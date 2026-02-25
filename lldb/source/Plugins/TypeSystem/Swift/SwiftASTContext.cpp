@@ -21,6 +21,7 @@
 #include "TypeSystemSwiftTypeRef.h"
 
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/UnimplementedError.h"
 #include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
@@ -2276,14 +2277,18 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
-#ifdef __APPLE__ // Other platforms do not support XcodeSDK.
   auto platform_sp = Platform::GetHostPlatform();
   if (!platform_sp)
     return {};
   auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(module);
   if (!sdk_or_err) {
-    Debugger::ReportError("Error while parsing SDK path from debug info: " +
-                          toString(sdk_or_err.takeError()));
+    llvm::handleAllErrors(
+        sdk_or_err.takeError(), [&](const UnimplementedError &error) {},
+        [&](const llvm::ErrorInfoBase &error) {
+          Debugger::ReportError(
+              "Error while parsing SDK path from debug info: " +
+              toString(sdk_or_err.takeError()));
+        });
     return {};
   }
 
@@ -2297,9 +2302,6 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
         module.GetFileSpec().GetFilename().AsCString("<unknown module>"));
 
   return GetSDKPath(m_description, std::move(sdk));
-#else
-  return {};
-#endif
 }
 
 static std::vector<llvm::StringRef>
@@ -2947,21 +2949,25 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   }
 
   // Get the precise SDK from the symbol context.
-  [[maybe_unused]] std::optional<XcodeSDK> sdk;
-#ifdef __APPLE__  // Other platforms do not support XcodeSDK.
+  std::optional<XcodeSDK> sdk;
   if (cu)
     if (auto platform_sp = Platform::GetHostPlatform()) {
       auto sdk_or_err = platform_sp->GetSDKPathFromDebugInfo(*cu);
-      if (!sdk_or_err)
-        Debugger::ReportError("Error while parsing SDK path from debug info: " +
-                              toString(sdk_or_err.takeError()));
-      else {
+      if (!sdk_or_err) {
+        llvm::handleAllErrors(
+            sdk_or_err.takeError(), [&](const UnimplementedError &error) {},
+            [&](const llvm::ErrorInfoBase &error) {
+              Debugger::ReportError(
+                  "Error while parsing SDK path from debug info: " +
+                  toString(sdk_or_err.takeError()));
+            });
+
+      } else {
         sdk = *sdk_or_err;
         LOG_PRINTF(GetLog(LLDBLog::Types), "Using precise SDK: %s",
                    sdk->GetString().str().c_str());
       }
     }
-#endif
   // Derive the triple next.
 
   // First, prime the compiler with the options from the main executable:
