@@ -24,7 +24,7 @@ void foo() {
 // LLVM:   br label %[[SCOPE_LABEL:.*]]
 // LLVM: [[SCOPE_LABEL]]:
 // LLVM:   store i32 42, ptr %[[TMP0]]
-// LLVM:   call void @_Z3barRKi(ptr %[[TMP0]])
+// LLVM:   call void @_Z3barRKi(ptr {{.*}} %[[TMP0]])
 
 // OGCG: define{{.*}} @_Z3foov()
 // OGCG:   %[[TMP0:.*]] = alloca i32
@@ -43,12 +43,12 @@ void test_ctor_defaultarg() {
 // CIR: cir.func {{.*}} @_Z20test_ctor_defaultargv()
 // CIR:   %[[S:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s", init]
 // CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
-// CIR:   cir.call @_ZN1SC1Ei(%[[S]], %[[TWO]]) : (!cir.ptr<!rec_S>, !s32i) -> ()
+// CIR:   cir.call @_ZN1SC1Ei(%[[S]], %[[TWO]]) : (!cir.ptr<!rec_S> {{.*}}, !s32i {{.*}}) -> ()
 
 // LLVM: define{{.*}} @_Z20test_ctor_defaultargv()
 // LLVM:   %[[S:.*]] = alloca %struct.S
-// LLVM:   call void @_ZN1SC1Ei(ptr %[[S]], i32 2)
+// LLVM:   call void @_ZN1SC1Ei(ptr {{.*}} %[[S]], i32 {{.*}} 2)
 
 // OGCG: define{{.*}} @_Z20test_ctor_defaultargv()
 // OGCG:   %[[S:.*]] = alloca %struct.S
-// OGCG:   call void @_ZN1SC1Ei(ptr{{.*}} %[[S]], i32 {{.*}} 2)
+// OGCG:   call void @_ZN1SC1Ei(ptr {{.*}} %[[S]], i32 {{.*}} 2)

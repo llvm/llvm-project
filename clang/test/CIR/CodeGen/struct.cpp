@@ -60,7 +60,7 @@ char f2(CompleteS &s) {
 // CIR:   %[[S_ADDR2:.*]] = cir.get_member %[[S_REF]][1] {name = "b"}
 // CIR:   %[[S_B:.*]] = cir.load{{.*}} %[[S_ADDR2]]
 
-// LLVM: define{{.*}} i8 @_Z2f2R9CompleteS(ptr %[[ARG_S:.*]])
+// LLVM: define{{.*}} i8 @_Z2f2R9CompleteS(ptr{{.*}} %[[ARG_S:.*]])
 // LLVM:   %[[S_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG_S]], ptr %[[S_ADDR]]
 // LLVM:   %[[S_REF:.*]] = load ptr, ptr %[[S_ADDR]], align 8
