@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // ADDITIONAL_COMPILE_FLAGS: -Wno-deprecated
-
 #include <ext/hash_map>
 
 int main(int, char**) {
