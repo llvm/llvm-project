@@ -573,8 +573,8 @@ static ControlFlowKind CheckFallThrough(AnalysisDeclContext &AC) {
   // The CFG leaves in dead things, and we don't want the dead code paths to
   // confuse us, so we mark all live things first.
   llvm::BitVector live(cfg->getNumBlockIDs());
-  unsigned count = reachable_code::ScanReachableFromBlock(&cfg->getEntry(),
-                                                          live);
+  unsigned count =
+      reachable_code::ScanReachableFromBlock(&cfg->getEntry(), live);
 
   bool AddEHEdges = AC.getAddEHEdges();
   if (!AddEHEdges && count != cfg->getNumBlockIDs())
