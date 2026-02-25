@@ -1,4 +1,4 @@
-//===-- Lua.cpp -----------------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Lua.h"
+#include "LuaState.h"
 #include "SWIGLuaBridge.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Utility/FileSpec.h"
@@ -31,7 +31,7 @@ static int lldb_print(lua_State *L) {
   return 0;
 }
 
-Lua::Lua() : m_lua_state(luaL_newstate()) {
+LuaState::LuaState() : m_lua_state(luaL_newstate()) {
   assert(m_lua_state);
   luaL_openlibs(m_lua_state);
   luaopen_lldb(m_lua_state);
@@ -39,12 +39,12 @@ Lua::Lua() : m_lua_state(luaL_newstate()) {
   lua_setglobal(m_lua_state, "print");
 }
 
-Lua::~Lua() {
+LuaState::~LuaState() {
   assert(m_lua_state);
   lua_close(m_lua_state);
 }
 
-llvm::Error Lua::Run(llvm::StringRef buffer) {
+llvm::Error LuaState::Run(llvm::StringRef buffer) {
   int error =
       luaL_loadbuffer(m_lua_state, buffer.data(), buffer.size(), "buffer") ||
       lua_pcall(m_lua_state, 0, 0, 0);
@@ -59,7 +59,8 @@ llvm::Error Lua::Run(llvm::StringRef buffer) {
   return e;
 }
 
-llvm::Error Lua::RegisterBreakpointCallback(void *baton, const char *body) {
+llvm::Error LuaState::RegisterBreakpointCallback(void *baton,
+                                                 const char *body) {
   lua_pushlightuserdata(m_lua_state, baton);
   const char *fmt_str = "return function(frame, bp_loc, ...) {0} end";
   std::string func_str = llvm::formatv(fmt_str, body).str();
@@ -76,9 +77,9 @@ llvm::Error Lua::RegisterBreakpointCallback(void *baton, const char *body) {
 }
 
 llvm::Expected<bool>
-Lua::CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
-                            lldb::BreakpointLocationSP bp_loc_sp,
-                            StructuredData::ObjectSP extra_args_sp) {
+LuaState::CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
+                                 lldb::BreakpointLocationSP bp_loc_sp,
+                                 StructuredData::ObjectSP extra_args_sp) {
 
   lua_pushlightuserdata(m_lua_state, baton);
   lua_gettable(m_lua_state, LUA_REGISTRYINDEX);
@@ -87,7 +88,8 @@ Lua::CallBreakpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
       m_lua_state, stop_frame_sp, bp_loc_sp, extra_args_impl);
 }
 
-llvm::Error Lua::RegisterWatchpointCallback(void *baton, const char *body) {
+llvm::Error LuaState::RegisterWatchpointCallback(void *baton,
+                                                 const char *body) {
   lua_pushlightuserdata(m_lua_state, baton);
   const char *fmt_str = "return function(frame, wp, ...) {0} end";
   std::string func_str = llvm::formatv(fmt_str, body).str();
@@ -104,8 +106,8 @@ llvm::Error Lua::RegisterWatchpointCallback(void *baton, const char *body) {
 }
 
 llvm::Expected<bool>
-Lua::CallWatchpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
-                            lldb::WatchpointSP wp_sp) {
+LuaState::CallWatchpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
+                                 lldb::WatchpointSP wp_sp) {
 
   lua_pushlightuserdata(m_lua_state, baton);
   lua_gettable(m_lua_state, LUA_REGISTRYINDEX);
@@ -113,7 +115,7 @@ Lua::CallWatchpointCallback(void *baton, lldb::StackFrameSP stop_frame_sp,
       m_lua_state, stop_frame_sp, wp_sp);
 }
 
-llvm::Error Lua::CheckSyntax(llvm::StringRef buffer) {
+llvm::Error LuaState::CheckSyntax(llvm::StringRef buffer) {
   int error =
       luaL_loadbuffer(m_lua_state, buffer.data(), buffer.size(), "buffer");
   if (error == LUA_OK) {
@@ -130,7 +132,7 @@ llvm::Error Lua::CheckSyntax(llvm::StringRef buffer) {
   return e;
 }
 
-llvm::Error Lua::LoadModule(llvm::StringRef filename) {
+llvm::Error LuaState::LoadModule(llvm::StringRef filename) {
   const FileSpec file(filename);
   if (!FileSystem::Instance().Exists(file)) {
     return llvm::make_error<llvm::StringError>("invalid path",
@@ -158,7 +160,7 @@ llvm::Error Lua::LoadModule(llvm::StringRef filename) {
   return llvm::Error::success();
 }
 
-llvm::Error Lua::ChangeIO(FILE *out, FILE *err) {
+llvm::Error LuaState::ChangeIO(FILE *out, FILE *err) {
   assert(out != nullptr);
   assert(err != nullptr);
 
