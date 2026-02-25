@@ -40,7 +40,8 @@ tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
 }
 
-static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp, BufferedStackTrace *ST){
+static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp,
+                          BufferedStackTrace *ST){
   uptr top = 0;
   uptr bottom = 0;
   if (fullStacktrace)
@@ -50,14 +51,13 @@ static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp, BufferedStackTr
 }
 
 namespace __tysan{
-  void OnStackUnwind(const SignalContext &sig, const void *,
-                          BufferedStackTrace *stack){
-    getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
-  }
+void OnStackUnwind(const SignalContext &sig, const void *,
+                        BufferedStackTrace *stack) {
+  getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
 }
+} // namespace __tysan
 
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__sanitizer_print_stack_trace() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __sanitizer_print_stack_trace() {
   GET_CURRENT_PC_BP;
   UNINITIALIZED BufferedStackTrace stack;
   getStackTrace(true, pc, bp, &stack);

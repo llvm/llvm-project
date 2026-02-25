@@ -7,7 +7,6 @@
 // TYSAN and UBSAN has no allocator.
 // UNSUPPORTED: tysan, ubsan
 
-
 // REQUIRES: x86_64-target-arch
 
 #include <stdio.h>
