@@ -767,6 +767,8 @@ def OpGetDefaultQueue: Op<303, (outs ID:$res), (ins TYPE:$type),
                   "$res = OpGetDefaultQueue $type">;
 def OpBuildNDRange: Op<304, (outs ID:$res), (ins TYPE:$type, ID:$GWS, ID:$LWS, ID:$GWO),
                   "$res = OpBuildNDRange $type $GWS $LWS $GWO">;
+def OpEnqueueMarker: Op<291, (outs ID:$res), (ins TYPE:$type, ID:$queue, ID:$num_events, ID:$event_wait_list, ID:$ret_event),
+                  "$res = OpEnqueueMarker $type $queue $num_events $event_wait_list $ret_event">;
 
 // 3.42.23. Pipe Instructions
 
