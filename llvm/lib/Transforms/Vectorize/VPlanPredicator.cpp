@@ -325,8 +325,11 @@ void VPlanTransforms::introduceMasksAndLinearize(VPlan &Plan, bool FoldTail) {
                Plan.getMiddleBlock() &&
            "the exit block must have middle block as single predecessor");
 
-    VPBuilder B(Plan.getMiddleBlock()->getTerminator());
-    for (VPRecipeBase &R : *Plan.getMiddleBlock()) {
+    auto *MiddleVPBB = Plan.getMiddleBlock();
+    auto *Term = MiddleVPBB->getTerminator();
+    auto IP = Term ? Term->getIterator() : MiddleVPBB->end();
+    VPBuilder B(MiddleVPBB, IP);
+    for (VPRecipeBase &R : *MiddleVPBB) {
       VPValue *Op;
       if (!match(&R, m_CombineOr(
                          m_ExitingIVValue(m_VPValue(), m_VPValue(Op)),

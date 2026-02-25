@@ -7513,8 +7513,9 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // 1. Set up the skeleton for vectorization, including vector pre-header and
   // middle block. The vector loop is created during VPlan execution.
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
-  replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
-                        State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
+  if (VPBasicBlock *ScalarPH = BestVPlan.getScalarPreheader())
+    replaceVPBBWithIRVPBB(ScalarPH, State.CFG.PrevBB->getSingleSuccessor(),
+                          &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan) && "final VPlan is invalid");
@@ -8198,6 +8199,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
   VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
                                   CM.foldTailByMasking());
+  VPlanTransforms::removeBranchOnConst(*Plan);
 
   VPlanTransforms::createLoopRegions(*Plan);
 

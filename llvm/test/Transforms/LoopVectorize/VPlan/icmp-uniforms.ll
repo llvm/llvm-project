@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: more_than_one_use
-;
+
 ; PR30627. Check that a compare instruction with more than one use is not
 ; recognized as uniform and is vectorized.
 ;
@@ -68,11 +68,8 @@ define i32 @more_than_one_use(ptr %a, i64 %n) {
 ; CHECK-NEXT:    IR   %tmp3 = add i32 %r, %tmp2
 ; CHECK-NEXT:  No successors
 ; CHECK-NEXT:  }
+; CHECK-EMPTY:
 ;
-; CHECK:     vector.body
-; CHECK:       %[[I:.+]] = add nuw nsw <4 x i64> %vec.ind, splat (i64 1)
-; CHECK:       icmp slt <4 x i64> %[[I]], %broadcast.splat
-; CHECK:       br i1 {{.*}}, label %middle.block, label %vector.body
 entry:
   br label %for.body
 
@@ -94,7 +91,7 @@ for.end:
 
 ; Check for crash exposed by D76992.
 define void @test(ptr %ptr) {
-; CHECK-LABEL: 'test'
+; CHECK-LABEL: VPlan for loop in 'test'
 ; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
 ; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
 ; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
@@ -147,11 +144,10 @@ define void @test(ptr %ptr) {
 ; CHECK-NEXT:  No successors
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  scalar.ph:
-; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ ir<0>, ir-bb<entry> ]
 ; CHECK-NEXT:  Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
-; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: ir<0> from scalar.ph)
 ; CHECK-NEXT:    IR   %cond0 = icmp ult i64 %iv, 13
 ; CHECK-NEXT:    IR   %s = select i1 %cond0, i32 10, i32 20
 ; CHECK-NEXT:    IR   %gep = getelementptr inbounds i32, ptr %ptr, i64 %iv

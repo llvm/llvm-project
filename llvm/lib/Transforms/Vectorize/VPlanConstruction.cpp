@@ -1288,32 +1288,34 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   // Update resume phis for inductions in the scalar preheader. If AnyNaNLane is
   // true, the resume from the start of the last vector iteration via the
   // canonical IV, otherwise from the original value.
-  for (auto &R : Plan.getScalarPreheader()->phis()) {
-    auto *ResumeR = cast<VPPhi>(&R);
-    VPValue *VecV = ResumeR->getOperand(0);
-    if (RdxResults.contains(VecV))
-      continue;
-    if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
-      if (DerivedIV->getNumUsers() == 1 &&
-          DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
-        auto *NewSel =
-            MiddleBuilder.createSelect(AnyNaNLane, LoopRegion->getCanonicalIV(),
-                                       &Plan.getVectorTripCount());
-        DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
-        DerivedIV->setOperand(1, NewSel);
+  if (auto *ScalarPH = Plan.getScalarPreheader()) {
+    for (auto &R : ScalarPH->phis()) {
+      auto *ResumeR = cast<VPPhi>(&R);
+      VPValue *VecV = ResumeR->getOperand(0);
+      if (RdxResults.contains(VecV))
         continue;
+      if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
+        if (DerivedIV->getNumUsers() == 1 &&
+            DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
+          auto *NewSel =
+              MiddleBuilder.createSelect(AnyNaNLane, LoopRegion->getCanonicalIV(),
+                                         &Plan.getVectorTripCount());
+          DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
+          DerivedIV->setOperand(1, NewSel);
+          continue;
+        }
       }
+      // Bail out and abandon the current, partially modified, VPlan if we
+      // encounter resume phi that cannot be updated yet.
+      if (VecV != &Plan.getVectorTripCount()) {
+        LLVM_DEBUG(dbgs() << "Found resume phi we cannot update for VPlan with "
+                             "FMaxNum/FMinNum reduction.\n");
+        return false;
+      }
+      auto *NewSel = MiddleBuilder.createSelect(
+          AnyNaNLane, LoopRegion->getCanonicalIV(), VecV);
+      ResumeR->setOperand(0, NewSel);
     }
-    // Bail out and abandon the current, partially modified, VPlan if we
-    // encounter resume phi that cannot be updated yet.
-    if (VecV != &Plan.getVectorTripCount()) {
-      LLVM_DEBUG(dbgs() << "Found resume phi we cannot update for VPlan with "
-                           "FMaxNum/FMinNum reduction.\n");
-      return false;
-    }
-    auto *NewSel = MiddleBuilder.createSelect(
-        AnyNaNLane, LoopRegion->getCanonicalIV(), VecV);
-    ResumeR->setOperand(0, NewSel);
   }
 
   auto *MiddleTerm = MiddleVPBB->getTerminator();

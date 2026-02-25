@@ -4624,7 +4624,8 @@ public:
 
   /// Return the VPBasicBlock for the preheader of the scalar loop.
   VPBasicBlock *getScalarPreheader() const {
-    return cast<VPBasicBlock>(getScalarHeader()->getSinglePredecessor());
+    return dyn_cast_or_null<VPBasicBlock>(
+        getScalarHeader()->getSinglePredecessor());
   }
 
   /// Return the VPIRBasicBlock wrapping the header of the scalar loop.
@@ -4869,8 +4870,8 @@ public:
   /// that this relies on unneeded branches to the scalar tail loop being
   /// removed.
   bool hasScalarTail() const {
-    return !(!getScalarPreheader()->hasPredecessors() ||
-             getScalarPreheader()->getSinglePredecessor() == getEntry());
+    auto *ScalarPH = getScalarPreheader();
+    return ScalarPH && ScalarPH->getSinglePredecessor() != getEntry();
   }
 };
 
