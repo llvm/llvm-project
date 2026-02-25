@@ -202,6 +202,11 @@ const char *RawComment::extractBriefText(const ASTContext &Context) const {
 comments::FullComment *RawComment::parse(const ASTContext &Context,
                                          const Preprocessor *PP,
                                          const Decl *D) const {
+  // If the associated declaration is invalid, do not proceed with semantic
+  // analysis.
+  if (D && D->isInvalidDecl())
+    return nullptr;
+
   // Lazily initialize RawText using the accessor before using it.
   (void)getRawText(Context.getSourceManager());
 
