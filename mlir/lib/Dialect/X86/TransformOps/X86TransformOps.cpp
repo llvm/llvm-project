@@ -19,32 +19,32 @@
 #include "mlir/IR/RegionKindInterface.h"
 
 using namespace mlir;
-using namespace mlir::x86vector;
+using namespace mlir::x86;
 using namespace mlir::transform;
 
 void mlir::transform::ApplyVectorContractToFMAPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  x86vector::populateVectorContractToFMAPatterns(patterns);
+  x86::populateVectorContractToFMAPatterns(patterns);
 }
 
 void mlir::transform::ApplyVectorContractToPackedTypeDotProductPatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
-  x86vector::populateVectorContractToPackedTypeDotProductPatterns(patterns);
+  x86::populateVectorContractToPackedTypeDotProductPatterns(patterns);
 }
 
 void mlir::transform::ApplyVectorContractBF16ToFMAPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  x86vector::populateVectorContractBF16ToFMAPatterns(patterns);
+  x86::populateVectorContractBF16ToFMAPatterns(patterns);
 }
 
 void mlir::transform::ApplySinkVectorProducerOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  x86vector::populateSinkVectorProducerOpsPatterns(patterns);
+  x86::populateSinkVectorProducerOpsPatterns(patterns);
 }
 
 void mlir::transform::ApplyShuffleVectorFMAOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  x86vector::populateShuffleVectorFMAOpsPatterns(patterns);
+  x86::populateShuffleVectorFMAOpsPatterns(patterns);
 }
 
 //===----------------------------------------------------------------------===//
@@ -59,7 +59,7 @@ public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(X86TransformDialectExtension)
 
   X86TransformDialectExtension() {
-    declareGeneratedDialect<x86vector::X86Dialect>();
+    declareGeneratedDialect<x86::X86Dialect>();
     declareGeneratedDialect<LLVM::LLVMDialect>();
     registerTransformOps<
 #define GET_OP_LIST
@@ -72,7 +72,6 @@ public:
 #define GET_OP_CLASSES
 #include "mlir/Dialect/X86/TransformOps/X86TransformOps.cpp.inc"
 
-void mlir::x86vector::registerTransformDialectExtension(
-    DialectRegistry &registry) {
+void mlir::x86::registerTransformDialectExtension(DialectRegistry &registry) {
   registry.addExtensions<X86TransformDialectExtension>();
 }
