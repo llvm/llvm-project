@@ -20,7 +20,8 @@ int main(int, char**) {
   for (std::regex_constants::syntax_option_type op :
        {std::regex::basic, std::regex::grep}) {
     try {
-      TEST_IGNORE_NODISCARD std::regex("a\\{100000000000000000\\}", op);
+      auto regex = "a\\{" + std::to_string(std::numeric_limits<size_t>::max()) + "1\\}";
+      TEST_IGNORE_NODISCARD std::regex(regex, op);
       assert(false);
     } catch (const std::regex_error &e) {
       assert(e.code() == std::regex_constants::error_badbrace);

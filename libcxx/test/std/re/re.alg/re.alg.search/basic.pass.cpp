@@ -31,6 +31,18 @@ int main(int, char**)
     }
     {
         std::cmatch m;
+        assert(!std::regex_search("a", m, std::regex("\\0", std::regex_constants::basic)));
+        assert(m.size() == 0);
+        assert(m.empty());
+    }
+    {
+        std::cmatch m;
+        assert(!std::regex_search("a", m, std::regex("[a-[.hyphen.]]", std::regex_constants::basic)));
+        assert(m.size() == 0);
+        assert(m.empty());
+    }
+    {
+        std::cmatch m;
         const char s[] = "a";
         assert(std::regex_search(s, m, std::regex("a", std::regex_constants::basic)));
         assert(m.size() == 1);
