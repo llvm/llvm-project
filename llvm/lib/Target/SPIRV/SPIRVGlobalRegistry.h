@@ -357,6 +357,20 @@ public:
     return getSPIRVTypeForVReg(VReg) != nullptr;
   }
 
+  // Returns true if a live (non-debug) VReg in VRegToTypeMap references this
+  // type. Avoids deleting types still needed by live values (e.g., PHIs).
+  bool isTypeInstructionUsed(const MachineInstr *TypeMI,
+                             const MachineFunction *MF,
+                             const MachineRegisterInfo &MRI) const {
+    auto It = VRegToTypeMap.find(MF);
+    if (It == VRegToTypeMap.end())
+      return false;
+    for (const auto &[Reg, TypeInst] : It->second)
+      if (TypeInst == TypeMI && !MRI.use_nodbg_empty(Reg))
+        return true;
+    return false;
+  }
+
   // Return the VReg holding the result of the given OpTypeXXX instruction.
   Register getSPIRVTypeID(SPIRVTypeInst SpirvType) const;
 

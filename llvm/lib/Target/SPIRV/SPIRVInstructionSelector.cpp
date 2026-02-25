@@ -673,7 +673,8 @@ static bool isOpcodeWithNoSideEffects(unsigned Opcode) {
   }
 }
 
-bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
+bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI,
+            const SPIRVGlobalRegistry &GR) {
   // If there are no definitions, then assume there is some other
   // side-effect that makes this instruction live.
   if (MI.getNumDefs() == 0)
@@ -731,6 +732,14 @@ bool isDead(const MachineInstr &MI, const MachineRegisterInfo &MRI) {
   }
 
   if (isOpcodeWithNoSideEffects(MI.getOpcode())) {
+    // A type instruction may have no MRI uses but still referenced by 
+    // VRegToTypeMap (e.g., PHIs). Erasing it leaves a dangling pointer 
+    // and can crash patchPhis/getSPIRVTypeID.
+    if (GR.isTypeInstructionUsed(&MI, MI.getMF(), MRI)) {
+      LLVM_DEBUG(dbgs() << "Not dead: type instruction still referenced "
+                           "by VRegToTypeMap\n");
+      return false;
+    }
     LLVM_DEBUG(dbgs() << "Dead: known opcode with no side effects\n");
     return true;
   }
@@ -771,7 +780,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
   assert(I.getParent()->getParent() && "Instruction should be in a function!");
 
   LLVM_DEBUG(dbgs() << "Checking if instruction is dead: " << I;);
-  if (isDead(I, *MRI)) {
+  if (isDead(I, *MRI, GR)) {
     LLVM_DEBUG(dbgs() << "Instruction is dead.\n");
     removeDeadInstruction(I);
     return true;
@@ -807,7 +816,7 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
         });
         assert(Res || Def->getOpcode() == TargetOpcode::G_CONSTANT);
         if (Res) {
-          if (!isTriviallyDead(*Def, *MRI) && isDead(*Def, *MRI))
+          if (!isTriviallyDead(*Def, *MRI) && isDead(*Def, *MRI, GR))
             DeadMIs.insert(Def);
           return Res;
         }

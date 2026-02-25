@@ -264,6 +264,15 @@ class SPIRVLegalizePointerCast : public FunctionPass {
     // - float a = array[0];
     if (isTypeFirstElementAggregate(ToTy, FromTy))
       Output = loadFirstValueFromAggregate(B, ToTy, OriginalOperand, LI);
+    // Scalar load. No aggregate/vector down-cast reconstruction is needed.
+    else if (LI->getType()->isSingleValueType() && !LI->getType()->isVectorTy()) {
+      Type *LoadTy = ToTy ? ToTy : LI->getType();
+      GR->buildAssignPtr(B, LoadTy, OriginalOperand);
+      LoadInst *NewLoad = B.CreateLoad(LI->getType(), OriginalOperand);
+      NewLoad->setAlignment(LI->getAlign());
+      buildAssignType(B, LI->getType(), NewLoad);
+      Output = NewLoad;
+    }
     // Destination is a smaller vector than source or different vector type.
     // - float3 v3 = vector4;
     // - float4 v2 = int4;
