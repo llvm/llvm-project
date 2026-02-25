@@ -9,6 +9,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -163,8 +164,6 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
 
   // Required variables to get from metadata search
   LLVMContext *Context;
-  SmallVector<SmallString<128>> FilePaths;
-  SmallVector<int64_t> LLVMSourceLanguages;
   SmallVector<const DICompileUnit *> CompileUnits;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
@@ -178,17 +177,12 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const NamedMDNode *DbgCu = M->getNamedMetadata("llvm.dbg.cu");
     if (!DbgCu)
       return false;
-    for (const auto *Op : DbgCu->operands()) {
-      if (const auto *CompileUnit = dyn_cast<DICompileUnit>(Op)) {
-        DIFile *File = CompileUnit->getFile();
-        FilePaths.emplace_back();
-        sys::path::append(FilePaths.back(), File->getDirectory(),
-                          File->getFilename());
-        LLVMSourceLanguages.push_back(
-            CompileUnit->getSourceLanguage().getUnversionedName());
-        CompileUnits.push_back(CompileUnit);
-      }
-    }
+    CompileUnits =
+        map_to_vector(make_filter_range(DbgCu->operands(),
+                                        [](const MDNode *Op) {
+                                          return isa<DICompileUnit>(Op);
+                                        }),
+                      [](const MDNode *Op) { return cast<DICompileUnit>(Op); });
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
     assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
@@ -262,16 +256,19 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
     const Register DebugInfoVersionReg =
         GR->buildConstantInt(DebugInfoVersion, MIRBuilder, I32Ty, false);
 
-    for (unsigned Idx = 0; Idx < LLVMSourceLanguages.size(); ++Idx) {
-      const Register FilePathStrReg =
-          emitOpString(MRI, MIRBuilder, FilePaths[Idx]);
+    for (unsigned Idx = 0; Idx < CompileUnits.size(); ++Idx) {
+      const DICompileUnit *CompileUnit = CompileUnits[Idx];
+      DIFile *File = CompileUnit->getFile();
+      SmallString<128> FilePath;
+      sys::path::append(FilePath, File->getDirectory(), File->getFilename());
+      const Register FilePathStrReg = emitOpString(MRI, MIRBuilder, FilePath);
 
       const Register DebugSourceResIdReg = emitDIInstruction(
           MRI, MIRBuilder, GR, VoidTy, TII, TRI, RBI, MF,
           SPIRV::NonSemanticExtInst::DebugSource, {FilePathStrReg});
 
-      SourceLanguage SpirvSourceLanguage =
-          convertDWARFToSPIRVSourceLanguage(LLVMSourceLanguages[Idx]);
+      SourceLanguage SpirvSourceLanguage = convertDWARFToSPIRVSourceLanguage(
+          CompileUnit->getSourceLanguage().getUnversionedName());
 
       const Register SourceLanguageReg =
           GR->buildConstantInt(SpirvSourceLanguage, MIRBuilder, I32Ty, false);
@@ -283,7 +280,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
                              DebugSourceResIdReg, SourceLanguageReg});
 
       // Store the register for this compile unit
-      CompileUnitRegMap[CompileUnits[Idx]] = DebugCompUnitResIdReg;
+      CompileUnitRegMap[CompileUnit] = DebugCompUnitResIdReg;
     }
 
     // We aren't extracting any DebugInfoFlags now so we
