@@ -835,12 +835,14 @@ ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
 }
 
 void ExternalFileUnit::PopChildIo(ChildIo &child) {
+  ChildIo previous = child.AcquirePrevious();
   if (child_ != &child) {
     child.parent().GetIoErrorHandler().Crash(
         "ChildIo being popped is not top of stack");
   }
   child_->~ChildIo(); // delete top child
-  child_ = child.AcquirePrevious();
+  FreeMemory(child_);
+  child_ = previous;
 }
 
 std::uint32_t ExternalFileUnit::ReadHeaderOrFooter(std::int64_t frameOffset) {

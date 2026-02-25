@@ -110,7 +110,6 @@ public:
 
 private:
   RT_API_ATTRS void delete_ptr(pointer_type p) {
-    //    static_assert(std::is_trivially_destructible_v<A>);
     p->~A();
     FreeMemory(p);
   }
