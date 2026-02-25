@@ -5297,13 +5297,25 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
           "unexpected memory order for __arm_atomic_store_with_stshh");
     }
 
-    Function *F =
-        CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
-                         {StoreAddr->getType(), StoreValue->getType()});
+    // Compute pointee bit-width from arg0 and create as i32 constant
+    QualType ValQT =
+        E->getArg(0)->getType()->castAs<PointerType>()->getPointeeType();
+    unsigned SizeBits = getContext().getTypeSize(ValQT);
+    auto *SizeC = llvm::ConstantInt::get(Int32Ty, SizeBits);
+
+    Value *StoreValue64 = Builder.CreateZExtOrTrunc(StoreValue, Int64Ty);
+
+    Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
+                                   {StoreAddr->getType()});
+
+    // Intrinsic imm args are i32 regardless of source integer width
+    auto *OrderI32 = llvm::ConstantInt::get(Int32Ty, OrderC->getZExtValue());
+    auto *PolicyI32 = llvm::ConstantInt::get(Int32Ty, PolicyC->getZExtValue());
 
     // Emit a single intrinsic so backend can expand to STSHH followed by
-    // atomic store, to guarantee STSHH immediately precedes store insn.
-    return Builder.CreateCall(F, {StoreAddr, StoreValue, OrderC, PolicyC});
+    // atomic store, to guarantee STSHH immediately precedes STR insn
+    return Builder.CreateCall(
+        F, {StoreAddr, StoreValue64, OrderI32, PolicyI32, SizeC});
   }
 
   if (BuiltinID == clang::AArch64::BI__builtin_arm_rndr ||

@@ -1011,26 +1011,27 @@ bool AArch64ExpandPseudo::expandSTSHHAtomicStore(
 
   unsigned Order = MI.getOperand(2).getImm();
   uint64_t Policy = MI.getOperand(3).getImm();
+  unsigned Size = MI.getOperand(4).getImm();
 
   bool IsRelaxed = Order == 0;
   unsigned StoreOpc = 0;
 
-  // __ATOMIC_RELAXED uses STR. __ATOMIC_{RELEASE/SEQ_CST} use STLR
-  switch (MI.getOpcode()) {
-  case AArch64::STSHH_ATOMIC_STORE_B:
+  // __ATOMIC_RELAXED uses STR. __ATOMIC_{RELEASE/SEQ_CST} use STLR.
+  switch (Size) {
+  case 8:
     StoreOpc = IsRelaxed ? AArch64::STRBBui : AArch64::STLRB;
     break;
-  case AArch64::STSHH_ATOMIC_STORE_H:
+  case 16:
     StoreOpc = IsRelaxed ? AArch64::STRHHui : AArch64::STLRH;
     break;
-  case AArch64::STSHH_ATOMIC_STORE_W:
+  case 32:
     StoreOpc = IsRelaxed ? AArch64::STRWui : AArch64::STLRW;
     break;
-  case AArch64::STSHH_ATOMIC_STORE_X:
+  case 64:
     StoreOpc = IsRelaxed ? AArch64::STRXui : AArch64::STLRX;
     break;
   default:
-    llvm_unreachable("Unexpected STSHH atomic store pseudo");
+    llvm_unreachable("Unexpected STSHH atomic store size");
   }
 
   // Emit the hint with the retention policy immediate.
@@ -1039,8 +1040,19 @@ bool AArch64ExpandPseudo::expandSTSHHAtomicStore(
                            .getInstr();
 
   // Emit the associated store instruction.
+  Register ValReg = MI.getOperand(0).getReg();
+  Register StoreValReg = ValReg;
+  bool UsesXReg = StoreOpc == AArch64::STRXui || StoreOpc == AArch64::STLRX;
+  if (!UsesXReg) {
+    const TargetRegisterInfo *TRI =
+        MBB.getParent()->getSubtarget().getRegisterInfo();
+    Register SubReg = TRI->getSubReg(ValReg, AArch64::sub_32);
+    if (SubReg)
+      StoreValReg = SubReg;
+  }
+
   MachineInstrBuilder Store = BuildMI(MBB, MBBI, DL, TII->get(StoreOpc))
-                                  .add(MI.getOperand(0))
+                                  .addReg(StoreValReg)
                                   .add(MI.getOperand(1));
 
   // Relaxed uses base+imm addressing with a zero offset.
@@ -1753,10 +1765,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
      return expandCALL_BTI(MBB, MBBI);
    case AArch64::StoreSwiftAsyncContext:
      return expandStoreSwiftAsyncContext(MBB, MBBI);
-   case AArch64::STSHH_ATOMIC_STORE_B:
-   case AArch64::STSHH_ATOMIC_STORE_H:
-   case AArch64::STSHH_ATOMIC_STORE_W:
-   case AArch64::STSHH_ATOMIC_STORE_X:
+   case AArch64::STSHH_ATOMIC_STORE_SZ:
      return expandSTSHHAtomicStore(MBB, MBBI);
    case AArch64::RestoreZAPseudo:
    case AArch64::CommitZASavePseudo:

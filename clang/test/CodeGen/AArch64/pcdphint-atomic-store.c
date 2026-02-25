@@ -12,7 +12,8 @@
 // CHECK-NEXT:    store i8 [[V]], ptr [[V_ADDR]], align 1
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[V_ADDR]], align 1
-// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0.i8(ptr [[TMP0]], i8 [[TMP1]], i32 0, i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i64
+// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP2]], i32 0, i32 0, i32 8)
 // CHECK-NEXT:    ret void
 //
 void test_u8(unsigned char *p, unsigned char v) {
@@ -28,7 +29,8 @@ void test_u8(unsigned char *p, unsigned char v) {
 // CHECK-NEXT:    store i16 [[V]], ptr [[V_ADDR]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i16, ptr [[V_ADDR]], align 2
-// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0.i16(ptr [[TMP0]], i16 [[TMP1]], i32 3, i32 1)
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i64
+// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP2]], i32 3, i32 1, i32 16)
 // CHECK-NEXT:    ret void
 //
 void test_u16(unsigned short *p, unsigned short v) {
@@ -44,7 +46,8 @@ void test_u16(unsigned short *p, unsigned short v) {
 // CHECK-NEXT:    store i32 [[V]], ptr [[V_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[V_ADDR]], align 4
-// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr [[TMP0]], i32 [[TMP1]], i32 5, i32 0)
+// CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
+// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP2]], i32 5, i32 0, i32 32)
 // CHECK-NEXT:    ret void
 //
 void test_u32(unsigned int *p, unsigned int v) {
@@ -60,7 +63,7 @@ void test_u32(unsigned int *p, unsigned int v) {
 // CHECK-NEXT:    store i64 [[V]], ptr [[V_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[V_ADDR]], align 8
-// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0.i64(ptr [[TMP0]], i64 [[TMP1]], i32 0, i32 1)
+// CHECK-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0(ptr [[TMP0]], i64 [[TMP1]], i32 0, i32 1, i32 64)
 // CHECK-NEXT:    ret void
 //
 void test_u64(unsigned long *p, unsigned long v) {

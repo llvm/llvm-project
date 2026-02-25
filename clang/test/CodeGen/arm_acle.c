@@ -1826,7 +1826,7 @@ int test_rndrrs(uint64_t *__addr) {
 
 // AArch64-LABEL: @test_stshh_atomic_store(
 // AArch64-NEXT:  entry:
-// AArch64-NEXT:    call void @llvm.aarch64.stshh.atomic.store.p0.i32(ptr %p, i32 %v, i32 0, i32 0)
+// AArch64:         call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 {{.*}}, i32 0, i32 0, i32 32)
 // AArch64-NEXT:    ret void
 //
 void test_stshh_atomic_store(int *p, int v) {

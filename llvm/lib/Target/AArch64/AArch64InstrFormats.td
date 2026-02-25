@@ -1873,7 +1873,7 @@ def phint_op : Operand<i32> {
 }
 
 class STSHHI
-    : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy">,
+    : SimpleSystemI<0, (ins phint_op:$policy), "stshh", "\t$policy", []>,
       Sched<[WriteHint]> {
   bits<3> policy;
   let Inst{20-12} = 0b000011001;
