@@ -2179,7 +2179,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
                       IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
-                      FakeStep, Final, Mergeable, Priority,
+                      FakeStep, FakeSharedsTy, Final, Mergeable, Priority,
                       NumOfCollapseLoops](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
@@ -2240,12 +2240,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     assert(ArgStructAlloca &&
            "Unable to find the alloca instruction corresponding to arguments "
            "for extracted function");
-    StructType *ArgStructType =
-        dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
-    assert(ArgStructType && "Unable to find struct type corresponding to "
-                            "arguments for extracted function");
-    Value *SharedsSize =
-        Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+    std::optional<TypeSize> ArgAllocSize =
+        ArgStructAlloca->getAllocationSize(M.getDataLayout());
+    assert(ArgAllocSize &&
+           "Unable to determine size of arguments for extracted function");
+    Value *SharedsSize = Builder.getInt64(ArgAllocSize->getFixedValue());
 
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
@@ -2263,13 +2262,13 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     // Get the pointer to loop lb, ub, step from task ptr
     // and set up the lowerbound,upperbound and step values
     llvm::Value *Lb = Builder.CreateGEP(
-        ArgStructType, TaskShareds, {Builder.getInt32(0), Builder.getInt32(0)});
+        FakeSharedsTy, TaskShareds, {Builder.getInt32(0), Builder.getInt32(0)});
 
     llvm::Value *Ub = Builder.CreateGEP(
-        ArgStructType, TaskShareds, {Builder.getInt32(0), Builder.getInt32(1)});
+        FakeSharedsTy, TaskShareds, {Builder.getInt32(0), Builder.getInt32(1)});
 
     llvm::Value *Step = Builder.CreateGEP(
-        ArgStructType, TaskShareds, {Builder.getInt32(0), Builder.getInt32(2)});
+        FakeSharedsTy, TaskShareds, {Builder.getInt32(0), Builder.getInt32(2)});
     llvm::Value *Loadstep = Builder.CreateLoad(Builder.getInt64Ty(), Step);
 
     // set up the arguments for emitting kmpc_taskloop runtime call
@@ -2540,12 +2539,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTask(
       assert(ArgStructAlloca &&
              "Unable to find the alloca instruction corresponding to arguments "
              "for extracted function");
-      StructType *ArgStructType =
-          dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
-      assert(ArgStructType && "Unable to find struct type corresponding to "
-                              "arguments for extracted function");
-      SharedsSize =
-          Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+      std::optional<TypeSize> ArgAllocSize =
+          ArgStructAlloca->getAllocationSize(M.getDataLayout());
+      assert(ArgAllocSize &&
+             "Unable to determine size of arguments for extracted function");
+      SharedsSize = Builder.getInt64(ArgAllocSize->getFixedValue());
     }
     // Emit the @__kmpc_omp_task_alloc runtime call
     // The runtime call returns a pointer to an area where the task captured
@@ -8652,12 +8650,16 @@ static Function *emitTargetTaskProxyFunction(
            "Unable to find the alloca instruction corresponding to arguments "
            "for extracted function");
     auto *ArgStructType = cast<StructType>(ArgStructAlloca->getAllocatedType());
+    std::optional<TypeSize> ArgAllocSize =
+        ArgStructAlloca->getAllocationSize(M.getDataLayout());
+    assert(ArgStructType && ArgAllocSize &&
+           "Unable to determine size of arguments for extracted function");
+    uint64_t StructSize = ArgAllocSize->getFixedValue();
 
     AllocaInst *NewArgStructAlloca =
         Builder.CreateAlloca(ArgStructType, nullptr, "structArg");
 
-    Value *SharedsSize =
-        Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+    Value *SharedsSize = Builder.getInt64(StructSize);
 
     LoadInst *LoadShared = loadSharedDataFromTaskDescriptor(
         OMPBuilder, Builder, TaskWithPrivates, TaskWithPrivatesTy);
@@ -8996,12 +8998,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::emitTargetTask(
       assert(ArgStructAlloca &&
              "Unable to find the alloca instruction corresponding to arguments "
              "for extracted function");
-      auto *ArgStructType =
-          dyn_cast<StructType>(ArgStructAlloca->getAllocatedType());
-      assert(ArgStructType && "Unable to find struct type corresponding to "
-                              "arguments for extracted function");
-      SharedsSize =
-          Builder.getInt64(M.getDataLayout().getTypeStoreSize(ArgStructType));
+      std::optional<TypeSize> ArgAllocSize =
+          ArgStructAlloca->getAllocationSize(M.getDataLayout());
+      assert(ArgAllocSize &&
+             "Unable to determine size of arguments for extracted function");
+      SharedsSize = Builder.getInt64(ArgAllocSize->getFixedValue());
     }
 
     // Argument - `flags`
@@ -9594,8 +9595,7 @@ void OpenMPIRBuilder::emitNonContiguousDescriptor(InsertPointTy AllocaIP,
     for (unsigned II = 0, EE = NonContigInfo.Dims[I]; II < EE; ++II) {
       unsigned RevIdx = EE - II - 1;
       Value *DimsLVal = Builder.CreateInBoundsGEP(
-          DimsAddr->getAllocatedType(), DimsAddr,
-          {Builder.getInt64(0), Builder.getInt64(II)});
+          ArrayTy, DimsAddr, {Builder.getInt64(0), Builder.getInt64(II)});
       // Offset
       Value *OffsetLVal = Builder.CreateStructGEP(DimTy, DimsLVal, OffsetFD);
       Builder.CreateAlignedStore(
@@ -10091,7 +10091,7 @@ Error OpenMPIRBuilder::emitOffloadingArrays(
       MFunc = Builder.CreatePointerCast(*CustomMFunc, PtrTy);
 
     Value *MAddr = Builder.CreateInBoundsGEP(
-        MappersArray->getAllocatedType(), MappersArray,
+        PointerArrayType, MappersArray,
         {Builder.getIntN(IndexSize, 0), Builder.getIntN(IndexSize, I)});
     Builder.CreateAlignedStore(
         MFunc, MAddr, M.getDataLayout().getPrefTypeAlign(MAddr->getType()));
