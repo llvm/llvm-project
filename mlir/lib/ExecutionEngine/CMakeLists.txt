@@ -176,6 +176,7 @@ if(LLVM_ENABLE_PIC)
       APFloatWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+      DISABLE_PCH_REUSE
       )
     set_target_properties(
       mlir_apfloat_wrappers
@@ -273,6 +274,7 @@ if(LLVM_ENABLE_PIC)
       CudaRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+      DISABLE_PCH_REUSE
     )
     set_property(TARGET mlir_cuda_runtime PROPERTY CXX_STANDARD 14)
 
@@ -468,6 +470,7 @@ if(LLVM_ENABLE_PIC)
       SpirvCpuRuntimeWrappers.cpp
 
       EXCLUDE_FROM_LIBMLIR
+      DISABLE_PCH_REUSE
     )
 
     target_compile_definitions(mlir_spirv_cpu_runtime
@@ -500,6 +503,8 @@ if(LLVM_ENABLE_PIC)
     add_llvm_library(mlir_vulkan_runtime SHARED
       VulkanRuntimeWrappers.cpp
       VulkanRuntime.cpp
+
+      DISABLE_PCH_REUSE
     )
 
     target_include_directories(mlir_vulkan_runtime
