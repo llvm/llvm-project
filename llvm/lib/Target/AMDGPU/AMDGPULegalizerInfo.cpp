@@ -3868,93 +3868,95 @@ bool AMDGPULegalizerInfo::legalizeFExp10Unsafe(MachineIRBuilder &B,
 // This expansion gives a result slightly better than 1ulp.
 bool AMDGPULegalizerInfo::legalizeFEXPF64(MachineInstr &MI,
                                           MachineIRBuilder &B) const {
-  Register x = MI.getOperand(1).getReg();
-  LLT s64 = LLT::scalar(64);
-  LLT s32 = LLT::scalar(32);
-  LLT s1 = LLT::scalar(1);
+
+  Register X = MI.getOperand(1).getReg();
+  LLT S64 = LLT::scalar(64);
+  LLT S32 = LLT::scalar(32);
+  LLT S1 = LLT::scalar(1);
 
   // TODO: Check if reassoc is safe. There is an output change in exp2 and
   // exp10, which slightly increases ulp.
   unsigned Flags = MI.getFlags() & ~MachineInstr::FmReassoc;
 
-  Register dn, f, t;
+  Register Dn, F, T;
 
   if (MI.getOpcode() == TargetOpcode::G_FEXP2) {
-    // dn = rint(x)
-    dn = B.buildFRint(s64, x, Flags).getReg(0);
-    // f = x - dn
-    f = B.buildFSub(s64, x, dn, Flags).getReg(0);
-    // t = f*C1 + f*C2
-    auto C1 = B.buildFConstant(s64, APFloat(0x1.62e42fefa39efp-1));
-    auto C2 = B.buildFConstant(s64, APFloat(0x1.abc9e3b39803fp-56));
-    auto mul2 = B.buildFMul(s64, f, C2, Flags).getReg(0);
-    t = B.buildFMA(s64, f, C1, mul2, Flags).getReg(0);
+    // Dn = rint(X)
+    Dn = B.buildFRint(S64, X, Flags).getReg(0);
+    // F = X - Dn
+    F = B.buildFSub(S64, X, Dn, Flags).getReg(0);
+    // T = F*C1 + F*C2
+    auto C1 = B.buildFConstant(S64, APFloat(0x1.62e42fefa39efp-1));
+    auto C2 = B.buildFConstant(S64, APFloat(0x1.abc9e3b39803fp-56));
+    auto Mul2 = B.buildFMul(S64, F, C2, Flags).getReg(0);
+    T = B.buildFMA(S64, F, C1, Mul2, Flags).getReg(0);
 
   } else if (MI.getOpcode() == TargetOpcode::G_FEXP10) {
-    auto C1 = B.buildFConstant(s64, APFloat(0x1.a934f0979a371p+1));
-    auto mul = B.buildFMul(s64, x, C1, Flags).getReg(0);
-    dn = B.buildFRint(s64, mul, Flags).getReg(0);
+    auto C1 = B.buildFConstant(S64, APFloat(0x1.a934f0979a371p+1));
+    auto Mul = B.buildFMul(S64, X, C1, Flags).getReg(0);
+    Dn = B.buildFRint(S64, Mul, Flags).getReg(0);
 
-    auto negdn = B.buildFNeg(s64, dn, Flags).getReg(0);
-    auto C2 = B.buildFConstant(s64, APFloat(-0x1.9dc1da994fd21p-59));
-    auto C3 = B.buildFConstant(s64, APFloat(0x1.34413509f79ffp-2));
-    auto inner = B.buildFMA(s64, negdn, C3, x, Flags).getReg(0);
-    f = B.buildFMA(s64, negdn, C2, inner, Flags).getReg(0);
+    auto NegDn = B.buildFNeg(S64, Dn, Flags).getReg(0);
+    auto C2 = B.buildFConstant(S64, APFloat(-0x1.9dc1da994fd21p-59));
+    auto C3 = B.buildFConstant(S64, APFloat(0x1.34413509f79ffp-2));
+    auto Inner = B.buildFMA(S64, NegDn, C3, X, Flags).getReg(0);
+    F = B.buildFMA(S64, NegDn, C2, Inner, Flags).getReg(0);
 
-    auto C4 = B.buildFConstant(s64, APFloat(0x1.26bb1bbb55516p+1));
-    auto C5 = B.buildFConstant(s64, APFloat(-0x1.f48ad494ea3e9p-53));
-    auto mulf = B.buildFMul(s64, f, C5, Flags).getReg(0);
-    t = B.buildFMA(s64, f, C4, mulf, Flags).getReg(0);
+    auto C4 = B.buildFConstant(S64, APFloat(0x1.26bb1bbb55516p+1));
+    auto C5 = B.buildFConstant(S64, APFloat(-0x1.f48ad494ea3e9p-53));
+    auto MulF = B.buildFMul(S64, F, C5, Flags).getReg(0);
+    T = B.buildFMA(S64, F, C4, MulF, Flags).getReg(0);
+
   } else { // G_FEXP
-    auto C1 = B.buildFConstant(s64, APFloat(0x1.71547652b82fep+0));
-    auto mul = B.buildFMul(s64, x, C1, Flags).getReg(0);
-    dn = B.buildFRint(s64, mul, Flags).getReg(0);
+    auto C1 = B.buildFConstant(S64, APFloat(0x1.71547652b82fep+0));
+    auto Mul = B.buildFMul(S64, X, C1, Flags).getReg(0);
+    Dn = B.buildFRint(S64, Mul, Flags).getReg(0);
 
-    auto negdn = B.buildFNeg(s64, dn, Flags).getReg(0);
-    auto C2 = B.buildFConstant(s64, APFloat(0x1.abc9e3b39803fp-56));
-    auto C3 = B.buildFConstant(s64, APFloat(0x1.62e42fefa39efp-1));
-    auto inner = B.buildFMA(s64, negdn, C3, x, Flags).getReg(0);
-    t = B.buildFMA(s64, negdn, C2, inner, Flags).getReg(0);
+    auto NegDn = B.buildFNeg(S64, Dn, Flags).getReg(0);
+    auto C2 = B.buildFConstant(S64, APFloat(0x1.abc9e3b39803fp-56));
+    auto C3 = B.buildFConstant(S64, APFloat(0x1.62e42fefa39efp-1));
+    auto Inner = B.buildFMA(S64, NegDn, C3, X, Flags).getReg(0);
+    T = B.buildFMA(S64, NegDn, C2, Inner, Flags).getReg(0);
   }
 
-  // Polynomial chain for p
-  auto p = B.buildFConstant(s64, 0x1.ade156a5dcb37p-26);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.28af3fca7ab0cp-22),
+  // Polynomial chain for P
+  auto P = B.buildFConstant(S64, 0x1.ade156a5dcb37p-26);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.28af3fca7ab0cp-22),
                  Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.71dee623fde64p-19),
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.71dee623fde64p-19),
                  Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.a01997c89e6b0p-16),
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.a01997c89e6b0p-16),
                  Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.a01a014761f6ep-13),
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.a01a014761f6ep-13),
                  Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.6c16c1852b7b0p-10),
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.6c16c1852b7b0p-10),
                  Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.1111111122322p-7), Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.55555555502a1p-5), Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.5555555555511p-3), Flags);
-  p = B.buildFMA(s64, t, p, B.buildFConstant(s64, 0x1.000000000000bp-1), Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.1111111122322p-7), Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.55555555502a1p-5), Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.5555555555511p-3), Flags);
+  P = B.buildFMA(S64, T, P, B.buildFConstant(S64, 0x1.000000000000bp-1), Flags);
 
-  auto One = B.buildFConstant(s64, 1.0);
-  p = B.buildFMA(s64, t, p, One, Flags);
-  p = B.buildFMA(s64, t, p, One, Flags);
+  auto One = B.buildFConstant(S64, 1.0);
+  P = B.buildFMA(S64, T, P, One, Flags);
+  P = B.buildFMA(S64, T, P, One, Flags);
 
-  // z = FLDEXP(p, (int)dn)
-  auto dn_int = B.buildFPTOSI(s32, dn);
-  auto z = B.buildFLdexp(s64, p, dn_int, Flags);
+  // Z = FLDEXP(P, (int)Dn)
+  auto DnInt = B.buildFPTOSI(S32, Dn);
+  auto Z = B.buildFLdexp(S64, P, DnInt, Flags);
 
   if (!(Flags & MachineInstr::FmNoInfs)) {
-    // Overflow guard: if x <= 1024.0 then z else +inf
-    auto cond_hi = B.buildFCmp(CmpInst::FCMP_ULE, s1, x,
-                               B.buildFConstant(s64, APFloat(1024.0)));
-    auto pinf = B.buildFConstant(s64, APFloat::getInf(APFloat::IEEEdouble()));
-    z = B.buildSelect(s64, cond_hi, z, pinf, Flags);
+    // Overflow guard: if X <= 1024.0 then Z else +inf
+    auto CondHi = B.buildFCmp(CmpInst::FCMP_ULE, S1, X,
+                              B.buildFConstant(S64, APFloat(1024.0)));
+    auto PInf = B.buildFConstant(S64, APFloat::getInf(APFloat::IEEEdouble()));
+    Z = B.buildSelect(S64, CondHi, Z, PInf, Flags);
   }
 
-  // Underflow guard: if x >= -1075.0 then z else 0.0
-  auto cond_lo = B.buildFCmp(CmpInst::FCMP_UGE, s1, x,
-                             B.buildFConstant(s64, APFloat(-1075.0)));
-  auto zero = B.buildFConstant(s64, APFloat(0.0));
-  B.buildSelect(MI.getOperand(0).getReg(), cond_lo, z, zero, Flags);
+  // Underflow guard: if X >= -1075.0 then Z else 0.0
+  auto CondLo = B.buildFCmp(CmpInst::FCMP_UGE, S1, X,
+                            B.buildFConstant(S64, APFloat(-1075.0)));
+  auto Zero = B.buildFConstant(S64, APFloat(0.0));
+  B.buildSelect(MI.getOperand(0).getReg(), CondLo, Z, Zero, Flags);
 
   MI.eraseFromParent();
   return true;
