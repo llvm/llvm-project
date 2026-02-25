@@ -242,8 +242,6 @@ ArraySpec ArraySpecAnalyzer::Analyze(const parser::ComponentArraySpec &x) {
 
 static bool checkAndRewriteExplicitShapeSpecListToExplicitBounds(
     SemanticsContext &context, const parser::ArraySpec &x) {
-  if (!std::getenv("FLANG_DEBUG_BOUNDS")) return false;
-
   auto &explicitShapeSpecList{std::get<std::list<parser::ExplicitShapeSpec>>(
       const_cast<parser::ArraySpec&>(x).u)};
   
