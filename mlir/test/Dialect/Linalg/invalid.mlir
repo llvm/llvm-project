@@ -321,6 +321,24 @@ func.func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->
 
 // -----
 
+// Unranked tensor inputs must be diagnosed.
+func.func @generic_unranked_input_tensor(%in: tensor<*xf32>) {
+  %out = tensor.empty() : tensor<16x16xf32>
+  // expected-error @+1 {{'linalg.generic' op operand #0 must be a ranked tensor, but got 'tensor<*xf32>'}}
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+      ins(%in : tensor<*xf32>)
+     outs(%out : tensor<16x16xf32>) {
+      ^bb0(%a: f32, %b: f32):
+        linalg.yield %a : f32
+     } -> tensor<16x16xf32>
+  return
+}
+
+// -----
+
 func.func @generic(%arg0: memref<?x?xf32>) {
   // expected-error @+6 {{block with no terminator, has %0 = "arith.addf"(%arg1, %arg1) <{fastmath = #arith.fastmath<none>}> : (f32, f32) -> f32}}
   linalg.generic  {
