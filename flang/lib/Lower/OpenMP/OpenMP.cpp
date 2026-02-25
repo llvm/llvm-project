@@ -3956,8 +3956,28 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
       appendCombiner(construct, clauses, semaCtx);
   const auto &identifier =
       std::get<parser::OmpReductionIdentifier>(specifier.t);
-  const auto &designator = std::get<parser::ProcedureDesignator>(identifier.u);
-  const auto &reductionName = std::get<parser::Name>(designator.u);
+
+  std::string reductionNameStr = Fortran::common::visit(
+      common::visitors{
+          [](const parser::ProcedureDesignator &pd) -> std::string {
+            return std::get<parser::Name>(pd.u).ToString();
+          },
+          [](const parser::DefinedOperator &defOp) -> std::string {
+            return Fortran::common::visit(
+                common::visitors{
+                    [](const parser::DefinedOpName &opName) -> std::string {
+                      return opName.v.ToString();
+                    },
+                    [](parser::DefinedOperator::IntrinsicOperator intrOp)
+                        -> std::string {
+                      return std::string(
+                          parser::DefinedOperator::EnumToString(intrOp));
+                    },
+                },
+                defOp.u);
+          },
+      },
+      identifier.u);
 
   for (const auto &typeSpec : typeNameList.v) {
     (void)typeSpec; // Currently unused
@@ -3970,7 +3990,7 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
     ReductionProcessor::createDeclareReductionHelper<
         mlir::omp::DeclareReductionOp>(
-        converter, reductionName.ToString(), reductionType,
+        converter, reductionNameStr, reductionType,
         converter.getCurrentLocation(), isByRef, genCombinerCB, genInitValueCB);
   }
 }
