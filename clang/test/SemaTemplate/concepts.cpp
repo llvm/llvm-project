@@ -1704,6 +1704,27 @@ struct ice_point : relative_point_origin<point<kelvin>> {};
 
 }
 
+namespace GH182344 {
+
+template <typename T>
+  requires true
+void f() {}
+
+template <typename T>
+  requires false
+void f() = delete;
+
+template <typename T>
+struct Bar {};
+
+template <typename T> using Foo = Bar<T>;
+
+template <typename T> void use() {
+  f<Foo<T>>();
+}
+
+}
+
 namespace GH174667 {
 
 template<class T, class, class U>
