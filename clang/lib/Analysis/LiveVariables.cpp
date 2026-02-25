@@ -393,6 +393,8 @@ void TransferFunctions::VisitBinaryOperator(BinaryOperator *B) {
           if (const auto *HV = BD->getHoldingVar())
             val.liveDecls = LV.DSetFact.remove(val.liveDecls, HV);
 
+          // TODO: Handle pack-exprs here.
+
           val.liveBindings = LV.BSetFact.remove(val.liveBindings, BD);
         }
       } else if (const auto *VD = dyn_cast<VarDecl>(D)) {
@@ -413,11 +415,78 @@ void TransferFunctions::VisitBlockExpr(BlockExpr *BE) {
   }
 }
 
+// Note: Liveness analysis
+// (https://en.wikipedia.org/wiki/Live-variable_analysis) These traverse
+// function go element-by-element backwards in each CFG block and basically
+// tracks what is "alive".
+//  - A Decl is marked alive if it's "used". (i.e. remember that the variable
+//    shouldn't raise an -Wunused warning)
+//  - A Decl is "killed" when it's assigned or initialized. (i.e. remember that
+//    whatever the previous value of this variable was, it does not matter,
+//    because here we just overwritten it)
+
+// Example: https://godbolt.org/z/PnGvsEeYa
+// \code
+//   template <class = void>
+//   int templated_fn() {
+//       struct S { int a; long b; };
+//       auto [... members] = S{12, 5};
+//       return members...[1];
+//   }
+// \endcode
+// Is has an AST of the template specialization (instantiation) would be this:
+// clang-format off
+// \code
+//   |-DeclStmt 0x1f25d6a0 <line:15:5, col:34>
+//   | `-DecompositionDecl 0x1f25d118 <col:5, col:33> col:10 used 'S' cinit
+//   |   |-CXXFunctionalCastExpr 0x1f25d3c0 <col:26, col:33> 'S' functional cast to S <NoOp>
+//   |   | `-InitListExpr 0x1f25d218 <col:27, col:33> 'S'
+//   |   |   |-IntegerLiteral 0x1f237bb0 <col:28> 'int' 12
+//   |   |   `-ImplicitCastExpr 0x1f25d268 <col:32> 'long' <IntegralCast>
+//   |   |     `-IntegerLiteral 0x1f237bd0 <col:32> 'int' 5
+//   |   `-BindingDecl 0x1f25d0c8 <col:15> col:15 referenced members '<dependent type>...'   <-- Why is it still "<dependent-type>"? It should be "int".
+//   |     `-FunctionParmPackExpr 0x1f25d5d0 <col:15> '<dependent type>...' lvalue
+//   `-ReturnStmt 0x1f25d878 <line:20:5, col:24>
+//     `-ImplicitCastExpr 0x1f25d780 <col:12, col:24> 'int' <IntegralCast>
+//       `-ImplicitCastExpr 0x1f25d768 <col:12, col:24> 'long' <LValueToRValue>
+//         `-PackIndexingExpr 0x1f25d730 <col:12, col:24> 'long' lvalue
+//           |-DeclRefExpr 0x1f237cb8 <col:12> '<dependent type>' lvalue Binding 0x1f237a98 'members' '<dependent type>...' <-- Refers to the BindingDecl inside the primary template, this is BAD!
+//           `-ConstantExpr 0x1f25d710 <col:23> '__size_t':'unsigned long'                                                      This should have the address of "0x1f25d0c8", and point to the BindingDecl inside the specialization.
+//             |-value: Int 1                                                                                                   But even then, the type of that Decl would be wrong.
+//             `-ImplicitCastExpr 0x1f25d6f8 <col:23> '__size_t':'unsigned long' <IntegralCast>
+//               `-IntegerLiteral 0x1f237cd8 <col:23> 'int' 1
+// \code
+// clang-format on
+
+// Note: DeclRefExpr represents a "use".
 void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
   const Decl* D = DR->getDecl();
   bool InAssignment = LV.inAssignment.contains(DR);
   if (const auto *BD = dyn_cast<BindingDecl>(D)) {
     if (!InAssignment) {
+      llvm::errs() << "visiting decl ref expr:\n";
+      DR->dump();
+      if (BD->isParameterPack()) {
+        llvm::errs() << "Visited decl ref expr of a parm pack expr:\n";
+        BD->getBinding()->dump();
+        // The binding will be basically the field access:
+        // "members...[1]" is basically a desugared "members.b", which is
+        // MemberExpr of a DeclRefExpr.
+        if (const auto *Mem = dyn_cast<MemberExpr>(BD->getBinding())) {
+          if (const auto *DRE = dyn_cast<DeclRefExpr>(Mem->getBase())) {
+            // This thing should refer to a DecompositionDecl
+            // "auto [...members]". Which is basically the hidden variable.
+            if (const auto *Decomp =
+                    dyn_cast<DecompositionDecl>(DRE->getDecl())) {
+              llvm::errs() << "Making it alive: " << Decomp << "\n";
+              // This should refer to the DecompositionDecl of the template
+              // specialization.
+              val.liveDecls = LV.DSetFact.add(val.liveDecls, Decomp);
+            }
+          }
+        }
+      }
+
       if (const auto *HV = BD->getHoldingVar())
         val.liveDecls = LV.DSetFact.add(val.liveDecls, HV);
 
@@ -429,12 +498,22 @@ void TransferFunctions::VisitDeclRefExpr(DeclRefExpr *DR) {
   }
 }
 
+// Note: DeclStmt represents a "kill".
 void TransferFunctions::VisitDeclStmt(DeclStmt *DS) {
   for (const auto *DI : DS->decls()) {
     if (const auto *DD = dyn_cast<DecompositionDecl>(DI)) {
       for (const auto *BD : DD->bindings()) {
         if (const auto *HV = BD->getHoldingVar())
           val.liveDecls = LV.DSetFact.remove(val.liveDecls, HV);
+
+        // For DecompositionDecls of packs we should jsut kill that decl.
+        // This decl must have the same address that the DeclRefExpr had!
+        // Otherwise it wouldn't do the right thing.
+        if (BD->isParameterPack()) {
+          llvm::errs() << "Making it dead: " << DD << "\n";
+          auto prev = val.liveDecls;
+          val.liveDecls = LV.DSetFact.remove(val.liveDecls, DD);
+        }
 
         val.liveBindings = LV.BSetFact.remove(val.liveBindings, BD);
       }
