@@ -119,12 +119,12 @@ class AttrConvertNonNegToLLVM {
 public:
   AttrConvertNonNegToLLVM(SourceOp srcOp) {
     convertedAttr = NamedAttrList{srcOp->getAttrs()};
-    if (convertedAttr.erase("nonNeg")) {
-      MLIRContext *ctx = srcOp.getOperation()->getContext();
-      Builder b(ctx);
-      NamedAttribute attr{"nonNeg", b.getUnitAttr()};
-      propertiesAttr = b.getDictionaryAttr(ArrayRef(attr));
-    }
+    if (!convertedAttr.erase("nonNeg"))
+      return;
+    MLIRContext *ctx = srcOp.getOperation()->getContext();
+    Builder b(ctx);
+    NamedAttribute attr{"nonNeg", b.getUnitAttr()};
+    propertiesAttr = b.getDictionaryAttr(ArrayRef(attr));
   }
   ArrayRef<NamedAttribute> getAttrs() const { return convertedAttr.getAttrs(); }
   Attribute getPropAttr() const { return propertiesAttr; }
