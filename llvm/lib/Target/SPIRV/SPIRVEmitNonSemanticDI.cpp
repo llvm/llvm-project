@@ -5,6 +5,7 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -67,7 +68,7 @@ private:
                     const SPIRVInstrInfo *TII, const SPIRVRegisterInfo *TRI,
                     const RegisterBankInfo *RBI, MachineFunction &MF,
                     SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
-                    std::initializer_list<Register> Registers);
+                    ArrayRef<Register> Registers);
 };
 } // anonymous namespace
 
@@ -135,7 +136,7 @@ Register SPIRVEmitNonSemanticDI::emitDIInstruction(
     const SPIRVInstrInfo *TII, const SPIRVRegisterInfo *TRI,
     const RegisterBankInfo *RBI, MachineFunction &MF,
     SPIRV::NonSemanticExtInst::NonSemanticExtInst Inst,
-    std::initializer_list<Register> Registers) {
+    ArrayRef<Register> Registers) {
   const Register InstReg = MRI.createVirtualRegister(&SPIRV::IDRegClass);
   MRI.setType(InstReg, LLT::scalar(32));
   MachineInstrBuilder MIB =
