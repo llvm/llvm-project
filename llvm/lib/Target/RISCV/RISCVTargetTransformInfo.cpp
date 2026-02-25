@@ -3566,6 +3566,8 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   // scale the vmv.v.vx, enabling removal of the bitcast. The transform helps
   // avoid creating redundant masks.
   const DataLayout &DL = IC.getDataLayout();
+  if (II.user_empty())
+    return {};
   auto *TargetVecTy = dyn_cast<ScalableVectorType>(II.user_back()->getType());
   if (!TargetVecTy)
     return {};
