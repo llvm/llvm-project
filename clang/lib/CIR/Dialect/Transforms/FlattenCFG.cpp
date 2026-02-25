@@ -1527,19 +1527,19 @@ public:
         tryOp.getHandlerRegions();
 
     // Collect throwing calls in the try body.
-    llvm::SmallVector<cir::CallOp, 4> callsToRewrite;
+    llvm::SmallVector<cir::CallOp> callsToRewrite;
     collectThrowingCalls(tryOp.getTryRegion(), callsToRewrite);
 
     // Collect resume ops from already-flattened cleanup scopes in the try body.
     llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
     collectResumeOps(tryOp.getTryRegion(), resumeOpsToChain);
 
-    // ---- Step 1: Split the current block and inline the try body ----
+    // Split the current block and inline the try body.
     mlir::Block *currentBlock = rewriter.getInsertionBlock();
     mlir::Block *continueBlock =
         rewriter.splitBlock(currentBlock, rewriter.getInsertionPoint());
 
-    // Get reference to try body blocks before inlining.
+    // Get references to try body blocks before inlining.
     mlir::Block *bodyEntry = &tryOp.getTryRegion().front();
     mlir::Block *bodyExit = &tryOp.getTryRegion().back();
 
@@ -1556,13 +1556,14 @@ public:
       rewriter.replaceOpWithNewOp<cir::BrOp>(bodyYield, continueBlock);
     }
 
-    // ---- Step 2: If there are no handlers, just inline the body ----
+    // If there are no handlers, we're done.
     if (!handlerTypes || handlerTypes.empty()) {
       rewriter.eraseOp(tryOp);
       return mlir::success();
     }
 
-    // ---- Step 3: Build catch handler blocks ----
+    // Build the catch handler blocks.
+
     // First, flatten all handler regions and collect the entry blocks.
     llvm::SmallVector<mlir::Block *> catchHandlerBlocks;
 
@@ -1570,26 +1571,27 @@ public:
       mlir::Region &handlerRegion = handlerRegions[idx];
 
       if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
-        // Unwind handler: inline and leave cir.resume in place.
         mlir::Block *unwindEntry = flattenUnwindHandler(
             handlerRegion, loc, continueBlock, rewriter);
         catchHandlerBlocks.push_back(unwindEntry);
       } else {
-        // Catch handler (typed or catch-all): flatten inline.
         mlir::Block *handlerEntry = flattenCatchHandler(
             handlerRegion, continueBlock, loc, continueBlock, rewriter);
         catchHandlerBlocks.push_back(handlerEntry);
       }
     }
 
-    // ---- Step 4: Build the catch dispatch block ----
-    // Insert the dispatch block before the first handler block so that
-    // it appears above the individual catch blocks in the output.
+    // Build the catch dispatch block.
     mlir::Block *dispatchBlock = buildCatchDispatchBlock(
         tryOp, handlerTypes, catchHandlerBlocks, loc,
         catchHandlerBlocks.front(), rewriter);
 
-    // ---- Step 5: Build unwind block(s) and replace throwing calls ----
+    // Build a block to be the unwind desination for throwing calls and replace
+    // the calls with try_call ops. Note that the unwind block created here is
+    // something different than the unwind handler that we may have created
+    // above. The unwind handler continues unwinding after uncaught exceptions.
+    // This is the block that will eventually become the landing pad for invoke
+    // instructions.
     bool hasCleanup = tryOp.getCleanup();
     if (!callsToRewrite.empty()) {
       // Create a shared unwind block for all throwing calls.
@@ -1600,7 +1602,7 @@ public:
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
     }
 
-    // ---- Step 6: Chain resume ops from inner cleanup scopes ----
+    // Chain resume ops from inner cleanup scopes.
     // Resume ops from already-flattened cleanup scopes within the try body
     // should branch to the catch dispatch block instead of unwinding directly.
     for (cir::ResumeOp resumeOp : resumeOpsToChain) {
@@ -1610,7 +1612,7 @@ public:
           resumeOp, mlir::ValueRange{ehToken}, dispatchBlock);
     }
 
-    // ---- Step 7: Erase the original try op ----
+    // Finally, erase the original try op ----
     rewriter.eraseOp(tryOp);
 
     return mlir::success();

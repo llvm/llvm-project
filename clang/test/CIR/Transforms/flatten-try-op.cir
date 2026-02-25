@@ -517,6 +517,84 @@ cir.func @test_nested_try() {
 // CHECK:         cir.br ^{{.*}}
 // CHECK:         cir.return
 
+// Test a try op with handlers nested inside a cleanup scope.
+// The try is flattened first, then the enclosing cleanup scope chains
+// its EH path through the try's catch dispatch.
+cir.func @test_try_with_handlers_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.try {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup all {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_with_handlers_in_cleanup()
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[C]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+//
+// Cleanup scope body: enters the flattened try.
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// Try body: doSomething becomes try_call.
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// Normal continuation from try_call.
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[TRY_CONTINUE:bb[0-9]+]]
+//
+// Catch dispatch.
+// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// Catch-all handler: begin_catch, end_catch
+// (empty body), then normal cleanup runs end_catch, then exit.
+// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CATCH_TOK:.*]], %{{.*}} = cir.begin_catch %[[ET]]
+// CHECK:         cir.br ^[[INNER_CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.end_catch %[[CATCH_TOK]]
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.br ^[[CATCH_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CATCH_EXIT]]:
+// CHECK:         cir.br ^[[TRY_CONTINUE]]
+//
+// Unwind block (from try_call).
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH]](%[[EH_TOK]] : !cir.eh_token)
+//
+// After try, normal cleanup: call dtor.
+// CHECK:       ^[[TRY_CONTINUE]]:
+// CHECK:         cir.br ^{{.*}}
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+//
+// CHECK:         cir.return
+
 cir.func private @mayThrow()
 cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
 cir.func private @dtor(!cir.ptr<!rec_SomeClass>) attributes {nothrow}
