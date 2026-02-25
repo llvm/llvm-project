@@ -8,6 +8,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   EntityLinkerTest.cpp
   EntityNameTest.cpp
   ErrorBuilderTest.cpp
+  ModelStringConversionsTest.cpp
   Registries/FancyAnalysisData.cpp
   Registries/MockSerializationFormat.cpp
   Registries/MockSummaryExtractor1.cpp
@@ -33,4 +34,8 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   LLVM_COMPONENTS
   FrontendOpenMP
   Support
+  )
+
+target_include_directories(ClangScalableAnalysisTests PRIVATE
+  ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/Analysis/Scalable
   )
