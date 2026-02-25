@@ -547,6 +547,7 @@ define void @test_stack_guard() ssp {
 ; CHECK-OPT: [[FAIL]]:
 ; CHECK-OPT-NEXT: bl ___stack_chk_fail
   %arr = alloca [8 x i32]
+  call void @llvm.ssp.protected(ptr %arr)
   call void @callee(ptr %arr)
   ret void
 }
@@ -771,6 +772,7 @@ define i1 @test_stackguard(ptr %p1) {
   ret i1 %res
 }
 declare ptr @llvm.stackguard()
+declare void @llvm.ssp.protected(ptr)
 @__stack_chk_guard = external global i32
 
 

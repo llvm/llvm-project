@@ -56,6 +56,7 @@ define i32 @z() nounwind ssp {
 entry:
 	%retval = alloca i32		; <ptr> [#uses=2]
 	%xxx = alloca %struct.X		; <ptr> [#uses=6]
+	call void @llvm.ssp.protected(ptr %xxx)
 	%0 = alloca i32		; <ptr> [#uses=2]
 	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	%1 = getelementptr %struct.X, ptr %xxx, i32 0, i32 1		; <ptr> [#uses=1]
@@ -80,6 +81,7 @@ return:		; preds = %entry
 	ret i32 %retval1
 }
 
+declare void @llvm.ssp.protected(ptr)
 declare i32 @f(ptr byval(%struct.X) align 4, ptr byval(%struct.X) align 4) nounwind ssp
 
 !llvm.module.flags = !{!0}

@@ -159,6 +159,38 @@ bool cir::CopyOp::canUsesBeRemoved(
 }
 
 //===----------------------------------------------------------------------===//
+// Interfaces for SspProtectedOp
+//===----------------------------------------------------------------------===//
+
+bool cir::SspProtectedOp::loadsFrom(const MemorySlot &slot) { return false; }
+
+bool cir::SspProtectedOp::storesTo(const MemorySlot &slot) { return false; }
+
+Value cir::SspProtectedOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                                     Value reachingDef,
+                                     const DataLayout &dataLayout) {
+  llvm_unreachable("getStored should not be called on SspProtectedOp");
+}
+
+bool cir::SspProtectedOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  // ssp_protected is always safe to drop when its alloca is being promoted
+  // to SSA values — a promoted alloca no longer resides on the stack, so
+  // the StackProtector pass does not need to guard it.
+  return blockingUses.size() == 1 &&
+         (*blockingUses.begin())->get() == slot.ptr && getPtr() == slot.ptr;
+}
+
+DeletionKind cir::SspProtectedOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}
+
+//===----------------------------------------------------------------------===//
 // Interfaces for CastOp
 //===----------------------------------------------------------------------===//
 

@@ -5,6 +5,8 @@
 
 %struct.__va_list = type { ptr, ptr, ptr, i32, i32 }
 
+declare void @llvm.ssp.protected(ptr)
+
 ; CHECK-LABEL: test
 ; CHECK: ldr [[GUARD:x[0-9]+]]{{.*}}:lo12:__stack_chk_guard]
 ; Make sure the canary is placed relative to the frame pointer, not
@@ -13,6 +15,7 @@
 define void @test(ptr %i, ...) #0 {
 entry:
   %buf = alloca [10 x i8], align 1
+  call void @llvm.ssp.protected(ptr %buf)
   %ap = alloca %struct.__va_list, align 8
   %tmp = alloca %struct.__va_list, align 8
   call void @llvm.lifetime.start(i64 10, ptr %buf)

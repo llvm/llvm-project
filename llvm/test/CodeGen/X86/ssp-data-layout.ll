@@ -97,7 +97,9 @@ entry:
   %large2 = alloca [8 x i32], align 16
   %small = alloca [2 x i8], align 2
   %large = alloca [8 x i8], align 8
+  call void @llvm.ssp.protected(ptr %large)
   %a = alloca %struct.struct_large_char, align 8
+  call void @llvm.ssp.protected(ptr %a)
   %b = alloca %struct.struct_small_char, align 8
   %c = alloca %struct.struct_large_nonchar, align 8
   %d = alloca %struct.struct_small_nonchar, align 8
@@ -216,13 +218,21 @@ entry:
   %z = alloca i32, align 4
   %ptr = alloca i32, align 4
   %small2 = alloca [2 x i16], align 2
+  call void @llvm.ssp.protected(ptr %small2)
   %large2 = alloca [8 x i32], align 16
+  call void @llvm.ssp.protected(ptr %large2)
   %small = alloca [2 x i8], align 2
+  call void @llvm.ssp.protected(ptr %small)
   %large = alloca [8 x i8], align 8
+  call void @llvm.ssp.protected(ptr %large)
   %a = alloca %struct.struct_large_char, align 8
+  call void @llvm.ssp.protected(ptr %a)
   %b = alloca %struct.struct_small_char, align 8
+  call void @llvm.ssp.protected(ptr %b)
   %c = alloca %struct.struct_large_nonchar, align 8
+  call void @llvm.ssp.protected(ptr %c)
   %d = alloca %struct.struct_small_nonchar, align 8
+  call void @llvm.ssp.protected(ptr %d)
   %call = call i32 @get_scalar1()
   store i32 %call, ptr %x, align 4
   call void @end_scalar1()
@@ -326,13 +336,21 @@ entry:
   %z = alloca i32, align 4
   %ptr = alloca i32, align 4
   %small2 = alloca [2 x i16], align 4
+  call void @llvm.ssp.protected(ptr %small2)
   %large2 = alloca [8 x i32], align 16
+  call void @llvm.ssp.protected(ptr %large2)
   %small = alloca [2 x i8], align 2
+  call void @llvm.ssp.protected(ptr %small)
   %large = alloca [8 x i8], align 8
+  call void @llvm.ssp.protected(ptr %large)
   %a = alloca %struct.struct_large_char, align 8
+  call void @llvm.ssp.protected(ptr %a)
   %b = alloca %struct.struct_small_char, align 8
+  call void @llvm.ssp.protected(ptr %b)
   %c = alloca %struct.struct_large_nonchar, align 8
+  call void @llvm.ssp.protected(ptr %c)
   %d = alloca %struct.struct_small_nonchar, align 8
+  call void @llvm.ssp.protected(ptr %d)
   %call = call i32 @get_scalar1()
   store i32 %call, ptr %x, align 4
   call void @end_scalar1()
@@ -391,6 +409,7 @@ entry:
 ; FAST-NON-LIN: call{{l|q}} end_large_char
   %x = alloca i32, align 4
   %large = alloca [8 x i8], align 1
+  call void @llvm.ssp.protected(ptr %large)
   %call = call i32 @get_scalar1()
   store i32 %call, ptr %x, align 4
   call void @end_scalar1()
@@ -401,6 +420,8 @@ entry:
   call void @takes_two(i32 %0, ptr %large)
   ret void
 }
+
+declare void @llvm.ssp.protected(ptr)
 
 declare i32 @get_scalar1()
 declare void @end_scalar1()

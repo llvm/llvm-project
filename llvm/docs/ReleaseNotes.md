@@ -59,6 +59,11 @@ Makes programs 10x faster by doing Special New Thing.
 Changes to the LLVM IR
 ----------------------
 
+* Added `llvm.ssp.protected` intrinsic. Clang emits this on allocas whose
+  `QualType` contains a protectable array when SSP is active, allowing the
+  `StackProtector` pass to use language-level type information instead of
+  unreliable IR-level heuristics.
+
 * Removed `llvm.convert.to.fp16` and `llvm.convert.from.fp16`
   intrinsics. These are equivalent to `fptrunc` and `fpext` with half
   with a bitcast.

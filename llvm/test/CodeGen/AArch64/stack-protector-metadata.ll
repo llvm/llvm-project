@@ -2,6 +2,8 @@
 
 @.str = private unnamed_addr constant [4 x i8] c"%s\0A\00", align 1
 
+declare void @llvm.ssp.protected(ptr)
+
 ; CHECK-LABEL: test1:
 ; CHECK-NOT: ___stack_chk_guard
 
@@ -28,6 +30,7 @@ define void @test2(ptr noundef %msg) #0 {
 entry:
   %msg.addr = alloca ptr, align 8
   %b = alloca [1000 x i8], align 1
+  call void @llvm.ssp.protected(ptr %b)
   store ptr %msg, ptr %msg.addr, align 8
   %arraydecay = getelementptr inbounds [1000 x i8], ptr %b, i64 0, i64 0
   %0 = load ptr, ptr %msg.addr, align 8

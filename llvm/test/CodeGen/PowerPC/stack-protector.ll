@@ -24,11 +24,14 @@
 
 @"\01LC" = internal constant [11 x i8] c"buf == %s\0A\00"		; <ptr> [#uses=1]
 
+declare void @llvm.ssp.protected(ptr)
+
 define void @test(ptr %a) nounwind ssp {
 entry:
 	%a_addr = alloca ptr		; <ptr> [#uses=2]
 	%buf = alloca [8 x i8]		; <ptr> [#uses=2]
-  %"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
+	call void @llvm.ssp.protected(ptr %buf)
+	%"alloca point" = bitcast i32 0 to i32		; <i32> [#uses=0]
 	store ptr %a, ptr %a_addr
 	%0 = load ptr, ptr %a_addr, align 4		; <ptr> [#uses=1]
 	%1 = call ptr @strcpy(ptr %buf, ptr %0) nounwind		; <ptr> [#uses=0]

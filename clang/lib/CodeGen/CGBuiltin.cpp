@@ -4481,39 +4481,52 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BIalloca:
   case Builtin::BI_alloca:
   case Builtin::BI__builtin_alloca_uninitialized:
-  case Builtin::BI__builtin_alloca: {
-    Value *Size = EmitScalarExpr(E->getArg(0));
-    const TargetInfo &TI = getContext().getTargetInfo();
-    // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
-    const Align SuitableAlignmentInBytes =
-        CGM.getContext()
-            .toCharUnitsFromBits(TI.getSuitableAlign())
-            .getAsAlign();
-    AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
-    AI->setAlignment(SuitableAlignmentInBytes);
-    if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
-      initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
-    if (AI->getAddressSpace() !=
-        CGM.getContext().getTargetAddressSpace(
-            E->getType()->getPointeeType().getAddressSpace())) {
-      llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
-      return RValue::get(performAddrSpaceCast(AI, Ty));
-    }
-    return RValue::get(AI);
-  }
-
+  case Builtin::BI__builtin_alloca:
   case Builtin::BI__builtin_alloca_with_align_uninitialized:
   case Builtin::BI__builtin_alloca_with_align: {
     Value *Size = EmitScalarExpr(E->getArg(0));
-    Value *AlignmentInBitsValue = EmitScalarExpr(E->getArg(1));
-    auto *AlignmentInBitsCI = cast<ConstantInt>(AlignmentInBitsValue);
-    unsigned AlignmentInBits = AlignmentInBitsCI->getZExtValue();
-    const Align AlignmentInBytes =
-        CGM.getContext().toCharUnitsFromBits(AlignmentInBits).getAsAlign();
+    Align AlignmentInBytes;
+    if (BuiltinID == Builtin::BI__builtin_alloca_with_align ||
+        BuiltinID == Builtin::BI__builtin_alloca_with_align_uninitialized) {
+      auto *AlignmentInBitsCI = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
+      AlignmentInBytes =
+          CGM.getContext()
+              .toCharUnitsFromBits(AlignmentInBitsCI->getZExtValue())
+              .getAsAlign();
+    } else {
+      // The alignment of the alloca should correspond to __BIGGEST_ALIGNMENT__.
+      AlignmentInBytes =
+          CGM.getContext()
+              .toCharUnitsFromBits(
+                  getContext().getTargetInfo().getSuitableAlign())
+              .getAsAlign();
+    }
     AllocaInst *AI = Builder.CreateAlloca(Builder.getInt8Ty(), Size);
     AI->setAlignment(AlignmentInBytes);
-    if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
+    if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized &&
+        BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
+    // Emit llvm.ssp.protected to inform the StackProtector pass that this
+    // alloca call needs a stack guard if it is either strong, large, or
+    // currently unknown.
+    if (std::optional<llvm::Attribute::AttrKind> SSPAttr =
+            CGM.StackProtectorAttribute(CurFuncDecl)) {
+      bool Strong = (*SSPAttr == llvm::Attribute::StackProtectStrong ||
+                     *SSPAttr == llvm::Attribute::StackProtectReq);
+      bool ShouldProtect;
+      if (Strong) {
+        ShouldProtect = true;
+      } else if (const auto *CI = dyn_cast<ConstantInt>(Size)) {
+        uint64_t SSPSize = CGM.getCodeGenOpts().SSPBufferSize;
+        ShouldProtect = CI->getLimitedValue(SSPSize) >= SSPSize;
+      } else {
+        ShouldProtect = true; // variable-length alloca
+      }
+      if (ShouldProtect) {
+        llvm::Function *Fn = CGM.getIntrinsic(llvm::Intrinsic::ssp_protected);
+        Builder.CreateCall(Fn, {AI});
+      }
+    }
     if (AI->getAddressSpace() !=
         CGM.getContext().getTargetAddressSpace(
             E->getType()->getPointeeType().getAddressSpace())) {

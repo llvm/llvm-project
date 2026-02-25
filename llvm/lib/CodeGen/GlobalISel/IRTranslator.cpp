@@ -2481,7 +2481,9 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
   case Intrinsic::experimental_noalias_scope_decl:
   case Intrinsic::var_annotation:
   case Intrinsic::sideeffect:
-    // Discard annotate attributes, assumptions, and artificial side-effects.
+  case Intrinsic::ssp_protected:
+    // Discard annotate attributes, assumptions, artificial side-effects, and
+    // SSP markers (consumed by StackProtector).
     return true;
   case Intrinsic::read_volatile_register:
   case Intrinsic::read_register: {
