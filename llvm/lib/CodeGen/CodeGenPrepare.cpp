@@ -1479,8 +1479,10 @@ static bool optimizeBitCast(BitCastInst *BCI, const TargetLowering &TLI,
 
     // 4. Ensure bitwidths match and perform hoisting.
     if (DL.getTypeSizeInBits(SrcTy) == DL.getTypeSizeInBits(DestTy)) {
-      BCI->moveAfter(SrcInst);
-      return true;
+      if (isa<LoadInst>(SrcInst)) {
+        BCI->moveAfter(SrcInst);
+        return true;
+      }
     }
   }
   return false;
