@@ -14,11 +14,11 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -566,8 +566,8 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
   return Spill.FullyAllocated;
 }
 
-bool SIMachineFunctionInfo::removeDeadFrameIndices(MachineFunction &MF,
-                                                   bool ResetSGPRSpillStackIDs) {
+bool SIMachineFunctionInfo::removeDeadFrameIndices(
+    MachineFunction &MF, bool ResetSGPRSpillStackIDs) {
   MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Collect all frame indices that will be removed so we can clear debug info.
