@@ -1527,16 +1527,17 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
   }];
   // Override explicitly in C++ to allow conditional dialect dependence.
   // let dependentDialects;
-  let options = [
-    Option<"reassociateFPReductions", "reassociate-fp-reductions",
-           "bool", /*default=*/"false",
-           "Allows llvm to reassociate floating-point reductions for speed">,
-    Option<"force32BitVectorIndices", "force-32bit-vector-indices",
-           "bool", /*default=*/"true",
-           "Allows compiler to assume vector indices fit in 32-bit if that "
-     "yields faster code">,
-    Option<"useVectorAlignment", "use-vector-alignment",
-           "bool", /*default=*/"false",
+  let options =
+      [Option<"reassociateFPReductions", "reassociate-fp-reductions", "bool",
+              /*default=*/"false",
+              "Allows llvm to reassociate floating-point reductions for speed">,
+       Option<"force32BitVectorIndices", "force-32bit-vector-indices", "bool",
+              /*default=*/"true",
+              "Allows compiler to assume vector indices fit in 32-bit if that "
+              "yields faster code">,
+       Option<
+           "useVectorAlignment", "use-vector-alignment", "bool",
+           /*default=*/"false",
            "Use the preferred alignment of a vector type in load/store "
            "operations instead of the alignment of the element type of the "
            "memref. This flag is intended for use with hardware which requires"
@@ -1544,34 +1545,28 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "vector access are naturally aligned. If operations have an "
            "alignment attribute set, the alignment attribute takes priority "
            "over this option ">,
-    Option<"amx", "enable-amx",
-           "bool", /*default=*/"false",
-           "Enables the use of AMX dialect while lowering the vector "
-	   "dialect.">,
-    Option<"armNeon", "enable-arm-neon",
-           "bool", /*default=*/"false",
-           "Enables the use of ArmNeon dialect while lowering the vector "
-	   "dialect.">,
-    Option<"armSVE", "enable-arm-sve",
-           "bool", /*default=*/"false",
-           "Enables the use of ArmSVE dialect while lowering the vector "
-       "dialect.">,
-    Option<"armI8MM", "enable-arm-i8mm",
-           "bool", /*default=*/"false",
-           "Enables the use of Arm FEAT_I8MM instructions while lowering "
-           "the vector dialect.">,
-    Option<"armBF16", "enable-arm-bf16",
-           "bool", /*default=*/"false",
-           "Enables the use of Arm FEAT_BF16 instructions while lowering "
-           "the vector dialect.">,
-    Option<"x86", "enable-x86",
-           "bool", /*default=*/"false",
-           "Enables the use of X86 dialect while lowering the vector "
-	   "dialect.">,
-    Option<"vectorContractLowering", "vector-contract-lowering",
-           "vector::VectorContractLowering",
-           /*default=*/"vector::VectorContractLowering::Dot",
-           VectorContractLoweringAttr.summary, [{::llvm::cl::values(
+       Option<"amx", "enable-amx", "bool", /*default=*/"false",
+              "Enables the use of AMX dialect while lowering the vector "
+              "dialect.">,
+       Option<"armNeon", "enable-arm-neon", "bool", /*default=*/"false",
+              "Enables the use of ArmNeon dialect while lowering the vector "
+              "dialect.">,
+       Option<"armSVE", "enable-arm-sve", "bool", /*default=*/"false",
+              "Enables the use of ArmSVE dialect while lowering the vector "
+              "dialect.">,
+       Option<"armI8MM", "enable-arm-i8mm", "bool", /*default=*/"false",
+              "Enables the use of Arm FEAT_I8MM instructions while lowering "
+              "the vector dialect.">,
+       Option<"armBF16", "enable-arm-bf16", "bool", /*default=*/"false",
+              "Enables the use of Arm FEAT_BF16 instructions while lowering "
+              "the vector dialect.">,
+       Option<"x86", "enable-x86", "bool", /*default=*/"false",
+              "Enables the use of X86 dialect while lowering the vector "
+              "dialect.">,
+       Option<"vectorContractLowering", "vector-contract-lowering",
+              "vector::VectorContractLowering",
+              /*default=*/"vector::VectorContractLowering::Dot",
+              VectorContractLoweringAttr.summary, [{::llvm::cl::values(
            clEnumValN(::mlir::vector::VectorContractLowering::Dot, "dot",
             "Progressively lower to finer grained `vector.contract` and dot-products. (default)"),
            clEnumValN(::mlir::vector::VectorContractLowering::LLVMIntr, "llvmintr",
@@ -1581,10 +1576,10 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            clEnumValN(::mlir::vector::VectorContractLowering::ParallelArith, "parallelarith",
             "Lower contract with all reduction dimensions unrolled to 1 to a vector elementwise operations.")
 	        )}]>,
-    Option<"vectorTransposeLowering", "vector-transpose-lowering",
-           "vector::VectorTransposeLowering",
-           /*default=*/"vector::VectorTransposeLowering::EltWise",
-           VectorTransposeLoweringAttr.summary, [{::llvm::cl::values(
+       Option<"vectorTransposeLowering", "vector-transpose-lowering",
+              "vector::VectorTransposeLowering",
+              /*default=*/"vector::VectorTransposeLowering::EltWise",
+              VectorTransposeLoweringAttr.summary, [{::llvm::cl::values(
            clEnumValN(::mlir::vector::VectorTransposeLowering::EltWise, "eltwise",
             "Lower transpose into element-wise extract and inserts (default)"),
            clEnumValN(::mlir::vector::VectorTransposeLowering::LLVMIntr, "llvmintr",
