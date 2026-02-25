@@ -5492,6 +5492,10 @@ bool AMDGPUAsmParser::validateTHAndScopeBits(const MCInst &Inst,
     return false;
   };
 
+  if ((TH & AMDGPU::CPol::TH_ATOMIC_RETURN) &&
+      (TID.TSFlags & SIInstrFlags::IsAtomicNoRet))
+    return PrintError("th:TH_ATOMIC_RETURN requires a destination operand");
+
   if ((TID.TSFlags & SIInstrFlags::IsAtomicRet) &&
       (TID.TSFlags & (SIInstrFlags::FLAT | SIInstrFlags::MUBUF)) &&
       (!(TH & AMDGPU::CPol::TH_ATOMIC_RETURN)))
