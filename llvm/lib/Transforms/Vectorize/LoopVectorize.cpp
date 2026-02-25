@@ -8433,7 +8433,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
 
   if (PreferControlFlow || TTI.preferControlFlowVectorization())
-    VPlanTransforms::optimizeConditionalVPBB(*Plan);
+    RUN_VPLAN_PASS(VPlanTransforms::optimizeConditionalVPBB, *Plan);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;

@@ -5659,7 +5659,6 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
   }
 }
 
-<<<<<<< HEAD
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                                PredicatedScalarEvolution &PSE,
                                                Loop &L) {
@@ -6212,7 +6211,7 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
   VPDominatorTree VPDT(Plan);
 
-  VPValue *HeaderMask = findHeaderMask(Plan);
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
 
   // Get the mask from the store recipes.
   auto GetMask = [&HeaderMask](VPRecipeBase &R) -> VPValue * {
