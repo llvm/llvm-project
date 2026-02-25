@@ -208,6 +208,8 @@ public:
     OPC_CheckTypeI32,
     OPC_CheckTypeI64,
     OPC_CheckTypeByHwMode,
+    // Space-optimized form that implicitly encodes index 0.
+    OPC_CheckTypeByHwMode0,
     OPC_CheckTypeRes,
     OPC_CheckTypeResByHwMode,
     OPC_SwitchType,
@@ -247,6 +249,15 @@ public:
     OPC_CheckChild6TypeByHwMode,
     OPC_CheckChild7TypeByHwMode,
 
+    OPC_CheckChild0TypeByHwMode0,
+    OPC_CheckChild1TypeByHwMode0,
+    OPC_CheckChild2TypeByHwMode0,
+    OPC_CheckChild3TypeByHwMode0,
+    OPC_CheckChild4TypeByHwMode0,
+    OPC_CheckChild5TypeByHwMode0,
+    OPC_CheckChild6TypeByHwMode0,
+    OPC_CheckChild7TypeByHwMode0,
+
     OPC_CheckInteger,
     OPC_CheckChild0Integer,
     OPC_CheckChild1Integer,
@@ -278,6 +289,7 @@ public:
     OPC_EmitIntegerI32,
     OPC_EmitIntegerI64,
     OPC_EmitIntegerByHwMode,
+    OPC_EmitIntegerByHwMode0,
     OPC_EmitRegister,
     OPC_EmitRegisterI32,
     OPC_EmitRegisterI64,
@@ -470,7 +482,7 @@ public:
   }
 
   void SelectCodeCommon(SDNode *NodeToMatch, const uint8_t *MatcherTable,
-                        unsigned TableSize);
+                        unsigned TableSize, const uint8_t *OperandLists);
 
   /// Return true if complex patterns for this target can mutate the
   /// DAG.

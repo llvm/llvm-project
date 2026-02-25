@@ -3605,6 +3605,8 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // Split the predecessors we are threading into a new edge block. We'll
     // clone the instructions into this block, and then redirect it to RealDest.
     BasicBlock *EdgeBB = SplitBlockPredecessors(BB, PredBBs, ".critedge", DTU);
+    if (!EdgeBB)
+      continue;
 
     // TODO: These just exist to reduce test diff, we can drop them if we like.
     EdgeBB->setName(RealDest->getName() + ".critedge");
@@ -6322,6 +6324,9 @@ static bool validLookupTableConstant(Constant *C, const TargetTransformInfo &TTI
       !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
     return false;
 
+  if (C->getType()->isVectorTy())
+    return false;
+
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
     // Pointer casts and in-bounds GEPs will not prohibit the backend from
     // materializing the array of constants.
@@ -7722,7 +7727,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
     Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
-    I = SIW->removeCase(I);
+    I = SIW.removeCase(I);
     E = SIW->case_end();
   }
 

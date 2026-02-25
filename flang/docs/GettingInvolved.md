@@ -49,12 +49,20 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 ### Flang Biweekly Call
 
 -   Technical discussions as well as general updates on the Flang project.
--   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=mdce13c9bd55202e8071d8128fb953614)
-    - If you prefer to join using a meeting number and password, those can be
-      found in this [Google Doc](https://docs.google.com/document/d/1Z2U5UAtJ-Dag5wlMaLaW1KRmNgENNAYynJqLW2j2AZQ/). Alternative methods of joining, such as call-in numbers, are also available there.
--   Time: Every other Wednesday, 8:30 a.m. Pacific Time
+-   Join the [Flang Biweekly Call](https://lanl-us.webex.com/lanl-us/j.php?MTID=m0fcaebfcf6b4b4f506efd792a71a015c). Alternative ways to join the call are provided below.
+    - Join with meeting number and password
+        - Meeting number (access code): 177 400 7047
+        - Meeting password: 6PCdCYKmN43
+    - Join by phone
+        - +1-415-655-0002 US Toll
+        - [Global call-in numbers](https://lanl-us.webex.com/lanl-us/globalcallin.php?MTID=ma8c4fc1f538bce541415427fbe89c85b)
+    - Join from a video system or application
+        - Dial [1774007047@lanl-us.webex.com](mailto:1774007047@lanl-us.webex.com)
+        - You can also dial 173.243.2.68 and enter your meeting number
+-   Time: Every other Wednesday, 8:30 a.m. Pacific Time. Please check the [LLVM Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org) for the next scheduled call.
 -   Calendar invite: https://drive.google.com/file/d/1rkfWCtIvQFcxN0Uz8YVwQGoX_BbzT8oc/view?usp=drive_link
--   Meeting minutes are available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit).
+-   Working agenda is available in this [Google Doc](https://docs.google.com/document/d/18DHhXjdzPQP20rmQiDsWbv1tHfqz8TjJiSPwI-wYbY8/edit). The drafted agenda will be posted on Slack the day before the meeting. Edits to the agenda should be made directly in the Google Doc, but if this is not possible any replies to the Slack post will also be incorporated.
+-   Meeting minutes are available in the [MeetingNotes](https://github.com/llvm/llvm-project/blob/main/flang/docs/MeetingNotes) directory.
 -   Minutes from older meetings were posted on the [Flang forum](https://discourse.llvm.org/c/subprojects/flang). Search for `Flang Biweekly Sync - Notes`.
 
 ### LLVM Alias Analysis Technical Call
@@ -68,7 +76,7 @@ Contributions to Flang are done using GitHub Pull Requests and follow the
 
 -   Development updates on OpenMP and OpenACC in the Flang Project.
 -   Join [OpenMP in Flang Technical Call](https://bit.ly/39eQW3o)
--   Time: Biweekly call on Thursdays 8:00 AM Pacific time.
+-   Time: Biweekly call on Thursdays 7:30 AM Pacific time. Please check the [LLVM Community Calendar](https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org) for the next scheduled call.
 -   Meeting minutes are [here](https://docs.google.com/document/d/1yA-MeJf6RYY-ZXpdol0t7YoDoqtwAyBhFLr5thu5pFI).
 -   Status tracking [page](https://docs.google.com/spreadsheets/d/1FvHPuSkGbl4mQZRAwCIndvQx9dQboffiD-xD0oqxgU0/edit#gid=0).
 

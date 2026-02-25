@@ -143,6 +143,11 @@ namespace llvm {
     /// or TEST instruction.
     BRCOND,
 
+    /// X86 conditional branch to self, used for implementing efficient
+    /// conditional traps. Operand 0 is the chain operand, operand 1 is the
+    /// condition code, and operand 2 is the flag operand.
+    BRCOND_SELF,
+
     /// BRIND node with NoTrack prefix. Operand 0 is the chain operand and
     /// operand 1 is the target address.
     NT_BRIND,
@@ -1503,12 +1508,12 @@ namespace llvm {
                                               unsigned SelectOpcode, SDValue X,
                                               SDValue Y) const override;
 
-    /// Given an intrinsic, checks if on the target the intrinsic will need to map
-    /// to a MemIntrinsicNode (touches memory). If this is the case, it returns
-    /// true and stores the intrinsic information into the IntrinsicInfo that was
-    /// passed to the function.
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                            MachineFunction &MF,
+    /// Given an intrinsic, checks if on the target the intrinsic will need to
+    /// map to a MemIntrinsicNode (touches memory). If this is the case, it
+    /// returns true and stores the intrinsic information into the IntrinsicInfo
+    /// that was passed to the function.
+    void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                            const CallBase &I, MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
     /// Returns true if the target can instruction select the
@@ -1798,7 +1803,7 @@ namespace llvm {
     SDValue LowerSETCC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
-    SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerConditionalBranch(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerVASTART(SDValue Op, SelectionDAG &DAG) const;

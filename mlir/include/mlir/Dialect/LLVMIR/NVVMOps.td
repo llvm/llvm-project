@@ -117,9 +117,10 @@ class NVVM_Op<string mnemonic, list<Trait> traits = []> :
 }
 
 /// Base class that defines BasicPtxBuilderOpInterface. 
-class NVVM_PTXBuilder_Op<string mnemonic, 
-  list<Trait> traits = [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> :
-  LLVM_OpBase<NVVM_Dialect, mnemonic, traits> {
+class NVVM_PTXBuilder_Op<string mnemonic, list<Trait> extraTraits = []> :
+  LLVM_OpBase<NVVM_Dialect, mnemonic,
+              !listconcat([DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>],
+                          extraTraits)> {
 }
 
 //===----------------------------------------------------------------------===//
@@ -231,6 +232,30 @@ def MemOrderKind : I32EnumAttr<"MemOrderKind", "NVVM Memory Ordering kind",
 def MemOrderKindAttr : EnumAttr<NVVM_Dialect, MemOrderKind, "mem_order"> {
   let assemblyFormat = "`<` $value `>`";
 }
+
+// Attrs for supported Reduction operations
+def ReductionKindNone : I32EnumAttrCase<"NONE", 0, "none">;
+def ReductionKindAdd  : I32EnumAttrCase<"ADD", 1, "add">;
+def ReductionKindAnd  : I32EnumAttrCase<"AND", 2, "and">;
+def ReductionKindMax  : I32EnumAttrCase<"MAX", 3, "max">;
+def ReductionKindMin  : I32EnumAttrCase<"MIN", 4, "min">;
+def ReductionKindOr   : I32EnumAttrCase<"OR", 5, "or">;
+def ReductionKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
+def ReductionKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
+def ReductionKindXor  : I32EnumAttrCase<"XOR", 8, "xor">;
+def ReductionKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
+def ReductionKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
+
+/// Enum attribute of the different kinds.
+def ReductionKind : I32EnumAttr<"ReductionKind", "NVVM Reduction Kind attribute",
+  [ReductionKindAdd, ReductionKindAnd, ReductionKindMax, ReductionKindMin,
+   ReductionKindOr, ReductionKindUmax, ReductionKindUmin, ReductionKindXor,
+   ReductionKindFmin, ReductionKindFmax]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::NVVM";
+}
+
+def ReductionKindAttr : EnumAttr<NVVM_Dialect, ReductionKind, "reduction_kind">;
 
 //===----------------------------------------------------------------------===//
 // NVVM intrinsic operations
@@ -493,33 +518,11 @@ def NVVM_RcpApproxFtzF32Op : NVVM_IntrOp<"rcp.approx.ftz.f", [Pure], 1> {
 // NVVM redux op definitions
 //===----------------------------------------------------------------------===//
 
-def ReduxKindNone : I32EnumAttrCase<"NONE", 0, "none">;
-def ReduxKindAdd  : I32EnumAttrCase<"ADD", 1, "add">;
-def ReduxKindAnd  : I32EnumAttrCase<"AND", 2, "and">;
-def ReduxKindMax  : I32EnumAttrCase<"MAX", 3, "max">;
-def ReduxKindMin  : I32EnumAttrCase<"MIN", 4, "min">;
-def ReduxKindOr   : I32EnumAttrCase<"OR", 5, "or">;
-def ReduxKindUmax : I32EnumAttrCase<"UMAX", 6, "umax">;
-def ReduxKindUmin : I32EnumAttrCase<"UMIN", 7, "umin">;
-def ReduxKindXor  : I32EnumAttrCase<"XOR", 8, "xor">; 
-def ReduxKindFmin : I32EnumAttrCase<"FMIN", 9, "fmin">;
-def ReduxKindFmax : I32EnumAttrCase<"FMAX", 10, "fmax">;
-
-/// Enum attribute of the different kinds.
-def ReduxKind : I32EnumAttr<"ReduxKind", "NVVM redux kind",
-  [ReduxKindAdd, ReduxKindAnd, ReduxKindMax, ReduxKindMin, ReduxKindOr, 
-   ReduxKindUmax, ReduxKindUmin, ReduxKindXor, ReduxKindFmin, ReduxKindFmax]> {
-  let genSpecializedAttr = 0;
-  let cppNamespace = "::mlir::NVVM";
-}
-
-def ReduxKindAttr : EnumAttr<NVVM_Dialect, ReduxKind, "redux_kind">;
-
 def NVVM_ReduxOp :
   NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
   Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
   Arguments<(ins AnyTypeOf<[I32, F32]>:$val,
-                 ReduxKindAttr:$kind,
+                 ReductionKindAttr:$kind,
                  I32:$mask_and_clamp,
                  DefaultValuedAttr<BoolAttr, "false">:$abs,
                  DefaultValuedAttr<BoolAttr, "false">:$nan)> {
@@ -1304,8 +1307,13 @@ def NVVM_FenceScClusterOp : NVVM_Op<"fence.sc.cluster"> {
   let assemblyFormat = "attr-dict";
 }
 
+defvar MemOrderAcquireOrRelease =
+  ConfinedAttr<MemOrderKindAttr,
+    [EnumAttrIsOneOf<MemOrderKindAttr,
+      [MemOrderKindAcquire, MemOrderKindRelease]>]>;
+
 def NVVM_FenceSyncRestrictOp : NVVM_Op<"fence.sync_restrict">,
-                               Arguments<(ins MemOrderKindAttr:$order)> {
+                               Arguments<(ins MemOrderAcquireOrRelease:$order)> {
   let summary = "Uni-directional thread fence operation";
   let description = [{
     The `nvvm.fence.sync_restrict` Op restricts the class of memory
@@ -1319,8 +1327,6 @@ def NVVM_FenceSyncRestrictOp : NVVM_Op<"fence.sync_restrict">,
   let llvmBuilder = [{
     createIntrinsicCall(builder, getFenceSyncRestrictID($order));
   }];
-
-  let hasVerifier = 1;
 }
 
 def NVVM_FenceMbarrierInitOp : NVVM_Op<"fence.mbarrier.init"> {
@@ -1357,8 +1363,12 @@ def ProxyKindAttr : EnumAttr<NVVM_Dialect, ProxyKind, "proxy_kind"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
+defvar ProxyKindNotTensormapOrGeneric =
+  ConfinedAttr<ProxyKindAttr,
+    [EnumAttrIsNoneOf<ProxyKindAttr, [ProxyTensorMap, ProxyGeneric]>]>;
+
 def NVVM_FenceProxyOp : NVVM_Op<"fence.proxy">,
-  Arguments<(ins ProxyKindAttr:$kind,
+  Arguments<(ins ProxyKindNotTensormapOrGeneric:$kind,
                  OptionalAttr<SharedSpaceAttr>:$space)> {
   let description = [{
     Fence operation with proxy to establish an ordering between memory accesses
@@ -1436,7 +1446,7 @@ def NVVM_FenceProxyReleaseOp : NVVM_Op<"fence.proxy.release">,
 }
 
 def NVVM_FenceProxySyncRestrictOp : NVVM_Op<"fence.proxy.sync_restrict">,
-      Arguments<(ins MemOrderKindAttr:$order,
+      Arguments<(ins MemOrderAcquireOrRelease:$order,
                      DefaultValuedAttr<ProxyKindAttr, "ProxyKind::GENERIC">:$fromProxy,
                      DefaultValuedAttr<ProxyKindAttr, "ProxyKind::async">:$toProxy)> {
   let summary = "Uni-directional proxy fence operation with sync_restrict";
@@ -3495,7 +3505,8 @@ class NVVM_MMA_BLOCK_SCALE_SUPPORTED<list<WMMA_REGS> frags, string kind,
     !and(!eq(geom, "m16n8k64"),
          !eq(kind, "mxf4nvf4"),
          !eq(scale_vec_size, ".scale_4x"),
-         !eq(stype, "ue4m3")) : true,
+         !or(!eq(stype, "ue4m3"),
+             !eq(stype, "ue8m0"))) : true,
     !and(!eq(geom, "m16n8k32"),
          !eq(kind, "mxf8f6f4"),
          !or(!eq(scale_vec_size, ""),
@@ -3522,7 +3533,8 @@ class NVVM_MMA_SP_BLOCK_SCALE_SUPPORTED<list<WMMA_REGS> frags, string kind,
          !eq(scale_vec_size, ".scale_2x")): true,
     !and(!eq(geom, "m16n8k128"),
          !eq(kind, "mxf4nvf4"),
-         !eq(stype, "ue4m3"),
+         !or(!eq(stype, "ue4m3"),
+             !eq(stype, "ue8m0")),
          !eq(scale_vec_size, ".scale_4x")): true,
     !and(!eq(geom, "m16n8k64"),
          !eq(kind, "mxf8f6f4"),
@@ -4047,8 +4059,7 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
 
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
   NVVM_PTXBuilder_Op<"cp.async.bulk.tensor.global.shared.cta",
-  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
-  AttrSizedOperandSegments]>,
+  [AttrSizedOperandSegments]>,
   Arguments<(ins LLVM_PointerGeneric:$tmaDescriptor,
                  LLVM_PointerShared:$srcMem,
                  Variadic<I32>:$coordinates,
@@ -5323,6 +5334,96 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMa<[100, 101]>]> {
 }
 
 //===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld.red Op
+//===----------------------------------------------------------------------===//
+
+def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
+                          [NVVMRequiresSMa<[101, 110]>]> {
+  let summary = "Tcgen05 tensor memory load and reduce instructions";
+  let arguments = (ins
+    Tcgen05LdStShapeAttr:$shape,
+    ReductionKindAttr:$op,
+    UnitAttr:$abs,
+    UnitAttr:$nan,
+    LLVM_PointerTensor:$addr,
+    Optional<I64>:$offset
+  );
+
+  let results = (outs VectorOfLengthAndType<[2, 4, 8, 16, 32, 64, 128],
+                                            [I32, F32]>:$data,
+                      AnyTypeOf<[I32, F32]>:$redVal);
+
+  let assemblyFormat = [{
+    $op $addr (`,` $offset^)? attr-dict `:` type($data) `,` type($redVal)
+  }];
+
+  let description = [{
+    Instruction `tcgen05.ld.red` asynchronously loads data from the Tensor
+    Memory at the location specified by the 32-bit address operand `addr` into
+    the destination register `data`, collectively across all threads of the
+    warp. The operation also performs reduction operation specified by `op` on
+    the loaded data across columns in each lane and stored into `redVal`
+
+    The `shape` and the `num` attribute together determines the total
+    dimension of the data which is loaded from the Tensor Memory. The `shape`
+    attribute indicates the base dimension of data to be accessed as described
+    in the Data Movement Shape. The `num` attribute indicates the repeat
+    factor on the base dimension resulting in the total dimension of the data
+    that is accessed.
+
+    The shape `16x32bx2` performs two accesses into Tensor Memory of the shape
+    `16x32b`. The base address of the first access is specified by `addr`
+    and the base address of the second access is specified by
+    `addr + offset`, where `offset` is an immediate argument.
+
+    The following table describes the size of the vector for various combinations
+    of `num` and `shape` attributes:
+    ```
+    |=============================================|
+    | num/shape      |     16x32bx2/32x32b        |
+    |=============================================|
+    | x2             |             2              |
+    | x4             |             4              |
+    | x8             |             8              |
+    | x16            |             16             |
+    | x32            |             32             |
+    | x64            |             64             |
+    | x128           |             128            |
+    |=============================================|
+    ```
+
+    Example:
+    ```mlir
+      %data, %redval = nvvm.tcgen05.ld,red %addr, %offset {
+        shape = #nvvm.tcgen05_ldst_shape<shape_16x32bx2>,
+      } : <2xi32>, i32
+
+      %data, %redval = nvvm.tcgen05.ld,red %addr {
+        shape = #nvvm.tcgen05_ldst_shape<shape_32x32b>,
+      } : <2xf32>, f32
+    ```
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld)
+  }];
+
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = [{
+    static mlir::NVVM::IDArgPair
+    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
+                          llvm::IRBuilderBase &builder);
+  }];
+
+  string llvmBuilder = [{
+    auto [id, args] = NVVM::Tcgen05LdRedOp::getIntrinsicIDAndArgs(
+                        *op, moduleTranslation, builder);
+    llvm::Value *result = createIntrinsicCall(builder, id, args);
+    $data = builder.CreateExtractValue(result, {0});
+    $redVal = builder.CreateExtractValue(result, {1});
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // NVVM tcgen05.st Op
 //===----------------------------------------------------------------------===//
 
@@ -6373,8 +6474,8 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let parameters = (ins
     DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
     StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
-    StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
-    StringRefParameter<"Target chip features.", "\"+ptx60\"">:$features,
+    StringRefParameter<"Target chip.", "\"sm_75\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"\"">:$features,
     OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
     OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link,
     DefaultValuedParameter<"bool", "true", "Perform SM version check on Ops.">:$verifyTarget
@@ -6385,14 +6486,13 @@ def NVVM_TargetAttr : NVVM_Attr<"NVVMTarget", "target",
   let builders = [
     AttrBuilder<(ins CArg<"int", "2">:$optLevel,
                      CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
-                     CArg<"StringRef", "\"sm_50\"">:$chip,
-                     CArg<"StringRef", "\"+ptx60\"">:$features,
+                     CArg<"StringRef", "\"sm_75\"">:$chip,
+                     CArg<"StringRef", "\"\"">:$features,
                      CArg<"DictionaryAttr", "nullptr">:$targetFlags,
                      CArg<"ArrayAttr", "nullptr">:$linkFiles,
                      CArg<"bool", "true">:$verifyTarget), [{
       return $_get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles, verifyTarget);
-    }]>
-  ];
+    }]>];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;
   let extraClassDeclaration = [{

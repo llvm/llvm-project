@@ -331,7 +331,7 @@ bool AtomicExpandImpl::processAtomicInstr(Instruction *I) {
     } else if (RMWI && (isReleaseOrStronger(RMWI->getOrdering()) ||
                         isAcquireOrStronger(RMWI->getOrdering()))) {
       FenceOrdering = RMWI->getOrdering();
-      RMWI->setOrdering(AtomicOrdering::Monotonic);
+      RMWI->setOrdering(TLI->atomicOperationOrderAfterFenceSplit(RMWI));
     } else if (CASI &&
                TLI->shouldExpandAtomicCmpXchgInIR(CASI) ==
                    TargetLoweringBase::AtomicExpansionKind::None &&
@@ -1681,6 +1681,9 @@ Value *AtomicExpandImpl::insertRMWCmpXchgLoop(
   std::prev(BB->end())->eraseFromParent();
   Builder.SetInsertPoint(BB);
   LoadInst *InitLoaded = Builder.CreateAlignedLoad(ResultTy, Addr, AddrAlign);
+  // TODO: The initial load must be atomic with the same synchronization scope
+  // to avoid a data race with concurrent stores. If the instruction being
+  // emulated is volatile, issue a volatile load.
   Builder.CreateBr(LoopBB);
 
   // Start the main loop block now that we've taken care of the preliminaries.
@@ -1947,6 +1950,16 @@ bool AtomicExpandImpl::expandAtomicOpToLibcall(
 
   bool UseSizedLibcall = canUseSizedAtomicCall(Size, Alignment, DL);
   Type *SizedIntTy = Type::getIntNTy(Ctx, Size * 8);
+
+  if (M->getTargetTriple().isOSWindows() && M->getTargetTriple().isX86_64() &&
+      Size == 16) {
+    // x86_64 Windows passes i128 as an XMM vector; on return, it is in
+    // XMM0, and as a parameter, it is passed indirectly. The generic lowering
+    // rules handles this correctly if we pass it as a v2i64 rather than
+    // i128. This is what Clang does in the frontend for such types as well
+    // (see WinX86_64ABIInfo::classify in Clang).
+    SizedIntTy = FixedVectorType::get(Type::getInt64Ty(Ctx), 2);
+  }
 
   const Align AllocaAlignment = DL.getPrefTypeAlign(SizedIntTy);
 

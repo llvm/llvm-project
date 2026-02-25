@@ -9,8 +9,8 @@
 #ifndef LLVM_CAS_UNIFIEDONDISKCACHE_H
 #define LLVM_CAS_UNIFIEDONDISKCACHE_H
 
-#include "llvm/CAS/BuiltinUnifiedCASDatabases.h"
 #include "llvm/CAS/OnDiskGraphDB.h"
+#include "llvm/CAS/ValidationResult.h"
 #include <atomic>
 
 namespace llvm::cas::ondisk {
@@ -44,7 +44,13 @@ public:
   OnDiskGraphDB &getGraphDB() { return *PrimaryGraphDB; }
 
   /// The \p OnDiskGraphDB instance for the open directory.
+  const OnDiskGraphDB &getGraphDB() const { return *PrimaryGraphDB; }
+
+  /// The \p OnDiskGraphDB instance for the open directory.
   OnDiskKeyValueDB &getKeyValueDB() { return *PrimaryKVDB; }
+
+  /// The \p OnDiskGraphDB instance for the open directory.
+  const OnDiskKeyValueDB &getKeyValueDB() const { return *PrimaryKVDB; }
 
   /// Open a \p UnifiedOnDiskCache instance for a directory.
   ///
@@ -89,8 +95,12 @@ public:
   /// in an invalid state because \p AllowRecovery is false.
   static Expected<ValidationResult>
   validateIfNeeded(StringRef Path, StringRef HashName, unsigned HashByteSize,
-                   bool CheckHash, bool AllowRecovery, bool ForceValidation,
+                   bool CheckHash, OnDiskGraphDB::HashingFuncT HashFn,
+                   bool AllowRecovery, bool ForceValidation,
                    std::optional<StringRef> LLVMCasBinary);
+
+  /// Validate the action cache only.
+  LLVM_ABI_FOR_TEST Error validateActionCache() const;
 
   /// This is called implicitly at destruction time, so it is not required for a
   /// client to call this. After calling \p close the only method that is valid

@@ -52,7 +52,7 @@ define half @fma_f16_expanded_no_nans(half %a, half %b, half %c) #0 {
   %1 = fmul half %a, %b
   %2 = fadd half %1, %c
   %3 = fcmp ogt half %2, 0.0
-  %4 = select i1 %3, half %2, half 0.0
+  %4 = select nsz i1 %3, half %2, half 0.0
   ret half %4
 }
 
@@ -113,7 +113,7 @@ define half @fma_f16_expanded_no_nans_multiple_uses_of_fma(half %a, half %b, hal
   %1 = fmul half %a, %b
   %2 = fadd half %1, %c
   %3 = fcmp ogt half %2, 0.0
-  %4 = select i1 %3, half %2, half 0.0
+  %4 = select nsz i1 %3, half %2, half 0.0
   %5 = fadd half %2, 7.0
   %6 = fadd half %4, %5
   ret half %6
@@ -212,7 +212,7 @@ define half @fma_f16_expanded_maxnum_no_nans(half %a, half %b, half %c) #0 {
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul half %a, %b
   %2 = fadd half %1, %c
-  %3 = call half @llvm.maxnum.f16(half %2, half 0.0)
+  %3 = call nsz half @llvm.maxnum.f16(half %2, half 0.0)
   ret half %3
 }
 
@@ -332,7 +332,7 @@ define bfloat @fma_bf16_expanded_no_nans(bfloat %a, bfloat %b, bfloat %c) #0 {
   %1 = fmul bfloat %a, %b
   %2 = fadd bfloat %1, %c
   %3 = fcmp ogt bfloat %2, 0.0
-  %4 = select i1 %3, bfloat %2, bfloat 0.0
+  %4 = select nsz i1 %3, bfloat %2, bfloat 0.0
   ret bfloat %4
 }
 
@@ -428,7 +428,7 @@ define bfloat @fma_bf16_expanded_no_nans_multiple_uses_of_fma(bfloat %a, bfloat 
   %1 = fmul bfloat %a, %b
   %2 = fadd bfloat %1, %c
   %3 = fcmp ogt bfloat %2, 0.0
-  %4 = select i1 %3, bfloat %2, bfloat 0.0
+  %4 = select nsz i1 %3, bfloat %2, bfloat 0.0
   %5 = fadd bfloat %2, 7.0
   %6 = fadd bfloat %4, %5
   ret bfloat %6
@@ -491,7 +491,7 @@ define bfloat @fma_bf16_expanded_maxnum_no_nans(bfloat %a, bfloat %b, bfloat %c)
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul bfloat %a, %b
   %2 = fadd bfloat %1, %c
-  %3 = call bfloat @llvm.maxnum.bf16(bfloat %2, bfloat 0.0)
+  %3 = call nsz bfloat @llvm.maxnum.bf16(bfloat %2, bfloat 0.0)
   ret bfloat %3
 }
 
@@ -541,7 +541,7 @@ define <2 x half> @fma_f16x2_expanded_no_nans(<2 x half> %a, <2 x half> %b, <2 x
   %1 = fmul <2 x half> %a, %b
   %2 = fadd <2 x half> %1, %c
   %3 = fcmp ogt <2 x half> %2, <half 0.0, half 0.0>
-  %4 = select <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
   ret <2 x half> %4
 }
 
@@ -606,7 +606,7 @@ define <2 x half> @fma_f16x2_expanded_no_nans_multiple_uses_of_fma(<2 x half> %a
   %1 = fmul <2 x half> %a, %b
   %2 = fadd <2 x half> %1, %c
   %3 = fcmp ogt <2 x half> %2, <half 0.0, half 0.0>
-  %4 = select <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
   %5 = fadd <2 x half> %2, <half 7.0, half 7.0>
   %6 = fadd <2 x half> %4, %5
   ret <2 x half> %6
@@ -662,7 +662,7 @@ define <2 x half> @fma_f16x2_expanded_unsafe_with_nans(<2 x half> %a, <2 x half>
   %1 = fmul <2 x half> %a, %b
   %2 = fadd <2 x half> %1, %c
   %3 = fcmp ogt <2 x half> %2, <half 0.0, half 0.0>
-  %4 = select <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x half> %2, <2 x half> <half 0.0, half 0.0>
   ret <2 x half> %4
 }
 
@@ -713,7 +713,7 @@ define <2 x half> @fma_f16x2_expanded_maxnum_no_nans(<2 x half> %a, <2 x half> %
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul <2 x half> %a, %b
   %2 = fadd <2 x half> %1, %c
-  %3 = call <2 x half> @llvm.maxnum.f16x2(<2 x half> %2, <2 x half> <half 0.0, half 0.0>)
+  %3 = call nsz <2 x half> @llvm.maxnum.f16x2(<2 x half> %2, <2 x half> <half 0.0, half 0.0>)
   ret <2 x half> %3
 }
 
@@ -795,7 +795,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_unsafe_with_nans(<2 x bfloat> %a, <2 x 
   %1 = fmul <2 x bfloat> %a, %b
   %2 = fadd <2 x bfloat> %1, %c
   %3 = fcmp ogt <2 x bfloat> %2, <bfloat 0.0, bfloat 0.0>
-  %4 = select <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
   ret <2 x bfloat> %4
 }
 
@@ -873,7 +873,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans(<2 x bfloat> %a, <2 x bfloat> %
   %1 = fmul <2 x bfloat> %a, %b
   %2 = fadd <2 x bfloat> %1, %c
   %3 = fcmp ogt <2 x bfloat> %2, <bfloat 0.0, bfloat 0.0>
-  %4 = select <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
   ret <2 x bfloat> %4
 }
 
@@ -1017,7 +1017,7 @@ define <2 x bfloat> @fma_bf16x2_expanded_no_nans_multiple_uses_of_fma(<2 x bfloa
   %1 = fmul <2 x bfloat> %a, %b
   %2 = fadd <2 x bfloat> %1, %c
   %3 = fcmp ogt <2 x bfloat> %2, <bfloat 0.0, bfloat 0.0>
-  %4 = select <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
+  %4 = select nsz <2 x i1> %3, <2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>
   %5 = fadd <2 x bfloat> %2, <bfloat 7.0, bfloat 7.0>
   %6 = fadd <2 x bfloat> %4, %5
   ret <2 x bfloat> %6
@@ -1105,8 +1105,8 @@ define <2 x bfloat> @fma_bf16x2_expanded_maxnum_no_nans(<2 x bfloat> %a, <2 x bf
 ; CHECK-SM70-NEXT:    ret;
   %1 = fmul <2 x bfloat> %a, %b
   %2 = fadd <2 x bfloat> %1, %c
-  %3 = call <2 x bfloat> @llvm.maxnum.bf16x2(<2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
+  %3 = call nsz <2 x bfloat> @llvm.maxnum.bf16x2(<2 x bfloat> %2, <2 x bfloat> <bfloat 0.0, bfloat 0.0>)
   ret <2 x bfloat> %3
 }
 
-attributes #0 = { "no-nans-fp-math"="true" "no-signed-zeros-fp-math"="true" }
+attributes #0 = { "no-nans-fp-math"="true" }

@@ -1946,6 +1946,6 @@ define amdgpu_ps double @global_atomic_fadd_double_div_address_div_value_system_
   ret double %result
 }
 
-attributes #0 = { "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
-attributes #1 = { strictfp "denormal-fp-math-f32"="preserve-sign,preserve-sign" }
+attributes #0 = { denormal_fpenv(float: preservesign) }
+attributes #1 = { strictfp denormal_fpenv(float: preservesign) }
 attributes #2 = { strictfp }

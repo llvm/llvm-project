@@ -458,3 +458,85 @@ class AddBazFrameProvider(ScriptedFrameProvider):
             # Pass through input frames (shifted by 1)
             return index - 1
         return None
+
+
+class ValueProvidingFrame(ScriptedFrame):
+    """Scripted frame with a valid PC but no associated module."""
+
+    def __init__(self, thread, idx, pc, function_name, variable):
+        args = lldb.SBStructuredData()
+        super().__init__(thread, args)
+
+        self.idx = idx
+        self.pc = pc
+        self.function_name = function_name
+        self.variable = variable
+
+    def get_id(self):
+        """Return the frame index."""
+        return self.idx
+
+    def get_pc(self):
+        """Return the program counter."""
+        return self.pc
+
+    def get_function_name(self):
+        """Return the function name."""
+        return self.function_name
+
+    def is_artificial(self):
+        """Not artificial."""
+        return False
+
+    def is_hidden(self):
+        """Not hidden."""
+        return False
+
+    def get_register_context(self):
+        """No register context."""
+        return None
+
+    def get_variables(self):
+        """"""
+        out = lldb.SBValueList()
+        out.Append(self.variable)
+        return out
+
+    def get_value_for_variable_expression(self, expr, options, error: lldb.SBError):
+        out = lldb.SBValue()
+        if expr == "_handler_one":
+            out = self.variable.CreateValueFromExpression("_handler_one", "(uint32_t)1")
+        elif self.variable.name in expr:
+            out = self.variable.CreateValueFromExpression("_expr", expr)
+
+        if out.IsValid():
+            return out
+
+        error.SetErrorString(f"expression {expr} failed")
+        return None
+
+
+class ValueProvidingFrameProvider(ScriptedFrameProvider):
+    """Add a single 'value-provider' frame at the beginning."""
+
+    def __init__(self, input_frames, args):
+        super().__init__(input_frames, args)
+
+    @staticmethod
+    def get_description():
+        """Return a description of this provider."""
+        return "Add 'value-provider' frame at beginning"
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            f = self.input_frames.GetFrameAtIndex(index)
+            # Find some variable we can give to the frame.
+            variable = f.FindVariable("variable_in_main")
+            # Return synthetic "value-provider" frame
+            return ValueProvidingFrame(
+                self.thread, 0, 0xF00, "value-provider", variable
+            )
+        elif index - 1 < len(self.input_frames):
+            # Pass through input frames (shifted by 1)
+            return index - 1
+        return None

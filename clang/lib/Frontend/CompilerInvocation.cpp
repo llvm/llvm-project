@@ -622,6 +622,11 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
     LangOpts.RawStringLiterals = true;
   }
 
+  if (Args.hasArg(OPT_freflection) && !LangOpts.CPlusPlus26) {
+    Diags.Report(diag::err_drv_reflection_requires_cxx26)
+        << Args.getLastArg(options::OPT_freflection)->getAsString(Args);
+  }
+
   LangOpts.NamedLoops =
       Args.hasFlag(OPT_fnamed_loops, OPT_fno_named_loops, LangOpts.C2y);
 
@@ -653,6 +658,18 @@ static bool FixupInvocation(CompilerInvocation &Invocation,
   if (Args.hasArg(OPT_gpu_max_threads_per_block_EQ) && !LangOpts.HIP)
     Diags.Report(diag::warn_ignored_hip_only_option)
         << Args.getLastArg(OPT_gpu_max_threads_per_block_EQ)->getAsString(Args);
+
+  // HLSL invocations should always have -Wconversion, -Wvector-conversion, and
+  // -Wmatrix-conversion by default.
+  if (LangOpts.HLSL) {
+    auto &Warnings = Invocation.getDiagnosticOpts().Warnings;
+    if (!llvm::is_contained(Warnings, "conversion"))
+      Warnings.insert(Warnings.begin(), "conversion");
+    if (!llvm::is_contained(Warnings, "vector-conversion"))
+      Warnings.insert(Warnings.begin(), "vector-conversion");
+    if (!llvm::is_contained(Warnings, "matrix-conversion"))
+      Warnings.insert(Warnings.begin(), "matrix-conversion");
+  }
 
   // When these options are used, the compiler is allowed to apply
   // optimizations that may affect the final result. For example
@@ -2244,7 +2261,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
   if (UsingSampleProfile)
     NeedLocTracking = true;
 
-  if (!Opts.StackUsageOutput.empty())
+  if (!Opts.StackUsageFile.empty())
     NeedLocTracking = true;
 
   // If the user requested a flag that requires source locations available in

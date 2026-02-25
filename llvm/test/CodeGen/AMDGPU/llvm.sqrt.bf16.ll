@@ -18,7 +18,7 @@ define amdgpu_kernel void @sqrt_bf16(ptr addrspace(1) %r, ptr addrspace(1) %a) {
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s8, s2
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s9, s3
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s4, s0
-; GFX12-TRUE16-NEXT:    buffer_load_u16 v0, off, s[8:11], null
+; GFX12-TRUE16-NEXT:    buffer_load_d16_b16 v0, off, s[8:11], null
 ; GFX12-TRUE16-NEXT:    s_mov_b32 s5, s1
 ; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-TRUE16-NEXT:    v_sqrt_bf16_e32 v0.l, v0.l
