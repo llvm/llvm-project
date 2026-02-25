@@ -164,12 +164,12 @@ void IteratorInvalidationInAForeachLoop(std::vector<int> v) {
 }  // namespace InvalidationInLoops
 
 namespace StdVectorPopBack {
-void StdVectorPopBackInvalid(std::vector<int> v) {
-  auto it = v.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
+void StdVectorPopBackDoesNotInvalidateOthers(std::vector<int> v) {
+  auto it = v.begin();
   if (it == v.end()) return;
-  *it;  // ok
-  v.pop_back(); // expected-note {{invalidated here}}
-  *it;          // expected-note {{later used here}}
+  *it;
+  v.pop_back();
+  *it;
 }
 }  // namespace StdVectorPopBack
 
@@ -446,6 +446,13 @@ void MapClearInvalidates() {
   auto it = m.begin();  // expected-warning {{object whose reference is captured is later invalidated}}
   m.clear(); // expected-note {{invalidated here}}
   *it; // expected-note {{later used here}}
+}
+
+void MapSubscriptDoesNotInvalidate() {
+  std::map<int, int> m;
+  auto it = m.begin();
+  m[1];
+  *it;
 }
 
 } // namespace AssociativeContainers
