@@ -754,6 +754,30 @@ func.func @ops_supporting_exact(i32, i32) {
 
 // -----
 
+// CHECK-LABEL: @ops_supporting_nneg
+func.func @ops_supporting_nneg(%arg0: i32) {
+  // CHECK: llvm.zext nneg %{{.*}} : i32 to i64
+  %0 = arith.extui %arg0 nneg : i32 to i64
+  // CHECK: llvm.uitofp nneg %{{.*}} : i32 to f32
+  %1 = arith.uitofp %arg0 nneg : i32 to f32
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @ops_nneg_not_set
+func.func @ops_nneg_not_set(%arg0: i32) {
+  // CHECK: llvm.zext %{{.*}} : i32 to i64
+  // CHECK-NOT: nneg
+  %0 = arith.extui %arg0 : i32 to i64
+  // CHECK: llvm.uitofp %{{.*}} : i32 to f32
+  // CHECK-NOT: nneg
+  %1 = arith.uitofp %arg0 : i32 to f32
+  return
+}
+
+// -----
+
 // CHECK-LABEL: func @memref_bitcast
 //  CHECK-SAME:   (%[[ARG:.*]]: memref<?xi16>)
 //       CHECK:   %[[V1:.*]] = builtin.unrealized_conversion_cast %[[ARG]] : memref<?xi16> to !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>

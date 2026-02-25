@@ -625,6 +625,20 @@ func.func @test_extui_scalable_vector(%arg0 : vector<[8]xi32>) -> vector<[8]xi64
   return %0 : vector<[8]xi64>
 }
 
+// CHECK-LABEL: test_extui_nneg
+// CHECK: arith.extui %{{.*}} nneg : i32 to i64
+func.func @test_extui_nneg(%arg0 : i32) -> i64 {
+  %0 = arith.extui %arg0 nneg : i32 to i64
+  return %0 : i64
+}
+
+// CHECK-LABEL: test_extui_nneg_vector
+// CHECK: arith.extui %{{.*}} nneg : vector<8xi32> to vector<8xi64>
+func.func @test_extui_nneg_vector(%arg0 : vector<8xi32>) -> vector<8xi64> {
+  %0 = arith.extui %arg0 nneg : vector<8xi32> to vector<8xi64>
+  return %0 : vector<8xi64>
+}
+
 // CHECK-LABEL: test_extsi
 func.func @test_extsi(%arg0 : i32) -> i64 {
   %0 = arith.extsi %arg0 : i32 to i64
@@ -759,6 +773,20 @@ func.func @test_uitofp_vector(%arg0 : vector<8xi32>) -> vector<8xf32> {
 func.func @test_uitofp_scalable_vector(%arg0 : vector<[8]xi32>) -> vector<[8]xf32> {
   %0 = arith.uitofp %arg0 : vector<[8]xi32> to vector<[8]xf32>
   return %0 : vector<[8]xf32>
+}
+
+// CHECK-LABEL: test_uitofp_nneg
+// CHECK: arith.uitofp %{{.*}} nneg : i32 to f32
+func.func @test_uitofp_nneg(%arg0 : i32) -> f32 {
+  %0 = arith.uitofp %arg0 nneg : i32 to f32
+  return %0 : f32
+}
+
+// CHECK-LABEL: test_uitofp_nneg_vector
+// CHECK: arith.uitofp %{{.*}} nneg : vector<8xi32> to vector<8xf32>
+func.func @test_uitofp_nneg_vector(%arg0 : vector<8xi32>) -> vector<8xf32> {
+  %0 = arith.uitofp %arg0 nneg : vector<8xi32> to vector<8xf32>
+  return %0 : vector<8xf32>
 }
 
 // CHECK-LABEL: test_sitofp

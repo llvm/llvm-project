@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
+// RUN: %clang_analyze_cc1 -std=c++20 -analyzer-checker=alpha.webkit.UncountedCallArgsChecker -verify %s
 
 #include "mock-types.h"
 #include "mock-system-header.h"
@@ -251,6 +251,13 @@ struct OtherObj {
 
 void __libcpp_verbose_abort(const char *__format, ...);
 
+struct ComparedObj {
+  unsigned v { 0 };
+  float m { -1 };
+  bool operator==(const ComparedObj& other) const { return v == other.v && m == other.m; }
+  bool operator==(int x) const;
+};
+
 class RefCounted {
 public:
   void ref() const;
@@ -388,6 +395,7 @@ public:
   DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
   unsigned trivial71() { return std::bit_cast<unsigned>(nullptr); }
   unsigned trivial72() { Number n { 5 }; return WTF::move(n).value(); }
+  bool trivial73(const ComparedObj& a, const ComparedObj& b) { return a != b; }
 
   unsigned [[clang::annotate_type("webkit.nodelete")]] nodelete1();
   void [[clang::annotate_type("webkit.nodelete")]] nodelete2();
@@ -484,6 +492,7 @@ public:
   SomeType nonTrivial24() { return SomeType("123"); }
   virtual void nonTrivial25() { }
   virtual ComplexNumber* operator->() { return nullptr; }
+  bool nonTrivial26(const ComparedObj& a) { return 3 == a; }
 
   static unsigned s_v;
   unsigned v { 0 };
@@ -584,6 +593,8 @@ public:
     getFieldTrivial().trivial69(); // no-warning
     getFieldTrivial().trivial70(); // no-warning
     getFieldTrivial().trivial71(); // no-warning
+    // FIXME: Missing test case for trivial72.
+    getFieldTrivial().trivial73(ComparedObj { }, ComparedObj { }); // no-warning
 
     getFieldTrivial().nodelete1(); // no-warning
     getFieldTrivial().nodelete2(); // no-warning
@@ -667,6 +678,8 @@ public:
     getFieldTrivial().nonTrivial25();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial()->complex();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial26(ComparedObj { });
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 

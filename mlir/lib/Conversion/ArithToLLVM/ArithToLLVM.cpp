@@ -104,7 +104,8 @@ using ExtFOpLowering = VectorConvertToLLVMPattern<arith::ExtFOp, LLVM::FPExtOp,
 using ExtSIOpLowering =
     VectorConvertToLLVMPattern<arith::ExtSIOp, LLVM::SExtOp>;
 using ExtUIOpLowering =
-    VectorConvertToLLVMPattern<arith::ExtUIOp, LLVM::ZExtOp>;
+    VectorConvertToLLVMPattern<arith::ExtUIOp, LLVM::ZExtOp,
+                               arith::AttrConvertNonNegToLLVM>;
 using FPToSIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToSIOp, LLVM::FPToSIOp,
                                AttrConvertPassThrough,
@@ -187,7 +188,7 @@ using TruncIOpLowering =
                                arith::AttrConvertOverflowToLLVM>;
 using UIToFPOpLowering =
     VectorConvertToLLVMPattern<arith::UIToFPOp, LLVM::UIToFPOp,
-                               AttrConvertPassThrough,
+                               arith::AttrConvertNonNegToLLVM,
                                /*FailOnUnsupportedFP=*/true>;
 using XOrIOpLowering = VectorConvertToLLVMPattern<arith::XOrIOp, LLVM::XOrOp>;
 
