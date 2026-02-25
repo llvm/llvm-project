@@ -959,6 +959,10 @@ private:
         claimRange(PTL.getStarLoc(), Result);
         return;
       }
+      if (auto MPTL = TL->getAs<MemberPointerTypeLoc>()) {
+        claimRange(MPTL.getLocalSourceRange(), Result);
+        return;
+      }
       if (auto FTL = TL->getAs<FunctionTypeLoc>()) {
         claimRange(SourceRange(FTL.getLParenLoc(), FTL.getEndLoc()), Result);
         return;

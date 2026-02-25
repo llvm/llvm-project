@@ -7332,9 +7332,12 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // evaluate the initializer.
   if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
       VD->getInit() && !VD->getInit()->isValueDependent()) {
-
-    if (VD->evaluateValue())
+    if (VD->evaluateValue()) {
+      // Revisit the variable declaration, but make sure it's associated with a
+      // different evaluation, so e.g. mutable reads don't work on it.
+      EvalIDScope _(Ctx);
       return revisit(VD);
+    }
 
     if (!IsReference)
       return this->emitDummyPtr(D, E);

@@ -2370,6 +2370,16 @@ TEST(FindReferences, WithinAST) {
           [$(Bar)[[F^oo]]...$(Bar)[[Fo^o]] + 1] = 0,
           [$(Bar)[[^Foo]] + 2] = 1
         };
+      )cpp",
+      // Field of pointer-to-member type
+      R"cpp(
+        struct S { void foo(); };
+        struct A {
+          void (S::*$def(A)[[fi^eld]])();
+        };
+        void bar(A& a, S& s) {
+          (s.*(a.$(bar)[[field]]))();
+        }
       )cpp"};
   for (const char *Test : Tests)
     checkFindRefs(Test);

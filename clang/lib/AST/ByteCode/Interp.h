@@ -3486,8 +3486,8 @@ inline bool Alloc(InterpState &S, CodePtr OpPC, const Descriptor *Desc) {
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B = Allocator.allocate(Desc, S.Ctx.getEvalID(),
-                                DynamicAllocator::Form::NonArray);
+  Block *B =
+      Allocator.allocate(Desc, S.EvalID, DynamicAllocator::Form::NonArray);
   assert(B);
   S.Stk.push<Pointer>(B);
   return true;
@@ -3522,9 +3522,8 @@ inline bool AllocN(InterpState &S, CodePtr OpPC, PrimType T, const Expr *Source,
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B =
-      Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
-                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
+  Block *B = Allocator.allocate(Source, T, static_cast<size_t>(NumElements),
+                                S.EvalID, DynamicAllocator::Form::Array);
   assert(B);
   if (NumElements.isZero())
     S.Stk.push<Pointer>(B);
@@ -3558,9 +3557,8 @@ inline bool AllocCN(InterpState &S, CodePtr OpPC, const Descriptor *ElementDesc,
     return false;
 
   DynamicAllocator &Allocator = S.getAllocator();
-  Block *B =
-      Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
-                         S.Ctx.getEvalID(), DynamicAllocator::Form::Array);
+  Block *B = Allocator.allocate(ElementDesc, static_cast<size_t>(NumElements),
+                                S.EvalID, DynamicAllocator::Form::Array);
   assert(B);
   if (NumElements.isZero())
     S.Stk.push<Pointer>(B);
