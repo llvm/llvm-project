@@ -475,13 +475,13 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     SmallVector<Register, 4> LeftoverRegs;
     if (SrcScalSize == 8)
       MainTy =
-          LLT::fixed_vector(16, SrcTy.getScalarType().changeElementSize(8));
+          LLT::fixed_vector(16, LLT::buildInteger(8));
     else if (SrcScalSize == 16)
       MainTy =
-          LLT::fixed_vector(8, SrcTy.getScalarType().changeElementSize(16));
+          LLT::fixed_vector(8, LLT::buildInteger(16));
     else if (SrcScalSize == 32)
       MainTy =
-          LLT::fixed_vector(4, SrcTy.getScalarType().changeElementSize(32));
+          LLT::fixed_vector(4, LLT::buildInteger(32));
     else
       llvm_unreachable("Source's Scalar Size not supported");
 
@@ -496,8 +496,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   }
 
   unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
-  LLT MidScalarLLT =
-      MainTy.changeElementSize(MidScalarSize).changeElementCount(1);
+  LLT MidScalarLLT = LLT::buildInteger(MidScalarSize);
   Register ZeroReg = B.buildConstant(LLT::buildInteger(64), 0).getReg(0);
   for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
     // If the number of elements is too small to build an instruction, extend
@@ -514,9 +513,8 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
 
     // Generate the {U/S}ADDLV instruction, whose output is always double of the
     // Src's Scalar size
-    LLT AddlvTy = MidScalarSize <= 32
-                      ? MainTy.changeElementSize(32).changeElementCount(4)
-                      : MainTy.changeElementSize(64).changeElementCount(2);
+    LLT AddlvTy = MidScalarSize <= 32 ? LLT::fixed_vector(4, LLT::buildInteger(32))
+                                      : LLT::fixed_vector(2, LLT::buildInteger(64));
     Register AddlvReg =
         B.buildInstr(Opc, {AddlvTy}, {WorkingRegisters[I]}).getReg(0);
 
@@ -532,7 +530,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
     } else {
       Register ExtractReg =
           B.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT,
-                       {DstTy.changeElementSize(32)}, {AddlvReg, ZeroReg})
+                       {LLT::buildInteger(32)}, {AddlvReg, ZeroReg})
               .getReg(0);
       WorkingRegisters[I] =
           B.buildTrunc({MidScalarLLT}, {ExtractReg}).getReg(0);
