@@ -12,12 +12,13 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIRegisterInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/LiveIntervals.h"
-#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
@@ -565,8 +566,13 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
   return Spill.FullyAllocated;
 }
 
-bool SIMachineFunctionInfo::removeDeadFrameIndices(
-    MachineFrameInfo &MFI, bool ResetSGPRSpillStackIDs) {
+bool SIMachineFunctionInfo::removeDeadFrameIndices(MachineFunction &MF,
+                                                   bool ResetSGPRSpillStackIDs) {
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+
+  // Collect all frame indices that will be removed so we can clear debug info.
+  SmallDenseSet<int, 8> DeadFIs;
+
   // Remove dead frame indices from function frame, however keep FP & BP since
   // spills for them haven't been inserted yet. And also make sure to remove the
   // frame indices from `SGPRSpillsToVirtualVGPRLanes` data structure,
@@ -574,6 +580,7 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   // any re-mapping of freed frame indices by later pass(es) like "stack slot
   // coloring".
   for (auto &R : make_early_inc_range(SGPRSpillsToVirtualVGPRLanes)) {
+    DeadFIs.insert(R.first);
     MFI.RemoveStackObject(R.first);
     SGPRSpillsToVirtualVGPRLanes.erase(R.first);
   }
@@ -582,6 +589,7 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   // VGPR lanes during SILowerSGPRSpills pass.
   if (!ResetSGPRSpillStackIDs) {
     for (auto &R : make_early_inc_range(SGPRSpillsToPhysicalVGPRLanes)) {
+      DeadFIs.insert(R.first);
       MFI.RemoveStackObject(R.first);
       SGPRSpillsToPhysicalVGPRLanes.erase(R.first);
     }
@@ -603,8 +611,28 @@ bool SIMachineFunctionInfo::removeDeadFrameIndices(
   }
 
   for (auto &R : VGPRToAGPRSpills) {
-    if (R.second.IsDead)
+    if (R.second.IsDead) {
+      DeadFIs.insert(R.first);
       MFI.RemoveStackObject(R.first);
+    }
+  }
+
+  // Clear debug value operands that reference dead frame indices. The spill
+  // values are no longer available in memory, so we replace the operand with
+  // a null register to indicate the value is unavailable.
+  // FIXME: We should instead update the debug value with the correct register
+  // value if possible.
+  if (!DeadFIs.empty()) {
+    for (MachineBasicBlock &MBB : MF) {
+      for (MachineInstr &MI : MBB) {
+        if (MI.isDebugValue()) {
+          for (MachineOperand &Op : MI.debug_operands()) {
+            if (Op.isFI() && DeadFIs.contains(Op.getIndex()))
+              Op.ChangeToRegister(Register(), false /*isDef*/);
+          }
+        }
+      }
+    }
   }
 
   return HaveSGPRToMemory;

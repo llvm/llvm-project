@@ -524,31 +524,14 @@ bool SILowerSGPRSpills::run(MachineFunction &MF) {
       FuncInfo->updateNonWWMRegMask(NonWwmRegMask);
     }
 
-    for (MachineBasicBlock &MBB : MF) {
-      // FIXME: The dead frame indices are replaced with a null register from
-      // the debug value instructions. We should instead, update it with the
-      // correct register value. But not sure the register value alone is
-      // adequate to lower the DIExpression. It should be worked out later.
-      for (MachineInstr &MI : MBB) {
-        if (MI.isDebugValue()) {
-          uint32_t StackOperandIdx = MI.isDebugValueList() ? 2 : 0;
-          if (MI.getOperand(StackOperandIdx).isFI() &&
-              !MFI.isFixedObjectIndex(
-                  MI.getOperand(StackOperandIdx).getIndex()) &&
-              SpillFIs[MI.getOperand(StackOperandIdx).getIndex()]) {
-            MI.getOperand(StackOperandIdx)
-                .ChangeToRegister(Register(), false /*isDef*/);
-          }
-        }
-      }
-    }
-
     // All those frame indices which are dead by now should be removed from the
     // function frame. Otherwise, there is a side effect such as re-mapping of
     // free frame index ids by the later pass(es) like "stack slot coloring"
     // which in turn could mess-up with the book keeping of "frame index to VGPR
     // lane".
-    FuncInfo->removeDeadFrameIndices(MFI, /*ResetSGPRSpillStackIDs*/ false);
+    // This also clears debug value operands that reference the removed frame
+    // indices.
+    FuncInfo->removeDeadFrameIndices(MF, /*ResetSGPRSpillStackIDs*/ false);
 
     MadeChange = true;
   }

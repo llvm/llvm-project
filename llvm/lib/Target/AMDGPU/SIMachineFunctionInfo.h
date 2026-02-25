@@ -832,8 +832,9 @@ public:
   bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
 
   /// If \p ResetSGPRSpillStackIDs is true, reset the stack ID from sgpr-spill
-  /// to the default stack.
-  bool removeDeadFrameIndices(MachineFrameInfo &MFI,
+  /// to the default stack. Also clears any debug value operands that reference
+  /// the removed frame indices.
+  bool removeDeadFrameIndices(MachineFunction &MF,
                               bool ResetSGPRSpillStackIDs);
 
   int getScavengeFI(MachineFrameInfo &MFI, const SIRegisterInfo &TRI);
