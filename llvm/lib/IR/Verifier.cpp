@@ -3843,6 +3843,16 @@ void Verifier::visitCallBase(CallBase &Call) {
         "Called function must be a pointer!", Call);
   FunctionType *FTy = Call.getFunctionType();
 
+  // `FTy` encodes the call site function type in case this is an indirect call
+  // or if the called function does not match the function type signature of the
+  // caller. Therefore retrieve the actual type of the called function in order
+  // to verify against the actual signature. Note `Call.getCalledFunction` shall
+  // not be used here because it returns null not only if this is an indirect
+  // call but also if the function signature mismatches, which is what we want
+  // to verify.
+  if (auto *CalledFn = dyn_cast_or_null<Function>(Call.getCalledOperand()))
+    FTy = CalledFn->getFunctionType();
+
   // Verify that the correct number of arguments are being passed
   if (FTy->isVarArg())
     Check(Call.arg_size() >= FTy->getNumParams(),
