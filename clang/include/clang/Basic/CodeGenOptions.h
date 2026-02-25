@@ -21,6 +21,7 @@
 #include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Frontend/Driver/CodeGenOptions.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Hash.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Instrumentation/AddressSanitizerOptions.h"
@@ -514,10 +515,13 @@ public:
   /// binary metadata pass should not be instrumented.
   std::vector<std::string> SanitizeMetadataIgnorelistFiles;
 
+  /// Hash algorithm to use for KCFI type IDs.
+  llvm::KCFIHashAlgorithm SanitizeKcfiHash;
+
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
   /// passed on the command line.
-  std::string StackUsageOutput;
+  std::string StackUsageFile;
 
   /// Executable and command-line used to create a given CompilerInvocation.
   /// Most of the time this will be the full -cc1 command.

@@ -12,7 +12,7 @@ variable that is actually of type ``X`` to be accessed as if it were of an
 unrelated type ``Z``.
 
 This rule is part of the `Type safety (Type.2)
-<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Pro-type-downcast>`_
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#pro-type-downcast>`_
 profile from the C++ Core Guidelines.
 
 Options

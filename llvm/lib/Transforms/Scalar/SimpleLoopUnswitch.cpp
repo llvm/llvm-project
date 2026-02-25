@@ -669,7 +669,7 @@ static bool unswitchTrivialBranch(Loop &L, BranchInst &BI, DominatorTree &DT,
     UnswitchedBB = LoopExitBB;
   } else {
     UnswitchedBB =
-        SplitBlock(LoopExitBB, LoopExitBB->begin(), &DT, &LI, MSSAU, "", false);
+        SplitBlock(LoopExitBB, LoopExitBB->begin(), &DT, &LI, MSSAU, "");
   }
 
   if (MSSAU && VerifyMemorySSA)
@@ -2576,12 +2576,14 @@ static void unswitchNontrivialInvariants(
   if (MSSAU && VerifyMemorySSA)
     MSSAU->getMemorySSA()->verifyMemorySSA();
 
+#ifdef EXPENSIVE_CHECKS
   // This transformation has a high risk of corrupting the dominator tree, and
   // the below steps to rebuild loop structures will result in hard to debug
   // errors in that case so verify that the dominator tree is sane first.
   // FIXME: Remove this when the bugs stop showing up and rely on existing
   // verification steps.
   assert(DT.verify(DominatorTree::VerificationLevel::Fast));
+#endif
 
   if (BI && !PartiallyInvariant) {
     // If we unswitched a branch which collapses the condition to a known
@@ -2687,7 +2689,7 @@ static void unswitchNontrivialInvariants(
          OuterL = OuterL->getParentLoop())
       UpdateLoop(*OuterL);
 
-#ifndef NDEBUG
+#ifdef EXPENSIVE_CHECKS
   // Verify the entire loop structure to catch any incorrect updates before we
   // progress in the pass pipeline.
   LI.verify(DT);
@@ -2914,8 +2916,8 @@ static int CalculateUnswitchCostMultiplier(
     ParentLoopSizeMultiplier =
         std::max<int>(ParentL->getNumBlocks() / UnswitchParentBlocksDiv, 1);
 
-  int SiblingsCount = (ParentL ? ParentL->getSubLoopsVector().size()
-                               : std::distance(LI.begin(), LI.end()));
+  int SiblingsCount =
+      (ParentL ? ParentL->getSubLoopsVector().size() : llvm::size(LI));
   // Count amount of clones that all the candidates might cause during
   // unswitching. Branch/guard/select counts as 1, switch counts as log2 of its
   // cases.
@@ -3751,9 +3753,11 @@ PreservedAnalyses SimpleLoopUnswitchPass::run(Loop &L, LoopAnalysisManager &AM,
   if (AR.MSSA && VerifyMemorySSA)
     AR.MSSA->verifyMemorySSA();
 
+#ifdef EXPENSIVE_CHECKS
   // Historically this pass has had issues with the dominator tree so verify it
   // in asserts builds.
   assert(AR.DT.verify(DominatorTree::VerificationLevel::Fast));
+#endif
 
   auto PA = getLoopPassPreservedAnalyses();
   if (AR.MSSA)

@@ -301,6 +301,9 @@ protected:
   // most targets, so defaults to true.
   bool HasFunctionAlignment = true;
 
+  // True if the target respects .prefalign directives.
+  bool HasPreferredAlignment = false;
+
   /// True if the target has .type and .size directives, this is true for most
   /// ELF targets.  Defaults to true.
   bool HasDotTypeDotSizeDirective = true;
@@ -382,7 +385,7 @@ protected:
   bool DwarfRegNumForCFI = false;
 
   /// True if target uses @ (expr@specifier) for relocation specifiers.
-  bool UseAtForSpecifier = true;
+  bool UseAtForSpecifier = false;
 
   /// (ARM-specific) Uses parens for relocation specifier in data
   /// directives, e.g. .word foo(got).
@@ -603,6 +606,7 @@ public:
   }
 
   bool hasFunctionAlignment() const { return HasFunctionAlignment; }
+  bool hasPreferredAlignment() const { return HasPreferredAlignment; }
   bool hasDotTypeDotSizeDirective() const { return HasDotTypeDotSizeDirective; }
   bool hasSingleParameterDotFile() const { return HasSingleParameterDotFile; }
   bool hasIdentDirective() const { return HasIdentDirective; }

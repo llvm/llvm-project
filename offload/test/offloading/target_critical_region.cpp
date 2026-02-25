@@ -4,6 +4,8 @@
 // UNSUPPORTED: nvptx64-nvidia-cuda
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
 // UNSUPPORTED: amdgcn-amd-amdhsa
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

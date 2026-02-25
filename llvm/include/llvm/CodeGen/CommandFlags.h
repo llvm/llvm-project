@@ -58,8 +58,6 @@ LLVM_ABI CodeGenFileType getFileType();
 
 LLVM_ABI FramePointerKind getFramePointerUsage();
 
-LLVM_ABI bool getEnableNoInfsFPMath();
-
 LLVM_ABI bool getEnableNoNaNsFPMath();
 
 LLVM_ABI bool getEnableNoSignedZerosFPMath();
@@ -124,6 +122,8 @@ LLVM_ABI bool getSeparateNamedSections();
 LLVM_ABI llvm::EABI getEABIVersion();
 
 LLVM_ABI llvm::DebuggerKind getDebuggerTuningOpt();
+
+LLVM_ABI llvm::VectorLibrary getVectorLibrary();
 
 LLVM_ABI bool getEnableStackSizeSection();
 

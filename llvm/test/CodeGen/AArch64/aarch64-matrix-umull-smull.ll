@@ -634,9 +634,8 @@ define i16 @red_mla_dup_ext_u8_s8_s16(ptr noalias nocapture noundef readonly %A,
 ; CHECK-GI-NEXT:    mov w8, w2
 ; CHECK-GI-NEXT:    b.hs .LBB5_4
 ; CHECK-GI-NEXT:  // %bb.2:
-; CHECK-GI-NEXT:    mov w10, #0 // =0x0
+; CHECK-GI-NEXT:    movi d0, #0000000000000000
 ; CHECK-GI-NEXT:    mov x9, xzr
-; CHECK-GI-NEXT:    fmov s0, w10
 ; CHECK-GI-NEXT:    b .LBB5_8
 ; CHECK-GI-NEXT:  .LBB5_3:
 ; CHECK-GI-NEXT:    mov w0, wzr
@@ -803,20 +802,20 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:    smlal2 v4.2d, v16.4s, v20.4s
 ; CHECK-SD-NEXT:    smlal v6.2d, v16.2s, v20.2s
 ; CHECK-SD-NEXT:    smlal v3.2d, v16.2s, v19.2s
-; CHECK-SD-NEXT:    smlal2 v1.2d, v16.4s, v18.4s
+; CHECK-SD-NEXT:    smlal2 v0.2d, v16.4s, v18.4s
 ; CHECK-SD-NEXT:    smlal v7.2d, v16.2s, v17.2s
-; CHECK-SD-NEXT:    smlal v0.2d, v16.2s, v18.2s
+; CHECK-SD-NEXT:    smlal v1.2d, v16.2s, v18.2s
 ; CHECK-SD-NEXT:    smlal2 v5.2d, v16.4s, v17.4s
 ; CHECK-SD-NEXT:    b.ne .LBB6_7
 ; CHECK-SD-NEXT:  // %bb.8: // %middle.block
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v6.2d
+; CHECK-SD-NEXT:    add v1.2d, v1.2d, v6.2d
 ; CHECK-SD-NEXT:    add v3.2d, v3.2d, v7.2d
 ; CHECK-SD-NEXT:    cmp x10, x9
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v4.2d
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v4.2d
 ; CHECK-SD-NEXT:    add v2.2d, v2.2d, v5.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v3.2d
-; CHECK-SD-NEXT:    add v1.2d, v1.2d, v2.2d
-; CHECK-SD-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add v1.2d, v1.2d, v3.2d
+; CHECK-SD-NEXT:    add v0.2d, v0.2d, v2.2d
+; CHECK-SD-NEXT:    add v0.2d, v1.2d, v0.2d
 ; CHECK-SD-NEXT:    addp d0, v0.2d
 ; CHECK-SD-NEXT:    fmov x8, d0
 ; CHECK-SD-NEXT:    b.eq .LBB6_15
@@ -1520,10 +1519,10 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_signed_and(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %val) {
 ; CHECK-SD-LABEL: matrix_mul_signed_and:
 ; CHECK-SD:       // %bb.0: // %vector.header
-; CHECK-SD-NEXT:    and w9, w3, #0xffff
+; CHECK-SD-NEXT:    and w8, w3, #0xffff
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    and x8, x0, #0xfffffff8
-; CHECK-SD-NEXT:    fmov s0, w9
 ; CHECK-SD-NEXT:  .LBB13_1: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    add x9, x2, w0, uxtw #1
@@ -1608,10 +1607,10 @@ for.end12:                                        ; preds = %vector.body
 define void @matrix_mul_signed_and_double(i32 %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %val) {
 ; CHECK-SD-LABEL: matrix_mul_signed_and_double:
 ; CHECK-SD:       // %bb.0: // %vector.header
-; CHECK-SD-NEXT:    and w9, w3, #0xffff
+; CHECK-SD-NEXT:    and w8, w3, #0xffff
 ; CHECK-SD-NEXT:    // kill: def $w0 killed $w0 def $x0
+; CHECK-SD-NEXT:    fmov s0, w8
 ; CHECK-SD-NEXT:    and x8, x0, #0xfffffff0
-; CHECK-SD-NEXT:    fmov s0, w9
 ; CHECK-SD-NEXT:  .LBB14_1: // %vector.body
 ; CHECK-SD-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-SD-NEXT:    add x9, x2, w0, uxtw #1

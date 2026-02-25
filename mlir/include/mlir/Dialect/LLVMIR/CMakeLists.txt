@@ -63,7 +63,7 @@ mlir_tablegen(NVVMRequiresSMTraits.cpp.inc -gen-op-interface-defs)
 add_mlir_dialect_tablegen_target(MLIRNVVMRequiresSMTraitsIncGen)
 
 add_mlir_dialect(NVVMOps nvvm)
-add_mlir_doc(NVVMOps NVVMDialect Dialects/ -gen-dialect-doc -dialect=nvvm)
+add_mlir_doc(NVVMOps NVVMOps Dialects/ -gen-op-doc)
 set(LLVM_TARGET_DEFINITIONS NVVMOps.td)
 mlir_tablegen(NVVMConversions.inc -gen-llvmir-conversions)
 mlir_tablegen(NVVMFromLLVMIRConversions.inc -gen-intr-from-llvmir-conversions)

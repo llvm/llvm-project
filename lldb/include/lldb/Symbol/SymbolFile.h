@@ -309,6 +309,9 @@ public:
   virtual void FindFunctions(const Module::LookupInfo &lookup_info,
                              const CompilerDeclContext &parent_decl_ctx,
                              bool include_inlines, SymbolContextList &sc_list);
+  virtual void FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
+                             const CompilerDeclContext &parent_decl_ctx,
+                             bool include_inlines, SymbolContextList &sc_list);
   virtual void FindFunctions(const RegularExpression &regex,
                              bool include_inlines, SymbolContextList &sc_list);
 
@@ -394,7 +397,8 @@ public:
 
   /// Return the number of stack bytes taken up by the parameters to this
   /// function.
-  virtual llvm::Expected<lldb::addr_t> GetParameterStackSize(Symbol &symbol) {
+  virtual llvm::Expected<lldb::addr_t>
+  GetParameterStackSize(const Symbol &symbol) {
     return llvm::createStringError(make_error_code(llvm::errc::not_supported),
                                    "Operation not supported.");
   }

@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_PROFDATAUTILS_H
 #define LLVM_IR_PROFDATAUTILS_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Compiler.h"
@@ -149,6 +150,9 @@ LLVM_ABI bool extractProfTotalWeight(const Instruction &I,
 LLVM_ABI void setBranchWeights(Instruction &I, ArrayRef<uint32_t> Weights,
                                bool IsExpected, bool ElideAllZero = false);
 
+/// Push the weights right to fit in uint32_t.
+LLVM_ABI SmallVector<uint32_t> fitWeights(ArrayRef<uint64_t> Weights);
+
 /// Variant of `setBranchWeights` where the `Weights` will be fit first to
 /// uint32_t by shifting right.
 LLVM_ABI void setFittedBranchWeights(Instruction &I, ArrayRef<uint64_t> Weights,
@@ -202,6 +206,11 @@ LLVM_ABI void
 setExplicitlyUnknownBranchWeightsIfProfiled(Instruction &I, StringRef PassName,
                                             const Function *F = nullptr);
 
+/// Returns a metadata node containing unknown branch weights if the function
+/// has an entry count, otherwise returns nullptr.
+LLVM_ABI MDNode *
+getExplicitlyUnknownBranchWeightsIfProfiled(Function &F, StringRef PassName);
+
 /// Analogous to setExplicitlyUnknownBranchWeights, but for functions and their
 /// entry counts.
 LLVM_ABI void setExplicitlyUnknownFunctionEntryCount(Function &F,
@@ -212,6 +221,12 @@ LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.
 LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
+
+// Helper to apply a metadata setting function to an Instruction* if profiling
+// is enabled. If profiling is disabled (ProfcheckDisableMetadataFixes is true)
+// or V is not an Instruction, the callback will not be invoked.
+LLVM_ABI void applyProfMetadataIfEnabled(
+    Value *V, llvm::function_ref<void(Instruction *)> setMetadataCallback);
 
 /// Get the branch weights of a branch conditioned on b1 || b2, where b1 and b2
 /// are 2 booleans that are the conditions of 2 branches for which we have the

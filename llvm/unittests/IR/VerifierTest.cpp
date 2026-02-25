@@ -76,7 +76,7 @@ TEST(VerifierTest, Freeze) {
 
   FI_dbl->eraseFromParent();
 
-  // Valid type : freeze(i32*)
+  // Valid type : freeze(ptr)
   PointerType *PT = PointerType::get(C, 0);
   ConstantPointerNull *CPN = ConstantPointerNull::get(PT);
   FreezeInst *FI_ptr = new FreezeInst(CPN);
@@ -329,9 +329,6 @@ TEST(VerifierTest, SwitchInst) {
   Switch->addCase(ConstantInt::get(Int32Ty, 2), OnTwo);
 
   EXPECT_FALSE(verifyFunction(*F));
-  // set one case value to function argument.
-  Switch->setOperand(2, F->getArg(1));
-  EXPECT_TRUE(verifyFunction(*F));
 }
 
 TEST(VerifierTest, CrossFunctionRef) {

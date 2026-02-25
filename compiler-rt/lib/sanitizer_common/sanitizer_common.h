@@ -487,6 +487,13 @@ inline uptr Log2(uptr x) {
   return LeastSignificantSetBitIndex(x);
 }
 
+inline bool IntervalsAreSeparate(uptr start1, uptr end1, uptr start2,
+                                 uptr end2) {
+  CHECK_LE(start1, end1);
+  CHECK_LE(start2, end2);
+  return (end1 < start2) || (end2 < start1);
+}
+
 // Don't use std::min, std::max or std::swap, to minimize dependency
 // on libstdc++.
 template <class T>
@@ -1092,6 +1099,12 @@ inline u32 GetNumberOfCPUsCached() {
     NumberOfCPUsCached = GetNumberOfCPUs();
   return NumberOfCPUsCached;
 }
+
+inline u32 Rand(u32* state) {  // ANSI C linear congruential PRNG.
+  return (*state = *state * 1103515245 + 12345) >> 16;
+}
+
+inline u32 RandN(u32* state, u32 n) { return Rand(state) % n; }  // [0, n)
 
 }  // namespace __sanitizer
 

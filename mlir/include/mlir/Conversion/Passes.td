@@ -198,7 +198,8 @@ def ArithToAPFloatConversionPass
     calls (APFloatWrappers.cpp). APFloat is a software implementation of
     floating-point arithmetic operations.
   }];
-  let dependentDialects = ["func::FuncDialect"];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "vector::VectorDialect"];
 }
 
 //===----------------------------------------------------------------------===//
@@ -628,6 +629,8 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
            "All memrefs must have static shape.">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
     ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];
@@ -773,6 +776,21 @@ def ConvertMathToLibmPass : Pass<"convert-math-to-libm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToAPFloat
+//===----------------------------------------------------------------------===//
+
+def MathToAPFloatConversionPass
+    : Pass<"convert-math-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Math ops to APFloat runtime library calls";
+  let description = [{
+    This pass converts supported Math ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point mathmetic operations.
+  }];
+  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -807,6 +825,20 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let options = [Option<"chipset", "chipset", "std::string",
                         /*default=*/"\"\"",
                         "Chipset that these operations will run on">];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToNVVM
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToNVVM : Pass<"convert-math-to-nvvm", "ModuleOp"> {
+  let summary = "Convert Math dialect to CUDA libdevice calls";
+  let description = [{
+    This pass converts supported Math ops to CUDA libdevice calls.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "NVVM::NVVMDialect", "vector::VectorDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -983,10 +1015,12 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
   let dependentDialects = [
     "affine::AffineDialect",
     "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "mpi::MPIDialect",
     "scf::SCFDialect",
-    "bufferization::BufferizationDialect"
+    "tensor::TensorDialect"
   ];
 }
 
@@ -1084,6 +1118,10 @@ def SCFToControlFlowPass : Pass<"convert-scf-to-cf"> {
   let summary = "Convert SCF dialect to ControlFlow dialect, replacing structured"
                 " control flow with a CFG";
   let dependentDialects = ["cf::ControlFlowDialect"];
+  let options = [
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
+  ];
 }
 
 //===----------------------------------------------------------------------===//

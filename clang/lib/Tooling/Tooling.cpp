@@ -13,6 +13,7 @@
 
 #include "clang/Tooling/Tooling.h"
 #include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -26,11 +27,11 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
@@ -96,7 +97,7 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
       OffloadCompilation = true;
 
   if (Jobs.size() > 1) {
-    for (auto *A : Actions){
+    for (auto *A : Actions) {
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();
@@ -107,13 +108,14 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
         // tooling will consider host-compilation only. For tooling on device
         // compilation, device compilation only option, such as
         // `--cuda-device-only`, needs specifying.
-        assert(Actions.size() > 1);
-        assert(
-            isa<driver::CompileJobAction>(Actions.front()) ||
-            // On MacOSX real actions may end up being wrapped in
-            // BindArchAction.
-            (isa<driver::BindArchAction>(Actions.front()) &&
-             isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
+        if (Actions.size() > 1) {
+          assert(
+              isa<driver::CompileJobAction>(Actions.front()) ||
+              // On MacOSX real actions may end up being wrapped in
+              // BindArchAction.
+              (isa<driver::BindArchAction>(Actions.front()) &&
+               isa<driver::CompileJobAction>(*Actions.front()->input_begin())));
+        }
         OffloadCompilation = true;
         break;
       }
@@ -395,10 +397,14 @@ bool ToolInvocation::run() {
     ArrayRef<const char *> CC1Args = ArrayRef(Argv).drop_front();
     std::unique_ptr<CompilerInvocation> Invocation(
         newInvocation(&*Diagnostics, CC1Args, BinaryName));
-    if (Diagnostics->hasErrorOccurred())
+    if (Diagnostics->hasErrorOccurred()) {
+      Diagnostics->getClient()->finish();
       return false;
-    return Action->runInvocation(std::move(Invocation), Files,
-                                 std::move(PCHContainerOps), DiagConsumer);
+    }
+    const bool Success = Action->runInvocation(
+        std::move(Invocation), Files, std::move(PCHContainerOps), DiagConsumer);
+    Diagnostics->getClient()->finish();
+    return Success;
   }
 
   const std::unique_ptr<driver::Driver> Driver(
@@ -411,16 +417,23 @@ bool ToolInvocation::run() {
     Driver->setCheckInputsExist(false);
   const std::unique_ptr<driver::Compilation> Compilation(
       Driver->BuildCompilation(llvm::ArrayRef(Argv)));
-  if (!Compilation)
+  if (!Compilation) {
+    Diagnostics->getClient()->finish();
     return false;
-  const llvm::opt::ArgStringList *const CC1Args = getCC1Arguments(
-      &*Diagnostics, Compilation.get());
-  if (!CC1Args)
+  }
+  const llvm::opt::ArgStringList *const CC1Args =
+      getCC1Arguments(&*Diagnostics, Compilation.get());
+  if (!CC1Args) {
+    Diagnostics->getClient()->finish();
     return false;
+  }
   std::unique_ptr<CompilerInvocation> Invocation(
       newInvocation(&*Diagnostics, *CC1Args, BinaryName));
-  return runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
-                       std::move(PCHContainerOps));
+  const bool Success =
+      runInvocation(BinaryName, Compilation.get(), std::move(Invocation),
+                    std::move(PCHContainerOps));
+  Diagnostics->getClient()->finish();
+  return Success;
 }
 
 bool ToolInvocation::runInvocation(
@@ -446,18 +459,13 @@ bool FrontendActionFactory::runInvocation(
   CompilerInstance Compiler(std::move(Invocation), std::move(PCHContainerOps));
   Compiler.setVirtualFileSystem(Files->getVirtualFileSystemPtr());
   Compiler.setFileManager(Files);
+  Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+  Compiler.createSourceManager();
 
   // The FrontendAction can have lifetime requirements for Compiler or its
   // members, and we need to ensure it's deleted earlier than Compiler. So we
   // pass it to an std::unique_ptr declared after the Compiler variable.
   std::unique_ptr<FrontendAction> ScopedToolAction(create());
-
-  // Create the compiler's actual diagnostics engine.
-  Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-  if (!Compiler.hasDiagnostics())
-    return false;
-
-  Compiler.createSourceManager();
 
   const bool Success = Compiler.ExecuteAction(*ScopedToolAction);
 
@@ -497,9 +505,7 @@ void ClangTool::appendArgumentsAdjuster(ArgumentsAdjuster Adjuster) {
   ArgsAdjuster = combineAdjusters(std::move(ArgsAdjuster), std::move(Adjuster));
 }
 
-void ClangTool::clearArgumentsAdjusters() {
-  ArgsAdjuster = nullptr;
-}
+void ClangTool::clearArgumentsAdjusters() { ArgsAdjuster = nullptr; }
 
 static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
                               void *MainAddr) {
@@ -510,8 +516,7 @@ static void injectResourceDir(CommandLineArguments &Args, const char *Argv0,
 
   // If there's no override in place add our resource dir.
   Args = getInsertArgumentAdjuster(
-      ("-resource-dir=" + CompilerInvocation::GetResourcesPath(Argv0, MainAddr))
-          .c_str())(Args, "");
+      ("-resource-dir=" + GetResourcesPath(Argv0, MainAddr)).c_str())(Args, "");
 }
 
 int ClangTool::run(ToolAction *Action) {
@@ -555,8 +560,9 @@ int ClangTool::run(ToolAction *Action) {
   }
 
   size_t NumOfTotalFiles = AbsolutePaths.size();
-  unsigned ProcessedFileCounter = 0;
+  unsigned CurrentFileIndex = 0;
   for (llvm::StringRef File : AbsolutePaths) {
+    ++CurrentFileIndex;
     // Currently implementations of CompilationDatabase::getCompileCommands can
     // change the state of the file system (e.g.  prepare generated headers), so
     // this method needs to run right before we invoke the tool, as the next
@@ -571,6 +577,7 @@ int ClangTool::run(ToolAction *Action) {
       FileSkipped = true;
       continue;
     }
+    unsigned CurrentCommandIndexForFile = 0;
     for (CompileCommand &CompileCommand : CompileCommandsForFile) {
       // If the 'directory' field of the compilation database is empty, display
       // an error and use the working directory instead.
@@ -617,13 +624,20 @@ int ClangTool::run(ToolAction *Action) {
       // pass in made-up names here. Make sure this works on other platforms.
       injectResourceDir(CommandLine, "clang_tool", &StaticSymbol);
 
+      ++CurrentCommandIndexForFile;
+
       // FIXME: We need a callback mechanism for the tool writer to output a
       // customized message for each file.
-      if (NumOfTotalFiles > 1)
-        llvm::errs() << "[" + std::to_string(++ProcessedFileCounter) + "/" +
-                            std::to_string(NumOfTotalFiles) +
-                            "] Processing file " + File
-                     << ".\n";
+      if (NumOfTotalFiles > 1 || CompileCommandsForFile.size() > 1) {
+        llvm::errs() << "[" << std::to_string(CurrentFileIndex) << "/"
+                     << std::to_string(NumOfTotalFiles) << "]";
+        if (CompileCommandsForFile.size() > 1) {
+          llvm::errs() << " (" << std::to_string(CurrentCommandIndexForFile)
+                       << "/" << std::to_string(CompileCommandsForFile.size())
+                       << ")";
+        }
+        llvm::errs() << " Processing file " << File << ".\n";
+      }
       ToolInvocation Invocation(std::move(CommandLine), Action, Files.get(),
                                 PCHContainerOps);
       Invocation.setDiagnosticConsumer(DiagConsumer);

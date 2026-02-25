@@ -943,17 +943,21 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             }
           }
 
-          if (Rec->isSubClassOf("RegisterOperand"))
-            Rec = Rec->getValueAsDef("RegClass");
-          if (Rec->isSubClassOf("RegisterClassLike")) {
+          if (Target.getAsRegClassLike(Rec)) {
             if (!IAP.isOpMapped(ROName)) {
               IAP.addOperand(ROName, MIOpNum, PrintMethodIdx);
-              const Record *R = CGA.ResultOperands[i].getRecord();
-              if (R->isSubClassOf("RegisterOperand"))
-                R = R->getValueAsDef("RegClass");
-              IAP.addCond(std::string(
-                  formatv("AliasPatternCond::K_RegClass, {}::{}RegClassID",
-                          Namespace, R->getName())));
+              const Record *R =
+                  Target.getAsRegClassLike(CGA.ResultOperands[i].getRecord());
+              assert(R && "Not a valid register class?");
+              if (R->isSubClassOf("RegClassByHwMode")) {
+                IAP.addCond(std::string(
+                    formatv("AliasPatternCond::K_RegClassByHwMode, {}::{}",
+                            Namespace, R->getName())));
+              } else {
+                IAP.addCond(std::string(
+                    formatv("AliasPatternCond::K_RegClass, {}::{}RegClassID",
+                            Namespace, R->getName())));
+              }
             } else {
               IAP.addCond(std::string(formatv("AliasPatternCond::K_TiedReg, {}",
                                               IAP.getOpIndex(ROName))));
@@ -997,9 +1001,22 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
             break;
           }
 
-          StringRef Reg = CGA.ResultOperands[i].getRegister()->getName();
-          IAP.addCond(std::string(
-              formatv("AliasPatternCond::K_Reg, {}::{}", Namespace, Reg)));
+          const Record *Rec = CGA.ResultOperands[i].getRegister();
+          StringRef Reg = Rec->getName();
+          if (Rec->isSubClassOf("RegisterByHwMode")) {
+            // Use a custom predicate to handle RegisterByHwMode since there
+            // is no way to handle this in the generic code.
+            unsigned &Entry = MCOpPredicateMap[Rec];
+            if (!Entry) {
+              MCOpPredicates.push_back(Rec);
+              Entry = MCOpPredicates.size();
+            }
+            IAP.addCond(std::string(
+                formatv("AliasPatternCond::K_Custom, {}/*{}*/", Entry, Reg)));
+          } else {
+            IAP.addCond(std::string(
+                formatv("AliasPatternCond::K_Reg, {}::{}", Namespace, Reg)));
+          }
           break;
         }
 
@@ -1293,12 +1310,25 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
       << "    llvm_unreachable(\"Unknown MCOperandPredicate kind\");\n"
       << "    break;\n";
 
-    for (unsigned i = 0; i < MCOpPredicates.size(); ++i) {
-      StringRef MCOpPred =
-          MCOpPredicates[i]->getValueAsString("MCOperandPredicate");
-      O << "  case " << i + 1 << ": {\n"
-        << MCOpPred.data() << "\n"
-        << "    }\n";
+    for (auto [I, Rec] : enumerate(MCOpPredicates)) {
+      O << "  case " << I + 1 << ": {\n";
+      // We have to handle RegClassByHwMode predicates here since there is no
+      // special case opcode for them.
+      if (Rec->isSubClassOf("RegisterByHwMode")) {
+        if (!PassSubtarget)
+          PrintFatalError(Target.getAsmWriter()->getLoc(),
+                          "PassSubtarget must be set in "
+                          "AsmWriter to handle RegisterByHwMode");
+        O << "    return MCOp.isReg() && MCOp.getReg() == ";
+        RegisterByHwMode(Rec, Target.getRegBank())
+            .emitResolverCall(O,
+                              "STI.getHwMode(MCSubtargetInfo::HwMode_RegInfo)");
+        O << ";\n";
+      } else {
+        // Normal MCOperandPredicate code snippet, emit verbatim.
+        O << Rec->getValueAsString("MCOperandPredicate") << "\n";
+      }
+      O << "  }\n";
     }
     O << "  }\n"
       << "}\n\n";

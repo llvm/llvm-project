@@ -1,0 +1,15 @@
+import("//third-party/unittest/unittest.gni")
+
+unittest("ClangDependencyScanningTests") {
+  configs += [ "//llvm/utils/gn/build:clang_code" ]
+  deps = [
+    "//clang/lib/DependencyScanning",
+    "//clang/lib/Frontend",
+    "//llvm/lib/Option",
+    "//llvm/lib/Support",
+  ]
+  sources = [
+    "DependencyScanningFilesystemTest.cpp",
+    "DependencyScanningWorkerTest.cpp",
+  ]
+}

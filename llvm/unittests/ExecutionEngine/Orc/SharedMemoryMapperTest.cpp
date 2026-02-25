@@ -23,7 +23,7 @@ using namespace llvm::orc::rt_bootstrap;
 #if (defined(LLVM_ON_UNIX) && !defined(__ANDROID__)) || defined(_WIN32)
 
 // A basic function to be used as both initializer/deinitializer
-CWrapperFunctionResult incrementWrapper(const char *ArgData, size_t ArgSize) {
+CWrapperFunctionBuffer incrementWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<SPSError(SPSExecutorAddr)>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr A) -> Error {

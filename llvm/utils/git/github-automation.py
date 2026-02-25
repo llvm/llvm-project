@@ -66,8 +66,10 @@ class IssueSubscriber:
         return self._team_name
 
     def __init__(self, token: str, repo: str, issue_number: int, label_name: str):
-        self.repo = github.Github(token).get_repo(repo)
-        self.org = github.Github(token).get_organization(self.repo.organization.login)
+        self.repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
+        self.org = github.Github(auth=github.Auth.Token(token)).get_organization(
+            self.repo.organization.login
+        )
         self.issue = self.repo.get_issue(issue_number)
         self._team_name = "issue-subscribers-{}".format(label_name).lower()
 
@@ -111,8 +113,10 @@ class PRSubscriber:
         return self._team_name
 
     def __init__(self, token: str, repo: str, pr_number: int, label_name: str):
-        self.repo = github.Github(token).get_repo(repo)
-        self.org = github.Github(token).get_organization(self.repo.organization.login)
+        self.repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
+        self.org = github.Github(auth=github.Auth.Token(token)).get_organization(
+            self.repo.organization.login
+        )
         self.pr = self.repo.get_issue(pr_number).as_pull_request()
         self._team_name = "pr-subscribers-{}".format(
             label_name.replace("+", "x")
@@ -126,6 +130,14 @@ class PRSubscriber:
         return None
 
     def run(self) -> bool:
+        for label in self.pr.get_labels():
+            # skip-precommit-approval label is intended for simple PR that don't
+            # require approval. To reduce the volume of notifications, avoid
+            # sending notifications to subscribers for PRs labeled as such.
+            if label.name == "skip-precommit-approval":
+                print(f"{label.name} label found, skip subscribers")
+                return True
+
         patch = None
         team = _get_current_team(self.team_name, self.org.get_teams())
         if not team:
@@ -222,7 +234,7 @@ class PRGreeter:
     COMMENT_TAG = "<!--LLVM NEW CONTRIBUTOR COMMENT-->\n"
 
     def __init__(self, token: str, repo: str, pr_number: int):
-        repo = github.Github(token).get_repo(repo)
+        repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
         self.pr = repo.get_issue(pr_number).as_pull_request()
 
     def run(self) -> bool:
@@ -252,7 +264,7 @@ You can also ask questions in a comment on this PR, on the [LLVM Discord](https:
 
 class CommitRequestGreeter:
     def __init__(self, token: str, repo: str, issue_number: int):
-        self.repo = github.Github(token).get_repo(repo)
+        self.repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
         self.issue = self.repo.get_issue(issue_number)
 
     def run(self) -> bool:
@@ -305,6 +317,8 @@ class CommitRequestGreeter:
             * [{merged_prs} Merged Pull Requests]({merged_prs_url})
             * Top 3 Committers: {get_user_values_str(get_top_values(merged_by))}
             * Top 3 Reviewers: {get_user_values_str(get_top_values(reviewed_by))}
+
+            Reviewers should clearly state their reasoning for accepting or rejecting this request, and finish with a clear statement such as \"I approve of this request\", \"LGTM\", or \"I do not approve of this request\". Please review the instructions for [obtaining commit access](https://llvm.org/docs/DeveloperPolicy.html#obtaining-commit-access).
         """
         self.issue.create_comment(textwrap.dedent(comment))
 
@@ -313,7 +327,7 @@ class PRBuildbotInformation:
     COMMENT_TAG = "<!--LLVM BUILDBOT INFORMATION COMMENT-->\n"
 
     def __init__(self, token: str, repo: str, pr_number: int, author: str):
-        repo = github.Github(token).get_repo(repo)
+        repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo)
         self.pr = repo.get_issue(pr_number).as_pull_request()
         self.author = author
 
@@ -450,7 +464,9 @@ class ReleaseWorkflow:
 
     @property
     def repo(self) -> github.Repository.Repository:
-        return github.Github(self.token).get_repo(self.repo_name)
+        return github.Github(auth=github.Auth.Token(self.token)).get_repo(
+            self.repo_name
+        )
 
     @property
     def issue(self) -> github.Issue.Issue:
@@ -495,7 +511,7 @@ class ReleaseWorkflow:
         if pr.state != "closed":
             return
 
-        gh = github.Github(login_or_token=self.token)
+        gh = github.Github(auth=github.Auth.Token(self.token))
         query = """
             query($node_id: ID!) {
               node(id: $node_id) {
@@ -715,7 +731,9 @@ class ReleaseWorkflow:
         https://docs.github.com/en/get-started/quickstart/github-glossary#base-branch
         https://docs.github.com/en/get-started/quickstart/github-glossary#compare-branch
         """
-        repo = github.Github(self.token).get_repo(self.repo_name)
+        repo = github.Github(auth=github.Auth.Token(self.token)).get_repo(
+            self.repo_name
+        )
         issue_ref = "{}#{}".format(self.repo_name, self.issue_number)
         pull = None
         release_branch_for_issue = self.release_branch_for_issue
@@ -790,7 +808,7 @@ class ReleaseWorkflow:
 
 
 def request_release_note(token: str, repo_name: str, pr_number: int):
-    repo = github.Github(token).get_repo(repo_name)
+    repo = github.Github(auth=github.Auth.Token(token)).get_repo(repo_name)
     pr = repo.get_issue(pr_number).as_pull_request()
     submitter = pr.user.login
     if submitter == "llvmbot":

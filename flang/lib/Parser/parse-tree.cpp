@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Parser/parse-tree.h"
+
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
+#include "flang/Parser/openmp-utils.h"
 #include "flang/Parser/tools.h"
 #include "flang/Parser/user-state.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -20,7 +22,8 @@ namespace Fortran::parser {
 
 // R867
 ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
-    : kind{k}, names(std::move(n)) {
+    : t(k, std::move(n)) {
+  const auto &[kind, names]{t};
   CHECK(kind == common::ImportKind::Default ||
       kind == common::ImportKind::Only || names.empty());
 }
@@ -28,8 +31,8 @@ ImportStmt::ImportStmt(common::ImportKind &&k, std::list<Name> &&n)
 // R873
 CommonStmt::CommonStmt(std::optional<Name> &&name,
     std::list<CommonBlockObject> &&objects, std::list<Block> &&others) {
-  blocks.emplace_front(std::move(name), std::move(objects));
-  blocks.splice(blocks.end(), std::move(others));
+  v.emplace_front(std::move(name), std::move(objects));
+  v.splice(v.end(), std::move(others));
 }
 
 // R901 designator
@@ -47,20 +50,21 @@ bool Designator::EndsInBareName() const {
 }
 
 // R911 data-ref -> part-ref [% part-ref]...
-DataRef::DataRef(std::list<PartRef> &&prl) : u{std::move(prl.front().name)} {
+DataRef::DataRef(std::list<PartRef> &&prl)
+    : u{std::move(std::get<Name>(prl.front().t))} {
   for (bool first{true}; !prl.empty(); first = false, prl.pop_front()) {
-    PartRef &pr{prl.front()};
+    auto &&[name, subscripts, imageSelector]{prl.front().t};
     if (!first) {
       u = common::Indirection<StructureComponent>::Make(
-          std::move(*this), std::move(pr.name));
+          std::move(*this), std::move(name));
     }
-    if (!pr.subscripts.empty()) {
+    if (!subscripts.empty()) {
       u = common::Indirection<ArrayElement>::Make(
-          std::move(*this), std::move(pr.subscripts));
+          std::move(*this), std::move(subscripts));
     }
-    if (pr.imageSelector) {
+    if (imageSelector) {
       u = common::Indirection<CoindexedNamedObject>::Make(
-          std::move(*this), std::move(*pr.imageSelector));
+          std::move(*this), std::move(*imageSelector));
     }
   }
 }
@@ -98,8 +102,9 @@ static Designator MakeArrayElementRef(
     const Name &name, std::list<Expr> &&subscripts) {
   ArrayElement arrayElement{DataRef{Name{name}}, std::list<SectionSubscript>{}};
   for (Expr &expr : subscripts) {
-    arrayElement.subscripts.push_back(
-        SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
+    std::get<std::list<SectionSubscript>>(arrayElement.t)
+        .push_back(
+            SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
   }
   return Designator{DataRef{common::Indirection{std::move(arrayElement)}}};
 }
@@ -109,8 +114,9 @@ static Designator MakeArrayElementRef(
   ArrayElement arrayElement{DataRef{common::Indirection{std::move(sc)}},
       std::list<SectionSubscript>{}};
   for (Expr &expr : subscripts) {
-    arrayElement.subscripts.push_back(
-        SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
+    std::get<std::list<SectionSubscript>>(arrayElement.t)
+        .push_back(
+            SectionSubscript{Integer{common::Indirection{std::move(expr)}}});
   }
   return Designator{DataRef{common::Indirection{std::move(arrayElement)}}};
 }
@@ -182,6 +188,7 @@ StructureConstructor FunctionReference::ConvertToStructureConstructor(
 
 StructureConstructor ArrayElement::ConvertToStructureConstructor(
     const semantics::DerivedTypeSpec &derived) {
+  auto &[base, subscripts]{t};
   Name name{std::get<parser::Name>(base.u)};
   std::list<ComponentSpec> components;
   for (auto &subscript : subscripts) {
@@ -194,6 +201,7 @@ StructureConstructor ArrayElement::ConvertToStructureConstructor(
 }
 
 Substring ArrayElement::ConvertToSubstring() {
+  auto &[base, subscripts]{t};
   auto iter{subscripts.begin()};
   CHECK(iter != subscripts.end());
   auto &triplet{std::get<SubscriptTriplet>(iter->u)};
@@ -430,6 +438,39 @@ const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
     return *clauses;
   }
   return empty;
+}
+
+const DoConstruct *OpenMPLoopConstruct::GetNestedLoop() const {
+  auto getFromBlock{[](const Block &body, auto self) -> const DoConstruct * {
+    for (auto &stmt : body) {
+      if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+        return self(std::get<Block>(block->t), self);
+      }
+      if (auto *loop{Unwrap<DoConstruct>(&stmt)}) {
+        return loop;
+      }
+    }
+    return nullptr;
+  }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
+}
+
+const OpenMPLoopConstruct *OpenMPLoopConstruct::GetNestedConstruct() const {
+  auto getFromBlock{
+      [](const Block &body, auto self) -> const OpenMPLoopConstruct * {
+        for (auto &stmt : body) {
+          if (auto *block{Unwrap<BlockConstruct>(&stmt)}) {
+            return self(std::get<Block>(block->t), self);
+          }
+          if (auto *omp{Unwrap<OpenMPLoopConstruct>(&stmt)}) {
+            return omp;
+          }
+        }
+        return nullptr;
+      }};
+
+  return getFromBlock(std::get<Block>(t), getFromBlock);
 }
 
 static bool InitCharBlocksFromStrings(llvm::MutableArrayRef<CharBlock> blocks,

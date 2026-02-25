@@ -20,7 +20,7 @@ define float @raw_ptr_buffer_load_format_f32__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
@@ -74,7 +74,7 @@ define <2 x float> @raw_ptr_buffer_load_format_v2f32__sgpr_rsrc__vgpr_voffset__s
   ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
@@ -131,7 +131,7 @@ define <3 x float> @raw_ptr_buffer_load_format_v3f32__sgpr_rsrc__vgpr_voffset__s
   ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
@@ -190,7 +190,7 @@ define <4 x float> @raw_ptr_buffer_load_format_v4f32__sgpr_rsrc__vgpr_voffset__s
   ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
@@ -252,7 +252,7 @@ define float @raw_ptr_buffer_load_format_f32__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:
@@ -306,7 +306,7 @@ define <4 x float> @raw_ptr_buffer_load_format_v4f32__sgpr_rsrc__vgpr_voffset__s
   ; GFX908-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY5]], %subreg.sub0, [[COPY4]], %subreg.sub1
   ; GFX908-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub1
   ; GFX908-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[REG_SEQUENCE1]].sub0
-  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY9]], %subreg.sub0, [[COPY8]], %subreg.sub1, [[COPY7]], %subreg.sub2, [[COPY6]], %subreg.sub3
+  ; GFX908-NEXT:   [[REG_SEQUENCE2:%[0-9]+]]:vreg_128 = REG_SEQUENCE killed [[COPY9]], %subreg.sub0, killed [[COPY8]], %subreg.sub1, killed [[COPY7]], %subreg.sub2, killed [[COPY6]], %subreg.sub3
   ; GFX908-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64_xexec = S_MOV_B64 $exec
   ; GFX908-NEXT: {{  $}}
   ; GFX908-NEXT: bb.1:

@@ -26,9 +26,8 @@ contains
 ! CHECK: %[[VAL_1:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}> {bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_pointer_arrayEd"}
 ! CHECK: %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QMopenacc_boundsFacc_derived_type_component_pointer_arrayEd"} : (!fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>)
 ! CHECK: %[[VAL_4:.*]] = hlfir.designate %[[VAL_2]]#0{"array_comp"}   {fortran_attrs = #fir.var_attrs<pointer>} : (!fir.ref<!fir.type<_QMopenacc_boundsTt1{array_comp:!fir.box<!fir.ptr<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK: %[[VAL_5:.*]] = fir.load %[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK: %[[VAL_6:.*]] = acc.create var(%[[VAL_5]] : !fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>> {name = "d%[[VAL_7:.*]]", structured = false}
-! CHECK: acc.enter_data dataOperands(%[[VAL_6]] : !fir.box<!fir.ptr<!fir.array<?xi32>>>)
+! CHECK: %[[VAL_6:.*]] = acc.create varPtr(%[[VAL_4]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>> {name = "d%array_comp", structured = false}
+! CHECK: acc.enter_data dataOperands(%[[VAL_6]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>)
 ! CHECK: return
 ! CHECK: }
 
@@ -61,14 +60,8 @@ contains
 ! CHECK: %[[D:.*]] = fir.alloca !fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}> {bindc_name = "d", uniq_name = "_QMopenacc_boundsFacc_derived_type_component_allocatable_arrayEd"}
 ! CHECK: %[[DECL_D:.*]]:2 = hlfir.declare %[[D]] {uniq_name = "_QMopenacc_boundsFacc_derived_type_component_allocatable_arrayEd"} : (!fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> (!fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>, !fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>)
 ! CHECK: %[[COORD:.*]] = hlfir.designate %[[DECL_D]]#0{"array_comp"}   {fortran_attrs = #fir.var_attrs<allocatable>} : (!fir.ref<!fir.type<_QMopenacc_boundsTt3{array_comp:!fir.box<!fir.heap<!fir.array<?xi32>>>}>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
-! CHECK: %[[BOX_DIMS0:.*]]:3 = fir.box_dims %[[LOAD]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK: %[[C1:.*]] = arith.constant 1 : index
-! CHECK: %[[BOX_DIMS1:.*]]:3 = fir.box_dims %[[LOAD]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-! CHECK: %[[UB:.*]] = arith.subi %[[BOX_DIMS1]]#1, %[[C1]] : index
-! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%c0{{.*}} : index) upperbound(%[[UB]] : index) extent(%[[BOX_DIMS1]]#1 : index) stride(%[[BOX_DIMS1]]#2 : index) startIdx(%[[BOX_DIMS0]]#0 : index) {strideInBytes = true}
-! CHECK: %[[CREATE:.*]] = acc.create var(%[[LOAD]] : !fir.box<!fir.heap<!fir.array<?xi32>>>) bounds(%[[BOUND]]) -> !fir.box<!fir.heap<!fir.array<?xi32>>> {name = "d%[[VAL_15:.*]]", structured = false}
-! CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.box<!fir.heap<!fir.array<?xi32>>>)
+! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {name = "d%[[VAL_15:.*]]", structured = false}
+! CHECK: acc.enter_data dataOperands(%[[CREATE]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>)
 ! CHECK: return
 ! CHECK: }
 
@@ -114,7 +107,7 @@ contains
     !$acc data attach(a)
     !$acc end data
   end subroutine
-  
+
 ! CHECK-LABEL: func.func @_QMopenacc_boundsPacc_optional_data(
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "a", fir.optional}) {
 ! CHECK: %[[ARG0_DECL:.*]]:2 = hlfir.declare %[[ARG0]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {fortran_attrs = #fir.var_attrs<optional, pointer>, uniq_name = "_QMopenacc_boundsFacc_optional_dataEa"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.dscope) -> (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>, !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>)

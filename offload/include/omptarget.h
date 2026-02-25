@@ -80,6 +80,10 @@ enum tgt_map_type {
   // Attach pointer and pointee, after processing all other maps.
   // Applicable to map-entering directives. Does not change ref-count.
   OMP_TGT_MAPTYPE_ATTACH = 0x4000,
+  // When a lookup fails, fall back to using null as the translated pointer,
+  // instead of preserving the original pointer's value. Currently only
+  // useful in conjunction with RETURN_PARAM.
+  OMP_TGT_MAPTYPE_FB_NULLIFY = 0x8000,
   // descriptor for non-contiguous target-update
   OMP_TGT_MAPTYPE_NON_CONTIG = 0x100000000000,
   // member of struct, member given by [16 MSBs] - 1
@@ -94,6 +98,8 @@ enum OpenMPOffloadingDeclareTargetFlags {
   OMP_DECLARE_TARGET_INDIRECT = 0x08,
   /// This is an entry corresponding to a requirement to be registered.
   OMP_REGISTER_REQUIRES = 0x10,
+  /// Mark the entry global as being an indirect vtable.
+  OMP_DECLARE_TARGET_INDIRECT_VTABLE = 0x20,
 };
 
 enum TargetAllocTy : int32_t {
@@ -101,6 +107,7 @@ enum TargetAllocTy : int32_t {
   TARGET_ALLOC_HOST,
   TARGET_ALLOC_SHARED,
   TARGET_ALLOC_DEFAULT,
+  TARGET_ALLOC_LAST = TARGET_ALLOC_DEFAULT
 };
 
 struct DeviceTy;
@@ -279,6 +286,8 @@ enum omp_access_t {
 void ompx_dump_mapping_tables(void);
 int omp_get_num_devices(void);
 int omp_get_device_num(void);
+int omp_get_device_from_uid(const char *DeviceUid);
+const char *omp_get_uid_from_device(int DeviceNum);
 int omp_get_initial_device(void);
 size_t omp_get_groupprivate_limit(int DeviceNum,
                                   omp_access_t AccessGroup = omp_access_cgroup);
@@ -430,6 +439,11 @@ int __tgt_print_device_info(int64_t DeviceId);
 int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
                                  void *VAddr, bool IsRecord, bool SaveOutput,
                                  uint64_t &ReqPtrArgOffset);
+
+// Registers a callback for the RPC server. Expects this function type.
+// unsigned callback(rpc::Server::Port *Port, unsigned NumLanes). See the RPC
+// code for details.
+void __tgt_register_rpc_callback(unsigned (*Callback)(void *, unsigned));
 
 #ifdef __cplusplus
 }

@@ -19,6 +19,7 @@
 
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
+#include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
 //===----------------------------------------------------------------------===//
@@ -35,6 +36,7 @@ namespace cir {
 class ArrayType;
 class BoolType;
 class ComplexType;
+class DataMemberType;
 class IntType;
 class MethodType;
 class PointerType;

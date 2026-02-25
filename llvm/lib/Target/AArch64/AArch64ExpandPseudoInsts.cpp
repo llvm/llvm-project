@@ -137,8 +137,8 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                                        unsigned BitSize) {
   MachineInstr &MI = *MBBI;
   Register DstReg = MI.getOperand(0).getReg();
-  uint64_t RenamableState =
-      MI.getOperand(0).isRenamable() ? RegState::Renamable : 0;
+  RegState RenamableState =
+      getRenamableRegState(MI.getOperand(0).isRenamable());
   uint64_t Imm = MI.getOperand(1).getImm();
 
   if (DstReg == AArch64::XZR || DstReg == AArch64::WZR) {
@@ -178,6 +178,8 @@ bool AArch64ExpandPseudo::expandMOVImm(MachineBasicBlock &MBB,
                 .addImm(I->Op2));
       }
       break;
+    case AArch64::EONXrs:
+    case AArch64::EORXrs:
     case AArch64::ORRWrs:
     case AArch64::ORRXrs: {
       Register DstReg = MI.getOperand(0).getReg();
@@ -615,7 +617,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
   }
 
   // Preserve undef state until DOP's reg is defined.
-  unsigned DOPRegState = MI.getOperand(DOPIdx).isUndef() ? RegState::Undef : 0;
+  RegState DOPRegState = getUndefRegState(MI.getOperand(DOPIdx).isUndef());
 
   //
   // Create the destructive operation (if required)
@@ -639,7 +641,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
 
     // After the movprfx, the destructive operand is same as Dst
     DOPIdx = 0;
-    DOPRegState = 0;
+    DOPRegState = {};
 
     // Create the additional LSL to zero the lanes when the DstReg is not
     // unique. Zeros the lanes in z0 that aren't active in p0 with sequence
@@ -660,7 +662,7 @@ bool AArch64ExpandPseudo::expand_DestructiveOp(
                .addReg(DstReg, RegState::Define)
                .addReg(MI.getOperand(DOPIdx).getReg(), DOPRegState);
     DOPIdx = 0;
-    DOPRegState = 0;
+    DOPRegState = {};
   }
 
   //
@@ -790,9 +792,8 @@ bool AArch64ExpandPseudo::expandSVESpillFill(MachineBasicBlock &MBB,
   assert((Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI ||
           Opc == AArch64::LDR_PXI || Opc == AArch64::STR_PXI) &&
          "Unexpected opcode");
-  unsigned RState = (Opc == AArch64::LDR_ZXI || Opc == AArch64::LDR_PXI)
-                        ? RegState::Define
-                        : 0;
+  RegState RState =
+      getDefRegState(Opc == AArch64::LDR_ZXI || Opc == AArch64::LDR_PXI);
   unsigned sub0 = (Opc == AArch64::LDR_ZXI || Opc == AArch64::STR_ZXI)
                       ? AArch64::zsub0
                       : AArch64::psub0;
@@ -1063,6 +1064,7 @@ AArch64ExpandPseudo::expandCommitZASave(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI) {
   MachineInstr &MI = *MBBI;
   DebugLoc DL = MI.getDebugLoc();
+  [[maybe_unused]] auto *RI = MBB.getParent()->getSubtarget().getRegisterInfo();
 
   // Compare TPIDR2_EL0 against 0. Commit ZA if TPIDR2_EL0 is non-zero.
   MachineInstrBuilder Branch =
@@ -1073,20 +1075,24 @@ AArch64ExpandPseudo::expandCommitZASave(MachineBasicBlock &MBB,
   MachineInstrBuilder MIB =
       BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::BL));
   // Copy operands (mainly the regmask) from the pseudo.
-  for (unsigned I = 2; I < MI.getNumOperands(); ++I)
+  for (unsigned I = 3; I < MI.getNumOperands(); ++I)
     MIB.add(MI.getOperand(I));
   // Clear TPIDR2_EL0.
   BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::MSR))
       .addImm(AArch64SysReg::TPIDR2_EL0)
       .addReg(AArch64::XZR);
   bool ZeroZA = MI.getOperand(1).getImm() != 0;
+  bool ZeroZT0 = MI.getOperand(2).getImm() != 0;
   if (ZeroZA) {
-    [[maybe_unused]] auto *TRI =
-        MBB.getParent()->getSubtarget().getRegisterInfo();
-    assert(MI.definesRegister(AArch64::ZAB0, TRI) && "should define ZA!");
+    assert(MI.definesRegister(AArch64::ZAB0, RI) && "should define ZA!");
     BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::ZERO_M))
         .addImm(ZERO_ALL_ZA_MASK)
         .addDef(AArch64::ZAB0, RegState::ImplicitDefine);
+  }
+  if (ZeroZT0) {
+    assert(MI.definesRegister(AArch64::ZT0, RI) && "should define ZT0!");
+    BuildMI(CondBB, CondBB.back(), DL, TII->get(AArch64::ZERO_T))
+        .addDef(AArch64::ZT0);
   }
 
   MI.eraseFromParent();
@@ -1291,7 +1297,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                 .add(MI.getOperand(3));
         transferImpOps(MI, I, I);
       } else {
-        unsigned RegState =
+        RegState RegState =
             getRenamableRegState(MI.getOperand(1).isRenamable()) |
             getKillRegState(
                 MI.getOperand(1).isKill() &&
@@ -1424,11 +1430,10 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
       if (MF.getSubtarget<AArch64Subtarget>().isTargetILP32()) {
         auto TRI = MBB.getParent()->getSubtarget().getRegisterInfo();
         unsigned Reg32 = TRI->getSubReg(DstReg, AArch64::sub_32);
-        unsigned DstFlags = MI.getOperand(0).getTargetFlags();
         MIB2 = BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::LDRWui))
                    .addDef(Reg32)
                    .addReg(DstReg, RegState::Kill)
-                   .addReg(DstReg, DstFlags | RegState::Implicit);
+                   .addReg(DstReg, RegState::Implicit);
       } else {
         Register DstReg = MI.getOperand(0).getReg();
         MIB2 = BuildMI(MBB, MBBI, DL, TII->get(AArch64::LDRXui))
@@ -1712,6 +1717,7 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
    }
    case AArch64::InOutZAUsePseudo:
    case AArch64::RequiresZASavePseudo:
+   case AArch64::RequiresZT0SavePseudo:
    case AArch64::SMEStateAllocPseudo:
    case AArch64::COALESCER_BARRIER_FPR16:
    case AArch64::COALESCER_BARRIER_FPR32:

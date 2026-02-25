@@ -81,12 +81,6 @@ RocmInstallationDetector::CommonBitcodeLibsPreferences::
                     DriverArgs.hasFlag(options::OPT_ffast_math,
                                        options::OPT_fno_fast_math, false);
 
-  const bool DefaultSqrt = IsKnownOffloading ? true : false;
-  CorrectSqrt =
-      DriverArgs.hasArg(options::OPT_cl_fp32_correctly_rounded_divide_sqrt) ||
-      DriverArgs.hasFlag(
-          options::OPT_fhip_fp32_correctly_rounded_divide_sqrt,
-          options::OPT_fno_hip_fp32_correctly_rounded_divide_sqrt, DefaultSqrt);
   // GPU Sanitizer currently only supports ASan and is enabled through host
   // ASan.
   GPUSan = (DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
@@ -127,14 +121,6 @@ void RocmInstallationDetector::scanLibDevicePath(llvm::StringRef Path) {
       FiniteOnly.Off = FilePath;
     } else if (BaseName == "oclc_finite_only_on") {
       FiniteOnly.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_on") {
-      DenormalsAreZero.On = FilePath;
-    } else if (BaseName == "oclc_daz_opt_off") {
-      DenormalsAreZero.Off = FilePath;
-    } else if (BaseName == "oclc_correctly_rounded_sqrt_on") {
-      CorrectlyRoundedSqrt.On = FilePath;
-    } else if (BaseName == "oclc_correctly_rounded_sqrt_off") {
-      CorrectlyRoundedSqrt.Off = FilePath;
     } else if (BaseName == "oclc_unsafe_math_on") {
       UnsafeMath.On = FilePath;
     } else if (BaseName == "oclc_unsafe_math_off") {
@@ -243,8 +229,15 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
     // Some versions of the rocm llvm package install to /opt/rocm/llvm/bin
     // Some versions of the aomp package install to /opt/rocm/aomp/bin
-    if (ParentName == "llvm" || ParentName.starts_with("aomp"))
+    if (ParentName == "llvm" || ParentName.starts_with("aomp")) {
       ParentDir = llvm::sys::path::parent_path(ParentDir);
+      ParentName = llvm::sys::path::filename(ParentDir);
+
+      // Some versions of the rocm llvm package install to
+      // /opt/rocm/lib/llvm/bin, so also back up if within the lib dir still
+      if (ParentName == "lib")
+        ParentDir = llvm::sys::path::parent_path(ParentDir);
+    }
 
     return Candidate(ParentDir.str(), /*StrictChecking=*/true);
   };
@@ -320,7 +313,7 @@ RocmInstallationDetector::getInstallationPathCandidates() {
 
 RocmInstallationDetector::RocmInstallationDetector(
     const Driver &D, const llvm::Triple &HostTriple,
-    const llvm::opt::ArgList &Args, bool DetectHIPRuntime, bool DetectDeviceLib)
+    const llvm::opt::ArgList &Args, bool DetectHIPRuntime)
     : D(D) {
   Verbose = Args.hasArg(options::OPT_v);
   RocmPathArg = Args.getLastArgValue(options::OPT_rocm_path_EQ);
@@ -374,8 +367,6 @@ RocmInstallationDetector::RocmInstallationDetector(
 
   if (DetectHIPRuntime)
     detectHIPRuntime();
-  if (DetectDeviceLib)
-    detectDeviceLibrary();
 }
 
 void RocmInstallationDetector::detectDeviceLibrary() {
@@ -841,7 +832,8 @@ bool AMDGPUToolChain::isWave64(const llvm::opt::ArgList &DriverArgs,
 ROCMToolChain::ROCMToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
     : AMDGPUToolChain(D, Triple, Args) {
-  RocmInstallation->detectDeviceLibrary();
+  if (Triple.getEnvironment() != llvm::Triple::LLVM)
+    RocmInstallation->detectDeviceLibrary();
 }
 
 void AMDGPUToolChain::addClangTargetOptions(
@@ -871,7 +863,7 @@ void AMDGPUToolChain::addClangTargetOptions(
     CC1Args.push_back("-disable-llvm-optzns");
 
   if (DeviceOffloadingKind == Action::OFK_None)
-    addOpenCLBuiltinsLib(getDriver(), DriverArgs, CC1Args);
+    addOpenCLBuiltinsLib(getDriver(), getTriple(), DriverArgs, CC1Args);
 }
 
 void AMDGPUToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {
@@ -960,6 +952,17 @@ void ROCMToolChain::addClangTargetOptions(
                           true))
     return;
 
+  // For SPIR-V (SPIRVAMDToolChain) we must not link any device libraries so we
+  // skip it.
+  const llvm::Triple &TT = this->getEffectiveTriple();
+  if (TT.isSPIRV())
+    return;
+
+  // With an LLVM environment, only use libraries provided by the resource
+  // directory.
+  if (TT.getEnvironment() == llvm::Triple::LLVM)
+    return;
+
   // Get the device name and canonicalize it
   const StringRef GpuArch = getGPUArch(DriverArgs);
   auto Kind = llvm::AMDGPU::parseArchAMDGCN(GpuArch);
@@ -1025,8 +1028,10 @@ RocmInstallationDetector::getCommonBitcodeLibs(
 
   auto AddBCLib = [&](ToolChain::BitCodeLibraryInfo BCLib,
                       bool Internalize = true) {
-    BCLib.ShouldInternalize = Internalize;
-    BCLibs.emplace_back(BCLib);
+    if (!BCLib.Path.empty()) {
+      BCLib.ShouldInternalize = Internalize;
+      BCLibs.emplace_back(BCLib);
+    }
   };
   auto AddSanBCLibs = [&]() {
     if (Pref.GPUSan)
@@ -1039,10 +1044,8 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     AddBCLib(getOCKLPath());
   else if (Pref.GPUSan && Pref.IsOpenMP)
     AddBCLib(getOCKLPath(), false);
-  AddBCLib(getDenormalsAreZeroPath(Pref.DAZ));
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
-  AddBCLib(getCorrectlyRoundedSqrtPath(Pref.CorrectSqrt));
   AddBCLib(getWavefrontSize64Path(Pref.Wave64));
   AddBCLib(LibDeviceFile);
   auto ABIVerPath = getABIVersionPath(Pref.ABIVer);
@@ -1074,24 +1077,9 @@ ROCMToolChain::getCommonDeviceLibNames(
 bool AMDGPUToolChain::shouldSkipSanitizeOption(
     const ToolChain &TC, const llvm::opt::ArgList &DriverArgs,
     StringRef TargetID, const llvm::opt::Arg *A) const {
-  // For actions without targetID, do nothing.
-  if (TargetID.empty())
-    return false;
-  Option O = A->getOption();
-
-  if (!O.matches(options::OPT_fsanitize_EQ))
-    return false;
-
-  if (!DriverArgs.hasFlag(options::OPT_fgpu_sanitize,
-                          options::OPT_fno_gpu_sanitize, true))
-    return true;
-
   auto &Diags = TC.getDriver().getDiags();
-
-  // For simplicity, we only allow -fsanitize=address
-  SanitizerMask K = parseSanitizerValue(A->getValue(), /*AllowGroups=*/false);
-  if (K != SanitizerKind::Address)
-    return true;
+  bool IsExplicitDevice =
+      A->getBaseArg().getOption().matches(options::OPT_Xarch_device);
 
   // Check 'xnack+' availability by default
   llvm::StringRef Processor =
@@ -1112,10 +1100,17 @@ bool AMDGPUToolChain::shouldSkipSanitizeOption(
   (void)OptionalGpuArch;
   auto Loc = FeatureMap.find("xnack");
   if (Loc == FeatureMap.end() || !Loc->second) {
-    Diags.Report(
-        clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
-        << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    if (IsExplicitDevice) {
+      Diags.Report(
+          clang::diag::err_drv_unsupported_option_for_offload_arch_req_feature)
+          << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    } else {
+      Diags.Report(
+          clang::diag::warn_drv_unsupported_option_for_offload_arch_req_feature)
+          << A->getAsString(DriverArgs) << TargetID << "xnack+";
+    }
     return true;
   }
+
   return false;
 }

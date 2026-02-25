@@ -90,7 +90,7 @@ defvar ZfhminDExts = [ZfhminDExt, ZhinxminZdinxExt, ZhinxminZdinx32Ext];
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasHalfFPLoadStoreMove] in {
-let canFoldAsLoad = 1 in
+let canFoldAsLoad = 1, isReMaterializable = 1 in
 def FLH : FPLoad_r<0b001, "flh", FPR16, WriteFLD16>;
 
 // Operands for stores are in the order srcreg, base, offset rather than
@@ -381,8 +381,10 @@ foreach Ext = ZfhExts in {
   defm : PatFprFpr_m<fmaximumnum, FMAX_H, Ext>;
   defm : PatFprFpr_m<riscv_fmin, FMIN_H, Ext>;
   defm : PatFprFpr_m<riscv_fmax, FMAX_H, Ext>;
-  let Predicates = Ext.Predicates in
-  def : Pat<(f16 (fcanonicalize FPR16:$rs1)), (FMIN_H $rs1, $rs1)>;
+  let Predicates = Ext.Predicates in {
+    def : Pat<(f16 (fcanonicalize Ext.PrimaryTy:$rs1)),
+              (!cast<Instruction>("FMIN_H"#Ext.Suffix) $rs1, $rs1)>;
+  }
 }
 
 /// Setcc

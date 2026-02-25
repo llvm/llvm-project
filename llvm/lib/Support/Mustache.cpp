@@ -75,7 +75,7 @@ static Accessor splitMustacheString(StringRef Str, MustacheContext &Ctx) {
   // Now, allocate memory for the array of StringRefs in the arena.
   StringRef *ArenaTokens = Ctx.Allocator.Allocate<StringRef>(Tokens.size());
   // Copy the StringRefs from the stack vector to the arena.
-  std::copy(Tokens.begin(), Tokens.end(), ArenaTokens);
+  llvm::copy(Tokens, ArenaTokens);
   // Return an ArrayRef pointing to the stable arena memory.
   return ArrayRef<StringRef>(ArenaTokens, Tokens.size());
 }
@@ -898,11 +898,11 @@ void Template::registerPartial(std::string Name, std::string Partial) {
 }
 
 void Template::registerLambda(std::string Name, Lambda L) {
-  Ctx.Lambdas[Name] = L;
+  Ctx.Lambdas[Name] = std::move(L);
 }
 
 void Template::registerLambda(std::string Name, SectionLambda L) {
-  Ctx.SectionLambdas[Name] = L;
+  Ctx.SectionLambdas[Name] = std::move(L);
 }
 
 void Template::overrideEscapeCharacters(EscapeMap E) {

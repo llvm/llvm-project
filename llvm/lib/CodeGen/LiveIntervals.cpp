@@ -40,6 +40,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/IR/Statepoint.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -64,8 +65,10 @@ AnalysisKey LiveIntervalsAnalysis::Key;
 LiveIntervalsAnalysis::Result
 LiveIntervalsAnalysis::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  return Result(MF, MFAM.getResult<SlotIndexesAnalysis>(MF),
-                MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  auto Res = Result(MF, MFAM.getResult<SlotIndexesAnalysis>(MF),
+                    MFAM.getResult<MachineDominatorTreeAnalysis>(MF));
+  LLVM_DEBUG(Res.dump());
+  return Res;
 }
 
 PreservedAnalyses
@@ -117,9 +120,8 @@ void LiveIntervalsWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-LiveIntervalsWrapperPass::LiveIntervalsWrapperPass() : MachineFunctionPass(ID) {
-  initializeLiveIntervalsWrapperPassPass(*PassRegistry::getPassRegistry());
-}
+LiveIntervalsWrapperPass::LiveIntervalsWrapperPass()
+    : MachineFunctionPass(ID) {}
 
 LiveIntervals::~LiveIntervals() { clear(); }
 
@@ -184,7 +186,8 @@ void LiveIntervals::print(raw_ostream &OS) const {
   // Dump the regunits.
   for (unsigned Unit = 0, UnitE = RegUnitRanges.size(); Unit != UnitE; ++Unit)
     if (LiveRange *LR = RegUnitRanges[Unit])
-      OS << printRegUnit(Unit, TRI) << ' ' << *LR << '\n';
+      OS << printRegUnit(static_cast<MCRegUnit>(Unit), TRI) << ' ' << *LR
+         << '\n';
 
   // Dump the virtregs.
   for (unsigned i = 0, e = MRI->getNumVirtRegs(); i != e; ++i) {
@@ -367,10 +370,11 @@ void LiveIntervals::computeLiveInRegUnits() {
     LLVM_DEBUG(dbgs() << Begin << "\t" << printMBBReference(MBB));
     for (const auto &LI : MBB.liveins()) {
       for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-        LiveRange *LR = RegUnitRanges[Unit];
+        LiveRange *LR = RegUnitRanges[static_cast<unsigned>(Unit)];
         if (!LR) {
           // Use segment set to speed-up initial computation of the live range.
-          LR = RegUnitRanges[Unit] = new LiveRange(UseSegmentSetForPhysRegs);
+          LR = RegUnitRanges[static_cast<unsigned>(Unit)] =
+              new LiveRange(UseSegmentSetForPhysRegs);
           NewRanges.push_back(Unit);
         }
         VNInfo *VNI = LR->createDeadDef(Begin, getVNInfoAllocator());
@@ -384,7 +388,7 @@ void LiveIntervals::computeLiveInRegUnits() {
 
   // Compute the 'normal' part of the ranges.
   for (MCRegUnit Unit : NewRanges)
-    computeRegUnitRange(*RegUnitRanges[Unit], Unit);
+    computeRegUnitRange(*RegUnitRanges[static_cast<unsigned>(Unit)], Unit);
 }
 
 static void createSegmentsForValues(LiveRange &LR,

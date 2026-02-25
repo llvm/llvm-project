@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
-
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -15,8 +13,11 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+
+#include <utility>
 
 #define DEBUG_TYPE "value-bounds-op-interface"
 
@@ -129,7 +130,7 @@ ValueBoundsConstraintSet::Variable::Variable(AffineMap map,
     assert(var.map.getNumDims() == 0 && "expected only symbols");
     SmallVector<AffineExpr> symReplacements;
     for (auto valueDim : var.mapOperands) {
-      auto it = llvm::find(this->mapOperands, valueDim);
+      auto *it = llvm::find(this->mapOperands, valueDim);
       if (it != this->mapOperands.end()) {
         // There is already a symbol for this operand.
         symReplacements.push_back(b.getAffineSymbolExpr(
@@ -314,10 +315,10 @@ int64_t ValueBoundsConstraintSet::insert(AffineMap map,
   auto mapper = [&](std::pair<Value, std::optional<int64_t>> v) {
     return getExpr(v.first, v.second);
   };
-  SmallVector<AffineExpr> dimReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).take_front(map.getNumDims()), mapper));
-  SmallVector<AffineExpr> symReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).drop_front(map.getNumDims()), mapper));
+  SmallVector<AffineExpr> dimReplacements = llvm::map_to_vector(
+      ArrayRef(operands).take_front(map.getNumDims()), mapper);
+  SmallVector<AffineExpr> symReplacements = llvm::map_to_vector(
+      ArrayRef(operands).drop_front(map.getNumDims()), mapper);
   addBound(
       presburger::BoundType::EQ, pos,
       map.getResult(0).replaceDimsAndSymbols(dimReplacements, symReplacements));

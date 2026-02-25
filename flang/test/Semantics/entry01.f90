@@ -7,6 +7,10 @@ module m1
   interface
     module subroutine separate
     end subroutine
+    subroutine hasentry
+      !ERROR: An ENTRY statement may not appear in an interface body
+      entry ent
+    end subroutine
   end interface
  contains
   subroutine modproc

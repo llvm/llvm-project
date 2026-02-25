@@ -145,10 +145,8 @@ bool MachTask::ExceptionPortIsValid() const {
 //----------------------------------------------------------------------
 void MachTask::Clear() {
   // Do any cleanup needed for this task
-  if (m_exception_thread)
-    ShutDownExcecptionThread();
+  ShutDownExceptionThread();
   m_task = TASK_NULL;
-  m_exception_thread = 0;
   m_exception_port = MACH_PORT_NULL;
   m_exec_will_be_suspended = false;
   m_do_double_resume = false;
@@ -685,8 +683,11 @@ bool MachTask::StartExceptionThread(
   return false;
 }
 
-kern_return_t MachTask::ShutDownExcecptionThread() {
+void MachTask::ShutDownExceptionThread() {
   DNBError err;
+  
+  if (!m_exception_thread)
+    return;
 
   err = RestoreExceptionPortInfo();
 
@@ -702,6 +703,8 @@ kern_return_t MachTask::ShutDownExcecptionThread() {
   if (DNBLogCheckLogBit(LOG_TASK) || err.Fail())
     err.LogThreaded("::pthread_join ( thread = %p, value_ptr = NULL)",
                     m_exception_thread);
+                    
+  m_exception_thread = nullptr;
 
   // Deallocate our exception port that we used to track our child process
   mach_port_t task_self = mach_task_self();
@@ -713,7 +716,7 @@ kern_return_t MachTask::ShutDownExcecptionThread() {
   m_exec_will_be_suspended = false;
   m_do_double_resume = false;
 
-  return err.Status();
+  return;
 }
 
 void *MachTask::ExceptionThread(void *arg) {

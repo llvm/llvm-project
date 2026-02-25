@@ -36,9 +36,34 @@ extern "C" {
 DEFINE_C_API_STRUCT(MlirRewriterBase, void);
 DEFINE_C_API_STRUCT(MlirFrozenRewritePatternSet, void);
 DEFINE_C_API_STRUCT(MlirGreedyRewriteDriverConfig, void);
+
+/// Greedy rewrite strictness levels.
+typedef enum {
+  /// No restrictions wrt. which ops are processed.
+  MLIR_GREEDY_REWRITE_STRICTNESS_ANY_OP,
+  /// Only pre-existing and newly created ops are processed.
+  MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_AND_NEW_OPS,
+  /// Only pre-existing ops are processed.
+  MLIR_GREEDY_REWRITE_STRICTNESS_EXISTING_OPS
+} MlirGreedyRewriteStrictness;
+
+/// Greedy simplify region levels.
+typedef enum {
+  /// Disable region control-flow simplification.
+  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_DISABLED,
+  /// Run the normal simplification (e.g. dead args elimination).
+  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_NORMAL,
+  /// Run extra simplifications (e.g. block merging).
+  MLIR_GREEDY_SIMPLIFY_REGION_LEVEL_AGGRESSIVE
+} MlirGreedySimplifyRegionLevel;
 DEFINE_C_API_STRUCT(MlirRewritePatternSet, void);
 DEFINE_C_API_STRUCT(MlirPatternRewriter, void);
 DEFINE_C_API_STRUCT(MlirRewritePattern, const void);
+DEFINE_C_API_STRUCT(MlirConversionTarget, void);
+DEFINE_C_API_STRUCT(MlirConversionPattern, const void);
+DEFINE_C_API_STRUCT(MlirTypeConverter, void);
+DEFINE_C_API_STRUCT(MlirConversionPatternRewriter, void);
+DEFINE_C_API_STRUCT(MlirConversionConfig, void);
 
 //===----------------------------------------------------------------------===//
 /// RewriterBase API inherited from OpBuilder
@@ -319,7 +344,134 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedilyWithOp(
 
 MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
     MlirModule op, MlirFrozenRewritePatternSet patterns,
-    MlirGreedyRewriteDriverConfig);
+    MlirGreedyRewriteDriverConfig config);
+
+//===----------------------------------------------------------------------===//
+/// GreedyRewriteDriverConfig API
+//===----------------------------------------------------------------------===//
+
+/// Creates a greedy rewrite driver configuration with default settings.
+MLIR_CAPI_EXPORTED MlirGreedyRewriteDriverConfig
+mlirGreedyRewriteDriverConfigCreate(void);
+
+/// Destroys a greedy rewrite driver configuration.
+MLIR_CAPI_EXPORTED void
+mlirGreedyRewriteDriverConfigDestroy(MlirGreedyRewriteDriverConfig config);
+
+/// Sets the maximum number of iterations for the greedy rewrite driver.
+/// Use -1 for no limit.
+MLIR_CAPI_EXPORTED void mlirGreedyRewriteDriverConfigSetMaxIterations(
+    MlirGreedyRewriteDriverConfig config, int64_t maxIterations);
+
+/// Sets the maximum number of rewrites within an iteration.
+/// Use -1 for no limit.
+MLIR_CAPI_EXPORTED void mlirGreedyRewriteDriverConfigSetMaxNumRewrites(
+    MlirGreedyRewriteDriverConfig config, int64_t maxNumRewrites);
+
+/// Sets whether to use top-down traversal for the initial population of the
+/// worklist.
+MLIR_CAPI_EXPORTED void mlirGreedyRewriteDriverConfigSetUseTopDownTraversal(
+    MlirGreedyRewriteDriverConfig config, bool useTopDownTraversal);
+
+/// Enables or disables folding during greedy rewriting.
+MLIR_CAPI_EXPORTED void
+mlirGreedyRewriteDriverConfigEnableFolding(MlirGreedyRewriteDriverConfig config,
+                                           bool enable);
+
+/// Sets the strictness level for the greedy rewrite driver.
+MLIR_CAPI_EXPORTED void mlirGreedyRewriteDriverConfigSetStrictness(
+    MlirGreedyRewriteDriverConfig config,
+    MlirGreedyRewriteStrictness strictness);
+
+/// Sets the region simplification level.
+MLIR_CAPI_EXPORTED void
+mlirGreedyRewriteDriverConfigSetRegionSimplificationLevel(
+    MlirGreedyRewriteDriverConfig config, MlirGreedySimplifyRegionLevel level);
+
+/// Enables or disables constant CSE.
+MLIR_CAPI_EXPORTED void mlirGreedyRewriteDriverConfigEnableConstantCSE(
+    MlirGreedyRewriteDriverConfig config, bool enable);
+
+/// Gets the maximum number of iterations for the greedy rewrite driver.
+MLIR_CAPI_EXPORTED int64_t mlirGreedyRewriteDriverConfigGetMaxIterations(
+    MlirGreedyRewriteDriverConfig config);
+
+/// Gets the maximum number of rewrites within an iteration.
+MLIR_CAPI_EXPORTED int64_t mlirGreedyRewriteDriverConfigGetMaxNumRewrites(
+    MlirGreedyRewriteDriverConfig config);
+
+/// Gets whether top-down traversal is used for initial worklist population.
+MLIR_CAPI_EXPORTED bool mlirGreedyRewriteDriverConfigGetUseTopDownTraversal(
+    MlirGreedyRewriteDriverConfig config);
+
+/// Gets whether folding is enabled during greedy rewriting.
+MLIR_CAPI_EXPORTED bool mlirGreedyRewriteDriverConfigIsFoldingEnabled(
+    MlirGreedyRewriteDriverConfig config);
+
+/// Gets the strictness level for the greedy rewrite driver.
+MLIR_CAPI_EXPORTED MlirGreedyRewriteStrictness
+mlirGreedyRewriteDriverConfigGetStrictness(
+    MlirGreedyRewriteDriverConfig config);
+
+/// Gets the region simplification level.
+MLIR_CAPI_EXPORTED MlirGreedySimplifyRegionLevel
+mlirGreedyRewriteDriverConfigGetRegionSimplificationLevel(
+    MlirGreedyRewriteDriverConfig config);
+
+/// Gets whether constant CSE is enabled.
+MLIR_CAPI_EXPORTED bool mlirGreedyRewriteDriverConfigIsConstantCSEEnabled(
+    MlirGreedyRewriteDriverConfig config);
+
+/// Applies the given patterns to the given op by a fast walk-based pattern
+/// rewrite driver.
+MLIR_CAPI_EXPORTED void
+mlirWalkAndApplyPatterns(MlirOperation op,
+                         MlirFrozenRewritePatternSet patterns);
+
+/// Apply a partial conversion on the given operation.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPartialConversion(
+    MlirOperation op, MlirConversionTarget target,
+    MlirFrozenRewritePatternSet patterns, MlirConversionConfig config);
+
+/// Apply a full conversion on the given operation.
+MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyFullConversion(
+    MlirOperation op, MlirConversionTarget target,
+    MlirFrozenRewritePatternSet patterns, MlirConversionConfig config);
+
+//===----------------------------------------------------------------------===//
+/// ConversionConfig API
+//===----------------------------------------------------------------------===//
+
+/// Create a default ConversionConfig.
+MLIR_CAPI_EXPORTED MlirConversionConfig mlirConversionConfigCreate(void);
+
+/// Destroy the given ConversionConfig.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigDestroy(MlirConversionConfig config);
+
+typedef enum {
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_NEVER,
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_BEFORE_PATTERNS,
+  MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS,
+} MlirDialectConversionFoldingMode;
+
+/// Set the folding mode for the given ConversionConfig.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigSetFoldingMode(MlirConversionConfig config,
+                                   MlirDialectConversionFoldingMode mode);
+
+/// Get the folding mode for the given ConversionConfig.
+MLIR_CAPI_EXPORTED MlirDialectConversionFoldingMode
+mlirConversionConfigGetFoldingMode(MlirConversionConfig config);
+
+/// Enable or disable building materializations during conversion.
+MLIR_CAPI_EXPORTED void
+mlirConversionConfigEnableBuildMaterializations(MlirConversionConfig config,
+                                                bool enable);
+
+/// Check if building materializations during conversion is enabled.
+MLIR_CAPI_EXPORTED bool
+mlirConversionConfigIsBuildMaterializationsEnabled(MlirConversionConfig config);
 
 //===----------------------------------------------------------------------===//
 /// PatternRewriter API
@@ -328,6 +480,107 @@ MLIR_CAPI_EXPORTED MlirLogicalResult mlirApplyPatternsAndFoldGreedily(
 /// Cast the PatternRewriter to a RewriterBase
 MLIR_CAPI_EXPORTED MlirRewriterBase
 mlirPatternRewriterAsBase(MlirPatternRewriter rewriter);
+
+//===----------------------------------------------------------------------===//
+/// ConversionPatternRewriter API
+//===----------------------------------------------------------------------===//
+
+/// Cast the ConversionPatternRewriter to a PatternRewriter
+MLIR_CAPI_EXPORTED MlirPatternRewriter
+mlirConversionPatternRewriterAsPatternRewriter(
+    MlirConversionPatternRewriter rewriter);
+
+//===----------------------------------------------------------------------===//
+/// ConversionTarget API
+//===----------------------------------------------------------------------===//
+
+/// Create an empty ConversionTarget.
+MLIR_CAPI_EXPORTED MlirConversionTarget
+mlirConversionTargetCreate(MlirContext context);
+
+/// Destroy the given ConversionTarget.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetDestroy(MlirConversionTarget target);
+
+/// Register the given operations as legal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddLegalOp(MlirConversionTarget target,
+                               MlirStringRef opName);
+
+/// Register the given operations as illegal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddIllegalOp(MlirConversionTarget target,
+                                 MlirStringRef opName);
+
+/// Register the operations of the given dialect as legal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddLegalDialect(MlirConversionTarget target,
+                                    MlirStringRef dialectName);
+
+/// Register the operations of the given dialect as illegal.
+MLIR_CAPI_EXPORTED void
+mlirConversionTargetAddIllegalDialect(MlirConversionTarget target,
+                                      MlirStringRef dialectName);
+
+//===----------------------------------------------------------------------===//
+/// TypeConverter API
+//===----------------------------------------------------------------------===//
+
+/// Create a TypeConverter.
+MLIR_CAPI_EXPORTED MlirTypeConverter mlirTypeConverterCreate(void);
+
+/// Destroy the given TypeConverter.
+MLIR_CAPI_EXPORTED void
+mlirTypeConverterDestroy(MlirTypeConverter typeConverter);
+
+/// Callback type for type conversion functions.
+/// Returns failure or sets convertedType to MlirType{NULL} to indicate failure.
+/// If failure is returned, the converter is allowed to try another
+/// conversion function to perform the conversion.
+typedef MlirLogicalResult (*MlirTypeConverterConversionCallback)(
+    MlirType type, MlirType *convertedType, void *userData);
+
+/// Add a type conversion function to the given TypeConverter.
+MLIR_CAPI_EXPORTED void
+mlirTypeConverterAddConversion(MlirTypeConverter typeConverter,
+                               MlirTypeConverterConversionCallback convertType,
+                               void *userData);
+
+//===----------------------------------------------------------------------===//
+/// ConversionPattern API
+//===----------------------------------------------------------------------===//
+
+typedef struct {
+  /// Optional constructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*construct)(void *userData);
+  /// Optional destructor for the user data.
+  /// Set to nullptr to disable it.
+  void (*destruct)(void *userData);
+  /// The callback function to match against code rooted at the specified
+  /// operation, and perform the conversion rewrite if the match is successful,
+  /// corresponding to ConversionPattern::matchAndRewrite.
+  MlirLogicalResult (*matchAndRewrite)(MlirConversionPattern pattern,
+                                       MlirOperation op, intptr_t nOperands,
+                                       MlirValue *operands,
+                                       MlirConversionPatternRewriter rewriter,
+                                       void *userData);
+} MlirConversionPatternCallbacks;
+
+/// Create a conversion pattern that matches the operation with the given
+/// rootName, corresponding to mlir::OpConversionPattern.
+MLIR_CAPI_EXPORTED MlirConversionPattern mlirOpConversionPatternCreate(
+    MlirStringRef rootName, unsigned benefit, MlirContext context,
+    MlirTypeConverter typeConverter, MlirConversionPatternCallbacks callbacks,
+    void *userData, size_t nGeneratedNames, MlirStringRef *generatedNames);
+
+/// Get the type converter used by this conversion pattern.
+MLIR_CAPI_EXPORTED MlirTypeConverter
+mlirConversionPatternGetTypeConverter(MlirConversionPattern pattern);
+
+/// Cast the ConversionPattern to a RewritePattern.
+MLIR_CAPI_EXPORTED MlirRewritePattern
+mlirConversionPatternAsRewritePattern(MlirConversionPattern pattern);
 
 //===----------------------------------------------------------------------===//
 /// RewritePattern API

@@ -977,7 +977,13 @@ struct TestValueReplace : public ConversionPattern {
     // Replace the first operand with 2x the second operand.
     Value from = op->getOperand(0);
     Value repl = op->getOperand(1);
-    rewriter.replaceAllUsesWith(from, {repl, repl});
+    if (op->hasAttr("conditional")) {
+      rewriter.replaceUsesWithIf(from, {repl, repl}, [=](OpOperand &use) {
+        return use.getOwner()->hasAttr("replace_uses");
+      });
+    } else {
+      rewriter.replaceAllUsesWith(from, {repl, repl});
+    }
     rewriter.modifyOpInPlace(op, [&] {
       // If the "trigger_rollback" attribute is set, keep the op illegal, so
       // that a rollback is triggered.
@@ -1032,6 +1038,38 @@ struct TestUndoPropertiesModification : public ConversionPattern {
       return failure();
     rewriter.modifyOpInPlace(
         op, [&]() { cast<TestOpWithProperties>(op).getProperties().setA(42); });
+    return success();
+  }
+};
+
+/// A pattern that tests the undo mechanism for a block move if the block was
+/// moved to a detached region. The block is first moved to a detached region
+/// and then a new operation is created with that region. During rollback, first
+/// the `CreateOperationRewrite` is rolled back, causing the block to be
+/// orphaned, i.e., removed from the region. Only then the `MoveBlockRewrite` is
+/// rolled back, which now can't access the region anymore. The test ensures
+/// that the rollback still works and doesn't try to access the orphaned block's
+/// containing region, leading to segfault.
+struct TestUndoMoveDetachedBlock : public ConversionPattern {
+  TestUndoMoveDetachedBlock(MLIRContext *ctx)
+      : ConversionPattern("test.undo_detached_block_move", /*benefit=*/1, ctx) {
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (op->getNumRegions() != 1)
+      return failure();
+    // Create an illegal operation to trigger rollback.
+    OperationState state(op->getLoc(), "test.illegal_op_created_after_move",
+                         operands, op->getResultTypes(), {}, BlockRange());
+    // Create detached region.
+    Region *newRegion = state.addRegion();
+    // Move blocks to the still detached region
+    rewriter.inlineRegionBefore(op->getRegion(0), *newRegion,
+                                newRegion->begin());
+    Operation *newOp = rewriter.create(state);
+    rewriter.replaceOp(op, newOp->getResults());
     return success();
   }
 };
@@ -1542,7 +1580,7 @@ struct TestLegalizePatternDriver
         TestUpdateConsumerType, TestNonRootReplacement,
         TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
         TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-        TestUndoPropertiesModification, TestEraseOp,
+        TestUndoPropertiesModification, TestUndoMoveDetachedBlock, TestEraseOp,
         TestReplaceWithValidProducer, TestReplaceWithValidConsumer,
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
@@ -2086,7 +2124,7 @@ struct TestTypeConversionDriver
           }
 
           conversionCallStack.push_back(type);
-          auto popConversionCallStack = llvm::make_scope_exit(
+          llvm::scope_exit popConversionCallStack(
               [&conversionCallStack]() { conversionCallStack.pop_back(); });
 
           // If the type is on the call stack more than once (it is there at

@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 // LLDB Python header must be included first
 #include "lldb-python.h"
 
@@ -272,6 +268,7 @@ void ScriptInterpreterPython::SharedLibraryDirectoryHelper(
   // does.
   if (this_file.GetFileNameExtension() == ".pyd") {
     this_file.RemoveLastPathComponent(); // _lldb.pyd or _lldb_d.pyd
+    this_file.RemoveLastPathComponent(); // native
     this_file.RemoveLastPathComponent(); // lldb
     llvm::StringRef libdir = LLDB_PYTHON_RELATIVE_LIBDIR;
     for (auto it = llvm::sys::path::begin(libdir),
@@ -298,12 +295,16 @@ void ScriptInterpreterPython::Initialize() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(),
                                   lldb::eScriptLanguagePython,
-                                  ScriptInterpreterPythonImpl::CreateInstance);
+                                  ScriptInterpreterPythonImpl::CreateInstance,
+                                  ScriptInterpreterPythonImpl::GetPythonDir);
     ScriptInterpreterPythonImpl::Initialize();
   });
+  ScriptInterpreterPythonInterfaces::Initialize();
 }
 
-void ScriptInterpreterPython::Terminate() {}
+void ScriptInterpreterPython::Terminate() {
+  ScriptInterpreterPythonInterfaces::Terminate();
+}
 
 ScriptInterpreterPythonImpl::Locker::Locker(
     ScriptInterpreterPythonImpl *py_interpreter, uint16_t on_entry,
@@ -1228,7 +1229,7 @@ Status ScriptInterpreterPythonImpl::ExportFunctionDefinitionToInterpreter(
     StringList &function_def) {
   // Convert StringList to one long, newline delimited, const char *.
   std::string function_def_string(function_def.CopyList());
-  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n%s\n",
+  LLDB_LOG(GetLog(LLDBLog::Script), "Added Function:\n{0}\n",
            function_def_string.c_str());
 
   Status error = ExecuteMultipleLines(
@@ -3095,5 +3096,3 @@ void ScriptInterpreterPythonImpl::AddToSysPath(AddLocation location,
 // when the process exits).
 //
 // void ScriptInterpreterPythonImpl::Terminate() { Py_Finalize (); }
-
-#endif

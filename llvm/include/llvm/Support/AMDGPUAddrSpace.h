@@ -15,6 +15,8 @@
 #ifndef LLVM_SUPPORT_AMDGPUADDRSPACE_H
 #define LLVM_SUPPORT_AMDGPUADDRSPACE_H
 
+#include <cstdint>
+
 namespace llvm {
 /// OpenCL uses address spaces to differentiate between
 /// various memory regions on the hardware. On the CPU
@@ -164,6 +166,19 @@ constexpr int mapToDWARFAddrSpace(unsigned LLVMAddrSpace) {
   if (LLVMAddrSpace < SizeOfLLVMToDWARFAddrSpaceMapping)
     return impl::LLVMToDWARFAddrSpaceMapping[LLVMAddrSpace];
   return -1;
+}
+
+/// Get the null pointer value for the given address space.
+constexpr int64_t getNullPointerValue(unsigned AS) {
+  switch (AS) {
+    using namespace AMDGPUAS;
+  case PRIVATE_ADDRESS:
+  case LOCAL_ADDRESS:
+  case REGION_ADDRESS:
+    return -1;
+  default:
+    return 0;
+  }
 }
 } // end namespace AMDGPU
 

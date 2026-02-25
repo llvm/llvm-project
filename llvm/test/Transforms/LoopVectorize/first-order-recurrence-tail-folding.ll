@@ -68,7 +68,7 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 true)
+; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
 ; VF2IC1-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
 ; VF2IC1-NEXT:    [[TMP29:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP28]]
@@ -187,9 +187,9 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ; VF2IC2-NEXT:    [[TMP49:%.*]] = xor <2 x i1> [[TMP4]], splat (i1 true)
 ; VF2IC2-NEXT:    [[TMP50:%.*]] = xor <2 x i1> [[TMP5]], splat (i1 true)
-; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 true)
+; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 false)
 ; VF2IC2-NEXT:    [[TMP52:%.*]] = add i64 2, [[TMP51]]
-; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 true)
+; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 false)
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]
@@ -220,35 +220,34 @@ define i32 @FOR_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
 ; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_LOAD_IF]]:
-; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[VEC_IV]]
 ; VF1IC2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; VF1IC2:       [[PRED_LOAD_CONTINUE]]:
 ; VF1IC2-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_LOAD_IF]] ]
 ; VF1IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
 ; VF1IC2:       [[PRED_LOAD_IF2]]:
-; VF1IC2-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP3]]
+; VF1IC2-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[VEC_IV1]]
 ; VF1IC2-NEXT:    [[TMP32:%.*]] = load i32, ptr [[TMP31]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
 ; VF1IC2:       [[PRED_LOAD_CONTINUE3]]:
 ; VF1IC2-NEXT:    [[TMP8]] = phi i32 [ poison, %[[PRED_LOAD_CONTINUE]] ], [ [[TMP32]], %[[PRED_LOAD_IF2]] ]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_STORE_IF]]:
-; VF1IC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[VEC_IV]]
 ; VF1IC2-NEXT:    [[TMP10:%.*]] = add nsw i32 [[VECTOR_RECUR]], [[TMP5]]
 ; VF1IC2-NEXT:    store i32 [[TMP10]], ptr [[TMP9]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF1IC2:       [[PRED_STORE_CONTINUE]]:
 ; VF1IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5]]
 ; VF1IC2:       [[PRED_STORE_IF4]]:
-; VF1IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP3]]
+; VF1IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[VEC_IV1]]
 ; VF1IC2-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP5]], [[TMP8]]
 ; VF1IC2-NEXT:    store i32 [[TMP12]], ptr [[TMP11]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
@@ -362,7 +361,7 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 true)
+; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
 ; VF2IC1-NEXT:    [[TMP28:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP27]]
 ; VF2IC1-NEXT:    br label %[[FOR_END:.*]]
@@ -477,9 +476,9 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ; VF2IC2-NEXT:    [[TMP49:%.*]] = xor <2 x i1> [[TMP4]], splat (i1 true)
 ; VF2IC2-NEXT:    [[TMP50:%.*]] = xor <2 x i1> [[TMP5]], splat (i1 true)
-; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 true)
+; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 false)
 ; VF2IC2-NEXT:    [[TMP52:%.*]] = add i64 2, [[TMP51]]
-; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 true)
+; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 false)
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]
@@ -506,35 +505,34 @@ define i32 @FOR_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
 ; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_LOAD_IF]]:
-; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[VEC_IV]]
 ; VF1IC2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; VF1IC2:       [[PRED_LOAD_CONTINUE]]:
 ; VF1IC2-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_LOAD_IF]] ]
 ; VF1IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
 ; VF1IC2:       [[PRED_LOAD_IF2]]:
-; VF1IC2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP3]]
+; VF1IC2-NEXT:    [[TMP28:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[VEC_IV1]]
 ; VF1IC2-NEXT:    [[TMP29:%.*]] = load i32, ptr [[TMP28]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
 ; VF1IC2:       [[PRED_LOAD_CONTINUE3]]:
 ; VF1IC2-NEXT:    [[TMP8]] = phi i32 [ poison, %[[PRED_LOAD_CONTINUE]] ], [ [[TMP29]], %[[PRED_LOAD_IF2]] ]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_STORE_IF]]:
-; VF1IC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[VEC_IV]]
 ; VF1IC2-NEXT:    [[TMP10:%.*]] = add nsw i32 [[VECTOR_RECUR]], [[TMP5]]
 ; VF1IC2-NEXT:    store i32 [[TMP10]], ptr [[TMP9]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF1IC2:       [[PRED_STORE_CONTINUE]]:
 ; VF1IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5]]
 ; VF1IC2:       [[PRED_STORE_IF4]]:
-; VF1IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP3]]
+; VF1IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[VEC_IV1]]
 ; VF1IC2-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP5]], [[TMP8]]
 ; VF1IC2-NEXT:    store i32 [[TMP12]], ptr [[TMP11]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
@@ -645,7 +643,7 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC1-NEXT:    br i1 [[TMP24]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; VF2IC1:       [[MIDDLE_BLOCK]]:
 ; VF2IC1-NEXT:    [[TMP25:%.*]] = xor <2 x i1> [[TMP2]], splat (i1 true)
-; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 true)
+; VF2IC1-NEXT:    [[TMP26:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP25]], i1 false)
 ; VF2IC1-NEXT:    [[TMP27:%.*]] = sub i64 [[TMP26]], 1
 ; VF2IC1-NEXT:    [[TMP28:%.*]] = sub i64 [[TMP27]], 1
 ; VF2IC1-NEXT:    [[TMP29:%.*]] = extractelement <2 x i32> [[TMP12]], i64 [[TMP28]]
@@ -766,9 +764,9 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF2IC2:       [[MIDDLE_BLOCK]]:
 ; VF2IC2-NEXT:    [[TMP49:%.*]] = xor <2 x i1> [[TMP4]], splat (i1 true)
 ; VF2IC2-NEXT:    [[TMP50:%.*]] = xor <2 x i1> [[TMP5]], splat (i1 true)
-; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 true)
+; VF2IC2-NEXT:    [[TMP51:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP50]], i1 false)
 ; VF2IC2-NEXT:    [[TMP52:%.*]] = add i64 2, [[TMP51]]
-; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 true)
+; VF2IC2-NEXT:    [[TMP53:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v2i1(<2 x i1> [[TMP49]], i1 false)
 ; VF2IC2-NEXT:    [[TMP54:%.*]] = add i64 0, [[TMP53]]
 ; VF2IC2-NEXT:    [[TMP55:%.*]] = icmp ne i64 [[TMP53]], 2
 ; VF2IC2-NEXT:    [[TMP56:%.*]] = select i1 [[TMP55]], i64 [[TMP54]], i64 [[TMP52]]
@@ -805,35 +803,34 @@ define i32 @FOR_and_next_used_outside(ptr noalias %A, ptr noalias %B, i64 %n) {
 ; VF1IC2:       [[VECTOR_BODY]]:
 ; VF1IC2-NEXT:    [[TMP0:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE5:.*]] ]
 ; VF1IC2-NEXT:    [[VECTOR_RECUR:%.*]] = phi i32 [ 33, %[[VECTOR_PH]] ], [ [[TMP8:%.*]], %[[PRED_STORE_CONTINUE5]] ]
-; VF1IC2-NEXT:    [[TMP3:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[VEC_IV:%.*]] = add i64 [[TMP0]], 0
 ; VF1IC2-NEXT:    [[VEC_IV1:%.*]] = add i64 [[TMP0]], 1
 ; VF1IC2-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[VEC_IV]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[VEC_IV1]], [[TRIP_COUNT_MINUS_1]]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_LOAD_IF:.*]], label %[[PRED_LOAD_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_LOAD_IF]]:
-; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[VEC_IV]]
 ; VF1IC2-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_LOAD_CONTINUE]]
 ; VF1IC2:       [[PRED_LOAD_CONTINUE]]:
 ; VF1IC2-NEXT:    [[TMP5:%.*]] = phi i32 [ poison, %[[VECTOR_BODY]] ], [ [[TMP7]], %[[PRED_LOAD_IF]] ]
 ; VF1IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_LOAD_IF2:.*]], label %[[PRED_LOAD_CONTINUE3:.*]]
 ; VF1IC2:       [[PRED_LOAD_IF2]]:
-; VF1IC2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[TMP3]]
+; VF1IC2-NEXT:    [[TMP34:%.*]] = getelementptr inbounds nuw i32, ptr [[A]], i64 [[VEC_IV1]]
 ; VF1IC2-NEXT:    [[TMP35:%.*]] = load i32, ptr [[TMP34]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_LOAD_CONTINUE3]]
 ; VF1IC2:       [[PRED_LOAD_CONTINUE3]]:
 ; VF1IC2-NEXT:    [[TMP8]] = phi i32 [ poison, %[[PRED_LOAD_CONTINUE]] ], [ [[TMP35]], %[[PRED_LOAD_IF2]] ]
 ; VF1IC2-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; VF1IC2:       [[PRED_STORE_IF]]:
-; VF1IC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP0]]
+; VF1IC2-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[VEC_IV]]
 ; VF1IC2-NEXT:    [[TMP10:%.*]] = add nsw i32 [[VECTOR_RECUR]], [[TMP5]]
 ; VF1IC2-NEXT:    store i32 [[TMP10]], ptr [[TMP9]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; VF1IC2:       [[PRED_STORE_CONTINUE]]:
 ; VF1IC2-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5]]
 ; VF1IC2:       [[PRED_STORE_IF4]]:
-; VF1IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[TMP3]]
+; VF1IC2-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i32, ptr [[B]], i64 [[VEC_IV1]]
 ; VF1IC2-NEXT:    [[TMP12:%.*]] = add nsw i32 [[TMP5]], [[TMP8]]
 ; VF1IC2-NEXT:    store i32 [[TMP12]], ptr [[TMP11]], align 4
 ; VF1IC2-NEXT:    br label %[[PRED_STORE_CONTINUE5]]

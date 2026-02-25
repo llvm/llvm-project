@@ -325,6 +325,30 @@ namespace llvm {
       return find_if([F](char c) { return !F(c); }, From);
     }
 
+    /// Search for the last character satisfying the predicate \p F
+    ///
+    /// \returns The index of the last character satisfying \p F before \p End,
+    /// or npos if not found.
+    [[nodiscard]] size_t rfind_if(function_ref<bool(char)> F,
+                                  size_t End = npos) const {
+      size_t I = std::min(End, size());
+      while (I) {
+        --I;
+        if (F(data()[I]))
+          return I;
+      }
+      return npos;
+    }
+
+    /// Search for the last character not satisfying the predicate \p F
+    ///
+    /// \returns The index of the last character not satisfying \p F before \p
+    /// End, or npos if not found.
+    [[nodiscard]] size_t rfind_if_not(function_ref<bool(char)> F,
+                                      size_t End = npos) const {
+      return rfind_if(std::not_fn(F), End);
+    }
+
     /// Search for the first string \p Str in the string.
     ///
     /// \returns The index of the first occurrence of \p Str, or npos if not
@@ -630,6 +654,16 @@ namespace llvm {
     /// satisfying the given predicate dropped from the beginning of the string.
     [[nodiscard]] StringRef drop_until(function_ref<bool(char)> F) const {
       return substr(find_if(F));
+    }
+
+    /// Returns true if this StringRef has the given prefix and removes that
+    /// prefix.
+    bool consume_front(char Prefix) {
+      if (!starts_with(Prefix))
+        return false;
+
+      *this = drop_front();
+      return true;
     }
 
     /// Returns true if this StringRef has the given prefix and removes that

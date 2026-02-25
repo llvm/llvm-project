@@ -28,9 +28,7 @@ namespace {
     static char ID; // Pass identification
     UnpackMachineBundles(
         std::function<bool(const MachineFunction &)> Ftor = nullptr)
-        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
-      initializeUnpackMachineBundlesPass(*PassRegistry::getPassRegistry());
-    }
+        : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {}
 
     bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -108,7 +106,7 @@ static bool containsReg(SmallSetVector<Register, 32> LocalDefsV,
                         const TargetRegisterInfo *TRI) {
   if (Reg.isPhysical()) {
     for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-      if (!LocalDefsP[Unit])
+      if (!LocalDefsP[static_cast<unsigned>(Unit)])
         return false;
 
     return true;
@@ -189,7 +187,7 @@ void llvm::finalizeBundle(MachineBasicBlock &MBB,
       if (LocalDefs.insert(Reg)) {
         if (!MO.isDead() && Reg.isPhysical()) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            LocalDefsP.set(Unit);
+            LocalDefsP.set(static_cast<unsigned>(Unit));
         }
       } else {
         if (!MO.isDead()) {
@@ -393,5 +391,5 @@ llvm::FinalizeBundleTestPass::run(MachineFunction &MF,
   // except for terminators.
   for (MachineBasicBlock &MBB : MF)
     finalizeBundle(MBB, MBB.instr_begin(), MBB.getFirstInstrTerminator());
-  return PreservedAnalyses::none();
+  return getMachineFunctionPassPreservedAnalyses();
 }

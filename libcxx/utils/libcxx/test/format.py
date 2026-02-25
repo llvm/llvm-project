@@ -99,7 +99,7 @@ def parseScript(test, preamble):
     substitutions.append(
         (
             "%{verify}",
-            "%{cxx} %s %{flags} %{compile_flags} -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
+            "%{cxx} %s %{flags} %{compile_flags} -U_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER -fsyntax-only -Wno-error -Xclang -verify -Xclang -verify-ignore-unexpected=note -ferror-limit=0",
         )
     )
     substitutions.append(("%{run}", "%{exec} %t.exe"))
@@ -167,7 +167,7 @@ def parseScript(test, preamble):
         # The moduleCompileFlags are added to the %{compile_flags}, but
         # the modules need to be built without these flags. So expand the
         # %{compile_flags} eagerly and hardcode them in the build script.
-        compileFlags = config._getSubstitution("%{compile_flags}", test.config)
+        compileFlags = config._getSubstitution("%{compile_flags}", substitutions)
 
         # Building the modules needs to happen before the other script
         # commands are executed. Therefore the commands are added to the

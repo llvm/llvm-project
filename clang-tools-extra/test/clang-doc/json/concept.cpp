@@ -1,5 +1,5 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=json --executor=standalone %s
+// RUN: clang-doc --extra-arg -std=c++20 --output=%t --format=html --executor=standalone %s
 // RUN: FileCheck %s < %t/json/GlobalNamespace/index.json
 
 // Requires that T suports post and pre-incrementing.
@@ -22,15 +22,22 @@ concept Incrementable = requires(T x) {
 // CHECK:             "End": true,
 // CHECK-NEXT:        "InfoType": "concept",
 // CHECK-NEXT:        "IsType": true,
+// CHECK-NEXT:        "Location": {
+// CHECK-NEXT:          "Filename": "{{.*}}concept.cpp",
+// CHECK-NEXT:          "LineNumber": 6
+// CHECK-NEXT:        },
 // CHECK-NEXT:        "Name": "Incrementable",
 // CHECK-NEXT:        "Template": {
 // CHECK-NEXT:          "Parameters": [
-// CHECK-NEXT:            "typename T"
+// CHECK-NEXT:            {
+// CHECK-NEXT:              "End": true,
+// CHECK-NEXT:              "Param": "typename T"
+// CHECK-NEXT:            }
 // CHECK-NEXT:          ]
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "USR": "{{[0-9A-F]*}}"
 // CHECK-NEXT:      }
 // CHECK-NEXT:    ],
-// CHECK:        "Name": "",
+// CHECK:        "Name": "Global Namespace",
 // CHECK:        "USR": "0000000000000000000000000000000000000000"
 // CHECK:      }
