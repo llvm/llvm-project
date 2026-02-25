@@ -1,6 +1,5 @@
 // RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -verify %s \
 // RUN:   -Wno-alloc-size \
-// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=unix \
@@ -880,7 +879,7 @@ void doNotInvalidateWhenPassedToSystemCalls(char *s) {
 // Treat source buffer contents as escaped.
 void escapeSourceContents(char *s) {
   char *p = malloc(12);
-  memcpy(s, &p, 12); // no warning
+  memcpy(s, &p, 12); // expected-warning {{'memcpy' reading 12 bytes from a region of size 8}}
 
   void *p1 = malloc(7);
   char *a;
