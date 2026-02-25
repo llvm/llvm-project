@@ -3040,6 +3040,12 @@ static bool isNaturalMemoryOperand(SDValue Op, unsigned ICmpType) {
 
 // Return true if it is better to swap the operands of C.
 static bool shouldSwapCmpOperands(const Comparison &C) {
+  // swap operands of COMPARE_STACK_GUARD if loading the reference value
+  // is Op0.
+  if ((C.Opcode == SystemZISD::COMPARE_STACKGUARD) && C.Op0.isMachineOpcode() &&
+      (C.Op0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD))
+      return true;
+
   // Leave i128 and f128 comparisons alone, since they have no memory forms.
   if (C.Op0.getValueType() == MVT::i128)
     return false;
@@ -3186,6 +3192,44 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
       }
     }
   }
+}
+
+// Adjust if a given Compare is a check of the stack guard against a stack
+// guard instance on the stack. Specifically, this checks if:
+// - The operands are a load of the stack guard, and a load from a stack slot
+// - Those operand values are not used elsewhere <-- asserts if this is not
+//   true!
+static void adjustForStackGuardCompare(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
+  SDValue StackGuardLoad;
+  LoadSDNode *FILoad;
+
+  if (C.Op0.isMachineOpcode() &&
+      C.Op0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
+      ISD::isNormalLoad(C.Op1.getNode()) &&
+      dyn_cast<FrameIndexSDNode>(C.Op1.getOperand(1))) {
+    StackGuardLoad = C.Op0;
+    FILoad = cast<LoadSDNode>(C.Op1);
+  } else if ((C.Op1.isMachineOpcode() &&
+              C.Op1.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
+              ISD::isNormalLoad(C.Op0.getNode()) &&
+              dyn_cast<FrameIndexSDNode>(C.Op0.getOperand(1)))) {
+    StackGuardLoad = C.Op1;
+    FILoad = cast<LoadSDNode>(C.Op0);
+  } else {
+    return;
+  }
+  // Assert that the values of the loads are not used elsewhere.
+  // Bail for now. TODO: What is the proper response here?
+  assert(
+      SDValue(FILoad, 0).hasOneUse() &&
+      "Value of stackguard loaded from stack must be used for compare only!");
+  assert(StackGuardLoad.hasOneUse() &&
+         "Value of reference stackguard must be used for compare only!");
+
+  // At this point we are sure that this is a proper compare_stack_guard
+  // case, update the opcode to reflect this.
+  C.Opcode = SystemZISD::COMPARE_STACKGUARD;
+  C.CCValid = SystemZ::CCMASK_ICMP;
 }
 
 // Return true if shift operation N has an in-range constant shift value.
@@ -3546,45 +3590,6 @@ static Comparison getIntrinsicCmp(SelectionDAG &DAG, unsigned Opcode,
   return C;
 }
 
-namespace {
-// Check if a given Compare is a check of the stack guard against a stack
-// guard instance on the stack. Specifically, this checks if:
-// - The operands are a load of the stack guard, and a load from a stack slot
-// - Those operand values are not used elsewhere <-- asserts if this is not
-//   true!
-// This function sets ShouldSwap to true, iff a swap would put the load from
-// the stack slot in the position 0.
-bool isStackGuardCompare(SDValue CmpOp0, SDValue CmpOp1, bool &ShouldSwap) {
-  SDValue StackGuardLoad;
-  LoadSDNode *FILoad;
-
-  if (CmpOp0.isMachineOpcode() &&
-      CmpOp0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
-      ISD::isNormalLoad(CmpOp1.getNode()) &&
-      dyn_cast<FrameIndexSDNode>(CmpOp1.getOperand(1))) {
-    StackGuardLoad = CmpOp0;
-    FILoad = cast<LoadSDNode>(CmpOp1);
-    ShouldSwap = true;
-  } else if ((CmpOp1.isMachineOpcode() &&
-              CmpOp1.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD &&
-              ISD::isNormalLoad(CmpOp0.getNode()) &&
-              dyn_cast<FrameIndexSDNode>(CmpOp0.getOperand(1)))) {
-    StackGuardLoad = CmpOp1;
-    FILoad = cast<LoadSDNode>(CmpOp0);
-  } else {
-    return false;
-  }
-  // Assert that the values of the loads are not used elsewhere.
-  // Bail for now. TODO: What is the proper response here?
-  assert(
-      SDValue(FILoad, 0).hasOneUse() &&
-      "Value of stackguard loaded from stack must be used for compare only!");
-  assert(StackGuardLoad.hasOneUse() &&
-         "Value of reference stackguard must be used for compare only!");
-  return true;
-}
-} // namespace
-
 // Decide how to implement a comparison of type Cond between CmpOp0 with CmpOp1.
 static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
                          ISD::CondCode Cond, const SDLoc &DL,
@@ -3605,7 +3610,6 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
                              CmpOp1->getAsZExtVal(), Cond);
   }
   Comparison C(CmpOp0, CmpOp1, Chain);
-  bool MustSwap = false;
   C.CCMask = CCMaskForCondCode(Cond);
   if (C.Op0.getValueType().isFloatingPoint()) {
     C.CCValid = SystemZ::CCMASK_FCMP;
@@ -3616,11 +3620,6 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
     else
       C.Opcode = SystemZISD::STRICT_FCMPS;
     adjustForFNeg(C);
-  } else if (isStackGuardCompare(CmpOp0, CmpOp1, MustSwap)) {
-    // emit COMPARE_STACKGUARD_DAG instead
-    C.Opcode = SystemZISD::COMPARE_STACKGUARD;
-    C.CCValid = SystemZ::CCMASK_ICMP;
-    C.ICmpType = SystemZICMP::Any;
   } else {
     assert(!C.Chain);
     C.CCValid = SystemZ::CCMASK_ICMP;
@@ -3639,6 +3638,7 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
     else
       C.ICmpType = SystemZICMP::SignedOnly;
     C.CCMask &= ~SystemZ::CCMASK_CMP_UO;
+    adjustForStackGuardCompare(DAG, DL, C);
     adjustForRedundantAnd(DAG, DL, C);
     adjustZeroCmp(DAG, DL, C);
     adjustSubwordCmp(DAG, DL, C);
@@ -3647,7 +3647,7 @@ static Comparison getCmp(SelectionDAG &DAG, SDValue CmpOp0, SDValue CmpOp1,
     adjustICmpTruncate(DAG, DL, C);
   }
 
-  if (MustSwap || shouldSwapCmpOperands(C)) {
+  if (shouldSwapCmpOperands(C)) {
     std::swap(C.Op0, C.Op1);
     C.CCMask = SystemZ::reverseCCMask(C.CCMask);
   }
