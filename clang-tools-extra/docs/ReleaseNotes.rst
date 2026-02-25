@@ -124,6 +124,13 @@ New checks
   ``llvm::to_vector(llvm::make_filter_range(...))`` that can be replaced with
   ``llvm::map_to_vector`` and ``llvm::filter_to_vector``.
 
+- New :doc:`misc-forbid-non-virtual-base-dtor
+  <clang-tidy/checks/misc/forbid-non-virtual-base-dtor>` check.
+
+  Warns when a class or struct publicly inherits from a base whose destructor
+  is neither virtual nor protected, and the derived type adds data members.
+  This pattern causes resource leaks when deleting through a base pointer.
+
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
 
