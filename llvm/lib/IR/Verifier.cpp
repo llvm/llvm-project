@@ -1147,7 +1147,7 @@ void Verifier::visitMDNode(const MDNode &MD, AreDebugLocsAllowed AllowLocs) {
 }
 
 // Loop attributes that require exactly two operands (name + i1).
-static const char *const LoopBooleanAttributeNames[] = {
+static const StringRef LoopBooleanAttributeNames[] = {
     "llvm.loop.distribute.enable",
     "llvm.loop.vectorize.enable",
 };
@@ -1155,7 +1155,7 @@ static const char *const LoopBooleanAttributeNames[] = {
 // Loop attributes that allow only a single operand (just the name).
 // TODO: This is not an exhaustive list and can also include attributes
 //       like llvm.loop.licm_versioning.disable.
-static const char *const LoopSingleOperandAttributeNames[] = {
+static const StringRef LoopSingleOperandAttributeNames[] = {
     "llvm.loop.unroll.disable",
     "llvm.loop.unroll.enable",
     "llvm.loop.unroll.full",
@@ -1169,7 +1169,7 @@ void Verifier::verifyLoopMetadata(const MDNode *LoopID) {
   if (LoopID->getNumOperands() == 0)
     return;
   Check(LoopID->getNumOperands() >= 1,
-        "llvm.loop metadata must have at least one operand", LoopID);
+        "llvm.loop metadata must have at least one operand.", LoopID);
   for (const MDOperand &Op : llvm::drop_begin(LoopID->operands())) {
     MDNode *Option = dyn_cast<MDNode>(Op);
     if (!Option || Option->getNumOperands() < 1)
@@ -1182,7 +1182,7 @@ void Verifier::verifyLoopMetadata(const MDNode *LoopID) {
     // Verify single-operand attributes.
     if (llvm::is_contained(LoopSingleOperandAttributeNames, AttrName)) {
       Check(Option->getNumOperands() == 1,
-            "llvm.loop attribute must have exactly one operand", Option);
+            "llvm.loop metadata must have exactly one operand.", Option);
       continue;
     }
 
@@ -1190,12 +1190,11 @@ void Verifier::verifyLoopMetadata(const MDNode *LoopID) {
     if (llvm::is_contained(LoopBooleanAttributeNames, AttrName)) {
       // Boolean loop attribute: exactly 2 operands (name + i1).
       Check(Option->getNumOperands() == 2,
-            "llvm.loop boolean attribute must have exactly two operands",
-            Option);
+            "llvm.loop metadata must have exactly two operands.", Option);
       auto *Val =
           mdconst::dyn_extract_or_null<ConstantInt>(Option->getOperand(1));
       Check(Val && Val->getType()->isIntegerTy(1),
-            "llvm.loop boolean attribute second operand must be i1", Option);
+            "llvm.loop metadata's second operand must be of type i1.", Option);
       continue;
     }
   }
