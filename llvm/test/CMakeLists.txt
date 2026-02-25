@@ -71,10 +71,8 @@ set(LLVM_TEST_DEPENDS_COMMON
 
 set(LLVM_TEST_DEPENDS
   ${LLVM_TEST_DEPENDS_COMMON}
-  BugpointPasses
   CASPluginTest
   LLVMWindowsDriver
-  bugpoint
   llc
   lli
   lli-child-target
