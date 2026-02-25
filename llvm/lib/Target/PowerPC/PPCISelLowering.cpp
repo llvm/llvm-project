@@ -17204,7 +17204,8 @@ static SDValue DAGCombineAddc(SDNode *N,
   }
   return SDValue();
 }
-/// Optimize the bitfloor pattern for PowerPC.
+
+/// Optimize the bitfloor(X) pattern for PowerPC.
 /// Transforms: select_cc X, 0, 0, (srl MinSignedValue, (ctlz X)), seteq
 /// Into: srl MinSignedValue, (ctlz X)
 ///
