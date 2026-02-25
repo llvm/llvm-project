@@ -369,6 +369,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       -Werror=undef
       -fdiscard-value-names
       -ffp-contract=fast-honor-pragmas
+      -fdenormal-fp-math=dynamic
     )
 
     if( NOT "${cpu}" STREQUAL "" )
