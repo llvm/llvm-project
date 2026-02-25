@@ -3715,19 +3715,34 @@ SDValue performConvertFPCombine(SDNode *N, SelectionDAG &DAG) {
   return SDValue();
 }
 
-// Considering follwing pattern
-// t := (v8i32 mul (sext (v8i16 x0), (sext (v8i16 x1))))
-//      (add
-//        (build_vector (extract_elt t, 0),
-//                      (extract_elt t, 2),
-//                      (extract_elt t, 4),
-//                      (extract_elt t, 6)),
-//        (build_vector (extract_elt t, 1),
-//                      (extract_elt t, 3),
-//                      (extract_elt t, 5),
-//                      (extract_elt t, 7)))
-// will combine into
-// (v4i32 dot (x0, x1))
+// We are looking for patterns that represent a widened arithmetic operation
+// followed by a pairwise addition. This perfectly matches the semantics of
+// the WebAssembly i32x4.dot_i16x8_s instruction.
+//
+// Step 1. Widened arithmetic operation (8 lanes)
+// We match the following variations for 't' (v8i32):
+//  - Var * Var:    t = mul (sign_extend (v8i16 x0)), (sign_extend (v8i16 x1))
+//  - Var * Const:  t = mul (sign_extend (v8i16 x0)), (v8i32 cst)
+//  - Var << Const: t = shl (sign_extend (v8i16 x0)), (v8i32 cst)
+//
+// Step 2. Pairwise addition (v8i32 -> v4i32)
+// The Type Legalizer shatters 't' into build_vectors of extract_elts.
+//  Even: v4i32 = build_vector (extract_elt t, 0), (extract_elt t, 2),
+//                             (extract_elt t, 4), (extract_elt t, 6)
+//  Odd:  v4i32 = build_vector (extract_elt t, 1), (extract_elt t, 3),
+//                             (extract_elt t, 5), (extract_elt t, 7)
+//  Result: v4i32 = add Even, Odd
+//
+// Step 3. Combine into DOT
+// This entire DAG is folded into a single WebAssemblyISD::DOT node:
+//  - For Var * Var:    v4i32 = DOT (v8i16 x0), (v8i16 x1)
+//  - For Var * / << Const: The constants are reverse-computed into a new v8i16
+//                      vector, folding into DOT (v8i16 x0), (v8i16 new_cst)
+//
+// Mathematical Equivalent
+// This optimization ensures the following pairwise dot product is computed:
+//  Result[i] = (x0[2*i] * x1[2*i]) + (x0[2*i + 1] * x1[2*i + 1])
+//  (for i = 0, 1, 2, 3)
 static SDValue combineToDOT(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
   using namespace SDPatternMatch;
   SelectionDAG &DAG = DCI.DAG;
