@@ -1306,8 +1306,6 @@ public:
     CIRGenFunction::ConditionalEvaluation eval(cgf);
 
     mlir::Value lhsCondV = cgf.evaluateExprAsBool(e->getLHS());
-    bool hasCleanupScopeParent =
-        mlir::isa<cir::CleanupScopeOp>(builder.getBlock()->getParentOp());
 
     auto resOp = cir::TernaryOp::create(
         builder, loc, lhsCondV, /*trueBuilder=*/
@@ -1315,24 +1313,29 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-
-          mlir::Value cleanupScopeTmpAlloca;
-          if (hasCleanupScopeParent) {
-            cleanupScopeTmpAlloca = builder.createAlloca(
-                loc, builder.getPointerTo(builder.getBoolTy()),
-                builder.getBoolTy(), "cleanup.scope.tmp",
-                clang::CharUnits::One());
-          }
-
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
 
-          if (hasCleanupScopeParent)
+          mlir::Value cleanupScopeTmpAlloca;
+          bool requiresCleanups = lexScope.requiresCleanups();
+          if (requiresCleanups) {
+            {
+              mlir::OpBuilder::InsertionGuard guard(builder);
+              builder.setInsertionPointToStart(
+                  res.getParentBlock()->getParentOp()->getBlock());
+
+              cleanupScopeTmpAlloca = builder.createAlloca(
+                  loc, builder.getPointerTo(builder.getBoolTy()),
+                  builder.getBoolTy(), "cleanup.scope.tmp",
+                  clang::CharUnits::One());
+            }
+
             cir::StoreOp::create(builder, loc, res, cleanupScopeTmpAlloca,
-                                 false, {}, {}, {});
+                                 /*is_volatile=*/false, {}, {}, {});
+          }
 
           lexScope.forceCleanup();
 
-          if (hasCleanupScopeParent)
+          if (requiresCleanups)
             res = cir::LoadOp::create(builder, loc, cleanupScopeTmpAlloca);
           cir::YieldOp::create(b, loc, res);
         },
@@ -1371,8 +1374,6 @@ public:
     CIRGenFunction::ConditionalEvaluation eval(cgf);
 
     mlir::Value lhsCondV = cgf.evaluateExprAsBool(e->getLHS());
-    bool hasCleanupScopeParent =
-        mlir::isa<cir::CleanupScopeOp>(builder.getBlock()->getParentOp());
 
     auto resOp = cir::TernaryOp::create(
         builder, loc, lhsCondV, /*trueBuilder=*/
@@ -1388,23 +1389,30 @@ public:
           CIRGenFunction::LexicalScope lexScope{cgf, loc,
                                                 b.getInsertionBlock()};
           cgf.curLexScope->setAsTernary();
-          mlir::Value cleanupScopeTmpAlloca;
-          if (hasCleanupScopeParent) {
-            cleanupScopeTmpAlloca = builder.createAlloca(
-                loc, builder.getPointerTo(builder.getBoolTy()),
-                builder.getBoolTy(), "cleanup.scope.tmp",
-                clang::CharUnits::One());
-          }
 
           mlir::Value res = cgf.evaluateExprAsBool(e->getRHS());
 
-          if (hasCleanupScopeParent)
+          mlir::Value cleanupScopeTmpAlloca;
+          bool requiresCleanups = lexScope.requiresCleanups();
+          if (requiresCleanups) {
+            {
+              mlir::OpBuilder::InsertionGuard guard(builder);
+              builder.setInsertionPointToStart(
+                  res.getParentBlock()->getParentOp()->getBlock());
+
+              cleanupScopeTmpAlloca = builder.createAlloca(
+                  loc, builder.getPointerTo(builder.getBoolTy()),
+                  builder.getBoolTy(), "cleanup.scope.tmp",
+                  clang::CharUnits::One());
+            }
+
             cir::StoreOp::create(builder, loc, res, cleanupScopeTmpAlloca,
-                                 false, {}, {}, {});
+                                 /*is_volatile=*/false, {}, {}, {});
+          }
 
           lexScope.forceCleanup();
 
-          if (hasCleanupScopeParent)
+          if (requiresCleanups)
             res = cir::LoadOp::create(builder, loc, cleanupScopeTmpAlloca);
           cir::YieldOp::create(b, loc, res);
         });

@@ -1059,6 +1059,11 @@ public:
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
+
+    /// Determine whether this scope requires any cleanups.
+    bool requiresCleanups() const {
+      return cgf.ehStack.stable_begin() != cleanupStackDepth;
+    }
   };
 
   // Cleanup stack depth of the RunCleanupsScope that was pushed most recently.
