@@ -500,6 +500,12 @@ public:
     return tryInsertInstruction(new VPExpandSCEVRecipe(Expr));
   }
 
+  VPExpandStridePredicatesRecipe *
+  createExpandSCEVPredicate(const SCEVUnionPredicate &StridePredicates) {
+    return tryInsertInstruction(new VPExpandStridePredicatesRecipe(
+        StridePredicates, this->getPlan().getContext()));
+  }
+
   VPVectorPointerRecipe *
   createVectorPointer(VPValue *Ptr, Type *SourceElementTy, VPValue *Stride,
                       GEPNoWrapFlags GEPFlags, DebugLoc DL) {
