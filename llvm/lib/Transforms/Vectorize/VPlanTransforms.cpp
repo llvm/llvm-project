@@ -5509,6 +5509,7 @@ void VPlanTransforms::updateScalarResumePhis(
     // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(ResumePhiR->getOperand(0));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
+      // TODO: Check if tail is folded directly in VPlan.
       VPValue *TC = !FoldTail
                         ? static_cast<VPValue *>(&Plan.getVectorTripCount())
                         : Plan.getTripCount();
