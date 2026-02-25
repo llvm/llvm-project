@@ -24,7 +24,7 @@
 
 op0 .req r0
 op1 .req r1
-.macro SetReturnRegister
+.macro ReturnResult
   bhi 0f
   blo 1f
   movs r0, #0

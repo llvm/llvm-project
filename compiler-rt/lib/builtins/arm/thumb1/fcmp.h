@@ -25,12 +25,13 @@
 //  - But a function with the reversed semantics of __aeabi_cfrcmple wil define
 //    them the other way round.
 //
-// SetReturnRegister: an assembly macro that looks at the PSR flags and sets up
-// an appropriate return value in r0, for the cases that do *not* involve NaN.
+// ReturnResult: an assembly macro that looks at the PSR flags, sets up an
+// appropriate return value in r0, and returns it, for the cases that do *not*
+// involve NaN.
 //  - On entry to this macro, the condition codes LO, EQ and HI indicate that
 //    op0 < op1, op0 == op1 or op0 > op1 respectively.
-//  - For functions that return a result in the flags, this macro can be empty,
-//    because those are the correct flags to return anyway.
+//  - For functions that return a result in the flags, this macro can just
+//    return immediately, because those are the correct flags to return anyway.
 //  - Functions that return a boolean in r0 should set it up by checking the
 //    flags.
 //
@@ -69,8 +70,7 @@
   // The fastest fast path: both inputs positive and we could easily tell there
   // were no NaNs. So we just compare op0 and op1 as unsigned integers.
   cmp     op0, op1
-  SetReturnRegister
-  bx      lr
+  ReturnResult
 
 LOCAL_LABEL(NaNInf_check_positive):
   // Second tier for positive numbers. We come here if both inputs are
@@ -95,8 +95,7 @@ LOCAL_LABEL(NaNInf_check_positive):
 
   // Second-tier return path, now we've ruled out anything difficult.
   cmp     op0, op1
-  SetReturnRegister
-  bx      lr
+  ReturnResult
 
 LOCAL_LABEL(NaN_check_positive):
   // Third tier for positive numbers. Here we know that at least one of the
@@ -122,8 +121,7 @@ LOCAL_LABEL(NaN_check_positive):
   // positive. So the third-tier return path can just compare the numbers
   // again.
   cmp     op0, op1
-  SetReturnRegister
-  bx      lr
+  ReturnResult
 
 LOCAL_LABEL(negative):
   // We come here if at least one operand is negative. We haven't checked for
@@ -163,8 +161,7 @@ LOCAL_LABEL(negative):
   beq     1f
   cmp     op1, op0                // otherwise, compare them backwards
 1:
-  SetReturnRegister
-  bx      lr
+  ReturnResult
 
 LOCAL_LABEL(NaNInf_check_negative):
   // Second tier for negative numbers: we know the OR of the exponents is 0xFF,
@@ -189,5 +186,4 @@ LOCAL_LABEL(NaNInf_check_negative):
   // exponent fields was 0xFF, which means the exponents can't both have been
   // zero! So we can _just_ do the reversed CMP and finish.
   cmp     op1, op0
-  SetReturnRegister
-  bx      lr
+  ReturnResult
