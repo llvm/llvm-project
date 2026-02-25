@@ -539,18 +539,11 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
   if (Subtarget.enablePExtSIMDCodeGen()) {
     setTargetDAGCombine(ISD::TRUNCATE);
-    setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
-    setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
     static const MVT RV32VTs[] = {MVT::v2i16, MVT::v4i8};
     static const MVT RV64VTs[] = {MVT::v2i32, MVT::v4i16, MVT::v8i8};
     ArrayRef<MVT> VTs;
     if (Subtarget.is64Bit()) {
       VTs = RV64VTs;
-      setTruncStoreAction(MVT::v2i64, MVT::v2i32, Expand);
-      setTruncStoreAction(MVT::v4i32, MVT::v4i16, Expand);
-      setTruncStoreAction(MVT::v8i16, MVT::v8i8, Expand);
-      setTruncStoreAction(MVT::v2i32, MVT::v2i16, Expand);
-      setTruncStoreAction(MVT::v4i16, MVT::v4i8, Expand);
       // There's no instruction for vector shamt in P extension so we unroll to
       // scalar instructions. Vector VTs that are 32-bit are widened to 64-bit
       // vector, e.g. v2i16 -> v4i16, before getting unrolled, so we need custom
@@ -563,6 +556,15 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // By default everything must be expanded.
     for (unsigned Op = 0; Op < ISD::BUILTIN_OP_END; ++Op)
       setOperationAction(Op, VTs, Expand);
+
+    for (MVT VT : VTs) {
+      for (MVT OtherVT : MVT::integer_fixedlen_vector_valuetypes()) {
+        setTruncStoreAction(VT, OtherVT, Expand);
+        setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, VT,
+                         OtherVT, Expand);
+      }
+    }
+
     setOperationAction({ISD::LOAD, ISD::STORE}, VTs, Legal);
     setOperationAction({ISD::ADD, ISD::SUB}, VTs, Legal);
     setOperationAction({ISD::AND, ISD::OR, ISD::XOR}, VTs, Legal);
@@ -584,7 +586,6 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction({ISD::SMIN, ISD::UMIN, ISD::SMAX, ISD::UMAX}, VTs,
                        Legal);
     setOperationAction(ISD::SELECT, VTs, Custom);
-    setOperationAction(ISD::SELECT_CC, VTs, Expand);
     setOperationAction(ISD::VSELECT, VTs, Legal);
     setOperationAction(ISD::SETCC, VTs, Legal);
     setCondCodeAction({ISD::SETNE, ISD::SETGT, ISD::SETGE, ISD::SETUGT,
@@ -1826,7 +1827,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   }
 
   // zve32x is broken for partial_reduce_umla, but let's not make it worse.
-  if (Subtarget.hasStdExtZvqdotq() && Subtarget.getELen() >= 64) {
+  if (Subtarget.hasStdExtZvdot4a8i() && Subtarget.getELen() >= 64) {
     static const unsigned MLAOps[] = {ISD::PARTIAL_REDUCE_SMLA,
                                       ISD::PARTIAL_REDUCE_UMLA,
                                       ISD::PARTIAL_REDUCE_SUMLA};
@@ -9313,7 +9314,8 @@ SDValue RISCVTargetLowering::lowerADJUST_TRAMPOLINE(SDValue Op,
 
 SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  // Currently, only the vqdot and vqdotu case (from zvqdotq) should be legal.
+  // Currently, only the vdota4 and vdota4u case (from zvdot4a8i) should be
+  // legal.
   // TODO: There are many other sub-cases we could potentially lower, are
   // any of them worthwhile?  Ex: via vredsum, vwredsum, vwwmaccu, etc..
   SDLoc DL(Op);
@@ -9328,7 +9330,7 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
          ArgVT.getVectorElementType() == MVT::i8);
   (void)ArgVT;
 
-  // The zvqdotq pseudos are defined with sources and destination both
+  // The zvdot4a8i pseudos are defined with sources and destination both
   // being i32.  This cast is needed for correctness to avoid incorrect
   // .vx matching of i8 splats.
   A = DAG.getBitcast(VT, A);
@@ -9345,13 +9347,13 @@ SDValue RISCVTargetLowering::lowerPARTIAL_REDUCE_MLA(SDValue Op,
   unsigned Opc;
   switch (Op.getOpcode()) {
   case ISD::PARTIAL_REDUCE_SMLA:
-    Opc = RISCVISD::VQDOT_VL;
+    Opc = RISCVISD::VDOTA4_VL;
     break;
   case ISD::PARTIAL_REDUCE_UMLA:
-    Opc = RISCVISD::VQDOTU_VL;
+    Opc = RISCVISD::VDOTA4U_VL;
     break;
   case ISD::PARTIAL_REDUCE_SUMLA:
-    Opc = RISCVISD::VQDOTSU_VL;
+    Opc = RISCVISD::VDOTA4SU_VL;
     break;
   default:
     llvm_unreachable("Unexpected opcode");
@@ -20340,10 +20342,10 @@ static SDValue getZeroPaddedAdd(const SDLoc &DL, SDValue A, SDValue B,
   return DAG.getInsertSubvector(DL, B, Res, 0);
 }
 
-static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
-                                         SelectionDAG &DAG,
-                                         const RISCVSubtarget &Subtarget,
-                                         const RISCVTargetLowering &TLI) {
+static SDValue foldReduceOperandViaVDOTA4(SDValue InVec, const SDLoc &DL,
+                                          SelectionDAG &DAG,
+                                          const RISCVSubtarget &Subtarget,
+                                          const RISCVTargetLowering &TLI) {
   using namespace SDPatternMatch;
   // Note: We intentionally do not check the legality of the reduction type.
   // We want to handle the m4/m8 *src*  types, and thus need to let illegal
@@ -20356,8 +20358,8 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
   // form).
   SDValue A, B;
   if (sd_match(InVec, m_AddLike(m_Value(A), m_Value(B)))) {
-    SDValue AOpt = foldReduceOperandViaVQDOT(A, DL, DAG, Subtarget, TLI);
-    SDValue BOpt = foldReduceOperandViaVQDOT(B, DL, DAG, Subtarget, TLI);
+    SDValue AOpt = foldReduceOperandViaVDOTA4(A, DL, DAG, Subtarget, TLI);
+    SDValue BOpt = foldReduceOperandViaVDOTA4(B, DL, DAG, Subtarget, TLI);
     if (AOpt || BOpt) {
       if (AOpt)
         A = AOpt;
@@ -20429,13 +20431,13 @@ static SDValue foldReduceOperandViaVQDOT(SDValue InVec, const SDLoc &DL,
 static SDValue performVECREDUCECombine(SDNode *N, SelectionDAG &DAG,
                                        const RISCVSubtarget &Subtarget,
                                        const RISCVTargetLowering &TLI) {
-  if (!Subtarget.hasStdExtZvqdotq())
+  if (!Subtarget.hasStdExtZvdot4a8i())
     return SDValue();
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
   SDValue InVec = N->getOperand(0);
-  if (SDValue V = foldReduceOperandViaVQDOT(InVec, DL, DAG, Subtarget, TLI))
+  if (SDValue V = foldReduceOperandViaVDOTA4(InVec, DL, DAG, Subtarget, TLI))
     return DAG.getNode(ISD::VECREDUCE_ADD, DL, VT, V);
   return SDValue();
 }
@@ -20763,8 +20765,8 @@ static SDValue combineToVWMACC(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(Opc, DL, VT, Ops);
 }
 
-static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
-                                 const RISCVSubtarget &Subtarget) {
+static SDValue combineVdota4Accum(SDNode *N, SelectionDAG &DAG,
+                                  const RISCVSubtarget &Subtarget) {
 
   assert(N->getOpcode() == RISCVISD::ADD_VL || N->getOpcode() == ISD::ADD);
 
@@ -20780,21 +20782,21 @@ static SDValue combineVqdotAccum(SDNode *N, SelectionDAG &DAG,
       return SDValue();
   }
 
-  auto IsVqdotqOpc = [](unsigned Opc) {
+  auto IsVdota4Opc = [](unsigned Opc) {
     switch (Opc) {
-    case RISCVISD::VQDOT_VL:
-    case RISCVISD::VQDOTU_VL:
-    case RISCVISD::VQDOTSU_VL:
+    case RISCVISD::VDOTA4_VL:
+    case RISCVISD::VDOTA4U_VL:
+    case RISCVISD::VDOTA4SU_VL:
       return true;
     default:
       return false;
     }
   };
 
-  if (!IsVqdotqOpc(DotOp.getOpcode()))
+  if (!IsVdota4Opc(DotOp.getOpcode()))
     std::swap(Addend, DotOp);
 
-  if (!IsVqdotqOpc(DotOp.getOpcode()))
+  if (!IsVdota4Opc(DotOp.getOpcode()))
     return SDValue();
 
   auto [AddMask, AddVL] = [](SDNode *N, SelectionDAG &DAG,
@@ -21551,7 +21553,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineToVWMACC(N, DAG, Subtarget))
       return V;
-    if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
+    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
       return V;
     return performADDCombine(N, DCI, Subtarget);
   }
@@ -22124,7 +22126,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       return V;
     if (SDValue V = combineOp_VLToVWOp_VL(N, DCI, Subtarget))
       return V;
-    if (SDValue V = combineVqdotAccum(N, DAG, Subtarget))
+    if (SDValue V = combineVdota4Accum(N, DAG, Subtarget))
       return V;
     return combineToVWMACC(N, DAG, Subtarget);
   case RISCVISD::VWADDU_VL:
@@ -24571,8 +24573,7 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   MachineFunction::CallSiteInfo CSInfo;
 
   // Set type id for call site info.
-  if (MF.getTarget().Options.EmitCallGraphSection && CB && CB->isIndirectCall())
-    CSInfo = MachineFunction::CallSiteInfo(*CB);
+  setTypeIdForCallsiteInfo(CB, MF, CSInfo);
 
   // Analyze the operands of the call, assigning locations to each operand.
   SmallVector<CCValAssign, 16> ArgLocs;
