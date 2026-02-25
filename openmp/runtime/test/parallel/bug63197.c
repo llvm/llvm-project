@@ -8,6 +8,13 @@ int main(int argc, char *argv[]) {
 #pragma omp single
   { printf("BBB %2d\n", omp_get_num_threads()); }
 
+  // This test relies on the number of available threads
+  // being something other than 3.
+  if (omp_get_max_threads() == 3) {
+    printf("PASS\n");
+    return 0;
+  }
+
 #pragma omp parallel
 #pragma omp single
   {
