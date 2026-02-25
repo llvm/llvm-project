@@ -3470,10 +3470,17 @@ void ExprEngine::VisitPackIndexingExpr(const PackIndexingExpr *E,
                                        ExplodedNodeSet &Dst) {
   assert(E->isFullySubstituted() && "unsubstituted pack indexing expression");
 
-  NodeBuilder Builder(Pred, Dst, *currBldrCtx);
-  Builder.takeNodes(Pred);
+  // For now, just bind Unknown for indexing NTTP pack exprs.
+  // TODO: Properly implement this.
+  if (isa<SubstNonTypeTemplateParmExpr>(E->getPackIdExpression())) {
+    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
+    ProgramStateRef State = Pred->getState();
+    const auto *LCtx = Pred->getLocationContext();
+    Bldr.generateNode(E, Pred, State->BindExpr(E, LCtx, UnknownVal()));
+    return;
+  }
+
   VisitCommonDeclRefExpr(E, E->getPackDecl(), Pred, Dst);
-  Builder.addNodes(Dst);
 }
 
 /// VisitArraySubscriptExpr - Transfer function for array accesses
