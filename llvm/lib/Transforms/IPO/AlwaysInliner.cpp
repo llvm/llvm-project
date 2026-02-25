@@ -31,38 +31,26 @@ using namespace llvm;
 
 namespace {
 
-class InlinerHelper {
-  Module &M;
-  FunctionAnalysisManager *FAM;
-  function_ref<AssumptionCache &(Function &)> GetAssumptionCache;
-  function_ref<AAResults &(Function &)> GetAAR;
-  bool InsertLifetime;
+bool AlwaysInlineImpl(
+    Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
+    FunctionAnalysisManager *FAM,
+    function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+    function_ref<AAResults &(Function &)> GetAAR,
+    function_ref<TargetTransformInfo &(Function &)> GetTTI) {
+  SmallSetVector<CallBase *, 16> Calls;
+  bool Changed = false;
+  SmallVector<Function *, 16> InlinedComdatFunctions;
+  SmallVector<Function *, 4> NeedFlattening;
 
-  SmallSetVector<Function *, 16> MaybeInlinedFunctions;
-  InlineFunctionInfo IFI;
-
-public:
-  InlinerHelper(Module &M, ProfileSummaryInfo &PSI,
-                FunctionAnalysisManager *FAM,
-                function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-                function_ref<AAResults &(Function &)> GetAAR,
-                bool InsertLifetime)
-      : M(M), FAM(FAM), GetAssumptionCache(GetAssumptionCache), GetAAR(GetAAR),
-        InsertLifetime(InsertLifetime), IFI(GetAssumptionCache, &PSI) {}
-
-  bool canInline(Function &F) {
-    return !F.isPresplitCoroutine() && !F.isDeclaration() &&
-           isInlineViable(F).isSuccess();
-  }
-
-  bool tryInline(CallBase &CB, StringRef InlignReason) {
-    IFI.reset();
-    Function &Callee = *CB.getCalledFunction();
+  auto TryInline = [&](CallBase &CB, Function &Callee,
+                       OptimizationRemarkEmitter &ORE, const char *InlineReason,
+                       SmallVectorImpl<CallBase *> *NewCallSites =
+                           nullptr) -> bool {
     Function *Caller = CB.getCaller();
-    OptimizationRemarkEmitter ORE(Caller);
     DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
 
+    InlineFunctionInfo IFI(GetAssumptionCache, &PSI);
     InlineResult Res = InlineFunction(CB, IFI, /*MergeAttributes=*/true,
                                       &GetAAR(Callee), InsertLifetime);
     if (!Res.isSuccess()) {
@@ -76,74 +64,24 @@ public:
     }
 
     emitInlinedIntoBasedOnCost(ORE, DLoc, Block, Callee, *Caller,
-                               InlineCost::getAlways(InlignReason.data()),
+                               InlineCost::getAlways(InlineReason),
                                /*ForProfileContext=*/false, DEBUG_TYPE);
     if (FAM)
       FAM->invalidate(*Caller, PreservedAnalyses::none());
+    if (NewCallSites)
+      *NewCallSites = std::move(IFI.InlinedCallSites);
     return true;
-  }
-
-  ArrayRef<CallBase *> getInlinedCallSites() const {
-    return IFI.InlinedCallSites;
-  }
-
-  void addToMaybeInlinedFunctions(Function &F) {
-    MaybeInlinedFunctions.insert(&F);
-  }
-
-  bool postInlinerCleanup() {
-    SmallVector<Function *, 16> InlinedComdatFunctions;
-    bool Changed = false;
-    for (Function *F : MaybeInlinedFunctions) {
-      F->removeDeadConstantUsers();
-      if (F->hasFnAttribute(Attribute::AlwaysInline) &&
-          F->isDefTriviallyDead()) {
-        if (F->hasComdat()) {
-          InlinedComdatFunctions.push_back(F);
-        } else {
-          if (FAM)
-            FAM->clear(*F, F->getName());
-          M.getFunctionList().erase(F);
-          Changed = true;
-        }
-      }
-    }
-    if (!InlinedComdatFunctions.empty()) {
-      // Now we just have the comdat functions. Filter out the ones whose
-      // comdats are not actually dead.
-      filterDeadComdatFunctions(InlinedComdatFunctions);
-      // The remaining functions are actually dead.
-      for (Function *F : InlinedComdatFunctions) {
-        if (FAM)
-          FAM->clear(*F, F->getName());
-        M.getFunctionList().erase(F);
-        Changed = true;
-      }
-    }
-    return Changed;
-  }
-};
-
-bool AlwaysInlineImpl(
-    Module &M, bool InsertLifetime, ProfileSummaryInfo &PSI,
-    FunctionAnalysisManager *FAM,
-    function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-    function_ref<AAResults &(Function &)> GetAAR,
-    function_ref<TargetTransformInfo &(Function &)> GetTTI) {
-  SmallSetVector<CallBase *, 16> Calls;
-  InlinerHelper IH(M, PSI, FAM, GetAssumptionCache, GetAAR, InsertLifetime);
-  SmallVector<Function *, 4> NeedFlattening;
-
-  bool Changed = false;
-  SmallVector<Function *, 16> InlinedComdatFunctions;
+  };
 
   for (Function &F : make_early_inc_range(M)) {
     if (F.hasFnAttribute(Attribute::Flatten))
       NeedFlattening.push_back(&F);
 
-    if (!IH.canInline(F))
+    if (F.isPresplitCoroutine())
       continue;
-    IH.addToMaybeInlinedFunctions(F);
+
+    if (F.isDeclaration() || !isInlineViable(F).isSuccess())
+      continue;
 
     Calls.clear();
 
@@ -155,7 +93,20 @@ bool AlwaysInlineImpl(
           Calls.insert(CB);
 
     for (CallBase *CB : Calls) {
-      Changed |= IH.tryInline(*CB, "always inline attribute");
+      OptimizationRemarkEmitter ORE(CB->getCaller());
+      Changed |= TryInline(*CB, F, ORE, "always inline attribute");
+    }
+
+    F.removeDeadConstantUsers();
+    if (F.hasFnAttribute(Attribute::AlwaysInline) && F.isDefTriviallyDead()) {
+      if (F.hasComdat()) {
+        InlinedComdatFunctions.push_back(&F);
+      } else {
+        if (FAM)
+          FAM->clear(F, F.getName());
+        M.getFunctionList().erase(F);
+        Changed = true;
+      }
     }
   }
 
@@ -163,6 +114,7 @@ bool AlwaysInlineImpl(
   for (Function *F : NeedFlattening) {
     SmallVector<std::pair<CallBase *, int>, 16> Worklist;
     SmallVector<std::pair<Function *, int>, 16> InlineHistory;
+    SmallVector<CallBase *> NewCallSites;
     OptimizationRemarkEmitter ORE(F);
 
     // Collect initial calls.
@@ -199,7 +151,8 @@ bool AlwaysInlineImpl(
         continue;
       }
 
-      if (!IH.canInline(*Callee))
+      if (Callee->isPresplitCoroutine() || Callee->isDeclaration() ||
+          !isInlineViable(*Callee).isSuccess())
         continue;
 
       // Check TTI for target-specific inlining restrictions (e.g., SME ABI).
@@ -207,14 +160,12 @@ bool AlwaysInlineImpl(
       if (!TTI.areInlineCompatible(F, Callee))
         continue;
 
-      if (!IH.tryInline(*CB, "flatten attribute"))
+      if (!TryInline(*CB, *Callee, ORE, "flatten attribute", &NewCallSites))
         continue;
 
-      IH.addToMaybeInlinedFunctions(*Callee);
       Changed = true;
 
       // Add new call sites from the inlined function to the worklist.
-      ArrayRef<CallBase *> NewCallSites = IH.getInlinedCallSites();
       if (!NewCallSites.empty()) {
         int NewHistoryID = InlineHistory.size();
         InlineHistory.push_back({Callee, InlineHistoryID});
@@ -228,7 +179,16 @@ bool AlwaysInlineImpl(
     }
   }
 
-  Changed |= IH.postInlinerCleanup();
+  if (!InlinedComdatFunctions.empty()) {
+    filterDeadComdatFunctions(InlinedComdatFunctions);
+    for (Function *F : InlinedComdatFunctions) {
+      if (FAM)
+        FAM->clear(*F, F->getName());
+      M.getFunctionList().erase(F);
+      Changed = true;
+    }
+  }
+
   return Changed;
 }
 
