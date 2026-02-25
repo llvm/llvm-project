@@ -1016,9 +1016,9 @@ define <2 x i32> @pow2_rotl_vec() {
 ; CHECK:       retq
 entry:
   ; build vector <4,0>
-  %v0 = insertelement <2 x i32> undef, i32 4, i32 0
+  %v0 = insertelement <2 x i32> zeroinitializer, i32 4, i32 0
   %v1 = insertelement <2 x i32> %v0, i32 0, i32 1
-  %amt0 = insertelement <2 x i32> undef, i32 3, i32 0
+  %amt0 = insertelement <2 x i32> zeroinitializer, i32 3, i32 0
   %amt1 = insertelement <2 x i32> %amt0, i32 3, i32 1
   %r = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> %v1, <2 x i32> %v1, <2 x i32> %amt1)
   ret <2 x i32> %r
@@ -1030,9 +1030,9 @@ define <2 x i32> @pow2_rotr_vec() {
 ; CHECK:       xmm0 = [2147483648,0,0,0]
 ; CHECK:       retq
 entry:
-  %v0 = insertelement <2 x i32> undef, i32 16, i32 0
+  %v0 = insertelement <2 x i32> zeroinitializer, i32 16, i32 0
   %v1 = insertelement <2 x i32> %v0, i32 0, i32 1
-  %amt0 = insertelement <2 x i32> undef, i32 5, i32 0
+  %amt0 = insertelement <2 x i32> zeroinitializer, i32 5, i32 0
   %amt1 = insertelement <2 x i32> %amt0, i32 5, i32 1
   %r = call <2 x i32> @llvm.fshr.v2i32(<2 x i32> %v1, <2 x i32> %v1, <2 x i32> %amt1)
   ret <2 x i32> %r
