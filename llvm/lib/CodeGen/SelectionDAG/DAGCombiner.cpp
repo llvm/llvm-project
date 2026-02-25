@@ -11565,6 +11565,32 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
                          DAG.getNode(ISD::SRL, SDLoc(N0), VT, X, N1), ZExtY);
   }
 
+  // fold (srl (bitcast (build_vector e0, ..., eN)), (N-1) * eltsize)
+  //   -> (zext eN)
+  if (N1C && VT.isScalarInteger()) {
+    SDValue BV = peekThroughBitcasts(N0);
+    if (BV.getOpcode() == ISD::BUILD_VECTOR) {
+      EVT BVVT = BV.getValueType();
+      unsigned EltSizeInBits = BVVT.getScalarSizeInBits();
+      unsigned NumElts = BVVT.getVectorNumElements();
+      if (N1C->getZExtValue() == (NumElts - 1) * EltSizeInBits) {
+        SDValue LastElt = BV.getOperand(NumElts - 1);
+        if (!LastElt.isUndef()) {
+          EVT IntEltVT = EVT::getIntegerVT(*DAG.getContext(), EltSizeInBits);
+          EVT LastEltVT = LastElt.getValueType();
+          if (LastEltVT.isFloatingPoint())
+            LastElt = DAG.getBitcast(LastEltVT.changeTypeToInteger(), LastElt);
+          // BUILD_VECTOR integer operands may be implicitly promoted wider
+          // than the declared element type (e.g. i16 operands in a v4i8
+          // BUILD_VECTOR on targets that promote i8). Truncate to the
+          // element size, then zero-extend to the result type.
+          return DAG.getZExtOrTrunc(DAG.getZExtOrTrunc(LastElt, DL, IntEltVT),
+                                    DL, VT);
+        }
+      }
+    }
+  }
+
   // fold operands of srl based on knowledge that the low bits are not
   // demanded.
   if (SimplifyDemandedBits(SDValue(N, 0)))
