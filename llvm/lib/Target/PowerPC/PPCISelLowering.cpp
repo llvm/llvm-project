@@ -17212,7 +17212,8 @@ static SDValue DAGCombineAddc(SDNode *N,
 /// This is safe on PowerPC because the srw instruction returns 0 when the
 /// shift amount is == bitwidth, which matches the behavior we need for X=0.
 static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
-  assert(N->getOpcode() == ISD::SELECT_CC && "Expected SELECT_CC node");
+  if (N->getOpcode() != ISD::SELECT_CC)
+    return SDValue();
 
   // SELECT_CC operands: LHS, RHS, TrueVal, FalseVal, CC
   SDValue CmpLHS = N->getOperand(0);
@@ -17241,11 +17242,22 @@ static SDValue combineSELECT_CCBitFloor(SDNode *N, SelectionDAG &DAG) {
   if (!ShiftConst || !ShiftConst->getAPIntValue().isMinSignedValue())
     return SDValue();
 
-  // Check if ShiftAmt is (ctlz CmpLHS
-  if (ShiftAmt.getOpcode() != ISD::CTLZ)
-    return SDValue();
+  SDValue CtlzArg;
+  // Check if ShiftAmt is (ctlz CmpLHS) or (truncate (ctlz ...))
+  if (ShiftAmt.getOpcode() != ISD::CTLZ) {
+    // Look through truncate if present (for i64 ctlz truncated to i32 shift
+    // amount)
+    if (ShiftAmt.getOpcode() != ISD::TRUNCATE)
+      return SDValue();
 
-  SDValue CtlzArg = ShiftAmt.getOperand(0);
+    SDValue CtlzNode = ShiftAmt.getOperand(0);
+
+    if (CtlzNode.getOpcode() != ISD::CTLZ)
+      return SDValue();
+
+    CtlzArg = CtlzNode.getOperand(0);
+  } else
+    CtlzArg = ShiftAmt.getOperand(0);
 
   // Check if ctlz operates on the same value as the comparison
   if (CtlzArg != CmpLHS)
