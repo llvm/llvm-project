@@ -267,8 +267,8 @@ public:
   mlir::Value VisitOffsetOfExpr(OffsetOfExpr *e);
 
   mlir::Value VisitSizeOfPackExpr(SizeOfPackExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: size of pack");
-    return {};
+    return builder.getConstInt(cgf.getLoc(e->getExprLoc()),
+                               convertType(e->getType()), e->getPackLength());
   }
   mlir::Value VisitPseudoObjectExpr(PseudoObjectExpr *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: pseudo object");
