@@ -1172,7 +1172,7 @@ static void handleNoSuspendCoroutine(coro::Shape &Shape) {
       auto *FrameTy = ArrayType::get(Type::getInt8Ty(Builder.getContext()),
                                      Shape.FrameSize);
       auto *Frame = Builder.CreateAlloca(
-          FrameTy, nullptr, AllocInst->getParent()->getName() + ".Frame");
+          FrameTy, nullptr, AllocInst->getFunction()->getName() + ".Frame");
       Frame->setAlignment(Shape.FrameAlign);
       AllocInst->replaceAllUsesWith(Builder.getFalse());
       AllocInst->eraseFromParent();
