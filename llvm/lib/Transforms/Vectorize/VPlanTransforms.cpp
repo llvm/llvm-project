@@ -5683,7 +5683,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     if (HeaderMask &&
         !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
                                      m_VPValue(CondSelect), m_Specific(PhiR))))
-      continue;
+      llvm_unreachable("expected header mask select");
 
     // Get the IV from the conditional select of the reduction phi.
     // The conditional select should be a select between the phi and the IV.
