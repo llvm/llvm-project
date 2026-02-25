@@ -4338,7 +4338,7 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   return LangOpts;
 }
 
-const char *const StyleOptionHelpDescription =
+const char *StyleOptionHelpDescription =
     "Set coding style. <string> can be:\n"
     "1. A preset: LLVM, GNU, Google, Chromium, Microsoft,\n"
     "   Mozilla, WebKit.\n"
@@ -4449,9 +4449,9 @@ FormatStyle::LanguageKind guessLanguage(StringRef FileName, StringRef Code) {
 }
 
 // Update StyleOptionHelpDescription above when changing this.
-const char *const DefaultFormatStyle = "file";
+const char *DefaultFormatStyle = "file";
 
-const char *const DefaultFallbackStyle = "LLVM";
+const char *DefaultFallbackStyle = "LLVM";
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 loadAndParseConfigFile(StringRef ConfigFile, llvm::vfs::FileSystem *FS,
