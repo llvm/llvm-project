@@ -51,16 +51,15 @@ void InitializeDeadlySignals();
 #define COMMON_INTERCEPT_FUNCTION(name) TYSAN_INTERCEPT_FUNC(name)
 #include "sanitizer_common/sanitizer_signal_interceptors.inc"
 
-namespace __tysan{
+namespace __tysan {
 void InitializeDeadlySignals() {
-  if(tysanSignalsInitialized)
+  if (tysanSignalsInitialized)
     return;
   InitializeSignalInterceptors();
   InstallDeadlySignalHandlers(&TysanOnDeadlySignal);
   tysanSignalsInitialized = true;
 }
 } // namespace __tysan
-
 
 namespace {
 struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {

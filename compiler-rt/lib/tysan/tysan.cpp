@@ -41,7 +41,7 @@ tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
 }
 
 static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp,
-                          BufferedStackTrace *ST){
+                          BufferedStackTrace *ST) {
   uptr top = 0;
   uptr bottom = 0;
   if (fullStacktrace)
@@ -50,9 +50,9 @@ static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp,
   ST->Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
 }
 
-namespace __tysan{
+namespace __tysan {
 void OnStackUnwind(const SignalContext &sig, const void *,
-                        BufferedStackTrace *stack) {
+                   BufferedStackTrace *stack) {
   getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
 }
 } // namespace __tysan
