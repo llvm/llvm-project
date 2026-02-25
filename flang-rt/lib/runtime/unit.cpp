@@ -835,7 +835,7 @@ ChildIo &ExternalFileUnit::PushChildIo(IoStatementState &parent) {
 }
 
 void ExternalFileUnit::PopChildIo(ChildIo &child) {
-  ChildIo previous = child.AcquirePrevious();
+  ChildIo *previous = child.AcquirePrevious();
   if (child_ != &child) {
     child.parent().GetIoErrorHandler().Crash(
         "ChildIo being popped is not top of stack");
