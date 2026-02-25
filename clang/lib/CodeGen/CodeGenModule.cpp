@@ -2929,15 +2929,25 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
+  // Add `nooutline` if Outlining is disabled with a command-line flag or a
+  // function attribute.
+  if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
+    B.addAttribute(llvm::Attribute::NoOutline);
+
   F->addFnAttrs(B);
 
-  unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
-  if (alignment)
-    F->setAlignment(llvm::Align(alignment));
+  llvm::MaybeAlign ExplicitAlignment;
+  if (unsigned alignment = D->getMaxAlignment() / Context.getCharWidth())
+    ExplicitAlignment = llvm::Align(alignment);
+  else if (LangOpts.FunctionAlignment)
+    ExplicitAlignment = llvm::Align(1ull << LangOpts.FunctionAlignment);
 
-  if (!D->hasAttr<AlignedAttr>())
-    if (LangOpts.FunctionAlignment)
-      F->setAlignment(llvm::Align(1ull << LangOpts.FunctionAlignment));
+  if (ExplicitAlignment) {
+    F->setAlignment(ExplicitAlignment);
+    F->setPreferredAlignment(ExplicitAlignment);
+  } else if (LangOpts.PreferredFunctionAlignment) {
+    F->setPreferredAlignment(llvm::Align(LangOpts.PreferredFunctionAlignment));
+  }
 
   // Some C++ ABIs require 2-byte alignment for member functions, in order to
   // reserve a bit for differentiating between virtual and non-virtual member
@@ -6256,7 +6266,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   // / cudaMemcpyToSymbol() / cudaMemcpyFromSymbol())."
   if (LangOpts.CUDA) {
     if (LangOpts.CUDAIsDevice) {
-      if (Linkage != llvm::GlobalValue::InternalLinkage &&
+      if (Linkage != llvm::GlobalValue::InternalLinkage && !D->isConstexpr() &&
+          !D->getType().isConstQualified() &&
           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
            D->getType()->isCUDADeviceBuiltinSurfaceType() ||
            D->getType()->isCUDADeviceBuiltinTextureType()))

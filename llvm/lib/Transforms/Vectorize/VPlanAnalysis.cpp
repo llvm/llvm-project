@@ -124,14 +124,29 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::LastActiveLane:
     return Type::getIntNTy(Ctx, 64);
   case VPInstruction::LogicalAnd:
+  case VPInstruction::LogicalOr:
     assert(inferScalarType(R->getOperand(0))->isIntegerTy(1) &&
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
-           "LogicalAnd operands should be bool");
+           "LogicalAnd/Or operands should be bool");
     return IntegerType::get(Ctx, 1);
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
+  case Instruction::Store:
     return Type::getVoidTy(Ctx);
+  case Instruction::Load:
+    return cast<LoadInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Alloca:
+    return cast<AllocaInst>(R->getUnderlyingValue())->getType();
+  case Instruction::Call: {
+    unsigned CallIdx = R->getNumOperandsWithoutMask() - 1;
+    return cast<Function>(R->getOperand(CallIdx)->getLiveInIRValue())
+        ->getReturnType();
+  }
+  case Instruction::GetElementPtr:
+    return inferScalarType(R->getOperand(0));
+  case Instruction::ExtractValue:
+    return cast<ExtractValueInst>(R->getUnderlyingValue())->getType();
   default:
     break;
   }
@@ -271,7 +286,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPActiveLaneMaskPHIRecipe, VPCanonicalIVPHIRecipe,
                 VPFirstOrderRecurrencePHIRecipe, VPReductionPHIRecipe,
-                VPWidenPointerInductionRecipe, VPEVLBasedIVPHIRecipe>(
+                VPWidenPointerInductionRecipe, VPCurrentIterationPHIRecipe>(
               [this](const auto *R) {
                 // Handle header phi recipes, except VPWidenIntOrFpInduction
                 // which needs special handling due it being possibly truncated.
@@ -544,7 +559,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
         if (VFs[J].isScalar() ||
             isa<VPCanonicalIVPHIRecipe, VPReplicateRecipe, VPDerivedIVRecipe,
-                VPEVLBasedIVPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
+                VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {

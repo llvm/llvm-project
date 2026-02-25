@@ -3302,7 +3302,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 1); // M0
       return;
     case Intrinsic::amdgcn_raw_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 1); // rsrc
       constrainOpWithReadfirstlane(B, MI, 2); // M0
@@ -3310,7 +3312,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     case Intrinsic::amdgcn_struct_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 1); // rsrc
       constrainOpWithReadfirstlane(B, MI, 2); // M0
@@ -3326,7 +3330,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
     case Intrinsic::amdgcn_load_to_lds:
-    case Intrinsic::amdgcn_global_load_lds: {
+    case Intrinsic::amdgcn_load_async_to_lds:
+    case Intrinsic::amdgcn_global_load_lds:
+    case Intrinsic::amdgcn_global_load_async_lds: {
       applyDefaultMapping(OpdMapper);
       constrainOpWithReadfirstlane(B, MI, 2);
       return;
@@ -3382,12 +3388,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       constrainOpWithReadfirstlane(B, MI, 2);
       constrainOpWithReadfirstlane(B, MI, 3);
       constrainOpWithReadfirstlane(B, MI, 4);
-      return;
-    }
-    case Intrinsic::amdgcn_tensor_load_to_lds_d2:
-    case Intrinsic::amdgcn_tensor_store_from_lds_d2: {
-      constrainOpWithReadfirstlane(B, MI, 1);
-      constrainOpWithReadfirstlane(B, MI, 2);
+      constrainOpWithReadfirstlane(B, MI, 5);
       return;
     }
     default: {
@@ -5452,7 +5453,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_raw_buffer_load_lds:
-    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_raw_buffer_load_async_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
@@ -5485,7 +5488,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
     }
     case Intrinsic::amdgcn_struct_buffer_load_lds:
-    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds: {
+    case Intrinsic::amdgcn_struct_buffer_load_async_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
+    case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds: {
       OpdsMapping[1] = getSGPROpMapping(MI.getOperand(1).getReg(), MRI, *TRI);
       OpdsMapping[2] = getSGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       OpdsMapping[4] = getVGPROpMapping(MI.getOperand(4).getReg(), MRI, *TRI);
@@ -5626,8 +5631,6 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     case Intrinsic::amdgcn_pops_exiting_wave_id:
       return getDefaultMappingSOP(MI);
-    case Intrinsic::amdgcn_tensor_load_to_lds_d2:
-    case Intrinsic::amdgcn_tensor_store_from_lds_d2:
     case Intrinsic::amdgcn_tensor_load_to_lds:
     case Intrinsic::amdgcn_tensor_store_from_lds: {
       // Lie and claim everything is legal, even all operands need to be
