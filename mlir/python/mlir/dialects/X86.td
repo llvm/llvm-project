@@ -1,4 +1,4 @@
-//===-- X86.td - Entry point for x86 bindings --*- tablegen -*-===//
+//===-- X86.td - Entry point for x86 bindings --------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

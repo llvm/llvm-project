@@ -1,4 +1,4 @@
-//===-- mlir-c/Dialect/x86.h - C API for x86 Dialect --*- C -*-===//
+//===-- mlir-c/Dialect/x86.h - C API for x86 Dialect --------------*- C -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM
 // Exceptions.

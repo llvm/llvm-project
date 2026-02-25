@@ -1,4 +1,4 @@
-//===-- X86Ops.td - X86 dialect operation defs -*- tablegen -*-===//
+//===-- X86Ops.td - X86 dialect operation defs -------------*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

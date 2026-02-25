@@ -1,4 +1,4 @@
-//=- Transforms.h - X86 Dialect Transformation Entrypoints -*- C++ -*-=//
+//=- Transforms.h - X86 Dialect Transformation Entrypoints --------*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -18,7 +18,7 @@ class LLVMConversionTarget;
 class LLVMTypeConverter;
 class RewritePatternSet;
 
-namespace x86 {
+namespace x86vector {
 
 /// Helper class to factor out the creation and extraction of masks from nibs.
 struct MaskHelper {
@@ -100,7 +100,7 @@ void populateVectorContractBF16ToFMAPatterns(RewritePatternSet &patterns);
 // range by placing them at their earliest legal use site.
 void populateSinkVectorProducerOpsPatterns(RewritePatternSet &patterns);
 
-// Shuffles FMAs with x86 operations as operands such that FMAs are
+// Shuffles FMAs with x86vector operations as operands such that FMAs are
 // grouped with respect to odd/even packed index.
 void populateShuffleVectorFMAOpsPatterns(RewritePatternSet &patterns);
 
@@ -196,7 +196,7 @@ void populateSpecializedTransposeLoweringPatterns(
     int benefit = 10);
 
 } // namespace avx2
-} // namespace x86
+} // namespace x86vector
 
 /// Collect a set of patterns to lower X86 ops to ops that map to LLVM
 /// intrinsics.
