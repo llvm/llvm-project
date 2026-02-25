@@ -14614,7 +14614,8 @@ static SDValue PerformORCombineToShiftInsert(SelectionDAG &DAG, SDValue AndOp,
   ConstantSDNode *MaskC = isConstOrConstSplat(Mask, false, true);
   if (!MaskC)
     return SDValue();
-  APInt MaskBits = MaskC->getAPIntValue();
+  APInt MaskBits =
+      MaskC->getAPIntValue().trunc(Mask.getScalarValueSizeInBits());
 
   // Match shift (srl/shl Y, CntVec)
   int64_t Cnt = 0;
@@ -14639,7 +14640,7 @@ static SDValue PerformORCombineToShiftInsert(SelectionDAG &DAG, SDValue AndOp,
   APInt RequiredMask = IsShiftRight
                            ? APInt::getHighBitsSet(ElemBits, (unsigned)Cnt)
                            : APInt::getLowBitsSet(ElemBits, (unsigned)Cnt);
-  if (MaskBits.zextOrTrunc(ElemBits) != RequiredMask)
+  if (MaskBits != RequiredMask)
     return SDValue();
 
   unsigned Opc = IsShiftRight ? ARMISD::VSRIIMM : ARMISD::VSLIIMM;
