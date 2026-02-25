@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "AvoidEndlCheck.h"
 #include "EnumSizeCheck.h"
 #include "FasterStringFindCheck.h"
@@ -24,6 +23,7 @@
 #include "NoexceptDestructorCheck.h"
 #include "NoexceptMoveConstructorCheck.h"
 #include "NoexceptSwapCheck.h"
+#include "StringViewConversionsCheck.h"
 #include "TriviallyDestructibleCheck.h"
 #include "TypePromotionInMathFnCheck.h"
 #include "UnnecessaryCopyInitializationCheck.h"
@@ -63,6 +63,8 @@ public:
         "performance-noexcept-move-constructor");
     CheckFactories.registerCheck<NoexceptSwapCheck>(
         "performance-noexcept-swap");
+    CheckFactories.registerCheck<StringViewConversionsCheck>(
+        "performance-string-view-conversions");
     CheckFactories.registerCheck<TriviallyDestructibleCheck>(
         "performance-trivially-destructible");
     CheckFactories.registerCheck<TypePromotionInMathFnCheck>(

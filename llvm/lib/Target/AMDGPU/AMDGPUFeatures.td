@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 def FeatureFP64 : SubtargetFeature<"fp64",
-  "FP64",
+  "HasFP64",
   "true",
   "Enable double precision operations"
 >;
 
 def FeatureFMA : SubtargetFeature<"fmaf",
-  "FMA",
+  "HasFMA",
   "true",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
@@ -48,10 +48,4 @@ class SubtargetFeatureGeneration <string Value, string FeatureName,
                                   list<SubtargetFeature> Implies> :
         SubtargetFeature <FeatureName, "Gen", Subtarget#"::"#Value,
                           Value#" GPU generation", Implies>;
-
-def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",
-  "EnablePromoteAlloca",
-  "true",
-  "Enable promote alloca pass"
->;
 

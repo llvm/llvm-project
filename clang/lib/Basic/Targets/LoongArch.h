@@ -25,6 +25,7 @@ class LLVM_LIBRARY_VISIBILITY LoongArchTargetInfo : public TargetInfo {
 protected:
   std::string ABI;
   std::string CPU;
+  bool HasFeature32S;
   bool HasFeatureD;
   bool HasFeatureF;
   bool HasFeatureLSX;
@@ -39,6 +40,7 @@ protected:
 public:
   LoongArchTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
       : TargetInfo(Triple) {
+    HasFeature32S = false;
     HasFeatureD = false;
     HasFeatureF = false;
     HasFeatureLSX = false;

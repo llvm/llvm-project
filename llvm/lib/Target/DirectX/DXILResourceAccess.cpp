@@ -120,19 +120,33 @@ static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
   SI->replaceAllUsesWith(Inst);
 }
 
-static void createRawStore(IntrinsicInst *II, StoreInst *SI) {
+static void createRawStore(IntrinsicInst *II, StoreInst *SI,
+                           dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = SI->getDataLayout();
   IRBuilder<> Builder(SI);
 
   Value *V = SI->getValueOperand();
+  assert(!V->getType()->isAggregateType() &&
+         "Resource store should be scalar or vector type");
+
+  Value *Index = II->getOperand(1);
   // The offset for the rawbuffer load and store ops is always in bytes.
   uint64_t AccessSize = 1;
   Value *Offset =
       traverseGEPOffsets(DL, Builder, SI->getPointerOperand(), AccessSize);
-  // TODO: break up larger types
-  auto *Inst = Builder.CreateIntrinsic(
-      Builder.getVoidTy(), Intrinsic::dx_resource_store_rawbuffer,
-      {II->getOperand(0), II->getOperand(1), Offset, V});
+
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
+  auto *Inst = Builder.CreateIntrinsic(Builder.getVoidTy(),
+                                       Intrinsic::dx_resource_store_rawbuffer,
+                                       {II->getOperand(0), Index, Offset, V});
   SI->replaceAllUsesWith(Inst);
 }
 
@@ -143,7 +157,7 @@ static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
     return createTypedBufferStore(II, SI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawStore(II, SI);
+    return createRawStore(II, SI, RTI);
   case dxil::ResourceKind::Texture1D:
   case dxil::ResourceKind::Texture2D:
   case dxil::ResourceKind::Texture2DMS:
@@ -198,20 +212,33 @@ static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
   LI->replaceAllUsesWith(V);
 }
 
-static void createRawLoad(IntrinsicInst *II, LoadInst *LI) {
+static void createRawLoad(IntrinsicInst *II, LoadInst *LI,
+                          dxil::ResourceTypeInfo &RTI) {
   const DataLayout &DL = LI->getDataLayout();
   IRBuilder<> Builder(LI);
 
-  // TODO: break up larger types
   Type *LoadType = StructType::get(LI->getType(), Builder.getInt1Ty());
+  assert(!LI->getType()->isAggregateType() &&
+         "Resource load should be scalar or vector type");
 
+  Value *Index = II->getOperand(1);
   // The offset for the rawbuffer load and store ops is always in bytes.
   uint64_t AccessSize = 1;
   Value *Offset =
       traverseGEPOffsets(DL, Builder, LI->getPointerOperand(), AccessSize);
+
+  // For raw buffer (ie, HLSL's ByteAddressBuffer), we need to fold the access
+  // entirely into the index.
+  if (!RTI.isStruct()) {
+    auto *ConstantOffset = dyn_cast<ConstantInt>(Offset);
+    if (!ConstantOffset || !ConstantOffset->isZero())
+      Index = Builder.CreateAdd(Index, Offset);
+    Offset = llvm::PoisonValue::get(Builder.getInt32Ty());
+  }
+
   Value *V =
       Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_rawbuffer,
-                              {II->getOperand(0), II->getOperand(1), Offset});
+                              {II->getOperand(0), Index, Offset});
   V = Builder.CreateExtractValue(V, {0});
 
   LI->replaceAllUsesWith(V);
@@ -273,7 +300,8 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
   uint64_t GlobalOffsetVal = GlobalOffset->getZExtValue();
   Value *CurrentRow = ConstantInt::get(
       Builder.getInt32Ty(), GlobalOffsetVal / hlsl::CBufferRowSizeInBytes);
-  unsigned int CurrentIndex;
+  unsigned int CurrentIndex =
+      (GlobalOffsetVal % hlsl::CBufferRowSizeInBytes) / Intrin.EltSize;
 
   // Every object in a cbuffer either fits in a row or is aligned to a row. This
   // means that only the very last pointer access can point into a row.
@@ -283,8 +311,6 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
     // the result of getpointer directly.
     assert(LI->getPointerOperand() == II &&
            "Unexpected indirect access to resource without GEP");
-    CurrentIndex =
-        (GlobalOffsetVal % hlsl::CBufferRowSizeInBytes) / Intrin.EltSize;
   } else {
     Value *GEPOffset = traverseGEPOffsets(
         DL, Builder, LastGEP->getPointerOperand(), hlsl::CBufferRowSizeInBytes);
@@ -297,7 +323,7 @@ static void createCBufferLoad(IntrinsicInst *II, LoadInst *LI,
       APInt::udivrem(ConstantOffset, Remainder, ConstantOffset, Remainder);
       CurrentRow = Builder.CreateAdd(
           CurrentRow, ConstantInt::get(Builder.getInt32Ty(), ConstantOffset));
-      CurrentIndex = Remainder.udiv(Intrin.EltSize).getZExtValue();
+      CurrentIndex += Remainder.udiv(Intrin.EltSize).getZExtValue();
     } else {
       assert(LastGEP->getNumIndices() == 1 &&
              "Last GEP of cbuffer access is not array or struct access");
@@ -367,7 +393,7 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
     return createTypedBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::RawBuffer:
   case dxil::ResourceKind::StructuredBuffer:
-    return createRawLoad(II, LI);
+    return createRawLoad(II, LI, RTI);
   case dxil::ResourceKind::CBuffer:
     return createCBufferLoad(II, LI, RTI);
   case dxil::ResourceKind::Texture1D:
@@ -391,112 +417,6 @@ static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI,
     llvm_unreachable("Invalid resource kind for load");
   }
   llvm_unreachable("Unhandled case in switch");
-}
-
-static SmallVector<Instruction *> collectBlockUseDef(Instruction *Start) {
-  SmallPtrSet<Instruction *, 32> Visited;
-  SmallVector<Instruction *, 32> Worklist;
-  SmallVector<Instruction *> Out;
-  auto *BB = Start->getParent();
-
-  // Seed with direct users in this block.
-  for (User *U : Start->users()) {
-    if (auto *I = dyn_cast<Instruction>(U)) {
-      if (I->getParent() == BB)
-        Worklist.push_back(I);
-    }
-  }
-
-  // BFS over transitive users, constrained to the same block.
-  while (!Worklist.empty()) {
-    Instruction *I = Worklist.pop_back_val();
-    if (!Visited.insert(I).second)
-      continue;
-    Out.push_back(I);
-
-    for (User *U : I->users()) {
-      if (auto *J = dyn_cast<Instruction>(U)) {
-        if (J->getParent() == BB)
-          Worklist.push_back(J);
-      }
-    }
-    for (Use &V : I->operands()) {
-      if (auto *J = dyn_cast<Instruction>(V)) {
-        if (J->getParent() == BB && V != Start)
-          Worklist.push_back(J);
-      }
-    }
-  }
-
-  // Order results in program order.
-  DenseMap<const Instruction *, unsigned> Ord;
-  unsigned Idx = 0;
-  for (Instruction &I : *BB)
-    Ord[&I] = Idx++;
-
-  llvm::sort(Out, [&](Instruction *A, Instruction *B) {
-    return Ord.lookup(A) < Ord.lookup(B);
-  });
-
-  return Out;
-}
-
-static void phiNodeRemapHelper(PHINode *Phi, BasicBlock *BB,
-                               IRBuilder<> &Builder,
-                               SmallVector<Instruction *> &UsesInBlock) {
-
-  ValueToValueMapTy VMap;
-  Value *Val = Phi->getIncomingValueForBlock(BB);
-  VMap[Phi] = Val;
-  Builder.SetInsertPoint(&BB->back());
-  for (Instruction *I : UsesInBlock) {
-    // don't clone over the Phi just remap them
-    if (auto *PhiNested = dyn_cast<PHINode>(I)) {
-      VMap[PhiNested] = PhiNested->getIncomingValueForBlock(BB);
-      continue;
-    }
-    Instruction *Clone = I->clone();
-    RemapInstruction(Clone, VMap,
-                     RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
-    Builder.Insert(Clone);
-    VMap[I] = Clone;
-  }
-}
-
-static void phiNodeReplacement(IntrinsicInst *II,
-                               SmallVectorImpl<Instruction *> &PrevBBDeadInsts,
-                               SetVector<BasicBlock *> &DeadBB) {
-  SmallVector<Instruction *> CurrBBDeadInsts;
-  for (User *U : II->users()) {
-    auto *Phi = dyn_cast<PHINode>(U);
-    if (!Phi)
-      continue;
-
-    IRBuilder<> Builder(Phi);
-    SmallVector<Instruction *> UsesInBlock = collectBlockUseDef(Phi);
-    bool HasReturnUse = isa<ReturnInst>(UsesInBlock.back());
-
-    for (unsigned I = 0, E = Phi->getNumIncomingValues(); I < E; I++) {
-      auto *CurrIncomingBB = Phi->getIncomingBlock(I);
-      phiNodeRemapHelper(Phi, CurrIncomingBB, Builder, UsesInBlock);
-      if (HasReturnUse)
-        PrevBBDeadInsts.push_back(&CurrIncomingBB->back());
-    }
-
-    CurrBBDeadInsts.push_back(Phi);
-
-    for (Instruction *I : UsesInBlock) {
-      CurrBBDeadInsts.push_back(I);
-    }
-    if (HasReturnUse) {
-      BasicBlock *PhiBB = Phi->getParent();
-      DeadBB.insert(PhiBB);
-    }
-  }
-  // Traverse the now-dead instructions in RPO and remove them.
-  for (Instruction *Dead : llvm::reverse(CurrBBDeadInsts))
-    Dead->eraseFromParent();
-  CurrBBDeadInsts.clear();
 }
 
 static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
@@ -534,27 +454,13 @@ static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
 
 static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
   SmallVector<std::pair<IntrinsicInst *, dxil::ResourceTypeInfo>> Resources;
-  SetVector<BasicBlock *> DeadBB;
-  SmallVector<Instruction *> PrevBBDeadInsts;
-  for (BasicBlock &BB : make_early_inc_range(F)) {
-    for (Instruction &I : make_early_inc_range(BB))
-      if (auto *II = dyn_cast<IntrinsicInst>(&I))
-        if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer)
-          phiNodeReplacement(II, PrevBBDeadInsts, DeadBB);
-
+  for (BasicBlock &BB : make_early_inc_range(F))
     for (Instruction &I : BB)
       if (auto *II = dyn_cast<IntrinsicInst>(&I))
         if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
           auto *HandleTy = cast<TargetExtType>(II->getArgOperand(0)->getType());
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
-  }
-  for (auto *Dead : PrevBBDeadInsts)
-    Dead->eraseFromParent();
-  PrevBBDeadInsts.clear();
-  for (auto *Dead : DeadBB)
-    Dead->eraseFromParent();
-  DeadBB.clear();
 
   for (auto &[II, RI] : Resources)
     replaceAccess(II, RI);

@@ -525,9 +525,9 @@ static void printShuffleMask(raw_ostream &Out, Type *Ty, ArrayRef<int> Mask) {
   if (isa<ScalableVectorType>(Ty))
     Out << "vscale x ";
   Out << Mask.size() << " x i32> ";
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     Out << "zeroinitializer";
-  } else if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
+  } else if (all_of(Mask, equal_to(PoisonMaskElem))) {
     Out << "poison";
   } else {
     Out << "<";
@@ -1010,13 +1010,13 @@ int ModuleSlotTracker::getLocalSlot(const Value *V) {
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
         Fn) {
-  ProcessModuleHookFn = Fn;
+  ProcessModuleHookFn = std::move(Fn);
 }
 
 void ModuleSlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Function *, bool)>
         Fn) {
-  ProcessFunctionHookFn = Fn;
+  ProcessFunctionHookFn = std::move(Fn);
 }
 
 static SlotTracker *createSlotTracker(const Value *V) {
@@ -1304,13 +1304,13 @@ int SlotTracker::getGlobalSlot(const GlobalValue *V) {
 void SlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Module *, bool)>
         Fn) {
-  ProcessModuleHookFn = Fn;
+  ProcessModuleHookFn = std::move(Fn);
 }
 
 void SlotTracker::setProcessHook(
     std::function<void(AbstractSlotTrackerStorage *, const Function *, bool)>
         Fn) {
-  ProcessFunctionHookFn = Fn;
+  ProcessFunctionHookFn = std::move(Fn);
 }
 
 /// getMetadataSlot - Get the slot number of a MDNode.
@@ -3505,8 +3505,6 @@ void AssemblyWriter::printFunctionSummary(const FunctionSummary *FS) {
       Out << "(callee: ^" << Machine.getGUIDSlot(Call.first.getGUID());
       if (Call.second.getHotness() != CalleeInfo::HotnessType::Unknown)
         Out << ", hotness: " << getHotnessName(Call.second.getHotness());
-      else if (Call.second.RelBlockFreq)
-        Out << ", relbf: " << Call.second.RelBlockFreq;
       // Follow the convention of emitting flags as a boolean value, but only
       // emit if true to avoid unnecessary verbosity and test churn.
       if (Call.second.HasTailCall)
@@ -4213,6 +4211,8 @@ void AssemblyWriter::printFunction(const Function *F) {
   maybePrintComdat(Out, *F);
   if (MaybeAlign A = F->getAlign())
     Out << " align " << A->value();
+  if (MaybeAlign A = F->getPreferredAlignment())
+    Out << " prefalign(" << A->value() << ')';
   if (F->hasGC())
     Out << " gc \"" << F->getGC() << '"';
   if (F->hasPrefixData()) {

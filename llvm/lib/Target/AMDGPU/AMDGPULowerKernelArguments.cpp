@@ -389,7 +389,7 @@ FunctionPass *llvm::createAMDGPULowerKernelArgumentsPass() {
 
 PreservedAnalyses
 AMDGPULowerKernelArgumentsPass::run(Function &F, FunctionAnalysisManager &AM) {
-  DominatorTree &DT = *AM.getCachedResult<DominatorTreeAnalysis>(F);
+  DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   bool Changed = lowerKernelArguments(F, TM, DT);
   if (Changed) {
     // TODO: Preserves a lot more.

@@ -14,21 +14,36 @@
 # RUN: export CMAKE_GENERATOR=%cmake_generator
 # RUN: export LLVM_USE_LINKER=%llvm_use_linker
 # RUN: export MLIR_DIR="%mlir_cmake_dir"
+# RUN: export MLIR_INCLUDE_TESTS=ON
+# RUN: export MLIR_PYTHON_PACKAGE_PREFIX=mlir_standalone
+# RUN: export MLIR_BINDINGS_PYTHON_NB_DOMAIN=mlir_standalone
 
 # RUN: %python -m pip wheel "%mlir_src_root/examples/standalone" -w "%mlir_obj_root/wheelhouse" -v | tee %t
 
 # RUN: rm -rf "%mlir_obj_root/standalone-python-bindings-install"
 # RUN: %python -m pip install standalone_python_bindings -f "%mlir_obj_root/wheelhouse" --target "%mlir_obj_root/standalone-python-bindings-install" -v | tee -a %t
 
-# RUN: export PYTHONPATH="%mlir_obj_root/standalone-python-bindings-install"
-# RUN: %python "%mlir_src_root/examples/standalone/test/python/smoketest.py" nanobind | tee -a %t
+# RUN: export PYTHONPATH="%mlir_obj_root/standalone-python-bindings-install:%mlir_obj_root/python_packages/mlir_core"
+# RUN: %python "%mlir_src_root/examples/standalone/test/python/smoketest.py" 2>&1 | tee -a %t
 
 # RUN: FileCheck --input-file=%t %s
 
 # CHECK: Successfully built standalone-python-bindings
 
+# CHECK: Testing mlir_standalone package
+
 # CHECK: module {
 # CHECK:   %[[C2:.*]] = arith.constant 2 : i32
 # CHECK:   %[[V0:.*]] = standalone.foo %[[C2]] : i32
 # CHECK: }
+
+# CHECK: !standalone.custom<"foo">
+
+# CHECK: this is a fp16 type
+# CHECK: this is a fp32 type
+# CHECK: this is a fp64 type
+
+# CHECK: Testing mlir package
+
+# CHECK-NOT: RuntimeWarning: nanobind: type '{{.*}}' was already registered!
 

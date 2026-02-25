@@ -388,6 +388,8 @@ QualType Descriptor::getType() const {
 QualType Descriptor::getElemQualType() const {
   assert(isArray());
   QualType T = getType();
+  if (const auto *AT = T->getAs<AtomicType>())
+    T = AT->getValueType();
   if (T->isPointerOrReferenceType())
     T = T->getPointeeType();
 
@@ -427,6 +429,22 @@ QualType Descriptor::getDataType(const ASTContext &Ctx) const {
         ME && ME->getRecordDecl()->getName() == "allocator" &&
         ME->getMethodDecl()->getName() == "allocate")
       return MakeArrayType(E->getType()->getPointeeType());
+    return E->getType();
+  }
+
+  return getType();
+}
+
+QualType Descriptor::getDataElemType() const {
+  if (const auto *E = asExpr()) {
+    if (isa<CXXNewExpr>(E))
+      return E->getType()->getPointeeType();
+
+    // std::allocator.allocate() call.
+    if (const auto *ME = dyn_cast<CXXMemberCallExpr>(E);
+        ME && ME->getRecordDecl()->getName() == "allocator" &&
+        ME->getMethodDecl()->getName() == "allocate")
+      return E->getType()->getPointeeType();
     return E->getType();
   }
 

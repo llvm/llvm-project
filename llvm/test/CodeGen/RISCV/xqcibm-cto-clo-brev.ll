@@ -3,7 +3,7 @@
 ; RUN:   | FileCheck %s -check-prefixes=RV32I
 ; RUN: llc -mtriple=riscv32 -mattr=+zbb -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefixes=RV32ZBB
-; RUN: llc -mtriple=riscv32 -mattr=+zbb,experimental-xqcibm -verify-machineinstrs < %s \
+; RUN: llc -mtriple=riscv32 -mattr=+zbb,xqcibm -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=RV32ZBBXQCIBM
 
 define i8 @test_cttz_i8(i8 %a) nounwind {

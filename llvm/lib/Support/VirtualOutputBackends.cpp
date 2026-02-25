@@ -473,7 +473,7 @@ Error OnDiskOutputFile::keep() {
     return E;
 
   // Close the file descriptor and remove crash cleanup before exit.
-  auto RemoveDiscardOnSignal = make_scope_exit([&]() {
+  llvm::scope_exit RemoveDiscardOnSignal([&]() {
     if (Config.getDiscardOnSignal())
       sys::DontRemoveFileOnSignal(TempPath ? *TempPath : OutputPath);
   });

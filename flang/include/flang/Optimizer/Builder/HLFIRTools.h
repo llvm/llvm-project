@@ -66,6 +66,7 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
+  bool isBoxAddress() const { return fir::isBoxAddress(getType()); }
 
   /// Is this entity a procedure designator?
   bool isProcedure() const { return isFortranProcedureValue(getType()); }
@@ -455,13 +456,19 @@ mlir::Value inlineElementalOp(
 /// over the optimal extents deduced from both shapes. If \p emitWorkshareLoop
 /// is true, a workshare loop construct may be emitted when available.
 /// Allocatable LHS must be allocated with the right shape and parameters.
+/// An optional scalarCombineAndAssign can be provided to provide logic for more
+/// complex assignment actions like for reductions that may need to happen
+/// atomically. When provided, the callback will be passed scalar addresses for
+/// the LHS and RHS elements and is in charge of generating the combination and
+/// assignment logic.
 void genNoAliasArrayAssignment(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop = false,
     bool temporaryLHS = false,
-    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
-                                hlfir::Entity, hlfir::Entity)> *combiner =
-        nullptr);
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)>
+        *scalarCombineAndAssign = nullptr,
+    mlir::ArrayAttr accessGroups = {});
 
 /// Generate an assignment from \p rhs to \p lhs when they are known not to
 /// alias. Handles both arrays and scalars: for arrays, delegates to
@@ -472,17 +479,19 @@ void genNoAliasAssignment(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop = false,
     bool temporaryLHS = false,
-    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
-                                hlfir::Entity, hlfir::Entity)> *combiner =
-        nullptr);
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr accessGroups)>
+        *scalarCombineAndAssign = nullptr,
+    mlir::ArrayAttr accessGroups = {});
 inline void genNoAliasAssignment(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
-    std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
-                                hlfir::Entity, hlfir::Entity)>
-        combiner) {
+    std::function<void(mlir::Location, fir::FirOpBuilder &, hlfir::Entity,
+                       hlfir::Entity, mlir::ArrayAttr)>
+        scalarCombineAndAssign,
+    mlir::ArrayAttr accessGroups = {}) {
   genNoAliasAssignment(loc, builder, rhs, lhs, emitWorkshareLoop, temporaryLHS,
-                       &combiner);
+                       &scalarCombineAndAssign, accessGroups);
 }
 
 /// Create a new temporary with the shape and parameters of the provided
@@ -588,7 +597,6 @@ genExtentsVector(mlir::Location loc, fir::FirOpBuilder &builder, Entity entity);
 /// and \p typeParams of the array.
 Entity gen1DSection(mlir::Location loc, fir::FirOpBuilder &builder,
                     Entity array, int64_t dim,
-                    mlir::ArrayRef<mlir::Value> lbounds,
                     mlir::ArrayRef<mlir::Value> extents,
                     mlir::ValueRange oneBasedIndices,
                     mlir::ArrayRef<mlir::Value> typeParams);

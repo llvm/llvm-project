@@ -49,7 +49,7 @@ SimpleExecutorMemoryManager::initialize(tpctypes::FinalizeRequest &FR) {
   ExecutorAddrRange RR(FR.Segments.front().Addr, FR.Segments.front().Addr);
 
   std::vector<sys::MemoryBlock> MBsToReset;
-  auto ResetMBs = make_scope_exit([&]() {
+  llvm::scope_exit ResetMBs([&]() {
     for (auto &MB : MBsToReset)
       sys::Memory::protectMappedMemory(MB, sys::Memory::MF_READ |
                                                sys::Memory::MF_WRITE);

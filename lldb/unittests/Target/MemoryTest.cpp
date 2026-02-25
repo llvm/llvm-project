@@ -381,6 +381,13 @@ TEST_F(MemoryTest, TestReadMemoryRanges) {
 using MemoryDeathTest = MemoryTest;
 
 TEST_F(MemoryDeathTest, TestReadMemoryRangesReturnsTooMuch) {
+  // gtest death-tests execute in a sub-process (fork), which invalidates
+  // any signpost handles and would cause spurious crashes if used. Use the
+  // "threadsafe" style of death-test to work around this.
+  // FIXME: we should set this only if signposts are enabled, and do so
+  // for the entire test-suite.
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
   ArchSpec arch("x86_64-apple-macosx-");
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
   DebuggerSP debugger_sp = Debugger::CreateInstance();
@@ -409,6 +416,13 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesReturnsTooMuch) {
 }
 
 TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
+  // gtest death-tests execute in a sub-process (fork), which invalidates
+  // any signpost handles and would cause spurious crashes if used. Use the
+  // "threadsafe" style of death-test to work around this.
+  // FIXME: we should set this only if signposts are enabled, and do so
+  // for the entire test-suite.
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
   ArchSpec arch("x86_64-apple-macosx-");
   Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
   DebuggerSP debugger_sp = Debugger::CreateInstance();
@@ -433,4 +447,77 @@ TEST_F(MemoryDeathTest, TestReadMemoryRangesWithShortBuffer) {
   for (llvm::MutableArrayRef<uint8_t> result : read_results)
     ASSERT_TRUE(result.empty());
 #endif
+}
+
+/// A process class whose memory contains the following map of addresses to
+/// strings:
+///   100 -> "hello\0"
+///   200 -> "\0"
+///   201 -> "goodbye"
+///   300 -> a string composed of 500 'c' characters, followed by '\0'.
+///   addresses >= 1024 -> error
+class StringReaderProcess : public Process {
+public:
+  char memory[1024];
+  void initialize_memory() {
+    // Use some easily identifiable character for the areas of memory we're not
+    // intending to read.
+    memset(memory, '?', 1024);
+    strcpy(&memory[100], "hello");
+    strcpy(&memory[200], "");
+    strcpy(&memory[201], "goodbye");
+    std::vector<char> long_str(500, 'c');
+    long_str.push_back('\0');
+    strcpy(&memory[300], long_str.data());
+  }
+
+  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                      Status &error) override {
+    if (vm_addr >= 1024) {
+      error = Status::FromErrorString("out of bounds!");
+      return 0;
+    }
+    memcpy(buf, memory + vm_addr, size);
+    return size;
+  }
+  StringReaderProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {
+    initialize_memory();
+  }
+  // Boilerplate, nothing interesting below.
+  bool CanDebug(lldb::TargetSP, bool) override { return true; }
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &, ThreadList &) override { return false; }
+  llvm::StringRef GetPluginName() override { return "Dummy"; }
+};
+
+TEST_F(MemoryTest, TestReadCStringsFromMemory) {
+  ArchSpec arch("x86_64-apple-macosx-");
+  Platform::SetHostPlatform(PlatformRemoteMacOSX::CreateInstance(true, &arch));
+  DebuggerSP debugger_sp = Debugger::CreateInstance();
+  ASSERT_TRUE(debugger_sp);
+  TargetSP target_sp = CreateTarget(debugger_sp, arch);
+  ASSERT_TRUE(target_sp);
+  ListenerSP listener_sp(Listener::MakeListener("dummy"));
+  ProcessSP process_sp =
+      std::make_shared<StringReaderProcess>(target_sp, listener_sp);
+  ASSERT_TRUE(process_sp);
+
+  // See the docs for StringReaderProcess above for an explanation of these
+  // addresses.
+  llvm::SmallVector<std::optional<std::string>> maybe_strings =
+      process_sp->ReadCStringsFromMemory({100, 200, 201, 300, 0xffffff});
+  ASSERT_EQ(maybe_strings.size(), 5ull);
+  auto expected_valid_strings = llvm::ArrayRef(maybe_strings).take_front(4);
+
+  std::vector<char> long_str(500, 'c');
+  long_str.push_back('\0');
+  std::string big_str(long_str.data());
+
+  const std::vector<std::optional<std::string>> expected_answers = {
+      "hello", "", "goodbye", big_str, std::nullopt};
+  for (auto [maybe_str, expected_answer] :
+       llvm::zip(expected_valid_strings, expected_answers))
+    EXPECT_EQ(maybe_str, expected_answer);
 }

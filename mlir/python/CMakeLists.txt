@@ -3,6 +3,8 @@ include(AddMLIRPython)
 # Specifies that all MLIR packages are co-located under the `MLIR_PYTHON_PACKAGE_PREFIX.`
 # top level package (the API has been embedded in a relocatable way).
 add_compile_definitions("MLIR_PYTHON_PACKAGE_PREFIX=${MLIR_PYTHON_PACKAGE_PREFIX}.")
+set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
+set(PYTHON_SOURCE_DIR "${MLIR_SOURCE_DIR}/lib/Bindings/Python")
 
 ################################################################################
 # Structural groupings.
@@ -28,6 +30,7 @@ declare_mlir_python_sources(MLIRPythonSources.Core.Python
     passmanager.py
     rewrite.py
     dialects/_ods_common.py
+    dialects/ext.py
 )
 
 declare_mlir_python_sources(MLIRPythonSources.Core.Python.Extras
@@ -325,6 +328,15 @@ declare_mlir_dialect_extension_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/X86VectorTransformOps.td
+  SOURCES
+    dialects/transform/x86vector.py
+  DIALECT_NAME transform
+  EXTENSION_NAME x86vector_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/XeGPUTransformOps.td
   SOURCES
     dialects/transform/xegpu.py
@@ -510,6 +522,13 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/X86Vector.td
+  SOURCES dialects/x86vector.py
+  DIALECT_NAME x86vector)
+
+declare_mlir_dialect_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/IRDLOps.td
   SOURCES dialects/irdl.py
   DIALECT_NAME irdl
@@ -524,7 +543,6 @@ declare_mlir_dialect_python_bindings(
 # dependencies.
 ################################################################################
 
-set(PYTHON_SOURCE_DIR "${MLIR_SOURCE_DIR}/lib/Bindings/Python")
 declare_mlir_python_extension(MLIRPythonExtension.Core
   MODULE_NAME _mlir
   ADD_TO_PARENT MLIRPythonSources.Core
@@ -532,19 +550,12 @@ declare_mlir_python_extension(MLIRPythonExtension.Core
   SOURCES
     MainModule.cpp
     IRAffine.cpp
-    IRAttributes.cpp
-    IRCore.cpp
     IRInterfaces.cpp
-    IRModule.cpp
-    IRTypes.cpp
     Pass.cpp
     Rewrite.cpp
 
     # Headers must be included explicitly so they are installed.
-    Globals.h
-    IRModule.h
     Pass.h
-    NanobindUtils.h
     Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
@@ -676,8 +687,10 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.Transform.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectTransform.cpp
+    Rewrite.h
   PRIVATE_LINK_LIBS
     LLVMSupport
+    MLIRPythonExtension.Core
   EMBED_CAPI_LINK_LIBS
     MLIRCAPIIR
     MLIRCAPITransformDialect
@@ -752,8 +765,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.SMT.Nanobind
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
   SOURCES
     DialectSMT.cpp
-    # Headers must be included explicitly so they are installed.
-    NanobindUtils.h
   PRIVATE_LINK_LIBS
     LLVMSupport
   EMBED_CAPI_LINK_LIBS
@@ -790,7 +801,6 @@ declare_mlir_python_extension(MLIRPythonExtension.Dialects.AMDGPU.Nanobind
   MODULE_NAME _mlirDialectsAMDGPU
   ADD_TO_PARENT MLIRPythonSources.Dialects.amdgpu
   ROOT_DIR "${PYTHON_SOURCE_DIR}"
-  PYTHON_BINDINGS_LIBRARY nanobind
   SOURCES
     DialectAMDGPU.cpp
   PRIVATE_LINK_LIBS
@@ -847,6 +857,18 @@ if(MLIR_INCLUDE_TESTS)
   )
 endif()
 
+declare_mlir_python_extension(MLIRPythonExtension.MLIRPythonSupport
+  _PRIVATE_SUPPORT_LIB
+  MODULE_NAME MLIRPythonSupport
+  ADD_TO_PARENT MLIRPythonSources.Core
+  ROOT_DIR "${PYTHON_SOURCE_DIR}"
+  SOURCES
+    Globals.cpp
+    IRAttributes.cpp
+    IRCore.cpp
+    IRTypes.cpp
+)
+
 ################################################################################
 # Common CAPI dependency DSO.
 # All python extensions must link through one DSO which exports the CAPI, and
@@ -860,7 +882,6 @@ endif()
 # once ready.
 ################################################################################
 
-set(MLIRPythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
 add_mlir_python_common_capi_library(MLIRPythonCAPI
   INSTALL_COMPONENT MLIRPythonModules
   INSTALL_DESTINATION "${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}/_mlir_libs"

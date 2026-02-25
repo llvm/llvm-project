@@ -115,10 +115,11 @@ struct CognitiveComplexity final {
       } else if (C == Criteria::IncrementNesting) {
         Increment = 0; // Unused in this message.
         MsgId = 3;
-      } else
+      } else {
         llvm_unreachable("should not get to here.");
+      }
 
-      return std::make_pair(MsgId, Increment);
+      return {MsgId, Increment};
     }
   };
 
@@ -152,7 +153,7 @@ struct CognitiveComplexity final {
 // to use is based of the combination of the CognitiveComplexity::Criteria.
 // It would be nice to have it in CognitiveComplexity struct, but then it is
 // not static.
-static const std::array<const StringRef, 4> Msgs = {{
+static constexpr std::array<StringRef, 4> Msgs = {{
     // B1 + B2 + B3
     "+%0, including nesting penalty of %1, nesting level increased to %2",
 

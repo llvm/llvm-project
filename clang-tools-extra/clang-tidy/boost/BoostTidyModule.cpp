@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "UseRangesCheck.h"
 #include "UseToStringCheck.h"
 using namespace clang::ast_matchers;
