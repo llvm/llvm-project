@@ -921,7 +921,8 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
   auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
   auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
 
-  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i1);
+  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                  Register::index2VirtReg(1), MVT::i1);
   auto Select40 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst0);
   auto Select43 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst3);
   auto Select4Big =
@@ -938,7 +939,8 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
   auto Vec4Big = DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig});
   auto Vec0Big = DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig});
 
-  auto VecCond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 2, MVT::v2i1);
+  auto VecCond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                     Register::index2VirtReg(2), MVT::v2i1);
   auto VSelect0444 =
       DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec04, Vec44);
   auto VSelect4444 =
@@ -1478,7 +1480,8 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
   auto Cst4 = DAG->getConstant(4, Loc, MVT::i32);
   auto CstBig = DAG->getConstant(2 << 17, Loc, MVT::i32);
 
-  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i1);
+  auto Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                  Register::index2VirtReg(1), MVT::i1);
   auto Select40 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst0);
   auto Select43 = DAG->getNode(ISD::SELECT, Loc, MVT::i32, Cond, Cst4, Cst3);
   auto Select4Big =
@@ -1495,7 +1498,8 @@ TEST_F(AArch64SelectionDAGTest, KnownNeverZero_Select) {
   auto Vec4Big = DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig});
   auto Vec0Big = DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig});
 
-  auto VecCond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 2, MVT::v2i1);
+  auto VecCond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                     Register::index2VirtReg(2), MVT::v2i1);
   auto VSelect0444 =
       DAG->getNode(ISD::VSELECT, Loc, VecVT, VecCond, Vec04, Vec44);
   auto VSelect4444 =
