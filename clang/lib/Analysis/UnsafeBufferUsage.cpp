@@ -2945,7 +2945,7 @@ template <typename NodeTy> struct CompareNode {
   }
 };
 
-std::set<const Expr *> clang::findUnsafePointers(const Decl *FD) {
+std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
   class MockReporter : public UnsafeBufferUsageHandler {
   public:
     MockReporter() {}

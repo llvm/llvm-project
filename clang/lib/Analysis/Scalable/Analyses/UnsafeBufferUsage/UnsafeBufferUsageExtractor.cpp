@@ -261,14 +261,16 @@ buildEntityPointerLevels(std::set<const Expr *> &&UnsafePointers,
 
 std::unique_ptr<UnsafeBufferUsageEntitySummary>
 UnsafeBufferUsageTUSummaryExtractor::extractEntitySummary(
-    const Decl *ContributorDefn, ASTContext &Ctx, llvm::Error &Error) {
-  Expected<EntityPointerLevelSet> EPLs =
-      buildEntityPointerLevels(findUnsafePointers(ContributorDefn), *this);
+    const Decl *Contributor, ASTContext &Ctx, llvm::Error &Error) {
+  if (const auto *FD = dyn_cast<FunctionDecl>(Contributor)) {
+    Expected<EntityPointerLevelSet> EPLs =
+        buildEntityPointerLevels(findUnsafePointers(FD), *this);
 
-  if (EPLs)
-    return std::make_unique<UnsafeBufferUsageEntitySummary>(
-        UnsafeBufferUsageEntitySummary(std::move(*EPLs)));
-  Error = EPLs.takeError();
+    if (EPLs)
+      return std::make_unique<UnsafeBufferUsageEntitySummary>(
+          UnsafeBufferUsageEntitySummary(std::move(*EPLs)));
+    Error = EPLs.takeError();
+  }
   return nullptr;
 }
 
