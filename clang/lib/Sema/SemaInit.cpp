@@ -1910,15 +1910,15 @@ void InitListChecker::CheckMatrixType(const InitializedEntity &Entity,
   QualType ElemTy = MT->getElementType();
 
   Index = 0;
-  InitializedEntity ElemEnt =
+  InitializedEntity Element =
       InitializedEntity::InitializeElement(SemaRef.Context, 0, Entity);
 
   while (Index < IList->getNumInits()) {
     // Not a sublist: just consume directly.
     // Note: In HLSL, elements of the InitListExpr are in row-major order, so no
     // change is needed to the Index.
-    ElemEnt.setElementIndex(Index);
-    CheckSubElementType(ElemEnt, IList, ElemTy, Index, StructuredList,
+    Element.setElementIndex(Index);
+    CheckSubElementType(Element, IList, ElemTy, Index, StructuredList,
                         StructuredIndex);
   }
 }
