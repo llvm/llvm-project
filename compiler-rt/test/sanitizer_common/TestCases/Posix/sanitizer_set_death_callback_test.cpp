@@ -2,7 +2,7 @@
 
 // REQUIRES: stable-runtime
 
-// XFAIL: ubsan
+// XFAIL: tysan, ubsan
 // FIXME: On Darwin, LSAn detects the leak, but does not invoke the death_callback.
 // XFAIL: darwin && lsan
 

@@ -7,6 +7,8 @@
 // FIXME: Implement.
 // XFAIL: hwasan
 
+// UNSUPPORTED: tysan
+
 #include <assert.h>
 #include <string.h>
 #if defined(_GNU_SOURCE)

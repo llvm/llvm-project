@@ -41,7 +41,8 @@
 // RUN:   %run %t strndup 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
 
 // win32 is disabled due to failing errno tests.
-// UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
+// tysan doesn't support the max_allocation_size_mb flag
+// UNSUPPORTED: tysan, ubsan, target={{.*windows-msvc.*}}
 
 // Symbolizer needs to allocated memory when reporting.
 // UNSUPPORTED: internal_symbolizer

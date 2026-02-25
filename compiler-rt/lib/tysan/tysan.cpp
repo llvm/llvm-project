@@ -40,6 +40,30 @@ tysan_copy_types(const void *daddr, const void *saddr, uptr size) {
     internal_memmove(shadow_for(daddr), shadow_for(saddr), size * sizeof(uptr));
 }
 
+static void getStackTrace(bool fullStacktrace, uptr pc, uptr bp, BufferedStackTrace *ST){
+  uptr top = 0;
+  uptr bottom = 0;
+  if (fullStacktrace)
+    GetThreadStackTopAndBottom(false, &top, &bottom);
+  bool request_fast = StackTrace::WillUseFastUnwind(true);
+  ST->Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
+}
+
+namespace __tysan{
+  void OnStackUnwind(const SignalContext &sig, const void *,
+                          BufferedStackTrace *stack){
+    getStackTrace(true, StackTrace::GetNextInstructionPc(sig.pc), sig.bp, stack);
+  }
+}
+
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__sanitizer_print_stack_trace() {
+  GET_CURRENT_PC_BP;
+  UNINITIALIZED BufferedStackTrace stack;
+  getStackTrace(true, pc, bp, &stack);
+  stack.Print();
+}
+
 static const char *getDisplayName(const char *Name) {
   if (Name[0] == '\0')
     return "<anonymous type>";
@@ -241,14 +265,8 @@ static void reportError(void *Addr, int Size, tysan_type_descriptor *TD,
     Printf("\n");
 
   if (pc) {
-    uptr top = 0;
-    uptr bottom = 0;
-    if (flags().print_stacktrace)
-      GetThreadStackTopAndBottom(false, &top, &bottom);
-
-    bool request_fast = StackTrace::WillUseFastUnwind(true);
     BufferedStackTrace ST;
-    ST.Unwind(kStackTraceMax, pc, bp, 0, top, bottom, request_fast);
+    getStackTrace(flags().print_stacktrace, pc, bp, &ST);
     ST.Print();
   } else {
     Printf("\n");
@@ -484,9 +502,13 @@ static void TySanInitializePlatformEarly() {
 namespace __tysan {
 bool tysan_inited = false;
 bool tysan_init_is_running;
+void InitializeDeadlySignals();
 } // namespace __tysan
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
+  SanitizerToolName = "TypeSanitizer";
+  CacheBinaryName();
+
   CHECK(!tysan_init_is_running);
   if (tysan_inited)
     return;
@@ -496,6 +518,7 @@ extern "C" SANITIZER_INTERFACE_ATTRIBUTE void __tysan_init() {
   TySanInitializePlatformEarly();
 
   InitializeInterceptors();
+  InitializeDeadlySignals();
 
   if (!MmapFixedNoReserve(ShadowAddr(), AppAddr() - ShadowAddr()))
     Die();
