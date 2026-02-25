@@ -6456,7 +6456,6 @@ cc_binary(
     ],
 )
 
-
 cc_binary(
     name = "count",
     testonly = True,
