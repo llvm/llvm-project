@@ -111,6 +111,10 @@ function(add_gen_header target_name)
 
   list(TRANSFORM entry_points PREPEND "--entry-point=")
 
+  set(rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${out_file}.rsp")
+  string(REPLACE ";" " " entry_points "${entry_points}")
+  file(WRITE ${rsp_file} "${entry_points}")
+
   add_custom_command(
     OUTPUT ${out_file}
     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -119,9 +123,9 @@ function(add_gen_header target_name)
             --depfile ${dep_file}
             --write-if-changed
             ${proxy_arg}
-            ${entry_points}
             ${yaml_file}
-    DEPENDS ${yaml_file}
+            "@${rsp_file}"
+    DEPENDS ${yaml_file} ${rsp_file}
     DEPFILE ${dep_file}
     COMMENT "Generating header ${ADD_GEN_HDR_GEN_HDR} from ${yaml_file}"
   )
