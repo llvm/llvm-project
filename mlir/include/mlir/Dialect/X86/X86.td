@@ -32,25 +32,23 @@ def X86_Dialect : Dialect {
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX512_Op<string mnemonic, list<Trait> traits = []>
-    : Op<X86_Dialect, "avx512."#mnemonic, traits> {}
+class AVX512_Op<string mnemonic, list<Trait> traits = []> :
+  Op<X86_Dialect, "avx512." # mnemonic, traits> {}
 
 //----------------------------------------------------------------------------//
 // MaskCompressOp
 //----------------------------------------------------------------------------//
 
-def MaskCompressOp
-    : AVX512_Op<"mask.compress",
-                [Pure, X86IntrinsicOpInterface,
-                 // TODO: Support optional arguments in `AllTypesMatch`.
-                 // "type($src)" could then be removed from assemblyFormat.
-                 AllTypesMatch<["a", "dst"]>,
-                 TypesMatchWith<
-                     "`k` has the same number of bits as elements in `dst`",
-                     "dst", "k",
-                     "VectorType::get({::llvm::cast<VectorType>($_self)."
-                     "getShape()[0]}, "
-                     "IntegerType::get($_self.getContext(), 1))">]> {
+def MaskCompressOp : AVX512_Op<"mask.compress", [Pure,
+    X86IntrinsicOpInterface,
+    // TODO: Support optional arguments in `AllTypesMatch`. "type($src)" could
+    // then be removed from assemblyFormat.
+    AllTypesMatch<["a", "dst"]>,
+    TypesMatchWith<"`k` has the same number of bits as elements in `dst`",
+                   "dst", "k",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
+                   "IntegerType::get($_self.getContext(), 1))">
+  ]> {
   let summary = "Masked compress op";
   let description = [{
   The mask.compress op is an AVX512 specific op that can lower to the
@@ -65,12 +63,15 @@ def MaskCompressOp
   with their respective bit set in writemask `k`) to `dst`, and pass through the
   remaining elements from `src`.
   }];
-  let arguments = (ins VectorOfLengthAndType<[16, 8], [I1]>:$k,
-      VectorOfLengthAndType<[16, 8], [F32, I32, F64, I64]>:$a,
-      Optional<VectorOfLengthAndType<[16, 8], [F32, I32, F64, I64]>>:$src,
-      OptionalAttr<ElementsAttr>:$constant_src);
-  let results =
-      (outs VectorOfLengthAndType<[16, 8], [F32, I32, F64, I64]>:$dst);
+  let arguments = (ins VectorOfLengthAndType<[16, 8],
+                                             [I1]>:$k,
+                   VectorOfLengthAndType<[16, 8],
+                                         [F32, I32, F64, I64]>:$a,
+                   Optional<VectorOfLengthAndType<[16, 8],
+                                                  [F32, I32, F64, I64]>>:$src,
+                   OptionalAttr<ElementsAttr>:$constant_src);
+  let results = (outs VectorOfLengthAndType<[16, 8],
+                                            [F32, I32, F64, I64]>:$dst);
   let assemblyFormat = "$k `,` $a (`,` $src^)? attr-dict"
                        " `:` type($dst) (`,` type($src)^)?";
   let hasVerifier = 1;
@@ -93,15 +94,14 @@ def MaskCompressOp
 // MaskRndScaleOp
 //----------------------------------------------------------------------------//
 
-def MaskRndScaleOp
-    : AVX512_Op<"mask.rndscale",
-                [Pure, X86IntrinsicOpInterface,
-                 AllTypesMatch<["src", "a", "dst"]>,
-                 TypesMatchWith<
-                     "imm has the same number of bits as elements in dst",
-                     "dst", "imm",
-                     "IntegerType::get($_self.getContext(), "
-                     "(::llvm::cast<VectorType>($_self).getShape()[0]))">]> {
+def MaskRndScaleOp : AVX512_Op<"mask.rndscale", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["src", "a", "dst"]>,
+    TypesMatchWith<"imm has the same number of bits as elements in dst",
+                   "dst", "imm",
+                   "IntegerType::get($_self.getContext(), "
+                   "(::llvm::cast<VectorType>($_self).getShape()[0]))">
+  ]> {
   let summary = "Masked roundscale op";
   let description = [{
     The mask.rndscale op is an AVX512 specific op that can lower to the proper
@@ -116,13 +116,16 @@ def MaskRndScaleOp
     (elements are copied from src when the corresponding mask bit is not set).
   }];
   // Supports vector<16xf32> and vector<8xf64>.
-  let arguments = (ins VectorOfLengthAndType<[16, 8], [F32, F64]>:$src, I32:$k,
-      VectorOfLengthAndType<[16, 8], [F32, F64]>:$a, AnyTypeOf<[I16, I8]>:$imm,
-      // TODO: figure rounding out (optional operand?).
-      I32:$rounding);
+  let arguments = (ins VectorOfLengthAndType<[16, 8], [F32, F64]>:$src,
+                   I32:$k,
+                   VectorOfLengthAndType<[16, 8], [F32, F64]>:$a,
+                   AnyTypeOf<[I16, I8]>:$imm,
+                   // TODO: figure rounding out (optional operand?).
+                   I32:$rounding
+            );
   let results = (outs VectorOfLengthAndType<[16, 8], [F32, F64]>:$dst);
   let assemblyFormat =
-      "$src `,` $k `,` $a `,` $imm `,` $rounding attr-dict `:` type($dst)";
+    "$src `,` $k `,` $a `,` $imm `,` $rounding attr-dict `:` type($dst)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -143,15 +146,14 @@ def MaskRndScaleOp
 // MaskScaleFOp
 //----------------------------------------------------------------------------//
 
-def MaskScaleFOp
-    : AVX512_Op<
-          "mask.scalef",
-          [Pure, X86IntrinsicOpInterface,
-           AllTypesMatch<["src", "a", "b", "dst"]>,
-           TypesMatchWith<
-               "k has the same number of bits as elements in dst", "dst", "k",
-               "IntegerType::get($_self.getContext(), "
-               "(::llvm::cast<VectorType>($_self).getShape()[0]))">]> {
+def MaskScaleFOp : AVX512_Op<"mask.scalef", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["src", "a", "b", "dst"]>,
+    TypesMatchWith<"k has the same number of bits as elements in dst",
+                   "dst", "k",
+                   "IntegerType::get($_self.getContext(), "
+                   "(::llvm::cast<VectorType>($_self).getShape()[0]))">
+  ]> {
   let summary = "ScaleF op";
   let description = [{
     The `mask.scalef` op is an AVX512 specific op that can lower to the proper
@@ -167,14 +169,16 @@ def MaskScaleFOp
   }];
   // Supports vector<16xf32> and vector<8xf64>.
   let arguments = (ins VectorOfLengthAndType<[16, 8], [F32, F64]>:$src,
-      VectorOfLengthAndType<[16, 8], [F32, F64]>:$a,
-      VectorOfLengthAndType<[16, 8], [F32, F64]>:$b, AnyTypeOf<[I16, I8]>:$k,
-      // TODO: figure rounding out (optional operand?).
-      I32:$rounding);
+                   VectorOfLengthAndType<[16, 8], [F32, F64]>:$a,
+                   VectorOfLengthAndType<[16, 8], [F32, F64]>:$b,
+                   AnyTypeOf<[I16, I8]>:$k,
+                   // TODO: figure rounding out (optional operand?).
+                   I32:$rounding
+            );
   let results = (outs VectorOfLengthAndType<[16, 8], [F32, F64]>:$dst);
   // Fully specified by traits.
   let assemblyFormat =
-      "$src `,` $a `,` $b `,` $k `,` $rounding attr-dict `:` type($dst)";
+    "$src `,` $a `,` $b `,` $k `,` $rounding attr-dict `:` type($dst)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -195,22 +199,20 @@ def MaskScaleFOp
 // Vp2IntersectOp
 //----------------------------------------------------------------------------//
 
-def Vp2IntersectOp
-    : AVX512_Op<
-          "vp2intersect",
-          [Pure, X86IntrinsicOpInterface, AllTypesMatch<["a", "b"]>,
-           TypesMatchWith<"k1 has the same number of bits as elements in a",
-                          "a", "k1",
-                          "VectorType::get({::llvm::cast<VectorType>($_self)."
-                          "getShape()[0]}, "
-                          "IntegerType::get($_self.getContext(), 1))">,
-           TypesMatchWith<"k2 has the same number of bits as elements in b",
-                          // Should use `b` instead of `a`, but that would
-                          // require adding `type($b)` to assemblyFormat.
-                          "a", "k2",
-                          "VectorType::get({::llvm::cast<VectorType>($_self)."
-                          "getShape()[0]}, "
-                          "IntegerType::get($_self.getContext(), 1))">]> {
+def Vp2IntersectOp : AVX512_Op<"vp2intersect", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    TypesMatchWith<"k1 has the same number of bits as elements in a",
+                   "a", "k1",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
+                   "IntegerType::get($_self.getContext(), 1))">,
+    TypesMatchWith<"k2 has the same number of bits as elements in b",
+                   // Should use `b` instead of `a`, but that would require
+                   // adding `type($b)` to assemblyFormat.
+                   "a", "k2",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0]}, "
+                   "IntegerType::get($_self.getContext(), 1))">
+  ]> {
   let summary = "Vp2Intersect op";
   let description = [{
     The `vp2intersect` op is an AVX512 specific op that can lower to the proper
@@ -227,10 +229,13 @@ def Vp2IntersectOp
     registers.
   }];
   let arguments = (ins VectorOfLengthAndType<[16, 8], [I32, I64]>:$a,
-      VectorOfLengthAndType<[16, 8], [I32, I64]>:$b);
+                   VectorOfLengthAndType<[16, 8], [I32, I64]>:$b
+                   );
   let results = (outs VectorOfLengthAndType<[16, 8], [I1]>:$k1,
-      VectorOfLengthAndType<[16, 8], [I1]>:$k2);
-  let assemblyFormat = "$a `,` $b attr-dict `:` type($a)";
+                 VectorOfLengthAndType<[16, 8], [I1]>:$k2
+                 );
+  let assemblyFormat =
+    "$a `,` $b attr-dict `:` type($a)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -251,15 +256,15 @@ def Vp2IntersectOp
 // Dot BF16
 //----------------------------------------------------------------------------//
 
-def DotBF16Op
-    : AVX512_Op<
-          "dot", [Pure, X86IntrinsicOpInterface, AllTypesMatch<["a", "b"]>,
-                  AllTypesMatch<["src", "dst"]>,
-                  TypesMatchWith<"`a` has twice an many elements as `src`",
-                                 "src", "a",
-                                 "VectorType::get({::llvm::cast<VectorType>($_"
-                                 "self).getShape()[0] * 2}, "
-                                 "BFloat16Type::get($_self.getContext()))">]> {
+def DotBF16Op : AVX512_Op<"dot", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["src", "dst"]>,
+    TypesMatchWith<"`a` has twice an many elements as `src`",
+                   "src", "a",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 2}, "
+                   "BFloat16Type::get($_self.getContext()))">
+  ]> {
   let summary = "Dot BF16 op";
   let description = [{
     The `dot` op is an AVX512-BF16 specific op that can lower to the proper
@@ -278,11 +283,12 @@ def DotBF16Op
     ```
   }];
   let arguments = (ins VectorOfLengthAndType<[4, 8, 16], [F32]>:$src,
-      VectorOfLengthAndType<[8, 16, 32], [BF16]>:$a,
-      VectorOfLengthAndType<[8, 16, 32], [BF16]>:$b);
+                   VectorOfLengthAndType<[8, 16, 32], [BF16]>:$a,
+                   VectorOfLengthAndType<[8, 16, 32], [BF16]>:$b
+                   );
   let results = (outs VectorOfLengthAndType<[4, 8, 16], [F32]>:$dst);
   let assemblyFormat =
-      "$src `,` $a `,` $b attr-dict `:` type($a) `->` type($src)";
+    "$src `,` $a `,` $b attr-dict `:` type($a) `->` type($src)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -300,10 +306,10 @@ def DotBF16Op
 // Convert packed F32 to packed BF16
 //----------------------------------------------------------------------------//
 
-def CvtPackedF32ToBF16Op
-    : AVX512_Op<
-          "cvt.packed.f32_to_bf16", [Pure, X86IntrinsicOpInterface,
-                                     AllElementCountsMatch<["a", "dst"]>]> {
+def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
+    X86IntrinsicOpInterface,
+    AllElementCountsMatch<["a", "dst"]>
+  ]> {
   let summary = "Convert packed F32 to packed BF16 Data.";
   let description = [{
     The `convert_f32_to_bf16` op is an AVX512-BF16 specific op that can lower
@@ -322,7 +328,8 @@ def CvtPackedF32ToBF16Op
   }];
   let arguments = (ins VectorOfLengthAndType<[8, 16], [F32]>:$a);
   let results = (outs VectorOfLengthAndType<[8, 16], [BF16]>:$dst);
-  let assemblyFormat = "$a attr-dict `:` type($a) `->` type($dst)";
+  let assemblyFormat =
+    "$a attr-dict `:` type($a) `->` type($dst)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -341,21 +348,22 @@ def CvtPackedF32ToBF16Op
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX10_Op<string mnemonic, list<Trait> traits = []>
-    : Op<X86_Dialect, "avx10."#mnemonic, traits> {}
+class AVX10_Op<string mnemonic, list<Trait> traits = []> :
+  Op<X86_Dialect, "avx10." # mnemonic, traits> {}
 
 //----------------------------------------------------------------------------//
 // AVX10 Int8 Dot
 //----------------------------------------------------------------------------//
 
-def AVX10DotInt8Op
-    : AVX10_Op<"dot.i8",
-               [Pure, X86IntrinsicOpInterface, AllTypesMatch<["a", "b"]>,
-                AllTypesMatch<["w", "dst"]>,
-                TypesMatchWith<"`a` has four times elements as `w`", "w", "a",
-                               "VectorType::get({::llvm::cast<VectorType>($_"
-                               "self).getShape()[0] * 4}, "
-                               "IntegerType::get($_self.getContext(), 8))">]> {
+def AVX10DotInt8Op : AVX10_Op<"dot.i8", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["w", "dst"]>,
+    TypesMatchWith<"`a` has four times elements as `w`",
+                   "w", "a",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 4}, "
+                   "IntegerType::get($_self.getContext(), 8))">
+  ]> {
   let summary = "AVX10 Dot Int8 op";
   let description = [{
     The `dot` op is an AVX10-Int8 specific op that can lower to the proper
@@ -372,10 +380,12 @@ def AVX10DotInt8Op
     ```
   }];
   let arguments = (ins VectorOfLengthAndType<[16], [I32]>:$w,
-      VectorOfLengthAndType<[64], [I8]>:$a,
-      VectorOfLengthAndType<[64], [I8]>:$b);
+                   VectorOfLengthAndType<[64], [I8]>:$a,
+                   VectorOfLengthAndType<[64], [I8]>:$b
+                   );
   let results = (outs VectorOfLengthAndType<[16], [I32]>:$dst);
-  let assemblyFormat = "$w `,` $a `,` $b attr-dict `:` type($a) `->` type($w)";
+  let assemblyFormat =
+    "$w `,` $a `,` $b attr-dict `:` type($a) `->` type($w)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -384,26 +394,29 @@ def AVX10DotInt8Op
   }];
 }
 
+
 //===----------------------------------------------------------------------===//
 // AVX op definitions
 //===----------------------------------------------------------------------===//
 
 // Operation that is part of the input dialect.
-class AVX_Op<string mnemonic, list<Trait> traits = []>
-    : Op<X86_Dialect, "avx."#mnemonic, traits> {}
+class AVX_Op<string mnemonic, list<Trait> traits = []> :
+  Op<X86_Dialect, "avx." # mnemonic, traits> {}
 
 // Operation that may be part of the input dialect, but whose
 // form is somewhere between the user view of the operation
 // and the actual lower level intrinsic in LLVM IR.
-class AVX_LowOp<string mnemonic, list<Trait> traits = []>
-    : Op<X86_Dialect, "avx.intr."#mnemonic, traits> {}
+class AVX_LowOp<string mnemonic, list<Trait> traits = []> :
+  Op<X86_Dialect, "avx.intr." # mnemonic, traits> {}
 
 //----------------------------------------------------------------------------//
 // AVX Rsqrt
 //----------------------------------------------------------------------------//
 
-def RsqrtOp : AVX_Op<"rsqrt", [Pure, X86IntrinsicOpInterface,
-                               SameOperandsAndResultType]> {
+def RsqrtOp : AVX_Op<"rsqrt", [Pure,
+    X86IntrinsicOpInterface,
+    SameOperandsAndResultType
+  ]> {
   let summary = "Rsqrt";
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
   let results = (outs VectorOfLengthAndType<[8], [F32]>:$b);
@@ -420,8 +433,10 @@ def RsqrtOp : AVX_Op<"rsqrt", [Pure, X86IntrinsicOpInterface,
 // AVX Dot
 //----------------------------------------------------------------------------//
 
-def DotOp : AVX_LowOp<"dot", [Pure, X86IntrinsicOpInterface,
-                              SameOperandsAndResultType]> {
+def DotOp : AVX_LowOp<"dot", [Pure,
+    X86IntrinsicOpInterface,
+    SameOperandsAndResultType
+  ]> {
   let summary = "Dot";
   let description = [{
     Computes the 4-way dot products of the lower and higher parts of the source
@@ -440,7 +455,7 @@ def DotOp : AVX_LowOp<"dot", [Pure, X86IntrinsicOpInterface,
     ```
   }];
   let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a,
-      VectorOfLengthAndType<[8], [F32]>:$b);
+                       VectorOfLengthAndType<[8], [F32]>:$b);
   let results = (outs VectorOfLengthAndType<[8], [F32]>:$res);
   let assemblyFormat = "$a `,` $b attr-dict `:` type($res)";
 
@@ -461,14 +476,15 @@ def DotOp : AVX_LowOp<"dot", [Pure, X86IntrinsicOpInterface,
 // AVX Int8 Dot
 //----------------------------------------------------------------------------//
 
-def DotInt8Op
-    : AVX_Op<"dot.i8", [Pure, X86IntrinsicOpInterface,
-                        AllTypesMatch<["a", "b"]>, AllTypesMatch<["w", "dst"]>,
-                        TypesMatchWith<
-                            "`a` has four times elements as `w`", "w", "a",
-                            "VectorType::get({::llvm::cast<VectorType>($_self)."
-                            "getShape()[0] * 4}, "
-                            "IntegerType::get($_self.getContext(), 8))">]> {
+def DotInt8Op : AVX_Op<"dot.i8", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["w", "dst"]>,
+    TypesMatchWith<"`a` has four times elements as `w`",
+                   "w", "a",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 4}, "
+                   "IntegerType::get($_self.getContext(), 8))">
+  ]> {
   let summary = "Dot Int8 op";
   let description = [{
     The `dot` op is an AVX2-Int8 specific op that can lower to the proper
@@ -488,10 +504,12 @@ def DotInt8Op
     ```
   }];
   let arguments = (ins VectorOfLengthAndType<[4, 8], [I32]>:$w,
-      VectorOfLengthAndType<[16, 32], [I8]>:$a,
-      VectorOfLengthAndType<[16, 32], [I8]>:$b);
+                   VectorOfLengthAndType<[16, 32], [I8]>:$a,
+                   VectorOfLengthAndType<[16, 32], [I8]>:$b
+                   );
   let results = (outs VectorOfLengthAndType<[4, 8], [I32]>:$dst);
-  let assemblyFormat = "$w `,` $a `,` $b attr-dict `:` type($a) `->` type($w)";
+  let assemblyFormat =
+    "$w `,` $a `,` $b attr-dict `:` type($a) `->` type($w)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -510,8 +528,10 @@ def DotInt8Op
 //----------------------------------------------------------------------------//
 
 def BcstToPackedF32Op
-    : AVX_Op<"bcst_to_f32.packed", [MemoryEffects<[MemRead]>,
-                                    X86IntrinsicOpInterface]> {
+  : AVX_Op<"bcst_to_f32.packed", [
+    MemoryEffects<[MemRead]>,
+    X86IntrinsicOpInterface
+  ]> {
   let summary = "AVX: Broadcasts BF16/F16 into packed F32 Data.";
   let description = [{
     #### From the Intel Intrinsics Guide:
@@ -529,7 +549,8 @@ def BcstToPackedF32Op
   }];
   let arguments = (ins MemRefOf<[BF16, F16]>:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
-  let assemblyFormat = "$a  attr-dict`:` type($a)`->` type($dst)";
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -552,18 +573,19 @@ def BcstToPackedF32Op
         const ::mlir::LLVMTypeConverter &typeConverter,
         ::mlir::RewriterBase &rewriter);
   }];
+
 }
 
 //------------------------------------------------------------------------------//
-// AVX: Convert packed BF16/F16 even-indexed/odd-indexed elements into packed
-// F32
+// AVX: Convert packed BF16/F16 even-indexed/odd-indexed elements into packed F32
 //------------------------------------------------------------------------------//
 
 def CvtPackedEvenIndexedToF32Op
-    : AVX_Op<"cvt.packed.even.indexed_to_f32", [MemoryEffects<[MemRead]>,
-                                                X86IntrinsicOpInterface]> {
-  let summary = "AVX: Convert packed BF16/F16 even-indexed elements into "
-                "packed F32 Data.";
+  : AVX_Op<"cvt.packed.even.indexed_to_f32", [
+    MemoryEffects<[MemRead]>,
+    X86IntrinsicOpInterface
+  ]> {
+  let summary = "AVX: Convert packed BF16/F16 even-indexed elements into packed F32 Data.";
   let description = [{
     #### From the Intel Intrinsics Guide:
 
@@ -579,7 +601,8 @@ def CvtPackedEvenIndexedToF32Op
   }];
   let arguments = (ins MemRefOf<[BF16, F16]>:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
-  let assemblyFormat = "$a  attr-dict`:` type($a)`->` type($dst)";
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
@@ -605,10 +628,11 @@ def CvtPackedEvenIndexedToF32Op
 }
 
 def CvtPackedOddIndexedToF32Op
-    : AVX_Op<"cvt.packed.odd.indexed_to_f32", [MemoryEffects<[MemRead]>,
-                                               X86IntrinsicOpInterface]> {
-  let summary =
-      "AVX: Convert packed BF16/F16 odd-indexed elements into packed F32 Data.";
+  : AVX_Op<"cvt.packed.odd.indexed_to_f32", [
+    MemoryEffects<[MemRead]>,
+    X86IntrinsicOpInterface
+  ]> {
+  let summary = "AVX: Convert packed BF16/F16 odd-indexed elements into packed F32 Data.";
   let description = [{
     #### From the Intel Intrinsics Guide:
 
@@ -624,7 +648,8 @@ def CvtPackedOddIndexedToF32Op
   }];
   let arguments = (ins MemRefOf<[BF16, F16]>:$a);
   let results = (outs VectorOfLengthAndType<[4, 8], [F32]>:$dst);
-  let assemblyFormat = "$a  attr-dict`:` type($a)`->` type($dst)";
+  let assemblyFormat =
+    "$a  attr-dict`:` type($a)`->` type($dst)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {

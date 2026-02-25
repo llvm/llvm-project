@@ -10,4 +10,5 @@
 #include "mlir/CAPI/Registration.h"
 #include "mlir/Dialect/X86/X86Dialect.h"
 
-MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(X86, x86, mlir::x86::X86Dialect)
+MLIR_DEFINE_CAPI_DIALECT_REGISTRATION(X86, x86,
+                                      mlir::x86::X86Dialect)

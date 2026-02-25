@@ -17,20 +17,19 @@ include "mlir/Dialect/Transform/IR/TransformAttrs.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
 include "mlir/IR/RegionKindInterface.td"
 
-def ApplyVectorContractToFMAPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.x86.vector_contract_to_fma",
-         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+def ApplyVectorContractToFMAPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_to_fma",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collect patterns to lower a F32 type vector.contract operation to a FMA.
   }];
-
+  
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyVectorContractToPackedTypeDotProductPatternsOp
-    : Op<Transform_Dialect,
-         "apply_patterns.x86.vector_contract_to_packed_type_dot_product",
-         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+def ApplyVectorContractToPackedTypeDotProductPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_to_packed_type_dot_product",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collect patterns to lower a BF16/Int8 type vector.contract operation 
 	to a BF16/Int8 dot-product.
@@ -39,9 +38,9 @@ def ApplyVectorContractToPackedTypeDotProductPatternsOp
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyVectorContractBF16ToFMAPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.x86.vector_contract_bf16_to_fma",
-         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+def ApplyVectorContractBF16ToFMAPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.vector_contract_bf16_to_fma",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collect patterns to lower a BF16 type vector.contract operation
         to a FMA via emulation lowering using BF16 packed operations.
@@ -50,9 +49,9 @@ def ApplyVectorContractBF16ToFMAPatternsOp
   let assemblyFormat = "attr-dict";
 }
 
-def ApplySinkVectorProducerOpsPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.x86.sink_vector_producer_ops",
-         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+def ApplySinkVectorProducerOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.sink_vector_producer_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collect patterns to sink vector producer operations forward in a block to 
          place them immediately before their first use.
@@ -61,9 +60,9 @@ def ApplySinkVectorProducerOpsPatternsOp
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyShuffleVectorFMAOpsPatternsOp
-    : Op<Transform_Dialect, "apply_patterns.x86.shuffle_vector_fma_ops",
-         [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.x86.shuffle_vector_fma_ops",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
     Collect patterns to shuffle FMAs with x86 operations as operands 
     such that FMAs are grouped with respect to odd/even packed index.
@@ -71,5 +70,6 @@ def ApplyShuffleVectorFMAOpsPatternsOp
 
   let assemblyFormat = "attr-dict";
 }
+
 
 #endif // X86_TRANSFORM_OPS
