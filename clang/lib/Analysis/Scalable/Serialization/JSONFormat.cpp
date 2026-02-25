@@ -80,10 +80,10 @@ constexpr const char *FailedToSerializeEntitySummaryMissingData =
 
 constexpr const char *FailedToDeserializeEntitySummaryMismatchedSummaryName =
     "failed to deserialize EntitySummary: EntitySummary data for summary '{0}' "
-    "reports mismatched summary '{1}' ";
+    "reports mismatched summary '{1}'";
 constexpr const char *FailedToSerializeEntitySummaryMismatchedSummaryName =
-    "JSONFormat: EntitySummary data for summary '{0}' reports mismatched "
-    "summary '{1}' ";
+    "JSONFormat - EntitySummary data for summary '{0}' reports mismatched "
+    "summary '{1}'";
 
 constexpr const char *InvalidBuildNamespaceKind =
     "invalid 'kind' BuildNamespaceKind value '{0}'";

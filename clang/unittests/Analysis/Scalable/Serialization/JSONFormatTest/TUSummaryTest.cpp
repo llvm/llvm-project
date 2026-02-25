@@ -101,20 +101,20 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
         "Format info for PairsArrayEntitySummary");
 
 // ============================================================================
-// NullDeserializingEntitySummaryForJSONFormatTest - For null data checks
+// NullEntitySummaryForJSONFormatTest - For null data checks
 // ============================================================================
 
-struct NullDeserializingEntitySummaryForJSONFormatTest final : EntitySummary {
+struct NullEntitySummaryForJSONFormatTest final : EntitySummary {
   SummaryName getSummaryName() const override {
-    return SummaryName("NullDeserializingEntitySummaryForJSONFormatTest");
+    return SummaryName("NullEntitySummaryForJSONFormatTest");
   }
 };
 
-struct NullDeserializingEntitySummaryForJSONFormatTestFormatInfo final
+struct NullEntitySummaryForJSONFormatTestFormatInfo final
     : JSONFormat::FormatInfo {
-  NullDeserializingEntitySummaryForJSONFormatTestFormatInfo()
+  NullEntitySummaryForJSONFormatTestFormatInfo()
       : JSONFormat::FormatInfo(
-            SummaryName("NullDeserializingEntitySummaryForJSONFormatTest"),
+            SummaryName("NullEntitySummaryForJSONFormatTest"),
             [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
                 -> json::Object { return json::Object{}; },
             [](const json::Object &, EntityIdTable &,
@@ -125,10 +125,10 @@ struct NullDeserializingEntitySummaryForJSONFormatTestFormatInfo final
 };
 
 static llvm::Registry<JSONFormat::FormatInfo>::Add<
-    NullDeserializingEntitySummaryForJSONFormatTestFormatInfo>
-    RegisterNullDeserializingEntitySummaryForJSONFormatTest(
-        "NullDeserializingEntitySummaryForJSONFormatTest",
-        "Format info for NullDeserializingEntitySummary");
+    NullEntitySummaryForJSONFormatTestFormatInfo>
+    RegisterNullEntitySummaryForJSONFormatTest(
+        "NullEntitySummaryForJSONFormatTest",
+        "Format info for NullEntitySummary");
 
 // ============================================================================
 // UnregisteredEntitySummaryForJSONFormatTest - For missing FormatInfo checks
@@ -144,35 +144,32 @@ struct UnregisteredEntitySummaryForJSONFormatTest final : EntitySummary {
 // MismatchedEntitySummaryForJSONFormatTest - For mismatched SummaryName checks
 // ============================================================================
 
-struct MismatchedDeserializingEntitySummaryForJSONFormatTest final
-    : EntitySummary {
+struct MismatchedEntitySummaryForJSONFormatTest final : EntitySummary {
   SummaryName getSummaryName() const override {
-    return SummaryName(
-        "MismatchedDeserializingEntitySummaryForJSONFormatTest_WrongName");
+    return SummaryName("MismatchedEntitySummaryForJSONFormatTest_WrongName");
   }
 };
 
-struct MismatchedDeserializingEntitySummaryForJSONFormatTestFormatInfo final
+struct MismatchedEntitySummaryForJSONFormatTestFormatInfo final
     : JSONFormat::FormatInfo {
-  MismatchedDeserializingEntitySummaryForJSONFormatTestFormatInfo()
+  MismatchedEntitySummaryForJSONFormatTestFormatInfo()
       : JSONFormat::FormatInfo(
-            SummaryName(
-                "MismatchedDeserializingEntitySummaryForJSONFormatTest"),
+            SummaryName("MismatchedEntitySummaryForJSONFormatTest"),
             [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
                 -> json::Object { return json::Object{}; },
             [](const json::Object &, EntityIdTable &,
                const JSONFormat::EntityIdConverter &)
                 -> llvm::Expected<std::unique_ptr<EntitySummary>> {
               return std::make_unique<
-                  MismatchedDeserializingEntitySummaryForJSONFormatTest>();
+                  MismatchedEntitySummaryForJSONFormatTest>();
             }) {}
 };
 
 static llvm::Registry<JSONFormat::FormatInfo>::Add<
-    MismatchedDeserializingEntitySummaryForJSONFormatTestFormatInfo>
-    RegisterMismatchedDeserializingEntitySummaryForJSONFormatTest(
-        "MismatchedDeserializingEntitySummaryForJSONFormatTest",
-        "Format info for MismatchedDeserializingEntitySummary");
+    MismatchedEntitySummaryForJSONFormatTestFormatInfo>
+    RegisterMismatchedEntitySummaryForJSONFormatTest(
+        "MismatchedEntitySummaryForJSONFormatTest",
+        "Format info for MismatchedEntitySummary");
 
 // ============================================================================
 // JSONFormatTUSummaryTest Test Fixture
@@ -1246,7 +1243,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
 // JSONFormat::entitySummaryFromJSON() Error Tests
 // ============================================================================
 
-TEST_F(JSONFormatTUSummaryTest, EntitySummaryNoFormatInfo) {
+TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryNoFormatInfo) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1256,7 +1253,7 @@ TEST_F(JSONFormatTUSummaryTest, EntitySummaryNoFormatInfo) {
     "linkage_table": [],
     "data": [
       {
-        "summary_name": "unknown_summary_type",
+        "summary_name": "UnregisteredEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0,
@@ -1277,8 +1274,8 @@ TEST_F(JSONFormatTUSummaryTest, EntitySummaryNoFormatInfo) {
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("reading EntitySummary from field 'entity_summary'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr(
-              "no FormatInfo registered for summary 'unknown_summary_type'"))));
+          HasSubstr("no FormatInfo registered for summary "
+                    "'UnregisteredEntitySummaryForJSONFormatTest'"))));
 }
 
 // ============================================================================
@@ -1655,7 +1652,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityIDNotUInt64) {
 }
 
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
-  // NullDeserializingEntitySummaryForJSONFormatTest's deserializer returns
+  // NullEntitySummaryForJSONFormatTest's deserializer returns
   // nullptr, triggering FailedToDeserializeEntitySummaryMissingData.
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
@@ -1666,7 +1663,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
     "linkage_table": [],
     "data": [
       {
-        "summary_name": "NullDeserializingEntitySummaryForJSONFormatTest",
+        "summary_name": "NullEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0,
@@ -1685,15 +1682,12 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("failed to deserialize EntitySummary"),
           HasSubstr("null EntitySummary data for summary "
-                    "'NullDeserializingEntitySummaryForJSONFormatTest'"))));
+                    "'NullEntitySummaryForJSONFormatTest'"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
-  // MismatchedDeserializingEntitySummaryForJSONFormatTest's deserializer
-  // returns an object whose getSummaryName() differs from the registered
-  // SummaryName, triggering
-  // FailedToDeserializeEntitySummaryMismatchedSummaryName.
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
       "kind": "compilation_unit",
@@ -1703,7 +1697,7 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
     "linkage_table": [],
     "data": [
       {
-        "summary_name": "MismatchedDeserializingEntitySummaryForJSONFormatTest",
+        "summary_name": "MismatchedEntitySummaryForJSONFormatTest",
         "summary_data": [
           {
             "entity_id": 0,
@@ -1722,9 +1716,11 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
-          HasSubstr("MismatchedDeserializingEntitySummaryForJSONFormatTest"),
-          HasSubstr("MismatchedDeserializingEntitySummaryForJSONFormatTest_"
-                    "WrongName"))));
+          HasSubstr("failed to deserialize EntitySummary"),
+          HasSubstr("EntitySummary data for summary "
+                    "'MismatchedEntitySummaryForJSONFormatTest' reports "
+                    "mismatched summary "
+                    "'MismatchedEntitySummaryForJSONFormatTest_WrongName'"))));
 }
 
 // ============================================================================
@@ -1740,13 +1736,13 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
-  SummaryName SN("NullDeserializingEntitySummaryForJSONFormatTest");
+  SummaryName SN("NullEntitySummaryForJSONFormatTest");
   getData(Summary)[SN][EI] = nullptr;
 
   EXPECT_DEATH(
       { (void)writeTUSummary(Summary, "output.json"); },
-      "null EntitySummary data for summary "
-      "'NullDeserializingEntitySummaryForJSONFormatTest'");
+      "JSONFormat - null EntitySummary data for summary "
+      "'NullEntitySummaryForJSONFormatTest'");
 }
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
@@ -1758,13 +1754,16 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
-  SummaryName SN("MismatchedDeserializingEntitySummaryForJSONFormatTest");
+  SummaryName SN("MismatchedEntitySummaryForJSONFormatTest");
   getData(Summary)[SN][EI] =
-      std::make_unique<PairsEntitySummaryForJSONFormatTest>();
+      std::make_unique<MismatchedEntitySummaryForJSONFormatTest>();
 
   EXPECT_DEATH(
       { (void)writeTUSummary(Summary, "output.json"); },
-      "MismatchedDeserializingEntitySummaryForJSONFormatTest");
+      "JSONFormat - EntitySummary data for summary "
+      "'MismatchedEntitySummaryForJSONFormatTest' reports "
+      "mismatched summary "
+      "'MismatchedEntitySummaryForJSONFormatTest_WrongName'");
 }
 
 // ============================================================================
