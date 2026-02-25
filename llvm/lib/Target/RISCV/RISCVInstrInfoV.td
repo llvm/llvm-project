@@ -1693,7 +1693,7 @@ def VFIRST_M : RVInstVUnaryRd<0b010000, 0b10001, OPMVV, (outs GPR:$rd),
                               "vfirst.m", "$rd, $vs2$vm">,
               SchedUnaryMC<"WriteVMFFSV", "ReadVMFFSV">;
 
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, RVVConstraint = NoConstraint
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0, VMConstraint = false
 
 def : MnemonicAlias<"vpopc.m", "vcpop.m">;
 
