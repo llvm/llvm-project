@@ -403,7 +403,6 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
 // Output text that may contain ANSI codes, word wrapped (wrapped at whitespace)
 // to the given stream. The indent level of the stream is counted towards the
 // output line length.
-// FIXME: This does not handle unicode correctly.
 // FIXME: If an ANSI code is applied to multiple words and those words are split
 //        across lines, the code will apply to the indentation as well as the
 //        text.
