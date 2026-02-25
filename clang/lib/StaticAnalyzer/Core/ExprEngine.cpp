@@ -1327,11 +1327,10 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
   if (Opts.MayInlineCXXAllocator)
     VisitCXXNewAllocatorCall(NE, Pred, Dst);
   else {
-    NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
     const LocationContext *LCtx = Pred->getLocationContext();
     PostImplicitCall PP(NE->getOperatorNew(), NE->getBeginLoc(), LCtx,
                         getCFGElementRef());
-    Bldr.generateNode(PP, Pred->getState(), Pred);
+    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
   }
   Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
