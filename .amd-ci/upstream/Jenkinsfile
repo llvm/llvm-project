@@ -17,8 +17,10 @@ Boolean dualFlangBuild = actualTarget != upstreamBranch && actualTarget != stagi
 String abortedResultStr = Result.ABORTED, failureResultStr = Result.FAILURE
 String notBuiltResultStr = Result.NOT_BUILT, successResultStr = Result.SUCCESS
 
-if (!(actualTarget in [stagingBranch, upstreamBranch]) &&
-    !targetIsRelBranch) {
+if (
+    !(actualTarget in [stagingBranch, upstreamBranch]) &&
+        !targetIsRelBranch
+) {
     echo 'Pipeline skipped for base branch ' + actualTarget
     return this
 }
@@ -26,17 +28,21 @@ if (!(actualTarget in [stagingBranch, upstreamBranch]) &&
 String actualHead = env.CHANGE_BRANCH ?: env.BRANCH_NAME
 Boolean isPrBranch = env.CHANGE_BRANCH != null
 
-if (!isPrBranch &&
-    !(actualTarget in [stagingBranch, upstreamBranch]) &&
-    !targetIsRelBranch) {
+if (
+    !isPrBranch &&
+        !(actualTarget in [stagingBranch, upstreamBranch]) &&
+        !targetIsRelBranch
+) {
     echo 'Pipeline skipped for non-PR branch ' + actualHead + ' of base ' + actualTarget
     return this
 }
 
 String manualCause = 'hudson.model.Cause$UserIdCause'
-if (isPrBranch &&
-    pullRequest.draft &&
-    !currentBuild.getBuildCauses(manualCause)) {
+if (
+    isPrBranch &&
+        pullRequest.draft &&
+        !currentBuild.getBuildCauses(manualCause)
+) {
     String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
     echo 'Draft PR aborted for cause ' + cause
     echo 'Pipeline only runs for draft PRs if manually triggered.'
@@ -51,9 +57,11 @@ String buildTypeStaging = 'STAGING' // groovylint-disable-line UnusedVariable
 // buildType is processed during branch creation:
 String buildType = (isPrBranch ? buildTypePresub : buildTypeRelease)
 
-if (!isPrBranch &&
+if (
+    !isPrBranch &&
     env.BRANCH_NAME != stagingBranch &&
-    !env.BRANCH_NAME.startsWith(releaseBranchPrefix)) {
+    !env.BRANCH_NAME.startsWith(releaseBranchPrefix)
+) {
     // Treat it as 'presub'.
     buildType = buildTypePresub
 }
@@ -68,20 +76,24 @@ Boolean postsub = (
     )
 )
 
-if (postsub && !(env.BRANCH_NAME in [stagingBranch, upstreamBranch]) &&
-    !(env.BRANCH_NAME.startsWith(releaseBranchPrefix))) {
+if (
+    postsub && !(env.BRANCH_NAME in [stagingBranch, upstreamBranch]) &&
+        !(env.BRANCH_NAME.startsWith(releaseBranchPrefix))
+) {
     echo 'Pipeline postsub not supported for branch ' + env.BRANCH_NAME
     return this
 }
 
 Boolean disableStaging = false, disableRelease = true
 Boolean timerTrigger = currentBuild.getBuildCauses('hudson.triggers.TimerTrigger$TimerTriggerCause')
-if (((disableStaging &&
-     actualTarget == stagingBranch) ||
+if (
+    ((disableStaging &&
+      actualTarget == stagingBranch) ||
      (disableRelease &&
       targetIsRelBranch)) &&
-    !currentBuild.getBuildCauses(manualCause) &&
-    !timerTrigger) {
+        !currentBuild.getBuildCauses(manualCause) &&
+        !timerTrigger
+) {
     String cause = currentBuild.getBuildCauses().shortDescription // groovylint-disable-line UnnecessaryGetter
     echo 'Pipeline for base ' + actualTarget + ' not built for cause ' + cause
     echo 'Pipeline only runs if manually or timer triggered.'
@@ -164,12 +176,12 @@ String compilerTar
 
 try {
     timeout(time: fullTimeoutH, unit: 'HOURS') {
-        node ('atl && apptainer') {
+        node('atl && apptainer') {
             skipDefaultCheckout()
             List cleanExcludes = [
                 [pattern: 'llvm-project/.git/**', type: 'EXCLUDE']
             ]
-            stage ('prepare') {
+            stage('prepare') {
                 String referenceRepo = env.JENKINS_REMOTE_GIT_CACHE ?: 'NoSuchReferenceRepo'
                 cleanWs(
                     deleteDirs: true,
@@ -221,7 +233,7 @@ try {
                     essDir = 'aocc-essentials'
                 }
                 theUrl = 'https://github.amd.com/cpu-compilers/llvm-project'
-                dir (llvmProj) {
+                dir(llvmProj) {
                     gitVars = checkout(
                         changelog: true,
                         scm: scmGit(
@@ -331,7 +343,7 @@ try {
                 )
                 return // From node
             }
-            stage ('run') {
+            stage('run') {
                 try {
                     withEnv([
                         'PATH=' + linuxBasePath,
@@ -367,7 +379,7 @@ try {
             return // From timeout
         }
         if (runDownstream && compilerTar) {
-            stage ('downstream-tasks') {
+            stage('downstream-tasks') {
                 Map allTasks = [
                     failFast: false,
                 ]
@@ -378,9 +390,9 @@ try {
                 for (suite in downstreamSuites) {
                     String suiteName = suite
                     allTasks[suiteName] = {
-                        stage ('downstream-suite-' + suiteName) {
-                            build(
-                                propagate: true,
+                        stage('downstream-suite-' + suiteName) {
+                            def result = build( // groovylint-disable-line NoDef,VariableTypeRequired
+                                propagate: false,
                                 wait: true,
                                 job: 'AOCC-Workloads/TestSuites/' + suiteName,
                                 parameters: [
@@ -393,6 +405,7 @@ try {
                                     string(name: gitCommitEnv, value: gitVars.GIT_COMMIT ?: '')
                                 ]
                             )
+                            handleBuildResult(result, true)
                         }
                     }
                 }
@@ -424,8 +437,10 @@ void setStatusToLastCompleted() {
     String previousResult = 'SUCCESS' // Keep as a literal string because of scoping.
     String nBStr = 'NOT_BUILT' // Keep as a literal string because of scoping.
 
-    while (previousBuild &&
-           (!(previousBuild.result) || previousBuild.result == nBStr)) {
+    while (
+        previousBuild &&
+            (!(previousBuild.result) || previousBuild.result == nBStr)
+    ) {
         previousBuild = previousBuild.previousBuild
     }
 
@@ -437,4 +452,57 @@ void setStatusToLastCompleted() {
 
     echo('Setting build result to ' + previousResult + ' from a previous build.')
     currentBuild.result = previousResult
+}
+
+/*
+ * Using build(propagate: false, ...) and the following function
+ * supplies better information back to GitHub Checks than if
+ * we leave it to 'propagate: true'.
+ * Code smell: this method is also in the main AOCC CommitCheck class.
+ */
+void handleBuildResult(Object result, Boolean blocking) {
+    // groovylint-disable DuplicateStringLiteral,UnnecessaryGetter
+    String squote = "'", space = ' ', dot = '.'
+    String closeAnchor = '</a>', closeChevron = '>', closeTag = closeChevron
+    String downUrl = (
+        "Downstream job <a href='" +
+            result.getAbsoluteUrl() +
+            'console' + squote + closeTag +
+            result.getFullDisplayName() + closeAnchor
+    )
+    String downMsg = 'Downstream job ' + result.getFullDisplayName()
+    String resultStr = result.result
+    switch (resultStr) {
+        case 'SUCCESS':
+            break
+        case 'UNSTABLE':
+            // Code smell: might want to downgrade currentBuild result here?
+            break
+        case 'ABORTED':
+            // No whitelisted way to throw FlowInterruptedException explicitly:
+            String theStat = 'aborted.'
+            catchError(
+                buildResult: resultStr,
+                stageResult: resultStr,
+                message: downMsg + space + theStat
+            ) {
+                error(downUrl + space + theStat)
+            }
+        case 'FAILURE':
+            String theStat = 'failed'
+            if (blocking) {
+                catchError(
+                    buildResult: resultStr,
+                    stageResult: resultStr,
+                    message: downMsg + space + theStat
+                ) {
+                    error(downUrl + space + theStat + dot)
+                }
+            } else {
+                echo(downUrl + space + theStat + ' but non-blocking was requested.')
+            }
+            break
+        default:
+            throw new RuntimeException('Unexpected downstream result: ' + resultStr)  // groovylint-disable-line LineLength,ThrowRuntimeException
+    }
 }
