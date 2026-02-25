@@ -78,18 +78,17 @@ static CompilerType GetLLDBNSPairType(TargetSP target_sp) {
 
   if (!compiler_type) {
     compiler_type = scratch_ts_sp->CreateRecordType(
-        nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-        g_lldb_autogen_nspair, llvm::to_underlying(clang::TagTypeKind::Struct),
-        lldb::eLanguageTypeC);
+        nullptr, OptionalClangModuleID(), g_lldb_autogen_nspair,
+        llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
 
     if (compiler_type) {
       TypeSystemClang::StartTagDeclarationDefinition(compiler_type);
       CompilerType id_compiler_type =
           scratch_ts_sp->GetBasicType(eBasicTypeObjCID);
-      TypeSystemClang::AddFieldToRecordType(
-          compiler_type, "key", id_compiler_type, lldb::eAccessPublic, 0);
-      TypeSystemClang::AddFieldToRecordType(
-          compiler_type, "value", id_compiler_type, lldb::eAccessPublic, 0);
+      TypeSystemClang::AddFieldToRecordType(compiler_type, "key",
+                                            id_compiler_type, 0);
+      TypeSystemClang::AddFieldToRecordType(compiler_type, "value",
+                                            id_compiler_type, 0);
       TypeSystemClang::CompleteTagDeclarationDefinition(compiler_type);
     }
   }

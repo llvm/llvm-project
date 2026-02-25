@@ -202,7 +202,6 @@ protected:
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &member_function_dies,
       std::vector<lldb_private::plugin::dwarf::DWARFDIE> &contained_type_dies,
       DelayedPropertyList &delayed_properties,
-      const lldb::AccessType default_accessibility,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 
   void ParseChildParameters(
@@ -412,7 +411,6 @@ private:
   ParseSingleMember(const lldb_private::plugin::dwarf::DWARFDIE &die,
                     const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
                     const lldb_private::CompilerType &class_clang_type,
-                    lldb::AccessType default_accessibility,
                     lldb_private::ClangASTImporter::LayoutInfo &layout_info,
                     FieldInfo &last_field_info);
 
@@ -512,8 +510,6 @@ private:
   /// \param class_clang_type The C++/Objective-C class representing parent_die.
   /// For an Objective-C class this method sets the super class on success. For
   /// a C++ class this will *not* add the result as a base class.
-  /// \param default_accessibility The default accessibility that is given to
-  /// base classes if they don't have an explicit accessibility set.
   /// \param module_sp The current Module.
   /// \param base_classes The list of C++ base classes that will be appended
   /// with the parsed base class on success.
@@ -523,7 +519,6 @@ private:
       const lldb_private::plugin::dwarf::DWARFDIE &die,
       const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
       const lldb_private::CompilerType class_clang_type,
-      const lldb::AccessType default_accessibility,
       const lldb::ModuleSP &module_sp,
       std::vector<std::unique_ptr<clang::CXXBaseSpecifier>> &base_classes,
       lldb_private::ClangASTImporter::LayoutInfo &layout_info);
@@ -533,15 +528,12 @@ private:
   /// \param die DW_TAG_variant_part DIE to parse
   /// \param parent_die The parent DW_TAG_structure_type to parse
   /// \param class_clang_type The Rust struct representing parent_die.
-  /// \param default_accesibility The default accessibility that is given to
-  ///  base classes if they don't have an explicit accessibility set
   /// \param layout_info The layout information that will be updated for
   //   base classes with the base offset
   void
   ParseRustVariantPart(lldb_private::plugin::dwarf::DWARFDIE &die,
                        const lldb_private::plugin::dwarf::DWARFDIE &parent_die,
                        const lldb_private::CompilerType &class_clang_type,
-                       const lldb::AccessType default_accesibility,
                        lldb_private::ClangASTImporter::LayoutInfo &layout_info);
 };
 

@@ -126,6 +126,7 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
 
 void MCAsmInfo::initializeAtSpecifiers(ArrayRef<AtSpecifier> Descs) {
   assert(AtSpecifierToName.empty() && "cannot initialize twice");
+  UseAtForSpecifier = true;
   for (auto Desc : Descs) {
     [[maybe_unused]] auto It =
         AtSpecifierToName.try_emplace(Desc.Kind, Desc.Name);

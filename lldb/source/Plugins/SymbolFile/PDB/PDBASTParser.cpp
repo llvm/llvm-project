@@ -227,34 +227,6 @@ static AccessType TranslateMemberAccess(PDB_MemberAccess access) {
   return eAccessNone;
 }
 
-static AccessType GetDefaultAccessibilityForUdtKind(PDB_UdtType udt_kind) {
-  switch (udt_kind) {
-  case PDB_UdtType::Struct:
-  case PDB_UdtType::Union:
-    return eAccessPublic;
-  case PDB_UdtType::Class:
-  case PDB_UdtType::Interface:
-    return eAccessPrivate;
-  }
-  llvm_unreachable("unsupported PDB UDT type");
-}
-
-static AccessType GetAccessibilityForUdt(const PDBSymbolTypeUDT &udt) {
-  AccessType access = TranslateMemberAccess(udt.getAccess());
-  if (access != lldb::eAccessNone || !udt.isNested())
-    return access;
-
-  auto parent = udt.getClassParent();
-  if (!parent)
-    return lldb::eAccessNone;
-
-  auto parent_udt = llvm::dyn_cast<PDBSymbolTypeUDT>(parent.get());
-  if (!parent_udt)
-    return lldb::eAccessNone;
-
-  return GetDefaultAccessibilityForUdtKind(parent_udt->getUdtKind());
-}
-
 static clang::MSInheritanceAttr::Spelling
 GetMSInheritance(const PDBSymbolTypeUDT &udt) {
   int base_count = 0;
@@ -410,8 +382,6 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
     CompilerType clang_type = m_ast.GetTypeForIdentifier<clang::CXXRecordDecl>(
         m_ast.getASTContext(), name, decl_context);
     if (!clang_type.IsValid()) {
-      auto access = GetAccessibilityForUdt(*udt);
-
       auto tag_type_kind = TranslateUdtKind(udt->getUdtKind());
 
       ClangASTMetadata metadata;
@@ -419,7 +389,7 @@ lldb::TypeSP PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type) {
       metadata.SetIsDynamicCXXType(false);
 
       clang_type = m_ast.CreateRecordType(
-          decl_context, OptionalClangModuleID(), access, name, tag_type_kind,
+          decl_context, OptionalClangModuleID(), name, tag_type_kind,
           lldb::eLanguageTypeC_plus_plus, metadata);
       assert(clang_type.IsValid());
 
@@ -1264,8 +1234,6 @@ void PDBASTParser::AddRecordMembers(
         TypeSystemClang::CompleteTagDeclarationDefinition(member_comp_type);
     }
 
-    auto access = TranslateMemberAccess(member->getAccess());
-
     switch (member->getDataKind()) {
     case PDB_DataKind::Member: {
       auto location_type = member->getLocationType();
@@ -1275,7 +1243,7 @@ void PDBASTParser::AddRecordMembers(
         bit_size *= 8;
 
       auto decl = TypeSystemClang::AddFieldToRecordType(
-          record_type, member_name.c_str(), member_comp_type, access, bit_size);
+          record_type, member_name.c_str(), member_comp_type, bit_size);
       if (!decl)
         continue;
 
@@ -1291,7 +1259,7 @@ void PDBASTParser::AddRecordMembers(
     }
     case PDB_DataKind::StaticMember: {
       auto decl = TypeSystemClang::AddVariableToRecordType(
-          record_type, member_name.c_str(), member_comp_type, access);
+          record_type, member_name.c_str(), member_comp_type);
       if (!decl)
         continue;
 
@@ -1441,15 +1409,11 @@ PDBASTParser::AddRecordMethod(lldb_private::SymbolFile &symbol_file,
       TypeSystemClang::CompleteTagDeclarationDefinition(method_comp_type);
   }
 
-  AccessType access = TranslateMemberAccess(method.getAccess());
-  if (access == eAccessNone)
-    access = eAccessPublic;
-
   // TODO: get mangled name for the method.
   return m_ast.AddMethodToCXXRecordType(
       record_type.GetOpaqueQualType(), name.c_str(),
-      /*asm_label=*/{}, method_comp_type, access, method.isVirtual(),
-      method.isStatic(), method.hasInlineAttribute(),
+      /*asm_label=*/{}, method_comp_type, method.isVirtual(), method.isStatic(),
+      method.hasInlineAttribute(),
       /*is_explicit*/ false, // FIXME: Need this field in CodeView.
       /*is_attr_used*/ false,
       /*is_artificial*/ method.isCompilerGenerated());

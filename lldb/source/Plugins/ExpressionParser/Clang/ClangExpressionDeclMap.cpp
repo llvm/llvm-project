@@ -2011,8 +2011,8 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
 
     CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
         copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", /*asm_label=*/{},
-        method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
-        is_explicit, is_attr_used, is_artificial);
+        method_type, is_virtual, is_static, is_inline, is_explicit,
+        is_attr_used, is_artificial);
 
     LLDB_LOG(log,
              "  CEDM::AddThisType Added function $__lldb_expr "

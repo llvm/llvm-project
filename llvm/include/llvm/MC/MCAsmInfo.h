@@ -385,7 +385,7 @@ protected:
   bool DwarfRegNumForCFI = false;
 
   /// True if target uses @ (expr@specifier) for relocation specifiers.
-  bool UseAtForSpecifier = true;
+  bool UseAtForSpecifier = false;
 
   /// (ARM-specific) Uses parens for relocation specifier in data
   /// directives, e.g. .word foo(got).

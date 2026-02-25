@@ -98,11 +98,10 @@ ARMELFMCAsmInfo::ARMELFMCAsmInfo(const Triple &TheTriple) {
     break;
   }
 
+  initializeAtSpecifiers(atSpecifiers);
   // foo(plt) instead of foo@plt
   UseAtForSpecifier = false;
   UseParensForSpecifier = true;
-
-  initializeAtSpecifiers(atSpecifiers);
 }
 
 void ARMELFMCAsmInfo::setUseIntegratedAssembler(bool Value) {
@@ -146,15 +145,14 @@ ARMCOFFMCAsmInfoGNU::ARMCOFFMCAsmInfoGNU() {
   SupportsDebugInformation = true;
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
-  UseAtForSpecifier = false;
-  UseParensForSpecifier = true;
-
   DwarfRegNumForCFI = false;
 
   // Conditional Thumb 4-byte instructions can have an implicit IT.
   MaxInstLength = 6;
 
   initializeAtSpecifiers(atSpecifiers);
+  UseAtForSpecifier = false;
+  UseParensForSpecifier = true;
 }
 
 void ARM::printSpecifierExpr(const MCAsmInfo &MAI, raw_ostream &OS,
