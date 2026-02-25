@@ -3,80 +3,56 @@
 
 ; InstCombine added retattr dereferenceable(bytes) to a "call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()".
 
-define protected amdgpu_kernel void @foo(ptr addrspace(1) noundef writeonly captures(none) %d_c.coerce) local_unnamed_addr {
-; DEREF-LABEL: define protected amdgpu_kernel void @foo(
-; DEREF-SAME: ptr addrspace(1) noundef writeonly captures(none) [[D_C_COERCE:%.*]]) local_unnamed_addr {
+define ptr addrspace(4) @foo() {
+; DEREF-LABEL: define ptr addrspace(4) @foo() {
 ; DEREF-NEXT:  [[ENTRY:.*:]]
 ; DEREF-NEXT:    [[TMP:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; DEREF-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP]], i64 12
-; DEREF-NEXT:    [[DOTIN_I_I_I:%.*]] = load i16, ptr addrspace(4) [[TMP0]], align 2, !tbaa [[SHORT_TBAA6:![0-9]+]]
-; DEREF-NEXT:    store i16 [[DOTIN_I_I_I]], ptr addrspace(1) [[D_C_COERCE]], align 2
-; DEREF-NEXT:    ret void
+; DEREF-NEXT:    ret ptr addrspace(4) [[TMP0]]
 ;
 entry:
   %tmp = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %0 = getelementptr inbounds nuw i8, ptr addrspace(4) %tmp, i64 12
-  %.in.i.i.i = load i16, ptr addrspace(4) %0, align 2, !tbaa !12
-  %addr = getelementptr inbounds i16, ptr addrspace(1) %d_c.coerce
-  store i16 %.in.i.i.i, ptr addrspace(1) %addr, align 2
-  ret void
+  ret ptr addrspace(4) %0
 }
 
-define protected amdgpu_kernel void @bar(ptr addrspace(1) noundef writeonly captures(none) %d_c.coerce) local_unnamed_addr {
-; DEREF-LABEL: define protected amdgpu_kernel void @bar(
-; DEREF-SAME: ptr addrspace(1) noundef writeonly captures(none) [[D_C_COERCE:%.*]]) local_unnamed_addr {
+define ptr addrspace(4) @bar() {
+; DEREF-LABEL: define ptr addrspace(4) @bar() {
 ; DEREF-NEXT:  [[ENTRY:.*:]]
 ; DEREF-NEXT:    [[TMP:%.*]] = tail call dereferenceable(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; DEREF-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP]], i64 12
-; DEREF-NEXT:    [[DOTIN_I_I_I:%.*]] = load i16, ptr addrspace(4) [[TMP0]], align 2, !tbaa [[SHORT_TBAA6]]
-; DEREF-NEXT:    store i16 [[DOTIN_I_I_I]], ptr addrspace(1) [[D_C_COERCE]], align 2
-; DEREF-NEXT:    ret void
+; DEREF-NEXT:    ret ptr addrspace(4) [[TMP0]]
 ;
 entry:
   %tmp = tail call dereferenceable(128) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %0 = getelementptr inbounds nuw i8, ptr addrspace(4) %tmp, i64 12
-  %.in.i.i.i = load i16, ptr addrspace(4) %0, align 2, !tbaa !12
-  %addr = getelementptr inbounds i16, ptr addrspace(1) %d_c.coerce
-  store i16 %.in.i.i.i, ptr addrspace(1) %addr, align 2
-  ret void
+  ret ptr addrspace(4) %0
 }
 
-define protected amdgpu_kernel void @baz(ptr addrspace(1) noundef writeonly captures(none) %d_c.coerce) local_unnamed_addr {
-; DEREF-LABEL: define protected amdgpu_kernel void @baz(
-; DEREF-SAME: ptr addrspace(1) noundef writeonly captures(none) [[D_C_COERCE:%.*]]) local_unnamed_addr {
+define ptr addrspace(4) @baz() {
+; DEREF-LABEL: define ptr addrspace(4) @baz() {
 ; DEREF-NEXT:  [[ENTRY:.*:]]
 ; DEREF-NEXT:    [[TMP:%.*]] = tail call dereferenceable(512) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; DEREF-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP]], i64 12
-; DEREF-NEXT:    [[DOTIN_I_I_I:%.*]] = load i16, ptr addrspace(4) [[TMP0]], align 2, !tbaa [[SHORT_TBAA6]]
-; DEREF-NEXT:    store i16 [[DOTIN_I_I_I]], ptr addrspace(1) [[D_C_COERCE]], align 2
-; DEREF-NEXT:    ret void
+; DEREF-NEXT:    ret ptr addrspace(4) [[TMP0]]
 ;
 entry:
   %tmp = tail call dereferenceable(512) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %0 = getelementptr inbounds nuw i8, ptr addrspace(4) %tmp, i64 12
-  %.in.i.i.i = load i16, ptr addrspace(4) %0, align 2, !tbaa !12
-  %addr = getelementptr inbounds i16, ptr addrspace(1) %d_c.coerce
-  store i16 %.in.i.i.i, ptr addrspace(1) %addr, align 2
-  ret void
+  ret ptr addrspace(4) %0
 }
 
-define protected amdgpu_kernel void @derefornull(ptr addrspace(1) noundef writeonly captures(none) %d_c.coerce) local_unnamed_addr {
-; DEREF-LABEL: define protected amdgpu_kernel void @derefornull(
-; DEREF-SAME: ptr addrspace(1) noundef writeonly captures(none) [[D_C_COERCE:%.*]]) local_unnamed_addr {
+define ptr addrspace(4) @derefornull() {
+; DEREF-LABEL: define ptr addrspace(4) @derefornull() {
 ; DEREF-NEXT:  [[ENTRY:.*:]]
 ; DEREF-NEXT:    [[TMP:%.*]] = tail call dereferenceable_or_null(256) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; DEREF-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[TMP]], i64 12
-; DEREF-NEXT:    [[DOTIN_I_I_I:%.*]] = load i16, ptr addrspace(4) [[TMP0]], align 2, !tbaa [[SHORT_TBAA6]]
-; DEREF-NEXT:    store i16 [[DOTIN_I_I_I]], ptr addrspace(1) [[D_C_COERCE]], align 2
-; DEREF-NEXT:    ret void
+; DEREF-NEXT:    ret ptr addrspace(4) [[TMP0]]
 ;
 entry:
   %tmp = tail call dereferenceable_or_null(64) ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %0 = getelementptr inbounds nuw i8, ptr addrspace(4) %tmp, i64 12
-  %.in.i.i.i = load i16, ptr addrspace(4) %0, align 2, !tbaa !12
-  %addr = getelementptr inbounds i16, ptr addrspace(1) %d_c.coerce
-  store i16 %.in.i.i.i, ptr addrspace(1) %addr, align 2
-  ret void
+  ret ptr addrspace(4) %0
 }
 
 ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
@@ -85,27 +61,7 @@ declare noundef align 4 ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
 attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 !llvm.module.flags = !{!0}
-!llvm.errno.tbaa = !{!7}
 !opencl.ocl.version = !{!11}
 
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 600}
-!7 = !{!8, !8, i64 0}
-!8 = !{!"int", !9, i64 0}
-!9 = !{!"omnipotent char", !10, i64 0}
-!10 = !{!"Simple C++ TBAA"}
 !11 = !{i32 2, i32 0}
-!12 = !{!13, !13, i64 0}
-!13 = !{!"short", !14, i64 0}
-!14 = !{!"omnipotent char", !15, i64 0}
-!15 = !{!"Simple C/C++ TBAA"}
-!16 = distinct !{!16, !17}
-!17 = !{!"llvm.loop.mustprogress"}
-!18 = !{!19, !19, i64 0}
-!19 = !{!"double", !9, i64 0}
-!20 = distinct !{!20, !17}
-;.
-; DEREF: [[SHORT_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
-; DEREF: [[META7]] = !{!"short", [[META8:![0-9]+]], i64 0}
-; DEREF: [[META8]] = !{!"omnipotent char", [[META9:![0-9]+]], i64 0}
-; DEREF: [[META9]] = !{!"Simple C/C++ TBAA"}
-;.
