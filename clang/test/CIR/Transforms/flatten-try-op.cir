@@ -65,17 +65,17 @@ cir.func @test_try_catch_all() {
 // CHECK:       ^[[NORMAL]]:
 // CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
 //
-// Catch-all handler block: receives eh_token, does begin_catch/end_catch.
-// CHECK:       ^[[CATCH_ALL:bb[0-9]+]](%[[ET:.*]]: !cir.eh_token):
-// CHECK:         %[[CT:.*]], %[[EXN:.*]] = cir.begin_catch %[[ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
-// CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
-// CHECK:         cir.br ^[[CONTINUE]]
-//
 // Catch dispatch: dispatches to catch-all.
 // CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
 // CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
-// CHECK:           catch_all : ^[[CATCH_ALL]]
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
 // CHECK:         ]
+//
+// Catch-all handler block: receives eh_token, does begin_catch/end_catch.
+// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]], %[[EXN:.*]] = cir.begin_catch %[[ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
+// CHECK:         cir.br ^[[CONTINUE]]
 //
 // Unwind block.
 // CHECK:       ^[[UNWIND]]:
@@ -121,22 +121,22 @@ cir.func @test_try_catch_typed_with_unwind() {
 // CHECK:       ^[[NORMAL]]:
 // CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
 //
+// Catch dispatch: dispatches to typed handler or unwind.
+// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^[[CATCH_TYPED:bb[0-9]+]],
+// CHECK:           unwind : ^[[UNWIND_HANDLER:bb[0-9]+]]
+// CHECK:         ]
+//
 // Typed catch handler: receives eh_token.
-// CHECK:       ^[[CATCH_TYPED:bb[0-9]+]](%[[CT_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[CATCH_TYPED]](%[[CT_ET:.*]]: !cir.eh_token):
 // CHECK:         %[[CT:.*]], %[[EXN:.*]] = cir.begin_catch %[[CT_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>)
 // CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
 // CHECK:         cir.br ^[[CONTINUE]]
 //
 // Unwind handler: continues unwinding.
-// CHECK:       ^[[UNWIND_HANDLER:bb[0-9]+]](%[[UW_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[UNWIND_HANDLER]](%[[UW_ET:.*]]: !cir.eh_token):
 // CHECK:         cir.resume %[[UW_ET]] : !cir.eh_token
-//
-// Catch dispatch: dispatches to typed handler or unwind.
-// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
-// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
-// CHECK:           catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^[[CATCH_TYPED]],
-// CHECK:           unwind : ^[[UNWIND_HANDLER]]
-// CHECK:         ]
 //
 // Unwind block (from try_call).
 // CHECK:       ^[[UNWIND]]:
@@ -217,17 +217,17 @@ cir.func @test_try_catch_with_cleanup() {
 // CHECK:       ^[[TRY_EXIT]]:
 // CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
 //
-// Catch-all handler.
-// CHECK:       ^[[CATCH_ALL:bb[0-9]+]](%[[CA_ET:.*]]: !cir.eh_token):
-// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[CA_ET]]
-// CHECK:         cir.end_catch
-// CHECK:         cir.br ^[[CONTINUE]]
-//
 // Catch dispatch block.
 // CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
 // CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
-// CHECK:           catch_all : ^[[CATCH_ALL]]
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
 // CHECK:         ]
+//
+// Catch-all handler.
+// CHECK:       ^[[CATCH_ALL]](%[[CA_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[CA_ET]]
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
 //
 // Unwind block (from try_call of ctor).
 // CHECK:       ^{{bb[0-9]+}}:
@@ -288,23 +288,23 @@ cir.func @test_try_in_cleanup() {
 // CHECK:       ^[[NORMAL]]:
 // CHECK:         cir.br ^[[TRY_CONT:bb[0-9]+]]
 //
+// Catch dispatch.
+// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^[[CATCH:bb[0-9]+]],
+// CHECK:           unwind : ^[[UNWIND_HANDLER:bb[0-9]+]]
+// CHECK:         ]
+//
 // Typed catch handler.
-// CHECK:       ^[[CATCH:bb[0-9]+]](%[[CATCH_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[CATCH]](%[[CATCH_ET:.*]]: !cir.eh_token):
 // CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[CATCH_ET]]
 // CHECK:         cir.end_catch
 // CHECK:         cir.br ^[[TRY_CONT]]
 //
 // Unwind handler: resume is chained to the outer EH cleanup by the
 // outer cleanup scope flattening.
-// CHECK:       ^[[UNWIND_HANDLER:bb[0-9]+]](%[[UW_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[UNWIND_HANDLER]](%[[UW_ET:.*]]: !cir.eh_token):
 // CHECK:         cir.br ^[[OUTER_EH_CLEANUP:bb[0-9]+]](%[[UW_ET]] : !cir.eh_token)
-//
-// Catch dispatch.
-// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
-// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
-// CHECK:           catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^[[CATCH]],
-// CHECK:           unwind : ^[[UNWIND_HANDLER]]
-// CHECK:         ]
 //
 // Try's unwind block.
 // CHECK:       ^[[TRY_UNWIND]]:
@@ -350,17 +350,27 @@ cir.func @test_try_catch_all_no_throwing_calls() {
 // CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
 // CHECK:       ^[[SCOPE]]:
 // CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// Try body: no throwing calls, so no try_call.
 // CHECK:       ^[[TRY_BODY]]:
-// CHECK:         %{{.*}} = cir.const #cir.int<42>
+// CHECK:         %{{.*}} = cir.const #cir.int<42> : !s32i
 // CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
-// CHECK:       ^[[CATCH_ALL:bb[0-9]+]](%{{.*}}: !cir.eh_token):
-// CHECK:         cir.begin_catch
-// CHECK:         cir.end_catch
+//
+// Catch dispatch (unreachable since there are no throwing calls).
+// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// Catch-all handler (unreachable).
+// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]], %{{.*}} = cir.begin_catch %[[ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
 // CHECK:         cir.br ^[[CONTINUE]]
-// CHECK:       ^{{bb[0-9]+}}(%{{.*}}: !cir.eh_token):
-// CHECK:         cir.eh.dispatch
+//
 // CHECK:       ^[[CONTINUE]]:
-// CHECK:         cir.br ^{{.*}}
+// CHECK:         cir.br ^[[SCOPE_EXIT:bb[0-9]+]]
+// CHECK:       ^[[SCOPE_EXIT]]:
 // CHECK:         cir.return
 
 // Test: try-catch with multiple typed handlers and catch-all.
@@ -394,24 +404,24 @@ cir.func @test_try_multiple_handlers() {
 // CHECK:       ^[[NORMAL]]:
 // CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
 //
+// Dispatch: routes to int handler or catch-all.
+// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[CATCH_INT:bb[0-9]+]],
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
 // Int catch handler.
-// CHECK:       ^[[CATCH_INT:bb[0-9]+]](%[[INT_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[CATCH_INT]](%[[INT_ET:.*]]: !cir.eh_token):
 // CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[INT_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
 // CHECK:         cir.end_catch
 // CHECK:         cir.br ^[[CONTINUE]]
 //
 // Catch-all handler.
-// CHECK:       ^[[CATCH_ALL:bb[0-9]+]](%[[ALL_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[CATCH_ALL]](%[[ALL_ET:.*]]: !cir.eh_token):
 // CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[ALL_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
 // CHECK:         cir.end_catch
 // CHECK:         cir.br ^[[CONTINUE]]
-//
-// Dispatch: routes to int handler or catch-all.
-// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
-// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
-// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[CATCH_INT]],
-// CHECK:           catch_all : ^[[CATCH_ALL]]
-// CHECK:         ]
 //
 // Unwind block.
 // CHECK:       ^[[UNWIND]]:
@@ -465,22 +475,22 @@ cir.func @test_nested_try() {
 // CHECK:       ^[[INNER_NORMAL]]:
 // CHECK:         cir.br ^[[INNER_CONTINUE:bb[0-9]+]]
 //
+// Inner catch dispatch.
+// CHECK:       ^[[INNER_DISPATCH:bb[0-9]+]](%[[ID_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[ID_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[INNER_CATCH:bb[0-9]+]],
+// CHECK:           unwind : ^[[INNER_UW_HANDLER:bb[0-9]+]]
+// CHECK:         ]
+//
 // Inner typed catch handler.
-// CHECK:       ^[[INNER_CATCH:bb[0-9]+]](%[[IC_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[INNER_CATCH]](%[[IC_ET:.*]]: !cir.eh_token):
 // CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[IC_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
 // CHECK:         cir.end_catch
 // CHECK:         cir.br ^[[INNER_CONTINUE]]
 //
 // Inner unwind handler: resume was chained to the outer catch dispatch.
-// CHECK:       ^[[INNER_UW_HANDLER:bb[0-9]+]](%[[IUW_ET:.*]]: !cir.eh_token):
+// CHECK:       ^[[INNER_UW_HANDLER]](%[[IUW_ET:.*]]: !cir.eh_token):
 // CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]](%[[IUW_ET]] : !cir.eh_token)
-//
-// Inner catch dispatch.
-// CHECK:       ^[[INNER_DISPATCH:bb[0-9]+]](%[[ID_ET:.*]]: !cir.eh_token):
-// CHECK:         cir.eh.dispatch %[[ID_ET]] : !cir.eh_token [
-// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[INNER_CATCH]],
-// CHECK:           unwind : ^[[INNER_UW_HANDLER]]
-// CHECK:         ]
 //
 // Inner unwind block (from try_call).
 // CHECK:       ^[[INNER_UNWIND]]:
@@ -491,17 +501,17 @@ cir.func @test_nested_try() {
 // CHECK:       ^[[INNER_CONTINUE]]:
 // CHECK:         cir.br ^[[OUTER_CONTINUE:bb[0-9]+]]
 //
-// Outer catch-all handler.
-// CHECK:       ^[[OUTER_CATCH:bb[0-9]+]](%[[OC_ET:.*]]: !cir.eh_token):
-// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[OC_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
-// CHECK:         cir.end_catch
-// CHECK:         cir.br ^[[OUTER_CONTINUE]]
-//
 // Outer catch dispatch.
 // CHECK:       ^[[OUTER_DISPATCH]](%[[OD_ET:.*]]: !cir.eh_token):
 // CHECK:         cir.eh.dispatch %[[OD_ET]] : !cir.eh_token [
-// CHECK:           catch_all : ^[[OUTER_CATCH]]
+// CHECK:           catch_all : ^[[OUTER_CATCH:bb[0-9]+]]
 // CHECK:         ]
+//
+// Outer catch-all handler.
+// CHECK:       ^[[OUTER_CATCH]](%[[OC_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[OC_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[OUTER_CONTINUE]]
 //
 // CHECK:       ^[[OUTER_CONTINUE]]:
 // CHECK:         cir.br ^{{.*}}
