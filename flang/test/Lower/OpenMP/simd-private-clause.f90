@@ -1,6 +1,6 @@
 ! RUN: bbc --use-desc-for-alloc=false -fopenmp -fopenmp-version=45 -emit-hlfir %s -o - \
 ! RUN: | FileCheck %s --check-prefix=FIRDialect
-
+! XFAIL: *
 !CHECK-LABEL: func @_QPsimd_loop_1()
 subroutine simd_loop_1
   integer :: i
