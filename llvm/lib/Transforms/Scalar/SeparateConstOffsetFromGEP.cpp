@@ -779,8 +779,7 @@ static bool allowsPreservingNUW(const User *U) {
 // This helper checks first if the index is known non-negative. If it is not,
 // it checks whether the GEP is directly based on a global or an alloca with
 // zero offset, in which case inbounds is sufficient to prove non-negativity.
-static bool isGEPNonNegative(const GetElementPtrInst *GEP,
-                             const Value *Idx,
+static bool isGEPNonNegative(const GetElementPtrInst *GEP, const Value *Idx,
                              const DataLayout &DL) {
   if (isKnownNonNegative(Idx, DL))
     return true;
