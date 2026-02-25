@@ -624,7 +624,7 @@ public:
   }
 
   /// Return true only if vscale must be a power of two.
-  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
+  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return true; }
 
   /// Return true if Flow Control is an expensive operation that should be
   /// avoided.

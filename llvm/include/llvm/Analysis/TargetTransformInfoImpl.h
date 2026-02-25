@@ -644,7 +644,7 @@ public:
   virtual std::optional<unsigned> getVScaleForTuning() const {
     return std::nullopt;
   }
-  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return false; }
+  virtual bool isVScaleKnownToBeAPowerOfTwo() const { return true; }
 
   virtual bool
   shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
