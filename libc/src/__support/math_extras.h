@@ -171,6 +171,45 @@ count_zeros(T value) {
   return cpp::popcount<T>(static_cast<T>(~value));
 }
 
+// Returns the value rounded down to the nearest multiple of alignment.
+// Alignment must be a power of two.
+template <typename T>
+LIBC_INLINE constexpr T align_down(T value, size_t alignment) {
+#if __has_builtin(__builtin_align_down)
+  return __builtin_align_down(value, alignment);
+#else
+  using A = cpp::conditional_t<cpp::is_pointer_v<T>, uintptr_t, T>;
+  return cpp::bit_cast<T>(
+      static_cast<A>(cpp::bit_cast<A>(value) & ~(A(alignment) - 1)));
+#endif
+}
+
+// Returns the value rounded up to the nearest multiple of alignment.
+// Alignment must be a power of two.
+template <typename T>
+LIBC_INLINE constexpr T align_up(T value, size_t alignment) {
+#if __has_builtin(__builtin_align_up)
+  return __builtin_align_up(value, alignment);
+#else
+  using A = cpp::conditional_t<cpp::is_pointer_v<T>, uintptr_t, T>;
+  return cpp::bit_cast<T>(static_cast<A>(
+      (cpp::bit_cast<A>(value) + A(alignment) - 1) & ~(A(alignment) - 1)));
+#endif
+}
+
+// Returns the value rounded down to the nearest multiple of alignment.
+// Works for any positive alignment value, not just powers of two.
+template <typename T>
+LIBC_INLINE constexpr T align_to_down(T value, T alignment) {
+  return (value / alignment) * alignment;
+}
+
+// Returns the value rounded up to the nearest multiple of alignment.
+// Works for any positive alignment value, not just powers of two.
+template <typename T> LIBC_INLINE constexpr T align_to(T value, T alignment) {
+  return align_to_down(value + alignment - 1, alignment);
+}
+
 } // namespace LIBC_NAMESPACE_DECL
 
 #endif // LLVM_LIBC_SRC___SUPPORT_MATH_EXTRAS_H

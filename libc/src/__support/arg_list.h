@@ -12,6 +12,7 @@
 #include "hdr/stdint_proxy.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
 #include <stdarg.h>
@@ -19,11 +20,6 @@
 
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
-
-template <typename V, typename A>
-LIBC_INLINE constexpr V align_up(V val, A align) {
-  return ((val + V(align) - 1) / V(align)) * V(align);
-}
 
 class ArgList {
   va_list vlist;

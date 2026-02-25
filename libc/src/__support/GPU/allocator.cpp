@@ -23,6 +23,7 @@
 #include "src/__support/GPU/fixedstack.h"
 #include "src/__support/GPU/utils.h"
 #include "src/__support/RPC/rpc_client.h"
+#include "src/__support/math_extras.h"
 #include "src/__support/threads/sleep.h"
 #include "src/string/memory_utils/inline_memcpy.h"
 
@@ -122,13 +123,6 @@ static inline constexpr uint32_t get_chunk_id(uint32_t x) {
   if (x < MIN_SIZE << 2)
     return cpp::popcount(y);
   return cpp::popcount(y) + 3 * (BITS_IN_WORD - cpp::countl_zero(y)) - 7;
-}
-
-// Rounds to the nearest power of two.
-template <uint32_t N, typename T>
-static inline constexpr T round_up(const T x) {
-  static_assert(((N - 1) & N) == 0, "N must be a power of two");
-  return (x + N) & ~(N - 1);
 }
 
 // Perform a lane parallel memset on a uint32_t pointer.
@@ -235,7 +229,7 @@ struct Slab {
 
   // Get the number of bytes needed to contain the bitfield bits.
   constexpr static uint32_t bitfield_bytes(uint32_t chunk_size) {
-    return __builtin_align_up(
+    return align_up(
         ((num_chunks(chunk_size) + BITS_IN_WORD - 1) / BITS_IN_WORD) * 8,
         MIN_ALIGNMENT + 1);
   }
@@ -335,12 +329,11 @@ struct Slab {
         uint32_t after = before | bitmask;
         uint64_t waiting = gpu::ballot(lane_mask, !result);
         if (!result)
-          start =
-              gpu::shuffle(waiting, cpp::countr_zero(waiting),
-                           ~after ? __builtin_align_down(index, BITS_IN_WORD) +
-                                        cpp::countr_zero(~after)
-                                  : __builtin_align_down(
-                                        impl::xorshift32(state), BITS_IN_WORD));
+          start = gpu::shuffle(
+              waiting, cpp::countr_zero(waiting),
+              ~after
+                  ? align_down(index, BITS_IN_WORD) + cpp::countr_zero(~after)
+                  : align_down(impl::xorshift32(state), BITS_IN_WORD));
         if (!result)
           sleep_briefly();
       }
@@ -605,7 +598,7 @@ void *allocate(uint64_t size) {
 
   // Allocations requiring a full slab or more go directly to memory.
   if (size >= SLAB_SIZE / 2)
-    return impl::rpc_allocate(impl::round_up<SLAB_SIZE>(size));
+    return impl::rpc_allocate(align_up(size, SLAB_SIZE));
 
   // Try to find a slab for the rounded up chunk size and allocate from it.
   uint32_t chunk_size = impl::get_chunk_size(static_cast<uint32_t>(size));
@@ -683,7 +676,7 @@ void *aligned_allocate(uint32_t alignment, uint64_t size) {
   // alignment and then round up. The index logic will round down properly.
   uint64_t rounded = size + alignment - MIN_ALIGNMENT;
   void *ptr = gpu::allocate(rounded);
-  return __builtin_align_up(ptr, alignment);
+  return align_up(ptr, alignment);
 }
 
 } // namespace gpu

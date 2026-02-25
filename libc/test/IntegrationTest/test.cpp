@@ -9,6 +9,7 @@
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
+#include "src/__support/math_extras.h"
 #include <stddef.h>
 
 #ifdef LIBC_TARGET_ARCH_IS_AARCH64
@@ -72,7 +73,7 @@ extern "C" {
 
 void *malloc(size_t size) {
   LIBC_NAMESPACE::cpp::AtomicRef<size_t> ref(ptr);
-  size = (size + ALIGNMENT - 1) & ~(ALIGNMENT - 1);
+  size = LIBC_NAMESPACE::align_up(size, ALIGNMENT);
   size_t old_ptr =
       ref.fetch_add(size, LIBC_NAMESPACE::cpp::MemoryOrder::RELAXED);
   if (static_cast<size_t>(old_ptr + size) >= MEMORY_SIZE)
