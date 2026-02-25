@@ -381,7 +381,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process) {
     TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
-    llvm::CrashRecoveryContext::Enable(true);
+    llvm::CrashRecoveryContext::Enable(
+        /*NeedsPOSIXUtilitySignalHandling=*/true);
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));

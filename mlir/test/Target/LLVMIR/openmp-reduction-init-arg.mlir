@@ -37,7 +37,6 @@ module {
 // CHECK:         %[[VAL_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         br label %[[VAL_3:.*]]
 // CHECK:       entry:                                            ; preds = %[[VAL_4:.*]]
-// CHECK:         %[[VAL_5:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         br label %[[VAL_6:.*]]
 // CHECK:       omp_parallel:                                     ; preds = %[[VAL_3]]
 // CHECK:         %[[VAL_7:.*]] = getelementptr { ptr, ptr }, ptr %[[VAL_0]], i32 0, i32 0

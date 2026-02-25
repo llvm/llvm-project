@@ -1,10 +1,10 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s \
-// RUN:  -analyzer-constraints=z3 
+// RUN:  -analyzer-constraints=z3
 // RUN: %clang_analyze_cc1 -verify %s \
 // RUN:  -analyzer-checker=core,debug.ExprInspection \
 // RUN:  -analyzer-config crosscheck-with-z3=true
 
-// REQUIRES: Z3
+// REQUIRES: z3
 //
 // Previously Z3 analysis crashed when it encountered an UnarySymExpr, validate
 // that this no longer happens.
@@ -24,6 +24,10 @@ int negate(int x, int y) {
 // "negative" operator (unary '-', UO_Minus) is attempted to be applied which
 // then causes Z3 to crash. The accompanying patch just strips the negative
 // operator before submitting to Z3 to avoid the crash.
+//
+// In PR 168034, we fixed this problem by converting boolean expressions to
+// bitvec with Z3's ite operator "(ite THE_BOOL_EXPR #x00000000 #x00000001)"
+// and actually conducting the negation on the result.
 //
 // TODO: Find the root cause of this and fix it in symbol manager
 //
@@ -49,9 +53,10 @@ int z3_crash2(int a) {
 }
 
 // Refer to issue 165779
-void z3_crash3(long a) {
+long z3_crash3(long a) {
   if (~-(5 && a)) {
     long *c;
-    *c; // expected-warning{{Dereference of undefined pointer value (loaded from variable 'c')}}
+    return *c; // expected-warning{{Dereference of undefined pointer value (loaded from variable 'c')}}
   }
+  return 0;
 }

@@ -86,8 +86,8 @@ public:
   void deinitializeMultiple(OnDeinitializeCompleteFn &&OnComplete,
                             std::vector<void *> Bases);
 
-  void detach(ResourceManager::OnCompleteFn OnComplete) override;
-  void shutdown(ResourceManager::OnCompleteFn OnComplete) override;
+  void onDetach(ResourceManager::OnCompleteFn OnComplete) override;
+  void onShutdown(ResourceManager::OnCompleteFn OnComplete) override;
 
 private:
   struct SlabInfo {

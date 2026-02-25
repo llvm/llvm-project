@@ -138,6 +138,10 @@ bool PseudoConsole::IsConnected() const {
 }
 
 void PseudoConsole::Close() {
+  Sleep(50); // FIXME: This mitigates a race condition when closing the
+             // PseudoConsole. It's possible that there is still data in the
+             // pipe when we try to close it. We should wait until the data has
+             // been consumed.
   SetStopping(true);
   std::unique_lock<std::mutex> guard(m_mutex);
   if (m_conpty_handle != INVALID_HANDLE_VALUE)

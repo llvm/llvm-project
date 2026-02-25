@@ -26,18 +26,18 @@ public:
 
   virtual ~ResourceManager();
 
-  /// The detach method will be called if the controller disconnects from the
+  /// The onDetach method will be called if the controller disconnects from the
   /// session without shutting the session down.
   ///
   /// Since no further requests for allocation will be made, the ResourceManager
   /// may discard any book-keeping data-structures used to support allocation.
   /// E.g. a JIT memory manager may discard its free-list, since no further
   /// JIT'd allocations will happen.
-  virtual void detach(OnCompleteFn OnComplete) = 0;
+  virtual void onDetach(OnCompleteFn OnComplete) = 0;
 
-  /// The shutdown operation will be called at the end of the session.
+  /// The onShutdown operation will be called at the end of the session.
   /// The ResourceManager should release all held resources.
-  virtual void shutdown(OnCompleteFn OnComplete) = 0;
+  virtual void onShutdown(OnCompleteFn OnComplete) = 0;
 };
 } // namespace orc_rt
 

@@ -165,7 +165,7 @@ end subroutine
 
 !              [various blocks implementing the reduction]
 
-! CHECK:       omp.region.cont37:                                ; preds =
+! CHECK:       omp.region.cont36:                                ; preds =
 ! CHECK-NEXT:    %{{.*}} = phi ptr
 ! CHECK-NEXT:    call void @__kmpc_end_reduce(
 ! CHECK-NEXT:    br label %reduce.finalize
@@ -182,18 +182,18 @@ end subroutine
 
 ! CHECK:       omp.reduction.cleanup:                            ; preds = %.fini
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup43, label %omp.reduction.cleanup44
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup42, label %omp.reduction.cleanup43
 
-! CHECK:       omp.reduction.cleanup44:                          ; preds = %omp.reduction.cleanup43, %omp.reduction.cleanup
-! CHECK-NEXT:    br label %omp.region.cont42
+! CHECK:       omp.reduction.cleanup43:                          ; preds = %omp.reduction.cleanup42, %omp.reduction.cleanup
+! CHECK-NEXT:    br label %omp.region.cont41
 
-! CHECK:       omp.region.cont42:                                ; preds = %omp.reduction.cleanup44
+! CHECK:       omp.region.cont41:                                ; preds = %omp.reduction.cleanup43
 ! CHECK-NEXT:    %{{.*}} = load ptr, ptr
-! CHECK-NEXT:    br label %omp.reduction.cleanup46
+! CHECK-NEXT:    br label %omp.reduction.cleanup45
 
-! CHECK:       omp.reduction.cleanup46:                          ; preds = %omp.region.cont42
+! CHECK:       omp.reduction.cleanup45:                          ; preds = %omp.region.cont41
 !                [null check]
-! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup47, label %omp.reduction.cleanup48
+! CHECK:         br i1 %{{.*}}, label %omp.reduction.cleanup46, label %omp.reduction.cleanup47
 
 ! CHECK:       omp.par.region30:                                 ; preds = %omp.par.region29
 ! CHECK-NEXT:    call void @_FortranAStopStatement
@@ -222,5 +222,5 @@ end subroutine
 !                [var extent was non-zero: malloc a private array]
 ! CHECK:         br label %omp.private.init5
 
-! CHECK:       omp.par.exit.exitStub:                           ; preds = %omp.region.cont52
+! CHECK:       omp.par.exit.exitStub:                           ; preds = %omp.region.cont51
 ! CHECK-NEXT:    ret void

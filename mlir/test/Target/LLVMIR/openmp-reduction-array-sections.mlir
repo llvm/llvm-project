@@ -142,17 +142,17 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         br label %[[VAL_46:.*]]
 // CHECK:       omp.reduction.nonatomic.body:                     ; preds = %[[VAL_43]]
 // CHECK:         br label %[[VAL_47:.*]]
-// CHECK:       omp.reduction.nonatomic.body16:                   ; preds = %[[VAL_48:.*]], %[[VAL_46]]
+// CHECK:       omp.reduction.nonatomic.body15:                   ; preds = %[[VAL_48:.*]], %[[VAL_46]]
 // CHECK:         %[[VAL_49:.*]] = phi i64 [ %[[VAL_50:.*]], %[[VAL_48]] ], [ 0, %[[VAL_46]] ]
 // CHECK:         %[[VAL_51:.*]] = icmp sgt i64 %[[VAL_49]], 0
 // CHECK:         br i1 %[[VAL_51]], label %[[VAL_48]], label %[[VAL_52:.*]]
-// CHECK:       omp.reduction.nonatomic.body18:                   ; preds = %[[VAL_47]]
+// CHECK:       omp.reduction.nonatomic.body17:                   ; preds = %[[VAL_47]]
 // CHECK:         br label %[[VAL_53:.*]]
-// CHECK:       omp.region.cont15:                                ; preds = %[[VAL_52]]
+// CHECK:       omp.region.cont14:                                ; preds = %[[VAL_52]]
 // CHECK:         %[[VAL_54:.*]] = phi ptr [ %[[VAL_19]], %[[VAL_52]] ]
 // CHECK:         call void @__kmpc_end_reduce(ptr @1, i32 %[[VAL_40]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK:         br label %[[VAL_42]]
-// CHECK:       omp.reduction.nonatomic.body17:                   ; preds = %[[VAL_47]]
+// CHECK:       omp.reduction.nonatomic.body16:                   ; preds = %[[VAL_47]]
 // CHECK:         %[[VAL_50]] = sub i64 %[[VAL_49]], 1
 // CHECK:         br label %[[VAL_47]]
 // CHECK:       reduce.finalize:                                  ; preds = %[[VAL_53]], %[[VAL_37]]
@@ -164,9 +164,9 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         %[[VAL_58:.*]] = ptrtoint ptr %[[VAL_56]] to i64
 // CHECK:         %[[VAL_59:.*]] = icmp ne i64 %[[VAL_58]], 0
 // CHECK:         br i1 %[[VAL_59]], label %[[VAL_60:.*]], label %[[VAL_61:.*]]
-// CHECK:       omp.reduction.cleanup22:                          ; preds = %[[VAL_60]], %[[VAL_57]]
+// CHECK:       omp.reduction.cleanup21:                          ; preds = %[[VAL_60]], %[[VAL_57]]
 // CHECK:         br label %[[VAL_62:.*]]
-// CHECK:       omp.region.cont20:                                ; preds = %[[VAL_61]]
+// CHECK:       omp.region.cont19:                                ; preds = %[[VAL_61]]
 // CHECK:         br label %[[VAL_63:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_62]]
 // CHECK:         br label %[[VAL_64:.*]]
@@ -174,7 +174,7 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         br label %[[FINI:.fini.*]]
 // CHECK:       [[FINI]]:
 // CHECK:         br label %[[EXIT:.*]]
-// CHECK:       omp.reduction.cleanup21:                          ; preds = %[[VAL_57]]
+// CHECK:       omp.reduction.cleanup20:                          ; preds = %[[VAL_57]]
 // CHECK:         br label %[[VAL_61]]
 // CHECK:       omp_section_loop.body:                            ; preds = %[[VAL_32]]
 // CHECK:         %[[VAL_66:.*]] = add i32 %[[VAL_30]], %[[VAL_24]]
