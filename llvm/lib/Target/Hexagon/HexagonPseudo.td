@@ -495,6 +495,21 @@ def PS_vloadrq_ai: Pseudo<(outs HvxQR:$Qd),
       (ins IntRegs:$Rs, s32_0Imm:$Off), "", []>,
       Requires<[HasV60,UseHVX]>;
 
+let Predicates = [UseHVX], isPseudo = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in
+def PS_HVX_FPTU1_V32F32_TO_V32I1_Vec
+  : InstHexagon<(outs HvxQR:$dst), (ins HvxVR:$src),
+                "", [], "", NoItinerary, TypeALU32_2op>;
+def : Pat<(v32i1 (fp_to_uint (v32f32 HvxVR:$s))),
+          (PS_HVX_FPTU1_V32F32_TO_V32I1_Vec HvxVR:$s)>,
+      Requires<[UseHVX]>;
+
+let Predicates = [UseHVX], isPseudo = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in
+def PS_HVX_FPTS1_V32F32_TO_V32I1_Vec
+  : InstHexagon<(outs HvxQR:$dst), (ins HvxVR:$src),
+                "", [], "", NoItinerary, TypeALU32_2op>;
+def : Pat<(v32i1 (fp_to_sint (v32f32 HvxVR:$s))),
+          (PS_HVX_FPTS1_V32F32_TO_V32I1_Vec HvxVR:$s)>,
+      Requires<[UseHVX]>;
 
 let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in
 class VSELInst<dag outs, dag ins, InstHexagon rootInst>

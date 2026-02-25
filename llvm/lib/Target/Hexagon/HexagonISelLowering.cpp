@@ -434,6 +434,279 @@ SDValue HexagonTargetLowering::LowerCallResult(
   return Chain;
 }
 
+// Custom inserter for lowering PS_HVX_FPTU1_V32F32_TO_V32I1_Vec &
+// PS_HVX_FPTS1_V32F32_TO_V32I1_Vec..
+//
+// Converts the pseudo-instruction (dst: HvxQR, src: HvxVR) into a small CFG
+// with a counted loop that builds a 1-bit predicate vector where each lane is
+// set to 1 if the corresponding lane in SrcV is non-zero.
+//
+// CFG transformation:
+//   - Split the current block at  MI: MBB -> AfterBB (live-ins updated).
+//   - Create three blocks: HeaderBB (original MBB), BodyBB (loop body),
+//     ExitBB (loop exit).
+//   - Edges:
+//       HeaderBB -> BodyBB      (fallthrough)
+//       BodyBB   -> BodyBB      (backedge)
+//       BodyBB   -> ExitBB
+//       ExitBB   -> AfterBB
+//   - Erase the original pseudo (MI.eraseFromParent()) and return ExitBB.
+//
+// HeaderBB (initialization):
+//   - Scalar constants (A2_tfrsi):
+//       Rzero = 0, Rone = 1, Rmask = 0x01010101, Rcnt = 32, Rrot = 124
+//   - Build Vzero safely (no self-use before def):
+//       Vzero = V6_vxor  SrcV, SrcV
+//   - Compute zero-lane predicate:
+//       Qeq0  = V6_veqsf SrcV, Vzero            // float equality
+//   - Mask vector by predicate (bitplane source):
+//       V1    = V6_vandqrt Qeq0, Rmask          // Q-masked AND with scalar
+//   - Initialize accumulator:
+//       V3_init = V6_vxor Vzero, Vzero          // vector zero
+//   - Jump to loop body:
+//       J2_jump BodyBB
+//
+// BodyBB (PHI nodes at top; loop-carried values):
+//   - PHIs (Hexagon::PHI):
+//       V3_phi   <- { V3_init, HeaderBB ; V3_next, BodyBB }
+//       Rrot_phi <- { Rrot,    HeaderBB ; Rrot_next, BodyBB }
+//       Rcnt_phi <- { Rcnt,    HeaderBB ; Rcnt_next, BodyBB }
+//
+// BodyBB (loop body instructions):
+//   - Shift accumulator left by 1 bit:
+//       V3_shl   = V6_vaslw  V3_phi, Rone
+//   - Rotate masked bitplane by current rotation:
+//       V2       = V6_vror   V1, Rrot_phi
+//   - Advance rotation and decrement count:
+//       Rrot_next= A2_addi   Rrot_phi, -4
+//       V3_next  = V6_vor    V3_shl, V2
+//       Rcnt_next= A2_addi   Rcnt_phi, -1
+//   - Loop control:
+//       P0       = C2_cmpgtui Rcnt_next, 0
+//       J2_jumpf P0, ExitBB
+//       J2_jump  BodyBB
+//
+// ExitBB (finalization to produce HvxQR):
+//   - PHI to capture final accumulator:
+//       V3_final <- { V3_next, BodyBB }
+//   - Extract lane LSBs and test for zero:
+//       Vonetmp  = V6_lvsplatw Rone
+//       Vtmp     = V6_vand     V3_final, Vonetmp
+//       Qeq      = V6_veqw     Vtmp, Vzero        // 1 where Vtmp == 0
+//   - Invert to get predicate for (SrcV != 0.0f):
+//       DstQ     = V6_pred_not Qeq
+//   - Jump to continuation and wire successor:
+//       J2_jump  AfterBB
+//       ExitBB->addSuccessor(AfterBB)
+//
+// Implementation notes:
+//   - The loop iteratively assembles bitplanes into V3 via shift-OR of
+//     rotated masked bits from V1, controlled by Rrot and Rcnt.
+//   - V1 is effectively loop-invariant (encoded via a PHI for structural
+//     completeness). The carried state is V3_phi, Rrot_phi, and
+//     Rcnt_phi.
+//   - The final predicate is derived by isolating the least significant bit
+//     of each lane and comparing to zero, then inverting to represent
+//     "non-zero float" per lane.
+//   - The pseudo-instruction is removed once the concrete sequence and CFG
+//     are emitted.
+
+MachineBasicBlock *HexagonTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+
+  const DebugLoc DL = MI.getDebugLoc();
+  MachineFunction &MF = *MBB->getParent();
+  const HexagonSubtarget &HST = MF.getSubtarget<HexagonSubtarget>();
+  const TargetInstrInfo *TII = HST.getInstrInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+
+  switch (MI.getOpcode()) {
+  case Hexagon::PS_HVX_FPTS1_V32F32_TO_V32I1_Vec:
+  case Hexagon::PS_HVX_FPTU1_V32F32_TO_V32I1_Vec: {
+    // Operands: dst(HvxQR), src(HvxVR)
+    Register DstQ = MI.getOperand(0).getReg();
+    Register SrcV = MI.getOperand(1).getReg();
+    MachineBasicBlock *AfterBB = MBB->splitAt(MI, /*UpdateLiveIns*/ true);
+    AfterBB->transferSuccessorsAndUpdatePHIs(MBB);
+
+    // Loop
+    // ---------- Create CFG blocks ----------
+    auto *HeaderBB = MBB;
+    auto *BodyBB = MF.CreateMachineBasicBlock(HeaderBB->getBasicBlock());
+    auto *ExitBB = MF.CreateMachineBasicBlock(HeaderBB->getBasicBlock());
+    MF.insert(++MachineFunction::iterator(HeaderBB), BodyBB);
+    MF.insert(++MachineFunction::iterator(BodyBB), ExitBB);
+
+    // Header -> Body (fallthrough), Body -> Body (backedge), Body -> Exit
+    HeaderBB->addSuccessor(BodyBB);
+    BodyBB->addSuccessor(BodyBB);
+    BodyBB->addSuccessor(ExitBB);
+    // Loop Header
+
+    // ---------- Scalar constants ----------
+    Register Rzero = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    Register Rone = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    Register Rcnt = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    Register Rmask = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    Register Rrot = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::A2_tfrsi))
+        .addDef(Rzero)
+        .addImm(0);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::A2_tfrsi))
+        .addDef(Rone)
+        .addImm(1);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::A2_tfrsi))
+        .addDef(Rmask)
+        .addImm(0x01010101);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::A2_tfrsi))
+        .addDef(Rcnt)
+        .addImm(32);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::A2_tfrsi))
+        .addDef(Rrot)
+        .addImm(124);
+
+    // ---------- Build Vzero safely (no self-use before def) ----------
+    Register Vzero = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::V6_vd0)).addDef(Vzero);
+
+    // Qeq0 = (SrcV == 0.0f)
+    Register Qeq0 = MRI.createVirtualRegister(&Hexagon::HvxQRRegClass);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::V6_veqsf))
+        .addDef(Qeq0)
+        .addUse(SrcV)
+        .addUse(Vzero);
+
+    //  V6_vandnqrt
+    Register V1 = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::V6_vandnqrt))
+        .addDef(V1)
+        .addUse(Qeq0)
+        .addUse(Rmask);
+
+    // V3_init
+    Register V3_init = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*HeaderBB, MI, DL, TII->get(Hexagon::V6_vd0)).addDef(V3_init);
+
+    BuildMI(*HeaderBB, HeaderBB->end(), DL, TII->get(Hexagon::J2_jump))
+        .addMBB(BodyBB);
+
+    // Loop Body
+
+    // ---------- PHIs (build once at the very top of BodyBB) ----------
+    auto PHIAtTop = BodyBB->begin();
+
+    Register V3_phi = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    Register Rrot_phi = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    Register Rcnt_phi = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+
+    MachineInstrBuilder V3PhiMIB =
+        BuildMI(*BodyBB, PHIAtTop, DL, TII->get(Hexagon::PHI), V3_phi)
+            .addReg(V3_init)
+            .addMBB(HeaderBB);
+
+    MachineInstrBuilder RrotPhiMIB =
+        BuildMI(*BodyBB, PHIAtTop, DL, TII->get(Hexagon::PHI), Rrot_phi)
+            .addReg(Rrot)
+            .addMBB(HeaderBB);
+
+    MachineInstrBuilder RcntPhiMIB =
+        BuildMI(*BodyBB, PHIAtTop, DL, TII->get(Hexagon::PHI), Rcnt_phi)
+            .addReg(Rcnt)
+            .addMBB(HeaderBB);
+
+    Register V3_shl = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::V6_vaslw))
+        .addDef(V3_shl)
+        .addUse(V3_phi)
+        .addUse(Rone);
+
+    Register V2 = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::V6_vror))
+        .addDef(V2)
+        .addUse(V1)
+        .addUse(Rrot_phi);
+
+    Register Rrot_next = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::A2_addi))
+        .addDef(Rrot_next)
+        .addUse(Rrot_phi)
+        .addImm(-4);
+
+    Register V3_next = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::V6_vor))
+        .addDef(V3_next)
+        .addUse(V3_shl)
+        .addUse(V2);
+
+    Register Rcnt_next = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::A2_addi))
+        .addDef(Rcnt_next)
+        .addUse(Rcnt_phi)
+        .addImm(-1);
+
+    V3PhiMIB.addReg(V3_next).addMBB(BodyBB);
+    RrotPhiMIB.addReg(Rrot_next).addMBB(BodyBB);
+    RcntPhiMIB.addReg(Rcnt_next).addMBB(BodyBB);
+
+    // p0 = (Rcnt_next >u 0); if (!p0.new) jump Exit; else jump Body
+    Register P0 = MRI.createVirtualRegister(&Hexagon::PredRegsRegClass);
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::C2_cmpgtui))
+        .addDef(P0)
+        .addUse(Rcnt_next)
+        .addImm(0);
+
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::J2_jumpf))
+        .addUse(P0)
+        .addMBB(ExitBB);
+
+    BuildMI(*BodyBB, BodyBB->end(), DL, TII->get(Hexagon::J2_jump))
+        .addMBB(BodyBB);
+
+    // Exit:
+    auto PHIAtTopExit = ExitBB->begin();
+    Register V3_final = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*ExitBB, PHIAtTopExit, DL, TII->get(Hexagon::PHI), V3_final)
+        .addReg(V3_next)
+        .addMBB(BodyBB);
+
+    Register Vonetmp = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*ExitBB, ExitBB->end(), DL, TII->get(Hexagon::V6_lvsplatw))
+        .addDef(Vonetmp)
+        .addUse(Rone);
+
+    Register Vtmp = MRI.createVirtualRegister(&Hexagon::HvxVRRegClass);
+    BuildMI(*ExitBB, ExitBB->end(), DL, TII->get(Hexagon::V6_vand))
+        .addDef(Vtmp)
+        .addUse(V3_final)
+        .addUse(Vonetmp);
+
+    Register Qeq = MRI.createVirtualRegister(&Hexagon::HvxQRRegClass);
+    BuildMI(*ExitBB, ExitBB->end(), DL, TII->get(Hexagon::V6_veqw))
+        .addDef(Qeq)
+        .addUse(Vtmp)
+        .addUse(Vzero);
+
+    BuildMI(*ExitBB, ExitBB->end(), DL, TII->get(Hexagon::V6_pred_not))
+        .addDef(DstQ)
+        .addUse(Qeq);
+
+    BuildMI(*ExitBB, ExitBB->end(), DL, TII->get(Hexagon::J2_jump))
+        .addMBB(AfterBB);
+
+    // Remove the pseudo.
+    ExitBB->addSuccessor(AfterBB);
+    MI.eraseFromParent();
+    return ExitBB;
+  }
+
+  default:
+    break;
+  }
+
+  return MBB;
+}
+
 /// LowerCall - Functions arguments are copied from virtual regs to
 /// (physical regs)/(stack frame), CALLSEQ_START and CALLSEQ_END are emitted.
 SDValue
