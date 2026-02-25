@@ -1806,17 +1806,6 @@ void SystemZDAGToDAGISel::Select(SDNode *Node) {
     SelectCode(St);
     return;
   }
-  case SystemZISD::COMPARE_STACKGUARD:
-    auto *FINode = cast<FrameIndexSDNode>(Node->getOperand(0)->getOperand(1));
-    assert(FINode && "Operand of COMPARE_STACKGUARD_DAG was not load of stack slot");
-    int FI = FINode->getIndex();
-    auto DL = SDLoc(Node);
-    auto CompOps = {CurDAG->getTargetFrameIndex(FI, MVT::i64),
-                    CurDAG->getTargetConstant(0, DL, MVT::i64)};
-    MachineSDNode *Pseudo = CurDAG->getMachineNode(
-        SystemZ::COMPARE_STACKGUARD_DAG, SDLoc(Node), MVT::i32, CompOps);
-    ReplaceNode(Node, Pseudo);
-    return;
   }
 
   SelectCode(Node);

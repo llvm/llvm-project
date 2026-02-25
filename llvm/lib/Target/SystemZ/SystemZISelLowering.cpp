@@ -3676,8 +3676,7 @@ static SDValue emitCmp(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
     return DAG.getNode(SystemZISD::ICMP, DL, MVT::i32, C.Op0, C.Op1,
                        DAG.getTargetConstant(C.ICmpType, DL, MVT::i32));
   if (C.Opcode == SystemZISD::COMPARE_STACKGUARD)
-    return DAG.getNode(SystemZISD::COMPARE_STACKGUARD, DL, MVT::i32, C.Op0,
-                       DAG.getTargetConstant(C.ICmpType, DL, MVT::i32));
+    return DAG.getNode(SystemZISD::COMPARE_STACKGUARD, DL, MVT::i32, C.Op0);
   if (C.Opcode == SystemZISD::TM) {
     bool RegisterOnly = (bool(C.CCMask & SystemZ::CCMASK_TM_MIXED_MSB_0) !=
                          bool(C.CCMask & SystemZ::CCMASK_TM_MIXED_MSB_1));

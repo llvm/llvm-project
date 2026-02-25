@@ -547,7 +547,12 @@ let hasNoSchedulingInfo = 1, hasSideEffects = 1, mayLoad = 1 in {
     // and compare the stack guard against the one on the stack.
     let usesCustomInserter = 1 in
       def COMPARE_STACKGUARD_DAG : Pseudo<(outs),
-                                           (ins bdaddr12only:$grdloc), []>;
+                                           (ins bdaddr12only:$grdloc), 
+                                           [(set CC, 
+                                             (z_csg
+                                              (load bdaddr12only:$grdloc)
+                                             )
+                                            )]>;
     let Constraints = "@earlyclobber $grdaddr" in
       def COMPARE_STACKGUARD : Pseudo<(outs ADDR64:$grdaddr),
                                        (ins bdaddr12only:$grdloc), []>;

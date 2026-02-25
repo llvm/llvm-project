@@ -21,10 +21,9 @@ def SDT_ZICmp               : SDTypeProfile<1, 3,
                                             [SDTCisVT<0, i32>,
                                              SDTCisSameAs<1, 2>,
                                              SDTCisVT<3, i32>]>;
-def SDT_ZCSG                : SDTypeProfile<1, 2,
+def SDT_ZCSG                : SDTypeProfile<1, 1,
                                             [SDTCisVT<0, i32>,
-                                             SDTCisPtrTy<1>,
-                                             SDTCisVT<2, i32>]>;
+                                             SDTCisPtrTy<1>]>;
 def SDT_ZBRCCMask           : SDTypeProfile<0, 4,
                                             [SDTCisVT<0, i32>,
                                              SDTCisVT<1, i32>,
