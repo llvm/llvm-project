@@ -65,12 +65,25 @@ constexpr const char *FailedToReadObjectAtField =
 constexpr const char *FailedToReadObjectAtIndex =
     "failed to read {0} from index '{1}': expected JSON {2}";
 
-constexpr const char *FailedToDeserializeEntitySummary =
+constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
     "failed to deserialize EntitySummary: no FormatInfo registered for summary "
     "'{0}'";
-constexpr const char *FailedToSerializeEntitySummary =
+constexpr const char *FailedToSerializeEntitySummaryNoFormatInfo =
     "failed to serialize EntitySummary: no FormatInfo registered for summary "
     "'{0}'";
+
+constexpr const char *FailedToDeserializeEntitySummaryMissingData =
+    "failed to deserialize EntitySummary: null EntitySummary data for summary "
+    "'{0}'";
+constexpr const char *FailedToSerializeEntitySummaryMissingData =
+    "JSONFormat - null EntitySummary data for summary '{0}'";
+
+constexpr const char *FailedToDeserializeEntitySummaryMismatchedSummaryName =
+    "failed to deserialize EntitySummary: EntitySummary data for summary '{0}' "
+    "reports mismatched summary '{1}'";
+constexpr const char *FailedToSerializeEntitySummaryMismatchedSummaryName =
+    "JSONFormat - EntitySummary data for summary '{0}' reports mismatched "
+    "summary '{1}'";
 
 constexpr const char *InvalidBuildNamespaceKind =
     "invalid 'kind' BuildNamespaceKind value '{0}'";
@@ -698,9 +711,10 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
                                   EntityIdTable &IdTable) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToDeserializeEntitySummary,
-                                SN.str())
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeEntitySummaryNoFormatInfo,
+               SN.str())
         .build();
   }
 
@@ -716,9 +730,10 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
                                 const EntitySummary &ES) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToSerializeEntitySummary,
-                                SN.str())
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToSerializeEntitySummaryNoFormatInfo,
+               SN.str())
         .build();
   }
 
@@ -776,7 +791,57 @@ JSONFormat::entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
         .build();
   }
 
+  if (*ExpectedEntitySummary == nullptr) {
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeEntitySummaryMissingData,
+               SN.str())
+        .build();
+  }
+
+  auto ActualSN = (*ExpectedEntitySummary)->getSummaryName();
+  if (SN != ActualSN) {
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::
+                   FailedToDeserializeEntitySummaryMismatchedSummaryName,
+               SN.str(), ActualSN.str())
+        .build();
+  }
+
   return std::make_pair(std::move(EI), std::move(*ExpectedEntitySummary));
+}
+
+llvm::Expected<Object> JSONFormat::entityDataMapEntryToJSON(
+    const EntityId EI, const std::unique_ptr<EntitySummary> &EntitySummary,
+    const SummaryName &SN) const {
+  Object Entry;
+
+  Entry["entity_id"] = entityIdToJSON(EI);
+
+  if (!EntitySummary) {
+    ErrorBuilder::fatal(
+        ErrorMessages::FailedToSerializeEntitySummaryMissingData, SN.str());
+  }
+
+  const auto ActualSN = EntitySummary->getSummaryName();
+  if (SN != ActualSN) {
+    ErrorBuilder::fatal(
+        ErrorMessages::FailedToSerializeEntitySummaryMismatchedSummaryName,
+        SN.str(), ActualSN.str());
+  }
+
+  auto ExpectedEntitySummaryObject = entitySummaryToJSON(SN, *EntitySummary);
+  if (!ExpectedEntitySummaryObject) {
+    return ErrorBuilder::wrap(ExpectedEntitySummaryObject.takeError())
+        .context(ErrorMessages::WritingToField, "EntitySummary",
+                 "entity_summary")
+        .build();
+  }
+
+  Entry["entity_summary"] = std::move(*ExpectedEntitySummaryObject);
+
+  return Entry;
 }
 
 //----------------------------------------------------------------------------
@@ -803,11 +868,12 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
 
     auto ExpectedEntityDataMapEntry =
         entityDataMapEntryFromJSON(*OptEntityDataMapEntryObject, SN, IdTable);
-    if (!ExpectedEntityDataMapEntry)
+    if (!ExpectedEntityDataMapEntry) {
       return ErrorBuilder::wrap(ExpectedEntityDataMapEntry.takeError())
           .context(ErrorMessages::ReadingFromIndex, "EntitySummary entry",
                    Index)
           .build();
+    }
 
     auto [DataIt, DataInserted] =
         EntityDataMap.insert(std::move(*ExpectedEntityDataMapEntry));
@@ -834,20 +900,16 @@ llvm::Expected<Array> JSONFormat::entityDataMapToJSON(
        llvm::enumerate(EntityDataMap)) {
     const auto &[EntityId, EntitySummary] = EntityDataMapEntry;
 
-    Object Entry;
+    auto ExpectedEntityDataMapEntryObject =
+        entityDataMapEntryToJSON(EntityId, EntitySummary, SN);
 
-    Entry["entity_id"] = entityIdToJSON(EntityId);
-
-    auto ExpectedEntitySummaryObject = entitySummaryToJSON(SN, *EntitySummary);
-    if (!ExpectedEntitySummaryObject) {
-      return ErrorBuilder::wrap(ExpectedEntitySummaryObject.takeError())
+    if (!ExpectedEntityDataMapEntryObject) {
+      return ErrorBuilder::wrap(ExpectedEntityDataMapEntryObject.takeError())
           .context(ErrorMessages::WritingToIndex, "EntitySummary entry", Index)
           .build();
     }
 
-    Entry["entity_summary"] = std::move(*ExpectedEntitySummaryObject);
-
-    Result.push_back(std::move(Entry));
+    Result.push_back(std::move(*ExpectedEntityDataMapEntryObject));
   }
 
   return Result;

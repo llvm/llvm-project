@@ -6438,6 +6438,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
       DI->EmitFuncDeclForCallSite(
           CI, DI->getFunctionType(CalleeDecl, ResTy, Args), CalleeGlobalDecl);
     }
+    // Generate call site target information.
+    DI->addCallTargetIfVirtual(CalleeDecl, CI);
   }
 
   return Ret;

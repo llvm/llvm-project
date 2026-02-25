@@ -48,3 +48,7 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
   )
+
+
+  target_include_directories(lldbPluginScriptInterpreterPython
+    PUBLIC ${Python3_INCLUDE_DIRS})
