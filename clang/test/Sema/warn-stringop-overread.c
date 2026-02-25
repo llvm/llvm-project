@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 %s -verify
 // RUN: %clang_cc1 %s -verify -DUSE_BUILTINS
+// RUN: %clang_cc1 -xc++ %s -verify
+// RUN: %clang_cc1 -xc++ %s -verify -DUSE_BUILTINS
 
 typedef unsigned long size_t;
 
@@ -18,6 +20,8 @@ void *memmove(void *dst, const void *src, size_t c);
 void *memchr(const void *s, int c, size_t n);
 int memcmp(const void *s1, const void *s2, size_t n);
 #endif
+
+int bcmp(const void *s1, const void *s2, size_t n);
 
 #ifdef __cplusplus
 }
@@ -113,8 +117,6 @@ void test_memcpy_src_offset_no_warning(void) {
   memcpy(dst, src + 2, 2); // no warning
 }
 
-int bcmp(const void *s1, const void *s2, size_t n);
-
 void test_bcmp_overread(void) {
   char a[4], b[100];
   bcmp(a, b, 8); // expected-warning {{'bcmp' reading 8 bytes from a region of size 4}}
@@ -136,3 +138,16 @@ void test_memmove_chk_overread(void) {
   char src[4];
   __builtin___memmove_chk(dst, src, 8, sizeof(dst)); // expected-warning {{'memmove' reading 8 bytes from a region of size 4}}
 }
+
+#ifdef __cplusplus
+template <int N>
+void test_memcpy_dependent_dest() {
+  char dst[N];
+  int src = 0;
+  memcpy(dst, &src, sizeof(src) + 1); // expected-warning {{'memcpy' reading 5 bytes from a region of size 4}}
+}
+
+void call_test_memcpy_dependent_dest() {
+  test_memcpy_dependent_dest<100>(); // expected-note {{in instantiation}}
+}
+#endif
