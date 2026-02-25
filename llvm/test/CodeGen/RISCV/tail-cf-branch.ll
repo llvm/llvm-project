@@ -8,6 +8,10 @@
 ; RUN: llc -code-model=large -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-LARGE %s
 
+; This file contains tests similar to tail-calls.ll but with cf-protection-branch
+; module flag enabled. It tests landing pad generation and NonX7 variants for
+; indirect tail calls.
+
 ; Test tail call generation with cf-protection-branch enabled.
 ; This tests landing pad generation and NonX7 variants for indirect tail calls.
 

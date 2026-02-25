@@ -24372,14 +24372,23 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
   bool NeedSWGuarded = getTargetMachine().getCodeModel() == CodeModel::Large &&
                        HasCFBranch &&
                        (!IsIndirectCall || CalleeIsLargeExternalSymbol);
-  bool NeedNonX7 = HasCFBranch && IsIndirectCall && !NeedSWGuarded;
+  bool NeedNonX7 = HasCFBranch && IsIndirectCall;
+
+  unsigned TailOpc, CallOpc;
+  if (NeedSWGuarded) {
+    TailOpc = RISCVISD::SW_GUARDED_TAIL;
+    CallOpc = RISCVISD::SW_GUARDED_CALL;
+  } else if (NeedNonX7) {
+    TailOpc = RISCVISD::TAIL_NONX7;
+    CallOpc = RISCVISD::CALL_NONX7;
+  } else {
+    TailOpc = RISCVISD::TAIL;
+    CallOpc = RISCVISD::CALL;
+  }
 
   if (IsTailCall) {
     MF.getFrameInfo().setHasTailCall();
-    unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_TAIL
-                       : NeedNonX7   ? RISCVISD::TAIL_NONX7
-                                     : RISCVISD::TAIL;
-    SDValue Ret = DAG.getNode(CallOpc, DL, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(TailOpc, DL, NodeTys, Ops);
     if (CLI.CFIType)
       Ret.getNode()->setCFIType(CLI.CFIType->getZExtValue());
     DAG.addNoMergeSiteInfo(Ret.getNode(), CLI.NoMerge);
@@ -24387,9 +24396,6 @@ SDValue RISCVTargetLowering::LowerCall(CallLoweringInfo &CLI,
     return Ret;
   }
 
-  unsigned CallOpc = NeedSWGuarded ? RISCVISD::SW_GUARDED_CALL
-                     : NeedNonX7   ? RISCVISD::CALL_NONX7
-                                   : RISCVISD::CALL;
   Chain = DAG.getNode(CallOpc, DL, NodeTys, Ops);
   if (CLI.CFIType)
     Chain.getNode()->setCFIType(CLI.CFIType->getZExtValue());

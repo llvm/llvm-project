@@ -6,8 +6,9 @@
 ; RUN: llc -code-model=large -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I-LARGE %s
 
-; Test call generation with cf-protection-branch enabled.
-; This tests landing pad generation and NonX7 variants for indirect calls.
+; This file contains tests similar to calls.ll but with cf-protection-branch
+; module flag enabled. It tests landing pad generation and NonX7 variants for
+; indirect calls.
 
 declare i32 @external_function(i32)
 

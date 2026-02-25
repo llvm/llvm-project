@@ -4,7 +4,8 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s
 
-; Test branch relaxation with cf-protection-branch enabled.
+; This file contains tests similar to branch-relaxation-rv64.ll but with
+; cf-protection-branch module flag enabled.
 ; Software-guarded branches should use t2 (x7) for the target address.
 
 define void @relax_bcc(i1 %a) nounwind {
