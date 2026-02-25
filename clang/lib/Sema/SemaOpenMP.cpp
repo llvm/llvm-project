@@ -13508,7 +13508,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTeamsDirective(ArrayRef<OMPClause *> Clauses,
     return StmtError();
 
   if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
+          *this, Clauses, /*MaxNum=*/2,
+          diag::err_omp_num_teams_multi_expr_not_allowed) ||
       !checkNumExprsInClause<OMPThreadLimitClause>(
           *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
     return StmtError();
@@ -14287,16 +14288,20 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDirective(
     return StmtError();
   }
 
-  unsigned ClauseMaxNumExprs = HasBareClause ? 3 : 1;
-  unsigned DiagNo = HasBareClause
-                        ? diag::err_ompx_more_than_three_expr_not_allowed
-                        : diag::err_omp_multi_expr_not_allowed;
-  if (!checkNumExprsInClause<OMPNumTeamsClause>(*this, Clauses,
-                                                ClauseMaxNumExprs, DiagNo) ||
-      !checkNumExprsInClause<OMPThreadLimitClause>(*this, Clauses,
-                                                   ClauseMaxNumExprs, DiagNo))
-    return StmtError();
+  unsigned ClauseMaxNumExprs = HasBareClause ? 3 : 2;
+  unsigned NumTeamsDiag = HasBareClause
+                              ? diag::err_ompx_more_than_three_expr_not_allowed
+                              : diag::err_omp_num_teams_multi_expr_not_allowed;
+  unsigned ThreadLimitDiag =
+      HasBareClause ? diag::err_ompx_more_than_three_expr_not_allowed
+                    : diag::err_omp_multi_expr_not_allowed;
 
+  if (!checkNumExprsInClause<OMPNumTeamsClause>(
+          *this, Clauses, ClauseMaxNumExprs, NumTeamsDiag) ||
+      !checkNumExprsInClause<OMPThreadLimitClause>(
+          *this, Clauses, ClauseMaxNumExprs, ThreadLimitDiag)) {
+    return StmtError();
+  }
   return OMPTargetTeamsDirective::Create(getASTContext(), StartLoc, EndLoc,
                                          Clauses, AStmt);
 }
@@ -14308,7 +14313,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeDirective(
     return StmtError();
 
   if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
+          *this, Clauses, /*MaxNum=*/2,
+          diag::err_omp_num_teams_multi_expr_not_allowed) ||
       !checkNumExprsInClause<OMPThreadLimitClause>(
           *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
     return StmtError();
@@ -14340,7 +14346,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForDirective(
     return StmtError();
 
   if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
+          *this, Clauses, /*MaxNum=*/2,
+          diag::err_omp_num_teams_multi_expr_not_allowed) ||
       !checkNumExprsInClause<OMPThreadLimitClause>(
           *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
     return StmtError();
@@ -14373,7 +14380,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeParallelForSimdDirective(
     return StmtError();
 
   if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
+          *this, Clauses, /*MaxNum=*/2,
+          diag::err_omp_num_teams_multi_expr_not_allowed) ||
       !checkNumExprsInClause<OMPThreadLimitClause>(
           *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
     return StmtError();
@@ -14409,7 +14417,8 @@ StmtResult SemaOpenMP::ActOnOpenMPTargetTeamsDistributeSimdDirective(
     return StmtError();
 
   if (!checkNumExprsInClause<OMPNumTeamsClause>(
-          *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed) ||
+          *this, Clauses, /*MaxNum=*/2,
+          diag::err_omp_num_teams_multi_expr_not_allowed) ||
       !checkNumExprsInClause<OMPThreadLimitClause>(
           *this, Clauses, /*MaxNum=*/1, diag::err_omp_multi_expr_not_allowed))
     return StmtError();
@@ -23878,6 +23887,31 @@ OMPClause *SemaOpenMP::ActOnOpenMPNumTeamsClause(ArrayRef<Expr *> VarList,
     if (!isNonNegativeIntegerValue(ValExpr, SemaRef, OMPC_num_teams,
                                    /*StrictlyPositive=*/true))
       return nullptr;
+  }
+
+  // OpenMP 5.2: Validate lower-bound ≤ upper-bound constraint
+  if (VarList.size() == 2) {
+    Expr *LowerBound = VarList[0];
+    Expr *UpperBound = VarList[1];
+
+    // Check if both are compile-time constants for validation
+    if (!LowerBound->isValueDependent() && !UpperBound->isValueDependent() &&
+        LowerBound->isIntegerConstantExpr(getASTContext()) &&
+        UpperBound->isIntegerConstantExpr(getASTContext())) {
+
+      // Get the actual constant values
+      llvm::APSInt LowerVal =
+          LowerBound->EvaluateKnownConstInt(getASTContext());
+      llvm::APSInt UpperVal =
+          UpperBound->EvaluateKnownConstInt(getASTContext());
+
+      if (LowerVal > UpperVal) {
+        Diag(LowerBound->getExprLoc(),
+             diag::err_omp_num_teams_lower_bound_larger)
+            << LowerBound->getSourceRange() << UpperBound->getSourceRange();
+        return nullptr;
+      }
+    }
   }
 
   OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();

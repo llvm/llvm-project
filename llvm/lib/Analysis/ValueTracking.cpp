@@ -5583,41 +5583,27 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
 
-    KnownFPClass KnownLHS, KnownRHS;
-
-    bool CannotBeSubnormal = false;
     const APFloat *CRHS;
     if (match(Op->getOperand(1), m_APFloat(CRHS))) {
-      // Match denormal scaling pattern, similar to the case in ldexp. If the
-      // constant's exponent is sufficiently large, the result cannot be
-      // subnormal.
+      KnownFPClass KnownLHS;
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
+                          Q, Depth + 1);
 
-      // TODO: Should do general ConstantFPRange analysis.
-      const fltSemantics &Flt =
-          Op->getType()->getScalarType()->getFltSemantics();
-      unsigned Precision = APFloat::semanticsPrecision(Flt);
-      const int MantissaBits = Precision - 1;
-
-      int MinKnownExponent = ilogb(*CRHS);
-      if (MinKnownExponent >= MantissaBits)
-        CannotBeSubnormal = true;
-
-      KnownRHS = KnownFPClass(*CRHS);
+      Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
     } else {
+      KnownFPClass KnownLHS, KnownRHS;
+
       computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
                           Q, Depth + 1);
+      // TODO: Improve accuracy in unfused FMA pattern. We can prove an
+      // additional not-nan if the addend is known-not negative infinity if the
+      // multiply is known-not infinity.
+
+      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
+                          Q, Depth + 1);
+      Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
     }
 
-    // TODO: Improve accuracy in unfused FMA pattern. We can prove an additional
-    // not-nan if the addend is known-not negative infinity if the multiply is
-    // known-not infinity.
-
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                        Q, Depth + 1);
-
-    Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
-    if (CannotBeSubnormal)
-      Known.knownNot(fcSubnormal);
     break;
   }
   case Instruction::FDiv:

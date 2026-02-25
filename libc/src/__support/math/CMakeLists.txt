@@ -1642,6 +1642,111 @@ add_header_library(
 )
 
 add_header_library(
+ nexttoward
+  HDRS
+    nexttoward.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nexttowardbf16
+  HDRS
+    nexttowardbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nexttowardf
+  HDRS
+    nexttowardf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nexttowardf16
+  HDRS
+    nexttowardf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nexttowardl
+  HDRS
+    nexttowardl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextup
+  HDRS
+    nextup.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextupbf16
+  HDRS
+    nextupbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextupf
+  HDRS
+    nextupf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextupf128
+  HDRS
+    nextupf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextupf16
+  HDRS
+    nextupf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextupl
+  HDRS
+    nextupl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+
+add_header_library(
   nextdown
   HDRS
     nextdown.h

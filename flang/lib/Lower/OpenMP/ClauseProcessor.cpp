@@ -718,6 +718,11 @@ bool ClauseProcessor::processSimdlen(
   return false;
 }
 
+bool ClauseProcessor::processSimd(
+    mlir::omp::OrderedRegionOperands &result) const {
+  return markClauseOccurrence<omp::clause::Simd>(result.parLevelSimd);
+}
+
 bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
