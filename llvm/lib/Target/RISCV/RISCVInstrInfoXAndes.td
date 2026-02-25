@@ -726,10 +726,10 @@ let Predicates = [HasVendorXAndesBFHCvt] in {
 
 let Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
-  let RVVConstraint = VS2Constraint, DestEEW = EEWSEWx2 in
-    def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
+  let VS1VS2Constraint = VS2Constraint, DestEEW = EEWSEWx2 in
+  def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
   let Uses = [FRM, VL, VTYPE] in
-    def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
+  def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
 } // Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
   // mayRaiseFPException = true
 
@@ -939,8 +939,7 @@ class SFBNDS_BFO
     : Pseudo<(outs GPR:$dst),
              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
                   uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU,
-             ReadSFBALU]> {
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;

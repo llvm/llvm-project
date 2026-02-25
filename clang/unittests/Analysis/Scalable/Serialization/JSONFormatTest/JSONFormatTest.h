@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMATTEST_JSONFORMATTEST_H
 #define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMATTEST_JSONFORMATTEST_H
 
+#include "TestFixture.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -20,13 +21,15 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gtest/gtest.h"
+#ifndef _WIN32
+#include <unistd.h>
+#endif
 
 // ============================================================================
 // Test Fixture
 // ============================================================================
 
-class JSONFormatTest : public ::testing::Test {
+class JSONFormatTest : public clang::ssaf::TestFixture {
 public:
   using PathString = llvm::SmallString<128>;
 
@@ -96,6 +99,50 @@ protected:
     }
 
     return llvm::Error::success();
+  }
+
+  // Returns true if Unix file permission checks are enforced in this
+  // environment. Returns false if running as root (uid 0), or if a probe
+  // file with read permission removed can still be opened, indicating that
+  // permission checks are not enforced (e.g. certain container setups).
+  // Tests that rely on permission-based failure conditions should skip
+  // themselves when this returns false.
+  bool permissionsAreEnforced() const {
+#ifdef _WIN32
+    return false;
+#else
+    if (getuid() == 0) {
+      return false;
+    }
+
+    // Write a probe file, remove read permission, and try to open it.
+    PathString ProbePath = makePath("perm-probe.json");
+
+    {
+      std::error_code EC;
+      llvm::raw_fd_ostream OS(ProbePath, EC);
+      if (EC) {
+        return true; // Probe setup failed; assume enforced to avoid
+                     // silently suppressing the test.
+      }
+      OS << "{}";
+    }
+
+    std::error_code PermEC = llvm::sys::fs::setPermissions(
+        ProbePath, llvm::sys::fs::perms::owner_write);
+    if (PermEC) {
+      return true; // Probe setup failed; assume enforced to avoid
+                   // silently suppressing the test.
+    }
+
+    auto Buffer = llvm::MemoryBuffer::getFile(ProbePath);
+    bool Enforced = !Buffer; // If open failed, permissions are enforced.
+
+    // Restore permissions so TearDown can clean up the temp directory.
+    llvm::sys::fs::setPermissions(ProbePath, llvm::sys::fs::perms::all_all);
+
+    return Enforced;
+#endif
   }
 
   llvm::Expected<llvm::json::Value>
