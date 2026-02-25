@@ -1244,13 +1244,11 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   // Construct PostInitializer nodes whether the state changed or not,
   // so that the diagnostics don't get confused.
   PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
-  ExplodedNodeSet Dst;
-  NodeBuilder Bldr(Tmp, Dst, *currBldrCtx);
-  for (const auto I : Tmp) {
-    ProgramStateRef State = I->getState();
-    Bldr.generateNode(PP, State, I);
-  }
 
+  ExplodedNodeSet Dst;
+  for (ExplodedNode *Pred : Tmp) {
+    Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
+  }
   // Enqueue the new nodes onto the work list.
   Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
