@@ -3933,6 +3933,33 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+.. _CatchMacros:
+
+**CatchMacros** (``List of Strings``) :versionbadge:`clang-format 23` :ref:`¶ <CatchMacros>`
+  A vector of macros that should be interpreted as catch blocks
+  instead of as function calls.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    TRY_MACRO(...) {
+      ...
+    } CATCH_MACRO(...) {
+      ...
+    }
+
+  The parenthesized arguments are optional for both try and catch macros.
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    CatchMacros: [CATCH_MACRO]
+
+  For example: `KJ_CATCH
+  <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#throwing-and-catching-exceptions>`_
+
 .. _ColumnLimit:
 
 **ColumnLimit** (``Unsigned``) :versionbadge:`clang-format 3.7` :ref:`¶ <ColumnLimit>`
@@ -7364,6 +7391,33 @@ the configuration (without a prefix: ``Auto``).
 
   A ``<`` after a template name is annotated as a template opener instead of
   a binary operator.
+
+.. _TryMacros:
+
+**TryMacros** (``List of Strings``) :versionbadge:`clang-format 23` :ref:`¶ <TryMacros>`
+  A vector of macros that should be interpreted as try blocks
+  instead of as function calls.
+
+  These are expected to be macros of the form:
+
+  .. code-block:: c++
+
+    TRY_MACRO(...) {
+      ...
+    } CATCH_MACRO(...) {
+      ...
+    }
+
+  The parenthesized arguments are optional for both try and catch macros.
+
+  In the .clang-format configuration file, this can be configured like:
+
+  .. code-block:: yaml
+
+    TryMacros: [TRY_MACRO]
+
+  For example: `KJ_TRY
+  <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#throwing-and-catching-exceptions>`_
 
 .. _TypeNames:
 

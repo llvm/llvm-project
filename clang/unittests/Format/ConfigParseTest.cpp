@@ -1031,6 +1031,18 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE_LIST(TypenameMacros);
   CHECK_PARSE_LIST(VariableTemplates);
 
+  Style.TryMacros.clear();
+  CHECK_PARSE("TryMacros: [KJ_TRY]", TryMacros,
+              std::vector<std::string>{"KJ_TRY"});
+  CHECK_PARSE("TryMacros: [KJ_TRY, JSG_TRY]", TryMacros,
+              std::vector<std::string>({"KJ_TRY", "JSG_TRY"}));
+
+  Style.CatchMacros.clear();
+  CHECK_PARSE("CatchMacros: [KJ_CATCH]", CatchMacros,
+              std::vector<std::string>{"KJ_CATCH"});
+  CHECK_PARSE("CatchMacros: [KJ_CATCH, JSG_CATCH]", CatchMacros,
+              std::vector<std::string>({"KJ_CATCH", "JSG_CATCH"}));
+
   Style.WhitespaceSensitiveMacros.clear();
   CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE]",
               WhitespaceSensitiveMacros, std::vector<std::string>{"STRINGIZE"});

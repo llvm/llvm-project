@@ -418,6 +418,8 @@ AST Matchers
 
 clang-format
 ------------
+- Add ``TryMacros`` and ``CatchMacros`` options to allow macros to be formatted
+  as ``try`` and ``catch`` blocks, including catch-cuddling.
 - Add ``ObjCSpaceAfterMethodDeclarationPrefix`` option to control space between the
   '-'/'+' and the return type in Objective-C method declarations
 - Add ``AfterComma`` value to ``BreakConstructorInitializers`` to allow breaking

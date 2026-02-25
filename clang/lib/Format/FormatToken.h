@@ -44,6 +44,7 @@ namespace format {
   /* The colon at the end of a case label. */                                  \
   TYPE(CaseLabelColon)                                                         \
   TYPE(CastRParen)                                                             \
+  TYPE(CatchMacro)                                                             \
   TYPE(ClassLBrace)                                                            \
   /* Name of class/struct/union/interface definition. */                       \
   TYPE(ClassHeadName)                                                          \
@@ -196,6 +197,7 @@ namespace format {
   TYPE(TrailingAnnotation)                                                     \
   TYPE(TrailingReturnArrow)                                                    \
   TYPE(TrailingUnaryOperator)                                                  \
+  TYPE(TryMacro)                                                               \
   TYPE(TypeDeclarationParen)                                                   \
   TYPE(TemplateName)                                                           \
   TYPE(TypeName)                                                               \

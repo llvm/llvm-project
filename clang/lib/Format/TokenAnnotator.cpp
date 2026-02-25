@@ -2105,13 +2105,14 @@ private:
     if (!CurrentToken->isTypeFinalized() &&
         CurrentToken->isNoneOf(
             TT_LambdaLSquare, TT_LambdaLBrace, TT_AttributeMacro, TT_IfMacro,
-            TT_ForEachMacro, TT_TypenameMacro, TT_FunctionLBrace,
-            TT_ImplicitStringLiteral, TT_InlineASMBrace, TT_FatArrow,
-            TT_LambdaArrow, TT_NamespaceMacro, TT_OverloadedOperator,
-            TT_RegexLiteral, TT_TemplateString, TT_ObjCStringLiteral,
-            TT_UntouchableMacroFunc, TT_StatementAttributeLikeMacro,
-            TT_FunctionLikeOrFreestandingMacro, TT_ClassLBrace, TT_EnumLBrace,
-            TT_RecordLBrace, TT_StructLBrace, TT_UnionLBrace, TT_RequiresClause,
+            TT_ForEachMacro, TT_TypenameMacro, TT_TryMacro, TT_CatchMacro,
+            TT_FunctionLBrace, TT_ImplicitStringLiteral, TT_InlineASMBrace,
+            TT_FatArrow, TT_LambdaArrow, TT_NamespaceMacro,
+            TT_OverloadedOperator, TT_RegexLiteral, TT_TemplateString,
+            TT_ObjCStringLiteral, TT_UntouchableMacroFunc,
+            TT_StatementAttributeLikeMacro, TT_FunctionLikeOrFreestandingMacro,
+            TT_ClassLBrace, TT_EnumLBrace, TT_RecordLBrace, TT_StructLBrace,
+            TT_UnionLBrace, TT_RequiresClause,
             TT_RequiresClauseInARequiresExpression, TT_RequiresExpression,
             TT_RequiresExpressionLParen, TT_RequiresExpressionLBrace,
             TT_CompoundRequirementLBrace, TT_BracedListLBrace,
@@ -5064,6 +5065,11 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
 
   const bool IsVerilog = Style.isVerilog();
   assert(!IsVerilog || !IsCpp);
+
+  // TryMacros/CatchMacros should look like macro invocations, not keywords.
+  // Don't add a space before their argument list.
+  if (Left.isOneOf(TT_TryMacro, TT_CatchMacro) && Right.is(tok::l_paren))
+    return false;
 
   // Never ever merge two words.
   if (Keywords.isWordLike(Right, IsVerilog) &&

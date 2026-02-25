@@ -63,6 +63,14 @@ FormatTokenLexer::FormatTokenLexer(
     auto Identifier = &IdentTable.get(NamespaceMacro);
     Macros.insert({Identifier, TT_NamespaceMacro});
   }
+  for (const std::string &TryMacro : Style.TryMacros) {
+    auto Identifier = &IdentTable.get(TryMacro);
+    Macros.insert({Identifier, TT_TryMacro});
+  }
+  for (const std::string &CatchMacro : Style.CatchMacros) {
+    auto Identifier = &IdentTable.get(CatchMacro);
+    Macros.insert({Identifier, TT_CatchMacro});
+  }
   for (const std::string &WhitespaceSensitiveMacro :
        Style.WhitespaceSensitiveMacros) {
     auto Identifier = &IdentTable.get(WhitespaceSensitiveMacro);
@@ -538,6 +546,12 @@ bool FormatTokenLexer::tryTransformTryUsageForC() {
     return false;
   auto &Try = *(Tokens.end() - 2);
   if (Try->isNot(tok::kw_try))
+    return false;
+  // Don't reset TryMacros back to identifier — they legitimately use kw_try
+  // even when followed by '(' (for macro arguments like JSG_TRY(js)). If a
+  // configured TryMacro name is also used as a plain identifier somewhere, that
+  // is a user configuration error, consistent with IfMacros/ForEachMacros.
+  if (Try->is(TT_TryMacro))
     return false;
   auto &Next = *(Tokens.end() - 1);
   if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))
@@ -1471,6 +1485,10 @@ FormatToken *FormatTokenLexer::getNextToken() {
         // the tok value seems to be needed. Not sure if there's a more elegant
         // way.
         FormatTok->Tok.setKind(tok::kw_if);
+      } else if (it->second == TT_TryMacro) {
+        FormatTok->Tok.setKind(tok::kw_try);
+      } else if (it->second == TT_CatchMacro) {
+        FormatTok->Tok.setKind(tok::kw_catch);
       }
     } else if (FormatTok->is(tok::identifier)) {
       if (MacroBlockBeginRegex.match(Text))

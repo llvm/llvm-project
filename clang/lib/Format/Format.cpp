@@ -1242,6 +1242,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("BreakStringLiterals", Style.BreakStringLiterals);
     IO.mapOptional("BreakTemplateDeclarations",
                    Style.BreakTemplateDeclarations);
+    IO.mapOptional("CatchMacros", Style.CatchMacros);
     IO.mapOptional("ColumnLimit", Style.ColumnLimit);
     IO.mapOptional("CommentPragmas", Style.CommentPragmas);
     IO.mapOptional("CompactNamespaces", Style.CompactNamespaces);
@@ -1405,6 +1406,7 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("TabWidth", Style.TabWidth);
     IO.mapOptional("TemplateNames", Style.TemplateNames);
     IO.mapOptional("TypeNames", Style.TypeNames);
+    IO.mapOptional("TryMacros", Style.TryMacros);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
     IO.mapOptional("UseTab", Style.UseTab);
     IO.mapOptional("VariableTemplates", Style.VariableTemplates);

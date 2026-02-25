@@ -2633,6 +2633,30 @@ struct FormatStyle {
   /// \version 3.9
   bool BreakStringLiterals;
 
+  /// A vector of macros that should be interpreted as catch blocks
+  /// instead of as function calls.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   TRY_MACRO(...) {
+  ///     ...
+  ///   } CATCH_MACRO(...) {
+  ///     ...
+  ///   }
+  /// \endcode
+  ///
+  /// The parenthesized arguments are optional for both try and catch macros.
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   CatchMacros: [CATCH_MACRO]
+  /// \endcode
+  ///
+  /// For example: `KJ_CATCH
+  /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#throwing-and-catching-exceptions>`_
+  /// \version 23
+  std::vector<std::string> CatchMacros;
+
   /// The column limit.
   ///
   /// A column limit of ``0`` means that there is no column limit. In this case,
@@ -5632,6 +5656,30 @@ struct FormatStyle {
   /// \version 9
   std::vector<std::string> TypenameMacros;
 
+  /// A vector of macros that should be interpreted as try blocks
+  /// instead of as function calls.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   TRY_MACRO(...) {
+  ///     ...
+  ///   } CATCH_MACRO(...) {
+  ///     ...
+  ///   }
+  /// \endcode
+  ///
+  /// The parenthesized arguments are optional for both try and catch macros.
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   TryMacros: [TRY_MACRO]
+  /// \endcode
+  ///
+  /// For example: `KJ_TRY
+  /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#throwing-and-catching-exceptions>`_
+  /// \version 23
+  std::vector<std::string> TryMacros;
+
   /// This option is **deprecated**. See ``LF`` and ``CRLF`` of ``LineEnding``.
   /// \version 10
   // bool UseCRLF;
@@ -5810,7 +5858,8 @@ struct FormatStyle {
            BreakInheritanceList == R.BreakInheritanceList &&
            BreakStringLiterals == R.BreakStringLiterals &&
            BreakTemplateDeclarations == R.BreakTemplateDeclarations &&
-           ColumnLimit == R.ColumnLimit && CommentPragmas == R.CommentPragmas &&
+           CatchMacros == R.CatchMacros && ColumnLimit == R.ColumnLimit &&
+           CommentPragmas == R.CommentPragmas &&
            CompactNamespaces == R.CompactNamespaces &&
            ConstructorInitializerIndentWidth ==
                R.ConstructorInitializerIndentWidth &&
@@ -5935,8 +5984,9 @@ struct FormatStyle {
                R.TableGenBreakingDAGArgOperators &&
            TableGenBreakInsideDAGArg == R.TableGenBreakInsideDAGArg &&
            TabWidth == R.TabWidth && TemplateNames == R.TemplateNames &&
-           TypeNames == R.TypeNames && TypenameMacros == R.TypenameMacros &&
-           UseTab == R.UseTab && VariableTemplates == R.VariableTemplates &&
+           TryMacros == R.TryMacros && TypeNames == R.TypeNames &&
+           TypenameMacros == R.TypenameMacros && UseTab == R.UseTab &&
+           VariableTemplates == R.VariableTemplates &&
            VerilogBreakBetweenInstancePorts ==
                R.VerilogBreakBetweenInstancePorts &&
            WhitespaceSensitiveMacros == R.WhitespaceSensitiveMacros &&
