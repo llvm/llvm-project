@@ -201,8 +201,6 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
   if (!MemLoc.AATags.Scope)
     return false;
 
-  const AAMDNodes &MemAA = MemLoc.AATags;
-
   for (VPBlockBase *Block = FirstBB; Block;
        Block = Block->getSingleSuccessor()) {
     assert(Block->getNumSuccessors() <= 1 &&
@@ -222,16 +220,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
         // location.
         return false;
 
-      // For reads, check if they don't alias in the reverse direction and
-      // skip if so.
-      if (CheckReads && R.mayReadFromMemory() &&
-          !ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
-                                                   MemAA.NoAlias))
-        continue;
-
-      // Check if the memory operations may alias in the forward direction.
-      if (ScopedNoAliasAAResult::mayAliasInScopes(MemAA.Scope,
-                                                  Loc->AATags.NoAlias))
+      if (ScopedNoAliasAAResult::alias(*Loc, MemLoc) != AliasResult::NoAlias)
         return false;
     }
 
@@ -1483,6 +1472,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       Phi->replaceAllUsesWith(Phi->getOperand(0));
     return;
   }
+
+  // Simplify MaskedCond with no block mask to its single operand.
+  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
+      !cast<VPInstruction>(Def)->isMasked())
+    return Def->replaceAllUsesWith(Def->getOperand(0));
 
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
@@ -4001,6 +3995,17 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Lower MaskedCond with block mask to LogicalAnd.
+      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>())) {
+        auto *VPI = cast<VPInstruction>(&R);
+        assert(VPI->isMasked() &&
+               "Unmasked MaskedCond should be simplified earlier");
+        VPI->replaceAllUsesWith(Builder.createNaryOp(
+            VPInstruction::LogicalAnd, {VPI->getOperand(0), VPI->getMask()}));
+        ToRemove.push_back(VPI);
+        continue;
+      }
+
       // Lower BranchOnCount to ICmp + BranchOnCond.
       VPValue *IV, *TC;
       if (match(&R, m_BranchOnCount(m_VPValue(IV), m_VPValue(TC)))) {
@@ -4081,10 +4086,17 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
           match(EarlyExitingVPBB->getTerminator(),
                 m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
       assert(Matched && "Terminator must be BranchOnCond");
-      auto *CondToEarlyExit = TrueSucc == ExitBlock
-                                  ? CondOfEarlyExitingVPBB
-                                  : Builder.createNot(CondOfEarlyExitingVPBB);
+
+      // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
+      // the correct block mask.
+      VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
+      auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
+          VPInstruction::MaskedCond,
+          TrueSucc == ExitBlock
+              ? CondOfEarlyExitingVPBB
+              : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
       assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+              !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
               VPDT.properlyDominates(
                   CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
                   LatchVPBB)) &&
@@ -5057,6 +5069,10 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
   VPValue &VF = Plan.getVF();
   VPValue &VFxUF = Plan.getVFxUF();
+  // Note that after the transform, no further uses of Plan.getVF and
+  // Plan.getVFxUF should be added.
+  // TODO: Add assertions for this.
+
   VPValue *UF =
       Plan.getOrAddLiveIn(ConstantInt::get(TCTy, Plan.getConcreteUF()));
   Plan.getUF().replaceAllUsesWith(UF);
@@ -5083,10 +5099,6 @@ void VPlanTransforms::materializeFactors(VPlan &Plan, VPBasicBlock *VectorPH,
   VPValue *MulByUF = Builder.createOverflowingOp(
       Instruction::Mul, {RuntimeVF, UF}, {true, false});
   VFxUF.replaceAllUsesWith(MulByUF);
-
-  assert(Plan.getVF().getNumUsers() == 0 && Plan.getUF().getNumUsers() == 0 &&
-         Plan.getVFxUF().getNumUsers() == 0 &&
-         "VF, UF, and VFxUF not expected to be used");
 }
 
 DenseMap<const SCEV *, Value *>
@@ -5149,6 +5161,37 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(Member0OpR))
     return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
   return false;
+}
+
+static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
+  SmallVector<VPValue *> Ops0;
+  auto *WideMember0 = dyn_cast<VPWidenRecipe>(Ops[0]);
+  if (!WideMember0)
+    return false;
+
+  for (const auto &[_, V] : enumerate(Ops)) {
+    auto *R = dyn_cast<VPWidenRecipe>(V);
+    if (!R || R->getOpcode() != WideMember0->getOpcode() ||
+        R->getNumOperands() > 2)
+      return false;
+  }
+
+  for (unsigned Idx = 0; Idx != WideMember0->getNumOperands(); ++Idx) {
+    SmallVector<VPValue *> OpsI;
+    for (VPValue *Op : Ops)
+      OpsI.push_back(Op->getDefiningRecipe()->getOperand(Idx));
+
+    if (canNarrowOps(OpsI))
+      continue;
+
+    if (any_of(enumerate(OpsI), [WideMember0, Idx](const auto &P) {
+          const auto &[OpIdx, OpV] = P;
+          return !canNarrowLoad(WideMember0, Idx, OpV, OpIdx);
+        }))
+      return false;
+  }
+
+  return true;
 }
 
 /// Returns VF from \p VFs if \p IR is a full interleave group with factor and
@@ -5352,22 +5395,8 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
 
     // Check if all values feeding InterleaveR are matching wide recipes, which
     // operands that can be narrowed.
-    auto *WideMember0 =
-        dyn_cast_or_null<VPWidenRecipe>(InterleaveR->getStoredValues()[0]);
-    if (!WideMember0)
+    if (!canNarrowOps(InterleaveR->getStoredValues()))
       return nullptr;
-    for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
-      auto *R = dyn_cast_or_null<VPWidenRecipe>(V);
-      if (!R || R->getOpcode() != WideMember0->getOpcode() ||
-          R->getNumOperands() > 2)
-        return nullptr;
-      if (any_of(enumerate(R->operands()),
-                 [WideMember0, Idx = I](const auto &P) {
-                   const auto &[OpIdx, OpV] = P;
-                   return !canNarrowLoad(WideMember0, OpIdx, OpV, Idx);
-                 }))
-        return nullptr;
-    }
     StoreGroups.push_back(InterleaveR);
   }
 
