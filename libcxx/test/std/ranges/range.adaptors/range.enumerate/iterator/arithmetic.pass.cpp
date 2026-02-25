@@ -32,38 +32,6 @@
 
 #include "test_iterators.h"
 
-// Range types.
-
-using CommonRandomAccessRange = std::ranges::subrange<int*>;
-static_assert(std::ranges::common_range<CommonRandomAccessRange>);
-static_assert(std::ranges::random_access_range<CommonRandomAccessRange>);
-// clang-format off
-static_assert(std::sized_sentinel_for<std::ranges::iterator_t<CommonRandomAccessRange>, 
-                                      std::ranges::iterator_t<CommonRandomAccessRange>>);
-// clang-format on
-
-using NonCommonRandomAccessRange = std::ranges::subrange<std::counted_iterator<int*>, std::default_sentinel_t>;
-static_assert(!std::ranges::common_range<NonCommonRandomAccessRange>);
-static_assert(std::ranges::random_access_range<NonCommonRandomAccessRange>);
-// clang-format off
-static_assert(std::sized_sentinel_for<std::ranges::iterator_t<NonCommonRandomAccessRange>, 
-                                      std::ranges::iterator_t<NonCommonRandomAccessRange>>);
-// clang-format on
-
-using NonRandomAccessRange = std::ranges::subrange<bidirectional_iterator<int*>>;
-static_assert(!std::ranges::random_access_range<NonRandomAccessRange>);
-static_assert(std::ranges::bidirectional_range<NonRandomAccessRange>);
-// clang-format off
-static_assert(!std::sized_sentinel_for<std::ranges::iterator_t<NonRandomAccessRange>, 
-                                       std::ranges::iterator_t<NonRandomAccessRange>>);
-// clang-format on
-
-template <class BaseRange>
-using EnumerateIter = std::ranges::iterator_t<std::ranges::enumerate_view<BaseRange>>;
-
-template <class BaseRange>
-using EnumerateSent = std::ranges::sentinel_t<std::ranges::enumerate_view<BaseRange>>;
-
 // Concepts.
 
 template <typename T, typename U>
@@ -75,18 +43,29 @@ concept HasMinusEqual = requires(T t, U u) { t -= u; };
 template <typename T, typename U>
 concept HasPlus = requires(T t, U u) { t + u; };
 
-// template <typename T, typename U>
-// concept HasMinus = std::input_or_output_iterator<T> && (!std::sentinel_for<U, T> || std::same_as<T, U>) &&
-//                    requires(T t, U u) { t - u; };
-
 template <typename T, typename U>
 concept HasMinus = std::input_or_output_iterator<T> && requires(T t, U u) {
   // If T and U are both interators, the result is a difference_type otherwise it is an interator.
   { t - u } -> std::same_as<std::conditional_t<std::same_as<T, U>, std::iter_difference_t<T>, T>>;
 };
 
+// Iterator types.
+
+template <class BaseRange>
+using EnumerateIter = std::ranges::iterator_t<std::ranges::enumerate_view<BaseRange>>;
+
+template <class BaseRange>
+using EnumerateSent = std::ranges::sentinel_t<std::ranges::enumerate_view<BaseRange>>;
+
 // SFINAE.
 
+using CommonRandomAccessRange = std::ranges::subrange<int*>;
+static_assert(std::ranges::common_range<CommonRandomAccessRange>);
+static_assert(std::ranges::random_access_range<CommonRandomAccessRange>);
+// clang-format off
+static_assert(std::sized_sentinel_for<std::ranges::iterator_t<CommonRandomAccessRange>, 
+                                      std::ranges::iterator_t<CommonRandomAccessRange>>);
+// clang-format on
 static_assert(HasPlusEqual<EnumerateIter<CommonRandomAccessRange>, int>);
 static_assert(HasMinusEqual<EnumerateIter<CommonRandomAccessRange>, int>);
 static_assert(HasPlus<EnumerateIter<CommonRandomAccessRange>, int>);
@@ -94,6 +73,13 @@ static_assert(HasPlus<int, EnumerateIter<CommonRandomAccessRange>>);
 static_assert(HasMinus<EnumerateIter<CommonRandomAccessRange>, int>);
 static_assert(HasMinus<EnumerateIter<CommonRandomAccessRange>, EnumerateSent<CommonRandomAccessRange>>);
 
+using NonCommonRandomAccessRange = std::ranges::subrange<std::counted_iterator<int*>, std::default_sentinel_t>;
+static_assert(!std::ranges::common_range<NonCommonRandomAccessRange>);
+static_assert(std::ranges::random_access_range<NonCommonRandomAccessRange>);
+// clang-format off
+static_assert(std::sized_sentinel_for<std::ranges::iterator_t<NonCommonRandomAccessRange>, 
+                                      std::ranges::iterator_t<NonCommonRandomAccessRange>>);
+// clang-format on
 static_assert(HasPlusEqual<EnumerateIter<NonCommonRandomAccessRange>, int>);
 static_assert(HasMinusEqual<EnumerateIter<NonCommonRandomAccessRange>, int>);
 static_assert(HasPlus<EnumerateIter<NonCommonRandomAccessRange>, int>);
@@ -101,6 +87,13 @@ static_assert(HasPlus<int, EnumerateIter<NonCommonRandomAccessRange>>);
 static_assert(HasMinus<EnumerateIter<NonCommonRandomAccessRange>, int>);
 static_assert(!HasMinus<EnumerateIter<NonCommonRandomAccessRange>, EnumerateSent<NonCommonRandomAccessRange>>);
 
+using NonRandomAccessRange = std::ranges::subrange<bidirectional_iterator<int*>>;
+static_assert(!std::ranges::random_access_range<NonRandomAccessRange>);
+static_assert(std::ranges::bidirectional_range<NonRandomAccessRange>);
+// clang-format off
+static_assert(!std::sized_sentinel_for<std::ranges::iterator_t<NonRandomAccessRange>, 
+                                       std::ranges::iterator_t<NonRandomAccessRange>>);
+// clang-format on
 static_assert(!HasPlusEqual<EnumerateIter<NonRandomAccessRange>, int>);
 static_assert(!HasMinusEqual<EnumerateIter<NonRandomAccessRange>, int>);
 static_assert(!HasPlus<EnumerateIter<NonRandomAccessRange>, int>);
@@ -108,9 +101,16 @@ static_assert(!HasPlus<int, EnumerateIter<NonRandomAccessRange>>);
 static_assert(!HasMinus<EnumerateIter<NonRandomAccessRange>, int>);
 static_assert(!HasMinus<EnumerateIter<NonRandomAccessRange>, EnumerateSent<NonRandomAccessRange>>);
 
+template <typename Iter>
 constexpr void test_with_common_range() {
+  using CommonRange = std::ranges::subrange<Iter>;
+  static_assert(std::ranges::common_range<CommonRange>);
+
   int arr[] = {94, 1, 2, 82};
-  CommonRandomAccessRange range{arr, arr + 4};
+  Iter baseIt{arr};
+  Iter baseSt{arr + 4};
+
+  CommonRange range{baseIt, baseSt};
 
   auto ev = range | std::views::enumerate;
 
@@ -121,50 +121,52 @@ constexpr void test_with_common_range() {
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
-    std::same_as<IteratorT&> decltype(auto) result = (it += diff);
+    std::same_as<IteratorT&> decltype(auto) resultIt = (it += diff);
 
-    assert(result.base() == &arr[3]);
-    assert(*it.base() == 82);
+    assert(resultIt == it);
+    assert(base(resultIt.base()) == &arr[3]);
+    assert(*resultIt.base() == 82);
   }
 
   // constexpr iterator& operator-=(difference_type x)
   {
     auto it = ev.end();
     constexpr DifferenceT diff{4};
-    std::same_as<IteratorT&> decltype(auto) result = (it -= diff);
+    std::same_as<IteratorT&> decltype(auto) resultIt = (it -= diff);
 
-    assert(result.base() == &arr[0]);
-    assert(*it.base() == 94);
+    assert(resultIt == it);
+    assert(base(resultIt.base()) == &arr[0]);
+    assert(*resultIt.base() == 94);
   }
 
   //    friend constexpr iterator operator+(const iterator& x, difference_type y)
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
-    std::same_as<IteratorT> decltype(auto) result = (it + diff);
+    std::same_as<IteratorT> decltype(auto) resultIt = (it + diff);
 
-    assert(result.base() == &arr[3]);
-    assert(*result.base() == 82);
+    assert(base(resultIt.base()) == &arr[3]);
+    assert(*resultIt.base() == 82);
   }
 
   //    friend constexpr iterator operator+(difference_type x, const iterator& y)
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
-    std::same_as<IteratorT> decltype(auto) result = (diff + it);
+    std::same_as<IteratorT> decltype(auto) resultIt = (diff + it);
 
-    assert(result.base() == &arr[3]);
-    assert(*result.base() == 82);
+    assert(base(resultIt.base()) == &arr[3]);
+    assert(*resultIt.base() == 82);
   }
 
   //    friend constexpr iterator operator-(const iterator& x, difference_type y)
   {
     auto it = ev.end();
     constexpr DifferenceT diff{4};
-    std::same_as<IteratorT> decltype(auto) result = (it - diff);
+    std::same_as<IteratorT> decltype(auto) resultIt = (it - diff);
 
-    assert(result.base() == &arr[0]);
-    assert(*result.base() == 94);
+    assert(base(resultIt.base()) == &arr[0]);
+    assert(*resultIt.base() == 94);
   }
 
   //    friend constexpr difference_type operator-(const iterator& x, const iterator& y) noexcept;
@@ -172,19 +174,25 @@ constexpr void test_with_common_range() {
     auto it1 = ev.begin();
     auto it2 = ev.end();
 
-    std::same_as<DifferenceT> decltype(auto) result = (it2 - it1);
+    std::same_as<DifferenceT> decltype(auto) resultIt = (it2 - it1);
 
-    assert(result == DifferenceT{4});
+    assert(resultIt == DifferenceT{4});
     assert(((it2 - DifferenceT{1}) - (it1 + DifferenceT{1})) == DifferenceT{2});
 
     static_assert(noexcept(it1 - it2));
   }
 }
 
+template <typename Iter, typename Sent = sentinel_wrapper<Iter>>
 constexpr void test_with_noncommon_range() {
-  int arr[]   = {94, 1, 2, 82};
-  auto baseIt = std::counted_iterator{arr, 4};
-  auto range  = NonCommonRandomAccessRange{baseIt, std::default_sentinel};
+  using NonCommonRange = std::ranges::subrange<Iter, Sent>;
+  static_assert(!std::ranges::common_range<NonCommonRange>);
+
+  int arr[] = {94, 1, 2, 82};
+  Iter baseIt{arr};
+  Sent baseSt{Iter{arr + 4}};
+
+  NonCommonRange range{baseIt, baseSt};
 
   auto ev = range | std::views::enumerate;
 
@@ -195,50 +203,53 @@ constexpr void test_with_noncommon_range() {
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
-    std::same_as<IteratorT&> decltype(auto) result = (it += diff);
+    std::same_as<IteratorT&> decltype(auto) resultIt = (it += diff);
 
-    assert(result.base().base() == &arr[3]);
+    assert(resultIt == it);
+    assert(base(it.base()) == &arr[3]);
     assert(*it.base() == 82);
   }
 
   // constexpr iterator& operator-=(difference_type x)
   {
     constexpr DifferenceT diff{4};
-    auto it                                        = ev.begin() + diff;
-    std::same_as<IteratorT&> decltype(auto) result = (it -= diff);
+    auto it = ev.begin() + diff;
 
-    assert(result.base().base() == &arr[0]);
-    assert(*it.base() == 94);
+    std::same_as<IteratorT&> decltype(auto) resultIt = (it -= diff);
+
+    assert(resultIt == it);
+    assert(base(resultIt.base()) == &arr[0]);
+    assert(*resultIt.base() == 94);
   }
 
   //    friend constexpr iterator operator+(const iterator& x, difference_type y)
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
-    std::same_as<IteratorT> decltype(auto) result = (it + diff);
+    std::same_as<IteratorT> decltype(auto) resultIt = (it + diff);
 
-    assert(result.base().base() == &arr[3]);
-    assert(*result.base() == 82);
+    assert(base(resultIt.base()) == &arr[3]);
+    assert(*resultIt.base() == 82);
   }
 
   //    friend constexpr iterator operator+(difference_type x, const iterator& y)
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
-    std::same_as<IteratorT> decltype(auto) result = (diff + it);
+    std::same_as<IteratorT> decltype(auto) resultIt = (diff + it);
 
-    assert(result.base().base() == &arr[3]);
-    assert(*result.base() == 82);
+    assert(base(resultIt.base()) == &arr[3]);
+    assert(*resultIt.base() == 82);
   }
 
   //    friend constexpr iterator operator-(const iterator& x, difference_type y)
   {
     constexpr DifferenceT diff{4};
-    auto it                                       = ev.begin() + diff;
-    std::same_as<IteratorT> decltype(auto) result = (it - diff);
+    auto it                                         = ev.begin() + diff;
+    std::same_as<IteratorT> decltype(auto) resultIt = (it - diff);
 
-    assert(result.base().base() == &arr[0]);
-    assert(*result.base() == 94);
+    assert(base(resultIt.base()) == &arr[0]);
+    assert(*resultIt.base() == 94);
   }
 
   //    friend constexpr difference_type operator-(const iterator& x, const iterator& y) noexcept;
@@ -246,8 +257,15 @@ constexpr void test_with_noncommon_range() {
 }
 
 constexpr bool test() {
-  test_with_common_range();
-  test_with_noncommon_range();
+  test_with_common_range<random_access_iterator<int*>>();
+  test_with_common_range<contiguous_iterator<int*>>();
+  test_with_common_range<int*>();
+  test_with_common_range<int const*>();
+
+  test_with_noncommon_range<random_access_iterator<int*>>();
+  test_with_noncommon_range<contiguous_iterator<int*>>();
+  test_with_noncommon_range<int*>();
+  test_with_noncommon_range<int const*>();
 
   return true;
 }
