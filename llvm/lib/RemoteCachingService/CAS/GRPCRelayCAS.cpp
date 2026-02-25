@@ -376,15 +376,17 @@ ArrayRef<char> GRPCRelayCAS::getData(ObjectHandle Handle,
 
 Expected<ObjectRef>
 GRPCRelayCAS::storeFromOpenFileImpl(sys::fs::file_t FD,
-                                    std::optional<sys::fs::file_status> FS) {
-  if (!FS.has_value()) {
-    if (std::error_code EC = sys::fs::status(FD, *FS))
+                                    std::optional<sys::fs::file_status> OptFS) {
+  sys::fs::file_status FS;
+  if (OptFS.has_value()) {
+    FS = *OptFS;
+  } else {
+    if (std::error_code EC = sys::fs::status(FD, FS))
       return errorCodeToError(EC);
   }
   std::error_code EC;
   sys::fs::mapped_file_region Map(FD, sys::fs::mapped_file_region::readonly,
-                                  FS->getSize(),
-                                  /*offset=*/0, EC);
+                                  FS.getSize(), /*offset=*/0, EC);
   if (EC)
     return errorCodeToError(EC);
 

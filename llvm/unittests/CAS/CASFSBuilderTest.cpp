@@ -51,7 +51,7 @@ TEST(CASFSBuilderTest, MergeRoots) {
     CASFSBuilder Builder(*CAS);
     Builder.mergeCASFSRoot(aRoot->getRef());
     Builder.mergeCASFSRoot(cRoot->getRef());
-    Builder.mergeCASFSRoot(cRoot->getRef(), "f/g");
+    Builder.mergeCASFSRoot(cRoot->getRef(), "0/1");
     ASSERT_THAT_ERROR(Builder.finish().moveInto(mergedRoot), Succeeded());
   }
 
@@ -69,7 +69,7 @@ TEST(CASFSBuilderTest, MergeRoots) {
   Printed = Printed.drop_front(64); // 32 hash bytes in hex
   EXPECT_TRUE(Printed.consume_front("\n    file llvmcas://")) << Printed;
   Printed = Printed.drop_front(65); // 32 hash bytes in hex + 1 space
-  EXPECT_TRUE(Printed.consume_front("/f/g")) << Printed;
+  EXPECT_TRUE(Printed.consume_front("/0/1")) << Printed;
   EXPECT_TRUE(Printed.consume_front(f2.path())) << Printed;
   EXPECT_TRUE(Printed.consume_front("\n    file llvmcas://")) << Printed;
   Printed = Printed.drop_front(65); // 32 hash bytes in hex + 1 space
