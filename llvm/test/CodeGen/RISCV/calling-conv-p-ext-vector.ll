@@ -24,6 +24,8 @@ define <2 x i16> @test_cc_v2i16(<2 x i16> %a, <2 x i16> %b) {
   ret <2 x i16> %res
 }
 
+; TODO: On RV32, this should ideally use a register-pair
+; instruction (e.g., padd.db) instead of two padd.b instructions.
 define <8 x i8> @test_cc_v8i8(<8 x i8> %a, <8 x i8> %b) {
 ; RV32-LABEL: test_cc_v8i8:
 ; RV32:       # %bb.0:
@@ -357,4 +359,29 @@ define <4 x i16> @test_exhaust_2xlen_rv32_2(i64 %dummy, i64 %dummy2, i64 %dummy3
 ; RV64-NEXT:    ret
   %res = add <4 x i16> %b, %b
   ret <4 x i16> %res
+}
+
+; FIXME: On RV64, the zero-extension (zext.w or slli/srli) is redundant.
+; It is an artifact of ABI coercion for 32-bit vectors and should be
+; optimized away.
+define i64 @test_cc_v4i8_coerce(i64 %a.coerce, i64 %b.coerce) {
+; RV32-LABEL: test_cc_v4i8_coerce:
+; RV32:       # %bb.0:
+; RV32-NEXT:    padd.b a0, a2, a0
+; RV32-NEXT:    li a1, 0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: test_cc_v4i8_coerce:
+; RV64:       # %bb.0:
+; RV64-NEXT:    padd.b a0, a1, a0
+; RV64-NEXT:    zext.w a0, a0
+; RV64-NEXT:    ret
+  %1 = trunc i64 %a.coerce to i32
+  %2 = bitcast i32 %1 to <4 x i8>
+  %3 = trunc i64 %b.coerce to i32
+  %4 = bitcast i32 %3 to <4 x i8>
+  %5 = add <4 x i8> %4, %2
+  %6 = bitcast <4 x i8> %5 to i32
+  %7 = zext i32 %6 to i64
+  ret i64 %7
 }
