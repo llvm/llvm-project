@@ -1255,8 +1255,13 @@ private:
 
 void Sema::checkSourceBufferOverread(FunctionDecl *FD, CallExpr *TheCall,
                                      unsigned SrcArgIdx, unsigned SizeArgIdx) {
-  if (TheCall->isValueDependent() || TheCall->isTypeDependent() ||
-      isConstantEvaluatedContext())
+  if (isConstantEvaluatedContext())
+    return;
+
+  const Expr *SrcArg = TheCall->getArg(SrcArgIdx);
+  const Expr *SizeArg = TheCall->getArg(SizeArgIdx);
+  if (SrcArg->isValueDependent() || SrcArg->isTypeDependent() ||
+      SizeArg->isValueDependent() || SizeArg->isTypeDependent())
     return;
 
   FortifiedBufferChecker Checker(*this, FD, TheCall);
