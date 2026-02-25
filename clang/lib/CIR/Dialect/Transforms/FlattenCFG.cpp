@@ -979,7 +979,7 @@ public:
   //     %ct = cir.begin_cleanup %eh_token : !cir.eh_token -> !cir.cleanup_token
   //     <cloned cleanup operations>
   //     cir.end_cleanup %ct : !cir.cleanup_token
-  //     cir.resume
+  //     cir.resume %eh_token : !cir.eh_token
   //
   // For a multi-block cleanup region (e.g. containing a flattened cir.if),
   // the same wrapping is applied around the cloned block structure: the entry
@@ -1024,7 +1024,7 @@ public:
     if (yieldOp) {
       rewriter.setInsertionPoint(yieldOp);
       cir::EndCleanupOp::create(rewriter, loc, beginCleanup.getCleanupToken());
-      rewriter.replaceOpWithNewOp<cir::ResumeOp>(yieldOp);
+      rewriter.replaceOpWithNewOp<cir::ResumeOp>(yieldOp, ehToken);
     } else {
       cleanupOp->emitError("Not yet implemented: cleanup region terminated "
                            "with non-yield operation");
