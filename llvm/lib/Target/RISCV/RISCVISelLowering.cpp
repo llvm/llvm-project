@@ -22198,7 +22198,10 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       SDValue Chain = LD->getChain();
       SDValue Ptr = LD->getBasePtr();
       const DataLayout &DL = DAG.getDataLayout();
-      EVT SrcVT = LD->getValueType(0);
+      EVT SrcVT = LD->getExtensionType() == ISD::NON_EXTLOAD
+                      ? N->getValueType(0)
+                      : Ptr.getValueType();
+      EVT RetVT = N->getValueType(0);
       if (!SrcVT.isSimple() || SrcVT.isVector() || SrcVT.isScalableVT())
         break;
       Align SrcAlign = LD->getBaseAlign();
@@ -22206,21 +22209,20 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                              LD->getAddressSpace(), SrcAlign,
                              LD->getMemOperand()->getFlags()))
         break;
-      Type *SrcTy = SrcVT.getTypeForEVT(*DAG.getContext());
-      Align ABIAlign = DL.getABITypeAlign(SrcTy);
-      unsigned ScaleFactor = ABIAlign.value() / SrcAlign.value();
-      unsigned SrcBW = SrcVT.getScalarSizeInBits();
-      unsigned TargetBW = SrcBW / ScaleFactor;
+      unsigned SrcBW = RetVT.getScalarSizeInBits();
+      unsigned TargetBW = SrcAlign.value() * 8;
+      unsigned TargetNumElts = SrcBW / TargetBW;
       MVT TargetEltVT = SrcVT.isFloatingPoint()
                             ? MVT::getFloatingPointVT(TargetBW)
                             : MVT::getIntegerVT(TargetBW);
-      MVT TargetVecVT = MVT::getVectorVT(TargetEltVT, ScaleFactor);
+      MVT TargetVecVT = MVT::getVectorVT(TargetEltVT, TargetNumElts);
       if (!isLegalElementTypeForRVV(TargetEltVT) || !isTypeLegal(TargetVecVT))
         break;
       SDValue TargetLoad =
           DAG.getLoad(TargetVecVT, SDLoc(N), Chain, Ptr, LD->getPointerInfo(),
                       LD->getBaseAlign(), LD->getMemOperand()->getFlags());
-      return DCI.CombineTo(N, DAG.getBitcast(SrcVT, TargetLoad), Chain);
+      return DCI.CombineTo(N, DAG.getBitcast(RetVT, TargetLoad),
+                           cast<LoadSDNode>(TargetLoad)->getChain());
     }
 
     auto *Store = cast<StoreSDNode>(N);

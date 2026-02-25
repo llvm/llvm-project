@@ -1383,21 +1383,9 @@ entry:
 define <vscale x 1 x i64> @intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, ptr %1, iXLen %2) nounwind {
 ; RV32-LABEL: intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v10, v9, a0
-; RV32-NEXT:    vmv.x.s a0, v9
-; RV32-NEXT:    vmv.x.s a2, v10
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a2, 12(sp)
-; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    lw a0, 0(a0)
 ; RV32-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v9, (a0), zero
-; RV32-NEXT:    vadd.vv v8, v8, v9
-; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    vadd.vx v8, v8, a0
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64:

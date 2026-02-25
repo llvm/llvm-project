@@ -902,21 +902,15 @@ define <2 x i64> @vwmulu_vx_v2i64_i32(ptr %x, ptr %y) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 16
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vle32.v v8, (a1)
-; RV32-NEXT:    vle32.v v9, (a0)
-; RV32-NEXT:    li a0, 32
-; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32-NEXT:    vsrl.vx v10, v8, a0
-; RV32-NEXT:    vmv.x.s a0, v8
-; RV32-NEXT:    vmv.x.s a1, v10
-; RV32-NEXT:    sw a0, 8(sp)
-; RV32-NEXT:    sw a1, 12(sp)
-; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    lw a1, 0(a1)
 ; RV32-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV32-NEXT:    vlse64.v v8, (a0), zero
-; RV32-NEXT:    vzext.vf2 v10, v9
-; RV32-NEXT:    vmul.vv v8, v8, v10
+; RV32-NEXT:    vle32.v v8, (a0)
+; RV32-NEXT:    sw a1, 8(sp)
+; RV32-NEXT:    sw zero, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vlse64.v v9, (a0), zero
+; RV32-NEXT:    vzext.vf2 v10, v8
+; RV32-NEXT:    vmul.vv v8, v9, v10
 ; RV32-NEXT:    addi sp, sp, 16
 ; RV32-NEXT:    .cfi_def_cfa_offset 0
 ; RV32-NEXT:    ret
