@@ -333,6 +333,22 @@ add_header_library(
 )
 
 add_header_library(
+  asinpif16
+  HDRS
+    asinpif16.h
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.hdr.fenv_macros
+    libc.src.__support.FPUtil.fenv_impl
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   bf16add
   HDRS
     bf16add.h
