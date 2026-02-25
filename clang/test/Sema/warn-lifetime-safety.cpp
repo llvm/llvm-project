@@ -1786,7 +1786,7 @@ void outer_pointer_outlives_inner_pointee() {
   MyObj* view = &safe;
   for (int i = 0; i < 10; ++i) {
     MyObj obj;
-    view = &obj;     // expected-warning {{may not live long enough}}
+    view = &obj;     // expected-warning {{object whose reference is captured does not live long enough}}
   }                  // expected-note {{destroyed here}}
   (void)*view;       // expected-note {{later used here}}
 }
