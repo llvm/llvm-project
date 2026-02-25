@@ -197,7 +197,8 @@ void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME: This only handles variables initialized directly by the algorithm.
   // We may need to introduce more accurate dataflow analysis in the future.
   const auto VarWithAlgoInit =
-      varDecl(hasInitializer(expr(hasDescendant(AnyAlgoCall)))).bind("initVar");
+      varDecl(hasInitializer(expr(ignoringParenImpCasts(AnyAlgoCall))))
+          .bind("initVar");
 
   const auto IsVariableBoolUsage =
       anyOf(implicitCastExpr(hasCastKind(CK_PointerToBoolean),
