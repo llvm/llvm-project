@@ -548,14 +548,14 @@ static SDValue addBitcastHints(SelectionDAG &DAG, SDNode &N) {
     return VT.changeElementType(*(DAG.getContext()),
                                 ScalarVT == MVT::i32 ? MVT::f32 : MVT::f64);
   };
-  auto bitcastToFloat = [&](SDValue Val) {
-    return DAG.getBitcast(getFloatVT(Val.getValueType()), Val);
-  };
   SmallVector<SDValue, 2> NewOps;
   NewOps.reserve(N.getNumOperands());
 
-  for (unsigned I = 0, E = N.getNumOperands(); I < E; ++I)
-    NewOps.push_back(bitcastToFloat(N.getOperand(I)));
+  for (unsigned I = 0, E = N.getNumOperands(); I < E; ++I) {
+    auto bitcasted = DAG.getBitcast(getFloatVT(N.getOperand(I).getValueType()),
+                                    N.getOperand(I));
+    NewOps.push_back(bitcasted);
+  }
   EVT OrigVT = N.getValueType(0);
   SDValue OpNode = DAG.getNode(N.getOpcode(), DL, getFloatVT(OrigVT), NewOps);
   return DAG.getBitcast(OrigVT, OpNode);

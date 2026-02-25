@@ -6616,6 +6616,8 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
     if (isSplatValue(Op0))
       return Op0;
     break;
+  case Intrinsic::structured_gep:
+    return cast<StructuredGEPInst>(Call)->getPointerOperand();
   default:
     break;
   }
