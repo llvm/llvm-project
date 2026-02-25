@@ -6174,16 +6174,16 @@ LangOptions getFormattingLangOpts(const FormatStyle &Style = getLLVMStyle());
 /// Description to be used for help text for a ``llvm::cl`` option for
 /// specifying format style. The description is closely related to the operation
 /// of ``getStyle()``.
-extern const char *StyleOptionHelpDescription;
+extern const char *const StyleOptionHelpDescription;
 
 /// The suggested format style to use by default. This allows tools using
 /// ``getStyle`` to have a consistent default style.
 /// Different builds can modify the value to the preferred styles.
-extern const char *DefaultFormatStyle;
+extern const char *const DefaultFormatStyle;
 
 /// The suggested predefined style to use as the fallback style in ``getStyle``.
 /// Different builds can modify the value to the preferred styles.
-extern const char *DefaultFallbackStyle;
+extern const char *const DefaultFallbackStyle;
 
 /// Construct a FormatStyle based on ``StyleName``.
 ///

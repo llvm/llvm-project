@@ -13,7 +13,7 @@
 using namespace clang;
 
 ArrayRef<StringRef> ObjectFilePCHContainerReader::getFormats() const {
-  static StringRef Formats[] = {"obj", "raw"};
+  static const StringRef Formats[] = {"obj", "raw"};
   return Formats;
 }
 

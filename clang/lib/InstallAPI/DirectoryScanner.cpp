@@ -275,9 +275,9 @@ llvm::Error DirectoryScanner::scanForFrameworks(StringRef Directory) {
 
   // Expect a certain directory structure and naming convention to find
   // frameworks.
-  static const char *SubDirectories[] = {"System/Library/Frameworks/",
-                                         "System/Library/PrivateFrameworks/",
-                                         "System/Library/SubFrameworks"};
+  constexpr const char *const SubDirectories[] = {
+      "System/Library/Frameworks/", "System/Library/PrivateFrameworks/",
+      "System/Library/SubFrameworks"};
 
   // Check if the directory is already a framework.
   if (isFramework(Directory)) {
@@ -288,7 +288,7 @@ llvm::Error DirectoryScanner::scanForFrameworks(StringRef Directory) {
   }
 
   // Check known sub-directory locations.
-  for (const auto *SubDir : SubDirectories) {
+  for (const auto *const SubDir : SubDirectories) {
     SmallString<PATH_MAX> Path(Directory);
     sys::path::append(Path, SubDir);
 
