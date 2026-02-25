@@ -2617,6 +2617,78 @@ void SIInstrInfo::reMaterialize(MachineBasicBlock &MBB,
   // TODO: Handle more cases.
   unsigned Opcode = Orig.getOpcode();
   switch (Opcode) {
+  case AMDGPU::S_MOV_B64:
+  case AMDGPU::S_MOV_B64_IMM_PSEUDO: {
+    if (SubIdx != 0)
+      break;
+
+    if (I == MBB.end())
+      break;
+
+    if (I->isBundled())
+      break;
+
+    if (!Orig.getOperand(1).isImm())
+      break;
+
+    // Shrink S_MOV_B64 to S_MOV_B32 when the use at the insertion point
+    // only needs a single 32-bit subreg of the defined value.
+
+    // Scan all uses of the original register from the insertion point
+    // and verify that all uses in the same live range read the same lane.
+    // Stop at a def of RegToFind since that starts a new live
+    // range whose uses won't be rewritten to our DestReg.
+    Register RegToFind = Orig.getOperand(0).getReg();
+    unsigned UseSubReg = AMDGPU::NoSubRegister;
+
+    [&]() {
+      for (auto It = I; It != MBB.end(); ++It) {
+        for (auto &MO : It->operands()) {
+          // Skip irrelevant registers
+          if (!MO.isReg() || MO.getReg() != RegToFind)
+            continue;
+
+          // Stop at a new live range
+          if (MO.isDef())
+            return;
+
+          if (UseSubReg == AMDGPU::NoSubRegister) {
+            UseSubReg = MO.getSubReg();
+            continue;
+          }
+
+          // Bail out if subregs do not match between uses
+          if (MO.getSubReg() != UseSubReg) {
+            UseSubReg = AMDGPU::NoSubRegister;
+            return;
+          }
+        }
+      }
+    }();
+
+    if (UseSubReg == AMDGPU::NoSubRegister)
+      break;
+
+    if (RI.getSubRegIdxSize(UseSubReg) != 32)
+      break;
+
+    // Determine which half of the 64-bit immediate corresponds to the use.
+    unsigned UseOffset = RI.getSubRegIdxOffset(UseSubReg);
+    unsigned OrigSubReg = Orig.getOperand(0).getSubReg();
+    unsigned DefOffset =
+        (OrigSubReg == AMDGPU::NoSubRegister)
+            ? 0
+            : RI.getSubRegIdxOffset(Orig.getOperand(0).getSubReg());
+    int64_t Imm64 = Orig.getOperand(1).getImm();
+    int32_t Imm32 = (UseOffset == DefOffset) ? Lo_32(Imm64) : Hi_32(Imm64);
+
+    // Emit S_MOV_B32 defining just the needed 32-bit subreg of DestReg.
+    BuildMI(MBB, I, Orig.getDebugLoc(), get(AMDGPU::S_MOV_B32))
+        .addReg(DestReg, RegState::Define | RegState::Undef, UseSubReg)
+        .addImm(Imm32);
+    return;
+  }
+
   case AMDGPU::S_LOAD_DWORDX16_IMM:
   case AMDGPU::S_LOAD_DWORDX8_IMM: {
     if (SubIdx != 0)
