@@ -197,7 +197,7 @@ void BPFMISimplifyPatchable::processCandidate(MachineRegisterInfo *MRI,
       // We can optimize such a pattern:
       //  %1:gpr = LD_imm64 @"llvm.s:0:4$0:2"
       //  %2:gpr32 = LDW32 %1:gpr, 0
-      //  %3:gpr = SUBREG_TO_REG 0, %2:gpr32, %subreg.sub_32
+      //  %3:gpr = SUBREG_TO_REG %2:gpr32, %subreg.sub_32
       //  %4:gpr = ADD_rr %0:gpr, %3:gpr
       //  or similar patterns below for non-alu32 case.
       auto Begin = MRI->use_begin(DstReg), End = MRI->use_end();

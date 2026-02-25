@@ -359,7 +359,19 @@ getLoopEstimatedTripCount(Loop *L,
 /// - Set the branch weight metadata of \p L to reflect that \p L has an
 ///   estimated \p EstimatedTripCount iterations and has
 ///   \c *EstimatedLoopInvocationWeight exit weight through the loop's latch.
-/// - If \p EstimatedTripCount is zero, zero the branch weights.
+/// - If \p EstimatedTripCount is zero, set the backedge weight to 0 and exit
+///   edge to 1. The \p EstimatedTripCount is relative to the original loop
+///   entry, but the branch weights are encoding the probabilities of the
+///   true/false edges. The latter cannot validly be 0-0, because *if* the
+///   control flow arrived here, one of the branches *must* be taken. Moreover,
+///   BranchProbabilityInfo treats 0-0 branch weights as if they were 1-1.
+///   Assuming accurate profile information, a 0 \p EstimatedTripCount should
+///   correspond to a very low, or 0, BFI for the loop body. This should mean
+///   that the BPI info leading to the loop also gives a very low, or 0,
+///   probability to arriving there. If that probability is not exactly 0, 0-0
+///   branch weights would raise the BFI of the loop (as it would really be
+///   treated as 1-1). With the 0-1 (i.e. 100% exit) encoding, the BFI stays as
+///   low as the rest of the CFG's BPI dictates.
 ///
 /// TODO: Eventually, once all passes have migrated away from setting branch
 /// weights to indicate estimated trip counts, this function will drop the
@@ -392,6 +404,15 @@ bool setLoopProbability(Loop *L, BranchProbability P);
 ///   label such that `1 - P` is the probability of control flowing to its
 ///   second target label, or vice-versa if \p ForFirstTarget is false.
 BranchProbability getBranchProbability(BranchInst *B, bool ForFirstTarget);
+
+/// Calculates the edge probability from Src to Dst.
+/// Dst has to be a successor to Src.
+/// This uses branch_weights metadata directly. If data are missing or
+/// probability cannot be computed, then unknown probability is returned.
+/// This does not use BranchProbabilityInfo and the values computed by this
+/// will vary from BPI because BPI has its own more advanced heuristics to
+/// determine probabilities even without branch_weights metadata.
+BranchProbability getBranchProbability(BasicBlock *Src, BasicBlock *Dst);
 
 /// Set branch weight metadata for \p B to indicate that \p P and `1 - P` are
 /// the probabilities of control flowing to its first and second target labels,

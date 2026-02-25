@@ -609,6 +609,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX12W6496, MI, DecW, Address, CS))
         break;
 
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1396, DecoderTableGFX13_FAKE1696, MI,
+                        DecW, Address, CS))
+        break;
+
       if (STI.hasFeature(AMDGPU::Feature64BitLiterals)) {
         // Return 8 bytes for a potential literal.
         Bytes = Bytes_.slice(4, MaxInstBytesNum - 4);
@@ -681,9 +686,17 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                         Address, CS))
         break;
 
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX117064, MI, QW, Address, CS))
+        break;
+
       if (isGFX11() &&
           tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
                         Address, CS))
+        break;
+
+      if (isGFX1170() &&
+          tryDecodeInst(DecoderTableGFX1170W6464, MI, QW, Address, CS))
         break;
 
       if (isGFX11() &&
@@ -694,7 +707,9 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
           tryDecodeInst(DecoderTableGFX12W6464, MI, QW, Address, CS))
         break;
 
-      if (isGFX13() && tryDecodeInst(DecoderTableGFX1364, MI, QW, Address, CS))
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1364, DecoderTableGFX13_FAKE1664, MI, QW,
+                        Address, CS))
         break;
 
       // Reinitialize Bytes
@@ -742,6 +757,11 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
 
       if (isGFX12() &&
           tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632, MI, DW,
+                        Address, CS))
+        break;
+
+      if (isGFX13() &&
+          tryDecodeInst(DecoderTableGFX1332, DecoderTableGFX13_FAKE1632, MI, DW,
                         Address, CS))
         break;
     }
@@ -2235,6 +2255,8 @@ bool AMDGPUDisassembler::isGFX11Plus() const {
   return AMDGPU::isGFX11Plus(STI);
 }
 
+bool AMDGPUDisassembler::isGFX1170() const { return AMDGPU::isGFX1170(STI); }
+
 bool AMDGPUDisassembler::isGFX12() const {
   return STI.hasFeature(AMDGPU::FeatureGFX12);
 }
@@ -2662,8 +2684,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED0_OFFSET:
     // 4 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
-    for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED0_OFFSET, 4);
     }
     return true;
@@ -2678,8 +2700,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED1_OFFSET:
     // 20 reserved bytes, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 20);
-    for (int I = 0; I < 20; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED1_OFFSET, 20);
     }
     return true;
@@ -2761,8 +2783,8 @@ Expected<bool> AMDGPUDisassembler::decodeKernelDescriptorDirective(
   case amdhsa::RESERVED3_OFFSET:
     // 4 bytes from here are reserved, must be 0.
     ReservedBytes = DE.getBytes(Cursor, 4);
-    for (int I = 0; I < 4; ++I) {
-      if (ReservedBytes[I] != 0)
+    for (char B : ReservedBytes) {
+      if (B != 0)
         return createReservedKDBytesError(amdhsa::RESERVED3_OFFSET, 4);
     }
     return true;
