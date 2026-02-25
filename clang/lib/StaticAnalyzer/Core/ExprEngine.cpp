@@ -3300,10 +3300,11 @@ void ExprEngine::VisitCommonDeclRefExpr(const Expr *Ex, const NamedDecl *D,
 
     SVal V = UnknownVal();
 
-    // For pack indexing expressions. Binding is not available here but through
-    // the expanded expressions in the PackIndexingExpr node.
     if (BD->isParameterPack()) {
-      // FIXME: We should meaningfully implement this.
+      // Just bind the lvalue of the decomp decl to the expr.
+      V = state->getLValue(DD, LCtx);
+      Bldr.generateNode(Ex, Pred, state->BindExpr(Ex, LCtx, V), nullptr,
+                        ProgramPoint::PostLValueKind);
       return;
     }
 
@@ -3469,19 +3470,10 @@ void ExprEngine::VisitPackIndexingExpr(const PackIndexingExpr *E,
                                        ExplodedNodeSet &Dst) {
   assert(E->isFullySubstituted() && "unsubstituted pack indexing expression");
 
-  if (const auto *DE = dyn_cast<DeclRefExpr>(E->getSelectedExpr())) {
-    VisitCommonDeclRefExpr(E, DE->getDecl(), Pred, Dst);
-  } else if (const auto *SNTTPE =
-                 dyn_cast<SubstNonTypeTemplateParmExpr>(E->getSelectedExpr())) {
-    (void)SNTTPE;
-    // FIXME: handle this case
-    StmtNodeBuilder Bldr(Pred, Dst, *currBldrCtx);
-    const ExplodedNode *node = Bldr.generateSink(E, Pred, Pred->getState());
-    Engine.addAbortedBlock(node, currBldrCtx->getBlock());
-  } else {
-    llvm_unreachable(
-        "Unexpected selected expression in pack indexing expression");
-  }
+  NodeBuilder Builder(Pred, Dst, *currBldrCtx);
+  Builder.takeNodes(Pred);
+  VisitCommonDeclRefExpr(E, E->getPackDecl(), Pred, Dst);
+  Builder.addNodes(Dst);
 }
 
 /// VisitArraySubscriptExpr - Transfer function for array accesses
