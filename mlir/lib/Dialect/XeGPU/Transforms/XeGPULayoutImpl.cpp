@@ -697,14 +697,11 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
 
   if (!isChunkedLoad) {
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[valShapeSize - 1] =
-          std::min(static_cast<int>(consumerInstData[valShapeSize - 1]),
-                   maxChunkSize * subgroupSize);
+      instData[valShapeSize - 1] = consumerInstData[valShapeSize - 1];
       return xegpu::LayoutAttr::get(context, instData);
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
       laneLayout.back() = subgroupSize;
-      laneData.back() =
-          std::min(static_cast<int>(consumerLaneData.back()), maxChunkSize);
+      laneData.back() = consumerLaneData.back();
       return xegpu::LayoutAttr::get(context, laneLayout, laneData);
     }
   } else {
@@ -796,7 +793,8 @@ setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
 
   if (!isChunkedStore) {
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData[srcShapeSize - 1] = subgroupSize;
+      instData[srcShapeSize - 1] =
+          std::min(subgroupSize, static_cast<int>(srcShape.back()));
       return xegpu::LayoutAttr::get(context, instData);
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
       laneLayout[srcShapeSize - 1] = subgroupSize;
