@@ -211,7 +211,6 @@ Changes to LLDB
 * Support for MIPS64 has been removed.
 * The minimum assumed FreeBSD version is now 14. The effect of which is that watchpoints are
   assumed to be supported.
-* Kernel debugging support for FreeBSD on PPC64le has been added.
 
 #### Kernel Debugging
 
@@ -220,7 +219,7 @@ Changes to LLDB
 * Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
   available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
   from any platform.
-* Support for ARM has been added.
+* Support for ARM and PPC64le has been added.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 * Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
