@@ -69,5 +69,7 @@ then
   build_args+=(--version_val="${VERSION_VAL}")
 fi
 
+export AOCC_LLVM_FLANG_PKG_NAME="true"
+
 echo python3 -u "${ess_dir}/build_essentials/aocc_build.py" "${build_args[@]}"
 python3 -u "${ess_dir}/build_essentials/aocc_build.py" "${build_args[@]}"
