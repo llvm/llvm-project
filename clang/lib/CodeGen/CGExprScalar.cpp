@@ -2455,13 +2455,12 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   // codegen is determined by the -fmatrix-memory-layout flag (default:
   // column-major). When the memory layout is column-major, we need to shuffle
   // the elements from row-major to column-major order.
-  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>()) {
-    if (CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
-        LangOptions::MatrixMemoryLayout::MatrixColMajor) {
-      llvm::MatrixBuilder MB(Builder);
-      V = MB.CreateRowMajorToColumnMajorShuffle(
-          V, MT->getNumRows(), MT->getNumColumns(), "matrix.rowmajor2colmajor");
-    }
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
+      MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                LangOptions::MatrixMemoryLayout::MatrixColMajor) {
+    llvm::MatrixBuilder MB(Builder);
+    V = MB.CreateRowMajorToColumnMajorShuffle(
+        V, MT->getNumRows(), MT->getNumColumns(), "matrix.rowmajor2colmajor");
   }
 
   return V;
