@@ -471,12 +471,15 @@ LogicalResult MemRefAccess::getAccessRelation(IntegerRelation &rel) const {
   // of the access map is a subset of the domain of access, the domain ids of
   // `rel` should be a subset of ids of `domain`. If not, return failure.
 
-  for (unsigned i = 0, e = rel.getNumDimVars(); i < e; ++i) {
+  for (unsigned i = 0; i <rel.getNumDimVars(); ++i) {
     if (rel.getVarKindAt(i) != VarKind::SetDim)
       continue;
     Identifier idi = rel.getIds(VarKind::SetDim)[i];
+    if (!idi.hasValue()) {
+      continue;
+    }
     ArrayRef<Identifier> domainIds = domain.getIds(VarKind::SetDim);
-    if (llvm::is_contained(domainIds, idi)) {
+    if (!llvm::is_contained(domainIds, idi)) {
       return failure();
     }
   }

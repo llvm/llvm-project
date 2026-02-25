@@ -771,3 +771,20 @@ func.func @memref_cast_reused(%arg: memref<*xf32>) {
   // SIBLING-MAXIMAL-NEXT:   affine.store
   return
 }
+
+
+// Exercises fix for crash reported at https://github.com/llvm/llvm-project/issues/54541
+
+func.func @load_linearized_index() {
+  %0 = memref.alloc() : memref<128xi8>
+  %2 = arith.constant 1 : i8
+  affine.for %i0 = 0 to 128 {
+    %3 = affine.linearize_index [%i0] by (1) : index
+    affine.store %2, %0[%3] : memref<128xi8>
+  }
+  affine.for %i0 = 0 to 128 {
+    %3 = affine.linearize_index [%i0] by (1) : index
+    %4 = affine.load %0[%3] : memref<128xi8>
+  }
+  return
+}
