@@ -6,11 +6,11 @@ define i32 @repeated_splat(ptr %ptr, i32 %v) #0 {
 ; CHECK-SAME: ptr [[PTR:%.*]], i32 [[V:%.*]]) {
 ; CHECK-NEXT:    [[GEP0:%.*]] = getelementptr inbounds i32, ptr [[PTR]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = add i32 [[V]], 0
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i32> poison, i32 [[SPLAT]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i32> [[PACK]], i32 [[SPLAT]], i32 1
-; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i32>, ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[VEC:%.*]] = mul <2 x i32> [[VECL]], [[PACK1]]
-; CHECK-NEXT:    store <2 x i32> [[VEC]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <2 x i32> poison, i32 [[SPLAT]], i32 0, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <2 x i32> [[PACK]], i32 [[SPLAT]], i32 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <2 x i32>, ptr [[GEP0]], align 4, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VEC:%.*]] = mul <2 x i32> [[VECL]], [[PACK1]], !sandboxvec [[META0]]
+; CHECK-NEXT:    store <2 x i32> [[VEC]], ptr [[GEP0]], align 4, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret i32 0
 ;
   %gep0 = getelementptr inbounds i32, ptr %ptr, i64 0
@@ -35,13 +35,13 @@ define i32 @repeated_partial(ptr %ptr, i32 %v) #0 {
 ; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[LD3:%.*]] = load i32, ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <4 x i32> poison, i32 [[LD0]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <4 x i32> [[PACK]], i32 [[LD1]], i32 1
-; CHECK-NEXT:    [[PACK2:%.*]] = insertelement <4 x i32> [[PACK1]], i32 [[LD1]], i32 2
-; CHECK-NEXT:    [[PACK3:%.*]] = insertelement <4 x i32> [[PACK2]], i32 [[LD3]], i32 3
-; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i32>, ptr [[GEP0]], align 4
-; CHECK-NEXT:    [[VEC:%.*]] = mul <4 x i32> [[VECL]], [[PACK3]]
-; CHECK-NEXT:    store <4 x i32> [[VEC]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <4 x i32> poison, i32 [[LD0]], i32 0, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <4 x i32> [[PACK]], i32 [[LD1]], i32 1, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[PACK2:%.*]] = insertelement <4 x i32> [[PACK1]], i32 [[LD1]], i32 2, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[PACK3:%.*]] = insertelement <4 x i32> [[PACK2]], i32 [[LD3]], i32 3, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i32>, ptr [[GEP0]], align 4, !sandboxvec [[META1]]
+; CHECK-NEXT:    [[VEC:%.*]] = mul <4 x i32> [[VECL]], [[PACK3]], !sandboxvec [[META1]]
+; CHECK-NEXT:    store <4 x i32> [[VEC]], ptr [[GEP0]], align 4, !sandboxvec [[META1]]
 ; CHECK-NEXT:    ret i32 0
 ;
   %gep0 = getelementptr inbounds i32, ptr %ptr, i64 0
@@ -63,3 +63,7 @@ define i32 @repeated_partial(ptr %ptr, i32 %v) #0 {
   store i32 %add3, ptr %gep3, align 4
   ret i32 0
 }
+;.
+; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META1]] = distinct !{!"sandboxregion"}
+;.

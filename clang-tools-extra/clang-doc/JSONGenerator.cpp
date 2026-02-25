@@ -34,9 +34,14 @@ static void serializeInfo(const RecordInfo &I, Object &Obj,
 static void serializeReference(const Reference &Ref, Object &ReferenceObj);
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo);
+static void serializeArray(
+    const Container &Records, Object &Obj, const StringRef Key,
+    SerializationFunc SerializeInfo, const StringRef EndKey = "End",
+    function_ref<void(Object &)> UpdateJson = [](Object &Obj) {});
+
+// TODO(issue URL): Wrapping logic for HTML should probably use a more
+// sophisticated heuristic than number of parameters.
+constexpr static unsigned getMaxParamWrapLimit() { return 2; }
 
 // Convenience lambda to pass to serializeArray.
 // If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
@@ -442,9 +447,9 @@ serializeCommonChildren(const ScopeChildren &Children, json::Object &Obj,
 }
 
 template <typename Container, typename SerializationFunc>
-static void serializeArray(const Container &Records, Object &Obj,
-                           const std::string &Key,
-                           SerializationFunc SerializeInfo) {
+static void serializeArray(const Container &Records, Object &Obj, StringRef Key,
+                           SerializationFunc SerializeInfo, StringRef EndKey,
+                           function_ref<void(Object &)> UpdateJson) {
   json::Value RecordsArray = Array();
   auto &RecordsArrayRef = *RecordsArray.getAsArray();
   RecordsArrayRef.reserve(Records.size());
@@ -453,10 +458,11 @@ static void serializeArray(const Container &Records, Object &Obj,
     auto &ItemObj = *ItemVal.getAsObject();
     SerializeInfo(Records[Index], ItemObj);
     if (Index == Records.size() - 1)
-      ItemObj["End"] = true;
+      ItemObj[EndKey] = true;
     RecordsArrayRef.push_back(ItemVal);
   }
   Obj[Key] = RecordsArray;
+  UpdateJson(Obj);
 }
 
 static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
@@ -464,39 +470,39 @@ static void serializeInfo(const ConstraintInfo &I, Object &Obj) {
   Obj["Expression"] = I.ConstraintExpr;
 }
 
-static void serializeInfo(const ArrayRef<TemplateParamInfo> &Params,
-                          Object &Obj) {
-  json::Value ParamsArray = Array();
-  auto &ParamsArrayRef = *ParamsArray.getAsArray();
-  ParamsArrayRef.reserve(Params.size());
-  for (size_t Idx = 0; Idx < Params.size(); ++Idx) {
-    json::Value ParamObjVal = Object();
-    Object &ParamObj = *ParamObjVal.getAsObject();
-
-    ParamObj["Param"] = Params[Idx].Contents;
-    if (Idx == Params.size() - 1)
-      ParamObj["End"] = true;
-    ParamsArrayRef.push_back(ParamObjVal);
-  }
-  Obj["Parameters"] = ParamsArray;
-}
-
 static void serializeInfo(const TemplateInfo &Template, Object &Obj) {
   json::Value TemplateVal = Object();
   auto &TemplateObj = *TemplateVal.getAsObject();
+  auto SerializeTemplateParam = [](const TemplateParamInfo &Param,
+                                   Object &JsonObj) {
+    JsonObj["Param"] = Param.Contents;
+  };
 
   if (Template.Specialization) {
     json::Value TemplateSpecializationVal = Object();
     auto &TemplateSpecializationObj = *TemplateSpecializationVal.getAsObject();
     TemplateSpecializationObj["SpecializationOf"] =
         toHex(toStringRef(Template.Specialization->SpecializationOf));
-    if (!Template.Specialization->Params.empty())
-      serializeInfo(Template.Specialization->Params, TemplateSpecializationObj);
+    if (!Template.Specialization->Params.empty()) {
+      bool VerticalDisplay =
+          Template.Specialization->Params.size() > getMaxParamWrapLimit();
+      serializeArray(Template.Specialization->Params, TemplateSpecializationObj,
+                     "Parameters", SerializeTemplateParam, "End",
+                     [VerticalDisplay](Object &JsonObj) {
+                       JsonObj["VerticalDisplay"] = VerticalDisplay;
+                     });
+    }
     TemplateObj["Specialization"] = TemplateSpecializationVal;
   }
 
-  if (!Template.Params.empty())
-    serializeInfo(Template.Params, TemplateObj);
+  if (!Template.Params.empty()) {
+    bool VerticalDisplay = Template.Params.size() > getMaxParamWrapLimit();
+    serializeArray(Template.Params, TemplateObj, "Parameters",
+                   SerializeTemplateParam, "End",
+                   [VerticalDisplay](Object &JsonObj) {
+                     JsonObj["VerticalDisplay"] = VerticalDisplay;
+                   });
+  }
 
   if (!Template.Constraints.empty())
     serializeArray(Template.Constraints, TemplateObj, "Constraints",
@@ -541,8 +547,13 @@ static void serializeInfo(const FunctionInfo &F, json::Object &Obj,
   serializeInfo(F.ReturnType, ReturnTypeObj);
   Obj["ReturnType"] = std::move(ReturnTypeObj);
 
-  if (!F.Params.empty())
-    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda);
+  if (!F.Params.empty()) {
+    const bool VerticalDisplay = F.Params.size() > getMaxParamWrapLimit();
+    serializeArray(F.Params, Obj, "Params", SerializeInfoLambda, "ParamEnd",
+                   [VerticalDisplay](Object &JsonObj) {
+                     JsonObj["VerticalDisplay"] = VerticalDisplay;
+                   });
+  }
 
   if (F.Template)
     serializeInfo(F.Template.value(), Obj);

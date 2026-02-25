@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMATTEST_JSONFORMATTEST_H
 #define LLVM_CLANG_UNITTESTS_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMATTEST_JSONFORMATTEST_H
 
+#include "TestFixture.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -20,7 +21,6 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "gtest/gtest.h"
 #ifndef _WIN32
 #include <unistd.h>
 #endif
@@ -29,7 +29,7 @@
 // Test Fixture
 // ============================================================================
 
-class JSONFormatTest : public ::testing::Test {
+class JSONFormatTest : public clang::ssaf::TestFixture {
 public:
   using PathString = llvm::SmallString<128>;
 
