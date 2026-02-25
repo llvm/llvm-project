@@ -172,7 +172,7 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
 
   const VPlan &Plan = *LastActiveLane.getParent()->getPlan();
   // All operands must be prefix-mask. This means an icmp ult/ule LHS, RHS where
-  // the LHS is monotonically increasing and RHS is uniform.
+  // the LHS is monotonically increasing and RHS is uniform across VFs and UF.
   for (VPValue *Op : LastActiveLane.operands()) {
     if (vputils::isHeaderMask(Op, Plan))
       continue;
