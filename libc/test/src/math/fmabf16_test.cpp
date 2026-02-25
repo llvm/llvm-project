@@ -45,9 +45,9 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
 
 TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
   constexpr bfloat16 VALUES[] = {zero,    neg_zero,   inf,
-                                   neg_inf, min_normal, max_normal};
-  for (int i = 0 ; i< 6 ;++i) {
-    for (int j =i ; j< 6 ;++j) {
+                                 neg_inf, min_normal, max_normal};
+  for (int i = 0; i < 6; ++i) {
+    for (int j = i; j < 6; ++j) {
       bfloat16 x = VALUES[i];
       bfloat16 y = VALUES[j];
       for (const bfloat16 &z : VALUES) {
