@@ -14,7 +14,6 @@ if(NOT LLDB_PYTHON_EXE_RELATIVE_PATH)
 endif()
 add_definitions(-DLLDB_PYTHON_EXE_RELATIVE_PATH="${LLDB_PYTHON_EXE_RELATIVE_PATH}")
 
-
 if (LLDB_ENABLE_LIBEDIT)
   list(APPEND LLDB_LIBEDIT_LIBS LibEdit::LibEdit)
 endif()
@@ -31,6 +30,18 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
   PythonReadline.cpp
   ScriptInterpreterPython.cpp
 
+  Interfaces/OperatingSystemPythonInterface.cpp
+  Interfaces/ScriptInterpreterPythonInterfaces.cpp
+  Interfaces/ScriptedFramePythonInterface.cpp
+  Interfaces/ScriptedFrameProviderPythonInterface.cpp
+  Interfaces/ScriptedPlatformPythonInterface.cpp
+  Interfaces/ScriptedProcessPythonInterface.cpp
+  Interfaces/ScriptedPythonInterface.cpp
+  Interfaces/ScriptedStopHookPythonInterface.cpp
+  Interfaces/ScriptedBreakpointPythonInterface.cpp
+  Interfaces/ScriptedThreadPlanPythonInterface.cpp
+  Interfaces/ScriptedThreadPythonInterface.cpp
+
   LINK_COMPONENTS
     Support
   LINK_LIBS
@@ -41,7 +52,10 @@ add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN
     lldbInterpreter
     lldbTarget
     lldbValueObject
-    lldbPluginScriptInterpreterPythonInterfaces
     ${Python3_LIBRARIES}
     ${LLDB_LIBEDIT_LIBS}
   )
+
+
+  target_include_directories(lldbPluginScriptInterpreterPython
+    PUBLIC ${Python3_INCLUDE_DIRS})
