@@ -345,9 +345,11 @@ endfunction()
 #   aggregate shared library.
 #   TODO: Make this the default for all MLIR libraries once all libraries
 #   are compatible with building an object library.
+# STANDALONE
+#   Don't link against LLVMSupport.
 function(add_mlir_library name)
   cmake_parse_arguments(ARG
-    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT"
+    "SHARED;INSTALL_WITH_TOOLCHAIN;EXCLUDE_FROM_LIBMLIR;DISABLE_INSTALL;ENABLE_AGGREGATION;OBJECT;STANDALONE"
     ""
     "ADDITIONAL_HEADERS;DEPENDS;LINK_COMPONENTS;LINK_LIBS"
     ${ARGN})
@@ -400,8 +402,10 @@ function(add_mlir_library name)
     list(APPEND LIBTYPE OBJECT)
   endif()
 
-  # MLIR libraries uniformly depend on LLVMSupport.  Just specify it once here.
-  list(APPEND ARG_LINK_COMPONENTS Support)
+  # Most MLIR libraries depend on LLVMSupport.  Just specify it once here.
+  if(NOT ARG_STANDALONE)
+    list(APPEND ARG_LINK_COMPONENTS Support)
+  endif()
   _check_llvm_components_usage(${name} ${ARG_LINK_LIBS})
 
   list(APPEND ARG_DEPENDS mlir-generic-headers)

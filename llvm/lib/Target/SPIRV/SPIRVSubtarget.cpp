@@ -96,8 +96,11 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
     Env = Unknown;
 
   // Set the default extensions based on the target triple.
-  if (TargetTriple.getVendor() == Triple::Intel)
+  if (TargetTriple.getVendor() == Triple::Intel) {
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
+    Extensions.insert(
+        SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+  }
   if (TargetTriple.getVendor() == Triple::AMD)
     Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 

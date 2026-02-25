@@ -6456,37 +6456,6 @@ cc_binary(
     ],
 )
 
-cc_binary(
-    name = "bugpoint",
-    srcs = glob([
-        "tools/bugpoint/*.cpp",
-        "tools/bugpoint/*.h",
-    ]),
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":AllTargetsAsmParsers",
-        ":AllTargetsCodeGens",
-        ":Analysis",
-        ":AsmParser",
-        ":BitReader",
-        ":BitWriter",
-        ":CodeGen",
-        ":Core",
-        ":IPO",
-        ":IRPrinter",
-        ":IRReader",
-        ":Linker",
-        ":Passes",
-        ":Plugins",
-        ":Scalar",
-        ":Support",
-        ":TargetParser",
-        ":TransformUtils",
-        ":common_transforms",
-        ":config",
-    ],
-)
 
 cc_binary(
     name = "count",
