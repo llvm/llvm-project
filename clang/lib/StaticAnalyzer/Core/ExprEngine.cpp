@@ -1144,7 +1144,7 @@ void ExprEngine::ProcessStmt(const Stmt *currStmt, ExplodedNode *Pred) {
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
@@ -1162,7 +1162,7 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   LoopExit PP(S, Pred->getLocationContext());
   Bldr.generateNode(PP, NewState, Pred);
   // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
@@ -1255,7 +1255,7 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 std::pair<ProgramStateRef, uint64_t>
@@ -1319,7 +1319,7 @@ void ExprEngine::ProcessImplicitDtor(const CFGImplicitDtor D,
   }
 
   // Enqueue the new nodes onto the work list.
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
@@ -1339,7 +1339,7 @@ void ExprEngine::ProcessNewAllocator(const CXXNewExpr *NE,
                         getCFGElementRef());
     Bldr.generateNode(PP, Pred->getState(), Pred);
   }
-  Engine.enqueue(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessAutomaticObjDtor(const CFGAutomaticObjDtor Dtor,
