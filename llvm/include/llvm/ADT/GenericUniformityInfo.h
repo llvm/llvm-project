@@ -67,10 +67,6 @@ public:
   /// Whether \p V is uniform/non-divergent.
   bool isUniform(ConstValueRefT V) const { return !isDivergent(V); }
 
-  /// Whether \p V was not present during analysis (not in uniform or
-  /// divergent set). E.g. newly created instructions.
-  bool isValueUnknown(ConstValueRefT V) const;
-
   // Similar queries for InstructionT. These accept a pointer argument so that
   // in LLVM IR, they overload the equivalent queries for Value*. For example,
   // if querying whether a BranchInst is divergent, it should not be treated as
