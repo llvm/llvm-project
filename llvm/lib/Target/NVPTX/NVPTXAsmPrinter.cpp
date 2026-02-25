@@ -1707,10 +1707,16 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     }
   }
 
-  // Old constants
-  if (isa<ConstantArray>(CPV) || isa<ConstantVector>(CPV)) {
+  // Buffer arrays one element at a time.
+  if (isa<ConstantArray>(CPV)) {
     for (const auto &Op : CPV->operands())
       bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // Constant vectors
+  if (const auto *CVec = dyn_cast<ConstantVector>(CPV)) {
+    bufferAggregateConstVec(CVec, aggBuffer);
     return;
   }
 
@@ -1735,6 +1741,48 @@ void NVPTXAsmPrinter::bufferAggregateConstant(const Constant *CPV,
     return;
   }
   llvm_unreachable("unsupported constant type in printAggregateConstant()");
+}
+
+void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
+                                              AggBuffer *aggBuffer) {
+  unsigned NumElems = CV->getType()->getNumElements();
+  const unsigned BuffSize = aggBuffer->getSize();
+
+  // Buffer one element at a time if we have allocated enough buffer space.
+  if (BuffSize >= NumElems) {
+    for (const auto &Op : CV->operands())
+      bufferLEByte(cast<Constant>(Op), 0, aggBuffer);
+    return;
+  }
+
+  // We have more elements than allocated buffer space, this implies sub-byte
+  // datatype in the vector. Merge consecutive elements to form a full byte.
+  Type *ElemTy = CV->getType()->getElementType();
+  assert(ElemTy->isIntegerTy() && "Expected integer data type.");
+  unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
+  assert(ElemTySize < 8 && "Expected sub-byte data type.");
+  // Number of elements to merge to form a full byte.
+  unsigned ChunkSize = 8 / ElemTySize;
+
+  // Iterate through elements of vector one chunk at a time and buffer that
+  // chunk.
+  for (unsigned I = 0; I < NumElems; I += ChunkSize) {
+    unsigned CurrVal = 0;
+    for (unsigned J = I; J < std::min(I + ChunkSize, NumElems); ++J) {
+      auto *Elem = cast<ConstantInt>(CV->getAggregateElement(J));
+      unsigned ElemVal = Elem->getZExtValue();
+      // PTX datalayout is little-endian, so shift element based on its position
+      // in the chunk.
+      unsigned ShiftAmount = (J - I) * ElemTySize;
+      CurrVal |= ElemVal << ShiftAmount;
+    }
+
+    // Create a new constant to represent the merged value of the chunk and
+    // buffer it.
+    auto *MergedElem =
+        ConstantInt::get(Type::getInt8Ty(ElemTy->getContext()), CurrVal);
+    bufferLEByte(MergedElem, 0, aggBuffer);
+  }
 }
 
 /// lowerConstantForGV - Return an MCExpr for the given Constant.  This is mostly
