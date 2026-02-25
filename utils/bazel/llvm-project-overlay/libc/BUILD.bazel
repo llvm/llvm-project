@@ -3669,6 +3669,8 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16mul",
+    hdrs = ["src/__support/math/f16mul.h"],
     deps = [
         ":__support_fputil_basic_operations",
         ":__support_macros_config",
