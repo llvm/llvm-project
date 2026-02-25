@@ -17,7 +17,6 @@
 #include "flang/Runtime/freestanding-tools.h"
 #include <algorithm>
 #include <cstring>
-#include <iostream>
 
 namespace Fortran::runtime {
 
@@ -608,7 +607,11 @@ template <typename CHAR>
 static RT_API_ATTRS TokenizeAnalysis AnalyzeTokenize(const CHAR *str,
     std::size_t strChars, const CHAR *set, std::size_t setChars) {
   TokenizeAnalysis analysis;
+
+  // Empty STRING should return one empty token, per Fortran standard.
   if (strChars == 0) {
+    analysis.tokenCount = 1;
+    analysis.maxTokenLen = 0;
     return analysis;
   }
   if (setChars == 0) {
@@ -680,10 +683,10 @@ static RT_API_ATTRS void TokenizeFillForm1(Descriptor &tokens,
     // One token (possibly empty) equal to STRING.
     if (tokenElemBytes > 0) {
       CHAR *tokDest{tokens.OffsetElement<CHAR>(0)};
-      TokenizeFillBlanks(tokDest, analysis.maxTokenLen);
       if (strChars > 0) {
         runtime::memcpy(tokDest, str, strChars * sizeof(CHAR));
       }
+      TokenizeFillBlanks(tokDest + strChars, analysis.maxTokenLen - strChars);
     }
     return;
   }
@@ -696,10 +699,10 @@ static RT_API_ATTRS void TokenizeFillForm1(Descriptor &tokens,
     if (tokenElemBytes > 0) {
       // Each element is stored in a fixed-size slot of `tokenElemBytes`.
       CHAR *tokDest{tokens.OffsetElement<CHAR>(tokenIndex * tokenElemBytes)};
-      TokenizeFillBlanks(tokDest, analysis.maxTokenLen);
       if (tokenLen > 0) {
         runtime::memcpy(tokDest, str + tokenStart, tokenLen * sizeof(CHAR));
       }
+      TokenizeFillBlanks(tokDest + tokenLen, analysis.maxTokenLen - tokenLen);
     }
     ++tokenIndex;
   };
@@ -754,7 +757,11 @@ static RT_API_ATTRS void TokenizeFillPositions(Descriptor &first,
     Descriptor &last, const CHAR *str, std::size_t strChars, const CHAR *set,
     std::size_t setChars, TokenizeStoreIntFn storeFirst,
     TokenizeStoreIntFn storeLast, Terminator &terminator) {
+
+  // Empty STRING should return one empty token, per Fortran standard.
   if (strChars == 0) {
+    storeFirst(first, 0, 1);
+    storeLast(last, 0, 0);
     return;
   }
   if (setChars == 0) {
