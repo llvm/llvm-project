@@ -588,6 +588,15 @@ func.func @indexCastOfSignExtend(%arg0: i8) -> index {
   return %idx : index
 }
 
+// CHECK-LABEL: @indexCastOfSignExtend_exact
+//       CHECK:   %[[res:.+]] = arith.index_cast %arg0 exact : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastOfSignExtend_exact(%arg0: i8) -> index {
+  %ext = arith.extsi %arg0 : i8 to i16
+  %idx = arith.index_cast %ext exact : i16 to index
+  return %idx : index
+}
+
 // CHECK-LABEL: @indexCastUIOfUnsignedExtend
 //       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
 //       CHECK:   return %[[res]]
@@ -613,6 +622,24 @@ func.func @indexCastUIOfUnsignedExtend_nneg_on_extui(%arg0: i8) -> index {
 func.func @indexCastUIOfUnsignedExtend_nneg_on_castui(%arg0: i8) -> index {
   %ext = arith.extui %arg0 : i8 to i16
   %idx = arith.index_castui %ext nneg : i16 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_exact
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 exact : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend_exact(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 : i8 to i16
+  %idx = arith.index_castui %ext exact : i16 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_exact
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 nneg exact : i8 to index
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend_nneg_exact(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 nneg : i8 to i16
+  %idx = arith.index_castui %ext exact : i16 to index
   return %idx : index
 }
 
