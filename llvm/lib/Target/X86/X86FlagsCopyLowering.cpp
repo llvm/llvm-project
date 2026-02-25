@@ -433,6 +433,31 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
     llvm::scope_exit Cleanup([&] {
       // All uses of the EFLAGS copy are now rewritten, kill the copy into
       // eflags and if dead the copy from.
+
+      // Mark the last use of EFLAGS before the copy's def as a kill if
+      // the copy's def operand is itself a kill.
+      if (CopyDefI.getOperand(1).isKill()) {
+        MachineBasicBlock *DefMBB = CopyDefI.getParent();
+        MachineInstr *LastUse = nullptr;
+
+        // Find the last use of EFLAGS before CopyDefI
+        for (auto MI = std::prev(CopyDefI.getIterator()); MI != DefMBB->begin();
+             --MI) {
+          if (MI->readsRegister(X86::EFLAGS, TRI)) {
+            LastUse = &*MI;
+            break;
+          }
+        }
+
+        // If we found a last use, mark it as kill
+        if (LastUse) {
+          MachineOperand *FlagUse =
+              LastUse->findRegisterUseOperand(X86::EFLAGS, TRI);
+          if (FlagUse)
+            FlagUse->setIsKill(true);
+        }
+      }
+
       CopyI->eraseFromParent();
       if (MRI->use_empty(CopyDefI.getOperand(0).getReg()))
         CopyDefI.eraseFromParent();
@@ -702,9 +727,6 @@ bool X86FlagsCopyLoweringImpl::runOnMachineFunction(MachineFunction &MF) {
 
       rewriteMI(*TestMBB, TestPos, TestLoc, *JmpI, CondRegs);
     }
-
-    // FIXME: Mark the last use of EFLAGS before the copy's def as a kill if
-    // the copy's def operand is itself a kill.
   }
 
 #ifndef NDEBUG
