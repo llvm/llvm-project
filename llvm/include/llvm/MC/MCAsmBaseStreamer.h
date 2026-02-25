@@ -43,7 +43,7 @@ public:
   /// use this method.
   raw_ostream &getCommentOS() override {
     if (!isVerboseAsm())
-      return nulls();  // Discard comments unless in verbose asm mode.
+      return nulls(); // Discard comments unless in verbose asm mode.
     return CommentStream;
   }
 

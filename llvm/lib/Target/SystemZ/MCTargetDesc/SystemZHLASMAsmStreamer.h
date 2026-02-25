@@ -74,8 +74,6 @@ public:
   /// and only when verbose assembly output is enabled.
   void AddComment(const Twine &T, bool EOL = true) override;
 
-  raw_ostream &getCommentOS() override;
-
   void emitBytes(StringRef Data) override;
 
   void emitAlignmentDS(uint64_t ByteAlignment, std::optional<int64_t> Value,
