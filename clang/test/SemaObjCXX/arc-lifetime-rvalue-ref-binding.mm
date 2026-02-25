@@ -11,7 +11,7 @@ void take(const id&);
 
 // CHECK-LABEL: FunctionDecl {{.*}} test_rvalue_binding
 // CHECK: CallExpr
-// CHECK: ImplicitCastExpr {{.*}} 'const __autoreleasing id' lvalue <NoOp>
+// CHECK: ImplicitCastExpr {{.*}} 'const __autoreleasing id' xvalue <NoOp>
 // CHECK-NEXT: CXXStaticCastExpr {{.*}} '__strong id' xvalue static_cast<__strong id &&> <NoOp>
 void test_rvalue_binding() {
   id obj = nullptr;
