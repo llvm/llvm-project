@@ -592,7 +592,7 @@ llvm::Error Interpreter::Undo(unsigned N) {
         return Err;
     }
 
-    IncrParser->CleanUpPTU(PTUs.back().TUPart);
+    IncrParser->CleanUpPTU(PTUs.back());
     PTUs.pop_back();
   }
   return llvm::Error::success();

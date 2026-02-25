@@ -347,7 +347,9 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   }
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
-  if (ReusingEntry) { // Already have an entry with this inode, return it.
+  if (ReusingEntry &&
+      llvm::sys::toTimeT(Status.getLastModificationTime()) == UFE->ModTime) {
+    // Already have an entry with this inode, return it.
     return ReturnedRef;
   }
 

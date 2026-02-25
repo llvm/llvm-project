@@ -16,6 +16,7 @@
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
 #include "llvm/IR/Module.h"
@@ -27,6 +28,61 @@
 #define DEBUG_TYPE "clang-repl"
 
 namespace clang {
+
+class IncrementalPreProcessorTracker : public PPCallbacks {
+  std::vector<FileEntryRef> IncludedFiles;
+  PartialTranslationUnit::MacroDirectiveInfoQueue MacroDirectives;
+  void MacroDirective(const clang::Token &MacroNameTok,
+                      const clang::MacroDirective *MD) {
+    PartialTranslationUnit::MacroDirectiveInfo MDE(
+        MacroNameTok.getIdentifierInfo(), MD);
+    MacroDirectives.push_back(MDE);
+  }
+
+public:
+  explicit IncrementalPreProcessorTracker() {}
+  void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
+                          StringRef FileName, bool IsAngled,
+                          CharSourceRange FilenameRange,
+                          OptionalFileEntryRef File, StringRef SearchPath,
+                          StringRef RelativePath, const Module *SuggestedModule,
+                          bool ModuleImported,
+                          SrcMgr::CharacteristicKind FileType) override {
+
+    if (File) {
+      IncludedFiles.push_back(*File);
+    }
+  }
+
+  /// \name PPCallbacks overrides
+  /// Macro support
+  void MacroDefined(const clang::Token &MacroNameTok,
+                    const clang::MacroDirective *MD) final {
+    MacroDirective(MacroNameTok, MD);
+  }
+
+  /// \name PPCallbacks overrides
+  /// Macro support
+  void MacroUndefined(const clang::Token &MacroNameTok,
+                      const clang::MacroDefinition & /*MD*/,
+                      const clang::MacroDirective *Undef) final {
+    if (Undef)
+      MacroDirective(MacroNameTok, Undef);
+  }
+
+  /// Move out tracked files after Parse completes
+  std::vector<FileEntryRef> takeFiles() { return std::move(IncludedFiles); }
+
+  /// Move out tracked macros after Parse completes
+  PartialTranslationUnit::MacroDirectiveInfoQueue takeMacros() {
+    return std::move(MacroDirectives);
+  }
+
+  void reset() {
+    IncludedFiles.clear();
+    MacroDirectives.clear();
+  }
+};
 
 // IncrementalParser::IncrementalParser() {}
 
@@ -42,6 +98,11 @@ IncrementalParser::IncrementalParser(CompilerInstance &Instance,
     External->StartTranslationUnit(Consumer);
 
   P->Initialize();
+
+  // track files that are included when parse to support undo
+  auto Tracker = std::make_unique<IncrementalPreProcessorTracker>();
+  PreProcessorTracker = Tracker.get();
+  S.getPreprocessor().addPPCallbacks(std::move(Tracker));
 }
 
 IncrementalParser::~IncrementalParser() { P.reset(); }
@@ -82,7 +143,7 @@ IncrementalParser::ParseOrWrapTopLevelDecl() {
 
   DiagnosticsEngine &Diags = S.getDiagnostics();
   if (Diags.hasErrorOccurred()) {
-    CleanUpPTU(C.getTranslationUnitDecl());
+    CleanUpTU(C.getTranslationUnitDecl());
 
     Diags.Reset(/*soft=*/true);
     Diags.getClient()->clear();
@@ -108,6 +169,9 @@ llvm::Expected<TranslationUnitDecl *>
 IncrementalParser::Parse(llvm::StringRef input) {
   Preprocessor &PP = S.getPreprocessor();
   assert(PP.isIncrementalProcessingEnabled() && "Not in incremental mode!?");
+
+  if (PreProcessorTracker)
+    PreProcessorTracker->reset();
 
   std::ostringstream SourceName;
   SourceName << "input_line_" << InputCount++;
@@ -161,7 +225,7 @@ IncrementalParser::Parse(llvm::StringRef input) {
   return PTU;
 }
 
-void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
+void IncrementalParser::CleanUpTU(TranslationUnitDecl *MostRecentTU) {
   if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
     for (auto &&[Key, List] : *Map) {
       DeclContextLookupResult R = List.getLookupResult();
@@ -194,6 +258,51 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   }
 }
 
+void IncrementalParser::CleanUpPTU(
+    const PartialTranslationUnit &MostRecentPTU) {
+  CleanUpTU(MostRecentPTU.TUPart);
+
+  auto &PP = P->getPreprocessor();
+  auto &HS = PP.getHeaderSearchInfo();
+  auto &SM = PP.getSourceManager();
+
+  auto &MacroDirectives = PTUs.back().MacroDirectiveInfos;
+  bool Successful = true;
+  if (!MacroDirectives.empty()) {
+    for (auto MI = MacroDirectives.rbegin(), ME = MacroDirectives.rend();
+         MI != ME; ++MI) {
+      // Get rid of the macro definition
+      auto UnloadMacro =
+          [&PP](PartialTranslationUnit::MacroDirectiveInfo MacroD) {
+            const MacroDirective *MD = MacroD.MD;
+            // Undef the definition
+            const MacroInfo *MI = MD->getMacroInfo();
+
+            // If the macro is not defined, this is a noop undef, just return.
+            if (!MI)
+              return false;
+
+            // Remove the pair from the macros
+            PP.removeMacro(MacroD.II, const_cast<MacroDirective *>(MacroD.MD));
+
+            return true;
+          };
+      Successful = UnloadMacro(*MI) && Successful;
+    }
+  }
+  if (!PTUs.back().IncludedFiles.empty()) {
+    for (FileEntryRef FE : PTUs.back().IncludedFiles) {
+      HeaderFileInfo &HFI = HS.getFileInfo(FE);
+      HFI.IsLocallyIncluded = false;
+      HFI.isPragmaOnce = false;
+      HFI.LazyControllingMacro = LazyIdentifierInfoPtr();
+      HFI.IsValid = false;
+
+      SM.invalidateCache(SM.translateFile(FE));
+    }
+  }
+}
+
 PartialTranslationUnit &
 IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
                                std::unique_ptr<llvm::Module> M /*={}*/) {
@@ -213,6 +322,11 @@ IncrementalParser::RegisterPTU(TranslationUnitDecl *TU,
     LLVM_DEBUG(llvm::dbgs() << ", M=" << LastPTU.TheModule.get() << " ("
                             << LastPTU.TheModule->getName() << ")");
   LLVM_DEBUG(llvm::dbgs() << "]\n");
+
+  if (PreProcessorTracker) {
+    LastPTU.IncludedFiles = PreProcessorTracker->takeFiles();
+    LastPTU.MacroDirectiveInfos = PreProcessorTracker->takeMacros();
+  }
   return LastPTU;
 }
 } // end namespace clang
