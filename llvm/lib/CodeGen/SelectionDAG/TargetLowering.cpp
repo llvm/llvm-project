@@ -6295,10 +6295,6 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
 
   // If we can fold the register (i.e. it has an "rm" constraint), opt for the
   // 'r' constraint, and allow the register allocator to spill if need be.
-  //
-  // Note: This code is a holdover from when the Clang front-end defaulted to
-  // using the memory constriaint. This should be reviewed at some point to
-  // remove that assumption from the back-end.
   const TargetMachine &TM = getTargetMachine();
   if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister) {
     Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));

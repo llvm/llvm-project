@@ -273,10 +273,9 @@ static CallInst *CreateNewInlineAsm(
   NewCall->setAttributes(CB->getAttributes());
   NewCall->setDebugLoc(CB->getDebugLoc());
 
-  for (const std::pair<unsigned, Type *> &Item : ElementTypeAttrs)
-    NewCall->addParamAttr(
-        Item.first,
-        Attribute::get(Context, Attribute::ElementType, Item.second));
+  for (const auto &[Index, Ty] : ElementTypeAttrs)
+    NewCall->addParamAttr(Index,
+                          Attribute::get(Context, Attribute::ElementType, Ty));
 
   return NewCall;
 }
@@ -341,7 +340,7 @@ static bool ProcessInlineAsm(Function &F, CallBase *CB) {
   InlineAsm *IA = cast<InlineAsm>(CB->getCalledOperand());
   const InlineAsm::ConstraintInfoVector &Constraints = IA->ParseConstraints();
 
-  auto [NewConstraintStr, HasRegMem] =
+  const auto &[NewConstraintStr, HasRegMem] =
       ConvertConstraintsToMemory(IA->getConstraintString());
   if (!HasRegMem)
     return false;
@@ -493,15 +492,20 @@ static bool SplitCriticalEdges(CallBrInst *CBR, DominatorTree *DT) {
   //
   // ...hence starting at 1 and checking against successor 0 (aka the default
   // destination).
-  for (unsigned i = 1, e = CBR->getNumSuccessors(); i != e; ++i)
-    if (CBR->getSuccessor(i) == CBR->getSuccessor(0) ||
-        isCriticalEdge(CBR, i, /*AllowIdenticalEdges*/ true))
-      if (SplitKnownCriticalEdge(CBR, i, Options))
+  for (unsigned I = 1, E = CBR->getNumSuccessors(); I != E; ++I)
+    if (CBR->getSuccessor(I) == CBR->getSuccessor(0) ||
+        isCriticalEdge(CBR, I, /*AllowIdenticalEdges*/ true))
+      if (SplitKnownCriticalEdge(CBR, I, Options))
         Changed = true;
 
   return Changed;
 }
 
+/// Create a separate SSA definition in each indirect target (via
+/// llvm.callbr.landingpad). This may require splitting critical edges so we
+/// have a location to place the intrinsic. Then remap users of the original
+/// callbr output SSA value to instead point to the appropriate
+/// llvm.callbr.landingpad value.
 static bool InsertIntrinsicCalls(CallBrInst *CBR, DominatorTree &DT) {
   bool Changed = false;
   SmallPtrSet<const BasicBlock *, 4> Visited;
