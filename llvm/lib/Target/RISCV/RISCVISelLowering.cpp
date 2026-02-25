@@ -1873,7 +1873,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::SIGN_EXTEND_INREG);
 
   if (Subtarget.hasStdExtFOrZfinx())
-    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM, ISD::FMUL});
+    setTargetDAGCombine({ISD::FADD, ISD::FMAXNUM, ISD::FMINNUM,
+                         ISD::FMAXIMUMNUM, ISD::FMINIMUMNUM, ISD::FMUL});
 
   if (Subtarget.hasStdExtZbb())
     setTargetDAGCombine({ISD::UMAX, ISD::UMIN, ISD::SMAX, ISD::SMIN});
@@ -15998,8 +15999,10 @@ static unsigned getVecReduceOpcode(unsigned Opc) {
     // Note: This is the associative form of the generic reduction opcode.
     return ISD::VECREDUCE_FADD;
   case ISD::FMAXNUM:
+  case ISD::FMAXIMUMNUM:
     return ISD::VECREDUCE_FMAX;
   case ISD::FMINNUM:
+  case ISD::FMINIMUMNUM:
     return ISD::VECREDUCE_FMIN;
   }
 }
@@ -16042,6 +16045,8 @@ combineBinOpOfExtractToReduceTree(SDNode *N, SelectionDAG &DAG,
       break;
     case ISD::FMAXNUM:
     case ISD::FMINNUM:
+    case ISD::FMAXIMUMNUM:
+    case ISD::FMINIMUMNUM:
       break;
     }
   }
@@ -16138,8 +16143,9 @@ static SDValue combineBinOpToReduce(SDNode *N, SelectionDAG &DAG,
     case ISD::FADD:
       return RISCVISD::VECREDUCE_FADD_VL;
     case ISD::FMAXNUM:
+    case ISD::FMAXIMUMNUM:
       return RISCVISD::VECREDUCE_FMAX_VL;
-    case ISD::FMINNUM:
+    case ISD::FMINIMUMNUM:
       return RISCVISD::VECREDUCE_FMIN_VL;
     }
   };
@@ -21622,7 +21628,9 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SMAX:
   case ISD::SMIN:
   case ISD::FMAXNUM:
-  case ISD::FMINNUM: {
+  case ISD::FMINNUM:
+  case ISD::FMAXIMUMNUM:
+  case ISD::FMINIMUMNUM: {
     if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
       return V;
     if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
