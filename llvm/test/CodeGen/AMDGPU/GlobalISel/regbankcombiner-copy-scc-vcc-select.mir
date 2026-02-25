@@ -443,7 +443,7 @@ body: |
 ...
 
 ---
-name: test_no_match_no_and
+name: test_no_and_needed
 legalized: true
 regBankSelected: true
 tracksRegLiveness: true
@@ -451,7 +451,7 @@ body: |
   bb.1:
     liveins: $vgpr0, $vgpr1
 
-    ; CHECK-LABEL: name: test_no_match_no_and
+    ; CHECK-LABEL: name: test_no_and_needed
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
@@ -477,7 +477,7 @@ body: |
 ...
 
 ---
-name: test_no_match_and_mask_not_1
+name: test_and_mask_not_1
 legalized: true
 regBankSelected: true
 tracksRegLiveness: true
@@ -485,7 +485,7 @@ body: |
   bb.1:
     liveins: $vgpr0, $vgpr1
 
-    ; CHECK-LABEL: name: test_no_match_and_mask_not_1
+    ; CHECK-LABEL: name: test_and_mask_not_1
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
@@ -513,7 +513,7 @@ body: |
 ...
 
 ---
-name: test_no_match_trueval_not_1_or_neg1
+name: test_arbitrary_inline_trueval
 legalized: true
 regBankSelected: true
 tracksRegLiveness: true
@@ -521,7 +521,7 @@ body: |
   bb.1:
     liveins: $vgpr0, $vgpr1
 
-    ; CHECK-LABEL: name: test_no_match_trueval_not_1_or_neg1
+    ; CHECK-LABEL: name: test_arbitrary_inline_trueval
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
@@ -585,7 +585,7 @@ body: |
 ...
 
 ---
-name: test_no_match_false_not_zero
+name: test_arbitrary_inline_falseval
 legalized: true
 regBankSelected: true
 tracksRegLiveness: true
@@ -593,7 +593,7 @@ body: |
   bb.1:
     liveins: $vgpr0, $vgpr1
 
-    ; CHECK-LABEL: name: test_no_match_false_not_zero
+    ; CHECK-LABEL: name: test_arbitrary_inline_falseval
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
