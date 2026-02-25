@@ -171,8 +171,6 @@ private:
   unsigned getRegForPromotedValue(const Value *V, bool IsSigned);
   unsigned notValue(unsigned Reg);
   unsigned copyValue(unsigned Reg);
-  bool WebAssemblyEmitLoad(unsigned Opc, Register &ResultReg, Address &Addr,
-                           MachineMemOperand *MMO);
 
   // Backend specific FastISel code.
   Register fastMaterializeAlloca(const AllocaInst *AI) override;
