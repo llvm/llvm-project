@@ -2194,8 +2194,10 @@ The AMDGPU backend supports the following LLVM IR attributes.
                                                       on a single counter type. This allows PC-sampling based profilers to
                                                       attribute wait cycles to specific counter types (e.g., VMEM, LDS, EXP).
 
-     "amdgpu-no-fwd-progress"                         Disable forward progress mode for instruction selection priority
+     "amdgpu-no-fwd-progress"                         Disable forward progress mode for wave priority
                                                       (enabled by default).
+
+                                                      Relevant for GFX10+.
      ================================================ ==========================================================
 
 Calling Conventions
