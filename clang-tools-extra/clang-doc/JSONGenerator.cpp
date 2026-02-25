@@ -39,7 +39,8 @@ static void serializeArray(
     SerializationFunc SerializeInfo, const StringRef EndKey = "End",
     function_ref<void(Object &)> UpdateJson = [](Object &Obj) {});
 
-// TODO(issue URL): Wrapping logic for HTML should probably use a more sophisticated heuristic than number of parameters.
+// TODO(issue URL): Wrapping logic for HTML should probably use a more
+// sophisticated heuristic than number of parameters.
 constexpr static unsigned getMaxParamWrapLimit() { return 2; }
 
 // Convenience lambda to pass to serializeArray.
