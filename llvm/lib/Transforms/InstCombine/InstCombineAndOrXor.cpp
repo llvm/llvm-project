@@ -3628,6 +3628,9 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
 
     if (MatchedBitwise || MatchedLogical) {
       for (int i = 0; i < 2; ++i) {
+        if (MatchedLogical && i == 0)
+          continue;
+
         Value *Inner = i == 0 ? A : B;
         Value *Other = i == 0 ? B : A;
         auto *ICmpInner = dyn_cast<ICmpInst>(Inner);
@@ -3635,11 +3638,19 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
           continue;
 
         Value *Res =
-            foldAndOrOfICmps(ICmpInner, ICmpR, I, IsAnd, /*IsLogical=*/false);
+            foldAndOrOfICmps(ICmpInner, ICmpR, I, IsAnd, IsLogical);
         if (!Res)
           continue;
 
-        return Builder.CreateBinOp(Opcode, Other, Res);
+        if (auto *ResICmp = dyn_cast<ICmpInst>(Res))
+          ResICmp->setSameSign(false);
+
+        if (IsLogical)
+          return IsAnd ? Builder.CreateLogicalAnd(Other, Res)
+                       : Builder.CreateLogicalOr(Other, Res);
+
+        // For bitwise reconstruction, canonicalize icmp to the left (Res).
+        return Builder.CreateBinOp(Opcode, Res, Other);
       }
     }
     return nullptr;
@@ -3647,8 +3658,9 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
 
   if (Value *V = TryFold(LHS, RHS))
     return V;
-  if (Value *V = TryFold(RHS, LHS))
-    return V;
+  if (!IsLogical)
+    if (Value *V = TryFold(RHS, LHS))
+      return V;
 
   return nullptr;
 }

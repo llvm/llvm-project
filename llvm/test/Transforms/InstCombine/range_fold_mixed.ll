@@ -8,7 +8,7 @@
 define i1 @test_mixed_and_select(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_mixed_and_select(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult i32 [[TMP1]], 1048576
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 1048576
 ; CHECK-NEXT:    [[SEL2:%.*]] = and i1 [[COND:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
@@ -22,7 +22,7 @@ define i1 @test_mixed_and_select(i1 %cond, i32 %y) {
 define i1 @test_bitwise_and_reassoc(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_bitwise_and_reassoc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult i32 [[TMP1]], 1048576
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 1048576
 ; CHECK-NEXT:    [[SEL2:%.*]] = and i1 [[COND:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
@@ -36,7 +36,7 @@ define i1 @test_bitwise_and_reassoc(i1 %cond, i32 %y) {
 define i1 @test_mixed_or_select(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_mixed_or_select(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -1114112
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult i32 [[TMP1]], -1048576
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -1048576
 ; CHECK-NEXT:    [[SEL2:%.*]] = or i1 [[COND:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
