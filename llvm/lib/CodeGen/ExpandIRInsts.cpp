@@ -1203,7 +1203,6 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::SDiv:
     case Instruction::URem:
     case Instruction::SRem:
-      // TODO: We don't consider vectors here.
       // Power-of-2 divisors are handled inside the expansion (via efficient
       // shift/mask sequences) rather than being excluded here, so that
       // backends that cannot lower wide div/rem even for powers of two
@@ -1272,6 +1271,8 @@ static bool runImpl(Function &F, const TargetLowering &TLI,
     case Instruction::URem:
     case Instruction::SRem: {
       auto *BO = cast<BinaryOperator>(I);
+      // TODO: isConstantPowerOfTwo does not handle vector constants, so
+      // vector div/rem by a power-of-2 splat goes through the generic path.
       if (isConstantPowerOfTwo(BO->getOperand(1), isSigned(BO->getOpcode()))) {
         expandPow2DivRem(BO);
       } else {
