@@ -18,6 +18,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/IR/Iterators.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -174,6 +175,15 @@ public:
     propagateShapesInRegion(func.getBody(), state);
     state.commit();
 
+    if (foldShapeExpressions) {
+      // Folding shape expressions may leave dead tosa.const_shape operations
+      func.walk<WalkOrder::PostOrder, ReverseIterator>(
+          [](tosa::ConstShapeOp op) {
+            if (isOpTriviallyDead(op))
+              op->erase();
+          });
+    }
+
     validateSameOperandsAndResultRankTrait(func.getBody());
 
     if (convertFunctionBoundaries)
@@ -315,14 +325,7 @@ private:
 
         if (foldShapeExpressions &&
             op.hasTrait<OpTrait::tosa::TosaShapeOperator>()) {
-          const LogicalResult foldResult = folder.tryToFold(&op);
-          if (succeeded(foldResult))
-            // Clean up any dead const_shape ops as a result of folding.
-            llvm::for_each(op.getOperands(), [](Value operand) {
-              Operation *definingOp = operand.getDefiningOp();
-              if (definingOp && isOpTriviallyDead(definingOp))
-                definingOp->erase();
-            });
+          (void)folder.tryToFold(&op);
           continue;
         }
 
