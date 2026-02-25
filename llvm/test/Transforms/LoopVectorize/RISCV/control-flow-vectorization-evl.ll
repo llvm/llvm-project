@@ -147,8 +147,8 @@ define i64 @conditional_liveout_both_path(ptr %addr, i64 %N, i64 %M) {
 ; CHECK-NEXT:    [[VP_OP_LOAD:%.*]] = call <vscale x 4 x i64> @llvm.vp.load.nxv4i64.p0(ptr align 8 [[TMP1]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP0]])
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <vscale x 4 x i64> [[VP_OP_LOAD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <vscale x 4 x i64> [[VEC_PHI]], [[VP_OP_LOAD]]
-; CHECK-NEXT:    [[TMP4:%.*]] = add <vscale x 4 x i64> [[VP_OP_LOAD]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <vscale x 4 x i1> @llvm.vp.merge.nxv4i1(<vscale x 4 x i1> splat (i1 true), <vscale x 4 x i1> [[TMP2]], <vscale x 4 x i1> zeroinitializer, i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP4:%.*]] = add <vscale x 4 x i64> [[VP_OP_LOAD]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = freeze <vscale x 4 x i1> [[TMP5]]
 ; CHECK-NEXT:    [[COND:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP6]])
 ; CHECK-NEXT:    br i1 [[COND]], label %[[LOOP_IF:.*]], label %[[LOOP_ELSE]]

@@ -597,7 +597,7 @@ struct VPlanTransforms {
                                         VPRecipeBuilder &RecipeBuilder,
                                         VPCostContext &CostCtx);
 
-  /// Try to convert flattened control flow into a conditional vector basic
+  /// Try to convert the flattened control flow into a conditional vector basic
   /// block. If there are no active bits in the mask, it will skip all masked
   /// operations. This transformation will collect all masked operations
   /// bottom-up from the masked stores and put all masked operations in a new

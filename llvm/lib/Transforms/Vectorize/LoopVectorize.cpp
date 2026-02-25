@@ -6621,6 +6621,11 @@ void LoopVectorizationPlanner::buildVPlans(VPlan &VPlan1, ElementCount MinVF,
     RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                    Config.getMinimalBitwidths());
     RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
+    // optimizeConditionalVPBB will introduce non-linear control flow in the
+    // VPlan, need to insert it after `optimize` to prevent interaction with
+    // licm.
+    if (PreferControlFlow || TTI.preferControlFlowVectorization())
+      RUN_VPLAN_PASS(VPlanTransforms::optimizeConditionalVPBB, *Plan);
     // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
     if (CM.foldTailWithEVL()) {
       RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
@@ -6881,9 +6886,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan,
 
   if (CM.maskPartialAliasing())
     RUN_VPLAN_PASS(VPlanTransforms::attachAliasMaskToHeaderMask, *Plan);
-
-  if (PreferControlFlow || TTI.preferControlFlowVectorization())
-    RUN_VPLAN_PASS(VPlanTransforms::optimizeConditionalVPBB, *Plan);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
