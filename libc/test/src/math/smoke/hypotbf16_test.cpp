@@ -1,4 +1,4 @@
-//===-- Implementation of hypotbf16 function ------------------------------===//
+//===-- Unittests for hypotbf16 -------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "HypotTest.h"
+
+#include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/hypotbf16.h"
-#include "src/__support/math/hypotbf16.h"
 
-namespace LIBC_NAMESPACE_DECL {
+using LlvmLibcHypotBf16Test = HypotTestTemplate<bfloat16>;
 
-LLVM_LIBC_FUNCTION(bfloat16, hypotbf16, (bfloat16 x, bfloat16 y)) {
-  return math::hypotbf16(x, y);
+TEST_F(LlvmLibcHypotBf16Test, SpecialNumbers) {
+  test_special_numbers(&LIBC_NAMESPACE::hypotbf16);
 }
-
-} // namespace LIBC_NAMESPACE_DECL

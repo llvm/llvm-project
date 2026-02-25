@@ -3024,7 +3024,6 @@ add_entrypoint_object(
     ../hypotbf16.h
   DEPENDS
     libc.src.__support.math.hypotbf16
-    libc.src.math.hypotbf16
 )
 
 add_entrypoint_object(
