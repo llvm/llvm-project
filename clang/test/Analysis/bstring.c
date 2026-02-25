@@ -1,5 +1,4 @@
 // RUN: %clang_analyze_cc1 -verify %s \
-// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -8,7 +7,6 @@
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS \
-// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -17,7 +15,6 @@
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DVARIANT \
-// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -26,7 +23,6 @@
 // RUN:   -analyzer-config eagerly-assume=false
 //
 // RUN: %clang_analyze_cc1 -verify %s -DUSE_BUILTINS -DVARIANT \
-// RUN:   -Wno-stringop-overread \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring \
 // RUN:   -analyzer-checker=alpha.unix.cstring \
@@ -97,6 +93,9 @@ void memcpy1 (void) {
   char dst[10];
 
   memcpy(dst, src, 5); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#if !defined(VARIANT) || defined(USE_BUILTINS)
+  // expected-warning@-2{{'memcpy' reading 5 bytes from a region of size 4}}
+#endif
 }
 
 void memcpy2 (void) {
@@ -121,6 +120,9 @@ void memcpy4 (void) {
   char dst[10];
 
   memcpy(dst+2, src+2, 3); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#if !defined(VARIANT) || defined(USE_BUILTINS)
+  // expected-warning@-2{{'memcpy' reading 3 bytes from a region of size 2}}
+#endif
 }
 
 void memcpy5(void) {
@@ -223,6 +225,9 @@ void mempcpy1 (void) {
   char dst[10];
 
   mempcpy(dst, src, 5); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#if !defined(VARIANT) || defined(USE_BUILTINS)
+  // expected-warning@-2{{'mempcpy' reading 5 bytes from a region of size 4}}
+#endif
 }
 
 void mempcpy2 (void) {
@@ -247,6 +252,9 @@ void mempcpy4 (void) {
   char dst[10];
 
   mempcpy(dst+2, src+2, 3); // expected-warning{{Memory copy function accesses out-of-bound array element}}
+#if !defined(VARIANT) || defined(USE_BUILTINS)
+  // expected-warning@-2{{'mempcpy' reading 3 bytes from a region of size 2}}
+#endif
 }
 
 void mempcpy5(void) {
@@ -388,6 +396,9 @@ void memmove1 (void) {
   char dst[10];
 
   memmove(dst, src, 5); // expected-warning{{out-of-bound}}
+#if !defined(VARIANT) || defined(USE_BUILTINS)
+  // expected-warning@-2{{'memmove' reading 5 bytes from a region of size 4}}
+#endif
 }
 
 void memmove2 (void) {
@@ -430,6 +441,11 @@ void memcmp1 (void) {
   char b[10] = { 0 };
 
   memcmp(a, b, 5); // expected-warning{{out-of-bound}}
+#ifdef VARIANT
+  // expected-warning@-2{{'bcmp' reading 5 bytes from a region of size 4}}
+#else
+  // expected-warning@-4{{'memcmp' reading 5 bytes from a region of size 4}}
+#endif
 }
 
 void memcmp2 (void) {
@@ -437,6 +453,11 @@ void memcmp2 (void) {
   char b[1] = { 0 };
 
   memcmp(a, b, 4); // expected-warning{{out-of-bound}}
+#ifdef VARIANT
+  // expected-warning@-2{{'bcmp' reading 4 bytes from a region of size 1}}
+#else
+  // expected-warning@-4{{'memcmp' reading 4 bytes from a region of size 1}}
+#endif
 }
 
 void memcmp3 (void) {
