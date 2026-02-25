@@ -1,4 +1,4 @@
-//===-- RegisterContextFreeBSDKernel_x86_64.h -------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,17 +6,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_X86_64_H
-#define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_X86_64_H
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM64_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM64_H
 
-#include "Plugins/Process/Utility/RegisterContextPOSIX_x86.h"
+#include "Plugins/Process/Utility/RegisterContextPOSIX_arm64.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 
-class RegisterContextFreeBSDKernel_x86_64 : public RegisterContextPOSIX_x86 {
+#include <optional>
+
+class RegisterContextFreeBSDKernelCore_arm64
+    : public RegisterContextPOSIX_arm64 {
 public:
-  RegisterContextFreeBSDKernel_x86_64(
+  RegisterContextFreeBSDKernelCore_arm64(
       lldb_private::Thread &thread,
-      lldb_private::RegisterInfoInterface *register_info,
+      std::unique_ptr<RegisterInfoPOSIX_arm64> register_info_up,
       lldb::addr_t pcb_addr);
 
   bool ReadRegister(const lldb_private::RegisterInfo *reg_info,
@@ -36,6 +39,8 @@ protected:
 
 private:
   lldb::addr_t m_pcb_addr;
+
+  std::optional<int> GetOsreldate();
 };
 
-#endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNEL_X86_64_H
+#endif // LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_ARM64_H
