@@ -15,7 +15,7 @@
             <tr>
                 <th>Name</th>
                 <th>Value</th>
-                <th>Comments</th>
+                {{#HasComments}}<th>Comments</th>{{/HasComments}}
             </tr>
             {{#Members}}
             <tr>
@@ -27,7 +27,7 @@
                 {{^Value}}
                 <td>{{ValueExpr}}</td>
                 {{/Value}}
-                <td>{{#Description}}{{>Comments}}{{/Description}}{{^Description}} -- {{/Description}}</td>
+                {{#HasComments}}<td>{{#Description}}{{>Comments}}{{/Description}}{{^Description}} -- {{/Description}}</td>{{/HasComments}}
             </tr>
             {{/Members}}
         </tbody>

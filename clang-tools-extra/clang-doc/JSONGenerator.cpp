@@ -78,6 +78,29 @@ public:
 
 const char *JSONGenerator::Format = "json";
 
+static void serializeInfo(const ConstraintInfo &I, Object &Obj);
+static void serializeInfo(const RecordInfo &I, Object &Obj,
+                          const std::optional<StringRef> &RepositoryUrl,
+                          const std::optional<StringRef> &RepositoryLinePrefix);
+
+static void serializeReference(const Reference &Ref, Object &ReferenceObj);
+
+template <typename Container, typename SerializationFunc>
+static void serializeArray(
+    const Container &Records, Object &Obj, const StringRef Key,
+    SerializationFunc SerializeInfo, const StringRef EndKey = "End",
+    function_ref<void(Object &)> UpdateJson = [](Object &Obj) {});
+
+// Convenience lambda to pass to serializeArray.
+// If a serializeInfo needs a RepositoryUrl, create a local lambda that captures
+// the optional.
+static auto SerializeInfoLambda = [](const auto &Info, Object &Object) {
+  serializeInfo(Info, Object);
+};
+static auto SerializeReferenceLambda = [](const auto &Ref, Object &Object) {
+  serializeReference(Ref, Object);
+};
+
 static void insertNonEmpty(StringRef Key, StringRef Value, Object &Obj) {
   if (!Value.empty())
     Obj[Key] = Value;
@@ -624,7 +647,15 @@ void JSONGenerator::serializeInfo(const EnumInfo &I, json::Object &Obj) {
   }
 
   if (!I.Members.empty())
-    serializeArray(I.Members, Obj, "Members", serializeInfoLambda());
+    serializeArray(I.Members, Obj, "Members", SerializeInfoLambda, "End",
+                   [&I](Object &JsonObj) {
+                     for (const auto &Member : I.Members) {
+                       if (!Member.Description.empty()) {
+                         JsonObj["HasComments"] = true;
+                         break;
+                       }
+                     }
+                   });
 }
 
 void JSONGenerator::serializeInfo(const TypedefInfo &I, json::Object &Obj) {

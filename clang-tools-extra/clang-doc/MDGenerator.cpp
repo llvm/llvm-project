@@ -182,7 +182,17 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   }
   OS << "|\n\n" << "--\n\n";
 
-  OS << "| Name | Value | Comments |\n\n";
+  OS << "| Name | Value |";
+  bool HasComments = false;
+  for (const auto &Member : I.Members) {
+    if (!Member.Description.empty()) {
+      HasComments = true;
+      break;
+    }
+  }
+  if (HasComments)
+    OS << " Comments |";
+  OS << "\n\n";
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
   if (!I.Members.empty())
@@ -190,10 +200,12 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
       Members << "| " << N.Name << " ";
       if (!N.Value.empty())
         Members << "| " << N.Value << " ";
-      std::string RawComment = genRawText(N.Description);
-      RawComment.erase(0, RawComment.find_first_not_of(" \t\r\n"));
-      RawComment.erase(RawComment.find_last_not_of(" \t\r\n") + 1);
-      Members << "| " << (RawComment.empty() ? "--" : RawComment) << " ";
+      if (HasComments) {
+        std::string RawComment = genRawText(N.Description);
+        RawComment.erase(0, RawComment.find_first_not_of(" \t\r\n"));
+        RawComment.erase(RawComment.find_last_not_of(" \t\r\n") + 1);
+        Members << "| " << (RawComment.empty() ? "--" : RawComment) << " ";
+      }
       Members << "|\n";
     }
   writeLine(Members.str(), OS);
