@@ -3044,7 +3044,7 @@ static bool shouldSwapCmpOperands(const Comparison &C) {
   // is Op0.
   if ((C.Opcode == SystemZISD::COMPARE_STACKGUARD) && C.Op0.isMachineOpcode() &&
       (C.Op0.getMachineOpcode() == SystemZ::LOAD_STACK_GUARD))
-      return true;
+    return true;
 
   // Leave i128 and f128 comparisons alone, since they have no memory forms.
   if (C.Op0.getValueType() == MVT::i128)
@@ -3199,7 +3199,8 @@ static void adjustICmpTruncate(SelectionDAG &DAG, const SDLoc &DL,
 // - The operands are a load of the stack guard, and a load from a stack slot
 // - Those operand values are not used elsewhere <-- asserts if this is not
 //   true!
-static void adjustForStackGuardCompare(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
+static void adjustForStackGuardCompare(SelectionDAG &DAG, const SDLoc &DL,
+                                       Comparison &C) {
   SDValue StackGuardLoad;
   LoadSDNode *FILoad;
 
@@ -8187,8 +8188,8 @@ SDValue SystemZTargetLowering::combineSTORE(
     SDValue Ops[] = {DAG.getTargetFrameIndex(FI, MVT::i64),
                      DAG.getTargetConstant(0, SDLoc(SN), MVT::i64),
                      SN->getChain()};
-    MachineSDNode *Move =
-        DAG.getMachineNode(SystemZ::MOVE_STACKGUARD_DAG, SDLoc(SN), MVT::Other, Ops);
+    MachineSDNode *Move = DAG.getMachineNode(SystemZ::MOVE_STACKGUARD_DAG,
+                                             SDLoc(SN), MVT::Other, Ops);
 
     return SDValue(Move, 0);
   }
@@ -11120,7 +11121,8 @@ getBackchainAddress(SDValue SP, SelectionDAG &DAG) const {
 // Replace a _STACKGUARD_DAG pseudo with a _SG pseudo, adding
 // a dead early-clobber def reg that will be used as a
 // scratch register when the pseudo is expanded.
-MachineBasicBlock* SystemZTargetLowering::emitStackGuardPseudo(MachineInstr &MI, MachineBasicBlock* MBB, unsigned PseudoOp) const {
+MachineBasicBlock *SystemZTargetLowering::emitStackGuardPseudo(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned PseudoOp) const {
   MachineRegisterInfo *MRI = &MBB->getParent()->getRegInfo();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();

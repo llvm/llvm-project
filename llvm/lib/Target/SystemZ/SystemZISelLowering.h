@@ -471,7 +471,8 @@ private:
   MachineBasicBlock *emitProbedAlloca(MachineInstr &MI,
                                       MachineBasicBlock *MBB) const;
   MachineBasicBlock *emitStackGuardPseudo(MachineInstr &MI,
-                                   MachineBasicBlock *MBB, unsigned PseudoOp) const;
+                                          MachineBasicBlock *MBB,
+                                          unsigned PseudoOp) const;
   SDValue getBackchainAddress(SDValue SP, SelectionDAG &DAG) const;
 
   MachineMemOperand::Flags

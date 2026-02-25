@@ -761,12 +761,14 @@ void Module::setFramePointer(FramePointerKind Kind) {
 }
 
 bool Module::hasStackProtectorGuardRecord() const {
-  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("stack-protector-guard-record"));
+  auto *Val = cast_or_null<ConstantAsMetadata>(
+      getModuleFlag("stack-protector-guard-record"));
   return Val && cast<ConstantInt>(Val->getValue())->isOne();
 }
 
 void Module::setStackProtectorGuardRecord(bool Flag) {
-  addModuleFlag(ModFlagBehavior::Max, "stack-protector-guard-record", Flag ? 1 : 0);
+  addModuleFlag(ModFlagBehavior::Max, "stack-protector-guard-record",
+                Flag ? 1 : 0);
 }
 
 StringRef Module::getStackProtectorGuard() const {

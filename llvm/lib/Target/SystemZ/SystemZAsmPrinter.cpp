@@ -1037,7 +1037,7 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
 }
 
 void SystemZAsmPrinter::lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
-                                      SystemZMCInstLower &Lower) {
+                                                 SystemZMCInstLower &Lower) {
   Register AddrReg = MI.getOperand(0).getReg();
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
 
@@ -1047,26 +1047,24 @@ void SystemZAsmPrinter::lowerLOAD_TLS_BLOCK_ADDR(const MachineInstr &MI,
       MRI.getTargetRegisterInfo()->getSubReg(AddrReg, SystemZ::subreg_l32);
 
   // ear <reg>, %a0
-  EmitToStreamer(
-      *OutStreamer,
-      MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A0));
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A0));
 
   // sllg <reg>, <reg>, 32
   EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::SLLG)
-                                    .addReg(AddrReg)
-                                    .addReg(AddrReg)
-                                    .addReg(0)
-                                    .addImm(32));
+                                   .addReg(AddrReg)
+                                   .addReg(AddrReg)
+                                   .addReg(0)
+                                   .addImm(32));
 
   // ear <reg>, %a1
-  EmitToStreamer(
-      *OutStreamer,
-      MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A1));
+  EmitToStreamer(*OutStreamer,
+                 MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A1));
   return;
 }
 
-void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
-                                      SystemZMCInstLower &Lower) {
+void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(
+    const MachineInstr &MI, SystemZMCInstLower &Lower) {
   Register AddrReg = MI.getOperand(0).getReg();
   const MachineFunction &MF = *(MI.getParent()->getParent());
   const Module *M = MF.getFunction().getParent();
@@ -1075,7 +1073,7 @@ void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
   // Obtain the global value (assert if stack guard variable can't be found).
   const GlobalVariable *GV = cast<GlobalVariable>(
       TLI->getSDagStackGuard(*M, TLI->getLibcallLoweringInfo()));
-  
+
   // If configured, emit the `__stack_protector_loc` entry
   if (M->hasStackProtectorGuardRecord()) {
     MCSymbol *Sym = OutContext.createTempSymbol();
@@ -1089,15 +1087,15 @@ void SystemZAsmPrinter::lowerLOAD_GLOBAL_STACKGUARD_ADDR(const MachineInstr &MI,
   // Emit the address load.
   if (M->getPICLevel() == PICLevel::NotPIC) {
     EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
-                                      .addReg(AddrReg)
-                                      .addExpr(MCSymbolRefExpr::create(
-                                          getSymbol(GV), OutContext)));
+                                     .addReg(AddrReg)
+                                     .addExpr(MCSymbolRefExpr::create(
+                                         getSymbol(GV), OutContext)));
   } else {
     EmitToStreamer(*OutStreamer,
-                    MCInstBuilder(SystemZ::LGRL)
-                        .addReg(AddrReg)
-                        .addExpr(MCSymbolRefExpr::create(
-                            getSymbol(GV), SystemZ::S_GOTENT, OutContext)));
+                   MCInstBuilder(SystemZ::LGRL)
+                       .addReg(AddrReg)
+                       .addExpr(MCSymbolRefExpr::create(
+                           getSymbol(GV), SystemZ::S_GOTENT, OutContext)));
   }
   return;
 }

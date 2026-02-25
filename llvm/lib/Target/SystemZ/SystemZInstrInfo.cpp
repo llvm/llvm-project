@@ -1840,21 +1840,21 @@ void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
   if (AddrReg == OpReg)
     AddrReg = scavengeAddrReg(MI, &MBB);
 
-  // emit an appropriate pseudo for the guard type, which loads the address of said
-  // guard into the scratch register AddrReg.
+  // emit an appropriate pseudo for the guard type, which loads the address of
+  // said guard into the scratch register AddrReg.
   if (GuardType.empty() || (GuardType == "tls")) {
     // emit a load of the TLS stack guard's address
     BuildMI(MBB, MI, DL, get(SystemZ::LOAD_TLS_BLOCK_ADDR), AddrReg);
     // record the appropriate stack guard offset (40 in the tls case).
     Offset = 40;
-  }
-  else if (GuardType == "global") {
+  } else if (GuardType == "global") {
     // emit a load of the global stack guard's address
     BuildMI(MBB, MI, DL, get(SystemZ::LOAD_GLOBAL_STACKGUARD_ADDR), AddrReg);
   } else {
-    llvm_unreachable((Twine("Unknown stack protector type \"") + GuardType + "\"")
-                      .str()
-                      .c_str());
+    llvm_unreachable(
+        (Twine("Unknown stack protector type \"") + GuardType + "\"")
+            .str()
+            .c_str());
   }
 
   // Construct the appropriate move or compare instruction using the

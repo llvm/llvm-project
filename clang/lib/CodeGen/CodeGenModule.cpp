@@ -1607,7 +1607,7 @@ void CodeGenModule::Release() {
         getCodeGenOpts().StackProtectorGuardOffset);
   if (getCodeGenOpts().StackProtectorGuardRecord) {
     if (getModule().getStackProtectorGuard() != "global") {
-        Diags.Report(diag::err_opt_not_valid_without_opt)
+      Diags.Report(diag::err_opt_not_valid_without_opt)
           << "-mstack-protector-guard-record"
           << "-mstack-protector-guard=global";
     }
