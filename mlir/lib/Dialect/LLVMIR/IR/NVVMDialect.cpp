@@ -1423,7 +1423,7 @@ LogicalResult MmaSpOp::verify() {
     case MMATypes::e3m2:
     case MMATypes::e2m3:
     case MMATypes::e2m1:
-      kFactor = 32;
+      kFactor = 16;
       multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);
@@ -2733,18 +2733,7 @@ bool NVVM::WgmmaMmaAsyncOp::getAsmValues(
   return true; // Has manual mapping
 }
 
-LogicalResult NVVM::FenceSyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-  return success();
-}
-
 LogicalResult NVVM::FenceProxyOp::verify() {
-  if (getKind() == NVVM::ProxyKind::TENSORMAP)
-    return emitOpError() << "tensormap proxy is not a supported proxy kind";
-  if (getKind() == NVVM::ProxyKind::GENERIC)
-    return emitOpError() << "generic proxy not a supported proxy kind";
   if (getKind() == NVVM::ProxyKind::async_shared && !getSpace().has_value()) {
     return emitOpError() << "async_shared fence requires space attribute";
   }
@@ -2777,10 +2766,6 @@ LogicalResult NVVM::FenceProxyReleaseOp::verify() {
 }
 
 LogicalResult NVVM::FenceProxySyncRestrictOp::verify() {
-  if (getOrder() != NVVM::MemOrderKind::ACQUIRE &&
-      getOrder() != NVVM::MemOrderKind::RELEASE)
-    return emitOpError("only acquire and release semantics are supported");
-
   if (getFromProxy() != NVVM::ProxyKind::GENERIC)
     return emitOpError("only generic is support for from_proxy attribute");
 

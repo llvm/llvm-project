@@ -63,10 +63,6 @@ MCAsmInfo::MCAsmInfo() {
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
   if (UseLEB128Directives != cl::BOU_UNSET)
     HasLEB128Directives = UseLEB128Directives == cl::BOU_TRUE;
-  UseIntegratedAssembler = true;
-  ParseInlineAsmUsingAsmParser = false;
-  PreserveAsmComments = true;
-  PPCUseFullRegisterNames = false;
 }
 
 MCAsmInfo::~MCAsmInfo() = default;
@@ -126,6 +122,7 @@ bool MCAsmInfo::shouldOmitSectionDirective(StringRef SectionName) const {
 
 void MCAsmInfo::initializeAtSpecifiers(ArrayRef<AtSpecifier> Descs) {
   assert(AtSpecifierToName.empty() && "cannot initialize twice");
+  UseAtForSpecifier = true;
   for (auto Desc : Descs) {
     [[maybe_unused]] auto It =
         AtSpecifierToName.try_emplace(Desc.Kind, Desc.Name);
