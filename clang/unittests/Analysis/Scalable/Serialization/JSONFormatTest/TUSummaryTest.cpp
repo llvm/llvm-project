@@ -27,7 +27,7 @@ using ::testing::HasSubstr;
 namespace {
 
 // ============================================================================
-// Test Analysis - Simple analysis for testing JSON serialization.
+// PairsEntitySummaryForJSONFormatTest - Simple analysis for testing JSONFormat
 // ============================================================================
 
 struct PairsEntitySummaryForJSONFormatTest final : EntitySummary {
@@ -99,6 +99,84 @@ static llvm::Registry<JSONFormat::FormatInfo>::Add<
     RegisterPairsEntitySummaryForJSONFormatTest(
         "PairsEntitySummaryForJSONFormatTest",
         "Format info for PairsArrayEntitySummary");
+
+// ============================================================================
+// NullDeserializingEntitySummaryForJSONFormatTest - For null data checks
+// ============================================================================
+
+struct NullDeserializingEntitySummaryForJSONFormatTest final : EntitySummary {
+  SummaryName getSummaryName() const override {
+    return SummaryName("NullDeserializingEntitySummaryForJSONFormatTest");
+  }
+};
+
+struct NullDeserializingEntitySummaryForJSONFormatTestFormatInfo final
+    : JSONFormat::FormatInfo {
+  NullDeserializingEntitySummaryForJSONFormatTestFormatInfo()
+      : JSONFormat::FormatInfo(
+            SummaryName("NullDeserializingEntitySummaryForJSONFormatTest"),
+            [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
+                -> json::Object { return json::Object{}; },
+            [](const json::Object &, EntityIdTable &,
+               const JSONFormat::EntityIdConverter &)
+                -> llvm::Expected<std::unique_ptr<EntitySummary>> {
+              return nullptr;
+            }) {}
+};
+
+static llvm::Registry<JSONFormat::FormatInfo>::Add<
+    NullDeserializingEntitySummaryForJSONFormatTestFormatInfo>
+    RegisterNullDeserializingEntitySummaryForJSONFormatTest(
+        "NullDeserializingEntitySummaryForJSONFormatTest",
+        "Format info for NullDeserializingEntitySummary");
+
+// ============================================================================
+// UnregisteredEntitySummaryForJSONFormatTest - For missing FormatInfo checks
+// ============================================================================
+
+struct UnregisteredEntitySummaryForJSONFormatTest final : EntitySummary {
+  SummaryName getSummaryName() const override {
+    return SummaryName("UnregisteredEntitySummaryForJSONFormatTest");
+  }
+};
+
+// ============================================================================
+// MismatchedEntitySummaryForJSONFormatTest - For mismatched SummaryName checks
+// ============================================================================
+
+struct MismatchedDeserializingEntitySummaryForJSONFormatTest final
+    : EntitySummary {
+  SummaryName getSummaryName() const override {
+    return SummaryName(
+        "MismatchedDeserializingEntitySummaryForJSONFormatTest_WrongName");
+  }
+};
+
+struct MismatchedDeserializingEntitySummaryForJSONFormatTestFormatInfo final
+    : JSONFormat::FormatInfo {
+  MismatchedDeserializingEntitySummaryForJSONFormatTestFormatInfo()
+      : JSONFormat::FormatInfo(
+            SummaryName(
+                "MismatchedDeserializingEntitySummaryForJSONFormatTest"),
+            [](const EntitySummary &, const JSONFormat::EntityIdConverter &)
+                -> json::Object { return json::Object{}; },
+            [](const json::Object &, EntityIdTable &,
+               const JSONFormat::EntityIdConverter &)
+                -> llvm::Expected<std::unique_ptr<EntitySummary>> {
+              return std::make_unique<
+                  MismatchedDeserializingEntitySummaryForJSONFormatTest>();
+            }) {}
+};
+
+static llvm::Registry<JSONFormat::FormatInfo>::Add<
+    MismatchedDeserializingEntitySummaryForJSONFormatTestFormatInfo>
+    RegisterMismatchedDeserializingEntitySummaryForJSONFormatTest(
+        "MismatchedDeserializingEntitySummaryForJSONFormatTest",
+        "Format info for MismatchedDeserializingEntitySummary");
+
+// ============================================================================
+// JSONFormatTUSummaryTest Test Fixture
+// ============================================================================
 
 class JSONFormatTUSummaryTest : public JSONFormatTest {
 protected:
@@ -1576,6 +1654,119 @@ TEST_F(JSONFormatTUSummaryTest, EntityIDNotUInt64) {
           HasSubstr("expected JSON integer"))));
 }
 
+TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
+  // NullDeserializingEntitySummaryForJSONFormatTest's deserializer returns
+  // nullptr, triggering FailedToDeserializeEntitySummaryMissingData.
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "linkage_table": [],
+    "data": [
+      {
+        "summary_name": "NullDeserializingEntitySummaryForJSONFormatTest",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {}
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("null EntitySummary data for summary "
+                    "'NullDeserializingEntitySummaryForJSONFormatTest'"))));
+}
+
+TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
+  // MismatchedDeserializingEntitySummaryForJSONFormatTest's deserializer
+  // returns an object whose getSummaryName() differs from the registered
+  // SummaryName, triggering
+  // FailedToDeserializeEntitySummaryMismatchedSummaryName.
+  auto Result = readTUSummaryFromString(R"({
+    "tu_namespace": {
+      "kind": "compilation_unit",
+      "name": "test.cpp"
+    },
+    "id_table": [],
+    "linkage_table": [],
+    "data": [
+      {
+        "summary_name": "MismatchedDeserializingEntitySummaryForJSONFormatTest",
+        "summary_data": [
+          {
+            "entity_id": 0,
+            "entity_summary": {}
+          }
+        ]
+      }
+    ]
+  })");
+
+  EXPECT_THAT_EXPECTED(
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("reading SummaryData entry from index '0'"),
+          HasSubstr("reading EntitySummary entries from field 'summary_data'"),
+          HasSubstr("reading EntitySummary entry from index '0'"),
+          HasSubstr("MismatchedDeserializingEntitySummaryForJSONFormatTest"),
+          HasSubstr("MismatchedDeserializingEntitySummaryForJSONFormatTest_"
+                    "WrongName"))));
+}
+
+// ============================================================================
+// JSONFormat::entityDataMapEntryToJSON() Fatal Tests
+// ============================================================================
+
+TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
+  TUSummary Summary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+
+  NestedBuildNamespace Namespace =
+      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  EntityId EI = getIdTable(Summary).getId(
+      EntityName{"c:@F@foo", "", std::move(Namespace)});
+
+  SummaryName SN("NullDeserializingEntitySummaryForJSONFormatTest");
+  getData(Summary)[SN][EI] = nullptr;
+
+  EXPECT_DEATH(
+      { (void)writeTUSummary(Summary, "output.json"); },
+      "null EntitySummary data for summary "
+      "'NullDeserializingEntitySummaryForJSONFormatTest'");
+}
+
+TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
+  TUSummary Summary(
+      BuildNamespace(BuildNamespaceKind::CompilationUnit, "test.cpp"));
+
+  NestedBuildNamespace Namespace =
+      NestedBuildNamespace::makeCompilationUnit("test.cpp");
+  EntityId EI = getIdTable(Summary).getId(
+      EntityName{"c:@F@foo", "", std::move(Namespace)});
+
+  SummaryName SN("MismatchedDeserializingEntitySummaryForJSONFormatTest");
+  getData(Summary)[SN][EI] =
+      std::make_unique<PairsEntitySummaryForJSONFormatTest>();
+
+  EXPECT_DEATH(
+      { (void)writeTUSummary(Summary, "output.json"); },
+      "MismatchedDeserializingEntitySummaryForJSONFormatTest");
+}
+
 // ============================================================================
 // JSONFormat::entityDataMapFromJSON() Error Tests
 // ============================================================================
@@ -1958,23 +2149,25 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
   EntityId EI = getIdTable(Summary).getId(
       EntityName{"c:@F@foo", "", std::move(Namespace)});
 
-  // Inject an EntitySummary under a SummaryName that has no registered
-  // FormatInfo, so that entitySummaryToJSON fails during serialization.
-  SummaryName UnknownSN("unknown_summary_type");
-  getData(Summary)[UnknownSN][EI] = nullptr;
+  // Inject an EntitySummary under the SummaryName matching its getSummaryName()
+  // but with no registered FormatInfo, so that entitySummaryToJSON fails.
+  SummaryName UnknownSN("UnregisteredEntitySummaryForJSONFormatTest");
+  getData(Summary)[UnknownSN][EI] =
+      std::make_unique<UnregisteredEntitySummaryForJSONFormatTest>();
 
   auto Result = writeTUSummary(Summary, "output.json");
 
-  EXPECT_THAT_ERROR(std::move(Result),
-                    FailedWithMessage(AllOf(
-                        HasSubstr("writing TUSummary to file"),
-                        HasSubstr("writing SummaryData entry to index '0'"),
-                        HasSubstr("writing EntitySummary entries to field "
-                                  "'summary_data'"),
-                        HasSubstr("writing EntitySummary entry to index '0'"),
-                        HasSubstr("failed to serialize EntitySummary"),
-                        HasSubstr("no FormatInfo registered for summary "
-                                  "'unknown_summary_type'"))));
+  EXPECT_THAT_ERROR(
+      std::move(Result),
+      FailedWithMessage(
+          AllOf(HasSubstr("writing TUSummary to file"),
+                HasSubstr("writing SummaryData entry to index '0'"),
+                HasSubstr("writing EntitySummary entries to field "
+                          "'summary_data'"),
+                HasSubstr("writing EntitySummary entry to index '0'"),
+                HasSubstr("failed to serialize EntitySummary"),
+                HasSubstr("no FormatInfo registered for summary "
+                          "'UnregisteredEntitySummaryForJSONFormatTest'"))));
 }
 
 // ============================================================================
