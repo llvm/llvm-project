@@ -1851,6 +1851,45 @@ TEST_F(SymbolCollectorTest, HeaderGuardDetected) {
   EXPECT_THAT(Symbols, Each(includeHeader()));
 }
 
+TEST_F(SymbolCollectorTest, HeaderGuardDetectedPragmaInPreamble) {
+  // TestTU builds with a preamble.
+  auto TU = TestTU::withCode(R"cpp(
+    #pragma once
+
+    // Symbols are seen before the header guard is complete.
+    #define MACRO
+    int decl();
+    #define MACRO2
+  )cpp");
+  TU.HeaderFilename = "Foo.h";
+  auto Symbols = TU.headerSymbols();
+  EXPECT_THAT(Symbols, Not(Contains(qName("HEADER_GUARD_"))));
+  EXPECT_THAT(Symbols, Contains(qName("MACRO")));
+  EXPECT_THAT(Symbols, Contains(qName("MACRO2")));
+  EXPECT_THAT(Symbols, Contains(qName("decl")));
+}
+
+TEST_F(SymbolCollectorTest, HeaderGuardDetectedIfdefInPreamble) {
+  // TestTU builds with a preamble.
+  auto TU = TestTU::withCode(R"cpp(
+    #ifndef HEADER_GUARD_
+    #define HEADER_GUARD_
+
+    // Symbols are seen before the header guard is complete.
+    #define MACRO
+    int decl();
+    #define MACRO2
+
+    #endif // Header guard is recognized here.
+  )cpp");
+  TU.HeaderFilename = "Foo.h";
+  auto Symbols = TU.headerSymbols();
+  EXPECT_THAT(Symbols, Not(Contains(qName("HEADER_GUARD_"))));
+  EXPECT_THAT(Symbols, Contains(qName("MACRO")));
+  EXPECT_THAT(Symbols, Contains(qName("MACRO2")));
+  EXPECT_THAT(Symbols, Contains(qName("decl")));
+}
+
 TEST_F(SymbolCollectorTest, NonModularHeader) {
   auto TU = TestTU::withHeaderCode("int x();");
   EXPECT_THAT(TU.headerSymbols(), ElementsAre(includeHeader()));
