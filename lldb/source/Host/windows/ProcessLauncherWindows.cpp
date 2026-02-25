@@ -124,7 +124,6 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
   startupinfoex.StartupInfo.cb = sizeof(STARTUPINFOEXW);
   startupinfoex.StartupInfo.dwFlags |= STARTF_USESTDHANDLES;
 
-  HPCON hPC = launch_info.GetPTY().GetPseudoTerminalHandle();
   bool use_pty = launch_info.ShouldUsePTY();
 
   HANDLE stdin_handle = GetStdioHandle(launch_info, STDIN_FILENO);
@@ -148,6 +147,7 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   std::vector<HANDLE> inherited_handles;
   if (use_pty) {
+    HPCON hPC = launch_info.GetPTY().GetPseudoTerminalHandle();
     if (auto err = attributelist.SetupPseudoConsole(hPC)) {
       error = Status::FromError(std::move(err));
       return HostProcess();
@@ -203,7 +203,8 @@ ProcessLauncherWindows::LaunchProcess(const ProcessLaunchInfo &launch_info,
 
   BOOL result = ::CreateProcessW(
       wexecutable.c_str(), pwcommandLine, NULL, NULL,
-      /*bInheritHandles=*/!inherited_handles.empty(), flags, environment.data(),
+      /*bInheritHandles=*/!inherited_handles.empty() || use_pty, flags,
+      environment.data(),
       wworkingDirectory.size() == 0 ? NULL : wworkingDirectory.c_str(),
       reinterpret_cast<STARTUPINFOW *>(&startupinfoex), &pi);
 
