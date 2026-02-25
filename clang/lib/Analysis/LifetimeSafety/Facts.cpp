@@ -70,7 +70,7 @@ void FieldEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
 }
 
 void GlobalEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                           const OriginManager &OM) const {
+                            const OriginManager &OM) const {
   OS << "OriginEscapes (";
   OM.dump(getEscapedOriginID(), OS);
   OS << ", via Global)\n";

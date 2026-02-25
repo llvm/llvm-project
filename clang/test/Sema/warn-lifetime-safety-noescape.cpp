@@ -113,10 +113,9 @@ View escape_through_unannotated_call(const MyObj& in [[clang::noescape]]) { // e
   return no_annotation_identity(in); // expected-note {{returned here}}
 }
 
-View global_view;
+View global_view; // expected-note {{escapes to this global}}
 
-// FIXME: Escaping through a global variable is not detected.
-void escape_through_global_var(const MyObj& in [[clang::noescape]]) {
+void escape_through_global_var(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   global_view = in;
 }
 

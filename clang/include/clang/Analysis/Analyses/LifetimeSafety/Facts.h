@@ -152,7 +152,7 @@ public:
   enum class EscapeKind : uint8_t {
     Return, /// Escapes via return statement.
     Field,  /// Escapes via assignment to a field.
-    Global,  /// Escapes via assignment to global storage.
+    Global, /// Escapes via assignment to global storage.
   } EscKind;
 
   static bool classof(const Fact *F) {
@@ -203,19 +203,21 @@ public:
             const OriginManager &OM) const override;
 };
 
+/// Represents that an origin escapes via assignment to global storage.
+/// Example: `global_storage = local_var;`
 class GlobalEscapeFact : public OriginEscapesFact {
-  const VarDecl *VDecl;
+  const VarDecl *Global;
 
 public:
   GlobalEscapeFact(OriginID OID, const VarDecl *VDecl)
-        : OriginEscapesFact(OID, EscapeKind::Global), VDecl(VDecl) {}
+      : OriginEscapesFact(OID, EscapeKind::Global), Global(VDecl) {}
 
   static bool classof(const Fact *F) {
     return F->getKind() == Kind::OriginEscapes &&
            static_cast<const OriginEscapesFact *>(F)->getEscapeKind() ==
                EscapeKind::Global;
   }
-  const VarDecl *getVarDecl() const { return VDecl; };
+  const VarDecl *getGlobal() const { return Global; };
   void dump(llvm::raw_ostream &OS, const LoanManager &,
             const OriginManager &OM) const override;
 };
