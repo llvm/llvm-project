@@ -14,12 +14,16 @@ define void @baz() nounwind {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui a0, %hi(foo)
 ; CHECK-NEXT:    addi a0, a0, %lo(foo)
-; CHECK-NEXT:    lw a1, 4(a0)
-; CHECK-NEXT:    lw a0, 0(a0)
-; CHECK-NEXT:    lui a2, %hi(bar)
-; CHECK-NEXT:    addi a2, a2, %lo(bar)
-; CHECK-NEXT:    sw a1, 0(a2)
-; CHECK-NEXT:    sw a0, 4(a2)
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    addi a0, a0, 4
+; CHECK-NEXT:    vle32.v v9, (a0)
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    lui a1, %hi(bar)
+; CHECK-NEXT:    addi a1, a1, %lo(bar)
+; CHECK-NEXT:    vmv.x.s a2, v9
+; CHECK-NEXT:    sw a2, 0(a1)
+; CHECK-NEXT:    sw a0, 4(a1)
 ; CHECK-NEXT:    ret
 entry:
   %0 = load i32, ptr getelementptr inbounds ([2 x i32], ptr @foo, i64 0, i64 1), align 4

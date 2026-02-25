@@ -15,11 +15,19 @@
 ; RUN: llc < %s -mtriple=riscv64 -mattr=+m,+v,+zvfh,+zvfbfmin -riscv-v-vector-bits-max=128 -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,VLS,CHECK64
 
 define void @extract_v2i8_v4i8_0(ptr %x, ptr %y) {
-; CHECK-LABEL: extract_v2i8_v4i8_0:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a0, 0(a0)
-; CHECK-NEXT:    sh a0, 0(a1)
-; CHECK-NEXT:    ret
+; CHECK32-LABEL: extract_v2i8_v4i8_0:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    lh a0, 0(a0)
+; CHECK32-NEXT:    sh a0, 0(a1)
+; CHECK32-NEXT:    ret
+;
+; CHECK64-LABEL: extract_v2i8_v4i8_0:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK64-NEXT:    vle32.v v8, (a0)
+; CHECK64-NEXT:    vmv.x.s a0, v8
+; CHECK64-NEXT:    sh a0, 0(a1)
+; CHECK64-NEXT:    ret
   %a = load <4 x i8>, ptr %x
   %c = call <2 x i8> @llvm.vector.extract.v2i8.v4i8(<4 x i8> %a, i64 0)
   store <2 x i8> %c, ptr %y
@@ -27,11 +35,20 @@ define void @extract_v2i8_v4i8_0(ptr %x, ptr %y) {
 }
 
 define void @extract_v2i8_v4i8_2(ptr %x, ptr %y) {
-; CHECK-LABEL: extract_v2i8_v4i8_2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a0, 2(a0)
-; CHECK-NEXT:    sh a0, 0(a1)
-; CHECK-NEXT:    ret
+; CHECK32-LABEL: extract_v2i8_v4i8_2:
+; CHECK32:       # %bb.0:
+; CHECK32-NEXT:    lh a0, 2(a0)
+; CHECK32-NEXT:    sh a0, 0(a1)
+; CHECK32-NEXT:    ret
+;
+; CHECK64-LABEL: extract_v2i8_v4i8_2:
+; CHECK64:       # %bb.0:
+; CHECK64-NEXT:    addi a0, a0, 2
+; CHECK64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK64-NEXT:    vle8.v v8, (a0)
+; CHECK64-NEXT:    vmv.x.s a0, v8
+; CHECK64-NEXT:    sh a0, 0(a1)
+; CHECK64-NEXT:    ret
   %a = load <4 x i8>, ptr %x
   %c = call <2 x i8> @llvm.vector.extract.v2i8.v4i8(<4 x i8> %a, i64 2)
   store <2 x i8> %c, ptr %y

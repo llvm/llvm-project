@@ -340,7 +340,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32-NEXT:    addi a1, sp, 128
 ; RV32-NEXT:    vse8.v v8, (a1)
-; RV32-NEXT:    lbu a0, 0(a0)
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vle8.v v8, (a0)
+; RV32-NEXT:    vmv.x.s a0, v8
 ; RV32-NEXT:    addi sp, s0, -384
 ; RV32-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
@@ -370,7 +372,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64-NEXT:    addi a1, sp, 128
 ; RV64-NEXT:    vse8.v v8, (a1)
-; RV64-NEXT:    lbu a0, 0(a0)
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vle8.v v8, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
 ; RV64-NEXT:    addi sp, s0, -384
 ; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
@@ -400,7 +404,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV32ZBS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV32ZBS-NEXT:    addi a1, sp, 128
 ; RV32ZBS-NEXT:    vse8.v v8, (a1)
-; RV32ZBS-NEXT:    lbu a0, 0(a0)
+; RV32ZBS-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32ZBS-NEXT:    vle8.v v8, (a0)
+; RV32ZBS-NEXT:    vmv.x.s a0, v8
 ; RV32ZBS-NEXT:    addi sp, s0, -384
 ; RV32ZBS-NEXT:    lw ra, 380(sp) # 4-byte Folded Reload
 ; RV32ZBS-NEXT:    lw s0, 376(sp) # 4-byte Folded Reload
@@ -430,7 +436,9 @@ define i1 @extractelt_v256i1(ptr %x, i64 %idx) nounwind {
 ; RV64ZBS-NEXT:    vmerge.vim v8, v8, 1, v0
 ; RV64ZBS-NEXT:    addi a1, sp, 128
 ; RV64ZBS-NEXT:    vse8.v v8, (a1)
-; RV64ZBS-NEXT:    lbu a0, 0(a0)
+; RV64ZBS-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64ZBS-NEXT:    vle8.v v8, (a0)
+; RV64ZBS-NEXT:    vmv.x.s a0, v8
 ; RV64ZBS-NEXT:    addi sp, s0, -384
 ; RV64ZBS-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; RV64ZBS-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload

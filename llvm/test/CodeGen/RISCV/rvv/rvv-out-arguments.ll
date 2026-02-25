@@ -64,80 +64,133 @@ entry:
 define dso_local signext i32 @main() #0 {
 ; CHECK-LABEL: main:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -112
-; CHECK-NEXT:    sd ra, 104(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s0, 96(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd s1, 88(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    addi s0, sp, 112
+; CHECK-NEXT:    addi sp, sp, -192
+; CHECK-NEXT:    sd ra, 184(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 176(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s1, 168(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s2, 160(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s3, 152(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s4, 144(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s5, 136(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s6, 128(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s7, 120(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s8, 112(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s9, 104(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s10, 96(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s11, 88(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 192
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 3
 ; CHECK-NEXT:    sub sp, sp, a0
-; CHECK-NEXT:    sw zero, -36(s0)
+; CHECK-NEXT:    sw zero, -116(s0)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    addi a0, s0, -64
+; CHECK-NEXT:    addi a0, s0, -144
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    vsetivli a1, 4, e32, m8, ta, ma
-; CHECK-NEXT:    sd a1, -72(s0)
-; CHECK-NEXT:    ld a1, -72(s0)
+; CHECK-NEXT:    sd a1, -152(s0)
+; CHECK-NEXT:    ld a1, -152(s0)
 ; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    csrr s1, vlenb
 ; CHECK-NEXT:    slli s1, s1, 3
 ; CHECK-NEXT:    sub s1, s0, s1
-; CHECK-NEXT:    addi s1, s1, -112
+; CHECK-NEXT:    addi s1, s1, -192
 ; CHECK-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vse32.v v8, (s1)
 ; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    sw a0, -76(s0)
-; CHECK-NEXT:    sw a0, -80(s0)
-; CHECK-NEXT:    sw a0, -84(s0)
-; CHECK-NEXT:    sw a0, -88(s0)
-; CHECK-NEXT:    sw a0, -92(s0)
-; CHECK-NEXT:    sw a0, -96(s0)
-; CHECK-NEXT:    sw a0, -100(s0)
-; CHECK-NEXT:    sw a0, -104(s0)
-; CHECK-NEXT:    sw a0, -108(s0)
-; CHECK-NEXT:    sw a0, -112(s0)
-; CHECK-NEXT:    lw a0, -76(s0)
-; CHECK-NEXT:    lw a1, -80(s0)
-; CHECK-NEXT:    vle32.v v8, (s1)
-; CHECK-NEXT:    lw a2, -84(s0)
-; CHECK-NEXT:    lw a3, -88(s0)
-; CHECK-NEXT:    lw a4, -92(s0)
-; CHECK-NEXT:    lw a5, -96(s0)
-; CHECK-NEXT:    lw a6, -100(s0)
-; CHECK-NEXT:    lw a7, -104(s0)
-; CHECK-NEXT:    lw t0, -108(s0)
-; CHECK-NEXT:    lw t1, -112(s0)
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd t1, 8(sp)
-; CHECK-NEXT:    sd t0, 0(sp)
-; CHECK-NEXT:    call lots_args
-; CHECK-NEXT:    addi sp, sp, 16
-; CHECK-NEXT:    lw a0, -76(s0)
-; CHECK-NEXT:    lw a1, -80(s0)
+; CHECK-NEXT:    sw a0, -156(s0)
+; CHECK-NEXT:    sw a0, -160(s0)
+; CHECK-NEXT:    sw a0, -164(s0)
+; CHECK-NEXT:    sw a0, -168(s0)
+; CHECK-NEXT:    sw a0, -172(s0)
+; CHECK-NEXT:    sw a0, -176(s0)
+; CHECK-NEXT:    sw a0, -180(s0)
+; CHECK-NEXT:    sw a0, -184(s0)
+; CHECK-NEXT:    sw a0, -188(s0)
+; CHECK-NEXT:    sw a0, -192(s0)
+; CHECK-NEXT:    addi s2, s0, -156
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (s2)
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    addi s3, s0, -160
+; CHECK-NEXT:    vle32.v v8, (s3)
+; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (s1)
-; CHECK-NEXT:    lw a2, -84(s0)
-; CHECK-NEXT:    lw a3, -88(s0)
-; CHECK-NEXT:    lw a4, -92(s0)
-; CHECK-NEXT:    lw a5, -96(s0)
-; CHECK-NEXT:    lw a6, -100(s0)
-; CHECK-NEXT:    lw a7, -104(s0)
-; CHECK-NEXT:    lw t0, -108(s0)
-; CHECK-NEXT:    lw t1, -112(s0)
+; CHECK-NEXT:    addi s4, s0, -164
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle32.v v16, (s4)
+; CHECK-NEXT:    vmv.x.s a2, v16
+; CHECK-NEXT:    addi s5, s0, -168
+; CHECK-NEXT:    vle32.v v16, (s5)
+; CHECK-NEXT:    vmv.x.s a3, v16
+; CHECK-NEXT:    addi s6, s0, -172
+; CHECK-NEXT:    vle32.v v16, (s6)
+; CHECK-NEXT:    vmv.x.s a4, v16
+; CHECK-NEXT:    addi s7, s0, -176
+; CHECK-NEXT:    vle32.v v16, (s7)
+; CHECK-NEXT:    vmv.x.s a5, v16
+; CHECK-NEXT:    addi s8, s0, -180
+; CHECK-NEXT:    vle32.v v16, (s8)
+; CHECK-NEXT:    vmv.x.s a6, v16
 ; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd t1, 8(sp)
-; CHECK-NEXT:    sd t0, 0(sp)
+; CHECK-NEXT:    addi s9, s0, -188
+; CHECK-NEXT:    vle32.v v16, (s9)
+; CHECK-NEXT:    vse32.v v16, (sp)
+; CHECK-NEXT:    addi s10, s0, -192
+; CHECK-NEXT:    vle32.v v16, (s10)
+; CHECK-NEXT:    addi a7, sp, 8
+; CHECK-NEXT:    vse32.v v16, (a7)
+; CHECK-NEXT:    addi s11, s0, -184
+; CHECK-NEXT:    vle32.v v16, (s11)
+; CHECK-NEXT:    vmv.x.s a7, v16
+; CHECK-NEXT:    call lots_args
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (s2)
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vle32.v v8, (s3)
+; CHECK-NEXT:    vmv.x.s a1, v8
+; CHECK-NEXT:    vsetvli a2, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vle32.v v8, (s1)
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle32.v v16, (s4)
+; CHECK-NEXT:    vmv.x.s a2, v16
+; CHECK-NEXT:    vle32.v v16, (s5)
+; CHECK-NEXT:    vmv.x.s a3, v16
+; CHECK-NEXT:    vle32.v v16, (s6)
+; CHECK-NEXT:    vmv.x.s a4, v16
+; CHECK-NEXT:    vle32.v v16, (s7)
+; CHECK-NEXT:    vmv.x.s a5, v16
+; CHECK-NEXT:    vle32.v v16, (s8)
+; CHECK-NEXT:    vmv.x.s a6, v16
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    vle32.v v16, (s9)
+; CHECK-NEXT:    vse32.v v16, (sp)
+; CHECK-NEXT:    vle32.v v16, (s10)
+; CHECK-NEXT:    addi a7, sp, 8
+; CHECK-NEXT:    vse32.v v16, (a7)
+; CHECK-NEXT:    vle32.v v16, (s11)
+; CHECK-NEXT:    vmv.x.s a7, v16
 ; CHECK-NEXT:    call lots_args
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    li a0, 0
-; CHECK-NEXT:    addi sp, s0, -112
-; CHECK-NEXT:    ld ra, 104(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s0, 96(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld s1, 88(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 112
+; CHECK-NEXT:    addi sp, s0, -192
+; CHECK-NEXT:    ld ra, 184(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 176(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s1, 168(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s2, 160(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s3, 152(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s4, 144(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s5, 136(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s6, 128(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s7, 120(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s8, 112(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s9, 104(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s10, 96(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s11, 88(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 192
 ; CHECK-NEXT:    ret
 entry:
   %retval = alloca i32, align 4

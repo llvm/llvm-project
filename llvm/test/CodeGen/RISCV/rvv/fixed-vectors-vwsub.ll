@@ -646,11 +646,22 @@ define <16 x i64> @vwsub_vx_v16i64(ptr %x, i32 %y) {
 define <8 x i16> @vwsub_vx_v8i16_i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwsub_vx_v8i16_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lb a1, 0(a1)
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsub.vv v8, v10, v9
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v10, v8, 2
+; CHECK-NEXT:    vsetivli zero, 6, e8, mf2, tu, ma
+; CHECK-NEXT:    vslideup.vi v10, v8, 4
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v10, v8, 6
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vwsub.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = load i8, ptr %y
@@ -663,15 +674,31 @@ define <8 x i16> @vwsub_vx_v8i16_i8(ptr %x, ptr %y) {
 }
 
 define <8 x i16> @vwsub_vx_v8i16_i16(ptr %x, ptr %y) {
-; CHECK-LABEL: vwsub_vx_v8i16_i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vwsub.wv v8, v8, v9
-; CHECK-NEXT:    ret
+; RV32-LABEL: vwsub_vx_v8i16_i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32-NEXT:    vle16.v v8, (a1)
+; RV32-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-NEXT:    vle8.v v9, (a0)
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV32-NEXT:    vmv.v.x v8, a0
+; RV32-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; RV32-NEXT:    vwsub.wv v8, v8, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwsub_vx_v8i16_i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV64-NEXT:    vle16.v v8, (a1)
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vle8.v v9, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
+; RV64-NEXT:    vwsub.wv v8, v8, v9
+; RV64-NEXT:    ret
   %a = load <8 x i8>, ptr %x
   %b = load i16, ptr %y
   %d = insertelement <8 x i16> poison, i16 %b, i32 0
@@ -684,11 +711,17 @@ define <8 x i16> @vwsub_vx_v8i16_i16(ptr %x, ptr %y) {
 define <4 x i32> @vwsub_vx_v4i32_i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwsub_vx_v4i32_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lb a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a1)
 ; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsub.vv v8, v10, v9
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; CHECK-NEXT:    vslideup.vi v10, v8, 4
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 8
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwsub.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b = load i8, ptr %y
@@ -703,11 +736,17 @@ define <4 x i32> @vwsub_vx_v4i32_i8(ptr %x, ptr %y) {
 define <4 x i32> @vwsub_vx_v4i32_i16(ptr %x, ptr %y) {
 ; CHECK-LABEL: vwsub_vx_v4i32_i16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a1, 0(a1)
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a1)
 ; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsub.vv v8, v10, v9
+; CHECK-NEXT:    vmv1r.v v10, v8
+; CHECK-NEXT:    vslideup.vi v10, v8, 2
+; CHECK-NEXT:    vmv1r.v v8, v10
+; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; CHECK-NEXT:    vslideup.vi v8, v10, 4
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vwsub.wv v8, v8, v9
 ; CHECK-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b = load i16, ptr %y
@@ -720,15 +759,28 @@ define <4 x i32> @vwsub_vx_v4i32_i16(ptr %x, ptr %y) {
 }
 
 define <4 x i32> @vwsub_vx_v4i32_i32(ptr %x, ptr %y) {
-; CHECK-LABEL: vwsub_vx_v4i32_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vle16.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v8, a1
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
-; CHECK-NEXT:    vwsub.wv v8, v8, v9
-; CHECK-NEXT:    ret
+; RV32-LABEL: vwsub_vx_v4i32_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a1, 0(a1)
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vle16.v v9, (a0)
+; RV32-NEXT:    vmv.v.x v8, a1
+; RV32-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV32-NEXT:    vwsub.wv v8, v8, v9
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwsub_vx_v4i32_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v8, (a1)
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vle16.v v9, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a0
+; RV64-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
+; RV64-NEXT:    vwsub.wv v8, v8, v9
+; RV64-NEXT:    ret
   %a = load <4 x i16>, ptr %x
   %b = load i32, ptr %y
   %d = insertelement <4 x i32> poison, i32 %b, i32 0
@@ -739,14 +791,39 @@ define <4 x i32> @vwsub_vx_v4i32_i32(ptr %x, ptr %y) {
 }
 
 define <2 x i64> @vwsub_vx_v2i64_i8(ptr %x, ptr %y) nounwind {
-; CHECK-LABEL: vwsub_vx_v2i64_i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lb a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsub.vv v8, v10, v9
-; CHECK-NEXT:    ret
+; RV32-LABEL: vwsub_vx_v2i64_i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v9, (a0)
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vsrl.vx v10, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vmv.x.s a1, v10
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vlse64.v v8, (a0), zero
+; RV32-NEXT:    vwsub.wv v8, v8, v9
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwsub_vx_v2i64_i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vle8.v v9, (a1)
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v10, (a0)
+; RV64-NEXT:    vmv1r.v v8, v9
+; RV64-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v9, 8
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vwsub.wv v8, v8, v10
+; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i8, ptr %y
   %c = sext i8 %b to i64
@@ -758,14 +835,39 @@ define <2 x i64> @vwsub_vx_v2i64_i8(ptr %x, ptr %y) nounwind {
 }
 
 define <2 x i64> @vwsub_vx_v2i64_i16(ptr %x, ptr %y) nounwind {
-; CHECK-LABEL: vwsub_vx_v2i64_i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsub.vv v8, v10, v9
-; CHECK-NEXT:    ret
+; RV32-LABEL: vwsub_vx_v2i64_i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32-NEXT:    vle16.v v8, (a1)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v9, (a0)
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vsrl.vx v10, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vmv.x.s a1, v10
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vlse64.v v8, (a0), zero
+; RV32-NEXT:    vwsub.wv v8, v8, v9
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwsub_vx_v2i64_i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV64-NEXT:    vle16.v v9, (a1)
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v10, (a0)
+; RV64-NEXT:    vmv1r.v v8, v9
+; RV64-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v9, 4
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vwsub.wv v8, v8, v10
+; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i16, ptr %y
   %c = sext i16 %b to i64
@@ -777,14 +879,37 @@ define <2 x i64> @vwsub_vx_v2i64_i16(ptr %x, ptr %y) nounwind {
 }
 
 define <2 x i64> @vwsub_vx_v2i64_i32(ptr %x, ptr %y) nounwind {
-; CHECK-LABEL: vwsub_vx_v2i64_i32:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a1, 0(a1)
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    vmv.v.x v10, a1
-; CHECK-NEXT:    vwsub.vv v8, v10, v9
-; CHECK-NEXT:    ret
+; RV32-LABEL: vwsub_vx_v2i64_i32:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi sp, sp, -16
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle32.v v8, (a1)
+; RV32-NEXT:    vle32.v v9, (a0)
+; RV32-NEXT:    li a0, 32
+; RV32-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
+; RV32-NEXT:    vsrl.vx v10, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vmv.x.s a1, v10
+; RV32-NEXT:    sw a0, 8(sp)
+; RV32-NEXT:    sw a1, 12(sp)
+; RV32-NEXT:    addi a0, sp, 8
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vlse64.v v8, (a0), zero
+; RV32-NEXT:    vwsub.wv v8, v8, v9
+; RV32-NEXT:    addi sp, sp, 16
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vwsub_vx_v2i64_i32:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vle32.v v9, (a1)
+; RV64-NEXT:    vle32.v v10, (a0)
+; RV64-NEXT:    vmv1r.v v8, v9
+; RV64-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-NEXT:    vslideup.vi v8, v9, 2
+; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64-NEXT:    vwsub.wv v8, v8, v10
+; RV64-NEXT:    ret
   %a = load <2 x i32>, ptr %x
   %b = load i32, ptr %y
   %c = sext i32 %b to i64

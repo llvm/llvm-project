@@ -1884,16 +1884,34 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
-    setTargetDAGCombine(
-        {ISD::FCOPYSIGN,    ISD::MGATHER,      ISD::MSCATTER,
-         ISD::VP_GATHER,    ISD::VP_SCATTER,   ISD::SRA,
-         ISD::SRL,          ISD::SHL,          ISD::STORE,
-         ISD::SPLAT_VECTOR, ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
-         ISD::VP_STORE,     ISD::VP_TRUNCATE,  ISD::EXPERIMENTAL_VP_REVERSE,
-         ISD::MUL,          ISD::SDIV,         ISD::UDIV,
-         ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
-         ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
-         ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD});
+    setTargetDAGCombine({ISD::FCOPYSIGN,
+                         ISD::MGATHER,
+                         ISD::MSCATTER,
+                         ISD::VP_GATHER,
+                         ISD::VP_SCATTER,
+                         ISD::SRA,
+                         ISD::SRL,
+                         ISD::SHL,
+                         ISD::LOAD,
+                         ISD::STORE,
+                         ISD::SPLAT_VECTOR,
+                         ISD::BUILD_VECTOR,
+                         ISD::CONCAT_VECTORS,
+                         ISD::VP_STORE,
+                         ISD::VP_TRUNCATE,
+                         ISD::EXPERIMENTAL_VP_REVERSE,
+                         ISD::MUL,
+                         ISD::SDIV,
+                         ISD::UDIV,
+                         ISD::SREM,
+                         ISD::UREM,
+                         ISD::INSERT_VECTOR_ELT,
+                         ISD::ABS,
+                         ISD::CTPOP,
+                         ISD::VECTOR_SHUFFLE,
+                         ISD::FMA,
+                         ISD::VSELECT,
+                         ISD::VECREDUCE_ADD});
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -22172,8 +22190,38 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       if (SDValue V = performMemPairCombine(N, DCI))
         return V;
 
-    if (N->getOpcode() != ISD::STORE)
-      break;
+    if (N->getOpcode() == ISD::LOAD) {
+      // Replace misaligned scalar load with aligned vector load + bitcast.
+      auto *LD = cast<LoadSDNode>(N);
+      if (!LD->isUnindexed() || !LD->isSimple())
+        break;
+      SDValue Chain = LD->getChain();
+      SDValue Ptr = LD->getBasePtr();
+      const DataLayout &DL = DAG.getDataLayout();
+      EVT SrcVT = LD->getValueType(0);
+      if (!SrcVT.isSimple() || SrcVT.isVector() || SrcVT.isScalableVT())
+        break;
+      Align SrcAlign = LD->getBaseAlign();
+      if (allowsMemoryAccess(*DAG.getContext(), DL, SrcVT,
+                             LD->getAddressSpace(), SrcAlign,
+                             LD->getMemOperand()->getFlags()))
+        break;
+      Type *SrcTy = SrcVT.getTypeForEVT(*DAG.getContext());
+      Align ABIAlign = DL.getABITypeAlign(SrcTy);
+      unsigned ScaleFactor = ABIAlign.value() / SrcAlign.value();
+      unsigned SrcBW = SrcVT.getScalarSizeInBits();
+      unsigned TargetBW = SrcBW / ScaleFactor;
+      MVT TargetEltVT = SrcVT.isFloatingPoint()
+                            ? MVT::getFloatingPointVT(TargetBW)
+                            : MVT::getIntegerVT(TargetBW);
+      MVT TargetVecVT = MVT::getVectorVT(TargetEltVT, ScaleFactor);
+      if (!isLegalElementTypeForRVV(TargetEltVT) || !isTypeLegal(TargetVecVT))
+        break;
+      SDValue TargetLoad =
+          DAG.getLoad(TargetVecVT, SDLoc(N), Chain, Ptr, LD->getPointerInfo(),
+                      LD->getBaseAlign(), LD->getMemOperand()->getFlags());
+      return DCI.CombineTo(N, DAG.getBitcast(SrcVT, TargetLoad), Chain);
+    }
 
     auto *Store = cast<StoreSDNode>(N);
     SDValue Chain = Store->getChain();

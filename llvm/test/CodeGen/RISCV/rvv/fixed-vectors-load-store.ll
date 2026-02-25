@@ -3,22 +3,40 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v,+zvfh,+zvfbfmin -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,RV64 %s
 
 define void @v2i8(ptr %p, ptr %q) {
-; CHECK-LABEL: v2i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a0, 0(a0)
-; CHECK-NEXT:    sh a0, 0(a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v2i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle16.v v8, (a0)
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    sh a0, 0(a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v2i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vle16.v v8, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sh a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <2 x i8>, ptr %p
   store <2 x i8> %v, ptr %q
   ret void
 }
 
 define void @v2i16(ptr %p, ptr %q) {
-; CHECK-LABEL: v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a0, 0(a0)
-; CHECK-NEXT:    sw a0, 0(a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    sw a0, 0(a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sw a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <2 x i16>, ptr %p
   store <2 x i16> %v, ptr %q
   ret void
@@ -55,11 +73,19 @@ define void @v2i64(ptr %p, ptr %q) {
 }
 
 define void @v2f16(ptr %p, ptr %q) {
-; CHECK-LABEL: v2f16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a0, 0(a0)
-; CHECK-NEXT:    sw a0, 0(a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v2f16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    sw a0, 0(a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v2f16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sw a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <2 x half>, ptr %p
   store <2 x half> %v, ptr %q
   ret void
@@ -96,11 +122,19 @@ define void @v2f64(ptr %p, ptr %q) {
 }
 
 define void @v4i8(ptr %p, ptr %q) {
-; CHECK-LABEL: v4i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lw a0, 0(a0)
-; CHECK-NEXT:    sw a0, 0(a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v4i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lw a0, 0(a0)
+; RV32-NEXT:    sw a0, 0(a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v4i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sw a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <4 x i8>, ptr %p
   store <4 x i8> %v, ptr %q
   ret void
@@ -257,22 +291,40 @@ define void @v2i8_align1(ptr %p, ptr %q) {
 }
 
 define void @v2i8_align2(ptr %p, ptr %q) {
-; CHECK-LABEL: v2i8_align2:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a0, 0(a0)
-; CHECK-NEXT:    sh a0, 0(a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v2i8_align2:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle16.v v8, (a0)
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    sh a0, 0(a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v2i8_align2:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-NEXT:    vle16.v v8, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sh a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <2 x i8>, ptr %p, align 2
   store <2 x i8> %v, ptr %q
   ret void
 }
 
 define void @v2i8_align4(ptr %p, ptr %q) {
-; CHECK-LABEL: v2i8_align4:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    lh a0, 0(a0)
-; CHECK-NEXT:    sh a0, 0(a1)
-; CHECK-NEXT:    ret
+; RV32-LABEL: v2i8_align4:
+; RV32:       # %bb.0:
+; RV32-NEXT:    lh a0, 0(a0)
+; RV32-NEXT:    sh a0, 0(a1)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: v2i8_align4:
+; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle32.v v8, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    sh a0, 0(a1)
+; RV64-NEXT:    ret
   %v = load <2 x i8>, ptr %p, align 4
   store <2 x i8> %v, ptr %q
   ret void

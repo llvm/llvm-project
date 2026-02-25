@@ -112,6 +112,7 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64-NEXT:    slli a5, a3, 2
 ; RV64-NEXT:    add a3, a1, a4
 ; RV64-NEXT:    add a1, a1, a5
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; RV64-NEXT:    j .LBB0_9
 ; RV64-NEXT:  .LBB0_8: # %for.inc
 ; RV64-NEXT:    # in Loop: Header=BB0_9 Depth=1
@@ -119,7 +120,8 @@ define dso_local void @test_store1(ptr nocapture noundef writeonly %dst, ptr noc
 ; RV64-NEXT:    beq a3, a1, .LBB0_6
 ; RV64-NEXT:  .LBB0_9: # %for.body
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV64-NEXT:    lw a4, 0(a3)
+; RV64-NEXT:    vle32.v v8, (a3)
+; RV64-NEXT:    vmv.x.s a4, v8
 ; RV64-NEXT:    bge a4, a2, .LBB0_8
 ; RV64-NEXT:  # %bb.10: # %if.then
 ; RV64-NEXT:    # in Loop: Header=BB0_9 Depth=1

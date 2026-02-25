@@ -72,27 +72,33 @@ declare signext i32 @bar(i32 signext)
 define signext i32 @test2(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test2:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lw a0, 0(a0)
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    sllw a1, a2, a1
-; RV64I-NEXT:    not a1, a1
-; RV64I-NEXT:    and a0, a1, a0
+; RV64I-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64I-NEXT:    vle32.v v8, (a0)
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    vmv.x.s a1, v8
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test2:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lw a0, 0(a0)
-; RV64ZBB-NEXT:    li a2, -2
-; RV64ZBB-NEXT:    rolw a1, a2, a1
-; RV64ZBB-NEXT:    and a0, a1, a0
+; RV64ZBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZBB-NEXT:    vle32.v v8, (a0)
+; RV64ZBB-NEXT:    li a0, -2
+; RV64ZBB-NEXT:    vmv.x.s a2, v8
+; RV64ZBB-NEXT:    rolw a0, a0, a1
+; RV64ZBB-NEXT:    and a0, a0, a2
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test2:
 ; NOREMOVAL:       # %bb.0:
-; NOREMOVAL-NEXT:    lw a0, 0(a0)
-; NOREMOVAL-NEXT:    li a2, -2
-; NOREMOVAL-NEXT:    rolw a1, a2, a1
-; NOREMOVAL-NEXT:    and a0, a1, a0
+; NOREMOVAL-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; NOREMOVAL-NEXT:    vle32.v v8, (a0)
+; NOREMOVAL-NEXT:    li a0, -2
+; NOREMOVAL-NEXT:    vmv.x.s a2, v8
+; NOREMOVAL-NEXT:    rolw a0, a0, a1
+; NOREMOVAL-NEXT:    and a0, a0, a2
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, ptr %p
   %shl = shl i32 1, %b
@@ -104,27 +110,33 @@ define signext i32 @test2(ptr %p, i32 signext %b) nounwind {
 define signext i32 @test3(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test3:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lw a0, 0(a0)
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    sllw a1, a2, a1
-; RV64I-NEXT:    not a1, a1
-; RV64I-NEXT:    or a0, a1, a0
+; RV64I-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64I-NEXT:    vle32.v v8, (a0)
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    vmv.x.s a1, v8
+; RV64I-NEXT:    not a0, a0
+; RV64I-NEXT:    or a0, a0, a1
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test3:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lw a0, 0(a0)
-; RV64ZBB-NEXT:    li a2, -2
-; RV64ZBB-NEXT:    rolw a1, a2, a1
-; RV64ZBB-NEXT:    or a0, a1, a0
+; RV64ZBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZBB-NEXT:    vle32.v v8, (a0)
+; RV64ZBB-NEXT:    li a0, -2
+; RV64ZBB-NEXT:    vmv.x.s a2, v8
+; RV64ZBB-NEXT:    rolw a0, a0, a1
+; RV64ZBB-NEXT:    or a0, a0, a2
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test3:
 ; NOREMOVAL:       # %bb.0:
-; NOREMOVAL-NEXT:    lw a0, 0(a0)
-; NOREMOVAL-NEXT:    li a2, -2
-; NOREMOVAL-NEXT:    rolw a1, a2, a1
-; NOREMOVAL-NEXT:    or a0, a1, a0
+; NOREMOVAL-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; NOREMOVAL-NEXT:    vle32.v v8, (a0)
+; NOREMOVAL-NEXT:    li a0, -2
+; NOREMOVAL-NEXT:    vmv.x.s a2, v8
+; NOREMOVAL-NEXT:    rolw a0, a0, a1
+; NOREMOVAL-NEXT:    or a0, a0, a2
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, ptr %p
   %shl = shl i32 1, %b
@@ -136,27 +148,33 @@ define signext i32 @test3(ptr %p, i32 signext %b) nounwind {
 define signext i32 @test4(ptr %p, i32 signext %b) nounwind {
 ; RV64I-LABEL: test4:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lw a0, 0(a0)
-; RV64I-NEXT:    li a2, 1
-; RV64I-NEXT:    sllw a1, a2, a1
-; RV64I-NEXT:    xor a0, a1, a0
+; RV64I-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64I-NEXT:    vle32.v v8, (a0)
+; RV64I-NEXT:    li a0, 1
+; RV64I-NEXT:    vmv.x.s a2, v8
+; RV64I-NEXT:    sllw a0, a0, a1
+; RV64I-NEXT:    xor a0, a0, a2
 ; RV64I-NEXT:    not a0, a0
 ; RV64I-NEXT:    ret
 ;
 ; RV64ZBB-LABEL: test4:
 ; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    lw a0, 0(a0)
-; RV64ZBB-NEXT:    li a2, 1
-; RV64ZBB-NEXT:    sllw a1, a2, a1
-; RV64ZBB-NEXT:    xnor a0, a1, a0
+; RV64ZBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64ZBB-NEXT:    vle32.v v8, (a0)
+; RV64ZBB-NEXT:    li a0, 1
+; RV64ZBB-NEXT:    vmv.x.s a2, v8
+; RV64ZBB-NEXT:    sllw a0, a0, a1
+; RV64ZBB-NEXT:    xnor a0, a0, a2
 ; RV64ZBB-NEXT:    ret
 ;
 ; NOREMOVAL-LABEL: test4:
 ; NOREMOVAL:       # %bb.0:
-; NOREMOVAL-NEXT:    lw a0, 0(a0)
-; NOREMOVAL-NEXT:    li a2, 1
-; NOREMOVAL-NEXT:    sllw a1, a2, a1
-; NOREMOVAL-NEXT:    xnor a0, a1, a0
+; NOREMOVAL-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; NOREMOVAL-NEXT:    vle32.v v8, (a0)
+; NOREMOVAL-NEXT:    li a0, 1
+; NOREMOVAL-NEXT:    vmv.x.s a2, v8
+; NOREMOVAL-NEXT:    sllw a0, a0, a1
+; NOREMOVAL-NEXT:    xnor a0, a0, a2
 ; NOREMOVAL-NEXT:    ret
   %a = load i32, ptr %p
   %shl = shl i32 1, %b

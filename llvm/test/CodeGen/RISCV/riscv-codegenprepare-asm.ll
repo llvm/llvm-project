@@ -12,9 +12,11 @@ define void @test1(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    slli a1, a1, 2
 ; CHECK-NEXT:    add a1, a0, a1
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a2, 0(a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.x.s a2, v8
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    sw a2, 0(a0)
 ; CHECK-NEXT:    addi a0, a0, 4
@@ -60,15 +62,19 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    andi a1, a1, -2
 ; CHECK-NEXT:    addi a4, a0, 4
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:  .LBB1_4: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    lw a5, -4(a4)
-; CHECK-NEXT:    lw a6, 0(a4)
+; CHECK-NEXT:    vle32.v v8, (a4)
+; CHECK-NEXT:    addi a5, a4, -4
+; CHECK-NEXT:    vle32.v v9, (a5)
+; CHECK-NEXT:    vmv.x.s a5, v8
 ; CHECK-NEXT:    addi a3, a3, 2
+; CHECK-NEXT:    vmv.x.s a6, v9
 ; CHECK-NEXT:    addi a5, a5, 4
 ; CHECK-NEXT:    addi a6, a6, 4
-; CHECK-NEXT:    sw a5, -4(a4)
-; CHECK-NEXT:    sw a6, 0(a4)
+; CHECK-NEXT:    sw a6, -4(a4)
+; CHECK-NEXT:    sw a5, 0(a4)
 ; CHECK-NEXT:    addi a4, a4, 8
 ; CHECK-NEXT:    bne a1, a3, .LBB1_4
 ; CHECK-NEXT:  .LBB1_5: # %for.cond.cleanup.loopexit.unr-lcssa
@@ -76,7 +82,9 @@ define void @test2(ptr nocapture noundef %a, i32 noundef signext %n) {
 ; CHECK-NEXT:  # %bb.6: # %for.body.epil
 ; CHECK-NEXT:    slli a3, a3, 2
 ; CHECK-NEXT:    add a0, a0, a3
-; CHECK-NEXT:    lw a1, 0(a0)
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.x.s a1, v8
 ; CHECK-NEXT:    addi a1, a1, 4
 ; CHECK-NEXT:    sw a1, 0(a0)
 ; CHECK-NEXT:  .LBB1_7: # %for.cond.cleanup

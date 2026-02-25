@@ -106,8 +106,10 @@ define void @i8_i16(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    lh s1, 0(a0)
 ; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vmv.x.s s1, v8
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sh s1, 0(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -144,9 +146,14 @@ define void @i8_i16_rotate(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    lbu s1, 0(a0)
-; CHECK-NEXT:    lbu s2, 1(a0)
 ; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    addi a1, a0, 1
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vmv.x.s s1, v8
+; CHECK-NEXT:    vmv.x.s s2, v9
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s2, 0(s0)
 ; CHECK-NEXT:    sb s1, 1(s0)
@@ -188,14 +195,18 @@ define void @i8_i16_resched_readnone_ld(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    mv s0, a0
-; CHECK-NEXT:    lbu s2, 0(a0)
-; CHECK-NEXT:    mv s1, a1
+; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    addi s1, a0, 1
+; CHECK-NEXT:    vmv.x.s s2, v8
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    lbu s0, 1(s0)
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (s1)
+; CHECK-NEXT:    vmv.x.s s1, v8
 ; CHECK-NEXT:    call g
-; CHECK-NEXT:    sb s2, 0(s1)
-; CHECK-NEXT:    sb s0, 1(s1)
+; CHECK-NEXT:    sb s2, 0(s0)
+; CHECK-NEXT:    sb s1, 1(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -235,9 +246,14 @@ define void @i8_i16_resched_readnone_st(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
 ; CHECK-NEXT:    .cfi_offset s2, -32
-; CHECK-NEXT:    lbu s1, 0(a0)
-; CHECK-NEXT:    lbu s2, 1(a0)
 ; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    addi a1, a0, 1
+; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v8, (a0)
+; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    vle8.v v9, (a1)
+; CHECK-NEXT:    vmv.x.s s1, v8
+; CHECK-NEXT:    vmv.x.s s2, v9
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sb s1, 0(s0)
 ; CHECK-NEXT:    call g
@@ -449,8 +465,10 @@ define void @two_half(ptr %p, ptr %q) {
 ; CHECK-NEXT:    .cfi_offset ra, -8
 ; CHECK-NEXT:    .cfi_offset s0, -16
 ; CHECK-NEXT:    .cfi_offset s1, -24
-; CHECK-NEXT:    lw s1, 0(a0)
 ; CHECK-NEXT:    mv s0, a1
+; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    vmv.x.s s1, v8
 ; CHECK-NEXT:    call g
 ; CHECK-NEXT:    sw s1, 0(s0)
 ; CHECK-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -487,9 +505,13 @@ define void @two_half_unaligned(ptr %p, ptr %q) {
 ; V-NEXT:    .cfi_offset s0, -16
 ; V-NEXT:    .cfi_offset s1, -24
 ; V-NEXT:    .cfi_offset s2, -32
-; V-NEXT:    lh s1, 0(a0)
-; V-NEXT:    lh s2, 2(a0)
 ; V-NEXT:    mv s0, a1
+; V-NEXT:    addi a1, a0, 2
+; V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; V-NEXT:    vle16.v v8, (a0)
+; V-NEXT:    vle16.v v9, (a1)
+; V-NEXT:    vmv.x.s s1, v8
+; V-NEXT:    vmv.x.s s2, v9
 ; V-NEXT:    call g
 ; V-NEXT:    sh s1, 0(s0)
 ; V-NEXT:    sh s2, 2(s0)

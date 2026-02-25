@@ -7,19 +7,24 @@
 define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV32-LABEL: test:
 ; RV32:       # %bb.0: # %entry
+; RV32-NEXT:    addi a1, a1, -1
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vmv.x.s a3, v8
+; RV32-NEXT:    vmv.s.x v8, a3
 ; RV32-NEXT:    addi a3, a2, 1
-; RV32-NEXT:    th.lbib a4, (a1), -1, 0
-; RV32-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; RV32-NEXT:    vmv.s.x v8, a4
 ; RV32-NEXT:    vmv.s.x v9, zero
 ; RV32-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
 ; RV32-NEXT:    vslideup.vx v8, v9, a2
 ; RV32-NEXT:    addi a2, a0, 1
 ; RV32-NEXT:  .LBB0_1: # %for.body
 ; RV32-NEXT:    # =>This Inner Loop Header: Depth=1
-; RV32-NEXT:    th.lrb a0, a1, a0, 0
-; RV32-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
+; RV32-NEXT:    add a0, a1, a0
+; RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-NEXT:    vle8.v v9, (a0)
+; RV32-NEXT:    vmv.x.s a0, v9
 ; RV32-NEXT:    vmv1r.v v9, v8
+; RV32-NEXT:    vsetvli zero, zero, e8, mf4, tu, ma
 ; RV32-NEXT:    vmv.s.x v9, a0
 ; RV32-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; RV32-NEXT:    vmseq.vi v9, v9, 0
@@ -33,10 +38,12 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ;
 ; RV64-LABEL: test:
 ; RV64:       # %bb.0: # %entry
+; RV64-NEXT:    addi a1, a1, -1
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vmv.x.s a3, v8
+; RV64-NEXT:    vmv.s.x v8, a3
 ; RV64-NEXT:    addi a3, a2, 1
-; RV64-NEXT:    th.lbib a4, (a1), -1, 0
-; RV64-NEXT:    vsetivli zero, 8, e8, m1, ta, ma
-; RV64-NEXT:    vmv.s.x v8, a4
 ; RV64-NEXT:    vmv.s.x v9, zero
 ; RV64-NEXT:    vsetvli zero, a3, e8, mf2, tu, ma
 ; RV64-NEXT:    vslideup.vx v8, v9, a2
@@ -44,11 +51,14 @@ define i32 @test(i32 %size, ptr %add.ptr, i64 %const) {
 ; RV64-NEXT:  .LBB0_1: # %for.body
 ; RV64-NEXT:    # =>This Inner Loop Header: Depth=1
 ; RV64-NEXT:    sext.w a0, a0
-; RV64-NEXT:    th.lrb a0, a1, a0, 0
-; RV64-NEXT:    vsetivli zero, 1, e8, m1, tu, ma
+; RV64-NEXT:    add a0, a1, a0
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-NEXT:    vle8.v v9, (a0)
+; RV64-NEXT:    vmv.x.s a0, v9
 ; RV64-NEXT:    vmv1r.v v9, v8
+; RV64-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
 ; RV64-NEXT:    vmv.s.x v9, a0
-; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vsetvli zero, zero, e8, mf2, ta, ma
 ; RV64-NEXT:    vmseq.vi v9, v9, 0
 ; RV64-NEXT:    vmv.x.s a0, v9
 ; RV64-NEXT:    zext.b a3, a0

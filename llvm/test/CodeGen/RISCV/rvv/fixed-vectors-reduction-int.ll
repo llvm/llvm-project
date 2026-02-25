@@ -5325,14 +5325,31 @@ define i8 @vreduce_mul_v1i8(<1 x i8> %v) {
 }
 
 define i8 @vreduce_mul_v2i8(ptr %x) {
-; CHECK-LABEL: vreduce_mul_v2i8:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    lbu a0, 1(a0)
-; CHECK-NEXT:    vmul.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+; RV32-LABEL: vreduce_mul_v2i8:
+; RV32:       # %bb.0:
+; RV32-NEXT:    addi a1, a0, 1
+; RV32-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; RV32-NEXT:    vle8.v v8, (a1)
+; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV32-NEXT:    vle8.v v9, (a0)
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV32-NEXT:    vmul.vx v8, v9, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v2i8:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi a1, a0, 1
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle8.v v9, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vmul.vx v8, v9, a0
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
   %v = load <2 x i8>, ptr %x
   %red = call i8 @llvm.vector.reduce.mul.v2i8(<2 x i8> %v)
   ret i8 %red
@@ -5535,14 +5552,27 @@ define i16 @vreduce_mul_v1i16(<1 x i16> %v) {
 }
 
 define i16 @vreduce_mul_v2i16(ptr %x) {
-; CHECK-LABEL: vreduce_mul_v2i16:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    lh a0, 2(a0)
-; CHECK-NEXT:    vmul.vx v8, v8, a0
-; CHECK-NEXT:    vmv.x.s a0, v8
-; CHECK-NEXT:    ret
+; RV32-LABEL: vreduce_mul_v2i16:
+; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32-NEXT:    vle16.v v8, (a0)
+; RV32-NEXT:    lh a0, 2(a0)
+; RV32-NEXT:    vmul.vx v8, v8, a0
+; RV32-NEXT:    vmv.x.s a0, v8
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: vreduce_mul_v2i16:
+; RV64:       # %bb.0:
+; RV64-NEXT:    addi a1, a0, 2
+; RV64-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
+; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; RV64-NEXT:    vle16.v v9, (a0)
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vmul.vx v8, v9, a0
+; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    ret
   %v = load <2 x i16>, ptr %x
   %red = call i16 @llvm.vector.reduce.mul.v2i16(<2 x i16> %v)
   ret i16 %red
