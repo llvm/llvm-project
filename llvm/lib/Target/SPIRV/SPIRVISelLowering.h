@@ -74,7 +74,7 @@ public:
   bool enforcePtrTypeCompatibility(MachineInstr &I, unsigned PtrOpIdx,
                                    unsigned OpIdx) const;
   bool insertLogicalCopyOnResult(MachineInstr &I,
-                                 SPIRVType *NewResultType) const;
+                                 SPIRVTypeInst NewResultType) const;
 
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const override;

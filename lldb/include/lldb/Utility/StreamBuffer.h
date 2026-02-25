@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_STREAMBUFFER_H
-#define LLDB_CORE_STREAMBUFFER_H
+#ifndef LLDB_UTILITY_STREAMBUFFER_H
+#define LLDB_UTILITY_STREAMBUFFER_H
 
 #include "lldb/Utility/Stream.h"
 #include "llvm/ADT/SmallVector.h"
@@ -51,4 +51,4 @@ protected:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_STREAMBUFFER_H
+#endif // LLDB_UTILITY_STREAMBUFFER_H
