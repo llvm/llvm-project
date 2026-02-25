@@ -81,6 +81,17 @@ private:
   void addOperandAndMods(MachineInstrBuilder &NewMI, unsigned SrcMods,
                          bool IsHiBits, const MachineOperand &SrcMO);
 
+  // Scan basic block for consecutive s_cselect_b32 instructions whose operands
+  // may be concatenated to form a single s_cselect_b64.
+  // Corresponding operands may be concatenated if they are adjacent SGPRs, or
+  // they are both constant i32s.
+  // E.g.
+  //    s_cselect_b32 s0, s2, s4
+  //    s_cselect_b32 s1, s3, s5
+  // ==>
+  //    s_cselect_b64 s[0:1], s[2:3], s[4:5]
+  bool foldConsecutiveSelects(MachineBasicBlock &MBB) const;
+
 public:
   bool run(MachineFunction &MF, MachineLoopInfo *MLI);
 };
@@ -642,6 +653,82 @@ void SIPreEmitPeephole::addOperandAndMods(MachineInstrBuilder &NewMI,
   NewMI.add(UnpackedSrcMO);
 }
 
+bool SIPreEmitPeephole::foldConsecutiveSelects(MachineBasicBlock &MBB) const {
+  bool Changed = false;
+
+  const auto GetCombinedRegister = [&](const MachineOperand &Lo,
+                                       const MachineOperand &Hi) -> MCRegister {
+    if (!Lo.isReg() || !Hi.isReg())
+      return MCRegister::NoRegister;
+
+    const MCRegister LoReg = Lo.getReg();
+    const MCRegister HiReg = Hi.getReg();
+
+    MCRegister SuperReg =
+        TRI->getMatchingSuperReg(LoReg, AMDGPU::sub0, &AMDGPU::SReg_64RegClass);
+    if (!SuperReg || TRI->getSubReg(SuperReg, AMDGPU::sub1) != HiReg)
+      return MCRegister::NoRegister;
+
+    return SuperReg;
+  };
+
+  MachineBasicBlock::iterator I = MBB.begin();
+  MachineBasicBlock::iterator End = MBB.end();
+  while (I != End) {
+    MachineInstr *First = &*I++;
+    if (I == End)
+      break;
+
+    if (First->getOpcode() != AMDGPU::S_CSELECT_B32)
+      continue;
+
+    MachineInstr *Second = &*I;
+    if (Second->getOpcode() != AMDGPU::S_CSELECT_B32)
+      continue;
+
+    Register Dst =
+        GetCombinedRegister(First->getOperand(0), Second->getOperand(0));
+    if (!Dst) {
+      // Check whether destination registers can be combined in the other order.
+      std::swap(First, Second);
+      Dst = GetCombinedRegister(First->getOperand(0), Second->getOperand(0));
+      if (!Dst)
+        continue;
+    }
+
+    // First operand is always a register.
+    Register Src1 =
+        GetCombinedRegister(First->getOperand(1), Second->getOperand(1));
+    if (!Src1)
+      continue;
+
+    // Second operand may be a register or an immediatea constant.
+    std::optional<MachineOperand> Src2 = std::nullopt;
+    MachineOperand &Src2Lo = First->getOperand(2);
+    MachineOperand &Src2Hi = Second->getOperand(2);
+    if (MCRegister Src2Reg = GetCombinedRegister(Src2Lo, Src2Hi)) {
+      Src2 = MachineOperand::CreateReg(Src2Reg, /* isDef */ false);
+    } else if (Src2Lo.isImm() && Src2Hi.isImm()) {
+      Src2 =
+          MachineOperand::CreateImm(Make_64(Src2Hi.getImm(), Src2Lo.getImm()));
+    } else {
+      continue;
+    }
+
+    BuildMI(MBB, *First, First->getDebugLoc(), TII->get(AMDGPU::S_CSELECT_B64),
+            Dst)
+        .addReg(Src1)
+        .add(*Src2);
+
+    ++I;
+    First->eraseFromParent();
+    Second->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
+}
+
 void SIPreEmitPeephole::collectUnpackingCandidates(
     MachineInstr &BeginMI, SetVector<MachineInstr *> &InstrsToUnpack,
     uint16_t NumMFMACycles) {
@@ -794,6 +881,8 @@ bool SIPreEmitPeephole::run(MachineFunction &MF, MachineLoopInfo *LoopInfo) {
   MF.RenumberBlocks();
 
   for (MachineBasicBlock &MBB : MF) {
+    Changed |= foldConsecutiveSelects(MBB);
+
     MachineBasicBlock::iterator TermI = MBB.getFirstTerminator();
     // Check first terminator for branches to optimize
     if (TermI != MBB.end()) {

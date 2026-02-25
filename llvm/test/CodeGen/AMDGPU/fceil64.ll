@@ -28,8 +28,7 @@ define amdgpu_kernel void @fceil_f64(ptr addrspace(1) %out, double %x) {
 ; SI-NEXT:    s_cselect_b32 s4, 0, s4
 ; SI-NEXT:    s_cselect_b32 s5, s9, s5
 ; SI-NEXT:    s_cmp_gt_i32 s8, 51
-; SI-NEXT:    s_cselect_b32 s9, s3, s5
-; SI-NEXT:    s_cselect_b32 s8, s2, s4
+; SI-NEXT:    s_cselect_b64 s[8:9], s[2:3], s[4:5]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[4:5], s[2:3], 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
 ; SI-NEXT:    v_mov_b32_e32 v1, s9
@@ -69,8 +68,7 @@ define amdgpu_kernel void @fceil_v2f64(ptr addrspace(1) %out, <2 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s10, 0, s10
 ; SI-NEXT:    s_cselect_b32 s11, s12, s11
 ; SI-NEXT:    s_cmp_gt_i32 s13, 51
-; SI-NEXT:    s_cselect_b32 s11, s7, s11
-; SI-NEXT:    s_cselect_b32 s10, s6, s10
+; SI-NEXT:    s_cselect_b64 s[10:11], s[6:7], s[10:11]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[12:13], s[6:7], 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s10
 ; SI-NEXT:    v_mov_b32_e32 v2, s11
@@ -87,8 +85,7 @@ define amdgpu_kernel void @fceil_v2f64(ptr addrspace(1) %out, <2 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s6, 0, s6
 ; SI-NEXT:    s_cselect_b32 s7, s13, s7
 ; SI-NEXT:    s_cmp_gt_i32 s14, 51
-; SI-NEXT:    s_cselect_b32 s7, s5, s7
-; SI-NEXT:    s_cselect_b32 s6, s4, s6
+; SI-NEXT:    s_cselect_b64 s[6:7], s[4:5], s[6:7]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[8:9], s[4:5], 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s12
 ; SI-NEXT:    v_mov_b32_e32 v2, s6
@@ -139,8 +136,7 @@ define amdgpu_kernel void @fceil_v4f64(ptr addrspace(1) %out, <4 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s18, 0, s18
 ; SI-NEXT:    s_cselect_b32 s19, s20, s19
 ; SI-NEXT:    s_cmp_gt_i32 s21, 51
-; SI-NEXT:    s_cselect_b32 s19, s3, s19
-; SI-NEXT:    s_cselect_b32 s18, s2, s18
+; SI-NEXT:    s_cselect_b64 s[18:19], s[2:3], s[18:19]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[20:21], s[6:7], 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s18
 ; SI-NEXT:    v_mov_b32_e32 v2, s19
@@ -157,8 +153,7 @@ define amdgpu_kernel void @fceil_v4f64(ptr addrspace(1) %out, <4 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s14, s3
 ; SI-NEXT:    s_cmp_gt_i32 s15, 51
-; SI-NEXT:    s_cselect_b32 s3, s1, s3
-; SI-NEXT:    s_cselect_b32 s2, s0, s2
+; SI-NEXT:    s_cselect_b64 s[2:3], s[0:1], s[2:3]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[14:15], s[4:5], 0
 ; SI-NEXT:    v_mov_b32_e32 v1, s22
 ; SI-NEXT:    v_mov_b32_e32 v2, s2
@@ -176,8 +171,7 @@ define amdgpu_kernel void @fceil_v4f64(ptr addrspace(1) %out, <4 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s17, s1
 ; SI-NEXT:    s_cmp_gt_i32 s22, 51
-; SI-NEXT:    s_cselect_b32 s1, s7, s1
-; SI-NEXT:    s_cselect_b32 s0, s6, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], s[6:7], s[0:1]
 ; SI-NEXT:    v_add_f64 v[4:5], s[18:19], v[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v1, s16
 ; SI-NEXT:    v_mov_b32_e32 v3, s1
@@ -195,8 +189,7 @@ define amdgpu_kernel void @fceil_v4f64(ptr addrspace(1) %out, <4 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s6, 0, s6
 ; SI-NEXT:    s_cselect_b32 s7, s17, s7
 ; SI-NEXT:    s_cmp_gt_i32 s18, 51
-; SI-NEXT:    s_cselect_b32 s7, s5, s7
-; SI-NEXT:    s_cselect_b32 s6, s4, s6
+; SI-NEXT:    s_cselect_b64 s[6:7], s[4:5], s[6:7]
 ; SI-NEXT:    v_add_f64 v[2:3], s[2:3], v[0:1]
 ; SI-NEXT:    v_mov_b32_e32 v1, s16
 ; SI-NEXT:    v_mov_b32_e32 v6, s6
@@ -243,8 +236,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s38, 0, s38
 ; SI-NEXT:    s_cselect_b32 s39, s40, s39
 ; SI-NEXT:    s_cmp_gt_i32 s33, 51
-; SI-NEXT:    s_cselect_b32 s41, s3, s39
-; SI-NEXT:    s_cselect_b32 s40, s2, s38
+; SI-NEXT:    s_cselect_b64 s[40:41], s[2:3], s[38:39]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[38:39], s[12:13], 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s40
 ; SI-NEXT:    v_mov_b32_e32 v1, s41
@@ -262,8 +254,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s22, s3
 ; SI-NEXT:    s_cmp_gt_i32 s23, 51
-; SI-NEXT:    s_cselect_b32 s3, s1, s3
-; SI-NEXT:    s_cselect_b32 s2, s0, s2
+; SI-NEXT:    s_cselect_b64 s[2:3], s[0:1], s[2:3]
 ; SI-NEXT:    v_add_f64 v[2:3], s[40:41], v[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
@@ -281,8 +272,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s22, s1
 ; SI-NEXT:    s_cmp_gt_i32 s23, 51
-; SI-NEXT:    s_cselect_b32 s1, s7, s1
-; SI-NEXT:    s_cselect_b32 s0, s6, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], s[6:7], s[0:1]
 ; SI-NEXT:    v_add_f64 v[0:1], s[2:3], v[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v6, s1
 ; SI-NEXT:    v_mov_b32_e32 v5, s0
@@ -300,8 +290,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s6, s3
 ; SI-NEXT:    s_cmp_gt_i32 s7, 51
-; SI-NEXT:    s_cselect_b32 s3, s5, s3
-; SI-NEXT:    s_cselect_b32 s2, s4, s2
+; SI-NEXT:    s_cselect_b64 s[2:3], s[4:5], s[2:3]
 ; SI-NEXT:    v_add_f64 v[7:8], s[0:1], v[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v6, s3
 ; SI-NEXT:    v_mov_b32_e32 v5, s2
@@ -320,8 +309,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s4, s1
 ; SI-NEXT:    s_cmp_gt_i32 s2, 51
-; SI-NEXT:    s_cselect_b32 s1, s11, s1
-; SI-NEXT:    s_cselect_b32 s0, s10, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], s[10:11], s[0:1]
 ; SI-NEXT:    buffer_store_dwordx4 v[5:8], off, s[16:19], 0 offset:16
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v6, s1
@@ -340,8 +328,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s4, s3
 ; SI-NEXT:    s_cmp_gt_i32 s5, 51
-; SI-NEXT:    s_cselect_b32 s3, s9, s3
-; SI-NEXT:    s_cselect_b32 s2, s8, s2
+; SI-NEXT:    s_cselect_b64 s[2:3], s[8:9], s[2:3]
 ; SI-NEXT:    v_add_f64 v[7:8], s[0:1], v[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v6, s3
 ; SI-NEXT:    v_mov_b32_e32 v5, s2
@@ -359,8 +346,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s4, s1
 ; SI-NEXT:    s_cmp_gt_i32 s5, 51
-; SI-NEXT:    s_cselect_b32 s1, s15, s1
-; SI-NEXT:    s_cselect_b32 s0, s14, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], s[14:15], s[0:1]
 ; SI-NEXT:    v_add_f64 v[5:6], s[2:3], v[4:5]
 ; SI-NEXT:    v_mov_b32_e32 v10, s1
 ; SI-NEXT:    v_mov_b32_e32 v9, s0
@@ -377,8 +363,7 @@ define amdgpu_kernel void @fceil_v8f64(ptr addrspace(1) %out, <8 x double> %x) {
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s5, s3
 ; SI-NEXT:    s_cmp_gt_i32 s6, 51
-; SI-NEXT:    s_cselect_b32 s3, s13, s3
-; SI-NEXT:    s_cselect_b32 s2, s12, s2
+; SI-NEXT:    s_cselect_b64 s[2:3], s[12:13], s[2:3]
 ; SI-NEXT:    buffer_store_dwordx4 v[5:8], off, s[16:19], 0 offset:32
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v5, s4
@@ -418,8 +403,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s2, s1
 ; SI-NEXT:    s_cmp_gt_i32 s3, 51
-; SI-NEXT:    s_cselect_b32 s3, s11, s1
-; SI-NEXT:    s_cselect_b32 s2, s10, s0
+; SI-NEXT:    s_cselect_b64 s[2:3], s[10:11], s[0:1]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[0:1], s[10:11], 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s2
 ; SI-NEXT:    v_mov_b32_e32 v1, s3
@@ -436,8 +420,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s6, s1
 ; SI-NEXT:    s_cmp_gt_i32 s7, 51
-; SI-NEXT:    s_cselect_b32 s7, s9, s1
-; SI-NEXT:    s_cselect_b32 s6, s8, s0
+; SI-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[0:1]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[0:1], s[8:9], 0
 ; SI-NEXT:    v_mov_b32_e32 v0, s6
 ; SI-NEXT:    v_mov_b32_e32 v1, s7
@@ -454,8 +437,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s8, s1
 ; SI-NEXT:    s_cmp_gt_i32 s9, 51
-; SI-NEXT:    s_cselect_b32 s9, s15, s1
-; SI-NEXT:    s_cselect_b32 s8, s14, s0
+; SI-NEXT:    s_cselect_b64 s[8:9], s[14:15], s[0:1]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[0:1], s[14:15], 0
 ; SI-NEXT:    v_mov_b32_e32 v9, s10
 ; SI-NEXT:    v_mov_b32_e32 v0, s8
@@ -474,8 +456,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s1, s10, s1
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[10:11], s[12:13], 0
 ; SI-NEXT:    s_cmp_gt_i32 s15, 51
-; SI-NEXT:    s_cselect_b32 s1, s13, s1
-; SI-NEXT:    s_cselect_b32 s0, s12, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], s[12:13], s[0:1]
 ; SI-NEXT:    v_add_f64 v[2:3], s[2:3], v[8:9]
 ; SI-NEXT:    v_mov_b32_e32 v9, s27
 ; SI-NEXT:    v_mov_b32_e32 v0, s0
@@ -552,8 +533,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s1, s2, s1
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cmp_gt_i32 s3, 51
-; SI-NEXT:    s_cselect_b32 s17, s21, s1
-; SI-NEXT:    s_cselect_b32 s16, s20, s0
+; SI-NEXT:    s_cselect_b64 s[16:17], s[20:21], s[0:1]
 ; SI-NEXT:    v_cmp_gt_f64_e64 s[22:23], s[20:21], 0
 ; SI-NEXT:    v_mov_b32_e32 v9, s16
 ; SI-NEXT:    v_mov_b32_e32 v10, s17
@@ -673,8 +653,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s4, 0, s4
 ; SI-NEXT:    s_cselect_b32 s5, s18, s5
 ; SI-NEXT:    s_cmp_gt_i32 s16, 51
-; SI-NEXT:    s_cselect_b32 s5, s11, s5
-; SI-NEXT:    s_cselect_b32 s4, s10, s4
+; SI-NEXT:    s_cselect_b64 s[4:5], s[10:11], s[4:5]
 ; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[24:27], 0 offset:80
 ; SI-NEXT:    s_waitcnt expcnt(0)
 ; SI-NEXT:    v_mov_b32_e32 v4, s4
@@ -693,8 +672,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s10, 0, s10
 ; SI-NEXT:    s_cselect_b32 s11, s16, s11
 ; SI-NEXT:    s_cmp_gt_i32 s17, 51
-; SI-NEXT:    s_cselect_b32 s11, s9, s11
-; SI-NEXT:    s_cselect_b32 s10, s8, s10
+; SI-NEXT:    s_cselect_b64 s[10:11], s[8:9], s[10:11]
 ; SI-NEXT:    v_add_f64 v[6:7], s[4:5], v[8:9]
 ; SI-NEXT:    v_mov_b32_e32 v4, s10
 ; SI-NEXT:    v_mov_b32_e32 v5, s11
@@ -712,8 +690,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s4, s3
 ; SI-NEXT:    s_cmp_gt_i32 s5, 51
-; SI-NEXT:    s_cselect_b32 s3, s15, s3
-; SI-NEXT:    s_cselect_b32 s2, s14, s2
+; SI-NEXT:    s_cselect_b64 s[2:3], s[14:15], s[2:3]
 ; SI-NEXT:    v_add_f64 v[4:5], s[10:11], v[8:9]
 ; SI-NEXT:    v_mov_b32_e32 v10, s3
 ; SI-NEXT:    v_mov_b32_e32 v9, s2
@@ -730,8 +707,7 @@ define amdgpu_kernel void @fceil_v16f64(ptr addrspace(1) %out, <16 x double> %x)
 ; SI-NEXT:    s_cselect_b32 s0, 0, s0
 ; SI-NEXT:    s_cselect_b32 s1, s5, s1
 ; SI-NEXT:    s_cmp_gt_i32 s8, 51
-; SI-NEXT:    s_cselect_b32 s1, s13, s1
-; SI-NEXT:    s_cselect_b32 s0, s12, s0
+; SI-NEXT:    s_cselect_b64 s[0:1], s[12:13], s[0:1]
 ; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[24:27], 0 offset:96
 ; SI-NEXT:    v_mov_b32_e32 v9, s4
 ; SI-NEXT:    s_waitcnt expcnt(0)

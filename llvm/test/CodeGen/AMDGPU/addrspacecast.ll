@@ -5,20 +5,18 @@ target triple = "amdgcn-amd-amdhsa"
 
 ; HSA-LABEL: {{^}}use_group_to_flat_addrspacecast:
 
-; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
-; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x10{{$}}
-; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
-; CI-DAG: s_cselect_b32 s[[SHI:[0-9]+]], [[APERTURE]], 0
-; CI-DAG: s_cselect_b32 s[[SLO:[0-9]+]], [[PTR]], 0
+; CI-DAG: s_load_dword s[[PTR:[0-9]+]], s[6:7], 0x0{{$}}
+; CI-DAG: s_load_dword s[[APERTURE:[0-9]+]], s[4:5], 0x10{{$}}
+; CI-DAG: s_cmp_lg_u32 s[[PTR]], -1
+; CI-DAG: s_cselect_b64 s[[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[[[PTR]]:[[APERTURE]]], 0
 
 ; GFX9-DAG: s_mov_b64 s[{{[0-9]+}}:[[HIBASE:[0-9]+]]], src_shared_base
 
 ; HSA-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: s_load_dword s[[PTR:[0-9]+]], s[4:5], 0x0{{$}}
 
-; GFX9: s_cmp_lg_u32 [[PTR]], -1
-; GFX9-DAG: s_cselect_b32 s[[SHI:[0-9]+]], s[[HIBASE]], 0
-; GFX9-DAG: s_cselect_b32 s[[SLO:[0-9]+]], [[PTR]], 0
+; GFX9: s_cmp_lg_u32 s[[PTR]], -1
+; GFX9-DAG: s_cselect_b64 s[[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[[[PTR]]:[[HIBASE]]], 0
 
 ; HSA-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[SLO]]
 ; HSA-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[SHI]]
@@ -66,21 +64,19 @@ define void @use_group_to_flat_addrspacecast_func(ptr addrspace(3) %ptr) #0 {
 
 ; HSA-LABEL: {{^}}use_private_to_flat_addrspacecast:
 
-; CI-DAG: s_load_dword [[PTR:s[0-9]+]], s[6:7], 0x0{{$}}
-; CI-DAG: s_load_dword [[APERTURE:s[0-9]+]], s[4:5], 0x11{{$}}
+; CI-DAG: s_load_dword s[[PTR:[0-9]+]], s[6:7], 0x0{{$}}
+; CI-DAG: s_load_dword s[[APERTURE:[0-9]+]], s[4:5], 0x11{{$}}
 
 ; CI-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; CI-DAG: s_cmp_lg_u32 [[PTR]], -1
-; CI-DAG: s_cselect_b32 s[[SHI:[0-9]+]], [[APERTURE]], 0
-; CI-DAG: s_cselect_b32 s[[SLO:[0-9]+]], [[PTR]], 0
+; CI-DAG: s_cmp_lg_u32 s[[PTR]], -1
+; CI-DAG: s_cselect_b64 s[[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[[[PTR]]:[[APERTURE]]], 0
 
-; GFX9-DAG: s_load_dword [[PTR:s[0-9]+]], s[4:5], 0x0{{$}}
+; GFX9-DAG: s_load_dword s[[PTR:[0-9]+]], s[4:5], 0x0{{$}}
 ; GFX9-DAG: s_mov_b64 s[{{[0-9]+}}:[[HIBASE:[0-9]+]]], src_private_base
 
 ; GFX9-DAG: v_mov_b32_e32 [[K:v[0-9]+]], 7
-; GFX9: s_cmp_lg_u32 [[PTR]], -1
-; GFX9: s_cselect_b32 s[[SHI:[0-9]+]], s[[HIBASE]], 0
-; GFX9: s_cselect_b32 s[[SLO:[0-9]+]], [[PTR]], 0
+; GFX9: s_cmp_lg_u32 s[[PTR]], -1
+; GFX9: s_cselect_b64 s[[[SLO:[0-9]+]]:[[SHI:[0-9]+]]], s[[[PTR]]:[[HIBASE]]], 0
 
 ; HSA-DAG: v_mov_b32_e32 v[[VHI:[0-9]+]], s[[SHI]]
 ; HSA-DAG: v_mov_b32_e32 v[[VLO:[0-9]+]], s[[SLO]]

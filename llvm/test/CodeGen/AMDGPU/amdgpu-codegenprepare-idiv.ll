@@ -1336,8 +1336,7 @@ define amdgpu_kernel void @udiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    v_mul_f32_e32 v0, 0x4f7ffffe, v0
 ; GFX9-NEXT:    s_cmp_ge_u32 s5, s14
 ; GFX9-NEXT:    v_cvt_u32_f32_e32 v0, v0
-; GFX9-NEXT:    s_cselect_b32 s4, s6, s4
-; GFX9-NEXT:    s_cselect_b32 s5, s7, s5
+; GFX9-NEXT:    s_cselect_b64 s[4:5], s[6:7], s[4:5]
 ; GFX9-NEXT:    s_add_i32 s6, s4, 1
 ; GFX9-NEXT:    s_cmp_ge_u32 s5, s14
 ; GFX9-NEXT:    s_cselect_b32 s4, s6, s4
@@ -1984,8 +1983,7 @@ define amdgpu_kernel void @sdiv_v4i32(ptr addrspace(1) %out, <4 x i32> %x, <4 x 
 ; GFX9-NEXT:    s_add_i32 s7, s3, 1
 ; GFX9-NEXT:    s_sub_i32 s6, s2, s0
 ; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
-; GFX9-NEXT:    s_cselect_b32 s3, s7, s3
-; GFX9-NEXT:    s_cselect_b32 s2, s6, s2
+; GFX9-NEXT:    s_cselect_b64 s[2:3], s[6:7], s[2:3]
 ; GFX9-NEXT:    s_add_i32 s6, s3, 1
 ; GFX9-NEXT:    s_cmp_ge_u32 s2, s0
 ; GFX9-NEXT:    s_cselect_b32 s0, s6, s3

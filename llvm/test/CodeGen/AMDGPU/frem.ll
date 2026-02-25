@@ -4452,8 +4452,7 @@ define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1)
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s9, s3
 ; SI-NEXT:    s_cmp_gt_i32 s8, 51
-; SI-NEXT:    s_cselect_b32 s1, s1, s3
-; SI-NEXT:    s_cselect_b32 s0, s0, s2
+; SI-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; SI-NEXT:    v_fma_f64 v[0:1], -s[0:1], v[2:3], v[0:1]
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -4730,8 +4729,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 ; SI-NEXT:    s_cselect_b32 s2, 0, s2
 ; SI-NEXT:    s_cselect_b32 s3, s9, s3
 ; SI-NEXT:    s_cmp_gt_i32 s8, 51
-; SI-NEXT:    s_cselect_b32 s1, s1, s3
-; SI-NEXT:    s_cselect_b32 s0, s0, s2
+; SI-NEXT:    s_cselect_b64 s[0:1], s[0:1], s[2:3]
 ; SI-NEXT:    v_fma_f64 v[0:1], -s[0:1], v[2:3], v[0:1]
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm

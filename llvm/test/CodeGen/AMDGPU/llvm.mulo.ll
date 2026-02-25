@@ -683,13 +683,11 @@ define amdgpu_kernel void @smulo_i64_s(i64 %x, i64 %y) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_sub_nc_u64 s[8:9], s[6:7], s[4:5]
 ; GFX12-NEXT:    s_mov_b32 s4, s0
-; GFX12-NEXT:    s_cselect_b32 s7, s9, s7
-; GFX12-NEXT:    s_cselect_b32 s6, s8, s6
+; GFX12-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[6:7]
 ; GFX12-NEXT:    s_cmp_lt_i32 s3, 0
 ; GFX12-NEXT:    s_sub_nc_u64 s[4:5], s[6:7], s[4:5]
 ; GFX12-NEXT:    s_mul_u64 s[0:1], s[0:1], s[2:3]
-; GFX12-NEXT:    s_cselect_b32 s3, s5, s7
-; GFX12-NEXT:    s_cselect_b32 s2, s4, s6
+; GFX12-NEXT:    s_cselect_b64 s[2:3], s[4:5], s[6:7]
 ; GFX12-NEXT:    s_ashr_i32 s4, s1, 31
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    s_mov_b32 s5, s4
