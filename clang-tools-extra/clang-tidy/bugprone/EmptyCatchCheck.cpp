@@ -88,7 +88,7 @@ void EmptyCatchCheck::registerMatchers(MatchFinder *Finder) {
                      hasCanonicalType(AllowedNamedExceptionTypes)));
 
   Finder->addMatcher(
-      cxxCatchStmt(unless(isExpansionInSystemHeader()), unless(isInMacro()),
+      cxxCatchStmt(unless(isInMacro()),
                    unless(hasCaughtType(IgnoredExceptionType)),
                    hasHandler(compoundStmt(
                        statementCountIs(0),

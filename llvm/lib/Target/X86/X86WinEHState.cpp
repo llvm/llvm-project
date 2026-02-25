@@ -38,23 +38,18 @@ using namespace llvm;
 namespace {
 const int OverdefinedState = INT_MIN;
 
-class WinEHStatePass : public FunctionPass {
+constexpr StringRef X86WinEHStatePassName =
+    "Windows 32-bit x86 EH state insertion";
+
+class WinEHStateFnPassImpl {
 public:
-  static char ID; // Pass identification, replacement for typeid.
+  WinEHStateFnPassImpl() = default;
 
-  WinEHStatePass() : FunctionPass(ID) {}
+  bool initialize(Module &M);
 
-  bool runOnFunction(Function &Fn) override;
+  bool finalize(Module &M);
 
-  bool doInitialization(Module &M) override;
-
-  bool doFinalization(Module &M) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  StringRef getPassName() const override {
-    return "Windows 32-bit x86 EH state insertion";
-  }
+  bool runOnFunction(Function &F);
 
 private:
   void emitExceptionRegistrationRecord(Function *F);
@@ -115,21 +110,63 @@ private:
   /// The linked list node subobject inside of RegNode.
   Value *Link = nullptr;
 };
+
+class WinEHStateLegacy : public FunctionPass {
+public:
+  static char ID; // Pass identification, replacement for typeid.
+
+  WinEHStateLegacy() : FunctionPass(ID) {}
+
+  bool runOnFunction(Function &Fn) override { return Impl.runOnFunction(Fn); }
+
+  bool doInitialization(Module &M) override { return Impl.initialize(M); }
+
+  bool doFinalization(Module &M) override { return Impl.finalize(M); }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  StringRef getPassName() const override { return X86WinEHStatePassName; }
+
+private:
+  WinEHStateFnPassImpl Impl;
+};
+
 } // namespace
 
-FunctionPass *llvm::createX86WinEHStatePass() { return new WinEHStatePass(); }
+PreservedAnalyses X86WinEHStatePass::run(Module &M,
+                                         ModuleAnalysisManager &MAM) {
+  WinEHStateFnPassImpl Impl;
+  Impl.initialize(M);
 
-char WinEHStatePass::ID = 0;
+  bool Changed = false;
+  for (Function &F : M) {
+    bool ModifiedForFn = Impl.runOnFunction(F);
+    Changed = Changed || ModifiedForFn;
+  }
 
-INITIALIZE_PASS(WinEHStatePass, "x86-winehstate",
+  Impl.finalize(M);
+
+  // This pass should only insert a stack allocation, memory accesses, and
+  // localrecovers.
+  return Changed ? PreservedAnalyses::none().preserveSet<CFGAnalyses>()
+                 : PreservedAnalyses::all();
+}
+
+FunctionPass *llvm::createX86WinEHStateLegacyPass() {
+  return new WinEHStateLegacy();
+}
+
+char WinEHStateLegacy::ID = 0;
+
+INITIALIZE_PASS(WinEHStateLegacy, "x86-winehstate",
                 "Insert stores for EH state numbers", false, false)
 
-bool WinEHStatePass::doInitialization(Module &M) {
+bool WinEHStateFnPassImpl::initialize(Module &M) {
   TheModule = &M;
   return false;
 }
 
-bool WinEHStatePass::doFinalization(Module &M) {
+bool WinEHStateFnPassImpl::finalize(Module &M) {
   assert(TheModule == &M);
   TheModule = nullptr;
   EHLinkRegistrationTy = nullptr;
@@ -142,13 +179,13 @@ bool WinEHStatePass::doFinalization(Module &M) {
   return false;
 }
 
-void WinEHStatePass::getAnalysisUsage(AnalysisUsage &AU) const {
+void WinEHStateLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
   // This pass should only insert a stack allocation, memory accesses, and
   // localrecovers.
   AU.setPreservesCFG();
 }
 
-bool WinEHStatePass::runOnFunction(Function &F) {
+bool WinEHStateFnPassImpl::runOnFunction(Function &F) {
   // Don't insert state stores or exception handler thunks for
   // available_externally functions. The handler needs to reference the LSDA,
   // which will not be emitted in this case.
@@ -213,7 +250,7 @@ bool WinEHStatePass::runOnFunction(Function &F) {
 ///     EHRegistrationNode *Next;
 ///     PEXCEPTION_ROUTINE Handler;
 ///   };
-Type *WinEHStatePass::getEHLinkRegistrationType() {
+Type *WinEHStateFnPassImpl::getEHLinkRegistrationType() {
   if (EHLinkRegistrationTy)
     return EHLinkRegistrationTy;
   LLVMContext &Context = TheModule->getContext();
@@ -231,7 +268,7 @@ Type *WinEHStatePass::getEHLinkRegistrationType() {
 ///     EHRegistrationNode SubRecord;
 ///     int32_t TryLevel;
 ///   };
-Type *WinEHStatePass::getCXXEHRegistrationType() {
+Type *WinEHStateFnPassImpl::getCXXEHRegistrationType() {
   if (CXXEHRegistrationTy)
     return CXXEHRegistrationTy;
   LLVMContext &Context = TheModule->getContext();
@@ -253,7 +290,7 @@ Type *WinEHStatePass::getCXXEHRegistrationType() {
 ///     int32_t EncodedScopeTable;
 ///     int32_t TryLevel;
 ///   };
-Type *WinEHStatePass::getSEHRegistrationType() {
+Type *WinEHStateFnPassImpl::getSEHRegistrationType() {
   if (SEHRegistrationTy)
     return SEHRegistrationTy;
   LLVMContext &Context = TheModule->getContext();
@@ -272,7 +309,7 @@ Type *WinEHStatePass::getSEHRegistrationType() {
 // common subobject of two pointers: the previous registration record (the old
 // fs:00) and the personality function for the current frame. The data before
 // and after that is personality function specific.
-void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
+void WinEHStateFnPassImpl::emitExceptionRegistrationRecord(Function *F) {
   assert(Personality == EHPersonality::MSVC_CXX ||
          Personality == EHPersonality::MSVC_X86SEH);
 
@@ -373,7 +410,7 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
   }
 }
 
-Value *WinEHStatePass::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
+Value *WinEHStateFnPassImpl::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
   return Builder.CreateIntrinsic(Intrinsic::x86_seh_lsda, F);
 }
 
@@ -384,7 +421,7 @@ Value *WinEHStatePass::emitEHLSDA(IRBuilder<> &Builder, Function *F) {
 /// We essentially want this code:
 ///   movl $lsda, %eax
 ///   jmpl ___CxxFrameHandler3
-Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
+Function *WinEHStateFnPassImpl::generateLSDAInEAXThunk(Function *ParentFunc) {
   LLVMContext &Context = ParentFunc->getContext();
   Type *Int32Ty = Type::getInt32Ty(Context);
   Type *Int8PtrType = PointerType::getUnqual(Context);
@@ -417,8 +454,8 @@ Function *WinEHStatePass::generateLSDAInEAXThunk(Function *ParentFunc) {
   return Trampoline;
 }
 
-void WinEHStatePass::linkExceptionRegistration(IRBuilder<> &Builder,
-                                               Function *Handler) {
+void WinEHStateFnPassImpl::linkExceptionRegistration(IRBuilder<> &Builder,
+                                                     Function *Handler) {
   // Emit the .safeseh directive for this function.
   Handler->addFnAttr("safeseh");
 
@@ -434,7 +471,7 @@ void WinEHStatePass::linkExceptionRegistration(IRBuilder<> &Builder,
   Builder.CreateStore(Link, FSZero);
 }
 
-void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
+void WinEHStateFnPassImpl::unlinkExceptionRegistration(IRBuilder<> &Builder) {
   // Clone Link into the current BB for better address mode folding.
   if (auto *GEP = dyn_cast<GetElementPtrInst>(Link)) {
     GEP = cast<GetElementPtrInst>(GEP->clone());
@@ -455,8 +492,8 @@ void WinEHStatePass::unlinkExceptionRegistration(IRBuilder<> &Builder) {
 // The idea behind _setjmp3 is that it takes an optional number of personality
 // specific parameters to indicate how to restore the personality-specific frame
 // state when longjmp is initiated.  Typically, the current TryLevel is saved.
-void WinEHStatePass::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
-                                       CallBase &Call, Value *State) {
+void WinEHStateFnPassImpl::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
+                                             CallBase &Call, Value *State) {
   // Don't rewrite calls with a weird number of arguments.
   if (Call.arg_size() != 2)
     return;
@@ -504,7 +541,7 @@ void WinEHStatePass::rewriteSetJmpCall(IRBuilder<> &Builder, Function &F,
 }
 
 // Figure out what state we should assign calls in this block.
-int WinEHStatePass::getBaseStateForBB(
+int WinEHStateFnPassImpl::getBaseStateForBB(
     DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
     BasicBlock *BB) {
   int BaseState = ParentBaseState;
@@ -536,7 +573,7 @@ static bool isSehScopeBegin(const CallBase &Call) {
 }
 
 // Calculate the state a call-site is in.
-int WinEHStatePass::getStateForCall(
+int WinEHStateFnPassImpl::getStateForCall(
     DenseMap<BasicBlock *, ColorVector> &BlockColors, WinEHFuncInfo &FuncInfo,
     CallBase &Call) {
   if (auto *II = dyn_cast<InvokeInst>(&Call)) {
@@ -630,8 +667,8 @@ static int getSuccState(DenseMap<BasicBlock *, int> &InitialStates, Function &F,
   return CommonState;
 }
 
-bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
-                                        CallBase &Call) {
+bool WinEHStateFnPassImpl::isStateStoreNeeded(EHPersonality Personality,
+                                              CallBase &Call) {
   if (isSehScopeBegin(Call) || isSehScopeEnd(Call)) {
     return true;
   }
@@ -644,7 +681,8 @@ bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
   return !Call.doesNotThrow();
 }
 
-void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
+void WinEHStateFnPassImpl::addStateStores(Function &F,
+                                          WinEHFuncInfo &FuncInfo) {
   // Mark the registration node. The backend needs to know which alloca it is so
   // that it can recover the original frame pointer.
   IRBuilder<> Builder(RegNode->getNextNode());
@@ -798,14 +836,14 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   }
 }
 
-void WinEHStatePass::insertStateNumberStore(Instruction *IP, int State) {
+void WinEHStateFnPassImpl::insertStateNumberStore(Instruction *IP, int State) {
   IRBuilder<> Builder(IP);
   Value *StateField =
       Builder.CreateStructGEP(RegNodeTy, RegNode, StateFieldIndex);
   Builder.CreateStore(Builder.getInt32(State), StateField);
 }
 
-void WinEHStatePass::updateEspForInAllocas(Function &F) {
+void WinEHStateFnPassImpl::updateEspForInAllocas(Function &F) {
   for (BasicBlock &BB : F) {
     for (Instruction &I : BB) {
       if (auto *Alloca = dyn_cast<AllocaInst>(&I)) {

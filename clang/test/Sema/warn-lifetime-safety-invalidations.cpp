@@ -138,6 +138,21 @@ void IteratorInvalidationInAWhileLoop(std::vector<int> v) {
   }
 }
 
+void NoIteratorInvalidationInAWhileLoopErase(std::unordered_map<int, int> mp) {
+  auto it = mp.begin();
+  while (it != std::end(mp)) {
+    if (Bool()) {
+      auto next = it;
+      ++next;
+      mp.erase(it); // Ok. 'next' remains valid.
+      it = next;
+    }
+    else {
+      ++it;
+    }
+  }
+}
+
 void IteratorInvalidationInAForeachLoop(std::vector<int> v) {
   for (int& x : v) { // expected-warning {{object whose reference is captured is later invalidated}} \
                      // expected-note {{later used here}}
@@ -260,9 +275,26 @@ void PointerToVectorElement() {
 }
 
 void SelfInvalidatingMap() {
-  std::unordered_map<int, int> mp;
-  mp[1] = 1;
-  mp[2] = mp[1];  // FIXME: Detect this. We are mising a UseFact for the assignment params.
+  std::flat_map<int, std::string> mp;
+  // TODO: We do not have a way to differentiate between pointer stability and iterator stability!
+  //
+  // std::unordered_map and other node-based containers provide pointer/reference stability.
+  // Therefore the following is safe in practice.
+  // On the other hand, std::flat_map (since C++23) does not provide pointer stability on
+  // insertion and following is unsafe for this container.
+  mp[1] = "42";
+  mp[2]     // expected-note {{invalidated here}}
+    = 
+    mp[1];  // expected-warning {{object whose reference is captured is later invalidated}} expected-note {{later used here}}
+}
+
+void InvalidateErase() {
+  std::flat_map<int, std::string> mp;
+  // None of these containers provide iterator stability. So following is unsafe:
+  auto it = mp.find(3); // expected-warning {{object whose reference is captured is later invalidated}}
+  mp.erase(mp.find(4)); // expected-note {{invalidated here}} 
+  if (it != mp.end())   // expected-note {{later used here}}
+    *it;
 }
 } // namespace ElementReferences
 
