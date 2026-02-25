@@ -301,10 +301,10 @@ public:
   Expected<uint32_t> getPhNum() const {
     if (!RealPhNum) {
       if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero()) {
-        // If RealPhNum is set, the error is not emitted because PhNum is being
-        // read.
+        // If RealPhNum is set, the error was not emitted due to reading the
+        // program header count, so we can ignore it in this context.
         if (RealPhNum) {
-          llvm::consumeError(std::move(E));
+          consumeError(std::move(E));
           return *RealPhNum;
         }
         return std::move(E);
@@ -316,10 +316,10 @@ public:
   Expected<uint64_t> getShNum() const {
     if (!RealShNum) {
       if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero()) {
-        // If RealShNum is set, the error is not emitted because ShNum is being
-        // read.
+        // If RealShNum is set, the error was not emitted due to reading the
+        // section header count, so we can ignore it in this context.
         if (RealShNum) {
-          llvm::consumeError(std::move(E));
+          consumeError(std::move(E));
           return *RealShNum;
         }
         return std::move(E);
@@ -331,10 +331,10 @@ public:
   Expected<uint32_t> getShStrNdx() const {
     if (!RealShStrNdx) {
       if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero()) {
-        // If RealShStrNdx is set, the error is not emitted because of reading
-        // ShStrNdx
+        // If RealShStrNdx is set, the error was not emitted due to reading the
+        // section header table index, so we can ignore it in this context.
         if (RealShStrNdx) {
-          llvm::consumeError(std::move(E));
+          consumeError(std::move(E));
           return *RealShStrNdx;
         }
         return std::move(E);
@@ -840,7 +840,7 @@ ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections,
                                      WarningHandler WarnHandler) const {
   Expected<uint32_t> ShStrNdxOrErr = getShStrNdx();
   if (!ShStrNdxOrErr) {
-    llvm::consumeError(ShStrNdxOrErr.takeError());
+    consumeError(ShStrNdxOrErr.takeError());
     return createError(
         "e_shstrndx == SHN_XINDEX, but the section header table is empty");
   }
