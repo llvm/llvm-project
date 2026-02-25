@@ -693,6 +693,8 @@ public:
     return llvm::DebuggerKind::LLDB;
   }
 
+  bool getDefaultDebugSimpleTemplateNames() const override;
+
   /// }
 
 private:

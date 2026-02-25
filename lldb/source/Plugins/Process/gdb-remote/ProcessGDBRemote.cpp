@@ -925,7 +925,7 @@ Status ProcessGDBRemote::ConnectToDebugserver(llvm::StringRef connect_url) {
   m_gdb_comm.GetThreadSuffixSupported();
   m_gdb_comm.GetListThreadsInStopReplySupported();
   m_gdb_comm.GetHostInfo();
-  m_gdb_comm.GetVContSupported('c');
+  m_gdb_comm.GetVContSupported("c");
   m_gdb_comm.GetVAttachOrWaitSupported();
   m_gdb_comm.EnableErrorStringInPacket();
 
@@ -1305,7 +1305,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         continue_packet.PutCString("vCont");
 
         if (!m_continue_c_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('c')) {
+          if (m_gdb_comm.GetVContSupported("c")) {
             for (tid_collection::const_iterator
                      t_pos = m_continue_c_tids.begin(),
                      t_end = m_continue_c_tids.end();
@@ -1316,7 +1316,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         }
 
         if (!continue_packet_error && !m_continue_C_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('C')) {
+          if (m_gdb_comm.GetVContSupported("C")) {
             for (tid_sig_collection::const_iterator
                      s_pos = m_continue_C_tids.begin(),
                      s_end = m_continue_C_tids.end();
@@ -1328,7 +1328,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         }
 
         if (!continue_packet_error && !m_continue_s_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('s')) {
+          if (m_gdb_comm.GetVContSupported("s")) {
             for (tid_collection::const_iterator
                      t_pos = m_continue_s_tids.begin(),
                      t_end = m_continue_s_tids.end();
@@ -1339,7 +1339,7 @@ Status ProcessGDBRemote::DoResume(RunDirection direction) {
         }
 
         if (!continue_packet_error && !m_continue_S_tids.empty()) {
-          if (m_gdb_comm.GetVContSupported('S')) {
+          if (m_gdb_comm.GetVContSupported("S")) {
             for (tid_sig_collection::const_iterator
                      s_pos = m_continue_S_tids.begin(),
                      s_end = m_continue_S_tids.end();
@@ -4375,12 +4375,16 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
         FileSpec sc_path(
             dict->GetValueForKey("shared_cache_path")->GetStringValue());
 
-        // Attempt to open the shared cache at sc_path, and
-        // if the uuid matches, index all the files.
-        HostInfo::SharedCacheIndexFiles(
-            sc_path, uuid,
+        SymbolSharedCacheUse sc_mode =
             ModuleList::GetGlobalModuleListProperties()
-                .GetSharedCacheBinaryLoading());
+                .GetSharedCacheBinaryLoading();
+
+        if (sc_mode == eSymbolSharedCacheUseHostAndInferiorSharedCache ||
+            sc_mode == eSymbolSharedCacheUseInferiorSharedCacheOnly) {
+          // Attempt to open the shared cache at sc_path, and
+          // if the uuid matches, index all the files.
+          HostInfo::SharedCacheIndexFiles(sc_path, uuid, sc_mode);
+        }
       }
       m_shared_cache_info_sp = response_sp;
     }

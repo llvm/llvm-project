@@ -476,7 +476,7 @@ uint32_t Module::ResolveSymbolContextForAddress(
           symfile->ResolveSymbolContext(so_addr, resolve_scope, sc);
 
       if ((resolve_scope & eSymbolContextLineEntry) && sc.line_entry.IsValid())
-        sc.line_entry.ApplyFileMappings(sc.target_sp, so_addr);
+        sc.line_entry.ApplyFileMappings(sc.target_sp);
     }
 
     // Resolve the symbol if requested, but don't re-look it up if we've
@@ -929,7 +929,7 @@ void Module::FindFunctions(const RegularExpression &regex,
                 if (pos == end)
                   sc_list.Append(sc);
                 else
-                  sc_list[pos->second].symbol = sc.symbol;
+                  sc_list.SetSymbolAtIndex(pos->second, sc.symbol);
               }
             }
           }
@@ -1203,9 +1203,7 @@ ObjectFile *Module::GetObjectFile() {
         m_did_load_objfile = true;
         // FindPlugin will modify its extractor_sp argument. Do not let it
         // modify our m_extractor_sp member.
-        DataExtractorSP extractor_sp;
-        if (m_extractor_sp)
-          extractor_sp = m_extractor_sp;
+        DataExtractorSP extractor_sp = m_extractor_sp;
         m_objfile_sp = ObjectFile::FindPlugin(
             shared_from_this(), &m_file, m_object_offset,
             file_size - m_object_offset, extractor_sp, data_offset);
