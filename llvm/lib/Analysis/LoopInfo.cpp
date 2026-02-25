@@ -121,11 +121,11 @@ bool Loop::makeLoopInvariant(Instruction *I, bool &Changed,
   // need to worry about other control flow in the loop conditioned on values
   // that are potentially not independent of the condition of the instruction
   // we are interested in hoisting. Given this is not knowable in the general
-  // case, we only hoist from a loop header or unique latch (constitutes the
-  // majority of cases), where we are guaranteed to not run into problems.
+  // case, we only hoist from a loop header (which covers a reasonable number
+  // of cases) where we are guaranteed to not run into problems.
   SmallVector<unsigned, 1> ProfileMetadataToPreserve;
   if (!ProfcheckDisableMetadataFixes)
-    if (OriginalParent == getHeader() || OriginalParent == getLoopLatch())
+    if (OriginalParent == getHeader())
       ProfileMetadataToPreserve.push_back(LLVMContext::MD_prof);
 
   // There is possibility of hoisting this instruction above some arbitrary
