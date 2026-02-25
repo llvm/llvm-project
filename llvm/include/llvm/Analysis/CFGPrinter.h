@@ -87,8 +87,8 @@ public:
   DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
               const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
               std::optional<NodeIdFormatterTy> NodeIdFormatter = std::nullopt,
-              std::optional<bool> HideDeoptimizePaths = std::nullopt,
-              std::optional<bool> HideUnreachablePaths = std::nullopt);
+              bool HideDeoptimizePaths = false,
+              bool HideUnreachablePaths = false);
 
   const BlockFrequencyInfo *getBFI() const { return BFI; }
 

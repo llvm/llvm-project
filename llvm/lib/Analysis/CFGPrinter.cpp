@@ -35,11 +35,11 @@ static cl::opt<std::string> CFGDotFilenamePrefix(
     "cfg-dot-filename-prefix", cl::Hidden,
     cl::desc("The prefix used for the CFG dot file names."));
 
-static cl::opt<bool> HideUnreachablePaths("cfg-hide-unreachable-paths",
-                                          cl::init(false));
+static cl::opt<cl::boolOrDefault>
+    HideUnreachablePaths("cfg-hide-unreachable-paths");
 
-static cl::opt<bool> HideDeoptimizePaths("cfg-hide-deoptimize-paths",
-                                         cl::init(false));
+static cl::opt<cl::boolOrDefault>
+    HideDeoptimizePaths("cfg-hide-deoptimize-paths");
 
 static cl::opt<double> HideColdPaths(
     "cfg-hide-cold-paths", cl::init(0.0),
@@ -94,13 +94,15 @@ static void viewCFG(Function &F, const BlockFrequencyInfo *BFI,
 DOTFuncInfo::DOTFuncInfo(const Function *F, const BlockFrequencyInfo *BFI,
                          const BranchProbabilityInfo *BPI, uint64_t MaxFreq,
                          std::optional<NodeIdFormatterTy> NodeIdFormatter,
-                         std::optional<bool> HideDeoptimizePaths,
-                         std::optional<bool> HideUnreachablePaths)
+                         bool HideDeoptimizePaths, bool HideUnreachablePaths)
     : F(F), BFI(BFI), BPI(BPI), MaxFreq(MaxFreq),
       NodeIdFormatter(NodeIdFormatter),
-      HideDeoptimizePaths(HideDeoptimizePaths.value_or(::HideDeoptimizePaths)),
-      HideUnreachablePaths(
-          HideUnreachablePaths.value_or(::HideUnreachablePaths)) {
+      HideDeoptimizePaths(::HideDeoptimizePaths == cl::BOU_UNSET
+                              ? HideDeoptimizePaths
+                              : (::HideDeoptimizePaths == cl::BOU_TRUE)),
+      HideUnreachablePaths(::HideUnreachablePaths == cl::BOU_UNSET
+                               ? HideUnreachablePaths
+                               : (::HideUnreachablePaths == cl::BOU_TRUE)) {
   ShowHeat = false;
   EdgeWeights = !!BPI; // Print EdgeWeights when BPI is available.
   RawWeights = !!BFI;  // Print RawWeights when BFI is available.
