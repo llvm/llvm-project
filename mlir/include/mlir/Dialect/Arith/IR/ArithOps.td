@@ -1580,15 +1580,32 @@ def IndexCastTypeConstraint : TypeConstraint<Or<[
 
 def Arith_IndexCastOp
   : Arith_CastOp<"index_cast", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                  DeclareOpInterfaceMethods<ArithExactFlagInterface>]> {
   let summary = "cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
     vectors. Index is an integer of platform-specific bit width. If casting to
     a wider integer, the value is sign-extended. If casting to a narrower
     integer, the value is truncated.
+
+    If the `exact` attribute is present, it is assumed that the index type width
+    is such that the conversion does not lose information. When this assumption
+    is violated, the result is poison.
+
+    Example:
+
+    ```mlir
+      %0 = arith.index_cast %a : index to i64
+      %1 = arith.index_cast %a exact : index to i64
+    ```
   }];
 
+  let arguments = (ins IndexCastTypeConstraint:$in, UnitAttr:$isExact);
+  let results = (outs IndexCastTypeConstraint:$out);
+  let assemblyFormat = [{
+    $in (`exact` $isExact^)? attr-dict `:` type($in) `to` type($out)
+  }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
@@ -1600,7 +1617,8 @@ def Arith_IndexCastOp
 def Arith_IndexCastUIOp
   : Arith_CastOp<"index_castui", IndexCastTypeConstraint, IndexCastTypeConstraint,
                  [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-                  DeclareOpInterfaceMethods<ArithNonNegFlagInterface>]> {
+                  DeclareOpInterfaceMethods<ArithNonNegFlagInterface>,
+                  DeclareOpInterfaceMethods<ArithExactFlagInterface>]> {
   let summary = "unsigned cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
@@ -1612,18 +1630,26 @@ def Arith_IndexCastUIOp
     In this case, zero extension is equivalent to sign extension. When this
     assumption is violated, the result is poison.
 
+    If the `exact` attribute is present, it is assumed that the index type width
+    is such that the conversion does not lose information. When this assumption
+    is violated, the result is poison.
+
     Example:
 
     ```mlir
       %0 = arith.index_castui %a : i32 to index
       %1 = arith.index_castui %a nneg : i32 to index
+      %2 = arith.index_castui %a exact : i32 to index
+      %3 = arith.index_castui %a nneg exact : i32 to index
     ```
   }];
 
-  let arguments = (ins IndexCastTypeConstraint:$in, UnitAttr:$nonNeg);
+  let arguments = (ins IndexCastTypeConstraint:$in, UnitAttr:$nonNeg,
+                       UnitAttr:$isExact);
   let results = (outs IndexCastTypeConstraint:$out);
   let assemblyFormat = [{
-    $in (`nneg` $nonNeg^)? attr-dict `:` type($in) `to` type($out)
+    $in (`nneg` $nonNeg^)? (`exact` $isExact^)? attr-dict
+        `:` type($in) `to` type($out)
   }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
