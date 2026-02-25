@@ -212,6 +212,8 @@ public:
     return std::make_pair(nullptr, -1);
   }
 
+  virtual bool requiresStructuredGEP() const { return false; }
+
   virtual Value *rewriteIntrinsicWithAddressSpace(IntrinsicInst *II,
                                                   Value *OldV,
                                                   Value *NewV) const {

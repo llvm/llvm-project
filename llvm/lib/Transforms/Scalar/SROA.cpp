@@ -43,6 +43,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/PtrUseVisitor.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/BasicBlock.h"
@@ -179,6 +180,7 @@ class SROA {
   DomTreeUpdater *const DTU;
   AssumptionCache *const AC;
   const bool PreserveCFG;
+  const TargetTransformInfo &TTI;
 
   /// Worklist of alloca instructions to simplify.
   ///
@@ -241,9 +243,9 @@ class SROA {
 
 public:
   SROA(LLVMContext *C, DomTreeUpdater *DTU, AssumptionCache *AC,
-       SROAOptions PreserveCFG_)
+       SROAOptions PreserveCFG_, TargetTransformInfo &TTI)
       : C(C), DTU(DTU), AC(AC),
-        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG) {}
+        PreserveCFG(PreserveCFG_ == SROAOptions::PreserveCFG), TTI(TTI) {}
 
   /// Main run method used by both the SROAPass and by the legacy pass.
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runSROA(Function &F);
@@ -2725,6 +2727,7 @@ class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
   using Base = InstVisitor<AllocaSliceRewriter, bool>;
 
   const DataLayout &DL;
+  const TargetTransformInfo &TTI;
   AllocaSlices &AS;
   SROA &Pass;
   AllocaInst &OldAI, &NewAI;
@@ -2784,14 +2787,15 @@ class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
   }
 
 public:
-  AllocaSliceRewriter(const DataLayout &DL, AllocaSlices &AS, SROA &Pass,
-                      AllocaInst &OldAI, AllocaInst &NewAI, Type *NewAllocaTy,
+  AllocaSliceRewriter(const DataLayout &DL, const TargetTransformInfo &TTI,
+                      AllocaSlices &AS, SROA &Pass, AllocaInst &OldAI,
+                      AllocaInst &NewAI, Type *NewAllocaTy,
                       uint64_t NewAllocaBeginOffset,
                       uint64_t NewAllocaEndOffset, bool IsIntegerPromotable,
                       VectorType *PromotableVecTy,
                       SmallSetVector<PHINode *, 8> &PHIUsers,
                       SmallSetVector<SelectInst *, 8> &SelectUsers)
-      : DL(DL), AS(AS), Pass(Pass), OldAI(OldAI), NewAI(NewAI),
+      : DL(DL), TTI(TTI), AS(AS), Pass(Pass), OldAI(OldAI), NewAI(NewAI),
         NewAllocaBeginOffset(NewAllocaBeginOffset),
         NewAllocaEndOffset(NewAllocaEndOffset), NewAllocaTy(NewAllocaTy),
         IntTy(IsIntegerPromotable
@@ -3969,11 +3973,14 @@ class AggLoadStoreRewriter : public InstVisitor<AggLoadStoreRewriter, bool> {
   /// Used to calculate offsets, and hence alignment, of subobjects.
   const DataLayout &DL;
 
+  const TargetTransformInfo &TTI;
+
   IRBuilderTy &IRB;
 
 public:
-  AggLoadStoreRewriter(const DataLayout &DL, IRBuilderTy &IRB)
-      : DL(DL), IRB(IRB) {}
+  AggLoadStoreRewriter(const DataLayout &DL, const TargetTransformInfo &TTI,
+                       IRBuilderTy &IRB)
+      : DL(DL), TTI(TTI), IRB(IRB) {}
 
   /// Rewrite loads and stores through a pointer and all pointers derived from
   /// it.
@@ -4028,12 +4035,15 @@ private:
     /// alignments.
     const DataLayout &DL;
 
+    const TargetTransformInfo &TTI;
+
     /// Initialize the splitter with an insertion point, Ptr and start with a
     /// single zero GEP index.
     OpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
-               Align BaseAlign, const DataLayout &DL, IRBuilderTy &IRB)
+               Align BaseAlign, const DataLayout &DL,
+               const TargetTransformInfo &TTI, IRBuilderTy &IRB)
         : IRB(IRB), GEPIndices(1, IRB.getInt32(0)), Ptr(Ptr), BaseTy(BaseTy),
-          BaseAlign(BaseAlign), DL(DL) {
+          BaseAlign(BaseAlign), DL(DL), TTI(TTI) {
       IRB.SetInsertPoint(InsertionPoint);
     }
 
@@ -4103,9 +4113,9 @@ private:
 
     LoadOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
                    AAMDNodes AATags, Align BaseAlign, const DataLayout &DL,
-                   IRBuilderTy &IRB)
+                   const TargetTransformInfo &TTI, IRBuilderTy &IRB)
         : OpSplitter<LoadOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign, DL,
-                                     IRB),
+                                     TTI, IRB),
           AATags(AATags) {}
 
     /// Emit a leaf load of a single value. This is called at the leaves of the
@@ -4113,8 +4123,15 @@ private:
     void emitFunc(Type *Ty, Value *&Agg, Align Alignment, const Twine &Name) {
       assert(Ty->isSingleValueType());
       // Load the single value and insert it using the indices.
-      Value *GEP =
-          IRB.CreateInBoundsGEP(BaseTy, Ptr, GEPIndices, Name + ".gep");
+      Value *GEP = nullptr;
+      if (TTI.requiresStructuredGEP()) {
+        assert(GEPIndices.size() > 0);
+        llvm::ArrayRef<Value *> SGEPIndices =
+            llvm::ArrayRef<Value *>(GEPIndices).drop_front(1);
+        GEP = IRB.CreateStructuredGEP(BaseTy, Ptr, SGEPIndices, Name + ".gep");
+      } else {
+        GEP = IRB.CreateInBoundsGEP(BaseTy, Ptr, GEPIndices, Name + ".gep");
+      }
       LoadInst *Load =
           IRB.CreateAlignedLoad(Ty, GEP, Alignment, Name + ".load");
 
@@ -4160,7 +4177,7 @@ private:
     // We have an aggregate being loaded, split it apart.
     LLVM_DEBUG(dbgs() << "    original: " << LI << "\n");
     LoadOpSplitter Splitter(&LI, *U, LI.getType(), LI.getAAMetadata(),
-                            getAdjustedAlignment(&LI, 0), DL, IRB);
+                            getAdjustedAlignment(&LI, 0), DL, TTI, IRB);
     Splitter.recordFakeUses(LI);
     Value *V = PoisonValue::get(LI.getType());
     Splitter.emitSplitOps(LI.getType(), V, LI.getName() + ".fca");
@@ -4174,9 +4191,10 @@ private:
   struct StoreOpSplitter : public OpSplitter<StoreOpSplitter> {
     StoreOpSplitter(Instruction *InsertionPoint, Value *Ptr, Type *BaseTy,
                     AAMDNodes AATags, StoreInst *AggStore, Align BaseAlign,
-                    const DataLayout &DL, IRBuilderTy &IRB)
+                    const DataLayout &DL, const TargetTransformInfo &TTI,
+                    IRBuilderTy &IRB)
         : OpSplitter<StoreOpSplitter>(InsertionPoint, Ptr, BaseTy, BaseAlign,
-                                      DL, IRB),
+                                      DL, TTI, IRB),
           AATags(AATags), AggStore(AggStore) {}
     AAMDNodes AATags;
     StoreInst *AggStore;
@@ -4190,8 +4208,17 @@ private:
       // call to make the output independent of the argument evaluation order.
       Value *ExtractValue =
           IRB.CreateExtractValue(Agg, Indices, Name + ".extract");
-      Value *InBoundsGEP =
-          IRB.CreateInBoundsGEP(BaseTy, Ptr, GEPIndices, Name + ".gep");
+
+      Value *InBoundsGEP = nullptr;
+      if (TTI.requiresStructuredGEP()) {
+        assert(GEPIndices.size() > 0);
+        llvm::ArrayRef<Value *> SGEPIndices =
+            llvm::ArrayRef<Value *>(GEPIndices).drop_front(1);
+        InBoundsGEP =
+            IRB.CreateStructuredGEP(BaseTy, Ptr, SGEPIndices, Name + ".gep");
+      } else
+        InBoundsGEP =
+            IRB.CreateInBoundsGEP(BaseTy, Ptr, GEPIndices, Name + ".gep");
       StoreInst *Store =
           IRB.CreateAlignedStore(ExtractValue, InBoundsGEP, Alignment);
 
@@ -4234,7 +4261,7 @@ private:
     // We have an aggregate being stored, split it apart.
     LLVM_DEBUG(dbgs() << "    original: " << SI << "\n");
     StoreOpSplitter Splitter(&SI, *U, V->getType(), SI.getAAMetadata(), &SI,
-                             getAdjustedAlignment(&SI, 0), DL, IRB);
+                             getAdjustedAlignment(&SI, 0), DL, TTI, IRB);
     Splitter.emitSplitOps(V->getType(), V, V->getName() + ".fca");
     Visited.erase(&SI);
     // The stores replacing SI each have markers describing fragments of the
@@ -5268,8 +5295,8 @@ SROA::rewritePartition(AllocaInst &AI, AllocaSlices &AS, Partition &P) {
   SmallSetVector<SelectInst *, 8> SelectUsers;
 
   AllocaSliceRewriter Rewriter(
-      DL, AS, *this, AI, *NewAI, PartitionTy, P.beginOffset(), P.endOffset(),
-      IsIntegerWideningViable, VecTy, PHIUsers, SelectUsers);
+      DL, TTI, AS, *this, AI, *NewAI, PartitionTy, P.beginOffset(),
+      P.endOffset(), IsIntegerWideningViable, VecTy, PHIUsers, SelectUsers);
   bool Promotable = true;
   // Check whether we can have tree-structured merge.
   if (auto DeletedValues = Rewriter.rewriteTreeStructuredMerge(P)) {
@@ -5852,7 +5879,7 @@ SROA::runOnAlloca(AllocaInst &AI) {
   // First, split any FCA loads and stores touching this alloca to promote
   // better splitting and promotion opportunities.
   IRBuilderTy IRB(&AI);
-  AggLoadStoreRewriter AggRewriter(DL, IRB);
+  AggLoadStoreRewriter AggRewriter(DL, TTI, IRB);
   Changed |= AggRewriter.rewrite(AI);
 
   // Build the slices using a recursive instruction-visiting builder.
@@ -6064,8 +6091,9 @@ PreservedAnalyses SROAPass::run(Function &F, FunctionAnalysisManager &AM) {
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
   AssumptionCache &AC = AM.getResult<AssumptionAnalysis>(F);
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+  TargetTransformInfo &TTI = AM.getResult<TargetIRAnalysis>(F);
   auto [Changed, CFGChanged] =
-      SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+      SROA(&F.getContext(), &DTU, &AC, PreserveCFG, TTI).runSROA(F);
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
@@ -6106,15 +6134,18 @@ public:
     DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     AssumptionCache &AC =
         getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    TargetTransformInfo &TTI =
+        getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
     auto [Changed, _] =
-        SROA(&F.getContext(), &DTU, &AC, PreserveCFG).runSROA(F);
+        SROA(&F.getContext(), &DTU, &AC, PreserveCFG, TTI).runSROA(F);
     return Changed;
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addPreserved<GlobalsAAWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
   }
@@ -6135,5 +6166,6 @@ INITIALIZE_PASS_BEGIN(SROALegacyPass, "sroa",
                       "Scalar Replacement Of Aggregates", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(SROALegacyPass, "sroa", "Scalar Replacement Of Aggregates",
                     false, false)
