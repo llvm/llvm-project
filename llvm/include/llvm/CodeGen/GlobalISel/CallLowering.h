@@ -281,7 +281,7 @@ public:
     /// relevant uses/defines as needed.
     virtual void assignValueToReg(Register ValVReg, Register PhysReg,
                                   const CCValAssign &VA,
-                                  ISD::ArgFlagsTy Flags = {}) = 0;
+                                  ISD::ArgFlagsTy Flags) = 0;
 
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
