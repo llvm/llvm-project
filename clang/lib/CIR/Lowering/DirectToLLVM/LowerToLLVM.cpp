@@ -1837,7 +1837,9 @@ static mlir::LogicalResult
 rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::ConversionPatternRewriter &rewriter,
                     const mlir::TypeConverter *converter,
-                    mlir::FlatSymbolRefAttr calleeAttr) {
+                    mlir::FlatSymbolRefAttr calleeAttr,
+                    mlir::Block *continueBlock = nullptr,
+                    mlir::Block *landingPadBlock = nullptr) {
   llvm::SmallVector<mlir::Type, 8> llvmResults;
   mlir::ValueTypeRange<mlir::ResultRange> cirResults = op->getResultTypes();
   auto call = cast<cir::CIRCallOpInterface>(op);
@@ -1908,18 +1910,23 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
         converter->convertType(calleeFuncTy));
   }
 
-  assert(!cir::MissingFeatures::opCallLandingPad());
-  assert(!cir::MissingFeatures::opCallContinueBlock());
   assert(!cir::MissingFeatures::opCallCallConv());
 
-  auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
-      op, llvmFnTy, calleeAttr, callOperands);
-  newOp->setAttrs(attributes);
-  if (memoryEffects)
-    newOp.setMemoryEffectsAttr(memoryEffects);
-  newOp.setNoUnwind(noUnwind);
-  newOp.setWillReturn(willReturn);
-  newOp.setNoreturn(noReturn);
+  if (landingPadBlock) {
+    auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::InvokeOp>(
+        op, llvmFnTy, calleeAttr, callOperands, continueBlock,
+        mlir::ValueRange{}, landingPadBlock, mlir::ValueRange{});
+    newOp->setAttrs(attributes);
+  } else {
+    auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+        op, llvmFnTy, calleeAttr, callOperands);
+    newOp->setAttrs(attributes);
+    if (memoryEffects)
+      newOp.setMemoryEffectsAttr(memoryEffects);
+    newOp.setNoUnwind(noUnwind);
+    newOp.setWillReturn(willReturn);
+    newOp.setNoreturn(noReturn);
+  }
 
   return mlir::success();
 }
@@ -1930,6 +1937,16 @@ mlir::LogicalResult CIRToLLVMCallOpLowering::matchAndRewrite(
   return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(), rewriter,
                              getTypeConverter(), op.getCalleeAttr());
 }
+
+mlir::LogicalResult CIRToLLVMTryCallOpLowering::matchAndRewrite(
+    cir::TryCallOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  assert(!cir::MissingFeatures::opCallCallConv());
+  return rewriteCallOrInvoke(op.getOperation(), adaptor.getOperands(),
+                             rewriter, getTypeConverter(), op.getCalleeAttr(),
+                             op.getNormalDest(), op.getUnwindDest());
+}
+
 
 mlir::LogicalResult CIRToLLVMReturnAddrOpLowering::matchAndRewrite(
     cir::ReturnAddrOp op, OpAdaptor adaptor,
