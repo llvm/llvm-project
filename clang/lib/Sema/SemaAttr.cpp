@@ -136,6 +136,8 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
       "unordered_map",
       "unordered_multiset",
       "unordered_multimap",
+      "flat_map",
+      "flat_set",
   };
 
   static const llvm::StringSet<> Iterators{"iterator", "const_iterator",
@@ -189,6 +191,8 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
       "unordered_multiset",
       "unordered_multimap",
       "variant",
+      "flat_map",
+      "flat_set",
   };
   static const llvm::StringSet<> StdPointers{
       "basic_string_view",
