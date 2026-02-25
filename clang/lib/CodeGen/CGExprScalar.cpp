@@ -2458,9 +2458,10 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   if (const auto *MT = E->getType()->getAs<ConstantMatrixType>();
       MT && CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
                 LangOptions::MatrixMemoryLayout::MatrixColMajor) {
-    llvm::MatrixBuilder MB(Builder);
-    V = MB.CreateMatrixTransposeVectorShuffle(
-        V, MT->getNumRows(), MT->getNumColumns(), "matrix.rowmajor2colmajor");
+    SmallVector<int, 16> Mask;
+    for (unsigned I = 0, N = MT->getNumElementsFlattened(); I < N; ++I)
+      Mask.push_back(MT->mapColumnMajorToRowMajorFlattenedIndex(I));
+    V = Builder.CreateShuffleVector(V, Mask, "matrix.rowmajor2colmajor");
   }
 
   return V;

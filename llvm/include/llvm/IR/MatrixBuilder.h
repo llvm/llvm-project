@@ -227,20 +227,6 @@ public:
                : (IsUnsigned ? B.CreateUDiv(LHS, RHS) : B.CreateSDiv(LHS, RHS));
   }
 
-  /// Create a vector shuffle that performs a matrix transpose on a matrix with
-  /// \p NumRows rows and \p NumColumns columns. This is intended to be used as
-  /// a change in matrix memory layout between row-major and column-major
-  /// order for small matrices, and therefore does not use the
-  /// llvm.matrix.transpose intrinsic.
-  Value *CreateMatrixTransposeVectorShuffle(Value *Vec, unsigned NumRows,
-                                            unsigned NumColumns,
-                                            const Twine &Name = "") {
-    SmallVector<int, 16> Mask;
-    for (unsigned I = 0, N = NumRows * NumColumns; I < N; ++I)
-      Mask.push_back((I % NumRows) * NumColumns + (I / NumRows));
-    return B.CreateShuffleVector(Vec, Mask, Name);
-  }
-
   /// Create an assumption that \p Idx is less than \p NumElements.
   void CreateIndexAssumption(Value *Idx, unsigned NumElements,
                              Twine const &Name = "") {
