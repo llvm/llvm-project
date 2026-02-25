@@ -1,4 +1,4 @@
-//===-- Implementation of nextupbf16 function -----------------------------===//
+//===-- Shared nextupf function ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/nextupbf16.h"
-#include "src/__support/math/nextupbf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_NEXTUPF_H
+#define LLVM_LIBC_SHARED_MATH_NEXTUPF_H
+
+#include "shared/libc_common.h"
+#include "src/__support/math/nextupf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(bfloat16, nextupbf16, (bfloat16 x)) {
-  return math::nextupbf16(x);
-}
+using math::nextupf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_NEXTUPF_H
