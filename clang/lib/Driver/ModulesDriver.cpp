@@ -132,7 +132,7 @@ static ManifestEntryLookup
 buildManifestLookupMap(ArrayRef<StdModuleManifest::Module> ManifestEntries) {
   ManifestEntryLookup ManifestEntryBySource;
   for (auto &Entry : ManifestEntries) {
-    const bool Inserted =
+    [[maybe_unused]] const bool Inserted =
         ManifestEntryBySource.try_emplace(Entry.SourcePath, &Entry).second;
     assert(Inserted &&
            "Manifest defines multiple modules with the same source path.");
