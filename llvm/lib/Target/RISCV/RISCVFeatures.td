@@ -445,7 +445,7 @@ def FeatureStdExtZcmp
                      "sequenced instructions for code-size reduction",
                      [FeatureStdExtZca]>,
       RISCVExtensionBitmask<1, 10>;
-def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp() && !Subtarget->hasStdExtC()">,
+def HasStdExtZcmp : Predicate<"Subtarget->hasStdExtZcmp()">,
                     AssemblerPredicate<(all_of FeatureStdExtZcmp),
                         "'Zcmp' (sequenced instructions for code-size reduction)">;
 
@@ -877,12 +877,12 @@ def FeatureStdExtZvksg
 
 // Vector quad widening dot product
 
-def FeatureStdExtZvqdotq
-    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
+def FeatureStdExtZvdot4a8i
+    : RISCVExperimentalExtension<0, 1, "Vector 4-element Dot Product of packed 8-bit Integers",
                                  [FeatureStdExtZve32x]>;
-def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
-                       AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
-                           "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
+def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
+                         AssemblerPredicate<(all_of FeatureStdExtZvdot4a8i),
+                         "'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)">;
 
 // Vector instruction predicates
 
@@ -1298,6 +1298,11 @@ def FeatureVendorXSfmm128t
     : RISCVExtension<0, 6,
                      "TE=128 configuration",
                      [FeatureVendorXSfmmbase, FeatureStdExtZvl512b], "XSfmmTE", "128">;
+
+def FeatureVendorXSfmm32a
+    : RISCVExtension<0, 6,
+                     "TEW=32-bit accumulation operands - int: 8b; float: fp16, bf16, fp32",
+                     [FeatureVendorXSfmm32a8i, FeatureVendorXSfmm32a16f, FeatureVendorXSfmm32a32f]>;
 
 def FeatureVendorXSfvqmaccdod
     : RISCVExtension<1, 0,
@@ -1909,7 +1914,7 @@ def TuneOptimizedZeroStrideLoad
                       "true", "Optimized (perform fewer memory operations)"
                       "zero-stride vector load">;
 
-def FeatureEnableSelectOptimize
+def TuneEnableSelectOptimize
     : SubtargetFeature<"enable-select-opt", "EnableSelectOptimize", "true",
                        "Enable the select optimize pass for select loop heuristics">;
 

@@ -806,8 +806,12 @@ define void @and_zext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
+; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
 ; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
+; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
 ; LA32-NEXT:    vldi $vr0, -1777
 ; LA32-NEXT:    vand.v $vr0, $vr1, $vr0
 ; LA32-NEXT:    vextrins.w $vr1, $vr0, 2
@@ -885,8 +889,12 @@ define void @and_sext_masks_v4i64(ptr %res, ptr %a, ptr %b) nounwind {
 ; LA32-NEXT:    xvfcmp.clt.d $xr0, $xr0, $xr1
 ; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 0
+; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 2
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 1
 ; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 4
 ; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 2
+; LA32-NEXT:    xvpickve2gr.w $a1, $xr0, 6
+; LA32-NEXT:    vinsgr2vr.w $vr1, $a1, 3
 ; LA32-NEXT:    vldi $vr0, -1777
 ; LA32-NEXT:    vand.v $vr0, $vr1, $vr0
 ; LA32-NEXT:    vori.b $vr1, $vr0, 0
