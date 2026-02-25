@@ -2414,6 +2414,120 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_setpayload",
+    hdrs = ["src/__support/math/setpayload.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadbf16",
+    hdrs = ["src/__support/math/setpayloadbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadf",
+    hdrs = ["src/__support/math/setpayloadf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadf128",
+    hdrs = ["src/__support/math/setpayloadf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadf16",
+    hdrs = ["src/__support/math/setpayloadf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadl",
+    hdrs = ["src/__support/math/setpayloadl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsig",
+    hdrs = ["src/__support/math/setpayloadsig.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigbf16",
+    hdrs = ["src/__support/math/setpayloadsigbf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigf",
+    hdrs = ["src/__support/math/setpayloadsigf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigf128",
+    hdrs = ["src/__support/math/setpayloadsigf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigf16",
+    hdrs = ["src/__support/math/setpayloadsigf16.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_setpayloadsigl",
+    hdrs = ["src/__support/math/setpayloadsigl.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sqrtf16",
     hdrs = ["src/__support/math/sqrtf16.h"],
     deps = [
@@ -3492,6 +3606,63 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_nextdown",
+    hdrs = ["src/__support/math/nextdown.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextdownbf16",
+    hdrs = ["src/__support/math/nextdownbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextdownf",
+    hdrs = ["src/__support/math/nextdownf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextdownf128",
+    hdrs = ["src/__support/math/nextdownf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_properties_types",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextdownf16",
+    hdrs = ["src/__support/math/nextdownf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextdownl",
+    hdrs = ["src/__support/math/nextdownl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf128",
     hdrs = ["src/__support/math/ldexpf128.h"],
     deps = [
@@ -4372,6 +4543,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_asinpif16",
+    hdrs = ["src/__support/math/asinpif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sinpif16",
     hdrs = ["src/__support/math/sinpif16.h"],
     deps = [
@@ -4876,28 +5064,28 @@ libc_math_function(
 )
 
 libc_math_function(
-    name = "bf16fmul",
+    name = "bf16mul",
     additional_deps = [
         ":__support_math_bf16mul",
     ],
 )
 
 libc_math_function(
-    name = "bf16fmulf",
+    name = "bf16mulf",
     additional_deps = [
         ":__support_math_bf16mulf",
     ],
 )
 
 libc_math_function(
-    name = "bf16fmulf128",
+    name = "bf16mulf128",
     additional_deps = [
         ":__support_math_bf16mulf128",
     ],
 )
 
 libc_math_function(
-    name = "bf16fmull",
+    name = "bf16mull",
     additional_deps = [
         ":__support_math_bf16mull",
     ],
@@ -5950,15 +6138,40 @@ libc_math_function(name = "nextafterf128")
 
 libc_math_function(name = "nextafterf16")
 
-libc_math_function(name = "nextdown")
+libc_math_function(
+    name = "nextdown",
+    additional_deps = [
+        ":__support_math_nextdown",
+    ],
+)
 
-libc_math_function(name = "nextdownf")
+libc_math_function(
+    name = "nextdownf",
+    additional_deps = [
+        ":__support_math_nextdownf",
+    ],
+)
 
-libc_math_function(name = "nextdownl")
+libc_math_function(
+    name = "nextdownl",
+    additional_deps = [
+        ":__support_math_nextdownl",
+    ],
+)
 
-libc_math_function(name = "nextdownf128")
+libc_math_function(
+    name = "nextdownf128",
+    additional_deps = [
+        ":__support_math_nextdownf128",
+    ],
+)
 
-libc_math_function(name = "nextdownf16")
+libc_math_function(
+    name = "nextdownf16",
+    additional_deps = [
+        ":__support_math_nextdownf16",
+    ],
+)
 
 libc_math_function(name = "nexttoward")
 
@@ -6074,25 +6287,75 @@ libc_math_function(name = "scalbnf128")
 
 libc_math_function(name = "scalbnf16")
 
-libc_math_function(name = "setpayload")
+libc_math_function(
+    name = "setpayload",
+    additional_deps = [
+        ":__support_math_setpayload",
+    ],
+)
 
-libc_math_function(name = "setpayloadf")
+libc_math_function(
+    name = "setpayloadf",
+    additional_deps = [
+        ":__support_math_setpayloadf",
+    ],
+)
 
-libc_math_function(name = "setpayloadl")
+libc_math_function(
+    name = "setpayloadl",
+    additional_deps = [
+        ":__support_math_setpayloadl",
+    ],
+)
 
-libc_math_function(name = "setpayloadf128")
+libc_math_function(
+    name = "setpayloadf128",
+    additional_deps = [
+        ":__support_math_setpayloadf128",
+    ],
+)
 
-libc_math_function(name = "setpayloadf16")
+libc_math_function(
+    name = "setpayloadf16",
+    additional_deps = [
+        ":__support_math_setpayloadf16",
+    ],
+)
 
-libc_math_function(name = "setpayloadsig")
+libc_math_function(
+    name = "setpayloadsig",
+    additional_deps = [
+        ":__support_math_setpayloadsig",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigf")
+libc_math_function(
+    name = "setpayloadsigf",
+    additional_deps = [
+        ":__support_math_setpayloadsigf",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigl")
+libc_math_function(
+    name = "setpayloadsigl",
+    additional_deps = [
+        ":__support_math_setpayloadsigl",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigf128")
+libc_math_function(
+    name = "setpayloadsigf128",
+    additional_deps = [
+        ":__support_math_setpayloadsigf128",
+    ],
+)
 
-libc_math_function(name = "setpayloadsigf16")
+libc_math_function(
+    name = "setpayloadsigf16",
+    additional_deps = [
+        ":__support_math_setpayloadsigf16",
+    ],
+)
 
 libc_math_function(
     name = "sin",
@@ -6144,6 +6407,14 @@ libc_math_function(
     name = "sinpif16",
     additional_deps = [
         ":__support_math_sinpif16",
+    ],
+)
+
+libc_math_function(
+    name = "asinpif16",
+    additional_deps = [
+        ":__support_math_asinpif16",
+        ":errno",
     ],
 )
 

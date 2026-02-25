@@ -22,7 +22,7 @@ void emit_simple_parallel() {
   }
   // CHECK-NEXT: omp.parallel {
   // CHECK-NEXT: {{.*}} = cir.load align(4) %{{.*}} : !cir.ptr<!s32i>, !s32i
-  // CHECK-NEXT: cir.call @during(%{{.*}}) : (!s32i) -> ()
+  // CHECK-NEXT: cir.call @during(%{{.*}}) : (!s32i {{.*}}) -> ()
   // CHECK-NEXT: omp.terminator
   // CHECK-NEXT: }
 

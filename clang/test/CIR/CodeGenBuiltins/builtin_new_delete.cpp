@@ -9,13 +9,13 @@
 void test_builtins_basic() {
   __builtin_operator_delete(__builtin_operator_new(4));
   // CIR-LABEL: test_builtins_basic
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i) -> (!cir.ptr<!void> {llvm.noundef})
-  // CIR: cir.call @_ZdlPv([[P]]) {{.*}}: (!cir.ptr<!void>) -> ()
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: cir.call @_ZdlPv([[P]]) {{.*}}: (!cir.ptr<!void> {llvm.noundef}) -> ()
   // CIR: cir.return
 
   // LLVM-LABEL: test_builtins_basic
-  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 4)
-  // LLVM: call void @_ZdlPv(ptr [[P]])
+  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 {{.*}} 4)
+  // LLVM: call void @_ZdlPv(ptr {{.*}} [[P]])
   // LLVM: ret void
 
   // OGCG-LABEL: test_builtins_basic
@@ -28,13 +28,13 @@ void test_sized_delete() {
   __builtin_operator_delete(__builtin_operator_new(4), 4);
 
   // CIR-LABEL: test_sized_delete
-  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i) -> (!cir.ptr<!void> {llvm.noundef})
-  // CIR: cir.call @_ZdlPvm([[P]], {{%.*}}) {{.*}}: (!cir.ptr<!void>, !u64i) -> ()
+  // CIR: [[P:%.*]] = cir.call @_Znwm({{%.*}}) {allocsize = array<i32: 0>} : (!u64i {llvm.noundef}) -> (!cir.ptr<!void> {llvm.noundef})
+  // CIR: cir.call @_ZdlPvm([[P]], {{%.*}}) {{.*}}: (!cir.ptr<!void> {llvm.noundef}, !u64i {llvm.noundef}) -> ()
   // CIR: cir.return
 
   // LLVM-LABEL: test_sized_delete
-  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 4)
-  // LLVM: call void @_ZdlPvm(ptr [[P]], i64 4)
+  // LLVM: [[P:%.*]] = call noundef ptr @_Znwm(i64 {{.*}} 4)
+  // LLVM: call void @_ZdlPvm(ptr {{.*}} [[P]], i64 {{.*}} 4)
   // LLVM: ret void
 
   // OGCG-LABEL: test_sized_delete
