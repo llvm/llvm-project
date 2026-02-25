@@ -825,3 +825,18 @@ body: |
     %v:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
     %w:vr = PseudoVSLIDEDOWN_VX_M1 $noreg, %v, %y, 1, 5 /* e32 */, 0 /* tu, mu */
 ...
+---
+name: vabs_v
+body: |
+  bb.0:
+    liveins: $x8
+    ; CHECK-LABEL: name: vabs_v
+    ; CHECK: liveins: $x8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:vr = PseudoVABS_V_M1 $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVABS_V_M1 $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, 1, 5 /* e32 */, 0 /* tu, mu */
+    $v8 = COPY %y
+...

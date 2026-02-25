@@ -3550,3 +3550,41 @@ func.func @task_affinity_multi() {
   }
   return
 }
+
+// CHECK-LABEL: func.func @omp_iterator
+func.func @omp_iterator(%s2 : !llvm.struct<(ptr, i64)>) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV:.*]]: index) = ({{.*}} to {{.*}} step {{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.struct<(ptr, i64)>)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  %lb = arith.constant 1 : index
+  %ub = arith.constant 4 : index
+  %st = arith.constant 1 : index
+
+  %0 = omp.iterator(%iv: index) = (%lb to %ub step %st) {
+    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
+  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+  return
+}
+
+// CHECK-LABEL: func.func @omp_iterator_2d
+func.func @omp_iterator_2d(%s2 : !llvm.struct<(ptr, i64)>) -> () {
+  // CHECK: %[[IT:.*]] = omp.iterator(%[[IV0:.*]]: index, %[[IV1:.*]]: index) =
+  // CHECK-SAME: ({{.*}} to {{.*}} step {{.*}}, {{.*}} to {{.*}} step {{.*}}) {
+  // CHECK:   omp.yield(%{{.*}} : !llvm.struct<(ptr, i64)>)
+  // CHECK: } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+
+  %lb0 = arith.constant 1 : index
+  %ub0 = arith.constant 4 : index
+  %st0 = arith.constant 1 : index
+  %lb1 = arith.constant 2 : index
+  %ub1 = arith.constant 10 : index
+  %st1 = arith.constant 2 : index
+
+  %0 = omp.iterator(%iv0: index, %iv1: index) =
+        (%lb0 to %ub0 step %st0,
+         %lb1 to %ub1 step %st1) {
+    omp.yield(%s2 : !llvm.struct<(ptr, i64)>)
+  } -> !omp.iterated<!llvm.struct<(ptr, i64)>>
+
+  return
+}

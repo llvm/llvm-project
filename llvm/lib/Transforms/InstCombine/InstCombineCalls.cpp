@@ -1755,6 +1755,24 @@ static bool leftDistributesOverRight(Instruction::BinaryOps LOp, bool HasNUW,
   }
 }
 
+/// Return whether "(X ROp Y) LOp Z" is always equal to
+/// "(X LOp Z) ROp (Y LOp Z)".
+static bool rightDistributesOverLeft(Instruction::BinaryOps LOp, bool HasNUW,
+                                     bool HasNSW, Intrinsic::ID ROp) {
+  if (Instruction::isCommutative(LOp) || LOp == Instruction::Shl)
+    return leftDistributesOverRight(LOp, HasNUW, HasNSW, ROp);
+  switch (ROp) {
+  case Intrinsic::umax:
+  case Intrinsic::umin:
+    return HasNUW && LOp == Instruction::Sub;
+  case Intrinsic::smax:
+  case Intrinsic::smin:
+    return HasNSW && LOp == Instruction::Sub;
+  default:
+    return false;
+  }
+}
+
 // Attempts to factorise a common term
 // in an instruction that has the form "(A op' B) op (C op' D)
 // where op is an intrinsic and op' is a binop
@@ -1781,9 +1799,6 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   bool HasNUW = Op0->hasNoUnsignedWrap() && Op1->hasNoUnsignedWrap();
   bool HasNSW = Op0->hasNoSignedWrap() && Op1->hasNoSignedWrap();
 
-  if (!leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode))
-    return nullptr;
-
   Value *A = Op0->getOperand(0);
   Value *B = Op0->getOperand(1);
   Value *C = Op1->getOperand(0);
@@ -1799,11 +1814,13 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   }
 
   BinaryOperator *NewBinop;
-  if (A == C) {
+  if (A == C &&
+      leftDistributesOverRight(InnerOpcode, HasNUW, HasNSW, TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
     NewBinop =
         cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
-  } else if (B == D) {
+  } else if (B == D && rightDistributesOverLeft(InnerOpcode, HasNUW, HasNSW,
+                                                TopLevelOpcode)) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
     NewBinop =
         cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));

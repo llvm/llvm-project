@@ -13,13 +13,13 @@ define void @check_dag_scheduler_update(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[I4:%.*]] = load i32, ptr [[ARRAYIDX11]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX18:%.*]] = getelementptr i32, ptr [[P]], i64 34
 ; CHECK-NEXT:    [[I6:%.*]] = load i32, ptr [[ARRAYIDX18]], align 4
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <4 x i32> poison, i32 [[I]], i32 0
-; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <4 x i32> [[PACK]], i32 [[I2]], i32 1
-; CHECK-NEXT:    [[PACK2:%.*]] = insertelement <4 x i32> [[PACK1]], i32 [[I4]], i32 2
-; CHECK-NEXT:    [[PACK3:%.*]] = insertelement <4 x i32> [[PACK2]], i32 [[I6]], i32 3
-; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i32>, ptr [[P]], align 4
-; CHECK-NEXT:    [[VEC:%.*]] = add nsw <4 x i32> [[PACK3]], [[VECL]]
-; CHECK-NEXT:    store <4 x i32> [[VEC]], ptr [[P1]], align 4
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <4 x i32> poison, i32 [[I]], i32 0, !sandboxvec [[META0:![0-9]+]]
+; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <4 x i32> [[PACK]], i32 [[I2]], i32 1, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[PACK2:%.*]] = insertelement <4 x i32> [[PACK1]], i32 [[I4]], i32 2, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[PACK3:%.*]] = insertelement <4 x i32> [[PACK2]], i32 [[I6]], i32 3, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i32>, ptr [[P]], align 4, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[VEC:%.*]] = add nsw <4 x i32> [[PACK3]], [[VECL]], !sandboxvec [[META0]]
+; CHECK-NEXT:    store <4 x i32> [[VEC]], ptr [[P1]], align 4, !sandboxvec [[META0]]
 ; CHECK-NEXT:    ret void
 ;
   %i = load i32, ptr %p
@@ -59,7 +59,7 @@ define <4 x float> @check_top_of_schedule(ptr %0) {
 ; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr double, ptr [[TMP0]], i64 1
 ; CHECK-NEXT:    [[TRUNC_1:%.*]] = fptrunc double 0.000000e+00 to float
 ; CHECK-NEXT:    [[INS_2:%.*]] = insertelement <4 x float> [[INS_1]], float [[TRUNC_1]], i64 0
-; CHECK-NEXT:    store <2 x double> <double 0.000000e+00, double 1.000000e+00>, ptr [[GEP_1]], align 8
+; CHECK-NEXT:    store <2 x double> <double 0.000000e+00, double 1.000000e+00>, ptr [[GEP_1]], align 8, !sandboxvec [[META1:![0-9]+]]
 ; CHECK-NEXT:    ret <4 x float> [[INS_2]]
 ;
   %trunc.1 = fptrunc double 0.000000e+00 to float
@@ -74,3 +74,7 @@ define <4 x float> @check_top_of_schedule(ptr %0) {
   store double %ext.2, ptr %gep.2, align 8
   ret <4 x float> %ins.2
 }
+;.
+; CHECK: [[META0]] = distinct !{!"sandboxregion"}
+; CHECK: [[META1]] = distinct !{!"sandboxregion"}
+;.

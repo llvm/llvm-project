@@ -140,7 +140,7 @@ def main(argv):
                             '--test-suite-commit', args.test_suite_commit,
                             '--libcxx-installation', build_dir / 'install',
                             '--',
-                            '-j1', '--time-tests',
+                            '-j1', '--time-tests', '--test-output=failed',
                             '--param', f'compiler={args.compiler}',
                             '--param', 'optimization=speed',
                             '--param', 'std=c++26',
