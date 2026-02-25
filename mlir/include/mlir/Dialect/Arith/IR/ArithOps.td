@@ -1181,9 +1181,10 @@ def Arith_ExtUIOp :
     bit-width must be larger than the input bit-width (N > M).
     The top-most (N - M) bits of the output are filled with zeros.
 
-    This op supports an `nneg` flag. If the flag is present, the operand
-    is known to be non-negative, i.e. the sign bit is zero. This allows
-    the zero extension to be treated as a sign extension.
+    When the `nneg` flag is present, the operand is assumed to have
+    the most significant bit set to 0. In this case, zero extension is
+    equivalent to sign extension. When this assumption is violated, the
+    result is poison.
 
     Example:
 
@@ -1499,10 +1500,10 @@ def Arith_UIToFPOp :
     rounded using the default rounding mode. When operating on vectors, casts
     elementwise.
 
-    This op supports an `nneg` flag. If the flag is present, the operand
-    is known to be non-negative, i.e. the sign bit is zero. This allows
-    the unsigned-to-float conversion to be treated as a signed-to-float
-    conversion.
+    When the `nneg` flag is present, the operand is assumed to have
+    the most significant bit set to 0. In this case, zero extension is
+    equivalent to sign extension. When this assumption is violated, the
+    result is poison.
 
     Example:
 
