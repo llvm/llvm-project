@@ -1038,9 +1038,8 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
 void VPlanTransforms::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
-    bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
-    const uint32_t *MinItersBypassWeights, DebugLoc DL,
-    PredicatedScalarEvolution &PSE) {
+    bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
+    DebugLoc DL, PredicatedScalarEvolution &PSE) {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -1071,30 +1070,9 @@ void VPlanTransforms::addMinimumIterationCheck(
   VPBuilder Builder(EntryVPBB);
   VPValue *TripCountCheck = Plan.getFalse();
   const SCEV *Step = GetMinTripCount();
-  if (TailFolded) {
-    if (CheckNeededWithTailFolding) {
-      // vscale is not necessarily a power-of-2, which means we cannot guarantee
-      // an overflow to zero when updating induction variables and so an
-      // additional overflow check is required before entering the vector loop.
-
-      VPValue *StepVPV = Builder.createExpandSCEV(Step);
-
-      // Get the maximum unsigned value for the type.
-      VPValue *MaxUIntTripCount =
-          Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
-      VPValue *DistanceToMax =
-          Builder.createSub(MaxUIntTripCount, TripCountVPV);
-
-      // Don't execute the vector loop if (UMax - n) < (VF * UF).
-      // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
-      // minProfitableTripCount).
-      TripCountCheck =
-          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax, StepVPV, DL);
-    } else {
-      // TripCountCheck = false, folding tail implies positive vector trip
-      // count.
-    }
-  } else {
+  // TripCountCheck = false, folding tail implies positive vector trip
+  // count.
+  if (!TailFolded) {
     // TODO: Emit unconditional branch to vector preheader instead of
     // conditional branch with known condition.
     TripCount = SE.applyLoopGuards(TripCount, OrigLoop);
