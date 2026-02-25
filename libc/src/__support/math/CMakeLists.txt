@@ -1932,6 +1932,7 @@ add_header_library(
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
+    libc.sec.__support.FPUtil.bfloat16
 )
 
 add_header_library(

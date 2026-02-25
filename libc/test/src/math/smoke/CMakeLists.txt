@@ -3754,6 +3754,9 @@ add_fp_unittest(
   DEPENDS
     libc.src.math.hypotbf16
     libc.src.__support.FPUtil.bfloat16
+    libc.test.UnitTest.FPMatcher
+    libc.test.UnitTest.Test
+    libc.utils.MPFRWrapper.MPFRUtils
 )
 
 add_fp_unittest(

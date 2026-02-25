@@ -408,8 +408,8 @@ template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<float16> &, float16, double, RoundingMode);
 template void
 explain_binary_operation_one_output_error(Operation, const BinaryInput<float> &,
-       explain_binary_operation_one_output_error                                   float16, double, RoundingMode);
-template void (
+                                          float16, double, RoundingMode);
+template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<double> &, float16, double, RoundingMode);
 template void explain_binary_operation_one_output_error(
     Operation, const BinaryInput<long double> &, float16, double, RoundingMode);
