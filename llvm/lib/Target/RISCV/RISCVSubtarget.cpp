@@ -70,12 +70,6 @@ static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePExtSIMDCodeGen(
-    "riscv-enable-p-ext-simd-codegen",
-    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
-             "where only partial codegen is currently supported)"),
-    cl::init(false), cl::Hidden);
-
 void RISCVSubtarget::anchor() {}
 
 RISCVSubtarget &
@@ -164,13 +158,9 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
-  return HasStdExtP && EnablePExtSIMDCodeGen;
-}
-
 // Returns true if VT is a P extension packed SIMD type that fits in XLen.
 bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
-  if (!enablePExtSIMDCodeGen())
+  if (!HasStdExtP)
     return false;
 
   if (is64Bit())
