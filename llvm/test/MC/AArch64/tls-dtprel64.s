@@ -1,9 +1,12 @@
-# RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s | llvm-readobj -r - | FileCheck %s
-  
-# CHECK: Relocations [
-# CHECK:   Section {{.*}} .rela.debug_info {
-# CHECK:     0x{{[0-9A-F]+}} R_AARCH64_TLS_DTPREL64 var {{.*}}
-# CHECK:   }
+// RUN: llvm-mc -triple=aarch64-none-linux-gnu -show-encoding < %s | FileCheck %s
+// RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s | llvm-readobj -r - | FileCheck --check-prefix=CHECK-ELF %s
+
+# CHECK: .xword %dtprel(var)
+
+# CHECK-ELF: Relocations [
+# CHECK-ELF:   Section {{.*}} .rela.debug_info {
+# CHECK-ELF:     0x{{[0-9A-F]+}} R_AARCH64_TLS_DTPREL64 var {{.*}}
+# CHECK-ELF:   }
 
 .section .tdata,"awT",@progbits
 .globl var
@@ -34,5 +37,5 @@ var:
   .byte   8              // Address Size (in bytes)
   .byte   1              // Abbrev [1] DW_TAG_compile_unit
   .byte   2              // Abbrev [2] DW_TAG_variable
-  .xword  var@DTPREL
+  .xword  %dtprel(var)
 .Lcu_end:
