@@ -526,9 +526,4 @@ if __name__ == "__main__":
                     interpret(compile('2 1 > { "yes" } { "no" } ifelse'), [], []), "yes"
                 )
 
-                import sys
-
-                sys.argv.pop()
-                path = os.path.dirname(__file__)
-                sys.path.remove
-                unittest.main()
+        unittest.main(argv=[__file__])
