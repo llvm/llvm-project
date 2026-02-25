@@ -9641,7 +9641,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeShiftCompareExitLimit(
   assert(Result->getType()->isIntegerTy(1) &&
          "Otherwise cannot be an operand to a branch instruction");
 
-  if (Result->isZeroValue()) {
+  if (Result->isNullValue()) {
     unsigned BitWidth = getTypeSizeInBits(RHS->getType());
     const SCEV *UpperBound =
         getConstant(getEffectiveSCEVType(RHS->getType()), BitWidth);
@@ -10032,8 +10032,7 @@ static Constant *BuildConstantFromSCEV(const SCEV *V) {
       if (OpC->getType()->isPointerTy()) {
         // The offsets have been converted to bytes.  We can add bytes using
         // an i8 GEP.
-        C = ConstantExpr::getGetElementPtr(Type::getInt8Ty(C->getContext()),
-                                           OpC, C);
+        C = ConstantExpr::getPtrAdd(OpC, C);
       } else {
         C = ConstantExpr::getAdd(C, OpC);
       }

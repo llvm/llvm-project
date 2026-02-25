@@ -51,7 +51,7 @@ void RISCVDAGToDAGISel::PreprocessISelDAG() {
     SDValue Result;
     switch (N->getOpcode()) {
     case ISD::SPLAT_VECTOR: {
-      if (Subtarget->enablePExtSIMDCodeGen())
+      if (Subtarget->hasStdExtP())
         break;
       // Convert integer SPLAT_VECTOR to VMV_V_X_VL and floating-point
       // SPLAT_VECTOR to VFMV_V_F_VL to reduce isel burden.
@@ -918,35 +918,33 @@ bool RISCVDAGToDAGISel::tryWideningMulAcc(SDNode *Node, const SDLoc &DL) {
   SDValue Op1Lo = Node->getOperand(2);
   SDValue Op1Hi = Node->getOperand(3);
 
-  auto IsSupportedMul = [](unsigned Opc) {
-    return Opc == ISD::UMUL_LOHI || Opc == ISD::SMUL_LOHI ||
-           Opc == RISCVISD::WMULSU;
+  auto IsSupportedMulWithOneUse = [](SDValue Lo, SDValue Hi) {
+    unsigned Opc = Lo.getOpcode();
+    if (Opc != ISD::UMUL_LOHI && Opc != ISD::SMUL_LOHI &&
+        Opc != RISCVISD::WMULSU)
+      return false;
+    return Lo.getNode() == Hi.getNode() && Lo.getResNo() == 0 &&
+           Hi.getResNo() == 1 && Lo.hasOneUse() && Hi.hasOneUse();
   };
 
   SDNode *MulNode = nullptr;
   SDValue AddLo, AddHi;
 
-  // Check if first operand pair is a supported multiply.
-  if (IsSupportedMul(Op0Lo.getOpcode()) && Op0Lo.getNode() == Op0Hi.getNode() &&
-      Op0Lo.getResNo() == 0 && Op0Hi.getResNo() == 1) {
+  // Check if first operand pair is a supported multiply with single use.
+  if (IsSupportedMulWithOneUse(Op0Lo, Op0Hi)) {
     MulNode = Op0Lo.getNode();
     AddLo = Op1Lo;
     AddHi = Op1Hi;
   }
-  // ADDD is commutative. Check if second operand pair is a supported multiply.
-  else if (IsSupportedMul(Op1Lo.getOpcode()) &&
-           Op1Lo.getNode() == Op1Hi.getNode() && Op1Lo.getResNo() == 0 &&
-           Op1Hi.getResNo() == 1) {
+  // ADDD is commutative. Check if second operand pair is a supported multiply
+  // with single use.
+  else if (IsSupportedMulWithOneUse(Op1Lo, Op1Hi)) {
     MulNode = Op1Lo.getNode();
     AddLo = Op0Lo;
     AddHi = Op0Hi;
-  }
-
-  // Check that we found a multiply and this is the only user.
-  // FIXME: We should check the use count before trying to commuted case.
-  if (!MulNode || !SDValue(MulNode, 0).hasOneUse() ||
-      !SDValue(MulNode, 1).hasOneUse())
+  } else {
     return false;
+  }
 
   unsigned Opc;
   switch (MulNode->getOpcode()) {
@@ -1991,11 +1989,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     // Fall through to regular ADDD selection.
     [[fallthrough]];
   case RISCVISD::SUBD:
-  case RISCVISD::PPAIRE_DB: {
+  case RISCVISD::PPAIRE_DB:
+  case RISCVISD::WADDAU:
+  case RISCVISD::WSUBAU: {
     assert(!Subtarget->is64Bit() && "Unexpected opcode");
-    assert((Node->getOpcode() != RISCVISD::PPAIRE_DB ||
-            Subtarget->enablePExtSIMDCodeGen()) &&
-           "Unexpected opcode");
+    assert(
+        (Node->getOpcode() != RISCVISD::PPAIRE_DB || Subtarget->hasStdExtP()) &&
+        "Unexpected opcode");
 
     SDValue Op0Lo = Node->getOperand(0);
     SDValue Op0Hi = Node->getOperand(1);
@@ -2009,25 +2009,32 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
 
     SDValue Op1Lo = Node->getOperand(2);
     SDValue Op1Hi = Node->getOperand(3);
-    SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
 
-    unsigned Opc;
-    switch (Node->getOpcode()) {
-    default:
-      llvm_unreachable("Unexpected opcode");
-    case RISCVISD::ADDD:
-      Opc = RISCV::ADDD;
-      break;
-    case RISCVISD::SUBD:
-      Opc = RISCV::SUBD;
-      break;
-    case RISCVISD::PPAIRE_DB:
-      Opc = RISCV::PPAIRE_DB;
-      break;
+    MachineSDNode *New;
+    if (Opcode == RISCVISD::WADDAU || Opcode == RISCVISD::WSUBAU) {
+      // WADDAU/WSUBAU: Op0 is the accumulator (GPRPair), Op1Lo and Op1Hi are
+      // the two 32-bit values.
+      unsigned Opc = Opcode == RISCVISD::WADDAU ? RISCV::WADDAU : RISCV::WSUBAU;
+      New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1Lo, Op1Hi);
+    } else {
+      SDValue Op1 = buildGPRPair(CurDAG, DL, MVT::Untyped, Op1Lo, Op1Hi);
+
+      unsigned Opc;
+      switch (Opcode) {
+      default:
+        llvm_unreachable("Unexpected opcode");
+      case RISCVISD::ADDD:
+        Opc = RISCV::ADDD;
+        break;
+      case RISCVISD::SUBD:
+        Opc = RISCV::SUBD;
+        break;
+      case RISCVISD::PPAIRE_DB:
+        Opc = RISCV::PPAIRE_DB;
+        break;
+      }
+      New = CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1);
     }
-
-    MachineSDNode *New =
-        CurDAG->getMachineNode(Opc, DL, MVT::Untyped, Op0, Op1);
 
     auto [Lo, Hi] = extractGPRPair(CurDAG, DL, SDValue(New, 0));
     ReplaceUses(SDValue(Node, 0), Lo);
@@ -2844,7 +2851,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
       CurDAG->RemoveDeadNode(Node);
       return;
     }
-    if (Subtarget->enablePExtSIMDCodeGen()) {
+    if (Subtarget->hasStdExtP()) {
       bool Is32BitCast =
           (VT == MVT::i32 && (SrcVT == MVT::v4i8 || SrcVT == MVT::v2i16)) ||
           (SrcVT == MVT::i32 && (VT == MVT::v4i8 || VT == MVT::v2i16));
@@ -2862,7 +2869,7 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     break;
   }
   case ISD::SCALAR_TO_VECTOR:
-    if (Subtarget->enablePExtSIMDCodeGen()) {
+    if (Subtarget->hasStdExtP()) {
       MVT SrcVT = Node->getOperand(0).getSimpleValueType();
       if ((VT == MVT::v2i32 && SrcVT == MVT::i64) ||
           (VT == MVT::v4i8 && SrcVT == MVT::i32)) {
@@ -4060,6 +4067,8 @@ bool RISCVDAGToDAGISel::selectNegImm(SDValue N, SDValue &Val) {
   int64_t Imm = cast<ConstantSDNode>(N)->getSExtValue();
   if (isInt<32>(Imm))
     return false;
+  if (Imm == INT64_MIN)
+    return false;
 
   for (const SDNode *U : N->users()) {
     switch (U->getOpcode()) {
@@ -4550,6 +4559,54 @@ bool RISCVDAGToDAGISel::selectRVVSimm5(SDValue N, unsigned Width,
 
     Imm = CurDAG->getSignedTargetConstant(ImmVal, SDLoc(N),
                                           Subtarget->getXLenVT());
+    return true;
+  }
+
+  return false;
+}
+
+// Match XOR with a VMSET_VL operand. Return the other operand.
+bool RISCVDAGToDAGISel::selectVMNOTOp(SDValue N, SDValue &Res) {
+  if (N.getOpcode() != ISD::XOR)
+    return false;
+
+  if (N.getOperand(0).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(1);
+    return true;
+  }
+
+  if (N.getOperand(1).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(0);
+    return true;
+  }
+
+  return false;
+}
+
+// Match VMXOR_VL with a VMSET_VL operand. Making sure that that VL operand
+// matches the parent's VL. Return the other operand of the VMXOR_VL.
+bool RISCVDAGToDAGISel::selectVMNOT_VLOp(SDNode *Parent, SDValue N,
+                                         SDValue &Res) {
+  if (N.getOpcode() != RISCVISD::VMXOR_VL)
+    return false;
+
+  assert(Parent &&
+         (Parent->getOpcode() == RISCVISD::VMAND_VL ||
+          Parent->getOpcode() == RISCVISD::VMOR_VL ||
+          Parent->getOpcode() == RISCVISD::VMXOR_VL) &&
+         "Unexpected parent");
+
+  // The VL should match the parent.
+  if (Parent->getOperand(2) != N->getOperand(2))
+    return false;
+
+  if (N.getOperand(0).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(1);
+    return true;
+  }
+
+  if (N.getOperand(1).getOpcode() == RISCVISD::VMSET_VL) {
+    Res = N.getOperand(0);
     return true;
   }
 

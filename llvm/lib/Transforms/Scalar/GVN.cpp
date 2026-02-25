@@ -2965,6 +2965,12 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
       return false;
   }
 
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(CurInst))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
+
   uint32_t ValNo = VN.lookup(CurInst);
 
   // Look for the predecessors for PRE opportunities.  We're
@@ -3091,7 +3097,6 @@ bool GVNPass::performScalarPRE(Instruction *CurInst) {
 
   LLVM_DEBUG(dbgs() << "GVN PRE removed: " << *CurInst << '\n');
   removeInstruction(CurInst);
-  ++NumGVNInstr;
 
   return true;
 }
@@ -3195,6 +3200,7 @@ void GVNPass::removeInstruction(Instruction *I) {
 #endif
   ICF->removeInstruction(I);
   I->eraseFromParent();
+  ++NumGVNInstr;
 }
 
 /// Verify that the specified instruction does not occur in our

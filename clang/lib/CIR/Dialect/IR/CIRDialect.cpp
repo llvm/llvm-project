@@ -934,9 +934,24 @@ printCallCommon(mlir::Operation *op, mlir::FlatSymbolRefAttr calleeSym,
       llvm::StringRef("arg_attrs")};
   printer.printOptionalAttrDict(op->getAttrs(), elidedAttrs);
   printer << " : ";
-  call_interface_impl::printFunctionSignature(
-      printer, op->getOperands().getTypes(), argAttrs,
-      /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  if (calleeSym || !argAttrs) {
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(), argAttrs,
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  } else {
+    // indirect function calls use an 'arg' type for the type of its indirect
+    // argument.  However, we don't store a similar attribute collection.  In
+    // order to make `printFunctionSignature` have the attributes line up, we
+    // have to make a 'shimmed' copy of the attributes that have a blank set of
+    // attributes for the indirect argument.
+    llvm::SmallVector<Attribute> shimmedArgAttrs;
+    shimmedArgAttrs.push_back(mlir::DictionaryAttr::get(op->getContext(), {}));
+    shimmedArgAttrs.append(argAttrs.begin(), argAttrs.end());
+    call_interface_impl::printFunctionSignature(
+        printer, op->getOperands().getTypes(),
+        mlir::ArrayAttr::get(op->getContext(), shimmedArgAttrs),
+        /*isVariadic=*/false, op->getResultTypes(), resAttrs);
+  }
 }
 
 mlir::ParseResult cir::CallOp::parse(mlir::OpAsmParser &parser,
@@ -3774,6 +3789,44 @@ mlir::ValueRange cir::TryOp::getSuccessorInputs(RegionSuccessor successor) {
                               : ValueRange();
 }
 
+LogicalResult cir::TryOp::verify() {
+  mlir::ArrayAttr handlerTypes = getHandlerTypes();
+  if (!handlerTypes) {
+    if (!getHandlerRegions().empty())
+      return emitOpError(
+          "handler regions must be empty when no handler types are present");
+    return success();
+  }
+
+  mlir::MutableArrayRef<mlir::Region> handlerRegions = getHandlerRegions();
+
+  // The parser and builder won't allow this to happen, but the loop below
+  // relies on the sizes being the same, so we check it here.
+  if (handlerRegions.size() != handlerTypes.size())
+    return emitOpError(
+        "number of handler regions and handler types must match");
+
+  for (const auto &[typeAttr, handlerRegion] :
+       llvm::zip(handlerTypes, handlerRegions)) {
+    // Verify that handler regions have a !cir.eh_token block argument.
+    mlir::Block &entryBlock = handlerRegion.front();
+    if (entryBlock.getNumArguments() != 1 ||
+        !mlir::isa<cir::EhTokenType>(entryBlock.getArgument(0).getType()))
+      return emitOpError(
+          "handler region must have a single '!cir.eh_token' argument");
+
+    // The unwind region does not require a cir.begin_catch.
+    if (mlir::isa<cir::UnwindAttr>(typeAttr))
+      continue;
+
+    if (entryBlock.empty() || !mlir::isa<cir::BeginCatchOp>(entryBlock.front()))
+      return emitOpError(
+          "catch handler region must start with 'cir.begin_catch'");
+  }
+
+  return success();
+}
+
 static void
 printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
                        mlir::MutableArrayRef<mlir::Region> handlerRegions,
@@ -3795,7 +3848,15 @@ printTryHandlerRegions(mlir::OpAsmPrinter &printer, cir::TryOp op,
       printer << "] ";
     }
 
-    printer.printRegion(handlerRegions[typeIdx],
+    // Print the handler region's !cir.eh_token block argument.
+    mlir::Region &region = handlerRegions[typeIdx];
+    if (!region.empty() && region.front().getNumArguments() > 0) {
+      printer << "(";
+      printer.printRegionArgument(region.front().getArgument(0));
+      printer << ") ";
+    }
+
+    printer.printRegion(region,
                         /*printEntryBLockArgs=*/false,
                         /*printBlockTerminators=*/true);
   }
@@ -3810,8 +3871,20 @@ static mlir::ParseResult parseTryHandlerRegions(
     handlerRegions.emplace_back(new mlir::Region);
 
     mlir::Region &currRegion = *handlerRegions.back();
+
+    // Parse the required region argument: (%eh_token : !cir.eh_token)
+    llvm::SmallVector<mlir::OpAsmParser::Argument> regionArgs;
+    if (parser.parseLParen())
+      return failure();
+    mlir::OpAsmParser::Argument arg;
+    if (parser.parseArgument(arg, /*allowType=*/true))
+      return failure();
+    regionArgs.push_back(arg);
+    if (parser.parseRParen())
+      return failure();
+
     mlir::SMLoc regionLoc = parser.getCurrentLocation();
-    if (parser.parseRegion(currRegion)) {
+    if (parser.parseRegion(currRegion, regionArgs)) {
       handlerRegions.clear();
       return failure();
     }
