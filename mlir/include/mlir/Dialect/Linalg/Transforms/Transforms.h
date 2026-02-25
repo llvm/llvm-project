@@ -1634,19 +1634,21 @@ decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
 FailureOr<linalg::GenericOp> deduplicateOperandsAndRemoveDeadResults(
     RewriterBase &rewriter, linalg::GenericOp genericOp, bool removeOutputs);
 
+/// Rewrite convolution/pooling/depthwise ops with size-1 window dimensions
+/// into lower-dimensional ops. Uses `inferConvolutionDims` to work with any
+/// layout and handles both named ops and equivalent linalg.generic ops
+/// uniformly. The result is specialized back to a named op if the input was a
+/// named op.
+/// TODO: Support n-D to (n-1)-D downscaling. Currently it only support 2D->1D
+/// downscaling.
+FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
+                                                        LinalgOp op);
+
 //===----------------------------------------------------------------------===//
 // Rewrite patterns wrapping transformations.
 // TODO: every single such pattern should be a close to noop wrapper around a
 // functional-stye API call.
 //===----------------------------------------------------------------------===//
-
-/// Rewrite convolution/pooling/depthwise ops with size-1 window dimensions
-/// into lower-dimensional ops. Uses `inferConvolutionDims` to work with any
-/// layout and handles both named ops and equivalent linalg.generic ops
-/// uniformly. The result is specialized back to a named op when possible.
-/// TODO: Support n-D to (n-1)-D downscaling.
-FailureOr<LinalgOp> downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
-                                                        LinalgOp op);
 
 ///
 /// Linalg generalization pattern.

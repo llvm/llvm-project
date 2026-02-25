@@ -1530,20 +1530,17 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   if (!canRemoveSpatial0 && !canRemoveSpatial1)
     return failure();
 
-  // Prioritize dropping the leading spatial dimension if both are removable.
-  bool removeSpatial0 = canRemoveSpatial0;
-
   // Determine which loop dims to remove (output spatial + corresponding filter)
+  // and sort for correct index compression when removing dimensions from affine
+  // maps.
   SmallVector<unsigned> loopDimsToRemove;
-  if (removeSpatial0) {
+  if (canRemoveSpatial0) {
     loopDimsToRemove.push_back(outSpatial0);
     loopDimsToRemove.push_back(filterSpatial0);
   } else {
     loopDimsToRemove.push_back(outSpatial1);
     loopDimsToRemove.push_back(filterSpatial1);
   }
-  // Sort for correct index compression when removing dimensions from affine
-  // maps.
   llvm::sort(loopDimsToRemove);
 
   // Create new indexing maps with dimensions removed.
@@ -1551,9 +1548,7 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
   MLIRContext *ctx = op.getContext();
   unsigned numDims = op.getNumLoops();
   unsigned newNumDims = numDims - loopDimsToRemove.size();
-
   for (AffineMap map : op.getIndexingMapsArray()) {
-    // Remove the loop dimensions from the map.
     SmallVector<AffineExpr> newResults;
     for (AffineExpr expr : map.getResults()) {
       auto newExpr =
@@ -1584,35 +1579,19 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
     newInputs.push_back(reduced);
   }
 
-  SmallVector<Value> newOutputs;
-  Value originalOutput;
-  SmallVector<OpOperand *> initOperands =
-      llvm::to_vector(llvm::make_pointer_range(op.getDpsInitsMutable()));
-  for (OpOperand *output : initOperands) {
-    originalOutput = output->get();
-    AffineMap map = op.getMatchingIndexingMap(output);
-    SmallVector<unsigned> tensorDimsToRemove =
-        getResultIndicesReferencingDims(map, loopDimsToRemove);
-    Value reduced = createRankReducingExtractSlice(rewriter, loc, output->get(),
-                                                   tensorDimsToRemove);
-    newOutputs.push_back(reduced);
-  }
+  OpOperand &output = *op.getDpsInitsMutable().begin();
+  AffineMap outputMap = op.getMatchingIndexingMap(&output);
+  SmallVector<unsigned> outputDimsToRemove =
+      getResultIndicesReferencingDims(outputMap, loopDimsToRemove);
+  Value newOutput = createRankReducingExtractSlice(rewriter, loc, output.get(),
+                                                   outputDimsToRemove);
 
   // Create new linalg.generic with reduced dimensions.
-  auto newOp = linalg::GenericOp::create(
-      rewriter, loc, TypeRange{newOutputs[0].getType()}, newInputs, newOutputs,
-      newMaps, newIterTypes,
-      [&](OpBuilder &b, Location nestedLoc, ValueRange args) {
-        IRMapping mapping;
-        for (auto [oldArg, newArg] :
-             llvm::zip(op.getBlock()->getArguments(), args))
-          mapping.map(oldArg, newArg);
-        for (Operation &bodyOp : op.getBlock()->without_terminator())
-          b.clone(bodyOp, mapping);
-        auto yield = cast<linalg::YieldOp>(op.getBlock()->getTerminator());
-        linalg::YieldOp::create(b, nestedLoc,
-                                mapping.lookup(yield.getOperand(0)));
-      });
+  auto newOp =
+      linalg::GenericOp::create(rewriter, loc, TypeRange{newOutput.getType()},
+                                newInputs, newOutput, newMaps, newIterTypes);
+  rewriter.inlineRegionBefore(op->getRegion(0), newOp.getRegion(),
+                              newOp.getRegion().begin());
 
   // Try to specialize the generic back to a named op only if the input was
   // already a specialized (named) op.
@@ -1625,7 +1604,7 @@ linalg::downscaleSizeOneWindowedConvolution(RewriterBase &rewriter,
 
   // Insert result back into original shape.
   Value result = tensor::createCanonicalRankReducingInsertSliceOp(
-      rewriter, loc, resultOp->getResult(0), originalOutput);
+      rewriter, loc, resultOp->getResult(0), output.get());
 
   rewriter.replaceOp(op, result);
   return resultOp;
