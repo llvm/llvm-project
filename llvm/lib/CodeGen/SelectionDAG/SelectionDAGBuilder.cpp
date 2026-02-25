@@ -1505,7 +1505,6 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
   DanglingDebugInfoVector &DDIV = DanglingDbgInfoIt->second;
   for (auto &DDI : DDIV) {
     DebugLoc DL = DDI.getDebugLoc();
-    unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
     unsigned DbgSDNodeOrder = DDI.getSDNodeOrder();
     DILocalVariable *Variable = DDI.getVariable();
     DIExpression *Expr = DDI.getExpression();
@@ -1519,6 +1518,7 @@ void SelectionDAGBuilder::resolveDanglingDebugInfo(const Value *V,
       // in the first place we should not be more successful here). Unless we
       // have some test case that prove this to be correct we should avoid
       // calling EmitFuncArgumentDbgValue here.
+      unsigned ValSDNodeOrder = Val.getNode()->getIROrder();
       if (!EmitFuncArgumentDbgValue(V, Variable, Expr, DL,
                                     FuncArgumentDbgValueKind::Value, Val)) {
         LLVM_DEBUG(dbgs() << "Resolve dangling debug info for "
@@ -6555,8 +6555,12 @@ void SelectionDAGBuilder::visitVectorHistogram(const CallInst &I,
   }
 
   EVT IdxVT = Index.getValueType();
-  EVT EltTy = IdxVT.getVectorElementType();
-  if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
+
+  // Avoid using e.g. i32 as index type when the increment must be performed
+  // on i64's.
+  bool MustExtendIndex = VT.getScalarSizeInBits() > IdxVT.getScalarSizeInBits();
+  EVT EltTy = MustExtendIndex ? VT : IdxVT.getVectorElementType();
+  if (MustExtendIndex || TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
     EVT NewIdxVT = IdxVT.changeVectorElementType(*DAG.getContext(), EltTy);
     Index = DAG.getNode(ISD::SIGN_EXTEND, sdl, NewIdxVT, Index);
   }

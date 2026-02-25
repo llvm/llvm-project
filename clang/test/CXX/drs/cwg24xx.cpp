@@ -6,40 +6,7 @@
 // RUN: %clang_cc1 -std=c++23 -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
 // RUN: %clang_cc1 -std=c++2c -pedantic-errors %s -verify=expected,since-cxx20,since-cxx17
 
-namespace cwg2406 { // cwg2406: 5
-#if __cplusplus >= 201703L
-void fallthrough(int n) {
-  void g(), h(), i();
-  switch (n) {
-  case 1:
-  case 2:
-    g();
-    [[fallthrough]];
-  case 3: // warning on fallthrough discouraged
-    do {
-      [[fallthrough]];
-      // since-cxx17-error@-1 {{fallthrough annotation does not directly precede switch label}}
-    } while (false);
-  case 6:
-    do {
-      [[fallthrough]];
-      // since-cxx17-error@-1 {{fallthrough annotation does not directly precede switch label}}
-    } while (n);
-  case 7:
-    while (false) {
-      [[fallthrough]];
-      // since-cxx17-error@-1 {{fallthrough annotation does not directly precede switch label}}
-    }
-  case 5:
-    h();
-  case 4: // implementation may warn on fallthrough
-    i();
-    [[fallthrough]];
-    // since-cxx17-error@-1 {{fallthrough annotation does not directly precede switch label}}
-  }
-}
-#endif
-} // namespace cwg2406
+// cwg2406 is in cwg2406.cpp
 
 namespace cwg2428 { // cwg2428: 19
 #if __cplusplus >= 202002L
@@ -232,13 +199,13 @@ struct S {
 struct T : S {
     virtual void f() &;
     // expected-error@-1 {{cannot overload a member function with ref-qualifier '&' with a member function without a ref-qualifier}}
-    // expected-note@#cwg2496-f {{previous declaration is here}}
+    //   expected-note@#cwg2496-f {{previous declaration is here}}
     virtual void g();
     // expected-error@-1 {{cannot overload a member function without a ref-qualifier with a member function with ref-qualifier '&'}}
-    // expected-note@#cwg2496-g {{previous declaration is here}}
+    //   expected-note@#cwg2496-g {{previous declaration is here}}
     virtual void h() &&;
     // expected-error@-1 {{cannot overload a member function with ref-qualifier '&&' with a member function without a ref-qualifier}}
-    // expected-note@#cwg2496-h {{previous declaration is here}}
+    //   expected-note@#cwg2496-h {{previous declaration is here}}
     virtual void i();
     virtual void j() &;
     virtual void k() &;
