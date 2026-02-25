@@ -6619,11 +6619,15 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
       if (MD->isInlined()) {
         // MinGW does not import or export inline methods. But do it for
-        // template instantiations.
+        // template instantiations and inherited constructors (which are
+        // marked inline but must be exported to match MSVC behavior).
         if (!Context.getTargetInfo().shouldDLLImportComdatSymbols() &&
             TSK != TSK_ExplicitInstantiationDeclaration &&
-            TSK != TSK_ExplicitInstantiationDefinition)
-          continue;
+            TSK != TSK_ExplicitInstantiationDefinition) {
+          if (auto *CD = dyn_cast<CXXConstructorDecl>(MD);
+              !CD || !CD->getInheritedConstructor())
+            continue;
+        }
 
         // MSVC versions before 2015 don't export the move assignment operators
         // and move constructor, so don't attempt to import/export them if
