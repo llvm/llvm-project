@@ -14,6 +14,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
 #include "SBAPIExtras.h"
+#include "lldb/API/SBDeclaration.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
@@ -29,6 +30,11 @@ using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
 namespace {
+
+bool HasInnerVarref(lldb::SBValue &v) {
+  return v.MightHaveChildren() || ValuePointsToCode(v) ||
+         v.GetDeclaration().IsValid();
+}
 
 template <typename T> StringMap<uint32_t> distinct_names(T &container) {
   StringMap<uint32_t> variable_name_counts;
@@ -61,7 +67,7 @@ std::vector<Variable> make_variables(VariableReferenceStorage &storage,
       break;
 
     const var_ref_t var_ref =
-        variable.MightHaveChildren()
+        HasInnerVarref(variable)
             ? storage.Insert(variable, /*is_permanent=*/is_permanent)
             : var_ref_t(var_ref_t::k_no_child);
     if (LLVM_UNLIKELY(var_ref.AsUInt32() >=
@@ -164,10 +170,8 @@ private:
       if (m_frame.GetFrameID() == 0) {
         lldb::SBValue stop_return_value =
             m_frame.GetThread().GetStopReturnValue();
-        if (stop_return_value.IsValid()) {
-          auto renamed_return_value = stop_return_value.Clone("(Return Value)");
-          m_children.Append(renamed_return_value);
-        }
+        if (stop_return_value.IsValid())
+          m_children.Append(stop_return_value.Clone("(Return Value)"));
       }
 
       break;
