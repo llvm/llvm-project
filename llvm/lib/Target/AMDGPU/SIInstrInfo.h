@@ -1737,86 +1737,86 @@ bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
 namespace AMDGPU {
 
   LLVM_READONLY
-  int64_t getVOPe64(uint32_t Opcode);
+  int32_t getVOPe64(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getVOPe32(uint32_t Opcode);
+  int32_t getVOPe32(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getSDWAOp(uint32_t Opcode);
+  int32_t getSDWAOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getDPPOp32(uint32_t Opcode);
+  int32_t getDPPOp32(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getDPPOp64(uint32_t Opcode);
+  int32_t getDPPOp64(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getBasicFromSDWAOp(uint32_t Opcode);
+  int32_t getBasicFromSDWAOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getCommuteRev(uint32_t Opcode);
+  int32_t getCommuteRev(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getCommuteOrig(uint32_t Opcode);
+  int32_t getCommuteOrig(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getAddr64Inst(uint32_t Opcode);
+  int32_t getAddr64Inst(uint32_t Opcode);
 
   /// Check if \p Opcode is an Addr64 opcode.
   ///
   /// \returns \p Opcode if it is an Addr64 opcode, otherwise -1.
   LLVM_READONLY
-  int64_t getIfAddr64Inst(uint32_t Opcode);
+  int32_t getIfAddr64Inst(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getSOPKOp(uint32_t Opcode);
+  int32_t getSOPKOp(uint32_t Opcode);
 
   /// \returns SADDR form of a FLAT Global instruction given an \p Opcode
   /// of a VADDR form.
   LLVM_READONLY
-  int64_t getGlobalSaddrOp(uint32_t Opcode);
+  int32_t getGlobalSaddrOp(uint32_t Opcode);
 
   /// \returns VADDR form of a FLAT Global instruction given an \p Opcode
   /// of a SADDR form.
   LLVM_READONLY
-  int64_t getGlobalVaddrOp(uint32_t Opcode);
+  int32_t getGlobalVaddrOp(uint32_t Opcode);
 
   LLVM_READONLY
-  int64_t getVCMPXNoSDstOp(uint32_t Opcode);
+  int32_t getVCMPXNoSDstOp(uint32_t Opcode);
 
   /// \returns ST form with only immediate offset of a FLAT Scratch instruction
   /// given an \p Opcode of an SS (SADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSTfromSS(uint32_t Opcode);
+  int32_t getFlatScratchInstSTfromSS(uint32_t Opcode);
 
   /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SVS (SADDR + VADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSVfromSVS(uint32_t Opcode);
+  int32_t getFlatScratchInstSVfromSVS(uint32_t Opcode);
 
   /// \returns SS (SADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SV (VADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSSfromSV(uint32_t Opcode);
+  int32_t getFlatScratchInstSSfromSV(uint32_t Opcode);
 
   /// \returns SV (VADDR) form of a FLAT Scratch instruction given an \p Opcode
   /// of an SS (SADDR) form.
   LLVM_READONLY
-  int64_t getFlatScratchInstSVfromSS(uint32_t Opcode);
+  int32_t getFlatScratchInstSVfromSS(uint32_t Opcode);
 
   /// \returns earlyclobber version of a MAC MFMA is exists.
   LLVM_READONLY
-  int64_t getMFMAEarlyClobberOp(uint32_t Opcode);
+  int32_t getMFMAEarlyClobberOp(uint32_t Opcode);
 
   /// \returns Version of an MFMA instruction which uses AGPRs for srcC and
   /// vdst, given an \p Opcode of an MFMA which uses VGPRs for srcC/vdst.
   LLVM_READONLY
-  int64_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
+  int32_t getMFMASrcCVDstAGPROp(uint32_t Opcode);
 
   /// \returns v_cmpx version of a v_cmp instruction.
   LLVM_READONLY
-  int64_t getVCMPXOpFromVCMP(uint32_t Opcode);
+  int32_t getVCMPXOpFromVCMP(uint32_t Opcode);
 
   const uint64_t RSRC_DATA_FORMAT = 0xf00000000000LL;
   const uint64_t RSRC_ELEMENT_SIZE_SHIFT = (32 + 19);

@@ -1109,3 +1109,40 @@ define i64 @waddau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
   %sum2 = add i64 %sum1, %ext_b
   ret i64 %sum2
 }
+
+; acc - zext(a) -> wsubau acc, 0, a
+define i64 @wsubau_zext(i64 %acc, i32 %a) nounwind {
+; CHECK-LABEL: wsubau_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubau a0, zero, a2
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %sub = sub i64 %acc, %ext_a
+  ret i64 %sub
+}
+
+; (acc + zext(a)) - zext(b) -> wsubau acc, a, b
+define i64 @wsubau_zext_chain(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsubau_zext_chain:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubau a0, a2, a3
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sum = add i64 %acc, %ext_a
+  %sub = sub i64 %sum, %ext_b
+  ret i64 %sub
+}
+
+; (acc - zext(a)) + zext(b) -> wsubau acc, b, a
+define i64 @wsubau_zext_chain_rev(i64 %acc, i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: wsubau_zext_chain_rev:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    wsubau a0, a3, a2
+; CHECK-NEXT:    ret
+  %ext_a = zext i32 %a to i64
+  %ext_b = zext i32 %b to i64
+  %sub = sub i64 %acc, %ext_a
+  %sum = add i64 %sub, %ext_b
+  ret i64 %sum
+}
