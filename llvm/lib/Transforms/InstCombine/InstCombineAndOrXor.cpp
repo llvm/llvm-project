@@ -3612,6 +3612,44 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
   if (Value *Res = foldEqOfParts(LHS, RHS, IsAnd))
     return Res;
 
+  auto TryFold = [&](Value *L, Value *R) -> Value * {
+    auto *ICmpR = dyn_cast<ICmpInst>(R);
+    if (!ICmpR)
+      return nullptr;
+
+    Value *A, *B;
+    Instruction::BinaryOps Opcode = IsAnd ? Instruction::And : Instruction::Or;
+
+    bool MatchedBitwise = match(L, m_BinOp(Opcode, m_Value(A), m_Value(B)));
+    bool MatchedLogical =
+        !MatchedBitwise && IsLogical &&
+        (IsAnd ? match(L, m_LogicalAnd(m_Value(A), m_Value(B)))
+               : match(L, m_LogicalOr(m_Value(A), m_Value(B))));
+
+    if (MatchedBitwise || MatchedLogical) {
+      for (int i = 0; i < 2; ++i) {
+        Value *Inner = i == 0 ? A : B;
+        Value *Other = i == 0 ? B : A;
+        auto *ICmpInner = dyn_cast<ICmpInst>(Inner);
+        if (!ICmpInner)
+          continue;
+
+        Value *Res =
+            foldAndOrOfICmps(ICmpInner, ICmpR, I, IsAnd, /*IsLogical=*/false);
+        if (!Res)
+          continue;
+
+        return Builder.CreateBinOp(Opcode, Other, Res);
+      }
+    }
+    return nullptr;
+  };
+
+  if (Value *V = TryFold(LHS, RHS))
+    return V;
+  if (Value *V = TryFold(RHS, LHS))
+    return V;
+
   return nullptr;
 }
 
