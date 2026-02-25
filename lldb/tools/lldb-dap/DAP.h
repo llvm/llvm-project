@@ -10,6 +10,7 @@
 #define LLDB_TOOLS_LLDB_DAP_DAP_H
 
 #include "DAPForward.h"
+#include "DAPSessionManager.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
@@ -31,6 +32,7 @@
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/Host/MainLoop.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -45,6 +47,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -76,12 +79,16 @@ enum DAPBroadcasterBits {
 
 enum class ReplMode { Variable = 0, Command, Auto };
 
-struct DAP {
+using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
+
+struct DAP final : public DAPTransport::MessageHandler {
+  friend class DAPSessionManager;
+
   /// Path to the lldb-dap binary itself.
   static llvm::StringRef debug_adapter_path;
 
-  Log *log;
-  Transport &transport;
+  Log &log;
+  DAPTransport &transport;
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
@@ -95,12 +102,11 @@ struct DAP {
   /// The target instance for this DAP session.
   lldb::SBTarget target;
 
-  Variables variables;
+  VariableReferenceStorage reference_storage;
   lldb::SBBroadcaster broadcaster;
   FunctionBreakpointMap function_breakpoints;
   InstructionBreakpointMap instruction_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
-  llvm::once_flag init_exception_breakpoints_flag;
 
   /// Map step in target id to list of function targets that user can choose.
   llvm::DenseMap<lldb::addr_t, std::string> step_in_targets;
@@ -112,7 +118,6 @@ struct DAP {
   /// The focused thread for this DAP session.
   lldb::tid_t focus_tid = LLDB_INVALID_THREAD_ID;
 
-  bool disconnecting = false;
   llvm::once_flag terminated_event_flag;
   bool stop_at_entry = false;
   bool is_attach = false;
@@ -126,30 +131,37 @@ struct DAP {
   /// the client has finished initialization of the debug adapter.
   bool configuration_done;
 
-  bool waiting_for_run_in_terminal = false;
+  std::mutex call_mutex;
   ProgressEventReporter progress_event_reporter;
 
   /// Keep track of the last stop thread index IDs as threads won't go away
   /// unless we send a "thread" event to indicate the thread exited.
   llvm::DenseSet<lldb::tid_t> thread_ids;
 
-  uint32_t reverse_request_seq = 0;
-  std::mutex call_mutex;
+  protocol::Id seq = 0;
   llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
   lldb::SBFormat frame_format;
   lldb::SBFormat thread_format;
+  llvm::unique_function<void()> on_configuration_done;
 
   /// This is used to allow request_evaluate to handle empty expressions
   /// (ie the user pressed 'return' and expects the previous expression to
-  /// repeat). If the previous expression was a command, this string will be
-  /// empty; if the previous expression was a variable expression, this string
-  /// will contain that expression.
-  std::string last_nonempty_var_expression;
+  /// repeat). If the previous expression was a command, it will be empty.
+  /// Else it will contain the last valid variable expression.
+  std::string last_valid_variable_expression;
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
+
+  /// Whether to disable sourcing .lldbinit files.
+  bool no_lldbinit;
+
+  /// Stores whether the initialize request specified a value for
+  /// lldbExtSourceInitFile. Used by the test suite to prevent sourcing
+  /// `.lldbinit` and changing its behavior.
+  bool sourceInitFile = true;
 
   /// The initial thread list upon attaching.
   std::vector<protocol::Thread> initial_thread_list;
@@ -173,12 +185,18 @@ struct DAP {
   /// \param[in] pre_init_commands
   ///     LLDB commands to execute as soon as the debugger instance is
   ///     allocated.
+  /// \param[in] no_lldbinit
+  ///     Whether to disable sourcing .lldbinit files.
   /// \param[in] transport
   ///     Transport for this debug session.
-  DAP(Log *log, const ReplMode default_repl_mode,
-      std::vector<std::string> pre_init_commands, Transport &transport);
+  /// \param[in] loop
+  ///     Main loop associated with this instance.
+  DAP(Log &log, const ReplMode default_repl_mode,
+      const std::vector<protocol::String> &pre_init_commands, bool no_lldbinit,
+      llvm::StringRef client_name, DAPTransport &transport,
+      lldb_private::MainLoop &loop);
 
-  ~DAP();
+  ~DAP() override = default;
 
   /// DAP is not copyable.
   /// @{
@@ -208,16 +226,13 @@ struct DAP {
   /// Serialize the JSON value into a string and send the JSON packet to the
   /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
-  /// Send the given message to the client
-  void Send(const protocol::Message &message);
+  /// Send the given message to the client.
+  protocol::Id Send(const protocol::Message &message);
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
   void SendProgressEvent(uint64_t progress_id, const char *message,
                          uint64_t completed, uint64_t total);
-
-  void __attribute__((format(printf, 3, 4)))
-  SendFormattedOutput(OutputType o, const char *format, ...);
 
   int32_t CreateSourceReference(lldb::addr_t address);
 
@@ -226,14 +241,12 @@ struct DAP {
   ExceptionBreakpoint *GetExceptionBPFromStopReason(lldb::SBThread &thread);
 
   lldb::SBThread GetLLDBThread(lldb::tid_t id);
-  lldb::SBThread GetLLDBThread(const llvm::json::Object &arguments);
 
   lldb::SBFrame GetLLDBFrame(uint64_t frame_id);
-  /// TODO: remove this function when we finish migrating to the
-  /// new protocol types.
-  lldb::SBFrame GetLLDBFrame(const llvm::json::Object &arguments);
 
   void PopulateExceptionBreakpoints();
+
+  bool ProcessIsNotStopped();
 
   /// Attempt to determine if an expression is a variable expression or
   /// lldb command using a heuristic based on the first term of the
@@ -251,7 +264,7 @@ struct DAP {
   ///     either an expression or a statement, depending on the rest of
   ///     the expression.
   /// \return the expression mode
-  ReplMode DetectReplMode(lldb::SBFrame frame, std::string &expression,
+  ReplMode DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                           bool partial_expression);
 
   /// Create a `protocol::Source` object as described in the debug adapter
@@ -292,10 +305,12 @@ struct DAP {
   ///   \b false if a fatal error was found while executing these commands,
   ///   according to the rules of \a LLDBUtils::RunLLDBCommands.
   bool RunLLDBCommands(llvm::StringRef prefix,
-                       llvm::ArrayRef<std::string> commands);
+                       llvm::ArrayRef<protocol::String> commands);
 
-  llvm::Error RunAttachCommands(llvm::ArrayRef<std::string> attach_commands);
-  llvm::Error RunLaunchCommands(llvm::ArrayRef<std::string> launch_commands);
+  llvm::Error
+  RunAttachCommands(llvm::ArrayRef<protocol::String> attach_commands);
+  llvm::Error
+  RunLaunchCommands(llvm::ArrayRef<protocol::String> launch_commands);
   llvm::Error RunPreInitCommands();
   llvm::Error RunInitCommands();
   llvm::Error RunPreRunCommands();
@@ -315,7 +330,7 @@ struct DAP {
   lldb::SBTarget CreateTarget(lldb::SBError &error);
 
   /// Set given target object as a current target for lldb-dap and start
-  /// listeing for its breakpoint events.
+  /// listening for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
   bool HandleObject(const protocol::Message &M);
@@ -341,26 +356,23 @@ struct DAP {
   template <typename Handler>
   void SendReverseRequest(llvm::StringRef command,
                           llvm::json::Value arguments) {
-    int64_t id;
-    {
-      std::lock_guard<std::mutex> locker(call_mutex);
-      id = ++reverse_request_seq;
-      inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
-    }
-
-    SendJSON(llvm::json::Object{
-        {"type", "request"},
-        {"seq", id},
-        {"command", command},
-        {"arguments", std::move(arguments)},
+    protocol::Id id = Send(protocol::Request{
+        command.str(),
+        std::move(arguments),
     });
+
+    std::lock_guard<std::mutex> locker(call_mutex);
+    inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
   }
 
   /// The set of capabilities supported by this adapter.
   protocol::Capabilities GetCapabilities();
 
+  /// The set of custom capabilities supported by this adapter.
+  protocol::Capabilities GetCustomCapabilities();
+
   /// Debuggee will continue from stopped state.
-  void WillContinue() { variables.Clear(); }
+  void WillContinue() { reference_storage.Clear(); }
 
   /// Poll the process to wait for it to reach the eStateStopped state.
   ///
@@ -399,8 +411,29 @@ struct DAP {
 
   lldb::SBMutex GetAPIMutex() const { return target.GetAPIMutex(); }
 
+  /// Get the client name for this DAP session.
+  llvm::StringRef GetClientName() const { return m_client_name; }
+
   void StartEventThread();
   void StartProgressEventThread();
+
+  /// DAP debugger initialization functions.
+  /// @{
+
+  /// Perform complete DAP initialization for a new debugger.
+  llvm::Error InitializeDebugger();
+
+  /// Perform complete DAP initialization by reusing an existing debugger and
+  /// target.
+  ///
+  /// \param[in] session
+  ///     A session consisting of an existing debugger and target.
+  llvm::Error InitializeDebugger(const protocol::DAPSession &session);
+
+  /// Start event handling threads based on client capabilities.
+  void StartEventThreads();
+
+  /// @}
 
   /// Sets the given protocol `breakpoints` in the given `source`, while
   /// removing any existing breakpoints in the given source if they are not in
@@ -418,11 +451,20 @@ struct DAP {
       const std::optional<std::vector<protocol::SourceBreakpoint>>
           &breakpoints);
 
+  void Received(const protocol::Event &) override;
+  void Received(const protocol::Request &) override;
+  void Received(const protocol::Response &) override;
+  void OnError(llvm::Error) override;
+  void OnClosed() override;
+
 private:
   std::vector<protocol::Breakpoint> SetSourceBreakpoints(
       const protocol::Source &source,
       const std::optional<std::vector<protocol::SourceBreakpoint>> &breakpoints,
       SourceBreakpointMap &existing_breakpoints);
+
+  void TransportHandler();
+  void TerminateLoop(bool failed = false);
 
   /// Registration of request handler.
   /// @{
@@ -435,12 +477,15 @@ private:
 
   /// Event threads.
   /// @{
-  void EventThread();
   void ProgressEventThread();
 
-  std::thread event_thread;
+  /// Event thread is a shared pointer in case we have a multiple
+  /// DAP instances sharing the same event thread.
+  std::shared_ptr<ManagedEventThread> event_thread_sp;
   std::thread progress_event_thread;
   /// @}
+
+  const llvm::StringRef m_client_name;
 
   /// List of addresses mapped by sourceReference.
   std::vector<lldb::addr_t> m_source_references;
@@ -450,6 +495,11 @@ private:
   std::deque<protocol::Message> m_queue;
   std::mutex m_queue_mutex;
   std::condition_variable m_queue_cv;
+  bool m_disconnecting = false;
+  bool m_error_occurred = false;
+
+  // Loop for managing reading from the client.
+  lldb_private::MainLoop &m_loop;
 
   std::mutex m_cancelled_requests_mutex;
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;

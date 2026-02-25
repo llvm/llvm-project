@@ -199,8 +199,8 @@ define ptx_kernel void @ptr_as_int(i64 noundef %i, i32 noundef %v) {
 
 define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%struct.S) align 8 %s, i32 noundef %v) {
 ; IRC-LABEL: define ptx_kernel void @ptr_as_int_aggr(
-; IRC-SAME: ptr noundef readonly byval([[STRUCT_S:%.*]]) align 8 captures(none) [[S:%.*]], i32 noundef [[V:%.*]]) {
-; IRC-NEXT:    [[S3:%.*]] = call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
+; IRC-SAME: ptr noundef readonly byval([[STRUCT_S:%.*]]) align 8 captures(none) "nvvm.grid_constant" [[S:%.*]], i32 noundef [[V:%.*]]) {
+; IRC-NEXT:    [[S3:%.*]] = call align 8 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
 ; IRC-NEXT:    [[I:%.*]] = load i64, ptr addrspace(101) [[S3]], align 8
 ; IRC-NEXT:    [[P:%.*]] = inttoptr i64 [[I]] to ptr
 ; IRC-NEXT:    [[P1:%.*]] = addrspacecast ptr [[P]] to ptr addrspace(1)
@@ -209,8 +209,8 @@ define ptx_kernel void @ptr_as_int_aggr(ptr nocapture noundef readonly byval(%st
 ; IRC-NEXT:    ret void
 ;
 ; IRO-LABEL: define ptx_kernel void @ptr_as_int_aggr(
-; IRO-SAME: ptr noundef readonly byval([[STRUCT_S:%.*]]) align 8 captures(none) [[S:%.*]], i32 noundef [[V:%.*]]) {
-; IRO-NEXT:    [[S1:%.*]] = call ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
+; IRO-SAME: ptr noundef readonly byval([[STRUCT_S:%.*]]) align 8 captures(none) "nvvm.grid_constant" [[S:%.*]], i32 noundef [[V:%.*]]) {
+; IRO-NEXT:    [[S1:%.*]] = call align 8 ptr addrspace(101) @llvm.nvvm.internal.addrspace.wrap.p101.p0(ptr [[S]])
 ; IRO-NEXT:    [[I:%.*]] = load i64, ptr addrspace(101) [[S1]], align 8
 ; IRO-NEXT:    [[P:%.*]] = inttoptr i64 [[I]] to ptr
 ; IRO-NEXT:    store i32 [[V]], ptr [[P]], align 4

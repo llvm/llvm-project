@@ -175,6 +175,40 @@ void AMDGPUMCInstLower::lowerT16D16Helper(const MachineInstr *MI,
   }
 }
 
+void AMDGPUMCInstLower::lowerT16FmaMixFP16(const MachineInstr *MI,
+                                           MCInst &OutMI) const {
+  unsigned Opcode = MI->getOpcode();
+  const auto *TII = static_cast<const SIInstrInfo *>(ST.getInstrInfo());
+  const SIRegisterInfo &TRI = TII->getRegisterInfo();
+
+  int VDstIdx = AMDGPU::getNamedOperandIdx(Opcode, llvm::AMDGPU::OpName::vdst);
+  const MachineOperand &VDst = MI->getOperand(VDstIdx);
+  bool IsHi = AMDGPU::isHi16Reg(VDst.getReg(), TRI);
+  switch (Opcode) {
+  case AMDGPU::V_FMA_MIX_F16_t16:
+    Opcode = IsHi ? AMDGPU::V_FMA_MIXHI_F16 : AMDGPU::V_FMA_MIXLO_F16;
+    break;
+  case AMDGPU::V_FMA_MIX_BF16_t16:
+    Opcode = IsHi ? AMDGPU::V_FMA_MIXHI_BF16 : AMDGPU::V_FMA_MIXLO_BF16;
+    break;
+  }
+  int MCOpcode = TII->pseudoToMCOpcode(Opcode);
+  assert(MCOpcode != -1 &&
+         "Pseudo instruction doesn't have a target-specific version");
+  OutMI.setOpcode(MCOpcode);
+
+  // lower operands
+  for (int I = 0, E = MI->getNumExplicitOperands(); I < E; I++) {
+    const MachineOperand &MO = MI->getOperand(I);
+    MCOperand MCOp;
+    if (I == VDstIdx)
+      MCOp = MCOperand::createReg(TRI.get32BitRegister(VDst.getReg()));
+    else
+      lowerOperand(MO, MCOp);
+    OutMI.addOperand(MCOp);
+  }
+}
+
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
   unsigned Opcode = MI->getOpcode();
   const auto *TII = static_cast<const SIInstrInfo *>(ST.getInstrInfo());
@@ -195,17 +229,22 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(Src);
     return;
   } else if (Opcode == AMDGPU::SI_TCRETURN ||
-             Opcode == AMDGPU::SI_TCRETURN_GFX) {
+             Opcode == AMDGPU::SI_TCRETURN_GFX ||
+             Opcode == AMDGPU::SI_TCRETURN_CHAIN) {
     // TODO: How to use branch immediate and avoid register+add?
     Opcode = AMDGPU::S_SETPC_B64;
   } else if (AMDGPU::getT16D16Helper(Opcode)) {
     lowerT16D16Helper(MI, OutMI);
     return;
+  } else if (Opcode == AMDGPU::V_FMA_MIX_F16_t16 ||
+             Opcode == AMDGPU::V_FMA_MIX_BF16_t16) {
+    lowerT16FmaMixFP16(MI, OutMI);
+    return;
   }
 
   int MCOpcode = TII->pseudoToMCOpcode(Opcode);
   if (MCOpcode == -1) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("AMDGPUMCInstLower::lower - Pseudo instruction doesn't have "
                 "a target-specific version: " + Twine(MI->getOpcode()));
   }
@@ -294,7 +333,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
 
   StringRef Err;
   if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
-    LLVMContext &C = MI->getParent()->getParent()->getFunction().getContext();
+    LLVMContext &C = MI->getMF()->getFunction().getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->print(errs());
   }
@@ -308,7 +347,7 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     }
   } else {
     // We don't want these pseudo instructions encoded. They are
-    // placeholder terminator instructions and should only be printed as
+    // placeholder instructions and should only be printed as
     // comments.
     if (MI->getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG) {
       if (isVerbose())
@@ -319,6 +358,20 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
     if (MI->getOpcode() == AMDGPU::WAVE_BARRIER) {
       if (isVerbose())
         OutStreamer->emitRawComment(" wave barrier");
+      return;
+    }
+
+    if (MI->getOpcode() == AMDGPU::ASYNCMARK) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" asyncmark");
+      return;
+    }
+
+    if (MI->getOpcode() == AMDGPU::WAIT_ASYNCMARK) {
+      if (isVerbose()) {
+        OutStreamer->emitRawComment(" wait_asyncmark(" +
+                                    Twine(MI->getOperand(0).getImm()) + ")");
+      }
       return;
     }
 
@@ -367,11 +420,28 @@ void AMDGPUAsmPrinter::emitInstruction(const MachineInstr *MI) {
       return;
     }
 
+    unsigned Opc = MI->getOpcode();
+    if (LLVM_UNLIKELY(Opc == TargetOpcode::STATEPOINT ||
+                      Opc == TargetOpcode::STACKMAP ||
+                      Opc == TargetOpcode::PATCHPOINT)) {
+      LLVMContext &Ctx = MI->getMF()->getFunction().getContext();
+      Ctx.emitError("unhandled statepoint-like instruction");
+      OutStreamer->emitRawComment("unsupported statepoint/stackmap/patchpoint");
+      return;
+    }
+
     if (isVerbose())
       if (STI.getInstrInfo()->isBlockLoadStore(MI->getOpcode()))
         emitVGPRBlockComment(MI, STI.getInstrInfo(), STI.getRegisterInfo(),
                              MF->getInfo<SIMachineFunctionInfo>(),
                              *OutStreamer);
+
+    if (isVerbose() && MI->getOpcode() == AMDGPU::S_SET_VGPR_MSB) {
+      unsigned V = MI->getOperand(0).getImm() & 0xff;
+      OutStreamer->AddComment(
+          " msbs: dst=" + Twine(V >> 6) + " src0=" + Twine(V & 3) +
+          " src1=" + Twine((V >> 2) & 3) + " src2=" + Twine((V >> 4) & 3));
+    }
 
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);

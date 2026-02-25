@@ -16,7 +16,7 @@ bool TrackingOutputBuffer::shouldTrack() const {
   if (!isPrintingTopLevelFunctionType())
     return false;
 
-  if (isGtInsideTemplateArgs())
+  if (isInsideTemplateArgs())
     return false;
 
   if (NameInfo.ArgumentsRange.first > 0)
@@ -29,7 +29,7 @@ bool TrackingOutputBuffer::canFinalize() const {
   if (!isPrintingTopLevelFunctionType())
     return false;
 
-  if (isGtInsideTemplateArgs())
+  if (isInsideTemplateArgs())
     return false;
 
   if (NameInfo.ArgumentsRange.first == 0)
@@ -111,6 +111,11 @@ void TrackingOutputBuffer::finalizeEnd() {
   if (NameInfo.ScopeRange.first > NameInfo.ScopeRange.second)
     NameInfo.ScopeRange.second = NameInfo.ScopeRange.first;
   NameInfo.BasenameRange.first = NameInfo.ScopeRange.second;
+
+  // We call anything past the FunctionEncoding the "suffix".
+  // In practice this would be nodes like `DotSuffix` that wrap
+  // a FunctionEncoding.
+  NameInfo.SuffixRange.first = getCurrentPosition();
 }
 
 ScopedOverride<unsigned> TrackingOutputBuffer::enterFunctionTypePrinting() {
@@ -138,6 +143,9 @@ void TrackingOutputBuffer::printLeft(const Node &N) {
   default:
     OutputBuffer::printLeft(N);
   }
+
+  // Keep updating suffix until we reach the end.
+  NameInfo.SuffixRange.second = getCurrentPosition();
 }
 
 void TrackingOutputBuffer::printRight(const Node &N) {
@@ -151,6 +159,9 @@ void TrackingOutputBuffer::printRight(const Node &N) {
   default:
     OutputBuffer::printRight(N);
   }
+
+  // Keep updating suffix until we reach the end.
+  NameInfo.SuffixRange.second = getCurrentPosition();
 }
 
 void TrackingOutputBuffer::printLeftImpl(const FunctionType &N) {

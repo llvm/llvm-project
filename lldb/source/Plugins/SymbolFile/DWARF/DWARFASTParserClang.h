@@ -47,6 +47,11 @@ public:
 
   ~DWARFASTParserClang() override;
 
+  // LLVM RTTI support
+  static bool classof(const DWARFASTParser *Parser) {
+    return Parser->GetKind() == Kind::DWARFASTParserClang;
+  }
+
   // DWARFASTParser interface.
   lldb::TypeSP
   ParseTypeFromDWARF(const lldb_private::SymbolContext &sc,
@@ -216,7 +221,7 @@ protected:
   lldb::TypeSP
   ParseStructureLikeDIE(const lldb_private::SymbolContext &sc,
                         const lldb_private::plugin::dwarf::DWARFDIE &die,
-                        ParsedDWARFTypeAttributes &attrs);
+                        const ParsedDWARFTypeAttributes &attrs);
 
   clang::Decl *
   GetClangDeclForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
@@ -263,10 +268,6 @@ protected:
   // module.
   lldb::ModuleSP
   GetModuleForType(const lldb_private::plugin::dwarf::DWARFDIE &die);
-
-  static bool classof(const DWARFASTParser *Parser) {
-    return Parser->GetKind() == Kind::DWARFASTParserClang;
-  }
 
 private:
   struct FieldInfo {
@@ -334,7 +335,6 @@ private:
     /// Indicates the size of the field in bits.
     size_t bit_size = 0;
     uint64_t data_bit_offset = UINT64_MAX;
-    lldb::AccessType accessibility = lldb::eAccessNone;
     std::optional<uint64_t> byte_size;
     std::optional<lldb_private::plugin::dwarf::DWARFFormValue> const_value_form;
     lldb_private::plugin::dwarf::DWARFFormValue encoding_form;
@@ -552,7 +552,6 @@ struct ParsedDWARFTypeAttributes {
   explicit ParsedDWARFTypeAttributes(
       const lldb_private::plugin::dwarf::DWARFDIE &die);
 
-  lldb::AccessType accessibility = lldb::eAccessNone;
   bool is_artificial = false;
   bool is_complete_objc_class = false;
   bool is_explicit = false;
@@ -574,6 +573,7 @@ struct ParsedDWARFTypeAttributes {
   lldb_private::plugin::dwarf::DWARFFormValue type;
   lldb::LanguageType class_language = lldb::eLanguageTypeUnknown;
   std::optional<uint64_t> byte_size;
+  std::optional<uint64_t> data_bit_size;
   std::optional<uint64_t> alignment;
   size_t calling_convention = llvm::dwarf::DW_CC_normal;
   uint32_t bit_stride = 0;

@@ -85,6 +85,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
   if (options.features.IsEnabled(LanguageFeature::OpenACC) ||
       (options.prescanAndReformat && noneOfTheAbove)) {
     prescanner.AddCompilerDirectiveSentinel("$acc");
+    prescanner.AddCompilerDirectiveSentinel("@acc");
   }
   if (options.features.IsEnabled(LanguageFeature::OpenMP) ||
       (options.prescanAndReformat && noneOfTheAbove)) {
@@ -96,8 +97,8 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
   }
-  if (options.features.IsEnabled(LanguageFeature::CUDA)) {
-    preprocessor_.Define("_CUDA", "1");
+  for (const auto &sentinel : options.compilerDirectiveSentinels) {
+    prescanner.AddCompilerDirectiveSentinel(sentinel);
   }
   ProvenanceRange range{allSources.AddIncludedFile(
       *sourceFile, ProvenanceRange{}, options.isModuleFile)};

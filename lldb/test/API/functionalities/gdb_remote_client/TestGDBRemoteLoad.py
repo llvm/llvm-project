@@ -22,7 +22,7 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
         target = self.createTarget("a.yaml")
         process = self.connect(target)
         self.dbg.HandleCommand("target modules load -l -s0")
-        self.assertPacketLogContains(["M1000,4:c3c3c3c3", "M1004,2:3232"])
+        self.assertPacketLogReceived(["M1000,4:c3c3c3c3", "M1004,2:3232"])
 
     @skipIfXmlSupportMissing
     def test_flash_load(self):
@@ -63,7 +63,7 @@ class TestGDBRemoteLoad(GDBRemoteTestBase):
         target = self.createTarget("a.yaml")
         process = self.connect(target)
         self.dbg.HandleCommand("target modules load -l -s0")
-        self.assertPacketLogContains(
+        self.assertPacketLogReceived(
             [
                 "vFlashErase:1000,100",
                 "vFlashWrite:1000:\xc3\xc3\xc3\xc3",

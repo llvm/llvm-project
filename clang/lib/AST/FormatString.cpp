@@ -371,7 +371,7 @@ static clang::analyze_format_string::ArgType::MatchKind
 matchesSizeTPtrdiffT(ASTContext &C, QualType T, QualType E) {
   using MatchKind = clang::analyze_format_string::ArgType::MatchKind;
 
-  if (!T->isIntegerType())
+  if (!T->isIntegerType() || T->isBooleanType())
     return MatchKind::NoMatch;
 
   if (C.hasSameType(T, E))
@@ -405,6 +405,9 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
     argTy = PT->getPointeeType();
   }
 
+  if (const auto *OBT = argTy->getAs<OverflowBehaviorType>())
+    argTy = OBT->getUnderlyingType();
+
   switch (K) {
     case InvalidTy:
       llvm_unreachable("ArgType must be valid");
@@ -413,14 +416,14 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
       return Match;
 
     case AnyCharTy: {
-      if (const auto *ETy = argTy->getAs<EnumType>()) {
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration.
-        if (!ETy->getDecl()->isComplete())
+        if (!ED->isComplete())
           return NoMatch;
-        if (ETy->isUnscopedEnumerationType())
-          argTy = ETy->getDecl()->getIntegerType();
+        if (!ED->isScoped())
+          argTy = ED->getIntegerType();
       }
 
       if (const auto *BT = argTy->getAs<BuiltinType>()) {
@@ -462,14 +465,14 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         return matchesSizeTPtrdiffT(C, argTy, T);
       }
 
-      if (const EnumType *ETy = argTy->getAs<EnumType>()) {
+      if (const auto *ED = argTy->getAsEnumDecl()) {
         // If the enum is incomplete we know nothing about the underlying type.
         // Assume that it's 'int'. Do not use the underlying type for a scoped
         // enumeration as that needs an exact match.
-        if (!ETy->getDecl()->isComplete())
+        if (!ED->isComplete())
           argTy = C.IntTy;
-        else if (ETy->isUnscopedEnumerationType())
-          argTy = ETy->getDecl()->getIntegerType();
+        else if (!ED->isScoped())
+          argTy = ED->getIntegerType();
       }
 
       if (argTy->isSaturatedFixedPointType())
@@ -653,7 +656,7 @@ ArgType::matchesType(ASTContext &C, QualType argTy) const {
         // to Objective-C objects.  Since the compiler doesn't know which
         // structs can be toll-free bridged, we just accept them all.
         QualType pointee = PT->getPointeeType();
-        if (pointee->getAsStructureType() || pointee->isVoidType())
+        if (pointee->isStructureType() || pointee->isVoidType())
           return Match;
       }
       return NoMatch;

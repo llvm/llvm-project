@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Host/Config.h"
-
-#if LLDB_ENABLE_PYTHON
-
 #include "PythonDataObjects.h"
 #include "ScriptInterpreterPython.h"
 
@@ -128,14 +124,13 @@ void PythonObject::Dump(Stream &strm) const {
   if (!py_str)
     return;
 
-  auto release_py_str = llvm::make_scope_exit([py_str] { Py_DECREF(py_str); });
+  llvm::scope_exit release_py_str([py_str] { Py_DECREF(py_str); });
 
   PyObject *py_bytes = PyUnicode_AsEncodedString(py_str, "utf-8", "replace");
   if (!py_bytes)
     return;
 
-  auto release_py_bytes =
-      llvm::make_scope_exit([py_bytes] { Py_DECREF(py_bytes); });
+  llvm::scope_exit release_py_bytes([py_bytes] { Py_DECREF(py_bytes); });
 
   char *buffer = nullptr;
   Py_ssize_t length = 0;
@@ -405,15 +400,32 @@ Expected<llvm::StringRef> PythonString::AsUTF8() const {
   if (!IsValid())
     return nullDeref();
 
-  Py_ssize_t size;
-  const char *data;
+  // PyUnicode_AsUTF8AndSize caches the UTF-8 representation of the string in
+  // the Unicode object, which makes it more efficient and ties the lifetime of
+  // the data to the Python string. However, it was only added to the Stable API
+  // in Python 3.10. Older versions that want to use the Stable API must use
+  // PyUnicode_AsUTF8String in combination with ConstString.
+#if defined(Py_LIMITED_API) && (Py_LIMITED_API < 0x030a0000)
+  PyObject *py_bytes = PyUnicode_AsUTF8String(m_py_obj);
+  if (!py_bytes)
+    return exception();
+  llvm::scope_exit release_py_str([py_bytes] { Py_DECREF(py_bytes); });
+  Py_ssize_t size = PyBytes_Size(py_bytes);
+  const char *str = PyBytes_AsString(py_bytes);
 
-  data = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
-
-  if (!data)
+  if (!str)
     return exception();
 
-  return llvm::StringRef(data, size);
+  return ConstString(str, size).GetStringRef();
+#else
+  Py_ssize_t size;
+  const char *str = PyUnicode_AsUTF8AndSize(m_py_obj, &size);
+
+  if (!str)
+    return exception();
+
+  return llvm::StringRef(str, size);
+#endif
 }
 
 size_t PythonString::GetSize() const {
@@ -791,6 +803,17 @@ PythonDictionary PythonModule::GetDictionary() const {
 bool PythonCallable::Check(PyObject *py_obj) {
   if (!py_obj)
     return false;
+
+  PythonObject python_obj(PyRefType::Borrowed, py_obj);
+
+  // Handle staticmethod/classmethod descriptors by extracting the
+  // `__func__` attribute.
+  if (python_obj.HasAttribute("__func__")) {
+    PythonObject function_obj = python_obj.GetAttributeValue("__func__");
+    if (!function_obj.IsAllocated())
+      return false;
+    return PyCallable_Check(function_obj.release());
+  }
 
   return PyCallable_Check(py_obj);
 }
@@ -1461,4 +1484,3 @@ int lldb_private::python::RunSimpleString(const char *str) {
 
   return 0;
 }
-#endif

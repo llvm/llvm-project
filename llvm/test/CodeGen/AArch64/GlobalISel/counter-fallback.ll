@@ -2,8 +2,6 @@
 ; RUN: llc -mtriple=aarch64-- -global-isel -global-isel-abort=0 -debug-counter=globalisel=0 %s -o - 2>/dev/null | FileCheck %s
 ; RUN: llc -mtriple=aarch64-- -global-isel -global-isel-abort=0 -debug-counter=globalisel=0 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=DEBUG
 
-; REQUIRES: asserts
-
 ; DEBUG-NOT: Falling back for function test1
 ; DEBUG: Falling back for function test2
 

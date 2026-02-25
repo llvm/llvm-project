@@ -58,7 +58,9 @@ struct DebugLine {
 };
 
 /// Map from a selection/loop's header block to its merge (and continue) target.
-using BlockMergeInfoMap = DenseMap<Block *, BlockMergeInfo>;
+/// Use `MapVector<>` to ensure a deterministic iteration order with a pointer
+/// key.
+using BlockMergeInfoMap = llvm::MapVector<Block *, BlockMergeInfo>;
 
 /// A "deferred struct type" is a struct type with one or more member types not
 /// known when the Deserializer first encounters the struct. This happens, for
@@ -104,6 +106,13 @@ struct SpecConstOperationMaterializationInfo {
   spirv::Opcode enclodesOpcode;
   uint32_t resultTypeID;
   SmallVector<uint32_t> enclosedOpOperands;
+};
+
+/// A struct that collects the info needed to materialize/emit a
+/// GraphConstantARMOp.
+struct GraphConstantARMOpMaterializationInfo {
+  Type resultType;
+  IntegerAttr graphConstantID;
 };
 
 //===----------------------------------------------------------------------===//
@@ -211,9 +220,14 @@ private:
   /// exists; otherwise creates one based on the <id>.
   std::string getFunctionSymbol(uint32_t id);
 
-  /// Returns a symbol to be used for the specialization constant with the given
-  /// result <id>. This tries to use the specialization constant's OpName if
+  /// Returns a symbol to be used for the graph name with the given
+  /// result <id>. This tries to use the graph's OpName if
   /// exists; otherwise creates one based on the <id>.
+  std::string getGraphSymbol(uint32_t id);
+
+  /// Returns a symbol to be used for the specialization constant with the
+  /// given result <id>. This tries to use the specialization constant's
+  /// OpName if exists; otherwise creates one based on the <id>.
   std::string getSpecConstantSymbol(uint32_t id);
 
   /// Gets the specialization constant with the given result <id>.
@@ -236,6 +250,11 @@ private:
   /// Creates a spirv::SpecConstantOp.
   spirv::SpecConstantOp createSpecConstant(Location loc, uint32_t resultID,
                                            TypedAttr defaultValue);
+
+  /// Gets the GraphConstantARM ID attribute and result type with the given
+  /// result <id>.
+  std::optional<spirv::GraphConstantARMOpMaterializationInfo>
+  getGraphConstantARM(uint32_t id);
 
   /// Processes the OpVariable instructions at current `offset` into `binary`.
   /// It is expected that this method is used for variables that are to be
@@ -261,11 +280,11 @@ private:
     return opBuilder.getStringAttr(attrName);
   }
 
-  /// Move a conditional branch into a separate basic block to avoid unnecessary
-  /// sinking of defs that may be required outside a selection region. This
-  /// function also ensures that a single block cannot be a header block of one
-  /// selection construct and the merge block of another.
-  LogicalResult splitConditionalBlocks();
+  /// Move a conditional branch or a switch into a separate basic block to avoid
+  /// unnecessary sinking of defs that may be required outside a selection
+  /// region. This function also ensures that a single block cannot be a header
+  /// block of one selection construct and the merge block of another.
+  LogicalResult splitSelectionHeader();
 
   //===--------------------------------------------------------------------===//
   // Type
@@ -305,6 +324,16 @@ private:
   LogicalResult processMatrixType(ArrayRef<uint32_t> operands);
 
   LogicalResult processTensorARMType(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphTypeARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphEntryPointARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processOpGraphSetOutputARM(ArrayRef<uint32_t> operands);
+
+  LogicalResult processGraphEndARM(ArrayRef<uint32_t> operands);
 
   LogicalResult processTypeForwardPointer(ArrayRef<uint32_t> operands);
 
@@ -352,6 +381,10 @@ private:
 
   /// Processes a SPIR-V OpConstantNull instruction with the given `operands`.
   LogicalResult processConstantNull(ArrayRef<uint32_t> operands);
+
+  /// Processes a SPIR-V OpGraphConstantARM instruction with the given
+  /// `operands`.
+  LogicalResult processGraphConstantARM(ArrayRef<uint32_t> operands);
 
   //===--------------------------------------------------------------------===//
   // Debug
@@ -441,6 +474,9 @@ private:
   /// Processes a SPIR-V OpPhi instruction with the given `operands`.
   LogicalResult processPhi(ArrayRef<uint32_t> operands);
 
+  /// Processes a SPIR-V OpSwitch instruction with the given `operands`.
+  LogicalResult processSwitch(ArrayRef<uint32_t> operands);
+
   /// Creates block arguments on predecessors previously recorded when handling
   /// OpPhi instructions.
   LogicalResult wireUpBlockArgument();
@@ -449,6 +485,9 @@ private:
   /// spirv.mlir.selection/spirv.mlir.loop op. This method iterates until all
   /// blocks declared as selection/loop headers are handled.
   LogicalResult structurizeControlFlow();
+
+  /// Creates a block for graph with the given graphID.
+  LogicalResult createGraphBlock(uint32_t graphID);
 
   //===--------------------------------------------------------------------===//
   // Instruction
@@ -546,6 +585,9 @@ private:
   /// The current function under construction.
   std::optional<spirv::FuncOp> curFunction;
 
+  /// The current graph under construction.
+  std::optional<spirv::GraphARMOp> curGraph;
+
   /// The current block under construction.
   Block *curBlock = nullptr;
 
@@ -599,11 +641,18 @@ private:
   DenseMap<uint32_t, SpecConstOperationMaterializationInfo>
       specConstOperationMap;
 
+  // Result <id> to GraphConstantARM ID attribute and result type.
+  DenseMap<uint32_t, spirv::GraphConstantARMOpMaterializationInfo>
+      graphConstantMap;
+
   // Result <id> to variable mapping.
   DenseMap<uint32_t, spirv::GlobalVariableOp> globalVariableMap;
 
   // Result <id> to function mapping.
   DenseMap<uint32_t, spirv::FuncOp> funcMap;
+
+  // Result <id> to function mapping.
+  DenseMap<uint32_t, spirv::GraphARMOp> graphMap;
 
   // Result <id> to block mapping.
   DenseMap<uint32_t, Block *> blockMap;
@@ -667,6 +716,9 @@ private:
 
   /// Deserialization options.
   DeserializationOptions options;
+
+  /// List of IDs assigned to graph outputs.
+  SmallVector<Value> graphOutputs;
 
 #ifndef NDEBUG
   /// A logger used to emit information during the deserialzation process.

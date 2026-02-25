@@ -8,8 +8,6 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+v,+m,+zvfh,+zfbfmin,+zvfbfmin -target-abi=lp64d \
 ; RUN:   -verify-machineinstrs < %s | FileCheck %s
 
-declare <2 x bfloat> @llvm.vp.merge.v2bf16(<2 x i1>, <2 x bfloat>, <2 x bfloat>, i32)
-
 define <2 x bfloat> @vpmerge_vv_v2bf16(<2 x bfloat> %va, <2 x bfloat> %vb, <2 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_v2bf16:
 ; CHECK:       # %bb.0:
@@ -35,8 +33,6 @@ define <2 x bfloat> @vpmerge_vf_v2bf16(bfloat %a, <2 x bfloat> %vb, <2 x i1> %m,
   %v = call <2 x bfloat> @llvm.vp.merge.v2bf16(<2 x i1> %m, <2 x bfloat> %va, <2 x bfloat> %vb, i32 %evl)
   ret <2 x bfloat> %v
 }
-
-declare <4 x bfloat> @llvm.vp.merge.v4bf16(<4 x i1>, <4 x bfloat>, <4 x bfloat>, i32)
 
 define <4 x bfloat> @vpmerge_vv_v4bf16(<4 x bfloat> %va, <4 x bfloat> %vb, <4 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_v4bf16:
@@ -64,8 +60,6 @@ define <4 x bfloat> @vpmerge_vf_v4bf16(bfloat %a, <4 x bfloat> %vb, <4 x i1> %m,
   ret <4 x bfloat> %v
 }
 
-declare <8 x bfloat> @llvm.vp.merge.v8bf16(<8 x i1>, <8 x bfloat>, <8 x bfloat>, i32)
-
 define <8 x bfloat> @vpmerge_vv_v8bf16(<8 x bfloat> %va, <8 x bfloat> %vb, <8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_v8bf16:
 ; CHECK:       # %bb.0:
@@ -91,8 +85,6 @@ define <8 x bfloat> @vpmerge_vf_v8bf16(bfloat %a, <8 x bfloat> %vb, <8 x i1> %m,
   %v = call <8 x bfloat> @llvm.vp.merge.v8bf16(<8 x i1> %m, <8 x bfloat> %va, <8 x bfloat> %vb, i32 %evl)
   ret <8 x bfloat> %v
 }
-
-declare <16 x bfloat> @llvm.vp.merge.v16bf16(<16 x i1>, <16 x bfloat>, <16 x bfloat>, i32)
 
 define <16 x bfloat> @vpmerge_vv_v16bf16(<16 x bfloat> %va, <16 x bfloat> %vb, <16 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: vpmerge_vv_v16bf16:

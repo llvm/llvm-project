@@ -1,4 +1,4 @@
-//===--- AvoidEndlCheck.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -22,7 +22,6 @@ namespace clang::tidy::performance {
 void AvoidEndlCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       callExpr(
-          unless(isExpansionInSystemHeader()),
           anyOf(cxxOperatorCallExpr(
                     hasOverloadedOperatorName("<<"),
                     hasRHS(declRefExpr(to(namedDecl(hasName("::std::endl"))))

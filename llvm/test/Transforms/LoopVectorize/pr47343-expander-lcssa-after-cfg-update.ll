@@ -28,20 +28,17 @@ define void @f() {
 ; CHECK:       outer.latch:
 ; CHECK-NEXT:    br label [[OUTER_HEADER]]
 ; CHECK:       outer.exit.0:
-; CHECK-NEXT:    [[DOTLCSSA:%.*]] = phi ptr [ [[TMP0]], [[OUTER_HEADER]] ]
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       outer.exit.1:
-; CHECK-NEXT:    [[DOTLCSSA1:%.*]] = phi ptr [ [[TMP0]], [[INNER_1_LATCH]] ]
 ; CHECK-NEXT:    br label [[LOOP_PREHEADER]]
 ; CHECK:       loop.preheader:
-; CHECK-NEXT:    [[TMP1:%.*]] = phi ptr [ [[DOTLCSSA]], [[OUTER_EXIT_0]] ], [ [[DOTLCSSA1]], [[OUTER_EXIT_1]] ]
-; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    br label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
-; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[TMP0]], i64 1
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ult ptr @f.e, [[SCEVGEP]]
-; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP1]], getelementptr inbounds nuw (i8, ptr @f.e, i64 4)
+; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ult ptr [[TMP0]], getelementptr inbounds nuw (i8, ptr @f.e, i64 4)
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
@@ -54,13 +51,12 @@ define void @f() {
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    br label [[EXIT:%.*]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 0, [[LOOP_PREHEADER]] ], [ 0, [[VECTOR_MEMCHECK]] ]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[IV_NEXT:%.*]], [[LOOP]] ], [ 0, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[CONV6_US_US_US:%.*]] = zext i1 false to i32
 ; CHECK-NEXT:    store i32 [[CONV6_US_US_US]], ptr @f.e, align 1
-; CHECK-NEXT:    store i8 10, ptr [[TMP1]], align 1
+; CHECK-NEXT:    store i8 10, ptr [[TMP0]], align 1
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i32 [[IV_NEXT]], 500
 ; CHECK-NEXT:    br i1 [[EC]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP8:![0-9]+]]

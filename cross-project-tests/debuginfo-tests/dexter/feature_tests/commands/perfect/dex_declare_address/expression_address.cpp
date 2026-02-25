@@ -14,4 +14,4 @@ int main() {
 
 // DexDeclareAddress('x_addr', '&x', on_line=ref('test_line'))
 // DexExpectWatchValue('&x', address('x_addr'), on_line=ref('test_line'))
-// DexExpectWatchValue('&y', address('x_addr'), on_line=ref('test_line'))
+// DexExpectWatchValue('y', address('x_addr'), on_line=ref('test_line'))

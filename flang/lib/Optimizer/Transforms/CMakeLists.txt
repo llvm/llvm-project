@@ -1,22 +1,35 @@
 add_flang_library(FIRTransforms
   AbstractResult.cpp
   AddAliasTags.cpp
-  AffinePromotion.cpp
+  AddDebugInfo.cpp
   AffineDemotion.cpp
+  AffinePromotion.cpp
+  AlgebraicSimplification.cpp
   AnnotateConstant.cpp
+  ArrayValueCopy.cpp
+  ArrayValueCopy.cpp
   AssumedRankOpConversion.cpp
+  CUDA/CUFAddConstructor.cpp
+  CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFAllocationConversion.cpp
+  CUDA/CUFComputeSharedMemoryOffsetsAndSize.cpp
+  CUDA/CUFDeviceFuncTransform.cpp
+  CUDA/CUFDeviceGlobal.cpp
+  CUDA/CUFFunctionRewrite.cpp
+  CUDA/CUFGPUToLLVMConversion.cpp
+  CUDA/CUFLaunchAttachAttr.cpp
+  CUDA/CUFOpConversion.cpp
+  CUDA/CUFOpConversionLate.cpp
+  CUDA/CUFPredefinedVarToGPU.cpp
   CharacterConversion.cpp
   CompilerGeneratedNames.cpp
   ConstantArgumentGlobalisation.cpp
   ControlFlowConverter.cpp
-  CUFAddConstructor.cpp
-  CUFDeviceGlobal.cpp
-  CUFOpConversion.cpp
-  CUFGPUToLLVMConversion.cpp
-  CUFComputeSharedMemoryOffsetsAndSize.cpp
-  ArrayValueCopy.cpp
+  ConvertComplexPow.cpp
+  DebugTypeGenerator.cpp
   ExternalNameConversion.cpp
   FIRToSCF.cpp
+  FIRToMemRef.cpp
   MemoryUtils.cpp
   MemoryAllocation.cpp
   StackArrays.cpp
@@ -26,15 +39,23 @@ add_flang_library(FIRTransforms
   SimplifyIntrinsics.cpp
   AddDebugInfo.cpp
   PolymorphicOpConversion.cpp
+  FunctionAttr.cpp
+  GenRuntimeCallsForTest.cpp
+  LoopInvariantCodeMotion.cpp
   LoopVersioning.cpp
+  MIFOpConversion.cpp
+  MemRefDataFlowOpt.cpp
+  MemoryAllocation.cpp
+  MemoryUtils.cpp
+  OptimizeArrayRepacking.cpp
+  PolymorphicOpConversion.cpp
+  SetRuntimeCallAttributes.cpp
+  SimplifyFIROperations.cpp
+  SimplifyIntrinsics.cpp
+  SimplifyRegionLite.cpp
+  StackArrays.cpp
   StackReclaim.cpp
   VScaleAttr.cpp
-  FunctionAttr.cpp
-  DebugTypeGenerator.cpp
-  SetRuntimeCallAttributes.cpp
-  GenRuntimeCallsForTest.cpp
-  SimplifyFIROperations.cpp
-  OptimizeArrayRepacking.cpp
 
   DEPENDS
   CUFAttrs
@@ -42,6 +63,7 @@ add_flang_library(FIRTransforms
   FIRDialect
   FIROptTransformsPassIncGen
   HLFIROpsIncGen
+  MIFDialect
 
   LINK_LIBS
   CUFAttrs
@@ -55,15 +77,18 @@ add_flang_library(FIRTransforms
   FIRSupport
   FortranSupport
   HLFIRDialect
+  MIFDialect
 
   MLIR_LIBS
   MLIRAffineUtils
+  MLIRAnalysis
   MLIRFuncDialect
   MLIRGPUDialect
-  MLIRLLVMDialect
   MLIRLLVMCommonConversion
+  MLIRLLVMDialect
   MLIRMathTransforms
   MLIROpenACCDialect
   MLIROpenACCToLLVMIRTranslation
   MLIROpenMPDialect
+  MLIRTransformUtils
 )

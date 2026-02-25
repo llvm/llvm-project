@@ -344,7 +344,6 @@ int test_volatile(volatile atomic_int *i) {
   // CHECK-LABEL: @test_volatile
   // CHECK:      %[[i_addr:.*]] = alloca ptr
   // CHECK-NEXT: %[[atomicdst:.*]] = alloca i32
-  // CHECK-NEXT: %[[retval_ascast:.*]] = addrspacecast ptr addrspace(5) {{.*}} to ptr
   // CHECK-NEXT: %[[i_addr_ascast:.*]] = addrspacecast ptr addrspace(5) %[[i_addr]] to ptr
   // CHECK-NEXT: %[[atomicdst_ascast:.*]] = addrspacecast ptr addrspace(5) %[[atomicdst]] to ptr
   // CHECK-NEXT: store ptr %i, ptr %[[i_addr_ascast]]

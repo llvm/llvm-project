@@ -405,6 +405,43 @@ TEST_F(MacroExpansionContextTest, UnbalacedParenthesis) {
   EXPECT_EQ("f(f(1))", *Ctx->getOriginalText(at(13, 12)));
 }
 
+TEST_F(MacroExpansionContextTest, FormattedExpandedTextNoneWhenNoExpansion) {
+  const auto Ctx = getMacroExpansionContextFor(R"code(
+  #define UNUSED 1
+  int value = 0;
+      )code");
+  EXPECT_FALSE(Ctx->getFormattedExpandedText(at(3, 3)).has_value());
+}
+
+TEST_F(MacroExpansionContextTest,
+       FormattedExpandedTextKeepsOriginalWhenStable) {
+  const auto Ctx = getMacroExpansionContextFor(R"code(
+  #define ANSWER 42
+  int life = ANSWER;
+      )code");
+
+  const auto Expanded = Ctx->getExpandedText(at(3, 14));
+  ASSERT_TRUE(Expanded.has_value());
+
+  EXPECT_EQ(*Expanded, *Ctx->getFormattedExpandedText(at(3, 14)));
+}
+
+TEST_F(MacroExpansionContextTest, FormattedExpandedTextChangesWhenFormatting) {
+  const auto Ctx = getMacroExpansionContextFor(R"code(
+  #define ADD(x, y) (x+y* x)
+  int result = ADD(1,2);
+      )code");
+
+  const auto Expanded = Ctx->getExpandedText(at(3, 16));
+  ASSERT_TRUE(Expanded.has_value());
+
+  const auto Formatted = Ctx->getFormattedExpandedText(at(3, 16));
+  ASSERT_TRUE(Formatted.has_value());
+
+  EXPECT_EQ(*Formatted, *Ctx->getFormattedExpandedText(at(3, 16)));
+  EXPECT_NE(*Expanded, *Formatted);
+}
+
 } // namespace
 } // namespace analysis
 } // namespace clang

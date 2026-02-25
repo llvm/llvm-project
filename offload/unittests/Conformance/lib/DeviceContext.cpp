@@ -48,20 +48,21 @@ namespace {
 // The static 'Wrapper' instance ensures olInit() is called once at program
 // startup and olShutDown() is called once at program termination
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { OL_CHECK(olInit()); }
+  OffloadInitWrapper() { OL_CHECK(olInit(nullptr)); }
   ~OffloadInitWrapper() { OL_CHECK(olShutDown()); }
 };
 static OffloadInitWrapper Wrapper{};
 
 [[nodiscard]] std::string getDeviceName(ol_device_handle_t DeviceHandle) {
   std::size_t PropSize = 0;
-  OL_CHECK(olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_NAME, &PropSize));
+  OL_CHECK(olGetDeviceInfoSize(DeviceHandle, OL_DEVICE_INFO_PRODUCT_NAME,
+                               &PropSize));
 
   if (PropSize == 0)
     return "";
 
   std::string PropValue(PropSize, '\0');
-  OL_CHECK(olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_NAME, PropSize,
+  OL_CHECK(olGetDeviceInfo(DeviceHandle, OL_DEVICE_INFO_PRODUCT_NAME, PropSize,
                            PropValue.data()));
   PropValue.pop_back(); // Remove the null terminator
 

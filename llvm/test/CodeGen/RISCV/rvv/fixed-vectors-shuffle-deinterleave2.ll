@@ -472,7 +472,7 @@ define void @vnsrl_0_i8_undef(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -488,7 +488,7 @@ define void @vnsrl_0_i8_undef2(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 undef, i32 6, i32 undef, i32 10, i32 12, i32 14>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 poison, i32 6, i32 poison, i32 10, i32 12, i32 14>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -504,7 +504,7 @@ define void @vnsrl_0_i8_undef3(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 undef, i32 undef, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 poison, i32 poison, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -534,7 +534,7 @@ define void @vnsrl_0_i8_undef_negative(ptr %in, ptr %out) {
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <16 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 undef, i32 1>
+  %shuffle.i5 = shufflevector <16 x i8> %0, <16 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 poison, i32 1>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -639,7 +639,7 @@ define void @vnsrl_0_i8_single_wideuse(ptr %in, ptr %out) {
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <8 x i8>, ptr %in, align 1
-  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <8 x i8> %0, <8 x i8> poison, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 poison, i32 poison, i32 poison, i32 poison>
   store <8 x i8> %shuffle.i5, ptr %out, align 1
   ret void
 }
@@ -686,7 +686,7 @@ define void @vnsrl_0_i32_single_src_m8(ptr %in, ptr %out) {
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
-  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <64 x i32> %shuffle.i5, ptr %out, align 4
   ret void
 }
@@ -731,7 +731,7 @@ define void @vnsrl_0_i32_single_src_m8_2(ptr %in, ptr %out) {
 ; ZIP-NEXT:    ret
 entry:
   %0 = load <64 x i32>, ptr %in, align 4
-  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
+  %shuffle.i5 = shufflevector <64 x i32> %0, <64 x i32> poison, <64 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30, i32 32, i32 34, i32 36, i32 38, i32 40, i32 42, i32 44, i32 46, i32 48, i32 50, i32 52, i32 54, i32 56, i32 58, i32 60, i32 62, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   store <64 x i32> %shuffle.i5, ptr %out, align 4
   ret void
 }
@@ -1401,14 +1401,14 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F-NEXT:    .cfi_def_cfa_offset 256
 ; ZVE32F-NEXT:    sd ra, 248(sp) # 8-byte Folded Spill
 ; ZVE32F-NEXT:    sd s0, 240(sp) # 8-byte Folded Spill
-; ZVE32F-NEXT:    sd s2, 232(sp) # 8-byte Folded Spill
-; ZVE32F-NEXT:    sd s3, 224(sp) # 8-byte Folded Spill
-; ZVE32F-NEXT:    sd s4, 216(sp) # 8-byte Folded Spill
+; ZVE32F-NEXT:    sd s1, 232(sp) # 8-byte Folded Spill
+; ZVE32F-NEXT:    sd s2, 224(sp) # 8-byte Folded Spill
+; ZVE32F-NEXT:    sd s3, 216(sp) # 8-byte Folded Spill
 ; ZVE32F-NEXT:    .cfi_offset ra, -8
 ; ZVE32F-NEXT:    .cfi_offset s0, -16
-; ZVE32F-NEXT:    .cfi_offset s2, -24
-; ZVE32F-NEXT:    .cfi_offset s3, -32
-; ZVE32F-NEXT:    .cfi_offset s4, -40
+; ZVE32F-NEXT:    .cfi_offset s1, -24
+; ZVE32F-NEXT:    .cfi_offset s2, -32
+; ZVE32F-NEXT:    .cfi_offset s3, -40
 ; ZVE32F-NEXT:    addi s0, sp, 256
 ; ZVE32F-NEXT:    .cfi_def_cfa s0, 0
 ; ZVE32F-NEXT:    andi sp, sp, -128
@@ -1425,16 +1425,16 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F-NEXT:    ld t4, 32(a2)
 ; ZVE32F-NEXT:    ld t3, 48(a2)
 ; ZVE32F-NEXT:    ld t6, 64(a2)
-; ZVE32F-NEXT:    ld s2, 80(a2)
-; ZVE32F-NEXT:    ld s3, 96(a2)
+; ZVE32F-NEXT:    ld s1, 80(a2)
+; ZVE32F-NEXT:    ld s2, 96(a2)
 ; ZVE32F-NEXT:    ld a2, 112(a2)
-; ZVE32F-NEXT:    srli s4, t5, 32
+; ZVE32F-NEXT:    srli s3, t5, 32
 ; ZVE32F-NEXT:    sw t5, 0(sp)
-; ZVE32F-NEXT:    sw s4, 4(sp)
+; ZVE32F-NEXT:    sw s3, 4(sp)
 ; ZVE32F-NEXT:    srli t5, t2, 32
 ; ZVE32F-NEXT:    sw t2, 8(sp)
-; ZVE32F-NEXT:    srli t2, s3, 32
-; ZVE32F-NEXT:    sw s3, 112(sp)
+; ZVE32F-NEXT:    srli t2, s2, 32
+; ZVE32F-NEXT:    sw s2, 112(sp)
 ; ZVE32F-NEXT:    sw t2, 116(sp)
 ; ZVE32F-NEXT:    srli t2, a2, 32
 ; ZVE32F-NEXT:    sw a2, 120(sp)
@@ -1442,8 +1442,8 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F-NEXT:    srli a2, t6, 32
 ; ZVE32F-NEXT:    sw t6, 96(sp)
 ; ZVE32F-NEXT:    sw a2, 100(sp)
-; ZVE32F-NEXT:    srli a2, s2, 32
-; ZVE32F-NEXT:    sw s2, 104(sp)
+; ZVE32F-NEXT:    srli a2, s1, 32
+; ZVE32F-NEXT:    sw s1, 104(sp)
 ; ZVE32F-NEXT:    sw a2, 108(sp)
 ; ZVE32F-NEXT:    srli a2, t4, 32
 ; ZVE32F-NEXT:    sw t4, 80(sp)
@@ -1485,14 +1485,14 @@ define <16 x i64> @unzip2a_dual_v16i64(<16 x i64> %a, <16 x i64> %b) {
 ; ZVE32F-NEXT:    .cfi_def_cfa sp, 256
 ; ZVE32F-NEXT:    ld ra, 248(sp) # 8-byte Folded Reload
 ; ZVE32F-NEXT:    ld s0, 240(sp) # 8-byte Folded Reload
-; ZVE32F-NEXT:    ld s2, 232(sp) # 8-byte Folded Reload
-; ZVE32F-NEXT:    ld s3, 224(sp) # 8-byte Folded Reload
-; ZVE32F-NEXT:    ld s4, 216(sp) # 8-byte Folded Reload
+; ZVE32F-NEXT:    ld s1, 232(sp) # 8-byte Folded Reload
+; ZVE32F-NEXT:    ld s2, 224(sp) # 8-byte Folded Reload
+; ZVE32F-NEXT:    ld s3, 216(sp) # 8-byte Folded Reload
 ; ZVE32F-NEXT:    .cfi_restore ra
 ; ZVE32F-NEXT:    .cfi_restore s0
+; ZVE32F-NEXT:    .cfi_restore s1
 ; ZVE32F-NEXT:    .cfi_restore s2
 ; ZVE32F-NEXT:    .cfi_restore s3
-; ZVE32F-NEXT:    .cfi_restore s4
 ; ZVE32F-NEXT:    addi sp, sp, 256
 ; ZVE32F-NEXT:    .cfi_def_cfa_offset 0
 ; ZVE32F-NEXT:    ret

@@ -90,6 +90,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   disable_.set(LanguageFeature::OldStyleParameter);
   // Possibly an accidental "feature" of nvfortran.
   disable_.set(LanguageFeature::AssumedRankPassedToNonAssumedRank);
+  disable_.set(LanguageFeature::Coarray);
   // These warnings are enabled by default, but only because they used
   // to be unconditional.  TODO: prune this list
   warnLanguage_.set(LanguageFeature::ExponentMatchingKindParam);
@@ -102,7 +103,6 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnLanguage_.set(LanguageFeature::HollerithPolymorphic);
   warnLanguage_.set(LanguageFeature::ListDirectedSize);
   warnLanguage_.set(LanguageFeature::IgnoreIrrelevantAttributes);
-  warnLanguage_.set(LanguageFeature::AmbiguousStructureConstructor);
   warnLanguage_.set(LanguageFeature::TransferBOZ);
   warnUsage_.set(UsageWarning::ShortArrayActual);
   warnUsage_.set(UsageWarning::FoldingException);
@@ -147,9 +147,12 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::UseAssociationIntoSameNameSubprogram);
   warnUsage_.set(UsageWarning::HostAssociatedIntentOutInSpecExpr);
   warnUsage_.set(UsageWarning::NonVolatilePointerToVolatile);
+  warnUsage_.set(UsageWarning::RealConstantWidening);
   // New warnings, on by default
   warnLanguage_.set(LanguageFeature::SavedLocalInSpecExpr);
   warnLanguage_.set(LanguageFeature::NullActualForAllocatable);
+  warnUsage_.set(UsageWarning::BadValueInDeadCode);
+  warnUsage_.set(UsageWarning::MisplacedIgnoreTKR);
 }
 
 std::optional<LanguageControlFlag> LanguageFeatureControl::FindWarning(

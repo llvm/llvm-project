@@ -447,7 +447,7 @@ private:
   AllocatorTy MemPool;
 };
 
-using RegisterSet = std::set<RegisterRef>;
+using RegisterSet = std::set<RegisterRef, RegisterRefLess>;
 
 struct TargetOperandInfo {
   TargetOperandInfo(const TargetInstrInfo &tii) : TII(tii) {}
@@ -462,7 +462,7 @@ struct TargetOperandInfo {
 
 // Packed register reference. Only used for storage.
 struct PackedRegisterRef {
-  RegisterId Reg;
+  RegisterId Id;
   uint32_t MaskId;
 };
 
@@ -779,13 +779,13 @@ struct DataFlowGraph {
   void releaseBlock(NodeId B, DefStackMap &DefM);
 
   PackedRegisterRef pack(RegisterRef RR) {
-    return {RR.Reg, LMI.getIndexForLaneMask(RR.Mask)};
+    return {RR.Id, LMI.getIndexForLaneMask(RR.Mask)};
   }
   PackedRegisterRef pack(RegisterRef RR) const {
-    return {RR.Reg, LMI.getIndexForLaneMask(RR.Mask)};
+    return {RR.Id, LMI.getIndexForLaneMask(RR.Mask)};
   }
   RegisterRef unpack(PackedRegisterRef PR) const {
-    return RegisterRef(PR.Reg, LMI.getLaneMaskForIndex(PR.MaskId));
+    return RegisterRef(PR.Id, LMI.getLaneMaskForIndex(PR.MaskId));
   }
 
   RegisterRef makeRegRef(unsigned Reg, unsigned Sub) const;

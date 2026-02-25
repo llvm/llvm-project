@@ -636,6 +636,16 @@ DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
      /*.basename=*/"operator()",
      /*.scope=*/"dyld4::Loader::runInitializersBottomUpPlusUpwardLinks(dyld4::RuntimeState&) const::$_0::",
      /*.qualifiers=*/" const",
+   },
+   {"_Z4funcILN3foo4EnumE1EEvv",
+     {
+       /*.BasenameRange=*/{5, 9}, /*.TemplateArgumentsRange=*/{9, 23}, /*.ScopeRange=*/{5, 5},
+       /*.ArgumentsRange=*/{23, 25}, /*.QualifiersRange=*/{25, 25}, /*.NameQualifiersRange=*/{0, 0},
+       /*.PrefixRange=*/{0, 0}, /*.SuffixRange=*/{0, 0}
+     },
+     /*.basename=*/"func",
+     /*.scope=*/"",
+     /*.qualifiers=*/"",
    }
     // clang-format on
 };
@@ -889,10 +899,10 @@ TEST_P(DemanglingInfoCorrectnessTestFixutre, Correctness) {
   EXPECT_THAT_EXPECTED(qualifiers, llvm::Succeeded());
   reconstructed_name += *qualifiers;
 
-  // TODO: should retrieve suffix using the plugin too.
-  auto suffix = tracked_name.slice(OB->NameInfo.QualifiersRange.second,
-                                   llvm::StringRef::npos);
-  reconstructed_name += suffix;
+  auto suffix =
+      CPlusPlusLanguage::GetDemangledFunctionSuffix(tracked_name, OB->NameInfo);
+  EXPECT_THAT_EXPECTED(suffix, llvm::Succeeded());
+  reconstructed_name += *suffix;
 
   EXPECT_EQ(reconstructed_name, demangled);
 }

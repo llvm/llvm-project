@@ -118,12 +118,18 @@ class module_test_generator:
         print(
             f"""\
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: clang-modules-build
+
+// These tests check that we provide all declarations, so they currently don't work when
+// carve-outs are enabled.
+// XFAIL: no-filesystem, no-tzdb, no-localization, no-threads, no-wide-characters
 
 // REQUIRES: has-clang-tidy
 
 // The GCC compiler flags are not always compatible with clang-tidy.
 // UNSUPPORTED: gcc
+
+// C++20 modules are incompatible with Clang modules
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 // MODULE_DEPENDENCIES: {self.module}
 
@@ -166,7 +172,7 @@ class module_test_generator:
             f'" > {self.tmp_prefix}.{header}.cppm'
         )
 
-        # Extract the information of the module partition using lang-tidy
+        # Extract the information of the module partition using clang-tidy
         print(
             f"// RUN: {self.clang_tidy} {self.tmp_prefix}.{header}.cppm "
             "  --checks='-*,libcpp-header-exportable-declarations' "
@@ -222,6 +228,7 @@ class module_test_generator:
         print(f'// RUN: echo -e "' f"{include}" f'" > {self.tmp_prefix}.{header}.cpp')
         print(
             f"// RUN: {self.clang_tidy} {self.tmp_prefix}.{header}.cpp "
+            "  --system-headers "
             "  --checks='-*,libcpp-header-exportable-declarations' "
             "  -config='{CheckOptions: [ "
             "    {"

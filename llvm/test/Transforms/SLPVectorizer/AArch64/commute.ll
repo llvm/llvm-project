@@ -8,15 +8,18 @@ target triple = "aarch64--linux-gnu"
 define void @test1(ptr nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH:%.*]]
 ; CHECK:       for.body3.lr.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[J:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x float> [[TMP5]], [[TMP5]]
-; CHECK-NEXT:    [[ADD:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP6]])
+; CHECK-NEXT:    [[CONV5:%.*]] = sitofp i32 [[YMIN:%.*]] to float
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[XMIN:%.*]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[J:%.*]], align 4
+; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[CONV]], [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [[STRUCTA:%.*]], ptr [[J]], i64 0, i32 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX9]], align 4
+; CHECK-NEXT:    [[SUB10:%.*]] = fsub fast float [[CONV5]], [[TMP1]]
+; CHECK-NEXT:    [[MUL11:%.*]] = fmul fast float [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[MUL12:%.*]] = fmul fast float [[SUB10]], [[SUB10]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[MUL11]], [[MUL12]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ADD]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY3_LR_PH]], label [[FOR_END27:%.*]]
 ; CHECK:       for.end27:
@@ -47,15 +50,18 @@ for.end27:
 define void @test2(ptr nocapture readonly %J, i32 %xmin, i32 %ymin) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[XMIN:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[YMIN:%.*]], i32 1
 ; CHECK-NEXT:    br label [[FOR_BODY3_LR_PH:%.*]]
 ; CHECK:       for.body3.lr.ph:
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp <2 x i32> [[TMP1]] to <2 x float>
-; CHECK-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[J:%.*]], align 4
-; CHECK-NEXT:    [[TMP5:%.*]] = fsub fast <2 x float> [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = fmul fast <2 x float> [[TMP5]], [[TMP5]]
-; CHECK-NEXT:    [[ADD:%.*]] = call fast float @llvm.vector.reduce.fadd.v2f32(float 0.000000e+00, <2 x float> [[TMP6]])
+; CHECK-NEXT:    [[CONV5:%.*]] = sitofp i32 [[YMIN:%.*]] to float
+; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[XMIN:%.*]] to float
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[J:%.*]], align 4
+; CHECK-NEXT:    [[SUB:%.*]] = fsub fast float [[CONV]], [[TMP0]]
+; CHECK-NEXT:    [[ARRAYIDX9:%.*]] = getelementptr inbounds [[STRUCTA:%.*]], ptr [[J]], i64 0, i32 0, i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX9]], align 4
+; CHECK-NEXT:    [[SUB10:%.*]] = fsub fast float [[CONV5]], [[TMP1]]
+; CHECK-NEXT:    [[MUL11:%.*]] = fmul fast float [[SUB]], [[SUB]]
+; CHECK-NEXT:    [[MUL12:%.*]] = fmul fast float [[SUB10]], [[SUB10]]
+; CHECK-NEXT:    [[ADD:%.*]] = fadd fast float [[MUL12]], [[MUL11]]
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq float [[ADD]], 0.000000e+00
 ; CHECK-NEXT:    br i1 [[CMP]], label [[FOR_BODY3_LR_PH]], label [[FOR_END27:%.*]]
 ; CHECK:       for.end27:

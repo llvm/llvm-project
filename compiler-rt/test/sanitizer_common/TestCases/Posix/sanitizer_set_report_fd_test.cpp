@@ -7,7 +7,7 @@
 // RUN: not %run %t %t-out && FileCheck < %t-out %s
 
 // REQUIRES: stable-runtime
-// XFAIL: android && asan
+// UNSUPPORTED: android && asan
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

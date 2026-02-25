@@ -30,7 +30,7 @@ subroutine spread_test(s,d,n,r)
   ! CHECK-DAG:  %[[a15:.*]] = fir.box_addr %[[a13]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
   ! CHECK:  fir.freemem %[[a15]]
 end subroutine
-  
+
 ! CHECK-LABEL: func @_QMspread_modPspread_test2(
 ! CHECK-SAME: %[[arg0:.*]]: !fir.box<!fir.array<?xi32>>{{.*}}, %[[arg1:[^:]+]]: !fir.ref<i32>{{.*}}, %[[arg2:[^:]+]]: !fir.ref<i32>{{.*}}, %[[arg3:.*]]: !fir.box<!fir.array<?x?xi32>>{{.*}}) {
 subroutine spread_test2(s,d,n,r)

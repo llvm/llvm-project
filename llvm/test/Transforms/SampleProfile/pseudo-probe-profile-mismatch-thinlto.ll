@@ -1,4 +1,4 @@
-; REQUIRES: x86_64-linux
+; REQUIRES: x86-registered-target
 ; RUN: opt < %S/pseudo-probe-stale-profile-matching-lto.ll -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline  --salvage-unused-profile=false -sample-profile-file=%S/Inputs/pseudo-probe-stale-profile-matching-lto.prof -report-profile-staleness -persist-profile-staleness  -S 2>%t -o %t.ll
 ; RUN: FileCheck %s --input-file %t
 ; RUN: FileCheck %s --input-file %t.ll -check-prefix=CHECK-MD

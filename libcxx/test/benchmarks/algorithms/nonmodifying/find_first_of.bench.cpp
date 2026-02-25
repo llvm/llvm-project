@@ -30,13 +30,6 @@ int main(int argc, char** argv) {
       return x == y;
     });
   };
-  auto ranges_find_first_of_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::find_first_of(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
-  };
 
   // Benchmark {std,ranges}::find_first_of where we never find a match in the needle, and the needle is small.
   // This is the worst case of the most common case (a small needle).
@@ -68,17 +61,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::find_first_of(vector<int>) (small needle)", std_find_first_of);
     bm.operator()<std::deque<int>>("std::find_first_of(deque<int>) (small needle)", std_find_first_of);
     bm.operator()<std::list<int>>("std::find_first_of(list<int>) (small needle)", std_find_first_of);
-    bm.operator()<std::vector<int>>("rng::find_first_of(vector<int>) (small needle)", std::ranges::find_first_of);
-    bm.operator()<std::deque<int>>("rng::find_first_of(deque<int>) (small needle)", std::ranges::find_first_of);
-    bm.operator()<std::list<int>>("rng::find_first_of(list<int>) (small needle)", std::ranges::find_first_of);
 
     // {std,ranges}::find_first_of(it1, it1, it2, it2, pred)
     bm.operator()<std::vector<int>>("std::find_first_of(vector<int>, pred) (small needle)", std_find_first_of_pred);
     bm.operator()<std::deque<int>>("std::find_first_of(deque<int>, pred) (small needle)", std_find_first_of_pred);
     bm.operator()<std::list<int>>("std::find_first_of(list<int>, pred) (small needle)", std_find_first_of_pred);
-    bm.operator()<std::vector<int>>("rng::find_first_of(vector<int>, pred) (small needle)", ranges_find_first_of_pred);
-    bm.operator()<std::deque<int>>("rng::find_first_of(deque<int>, pred) (small needle)", ranges_find_first_of_pred);
-    bm.operator()<std::list<int>>("rng::find_first_of(list<int>, pred) (small needle)", ranges_find_first_of_pred);
   }
 
   // Special case: the needle is large compared to the haystack, and we find a match early in the haystack.
@@ -113,17 +100,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::find_first_of(vector<int>) (large needle)", std_find_first_of);
     bm.operator()<std::deque<int>>("std::find_first_of(deque<int>) (large needle)", std_find_first_of);
     bm.operator()<std::list<int>>("std::find_first_of(list<int>) (large needle)", std_find_first_of);
-    bm.operator()<std::vector<int>>("rng::find_first_of(vector<int>) (large needle)", std::ranges::find_first_of);
-    bm.operator()<std::deque<int>>("rng::find_first_of(deque<int>) (large needle)", std::ranges::find_first_of);
-    bm.operator()<std::list<int>>("rng::find_first_of(list<int>) (large needle)", std::ranges::find_first_of);
 
     // {std,ranges}::find_first_of(it1, it1, it2, it2, pred)
     bm.operator()<std::vector<int>>("std::find_first_of(vector<int>, pred) (large needle)", std_find_first_of_pred);
     bm.operator()<std::deque<int>>("std::find_first_of(deque<int>, pred) (large needle)", std_find_first_of_pred);
     bm.operator()<std::list<int>>("std::find_first_of(list<int>, pred) (large needle)", std_find_first_of_pred);
-    bm.operator()<std::vector<int>>("rng::find_first_of(vector<int>, pred) (large needle)", ranges_find_first_of_pred);
-    bm.operator()<std::deque<int>>("rng::find_first_of(deque<int>, pred) (large needle)", ranges_find_first_of_pred);
-    bm.operator()<std::list<int>>("rng::find_first_of(list<int>, pred) (large needle)", ranges_find_first_of_pred);
   }
 
   benchmark::Initialize(&argc, argv);

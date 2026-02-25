@@ -507,13 +507,21 @@ TEST(SourceCodeTest, EditInvolvingExpansionIgnoringExpansionShouldFail) {
   // If we specify to ignore macro expansions, none of these call expressions
   // should have an editable range.
   llvm::Annotations Code(R"cpp(
+#define NOOP(x) x
 #define M1(x) x(1)
-#define M2(x, y) x ## y
+#define M2(x, y) NOOP(M2_IMPL(x, y))
+#define M2_IMPL(x, y) x ## y
 #define M3(x) foobar(x)
+#define M4(x, y) NOOP(x y)
+#define M5(x) x
+#define M6(...) M4(__VA_ARGS__)
 int foobar(int);
 int a = M1(foobar);
 int b = M2(foo, bar(2));
 int c = M3(3);
+int d = M4(foobar, (4));
+int e = M5(foobar) (5);
+int f = M6(foobar, (6));
 )cpp");
 
   CallsVisitor Visitor;
@@ -588,18 +596,39 @@ int c = BAR 3.0;
 }
 
 TEST_P(GetFileRangeForEditTest, EditWholeMacroArgShouldSucceed) {
-  llvm::Annotations Code(R"cpp(
-#define FOO(a) a + 7.0;
-int a = FOO($r[[10]]);
-)cpp");
+  {
+    llvm::Annotations Code(R"cpp(
+      #define FOO(a) a + 7.0;
+      int a = FOO($r[[10]]);
+    )cpp");
 
-  IntLitVisitor Visitor;
-  Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
-    auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
-    EXPECT_THAT(getFileRangeForEdit(Range, *Context, GetParam()),
-                ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
-  };
-  Visitor.runOver(Code.code());
+    IntLitVisitor Visitor;
+    Visitor.OnIntLit = [&Code](IntegerLiteral *Expr, ASTContext *Context) {
+      auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
+      EXPECT_THAT(
+          getFileRangeForEdit(Range, *Context, GetParam()),
+          ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
+    };
+    Visitor.runOver(Code.code());
+  }
+
+  {
+    llvm::Annotations Code(R"cpp(
+      #define FOO(a) a + 7.0;
+      #define DO_NOTHING(x) x
+      int Frob(int x);
+      int a = FOO($r[[Frob(DO_NOTHING(40))]]);
+    )cpp");
+
+    CallsVisitor Visitor;
+    Visitor.OnCall = [&Code](CallExpr *Expr, ASTContext *Context) {
+      auto Range = CharSourceRange::getTokenRange(Expr->getSourceRange());
+      EXPECT_THAT(
+          getFileRangeForEdit(Range, *Context, GetParam()),
+          ValueIs(AsRange(Context->getSourceManager(), Code.range("r"))));
+    };
+    Visitor.runOver(Code.code());
+  }
 }
 
 TEST_P(GetFileRangeForEditTest, EditPartialMacroArgShouldSucceed) {

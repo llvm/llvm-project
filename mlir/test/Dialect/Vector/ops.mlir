@@ -45,11 +45,11 @@ func.func @vector_transfer_ops(%arg0: memref<?x?xf32>,
   %i0 = arith.constant 0 : index
   %i1 = arith.constant 1 : i1
 
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
-  %v0 = vector.splat %c0 : vector<4x3xi32>
-  %vi0 = vector.splat %i0 : vector<4x3xindex>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
+  %v0 = vector.broadcast %c0 : i32 to vector<4x3xi32>
+  %vi0 = vector.broadcast %i0 : index to vector<4x3xindex>
   %m = arith.constant dense<[0, 0, 1, 0, 1]> : vector<5xi1>
-  %m2 = vector.splat %i1 : vector<4x5xi1>
+  %m2 = vector.broadcast %i1 : i1 to vector<4x5xi1>
   //
   // CHECK: vector.transfer_read
   %0 = vector.transfer_read %arg0[%c3, %c3], %f0 {permutation_map = affine_map<(d0, d1)->(d0)>} : memref<?x?xf32>, vector<128xf32>
@@ -106,9 +106,9 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
   %c0 = arith.constant 0 : i32
   %i0 = arith.constant 0 : index
 
-  %vf0 = vector.splat %f0 : vector<4x3xf32>
-  %v0 = vector.splat %c0 : vector<4x3xi32>
-  %vi0 = vector.splat %i0 : vector<4x3xindex>
+  %vf0 = vector.broadcast %f0 : f32 to vector<4x3xf32>
+  %v0 = vector.broadcast %c0 : i32 to vector<4x3xi32>
+  %vi0 = vector.broadcast %i0 : index to vector<4x3xindex>
 
   //
   // CHECK: vector.transfer_read
@@ -149,7 +149,7 @@ func.func @vector_transfer_ops_tensor(%arg0: tensor<?x?xf32>,
 }
 
 // CHECK-LABEL: @vector_broadcast
-func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>, %f: vector<8x1x!llvm.ptr<1>>) {
+func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: vector<1x16xf32>, %e: vector<8x1xf32>, %f: vector<8x1x!llvm.ptr<1>>, %g: !llvm.ptr<1>) {
   // CHECK: vector.broadcast %{{.*}} : f32 to vector<f32>
   %0 = vector.broadcast %a : f32 to vector<f32>
   // CHECK: vector.broadcast %{{.*}} : vector<f32> to vector<4xf32>
@@ -164,6 +164,8 @@ func.func @vector_broadcast(%a: f32, %b: vector<f32>, %c: vector<16xf32>, %d: ve
   %5 = vector.broadcast %e : vector<8x1xf32> to vector<8x16xf32>
   // CHECK-NEXT: vector.broadcast %{{.*}} : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
   %6 = vector.broadcast %f : vector<8x1x!llvm.ptr<1>> to vector<8x16x!llvm.ptr<1>>
+  // CHECK-NEXT: vector.broadcast %{{.*}} : !llvm.ptr<1> to vector<8x16x!llvm.ptr<1>>
+  %7 = vector.broadcast %g : !llvm.ptr<1> to vector<8x16x!llvm.ptr<1>>
   return
 }
 
@@ -920,28 +922,6 @@ func.func @vector_scan(%0: vector<4x8x16x32xf32>) -> vector<4x8x16x32xf32> {
   return %2#0 : vector<4x8x16x32xf32>
 }
 
-// CHECK-LABEL: func @test_splat_op
-// CHECK-SAME: %[[s:.*]]: f32, %[[s2:.*]]: !llvm.ptr<1>
-func.func @test_splat_op(%s : f32, %s2 : !llvm.ptr<1>) {
-  // CHECK: vector.splat %[[s]] : vector<8xf32>
-  %v = vector.splat %s : vector<8xf32>
-
-  // CHECK: vector.splat %[[s]] : vector<4xf32>
-  %u = "vector.splat"(%s) : (f32) -> vector<4xf32>
-
-  // CHECK: vector.splat %[[s2]] : vector<16x!llvm.ptr<1>>
-  %w = vector.splat %s2 : vector<16x!llvm.ptr<1>>
-  return
-}
-
-// CHECK-LABEL: func @vector_splat_0d(
-func.func @vector_splat_0d(%a: f32) -> vector<f32> {
-  // CHECK: vector.splat %{{.*}} : vector<f32>
-  %0 = vector.splat %a : vector<f32>
-  return %0 : vector<f32>
-}
-
-
 // CHECK-LABEL: func @vector_mask
 func.func @vector_mask(%a: vector<8xi32>, %m0: vector<8xi1>) -> i32 {
 //  CHECK-NEXT:   %{{.*}} = vector.mask %{{.*}} { vector.reduction <add>, %{{.*}} : vector<8xi32> into i32 } : vector<8xi1> -> i32
@@ -1179,4 +1159,18 @@ func.func @step() {
   // CHECK: vector.step : vector<[4]xindex>
   %1 = vector.step : vector<[4]xindex>
   return
+}
+
+// CHECK-LABEL: func @scatter_tensor(
+//  CHECK-SAME: %[[BASE:.*]]: tensor<16x16xf32>, %[[V:.*]]: vector<16xi32>,
+//  CHECK-SAME: %[[MASK:.*]]: vector<16xi1>, %[[VALUE:.*]]: vector<16xf32>) -> tensor<16x16xf32>
+func.func @scatter_tensor(%base: tensor<16x16xf32>, %v: vector<16xi32>, 
+                          %mask: vector<16xi1>, %value: vector<16xf32>) -> tensor<16x16xf32> {
+  // CHECK: %[[C0:.*]] = arith.constant 0 : index
+  %c0 = arith.constant 0 : index
+  // CHECK: %[[RESULT:.*]] = vector.scatter %[[BASE]][%[[C0]], %[[C0]]] [%[[V]]], %[[MASK]], %[[VALUE]]
+  %0 = vector.scatter %base[%c0, %c0] [%v], %mask, %value
+      : tensor<16x16xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> -> tensor<16x16xf32>
+  // CHECK: return %[[RESULT]] : tensor<16x16xf32>
+  return %0 : tensor<16x16xf32>
 }

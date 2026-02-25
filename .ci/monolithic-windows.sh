@@ -13,53 +13,18 @@
 # run only the relevant tests.
 #
 
-set -ex
-set -o pipefail
-
-MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
-BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build}"
-
-rm -rf "${BUILD_DIR}"
-
-sccache --zero-stats
-function at-exit {
-  retcode=$?
-
-  mkdir -p artifacts
-  sccache --show-stats >> artifacts/sccache_stats.txt
-  cp "${BUILD_DIR}"/.ninja_log artifacts/.ninja_log
-  cp "${BUILD_DIR}"/test-results.*.xml artifacts/ || :
-
-  # If building fails there will be no results files.
-  shopt -s nullglob
-
-  if [[ "$GITHUB_STEP_SUMMARY" != "" ]]; then
-    python "${MONOREPO_ROOT}"/.ci/generate_test_report_github.py \
-      $retcode "${BUILD_DIR}"/test-results.*.xml >> $GITHUB_STEP_SUMMARY
-  fi
-}
-trap at-exit EXIT
-
-function start-group {
-  groupname=$1
-  if [[ "$GITHUB_ACTIONS" != "" ]]; then
-    echo "::endgroup"
-    echo "::group::$groupname"
-  elif [[ "$POSTCOMMIT_CI" != "" ]]; then
-    echo "@@@$STEP@@@"
-  else
-    echo "Starting $groupname"
-  fi
-}
+source .ci/utils.sh
 
 projects="${1}"
 targets="${2}"
+runtimes="${3}"
+runtimes_targets="${4}"
 
 start-group "CMake"
 pip install -q -r "${MONOREPO_ROOT}"/.ci/all_requirements.txt
 
-export CC=cl
-export CXX=cl
+export CC=C:/clang/clang-msvc/bin/clang-cl.exe
+export CXX=C:/clang/clang-msvc/bin/clang-cl.exe
 export LD=link
 
 # The CMAKE_*_LINKER_FLAGS to disable the manifest come from research
@@ -67,8 +32,6 @@ export LD=link
 # see https://github.com/llvm/llvm-project/pull/82393 and
 # https://discourse.llvm.org/t/rfc-future-of-windows-pre-commit-ci/76840/40
 # for further information.
-# We limit the number of parallel compile jobs to 24 control memory
-# consumption and improve build reliability.
 cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_PROJECTS="${projects}" \
       -G Ninja \
@@ -76,16 +39,28 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D LLVM_ENABLE_ASSERTIONS=ON \
       -D LLVM_BUILD_EXAMPLES=ON \
       -D COMPILER_RT_BUILD_LIBFUZZER=OFF \
-      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests" \
+      -D LLVM_LIT_ARGS="-v --xunit-xml-output ${BUILD_DIR}/test-results.xml --use-unique-output-file-name --timeout=1200 --time-tests --succinct" \
       -D COMPILER_RT_BUILD_ORC=OFF \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D CMAKE_EXE_LINKER_FLAGS="/MANIFEST:NO" \
       -D CMAKE_MODULE_LINKER_FLAGS="/MANIFEST:NO" \
-      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO"
+      -D CMAKE_SHARED_LINKER_FLAGS="/MANIFEST:NO" \
+      -D LLVM_ENABLE_RUNTIMES="${runtimes}"
 
 start-group "ninja"
 
-# Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets}
+if [[ -n "${targets}" ]]; then
+  # Targets are not escaped as they are passed as separate arguments.
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+  cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
+
+if [[ -n "${runtimes_targets}" ]]; then
+  start-group "ninja runtimes"
+  
+  ninja -C "${BUILD_DIR}" -k 0 ${runtimes_targets} |& tee ninja_runtimes.log
+  cp ${BUILD_DIR}/.ninja_log ninja_runtimes.ninja_log
+fi
