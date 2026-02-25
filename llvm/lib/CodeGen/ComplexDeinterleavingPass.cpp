@@ -2473,25 +2473,9 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *FinalReductionReal = ReductionInfo[Real].second;
   auto *FinalReductionImag = ReductionInfo[Imag].second;
 
-  BasicBlock *InsertBB = FinalReductionReal->getParent();
-  if (FinalReductionImag->getParent() != InsertBB) {
-    DominatorTree DT(*Real->getFunction());
-    if (BasicBlock *DomBB = DT.findNearestCommonDominator(
-            FinalReductionReal->getParent(), FinalReductionImag->getParent()))
-      InsertBB = DomBB;
-  }
-
-  // Ensure we place the deinterleave after it's source
-  Instruction *InsertPt = &*InsertBB->getFirstInsertionPt();
-  if (auto *OpInst = dyn_cast<Instruction>(OperationReplacement)) {
-    if (OpInst->getParent() == InsertBB && !isa<PHINode>(OpInst)) {
-      if (Instruction *Next = OpInst->getNextNode())
-        InsertPt = Next;
-      else
-        InsertPt = InsertBB->getTerminator();
-    }
-  }
-  Builder.SetInsertPoint(InsertPt);
+  auto *Br = cast<BranchInst>(BackEdge->getTerminator());
+  BasicBlock *ExitBB = Br->getSuccessor(Br->getSuccessor(0) == BackEdge);
+  Builder.SetInsertPoint(&*ExitBB->getFirstInsertionPt());
 
   auto *Deinterleave = Builder.CreateIntrinsic(Intrinsic::vector_deinterleave2,
                                                OperationReplacement->getType(),

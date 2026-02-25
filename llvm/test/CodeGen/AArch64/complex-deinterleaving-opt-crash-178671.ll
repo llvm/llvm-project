@@ -2,10 +2,9 @@
 ; Reproducer from https://github.com/llvm/llvm-project/issues/178671
 ; RUN: opt -S --passes=complex-deinterleaving %s --mattr=+sve2 | FileCheck %s
 
-target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32"
 target triple = "aarch64-unknown-linux-gnu"
 
-define double @test(<vscale x 2 x i1> %0, i1 %1, <vscale x 2 x i1> %2) #0 {
+define double @test(<vscale x 2 x i1> %0, i1 %1, <vscale x 2 x i1> %2) {
 ; CHECK-LABEL: define double @test(
 ; CHECK-SAME: <vscale x 2 x i1> [[TMP0:%.*]], i1 [[TMP1:%.*]], <vscale x 2 x i1> [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[_PREHEADER159:.*:]]
@@ -85,16 +84,3 @@ vector.body266:                                   ; preds = %vector.body266, %mi
   %18 = tail call double @llvm.vector.reduce.fadd.nxv2f64(double 0.000000e+00, <vscale x 2 x double> %16)
   ret double %18
 }
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare { <vscale x 2 x double>, <vscale x 2 x double> } @llvm.vector.deinterleave2.nxv4f64(<vscale x 4 x double>) #1
-
-; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
-declare double @llvm.vector.reduce.fadd.nxv2f64(double, <vscale x 2 x double>) #1
-
-; uselistorder directives
-uselistorder ptr @llvm.vector.deinterleave2.nxv4f64, { 1, 0 }
-uselistorder ptr @llvm.vector.reduce.fadd.nxv2f64, { 1, 0 }
-
-attributes #0 = { "target-cpu"="neoverse-v2" }
-attributes #1 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
