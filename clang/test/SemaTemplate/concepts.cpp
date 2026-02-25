@@ -1714,10 +1714,9 @@ template <typename T>
   requires false
 void f() = delete;
 
-template <typename T>
 struct Bar {};
 
-template <typename T> using Foo = Bar<T>;
+template <typename T> using Foo = Bar;
 
 template <typename T> void use() {
   f<Foo<T>>();
