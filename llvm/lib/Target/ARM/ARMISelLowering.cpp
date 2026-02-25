@@ -14621,17 +14621,14 @@ static SDValue PerformORCombineToShiftInsert(SelectionDAG &DAG, SDValue AndOp,
   int64_t Cnt = 0;
   bool IsShiftRight = false;
   SDValue Y;
-  SDValue CntOp;
 
   if (ShiftOp.getOpcode() == ARMISD::VSHRuIMM) {
     IsShiftRight = true;
     Y = ShiftOp.getOperand(0);
-    CntOp = ShiftOp.getOperand(1);
-    Cnt = cast<ConstantSDNode>(CntOp)->getZExtValue();
+    Cnt = ShiftOp.getConstantOperandVal(1);
   } else if (ShiftOp.getOpcode() == ARMISD::VSHLIMM) {
     Y = ShiftOp.getOperand(0);
-    CntOp = ShiftOp.getOperand(1);
-    Cnt = cast<ConstantSDNode>(CntOp)->getZExtValue();
+    Cnt = ShiftOp.getConstantOperandVal(1);
   } else {
     return SDValue();
   }
