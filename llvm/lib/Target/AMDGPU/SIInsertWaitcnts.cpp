@@ -654,7 +654,8 @@ public:
                        MachineBasicBlock &Block, WaitcntBrackets &ScoreBrackets,
                        MachineInstr *OldWaitcntInstr);
   /// \returns all events that correspond to \p Inst.
-  SmallVector<WaitEventType> getEventsFor(const MachineInstr &Inst) const;
+  SmallVector<WaitEventType, NUM_WAIT_EVENTS>
+  getEventsFor(const MachineInstr &Inst) const;
   void updateEventWaitcntAfter(MachineInstr &Inst,
                                WaitcntBrackets *ScoreBrackets);
   bool isNextENDPGM(MachineBasicBlock::instr_iterator It,
@@ -2823,7 +2824,7 @@ bool SIInsertWaitcnts::insertForcedWaitAfter(MachineInstr &Inst,
   return Result;
 }
 
-SmallVector<WaitEventType>
+SmallVector<WaitEventType, NUM_WAIT_EVENTS>
 SIInsertWaitcnts::getEventsFor(const MachineInstr &Inst) const {
   SmallVector<WaitEventType> Events;
   if (IsExpertMode) {
