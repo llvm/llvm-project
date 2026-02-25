@@ -2609,18 +2609,27 @@ bool LLParser::parseAllocKind(AllocFnKind &Kind) {
   return false;
 }
 
-static std::optional<MemoryEffects::Location> keywordToLoc(lltok::Kind Tok) {
+static std::optional<SmallVector<MemoryEffects::Location, 2>>
+keywordToLoc(lltok::Kind Tok) {
+  using Loc = IRMemLocation;
+
   switch (Tok) {
   case lltok::kw_argmem:
-    return IRMemLocation::ArgMem;
+    return SmallVector<Loc, 2>{Loc::ArgMem};
   case lltok::kw_inaccessiblemem:
-    return IRMemLocation::InaccessibleMem;
+    return SmallVector<Loc, 2>{Loc::InaccessibleMem};
   case lltok::kw_errnomem:
-    return IRMemLocation::ErrnoMem;
+    return SmallVector<Loc, 2>{Loc::ErrnoMem};
   case lltok::kw_target_mem0:
-    return IRMemLocation::TargetMem0;
+    return SmallVector<Loc, 2>{Loc::TargetMem0};
   case lltok::kw_target_mem1:
-    return IRMemLocation::TargetMem1;
+    return SmallVector<Loc, 2>{Loc::TargetMem1};
+  case lltok::kw_target_mem: {
+    SmallVector<MemoryEffects::Location, 2> Targets;
+    for (auto Loc : MemoryEffects::targetMemLocations())
+      Targets.push_back(Loc);
+    return Targets;
+  }
   default:
     return std::nullopt;
   }
@@ -2672,9 +2681,11 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
   }
 
   bool SeenLoc = false;
+  bool SeenTargetLoc = false;
   do {
-    std::optional<IRMemLocation> Loc = keywordToLoc(Lex.getKind());
-    if (Loc) {
+    std::optional<SmallVector<IRMemLocation, 2>> Locs =
+        keywordToLoc(Lex.getKind());
+    if (Locs) {
       Lex.Lex();
       if (!EatIfPresent(lltok::colon)) {
         tokError("expected ':' after location");
@@ -2684,7 +2695,7 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
 
     std::optional<ModRefInfo> MR = keywordToModRef(Lex.getKind());
     if (!MR) {
-      if (!Loc)
+      if (!Locs)
         tokError("expected memory location (argmem, inaccessiblemem, errnomem) "
                  "or access kind (none, read, write, readwrite)");
       else
@@ -2693,9 +2704,18 @@ std::optional<MemoryEffects> LLParser::parseMemoryAttr() {
     }
 
     Lex.Lex();
-    if (Loc) {
+    if (Locs) {
       SeenLoc = true;
-      ME = ME.getWithModRef(*Loc, *MR);
+      for (IRMemLocation Loc : *Locs) {
+        ME = ME.getWithModRef(Loc, *MR);
+        if (ME.isTargetMemLoc(Loc) && Locs->size() == 1)
+          SeenTargetLoc = true;
+      }
+      if (Locs->size() > 1 && SeenTargetLoc) {
+        tokError("target memory default access kind must be specified first");
+        return std::nullopt;
+      }
+
     } else {
       if (SeenLoc) {
         tokError("default access kind must be specified first");
