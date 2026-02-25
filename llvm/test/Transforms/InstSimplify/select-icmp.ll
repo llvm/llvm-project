@@ -309,3 +309,98 @@ define <2 x ptr> @ptr_eq_replace_vector_constant(<2 x ptr> %a) {
   %sel = select <2 x i1> %cmp, <2 x ptr> %a, <2 x ptr> <ptr inttoptr (i64 42 to ptr), ptr inttoptr (i64 88 to ptr)>
   ret <2 x ptr> %sel
 }
+
+define i32 @selectICmpSelectInArmNotSimplifiedDueToMorePoison(i32 %1, i32 %2, i1 %scond) {
+; CHECK-LABEL: @selectICmpSelectInArmNotSimplifiedDueToMorePoison(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[SCOND:%.*]], i32 [[TMP1]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 [[TMP0]], i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %4 = icmp eq i32 %1, %2
+  %5 = select i1 %scond, i32 %2, i32 %1
+  %6 = select i1 %4, i32 %1, i32 %5
+  ret i32 %6
+}
+
+define i32 @selectICmpSelectInArmSimplifiedDueToSameValues(i32 %1, i32 %2, i1 %scond) {
+; CHECK-LABEL: @selectICmpSelectInArmSimplifiedDueToSameValues(
+; CHECK-NEXT:    [[SAMEVALUES:%.*]] = icmp ule i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[SAMEVALUES]], i32 [[TMP1]], i32 [[TMP0]]
+; CHECK-NEXT:    ret i32 [[TMP6]]
+;
+  %4 = icmp eq i32 %1, %2
+  %sameValues = icmp ule i32 %1, %2
+  %5 = select i1 %sameValues, i32 %2, i32 %1
+  %6 = select i1 %4, i32 %1, i32 %5
+  ret i32 %6
+}
+
+define i32 @selectICmpSelectInArmSimplifiedNoPoisonFlagOnCondUseDefChain(i32 %1, i32 %2, i1 %scond) {
+; CHECK-LABEL: @selectICmpSelectInArmSimplifiedNoPoisonFlagOnCondUseDefChain(
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[WITHPOISONFLAG:%.*]] = or i32 [[TMP0]], 42
+; CHECK-NEXT:    [[SAMEVALUES:%.*]] = icmp ule i32 [[WITHPOISONFLAG]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[SAMEVALUES]], i32 [[TMP1]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP4]], i32 [[TMP0]], i32 [[TMP3]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %4 = icmp eq i32 %1, %2
+  %withPoisonFlag = or i32 %1, 42
+  %sameValues = icmp ule i32 %withPoisonFlag, %2
+  %5 = select i1 %sameValues, i32 %2, i32 %1
+  %6 = select i1 %4, i32 %1, i32 %5
+  ret i32 %6
+}
+
+define i32 @selectICmpSelectInArmNotSimplifiedPoisonFlagOnCondUseDefChain(i32 %1, i32 %2, i1 %scond) {
+; CHECK-LABEL: @selectICmpSelectInArmNotSimplifiedPoisonFlagOnCondUseDefChain(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[WITHPOISONFLAG:%.*]] = or disjoint i32 [[TMP0]], 42
+; CHECK-NEXT:    [[SAMEVALUES:%.*]] = icmp ule i32 [[WITHPOISONFLAG]], [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[SAMEVALUES]], i32 [[TMP1]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 [[TMP0]], i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %4 = icmp eq i32 %1, %2
+  %withPoisonFlag = or disjoint i32 %1, 42
+  %sameValues = icmp ule i32 %withPoisonFlag, %2
+  %5 = select i1 %sameValues, i32 %2, i32 %1
+  %6 = select i1 %4, i32 %1, i32 %5
+  ret i32 %6
+}
+
+define i32 @selectICmpSelectInArmNotSimplifiedSecondSelectPoisonBarrier(i32 %1, i32 %2, i1 %scond) {
+; CHECK-LABEL: @selectICmpSelectInArmNotSimplifiedSecondSelectPoisonBarrier(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[SAMEVALUES:%.*]] = icmp ule i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[SAMEVALUES]], [[SCOND:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[OR]], i32 [[TMP1]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 [[TMP0]], i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %4 = icmp eq i32 %1, %2
+  %sameValues = icmp ule i32 %1, %2
+  %or = or i1 %sameValues, %scond
+  %5 = select i1 %or, i32 %2, i32 %1
+  %6 = select i1 %4, i32 %1, i32 %5
+  ret i32 %6
+}
+
+define i32 @selectICmpSelectInArmNotSimplifiedSecondSelectPoisonBarrierPoisonFlagInCond(i32 %1, i32 %2, i1 %scond) {
+; CHECK-LABEL: @selectICmpSelectInArmNotSimplifiedSecondSelectPoisonBarrierPoisonFlagInCond(
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP0:%.*]], [[TMP1:%.*]]
+; CHECK-NEXT:    [[SAMEVALUES:%.*]] = icmp ule i32 [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[OR:%.*]] = or disjoint i1 [[SAMEVALUES]], [[SCOND:%.*]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[OR]], i32 [[TMP1]], i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[TMP3]], i32 [[TMP0]], i32 [[TMP4]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+  %4 = icmp eq i32 %1, %2
+  %sameValues = icmp ule i32 %1, %2
+  %or = or disjoint i1 %sameValues, %scond
+  %5 = select i1 %or, i32 %2, i32 %1
+  %6 = select i1 %4, i32 %1, i32 %5
+  ret i32 %6
+}
+
