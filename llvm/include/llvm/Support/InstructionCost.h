@@ -64,8 +64,6 @@ private:
 
   static constexpr CostType MaxValue = std::numeric_limits<CostType>::max();
   static constexpr CostType MinValue = std::numeric_limits<CostType>::min();
-  static constexpr CostType MaxInputValue = MaxValue / ScalingFactor;
-  static constexpr CostType MinInputValue = MinValue / ScalingFactor;
 
 public:
   // A default constructed InstructionCost is a valid zero cost
@@ -73,13 +71,14 @@ public:
 
   InstructionCost(CostState) = delete;
   InstructionCost(CostType Val) : Value(), State(Valid) {
-    if (Val > MaxInputValue)
-      Val = MaxValue;
-    else if (Val < MinInputValue)
-      Val = MinValue;
-    else
-      Val *= ScalingFactor;
-    Value = Val;
+    InstructionCost::CostType Result;
+    if (MulOverflow(Val, ScalingFactor, Result)) {
+      if (Val > 0)
+        Result = MaxValue;
+      else
+        Result = MinValue;
+    }
+    Value = Result;
   }
 
   static InstructionCost getMax() { return MaxValue; }
