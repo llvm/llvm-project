@@ -232,7 +232,6 @@ struct MissingFeatures {
   static bool builtinCheckKind() { return false; }
   static bool cgCapturedStmtInfo() { return false; }
   static bool countedBySize() { return false; }
-  static bool cgFPOptionsRAII() { return false; }
   static bool checkBitfieldClipping() { return false; }
   static bool cirgenABIInfo() { return false; }
   static bool cleanupAfterErrorDiags() { return false; }
@@ -279,13 +278,21 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
+
+  // Fast math.
+  static bool fastMathGuard() { return false; }
+  // Should be implemented with a moduleOp level attribute and directly
+  // mapped to LLVM - those can be set directly for every relevant LLVM IR
+  // dialect operation (log10, ...).
   static bool fastMathFlags() { return false; }
+  static bool fastMathFuncAttributes() { return false; }
 
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
   static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
+  static bool guardAbortOnException() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
   static bool hip() { return false; }
   static bool incrementProfileCounter() { return false; }
@@ -332,7 +339,6 @@ struct MissingFeatures {
   static bool setNonGC() { return false; }
   static bool setObjCGCLValueClass() { return false; }
   static bool setTargetAttributes() { return false; }
-  static bool shouldCreateMemCpyFromGlobal() { return false; }
   static bool shouldSplitConstantStore() { return false; }
   static bool shouldUseBZeroPlusStoresToInitialize() { return false; }
   static bool shouldUseMemSetToInitialize() { return false; }
@@ -380,6 +386,7 @@ struct MissingFeatures {
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+  static bool functionArgumentAttrs() { return false; }
 
   // Maybe only needed for Windows exception handling
   static bool currentFuncletPad() { return false; }

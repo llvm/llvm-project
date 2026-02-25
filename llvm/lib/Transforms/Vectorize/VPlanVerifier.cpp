@@ -31,7 +31,6 @@ namespace {
 class VPlanVerifier {
   const VPDominatorTree &VPDT;
   VPTypeAnalysis &TypeInfo;
-  bool VerifyLate;
 
   SmallPtrSet<BasicBlock *, 8> WrappedIRBBs;
 
@@ -39,11 +38,6 @@ class VPlanVerifier {
   // other recipes in between. Also check that only header blocks contain
   // VPHeaderPHIRecipes.
   bool verifyPhiRecipes(const VPBasicBlock *VPBB);
-
-  /// Verify that \p EVL is used correctly. The user must be either in
-  /// EVL-based recipes as a last operand or VPInstruction::Add which is
-  /// incoming value into EVL's recipe.
-  bool verifyEVLRecipe(const VPInstruction &EVL) const;
 
   /// Verify that \p LastActiveLane's operand is guaranteed to be a prefix-mask.
   bool verifyLastActiveLaneRecipe(const VPInstruction &LastActiveLane) const;
@@ -67,9 +61,8 @@ class VPlanVerifier {
   bool verifyRegionRec(const VPRegionBlock *Region);
 
 public:
-  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo,
-                bool VerifyLate)
-      : VPDT(VPDT), TypeInfo(TypeInfo), VerifyLate(VerifyLate) {}
+  VPlanVerifier(VPDominatorTree &VPDT, VPTypeAnalysis &TypeInfo)
+      : VPDT(VPDT), TypeInfo(TypeInfo) {}
 
   bool verify(const VPlan &Plan);
 };
@@ -103,9 +96,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
-    if (isa<VPEVLBasedIVPHIRecipe>(RecipeI) &&
+    if (isa<VPCurrentIterationPHIRecipe>(RecipeI) &&
         !isa_and_nonnull<VPCanonicalIVPHIRecipe>(std::prev(RecipeI))) {
-      errs() << "EVL based IV is not immediately after canonical IV\n";
+      errs() << "CurrentIteration PHI is not immediately after canonical IV\n";
       return false;
     }
 
@@ -124,7 +117,7 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     RecipeI++;
   }
 
-  if (!VerifyLate && NumActiveLaneMaskPhiRecipes > 1) {
+  if (!VPBB->getPlan()->isUnrolled() && NumActiveLaneMaskPhiRecipes > 1) {
     errs() << "There should be no more than one VPActiveLaneMaskPHIRecipe";
     return false;
   }
@@ -144,83 +137,6 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     RecipeI++;
   }
   return true;
-}
-
-bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
-  if (EVL.getOpcode() != VPInstruction::ExplicitVectorLength) {
-    errs() << "verifyEVLRecipe should only be called on "
-              "VPInstruction::ExplicitVectorLength\n";
-    return false;
-  }
-  auto VerifyEVLUse = [&](const VPRecipeBase &R,
-                          const unsigned ExpectedIdx) -> bool {
-    SmallVector<const VPValue *> Ops(R.operands());
-    unsigned UseCount = count(Ops, &EVL);
-    if (UseCount != 1 || Ops[ExpectedIdx] != &EVL) {
-      errs() << "EVL is used as non-last operand in EVL-based recipe\n";
-      return false;
-    }
-    return true;
-  };
-  return all_of(EVL.users(), [this, &VerifyEVLUse](VPUser *U) {
-    return TypeSwitch<const VPUser *, bool>(U)
-        .Case([&](const VPWidenIntrinsicRecipe *S) {
-          return VerifyEVLUse(*S, S->getNumOperands() - 1);
-        })
-        .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
-              VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
-            [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case([&](const VPScalarIVStepsRecipe *R) {
-          if (R->getNumOperands() != 3) {
-            errs() << "Unrolling with EVL tail folding not yet supported\n";
-            return false;
-          }
-          return VerifyEVLUse(*R, 2);
-        })
-        .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe,
-              VPInterleaveEVLRecipe>(
-            [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case(
-            [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
-        .Case([&](const VPInstruction *I) {
-          if (I->getOpcode() == Instruction::PHI ||
-              I->getOpcode() == Instruction::ICmp ||
-              I->getOpcode() == Instruction::Sub)
-            return VerifyEVLUse(*I, 1);
-          switch (I->getOpcode()) {
-          case Instruction::Add:
-            break;
-          case Instruction::UIToFP:
-          case Instruction::Trunc:
-          case Instruction::ZExt:
-          case Instruction::Mul:
-          case Instruction::Shl:
-          case Instruction::FMul:
-          case VPInstruction::Broadcast:
-          case VPInstruction::PtrAdd:
-            // Opcodes above can only use EVL after wide inductions have been
-            // expanded.
-            if (!VerifyLate) {
-              errs() << "EVL used by unexpected VPInstruction\n";
-              return false;
-            }
-            break;
-          default:
-            errs() << "EVL used by unexpected VPInstruction\n";
-            return false;
-          }
-          if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
-            errs() << "Result of VPInstruction::Add with EVL operand is "
-                      "not used by VPEVLBasedIVPHIRecipe\n";
-            return false;
-          }
-          return true;
-        })
-        .Default([&](const VPUser *U) {
-          errs() << "EVL has unexpected user\n";
-          return false;
-        });
-  });
 }
 
 bool VPlanVerifier::verifyLastActiveLaneRecipe(
@@ -347,12 +263,6 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
     }
     if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
       switch (VPI->getOpcode()) {
-      case VPInstruction::ExplicitVectorLength:
-        if (!verifyEVLRecipe(*VPI)) {
-          errs() << "EVL VPValue is not used correctly\n";
-          return false;
-        }
-        break;
       case VPInstruction::LastActiveLane:
         if (!verifyLastActiveLaneRecipe(*VPI))
           return false;
@@ -544,9 +454,9 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   return true;
 }
 
-bool llvm::verifyVPlanIsValid(const VPlan &Plan, bool VerifyLate) {
+bool llvm::verifyVPlanIsValid(const VPlan &Plan) {
   VPDominatorTree VPDT(const_cast<VPlan &>(Plan));
   VPTypeAnalysis TypeInfo(Plan);
-  VPlanVerifier Verifier(VPDT, TypeInfo, VerifyLate);
+  VPlanVerifier Verifier(VPDT, TypeInfo);
   return Verifier.verify(Plan);
 }

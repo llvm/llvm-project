@@ -398,6 +398,19 @@ func.func @extract_from_elements_complex_f() -> tensor<3xcomplex<f32>> {
 
 // -----
 
+// Ensure tensor.from_elements with poison values doesn't crash.
+// CHECK-LABEL: func @from_elements_with_poison
+func.func @from_elements_with_poison() -> tensor<1xindex> {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK: %[[TENSOR:.*]] = tensor.from_elements %[[POISON]] : tensor<1xindex>
+  // CHECK: return %[[TENSOR]]
+  %0 = ub.poison : index
+  %1 = tensor.from_elements %0 : tensor<1xindex>
+  return %1 : tensor<1xindex>
+}
+
+// -----
+
 // Ensure the optimization doesn't segfault from bad constants
 // CHECK-LABEL: func @extract_negative_from_tensor.from_elements
 func.func @extract_negative_from_tensor.from_elements(%element : index) -> index {
@@ -1351,7 +1364,7 @@ func.func @compose_expand_of_collapse_dynamic(%arg0 : tensor<4x?x10x64x2xf16>, %
 
 func.func @no_compose_collapse_of_expand_dynamic(%arg0 : tensor<?x8x128x?xf16>, %arg1: index) -> tensor<?x128x?xf16> {
   %collapse = tensor.collapse_shape %arg0 [[0, 1, 2, 3]] : tensor<?x8x128x?xf16> into tensor<?xf16>
-  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 8, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
+  %expanded_19 = tensor.expand_shape %collapse [[0, 1, 2]] output_shape [%arg1, 128, %arg1] : tensor<?xf16> into tensor<?x128x?xf16>
   return %expanded_19 : tensor<?x128x?xf16>
 }
 // CHECK-LABEL: func @no_compose_collapse_of_expand_dynamic

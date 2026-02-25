@@ -989,7 +989,7 @@ mlir::Value CIRGenFunction::evaluateExprAsBool(const Expr *e) {
     return createDummyValue(getLoc(loc), boolTy);
   }
 
-  assert(!cir::MissingFeatures::cgFPOptionsRAII());
+  CIRGenFunction::CIRGenFPOptionsRAII FPOptsRAII(*this, e);
   if (!e->getType()->isAnyComplexType())
     return emitScalarConversion(emitScalarExpr(e), e->getType(), boolTy, loc);
 
@@ -1657,10 +1657,13 @@ static Address createReferenceTemporary(CIRGenFunction &cgf,
   }
   case SD_Thread:
   case SD_Static: {
-    cgf.cgm.errorNYI(
-        m->getSourceRange(),
-        "createReferenceTemporary: static/thread storage duration");
-    return Address::invalid();
+    auto addr =
+        mlir::cast<cir::GlobalOp>(cgf.cgm.getAddrOfGlobalTemporary(m, inner));
+    auto getGlobal = cgf.cgm.getBuilder().createGetGlobal(addr);
+    assert(addr.getAlignment().has_value() &&
+           "This should always have an alignment");
+    return Address(getGlobal,
+                   clang::CharUnits::fromQuantity(addr.getAlignment().value()));
   }
 
   case SD_Dynamic:
