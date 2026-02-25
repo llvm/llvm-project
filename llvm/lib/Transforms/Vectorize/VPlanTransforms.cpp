@@ -4117,14 +4117,12 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   // before downstream exits in the dispatch chain.
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       HeaderVPBB);
-  DenseMap<VPBlockBase *, unsigned> RPONumber;
-  unsigned Num = 0;
-  for (VPBlockBase *VPB : RPOT)
-    RPONumber[VPB] = Num++;
-  llvm::sort(
-      Exits, [&RPONumber](const EarlyExitInfo &A, const EarlyExitInfo &B) {
-        return RPONumber[A.EarlyExitingVPBB] < RPONumber[B.EarlyExitingVPBB];
-      });
+  DenseMap<VPBlockBase *, unsigned> RPOIdx;
+  for (const auto &[Num, VPB] : enumerate(RPOT))
+    RPOIdx[VPB] = Num;
+  llvm::sort(Exits, [&RPOIdx](const EarlyExitInfo &A, const EarlyExitInfo &B) {
+    return RPOIdx[A.EarlyExitingVPBB] < RPOIdx[B.EarlyExitingVPBB];
+  });
 #ifndef NDEBUG
   // After RPO sorting, verify that for any pair where one exit dominates
   // another, the dominating exit comes first. This is guaranteed by RPO
