@@ -168,6 +168,10 @@ New Compiler Flags
   enable parsing of the experimental ``overflow_behavior`` type attribute and
   type specifiers.
 
+- New ``-cl`` option ``/d2guardnochecks`` added to match MSVC. When Windows
+  Control Flow Guard (CFG) is enabled by other options, it will instruct Clang
+  to emit the CFG metadata, but disable adding checks.
+
 Deprecated Compiler Flags
 -------------------------
 
