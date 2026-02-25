@@ -8201,22 +8201,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     IVUpdateMayOverflow |= !isIndvarOverflowCheckKnownFalse(&CM, VF);
 
   TailFoldingStyle Style = CM.getTailFoldingStyle(IVUpdateMayOverflow);
-  // Use NUW for the induction increment if we proved that it won't overflow in
-  // the vector loop or when not folding the tail. In the later case, we know
-  // that the canonical induction increment will not overflow as the vector trip
-  // count is >= increment and a multiple of the increment.
   VPRegionBlock *LoopRegion = Plan->getVectorLoopRegion();
-  bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
-  if (!HasNUW) {
-    auto *IVInc =
-        LoopRegion->getExitingBasicBlock()->getTerminator()->getOperand(0);
-    assert(match(IVInc,
-                 m_VPInstruction<Instruction::Add>(
-                     m_Specific(LoopRegion->getCanonicalIV()), m_VPValue())) &&
-           "Did not find the canonical IV increment");
-    cast<VPRecipeWithIRFlags>(IVInc)->dropPoisonGeneratingFlags();
-  }
-
   // ---------------------------------------------------------------------------
   // Pre-construction: record ingredients whose recipes we'll need to further
   // process after constructing the initial VPlan.
