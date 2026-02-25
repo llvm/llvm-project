@@ -129,6 +129,11 @@ MlirDynamicTypeDefinition mlirDynamicTypeGetTypeDef(MlirType type) {
   return wrap(llvm::cast<mlir::DynamicType>(unwrap(type)).getTypeDef());
 }
 
+MlirTypeID
+mlirDynamicTypeDefinitionGetTypeID(MlirDynamicTypeDefinition typeDef) {
+  return wrap(unwrap(typeDef)->getTypeID());
+}
+
 MlirStringRef
 mlirDynamicTypeDefinitionGetName(MlirDynamicTypeDefinition typeDef) {
   return wrap(unwrap(typeDef)->getName());
@@ -174,6 +179,11 @@ MlirAttribute mlirDynamicAttrGetParam(MlirAttribute attr, intptr_t index) {
 
 MlirDynamicAttrDefinition mlirDynamicAttrGetAttrDef(MlirAttribute attr) {
   return wrap(llvm::cast<mlir::DynamicAttr>(unwrap(attr)).getAttrDef());
+}
+
+MlirTypeID
+mlirDynamicAttrDefinitionGetTypeID(MlirDynamicAttrDefinition attrDef) {
+  return wrap(unwrap(attrDef)->getTypeID());
 }
 
 MlirStringRef
