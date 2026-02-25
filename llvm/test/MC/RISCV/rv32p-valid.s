@@ -2,7 +2,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-p < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-p -d -r --no-print-imm-hex - \
-# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: cls a1, a2
 # CHECK-ASM: encoding: [0x93,0x15,0x36,0x60]
@@ -16,7 +16,8 @@ rev s2, s3
 # CHECK-ASM-AND-OBJ: pack s0, s1, s2
 # CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
 pack s0, s1, s2
-# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: pack t0, t1, zero
+# CHECK-OBJ: zext.h t0, t1
 # CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
 pack t0, t1, x0
 # CHECK-ASM-AND-OBJ: zext.h t0, t1
@@ -337,6 +338,9 @@ maccsu.h11 s0, a2, s6
 # CHECK-ASM-AND-OBJ: ppaire.b t1, a2, t5
 # CHECK-ASM: encoding: [0x3b,0x43,0xe6,0x81]
 ppaire.b t1, a2, t5
+# CHECK-ASM-AND-OBJ: pack s0, s1, s2
+# CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
+ppaire.h s0, s1, s2
 # CHECK-ASM-AND-OBJ: ppaireo.b t5, t3, s2
 # CHECK-ASM: encoding: [0x3b,0x4f,0x2e,0x91]
 ppaireo.b t5, t3, s2
@@ -906,15 +910,15 @@ pnsrai.h s0, a0, 2
 # CHECK-ASM-AND-OBJ: nsrai a4, t3
 # CHECK-ASM: encoding: [0x1b,0xc7,0x4e,0x44]
 nsrai a4, t3, 4
-# CHECK-ASM-AND-OBJ: pnsari.b t5, t5
+# CHECK-ASM-AND-OBJ: pnsrari.b t5, t5
 # CHECK-ASM: encoding: [0x1b,0xcf,0x0f,0x51]
-pnsari.b t5, t5, 0
-# CHECK-ASM-AND-OBJ: pnsari.h t1, a4
+pnsrari.b t5, t5, 0
+# CHECK-ASM-AND-OBJ: pnsrari.h t1, a4
 # CHECK-ASM: encoding: [0x1b,0xc3,0x37,0x52]
-pnsari.h t1, a4, 3
-# CHECK-ASM-AND-OBJ: nsari s0, t1
+pnsrari.h t1, a4, 3
+# CHECK-ASM-AND-OBJ: nsrari s0, t1
 # CHECK-ASM: encoding: [0x1b,0xc4,0x53,0x54]
-nsari s0, t1, 5
+nsrari s0, t1, 5
 # CHECK-ASM-AND-OBJ: pnclipi.b t1, a4
 # CHECK-ASM: encoding: [0x1b,0xc3,0x77,0x61]
 pnclipi.b t1, a4, 7
@@ -1266,9 +1270,9 @@ psas.dhx a2, a2, s0
 # CHECK-ASM-AND-OBJ: pssa.dhx t3, t3, t3
 # CHECK-ASM: encoding: [0x1b,0xee,0xde,0x95]
 pssa.dhx t3, t3, t3
-# CHECK-ASM-AND-OBJ: paax.dhx t3, t3, a4
+# CHECK-ASM-AND-OBJ: paas.dhx t3, t3, a4
 # CHECK-ASM: encoding: [0x1b,0xee,0xfe,0x98]
-paax.dhx t3, t3, a4
+paas.dhx t3, t3, a4
 # CHECK-ASM-AND-OBJ: pasa.dhx a0, t1, t1
 # CHECK-ASM: encoding: [0x1b,0xe5,0x73,0x9c]
 pasa.dhx a0, t1, t1

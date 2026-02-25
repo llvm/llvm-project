@@ -7,6 +7,7 @@ from lldbsuite.test_event.build_exception import BuildError
 
 class TestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
+    SHARED_BUILD_TESTCASE = False
 
     def build_and_run(self, test_file):
         """

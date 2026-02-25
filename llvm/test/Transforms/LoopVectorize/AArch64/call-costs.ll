@@ -113,10 +113,8 @@ define void @call_scalarized(ptr noalias %src, ptr noalias %dst) {
 ; CHECK-NEXT:    [[IV:%.*]] = sub i64 100, [[INDEX]]
 ; CHECK-NEXT:    [[IV_NEXT:%.*]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC]], i64 [[IV_NEXT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr double, ptr [[GEP_SRC]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[TMP2]], i64 -1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr double, ptr [[GEP_SRC]], i64 -2
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[TMP4]], i64 -1
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[GEP_SRC]], i64 -1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr double, ptr [[GEP_SRC]], i64 -3
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP5]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <2 x double> [[WIDE_LOAD]], <2 x double> poison, <2 x i32> <i32 1, i32 0>

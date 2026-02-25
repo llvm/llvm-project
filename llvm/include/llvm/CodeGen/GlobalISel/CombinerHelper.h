@@ -157,6 +157,10 @@ public:
   /// perform WidenScalar action on the target.
   bool isLegalOrHasWidenScalar(const LegalityQuery &Query) const;
 
+  /// \return true if \p Query is legal on the target, or if \p Query will
+  /// perform a FewerElements action on the target.
+  bool isLegalOrHasFewerElements(const LegalityQuery &Query) const;
+
   /// \return true if the combine is running prior to legalization, or if \p Ty
   /// is a legal integer constant type on the target.
   bool isConstantLegalOrBeforeLegalizer(const LLT Ty) const;
@@ -517,9 +521,6 @@ public:
 
   /// Optimize (x op x) -> x
   bool matchBinOpSameVal(MachineInstr &MI) const;
-
-  /// Check if operand \p OpIdx is zero.
-  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) const;
 
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;

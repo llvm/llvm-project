@@ -889,7 +889,6 @@ public:
   std::optional<unsigned> getVScaleForTuning() const override {
     return std::nullopt;
   }
-  bool isVScaleKnownToBeAPowerOfTwo() const override { return false; }
 
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
@@ -2702,6 +2701,9 @@ public:
     case Intrinsic::scmp:
       ISD = ISD::SCMP;
       break;
+    case Intrinsic::clmul:
+      ISD = ISD::CLMUL;
+      break;
     }
 
     auto *ST = dyn_cast<StructType>(RetTy);
@@ -3016,6 +3018,22 @@ public:
         return LT.first + FCanonicalizeCost * 2;
       }
       break;
+    }
+    case Intrinsic::clmul: {
+      // This cost model should match the expansion in
+      // TargetLowering::expandCLMUL.
+      InstructionCost PerBitCostMul =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      InstructionCost PerBitCostBittest =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, RetTy,
+                                      ICmpInst::BAD_ICMP_PREDICATE, CostKind) +
+          thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, RetTy,
+                                      ICmpInst::ICMP_NE, CostKind);
+      InstructionCost PerBitCost = std::min(PerBitCostMul, PerBitCostBittest);
+      return RetTy->getScalarSizeInBits() * PerBitCost;
     }
     default:
       break;

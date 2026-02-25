@@ -11,6 +11,7 @@
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
 
@@ -71,6 +72,16 @@ void populateXeGPUMoveFuncBodyToWarpOpPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU workgroup to subgroup distribution into
 /// `patterns`.
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
+/// Define only the type conversions needed for XeGPU subgroup to workitem
+/// distribution.
+void populateXeGPUSgToWiDistributeTypeConversions(TypeConverter &typeConverter);
+/// Defines type conversions and legality for XeGPU subgroup to workitem
+/// distribution and appends the required conversion patterns into `patterns`.
+/// Appends patterns for XeGPU subgroup to workitem distribution into
+/// `patterns`.
+void populateXeGPUSgToWiDistributeTypeConversionAndLegality(
+    TypeConverter &typeConverter, RewritePatternSet &patterns,
+    ConversionTarget &target);
 
 /// Collect a set of patterns to unroll xegpu operations to a smaller shapes.
 /// Users can control whether an operation to be unrolled or not, as well as
@@ -82,7 +93,7 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 ///   1. the unrolled type `unrolledType` and number of unrolled instances
 ///   `numUnrolledInstances` are computed from the `targetShape`.
 ///   2. pack each operand. ExtractStridedSlice are created to break-up the
-///   vector operands. And BuiltinUnrealizedCastop are created to break-up
+///   vector operands. And BuiltinUnrealizedCastOp are created to break-up
 ///    the TensorDesc operands.
 ///   3. the original op is cloned `numUnrolledInstances` times, once for each
 ///   result.
@@ -91,12 +102,6 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 ///   to re-assemble the slices into the original shape.
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
-
-enum class LayoutKind { Lane, InstData, Subgroup };
-LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
-                               LayoutKind layoutKind, bool printOnly = false);
-
-LogicalResult resolveLayoutConflicts(Operation *target);
 
 } // namespace xegpu
 } // namespace mlir

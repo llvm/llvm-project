@@ -255,7 +255,7 @@ def SPIRV_VectorInsertDynamicOp : SPIRV_Op<"VectorInsertDynamic", [
 
     ```mlir
     %scalar = ... : f32
-    %2 = spirv.VectorInsertDynamic %scalar %0[%1] : f32, vector<8xf32>, i32
+    %2 = spirv.VectorInsertDynamic %scalar, %0[%1] : vector<8xf32>, i32
     ```
   }];
 

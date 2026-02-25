@@ -490,61 +490,173 @@ define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in)
 ; GFX11-SDAG-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
-; GFX11-GISEL-LABEL: fptrunc_f64_to_f16:
-; GFX11-GISEL:       ; %bb.0:
-; GFX11-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
-; GFX11-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-GISEL-NEXT:    s_bfe_u32 s4, s3, 0xb0014
-; GFX11-GISEL-NEXT:    s_lshr_b32 s5, s3, 8
-; GFX11-GISEL-NEXT:    s_and_b32 s6, s3, 0x1ff
-; GFX11-GISEL-NEXT:    s_addk_i32 s4, 0xfc10
-; GFX11-GISEL-NEXT:    s_and_b32 s5, s5, 0xffe
-; GFX11-GISEL-NEXT:    s_or_b32 s2, s6, s2
-; GFX11-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    s_or_b32 s2, s5, s2
-; GFX11-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
-; GFX11-GISEL-NEXT:    s_sub_i32 s6, 1, s4
-; GFX11-GISEL-NEXT:    s_or_b32 s8, s2, 0x1000
-; GFX11-GISEL-NEXT:    s_max_i32 s6, s6, 0
-; GFX11-GISEL-NEXT:    s_lshl_b32 s7, s4, 12
-; GFX11-GISEL-NEXT:    s_min_i32 s6, s6, 13
-; GFX11-GISEL-NEXT:    s_lshl_b32 s5, s5, 9
-; GFX11-GISEL-NEXT:    s_lshr_b32 s9, s8, s6
-; GFX11-GISEL-NEXT:    s_or_b32 s2, s2, s7
-; GFX11-GISEL-NEXT:    s_lshl_b32 s6, s9, s6
-; GFX11-GISEL-NEXT:    s_or_b32 s5, s5, 0x7c00
-; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s6, s8
-; GFX11-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    s_or_b32 s6, s9, s6
-; GFX11-GISEL-NEXT:    s_cmp_lt_i32 s4, 1
-; GFX11-GISEL-NEXT:    s_cselect_b32 s2, s6, s2
-; GFX11-GISEL-NEXT:    s_and_b32 s6, s2, 7
-; GFX11-GISEL-NEXT:    s_lshr_b32 s2, s2, 2
-; GFX11-GISEL-NEXT:    s_cmp_eq_u32 s6, 3
-; GFX11-GISEL-NEXT:    s_cselect_b32 s7, 1, 0
-; GFX11-GISEL-NEXT:    s_cmp_gt_i32 s6, 5
-; GFX11-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    s_or_b32 s6, s7, s6
-; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
-; GFX11-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    s_add_i32 s2, s2, s6
-; GFX11-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
-; GFX11-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
-; GFX11-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
-; GFX11-GISEL-NEXT:    s_cselect_b32 s2, s5, s2
-; GFX11-GISEL-NEXT:    s_lshr_b32 s3, s3, 16
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX11-GISEL-NEXT:    s_and_b32 s3, s3, 0x8000
-; GFX11-GISEL-NEXT:    s_or_b32 s2, s3, s2
-; GFX11-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
-; GFX11-GISEL-NEXT:    v_mov_b32_e32 v0, s2
-; GFX11-GISEL-NEXT:    s_mov_b32 s2, -1
-; GFX11-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
-; GFX11-GISEL-NEXT:    s_endpgm
+; GFX11-SAFE-GISEL-LABEL: fptrunc_f64_to_f16:
+; GFX11-SAFE-GISEL:       ; %bb.0:
+; GFX11-SAFE-GISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-SAFE-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-SAFE-GISEL-NEXT:    s_bfe_u32 s4, s3, 0xb0014
+; GFX11-SAFE-GISEL-NEXT:    s_lshr_b32 s5, s3, 8
+; GFX11-SAFE-GISEL-NEXT:    s_and_b32 s6, s3, 0x1ff
+; GFX11-SAFE-GISEL-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX11-SAFE-GISEL-NEXT:    s_and_b32 s5, s5, 0xffe
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s2, s6, s2
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s2, s5, s2
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX11-SAFE-GISEL-NEXT:    s_sub_i32 s6, 1, s4
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s8, s2, 0x1000
+; GFX11-SAFE-GISEL-NEXT:    s_max_i32 s6, s6, 0
+; GFX11-SAFE-GISEL-NEXT:    s_lshl_b32 s7, s4, 12
+; GFX11-SAFE-GISEL-NEXT:    s_min_i32 s6, s6, 13
+; GFX11-SAFE-GISEL-NEXT:    s_lshl_b32 s5, s5, 9
+; GFX11-SAFE-GISEL-NEXT:    s_lshr_b32 s9, s8, s6
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s2, s2, s7
+; GFX11-SAFE-GISEL-NEXT:    s_lshl_b32 s6, s9, s6
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s5, s5, 0x7c00
+; GFX11-SAFE-GISEL-NEXT:    s_cmp_lg_u32 s6, s8
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s6, s9, s6
+; GFX11-SAFE-GISEL-NEXT:    s_cmp_lt_i32 s4, 1
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s2, s6, s2
+; GFX11-SAFE-GISEL-NEXT:    s_and_b32 s6, s2, 7
+; GFX11-SAFE-GISEL-NEXT:    s_lshr_b32 s2, s2, 2
+; GFX11-SAFE-GISEL-NEXT:    s_cmp_eq_u32 s6, 3
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s7, 1, 0
+; GFX11-SAFE-GISEL-NEXT:    s_cmp_gt_i32 s6, 5
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s6, s7, s6
+; GFX11-SAFE-GISEL-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SAFE-GISEL-NEXT:    s_add_i32 s2, s2, s6
+; GFX11-SAFE-GISEL-NEXT:    s_cmp_gt_i32 s4, 30
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s2, 0x7c00, s2
+; GFX11-SAFE-GISEL-NEXT:    s_cmpk_eq_i32 s4, 0x40f
+; GFX11-SAFE-GISEL-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX11-SAFE-GISEL-NEXT:    s_lshr_b32 s3, s3, 16
+; GFX11-SAFE-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-SAFE-GISEL-NEXT:    s_and_b32 s3, s3, 0x8000
+; GFX11-SAFE-GISEL-NEXT:    s_or_b32 s2, s3, s2
+; GFX11-SAFE-GISEL-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-SAFE-GISEL-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-SAFE-GISEL-NEXT:    s_mov_b32 s2, -1
+; GFX11-SAFE-GISEL-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-SAFE-GISEL-NEXT:    s_endpgm
+;
+; GFX11-UNSAFE-GISEL-TRUE16-LABEL: fptrunc_f64_to_f16:
+; GFX11-UNSAFE-GISEL-TRUE16:       ; %bb.0:
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_bfe_u32 s4, s3, 0xb0014
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_lshr_b32 s5, s3, 8
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_and_b32 s6, s3, 0x1ff
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_and_b32 s5, s5, 0xffe
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s2, s6, s2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s2, s5, s2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_sub_i32 s6, 1, s4
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s8, s2, 0x1000
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_max_i32 s6, s6, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_lshl_b32 s7, s4, 12
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_min_i32 s6, s6, 13
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_lshl_b32 s5, s5, 9
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_lshr_b32 s9, s8, s6
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s2, s2, s7
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_lshl_b32 s6, s9, s6
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s5, s5, 0x7c00
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s6, s8
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s6, s9, s6
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cmp_lt_i32 s4, 1
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, s6, s2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_and_b32 s6, s2, 7
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_lshr_b32 s2, s2, 2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cmp_eq_u32 s6, 3
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s7, 1, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s6, 5
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s6, s7, s6
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_add_i32 s2, s2, s6
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cmp_gt_i32 s4, 30
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, 0x7c00, s2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cmpk_eq_i32 s4, 0x40f
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_lshr_b32 s3, s3, 16
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_and_b32 s3, s3, 0x8000
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_or_b32 s2, s3, s2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s2
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-UNSAFE-GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GFX11-UNSAFE-GISEL-FAKE16-LABEL: fptrunc_f64_to_f16:
+; GFX11-UNSAFE-GISEL-FAKE16:       ; %bb.0:
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_bfe_u32 s4, s3, 0xb0014
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_lshr_b32 s5, s3, 8
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_and_b32 s6, s3, 0x1ff
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_addk_i32 s4, 0xfc10
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_and_b32 s5, s5, 0xffe
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s2, s6, s2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, 1, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s2, s5, s2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s5, 1, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_sub_i32 s6, 1, s4
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s8, s2, 0x1000
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_max_i32 s6, s6, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_lshl_b32 s7, s4, 12
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_min_i32 s6, s6, 13
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_lshl_b32 s5, s5, 9
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_lshr_b32 s9, s8, s6
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s2, s2, s7
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_lshl_b32 s6, s9, s6
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s5, s5, 0x7c00
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s6, s8
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s6, s9, s6
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cmp_lt_i32 s4, 1
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, s6, s2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_and_b32 s6, s2, 7
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_lshr_b32 s2, s2, 2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cmp_eq_u32 s6, 3
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s7, 1, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s6, 5
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s6, s7, s6
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cmp_lg_u32 s6, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s6, 1, 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_add_i32 s2, s2, s6
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cmp_gt_i32 s4, 30
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, 0x7c00, s2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cmpk_eq_i32 s4, 0x40f
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_cselect_b32 s2, s5, s2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_lshr_b32 s3, s3, 16
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_and_b32 s3, s3, 0x8000
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_or_b32 s2, s3, s2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_mov_b32 s3, 0x31016000
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s2
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_mov_b32 s2, -1
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
+; GFX11-UNSAFE-GISEL-FAKE16-NEXT:    s_endpgm
   %result = fptrunc double %in to half
   %result_i16 = bitcast half %result to i16
   store i16 %result_i16, ptr addrspace(1) %out

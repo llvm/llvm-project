@@ -136,8 +136,12 @@ expand_template(
         "#cmakedefine01 CURSES_HAVE_NCURSES_CURSES_H": "#define CURSES_HAVE_NCURSES_CURSES_H 0",
         "#cmakedefine01 LLDB_ENABLE_FBSDVMCORE": "#define LLDB_ENABLE_FBSDVMCORE 0",
 
+        # TODO: treesitter support
+        "#cmakedefine01 LLDB_ENABLE_TREESITTER": "#define LLDB_ENABLE_TREESITTER 0",
+
         # Defaults that could be configurable if needed
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
+        "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
         "#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R\"(${LLDB_GLOBAL_INIT_DIRECTORY})\"": "#define LLDB_GLOBAL_INIT_DIRECTORY \"\"",
         "${LLDB_INSTALL_LIBDIR_BASENAME}": "lib",
         "${LLDB_BUG_REPORT_URL}": "",
@@ -285,11 +289,10 @@ cc_library(
     name = "DataFormatters",
     srcs = glob([
         "source/DataFormatters/**/*.cpp",
-        "source/DataFormatters/**/*.h",
     ]),
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
     includes = ["include"],
-    textual_hdrs = glob(["source/DataFormatters/**/*.def"]),
+    textual_hdrs = glob(["include/lldb/DataFormatters/**/*.def"]),
     deps = [
         ":CoreHeaders",
         ":Headers",
@@ -385,6 +388,7 @@ cc_library(
     name = "DataFormattersHeaders",
     hdrs = glob(["include/lldb/DataFormatters/**/*.h"]),
     includes = ["include"],
+    textual_hdrs = glob(["include/lldb/DataFormatters/**/*.def"]),
 )
 
 cc_library(
@@ -756,6 +760,27 @@ cc_library(
     name = "UtilityHeaders",
     hdrs = glob(["include/lldb/Utility/**/*.h"]),
     includes = ["include"],
+)
+
+cc_library(
+    name = "ProtocolHeaders",
+    hdrs = glob(["include/lldb/Protocol/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Headers",
+        "//llvm:Telemetry",
+    ],
+)
+
+cc_library(
+    name = "ProtocolMCP",
+    srcs = glob(["source/Protocol/MCP/*.cpp"]),
+    deps = [
+        ":Host",
+        ":ProtocolHeaders",
+        ":Utility",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(

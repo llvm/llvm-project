@@ -18,6 +18,7 @@
 namespace llvm {
 class DomTreeUpdater;
 class BasicBlock;
+class ConstantInt;
 class Value;
 class Loop;
 class LoopInfo;
@@ -80,9 +81,9 @@ private:
   /// Exit as exit block.  Adds the new loop blocks to \L and applies dominator
   /// tree updates to \p DTU.
   static BasicBlock *CreateLoop(BasicBlock *Preheader, BasicBlock *Exit,
-                                Value *Bound, Value *Step, StringRef Name,
-                                IRBuilderBase &B, DomTreeUpdater &DTU, Loop *L,
-                                LoopInfo &LI);
+                                ConstantInt *Bound, ConstantInt *Step,
+                                StringRef Name, IRBuilderBase &B,
+                                DomTreeUpdater &DTU, Loop *L, LoopInfo &LI);
 };
 } // namespace llvm
 

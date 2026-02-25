@@ -270,6 +270,26 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
         mlir::cast_if_present<cir::MethodAttr>(op.getInitialValueAttr());
     loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
         init, layout, *getTypeConverter());
+  } else if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
+    auto init = mlir::cast<cir::ConstArrayAttr>(op.getInitialValueAttr());
+    auto arrayElts = mlir::cast<ArrayAttr>(init.getElts());
+    SmallVector<mlir::Attribute> loweredElements;
+    loweredElements.reserve(arrTy.getSize());
+    for (const mlir::Attribute &attr : arrayElts) {
+      if (auto methodAttr = mlir::dyn_cast<cir::MethodAttr>(attr)) {
+        mlir::Attribute loweredElt =
+            lowerModule->getCXXABI().lowerMethodConstant(methodAttr, layout,
+                                                         *getTypeConverter());
+        loweredElements.push_back(loweredElt);
+      } else {
+        llvm_unreachable("array of data member lowering is NYI");
+      }
+    }
+    auto loweredArrTy =
+        mlir::cast<cir::ArrayType>(getTypeConverter()->convertType(arrTy));
+    loweredInit = cir::ConstArrayAttr::get(
+        loweredArrTy,
+        mlir::ArrayAttr::get(rewriter.getContext(), loweredElements));
   } else {
     llvm_unreachable(
         "inputs to cir.global in ABI lowering must be data member or method");
@@ -363,6 +383,14 @@ static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
     return cir::PointerType::get(type.getContext(), loweredPointeeType,
                                  type.getAddrSpace());
   });
+  converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
+    mlir::Type loweredElementType =
+        converter.convertType(type.getElementType());
+    if (!loweredElementType)
+      return {};
+    return cir::ArrayType::get(loweredElementType, type.getSize());
+  });
+
   converter.addConversion([&](cir::DataMemberType type) -> mlir::Type {
     mlir::Type abiType =
         lowerModule.getCXXABI().lowerDataMemberType(type, converter);
@@ -425,21 +453,18 @@ populateCXXABIConversionTarget(mlir::ConversionTarget &target,
 //===----------------------------------------------------------------------===//
 
 void CXXABILoweringPass::runOnOperation() {
-  auto module = mlir::cast<mlir::ModuleOp>(getOperation());
-  mlir::MLIRContext *ctx = module.getContext();
+  auto mod = mlir::cast<mlir::ModuleOp>(getOperation());
+  mlir::MLIRContext *ctx = mod.getContext();
 
-  // If the triple is not present, e.g. CIR modules parsed from text, we
-  // cannot init LowerModule properly.
-  assert(!cir::MissingFeatures::makeTripleAlwaysPresent());
-  // If no target triple is available, skip the ABI lowering pass.
-  if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
+  std::unique_ptr<cir::LowerModule> lowerModule = cir::createLowerModule(mod);
+  // If lower module is not available, skip the ABI lowering pass.
+  if (!lowerModule) {
+    mod.emitWarning("Cannot create a CIR lower module, skipping the ")
+        << getName() << " pass";
     return;
+  }
 
-  mlir::PatternRewriter rewriter(ctx);
-  std::unique_ptr<cir::LowerModule> lowerModule =
-      cir::createLowerModule(module, rewriter);
-
-  mlir::DataLayout dataLayout(module);
+  mlir::DataLayout dataLayout(mod);
   mlir::TypeConverter typeConverter;
   prepareCXXABITypeConverter(typeConverter, dataLayout, *lowerModule);
 
@@ -455,7 +480,7 @@ void CXXABILoweringPass::runOnOperation() {
   mlir::ConversionTarget target(*ctx);
   populateCXXABIConversionTarget(target, typeConverter);
 
-  if (failed(mlir::applyPartialConversion(module, target, std::move(patterns))))
+  if (failed(mlir::applyPartialConversion(mod, target, std::move(patterns))))
     signalPassFailure();
 }
 

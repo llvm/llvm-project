@@ -27,6 +27,7 @@ struct basic_string {
   basic_string(const C *p, size_type count);
   basic_string(const C *b, const C *e);
   basic_string(size_t, C);
+  operator basic_string_view<C, T>() const;
 
   ~basic_string();
 
@@ -108,7 +109,6 @@ struct basic_string_view {
 
   const C *str;
   constexpr basic_string_view(const C* s) : str(s) {}
-  basic_string_view(const basic_string<C, T>&) {}
 
   const C *data() const;
 

@@ -132,7 +132,7 @@ public:
 
   PluginProperties() {
     m_collection_sp = std::make_shared<OptionValueProperties>(GetSettingName());
-    m_collection_sp->Initialize(g_symbolfiledwarf_properties);
+    m_collection_sp->Initialize(g_symbolfiledwarf_properties_def);
   }
 
   bool IgnoreFileIndexes() const {
@@ -519,12 +519,7 @@ SymbolFileDWARF::GetTypeSystemForLanguage(LanguageType language) {
   if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeSystemForLanguage(language);
 
-  auto type_system_or_err =
-      m_objfile_sp->GetModule()->GetTypeSystemForLanguage(language);
-  if (type_system_or_err)
-    if (auto ts = *type_system_or_err)
-      ts->SetSymbolFile(this);
-  return type_system_or_err;
+  return SymbolFileCommon::GetTypeSystemForLanguage(language);
 }
 
 void SymbolFileDWARF::InitializeObject() {
@@ -3579,6 +3574,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   DWARFFormValue type_die_form;
   bool is_external = false;
   bool is_artificial = false;
+  std::optional<uint64_t> tag_offset = std::nullopt;
   DWARFFormValue const_value_form, location_form;
   Variable::RangeList scope_ranges;
 
@@ -3589,6 +3585,9 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     if (!attributes.ExtractFormValueAtIndex(i, form_value))
       continue;
     switch (attr) {
+    case DW_AT_LLVM_tag_offset:
+      tag_offset = form_value.Unsigned();
+      break;
     case DW_AT_decl_file:
       decl.SetFile(
           attributes.CompileUnitAtIndex(i)->GetFile(form_value.Unsigned()));
@@ -3829,7 +3828,7 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
   return std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member);
+      location_is_const_value_data, is_static_member, tag_offset);
 }
 
 DWARFDIE
