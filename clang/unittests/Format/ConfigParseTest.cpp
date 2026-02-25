@@ -453,19 +453,66 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("BreakBeforeBinaryOperators: true", BreakBeforeBinaryOperators,
               FormatStyle::BOS_All);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_Never;
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
   CHECK_PARSE("BreakBinaryOperations: OnePerLine", BreakBinaryOperations,
-              FormatStyle::BBO_OnePerLine);
+              FormatStyle::BreakBinaryOperationsOptions(
+                  {FormatStyle::BBO_OnePerLine, {}}));
   CHECK_PARSE("BreakBinaryOperations: RespectPrecedence", BreakBinaryOperations,
-              FormatStyle::BBO_RespectPrecedence);
-  CHECK_PARSE("BreakBinaryOperations: Never", BreakBinaryOperations,
-              FormatStyle::BBO_Never);
+              FormatStyle::BreakBinaryOperationsOptions(
+                  {FormatStyle::BBO_RespectPrecedence, {}}));
+  CHECK_PARSE(
+      "BreakBinaryOperations: Never", BreakBinaryOperations,
+      FormatStyle::BreakBinaryOperationsOptions({FormatStyle::BBO_Never, {}}));
+
+  // Structured form
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  CHECK_PARSE("BreakBinaryOperations:\n"
+              "  Default: OnePerLine",
+              BreakBinaryOperations,
+              FormatStyle::BreakBinaryOperationsOptions(
+                  {FormatStyle::BBO_OnePerLine, {}}));
+
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  EXPECT_EQ(0, parseConfiguration("BreakBinaryOperations:\n"
+                                  "  Default: Never\n"
+                                  "  PerOperator:\n"
+                                  "    - Operators: ['&&', '||']\n"
+                                  "      Style: OnePerLine\n"
+                                  "      MinChainLength: 3",
+                                  &Style)
+                   .value());
+  EXPECT_EQ(Style.BreakBinaryOperations.Default, FormatStyle::BBO_Never);
+  ASSERT_EQ(Style.BreakBinaryOperations.PerOperator.size(), 1u);
+  std::vector<tok::TokenKind> ExpectedOps = {tok::ampamp, tok::pipepipe};
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Operators, ExpectedOps);
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Style,
+            FormatStyle::BBO_OnePerLine);
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].MinChainLength, 3u);
+
+  // Parse ">" and ">>" which have edge cases: clang-format splits ">>" into
+  // two ">" tokens, so ">>" maps to tok::greatergreater while ">" maps to
+  // tok::greater.
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  EXPECT_EQ(0, parseConfiguration("BreakBinaryOperations:\n"
+                                  "  Default: Never\n"
+                                  "  PerOperator:\n"
+                                  "    - Operators: ['>', '>>']\n"
+                                  "      Style: OnePerLine",
+                                  &Style)
+                   .value());
+  ASSERT_EQ(Style.BreakBinaryOperations.PerOperator.size(), 1u);
+  std::vector<tok::TokenKind> ExpectedShiftOps = {tok::greater,
+                                                  tok::greatergreater};
+  EXPECT_EQ(Style.BreakBinaryOperations.PerOperator[0].Operators,
+            ExpectedShiftOps);
 
   Style.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   CHECK_PARSE("BreakConstructorInitializers: BeforeComma",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeComma);
   CHECK_PARSE("BreakConstructorInitializers: AfterColon",
               BreakConstructorInitializers, FormatStyle::BCIS_AfterColon);
+  CHECK_PARSE("BreakConstructorInitializers: AfterComma",
+              BreakConstructorInitializers, FormatStyle::BCIS_AfterComma);
   CHECK_PARSE("BreakConstructorInitializers: BeforeColon",
               BreakConstructorInitializers, FormatStyle::BCIS_BeforeColon);
   // For backward compatibility:
@@ -961,6 +1008,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               StatementAttributeLikeMacros,
               std::vector<std::string>({"emit", "Q_EMIT"}));
 
+  Style.Macros.clear();
+  CHECK_PARSE("{Macros: [foo]}", Macros, std::vector<std::string>({"foo"}));
+  std::vector<std::string> GoogleMacros;
+  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleMacros.push_back("ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+  CHECK_PARSE("BasedOnStyle: Google", Macros, GoogleMacros);
+
   Style.StatementMacros.clear();
   CHECK_PARSE("StatementMacros: [QUNUSED]", StatementMacros,
               std::vector<std::string>{"QUNUSED"});
@@ -968,7 +1022,6 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
   CHECK_PARSE_LIST(JavaImportGroups);
-  CHECK_PARSE_LIST(Macros);
   CHECK_PARSE_LIST(MacrosSkippedByRemoveParentheses);
   CHECK_PARSE_LIST(NamespaceMacros);
   CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);

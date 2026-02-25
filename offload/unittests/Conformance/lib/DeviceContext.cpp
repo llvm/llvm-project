@@ -48,7 +48,7 @@ namespace {
 // The static 'Wrapper' instance ensures olInit() is called once at program
 // startup and olShutDown() is called once at program termination
 struct OffloadInitWrapper {
-  OffloadInitWrapper() { OL_CHECK(olInit()); }
+  OffloadInitWrapper() { OL_CHECK(olInit(nullptr)); }
   ~OffloadInitWrapper() { OL_CHECK(olShutDown()); }
 };
 static OffloadInitWrapper Wrapper{};

@@ -48,7 +48,7 @@ void NondeterministicPointerIterationOrderCheck::check(
   const auto *ForRangePointers =
       Result.Nodes.getNodeAs<CXXForRangeStmt>("cxxForRangeStmt");
 
-  if ((ForRangePointers) && !(ForRangePointers->getBeginLoc().isMacroID())) {
+  if (ForRangePointers && !(ForRangePointers->getBeginLoc().isMacroID())) {
     const auto *RangeInit = Result.Nodes.getNodeAs<Stmt>("rangeinit");
     if (const auto *ClassTemplate =
             Result.Nodes.getNodeAs<ClassTemplateSpecializationDecl>(
@@ -67,7 +67,7 @@ void NondeterministicPointerIterationOrderCheck::check(
   }
   const auto *SortPointers = Result.Nodes.getNodeAs<Stmt>("sortsemantic");
 
-  if ((SortPointers) && !(SortPointers->getBeginLoc().isMacroID())) {
+  if (SortPointers && !(SortPointers->getBeginLoc().isMacroID())) {
     const SourceRange R = SortPointers->getSourceRange();
     diag(R.getBegin(), "sorting pointers is nondeterministic") << R;
   }

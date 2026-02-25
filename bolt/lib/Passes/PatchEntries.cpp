@@ -120,6 +120,9 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       BinaryFunction *PatchFunction = BC.createInstructionPatch(
           Patch.Address, Instructions,
           NameResolver::append(Patch.Symbol->getName(), ".org.0"));
+      if (BC.usesBTI())
+        BC.MIB->applyBTIFixupToSymbol(BC, Patch.Symbol,
+                                      *(Instructions.end() - 1));
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;

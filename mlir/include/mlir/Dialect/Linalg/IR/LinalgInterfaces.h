@@ -125,10 +125,9 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp,
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
 
-/// Checks whether `genericOp` is semantically equivalent to a
-///  `linalg.broadcast`. Returns broadcast dimensions if true.
-std::optional<SmallVector<int64_t>>
-isaBroadcastOpInterface(GenericOp genericOp);
+/// Checks whether `linalgOp` is semantically equivalent to a broadcast
+/// operation. Returns broadcast dimensions if true.
+std::optional<SmallVector<int64_t>> isaBroadcastOpInterface(LinalgOp linalgOp);
 
 /// Checks whether `genericOp` is semantically equivalent to a
 ///  `linalg.transpose`. Returns permuted dimensions if true.

@@ -7,13 +7,6 @@
 
 #include <arm_fp16.h>
 
-// CHECK-LABEL: test_vabsh_f16
-// CHECK:  [[ABS:%.*]] =  call half @llvm.fabs.f16(half %a)
-// CHECK:  ret half [[ABS]]
-float16_t test_vabsh_f16(float16_t a) {
-  return vabsh_f16(a);
-}
-
 // CHECK-LABEL: test_vceqzh_f16
 // CHECK:  [[TMP1:%.*]] = fcmp oeq half %a, 0xH0000
 // CHECK:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
@@ -626,19 +619,3 @@ float16_t test_vrsqrtsh_f16(float16_t a, float16_t b) {
 float16_t test_vsubh_f16(float16_t a, float16_t b) {
   return vsubh_f16(a, b);
 }
-
-// CHECK-LABEL: test_vfmah_f16
-// CHECK:  [[FMA:%.*]] = call half @llvm.fma.f16(half %b, half %c, half %a)
-// CHECK:  ret half [[FMA]]
-float16_t test_vfmah_f16(float16_t a, float16_t b, float16_t c) {
-  return vfmah_f16(a, b, c);
-}
-
-// CHECK-LABEL: test_vfmsh_f16
-// CHECK:  [[SUB:%.*]] = fneg half %b
-// CHECK:  [[ADD:%.*]] = call half @llvm.fma.f16(half [[SUB]], half %c, half %a)
-// CHECK:  ret half [[ADD]]
-float16_t test_vfmsh_f16(float16_t a, float16_t b, float16_t c) {
-  return vfmsh_f16(a, b, c);
-}
-
