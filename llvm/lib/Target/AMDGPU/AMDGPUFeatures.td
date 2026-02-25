@@ -49,9 +49,3 @@ class SubtargetFeatureGeneration <string Value, string FeatureName,
         SubtargetFeature <FeatureName, "Gen", Subtarget#"::"#Value,
                           Value#" GPU generation", Implies>;
 
-def FeaturePromoteAlloca : SubtargetFeature <"promote-alloca",
-  "EnablePromoteAlloca",
-  "true",
-  "Enable promote alloca pass"
->;
-

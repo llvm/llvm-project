@@ -364,7 +364,7 @@ cl::opt<bool>
                           cl::init(false),
 #endif
                           cl::Hidden,
-                          cl::desc("Verfiy VPlans after VPlan transforms."));
+                          cl::desc("Verify VPlans after VPlan transforms."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 cl::opt<bool> llvm::VPlanPrintAfterAll(
@@ -2383,21 +2383,8 @@ Value *EpilogueVectorizerMainLoop::createIterationCountCheck(
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
-             !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
-             Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
-    // vscale is not necessarily a power-of-2, which means we cannot guarantee
-    // an overflow to zero when updating induction variables and so an
-    // additional overflow check is required before entering the vector loop.
-
-    // Get the maximum unsigned value for the type.
-    Value *MaxUIntTripCount =
-        ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
-    Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
-
-    // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
   }
+
   return CheckMinIters;
 }
 
@@ -3663,7 +3650,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
     std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
-    if (MaxVScale && TTI.isVScaleKnownToBeAPowerOfTwo()) {
+    if (MaxVScale) {
       MaxPowerOf2RuntimeVF = std::max<unsigned>(
           *MaxPowerOf2RuntimeVF,
           *MaxVScale * MaxFactors.ScalableVF.getKnownMinValue());
@@ -4381,8 +4368,9 @@ static bool hasUnsupportedHeaderPhiRecipe(VPlan &Plan) {
         if (auto *WidenInd = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R))
           return !WidenInd->getPHINode();
         auto *RedPhi = dyn_cast<VPReductionPHIRecipe>(&R);
-        return RedPhi && RecurrenceDescriptor::isFindLastRecurrenceKind(
-                             RedPhi->getRecurrenceKind());
+        return RedPhi && (RecurrenceDescriptor::isFindLastRecurrenceKind(
+                              RedPhi->getRecurrenceKind()) ||
+                          !RedPhi->getUnderlyingValue());
       });
 }
 
@@ -4436,13 +4424,8 @@ bool LoopVectorizationCostModel::isEpilogueVectorizationProfitable(
   // account. For now we apply a very crude heuristic and only consider loops
   // with vectorization factors larger than a certain value.
 
-  // Allow the target to opt out entirely.
-  if (!TTI.preferEpilogueVectorization())
-    return false;
-
-  // We also consider epilogue vectorization unprofitable for targets that don't
-  // consider interleaving beneficial (eg. MVE).
-  if (TTI.getMaxInterleaveFactor(VF) <= 1)
+  // Allow the target to opt out.
+  if (!TTI.preferEpilogueVectorization(VF * IC))
     return false;
 
   unsigned MinVFThreshold = EpilogueVectorizationMinVF.getNumOccurrences() > 0
@@ -7512,8 +7495,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                         State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
   VPlanTransforms::removeDeadRecipes(BestVPlan);
 
-  assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
-         "final VPlan is invalid");
+  assert(verifyVPlanIsValid(BestVPlan) && "final VPlan is invalid");
 
   // After vectorization, the exit blocks of the original loop will have
   // additional predecessors. Invalidate SCEVs for the exit phis in case SE
@@ -8697,14 +8679,6 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
-  // vscale is not necessarily a power-of-2, which means we cannot guarantee
-  // an overflow to zero when updating induction variables and so an
-  // additional overflow check is required before entering the vector loop.
-  bool IsIndvarOverflowCheckNeededForVF =
-      VF.isScalable() && !TTI.isVScaleKnownToBeAPowerOfTwo() &&
-      !isIndvarOverflowCheckKnownFalse(&CM, VF, UF) &&
-      CM.getTailFoldingStyle() !=
-          TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
   const uint32_t *BranchWeigths =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
@@ -8712,7 +8686,7 @@ void LoopVectorizationPlanner::addMinimumIterationCheck(
   VPlanTransforms::addMinimumIterationCheck(
       Plan, VF, UF, MinProfitableTripCount,
       CM.requiresScalarEpilogue(VF.isVector()), CM.foldTailByMasking(),
-      IsIndvarOverflowCheckNeededForVF, OrigLoop, BranchWeigths,
+      /*CheckNeededWithTailFolding=*/false, OrigLoop, BranchWeigths,
       OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 }
 

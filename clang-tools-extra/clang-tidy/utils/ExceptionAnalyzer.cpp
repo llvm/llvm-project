@@ -534,11 +534,12 @@ ExceptionAnalyzer::throwsException(const Stmt *St,
       Results.registerException(
           ThrownExpr->getType()->getUnqualifiedDesugaredType(),
           {Throw->getBeginLoc(), CallStack});
-    } else
+    } else {
       // A rethrow of a caught exception happens which makes it possible
       // to throw all exception that are caught in the 'catch' clause of
       // the parent try-catch block.
       Results.registerExceptions(Caught);
+    }
   } else if (const auto *Try = dyn_cast<CXXTryStmt>(St)) {
     ExceptionInfo Uncaught =
         throwsException(Try->getTryBlock(), Caught, CallStack);
@@ -644,8 +645,9 @@ ExceptionAnalyzer::analyzeImpl(const FunctionDecl *Func) {
     // The results here might be relevant to different analysis passes
     // with different needs as well.
     FunctionCache.try_emplace(Func, ExceptionList);
-  } else
+  } else {
     ExceptionList = CacheEntry->getSecond();
+  }
 
   return ExceptionList;
 }
