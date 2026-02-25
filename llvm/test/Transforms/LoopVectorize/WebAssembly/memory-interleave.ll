@@ -22,7 +22,7 @@ target triple = "wasm32-unknown-wasi"
 ; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2 at %10
 ; CHECK: Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2 at %10
 ; CHECK: LV: Scalar loop costs: 12.
-; CHECK: LV: Vector loop of width 2 costs: 13.
+; CHECK: LV: Vector loop of width 2 costs: 54/4.
 ; CHECK: LV: Vector loop of width 4 costs: 6.
 ; CHECK: LV: Selecting VF: 4
 define hidden void @two_ints_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
@@ -57,7 +57,7 @@ define hidden void @two_ints_same_op(ptr noalias nocapture noundef writeonly %0,
 ; CHECK: Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 2 at %10
 ; CHECK: Cost of 6 for VF 4: INTERLEAVE-GROUP with factor 2 at %10
 ; CHECK: LV: Scalar loop costs: 12.
-; CHECK: LV: Vector loop of width 2 costs: 13.
+; CHECK: LV: Vector loop of width 2 costs: 54/4.
 ; CHECK: LV: Vector loop of width 4 costs: 6.
 ; CHECK: LV: Selecting VF: 4
 define hidden void @two_ints_vary_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
@@ -93,11 +93,11 @@ define hidden void @two_ints_vary_op(ptr noalias nocapture noundef writeonly %0,
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %10 = load i32, ptr %9
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %12 = load i32, ptr %11
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: store i32 %25, ptr %26
-; CHECK: LV: Vector loop of width 2 costs: 30.
+; CHECK: LV: Vector loop of width 2 costs: 122/4.
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: %10 = load i32, ptr %9
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: %12 = load i32, ptr %11
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: store i32 %25, ptr %26
-; CHECK: LV: Vector loop of width 4 costs: 28.
+; CHECK: LV: Vector loop of width 4 costs: 115/4.
 ; CHECK: LV: Selecting VF: 1
 define hidden void @three_ints(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -139,15 +139,15 @@ define hidden void @three_ints(ptr noalias nocapture noundef writeonly %0, ptr n
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: store i16 %25
-; CHECK: LV: Vector loop of width 2 costs: 30.
+; CHECK: LV: Vector loop of width 2 costs: 122/4.
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: store i16 %25
-; CHECK: LV: Vector loop of width 4 costs: 28.
+; CHECK: LV: Vector loop of width 4 costs: 115/4.
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: store i16 %25
-; CHECK: LV: Vector loop of width 8 costs: 27.
+; CHECK: LV: Vector loop of width 8 costs: 111/4.
 ; CHECK: LV: Selecting VF: 1
 define hidden void @three_shorts(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -197,11 +197,11 @@ define hidden void @three_shorts(ptr noalias nocapture noundef writeonly %0, ptr
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: store i16
-; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Vector loop of width 4 costs: 62/4.
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: store i16
-; CHECK: LV: Vector loop of width 8 costs: 26
+; CHECK: LV: Vector loop of width 8 costs: 106/4
 ; CHECK: LV: Selecting VF: 4
 define hidden void @four_shorts_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -257,11 +257,11 @@ define hidden void @four_shorts_same_op(ptr noalias nocapture noundef writeonly 
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: store i16 %31
-; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Vector loop of width 4 costs: 62/4.
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: store i16 %31
-; CHECK: LV: Vector loop of width 8 costs: 26.
+; CHECK: LV: Vector loop of width 8 costs: 106/4.
 ; CHECK: LV: Selecting VF: 4
 define hidden void @four_shorts_split_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -317,11 +317,11 @@ define hidden void @four_shorts_split_op(ptr noalias nocapture noundef writeonly
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: store i16
-; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Vector loop of width 4 costs: 62/4.
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: %10 = load i16
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: %12 = load i16
 ; CHECK: LV: Found an estimated cost of 68 for VF 8 For instruction: store i16
-; CHECK: LV: Vector loop of width 8 costs: 26.
+; CHECK: LV: Vector loop of width 8 costs: 106/4.
 ; CHECK: LV: Selecting VF: 4
 define hidden void @four_shorts_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -371,7 +371,7 @@ define hidden void @four_shorts_interleave_op(ptr noalias nocapture noundef writ
 ; CHECK: LV: Found an estimated cost of 84 for VF 8 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 84 for VF 8 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 84 for VF 8 For instruction: store i8 %37
-; CHECK: LV: Vector loop of width 8 costs: 32
+; CHECK: LV: Vector loop of width 8 costs: 130/4
 ; CHECK: LV: Found an estimated cost of 168 for VF 16 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 168 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 168 for VF 16 For instruction: store i8 %37
@@ -438,7 +438,7 @@ define hidden void @five_shorts(ptr noalias nocapture noundef writeonly %0, ptr 
 ; CHECK: LV: Found an estimated cost of 11 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 11 for VF 4 For instruction: store i8
-; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Vector loop of width 4 costs: 61/4.
 ; CHECK: LV: Found an estimated cost of 7 for VF 8 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 7 for VF 8 For instruction: store i8
@@ -446,7 +446,7 @@ define hidden void @five_shorts(ptr noalias nocapture noundef writeonly %0, ptr 
 ; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 4 for VF 16 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction: store i8
-; CHECK: LV: Vector loop of width 16 costs: 1.
+; CHECK: LV: Vector loop of width 16 costs: 7/4.
 ; CHECK: LV: Selecting VF: 16.
 define hidden void @two_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -484,19 +484,19 @@ define hidden void @two_bytes_same_op(ptr noalias nocapture noundef writeonly %0
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: store i8 %13
-; CHECK: LV: Vector loop of width 2 costs: 23.
+; CHECK: LV: Vector loop of width 2 costs: 94/4.
 ; CHECK: LV: Found an estimated cost of 11 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 12 for VF 4 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 11 for VF 4 For instruction: store i8
-; CHECK: LV: Vector loop of width 4 costs: 12.
+; CHECK: LV: Vector loop of width 4 costs: 50/4.
 ; CHECK: LV: Found an estimated cost of 7 for VF 8 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 7 for VF 8 For instruction: store i8
-; CHECK: LV: Vector loop of width 8 costs: 3.
+; CHECK: LV: Vector loop of width 8 costs: 15/4.
 ; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 4 for VF 16 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 6 for VF 16 For instruction: store i8 %19
-; CHECK: LV: Vector loop of width 16 costs: 1.
+; CHECK: LV: Vector loop of width 16 costs: 6/4.
 ; CHECK: LV: Selecting VF: 16.
 define hidden void @two_bytes_vary_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -528,16 +528,16 @@ define hidden void @two_bytes_vary_op(ptr noalias nocapture noundef writeonly %0
 
 ; CHECK-LABEL: three_bytes_same_op
 ; CHECK: LV: Scalar loop costs: 16.
-; CHECK: LV: Vector loop of width 2 costs: 30.
-; CHECK: LV: Vector loop of width 4 costs: 28.
+; CHECK: LV: Vector loop of width 2 costs: 122/4.
+; CHECK: LV: Vector loop of width 4 costs: 115/4.
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: %10 = load i8, ptr %9
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: %12 = load i8, ptr %11
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: store i8 %25
-; CHECK: LV: Vector loop of width 8 costs: 27.
+; CHECK: LV: Vector loop of width 8 costs: 111/4.
 ; CHECK: LV: Found an estimated cost of 48 for VF 16 For instruction: %10 = load i8, ptr %9
 ; CHECK: LV: Found an estimated cost of 48 for VF 16 For instruction: %12 = load i8, ptr %11
 ; CHECK: LV: Found an estimated cost of 48 for VF 16 For instruction: store i8 %25
-; CHECK: LV: Vector loop of width 16 costs: 27.
+; CHECK: LV: Vector loop of width 16 costs: 109/4.
 ; CHECK: LV: Selecting VF: 1.
 define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -576,16 +576,16 @@ define hidden void @three_bytes_same_op(ptr noalias nocapture noundef writeonly 
 
 ; CHECK-LABEL: three_bytes_interleave_op
 ; CHECK: LV: Scalar loop costs: 16.
-; CHECK: LV: Vector loop of width 2 costs: 30.
-; CHECK: LV: Vector loop of width 4 costs: 28.
+; CHECK: LV: Vector loop of width 2 costs: 122/4.
+; CHECK: LV: Vector loop of width 4 costs: 115/4.
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: %10 = load i8, ptr %9
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: %12 = load i8, ptr %11
 ; CHECK: LV: Found an estimated cost of 24 for VF 8 For instruction: store i8 %25
-; CHECK: LV: Vector loop of width 8 costs: 27.
+; CHECK: LV: Vector loop of width 8 costs: 111/4.
 ; CHECK: LV: Found an estimated cost of 48 for VF 16 For instruction: %10 = load i8, ptr %9
 ; CHECK: LV: Found an estimated cost of 48 for VF 16 For instruction: %12 = load i8, ptr %11
 ; CHECK: LV: Found an estimated cost of 48 for VF 16 For instruction: store i8 %25
-; CHECK: LV: Vector loop of width 16 costs: 27.
+; CHECK: LV: Vector loop of width 16 costs: 109/4.
 ; CHECK: LV: Selecting VF: 1.
 define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -631,15 +631,15 @@ define hidden void @three_bytes_interleave_op(ptr noalias nocapture noundef writ
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: store i8
-; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Vector loop of width 4 costs: 62/4.
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: store i8
-; CHECK: LV: Vector loop of width 8 costs: 10.
+; CHECK: LV: Vector loop of width 8 costs: 43/4.
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: store i8
-; CHECK: LV: Vector loop of width 16 costs: 25.
+; CHECK: LV: Vector loop of width 16 costs: 101/4.
 ; CHECK: LV: Selecting VF: 8.
 define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -698,12 +698,12 @@ define hidden void @four_bytes_same_op(ptr noalias nocapture noundef writeonly %
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 4 for VF 8 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: store i8
-; CHECK: LV: Vector loop of width 8 costs: 11.
+; CHECK: LV: Vector loop of width 8 costs: 46/4.
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 4 for VF 16 For instruction: %13 = mul i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: store i8
-; CHECK: LV: Vector loop of width 16 costs: 25
+; CHECK: LV: Vector loop of width 16 costs: 102/4
 ; CHECK: LV: Selecting VF: 8
 define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -757,15 +757,15 @@ define hidden void @four_bytes_split_op(ptr noalias nocapture noundef writeonly 
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: store i8
-; CHECK: LV: Vector loop of width 4 costs: 15
+; CHECK: LV: Vector loop of width 4 costs: 62/4
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: store i8
-; CHECK: LV: Vector loop of width 8 costs: 10
+; CHECK: LV: Vector loop of width 8 costs: 43/4
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: store i8
-; CHECK: LV: Vector loop of width 16 costs: 25
+; CHECK: LV: Vector loop of width 16 costs: 101/4
 ; CHECK: LV: Selecting VF: 8
 define hidden void @four_bytes_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -817,7 +817,7 @@ define hidden void @four_bytes_interleave_op(ptr noalias nocapture noundef write
 ; CHECK: LV: Found an estimated cost of 66 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 66 for VF 4 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 66 for VF 4 For instruction: store i8 %55
-; CHECK: LV: Vector loop of width 4 costs: 74
+; CHECK: LV: Vector loop of width 4 costs: 298/4
 ; CHECK: LV: Found an estimated cost of 132 for VF 8 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 8 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 132 for VF 8 For instruction: store i8 %55
@@ -825,7 +825,7 @@ define hidden void @four_bytes_interleave_op(ptr noalias nocapture noundef write
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: store i8 %55
-; CHECK: LV: Vector loop of width 16 costs: 51
+; CHECK: LV: Vector loop of width 16 costs: 207/4
 ; CHECK: LV: Selecting VF: 1
 define hidden void @eight_bytes_same_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -901,7 +901,7 @@ define hidden void @eight_bytes_same_op(ptr noalias nocapture noundef writeonly 
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: store i8 %55
-; CHECK: LV: Vector loop of width 16 costs: 50
+; CHECK: LV: Vector loop of width 16 costs: 201/4
 ; CHECK: LV: Selecting VF: 1
 define hidden void @eight_bytes_split_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -977,7 +977,7 @@ define hidden void @eight_bytes_split_op(ptr noalias nocapture noundef writeonly
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: %12 = load i8
 ; CHECK: LV: Found an estimated cost of 264 for VF 16 For instruction: store i8 %55
-; CHECK: LV: Vector loop of width 16 costs: 50
+; CHECK: LV: Vector loop of width 16 costs: 201/4
 ; CHECK: LV: Selecting VF: 1
 define hidden void @eight_bytes_interleave_op(ptr noalias nocapture noundef writeonly %0, ptr nocapture noundef readonly %1, ptr nocapture noundef readonly %2, i32 noundef %3) {
   %5 = icmp eq i32 %3, 0
@@ -1126,7 +1126,7 @@ define hidden void @four_bytes_into_four_ints_same_op(ptr noalias nocapture noun
 ; CHECK: LV: Found an estimated cost of 6 for VF 2 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 0 for VF 2 For instruction: %11 = zext i8
 ; CHECK: LV: Found an estimated cost of 14 for VF 2 For instruction: store i32
-; CHECK: LV: Vector loop of width 2 costs: 35.
+; CHECK: LV: Vector loop of width 2 costs: 142/4.
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 2 for VF 4 For instruction:  %11 = zext i8
 ; CHECK: LV: Found an estimated cost of 24 for VF 4 For instruction: store i32
@@ -1184,8 +1184,8 @@ define hidden void @four_bytes_into_four_ints_vary_op(ptr noalias nocapture noun
 ; CHECK-LABEL: scale_uv_row_down2
 ; CHECK: LV: Scalar loop costs: 10.
 ; CHECK: LV: Vector loop of width 2 costs: 13.
-; CHECK: LV: Vector loop of width 4 costs: 8.
-; CHECK: LV: Vector loop of width 8 costs: 4.
+; CHECK: LV: Vector loop of width 4 costs: 35/4.
+; CHECK: LV: Vector loop of width 8 costs: 19/4.
 ; CHECK: LV: Vector loop of width 16 costs: 5.
 ; CHECK: LV: Selecting VF: 8.
 define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
@@ -1219,7 +1219,7 @@ define hidden void @scale_uv_row_down2(ptr nocapture noundef readonly %0, i32 no
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %14 = load i8
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %20 = load i8
 ; CHECK: LV: Found an estimated cost of 11 for VF 4 For instruction: store i8 %48
-; CHECK: LV: Vector loop of width 4 costs: 18.
+; CHECK: LV: Vector loop of width 4 costs: 73/4.
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %14 = load i8
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %20 = load i8
 ; CHECK: LV: Found an estimated cost of 7 for VF 8 For instruction: store i8 %48
@@ -1299,12 +1299,12 @@ define hidden void @scale_uv_row_down2_box(ptr nocapture noundef readonly %0, i3
 ; CHECK: LV: Vector loop of width 2 costs: 25.
 ; CHECK: LV: Found an estimated cost of 18 for VF 4 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 11 for VF 4 For instruction: store i8
-; CHECK: LV: Vector loop of width 4 costs: 11.
+; CHECK: LV: Vector loop of width 4 costs: 47/4.
 ; CHECK: LV: Found an estimated cost of 26 for VF 8 For instruction: %10 = load i8
 ; CHECK: LV: Found an estimated cost of 7 for VF 8 For instruction: store i8
-; CHECK: LV: Vector loop of width 8 costs: 6.
+; CHECK: LV: Vector loop of width 8 costs: 27/4.
 ; CHECK: LV: Found an estimated cost of 132 for VF 16 For instruction: %10 = load i8
-; CHECK: LV: Vector loop of width 16 costs: 10.
+; CHECK: LV: Vector loop of width 16 costs: 43/4.
 ; CHECK: LV: Selecting VF: 8.
 define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0, i32 noundef %1, ptr nocapture noundef writeonly %2, i32 noundef %3) {
   %5 = icmp sgt i32 %3, 0
@@ -1356,7 +1356,7 @@ define hidden void @scale_uv_row_down2_linear(ptr nocapture noundef readonly %0,
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: LV: Scalar loop costs: 14.
 ; CHECK: LV: Vector loop of width 2 costs: 19.
-; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Vector loop of width 4 costs: 62/4.
 ; CHECK: LV: Selecting VF: 1.
 define hidden void @two_floats_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -1397,7 +1397,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: LV: Scalar loop costs: 14.
 ; CHECK: LV: Vector loop of width 2 costs: 19.
-; CHECK: LV: Vector loop of width 4 costs: 15.
+; CHECK: LV: Vector loop of width 4 costs: 62/4.
 ; CHECK: LV: Selecting VF: 1.
 define hidden void @two_floats_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -1519,7 +1519,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 11 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: LV: Scalar loop costs: 16
 ; CHECK: LV: Vector loop of width 2 costs: 26
-; CHECK: LV: Vector loop of width 4 costs: 16.
+; CHECK: LV: Vector loop of width 4 costs: 67/4.
 ; CHECK: LV: Selecting VF: 1.
 define hidden void @two_floats_two_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -1559,7 +1559,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: LV: Scalar loop costs: 16
 ; CHECK: LV: Vector loop of width 2 costs: 26
-; CHECK: LV: Vector loop of width 4 costs: 16.
+; CHECK: LV: Vector loop of width 4 costs: 67/4.
 ; CHECK: LV: Selecting VF: 1.
 define hidden void @two_floats_two_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -1688,8 +1688,8 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: LV: Scalar loop costs: 16
-; CHECK: LV: Vector loop of width 2 costs: 23
-; CHECK: LV: Vector loop of width 4 costs: 14
+; CHECK: LV: Vector loop of width 2 costs: 94/4
+; CHECK: LV: Vector loop of width 4 costs: 59/4
 ; CHECK: LV: Selecting VF: 4
 define hidden void @two_floats_two_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -1730,8 +1730,8 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: Cost of 7 for VF 4: INTERLEAVE-GROUP with factor 2
 ; CHECK: LV: Scalar loop costs: 16
-; CHECK: LV: Vector loop of width 2 costs: 23
-; CHECK: LV: Vector loop of width 4 costs: 14
+; CHECK: LV: Vector loop of width 2 costs: 94/4
+; CHECK: LV: Vector loop of width 4 costs: 59/4
 ; CHECK: LV: Selecting VF: 4
 define hidden void @two_floats_two_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -1997,7 +1997,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 28
 ; CHECK: LV: Vector loop of width 2 costs: 48
-; CHECK: LV: Vector loop of width 4 costs: 31
+; CHECK: LV: Vector loop of width 4 costs: 126/4
 ; CHECK: LV: Selecting VF: 1
 define hidden void @four_floats_four_bytes_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -2054,7 +2054,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 28
 ; CHECK: LV: Vector loop of width 2 costs: 48
-; CHECK: LV: Vector loop of width 4 costs: 31
+; CHECK: LV: Vector loop of width 4 costs: 126/4
 ; CHECK: LV: Selecting VF: 1
 define hidden void @four_floats_four_bytes_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -2236,7 +2236,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 28
 ; CHECK: LV: Vector loop of width 2 costs: 41
-; CHECK: LV: Vector loop of width 4 costs: 29
+; CHECK: LV: Vector loop of width 4 costs: 118/4
 ; CHECK: LV: Selecting VF: 1
 define hidden void @four_floats_four_shorts_same_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:
@@ -2294,7 +2294,7 @@ for.body:                                         ; preds = %entry, %for.body
 ; CHECK: Cost of 18 for VF 4: INTERLEAVE-GROUP with factor 4
 ; CHECK: LV: Scalar loop costs: 28
 ; CHECK: LV: Vector loop of width 2 costs: 41
-; CHECK: LV: Vector loop of width 4 costs: 29
+; CHECK: LV: Vector loop of width 4 costs: 118/4
 ; CHECK: LV: Selecting VF: 1
 define hidden void @four_floats_four_shorts_vary_op(ptr noundef readonly captures(none) %a, ptr noundef readonly captures(none) %b, ptr noundef writeonly captures(none) %res, i32 noundef %N) {
 entry:

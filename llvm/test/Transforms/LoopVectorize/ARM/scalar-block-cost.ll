@@ -57,7 +57,7 @@ define void @if_convert(ptr %a, ptr %b, i32 %start, i32 %end) #0 {
 ; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %inc = add nsw i32 %i.032, 1
 ; CHECK-COST-2-NEXT: LV: Found an estimated cost of 1 for VF 1 For instruction:   %exitcond.not = icmp eq i32 %inc, %end
 ; CHECK-COST-2-NEXT: LV: Found an estimated cost of 0 for VF 1 For instruction:   br i1 %exitcond.not, label %for.cond.cleanup.loopexit, label %for.body
-; CHECK-COST-2-NEXT: LV: Scalar loop costs: 8.
+; CHECK-COST-2-NEXT: LV: Scalar loop costs: 34/4.
 
 entry:
   %cmp31 = icmp slt i32 %start, %end
