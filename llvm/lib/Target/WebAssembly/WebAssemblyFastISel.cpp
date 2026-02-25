@@ -1296,15 +1296,6 @@ static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
   return Opc;
 }
 
-bool WebAssemblyFastISel::WebAssemblyEmitLoad(unsigned Opc, Register &ResultReg,
-                                              Address &Addr,
-                                              MachineMemOperand *MMO) {
-  MachineInstrBuilder MIB =
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
-  addLoadStoreOperands(Addr, MIB, MMO);
-  return true;
-}
-
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
@@ -1318,10 +1309,9 @@ bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
     return false;
 
   Register ResultReg = MI->getOperand(0).getReg();
-  if (!WebAssemblyEmitLoad(NewOpc, ResultReg, Addr,
-                           createMachineMemOperandFor(LI)))
-    return false;
-
+  MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
+                                    TII.get(NewOpc), ResultReg);
+  addLoadStoreOperands(Addr, MIB, createMachineMemOperandFor(LI));
   MachineBasicBlock::iterator Iter(MI);
   removeDeadCode(Iter, std::next(Iter));
   return true;
