@@ -3640,9 +3640,8 @@ SDValue HexagonTargetLowering::WidenHvxTruncateToBool(SDValue Op,
   if (!Subtarget.isHVXVectorType(WideInpTy, false))
     return SDValue();
 
-  // Widen the input if it's not already at HVX width.
-  SDValue WideInp =
-      (InpTy == WideInpTy) ? Inp : appendUndef(Inp, WideInpTy, DAG);
+  // Widen the input to HVX width.
+  SDValue WideInp = appendUndef(Inp, WideInpTy, DAG);
 
   // Perform the truncate to widened boolean type.
   MVT WideBoolTy = MVT::getVectorVT(MVT::i1, WideLen);
