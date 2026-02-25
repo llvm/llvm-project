@@ -9553,9 +9553,8 @@ unsigned clang_CXXMethod_isDeleted(CXCursor C) {
     return 0;
 
   const Decl *D = cxcursor::getCursorDecl(C);
-  const CXXMethodDecl *Method =
-      D ? dyn_cast_if_present<CXXMethodDecl>(D->getAsFunction()) : nullptr;
-  return (Method && Method->isDeleted()) ? 1 : 0;
+  const FunctionDecl *Function = D ? D->getAsFunction() : nullptr;
+  return (Function && Function->isDeleted()) ? 1 : 0;
 }
 
 unsigned clang_CXXMethod_isStatic(CXCursor C) {

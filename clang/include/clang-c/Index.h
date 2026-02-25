@@ -4748,7 +4748,7 @@ CINDEX_LINKAGE unsigned clang_CXXField_isMutable(CXCursor C);
 CINDEX_LINKAGE unsigned clang_CXXMethod_isDefaulted(CXCursor C);
 
 /**
- * Determine if a C++ method is declared '= delete'.
+ * Determine if a function is declared '= delete'.
  */
 CINDEX_LINKAGE unsigned clang_CXXMethod_isDeleted(CXCursor C);
 
