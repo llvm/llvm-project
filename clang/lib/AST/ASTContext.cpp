@@ -13020,7 +13020,7 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
     // names and calling convention. Keep non-dllexport inheriting constructor
     // thunks internal since they are not needed outside the translation unit.
     //
-    // But, dllexport inherited constructors must be externally visible to 
+    // But, dllexport inherited constructors must be externally visible to
     // match MSVC's behavior.
     return GVA_Internal;
 
