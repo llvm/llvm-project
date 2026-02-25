@@ -24,7 +24,7 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
   constexpr bfloat16 Z_VALUES[] = {zero,    neg_zero,   inf,
                                    neg_inf, min_normal, max_normal};
   for (uint16_t v1 = SUBNORM_NEG_START; v1 <= SUBNORM_NEG_STOP; v1++) {
-    for (uint16_t v2 = SUBNORM_NEG_START; v2 <= SUBNORM_NEG_STOP; v2++) {
+    for (uint16_t v2 = v1; v2 <= SUBNORM_NEG_STOP; v2++) {
 
       bfloat16 x = FPBits(v1).get_val();
       bfloat16 y = FPBits(v2).get_val();
@@ -44,16 +44,13 @@ TEST_F(LlvmLibcFmaBf16Test, SubnormalNegativeRange) {
 }
 
 TEST_F(LlvmLibcFmaBf16Test, SpecialNumbers) {
-  constexpr bfloat16 Z_VALUES[] = {zero,    neg_zero,   inf,
+  constexpr bfloat16 VALUES[] = {zero,    neg_zero,   inf,
                                    neg_inf, min_normal, max_normal};
-  constexpr bfloat16 X_VALUES[] = {zero,    neg_zero,   inf,
-                                   neg_inf, min_normal, max_normal};
-  constexpr bfloat16 Y_VALUES[] = {zero,    neg_zero,   inf,
-                                   neg_inf, min_normal, max_normal};
-
-  for (const bfloat16 &x : X_VALUES) {
-    for (const bfloat16 &y : Y_VALUES) {
-      for (const bfloat16 &z : Z_VALUES) {
+  for (int i = 0 ; i< 6 ;++i) {
+    for (int j =i ; j< 6 ;++j) {
+      bfloat16 x = VALUES[i];
+      bfloat16 y = VALUES[j];
+      for (const bfloat16 &z : VALUES) {
         mpfr::TernaryInput<bfloat16> input{x, y, z};
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Fma, input,
