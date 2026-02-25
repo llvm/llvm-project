@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 
 using namespace clang;
@@ -1001,4 +1002,19 @@ bool clang::checkFailClauseParameter(OpenMPClauseKind FailClauseParameter) {
   return FailClauseParameter == llvm::omp::OMPC_acquire ||
          FailClauseParameter == llvm::omp::OMPC_relaxed ||
          FailClauseParameter == llvm::omp::OMPC_seq_cst;
+}
+
+bool clang::isOpenMPAccelerator(const llvm::Triple &T, bool OpenMPOffloading,
+                                bool NVPTX, bool AMDGPU, bool SPIRV) {
+  if (!OpenMPOffloading)
+    return false;
+
+  if (NVPTX && T.isNVPTX())
+    return true;
+  if (AMDGPU && T.isAMDGPU())
+    return true;
+  if (SPIRV && T.isSPIRV())
+    return true;
+
+  return false;
 }
