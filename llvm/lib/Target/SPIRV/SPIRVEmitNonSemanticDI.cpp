@@ -59,7 +59,6 @@ private:
   bool emitGlobalDI(MachineFunction &MF);
   static SourceLanguage
   convertDWARFToSPIRVSourceLanguage(int64_t LLVMSourceLanguage);
-  const Module *getModule(MachineFunction &MF);
   static Register emitOpString(MachineRegisterInfo &MRI,
                                MachineIRBuilder &MIRBuilder, StringRef SR);
   static Register
@@ -115,10 +114,8 @@ SourceLanguage SPIRVEmitNonSemanticDI::convertDWARFToSPIRVSourceLanguage(
   }
 }
 
-const Module *SPIRVEmitNonSemanticDI::getModule(MachineFunction &MF) {
-  const MachineModuleInfo &MMI =
-      getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-  return MMI.getModule();
+static const Module *getModule(MachineFunction &MF) {
+  return MF.getFunction().getParent();
 }
 
 Register SPIRVEmitNonSemanticDI::emitOpString(MachineRegisterInfo &MRI,
