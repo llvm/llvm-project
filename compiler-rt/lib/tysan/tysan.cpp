@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_flag_parser.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_interface_internal.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_report_decorator.h"
 #include "sanitizer_common/sanitizer_stacktrace.h"
@@ -478,6 +479,9 @@ static void InitializeFlags() {
     ReportUnrecognizedFlags();
   if (common_flags()->help)
     parser.PrintFlagDescriptions();
+
+    
+  __sanitizer_set_report_path(common_flags()->log_path);
 }
 
 static void TySanInitializePlatformEarly() {
