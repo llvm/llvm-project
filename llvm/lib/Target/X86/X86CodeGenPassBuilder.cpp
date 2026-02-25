@@ -274,6 +274,7 @@ void X86CodeGenPassBuilder::addAsmPrinterEnd(
 } // namespace
 
 void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+#include "X86PassRegistry.def"
 #define GET_PASS_REGISTRY "X86PassRegistry.def"
 #include "llvm/Passes/TargetPassRegistry.inc"
   // TODO(boomanaiden154): Move this into the base CodeGenPassBuilder once all
