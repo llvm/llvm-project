@@ -185,12 +185,13 @@ enum class TemplateSubstitutionKind : char {
       return !(*this)(Depth, Index).isNull();
     }
 
-    bool isAnyArgInstantiationDependent() const {
+    bool isAnyArgInstantiationDependent(const ASTContext &C) const {
       for (ArgumentListLevel ListLevel : TemplateArgumentLists)
         for (const TemplateArgument &TA : ListLevel.Args)
           // There might be null template arguments representing unused template
           // parameter mappings in an MLTAL during concept checking.
-          if (!TA.isNull() && TA.isInstantiationDependent())
+          if (!TA.isNull() &&
+              C.getCanonicalTemplateArgument(TA).isInstantiationDependent())
             return true;
       return false;
     }

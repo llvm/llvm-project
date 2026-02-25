@@ -221,7 +221,7 @@ protected:
   lldb::TypeSP
   ParseStructureLikeDIE(const lldb_private::SymbolContext &sc,
                         const lldb_private::plugin::dwarf::DWARFDIE &die,
-                        ParsedDWARFTypeAttributes &attrs);
+                        const ParsedDWARFTypeAttributes &attrs);
 
   clang::Decl *
   GetClangDeclForDIE(const lldb_private::plugin::dwarf::DWARFDIE &die);
