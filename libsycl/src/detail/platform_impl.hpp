@@ -53,8 +53,6 @@ public:
 
   ~PlatformImpl() = default;
 
-  /// Returns the backend associated with this platform.
-  ///
   /// \returns sycl::backend associated with this platform.
   backend getBackend() const noexcept { return MBackend; }
 
@@ -122,16 +120,14 @@ public:
   void iterateDevices(info::device_type DeviceType,
                       std::function<void(DeviceImpl *)> callback) const;
 
-  /// Returns context dummy (w/o liboffload handle) that represents all devices
-  /// in platform.
-  ///
-  /// \return context implementation object
+  // TODO: liboffload doesn't support context now, l0 plugin creates default
+  // context for all devices on its level. This method should be removed or
+  // reimplemented once native context support is added to liboffload.
+  /// \return the default context that represents all devices in platform.
   ContextImpl &getDefaultContext();
 
 private:
-  /// Returns all root devices for platform
-  ///
-  /// \return reference to collection of root devices
+  /// \return reference to collection of root devices for platform
   const std::vector<DeviceImplUPtr> &getRootDevices() const;
 
   const ol_platform_handle_t MOffloadPlatform{};

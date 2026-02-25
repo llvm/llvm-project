@@ -50,18 +50,14 @@ public:
     return std::make_shared<ContextImpl>(std::forward<Ts>(args)..., Private{});
   }
 
-  /// Returns associated platform
-  ///
-  /// \return platform implementation object this context is associated with.
+  /// \return the platform this context is associated with.
   PlatformImpl &getPlatformImpl() const { return MPlatform; }
 
   /// Calls "callback" with every device associated
   /// with this context.
   void iterateDevices(const std::function<void(DeviceImpl *)> &callback) const;
 
-  /// Returns backend of the platform this context is associated with.
-  ///
-  /// \return SYCL backend.
+  /// \return backend of the platform this context is associated with.
   backend getBackend() const;
 
 private:

@@ -56,19 +56,13 @@ public:
     return !(lhs == rhs);
   }
 
-  /// Returns the backend associated with this context.
-  ///
   /// \return the backend associated with this context.
   backend get_backend() const noexcept;
 
-  /// Gets platform associated with this SYCL context.
-  ///
-  /// \return a valid instance of SYCL platform.
+  /// \return the platform associated with this SYCL context.
   platform get_platform() const;
 
-  /// Gets devices associated with this SYCL context.
-  ///
-  /// \return a vector of valid SYCL device instances.
+  /// \return a vector of valid SYCL devices associated with this SYCL context.
   std::vector<device> get_devices() const;
 
   /// Queries this SYCL context for information.

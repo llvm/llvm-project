@@ -11,6 +11,8 @@
 #include <detail/context_impl.hpp>
 #include <detail/platform_impl.hpp>
 
+#include <cassert>
+
 _LIBSYCL_BEGIN_NAMESPACE_SYCL
 
 backend context::get_backend() const noexcept { return impl->getBackend(); }
