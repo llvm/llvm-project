@@ -5,8 +5,8 @@ bugprone-cast-to-struct
 
 Finds casts from pointers to struct or scalar type to pointers to struct type.
 
-Casts between pointers to different structs can be unsafe because it is possible
-to access uninitialized or undefined data after the cast. Cast from a
+Casts between pointers to different structs can be unsafe because it is
+possible to access uninitialized or undefined data after the cast. Cast from a
 scalar-type pointer (which points often to an array or memory block) to a
 ``struct`` type pointer can be unsafe for similar reasons. This check warns at
 pointer casts from any non-struct type to a struct type. No warning is produced

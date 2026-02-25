@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "CastToStructCheck.h"
-#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
