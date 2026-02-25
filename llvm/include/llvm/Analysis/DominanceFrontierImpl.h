@@ -97,20 +97,18 @@ void DominanceFrontierBase<BlockT, IsPostDom>::analyze(const DomTreeT &DT) {
     const DomTreeNodeT *parentNode = currentW->parentNode;
     assert(currentNode && "Invalid work object. Missing current Node");
 
+    // Note that for `IsPostDom == true`, virtual root node (empty currentBB)
+    // is an immediate post-dominator for all the exit nodes (which are
+    // virtual node's CFG successors).
+
     // Visit each block only once.
-    if (visited.insert(currentBB).second) {
+    if (currentBB && visited.insert(currentBB).second) {
       // Loop over CFG successors to calculate DFlocal[currentNode].
-      //
-      // Note that for `IsPostDom == true`, virtual root node (empty currentBB)
-      // is an immediate post-dominator for all the exit nodes (which are
-      // virtual node's CFG successors).
-      if (currentBB) {
-        DomSetType &S = this->Frontiers[currentBB];
-        for (const auto Child : children<GraphTy>(currentBB)) {
-          // Does Node immediately dominate this successor?
-          if (DT[Child]->getIDom() != currentNode)
-            S.insert(Child);
-        }
+      DomSetType &S = this->Frontiers[currentBB];
+      for (const auto Child : children<GraphTy>(currentBB)) {
+        // Does Node immediately dominate this successor?
+        if (DT[Child]->getIDom() != currentNode)
+          S.insert(Child);
       }
     }
 
