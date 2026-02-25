@@ -8,13 +8,13 @@
 define i1 @test_mixed_and_select(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_mixed_and_select(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 1048576
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult i32 [[TMP1]], 1048576
 ; CHECK-NEXT:    [[SEL2:%.*]] = and i1 [[COND:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
-  %cmp1 = icmp ugt i32 %y, 65535
+  %cmp1 = icmp samesign ugt i32 %y, 65535
   %sel11 = and i1 %cond, %cmp1
-  %cmp2 = icmp ult i32 %y, 1114112
+  %cmp2 = icmp samesign ult i32 %y, 1114112
   %sel2 = select i1 %sel11, i1 %cmp2, i1 false
   ret i1 %sel2
 }
@@ -22,13 +22,13 @@ define i1 @test_mixed_and_select(i1 %cond, i32 %y) {
 define i1 @test_bitwise_and_reassoc(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_bitwise_and_reassoc(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -65536
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], 1048576
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult i32 [[TMP1]], 1048576
 ; CHECK-NEXT:    [[SEL2:%.*]] = and i1 [[COND:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
-  %cmp1 = icmp ugt i32 %y, 65535
+  %cmp1 = icmp samesign ugt i32 %y, 65535
   %sel11 = and i1 %cond, %cmp1
-  %cmp2 = icmp ult i32 %y, 1114112
+  %cmp2 = icmp samesign ult i32 %y, 1114112
   %sel2 = and i1 %sel11, %cmp2
   ret i1 %sel2
 }
@@ -36,13 +36,13 @@ define i1 @test_bitwise_and_reassoc(i1 %cond, i32 %y) {
 define i1 @test_mixed_or_select(i1 %cond, i32 %y) {
 ; CHECK-LABEL: @test_mixed_or_select(
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[Y:%.*]], -1114112
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 [[TMP1]], -1048576
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp samesign ult i32 [[TMP1]], -1048576
 ; CHECK-NEXT:    [[SEL2:%.*]] = or i1 [[COND:%.*]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[SEL2]]
 ;
-  %cmp1 = icmp ugt i32 %y, 1114111
+  %cmp1 = icmp samesign ugt i32 %y, 1114111
   %sel11 = or i1 %cond, %cmp1
-  %cmp2 = icmp ult i32 %y, 65536
+  %cmp2 = icmp samesign ult i32 %y, 65536
   %sel2 = select i1 %sel11, i1 true, i1 %cmp2
   ret i1 %sel2
 }
