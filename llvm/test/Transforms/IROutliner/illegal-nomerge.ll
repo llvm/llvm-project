@@ -56,7 +56,11 @@ entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]], ptr @f1)
+; CHECK-NEXT:    store i32 2, ptr [[A]], align 4
+; CHECK-NEXT:    store i32 3, ptr [[B]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[C]], align 4
+; CHECK-NEXT:    call void @f1(ptr [[A]], ptr [[B]]) #[[ATTR1:[0-9]+]]
+; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -65,7 +69,11 @@ entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]], ptr @f1)
+; CHECK-NEXT:    store i32 2, ptr [[A]], align 4
+; CHECK-NEXT:    store i32 3, ptr [[B]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[C]], align 4
+; CHECK-NEXT:    call void @f1(ptr [[A]], ptr [[B]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 ;
@@ -74,19 +82,19 @@ entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[C:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]], ptr @f2)
+; CHECK-NEXT:    store i32 2, ptr [[A]], align 4
+; CHECK-NEXT:    store i32 3, ptr [[B]], align 4
+; CHECK-NEXT:    store i32 4, ptr [[C]], align 4
+; CHECK-NEXT:    call void @f2(ptr [[A]], ptr [[B]]) #[[ATTR1]]
+; CHECK-NEXT:    call void @outlined_ir_func_0(ptr [[A]], ptr [[B]], ptr [[C]])
 ; CHECK-NEXT:    ret void
 ;
 ;
 ; CHECK-LABEL: define internal void @outlined_ir_func_0(
-; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]], ptr [[TMP3:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr [[TMP0:%.*]], ptr [[TMP1:%.*]], ptr [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[NEWFUNCROOT:.*:]]
 ; CHECK-NEXT:    br label %[[ENTRY_TO_OUTLINE:.*]]
 ; CHECK:       [[ENTRY_TO_OUTLINE]]:
-; CHECK-NEXT:    store i32 2, ptr [[TMP0]], align 4
-; CHECK-NEXT:    store i32 3, ptr [[TMP1]], align 4
-; CHECK-NEXT:    store i32 4, ptr [[TMP2]], align 4
-; CHECK-NEXT:    call void [[TMP3]](ptr [[TMP0]], ptr [[TMP1]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    [[AL:%.*]] = load i32, ptr [[TMP0]], align 4
 ; CHECK-NEXT:    [[BL:%.*]] = load i32, ptr [[TMP1]], align 4
 ; CHECK-NEXT:    [[CL:%.*]] = load i32, ptr [[TMP2]], align 4
