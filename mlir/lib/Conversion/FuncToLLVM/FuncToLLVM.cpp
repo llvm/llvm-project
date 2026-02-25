@@ -52,15 +52,10 @@ static constexpr StringRef varargsAttrName = "func.varargs";
 static constexpr StringRef linkageAttrName = "llvm.linkage";
 static constexpr StringRef barePtrAttrName = "llvm.bareptr";
 
-static constexpr StringRef varargsAttrNameNoPrefix = "varargs";
-static constexpr StringRef linkageAttrNameNoPrefix = "linkage";
-static constexpr StringRef barePtrAttrNameNoPrefix = "bareptr";
-
 /// Return `true` if the `op` should use bare pointer calling convention.
 static bool shouldUseBarePtrCallConv(Operation *op,
                                      const LLVMTypeConverter *typeConverter) {
-  return (op && (op->hasAttr(barePtrAttrName) ||
-                 op->hasAttr(barePtrAttrNameNoPrefix))) ||
+  return (op && op->hasAttr(barePtrAttrName)) ||
          typeConverter->getOptions().useBarePtrCallConv;
 }
 
@@ -68,12 +63,11 @@ static bool shouldUseBarePtrCallConv(Operation *op,
 /// `LLVMFuncOp::build`.
 static void filterFuncAttributes(FunctionOpInterface func,
                                  SmallVectorImpl<NamedAttribute> &result) {
+  llvm::SmallDenseSet<StringRef> odsAttrNames(
+      LLVM::LLVMFuncOp::getAttributeNames().begin(),
+      LLVM::LLVMFuncOp::getAttributeNames().end());
   for (const NamedAttribute &attr : func->getDiscardableAttrs()) {
-    if (attr.getName() == linkageAttrName ||
-        attr.getName() == linkageAttrNameNoPrefix ||
-        attr.getName() == varargsAttrName ||
-        attr.getName() == varargsAttrNameNoPrefix ||
-        attr.getName() == LLVM::LLVMDialect::getReadnoneAttrName())
+    if (odsAttrNames.contains(attr.getName().strref()))
       continue;
     result.push_back(attr);
   }
@@ -306,10 +300,7 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
 
   // Convert the original function arguments. They are converted using the
   // LLVMTypeConverter provided to this legalization pattern.
-  auto varargsAttr =
-      funcOp->getAttrOfType<BoolAttr>(varargsAttrName)
-          ? funcOp->getAttrOfType<BoolAttr>(varargsAttrName)
-          : funcOp->getAttrOfType<BoolAttr>(varargsAttrNameNoPrefix);
+  auto varargsAttr = funcOp->getAttrOfType<BoolAttr>(varargsAttrName);
   // Gather `llvm.byval` and `llvm.byref` arguments whose type convertion was
   // overriden with an LLVM pointer type for later processing.
   SmallVector<std::optional<NamedAttribute>> byValRefNonPtrAttrs;
@@ -333,12 +324,9 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
   // Create an LLVM function, use external linkage by default until MLIR
   // functions have linkage.
   LLVM::Linkage linkage = LLVM::Linkage::External;
-  if (funcOp->hasAttr(linkageAttrName) ||
-      funcOp->hasAttr(linkageAttrNameNoPrefix)) {
-    auto attr = dyn_cast_or_null<mlir::LLVM::LinkageAttr>(
-        funcOp->getAttr(linkageAttrName)
-            ? funcOp->getAttr(linkageAttrName)
-            : funcOp->getAttr(linkageAttrNameNoPrefix));
+  if (funcOp->hasAttr(linkageAttrName)) {
+    auto attr =
+        dyn_cast<mlir::LLVM::LinkageAttr>(funcOp->getAttr(linkageAttrName));
     if (!attr) {
       funcOp->emitError() << "Contains " << linkageAttrName
                           << " attribute not of type LLVM::LinkageAttr";
@@ -664,15 +652,13 @@ public:
       Operation *callee =
           symbolTables->lookupNearestSymbolFrom(callOp, callOp.getCalleeAttr());
       useBarePtrCallConv =
-          callee != nullptr && (callee->hasAttr(barePtrAttrName) ||
-                                callee->hasAttr(barePtrAttrNameNoPrefix));
+          callee != nullptr && callee->hasAttr(barePtrAttrName);
     } else {
       // Warning: This is a linear lookup.
       Operation *callee =
           SymbolTable::lookupNearestSymbolFrom(callOp, callOp.getCalleeAttr());
       useBarePtrCallConv =
-          callee != nullptr && (callee->hasAttr(barePtrAttrName) ||
-                                callee->hasAttr(barePtrAttrNameNoPrefix));
+          callee != nullptr && callee->hasAttr(barePtrAttrName);
     }
     return matchAndRewriteImpl(callOp, adaptor, rewriter, useBarePtrCallConv);
   }
