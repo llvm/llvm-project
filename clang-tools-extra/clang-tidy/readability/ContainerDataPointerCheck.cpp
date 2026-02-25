@@ -74,7 +74,7 @@ void ContainerDataPointerCheck::registerMatchers(MatchFinder *Finder) {
 
   Finder->addMatcher(
       unaryOperator(
-          unless(isExpansionInSystemHeader()), hasOperatorName("&"),
+          hasOperatorName("&"),
           hasUnaryOperand(expr(
               anyOf(cxxOperatorCallExpr(SubscriptOperator, argumentCountIs(2),
                                         hasArgument(0, ContainerExpr),
