@@ -80,6 +80,8 @@ public:
     return SpillSGPRToVGPR;
   }
 
+  bool isCFISavedRegsSpillEnabled() const;
+
   /// Return the largest available SGPR aligned to \p Align for the register
   /// class \p RC.
   MCRegister getAlignedHighSGPRForRC(const MachineFunction &MF,
