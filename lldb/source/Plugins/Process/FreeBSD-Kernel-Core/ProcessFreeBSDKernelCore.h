@@ -48,6 +48,9 @@ public:
 
   void RefreshStateAfterStop() override;
 
+  size_t DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
+                       lldb_private::Status &error) override;
+
 protected:
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,
                           lldb_private::ThreadList &new_thread_list) override;

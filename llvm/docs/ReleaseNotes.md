@@ -220,6 +220,8 @@ Changes to LLDB
 * Threads are listed in incrmental order by pid then by tid.
 * Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
   when lldb is in the interactive mode (i.e. not in batch mode).
+* Writing to core is now supported. For security, `plugin.process.freebsd-kernel-core.read-only` must be set
+  to `false` to enable this feature.
 
 ### Linux
 
