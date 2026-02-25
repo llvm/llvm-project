@@ -48,7 +48,7 @@ entry:
 
   %0 = tail call target("spirv.VulkanBuffer", [0 x <4 x float>], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0v4f32_12_1t(i32 0, i32 0, i32 1, i32 0, ptr nonnull @.str)
 
-; CHECK: %[[VAL_INT:[0-9]+]] = OpLoad %[[INT]] %[[PTR_INT_ACCESS]] Aligned 4
+; CHECK: %[[VAL_INT:[0-9]+]] = OpLoad %[[INT]] %[[PTR_INT_ACCESS]]
   %1 = load i32, ptr addrspace(12) @index, align 4
 
 ; CHECK: %[[VAL_INT64:[0-9]+]] = OpSConvert %[[INT64]] %[[VAL_INT]]
@@ -57,10 +57,10 @@ entry:
 ; CHECK: %[[PTR_ELEM:[0-9]+]] = OpInBoundsAccessChain %[[PTR_VEC4]] %[[PTR_ARRAY_ACCESS]] %[[VAL_INT64]]
   %arrayidx.i = getelementptr inbounds <4 x float>, ptr addrspace(12) @colors, i64 %idxprom.i
 
-; CHECK: %[[VAL_ELEM:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_ELEM]] Aligned 16
+; CHECK: %[[VAL_ELEM:[0-9]+]] = OpLoad %[[VEC4]] %[[PTR_ELEM]]
   %2 = load <4 x float>, ptr addrspace(12) %arrayidx.i, align 16
 
-; CHECK: OpStore {{%[0-9]+}} %[[VAL_ELEM]] Aligned 16
+; CHECK: OpStore {{%[0-9]+}} %[[VAL_ELEM]]
   %3 = tail call noundef align 16 dereferenceable(16) ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0v4f32_12_1t(target("spirv.VulkanBuffer", [0 x <4 x float>], 12, 1) %0, i32 0)
   store <4 x float> %2, ptr addrspace(11) %3, align 16
   ret void

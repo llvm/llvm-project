@@ -1665,31 +1665,11 @@ Error OnDiskGraphDB::storeFile(
     return store(ID, {}, arrayRefFromStringRef<char>((*Buf)->getBuffer()));
   }
 
-  StringRef FromPath;
-  SmallString<256> TmpPath;
-
-  auto RemoveTmpFile = scope_exit([&TmpPath] {
-    if (!TmpPath.empty())
-      sys::fs::remove(TmpPath);
-  });
-
-  // \c clonefile requires that the destination path doesn't exist. We create
-  // a "placeholder" temporary file, then modify its path a bit and use that
-  // for \c clonefile to write to.
-  // FIXME: Instead of creating a dummy file, add a new file system API for
-  // copying to a unique path that can loop while checking EEXIST.
-  SmallString<256> UniqueTmpPath;
-  if (std::error_code EC =
-          sys::fs::createUniqueFile(RootPath + "/tmp.%%%%%%%", UniqueTmpPath))
-    return createFileError(RootPath + "/tmp.%%%%%%%", EC);
-  auto RemoveUniqueFile =
-      scope_exit([&UniqueTmpPath] { sys::fs::remove(UniqueTmpPath); });
-  TmpPath = UniqueTmpPath;
-  TmpPath += 'c'; // modify so that there's no file at that path.
-  // \c copy_file will use \c clonefile when applicable.
-  if (std::error_code EC = sys::fs::copy_file(FilePath, TmpPath))
-    return createFileError(FilePath, EC);
-  FromPath = TmpPath;
+  UniqueTempFile UniqueTmp;
+  auto ExpectedPath = UniqueTmp.createAndCopyFrom(RootPath, FilePath);
+  if (!ExpectedPath)
+    return ExpectedPath.takeError();
+  StringRef TmpPath = *ExpectedPath;
 
   TrieRecord::StorageKind SK;
   if (ImportKind.has_value()) {
@@ -1710,23 +1690,22 @@ Error OnDiskGraphDB::storeFile(
     if (Leaf0) {
       // Add a nul byte at the end.
       std::error_code EC;
-      raw_fd_ostream OS(FromPath, EC, sys::fs::CD_OpenExisting,
+      raw_fd_ostream OS(TmpPath, EC, sys::fs::CD_OpenExisting,
                         sys::fs::FA_Write, sys::fs::OF_Append);
       if (EC)
-        return createFileError(FromPath, EC);
+        return createFileError(TmpPath, EC);
       OS.write(0);
       OS.close();
       if (OS.has_error())
-        return createFileError(FromPath, OS.error());
+        return createFileError(TmpPath, OS.error());
     }
   }
 
   SmallString<256> StandalonePath;
   getStandalonePath(TrieRecord::getStandaloneFilePrefix(SK), I->Offset,
                     StandalonePath);
-  if (std::error_code EC = sys::fs::rename(FromPath, StandalonePath))
-    return createFileError(FromPath, EC);
-  TmpPath.clear();
+  if (Error E = UniqueTmp.renameTo(StandalonePath))
+    return E;
 
   // Store the object reference.
   TrieRecord::Data Existing;

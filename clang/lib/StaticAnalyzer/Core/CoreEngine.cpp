@@ -425,12 +425,15 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
       case Stmt::IndirectGotoStmtClass: {
         // Only 1 successor: the indirect goto dispatch block.
         assert(B->succ_size() == 1);
+        NodeBuilderContext Ctx(*this, B, Pred);
+        ExplodedNodeSet Dst;
+        IndirectGotoNodeBuilder Builder(
+            Dst, Ctx, cast<IndirectGotoStmt>(Term)->getTarget(),
+            *(B->succ_begin()));
 
-        IndirectGotoNodeBuilder
-           builder(Pred, B, cast<IndirectGotoStmt>(Term)->getTarget(),
-                   *(B->succ_begin()), this);
-
-        ExprEng.processIndirectGoto(builder);
+        ExprEng.processIndirectGoto(Builder, Pred);
+        // Enqueue the new frontier onto the worklist.
+        enqueue(Dst);
         return;
       }
 
@@ -449,7 +452,11 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         return;
 
       case Stmt::SwitchStmtClass: {
-        ExprEng.processSwitch(cast<SwitchStmt>(Term), *this, B, Pred);
+        NodeBuilderContext Ctx(*this, B, Pred);
+        ExplodedNodeSet Dst;
+        ExprEng.processSwitch(Ctx, cast<SwitchStmt>(Term), Pred, Dst);
+        // Enqueue the new frontier onto the worklist.
+        enqueue(Dst);
         return;
       }
 
@@ -521,6 +528,12 @@ void CoreEngine::HandlePostStmt(const CFGBlock *B, unsigned StmtIdx,
   assert(B);
   assert(!B->empty());
 
+  // We no-op by skipping any FullExprCleanup
+  while (StmtIdx < B->size() &&
+         (*B)[StmtIdx].getKind() == CFGElement::FullExprCleanup) {
+    StmtIdx++;
+  }
+
   if (StmtIdx == B->size())
     HandleBlockExit(B, Pred);
   else {
@@ -552,8 +565,23 @@ void CoreEngine::HandleVirtualBaseBranch(const CFGBlock *B,
   HandleBlockEdge(Loc, Pred);
 }
 
+ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
+                                   ProgramStateRef State, ExplodedNode *Pred,
+                                   bool MarkAsSink) const {
+  MarkAsSink = MarkAsSink || State->isPosteriorlyOverconstrained();
+
+  bool IsNew;
+  ExplodedNode *N = G.getNode(Loc, State, MarkAsSink, &IsNew);
+  N->addPredecessor(Pred, G);
+
+  return IsNew ? N : nullptr;
+}
+
 /// generateNode - Utility method to generate nodes, hook up successors,
 ///  and add nodes to the worklist.
+/// TODO: This and other similar methods should call CoreEngine::makeNode()
+/// instead of duplicating its logic. This would also fix that currently these
+/// can generate non-sink nodes with PosteriorlyOverconstrained state.
 void CoreEngine::generateNode(const ProgramPoint &Loc,
                               ProgramStateRef State,
                               ExplodedNode *Pred) {
@@ -681,34 +709,17 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
   }
 }
 
-void NodeBuilder::anchor() {}
-
-ExplodedNode* NodeBuilder::generateNodeImpl(const ProgramPoint &Loc,
-                                            ProgramStateRef State,
-                                            ExplodedNode *FromN,
-                                            bool MarkAsSink) {
+ExplodedNode *NodeBuilder::generateNode(const ProgramPoint &Loc,
+                                        ProgramStateRef State,
+                                        ExplodedNode *FromN, bool MarkAsSink) {
   HasGeneratedNodes = true;
-  bool IsNew;
-  ExplodedNode *N = C.getEngine().G.getNode(Loc, State, MarkAsSink, &IsNew);
-  N->addPredecessor(FromN, C.getEngine().G);
   Frontier.erase(FromN);
+  ExplodedNode *N = C.getEngine().makeNode(Loc, State, FromN, MarkAsSink);
 
-  if (!IsNew)
-    return nullptr;
-
-  if (!MarkAsSink)
-    Frontier.Add(N);
+  Frontier.Add(N);
 
   return N;
 }
-
-StmtNodeBuilder::~StmtNodeBuilder() {
-  if (EnclosingBldr)
-    for (const auto I : Frontier)
-      EnclosingBldr->addNodes(I);
-}
-
-void BranchNodeBuilder::anchor() {}
 
 ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
                                               bool Branch,
@@ -720,44 +731,28 @@ ExplodedNode *BranchNodeBuilder::generateNode(ProgramStateRef State,
 
   ProgramPoint Loc =
       BlockEdge(C.getBlock(), Dst, NodePred->getLocationContext());
-  ExplodedNode *Succ = generateNodeImpl(Loc, State, NodePred);
+  ExplodedNode *Succ = NodeBuilder::generateNode(Loc, State, NodePred);
   return Succ;
 }
 
 ExplodedNode *IndirectGotoNodeBuilder::generateNode(const CFGBlock *Block,
                                                     ProgramStateRef St,
-                                                    bool IsSink) {
-  bool IsNew;
-  ExplodedNode *Succ = Eng.G.getNode(
-      BlockEdge(Src, Block, Pred->getLocationContext()), St, IsSink, &IsNew);
-  Succ->addPredecessor(Pred, Eng.G);
-
-  if (!IsNew)
-    return nullptr;
-
-  if (!IsSink)
-    Eng.WList->enqueue(Succ);
-
-  return Succ;
+                                                    ExplodedNode *Pred) {
+  BlockEdge BE(C.getBlock(), Block, Pred->getLocationContext());
+  return generateNode(BE, St, Pred);
 }
 
 ExplodedNode *SwitchNodeBuilder::generateCaseStmtNode(const CFGBlock *Block,
-                                                      ProgramStateRef St) {
-  bool IsNew;
-  ExplodedNode *Succ = Eng.G.getNode(
-      BlockEdge(Src, Block, Pred->getLocationContext()), St, false, &IsNew);
-  Succ->addPredecessor(Pred, Eng.G);
-  if (!IsNew)
-    return nullptr;
-
-  Eng.WList->enqueue(Succ);
-  return Succ;
+                                                      ProgramStateRef St,
+                                                      ExplodedNode *Pred) {
+  BlockEdge BE(C.getBlock(), Block, Pred->getLocationContext());
+  return generateNode(BE, St, Pred);
 }
 
-ExplodedNode*
-SwitchNodeBuilder::generateDefaultCaseNode(ProgramStateRef St,
-                                           bool IsSink) {
+ExplodedNode *SwitchNodeBuilder::generateDefaultCaseNode(ProgramStateRef St,
+                                                         ExplodedNode *Pred) {
   // Get the block for the default case.
+  const CFGBlock *Src = C.getBlock();
   assert(Src->succ_rbegin() != Src->succ_rend());
   CFGBlock *DefaultBlock = *Src->succ_rbegin();
 
@@ -766,17 +761,6 @@ SwitchNodeBuilder::generateDefaultCaseNode(ProgramStateRef St,
   if (!DefaultBlock)
     return nullptr;
 
-  bool IsNew;
-  ExplodedNode *Succ =
-      Eng.G.getNode(BlockEdge(Src, DefaultBlock, Pred->getLocationContext()),
-                    St, IsSink, &IsNew);
-  Succ->addPredecessor(Pred, Eng.G);
-
-  if (!IsNew)
-    return nullptr;
-
-  if (!IsSink)
-    Eng.WList->enqueue(Succ);
-
-  return Succ;
+  BlockEdge BE(Src, DefaultBlock, Pred->getLocationContext());
+  return generateNode(BE, St, Pred);
 }

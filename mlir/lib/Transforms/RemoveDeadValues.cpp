@@ -720,6 +720,28 @@ static void cleanUpDeadVals(MLIRContext *ctx, RDVFinalCleanupList &list) {
       // When erasing a terminator, insert an unreachable op in its place.
       ub::UnreachableOp::create(rewriter, op->getLoc());
     }
+
+    // Before erasing the operation, replace all result values with live-uses by
+    // ub.poison values. This is important to maintain IR validity. For example,
+    // if we have an op with one of its results used by another op, erasing the
+    // op without replacing its corresponding result would leave us with a
+    // dangling operand in the user op. By replacing the result with a ub.poison
+    // value, we ensure that the user op still has a valid operand, even though
+    // it's a poison value which will be cleaned up later if it can be cleaned
+    // up. This keeps the IR valid for further simplification and
+    // canonicalization.
+    auto opResults = op->getResults();
+    for (Value opResult : opResults) {
+      // Early continue for the case where the op result has no uses. No need to
+      // create a poison op here.
+      if (opResult.use_empty())
+        continue;
+
+      rewriter.setInsertionPoint(op);
+      Value poisonedValue = createPoisonedValues(rewriter, opResult).front();
+      rewriter.replaceAllUsesWith(opResult, poisonedValue);
+    }
+
     op->dropAllUses();
     rewriter.eraseOp(op);
   }
