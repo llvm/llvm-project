@@ -1802,55 +1802,58 @@ define i512 @shl_i512_200(i512 %a0) nounwind {
 ; SSE-LABEL: shl_i512_200:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
+; SSE-NEXT:    movq %rsi, %rdi
+; SSE-NEXT:    shrdq $56, %rdx, %rdi
+; SSE-NEXT:    shrdq $56, %rcx, %rdx
+; SSE-NEXT:    shrdq $56, %r8, %rcx
 ; SSE-NEXT:    shldq $8, %r8, %r9
-; SSE-NEXT:    shldq $8, %rcx, %r8
-; SSE-NEXT:    shldq $8, %rdx, %rcx
-; SSE-NEXT:    shldq $8, %rsi, %rdx
 ; SSE-NEXT:    shlq $8, %rsi
-; SSE-NEXT:    movq %r9, 56(%rdi)
-; SSE-NEXT:    movq %r8, 48(%rdi)
-; SSE-NEXT:    movq %rcx, 40(%rdi)
-; SSE-NEXT:    movq %rdx, 32(%rdi)
-; SSE-NEXT:    movq %rsi, 24(%rdi)
+; SSE-NEXT:    movq %r9, 56(%rax)
+; SSE-NEXT:    movq %rcx, 48(%rax)
+; SSE-NEXT:    movq %rdx, 40(%rax)
+; SSE-NEXT:    movq %rdi, 32(%rax)
+; SSE-NEXT:    movq %rsi, 24(%rax)
 ; SSE-NEXT:    xorps %xmm0, %xmm0
-; SSE-NEXT:    movaps %xmm0, (%rdi)
-; SSE-NEXT:    movq $0, 16(%rdi)
+; SSE-NEXT:    movaps %xmm0, (%rax)
+; SSE-NEXT:    movq $0, 16(%rax)
 ; SSE-NEXT:    retq
 ;
 ; AVX2-LABEL: shl_i512_200:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    movq %rdi, %rax
+; AVX2-NEXT:    movq %rsi, %rdi
+; AVX2-NEXT:    shrdq $56, %rdx, %rdi
+; AVX2-NEXT:    shrdq $56, %rcx, %rdx
+; AVX2-NEXT:    shrdq $56, %r8, %rcx
 ; AVX2-NEXT:    shldq $8, %r8, %r9
-; AVX2-NEXT:    shldq $8, %rcx, %r8
-; AVX2-NEXT:    shldq $8, %rdx, %rcx
-; AVX2-NEXT:    shldq $8, %rsi, %rdx
 ; AVX2-NEXT:    shlq $8, %rsi
-; AVX2-NEXT:    movq %r9, 56(%rdi)
-; AVX2-NEXT:    movq %r8, 48(%rdi)
-; AVX2-NEXT:    movq %rcx, 40(%rdi)
-; AVX2-NEXT:    movq %rdx, 32(%rdi)
-; AVX2-NEXT:    movq %rsi, 24(%rdi)
+; AVX2-NEXT:    movq %r9, 56(%rax)
+; AVX2-NEXT:    movq %rcx, 48(%rax)
+; AVX2-NEXT:    movq %rdx, 40(%rax)
+; AVX2-NEXT:    movq %rdi, 32(%rax)
+; AVX2-NEXT:    movq %rsi, 24(%rax)
 ; AVX2-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vmovaps %xmm0, (%rdi)
-; AVX2-NEXT:    movq $0, 16(%rdi)
+; AVX2-NEXT:    vmovaps %xmm0, (%rax)
+; AVX2-NEXT:    movq $0, 16(%rax)
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: shl_i512_200:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    movq %rdi, %rax
+; AVX512-NEXT:    movq %rsi, %rdi
+; AVX512-NEXT:    shrdq $56, %rdx, %rdi
+; AVX512-NEXT:    shrdq $56, %rcx, %rdx
+; AVX512-NEXT:    shrdq $56, %r8, %rcx
 ; AVX512-NEXT:    shldq $8, %r8, %r9
-; AVX512-NEXT:    shldq $8, %rcx, %r8
-; AVX512-NEXT:    shldq $8, %rdx, %rcx
-; AVX512-NEXT:    shldq $8, %rsi, %rdx
 ; AVX512-NEXT:    shlq $8, %rsi
-; AVX512-NEXT:    movq %r9, 56(%rdi)
-; AVX512-NEXT:    movq %r8, 48(%rdi)
-; AVX512-NEXT:    movq %rcx, 40(%rdi)
-; AVX512-NEXT:    movq %rdx, 32(%rdi)
-; AVX512-NEXT:    movq %rsi, 24(%rdi)
+; AVX512-NEXT:    movq %r9, 56(%rax)
+; AVX512-NEXT:    movq %rcx, 48(%rax)
+; AVX512-NEXT:    movq %rdx, 40(%rax)
+; AVX512-NEXT:    movq %rdi, 32(%rax)
+; AVX512-NEXT:    movq %rsi, 24(%rax)
 ; AVX512-NEXT:    vxorps %xmm0, %xmm0, %xmm0
-; AVX512-NEXT:    vmovaps %xmm0, (%rdi)
-; AVX512-NEXT:    movq $0, 16(%rdi)
+; AVX512-NEXT:    vmovaps %xmm0, (%rax)
+; AVX512-NEXT:    movq $0, 16(%rax)
 ; AVX512-NEXT:    retq
   %r = shl i512 %a0, 200
   ret i512 %r
