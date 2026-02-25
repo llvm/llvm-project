@@ -1151,18 +1151,15 @@ void ExprEngine::ProcessLoopExit(const Stmt* S, ExplodedNode *Pred) {
   PrettyStackTraceLoc CrashInfo(getContext().getSourceManager(),
                                 S->getBeginLoc(),
                                 "Error evaluating end of the loop");
-  ExplodedNodeSet Dst;
-  Dst.Add(Pred);
-  NodeBuilder Bldr(Pred, Dst, *currBldrCtx);
   ProgramStateRef NewState = Pred->getState();
 
   if(AMgr.options.ShouldUnrollLoops)
     NewState = processLoopEnd(S, NewState);
 
   LoopExit PP(S, Pred->getLocationContext());
-  Bldr.generateNode(PP, NewState, Pred);
-  // Enqueue the new nodes onto the work list.
-  Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
+  ExplodedNode *N = Engine.makeNode(PP, NewState, Pred);
+  if (N && !N->isSink())
+    Engine.enqueueStmtNode(N, currBldrCtx->getBlock(), currStmtIdx);
 }
 
 void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
