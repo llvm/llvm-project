@@ -3480,7 +3480,7 @@ add_entrypoint_object(
   HDRS
     ../nextdown.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextdown
 )
 
 add_entrypoint_object(
@@ -3490,7 +3490,7 @@ add_entrypoint_object(
   HDRS
     ../nextdownl.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextdownl
 )
 
 add_entrypoint_object(
@@ -3500,7 +3500,7 @@ add_entrypoint_object(
   HDRS
     ../nextdownf.h
   DEPENDS
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextdownf
 )
 
 add_entrypoint_object(
@@ -3510,8 +3510,7 @@ add_entrypoint_object(
   HDRS
     ../nextdownf16.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextdownf16
 )
 
 add_entrypoint_object(
@@ -3521,8 +3520,7 @@ add_entrypoint_object(
   HDRS
     ../nextdownf128.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.math.nextdownf128
 )
 
 add_entrypoint_object(
@@ -3532,11 +3530,7 @@ add_entrypoint_object(
   HDRS
     ../nextdownbf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.manipulation_functions
-    libc.src.__support.macros.config
-    libc.src.__support.macros.properties.types
+    libc.src.__support.math.nextdownbf16
 )
 
 add_entrypoint_object(
