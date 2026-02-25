@@ -640,22 +640,22 @@ mqacc.h11 t5, t5, s0
 # CHECK-ASM-AND-OBJ: mqracc.h11 s0, t5, s2
 # CHECK-ASM: encoding: [0x3b,0x74,0x2f,0xfd]
 mqracc.h11 s0, t5, s2
-# CHECK-ASM-AND-OBJ: pwslli.b a0, t1
+# CHECK-ASM-AND-OBJ: pwslli.b a0, t1, 0
 # CHECK-ASM: encoding: [0x1b,0x25,0x03,0x01]
 pwslli.b a0, t1, 0
-# CHECK-ASM-AND-OBJ: pwslli.h s0, a0
+# CHECK-ASM-AND-OBJ: pwslli.h s0, a0, 31
 # CHECK-ASM: encoding: [0x1b,0x24,0xf5,0x03]
 pwslli.h s0, a0, 31
-# CHECK-ASM-AND-OBJ: wslli s2, t3
+# CHECK-ASM-AND-OBJ: wslli s2, t3, 63
 # CHECK-ASM: encoding: [0x1b,0x29,0xfe,0x07]
 wslli s2, t3, 63
-# CHECK-ASM-AND-OBJ: pwslai.b t5, t5
+# CHECK-ASM-AND-OBJ: pwslai.b t5, t5, 8
 # CHECK-ASM: encoding: [0x1b,0x2f,0x8f,0x41]
 pwslai.b t5, t5, 8
-# CHECK-ASM-AND-OBJ: pwslai.h t5, a4
+# CHECK-ASM-AND-OBJ: pwslai.h t5, a4, 31
 # CHECK-ASM: encoding: [0x1b,0x2f,0xf7,0x43]
 pwslai.h t5, a4, 31
-# CHECK-ASM-AND-OBJ: wslai t1, a2
+# CHECK-ASM-AND-OBJ: wslai t1, a2, 63
 # CHECK-ASM: encoding: [0x1b,0x23,0xf6,0x47]
 wslai t1, a2, 63
 # CHECK-ASM-AND-OBJ: pli.dh a4, 16
@@ -874,67 +874,67 @@ predsumu.dhs a2, a2, t3
 # CHECK-ASM-AND-OBJ: predsumu.dbs a2, a0, s0
 # CHECK-ASM: encoding: [0x1b,0x46,0x85,0x3c]
 predsumu.dbs a2, a0, s0
-# CHECK-ASM-AND-OBJ: pnsrli.b a2, a0
+# CHECK-ASM-AND-OBJ: pnsrli.b a2, a0, 0
 # CHECK-ASM: encoding: [0x1b,0xc6,0x05,0x01]
 pnsrli.b a2, a0, 0
-# CHECK-ASM-AND-OBJ: pnsrli.h a0, t3
+# CHECK-ASM-AND-OBJ: pnsrli.h a0, t3, 1
 # CHECK-ASM: encoding: [0x1b,0xc5,0x1e,0x02]
 pnsrli.h a0, t3, 1
-# CHECK-ASM-AND-OBJ: nsrli a2, a0
+# CHECK-ASM-AND-OBJ: nsrli a2, a0, 3
 # CHECK-ASM: encoding: [0x1b,0xc6,0x35,0x04]
 nsrli a2, a0, 3
-# CHECK-ASM-AND-OBJ: pnclipiu.b a4, t3
+# CHECK-ASM-AND-OBJ: pnclipiu.b a4, t3, 2
 # CHECK-ASM: encoding: [0x1b,0xc7,0x2e,0x21]
 pnclipiu.b a4, t3, 2
-# CHECK-ASM-AND-OBJ: pnclipiu.h t1, s2
+# CHECK-ASM-AND-OBJ: pnclipiu.h t1, s2, 3
 # CHECK-ASM: encoding: [0x1b,0xc3,0x39,0x22]
 pnclipiu.h t1, s2, 3
-# CHECK-ASM-AND-OBJ: nclipiu s0, a2
+# CHECK-ASM-AND-OBJ: nclipiu s0, a2, 4
 # CHECK-ASM: encoding: [0x1b,0xc4,0x46,0x24]
 nclipiu s0, a2, 4
-# CHECK-ASM-AND-OBJ: pnclipriu.b s2, s0
+# CHECK-ASM-AND-OBJ: pnclipriu.b s2, s0, 1
 # CHECK-ASM: encoding: [0x1b,0xc9,0x14,0x31]
 pnclipriu.b s2, s0, 1
-# CHECK-ASM-AND-OBJ: pnclipriu.h s0, s0
+# CHECK-ASM-AND-OBJ: pnclipriu.h s0, s0, 2
 # CHECK-ASM: encoding: [0x1b,0xc4,0x24,0x32]
 pnclipriu.h s0, s0, 2
-# CHECK-ASM-AND-OBJ: nclipriu t3, t3
+# CHECK-ASM-AND-OBJ: nclipriu t3, t3, 4
 # CHECK-ASM: encoding: [0x1b,0xce,0x4e,0x34]
 nclipriu t3, t3, 4
-# CHECK-ASM-AND-OBJ: pnsrai.b s2, t5
+# CHECK-ASM-AND-OBJ: pnsrai.b s2, t5, 3
 # CHECK-ASM: encoding: [0x1b,0xc9,0x3f,0x41]
 pnsrai.b s2, t5, 3
-# CHECK-ASM-AND-OBJ: pnsrai.h s0, a0
+# CHECK-ASM-AND-OBJ: pnsrai.h s0, a0, 2
 # CHECK-ASM: encoding: [0x1b,0xc4,0x25,0x42]
 pnsrai.h s0, a0, 2
-# CHECK-ASM-AND-OBJ: nsrai a4, t3
+# CHECK-ASM-AND-OBJ: nsrai a4, t3, 4
 # CHECK-ASM: encoding: [0x1b,0xc7,0x4e,0x44]
 nsrai a4, t3, 4
-# CHECK-ASM-AND-OBJ: pnsrari.b t5, t5
+# CHECK-ASM-AND-OBJ: pnsrari.b t5, t5, 0
 # CHECK-ASM: encoding: [0x1b,0xcf,0x0f,0x51]
 pnsrari.b t5, t5, 0
-# CHECK-ASM-AND-OBJ: pnsrari.h t1, a4
+# CHECK-ASM-AND-OBJ: pnsrari.h t1, a4, 3
 # CHECK-ASM: encoding: [0x1b,0xc3,0x37,0x52]
 pnsrari.h t1, a4, 3
-# CHECK-ASM-AND-OBJ: nsrari s0, t1
+# CHECK-ASM-AND-OBJ: nsrari s0, t1, 5
 # CHECK-ASM: encoding: [0x1b,0xc4,0x53,0x54]
 nsrari s0, t1, 5
-# CHECK-ASM-AND-OBJ: pnclipi.b t1, a4
+# CHECK-ASM-AND-OBJ: pnclipi.b t1, a4, 7
 # CHECK-ASM: encoding: [0x1b,0xc3,0x77,0x61]
 pnclipi.b t1, a4, 7
-# CHECK-ASM-AND-OBJ: pnclipi.h a0, a4
+# CHECK-ASM-AND-OBJ: pnclipi.h a0, a4, 2
 # CHECK-ASM: encoding: [0x1b,0xc5,0x27,0x62]
 pnclipi.h a0, a4, 2
-# CHECK-ASM-AND-OBJ: nclipi t5, t5
+# CHECK-ASM-AND-OBJ: nclipi t5, t5, 5
 # CHECK-ASM: encoding: [0x1b,0xcf,0x5f,0x64]
 nclipi t5, t5, 5
-# CHECK-ASM-AND-OBJ: pnclipri.b a0, s0
+# CHECK-ASM-AND-OBJ: pnclipri.b a0, s0, 2
 # CHECK-ASM: encoding: [0x1b,0xc5,0x24,0x71]
 pnclipri.b a0, s0, 2
-# CHECK-ASM-AND-OBJ: pnclipri.h s2, t5
+# CHECK-ASM-AND-OBJ: pnclipri.h s2, t5, 3
 # CHECK-ASM: encoding: [0x1b,0xc9,0x3f,0x72]
 pnclipri.h s2, t5, 3
-# CHECK-ASM-AND-OBJ: nclipri t3, s0
+# CHECK-ASM-AND-OBJ: nclipri t3, s0, 5
 # CHECK-ASM: encoding: [0x1b,0xce,0x54,0x74]
 nclipri t3, s0, 5
 # CHECK-ASM-AND-OBJ: pnsrl.bs t3, s0, a4
