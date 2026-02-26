@@ -45,7 +45,9 @@ def SPIRV_TosaNumerical_TensorArm4D : TensorArmRankOf<[SPIRV_TosaNumerical], [4]
 def SPIRV_TosaNumerical_TensorArm5D : TensorArmRankOf<[SPIRV_TosaNumerical], [5]>;
 
 def SPIRV_TosaNumerical_TensorArm : TensorArmRankOf<[SPIRV_TosaNumerical], [1, 2, 3, 4, 5, 6]>;
+def SPIRV_TosaInteger_TensorArm : TensorArmRankOf<[SPIRV_TosaInteger], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_TosaFloat_TensorArm : TensorArmRankOf<[SPIRV_TosaFloat], [1, 2, 3, 4, 5, 6]>;
+def SPIRV_Int32_TensorArm : TensorArmRankOf<[SPIRV_Int32], [1, 2, 3, 4, 5, 6]>;
 def SPIRV_Int32_TensorArmUpTo5D : TensorArmRankOf<[SPIRV_Int32], [1, 2, 3, 4, 5]>;
 
 class Is1DTensorArmOfLength<list<int> allowedLengths> :
@@ -113,6 +115,19 @@ class AccTypeIn<list<string> allowedValues> :
 class TypeImpliesAccType<string input, Type type, list<string> allowedAccTypes>:
   PredOpTrait<"acc_type must be one in [" # !interleave(allowedAccTypes, ",") # "] when type has value " # type.summary,
   Implies<ElementTypeIsPred<input, type>, [AccTypeIn<allowedAccTypes>]>>;
+
+class MatchBroadcastableShapes<string input1, string input2, string output>:
+  PredOpTrait<"the shape of " # input1 # " and " # input2 # " are compatible for broadcasting and the broadcast shape is equal to the output shape",
+  Implies<And<[CPred<HasRank<input1>.result>, CPred<HasRank<input2>.result>, CPred<HasRank<output>.result>,
+               CPred<Rank<input1>.result # " == " # Rank<input2>.result # " && " # Rank<input1>.result # " == " # Rank<output>.result>]>,
+    [CPred<"llvm::all_of_zip(" # Shape<input1>.result # ", " # Shape<input2>.result # ", " # Shape<output>.result # ", " #
+    "[](int64_t input1Dim, int64_t input2Dim, int64_t outputDim) { " #
+    "   bool dynamic = ShapedType::isDynamic(input1Dim) || ShapedType::isDynamic(input2Dim) || ShapedType::isDynamic(outputDim);"
+    "   bool broadcastableInputs = input1Dim == input2Dim || input1Dim == 1 || input2Dim == 1;" #
+    "   bool broacastDimMatchesOutputDim = std::max(input1Dim, input2Dim) == outputDim;"
+    "   return dynamic || (broadcastableInputs && broacastDimMatchesOutputDim);" #
+    "})">]>
+  >;
 
 
 #endif // MLIR_DIALECT_SPIRV_IR_TOSA_TYPES
