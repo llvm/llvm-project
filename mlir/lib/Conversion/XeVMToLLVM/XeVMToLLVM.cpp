@@ -848,7 +848,7 @@ class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
   LogicalResult
   matchAndRewrite(LLVM::AllocaOp op, LLVM::AllocaOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto moduleOp = op->getParentOfType<ModuleOp>();
+    auto moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
     if (!moduleOp)
       return failure();
     auto ptrType = cast<LLVM::LLVMPointerType>(op.getType());
