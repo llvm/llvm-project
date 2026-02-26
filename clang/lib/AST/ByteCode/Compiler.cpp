@@ -864,8 +864,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (const auto *VT = CE->getType()->getAs<VectorType>()) {
       NumElts = VT->getNumElements();
       DestElemType = VT->getElementType();
-    } else if (const auto *MT =
-                   CE->getType()->getAs<ConstantMatrixType>()) {
+    } else if (const auto *MT = CE->getType()->getAs<ConstantMatrixType>()) {
       NumElts = MT->getNumElementsFlattened();
       DestElemType = MT->getElementType();
     } else {

@@ -480,9 +480,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (!ElemTy)
       return nullptr;
 
-    return allocateDescriptor(D, *ElemTy, MDSize,
-                              MT->getNumElementsFlattened(), IsConst,
-                              IsTemporary, IsMutable);
+    return allocateDescriptor(D, *ElemTy, MDSize, MT->getNumElementsFlattened(),
+                              IsConst, IsTemporary, IsMutable);
   }
 
   return nullptr;
