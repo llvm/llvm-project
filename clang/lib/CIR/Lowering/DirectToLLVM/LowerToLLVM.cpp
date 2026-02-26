@@ -2549,7 +2549,7 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
 
   // FIXME: These default values are placeholders until the the equivalent
-  //        attributes are available on cir.global ops. 
+  //        attributes are available on cir.global ops.
   const bool isConst = op.getConstant();
   unsigned addrSpace = 0;
   if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
