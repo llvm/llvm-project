@@ -12,7 +12,7 @@
 
 
 func foo(_ x: Int, _ y: Int) -> Int {
-  return x - y + 1 // Set breakpoint here
+  return x - y + Int.random(in: 0..<100) // Set breakpoint here
 }
 
 foo(1,4)
