@@ -2,6 +2,8 @@
 // RUN: -fsanitize-cfi-icall-experimental-normalize-integers \
 // RUN: -S %s -o-
 
+// This is a regression test.
+
 template <class _Fn>
 void invoke(_Fn) {
   return;
