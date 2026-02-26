@@ -325,6 +325,8 @@ class HelpCommandTestCase(TestBase):
     def test_help_option_description_terminal_width_with_ansi(self):
         """Test that help on commands formats option descriptions that include
         ANSI codes acccording to the terminal width."""
+        # Note that because color is enabled, we will use ANSI cursor codes to
+        # indent, rather than spaces.
         self.runCmd("settings set use-color on")
 
         # Should fit on one line.
@@ -334,7 +336,7 @@ class HelpCommandTestCase(TestBase):
             matching=True,
             patterns=[
                 # The "S" of "Set" is underlined.
-                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
+                r"\x1b\[12C\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
             ],
         )
 
@@ -343,8 +345,8 @@ class HelpCommandTestCase(TestBase):
             "help breakpoint set",
             matching=True,
             patterns=[
-                r"\s+\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times\n"
-                r"\s+to specify multiple shared libraries.\n"
+                r"\x1b\[12C\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times\n"
+                r"\x1b\[12Cto specify multiple shared libraries.\n"
             ],
         )
 
