@@ -197,7 +197,7 @@ private:
                         MachineInstr const *&MI);
 
   static Function *
-  getNextUnusedUnnamedFunction(Module &M,
+  getNextUnusedUnnamedFunction(const Module &M,
                                Module::iterator &FirstUnvisitedFunction);
 };
 
@@ -326,7 +326,7 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
 }
 
 Function *MIRParserImpl::getNextUnusedUnnamedFunction(
-    Module &M, Module::iterator &FirstUnvisitedFunction) {
+    const Module &M, Module::iterator &FirstUnvisitedFunction) {
   for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
     if (!FirstUnvisitedFunction->hasName()) {
       auto *F = &*FirstUnvisitedFunction;
