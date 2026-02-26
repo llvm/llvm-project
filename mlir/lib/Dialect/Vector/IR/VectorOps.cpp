@@ -6743,7 +6743,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
     if (intPack.isSplat()) {
       auto splat = intPack.getSplatValue<IntegerAttr>();
 
-      if (llvm::isa<IntegerType>(dstElemType)) {
+      if (llvm::isa<IntegerType>(dstElemType) && srcElemType.isIntOrFloat()) {
         uint64_t srcBitWidth = srcElemType.getIntOrFloatBitWidth();
         uint64_t dstBitWidth = dstElemType.getIntOrFloatBitWidth();
 
