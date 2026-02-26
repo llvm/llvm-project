@@ -721,16 +721,16 @@ ExprDependence clang::computeDependence(GenericSelectionExpr *E,
                                   : ExprDependence::None;
   for (auto *AE : E->getAssocExprs())
     D |= AE->getDependence() &
-         (ExprDependence::Error | ExprDependence::Instantiation);
+         (ExprDependence::Instantiation | ExprDependence::Error);
   for (TypeSourceInfo *TSI : E->getAssocTypeSourceInfos()) {
     if (TSI)
       D |= toExprDependenceAsWritten(TSI->getType()->getDependence()) &
-           (ExprDependence::Error | ExprDependence::Instantiation);
+           (ExprDependence::Instantiation | ExprDependence::Error);
   }
 
   if (E->isExprPredicate())
     D |= E->getControllingExpr()->getDependence() &
-         (ExprDependence::Error | ExprDependence::Instantiation);
+         (ExprDependence::Instantiation | ExprDependence::Error);
   else
     D |= toExprDependenceAsWritten(
         E->getControllingType()->getType()->getDependence());
