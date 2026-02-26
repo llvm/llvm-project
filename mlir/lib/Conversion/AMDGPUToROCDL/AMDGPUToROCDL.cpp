@@ -2522,6 +2522,24 @@ struct AMDGPUSwizzleBitModeLowering
     Location loc = op.getLoc();
     Type i32 = rewriter.getI32Type();
     Value src = adaptor.getSrc();
+
+    // Check early if src's bit width is divisible by 32
+    // for bit swizzling, otherwise it is unable to be decomposed.
+    Type srcType = src.getType();
+    unsigned srcBitWidth;
+    // src can be int, float, or 1D vector
+    if (auto vecTy = llvm::dyn_cast<VectorType>(srcType)) {
+      srcBitWidth = vecTy.getNumElements() *
+                    vecTy.getElementType().getIntOrFloatBitWidth();
+    } else {
+      srcBitWidth = srcType.getIntOrFloatBitWidth();
+    }
+
+    if (srcBitWidth % 32 != 0) {
+      return rewriter.notifyMatchFailure(
+          op, "swizzle_bitmode requires src bit width to be a multiple of 32");
+    }
+
     SmallVector<Value> decomposed =
         LLVM::decomposeValue(rewriter, loc, src, i32);
     unsigned andMask = op.getAndMask();
