@@ -373,7 +373,8 @@ KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS,
   if (KnownLHS.isKnownNever(fcInf)) {
     if (MinKnownExponent < 0)
       Known.knownNot(fcInf);
-    else if (MinKnownExponent == 0 && CRHS <= APFloat::getOne(Flt))
+    else if (MinKnownExponent == 0 && CRHS.compareAbsoluteValue(APFloat::getOne(
+                                          Flt)) == APFloat::cmpEqual)
       Known.knownNot(fcInf);
   }
 
