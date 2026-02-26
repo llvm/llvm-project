@@ -11,7 +11,7 @@
 #include "clang/Analysis/Scalable/EntityLinker/EntitySummaryEncoding.h"
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 
-using namespace clang::ssaf;
+namespace clang::ssaf {
 
 //----------------------------------------------------------------------------
 // JSONEntitySummaryEncoding
@@ -399,3 +399,5 @@ llvm::Error JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryE
 
   return llvm::Error::success();
 }
+
+} // namespace clang::ssaf

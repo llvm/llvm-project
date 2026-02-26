@@ -10,7 +10,7 @@
 
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 
-using namespace clang::ssaf;
+namespace clang::ssaf {
 
 //----------------------------------------------------------------------------
 // EntitySummary
@@ -500,3 +500,5 @@ llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
 
   return llvm::Error::success();
 }
+
+} // namespace clang::ssaf

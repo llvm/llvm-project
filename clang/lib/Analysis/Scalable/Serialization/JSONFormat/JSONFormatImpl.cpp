@@ -12,15 +12,15 @@
 
 #include "llvm/Support/Registry.h"
 
-using namespace clang::ssaf;
+LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
 
-LLVM_INSTANTIATE_REGISTRY(llvm::Registry<JSONFormat::FormatInfo>)
+namespace clang::ssaf {
 
 //----------------------------------------------------------------------------
 // JSON Reader and Writer
 //----------------------------------------------------------------------------
 
-llvm::Expected<Value> clang::ssaf::readJSON(llvm::StringRef Path) {
+llvm::Expected<Value> readJSON(llvm::StringRef Path) {
   if (!llvm::sys::fs::exists(Path)) {
     return ErrorBuilder::create(std::errc::no_such_file_or_directory,
                                 ErrorMessages::FailedToReadFile, Path,
@@ -54,7 +54,7 @@ llvm::Expected<Value> clang::ssaf::readJSON(llvm::StringRef Path) {
   return llvm::json::parse(BufferOrError.get()->getBuffer());
 }
 
-llvm::Error clang::ssaf::writeJSON(Value &&V, llvm::StringRef Path) {
+llvm::Error writeJSON(Value &&V, llvm::StringRef Path) {
   if (llvm::sys::fs::exists(Path)) {
     return ErrorBuilder::create(std::errc::file_exists,
                                 ErrorMessages::FailedToWriteFile, Path,
@@ -125,13 +125,11 @@ std::map<SummaryName, JSONFormat::FormatInfo> JSONFormat::initFormatInfos() {
 // SummaryName
 //----------------------------------------------------------------------------
 
-SummaryName clang::ssaf::summaryNameFromJSON(llvm::StringRef SummaryNameStr) {
+SummaryName summaryNameFromJSON(llvm::StringRef SummaryNameStr) {
   return SummaryName(SummaryNameStr.str());
 }
 
-llvm::StringRef clang::ssaf::summaryNameToJSON(const SummaryName &SN) {
-  return SN.str();
-}
+llvm::StringRef summaryNameToJSON(const SummaryName &SN) { return SN.str(); }
 
 //----------------------------------------------------------------------------
 // EntityId
@@ -150,7 +148,7 @@ uint64_t JSONFormat::entityIdToJSON(EntityId EI) const {
 //----------------------------------------------------------------------------
 
 llvm::Expected<BuildNamespaceKind>
-clang::ssaf::buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
+buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
   auto OptBuildNamespaceKind =
       buildNamespaceKindFromString(BuildNamespaceKindStr);
   if (!OptBuildNamespaceKind) {
@@ -162,7 +160,7 @@ clang::ssaf::buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
   return *OptBuildNamespaceKind;
 }
 
-llvm::StringRef clang::ssaf::buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
+llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
   return buildNamespaceKindToString(BNK);
 }
 
@@ -307,7 +305,7 @@ Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
 //----------------------------------------------------------------------------
 
 llvm::Expected<EntityLinkageType>
-clang::ssaf::entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
+entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
   auto OptEntityLinkageType = entityLinkageTypeFromString(EntityLinkageTypeStr);
   if (!OptEntityLinkageType) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -318,7 +316,7 @@ clang::ssaf::entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
   return *OptEntityLinkageType;
 }
 
-llvm::StringRef clang::ssaf::entityLinkageTypeToJSON(EntityLinkageType LT) {
+llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
   return entityLinkageTypeToString(LT);
 }
 
@@ -592,3 +590,5 @@ Array JSONFormat::linkageTableToJSON(
 
   return Result;
 }
+
+} // namespace clang::ssaf
