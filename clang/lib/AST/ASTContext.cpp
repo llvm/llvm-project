@@ -13015,13 +13015,13 @@ static GVALinkage basicGVALinkageForFunction(const ASTContext &Context,
       isa<CXXConstructorDecl>(FD) &&
       cast<CXXConstructorDecl>(FD)->isInheritingConstructor() &&
       !FD->hasAttr<DLLExportAttr>())
-    // Both Clang and MSVC implement inherited constructors as forwarding
-    // thunks that delegate to the base constructor with the same mangled
-    // names and calling convention. Keep non-dllexport inheriting constructor
+    // Clang's inheriting constructor thunks use a forwarding model that
+    // differs from MSVC's implementation in some edge cases (e.g. inalloca
+    // argument forwarding on i686). Keep non-dllexport inheriting constructor
     // thunks internal since they are not needed outside the translation unit.
     //
-    // But, dllexport inherited constructors must be externally visible to
-    // match MSVC's behavior.
+    // dllexport inherited constructors are exempted so they are externally
+    // visible, matching MSVC's export behavior for the common cases.
     return GVA_Internal;
 
   return GVA_DiscardableODR;

@@ -1,9 +1,14 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -emit-llvm -std=c++17 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=MSVC %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple i686-windows-msvc -emit-llvm -std=c++17 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=M32 %s
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-gnu -emit-llvm -std=c++17 -fms-extensions -O0 -o - %s | FileCheck --check-prefix=GNU %s
+// RUN: %clang_cc1 -no-enable-noundef-analysis -triple x86_64-windows-msvc -emit-llvm -std=c++17 -fms-extensions -fno-dllexport-inlines -O0 -o - %s | FileCheck --check-prefix=NOINLINE %s
 
 // Test that inherited constructors via 'using Base::Base' in a dllexport
 // class are properly exported (https://github.com/llvm/llvm-project/issues/162640).
+
+//===----------------------------------------------------------------------===//
+// Basic: both base and child exported, simple parameter types.
+//===----------------------------------------------------------------------===//
 
 struct __declspec(dllexport) Base {
   Base(int);
@@ -29,7 +34,10 @@ struct __declspec(dllexport) Child : public Base {
 // GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN5ChildCI14BaseEi(
 // GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN5ChildCI14BaseEd(
 
-// Also test that a non-exported derived class does not export inherited ctors.
+//===----------------------------------------------------------------------===//
+// Non-exported class should not export inherited ctors.
+//===----------------------------------------------------------------------===//
+
 struct NonExportedBase {
   NonExportedBase(int);
 };
@@ -42,7 +50,10 @@ struct NonExportedChild : public NonExportedBase {
 // M32-NOT: dllexport{{.*}}NonExportedChild
 // GNU-NOT: dllexport{{.*}}NonExportedChild
 
-// Test that only the derived class is dllexport, base is not.
+//===----------------------------------------------------------------------===//
+// Only the derived class is dllexport, base is not.
+//===----------------------------------------------------------------------===//
+
 struct PlainBase {
   PlainBase(int);
   PlainBase(float);
@@ -60,3 +71,128 @@ struct __declspec(dllexport) ExportedChild : public PlainBase {
 
 // GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN13ExportedChildCI19PlainBaseEi(
 // GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN13ExportedChildCI19PlainBaseEf(
+
+//===----------------------------------------------------------------------===//
+// Multi-level inheritance: A -> B -> C with using at each level.
+//===----------------------------------------------------------------------===//
+
+struct MLBase {
+  MLBase(int);
+};
+
+struct MLMiddle : MLBase {
+  using MLBase::MLBase;
+};
+
+struct __declspec(dllexport) MLChild : MLMiddle {
+  using MLMiddle::MLMiddle;
+};
+
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MLChild@@QEAA@H@Z"
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MLChild@@QAE@H@Z"
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN7MLChildCI16MLBaseEi(
+
+//===----------------------------------------------------------------------===//
+// Class template specialization with inherited constructors.
+//===----------------------------------------------------------------------===//
+
+template <typename T>
+struct TplBase {
+  TplBase(T);
+};
+
+struct __declspec(dllexport) TplChild : TplBase<int> {
+  using TplBase<int>::TplBase;
+};
+
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0TplChild@@QEAA@H@Z"
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0TplChild@@QAE@H@Z"
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN8TplChildCI17TplBaseIiEEi(
+
+//===----------------------------------------------------------------------===//
+// Default arguments: thunk takes the full parameter list.
+//===----------------------------------------------------------------------===//
+
+struct DefArgBase {
+  DefArgBase(int a, int b = 10, int c = 20);
+};
+
+struct __declspec(dllexport) DefArgChild : DefArgBase {
+  using DefArgBase::DefArgBase;
+};
+
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0DefArgChild@@QEAA@HHH@Z"(ptr {{.*}} %this, i32 %0, i32 %1, i32 %2)
+// MSVC-DAG: call {{.*}} @"??0DefArgBase@@QEAA@HHH@Z"(ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32
+
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0DefArgChild@@QAE@HHH@Z"
+// M32-DAG: call {{.*}} @"??0DefArgBase@@QAE@HHH@Z"(ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32
+
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN11DefArgChildCI110DefArgBaseEiii(
+// GNU-DAG: call {{.*}} @_ZN10DefArgBaseC2Eiii(ptr {{.*}}, i32 {{.*}}, i32 {{.*}}, i32
+
+//===----------------------------------------------------------------------===//
+// Default arguments with mixed types.
+//===----------------------------------------------------------------------===//
+
+struct MixedDefBase {
+  MixedDefBase(int a, double b = 3.14);
+};
+
+struct __declspec(dllexport) MixedDefChild : MixedDefBase {
+  using MixedDefBase::MixedDefBase;
+};
+
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MixedDefChild@@QEAA@HN@Z"(ptr {{.*}} %this, i32 %0, double %1)
+// MSVC-DAG: call {{.*}} @"??0MixedDefBase@@QEAA@HN@Z"(ptr {{.*}}, i32 {{.*}}, double
+
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MixedDefChild@@QAE@HN@Z"
+// M32-DAG: call {{.*}} @"??0MixedDefBase@@QAE@HN@Z"(ptr {{.*}}, i32 {{.*}}, double
+
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN13MixedDefChildCI112MixedDefBaseEid(
+// GNU-DAG: call {{.*}} @_ZN12MixedDefBaseC2Eid(ptr {{.*}}, i32 {{.*}}, double
+
+//===----------------------------------------------------------------------===//
+// All parameters have defaults. The inherited constructor takes the full
+// parameter list. The implicit default constructor also gets exported, with
+// default argument values baked in.
+//===----------------------------------------------------------------------===//
+
+struct AllDefBase {
+  AllDefBase(int a = 1, int b = 2);
+};
+
+struct __declspec(dllexport) AllDefChild : AllDefBase {
+  using AllDefBase::AllDefBase;
+};
+
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0AllDefChild@@QEAA@HH@Z"(ptr {{.*}} %this, i32 %0, i32 %1)
+// MSVC-DAG: define weak_odr dso_local dllexport {{.*}} @"??0AllDefChild@@QEAA@XZ"(ptr {{.*}} %this)
+// MSVC-DAG: call {{.*}} @"??0AllDefBase@@QEAA@HH@Z"(ptr {{.*}}, i32 1, i32 2)
+
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0AllDefChild@@QAE@HH@Z"
+// M32-DAG: call {{.*}} @"??0AllDefBase@@QAE@HH@Z"(ptr {{.*}}, i32 %
+// M32-DAG: define weak_odr dso_local dllexport {{.*}} @"??0AllDefChild@@QAE@XZ"
+// M32-DAG: call {{.*}} @"??0AllDefBase@@QAE@HH@Z"(ptr {{.*}}, i32 1, i32 2)
+
+// GNU does not emit an implicit default constructor unless it is used.
+// Only the inherited constructor with the full parameter list is exported.
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}} @_ZN11AllDefChildCI110AllDefBaseEii(
+// GNU-DAG: call {{.*}} @_ZN10AllDefBaseC2Eii(ptr {{.*}}, i32 %{{.*}}, i32 %
+
+//===----------------------------------------------------------------------===//
+// -fno-dllexport-inlines should still export inherited constructors.
+// Inherited constructors are marked inline internally but must be exported.
+//===----------------------------------------------------------------------===//
+
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@H@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0Child@@QEAA@N@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0ExportedChild@@QEAA@H@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0ExportedChild@@QEAA@M@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MLChild@@QEAA@H@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0TplChild@@QEAA@H@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0DefArgChild@@QEAA@HHH@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0MixedDefChild@@QEAA@HN@Z"
+// NOINLINE-DAG: define weak_odr dso_local dllexport {{.*}} @"??0AllDefChild@@QEAA@HH@Z"
+// The implicit default ctor is a regular inline method, NOT an inherited
+// constructor, so -fno-dllexport-inlines correctly suppresses it.
+// NOINLINE-NOT: define {{.*}}dllexport{{.*}} @"??0AllDefChild@@QEAA@XZ"

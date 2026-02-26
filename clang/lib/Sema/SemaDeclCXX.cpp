@@ -6660,8 +6660,14 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
 
       // Do not export/import inline function when -fno-dllexport-inlines is
       // passed. But add attribute for later local static var check.
+      // Inherited constructors are marked inline but must still be exported
+      // to match MSVC behavior, so exclude them from this override.
+      bool IsInheritedCtor = false;
+      if (MD)
+        if (auto *CD = dyn_cast<CXXConstructorDecl>(MD))
+          IsInheritedCtor = (bool)CD->getInheritedConstructor();
       if (!getLangOpts().DllExportInlines && MD && MD->isInlined() &&
-          TSK != TSK_ExplicitInstantiationDeclaration &&
+          !IsInheritedCtor && TSK != TSK_ExplicitInstantiationDeclaration &&
           TSK != TSK_ExplicitInstantiationDefinition) {
         if (ClassExported) {
           NewAttr = ::new (getASTContext())
