@@ -1,4 +1,4 @@
-; REQUIRES: x86-registered-target, plugins, examples
+; REQUIRES: x86-registered-target, plugins, llvm-examples
 
 ;; Validate that -fpass-plugin works for distributed ThinLTO backends.
 

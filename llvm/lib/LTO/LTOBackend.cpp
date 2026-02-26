@@ -199,7 +199,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
+static void RegisterPassPlugins(const Config &Conf,
                                 PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
@@ -207,12 +207,16 @@ static void RegisterPassPlugins(ArrayRef<std::string> PassPlugins,
 #undef HANDLE_EXTENSION
 
   // Load requested pass plugins and let them register pass builder callbacks
-  for (auto &PluginFN : PassPlugins) {
+  for (auto &PluginFN : Conf.PassPluginFilenames) {
     auto PassPlugin = PassPlugin::Load(PluginFN);
     if (!PassPlugin)
       reportFatalUsageError(PassPlugin.takeError());
     PassPlugin->registerPassBuilderCallbacks(PB);
   }
+
+  // Register already loaded plugins
+  for (auto *LoadedPlugin : Conf.LoadedPassPlugins)
+    LoadedPlugin->registerPassBuilderCallbacks(PB);
 }
 
 static std::unique_ptr<TargetMachine>
@@ -292,7 +296,7 @@ static void runNewPMPasses(const Config &Conf, Module &Mod, TargetMachine *TM,
   SI.registerCallbacks(PIC, &MAM);
   PassBuilder PB(TM, Conf.PTO, PGOOpt, &PIC);
 
-  RegisterPassPlugins(Conf.PassPlugins, PB);
+  RegisterPassPlugins(Conf, PB);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       new TargetLibraryInfoImpl(TM->getTargetTriple(), TM->Options.VecLib));
