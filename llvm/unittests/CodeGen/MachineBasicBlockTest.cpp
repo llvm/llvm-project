@@ -67,8 +67,8 @@ TEST(FindDebugLocTest, DifferentIterators) {
 
   // Insert two MIs with DebugLoc DL1 and DL3.
   // Also add a DBG_VALUE with a different DebugLoc in between.
-  MCInstrDesc COPY = {TargetOpcode::COPY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-  MCInstrDesc DBG = {TargetOpcode::DBG_VALUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc COPY = {TargetOpcode::COPY, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+  MCInstrDesc DBG = {TargetOpcode::DBG_VALUE, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
   auto MI3 = MF->CreateMachineInstr(COPY, DL3);
   MBB.insert(MBB.begin(), MI3);
   auto MI2 = MF->CreateMachineInstr(DBG, DL2);

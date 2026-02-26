@@ -796,7 +796,7 @@ class Instruction : InstructionEncoding {
   string PostEncoderMethod = "";
 
   /// Target-specific flags. This becomes the TSFlags field in TargetInstrDesc.
-  bits<64> TSFlags = 0;
+  bits<128> TSFlags = 0;
 
   ///@name Assembler Parser Support
   ///@{
