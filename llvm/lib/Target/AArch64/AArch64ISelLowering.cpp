@@ -23790,10 +23790,21 @@ tryCombineFADDReductionWithZero(SDNode *N, SelectionDAG &DAG,
   }
 
   // Decomposing the reduction into scalar FADDs is only profitable when
-  // enough elements are zero. Require at least a quarter of the elements to
-  // be zero; otherwise the scalar extract+add chain is more expensive than
-  // the vector pairwise reduction with zero insertions.
-  if (NumZeroElts * 4 < NumElts)
+  // enough elements are zero.
+  unsigned MinZeroElts;
+  switch (NumElts) {
+  case 2:
+  case 4:
+    MinZeroElts = 1;
+    break;
+  case 8:
+    MinZeroElts = 3;
+    break;
+  default:
+    MinZeroElts = NumElts / 2;
+    break;
+  }
+  if (NumZeroElts < MinZeroElts)
     return SDValue();
 
   if (!IsSignedZeroSafe)

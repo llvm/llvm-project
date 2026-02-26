@@ -11,44 +11,58 @@ define half @test_v4f16_element_3_zero(<4 x half> %vec) {
 ; CHECK-NEXT:    ret
 entry:
   %with_zero = insertelement <4 x half> %vec, half 0.0, i64 3
-  %sum = call nsz half @llvm.aarch64.neon.faddv.f16.v4f16(<4 x half> %with_zero)
-  ret half %sum
-}
-
-define half @test_v8f16_elements_67_zero(<8 x half> %vec) {
-; CHECK-LABEL: test_v8f16_elements_67_zero:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov h1, v0.h[3]
-; CHECK-NEXT:    mov h2, v0.h[2]
-; CHECK-NEXT:    mov h3, v0.h[5]
-; CHECK-NEXT:    mov h4, v0.h[4]
-; CHECK-NEXT:    faddp h0, v0.2h
-; CHECK-NEXT:    fadd h1, h2, h1
-; CHECK-NEXT:    fadd h2, h4, h3
-; CHECK-NEXT:    fadd h0, h0, h1
-; CHECK-NEXT:    fadd h0, h0, h2
-; CHECK-NEXT:    ret
-entry:
-  %zero6 = insertelement <8 x half> %vec, half 0.0, i64 6
-  %zero7 = insertelement <8 x half> %zero6, half 0.0, i64 7
-  %sum = call nsz half @llvm.aarch64.neon.faddv.f16.v8f16(<8 x half> %zero7)
-  ret half %sum
-}
-
-define half @test_reduce_v4f16_element_3_zero(<4 x half> %vec) {
-; CHECK-LABEL: test_reduce_v4f16_element_3_zero:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    mov h1, v0.h[2]
-; CHECK-NEXT:    faddp h0, v0.2h
-; CHECK-NEXT:    fadd h0, h0, h1
-; CHECK-NEXT:    ret
-entry:
-  %with_zero = insertelement <4 x half> %vec, half 0.0, i64 3
   %sum = call reassoc nsz half @llvm.vector.reduce.fadd.v4f16(half -0.0, <4 x half> %with_zero)
   ret half %sum
 }
 
-declare half @llvm.aarch64.neon.faddv.f16.v4f16(<4 x half>)
-declare half @llvm.aarch64.neon.faddv.f16.v8f16(<8 x half>)
-declare half @llvm.vector.reduce.fadd.v4f16(half, <4 x half>)
+define half @test_v8f16_elements_567_zero(<8 x half> %vec) {
+; CHECK-LABEL: test_v8f16_elements_567_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov h1, v0.h[3]
+; CHECK-NEXT:    mov h2, v0.h[2]
+; CHECK-NEXT:    faddp h3, v0.2h
+; CHECK-NEXT:    mov h0, v0.h[4]
+; CHECK-NEXT:    fadd h1, h2, h1
+; CHECK-NEXT:    fadd h0, h3, h0
+; CHECK-NEXT:    fadd h0, h0, h1
+; CHECK-NEXT:    ret
+entry:
+  %zero5 = insertelement <8 x half> %vec, half 0.0, i64 5
+  %zero6 = insertelement <8 x half> %zero5, half 0.0, i64 6
+  %zero7 = insertelement <8 x half> %zero6, half 0.0, i64 7
+  %sum = call reassoc nsz half @llvm.vector.reduce.fadd.v8f16(half -0.0, <8 x half> %zero7)
+  ret half %sum
+}
+
+define half @negative_test_v8f16_elements_67_zero(<8 x half> %vec) {
+; CHECK-LABEL: negative_test_v8f16_elements_67_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    mov v0.h[6], v1.h[0]
+; CHECK-NEXT:    mov v0.h[7], v1.h[0]
+; CHECK-NEXT:    faddp v1.8h, v0.8h, v0.8h
+; CHECK-NEXT:    faddp v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    faddp h0, v0.2h
+; CHECK-NEXT:    ret
+entry:
+  %zero6 = insertelement <8 x half> %vec, half 0.0, i64 6
+  %zero7 = insertelement <8 x half> %zero6, half 0.0, i64 7
+  %sum = call reassoc nsz half @llvm.vector.reduce.fadd.v8f16(half -0.0, <8 x half> %zero7)
+  ret half %sum
+}
+
+; Negative test: only one zero element out of eight is not enough to decompose.
+define half @negative_test_v8f16_one_zero(<8 x half> %vec) {
+; CHECK-LABEL: negative_test_v8f16_one_zero:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi d1, #0000000000000000
+; CHECK-NEXT:    mov v0.h[7], v1.h[0]
+; CHECK-NEXT:    faddp v1.8h, v0.8h, v0.8h
+; CHECK-NEXT:    faddp v0.8h, v1.8h, v0.8h
+; CHECK-NEXT:    faddp h0, v0.2h
+; CHECK-NEXT:    ret
+entry:
+  %with_zero = insertelement <8 x half> %vec, half 0.0, i64 7
+  %sum = call reassoc nsz half @llvm.vector.reduce.fadd.v8f16(half -0.0, <8 x half> %with_zero)
+  ret half %sum
+}
