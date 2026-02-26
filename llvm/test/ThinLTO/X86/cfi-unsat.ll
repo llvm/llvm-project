@@ -57,13 +57,11 @@ cont:
 
 ; CHECK-IR0: define weak_odr i32 @test
 ; CHECK-IR0-NEXT: entry:
-; CHECK-IR0-NEXT: %vtable5 =
 ; CHECK-IR0-NEXT: tail call void @llvm.trap()
 ; CHECK-IR0-NEXT: unreachable
 ; CHECK-IR0-NEXT: }
 ; CHECK-IR0: define weak_odr i32 @testb
 ; CHECK-IR0-NEXT: entry:
-; CHECK-IR0-NEXT: %vtable5 =
 ; CHECK-IR0-NEXT: tail call void @llvm.trap()
 ; CHECK-IR0-NEXT: unreachable
 ; CHECK-IR0-NEXT: }
