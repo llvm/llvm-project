@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_UTILITY_SDK_H
-#define LLDB_UTILITY_SDK_H
+#ifndef LLDB_UTILITY_XCODESDK_H
+#define LLDB_UTILITY_XCODESDK_H
 
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/lldb-forward.h"
