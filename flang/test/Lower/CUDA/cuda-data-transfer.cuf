@@ -616,3 +616,16 @@ end subroutine
 
 ! CHECK-LABEL: func.func @_QPsub32() 
 ! CHECK-COUNT-2: cuf.data_transfer
+
+subroutine sub33(m, n)
+  integer :: m, n
+  real(2), managed :: dc(m,n)
+  real(4) :: c(m,n)
+
+  c = (dc)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub33
+! CHECK: cuf.data_transfer 
+! CHECK-COUNT-2: hlfir.elemental
+! CHECK: hlfir.assign
