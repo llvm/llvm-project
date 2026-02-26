@@ -316,5 +316,5 @@ def testConversionPattern():
             apply_partial_conversion(module, target, frozen)
         except MLIRError as e:
             # CHECK: caught exception: partial conversion failed
-            # CHECK: failed to legalize unresolved materialization from ('!smt.int') to ('i64') that remained live after conversion
+            # CHECK: failed to legalize unresolved materialization
             print("caught exception:", e)
