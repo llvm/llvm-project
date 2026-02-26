@@ -14,6 +14,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 #include "mlir/IR/PatternMatch.h"
@@ -461,4 +462,5 @@ void mlir::tosa::populateTosaToTensorConversionPatterns(
   patterns
       ->add<ConcatConverter, PadConverter, ReshapeConverter, SliceConverter>(
           converter, patterns->getContext());
+  tensor::populateForwardConcatInsertSliceDestPatterns(*patterns);
 }

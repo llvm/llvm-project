@@ -703,6 +703,25 @@ func.func @concat_non_axis_dyn_mixed(%arg0: tensor<?x1xf32>, %arg1: tensor<?x1xf
 
 // -----
 
+// CHECK-LABEL: @concat_forward_insert_slice_dest
+// CHECK-SAME: (%[[ARG0:.*]]: tensor<4xf32>)
+func.func @concat_forward_insert_slice_dest(%arg0: tensor<4xf32>) -> tensor<8xf32> {
+  %cst = arith.constant 1.000000e+00 : f32
+  %init = tensor.empty() : tensor<4xf32>
+  %filled = linalg.fill ins(%cst : f32) outs(%init : tensor<4xf32>) -> tensor<4xf32>
+  %0 = "tosa.concat"(%filled, %arg0) {axis = 0 : i32} : (tensor<4xf32>, tensor<4xf32>) -> tensor<8xf32>
+  // CHECK-DAG: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+  // CHECK: %[[SMALL:.*]] = tensor.empty() : tensor<4xf32>
+  // CHECK: %[[FILL:.*]] = linalg.fill ins(%[[CST]] : f32) outs(%[[SMALL]] : tensor<4xf32>) -> tensor<4xf32>
+  // CHECK: %[[INIT:.*]] = tensor.empty() : tensor<8xf32>
+  // CHECK: %[[INSERT0:.*]] = tensor.insert_slice %[[FILL]] into %[[INIT]][0] [4] [1] : tensor<4xf32> into tensor<8xf32>
+  // CHECK: %[[INSERT1:.*]] = tensor.insert_slice %[[ARG0]] into %[[INSERT0]][4] [4] [1] : tensor<4xf32> into tensor<8xf32>
+  // CHECK: return %[[INSERT1]] : tensor<8xf32>
+  return %0 : tensor<8xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @pad_variable_pad_const
 // CHECK-SAME: (%[[ARG0_SSA:.*]]: tensor<2x2xi32>, %[[PAD_INPUT_TENSOR_SSA:.*]]: tensor<1xi32>)
 func.func @pad_variable_pad_const(%arg0: tensor<2x2xi32>, %pad_input_tensor: tensor<1xi32>) -> tensor<4x5xi32> {
