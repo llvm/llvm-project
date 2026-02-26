@@ -733,8 +733,11 @@ static void forEachUser(const Value *User,
    const Value *Cur = WorkList.pop_back_val();
     if (!Visited.insert(Cur).second)
       continue;
-    if (Callback(Cur))
+    if (Callback(Cur)) {
+      auto R = Cur->materialized_users();
+      WorkList.reserve(WorkList.size() + std::distance(R.begin(), R.end()));
       append_range(WorkList, Cur->materialized_users());
+    }
   }
 }
 

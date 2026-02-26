@@ -1038,6 +1038,7 @@ void SplitEditor::computeRedundantBackCopies(
     }
     if (!DominatedVNIs.empty()) {
       forceRecompute(0, *ParentVNI);
+      BackCopies.reserve(BackCopies.size() + DominatedVNIs.size());
       append_range(BackCopies, DominatedVNIs);
       DominatedVNIs.clear();
     }
