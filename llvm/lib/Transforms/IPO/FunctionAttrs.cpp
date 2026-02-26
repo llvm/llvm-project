@@ -94,10 +94,10 @@ STATISTIC(NumThinLinkNoRecurse,
 STATISTIC(NumThinLinkNoUnwind,
           "Number of functions marked as nounwind during thinlink");
 
-static cl::opt<bool> EnableNonnullArgPropagation(
-    "enable-nonnull-arg-prop", cl::init(true), cl::Hidden,
-    cl::desc("Try to propagate nonnull argument attributes from callsites to "
-             "caller functions."));
+static cl::opt<bool> EnablePoisonArgAttrPropagation(
+    "enable-poison-arg-attr-prop", cl::init(true), cl::Hidden,
+    cl::desc("Try to propagate nonnull and nofpclass argument attributes from "
+             "callsites to caller functions."));
 
 static cl::opt<bool> DisableNoUnwindInference(
     "disable-nounwind-inference", cl::Hidden,
@@ -1052,7 +1052,7 @@ static void addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes,
 /// arguments. This may be important because inlining can cause information loss
 /// when attribute knowledge disappears with the inlined call.
 static bool addArgumentAttrsFromCallsites(Function &F) {
-  if (!EnableNonnullArgPropagation)
+  if (!EnablePoisonArgAttrPropagation)
     return false;
 
   bool Changed = false;
@@ -1069,16 +1069,29 @@ static bool addArgumentAttrsFromCallsites(Function &F) {
     if (auto *CB = dyn_cast<CallBase>(&I)) {
       if (auto *CalledFunc = CB->getCalledFunction()) {
         for (auto &CSArg : CalledFunc->args()) {
-          if (!CSArg.hasNonNullAttr(/* AllowUndefOrPoison */ false))
+          unsigned ArgNo = CSArg.getArgNo();
+          auto *FArg = dyn_cast<Argument>(CB->getArgOperand(ArgNo));
+          if (!FArg)
             continue;
 
-          // If the non-null callsite argument operand is an argument to 'F'
-          // (the caller) and the call is guaranteed to execute, then the value
-          // must be non-null throughout 'F'.
-          auto *FArg = dyn_cast<Argument>(CB->getArgOperand(CSArg.getArgNo()));
-          if (FArg && !FArg->hasNonNullAttr()) {
-            FArg->addAttr(Attribute::NonNull);
-            Changed = true;
+          if (CSArg.hasNonNullAttr(/*AllowUndefOrPoison=*/false)) {
+            // If the non-null callsite argument operand is an argument to 'F'
+            // (the caller) and the call is guaranteed to execute, then the
+            // value must be non-null throughout 'F'.
+            if (!FArg->hasNonNullAttr()) {
+              FArg->addAttr(Attribute::NonNull);
+              Changed = true;
+            }
+          } else if (FPClassTest CSNoFPClass = CB->getParamNoFPClass(ArgNo);
+                     CSNoFPClass != fcNone &&
+                     CB->paramHasAttr(ArgNo, Attribute::NoUndef)) {
+            FPClassTest ArgNoFPClass = FArg->getNoFPClass();
+
+            if ((CSNoFPClass | ArgNoFPClass) != ArgNoFPClass) {
+              FArg->addAttr(Attribute::getWithNoFPClass(
+                  FArg->getContext(), CSNoFPClass | ArgNoFPClass));
+              Changed = true;
+            }
           }
         }
       }
