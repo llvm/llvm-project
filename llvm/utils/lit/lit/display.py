@@ -1,7 +1,7 @@
 import sys
 
 from argparse import Namespace
-from typing import Optional
+from typing import Optional, List
 from lit.Test import Test
 
 
@@ -94,7 +94,7 @@ class Display(object):
     def __init__(
         self,
         opts: Namespace,
-        tests: list[Test],
+        tests: List[Test],
         header: Optional[str],
         progress_bar,
     ):
