@@ -441,118 +441,93 @@ declare i32 @callee_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %
 define i32 @caller_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n) nounwind {
 ; CHECK-LABEL: caller_args:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    lw t0, 32(sp)
-; CHECK-NEXT:    lw t1, 36(sp)
-; CHECK-NEXT:    lw t2, 40(sp)
-; CHECK-NEXT:    lw t3, 44(sp)
-; CHECK-NEXT:    lw t4, 48(sp)
-; CHECK-NEXT:    lw t5, 52(sp)
-; CHECK-NEXT:    sw t4, 16(sp)
-; CHECK-NEXT:    sw t5, 20(sp)
-; CHECK-NEXT:    sw t0, 0(sp)
-; CHECK-NEXT:    sw t1, 4(sp)
-; CHECK-NEXT:    sw t2, 8(sp)
-; CHECK-NEXT:    sw t3, 12(sp)
-; CHECK-NEXT:    call callee_args
-; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    lw t0, 20(sp)
+; CHECK-NEXT:    lw t1, 16(sp)
+; CHECK-NEXT:    lw t2, 0(sp)
+; CHECK-NEXT:    lw t3, 4(sp)
+; CHECK-NEXT:    lw t4, 8(sp)
+; CHECK-NEXT:    lw t5, 12(sp)
+; CHECK-NEXT:    sw t2, 0(sp)
+; CHECK-NEXT:    sw t3, 4(sp)
+; CHECK-NEXT:    sw t4, 8(sp)
+; CHECK-NEXT:    sw t5, 12(sp)
+; CHECK-NEXT:    sw t1, 16(sp)
+; CHECK-NEXT:    sw t0, 20(sp)
+; CHECK-NEXT:    tail callee_args
 ;
 ; CHECK-CF-RV32-LABEL: caller_args:
 ; CHECK-CF-RV32:       # %bb.0: # %entry
 ; CHECK-CF-RV32-NEXT:    lpad 0
-; CHECK-CF-RV32-NEXT:    addi sp, sp, -32
-; CHECK-CF-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-CF-RV32-NEXT:    lw t0, 32(sp)
-; CHECK-CF-RV32-NEXT:    lw t1, 36(sp)
-; CHECK-CF-RV32-NEXT:    lw t2, 40(sp)
-; CHECK-CF-RV32-NEXT:    lw t3, 44(sp)
-; CHECK-CF-RV32-NEXT:    lw t4, 48(sp)
-; CHECK-CF-RV32-NEXT:    lw t5, 52(sp)
-; CHECK-CF-RV32-NEXT:    sw t4, 16(sp)
-; CHECK-CF-RV32-NEXT:    sw t5, 20(sp)
-; CHECK-CF-RV32-NEXT:    sw t0, 0(sp)
-; CHECK-CF-RV32-NEXT:    sw t1, 4(sp)
-; CHECK-CF-RV32-NEXT:    sw t2, 8(sp)
-; CHECK-CF-RV32-NEXT:    sw t3, 12(sp)
-; CHECK-CF-RV32-NEXT:    call callee_args
-; CHECK-CF-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-CF-RV32-NEXT:    addi sp, sp, 32
-; CHECK-CF-RV32-NEXT:    ret
+; CHECK-CF-RV32-NEXT:    lw t0, 20(sp)
+; CHECK-CF-RV32-NEXT:    lw t1, 16(sp)
+; CHECK-CF-RV32-NEXT:    lw t2, 0(sp)
+; CHECK-CF-RV32-NEXT:    lw t3, 4(sp)
+; CHECK-CF-RV32-NEXT:    lw t4, 8(sp)
+; CHECK-CF-RV32-NEXT:    lw t5, 12(sp)
+; CHECK-CF-RV32-NEXT:    sw t2, 0(sp)
+; CHECK-CF-RV32-NEXT:    sw t3, 4(sp)
+; CHECK-CF-RV32-NEXT:    sw t4, 8(sp)
+; CHECK-CF-RV32-NEXT:    sw t5, 12(sp)
+; CHECK-CF-RV32-NEXT:    sw t1, 16(sp)
+; CHECK-CF-RV32-NEXT:    sw t0, 20(sp)
+; CHECK-CF-RV32-NEXT:    tail callee_args
 ;
 ; CHECK-CF-RV64-LABEL: caller_args:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
 ; CHECK-CF-RV64-NEXT:    lpad 0
-; CHECK-CF-RV64-NEXT:    addi sp, sp, -64
-; CHECK-CF-RV64-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-CF-RV64-NEXT:    ld t0, 64(sp)
-; CHECK-CF-RV64-NEXT:    ld t1, 72(sp)
-; CHECK-CF-RV64-NEXT:    ld t2, 80(sp)
-; CHECK-CF-RV64-NEXT:    ld t3, 88(sp)
-; CHECK-CF-RV64-NEXT:    ld t4, 96(sp)
-; CHECK-CF-RV64-NEXT:    ld t5, 104(sp)
-; CHECK-CF-RV64-NEXT:    sd t4, 32(sp)
-; CHECK-CF-RV64-NEXT:    sd t5, 40(sp)
-; CHECK-CF-RV64-NEXT:    sd t0, 0(sp)
-; CHECK-CF-RV64-NEXT:    sd t1, 8(sp)
-; CHECK-CF-RV64-NEXT:    sd t2, 16(sp)
-; CHECK-CF-RV64-NEXT:    sd t3, 24(sp)
-; CHECK-CF-RV64-NEXT:    call callee_args
-; CHECK-CF-RV64-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-CF-RV64-NEXT:    addi sp, sp, 64
-; CHECK-CF-RV64-NEXT:    ret
+; CHECK-CF-RV64-NEXT:    ld t0, 40(sp)
+; CHECK-CF-RV64-NEXT:    ld t1, 32(sp)
+; CHECK-CF-RV64-NEXT:    ld t2, 0(sp)
+; CHECK-CF-RV64-NEXT:    ld t3, 8(sp)
+; CHECK-CF-RV64-NEXT:    ld t4, 16(sp)
+; CHECK-CF-RV64-NEXT:    ld t5, 24(sp)
+; CHECK-CF-RV64-NEXT:    sd t2, 0(sp)
+; CHECK-CF-RV64-NEXT:    sd t3, 8(sp)
+; CHECK-CF-RV64-NEXT:    sd t4, 16(sp)
+; CHECK-CF-RV64-NEXT:    sd t5, 24(sp)
+; CHECK-CF-RV64-NEXT:    sd t1, 32(sp)
+; CHECK-CF-RV64-NEXT:    sd t0, 40(sp)
+; CHECK-CF-RV64-NEXT:    tail callee_args
 ;
 ; CHECK-CF-RV32-LARGE-LABEL: caller_args:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
 ; CHECK-CF-RV32-LARGE-NEXT:    lpad 0
-; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, -32
-; CHECK-CF-RV32-LARGE-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
-; CHECK-CF-RV32-LARGE-NEXT:    lw t0, 32(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    lw t1, 36(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    lw t3, 40(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    lw t4, 44(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    lw t2, 48(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    lw t5, 52(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    sw t2, 16(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    sw t5, 20(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    lw t0, 20(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    lw t1, 16(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    lw t2, 0(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    lw t3, 12(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    lw t4, 8(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    lw t5, 4(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    sw t2, 0(sp)
 ; CHECK-CF-RV32-LARGE-NEXT:  .Lpcrel_hi8:
 ; CHECK-CF-RV32-LARGE-NEXT:    auipc t2, %pcrel_hi(.LCPI6_0)
 ; CHECK-CF-RV32-LARGE-NEXT:    lw t2, %pcrel_lo(.Lpcrel_hi8)(t2)
-; CHECK-CF-RV32-LARGE-NEXT:    sw t0, 0(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    sw t1, 4(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    sw t3, 8(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    sw t4, 12(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    jalr t2
-; CHECK-CF-RV32-LARGE-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, 32
-; CHECK-CF-RV32-LARGE-NEXT:    ret
+; CHECK-CF-RV32-LARGE-NEXT:    sw t5, 4(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    sw t4, 8(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    sw t3, 12(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    sw t1, 16(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    sw t0, 20(sp)
+; CHECK-CF-RV32-LARGE-NEXT:    jr t2
 ;
 ; CHECK-CF-RV64-LARGE-LABEL: caller_args:
 ; CHECK-CF-RV64-LARGE:       # %bb.0: # %entry
 ; CHECK-CF-RV64-LARGE-NEXT:    lpad 0
-; CHECK-CF-RV64-LARGE-NEXT:    addi sp, sp, -64
-; CHECK-CF-RV64-LARGE-NEXT:    sd ra, 56(sp) # 8-byte Folded Spill
-; CHECK-CF-RV64-LARGE-NEXT:    ld t0, 64(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    ld t1, 72(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    ld t3, 80(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    ld t4, 88(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    ld t2, 96(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    ld t5, 104(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    sd t2, 32(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    sd t5, 40(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    ld t0, 40(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    ld t1, 32(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    ld t2, 0(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    ld t3, 24(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    ld t4, 16(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    ld t5, 8(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    sd t2, 0(sp)
 ; CHECK-CF-RV64-LARGE-NEXT:  .Lpcrel_hi8:
 ; CHECK-CF-RV64-LARGE-NEXT:    auipc t2, %pcrel_hi(.LCPI6_0)
 ; CHECK-CF-RV64-LARGE-NEXT:    ld t2, %pcrel_lo(.Lpcrel_hi8)(t2)
-; CHECK-CF-RV64-LARGE-NEXT:    sd t0, 0(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    sd t1, 8(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    sd t3, 16(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    sd t4, 24(sp)
-; CHECK-CF-RV64-LARGE-NEXT:    jalr t2
-; CHECK-CF-RV64-LARGE-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
-; CHECK-CF-RV64-LARGE-NEXT:    addi sp, sp, 64
-; CHECK-CF-RV64-LARGE-NEXT:    ret
+; CHECK-CF-RV64-LARGE-NEXT:    sd t5, 8(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    sd t4, 16(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    sd t3, 24(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    sd t1, 32(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    sd t0, 40(sp)
+; CHECK-CF-RV64-LARGE-NEXT:    jr t2
 entry:
   %r = tail call i32 @callee_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i, i32 %j, i32 %k, i32 %l, i32 %m, i32 %n)
   ret i32 %r
@@ -563,34 +538,28 @@ declare i32 @callee_indirect_args(fp128 %a)
 define void @caller_indirect_args() nounwind {
 ; CHECK-LABEL: caller_indirect_args:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    lui a1, 262128
 ; CHECK-NEXT:    mv a0, sp
 ; CHECK-NEXT:    sw zero, 0(sp)
 ; CHECK-NEXT:    sw zero, 4(sp)
 ; CHECK-NEXT:    sw zero, 8(sp)
 ; CHECK-NEXT:    sw a1, 12(sp)
-; CHECK-NEXT:    call callee_indirect_args
-; CHECK-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    addi sp, sp, 32
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    tail callee_indirect_args
 ;
 ; CHECK-CF-RV32-LABEL: caller_indirect_args:
 ; CHECK-CF-RV32:       # %bb.0: # %entry
 ; CHECK-CF-RV32-NEXT:    lpad 0
-; CHECK-CF-RV32-NEXT:    addi sp, sp, -32
-; CHECK-CF-RV32-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; CHECK-CF-RV32-NEXT:    addi sp, sp, -16
 ; CHECK-CF-RV32-NEXT:    lui a1, 262128
 ; CHECK-CF-RV32-NEXT:    mv a0, sp
 ; CHECK-CF-RV32-NEXT:    sw zero, 0(sp)
 ; CHECK-CF-RV32-NEXT:    sw zero, 4(sp)
 ; CHECK-CF-RV32-NEXT:    sw zero, 8(sp)
 ; CHECK-CF-RV32-NEXT:    sw a1, 12(sp)
-; CHECK-CF-RV32-NEXT:    call callee_indirect_args
-; CHECK-CF-RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-CF-RV32-NEXT:    addi sp, sp, 32
-; CHECK-CF-RV32-NEXT:    ret
+; CHECK-CF-RV32-NEXT:    addi sp, sp, 16
+; CHECK-CF-RV32-NEXT:    tail callee_indirect_args
 ;
 ; CHECK-CF-RV64-LABEL: caller_indirect_args:
 ; CHECK-CF-RV64:       # %bb.0: # %entry
@@ -603,8 +572,7 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-CF-RV32-LARGE-LABEL: caller_indirect_args:
 ; CHECK-CF-RV32-LARGE:       # %bb.0: # %entry
 ; CHECK-CF-RV32-LARGE-NEXT:    lpad 0
-; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, -32
-; CHECK-CF-RV32-LARGE-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
+; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, -16
 ; CHECK-CF-RV32-LARGE-NEXT:    lui a1, 262128
 ; CHECK-CF-RV32-LARGE-NEXT:  .Lpcrel_hi9:
 ; CHECK-CF-RV32-LARGE-NEXT:    auipc a0, %pcrel_hi(.LCPI7_0)
@@ -614,10 +582,8 @@ define void @caller_indirect_args() nounwind {
 ; CHECK-CF-RV32-LARGE-NEXT:    sw zero, 4(sp)
 ; CHECK-CF-RV32-LARGE-NEXT:    sw zero, 8(sp)
 ; CHECK-CF-RV32-LARGE-NEXT:    sw a1, 12(sp)
-; CHECK-CF-RV32-LARGE-NEXT:    jalr t2
-; CHECK-CF-RV32-LARGE-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
-; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, 32
-; CHECK-CF-RV32-LARGE-NEXT:    ret
+; CHECK-CF-RV32-LARGE-NEXT:    addi sp, sp, 16
+; CHECK-CF-RV32-LARGE-NEXT:    jr t2
 ;
 ; CHECK-CF-RV64-LARGE-LABEL: caller_indirect_args:
 ; CHECK-CF-RV64-LARGE:       # %bb.0: # %entry
