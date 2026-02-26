@@ -209,7 +209,7 @@ Changes in existing checks
     incorrectly diagnosed as allowing the pointee to be made ``const``.
 
 - Improved :doc:`misc-unused-using-decls
-  <clang-tidy/checks/misc/unused-using-decls>` to not diagnose using
+  <clang-tidy/checks/misc/unused-using-decls>` to not diagnose ``using``
   declarations as unused if they're exported from a module.
 
 - Improved :doc:`modernize-pass-by-value
