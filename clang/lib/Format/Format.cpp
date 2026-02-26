@@ -1405,8 +1405,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.TableGenBreakInsideDAGArg);
     IO.mapOptional("TabWidth", Style.TabWidth);
     IO.mapOptional("TemplateNames", Style.TemplateNames);
-    IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TryMacros", Style.TryMacros);
+    IO.mapOptional("TypeNames", Style.TypeNames);
     IO.mapOptional("TypenameMacros", Style.TypenameMacros);
     IO.mapOptional("UseTab", Style.UseTab);
     IO.mapOptional("VariableTemplates", Style.VariableTemplates);

@@ -545,13 +545,7 @@ bool FormatTokenLexer::tryTransformTryUsageForC() {
   if (Tokens.size() < 2)
     return false;
   auto &Try = *(Tokens.end() - 2);
-  if (Try->isNot(tok::kw_try))
-    return false;
-  // Don't reset TryMacros back to identifier — they legitimately use kw_try
-  // even when followed by '(' (for macro arguments like JSG_TRY(js)). If a
-  // configured TryMacro name is also used as a plain identifier somewhere, that
-  // is a user configuration error, consistent with IfMacros/ForEachMacros.
-  if (Try->is(TT_TryMacro))
+  if (Try->isNot(tok::kw_try) || Try->is(TT_TryMacro))
     return false;
   auto &Next = *(Tokens.end() - 1);
   if (Next->isOneOf(tok::l_brace, tok::colon, tok::hash, tok::comment))

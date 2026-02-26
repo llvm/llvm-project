@@ -5629,6 +5629,30 @@ struct FormatStyle {
   /// \version 20
   std::vector<std::string> TemplateNames;
 
+  /// A vector of macros that should be interpreted as try blocks
+  /// instead of as function calls.
+  ///
+  /// These are expected to be macros of the form:
+  /// \code
+  ///   TRY_MACRO(...) {
+  ///     ...
+  ///   } CATCH_MACRO(...) {
+  ///     ...
+  ///   }
+  /// \endcode
+  ///
+  /// The parenthesized arguments are optional for both try and catch macros.
+  ///
+  /// In the .clang-format configuration file, this can be configured like:
+  /// \code{.yaml}
+  ///   TryMacros: [TRY_MACRO]
+  /// \endcode
+  ///
+  /// For example: `KJ_TRY
+  /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#throwing-and-catching-exceptions>`_
+  /// \version 23
+  std::vector<std::string> TryMacros;
+
   /// A vector of non-keyword identifiers that should be interpreted as type
   /// names.
   ///
@@ -5655,30 +5679,6 @@ struct FormatStyle {
   /// For example: OpenSSL STACK_OF, BSD LIST_ENTRY.
   /// \version 9
   std::vector<std::string> TypenameMacros;
-
-  /// A vector of macros that should be interpreted as try blocks
-  /// instead of as function calls.
-  ///
-  /// These are expected to be macros of the form:
-  /// \code
-  ///   TRY_MACRO(...) {
-  ///     ...
-  ///   } CATCH_MACRO(...) {
-  ///     ...
-  ///   }
-  /// \endcode
-  ///
-  /// The parenthesized arguments are optional for both try and catch macros.
-  ///
-  /// In the .clang-format configuration file, this can be configured like:
-  /// \code{.yaml}
-  ///   TryMacros: [TRY_MACRO]
-  /// \endcode
-  ///
-  /// For example: `KJ_TRY
-  /// <https://github.com/capnproto/capnproto/blob/master/kjdoc/tour.md#throwing-and-catching-exceptions>`_
-  /// \version 23
-  std::vector<std::string> TryMacros;
 
   /// This option is **deprecated**. See ``LF`` and ``CRLF`` of ``LineEnding``.
   /// \version 10

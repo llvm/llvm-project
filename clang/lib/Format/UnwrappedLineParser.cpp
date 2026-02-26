@@ -3059,7 +3059,7 @@ FormatToken *UnwrappedLineParser::parseIfThenElse(IfStmtKind *IfKind,
 
 void UnwrappedLineParser::parseTryCatch() {
   assert(FormatTok->isOneOf(tok::kw_try, tok::kw___try) && "'try' expected");
-  bool IsTryMacro = FormatTok->is(TT_TryMacro);
+  const bool IsTryMacro = FormatTok->is(TT_TryMacro);
   nextToken();
   // If the try keyword was a macro like JSG_TRY(js), skip its arguments.
   if (IsTryMacro && FormatTok->is(tok::l_paren))
