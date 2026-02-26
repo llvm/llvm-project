@@ -45,7 +45,7 @@ cir.func @test_eh_only_cleanup() {
 // CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
 // CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
 // CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
-// CHECK:         cir.resume
+// CHECK:         cir.resume %[[ET]] : !cir.eh_token
 //
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         cir.return
@@ -93,7 +93,7 @@ cir.func @test_all_cleanup() {
 // CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
 // CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
 // CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
-// CHECK:         cir.resume
+// CHECK:         cir.resume %[[ET]] : !cir.eh_token
 //
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         cir.return
@@ -140,7 +140,7 @@ cir.func @test_eh_cleanup_multiple_calls() {
 // CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
 // CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
 // CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
-// CHECK:         cir.resume
+// CHECK:         cir.resume %[[ET]] : !cir.eh_token
 //
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         cir.return
@@ -182,7 +182,7 @@ cir.func @test_eh_cleanup_nothrow_call() {
 // CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
 // CHECK:         cir.call @dtor(%[[ALLOCA]]) nothrow
 // CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
-// CHECK:         cir.resume
+// CHECK:         cir.resume %[[ET]] : !cir.eh_token
 //
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         cir.return
@@ -225,7 +225,7 @@ cir.func @test_eh_cleanup_call_with_result() -> !s32i {
 // CHECK:         %{{.*}} = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
 // CHECK:         cir.call @dtor(%[[ALLOCA_CLASS]]) nothrow
 // CHECK:         cir.end_cleanup
-// CHECK:         cir.resume
+// CHECK:         cir.resume %[[ET]] : !cir.eh_token
 //
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         %[[RETVAL:.*]] = cir.load %[[ALLOCA_RET]]
@@ -310,7 +310,7 @@ cir.func @test_nrvo() -> !rec_NonTrivial {
 // EH cleanup merge: end cleanup and resume unwinding.
 // CHECK:       ^[[EH_MERGE]]:
 // CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
-// CHECK:         cir.resume
+// CHECK:         cir.resume %[[ET]] : !cir.eh_token
 //
 // CHECK:       ^[[CONTINUE]]:
 // CHECK:         %[[RET:.*]] = cir.load %[[RETVAL]]
@@ -363,7 +363,7 @@ cir.func @test_eh_cleanup_in_try() {
 // CHECK:   %[[CT:.*]] = cir.begin_cleanup %[[ET]] : !cir.eh_token -> !cir.cleanup_token
 // CHECK:   cir.call @dtor(%[[C]]) nothrow
 // CHECK:   cir.end_cleanup %[[CT]] : !cir.cleanup_token
-// CHECK:   cir.resume
+// CHECK:   cir.resume %[[ET]] : !cir.eh_token
 //
 // Try exit: branches to continue.
 // CHECK: ^[[TRY_EXIT]]:
