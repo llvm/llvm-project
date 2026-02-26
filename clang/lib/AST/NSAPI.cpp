@@ -21,7 +21,7 @@ NSAPI::NSAPI(ASTContext &ctx)
     NSUTF8StringEncodingId(nullptr) {}
 
 IdentifierInfo *NSAPI::getNSClassId(NSClassIdKindKind K) const {
-  constexpr const char *ClassName[NumClassIds] = {
+  static constexpr const char *ClassName[NumClassIds] = {
       "NSObject",       "NSString",     "NSArray",
       "NSMutableArray", "NSDictionary", "NSMutableDictionary",
       "NSNumber",       "NSMutableSet", "NSMutableOrderedSet",
@@ -277,7 +277,7 @@ std::optional<NSAPI::NSSetMethodKind> NSAPI::getNSSetMethodKind(Selector Sel) {
 
 Selector NSAPI::getNSNumberLiteralSelector(NSNumberLiteralMethodKind MK,
                                            bool Instance) const {
-  constexpr const char *ClassSelectorName[NumNSNumberLiteralMethods] = {
+  static constexpr const char *ClassSelectorName[NumNSNumberLiteralMethods] = {
       "numberWithChar",
       "numberWithUnsignedChar",
       "numberWithShort",
@@ -293,22 +293,22 @@ Selector NSAPI::getNSNumberLiteralSelector(NSNumberLiteralMethodKind MK,
       "numberWithBool",
       "numberWithInteger",
       "numberWithUnsignedInteger"};
-  constexpr const char *InstanceSelectorName[NumNSNumberLiteralMethods] = {
-      "initWithChar",
-      "initWithUnsignedChar",
-      "initWithShort",
-      "initWithUnsignedShort",
-      "initWithInt",
-      "initWithUnsignedInt",
-      "initWithLong",
-      "initWithUnsignedLong",
-      "initWithLongLong",
-      "initWithUnsignedLongLong",
-      "initWithFloat",
-      "initWithDouble",
-      "initWithBool",
-      "initWithInteger",
-      "initWithUnsignedInteger"};
+  static constexpr const char *InstanceSelectorName[NumNSNumberLiteralMethods] =
+      {"initWithChar",
+       "initWithUnsignedChar",
+       "initWithShort",
+       "initWithUnsignedShort",
+       "initWithInt",
+       "initWithUnsignedInt",
+       "initWithLong",
+       "initWithUnsignedLong",
+       "initWithLongLong",
+       "initWithUnsignedLongLong",
+       "initWithFloat",
+       "initWithDouble",
+       "initWithBool",
+       "initWithInteger",
+       "initWithUnsignedInteger"};
 
   Selector *Sels;
   const char *const *Names;

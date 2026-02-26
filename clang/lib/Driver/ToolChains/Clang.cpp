@@ -6518,7 +6518,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-relocatable-pch");
 
   if (const Arg *A = Args.getLastArg(options::OPT_fcf_runtime_abi_EQ)) {
-    constexpr const char *kCFABIs[] = {
+    static constexpr const char *kCFABIs[] = {
         "standalone", "objc", "swift", "swift-5.0", "swift-4.2", "swift-4.1",
     };
 

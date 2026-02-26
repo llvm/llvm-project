@@ -1923,7 +1923,7 @@ ProgramStateRef StreamChecker::ensureStreamOpened(SVal StreamVal,
 
 ProgramStateRef StreamChecker::ensureNoFilePositionIndeterminate(
     SVal StreamVal, CheckerContext &C, ProgramStateRef State) const {
-  constexpr char BugMessage[] =
+  const char *BugMessage =
       "File position of the stream might be 'indeterminate' "
       "after a failed operation. "
       "Can cause undefined behavior.";
