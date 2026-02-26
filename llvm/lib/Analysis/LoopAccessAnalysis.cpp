@@ -201,8 +201,8 @@ static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
 
 /// Returns \p A * \p B, if it is guaranteed not to unsigned wrap. Otherwise
 /// return nullptr. \p A and \p B must have the same type.
-static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
-                                   ScalarEvolution &SE) {
+static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
+                                     ScalarEvolution &SE) {
   if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getMulExpr(A, B);
@@ -275,7 +275,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
   const SCEV *OffsetAtLastIter =
-      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+      mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
   if (!OffsetAtLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
@@ -285,7 +285,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     MaxBTC = SE.getNoopOrZeroExtend(
         MaxBTC, WiderTy);
     OffsetAtLastIter =
-        mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+        mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
     if (!OffsetAtLastIter)
       return false;
   }

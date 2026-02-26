@@ -1423,7 +1423,7 @@ LogicalResult MmaSpOp::verify() {
     case MMATypes::e3m2:
     case MMATypes::e2m3:
     case MMATypes::e2m1:
-      kFactor = 32;
+      kFactor = 16;
       multiplicandFragType = i32Ty;
       expectedResult.push_back(f16x2x2StructTy);
       expectedResult.push_back(f32x4StructTy);

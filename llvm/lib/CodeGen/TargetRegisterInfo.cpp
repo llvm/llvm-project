@@ -50,17 +50,20 @@ static cl::opt<unsigned>
                      cl::init(5000));
 
 TargetRegisterInfo::TargetRegisterInfo(
-    const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-    regclass_iterator RCE, const char *SRIStrings,
-    ArrayRef<uint32_t> SRINameOffsets, const SubRegCoveredBits *SubIdxRanges,
-    const LaneBitmask *SRILaneMasks, LaneBitmask SRICoveringLanes,
-    const RegClassInfo *const RCIs, const MVT::SimpleValueType *const RCVTLists,
-    unsigned Mode)
-    : InfoDesc(ID), SubRegIndexStrings(SRIStrings),
-      SubRegIndexNameOffsets(SRINameOffsets), SubRegIdxRanges(SubIdxRanges),
-      SubRegIndexLaneMasks(SRILaneMasks), RegClassBegin(RCB), RegClassEnd(RCE),
-      CoveringLanes(SRICoveringLanes), RCInfos(RCIs), RCVTLists(RCVTLists),
-      HwMode(Mode) {}
+    const TargetRegisterInfoDesc *ID,
+    ArrayRef<const TargetRegisterClass *> RegisterClasses,
+    const char *SubRegIndexStrings, ArrayRef<uint32_t> SubRegIndexNameOffsets,
+    const SubRegCoveredBits *SubRegIdxRanges,
+    const LaneBitmask *SubRegIndexLaneMasks, LaneBitmask CoveringLanes,
+    const RegClassInfo *const RCInfos,
+    const MVT::SimpleValueType *const RCVTLists, unsigned Mode)
+    : InfoDesc(ID), SubRegIndexStrings(SubRegIndexStrings),
+      SubRegIndexNameOffsets(SubRegIndexNameOffsets),
+      SubRegIdxRanges(SubRegIdxRanges),
+      SubRegIndexLaneMasks(SubRegIndexLaneMasks),
+      RegClassBegin(RegisterClasses.begin()),
+      RegClassEnd(RegisterClasses.end()), CoveringLanes(CoveringLanes),
+      RCInfos(RCInfos), RCVTLists(RCVTLists), HwMode(Mode) {}
 
 TargetRegisterInfo::~TargetRegisterInfo() = default;
 

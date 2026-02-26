@@ -72,8 +72,10 @@ struct VPlanTransforms {
           dbgs() << Plan << '\n';
       }
 #endif
-      if (VerifyEachVPlan && EnableVerify)
-        verifyVPlanIsValid(Plan);
+      if (VerifyEachVPlan && EnableVerify) {
+        if (!verifyVPlanIsValid(Plan))
+          report_fatal_error("Broken VPlan found, compilation aborted!");
+      }
     }};
 
     return std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
@@ -158,13 +160,11 @@ struct VPlanTransforms {
                                                bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
-  static void
-  addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
-                           ElementCount MinProfitableTripCount,
-                           bool RequiresScalarEpilogue, bool TailFolded,
-                           bool CheckNeededWithTailFolding, Loop *OrigLoop,
-                           const uint32_t *MinItersBypassWeights, DebugLoc DL,
-                           PredicatedScalarEvolution &PSE);
+  static void addMinimumIterationCheck(
+      VPlan &Plan, ElementCount VF, unsigned UF,
+      ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+      bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
+      DebugLoc DL, PredicatedScalarEvolution &PSE);
 
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.

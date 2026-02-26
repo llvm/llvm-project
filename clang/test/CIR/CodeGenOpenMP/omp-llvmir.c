@@ -46,7 +46,6 @@
 // LLVM: br label %[[ENTRY:.*]]
 
 // LLVM: [[ENTRY]]:
-// LLVM: %[[THREAD_NUM:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // LLVM: br label %[[OMP_PARALLEL:.*]]
 
 // LLVM: [[OMP_PARALLEL]]:

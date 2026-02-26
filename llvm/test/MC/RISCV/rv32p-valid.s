@@ -2,7 +2,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-p < %s \
 # RUN:     | llvm-objdump --mattr=+experimental-p -d -r --no-print-imm-hex - \
-# RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
+# RUN:     | FileCheck --check-prefixes=CHECK-OBJ,CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: cls a1, a2
 # CHECK-ASM: encoding: [0x93,0x15,0x36,0x60]
@@ -16,7 +16,8 @@ rev s2, s3
 # CHECK-ASM-AND-OBJ: pack s0, s1, s2
 # CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
 pack s0, s1, s2
-# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: pack t0, t1, zero
+# CHECK-OBJ: zext.h t0, t1
 # CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
 pack t0, t1, x0
 # CHECK-ASM-AND-OBJ: zext.h t0, t1
