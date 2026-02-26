@@ -259,7 +259,7 @@ Error executeCommands(StringRef ExecutablePath, ArrayRef<StringRef> Args) {
   }
 
   // Write the arguments to a response file and pass that instead.
-  auto TempFileOrErr = createOutputFile("response", "txt");
+  auto TempFileOrErr = createOutputFile("response", "rsp");
   if (!TempFileOrErr)
     return TempFileOrErr.takeError();
 
