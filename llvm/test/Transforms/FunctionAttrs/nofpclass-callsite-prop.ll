@@ -67,8 +67,8 @@ define void @parent2(float %a, float %b, float %c) {
 }
 
 
-define void @parent5(ptr %a, i1 %a_is_not_nan) {
-; COMMON-LABEL: define void @parent5(
+define void @parent3(ptr %a, i1 %a_is_not_nan) {
+; COMMON-LABEL: define void @parent3(
 ; COMMON-SAME: ptr [[A:%.*]], i1 [[A_IS_NOT_NAN:%.*]]) {
 ; COMMON-NEXT:    br i1 [[A_IS_NOT_NAN]], label %[[T:.*]], label %[[F:.*]]
 ; COMMON:       [[T]]:
