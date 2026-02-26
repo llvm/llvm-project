@@ -1639,6 +1639,7 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_LoadOp : Vector_Op<"load", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1709,8 +1710,6 @@ def Vector_LoadOp : Vector_Op<"load", [
     load operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
-
-    Promises IndexedAccessOpInterface.
   }];
 
   let arguments = (ins Arg<AnyMemRef, "the reference to load from",
@@ -1759,6 +1758,7 @@ def Vector_LoadOp : Vector_Op<"load", [
       "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_StoreOp : Vector_Op<"store", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1827,8 +1827,6 @@ def Vector_StoreOp : Vector_Op<"store", [
     store operation. It must be a positive power of 2. The operation must access
     memory at an address aligned to this boundary. Violating this requirement
     triggers immediate undefined behavior.
-
-    Promises IndexedAccessOpInterface.
   }];
 
   let arguments = (ins
@@ -1868,6 +1866,7 @@ def Vector_StoreOp : Vector_Op<"store", [
                        "`:` type($base) `,` type($valueToStore)";
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_MaskedLoadOp :
   Vector_Op<"maskedload", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1903,8 +1902,6 @@ def Vector_MaskedLoadOp :
     hardware ISA support for a masked load. The semantics of the operation
     closely correspond to those of the `llvm.masked.load`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-load-intrinsics).
-
-    Promises IndexedAccessOpInterface.
 
     Examples:
 
@@ -1965,6 +1962,7 @@ def Vector_MaskedLoadOp :
   ];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1999,8 +1997,6 @@ def Vector_MaskedStoreOp :
     hardware ISA support for a masked store. The semantics of the operation
     closely correspond to those of the `llvm.masked.store`
     [intrinsic](https://llvm.org/docs/LangRef.html#llvm-masked-store-intrinsics).
-
-    Promises IndexedAccessOpInterface.
 
     Examples:
 
@@ -2240,6 +2236,7 @@ def Vector_ScatterOp
     }]>];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_ExpandLoadOp :
   Vector_Op<"expandload", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2288,8 +2285,6 @@ def Vector_ExpandLoadOp :
 
     Note, at the moment this Op is only available for fixed-width vectors.
 
-    Promises IndexedAccessOpInterface.
-
     Examples:
 
     ```mlir
@@ -2333,6 +2328,7 @@ def Vector_ExpandLoadOp :
   ];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_CompressStoreOp :
   Vector_Op<"compressstore", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2379,8 +2375,6 @@ def Vector_CompressStoreOp :
     triggers immediate undefined behavior.
 
     Note, at the moment this Op is only available for fixed-width vectors.
-
-    Promises IndexedAccessOpInterface.
 
     Examples:
 
