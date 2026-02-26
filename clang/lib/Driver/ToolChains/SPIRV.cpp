@@ -83,8 +83,11 @@ void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
 
   ArgStringList LlvmLinkArgs;
 
-  for (auto Input : Inputs)
+  for (auto Input : Inputs) {
+    if (!Input.isFilename())
+      continue;
     LlvmLinkArgs.push_back(Input.getFilename());
+  }
 
   tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
 }
