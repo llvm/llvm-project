@@ -42,7 +42,7 @@ TEST_F(LlvmLibcHypotBf16Test,NormalPositiveRange){
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-      
+
     }
   }
 }
@@ -57,7 +57,7 @@ TEST_F(LlvmLibcHypotBf16Test,NormalNegativeRange){
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-      
+
     }
   }
 }
@@ -72,7 +72,7 @@ TEST_F(LlvmLibcHypotBf16Test, SubnormalNegativeRange) {
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-      
+
     }
   }
 }
@@ -87,7 +87,7 @@ TEST_F(LlvmLibcHypotBf16Test, SubnormalPositiveRange) {
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-      
+
     }
   }
 }
@@ -95,14 +95,14 @@ TEST_F(LlvmLibcHypotBf16Test, SpecialNumbers) {
   constexpr bfloat16 VALUES[] = {zero,    neg_zero,   inf,
                                  neg_inf, min_normal, max_normal};
   for (size_t i = 0; i < 6; ++i) {
-    for (size_t j = i; j < 6; ++j) { 
+    for (size_t j = i; j < 6; ++j) {
       bfloat16 x = VALUES[i];
       bfloat16 y = VALUES[j];
         mpfr::BinaryInput<bfloat16> input{x, y};
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-      
+
     }
   }
 }
