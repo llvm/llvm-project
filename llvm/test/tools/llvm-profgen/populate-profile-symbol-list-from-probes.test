@@ -1,0 +1,26 @@
+; Test --populate-profile-symbol-list-from-probes flag for llvm-profgen.
+; This flag populates the profile symbol list from pseudo probe descriptors
+; using MD5 hashes instead of strings.
+
+; Generate extbinary profile with probe-based symbol list.
+; RUN: llvm-profgen --format=extbinary --perfscript=%S/Inputs/noinline-cs-pseudoprobe.perfscript --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin --output=%t --populate-profile-symbol-list-from-probes
+
+; Verify the ProfileSymbolListSection has the md5 flag set and is non-empty.
+; RUN: llvm-profdata show -sample -show-sec-info-only %t | FileCheck %s --check-prefix=CHECK-SEC
+; CHECK-SEC: ProfileSymbolListSection {{.*}} Size: {{[1-9][0-9]*}}, Flags: {md5}
+
+; Show the MD5-based symbol list and verify it contains hex hashes (one per source function).
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t | FileCheck %s --check-prefix=CHECK-SYMLIST
+; CHECK-SYMLIST: ======== Dump profile symbol list ========
+; CHECK-SYMLIST-NEXT: 0x{{[0-9a-f]+}}
+; CHECK-SYMLIST-NEXT: 0x{{[0-9a-f]+}}
+; CHECK-SYMLIST-NEXT: 0x{{[0-9a-f]+}}
+
+; Test round-trip: merge the extbinary profile and verify the symbol list is preserved.
+; RUN: llvm-profdata merge --sample --extbinary %t -o %t.merged
+; RUN: llvm-profdata show -sample -show-prof-sym-list %t.merged | FileCheck %s --check-prefix=CHECK-SYMLIST
+
+; Verify --drop-profile-symbol-list removes the symbol list.
+; RUN: llvm-profdata merge --sample --extbinary --drop-profile-symbol-list %t -o %t.dropped
+; RUN: llvm-profdata show -sample -show-sec-info-only %t.dropped | FileCheck %s --check-prefix=CHECK-DROPPED
+; CHECK-DROPPED: ProfileSymbolListSection {{.*}} Size: 0

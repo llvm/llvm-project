@@ -1699,16 +1699,12 @@ public:
   }
 
   void merge(const ProfileSymbolList &List) {
+    assert(UseMD5 == List.useMD5() &&
+           "Cannot merge profile symbol lists with different formats");
     if (UseMD5) {
-      if (List.useMD5()) {
-        for (auto Sym : List.HashSyms)
-          HashSyms.insert(Sym);
-      } else {
-        for (auto Sym : List.Syms)
-          HashSyms.insert(MD5Hash(Sym));
-      }
+      for (auto Sym : List.HashSyms)
+        HashSyms.insert(Sym);
     } else {
-      assert(List.useMD5() == false && "Can't merge MD5 list with string list");
       for (auto Sym : List.Syms)
         add(Sym, true);
     }

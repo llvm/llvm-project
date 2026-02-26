@@ -1591,6 +1591,10 @@ static std::string getSecFlagsStr(const SecHdrTableEntry &Entry) {
     if (hasSecFlag(Entry, SecFuncMetadataFlags::SecFlagHasAttribute))
       Flags.append("attr,");
     break;
+  case SecProfileSymbolList:
+    if (hasSecFlag(Entry, SecProfileSymbolListFlags::SecFlagMD5))
+      Flags.append("md5,");
+    break;
   default:
     break;
   }
