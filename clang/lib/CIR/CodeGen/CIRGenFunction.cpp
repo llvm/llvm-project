@@ -842,7 +842,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
-    cgm.errorNYI(dtor->getSourceRange(), "abstract base class destructors");
+    SourceLocation loc =
+        dtor->hasBody() ? dtor->getBody()->getBeginLoc() : dtor->getLocation();
+    emitTrap(getLoc(loc), true);
     return;
   }
 
