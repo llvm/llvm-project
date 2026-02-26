@@ -31,7 +31,7 @@ namespace adjust {
 using namespace llvm;
 
 static void unsigned_width(unsigned Width, uint64_t Value,
-                           std::string Description, const MCFixup &Fixup,
+                           const std::string &Description, const MCFixup &Fixup,
                            MCContext *Ctx) {
   if (!isUIntN(Width, Value)) {
     std::string Diagnostic = "out of range " + Description;

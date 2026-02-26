@@ -123,8 +123,8 @@ SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           SDValue Dst, SDValue SrcOrValue,
                                           SDValue Size, Align Alignment,
                                           bool isVolatile,
-                                          MachinePointerInfo DstPtrInfo,
-                                          MachinePointerInfo SrcPtrInfo) const {
+                                          const MachinePointerInfo &DstPtrInfo,
+                                          const MachinePointerInfo &SrcPtrInfo) const {
 
   // Get the constant size of the copy/set.
   uint64_t ConstSize = 0;
