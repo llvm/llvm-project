@@ -229,6 +229,17 @@ static SmallString<128> getFilename(const DIScope *SP, vfs::FileSystem &VFS) {
   return Path;
 }
 
+/// Canonicalize a path by making it absolute and removing dots.
+/// Compared to sys::fs::real_path, it will not resolve symlinks.
+static StringRef canonicalizePath(StringRef P) {
+  SmallString<256> Ret = P;
+  std::error_code Err = sys::fs::make_absolute(Ret);
+  if (Err)
+    return P;
+  sys::path::remove_dots(Ret, /*removedotdot*/ true);
+  return Ret;
+}
+
 namespace {
   class GCOVRecord {
   protected:
@@ -471,13 +482,8 @@ bool GCOVProfiler::isFunctionInstrumented(const Function &F) {
 
   // Path can be
   // /usr/lib/gcc/x86_64-linux-gnu/8/../../../../include/c++/8/bits/*.h so for
-  // such a case we must get the real_path.
-  if (VFS.getRealPath(Filename, RealPath)) {
-    // real_path can fail with path like "foo.c".
-    RealFilename = Filename;
-  } else {
-    RealFilename = RealPath;
-  }
+  // such a case we must get the canonicalized path.
+  StringRef RealFilename = canonicalizePath(Filename);
 
   bool ShouldInstrument;
   if (FilterRe.empty()) {
