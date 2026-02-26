@@ -21,7 +21,7 @@ void *f(C *c) {
   // CHECK:                             [[CAST_NOT_NULL]]:
   // CHECK-NOSANITIZE-NEXT:               %[[ADD_PTR:.*]] = getelementptr inbounds i8, ptr %[[C_RELOAD]], i64 4
   // CHECK-NOSANITIZE-NEXT:               br label %[[CAST_END]]
-  // CHECK-SANITIZE-NEXT:                 %[[PTRTOINT:.*]] = ptrtoint ptr %[[C_RELOAD]] to i64, !nosanitize
+  // CHECK-SANITIZE-NEXT:                 %[[PTRTOINT:.*]] = ptrtoaddr ptr %[[C_RELOAD]] to i64, !nosanitize
   // CHECK-SANITIZE-NEXT:                 %[[MASKEDPTR:.*]] = and i64 %[[PTRTOINT]], 3, !nosanitize
   // CHECK-SANITIZE-NEXT:                 %[[MASKCOND:.*]] = icmp eq i64 %[[MASKEDPTR]], 0, !nosanitize
   // CHECK-SANITIZE-NEXT:                 br i1 %[[MASKCOND]], label %[[CONT:[^,]+]], label %[[HANDLER_TYPE_MISMATCH:[^,]+]]

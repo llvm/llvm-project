@@ -30,7 +30,7 @@ void reference_binding(int *p, S *q) {
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 4
 
-  // CHECK: %[[PTRINT:.*]] = ptrtoint
+  // CHECK: %[[PTRINT:.*]] = ptrtoaddr
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 3
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
   int &r = *p;
@@ -50,7 +50,7 @@ void member_access(S *p) {
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 24
 
-  // CHECK: %[[PTRINT:.*]] = ptrtoint
+  // CHECK: %[[PTRINT:.*]] = ptrtoaddr
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 7
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
 
@@ -92,7 +92,7 @@ void member_access(S *p) {
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 4
 
-  // CHECK: %[[PTRINT:.*]] = ptrtoint
+  // CHECK: %[[PTRINT:.*]] = ptrtoaddr
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 3
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
   int k = p->b;
@@ -104,7 +104,7 @@ void member_access(S *p) {
   // CHECK: %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-NEXT: icmp uge i64 %[[SIZE]], 24
 
-  // CHECK: %[[PTRINT:.*]] = ptrtoint
+  // CHECK: %[[PTRINT:.*]] = ptrtoaddr
   // CHECK-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 7
   // CHECK-NEXT: icmp eq i64 %[[MISALIGN]], 0
 
@@ -366,7 +366,7 @@ void downcast_pointer(B *b) {
   // null check goes here
   // CHECK: [[FROM_PHI:%.+]] = phi ptr [ [[SUB]], {{.*}} ], {{.*}}
   // Objectsize check goes here
-  // CHECK: [[C_INT:%.+]] = ptrtoint ptr [[FROM_PHI]] to i64
+  // CHECK: [[C_INT:%.+]] = ptrtoaddr ptr [[FROM_PHI]] to i64
   // CHECK-NEXT: [[MASKED:%.+]] = and i64 [[C_INT]], 15
   // CHECK-NEXT: [[TEST:%.+]] = icmp eq i64 [[MASKED]], 0
   // AND the alignment test with the objectsize test.
@@ -380,7 +380,7 @@ void downcast_reference(B &b) {
   // Alignment check from EmitTypeCheck(TCK_DowncastReference, ...)
   // CHECK:      [[SUB:%[.a-z0-9]*]] = getelementptr inbounds i8, ptr {{.*}}, i64 -16
   // Objectsize check goes here
-  // CHECK:      [[C_INT:%.+]] = ptrtoint ptr [[SUB]] to i64
+  // CHECK:      [[C_INT:%.+]] = ptrtoaddr ptr [[SUB]] to i64
   // CHECK-NEXT: [[MASKED:%.+]] = and i64 [[C_INT]], 15
   // CHECK-NEXT: [[TEST:%.+]] = icmp eq i64 [[MASKED]], 0
   // AND the alignment test with the objectsize test.
@@ -420,7 +420,7 @@ namespace VBaseObjectSize {
     // CHECK: icmp uge i{{32|64}} [[SIZE]], 16,
 
     // Alignment check: check for nvalign(B) == 8 (do not require align(B) == 16)
-    // CHECK: [[PTRTOINT:%.+]] = ptrtoint {{.*}} to i64,
+    // CHECK: [[PTRTOINT:%.+]] = ptrtoaddr {{.*}} to i64,
     // CHECK: and i64 [[PTRTOINT]], 7,
     return b;
   }
@@ -429,7 +429,7 @@ namespace VBaseObjectSize {
   void *B::g() {
     // Ensure that the check on the "this" pointer also uses the proper
     // alignment. We should be using nvalign(B) == 8, not 16.
-    // CHECK: [[PTRTOINT:%.+]] = ptrtoint {{.*}} to i64,
+    // CHECK: [[PTRTOINT:%.+]] = ptrtoaddr {{.*}} to i64,
     // CHECK: and i64 [[PTRTOINT]], 7
     return nullptr;
   }
@@ -629,7 +629,7 @@ void ThisAlign::this_align_lambda() {
   // CHECK: %[[this_outer:.*]] = load ptr, ptr %[[this_outer_addr]],
   //
   // CHECK: %[[this_inner_isnonnull:.*]] = icmp ne ptr %[[this_inner]], null
-  // CHECK: %[[this_inner_asint:.*]] = ptrtoint ptr %[[this_inner]] to i
+  // CHECK: %[[this_inner_asint:.*]] = ptrtoaddr ptr %[[this_inner]] to i
   // CHECK: %[[this_inner_misalignment:.*]] = and i{{32|64}} %[[this_inner_asint]], {{3|7}},
   // CHECK: %[[this_inner_isaligned:.*]] = icmp eq i{{32|64}} %[[this_inner_misalignment]], 0
   // CHECK: %[[this_inner_valid:.*]] = and i1 %[[this_inner_isnonnull]], %[[this_inner_isaligned]],

@@ -857,7 +857,7 @@ void CodeGenFunction::EmitTypeCheck(TypeCheckKind TCK, SourceLocation Loc,
       // The glvalue must be suitably aligned.
       if (AlignVal && *AlignVal > llvm::Align(1) &&
           (!PtrToAlloca || PtrToAlloca->getAlign() < *AlignVal)) {
-        PtrAsInt = Builder.CreatePtrToInt(Ptr, IntPtrTy);
+        PtrAsInt = Builder.CreatePtrToAddr(Ptr);
         llvm::Value *Align = Builder.CreateAnd(
             PtrAsInt, llvm::ConstantInt::get(IntPtrTy, AlignVal->value() - 1));
         llvm::Value *Aligned =

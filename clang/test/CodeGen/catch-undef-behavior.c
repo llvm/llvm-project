@@ -55,7 +55,7 @@ int bar(int *a) {
   // CHECK-COMMON:      %[[SIZE:.*]] = call i64 @llvm.objectsize.i64
   // CHECK-COMMON-NEXT: icmp uge i64 %[[SIZE]], 4
 
-  // CHECK-COMMON:      %[[PTRINT:.*]] = ptrtoint
+  // CHECK-COMMON:      %[[PTRINT:.*]] = ptrtoaddr
   // CHECK-COMMON-NEXT: %[[MISALIGN:.*]] = and i64 %[[PTRINT]], 3
   // CHECK-COMMON-NEXT: icmp eq i64 %[[MISALIGN]], 0
 
