@@ -1134,8 +1134,7 @@ DependenceInfo::classifyPair(const SCEV *Src, const Loop *SrcLoopNest,
     return Subscript::ZIV;
   if (N == 1)
     return Subscript::SIV;
-  if (N == 2 && (SrcLoops.count() == 0 || DstLoops.count() == 0 ||
-                 (SrcLoops.count() == 1 && DstLoops.count() == 1)))
+  if (N == 2 && SrcLoops.count() == 1 && DstLoops.count() == 1)
     return Subscript::RDIV;
   return Subscript::MIV;
 }
@@ -2404,18 +2403,9 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
 // so there's no point in making special versions of the Strong SIV test or
 // the Weak-crossing SIV test.
 //
-// With minor algebra, this test can also be used for things like
-// [c1 + a1*i + a2*j][c2].
-//
 // Return true if dependence disproved.
 bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
                               FullDependence &Result) const {
-  // we have 3 possible situations here:
-  //   1) [a*i + b] and [c*j + d]
-  //   2) [a*i + c*j + b] and [d]
-  //   3) [b] and [a*i + c*j + d]
-  // We need to find what we've got and get organized
-
   const SCEV *SrcConst, *DstConst;
   const SCEV *SrcCoeff, *DstCoeff;
   const Loop *SrcLoop, *DstLoop;
@@ -2431,28 +2421,6 @@ bool DependenceInfo::testRDIV(const SCEV *Src, const SCEV *Dst,
     DstConst = DstAddRec->getStart();
     DstCoeff = DstAddRec->getStepRecurrence(*SE);
     DstLoop = DstAddRec->getLoop();
-  } else if (SrcAddRec) {
-    if (const SCEVAddRecExpr *tmpAddRec =
-            dyn_cast<SCEVAddRecExpr>(SrcAddRec->getStart())) {
-      SrcConst = tmpAddRec->getStart();
-      SrcCoeff = tmpAddRec->getStepRecurrence(*SE);
-      SrcLoop = tmpAddRec->getLoop();
-      DstConst = Dst;
-      DstCoeff = SE->getNegativeSCEV(SrcAddRec->getStepRecurrence(*SE));
-      DstLoop = SrcAddRec->getLoop();
-    } else
-      llvm_unreachable("RDIV reached by surprising SCEVs");
-  } else if (DstAddRec) {
-    if (const SCEVAddRecExpr *tmpAddRec =
-            dyn_cast<SCEVAddRecExpr>(DstAddRec->getStart())) {
-      DstConst = tmpAddRec->getStart();
-      DstCoeff = tmpAddRec->getStepRecurrence(*SE);
-      DstLoop = tmpAddRec->getLoop();
-      SrcConst = Src;
-      SrcCoeff = SE->getNegativeSCEV(DstAddRec->getStepRecurrence(*SE));
-      SrcLoop = DstAddRec->getLoop();
-    } else
-      llvm_unreachable("RDIV reached by surprising SCEVs");
   } else
     llvm_unreachable("RDIV expected at least one AddRec");
   return exactRDIVtest(SrcCoeff, DstCoeff, SrcConst, DstConst, SrcLoop, DstLoop,
