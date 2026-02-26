@@ -251,6 +251,95 @@ TEST(InstSizes, JumpTable) {
             });
 }
 
+TEST(InstSizes, MOVaddr) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  auto Check8 = [](AArch64InstrInfo &II, MachineFunction &MF) {
+    auto I = MF.begin()->begin();
+    EXPECT_EQ(8u, II.getInstSizeInBytes(*I));
+  };
+
+  runChecks(TM.get(), II.get(), "  @g = external global i32\n",
+            "    $x0 = MOVaddr target-flags(aarch64-page) @g, "
+            "target-flags(aarch64-pageoff, aarch64-nc) @g\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(), "",
+            "    $x0 = MOVaddrJT target-flags(aarch64-page) %jump-table.0, "
+            "target-flags(aarch64-pageoff, aarch64-nc) %jump-table.0\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(), "  @g = external global i32\n",
+            "    $x0 = MOVaddrTLS target-flags(aarch64-page) @g, "
+            "target-flags(aarch64-pageoff, aarch64-nc) @g\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(), "",
+            "    $x0 = MOVaddrEXT target-flags(aarch64-page) &memcpy, "
+            "target-flags(aarch64-pageoff, aarch64-nc) &memcpy\n",
+            Check8);
+
+  runChecks(TM.get(), II.get(),
+            "  define void @test_bb() {\n"
+            "  entry:\n"
+            "    br label %block\n"
+            "  block:\n"
+            "    ret void\n"
+            "  }\n",
+            "    $x0 = MOVaddrBA target-flags(aarch64-page) "
+            "blockaddress(@test_bb, %ir-block.block), "
+            "target-flags(aarch64-pageoff, aarch64-nc) "
+            "blockaddress(@test_bb, %ir-block.block)\n",
+            Check8);
+}
+
+TEST(InstSizes, MOVaddrTagged) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "  @g = external global i32\n",
+            "    $x0 = MOVaddr target-flags(aarch64-page, aarch64-tagged) @g, "
+            "target-flags(aarch64-pageoff, aarch64-nc) @g\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(12u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, MOVi32imm) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    $w0 = MOVi32imm 1\n"
+            "    $w1 = MOVi32imm 65536\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+            });
+}
+
+TEST(InstSizes, MOVi64imm) {
+  std::unique_ptr<TargetMachine> TM = createTargetMachine();
+  std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());
+
+  runChecks(TM.get(), II.get(), "",
+            "    $x0 = MOVi64imm 1\n"
+            "    $x1 = MOVi64imm 65537\n"
+            "    $x2 = MOVi64imm 1311768467463790320\n",
+            [](AArch64InstrInfo &II, MachineFunction &MF) {
+              auto I = MF.begin()->begin();
+              EXPECT_EQ(4u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(8u, II.getInstSizeInBytes(*I));
+              ++I;
+              EXPECT_EQ(16u, II.getInstSizeInBytes(*I));
+            });
+}
+
 TEST(InstSizes, MOPSMemoryPseudos) {
   std::unique_ptr<TargetMachine> TM = createTargetMachine();
   std::unique_ptr<AArch64InstrInfo> II = createInstrInfo(TM.get());

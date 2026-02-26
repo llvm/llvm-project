@@ -194,6 +194,33 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case AArch64::SPACE:
     NumBytes = MI.getOperand(1).getImm();
     break;
+
+  case AArch64::MOVaddr:
+  case AArch64::MOVaddrJT:
+  case AArch64::MOVaddrCP:
+  case AArch64::MOVaddrBA:
+  case AArch64::MOVaddrTLS:
+  case AArch64::MOVaddrEXT: {
+    // Use the same logic as the pseudo expansion to count instructions.
+    SmallVector<AArch64_ExpandPseudo::AddrInsnModel, 3> Insn;
+    AArch64_ExpandPseudo::expandMOVAddr(Desc.getOpcode(),
+                                        MI.getOperand(1).getTargetFlags(),
+                                        Subtarget.isTargetMachO(), Insn);
+    NumBytes = Insn.size() * 4;
+    break;
+  }
+
+  case AArch64::MOVi32imm:
+  case AArch64::MOVi64imm: {
+    // Use the same logic as the pseudo expansion to count instructions.
+    unsigned BitSize = Desc.getOpcode() == AArch64::MOVi32imm ? 32 : 64;
+    SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insn;
+    AArch64_ExpandPseudo::expandMOVImm(MI.getOperand(1).getImm(), BitSize,
+                                       Insn);
+    NumBytes = Insn.size() * 4;
+    break;
+  }
+
   case TargetOpcode::BUNDLE:
     NumBytes = getInstBundleLength(MI);
     break;
@@ -1215,20 +1242,6 @@ void AArch64InstrInfo::insertSelect(MachineBasicBlock &MBB,
       .addImm(CC);
 }
 
-// Return true if Imm can be loaded into a register by a "cheap" sequence of
-// instructions. For now, "cheap" means at most two instructions.
-static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
-  if (BitSize == 32)
-    return true;
-
-  assert(BitSize == 64 && "Only bit sizes of 32 or 64 allowed");
-  uint64_t Imm = static_cast<uint64_t>(MI.getOperand(1).getImm());
-  SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Is;
-  AArch64_ExpandPseudo::expandMOVImm(Imm, BitSize, Is);
-
-  return Is.size() <= 2;
-}
-
 // Check if a COPY instruction is cheap.
 static bool isCheapCopy(const MachineInstr &MI, const AArch64RegisterInfo &RI) {
   assert(MI.isCopy() && "Expected COPY instruction");
@@ -1277,9 +1290,8 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   // ORRXri, it is as cheap as MOV.
   // Likewise if it can be expanded to MOVZ/MOVN/MOVK.
   case AArch64::MOVi32imm:
-    return isCheapImmediate(MI, 32);
   case AArch64::MOVi64imm:
-    return isCheapImmediate(MI, 64);
+    return getInstSizeInBytes(MI) <= 8;
   }
 }
 
