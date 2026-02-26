@@ -486,6 +486,13 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
     llvm::sys::unregisterHandlers();
     raise(CommandRes - 128);
   }
+  // When cc1 runs out-of-process (CLANG_SPAWN_CC1), ExecuteAndWait returns -2
+  // if the child was killed by a signal. The signal number is not preserved,
+  // so resignal with SIGABRT to ensure the driver exits via signal.
+  if (CommandRes == -2) {
+    llvm::sys::unregisterHandlers();
+    raise(SIGABRT);
+  }
 #endif
 
   // If we have multiple failing commands, we return the result of the first
