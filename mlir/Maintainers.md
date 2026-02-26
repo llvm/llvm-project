@@ -105,7 +105,7 @@ available, should be contacted first, as they're more active in those areas.
 * ‘arm_sve’ Dialect ([@banach-space](https://github.com/banach-space))
 * ‘ArmSME’ Dialect ([@banach-space](https://github.com/banach-space))
 * ‘amx’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
-* ‘x86vector’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
+* ‘x86’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
 * ‘vcix’ Dialect ([@mshockwave](https://github.com/mshockwave))
 
 #### Paradigm Dialects

@@ -21,7 +21,7 @@
 // CHECK-SAME: enable-amx={{[aA-zZ0-9]+}}
 // CHECK-SAME: enable-arm-neon={{[aA-zZ0-9]+}}
 // CHECK-SAME: enable-arm-sve={{[aA-zZ0-9]+}}
-// CHECK-SAME: enable-x86vector={{[aA-zZ0-9]+}}
+// CHECK-SAME: enable-x86={{[aA-zZ0-9]+}}
 // CHECK-SAME: force-32bit-vector-indices={{[aA-zZ0-9]+}}
 // CHECK-SAME: reassociate-fp-reductions={{[aA-zZ0-9]+}}
 // DEFAULT: vector-contract-lowering=dot

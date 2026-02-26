@@ -9,7 +9,6 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNELCORE_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_PROCESSFREEBSDKERNELCORE_H
 
-#include "lldb/Core/Debugger.h"
 #include "lldb/Target/PostMortemProcess.h"
 
 #include <kvm.h>
@@ -27,8 +26,6 @@ public:
                  bool can_connect);
 
   static void Initialize();
-
-  static void DebuggerInitialize(lldb_private::Debugger &debugger);
 
   static void Terminate();
 
@@ -50,9 +47,6 @@ public:
   lldb_private::Status DoDestroy() override;
 
   void RefreshStateAfterStop() override;
-
-  size_t DoWriteMemory(lldb::addr_t addr, const void *buf, size_t size,
-                       lldb_private::Status &error) override;
 
 protected:
   bool DoUpdateThreadList(lldb_private::ThreadList &old_thread_list,

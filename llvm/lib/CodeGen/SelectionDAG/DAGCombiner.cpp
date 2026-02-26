@@ -5468,18 +5468,17 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
       return DAG.getNode(ISD::UREM, DL, VT, N0, N1);
   } else {
-    if (DAG.isKnownToBeAPowerOfTwo(N1)) {
+    if (DAG.isKnownToBeAPowerOfTwo(N1, /*OrZero=*/true)) {
       // fold (urem x, pow2) -> (and x, pow2-1)
       SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
-    // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
     // fold (urem x, (lshr pow2, y)) -> (and x, (add (lshr pow2, y), -1))
     // TODO: We should sink the following into isKnownToBePowerOfTwo
     // using a OrZero parameter analogous to our handling in ValueTracking.
-    if ((N1.getOpcode() == ISD::SHL || N1.getOpcode() == ISD::SRL) &&
+    if (N1.getOpcode() == ISD::SRL &&
         DAG.isKnownToBeAPowerOfTwo(N1.getOperand(0))) {
       SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);

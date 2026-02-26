@@ -22,7 +22,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/Dialect/X86Vector/X86VectorDialect.h"
+#include "mlir/Dialect/X86/X86Dialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
@@ -1740,7 +1740,7 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
   // Compute an approximate result.
   Value yApprox = handleMultidimensionalVectors(
       builder, op->getOperands(), 8, [&builder](ValueRange operands) -> Value {
-        return x86vector::RsqrtOp::create(builder, operands);
+        return x86::RsqrtOp::create(builder, operands);
       });
 
   // Do a single step of Newton-Raphson iteration to improve the approximation.
