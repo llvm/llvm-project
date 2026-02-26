@@ -14,6 +14,7 @@
 #include "flang-rt/runtime/lock.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
+#include "flang/Runtime/CUDA/allocator.h"
 #include "flang/Runtime/CUDA/common.h"
 #include "flang/Support/Fortran.h"
 
@@ -36,6 +37,11 @@ int RTDECL(CUFStreamSynchronize)(cudaStream_t stream) {
 
 int RTDECL(CUFStreamSynchronizeNull)() {
   return cudaStreamSynchronize(RTNAME(CUFGetDefaultStream)());
+}
+
+int RTDECL(CUFStreamDestroy)(cudaStream_t stream) {
+  CUFResetStream(stream);
+  return cudaStreamDestroy(stream);
 }
 }
 
