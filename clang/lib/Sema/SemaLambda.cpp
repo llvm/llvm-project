@@ -261,20 +261,6 @@ Sema::createLambdaClosureType(SourceRange IntroducerRange, TypeSourceInfo *Info,
   return Class;
 }
 
-/// Determine whether the given context is or is enclosed in an inline
-/// function.
-static bool isInInlineFunction(const DeclContext *DC) {
-  while (!DC->isFileContext()) {
-    if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
-      if (FD->isInlined())
-        return true;
-
-    DC = DC->getLexicalParent();
-  }
-
-  return false;
-}
-
 std::tuple<MangleNumberingContext *, Decl *>
 Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Compute the context for allocating mangling numbers in the current
@@ -287,32 +273,33 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     InlineVariable,
     TemplatedVariable,
+    ExternallyVisibleVariableInModulePurview,
     Concept,
-    NonInlineInModulePurview
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
       inTemplateInstantiation() || CurContext->isDependentContext();
 
+  // Checks if a VarDecl or FunctionDecl is from a module purview and externally
+  // visible. These Decls should be treated as "inline" for the purpose of
+  // mangling in the code below.
+  //
+  // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+  //
+  // zygoloid:
+  //    Yeah, I think the only cases left where lambdas don't need a
+  //    mangling are when they have (effectively) internal linkage or
+  //    appear in a non-inline function in a non-module translation unit.
+  static constexpr auto IsExternallyVisibleInModulePurview =
+      [](const NamedDecl *ND) -> bool {
+    return (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
+           ND->isExternallyVisible();
+  };
+
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
   Kind = [&]() {
-    // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
-    //
-    // zygoloid:
-    //    Yeah, I think the only cases left where lambdas don't need a
-    //    mangling are when they have (effectively) internal linkage or appear
-    //    in a non-inline function in a non-module translation unit.
-    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
-                                                           : cast<Decl>(DC));
-        ND && (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
-        ND->isExternallyVisible()) {
-      if (!ManglingContextDecl)
-        ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
-      return NonInlineInModulePurview;
-    }
-
     if (!ManglingContextDecl)
       return Normal;
 
@@ -324,6 +311,9 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getMostRecentDecl()->isInline())
         return InlineVariable;
+
+      if (IsExternallyVisibleInModulePurview(Var))
+        return ExternallyVisibleVariableInModulePurview;
 
       if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
         return TemplatedVariable;
@@ -344,15 +334,35 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return Normal;
   }();
 
-  // Itanium ABI [5.1.7]:
+  // Determine whether the given context is or is enclosed in a function that
+  // requires Decl's inside to be mangled, so either:
+  // - an inline function
+  // - or a function in a module purview that is externally visible
+  static constexpr auto IsInFunctionThatRequiresMangling =
+      [](const DeclContext *DC) -> bool {
+    while (!DC->isFileContext()) {
+      if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(DC))
+        if (FD->isInlined() || IsExternallyVisibleInModulePurview(FD))
+          return true;
+
+      DC = DC->getLexicalParent();
+    }
+
+    return false;
+  };
+
+  // Itanium ABI [5.1.8]:
   //   In the following contexts [...] the one-definition rule requires closure
   //   types in different translation units to "correspond":
   switch (Kind) {
   case Normal: {
     //  -- the bodies of inline or templated functions
+    //  -- the bodies of externally visible functions in a module purview
+    //     (note: this is not yet part of the Itanium ABI, see the linked Github
+    //     discussion above)
     if ((IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        isInInlineFunction(CurContext)) {
+        IsInFunctionThatRequiresMangling(CurContext)) {
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
       return std::make_tuple(&Context.getManglingNumberContext(DC), nullptr);
@@ -361,7 +371,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
-  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of
@@ -372,8 +381,12 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   case DefaultArgument:
     //  -- default arguments appearing in class definitions
   case InlineVariable:
+  case ExternallyVisibleVariableInModulePurview:
   case TemplatedVariable:
     //  -- the initializers of inline or templated variables
+    //  -- the initializers of externally visible variables in a module purview
+    //     (note: this is not yet part of the Itanium ABI, see the linked Github
+    //     discussion above)
     return std::make_tuple(
         &Context.getManglingNumberContext(ASTContext::NeedExtraManglingDecl,
                                           ManglingContextDecl),

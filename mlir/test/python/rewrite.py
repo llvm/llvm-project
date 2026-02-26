@@ -299,3 +299,22 @@ def testConversionPattern():
         # CHECK:     return %3 : i64
         # CHECK: }
         print(module)
+
+        module = ModuleOp.parse(
+            r"""
+            module {
+                func.func @f(%0: i64) -> i64 {
+                    %1 = arith.constant 3 : i64
+                    %2 = arith.addi %0, %1 : i64
+                    %3 = arith.muli %2, %1 : i64
+                    return %3 : i64
+                }
+            }
+            """
+        )
+        try:
+            apply_partial_conversion(module, target, frozen)
+        except MLIRError as e:
+            # CHECK: caught exception: partial conversion failed
+            # CHECK: failed to legalize unresolved materialization
+            print("caught exception:", e)
