@@ -3116,6 +3116,7 @@ void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
       .addImm(EncodedReg);
 }
 
+namespace {
 // TODO: Remove this work-around after fixing the scheduler.
 // There are two reasons why vccz might be incorrect; see ST->hasReadVCCZBug()
 // and ST->partialVCCWritesUpdateVCCZ().
@@ -3149,8 +3150,9 @@ public:
   }
   /// If \p MI reads vccz and we must recompute it based on MustRecomputeVCCZ,
   /// then emit a vccz recompute instruction before \p MI. This needs to be
-  /// called on every block instruction because it also tracks the state and
-  /// updates MustRecomputeVCCZ accordingly. Returns true if it modified the IR.
+  /// called on every instruction in the basic block because it also tracks the
+  /// state and updates MustRecomputeVCCZ accordingly. Returns true if it
+  /// modified the IR.
   bool tryRecomputeVCCZ(MachineInstr &MI) {
     // No need to run this if neither bug is present.
     if (!VCCZCorruptionBug && !VCCZNotUpdatedByPartialWrites)
@@ -3168,21 +3170,29 @@ public:
     }
     // If the target partial vcc writes don't update vccz, and MI is such an
     // instruction then we must recompute vccz.
-    if (VCCZNotUpdatedByPartialWrites &&
-        (MI.definesRegister(AMDGPU::VCC_LO, /*TRI=*/nullptr) ||
-         MI.definesRegister(AMDGPU::VCC_HI, /*TRI=*/nullptr))) {
-      // This is a partial VCC write but won't update vccz.
-      MustRecomputeVCCZ = true;
+    // Note: We are using PartiallyWritesToVCCOpt optional to avoid calling
+    // `definesRegister()` more than needed, because it's not very cheap.
+    std::optional<bool> PartiallyWritesToVCCOpt;
+    auto PartiallyWritesToVCC = [](MachineInstr &MI) {
+      return MI.definesRegister(AMDGPU::VCC_LO, /*TRI=*/nullptr) ||
+             MI.definesRegister(AMDGPU::VCC_HI, /*TRI=*/nullptr);
+    };
+    if (VCCZNotUpdatedByPartialWrites) {
+      PartiallyWritesToVCCOpt = PartiallyWritesToVCC(MI);
+      if (*PartiallyWritesToVCCOpt) {
+        // This is a partial VCC write but won't update vccz.
+        MustRecomputeVCCZ = true;
+      }
     }
 
     // If MI is a vcc write with no pending smem, or there is a pending smem
     // but the target does not suffer from the vccz corruption bug, then we
     // don't need to recompute vccz as this write will recompute it anyway.
     if (!ScoreBrackets.hasPendingEvent(SMEM_ACCESS) || !VCCZCorruptionBug) {
-      bool PartiallyWritesToVCC =
-          MI.definesRegister(AMDGPU::VCC_LO, /*TRI=*/nullptr) ||
-          MI.definesRegister(AMDGPU::VCC_HI, /*TRI=*/nullptr);
-      bool FullyWritesToVCC = !PartiallyWritesToVCC &&
+      // Compute PartiallyWritesToVCCOpt if we haven't done so already.
+      if (!PartiallyWritesToVCCOpt)
+        PartiallyWritesToVCCOpt = PartiallyWritesToVCC(MI);
+      bool FullyWritesToVCC = !*PartiallyWritesToVCCOpt &&
                               MI.definesRegister(AMDGPU::VCC, /*TRI=*/nullptr);
       // If we write to the full vcc or we write partially and the target
       // updates vccz on partial writes, then vccz will be updated correctly.
@@ -3211,6 +3221,8 @@ public:
     return false;
   }
 };
+
+} // namespace
 
 // Generate s_waitcnt instructions where needed.
 bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
