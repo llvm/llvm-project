@@ -14566,10 +14566,17 @@ TreeTransform<Derived>::TransformCXXTypeidExpr(CXXTypeidExpr *E) {
   // semantic processing can re-transform an already transformed operand.
   Expr *Op = E->getExprOperand();
   auto EvalCtx = Sema::ExpressionEvaluationContext::Unevaluated;
-  if (E->isGLValue())
-    if (auto *RD = Op->getType()->getAsCXXRecordDecl();
-        RD && RD->isPolymorphic())
-      EvalCtx = SemaRef.ExprEvalContexts.back().Context;
+  if (E->isGLValue()) {
+    QualType OpType = Op->getType();
+    if (auto *RD = OpType->getAsCXXRecordDecl()) {
+      if (SemaRef.RequireCompleteType(E->getBeginLoc(), OpType,
+                                      diag::err_incomplete_typeid))
+        return ExprError();
+
+      if (RD->isPolymorphic())
+        EvalCtx = SemaRef.ExprEvalContexts.back().Context;
+    }
+  }
 
   EnterExpressionEvaluationContext Unevaluated(SemaRef, EvalCtx,
                                                Sema::ReuseLambdaContextDecl);
