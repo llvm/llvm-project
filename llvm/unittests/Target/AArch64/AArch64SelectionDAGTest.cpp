@@ -922,7 +922,8 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_SHL) {
   SDValue Cst4 = DAG->getConstant(4, Loc, MVT::i32);
   SDValue Cst16 = DAG->getConstant(16, Loc, MVT::i32);
 
-  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::i32);
+  SDValue Cond = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                     Register::index2VirtReg(1), MVT::i32);
   SDValue ShlConst1 = DAG->getNode(ISD::SHL, Loc, MVT::i32, Cst1, Cond);
 
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(ShlConst1));
