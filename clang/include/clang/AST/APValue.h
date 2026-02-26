@@ -820,10 +820,11 @@ private:
   MutableArrayRef<APValue> setMatrixUninit(unsigned NumRows, unsigned NumCols) {
     assert(isMatrix() && "Invalid accessor");
     Mat *M = ((Mat *)(char *)&Data);
-    M->Elts = new APValue[NumRows * NumCols];
+    unsigned NumElts = NumRows * NumCols;
+    M->Elts = new APValue[NumElts];
     M->NumRows = NumRows;
     M->NumCols = NumCols;
-    return {M->Elts, NumRows * NumCols};
+    return {M->Elts, NumElts};
   }
   MutableArrayRef<LValuePathEntry>
   setLValueUninit(LValueBase B, const CharUnits &O, unsigned Size,
