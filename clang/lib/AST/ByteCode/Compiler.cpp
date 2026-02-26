@@ -811,6 +811,180 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_LValueBitCast:
     return this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/true, CE);
 
+  case CK_HLSLArrayRValue: {
+    // Non-decaying array rvalue cast - creates an rvalue copy of an lvalue
+    // array, similar to LValueToRValue for composite types.
+    if (!Initializing) {
+      UnsignedOrNone LocalIndex = allocateLocal(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitMemcpy(CE);
+  }
+
+  case CK_HLSLMatrixTruncation: {
+    assert(SubExpr->getType()->isConstantMatrixType());
+    if (OptPrimType ResultT = classify(CE)) {
+      assert(!DiscardResult);
+      // Result must be either a float or integer. Take the first element.
+      if (!this->visit(SubExpr))
+        return false;
+      return this->emitArrayElemPop(*ResultT, 0, CE);
+    }
+    // Otherwise, this truncates to a a constant matrix type.
+    assert(CE->getType()->isConstantMatrixType());
+
+    if (!Initializing) {
+      UnsignedOrNone LocalIndex = allocateTemporary(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+    unsigned ToSize =
+        CE->getType()->getAs<ConstantMatrixType>()->getNumElementsFlattened();
+    if (!this->visit(SubExpr))
+      return false;
+    return this->emitCopyArray(classifyMatrixElementType(SubExpr->getType()), 0,
+                               0, ToSize, CE);
+  }
+
+  case CK_HLSLAggregateSplatCast: {
+    // Aggregate splat cast: convert a scalar value to one of an aggregate type.
+    // TODO: Aggregate splat to struct and array types
+    assert(canClassify(SubExpr->getType()));
+
+    unsigned NumElts;
+    PrimType DestElemT;
+    QualType DestElemType;
+    if (const auto *VT = CE->getType()->getAs<VectorType>()) {
+      NumElts = VT->getNumElements();
+      DestElemType = VT->getElementType();
+    } else if (const auto *MT =
+                   CE->getType()->getAs<ConstantMatrixType>()) {
+      NumElts = MT->getNumElementsFlattened();
+      DestElemType = MT->getElementType();
+    } else {
+      return false;
+    }
+    DestElemT = classifyPrim(DestElemType);
+
+    if (!Initializing) {
+      UnsignedOrNone LocalIndex = allocateLocal(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+
+    PrimType SrcElemT = classifyPrim(SubExpr->getType());
+    unsigned SrcOffset =
+        allocateLocalPrimitive(SubExpr, DestElemT, /*IsConst=*/true);
+
+    if (!this->visit(SubExpr))
+      return false;
+    if (classifyPrim(SubExpr) == PT_Ptr && !this->emitLoadPop(SrcElemT, CE))
+      return false;
+    if (SrcElemT != DestElemT) {
+      if (!this->emitPrimCast(SrcElemT, DestElemT, DestElemType, CE))
+        return false;
+    }
+    if (!this->emitSetLocal(DestElemT, SrcOffset, CE))
+      return false;
+
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (!this->emitGetLocal(DestElemT, SrcOffset, CE))
+        return false;
+      if (!this->emitInitElem(DestElemT, I, CE))
+        return false;
+    }
+    return true;
+  }
+
+  case CK_HLSLElementwiseCast: {
+    // Elementwise cast: flatten source elements of one aggregate type and store
+    // to a destination aggregate type of the same or fewer number of elements.
+    // TODO: Elementwise cast to structs, nested arrays, and arrays of composite
+    // types
+    QualType SrcType = SubExpr->getType();
+    QualType DestType = CE->getType();
+
+    unsigned SrcNumElts;
+    PrimType SrcElemT;
+    if (const auto *VT = SrcType->getAs<VectorType>()) {
+      SrcNumElts = VT->getNumElements();
+      SrcElemT = classifyPrim(VT->getElementType());
+    } else if (const auto *MT = SrcType->getAs<ConstantMatrixType>()) {
+      SrcNumElts = MT->getNumElementsFlattened();
+      SrcElemT = classifyPrim(MT->getElementType());
+    } else if (const auto *AT = SrcType->getAsArrayTypeUnsafe()) {
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+        SrcNumElts = CAT->getZExtSize();
+        SrcElemT = classifyPrim(CAT->getElementType());
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+
+    unsigned DestNumElts;
+    PrimType DestElemT;
+    QualType DestElemType;
+    if (const auto *VT = DestType->getAs<VectorType>()) {
+      DestNumElts = VT->getNumElements();
+      DestElemType = VT->getElementType();
+    } else if (const auto *MT = DestType->getAs<ConstantMatrixType>()) {
+      DestNumElts = MT->getNumElementsFlattened();
+      DestElemType = MT->getElementType();
+    } else if (const auto *AT = DestType->getAsArrayTypeUnsafe()) {
+      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
+        DestNumElts = CAT->getZExtSize();
+        DestElemType = CAT->getElementType();
+      } else {
+        return false;
+      }
+    } else {
+      return false;
+    }
+    DestElemT = classifyPrim(DestElemType);
+
+    if (!Initializing) {
+      UnsignedOrNone LocalIndex =
+          classify(DestType) ? allocateLocal(CE) : allocateTemporary(CE);
+      if (!LocalIndex)
+        return false;
+      if (!this->emitGetPtrLocal(*LocalIndex, CE))
+        return false;
+    }
+
+    unsigned SrcOffset =
+        allocateLocalPrimitive(SubExpr, PT_Ptr, /*IsConst=*/true);
+    if (!this->visit(SubExpr))
+      return false;
+    if (!this->emitSetLocal(PT_Ptr, SrcOffset, CE))
+      return false;
+
+    unsigned NumElts = std::min(SrcNumElts, DestNumElts);
+    for (unsigned I = 0; I != NumElts; ++I) {
+      if (!this->emitGetLocal(PT_Ptr, SrcOffset, CE))
+        return false;
+      if (!this->emitArrayElemPop(SrcElemT, I, CE))
+        return false;
+      if (SrcElemT != DestElemT) {
+        if (!this->emitPrimCast(SrcElemT, DestElemT, DestElemType, CE))
+          return false;
+      }
+      if (!this->emitInitElem(DestElemT, I, CE))
+        return false;
+    }
+    return true;
+  }
+
   default:
     return this->emitInvalid(CE);
   }
@@ -1813,6 +1987,20 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     return true;
   }
 
+  if (const auto *MT = E->getType()->getAs<ConstantMatrixType>()) {
+    unsigned NumElts = MT->getNumElementsFlattened();
+    QualType ElemQT = MT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    for (unsigned I = 0; I < NumElts; ++I) {
+      if (!this->visitZeroInitializer(ElemT, ElemQT, E))
+        return false;
+      if (!this->emitInitElem(ElemT, I, E))
+        return false;
+    }
+    return true;
+  }
+
   return false;
 }
 
@@ -2124,6 +2312,25 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, InitIndex, E))
+        return false;
+    }
+    return true;
+  }
+
+  if (const auto *MT = QT->getAs<ConstantMatrixType>()) {
+    unsigned NumElts = MT->getNumElementsFlattened();
+    assert(Inits.size() == NumElts);
+
+    QualType ElemQT = MT->getElementType();
+    PrimType ElemT = classifyPrim(ElemQT);
+
+    // InitListExpr elements are in column-major order.
+    // Store in row-major order to match APValue convention.
+    for (unsigned I = 0; I < NumElts; ++I) {
+      if (!this->visit(Inits[I]))
+        return false;
+      if (!this->emitInitElem(ElemT,
+                              MT->mapColumnMajorToRowMajorFlattenedIndex(I), E))
         return false;
     }
     return true;
