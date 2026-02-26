@@ -1233,7 +1233,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (getIsaVersion(getGlobalSTI()->getCPU()).Major >= 10) {
     ProgInfo.MemOrdered = 1;
-    ProgInfo.FwdProgress = 1;
+    ProgInfo.FwdProgress = !F.hasFnAttribute("amdgpu-no-fwd-progress");
   }
 
   // 0 = X, 1 = XY, 2 = XYZ

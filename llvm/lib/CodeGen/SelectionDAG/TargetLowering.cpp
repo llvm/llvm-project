@@ -1472,6 +1472,17 @@ bool TargetLowering::SimplifyDemandedBits(
       }
     }
 
+    // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
+    SDValue X, Y;
+    if (sd_match(Op,
+                 m_And(m_Value(Y),
+                       m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
+                                        m_Sub(m_Value(X), m_Deferred(Y)))))) &&
+        TLO.DAG.isKnownToBeAPowerOfTwo(Y, DemandedElts, /*OrZero=*/true)) {
+      return TLO.CombineTo(
+          Op, TLO.DAG.getNode(ISD::AND, dl, VT, TLO.DAG.getNOT(dl, X, VT), Y));
+    }
+
     // AND(INSERT_SUBVECTOR(C,X,I),M) -> INSERT_SUBVECTOR(AND(C,M),X,I)
     // iff 'C' is Undef/Constant and AND(X,M) == X (for DemandedBits).
     if (Op0.getOpcode() == ISD::INSERT_SUBVECTOR && !VT.isScalableVector() &&
@@ -10072,7 +10083,9 @@ SDValue TargetLowering::expandAVG(SDNode *N, SelectionDAG &DAG) const {
   }
 
   // avgflooru(lhs, rhs) -> or(lshr(add(lhs, rhs),1),shl(overflow, typesize-1))
-  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT)) {
+  if (Opc == ISD::AVGFLOORU && VT.isScalarInteger() && !isTypeLegal(VT) &&
+      isOperationLegalOrCustom(
+          ISD::UADDO, getLegalTypeToTransformTo(*DAG.getContext(), VT))) {
     SDValue UAddWithOverflow =
         DAG.getNode(ISD::UADDO, dl, DAG.getVTList(VT, MVT::i1), {RHS, LHS});
 

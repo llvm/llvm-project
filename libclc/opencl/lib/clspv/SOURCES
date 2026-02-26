@@ -74,3 +74,4 @@ shared/vstore_half.cl
 ../generic/math/tanh.cl
 ../generic/math/tanpi.cl
 ../generic/math/tgamma.cl
+../generic/subnormal_config.cl
