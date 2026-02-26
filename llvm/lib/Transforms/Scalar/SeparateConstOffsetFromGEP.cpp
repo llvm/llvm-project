@@ -233,10 +233,12 @@ private:
   /// \p ZeroExtended Whether V will be zero-extended in the computation of the
   ///                 GEP index
   /// \p NonNegative  Whether V is guaranteed to be non-negative. For example,
-  ///                 an index of an inbounds GEP is guaranteed to be
-  ///                 non-negative. Levaraging this, we can better split
-  ///                 inbounds GEPs.
-  APInt find(Value *V, bool SignExtended, bool ZeroExtended, bool NonNegative);
+  ///                 an index of an inbounds GEP of a base address is
+  ///                 guaranteed to be non-negative. Leveraging this, we can
+  ///                 better split inbounds GEPs.
+  /// \p GEPInboundsNUW  Whether the GEP is both inbounds and nuw.
+  APInt find(Value *V, bool SignExtended, bool ZeroExtended, bool NonNegative,
+             bool GEPInboundsNUW);
 
   /// A helper function to look into both operands of a binary operator.
   APInt findInEitherOperand(BinaryOperator *BO, bool SignExtended,
@@ -292,8 +294,9 @@ private:
   /// \p ZeroExtended Whether BO is surrounded by zext
   /// \p NonNegative Whether BO is known to be non-negative, e.g., an in-bound
   ///                array index.
+  /// \p GEPInboundsNUW 
   bool CanTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
-                    bool NonNegative);
+                    bool NonNegative, bool GEPInboundsNUW);
 
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
@@ -474,10 +477,9 @@ FunctionPass *llvm::createSeparateConstOffsetFromGEPPass(bool LowerGEP) {
   return new SeparateConstOffsetFromGEPLegacyPass(LowerGEP);
 }
 
-bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
-                                            bool ZeroExtended,
-                                            BinaryOperator *BO,
-                                            bool NonNegative) {
+bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended, bool ZeroExtended,
+                                           BinaryOperator *BO, bool NonNegative,
+                                           bool GEPInboundsNUW) {
   // We only consider ADD, SUB and OR, because a non-zero constant found in
   // expressions composed of these operations can be easily hoisted as a
   // constant offset by reassociation.
@@ -530,6 +532,12 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
     }
   }
 
+  // For a sext(add nuw), allow tracing through when the enclosing GEP is both
+  // inbounds and nuw.
+  if (BO->getOpcode() == Instruction::Add && SignExtended && !ZeroExtended &&
+      GEPInboundsNUW && BO->hasNoUnsignedWrap())
+    return true;
+
   // sext (add/sub nsw A, B) == add/sub nsw (sext A), (sext B)
   // zext (add/sub nuw A, B) == add/sub nuw (zext A), (zext B)
   if (BO->getOpcode() == Instruction::Add ||
@@ -550,9 +558,10 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
   size_t ChainLength = UserChain.size();
 
   // BO being non-negative does not shed light on whether its operands are
-  // non-negative. Clear the NonNegative flag here.
-  APInt ConstantOffset = find(BO->getOperand(0), SignExtended, ZeroExtended,
-                              /* NonNegative */ false);
+  // non-negative. Clear the NonNegative and GEPInboundsNUW flags here.
+  APInt ConstantOffset =
+      find(BO->getOperand(0), SignExtended, ZeroExtended,
+           /* NonNegative */ false, /* GEPInboundsNUW */ false);
   // If we found a constant offset in the left operand, stop and return that.
   // This shortcut might cause us to miss opportunities of combining the
   // constant offsets in both operands, e.g., (a + 4) + (b + 5) => (a + b) + 9.
@@ -565,7 +574,7 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
   UserChain.resize(ChainLength);
 
   ConstantOffset = find(BO->getOperand(1), SignExtended, ZeroExtended,
-                        /* NonNegative */ false);
+                        /* NonNegative */ false, /* GEPInboundsNUW */ false);
   // If U is a sub operator, negate the constant offset found in the right
   // operand.
   if (BO->getOpcode() == Instruction::Sub)
@@ -579,7 +588,8 @@ APInt ConstantOffsetExtractor::findInEitherOperand(BinaryOperator *BO,
 }
 
 APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
-                                    bool ZeroExtended, bool NonNegative) {
+                                    bool ZeroExtended, bool NonNegative,
+                                    bool GEPInboundsNUW) {
   // TODO(jingyue): We could trace into integer/pointer casts, such as
   // inttoptr, ptrtoint, bitcast, and addrspacecast. We choose to handle only
   // integers because it gives good enough results for our benchmarks.
@@ -595,23 +605,27 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     ConstantOffset = CI->getValue();
   } else if (BinaryOperator *BO = dyn_cast<BinaryOperator>(V)) {
     // Trace into subexpressions for more hoisting opportunities.
-    if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
+    if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative,
+                     GEPInboundsNUW))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
   } else if (isa<TruncInst>(V)) {
-    ConstantOffset =
-        find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
-            .trunc(BitWidth);
+    ConstantOffset = find(U->getOperand(0), SignExtended, ZeroExtended,
+                          NonNegative, GEPInboundsNUW).trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset = find(U->getOperand(0), /* SignExtended */ true,
-                          ZeroExtended, NonNegative).sext(BitWidth);
+                          ZeroExtended, NonNegative, GEPInboundsNUW)
+                         .sext(BitWidth);
   } else if (isa<ZExtInst>(V)) {
     // As an optimization, we can clear the SignExtended flag because
     // sext(zext(a)) = zext(a). Verified in @sext_zext in split-gep.ll.
     //
+    // We can also clear the GEPInboundsNUW flag because it is not required to
+    // trace into zext.
+    //
     // Clear the NonNegative flag, because zext(a) >= 0 does not imply a >= 0.
-    ConstantOffset =
-        find(U->getOperand(0), /* SignExtended */ false,
-             /* ZeroExtended */ true, /* NonNegative */ false).zext(BitWidth);
+    ConstantOffset = find(U->getOperand(0), /* SignExtended */ false,
+                          /* ZeroExtended */ true, /* NonNegative */ false,
+                          /* GEPInboundsNUW */ false).zext(BitWidth);
   }
 
   // If we found a non-zero constant offset, add it to the path for
@@ -803,10 +817,12 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
                                         bool &PreservesNUW) {
   ConstantOffsetExtractor Extractor(GEP->getIterator());
   bool GEPNonNegative = isGEPNonNegative(GEP, Idx, Extractor.DL);
+  bool GEPInboundsNUW = GEP->isInBounds() && GEP->hasNoUnsignedWrap();
   // Find a non-zero constant offset first.
   APInt ConstantOffset =
       Extractor.find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-                     /* NonNegative */ GEPNonNegative);
+                     /* NonNegative */ GEPNonNegative,
+                     /* GEPInboundsNUW */ GEPInboundsNUW);
   if (ConstantOffset == 0) {
     UserChainTail = nullptr;
     PreservesNUW = true;
@@ -823,9 +839,11 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
 
 APInt ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
   bool GEPNonNegative = isGEPNonNegative(GEP, Idx, GEP->getDataLayout());
+  bool GEPInboundsNUW = GEP->isInBounds() && GEP->hasNoUnsignedWrap();
   return ConstantOffsetExtractor(GEP->getIterator())
       .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-            /* NonNegative */ GEPNonNegative);
+            /* NonNegative */ GEPNonNegative,
+            /* GEPInboundsNUW */ GEPInboundsNUW);
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
