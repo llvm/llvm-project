@@ -987,12 +987,14 @@ static VPValue *optimizeLatchExitInductionUser(
     DenseMap<VPValue *, VPValue *> &EndValues, PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
   VPWidenInductionRecipe *WideIV = nullptr;
-  if (match(Op, m_ExitingIVValue(m_VPValue(), m_VPValue(Incoming)))) {
-    WideIV = getOptimizableIVOf(Op->getDefiningRecipe()->getOperand(0), PSE);
-    assert(WideIV && "must have an optimizable IV");
-  } else if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)))) {
+  if (match(Op, m_ExitingIVValue(m_VPValue(Incoming)))) {
     WideIV = getOptimizableIVOf(Incoming, PSE);
+    assert(WideIV && "must have an optimizable IV");
+    return EndValues.lookup(WideIV);
   }
+
+  if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
+    WideIV = getOptimizableIVOf(Incoming, PSE);
 
   if (!WideIV)
     return nullptr;
@@ -5157,7 +5159,7 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
   if (!Member0OpR)
     return Member0Op == OpV;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(Member0OpR))
-    return !W->getMask() && Member0Op == OpV;
+    return !W->getMask() && W->isConsecutive() && Member0Op == OpV;
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(Member0OpR))
     return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
   return false;
@@ -5515,7 +5517,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
 }
 
 void VPlanTransforms::updateScalarResumePhis(
-    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues) {
+    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues, bool FoldTail) {
   VPTypeAnalysis TypeInfo(Plan);
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
@@ -5530,8 +5532,12 @@ void VPlanTransforms::updateScalarResumePhis(
     // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(ResumePhiR->getOperand(0));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
+      // TODO: Check if tail is folded directly in VPlan.
+      VPValue *TC = !FoldTail
+                        ? static_cast<VPValue *>(&Plan.getVectorTripCount())
+                        : Plan.getTripCount();
       if (VPValue *EndValue = tryToComputeEndValueForInduction(
-              WideIVR, VectorPHBuilder, TypeInfo, &Plan.getVectorTripCount())) {
+              WideIVR, VectorPHBuilder, TypeInfo, TC)) {
         IVEndValues[WideIVR] = EndValue;
         ResumePhiR->setOperand(0, EndValue);
         ResumePhiR->setName("bc.resume.val");
@@ -5697,6 +5703,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     return std::nullopt;
   };
 
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   for (VPRecipeBase &Phi :
        make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
@@ -5704,16 +5711,24 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Get the IV and condition from the backedge value of the reduction phi.
-    // The backedge value should be a select between the phi and the IV.
+    // If there's a header mask, the backedge select will not be the find-last
+    // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
+    VPValue *CondSelect = BackedgeVal;
+    if (HeaderMask &&
+        !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
+                                     m_VPValue(CondSelect), m_Specific(PhiR))))
+      llvm_unreachable("expected header mask select");
+
+    // Get the IV from the conditional select of the reduction phi.
+    // The conditional select should be a select between the phi and the IV.
     VPValue *Cond, *TrueVal, *FalseVal;
-    if (!match(BackedgeVal, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
-                                     m_VPValue(FalseVal))))
+    if (!match(CondSelect, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
+                                    m_VPValue(FalseVal))))
       continue;
 
     // The non-phi operand of the select is the IV.
-    assert(is_contained(BackedgeVal->getDefiningRecipe()->operands(), PhiR));
+    assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
     VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
 
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
@@ -5805,8 +5820,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *BackedgeVal, RdxUnordered{1}, {},
-        PhiR->hasUsesOutsideReductionChain());
+        *CondSelect, RdxUnordered{1}, {}, PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
     PhiR->eraseFromParent();

@@ -317,7 +317,6 @@ def IndexCastUIOfExtUI :
     Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2, $exact),
         (Arith_IndexCastUIOp $x, $nneg1, $exact)>;
 
-
 //===----------------------------------------------------------------------===//
 // BitcastOp
 //===----------------------------------------------------------------------===//

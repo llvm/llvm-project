@@ -1626,9 +1626,10 @@ def Arith_IndexCastUIOp
     a wider integer, the value is zero-extended. If casting to a narrower
     integer, the value is truncated.
 
-    When the `nneg` flag is present, the operand is assumed to be non-negative.
-    In this case, zero extension is equivalent to sign extension. When this
-    assumption is violated, the result is poison.
+    When the `nneg` flag is present, the operand is assumed to have
+    the most significant bit set to 0. In this case, zero extension
+    is equivalent to sign extension. When this assumption is violated,
+    the result is poison.
 
     If the `exact` attribute is present, it is assumed that the index type width
     is such that the conversion does not lose information. When this assumption
@@ -1639,8 +1640,8 @@ def Arith_IndexCastUIOp
     ```mlir
       %0 = arith.index_castui %a : i32 to index
       %1 = arith.index_castui %a nneg : i32 to index
-      %2 = arith.index_castui %a exact : i32 to index
-      %3 = arith.index_castui %a nneg exact : i32 to index
+      %2 = arith.index_castui %b nneg : index to i64
+      %3 = arith.index_castui %a nneg exact : i64 to index
     ```
   }];
 
