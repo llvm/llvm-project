@@ -77,10 +77,63 @@ static cl::opt<bool> NoWarnOnUnusedTemplateArgs(
     "no-warn-on-unused-template-args",
     cl::desc("Disable unused template argument warnings."));
 
+static cl::opt<bool> Preprocess("E", cl::desc("Write preprocessed output"));
+
 static int reportError(const char *ProgName, Twine Msg) {
   errs() << ProgName << ": " << Msg;
   errs().flush();
   return 1;
+}
+
+/// Encapsulate file, line and column numbers from SourceMgr.
+struct SMCoords {
+  unsigned Buf = 0;
+  unsigned Line = 0;
+  unsigned Col = 0;
+  SMCoords() = default;
+  SMCoords(const SourceMgr &Mgr, SMLoc Loc) {
+    Buf = Mgr.FindBufferContainingLoc(Loc);
+    // TODO: SourceMgr::getLineAndColumn is not a fast method. Find a better way
+    // to do this. For example we don't need the column number for every token,
+    // only the first token on each output line.
+    std::tie(Line, Col) = Mgr.getLineAndColumn(Loc, Buf);
+  }
+};
+
+/// Create preprocessed output for `-E` option.
+static int preprocessInput(raw_ostream &OS) {
+  TGLexer Lex(SrcMgr, MacroNames);
+  SMCoords Last;
+  bool EmptyOutput = true;
+  while (true) {
+    Lex.Lex();
+    if (Lex.getCode() == tgtok::Eof || Lex.getCode() == tgtok::Error)
+      break;
+    SMCoords This(SrcMgr, Lex.getLoc());
+    if (This.Buf == Last.Buf && This.Line == Last.Line) {
+      // Add a single space between tokens on the same line. This is overkill in
+      // many cases but at least it will parse correctly.
+      OS << ' ';
+    } else if (Last.Buf) {
+      // Always start a new line when including a new file or popping back out
+      // to the previous file. This is just a heuristic to make the output look
+      // reasonably pretty.
+      OS << '\n';
+      // Indent the first token on a line to its original indentation, to make
+      // the output look pretty.
+      OS.indent(This.Col - 1);
+    }
+
+    const char *Start = Lex.getLoc().getPointer();
+    const char *End = Lex.getLocRange().End.getPointer();
+    OS << StringRef(Start, End - Start);
+    EmptyOutput = false;
+
+    Last = This;
+  }
+  if (!EmptyOutput)
+    OS << '\n';
+  return Lex.getCode() == tgtok::Error;
 }
 
 /// Create a dependency file for `-d` option.
@@ -127,31 +180,25 @@ static int WriteOutput(const char *argv0, StringRef Filename,
   return 0;
 }
 
-int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
-  RecordKeeper Records;
-  TGTimer &Timer = Records.getTimer();
+static int Main(const char *argv0, MultiFileTableGenMainFn MainFn) {
+  if (Preprocess) {
+    std::string OutString;
+    raw_string_ostream Out(OutString);
+    if (int Ret = preprocessInput(Out))
+      return Ret;
+    return WriteOutput(argv0, OutputFilename, OutString);
+  }
 
+  RecordKeeper Records;
+  Records.saveInputFilename(InputFilename);
+
+  TGTimer &Timer = Records.getTimer();
   if (TimePhases)
     Timer.startPhaseTiming();
 
   // Parse the input file.
 
   Timer.startTimer("Parse, build records");
-  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
-      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
-  if (std::error_code EC = FileOrErr.getError())
-    return reportError(argv0, "Could not open input file '" + InputFilename +
-                                  "': " + EC.message() + "\n");
-
-  Records.saveInputFilename(InputFilename);
-
-  // Tell SrcMgr about this buffer, which is what TGParser will pick up.
-  SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
-
-  // Record the location of the include directory so that the lexer can find
-  // it later.
-  SrcMgr.setIncludeDirs(IncludeDirs);
-  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   TGParser Parser(SrcMgr, MacroNames, Records, NoWarnOnUnusedTemplateArgs);
 
@@ -162,7 +209,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   // Return early if any other errors were generated during parsing
   // (e.g., assert failures).
   if (ErrorsPrinted > 0)
-    return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
+    return 0;
 
   // Write output to memory.
   Timer.startBackendTimer("Backend overall");
@@ -178,7 +225,7 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
     return 1;
 
   // Always write the depfile, even if the main output hasn't changed.
-  // If it's missing, Ninja considers the output dirty. If this was below
+  // If it's missing, Ninja considers the output dirty.  If this was below
   // the early exit below and someone deleted the .inc.d file but not the .inc
   // file, tablegen would never write the depfile.
   if (!DependFilename.empty()) {
@@ -203,6 +250,26 @@ int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
   Timer.stopTimer();
   Timer.stopPhaseTiming();
 
+  return 0;
+}
+
+int llvm::TableGenMain(const char *argv0, MultiFileTableGenMainFn MainFn) {
+  ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
+      MemoryBuffer::getFileOrSTDIN(InputFilename, /*IsText=*/true);
+  if (std::error_code EC = FileOrErr.getError())
+    return reportError(argv0, "Could not open input file '" + InputFilename +
+                                  "': " + EC.message() + "\n");
+
+  // Tell SrcMgr about this buffer, which is what TGParser will pick up.
+  SrcMgr.AddNewSourceBuffer(std::move(*FileOrErr), SMLoc());
+
+  // Record the location of the include directory so that the lexer can find
+  // it later.
+  SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
+
+  if (int Ret = Main(argv0, MainFn))
+    return Ret;
   if (ErrorsPrinted > 0)
     return reportError(argv0, Twine(ErrorsPrinted) + " errors.\n");
   return 0;
