@@ -46,8 +46,8 @@ TEST_F(LlvmLibcHypotBf16Test, NormalPositiveRange) {
   }
 }
 
-TEST_F(LlvmLibcHypotBf16Test,NormalNegativeRange){
-    for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; v1++) {
+TEST_F(LlvmLibcHypotBf16Test, NormalNegativeRange) {
+  for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; v1++) {
     for (uint16_t v2 = v1; v2 <= NEG_STOP; v2++) {
 
       bfloat16 x = FPBits(v1).get_val();
