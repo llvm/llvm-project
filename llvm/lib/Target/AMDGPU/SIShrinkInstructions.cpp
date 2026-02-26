@@ -698,6 +698,25 @@ void SIShrinkInstructions::dropInstructionKeepingImpDefs(
 //
 // This is really just a generic peephole that is not a canonical shrinking,
 // although requirements match the pass placement and it reduces code size too.
+
+/*
+  movT     T, X                                                movT, X
+
+  ...               <no writes to T>
+
+  movX     X, Y
+
+                    <no writes to T>
+  ...               <no reads/writes to X>
+                    <no writes to Y>
+
+  insertion-point                            =======>          swap X, Y
+
+  ...               <no writes to T> 
+                    <no reads/writes to Y>
+  movY,    Y, T
+
+ */
 MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
   assert(MovT.getOpcode() == AMDGPU::V_MOV_B32_e32 ||
          MovT.getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
@@ -711,7 +730,9 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
     return nullptr;
   Register X = Xop.getReg();
   unsigned Xsub = Xop.getSubReg();
-
+  Register Y;
+  unsigned Ysub;
+  
   unsigned Size = TII->getOpSize(MovT, 0);
 
   // We can't match v_swap_b16 pre-RA, because VGPR_16_Lo128 registers
@@ -724,73 +745,78 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
 
   const unsigned SearchLimit = 16;
   unsigned Count = 0;
-  bool KilledT = false;
+  
+  MachineInstr *MovX = nullptr;
+  MachineInstr *InsertionPt = nullptr;    
+  MachineInstr *MovY = nullptr;
+  
   for (auto Iter = std::next(MovT.getIterator()),
             E = MovT.getParent()->instr_end();
-       Iter != E && Count < SearchLimit && !KilledT; ++Iter) {
-
-    MachineInstr *MovY = &*Iter;
-    KilledT = MovY->killsRegister(T, TRI);
-    if (MovY->isDebugInstr())
-      continue;
+       Iter != E && Count < SearchLimit; ++Iter) {
+    if (Iter->isDebugInstr())
+      continue;    
     ++Count;
 
-    if ((MovY->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
-         MovY->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
-         MovY->getOpcode() != AMDGPU::COPY) ||
-        !MovY->getOperand(1).isReg() || MovY->getOperand(1).getReg() != T ||
-        MovY->getOperand(1).getSubReg() != Tsub)
-      continue;
-
-    Register Y = MovY->getOperand(0).getReg();
-    unsigned Ysub = MovY->getOperand(0).getSubReg();
-
-    if (!TRI->isVGPR(*MRI, Y))
-      continue;
-
-    MachineInstr *MovX = nullptr;
-    for (auto IY = MovY->getIterator(), I = std::next(MovT.getIterator());
-         I != IY; ++I) {
-      if (I->isDebugInstr())
-        continue;
-      if (instReadsReg(&*I, X, Xsub) || instModifiesReg(&*I, Y, Ysub) ||
-          instModifiesReg(&*I, T, Tsub) ||
-          (MovX && instModifiesReg(&*I, X, Xsub))) {
-        MovX = nullptr;
-        break;
+    if (instModifiesReg(&*Iter, T, Tsub))
+      return nullptr;
+      
+    if (!MovX) {
+      if ((Iter->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+	   Iter->getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
+	   Iter->getOpcode() == AMDGPU::COPY) &&
+	  Iter->getOperand(0).getReg() == X &&
+	  Iter->getOperand(0).getSubReg() == Xsub &&
+	  Iter->getOperand(1).isReg()) {
+	MovX = &*Iter;
+	Y = MovX->getOperand(1).getReg();
+	Ysub = MovX->getOperand(1).getSubReg();
       }
-      if (!instReadsReg(&*I, Y, Ysub)) {
-        if (!MovX && instModifiesReg(&*I, X, Xsub)) {
-          MovX = nullptr;
-          break;
-        }
-        continue;
-      }
-      if (MovX ||
-          (I->getOpcode() != AMDGPU::V_MOV_B32_e32 &&
-           I->getOpcode() != AMDGPU::V_MOV_B16_t16_e32 &&
-           I->getOpcode() != AMDGPU::COPY) ||
-          I->getOperand(0).getReg() != X ||
-          I->getOperand(0).getSubReg() != Xsub) {
-        MovX = nullptr;
-        break;
+    } else {
+      if ((Iter->getOpcode() == AMDGPU::V_MOV_B32_e32 ||
+	   Iter->getOpcode() == AMDGPU::V_MOV_B16_t16_e32 ||
+	   Iter->getOpcode() == AMDGPU::COPY) &&
+	  Iter->getOperand(0).getReg() == Y &&
+	  Iter->getOperand(0).getSubReg() == Ysub &&
+	  Iter->getOperand(1).isReg() &&
+	  Iter->getOperand(1).getReg() == T &&
+	  Iter->getOperand(1).getSubReg() == Tsub) {
+	MovY=&*Iter;
+	break;
       }
 
-      if (Size > 4 && (I->getNumImplicitOperands() > (I->isCopy() ? 0U : 1U)))
-        continue;
+      // Effectively, mov X, Y must be moved downward
+      // and mov Y, T must be moved upward so that they can be fused into a swap.
+      // A write to Y creates a barrier that prevents the two moves from being moved
+      // adjacent to each other.
+      if (instModifiesReg(&*Iter, Y, Ysub))
+	return nullptr;
 
-      MovX = &*I;
+      // Reads or writes to X prevent mov X, Y from being moved farther downward.
+      // Select this to be the insertion point.
+      if (!InsertionPt &&
+	  (instReadsReg(&*Iter, X, Xsub) ||
+	   instModifiesReg(&*Iter, X, Xsub))) {
+	InsertionPt = &*Iter;
+      }
+      // If the insertion point has been found, then mov Y, T must be moved upward
+      // past all subsequent instructions.  A read of Y will block this movement.
+      if (InsertionPt) {
+	if (instReadsReg(&*Iter, Y, Ysub))
+	  return nullptr;
+      }
     }
-
-    if (!MovX)
-      continue;
-
+  }
+  if (MovY) {
     LLVM_DEBUG(dbgs() << "Matched v_swap:\n" << MovT << *MovX << *MovY);
 
     MachineBasicBlock &MBB = *MovT.getParent();
     SmallVector<MachineInstr *, 4> Swaps;
+
+
+    if (!InsertionPt)
+      InsertionPt=MovY;
     if (Size == 2) {
-      auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+      auto *MIB = BuildMI(MBB, InsertionPt->getIterator(), MovT.getDebugLoc(),
                           TII->get(AMDGPU::V_SWAP_B16))
                       .addDef(X)
                       .addDef(Y)
@@ -804,7 +830,7 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
         TargetInstrInfo::RegSubRegPair X1, Y1;
         X1 = getSubRegForIndex(X, Xsub, I);
         Y1 = getSubRegForIndex(Y, Ysub, I);
-        auto *MIB = BuildMI(MBB, MovX->getIterator(), MovT.getDebugLoc(),
+        auto *MIB = BuildMI(MBB, InsertionPt->getIterator(), MovT.getDebugLoc(),
                             TII->get(AMDGPU::V_SWAP_B32))
                         .addDef(X1.Reg, {}, X1.SubReg)
                         .addDef(Y1.Reg, {}, Y1.SubReg)
@@ -837,12 +863,15 @@ MachineInstr *SIShrinkInstructions::matchSwap(MachineInstr &MovT) const {
       }
     }
 
-    return Next;
+    return Next;    
   }
-
   return nullptr;
 }
 
+
+
+
+    
 // If an instruction has dead sdst replace it with NULL register on gfx1030+
 bool SIShrinkInstructions::tryReplaceDeadSDST(MachineInstr &MI) const {
   if (!ST->hasGFX10_3Insts())
@@ -905,6 +934,7 @@ bool SIShrinkInstructions::run(MachineFunction &MF) {
         if (auto *NextMI = matchSwap(MI)) {
           Next = NextMI->getIterator();
           Changed = true;
+	  dbgs() << "XXXXXXXXXXXXXXXXXXXX bingo\n";
           continue;
         }
       }
