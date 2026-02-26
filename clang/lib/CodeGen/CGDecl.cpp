@@ -2709,8 +2709,6 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
   if (Arg.isIndirect()) {
     DeclPtr = Arg.getIndirectAddress();
     DeclPtr = DeclPtr.withElementType(ConvertTypeForMem(Ty));
-    // Indirect argument is in alloca address space, which may be different
-    // from the default address space.
     auto *V = DeclPtr.emitRawPointer(*this);
     AllocaPtr = RawAddress(V, DeclPtr.getElementType(), DeclPtr.getAlignment());
 

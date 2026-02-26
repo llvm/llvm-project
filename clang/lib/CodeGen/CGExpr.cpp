@@ -177,7 +177,7 @@ RawAddress CodeGenFunction::CreateDefaultAlignTempAlloca(llvm::Type *Ty,
                                                          const Twine &Name) {
   CharUnits Align =
       CharUnits::fromQuantity(CGM.getDataLayout().getPrefTypeAlign(Ty));
-  return CreateTempAlloca(Ty, Align, Name);
+  return CreateTempAlloca(Ty, LangAS::Default, Align, Name);
 }
 
 RawAddress CodeGenFunction::CreateIRTempWithoutCast(QualType Ty,

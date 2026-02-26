@@ -2850,8 +2850,7 @@ public:
   /// CreateTempAlloca - This creates an alloca and inserts it into the entry
   /// block if \p ArraySize is nullptr, otherwise inserts it at the current
   /// insertion point of the builder. The caller is responsible for setting an
-  /// appropriate alignment on
-  /// the alloca.
+  /// appropriate alignment on the alloca.
   ///
   /// \p ArraySize is the number of array elements to be allocated if it
   ///    is not nullptr.
@@ -2871,7 +2870,7 @@ public:
   /// various ways, this function will perform the cast. The original alloca
   /// instruction is returned through \p Alloca if it is not nullptr.
   ///
-  /// The cast is not performaed in CreateTempAllocaWithoutCast. This is
+  /// The cast is not performed in CreateTempAllocaWithoutCast. This is
   /// more efficient if the caller knows that the address will not be exposed.
   llvm::AllocaInst *CreateTempAlloca(llvm::Type *Ty, const Twine &Name = "tmp",
                                      llvm::Value *ArraySize = nullptr);
@@ -2931,8 +2930,13 @@ public:
                            RawAddress *Alloca = nullptr);
   RawAddress CreateMemTemp(QualType T, CharUnits Align,
                            const Twine &Name = "tmp",
-                           RawAddress *Alloca = nullptr,
-                           LangAS OverrideSemaForOpenCL = LangAS::Default);
+                           RawAddress *Alloca = nullptr) {
+    return CreateMemTemp(T, Align, Name, Alloca, T.getAddressSpace());
+  }
+  RawAddress CreateMemTemp(QualType T, CharUnits Align,
+                           const Twine &Name,
+                           RawAddress *Alloca,
+                           LangAS OverrideSemaForOpenCL);
 
   /// CreateMemTemp - Create a temporary memory object of the given type, with
   /// appropriate alignmen without casting it to the default address space.
