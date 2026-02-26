@@ -18,6 +18,7 @@
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir/Bindings/Python/IRAttributes.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
@@ -1086,6 +1087,8 @@ PyDenseResourceElementsAttribute::getFromBuffer(
   size_t inferredAlignment;
   if (alignment)
     inferredAlignment = *alignment;
+  else if (view->ndim == 0)
+    inferredAlignment = view->itemsize;
   else
     inferredAlignment = view->strides[view->ndim - 1];
 
@@ -1374,6 +1377,85 @@ void PyStringAttribute::bindDerived(ClassTy &c) {
       "Returns the value of the string attribute as `bytes`");
 }
 
+static MlirDynamicAttrDefinition
+getDynamicAttrDef(const std::string &fullAttrName,
+                  DefaultingPyMlirContext context) {
+  size_t dotPos = fullAttrName.find('.');
+  if (dotPos == std::string::npos) {
+    throw nb::value_error("Expected full attribute name to be in the format "
+                          "'<dialectName>.<attributeName>'.");
+  }
+
+  std::string dialectName = fullAttrName.substr(0, dotPos);
+  std::string attrName = fullAttrName.substr(dotPos + 1);
+  PyDialects dialects(context->getRef());
+  MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
+  if (!mlirDialectIsAExtensibleDialect(dialect))
+    throw nb::value_error(
+        ("Dialect '" + dialectName + "' is not an extensible dialect.")
+            .c_str());
+
+  MlirDynamicAttrDefinition attrDef = mlirExtensibleDialectLookupAttrDefinition(
+      dialect, toMlirStringRef(attrName));
+  if (attrDef.ptr == nullptr) {
+    throw nb::value_error(("Dialect '" + dialectName +
+                           "' does not contain an attribute named '" +
+                           attrName + "'.")
+                              .c_str());
+  }
+  return attrDef;
+}
+
+void PyDynamicAttribute::bindDerived(ClassTy &c) {
+  c.def_static(
+      "get",
+      [](const std::string &fullAttrName, const std::vector<PyAttribute> &attrs,
+         DefaultingPyMlirContext context) {
+        std::vector<MlirAttribute> mlirAttrs;
+        mlirAttrs.reserve(attrs.size());
+        for (const auto &attr : attrs)
+          mlirAttrs.push_back(attr.get());
+
+        MlirDynamicAttrDefinition attrDef =
+            getDynamicAttrDef(fullAttrName, context);
+        MlirAttribute attr =
+            mlirDynamicAttrGet(attrDef, mlirAttrs.data(), mlirAttrs.size());
+        return PyDynamicAttribute(context->getRef(), attr);
+      },
+      nb::arg("full_attr_name"), nb::arg("attributes"),
+      nb::arg("context") = nb::none(), "Create a dynamic attribute.");
+  c.def_prop_ro(
+      "params",
+      [](PyDynamicAttribute &self) {
+        size_t numParams = mlirDynamicAttrGetNumParams(self);
+        std::vector<PyAttribute> params;
+        params.reserve(numParams);
+        for (size_t i = 0; i < numParams; ++i)
+          params.emplace_back(self.getContext(),
+                              mlirDynamicAttrGetParam(self, i));
+        return params;
+      },
+      "Returns the parameters of the dynamic attribute as a list of "
+      "attributes.");
+  c.def_prop_ro("attr_name", [](PyDynamicAttribute &self) {
+    MlirDynamicAttrDefinition attrDef = mlirDynamicAttrGetAttrDef(self);
+    MlirStringRef name = mlirDynamicAttrDefinitionGetName(attrDef);
+    MlirDialect dialect = mlirDynamicAttrDefinitionGetDialect(attrDef);
+    MlirStringRef dialectNamespace = mlirDialectGetNamespace(dialect);
+    return std::string(dialectNamespace.data, dialectNamespace.length) + "." +
+           std::string(name.data, name.length);
+  });
+  c.def_static(
+      "lookup_typeid",
+      [](const std::string &fullAttrName, DefaultingPyMlirContext context) {
+        MlirDynamicAttrDefinition attrDef =
+            getDynamicAttrDef(fullAttrName, context);
+        return PyTypeID(mlirDynamicAttrDefinitionGetTypeID(attrDef));
+      },
+      nb::arg("full_attr_name"), nb::arg("context") = nb::none(),
+      "Look up the TypeID for the given dynamic attribute name.");
+}
+
 void populateIRAttributes(nb::module_ &m) {
   PyAffineMapAttribute::bind(m);
   PyDenseBoolArrayAttribute::bind(m);
@@ -1426,6 +1508,7 @@ void populateIRAttributes(nb::module_ &m) {
   PyUnitAttribute::bind(m);
 
   PyStridedLayoutAttribute::bind(m);
+  PyDynamicAttribute::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

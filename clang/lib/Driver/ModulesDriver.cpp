@@ -32,9 +32,10 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ThreadPool.h"
-#include <algorithm>
+#include "llvm/Support/VirtualFileSystem.h"
 #include <utility>
 
 namespace deps = clang::dependencies;
@@ -138,18 +139,6 @@ void driver::modules::buildStdModuleManifestInputs(
   }
 }
 
-/// Computes the -fmodule-cache-path for this compilation.
-static std::optional<std::string>
-getModuleCachePath(llvm::opt::DerivedArgList &Args) {
-  if (const Arg *A = Args.getLastArg(options::OPT_fmodules_cache_path))
-    return A->getValue();
-
-  if (SmallString<128> Path; Driver::getDefaultModuleCachePath(Path))
-    return std::string(Path);
-
-  return std::nullopt;
-}
-
 using ManifestEntryLookup =
     llvm::DenseMap<StringRef, const StdModuleManifest::Module *>;
 
@@ -170,51 +159,66 @@ buildManifestLookupMap(ArrayRef<StdModuleManifest::Module> ManifestEntries) {
 /// exists.
 static const StdModuleManifest::Module *
 getManifestEntryForCommand(const Command &Job,
-                           const ManifestEntryLookup &ManifestLookup) {
+                           const ManifestEntryLookup &ManifestEntryBySource) {
   for (const auto &II : Job.getInputInfos()) {
-    if (const auto It = ManifestLookup.find(II.getFilename());
-        It != ManifestLookup.end())
+    if (const auto It = ManifestEntryBySource.find(II.getFilename());
+        It != ManifestEntryBySource.end())
       return It->second;
   }
   return nullptr;
 }
 
-/// Adds all \p SystemIncludeDirs to \p Job's arguments.
+/// Adds all \p SystemIncludeDirs to the \p CC1Args of \p Job.
 static void
 addSystemIncludeDirsFromManifest(Compilation &C, Command &Job,
+                                 ArgStringList &CC1Args,
                                  ArrayRef<std::string> SystemIncludeDirs) {
   const ToolChain &TC = Job.getCreator().getToolChain();
   const DerivedArgList &TCArgs =
       C.getArgsForToolChain(&TC, Job.getSource().getOffloadingArch(),
                             Job.getSource().getOffloadingDeviceKind());
 
-  ArgStringList NewArgs = Job.getArguments();
   for (const auto &IncludeDir : SystemIncludeDirs)
-    TC.addSystemInclude(TCArgs, NewArgs, IncludeDir);
-  Job.replaceArguments(NewArgs);
+    TC.addSystemInclude(TCArgs, CC1Args, IncludeDir);
 }
 
 static bool isCC1Job(const Command &Job) {
   return StringRef(Job.getCreator().getName()) == "clang";
 }
 
-/// For each job that generates a Standard library module, applies any
-/// local arguments specified in the corresponding module manifest entry.
-static void
-applyLocalArgsFromManifest(Compilation &C,
-                           const ManifestEntryLookup &ManifestLookup,
-                           MutableArrayRef<std::unique_ptr<Command>> Jobs) {
+/// Apply command-line modifications specific for inputs originating from the
+/// Standard library module manifest.
+static void applyArgsForStdModuleManifestInputs(
+    Compilation &C, const ManifestEntryLookup &ManifestEntryBySource,
+    MutableArrayRef<std::unique_ptr<Command>> Jobs) {
   for (auto &Job : Jobs) {
     if (!isCC1Job(*Job))
       continue;
 
-    const auto *Entry = getManifestEntryForCommand(*Job, ManifestLookup);
-    if (!Entry || !Entry->LocalArgs)
+    const auto *Entry = getManifestEntryForCommand(*Job, ManifestEntryBySource);
+    if (!Entry)
       continue;
 
-    const auto &IncludeDirs = Entry->LocalArgs->SystemIncludeDirs;
-    addSystemIncludeDirsFromManifest(C, *Job, IncludeDirs);
+    auto CC1Args = Job->getArguments();
+    if (Entry->IsStdlib)
+      CC1Args.push_back("-Wno-reserved-module-identifier");
+    if (Entry->LocalArgs)
+      addSystemIncludeDirsFromManifest(C, *Job, CC1Args,
+                                       Entry->LocalArgs->SystemIncludeDirs);
+    Job->replaceArguments(CC1Args);
   }
+}
+
+/// Computes the -fmodule-cache-path for this compilation.
+static std::optional<std::string>
+getModuleCachePath(llvm::opt::DerivedArgList &Args) {
+  if (const Arg *A = Args.getLastArg(options::OPT_fmodules_cache_path))
+    return A->getValue();
+
+  if (SmallString<128> Path; Driver::getDefaultModuleCachePath(Path))
+    return std::string(Path);
+
+  return std::nullopt;
 }
 
 /// Returns true if a dependency scan can be performed using \p Job.
@@ -325,7 +329,8 @@ static StringRef getTriple(const Command &Job) {
 using ModuleNameAndTriple = std::pair<StringRef, StringRef>;
 
 namespace {
-/// Thread-safe registry of Standard library scan inputs.
+/// Helper to schedule on-demand dependency scans for modules originating from
+/// the Standard library module manifest.
 struct StdlibModuleScanScheduler {
   StdlibModuleScanScheduler(const llvm::DenseMap<ModuleNameAndTriple, size_t>
                                 &StdlibModuleScanIndexByID)
@@ -409,7 +414,7 @@ public:
   void Report(ArrayRef<StandaloneDiagnostic> StandaloneDiags) const {
     llvm::StringMap<SourceLocation> SrcLocCache;
     Diags.getClient()->BeginSourceFile(LangOptions(), nullptr);
-    for (auto &StandaloneDiag : StandaloneDiags) {
+    for (const auto &StandaloneDiag : StandaloneDiags) {
       const auto StoredDiag = translateStandaloneDiag(
           getFileManager(), getSourceManager(), StandaloneDiag, SrcLocCache);
       Diags.Report(StoredDiag);
@@ -592,7 +597,7 @@ static std::optional<DependencyScanResult> scanDependencies(
   // Classify the jobs based on scan eligibility.
   SmallVector<size_t> ScannableJobIndices;
   SmallVector<size_t> NonScannableJobIndices;
-  for (auto &&[Index, Job] : llvm::enumerate(Jobs)) {
+  for (const auto &&[Index, Job] : llvm::enumerate(Jobs)) {
     if (isDependencyScannableJob(*Job))
       ScannableJobIndices.push_back(Index);
     else
@@ -604,12 +609,12 @@ static std::optional<DependencyScanResult> scanDependencies(
   // scanning when discovered as dependencies.
   SmallVector<size_t> UserInputScanIndices;
   llvm::DenseMap<ModuleNameAndTriple, size_t> StdlibModuleScanIndexByID;
-  for (auto &&[ScanIndex, JobIndex] : llvm::enumerate(ScannableJobIndices)) {
+  for (const auto &&[ScanIndex, JobIndex] : llvm::enumerate(ScannableJobIndices)) {
     const Command &ScanJob = *Jobs[JobIndex];
     if (const auto *Entry =
             getManifestEntryForCommand(ScanJob, ManifestLookup)) {
       ModuleNameAndTriple ID{Entry->LogicalName, getTriple(ScanJob)};
-      const bool Inserted =
+      [[maybe_unused]] const bool Inserted =
           StdlibModuleScanIndexByID.try_emplace(ID, ScanIndex).second;
       assert(Inserted &&
              "Multiple jobs build the same module for the same triple.");
@@ -1061,8 +1066,8 @@ struct DOTGraphTraits<const CompilationGraph *> : DefaultDOTGraphTraits {
                                getTriple(*NamedModuleNode->Job))
               .str();
         })
-        .Case([](const NonModuleTUJobNode *NonModTUNode) {
-          const auto &Job = *NonModTUNode->Job;
+        .Case([](const NonModuleTUJobNode *NonModuleTUNode) {
+          const auto &Job = *NonModuleTUNode->Job;
           return llvm::formatv("{0}-{1}", getFirstInputFilename(Job),
                                getTriple(Job))
               .str();
@@ -1088,8 +1093,8 @@ struct DOTGraphTraits<const CompilationGraph *> : DefaultDOTGraphTraits {
                      NamedModuleNode->InputDeps.ModuleName, getTriple(Job))
               .str();
         })
-        .Case([](const NonModuleTUJobNode *NonModTUNode) {
-          const auto &Job = *NonModTUNode->Job;
+        .Case([](const NonModuleTUJobNode *NonModuleTUNode) {
+          const auto &Job = *NonModuleTUNode->Job;
           return llvm::formatv("Filename: {0} \\| Triple: {1}",
                                getFirstInputFilename(Job), getTriple(Job))
               .str();
@@ -1153,12 +1158,12 @@ private:
   void writeNodeRelations(ArrayRef<NodeRef> VisibleNodes) {
     auto IsNodeVisible = [&](NodeRef N) { return !DTraits.isNodeHidden(N, G); };
     for (NodeRef Node : VisibleNodes) {
-      auto TgtNodes = llvm::make_range(GTraits::child_begin(Node),
+      auto DstNodes = llvm::make_range(GTraits::child_begin(Node),
                                        GTraits::child_end(Node));
-      auto VisibleTgtNodes = llvm::make_filter_range(TgtNodes, IsNodeVisible);
+      auto VisibleDstNodes = llvm::make_filter_range(DstNodes, IsNodeVisible);
       StringRef EscapedSrcNodeID = EscapedIDByNodeRef.at(Node);
-      for (NodeRef TgtNode : VisibleTgtNodes) {
-        StringRef EscapedTgtNodeID = EscapedIDByNodeRef.at(TgtNode);
+      for (NodeRef DstNode : VisibleDstNodes) {
+        StringRef EscapedTgtNodeID = EscapedIDByNodeRef.at(DstNode);
         O << '\t' << '"' << EscapedSrcNodeID << "\" -> \"" << EscapedTgtNodeID
           << "\";\n";
       }
@@ -1195,11 +1200,12 @@ static void createNodesForNonScannableJobs(
 /// Creates nodes for the Standard library module jobs not discovered as
 /// dependencies.
 ///
-/// These and any dependent (non-image) nodes  be removed later.
-static SmallVector<CGNode *> createNodesForUnusedStdlibModuleJobs(
+/// These and any dependent (non-image) job nodes should be pruned from the
+/// graph later.
+static SmallVector<JobNode *> createNodesForUnusedStdlibModuleJobs(
     CompilationGraph &Graph,
     SmallVectorImpl<std::unique_ptr<Command>> &&UnusedStdlibModuleJobs) {
-  SmallVector<CGNode *> StdlibModuleNodesToPrune;
+  SmallVector<JobNode *> StdlibModuleNodesToPrune;
   for (auto &Job : UnusedStdlibModuleJobs) {
     auto &NewNode = Graph.createJobNode<MiscJobNode>(std::move(Job));
     StdlibModuleNodesToPrune.push_back(&NewNode);
@@ -1298,15 +1304,16 @@ static void connectEdgesViaLookup(CompilationGraph &Graph, CGNode &TgtNode,
 /// Create edges for regular (non-module) dependencies in \p Graph.
 static void createRegularEdges(CompilationGraph &Graph) {
   llvm::DenseMap<StringRef, CGNode *> NodeByOutputFiles;
-  for (auto &Node : Graph) {
+  for (auto *Node : Graph) {
     for (const auto &Output : cast<JobNode>(Node)->Job->getOutputFilenames()) {
-      const bool Inserted = NodeByOutputFiles.try_emplace(Output, Node).second;
+      [[maybe_unused]] const bool Inserted =
+          NodeByOutputFiles.try_emplace(Output, Node).second;
       assert(Inserted &&
              "Driver should not produce multiple jobs with identical outputs!");
     }
   }
 
-  for (auto &Node : Graph) {
+  for (auto *Node : Graph) {
     const auto &InputInfos = cast<JobNode>(Node)->Job->getInputInfos();
     auto InputFilenames = llvm::map_range(
         InputInfos, [](const auto &II) { return II.getFilename(); });
@@ -1324,10 +1331,10 @@ static bool createModuleDependencyEdges(CompilationGraph &Graph,
 
   // Map each module to the job that produces it.
   bool HasDuplicateModuleError = false;
-  for (auto &Node : Graph) {
+  for (auto *Node : Graph) {
     llvm::TypeSwitch<CGNode *>(Node)
         .Case([&](ClangModuleJobNode *ClangModuleNode) {
-          const bool Inserted =
+          [[maybe_unused]] const bool Inserted =
               ClangModuleNodeByID.try_emplace(ClangModuleNode->MD.ID, Node)
                   .second;
           assert(Inserted &&
@@ -1356,7 +1363,7 @@ static bool createModuleDependencyEdges(CompilationGraph &Graph,
     return false;
 
   // Create edges from the module nodes to their importers.
-  for (auto &Node : Graph) {
+  for (auto *Node : Graph) {
     llvm::TypeSwitch<CGNode *>(Node)
         .Case([&](ClangModuleJobNode *ClangModuleNode) {
           connectEdgesViaLookup(Graph, *ClangModuleNode, ClangModuleNodeByID,
@@ -1387,34 +1394,38 @@ static bool createModuleDependencyEdges(CompilationGraph &Graph,
 /// modules not required in this compilation.
 static void
 pruneUnusedStdlibModuleJobs(CompilationGraph &Graph,
-                            ArrayRef<CGNode *> UnusedStdlibModuleNodes) {
-  // Collect all reachable nodes holding non-image jobs.
-  llvm::SmallPtrSet<CGNode *, 16> DeadNodes;
-  for (auto *UnusedStdlibModuleNode : UnusedStdlibModuleNodes) {
+                            ArrayRef<JobNode *> UnusedStdlibModuleJobNodes) {
+  // Collect all reachable non-image job nodes.
+  llvm::SmallPtrSet<JobNode *, 16> PrunableJobNodes;
+  for (auto *PrunableJobNodeRoot : UnusedStdlibModuleJobNodes) {
+    auto ReachableJobNodes =
+        llvm::map_range(llvm::depth_first(cast<CGNode>(PrunableJobNodeRoot)),
+                        llvm::CastTo<JobNode>);
     auto ReachableNonImageNodes = llvm::make_filter_range(
-        llvm::depth_first(cast<CGNode>(UnusedStdlibModuleNode)),
-        std::not_fn(llvm::IsaPred<ImageJobNode>));
+        ReachableJobNodes, std::not_fn(llvm::IsaPred<ImageJobNode>));
 
-    DeadNodes.insert_range(ReachableNonImageNodes);
+    PrunableJobNodes.insert_range(ReachableNonImageNodes);
   }
 
-  // Map image nodes to the dead nodes that feed into them.
-  llvm::DenseMap<ImageJobNode *, llvm::SmallPtrSet<CGNode *, 4>>
-      DeadJobsByImageJob;
-  for (auto *DeadNode : DeadNodes) {
-    auto ReachableImageNodes = llvm::make_filter_range(
-        llvm::depth_first(DeadNode), llvm::IsaPred<ImageJobNode>);
-    for (auto *ImageNode : ReachableImageNodes)
-      DeadJobsByImageJob[cast<ImageJobNode>(ImageNode)].insert(DeadNode);
+  // Map image job nodes to the prunable job nodes that feed into them.
+  llvm::DenseMap<ImageJobNode *, llvm::SmallPtrSet<JobNode *, 4>>
+      PrunableJobNodesByImageNode;
+  for (auto *PrunableJobNode : PrunableJobNodes) {
+    auto ReachableJobNodes = llvm::depth_first(cast<CGNode>(PrunableJobNode));
+    auto ReachableImageJobNodes = llvm::map_range(
+        llvm::make_filter_range(ReachableJobNodes, llvm::IsaPred<ImageJobNode>),
+        llvm::CastTo<ImageJobNode>);
+
+    for (auto *ImageNode : ReachableImageJobNodes)
+      PrunableJobNodesByImageNode[ImageNode].insert(PrunableJobNode);
   }
 
-  // Remove from each affected image node any arguments corresponding to
-  // outputs of dead nodes.
-  for (auto &[ImageNode, DeadJobNodes] : DeadJobsByImageJob) {
+  // Remove from each affected image job node any arguments corresponding to
+  // outputs of the connected prunable job nodes.
+  for (auto &[ImageNode, PrunableJobNodeInputs] : PrunableJobNodesByImageNode) {
     SmallVector<StringRef, 4> OutputsToRemove;
-    for (auto *DeadNode : DeadJobNodes)
-      llvm::append_range(OutputsToRemove,
-                         cast<JobNode>(DeadNode)->Job->getOutputFilenames());
+    for (auto *JN : PrunableJobNodeInputs)
+      llvm::append_range(OutputsToRemove, JN->Job->getOutputFilenames());
 
     auto NewArgs = ImageNode->Job->getArguments();
     llvm::erase_if(NewArgs, [&](StringRef Arg) {
@@ -1423,11 +1434,11 @@ pruneUnusedStdlibModuleJobs(CompilationGraph &Graph,
     ImageNode->Job->replaceArguments(NewArgs);
   }
 
-  // Erase all dead nodes from the graph.
-  for (auto *DeadNode : DeadNodes) {
+  // Erase all prunable job nodes from the graph.
+  for (auto *JN : PrunableJobNodes) {
     // Nodes are owned by the graph, but we can release the associated job.
-    cast<JobNode>(DeadNode)->Job.reset();
-    Graph.removeNode(*DeadNode);
+    JN->Job.reset();
+    Graph.removeNode(*JN);
   }
 }
 
@@ -1452,20 +1463,19 @@ static void createAndConnectRoot(CompilationGraph &Graph) {
 void driver::modules::runModulesDriver(
     Compilation &C, ArrayRef<StdModuleManifest::Module> ManifestEntries) {
   llvm::PrettyStackTraceString CrashInfo("Running modules driver.");
-  DiagnosticsEngine &Diags = C.getDriver().getDiags();
 
+  auto Jobs = C.getJobs().takeJobs();
+  const auto ManifestEntryBySource = buildManifestLookupMap(ManifestEntries);
+  // Apply manifest-entry specific command-line modifications before the scan as
+  // they might affect it.
+  applyArgsForStdModuleManifestInputs(C, ManifestEntryBySource, Jobs);
+
+  DiagnosticsEngine &Diags = C.getDriver().getDiags();
   const auto MaybeModuleCachePath = getModuleCachePath(C.getArgs());
   if (!MaybeModuleCachePath) {
     Diags.Report(diag::err_default_modules_cache_not_available);
     return;
   }
-
-  auto Jobs = C.getJobs().takeJobs();
-
-  // Apply manifest-specified local arguments before scanning as they may affect
-  // the scan results.
-  const auto ManifestEntryBySource = buildManifestLookupMap(ManifestEntries);
-  applyLocalArgsFromManifest(C, ManifestEntryBySource, Jobs);
 
   // Run the dependency scan.
   auto MaybeScanResults =
@@ -1481,7 +1491,7 @@ void driver::modules::runModulesDriver(
   CompilationGraph Graph;
   createNodesForNonScannableJobs(
       Graph, takeJobsAtIndices(Jobs, ScanResult.NonScannableJobIndices));
-  auto UnusedStdlibModuleNodes = createNodesForUnusedStdlibModuleJobs(
+  auto UnusedStdlibModuleJobNodes = createNodesForUnusedStdlibModuleJobs(
       Graph, takeJobsAtIndices(Jobs, ScanResult.UnusedStdlibModuleJobIndices));
   createClangModuleJobsAndNodes(
       Graph, C, Jobs, ScanResult.ScannedJobIndices,
@@ -1491,7 +1501,7 @@ void driver::modules::runModulesDriver(
       std::move(ScanResult.InputDepsForScannedJobs));
   createRegularEdges(Graph);
 
-  pruneUnusedStdlibModuleJobs(Graph, UnusedStdlibModuleNodes);
+  pruneUnusedStdlibModuleJobs(Graph, UnusedStdlibModuleJobNodes);
 
   if (!createModuleDependencyEdges(Graph, Diags))
     return;
@@ -1503,5 +1513,10 @@ void driver::modules::runModulesDriver(
 
   // TODO: Install all updated command-lines produced by the dependency scan.
   // TODO: Fix-up command-lines for named module imports.
-  // TODO: Sort the graph topologically and feed jobs back into the Compilation.
+
+  // TODO: Sort the graph topologically before adding jobs back to the
+  // Compilation being built.
+  for (auto *N : Graph)
+    if (auto *JN = dyn_cast<JobNode>(N))
+      C.addCommand(std::move(JN->Job));
 }

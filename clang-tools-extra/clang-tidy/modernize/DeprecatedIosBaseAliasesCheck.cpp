@@ -67,8 +67,9 @@ void DeprecatedIosBaseAliasesCheck::check(
     if (Fix)
       Builder << FixItHint::CreateReplacement(SourceRange(IoStateLoc, EndLoc),
                                               FixName);
-  } else
+  } else {
     diag(IoStateLoc, "'std::ios_base::%0' is deprecated") << TypeName;
+  }
 }
 
 } // namespace clang::tidy::modernize

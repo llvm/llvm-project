@@ -62,7 +62,7 @@ readStdModuleManifest(llvm::StringRef ManifestPath, llvm::vfs::FileSystem &VFS);
 /// Standard library module manifest.
 ///
 /// \param ManifestEntries All entries of the Standard library module manifest.
-/// \param C The compilation being built.
+/// \param C The Compilation being built.
 /// \param Inputs The input list to which the new module inputs are appended.
 void buildStdModuleManifestInputs(
     ArrayRef<StdModuleManifest::Module> ManifestEntries, Compilation &C,
@@ -71,7 +71,7 @@ void buildStdModuleManifestInputs(
 /// Scans the compilation inputs for module dependencies and adjusts the
 /// compilation to build and supply those modules as required.
 ///
-/// \param C The compilation being built.
+/// \param C The Compilation being built.
 /// \param ManifestEntries All entries of the Standard library module manifest.
 void runModulesDriver(Compilation &C,
                       ArrayRef<StdModuleManifest::Module> ManifestEntries);
