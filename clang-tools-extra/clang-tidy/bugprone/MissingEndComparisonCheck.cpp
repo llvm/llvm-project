@@ -49,25 +49,6 @@ void MissingEndComparisonCheck::storeOptions(
                 utils::options::serializeStringList(ExtraAlgorithms));
 }
 
-static bool isConditionVar(const DeclStmt *S, ASTContext &Ctx) {
-  const auto &Parents = Ctx.getParents(*S);
-  if (Parents.empty())
-    return false;
-
-  const auto *ParentStmt = Parents[0].get<Stmt>();
-  if (!ParentStmt)
-    return false;
-
-  if (const auto *If = dyn_cast<IfStmt>(ParentStmt))
-    return If->getConditionVariableDeclStmt() == S;
-  if (const auto *While = dyn_cast<WhileStmt>(ParentStmt))
-    return While->getConditionVariableDeclStmt() == S;
-  if (const auto *For = dyn_cast<ForStmt>(ParentStmt))
-    return For->getConditionVariableDeclStmt() == S;
-
-  return false;
-}
-
 static std::optional<std::string>
 getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
   const FunctionDecl *Callee = Call->getDirectCallee();
@@ -92,7 +73,7 @@ getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
   const Expr *RangeArg = Call->getArg(1);
   // Avoid potential side-effects
   const Expr *InnerRange = RangeArg->IgnoreParenImpCasts();
-  if (isa<DeclRefExpr>(InnerRange) || isa<MemberExpr>(InnerRange)) {
+  if (isa<DeclRefExpr, MemberExpr>(InnerRange)) {
     const StringRef RangeText =
         tooling::fixit::getText(*RangeArg, *Result.Context);
     if (!RangeText.empty())
@@ -197,8 +178,13 @@ void MissingEndComparisonCheck::registerMatchers(MatchFinder *Finder) {
   // FIXME: This only handles variables initialized directly by the algorithm.
   // We may need to introduce more accurate dataflow analysis in the future.
   const auto VarWithAlgoInit =
-      varDecl(hasInitializer(expr(ignoringParenImpCasts(AnyAlgoCall))))
-          .bind("initVar");
+      varDecl(decl().bind("initVar"),
+              hasInitializer(expr(ignoringParenImpCasts(AnyAlgoCall))),
+              optionally(hasParent(declStmt(
+                  hasParent(mapAnyOf(ifStmt, whileStmt, forStmt)
+                                .with(hasConditionVariableStatement(declStmt(
+                                    has(varDecl(equalsBoundNode("initVar"))))))
+                                .bind("condVarParent"))))));
 
   const auto IsVariableBoolUsage =
       anyOf(implicitCastExpr(hasCastKind(CK_PointerToBoolean),
@@ -246,13 +232,8 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
     if (InitVar->getType()->isBooleanType())
       return;
 
-    const auto &Parents = Result.Context->getParents(*InitVar);
-    if (!Parents.empty()) {
-      if (const auto *ParentDecl = Parents[0].get<DeclStmt>()) {
-        if (isConditionVar(ParentDecl, *Result.Context))
-          return;
-      }
-    }
+    if (Result.Nodes.getNodeAs<Stmt>("condVarParent"))
+      return;
   }
 
   const auto &Parents = Result.Context->getParents(*BoolOp);
