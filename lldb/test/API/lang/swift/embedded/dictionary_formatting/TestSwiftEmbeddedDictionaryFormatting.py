@@ -36,8 +36,7 @@ class TestSwiftEmbeddedDictionaryFormatting(TestBase):
         self.assertEqual(keys, {1, 2, 3})
         self.assertEqual(values, {10, 20, 30})
 
-        # rdar://170883616
-        # emptyDict = frame.FindVariable("emptyDict")
-        # lldbutil.check_variable(
-        #     self, emptyDict, False, summary="0 key/value pairs"
-        # )
+        emptyDict = frame.FindVariable("emptyDict")
+        lldbutil.check_variable(
+            self, emptyDict, False, summary="0 key/value pairs"
+        )

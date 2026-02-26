@@ -73,6 +73,10 @@ public:
 
   virtual bool IsValid() override;
 
+  bool IsEmptyEmbeddedCollection() {
+    return m_is_embedded_swift && m_count == 0;
+  }
+
   virtual ~NativeHashedStorageHandler() override {}
 
 protected:
@@ -128,21 +132,22 @@ protected:
   }
 
 private:
-  ValueObject *m_storage;
-  Process *m_process;
-  uint32_t m_ptr_size;
-  uint64_t m_count;
-  uint64_t m_scale;
-  lldb::addr_t m_metadata_ptr;
-  lldb::addr_t m_keys_ptr;
-  lldb::addr_t m_values_ptr;
+  ValueObject *m_storage = nullptr;
+  Process *m_process = nullptr;
+  uint32_t m_ptr_size = 0;
+  uint64_t m_count = 0;
+  uint64_t m_scale = 0;
+  lldb::addr_t m_metadata_ptr = LLDB_INVALID_ADDRESS;
+  lldb::addr_t m_keys_ptr = LLDB_INVALID_ADDRESS;
+  lldb::addr_t m_values_ptr = LLDB_INVALID_ADDRESS;
   CompilerType m_element_type;
-  uint64_t m_key_stride;
-  uint64_t m_value_stride;
-  uint64_t m_key_stride_padded;
+  uint64_t m_key_stride = 0;
+  uint64_t m_value_stride = 0;
+  uint64_t m_key_stride_padded = 0;
+  bool m_is_embedded_swift = false;
   // Cached mapping from index to occupied bucket.
   std::vector<Bucket> m_occupiedBuckets;
-  bool m_failedToGetBuckets;
+  bool m_failedToGetBuckets = false;
 };
 
 class CocoaHashedStorageHandler: public HashedStorageHandler {
@@ -421,11 +426,7 @@ HashedCollectionConfig::CreateCocoaHandler(ValueObjectSP storage_sp) const {
 NativeHashedStorageHandler::NativeHashedStorageHandler(
     ValueObjectSP nativeStorage_sp, CompilerType key_type,
     CompilerType value_type)
-    : m_storage(nativeStorage_sp.get()), m_process(nullptr), m_ptr_size(0),
-      m_count(0), m_scale(0), m_metadata_ptr(LLDB_INVALID_ADDRESS),
-      m_keys_ptr(LLDB_INVALID_ADDRESS), m_values_ptr(LLDB_INVALID_ADDRESS),
-      m_element_type(), m_key_stride(), m_value_stride(0),
-      m_key_stride_padded(), m_occupiedBuckets(), m_failedToGetBuckets(false) {
+    : m_storage(nativeStorage_sp.get()) {
   static ConstString g__count("_count");
   static ConstString g__scale("_scale");
   static ConstString g__rawElements("_rawElements");
@@ -446,6 +447,11 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
   m_process = m_storage->GetProcessSP().get();
   if (!m_process)
     return;
+
+  if (ConstString mangled = m_storage->GetCompilerType().GetMangledTypeName())
+    m_is_embedded_swift =
+        SwiftLanguageRuntime::GetManglingFlavor(mangled.GetStringRef()) ==
+        ::swift::Mangle::ManglingFlavor::Embedded;
 
   auto key_stride = key_type.GetByteStride(m_process);
   if (key_stride) {
@@ -511,8 +517,10 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
 
   m_metadata_ptr = last_field_ptr + m_ptr_size;
 
-  // Make sure we can read the first and last word of the bitmap.  
-  if (IsValid()) {
+  // Make sure we can read the first and last word of the bitmap.
+  // Skip this for empty embedded collections since there are no buckets to
+  // read.
+  if (IsValid() && !IsEmptyEmbeddedCollection()) {
     Status error;
     GetMetadataWord(0, error);
     GetMetadataWord(GetWordCount() - 1, error);
@@ -523,22 +531,28 @@ NativeHashedStorageHandler::NativeHashedStorageHandler(
 }
 
 bool NativeHashedStorageHandler::IsValid() {
-  return (m_storage != nullptr)
-    && (m_process != nullptr)
-    && (m_ptr_size > 0)
-    && (m_element_type.IsValid())
-    && (m_metadata_ptr != LLDB_INVALID_ADDRESS)
-    && (m_keys_ptr != LLDB_INVALID_ADDRESS)
-    && (m_value_stride == 0 || m_values_ptr != LLDB_INVALID_ADDRESS)
-    // Check counts.
-    && ((m_scale < (sizeof(size_t) * 8)) && (m_count <= GetBucketCount()))
-    // Buffers are tail-allocated in this order: metadata, keys, values
-    && (m_metadata_ptr < m_keys_ptr)
-    && (m_value_stride == 0 || m_keys_ptr < m_values_ptr);
+  if (!m_storage || !m_process || !m_element_type.IsValid())
+    return false;
+
+  // In embedded Swift, the empty singleton has no allocated buffer (all raw
+  // pointers are 0), so skip the buffer pointer ordering checks.
+  if (IsEmptyEmbeddedCollection())
+    return true;
+
+  return (m_ptr_size > 0) && (m_metadata_ptr != LLDB_INVALID_ADDRESS) &&
+         (m_keys_ptr != LLDB_INVALID_ADDRESS) &&
+         (m_value_stride == 0 || m_values_ptr != LLDB_INVALID_ADDRESS)
+         // Check counts.
+         && ((m_scale < (sizeof(size_t) * 8)) && (m_count <= GetBucketCount()))
+         // Buffers are tail-allocated in this order: metadata, keys, values.
+         && (m_metadata_ptr < m_keys_ptr) &&
+         (m_value_stride == 0 || m_keys_ptr < m_values_ptr);
 }
 
 uint64_t
 NativeHashedStorageHandler::GetMetadataWord(int index, Status &error) {
+  assert(!IsEmptyEmbeddedCollection() &&
+         "Cannot read from empty embedded hash collection!");
   if (static_cast<size_t>(index) >= GetWordCount()) {
     error = Status::FromErrorString("index out of bounds");
     return 0;
@@ -562,6 +576,9 @@ NativeHashedStorageHandler::UpdateBuckets() {
   if (m_failedToGetBuckets)
     return false;
   if (!m_occupiedBuckets.empty())
+    return true;
+  // Empty embedded collections have no allocated buffer to scan.
+  if (IsEmptyEmbeddedCollection())
     return true;
   // Scan bitmap for occupied buckets.
   m_occupiedBuckets.reserve(m_count);
