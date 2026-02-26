@@ -1245,9 +1245,8 @@ void ExprEngine::ProcessInitializer(const CFGInitializer CFGInit,
   PostInitializer PP(BMI, FieldLoc.getAsRegion(), stackFrame);
 
   ExplodedNodeSet Dst;
-  for (ExplodedNode *Pred : Tmp) {
+  for (ExplodedNode *Pred : Tmp)
     Dst.Add(Engine.makeNode(PP, Pred->getState(), Pred));
-  }
   // Enqueue the new nodes onto the work list.
   Engine.enqueueStmtNodes(Dst, currBldrCtx->getBlock(), currStmtIdx);
 }
