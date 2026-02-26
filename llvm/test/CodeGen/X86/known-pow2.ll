@@ -909,3 +909,53 @@ define i1 @pow2_and_i128(i128 %num, i128 %shift) {
   %bool = icmp eq i128 %bit, 0
   ret i1 %bool
 }
+
+; Negative test: Y = a | 1 is always odd/non-zero but not pow2, fold should not trigger.
+define i32 @pow2_blsi_add_fail(i32 %x, i32 %a) {
+; CHECK-LABEL: pow2_blsi_add_fail:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $esi killed $esi def $rsi
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    orl $1, %esi
+; CHECK-NEXT:    leal (%rdi,%rsi), %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    retq
+  %y = or i32 %a, 1
+  %x_add_y = add i32 %x, %y
+  %r = and i32 %x_add_y, %y
+  ret i32 %r
+}
+
+; Test that (X + Y) & Y --> ~X & Y when Y = a & -a (pow2-or-zero).
+define i32 @pow2_blsi_add(i32 %x, i32 %a) {
+; CHECK-LABEL: pow2_blsi_add:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
+  %neg_a = sub i32 0, %a
+  %y = and i32 %a, %neg_a
+  %x_add_y = add i32 %x, %y
+  %r = and i32 %x_add_y, %y
+  ret i32 %r
+}
+
+; Test that (X - Y) & Y --> ~X & Y when Y = a & -a (pow2-or-zero).
+define i32 @pow2_blsi_sub(i32 %x, i32 %a) {
+; CHECK-LABEL: pow2_blsi_sub:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %esi, %eax
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    andl %esi, %eax
+; CHECK-NEXT:    notl %edi
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    retq
+  %neg_a = sub i32 0, %a
+  %y = and i32 %a, %neg_a
+  %x_sub_y = sub i32 %x, %y
+  %r = and i32 %x_sub_y, %y
+  ret i32 %r
+}
