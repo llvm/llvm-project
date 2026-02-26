@@ -1176,7 +1176,17 @@ int CodeCoverageTool::doShow(int argc, const char **argv,
       if (!FilenameFilters.matchesFilename(Filename))
         SourceFiles.push_back(std::string(Filename));
     }
-
+  // Some file systems return directories and files in a random order,
+  // ensure case-insensitive sorting
+  std::sort(
+    SourceFiles.begin(),
+    SourceFiles.end(),
+    [](const auto& A, const auto& B) {
+      StringRef Sra(A);
+      StringRef Srb(B);
+      return Sra.compare_insensitive(Srb) == -1 ? true : false;
+    }
+  );
   // Create an index out of the source files.
   if (ViewOpts.hasOutputDirectory()) {
     if (Error E = Printer->createIndexFile(SourceFiles, *Coverage, Filters)) {
