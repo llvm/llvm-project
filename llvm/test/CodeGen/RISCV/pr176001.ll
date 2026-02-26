@@ -13,7 +13,7 @@ define <32 x i64> @main(i1 %tobool93.not, <32 x i64> %0, <32 x i64> %1) #0 {
   ; CHECK-NEXT:   PseudoBR %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.BS_LABEL_5:
-  ; CHECK-NEXT:   renamable $v8m8 = PseudoVMV_V_I_M8 undef renamable $v8m8, 0, 16, 6 /* e64 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   renamable $v8m8 = PseudoVMV_V_I_M8 undef renamable $v8m8, 0, 16 /* vl */, 6 /* e64 */, 0 /* tu, mu */
   ; CHECK-NEXT:   $v16m8 = COPY renamable $v8m8
   ; CHECK-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
   ; CHECK-NEXT: {{  $}}
@@ -21,7 +21,7 @@ define <32 x i64> @main(i1 %tobool93.not, <32 x i64> %0, <32 x i64> %1) #0 {
   ; CHECK-NEXT:   successors: %bb.4(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT:   liveins: $v8m8:0x0000000000000002, $v16m8:0x0000000000000006
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $v24m8 = PseudoVLE64_V_M8 undef renamable $v24m8, [[COPY]], 16, 6 /* e64 */, 2 /* tu, ma */ :: (load (s1024))
+  ; CHECK-NEXT:   renamable $v24m8 = PseudoVLE64_V_M8 undef renamable $v24m8, [[COPY]], 16 /* vl */, 6 /* e64 */, 2 /* tu, ma */ :: (load (s1024))
   ; CHECK-NEXT:   [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY1]], 1
   ; CHECK-NEXT:   BNE [[ANDI]], $x0, %bb.4
   ; CHECK-NEXT:   PseudoBR %bb.3
@@ -55,11 +55,11 @@ define <32 x i64> @main(i1 %tobool93.not, <32 x i64> %0, <32 x i64> %1) #0 {
   ; CHECK-NEXT:   successors: %bb.8(0x40000000), %bb.9(0x40000000)
   ; CHECK-NEXT:   liveins: $v16m8:0x0000000000000006
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $v0m8 = PseudoVMV_V_I_M8 undef renamable $v0m8, 0, 16, 6 /* e64 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   renamable $v0m8 = PseudoVMV_V_I_M8 undef renamable $v0m8, 0, 16 /* vl */, 6 /* e64 */, 0 /* tu, mu */
   ; CHECK-NEXT:   renamable $v24m8 = COPY renamable $v0m8
-  ; CHECK-NEXT:   renamable $v8m2 = PseudoVSLIDEDOWN_VI_M2 undef renamable $v8m2, killed renamable $v16m2, 2, 1, 6 /* e64 */, 3 /* ta, ma */
+  ; CHECK-NEXT:   renamable $v8m2 = PseudoVSLIDEDOWN_VI_M2 undef renamable $v8m2, killed renamable $v16m2, 2, 1 /* vl */, 6 /* e64 */, 3 /* ta, ma */
   ; CHECK-NEXT:   [[PseudoVMV_X_S1:%[0-9]+]]:gpr = PseudoVMV_X_S killed renamable $v8, 6 /* e64 */
-  ; CHECK-NEXT:   renamable $v24m8 = PseudoVMV_V_V_M8 killed renamable $v24m8, killed renamable $v0m8, 1, 6 /* e64 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   renamable $v24m8 = PseudoVMV_V_V_M8 killed renamable $v24m8, killed renamable $v0m8, 1 /* vl */, 6 /* e64 */, 0 /* tu, mu */
   ; CHECK-NEXT:   BNE [[PseudoVMV_X_S1]], $x0, %bb.9
   ; CHECK-NEXT:   PseudoBR %bb.8
   ; CHECK-NEXT: {{  $}}
@@ -70,22 +70,22 @@ define <32 x i64> @main(i1 %tobool93.not, <32 x i64> %0, <32 x i64> %1) #0 {
   ; CHECK-NEXT: bb.9.cond.end133:
   ; CHECK-NEXT:   liveins: $v24m8
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   renamable $v0m8 = PseudoVMV_V_I_M8 undef renamable $v0m8, 0, 16, 6 /* e64 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   renamable $v0m8 = PseudoVMV_V_I_M8 undef renamable $v0m8, 0, 16 /* vl */, 6 /* e64 */, 0 /* tu, mu */
   ; CHECK-NEXT:   renamable $v16 = COPY renamable $v0
   ; CHECK-NEXT:   renamable $v8m8 = VL8RE8_V %stack.0 :: (load (<vscale x 1 x s512>) from %stack.0, align 8)
   ; CHECK-NEXT:   [[PseudoVMV_X_S2:%[0-9]+]]:gpr = PseudoVMV_X_S killed renamable $v8, 5 /* e32 */
   ; CHECK-NEXT:   renamable $v8m8 = COPY renamable $v0m8
-  ; CHECK-NEXT:   early-clobber renamable $v17 = PseudoVMSLEU_VV_M8 killed renamable $v0m8, killed renamable $v24m8, 16, 6 /* e64 */
-  ; CHECK-NEXT:   renamable $v16 = PseudoVMV_S_X killed renamable $v16, $x0, 16, 6 /* e64 */
-  ; CHECK-NEXT:   renamable $v16 = PseudoVMV_S_X killed renamable $v16, [[PseudoVMV_X_S2]], 16, 6 /* e64 */
-  ; CHECK-NEXT:   renamable $v24m8 = PseudoVMV_V_I_M8 undef renamable $v24m8, 0, 16, 6 /* e64 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   early-clobber renamable $v17 = PseudoVMSLEU_VV_M8 killed renamable $v0m8, killed renamable $v24m8, 16 /* vl */, 6 /* e64 */
+  ; CHECK-NEXT:   renamable $v16 = PseudoVMV_S_X killed renamable $v16, $x0, 16 /* vl */, 6 /* e64 */
+  ; CHECK-NEXT:   renamable $v16 = PseudoVMV_S_X killed renamable $v16, [[PseudoVMV_X_S2]], 16 /* vl */, 6 /* e64 */
+  ; CHECK-NEXT:   renamable $v24m8 = PseudoVMV_V_I_M8 undef renamable $v24m8, 0, 16 /* vl */, 6 /* e64 */, 0 /* tu, mu */
   ; CHECK-NEXT:   renamable $v8 = COPY killed renamable $v16
   ; CHECK-NEXT:   $v0 = COPY killed renamable $v17
-  ; CHECK-NEXT:   renamable $v16m8 = PseudoVMERGE_VIM_M8 undef renamable $v16m8, killed renamable $v24m8, -1, $v0, 16, 6 /* e64 */
-  ; CHECK-NEXT:   renamable $v24m8 = PseudoVMV_V_I_M8 undef renamable $v24m8, 0, 16, 6 /* e64 */, 0 /* tu, mu */
-  ; CHECK-NEXT:   early-clobber renamable $v0 = PseudoVMSLEU_VV_M8 killed renamable $v24m8, killed renamable $v8m8, 16, 6 /* e64 */
-  ; CHECK-NEXT:   renamable $v8m8 = PseudoVMV_V_I_M8 undef renamable $v8m8, 0, 16, 6 /* e64 */, 0 /* tu, mu */
-  ; CHECK-NEXT:   renamable $v8m8 = PseudoVMERGE_VIM_M8 undef renamable $v8m8, killed renamable $v8m8, -1, $v0, 16, 6 /* e64 */
+  ; CHECK-NEXT:   renamable $v16m8 = PseudoVMERGE_VIM_M8 undef renamable $v16m8, killed renamable $v24m8, -1, $v0, 16 /* vl */, 6 /* e64 */
+  ; CHECK-NEXT:   renamable $v24m8 = PseudoVMV_V_I_M8 undef renamable $v24m8, 0, 16 /* vl */, 6 /* e64 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   early-clobber renamable $v0 = PseudoVMSLEU_VV_M8 killed renamable $v24m8, killed renamable $v8m8, 16 /* vl */, 6 /* e64 */
+  ; CHECK-NEXT:   renamable $v8m8 = PseudoVMV_V_I_M8 undef renamable $v8m8, 0, 16 /* vl */, 6 /* e64 */, 0 /* tu, mu */
+  ; CHECK-NEXT:   renamable $v8m8 = PseudoVMERGE_VIM_M8 undef renamable $v8m8, killed renamable $v8m8, -1, $v0, 16 /* vl */, 6 /* e64 */
   ; CHECK-NEXT:   PseudoRET implicit $v8m8, implicit $v16m8
 entry:
   switch i32 0, label %BS_LABEL_5 [

@@ -516,6 +516,10 @@ set(arm_EABI_RT_SOURCES
   arm/aeabi_ldivmod.S
   arm/aeabi_uidivmod.S
   arm/aeabi_uldivmod.S
+  arm/aeabi_uread4.S
+  arm/aeabi_uread8.S
+  arm/aeabi_uwrite4.S
+  arm/aeabi_uwrite8.S
 )
 
 set(arm_EABI_CLIB_SOURCES
@@ -836,6 +840,16 @@ if (NOT OS_NAME MATCHES "AIX")
     ppc/floattitf.c
     ppc/fixtfti.c
     ppc/fixunstfti.c
+    ${powerpc64_SOURCES}
+  )
+endif()
+if (OS_NAME MATCHES "AIX")
+  set(powerpc_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc_SOURCES}
+  )
+  set(powerpc64_SOURCES
+    ppc/init_ifuncs.c
     ${powerpc64_SOURCES}
   )
 endif()

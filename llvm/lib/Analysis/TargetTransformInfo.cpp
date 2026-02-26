@@ -339,6 +339,11 @@ KnownBits TargetTransformInfo::computeKnownBitsAddrSpaceCast(
   return TTIImpl->computeKnownBitsAddrSpaceCast(FromAS, ToAS, FromPtrBits);
 }
 
+APInt TargetTransformInfo::getAddrSpaceCastPreservedPtrMask(
+    unsigned SrcAS, unsigned DstAS) const {
+  return TTIImpl->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
+}
+
 bool TargetTransformInfo::canHaveNonUndefGlobalInitializerInAddressSpace(
     unsigned AS) const {
   return TTIImpl->canHaveNonUndefGlobalInitializerInAddressSpace(AS);
@@ -830,10 +835,6 @@ std::optional<unsigned> TargetTransformInfo::getMaxVScale() const {
 
 std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
-}
-
-bool TargetTransformInfo::isVScaleKnownToBeAPowerOfTwo() const {
-  return TTIImpl->isVScaleKnownToBeAPowerOfTwo();
 }
 
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
@@ -1369,6 +1370,10 @@ TargetTransformInfo::getInlineCallPenalty(const Function *F,
   return TTIImpl->getInlineCallPenalty(F, Call, DefaultCallPenalty);
 }
 
+bool TargetTransformInfo::shouldCopyAttributeWhenOutliningFrom(
+    const Function *Caller, const Attribute &Attr) const {
+  return TTIImpl->shouldCopyAttributeWhenOutliningFrom(Caller, Attr);
+}
 bool TargetTransformInfo::areTypesABICompatible(const Function *Caller,
                                                 const Function *Callee,
                                                 ArrayRef<Type *> Types) const {
@@ -1450,8 +1455,9 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
   return TTIImpl->preferPredicatedReductionSelect();
 }
 
-bool TargetTransformInfo::preferEpilogueVectorization() const {
-  return TTIImpl->preferEpilogueVectorization();
+bool TargetTransformInfo::preferEpilogueVectorization(
+    ElementCount Iters) const {
+  return TTIImpl->preferEpilogueVectorization(Iters);
 }
 
 bool TargetTransformInfo::shouldConsiderVectorizationRegPressure() const {

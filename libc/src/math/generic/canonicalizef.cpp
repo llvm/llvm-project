@@ -7,14 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/canonicalizef.h"
-#include "src/__support/FPUtil/BasicOperations.h"
-#include "src/__support/common.h"
-#include "src/__support/macros/config.h"
+#include "src/__support/math/canonicalizef.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(int, canonicalizef, (float *cx, const float *x)) {
-  return fputil::canonicalize(*cx, *x);
+  return math::canonicalizef(cx, x);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

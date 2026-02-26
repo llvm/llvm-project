@@ -540,43 +540,6 @@ void EhFrameSection::finalizeContents() {
   this->size = off;
 }
 
-static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
-  switch (size) {
-  case DW_EH_PE_udata2:
-    return read16(ctx, buf);
-  case DW_EH_PE_sdata2:
-    return (int16_t)read16(ctx, buf);
-  case DW_EH_PE_udata4:
-    return read32(ctx, buf);
-  case DW_EH_PE_sdata4:
-    return (int32_t)read32(ctx, buf);
-  case DW_EH_PE_udata8:
-  case DW_EH_PE_sdata8:
-    return read64(ctx, buf);
-  case DW_EH_PE_absptr:
-    return readUint(ctx, buf);
-  }
-  Err(ctx) << "unknown FDE size encoding";
-  return 0;
-}
-
-// Returns the VA to which a given FDE (on a mmap'ed buffer) is applied to.
-// We need it to create .eh_frame_hdr section.
-uint64_t EhFrameSection::getFdePc(uint8_t *buf, size_t fdeOff,
-                                  uint8_t enc) const {
-  // The starting address to which this FDE applies is
-  // stored at FDE + 8 byte. And this offset is within
-  // the .eh_frame section.
-  size_t off = fdeOff + 8;
-  uint64_t addr = readFdeAddr(ctx, buf + off, enc & 0xf);
-  if ((enc & 0x70) == DW_EH_PE_absptr)
-    return ctx.arg.is64 ? addr : uint32_t(addr);
-  if ((enc & 0x70) == DW_EH_PE_pcrel)
-    return addr + getParent()->addr + off + outSecOff;
-  Err(ctx) << "unknown FDE size relative encoding";
-  return 0;
-}
-
 void EhFrameSection::writeTo(uint8_t *buf) {
   // Write CIE and FDE records.
   for (CieRecord *rec : cieRecords) {
@@ -602,53 +565,31 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   if (!hdr || !hdr->getParent())
     return;
 
-  // Write the .eh_frame_hdr section, which contains a binary search table of
-  // pointers to FDEs. This must be written after .eh_frame relocation since
-  // the content depends on relocated initial_location fields in FDEs.
-  using FdeData = EhFrameSection::FdeData;
-  SmallVector<FdeData, 0> fdes;
-  uint64_t va = hdr->getVA();
-  for (CieRecord *rec : cieRecords) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    for (EhSectionPiece *fde : rec->fdes) {
-      uint64_t pc = getFdePc(buf, fde->outputOff, enc);
-      uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va)) {
-        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
-                 << Twine::utohexstr(pc - va);
-        continue;
-      }
-      fdes.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
-    }
-  }
+  // Write the .eh_frame_hdr section using cached FDE data from updateAllocSize.
+  bool large = hdr->large;
+  int64_t ehFramePtr = getParent()->addr - hdr->getVA() - 4;
+  auto writeField = [&](uint8_t *buf, uint64_t val) {
+    large ? write64(ctx, buf, val) : write32(ctx, buf, val);
+  };
 
-  // Sort the FDE list by their PC and uniqueify. Usually there is only
-  // one FDE for a PC (i.e. function), but if ICF merges two functions
-  // into one, there can be more than one FDEs pointing to the address.
-  llvm::stable_sort(fdes, [](const FdeData &a, const FdeData &b) {
-    return a.pcRel < b.pcRel;
-  });
-  fdes.erase(
-      llvm::unique(fdes, [](auto &a, auto &b) { return a.pcRel == b.pcRel; }),
-      fdes.end());
-
-  // Write header.
   uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
-  hdrBuf[0] = 1;                                  // version
-  hdrBuf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;   // eh_frame_ptr_enc
-  hdrBuf[2] = DW_EH_PE_udata4;                    // fde_count_enc
-  hdrBuf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4; // table_enc
-  write32(ctx, hdrBuf + 4,
-          getParent()->addr - hdr->getVA() - 4); // eh_frame_ptr
-  write32(ctx, hdrBuf + 8, fdes.size());         // fde_count
-  hdrBuf += 12;
-
-  // Write binary search table. Each entry describes the starting PC and the FDE
-  // address.
-  for (FdeData &fde : fdes) {
-    write32(ctx, hdrBuf, fde.pcRel);
-    write32(ctx, hdrBuf + 4, fde.fdeVARel);
-    hdrBuf += 8;
+  // version
+  hdrBuf[0] = 1;
+  // eh_frame_ptr_enc
+  hdrBuf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  // fde_count_enc
+  hdrBuf[2] = DW_EH_PE_udata4;
+  // table_enc
+  hdrBuf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  hdrBuf += 4;
+  writeField(hdrBuf, ehFramePtr);
+  hdrBuf += large ? 8 : 4;
+  write32(ctx, hdrBuf, hdr->fdes.size());
+  hdrBuf += 4;
+  for (const FdeData &fde : hdr->fdes) {
+    writeField(hdrBuf, fde.pcRel);
+    writeField(hdrBuf + (large ? 8 : 4), fde.fdeVARel);
+    hdrBuf += large ? 16 : 8;
   }
 }
 
@@ -659,13 +600,69 @@ void EhFrameHeader::writeTo(uint8_t *buf) {
   // The section content is written during EhFrameSection::writeTo.
 }
 
-size_t EhFrameHeader::getSize() const {
-  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
-}
-
 bool EhFrameHeader::isNeeded() const {
   return isLive() && getPartition(ctx).ehFrame->isNeeded();
+}
+
+void EhFrameHeader::finalizeContents() {
+  // Compute size: 4-byte header + eh_frame_ptr + fde_count + FDE table.
+  // Initially `large` is false; updateAllocSize may set it to true if addresses
+  // exceed the 32-bit range, then call finalizeContents again.
+  auto numFdes = getPartition(ctx).ehFrame->numFdes;
+  size = 4 + (large ? 8 : 4) + 4 + numFdes * (large ? 16 : 8);
+}
+
+bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
+  // This is called after `finalizeSynthetic`, so in the typical case without
+  // .relr.dyn, this function will not change the size and assignAddresses
+  // will not need another iteration.
+  EhFrameSection *ehFrame = getPartition(ctx).ehFrame.get();
+  uint64_t hdrVA = getVA();
+  int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
+  // Determine if 64-bit encodings are needed.
+  bool newLarge = !isInt<32>(ehFramePtr);
+
+  // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
+  // .eh_frame_hdr's VA.
+  fdes.clear();
+  for (CieRecord *rec : ehFrame->getCieRecords()) {
+    uint8_t enc = getFdeEncoding(rec->cie);
+    if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
+      Err(ctx) << "unknown FDE size encoding";
+      continue;
+    }
+    for (EhSectionPiece *fde : rec->fdes) {
+      // The FDE has passed `isFdeLive`, so the first relocation's symbol is a
+      // live Defined.
+      auto *isec = cast<EhInputSection>(fde->sec);
+      auto &reloc = isec->rels[fde->firstRelocation];
+      assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
+      int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
+      int64_t fdeVARel = ehFrame->getParent()->addr + fde->outputOff - hdrVA;
+      fdes.push_back({pcRel, fdeVARel});
+      newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
+    }
+  }
+
+  // Sort the FDE list by their PC and uniquify. Usually there is only one FDE
+  // at an address, but there can be more than one FDEs pointing to the address.
+  llvm::stable_sort(
+      fdes, [](const EhFrameSection::FdeData &a,
+               const EhFrameSection::FdeData &b) { return a.pcRel < b.pcRel; });
+  fdes.erase(llvm::unique(fdes,
+                          [](const EhFrameSection::FdeData &a,
+                             const EhFrameSection::FdeData &b) {
+                            return a.pcRel == b.pcRel;
+                          }),
+             fdes.end());
+  ehFrame->numFdes = fdes.size();
+
+  large = newLarge;
+
+  // Compute size.
+  size_t oldSize = size;
+  finalizeContents();
+  return size != oldSize;
 }
 
 GotSection::GotSection(Ctx &ctx)
