@@ -5283,9 +5283,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     auto *OrderC = dyn_cast<llvm::ConstantInt>(Order);
     auto *PolicyC = dyn_cast<llvm::ConstantInt>(Policy);
 
-    assert(OrderC && PolicyC &&
-           "order/policy must be constant for __arm_atomic_store_with_stshh");
-
     // Validate ordering argument; bail out if invalid
     switch (OrderC->getZExtValue()) {
     case 0: // __ATOMIC_RELAXED

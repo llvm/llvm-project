@@ -1042,8 +1042,8 @@ bool AArch64ExpandPseudo::expandSTSHHAtomicStore(
   // Emit the associated store instruction.
   Register ValReg = MI.getOperand(0).getReg();
   Register StoreValReg = ValReg;
-  bool UsesXReg = StoreOpc == AArch64::STRXui || StoreOpc == AArch64::STLRX;
-  if (!UsesXReg) {
+
+  if (Size < 64) {
     const TargetRegisterInfo *TRI =
         MBB.getParent()->getSubtarget().getRegisterInfo();
     Register SubReg = TRI->getSubReg(ValReg, AArch64::sub_32);
