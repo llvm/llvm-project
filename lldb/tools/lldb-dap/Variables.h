@@ -50,7 +50,7 @@ public:
   explicit VariableStore() = default;
   virtual ~VariableStore() = default;
 
-  virtual std::vector<protocol::Variable>
+  virtual llvm::Expected<std::vector<protocol::Variable>>
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) = 0;

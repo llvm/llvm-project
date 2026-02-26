@@ -9,6 +9,7 @@
 #include "Variables.h"
 #include "DAPLog.h"
 #include "JSONUtils.h"
+#include "LLDBUtils.h"
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
@@ -18,6 +19,7 @@
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-types.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -47,10 +49,10 @@ template <typename T> StringMap<uint32_t> distinct_names(T &container) {
 }
 
 template <typename T>
-std::vector<Variable> make_variables(VariableReferenceStorage &storage,
-                                     const Configuration &config,
-                                     const VariablesArguments &args,
-                                     T &container, bool is_permanent) {
+std::vector<Variable> make_variables(
+    VariableReferenceStorage &storage, const Configuration &config,
+    const VariablesArguments &args, T &container, bool is_permanent,
+    const std::map<lldb::user_id_t, std::string> &name_overrides = {}) {
   std::vector<Variable> variables;
 
   // We first find out which variable names are duplicated.
@@ -83,10 +85,16 @@ std::vector<Variable> make_variables(VariableReferenceStorage &storage,
     if (LLVM_UNLIKELY(var_ref.Kind() == eReferenceKindInvalid))
       break;
 
+    std::optional<std::string> custom_name;
+    auto name_it = name_overrides.find(variable.GetID());
+    if (name_it != name_overrides.end())
+      custom_name = name_it->second;
+
     variables.emplace_back(CreateVariable(
         variable, var_ref, format_hex, config.enableAutoVariableSummaries,
         config.enableSyntheticChildDebugging,
-        variable_name_counts[GetNonNullVariableName(variable)] > 1));
+        variable_name_counts[GetNonNullVariableName(variable)] > 1,
+        custom_name));
   }
 
   return variables;
@@ -99,35 +107,15 @@ public:
   explicit ScopeStore(ScopeKind kind, const lldb::SBFrame &frame)
       : m_frame(frame), m_kind(kind) {}
 
-  std::vector<Variable> GetVariables(VariableReferenceStorage &storage,
-                                     const Configuration &config,
-                                     const VariablesArguments &args) override {
+  Expected<std::vector<Variable>>
+  GetVariables(VariableReferenceStorage &storage, const Configuration &config,
+               const VariablesArguments &args) override {
     LoadVariables();
-    if (m_children.GetSize() == 0) {
-      // Check for an error in the SBValueList that might explain why we don't
-      // have locals. If we have an error display it as the sole value in the
-      // the locals.
-      // "error" owns the error string so we must keep it alive as long as we
-      // want to use the returns "const char *".
-      lldb::SBError error = m_children.GetError();
-      if (const char *var_err = error.GetCString()) {
-        // Create a fake variable named "<error>" to explain why variables were
-        // not available. This new error will help let users know when there
-        // was a problem that kept variables from being available for display
-        // and allow users to fix this issue instead of seeing no variables.
-        // The errors are only set when there is a problem that the user could
-        // fix, so no error will show up when you have no debug info, only
-        // when we do have debug info and something that is fixable can be
-        // done.
-        Variable err_var;
-        err_var.name = "<error>";
-        err_var.type = "const char *";
-        err_var.value = var_err;
-        return {err_var};
-      }
-    }
+    lldb::SBError error = m_children.GetError();
+    if (error.Fail())
+      return ToError(error);
     return make_variables(storage, config, args, m_children,
-                          /*is_permanent=*/false);
+                          /*is_permanent=*/false, m_names);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
@@ -140,7 +128,7 @@ public:
     const uint32_t end_idx = m_children.GetSize();
     // Searching backward so that we choose the variable in closest scope
     // among variables of the same name.
-    for (const uint32_t i : llvm::reverse(llvm::seq<uint32_t>(0, end_idx))) {
+    for (const uint32_t i : reverse(seq<uint32_t>(0, end_idx))) {
       lldb::SBValue curr_variable = m_children.GetValueAtIndex(i);
       std::string variable_name =
           CreateUniqueVariableNameForDisplay(curr_variable, is_name_duplicated);
@@ -160,21 +148,29 @@ private:
       return;
 
     m_variables_loaded = true;
+
+    // TODO: Support "arguments" and "return value" scope.
+    // At the moment lldb-dap includes the arguments and return_value  into the
+    // "locals" scope.
+    // VS Code only expands the first non-expensive scope. This causes friction
+    // if we add the arguments above the local scope, as the locals scope will
+    // not be expanded if we enter a function with arguments. It becomes more
+    // annoying when the scope has arguments, return_value and locals.
     switch (m_kind) {
-    case eScopeKindLocals:
+    case eScopeKindLocals: {
       m_children = m_frame.GetVariables(/*arguments=*/true,
                                         /*locals=*/true,
                                         /*statics=*/false,
                                         /*in_scope_only=*/true);
-      // Show return value if there is any ( in the local top frame )
-      if (m_frame.GetFrameID() == 0) {
-        lldb::SBValue stop_return_value =
-            m_frame.GetThread().GetStopReturnValue();
-        if (stop_return_value.IsValid())
-          m_children.Append(stop_return_value.Clone("(Return Value)"));
+      // Show return value if there is any (in the local top frame)
+      lldb::SBValue stop_return_value;
+      if (m_frame.GetFrameID() == 0 &&
+          ((stop_return_value = m_frame.GetThread().GetStopReturnValue()))) {
+        // FIXME: Cloning this value seems to change the type summary.
+        m_names[stop_return_value.GetID()] = "(Return Value)";
+        m_children.Append(stop_return_value);
       }
-
-      break;
+    } break;
     case eScopeKindGlobals:
       m_children = m_frame.GetVariables(/*arguments=*/false,
                                         /*locals=*/false,
@@ -202,6 +198,7 @@ private:
 
   lldb::SBFrame m_frame;
   lldb::SBValueList m_children;
+  std::map<lldb::user_id_t, std::string> m_names;
   ScopeKind m_kind;
   bool m_variables_loaded = false;
 };
@@ -215,10 +212,11 @@ class ExpandableValueStore final : public VariableStore {
 public:
   explicit ExpandableValueStore(const lldb::SBValue &value) : m_value(value) {}
 
-  std::vector<protocol::Variable>
+  llvm::Expected<std::vector<protocol::Variable>>
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
+    std::map<lldb::user_id_t, std::string> name_overrides;
     lldb::SBValueList list;
     for (auto inner : m_value)
       list.Append(inner);
@@ -226,12 +224,18 @@ public:
     // We insert a new "[raw]" child that can be used to inspect the raw version
     // of a synthetic member. That eliminates the need for the user to go to the
     // debug console and type `frame var <variable> to get these values.
-    if (config.enableSyntheticChildDebugging && m_value.IsSynthetic())
-      list.Append(m_value.GetSyntheticValue().Clone("[raw]"));
+    if (config.enableSyntheticChildDebugging && m_value.IsSynthetic()) {
+      lldb::SBValue synthetic_value = m_value.GetSyntheticValue();
+      name_overrides[synthetic_value.GetID()] = "[raw]";
+      // FIXME: Cloning the value seems to affect the type summary.
+      // m_value.GetSyntheticValue().Clone("[raw]");
+      list.Append(synthetic_value);
+    }
 
     const bool is_permanent =
         args.variablesReference.Kind() == eReferenceKindPermanent;
-    return make_variables(storage, config, args, list, is_permanent);
+    return make_variables(storage, config, args, list, is_permanent,
+                          name_overrides);
   }
 
   lldb::SBValue FindVariable(llvm::StringRef name) override {
@@ -264,7 +268,7 @@ public:
   explicit ExpandableValueListStore(const lldb::SBValueList &list)
       : m_value_list(list) {}
 
-  std::vector<protocol::Variable>
+  llvm::Expected<std::vector<protocol::Variable>>
   GetVariables(VariableReferenceStorage &storage,
                const protocol::Configuration &config,
                const protocol::VariablesArguments &args) override {
@@ -298,13 +302,6 @@ protocol::Scope CreateScope(ScopeKind kind, var_ref_t variablesReference,
   scope.variablesReference = variablesReference;
   scope.expensive = expensive;
 
-  // TODO: Support "arguments" and "return value" scope.
-  // At the moment lldb-dap includes the arguments and return_value  into the
-  // "locals" scope.
-  // VS Code only expands the first non-expensive scope. This causes friction
-  // if we add the arguments above the local scope, as the locals scope will not
-  // be expanded if we enter a function with arguments. It becomes more
-  // annoying when the scope has arguments, return_value and locals.
   switch (kind) {
   case eScopeKindLocals:
     scope.presentationHint = protocol::Scope::eScopePresentationHintLocals;
@@ -378,7 +375,7 @@ VariableStore *VariableReferenceStorage::GetVariableStore(var_ref_t var_ref) {
     return m_permanent_kind_pool.GetVariableStore(var_ref);
   case eReferenceKindTemporary:
     return m_temporary_kind_pool.GetVariableStore(var_ref);
-  default:
+  case eReferenceKindInvalid:
     return nullptr;
   }
   llvm_unreachable("Unknown reference kind.");
