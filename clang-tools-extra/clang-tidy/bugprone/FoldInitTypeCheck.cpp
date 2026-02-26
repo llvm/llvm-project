@@ -50,7 +50,7 @@ void FoldInitTypeCheck::registerMatchers(MatchFinder *Finder) {
       hasType(hasCanonicalType(IteratorWithValueType("Iter2ValueType"))));
   const auto InitParam = parmVarDecl(hasType(BuiltinTypeWithId("InitType")));
 
-  // Transparent standard functors that preserve arithmetic conversion semantics
+  // Transparent standard functors that preserve arithmetic conversion semantics.
   const auto TransparentFunctor = expr(hasType(
       hasCanonicalType(recordType(hasDeclaration(cxxRecordDecl(hasAnyName(
           "::std::plus", "::std::minus", "::std::multiplies", "::std::divides",
