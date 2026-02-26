@@ -5981,7 +5981,7 @@ unsigned AMDGPUTargetLowering::ComputeNumSignBitsForTargetNode(
     if (!Width)
       return 1;
 
-    unsigned SignBits = 32 - Width->getZExtValue() + 1;
+    unsigned SignBits = 32 - (Width->getZExtValue() & 0x1f) + 1;
     if (!isNullConstant(Op.getOperand(1)))
       return SignBits;
 
