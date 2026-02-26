@@ -769,10 +769,11 @@ void populateRewriteSubmodule(nb::module_ &m) {
              std::optional<PyConversionConfig> config) {
             if (!config)
               config.emplace(PyConversionConfig());
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirApplyPartialConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error("partial conversion failed");
+              throw MLIRError("partial conversion failed", errors.take());
           },
           "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
           "Applies a partial conversion on the given operation.")
@@ -783,10 +784,11 @@ void populateRewriteSubmodule(nb::module_ &m) {
              std::optional<PyConversionConfig> config) {
             if (!config)
               config.emplace(PyConversionConfig());
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirApplyFullConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error("full conversion failed");
+              throw MLIRError("full conversion failed", errors.take());
           },
           "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
           "Applies a full conversion on the given operation.");
