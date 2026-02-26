@@ -259,6 +259,7 @@ bool ClauseProcessor::processCollapse(
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
 
   int64_t numCollapse = collectLoopRelatedInfo(converter, currentLocation, eval,
+                                               getNestedDoConstruct(eval),
                                                clauses, loopResult, iv);
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   collapseResult.collapseNumLoops = firOpBuilder.getI64IntegerAttr(numCollapse);
@@ -394,16 +395,42 @@ bool ClauseProcessor::processInitializer(
 
       for (const Object &object :
            std::get<StylizedInstance::Variables>(inst.t)) {
-        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
-        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        mlir::Value addr;
+        mlir::Type ompOrigType = ompOrig.getType();
+        // Check for unsupported dynamic-length character reductions
+        mlir::Type unwrappedType = fir::unwrapRefType(ompOrigType);
+        if (mlir::isa<fir::BoxCharType>(unwrappedType)) {
+          TODO(loc, "OpenMP reduction allocation for dynamic length character");
+        }
+        if (auto charTy = mlir::dyn_cast<fir::CharacterType>(unwrappedType)) {
+          if (!charTy.hasConstantLen()) {
+            TODO(loc,
+                 "OpenMP reduction allocation for dynamic length character");
+          }
+        }
+        // If ompOrig is already a reference, we can use it directly
+        if (fir::isa_ref_type(ompOrigType)) {
+          addr = ompOrig;
+        } else {
+          addr = builder.createTemporary(loc, ompOrigType);
+          fir::StoreOp::create(builder, loc, ompOrig, addr);
+        }
         fir::FortranVariableFlagsEnum extraFlags = {};
         fir::FortranVariableFlagsAttr attributes =
             Fortran::lower::translateSymbolAttributes(
                 builder.getContext(), *object.sym(), extraFlags);
         std::string name = object.sym()->name().ToString();
-        auto declareOp =
-            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
-                                     nullptr, nullptr, 0, attributes);
+        // Get length parameters for types that need them (e.g., characters).
+        // Note: DeclareOp requires exactly one type parameter for non-boxed
+        // characters, unlike EmboxOp which doesn't allow them for constant-len.
+        llvm::SmallVector<mlir::Value> typeParams;
+        if (hlfir::isFortranEntity(addr)) {
+          hlfir::genLengthParameters(loc, builder, hlfir::Entity{addr},
+                                     typeParams);
+        }
+        auto declareOp = hlfir::DeclareOp::create(builder, loc, addr, name,
+                                                  nullptr, typeParams, nullptr,
+                                                  nullptr, 0, attributes);
         if (name == "omp_priv")
           ompPrivVar = declareOp.getResult(0);
         symMap.addVariableDefinition(*object.sym(), declareOp);
@@ -486,6 +513,21 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
     for (const ExprTy &vv : clause->v)
       result.sizes.push_back(fir::getBase(converter.genExprValue(vv, stmtCtx)));
 
+    return true;
+  }
+
+  return false;
+}
+
+bool ClauseProcessor::processLooprange(StatementContext &stmtCtx,
+                                       mlir::omp::LooprangeClauseOps &result,
+                                       int64_t &count) const {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  if (auto *clause = findUniqueClause<omp::clause::Looprange>()) {
+    int64_t first = evaluate::ToInt64(std::get<0>(clause->t)).value();
+    count = evaluate::ToInt64(std::get<1>(clause->t)).value();
+    result.first = firOpBuilder.getI64IntegerAttr(first);
+    result.count = firOpBuilder.getI64IntegerAttr(count);
     return true;
   }
 
@@ -676,6 +718,11 @@ bool ClauseProcessor::processSimdlen(
   return false;
 }
 
+bool ClauseProcessor::processSimd(
+    mlir::omp::OrderedRegionOperands &result) const {
+  return markClauseOccurrence<omp::clause::Simd>(result.parLevelSimd);
+}
+
 bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
@@ -708,6 +755,23 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
     }
   }
   return featuresMap;
+}
+
+bool ClauseProcessor::processAffinity(
+    mlir::omp::AffinityClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Affinity>(
+      [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
+        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+          TODO(converter.getCurrentLocation(),
+               "Support for iterator modifiers is not implemented yet");
+        }
+
+        const auto &objects = std::get<omp::ObjectList>(clause.t);
+        if (!objects.empty())
+          genObjectList(objects, converter, result.affinityVars);
+
+        return true;
+      });
 }
 
 static void
@@ -1254,10 +1318,7 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
       result.linearVars.push_back(variable);
       mlir::Type ty = converter.genType(*sym);
       typeAttrs.push_back(mlir::TypeAttr::get(ty));
-    }
-    result.linearVarTypes =
-        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
-    if (objects.size()) {
+
       if (auto &mod =
               std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
                   clause.t)) {
@@ -1272,11 +1333,14 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
         // If nothing is present, add the default step of 1.
         fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
         mlir::Location currentLocation = converter.getCurrentLocation();
-        mlir::Value operand = firOpBuilder.createIntegerConstant(
-            currentLocation, firOpBuilder.getI32Type(), 1);
+        mlir::Type integerTy = ty.isInteger() ? ty : firOpBuilder.getI32Type();
+        mlir::Value operand =
+            firOpBuilder.createIntegerConstant(currentLocation, integerTy, 1);
         result.linearStepVars.append(objects.size(), operand);
       }
     }
+    result.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
   });
 }
 

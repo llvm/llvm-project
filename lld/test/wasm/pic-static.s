@@ -102,32 +102,48 @@ ret32_ptr:
 # CHECK-NEXT:           Opcode:          I32_CONST
 # CHECK-NEXT:           Value:           65536
 
-# GOT.func.ret32
+# __memory_base
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT: Value: 1
-
-# GOT.func.missing_function
-# CHECK-NEXT:       - Index:           2
-# CHECK-NEXT:         Type:            I32
-# CHECK-NEXT:         Mutable:         false
-# CHECK-NEXT:         InitExpr:
-# CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           2
+# CHECK-NEXT:           Value:           0
 
 # __table_base
-# CHECK-NEXT:       - Index:           3
+# CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
 # CHECK-NEXT:           Value:           1
 
-# GOT.mem.missing_float
+# __tls_base
+# CHECK-NEXT:       - Index:           3
+# CHECK-NEXT:         Type:            I32
+# CHECK-NEXT:         Mutable:         false
+# CHECK-NEXT:         InitExpr:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value:           0
+
+# GOT.func.internal.ret32
 # CHECK-NEXT:       - Index:           4
+# CHECK-NEXT:         Type:            I32
+# CHECK-NEXT:         Mutable:         false
+# CHECK-NEXT:         InitExpr:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value: 1
+
+# GOT.func.missing_function
+# CHECK-NEXT:       - Index:           5
+# CHECK-NEXT:         Type:            I32
+# CHECK-NEXT:         Mutable:         false
+# CHECK-NEXT:         InitExpr:
+# CHECK-NEXT:           Opcode:          I32_CONST
+# CHECK-NEXT:           Value:           2
+
+# GOT.mem.missing_float
+# CHECK-NEXT:       - Index:           6
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
@@ -135,7 +151,7 @@ ret32_ptr:
 # CHECK-NEXT:           Value:           0
 
 # GOT.mem.global_float
-# CHECK-NEXT:       - Index:           5
+# CHECK-NEXT:       - Index:           7
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
@@ -143,17 +159,30 @@ ret32_ptr:
 # CHECK-NEXT:           Value:           65536
 
 # GOT.mem.ret32_ptr
-# CHECK-NEXT:       - Index:           6
+# CHECK-NEXT:       - Index:           8
 # CHECK-NEXT:         Type:            I32
 # CHECK-NEXT:         Mutable:         false
 # CHECK-NEXT:         InitExpr:
 # CHECK-NEXT:           Opcode:          I32_CONST
 # CHECK-NEXT:           Value:           65544
 
-# __memory_base
+# CHECK:          GlobalNames:
+# CHECK-NEXT:       - Index:           0
+# CHECK-NEXT:         Name:            __stack_pointer
+# CHECK-NEXT:       - Index:           1
+# CHECK-NEXT:         Name:            __memory_base
+# CHECK-NEXT:       - Index:           2
+# CHECK-NEXT:         Name:            __table_base
+# CHECK-NEXT:       - Index:           3
+# CHECK-NEXT:         Name:            __tls_base
+# CHECK-NEXT:       - Index:           4
+# CHECK-NEXT:         Name:            GOT.func.internal.ret32
+# CHECK-NEXT:       - Index:           5
+# CHECK-NEXT:         Name:            GOT.func.internal.missing_function
+# CHECK-NEXT:       - Index:           6
+# CHECK-NEXT:         Name:            GOT.data.internal.missing_float
 # CHECK-NEXT:       - Index:           7
-# CHECK-NEXT:         Type:            I32
-# CHECK-NEXT:         Mutable:         false
-# CHECK-NEXT:         InitExpr:
-# CHECK-NEXT:           Opcode:          I32_CONST
-# CHECK-NEXT:           Value:           0
+# CHECK-NEXT:         Name:            GOT.data.internal.global_float
+# CHECK-NEXT:       - Index:           8
+# CHECK-NEXT:         Name:            GOT.data.internal.ret32_ptr
+# CHECK-NEXT:     DataSegmentNames:

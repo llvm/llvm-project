@@ -29,7 +29,6 @@
 #include "lldb/Target/ScriptedThreadPlan.h"
 #include "lldb/Target/StackFrameRecognizer.h"
 #include "lldb/Target/StopInfo.h"
-#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/SystemRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlan.h"
@@ -56,6 +55,8 @@
 #include "lldb/ValueObject/ValueObject.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/lldb-enumerations.h"
+
+#include "llvm/Support/MathExtras.h"
 
 #include <memory>
 #include <optional>
@@ -106,7 +107,7 @@ public:
 ThreadProperties::ThreadProperties(bool is_global) : Properties() {
   if (is_global) {
     m_collection_sp = std::make_shared<ThreadOptionValueProperties>("thread");
-    m_collection_sp->Initialize(g_thread_properties);
+    m_collection_sp->Initialize(g_thread_properties_def);
   } else
     m_collection_sp =
         OptionValueProperties::CreateLocalCopy(Thread::GetGlobalProperties());
@@ -262,7 +263,10 @@ void Thread::DestroyThread() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
+  m_unwinder_frames_sp.reset();
   m_frame_providers.clear();
+  m_provider_chain_ids.clear();
+  m_frame_lists_by_id.clear();
   m_prev_framezero_pc.reset();
 }
 
@@ -1465,16 +1469,15 @@ StackFrameListSP Thread::GetStackFrameList() {
       const auto &descriptors = target.GetScriptedFrameProviderDescriptors();
 
       // Collect all descriptors that apply to this thread.
-      std::vector<const ScriptedFrameProviderDescriptor *>
-          applicable_descriptors;
+      std::vector<const ScriptedFrameProviderDescriptor *> thread_descriptors;
       for (const auto &entry : descriptors) {
         const ScriptedFrameProviderDescriptor &descriptor = entry.second;
         if (descriptor.IsValid() && descriptor.AppliesToThread(*this))
-          applicable_descriptors.push_back(&descriptor);
+          thread_descriptors.push_back(&descriptor);
       }
 
       // Sort by priority (lower number = higher priority).
-      llvm::sort(applicable_descriptors,
+      llvm::sort(thread_descriptors,
                  [](const ScriptedFrameProviderDescriptor *a,
                     const ScriptedFrameProviderDescriptor *b) {
                    // nullopt (no priority) sorts last (UINT32_MAX).
@@ -1484,7 +1487,7 @@ StackFrameListSP Thread::GetStackFrameList() {
                  });
 
       // Load ALL matching providers in priority order.
-      for (const auto *descriptor : applicable_descriptors) {
+      for (const auto *descriptor : thread_descriptors) {
         if (llvm::Error error = LoadScriptedFrameProvider(*descriptor)) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), std::move(error),
                          "Failed to load scripted frame provider: {0}");
@@ -1495,58 +1498,123 @@ StackFrameListSP Thread::GetStackFrameList() {
   }
 
   // Create the frame list based on whether we have providers.
-  if (!m_frame_providers.empty()) {
+  if (!m_provider_chain_ids.empty()) {
     // We have providers - use the last one in the chain.
     // The last provider has already been chained with all previous providers.
-    StackFrameListSP input_frames = m_frame_providers.back()->GetInputFrames();
-    m_curr_frames_sp = std::make_shared<SyntheticStackFrameList>(
-        *this, input_frames, m_prev_frames_sp, true, m_frame_providers.back());
+    auto [last_desc, last_id] = m_provider_chain_ids.back();
+    auto it = m_frame_providers.find(last_id);
+    if (it != m_frame_providers.end()) {
+      SyntheticFrameProviderSP last_provider = it->second;
+      StackFrameListSP input_frames = last_provider->GetInputFrames();
+      m_curr_frames_sp = std::make_shared<SyntheticStackFrameList>(
+          *this, input_frames, m_prev_frames_sp, true, last_provider, last_id);
+    } else {
+      LLDB_LOG(GetLog(LLDBLog::Thread),
+               "Missing frame provider (id = {0}) in Thread #{1:x}}", last_id,
+               GetID());
+    }
+  }
+
+  if (!m_curr_frames_sp) {
+    // No provider - use normal unwinder frames with stable ID = 0.
+    m_unwinder_frames_sp = std::make_shared<StackFrameList>(
+        *this, m_prev_frames_sp, true, /*provider_id=*/0);
+    m_curr_frames_sp = m_unwinder_frames_sp;
   } else {
-    // No provider - use normal unwinder frames.
-    m_curr_frames_sp =
-        std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
+    // Register this frame list by its identifier for later lookup.
+    m_frame_lists_by_id.insert(
+        {m_curr_frames_sp->GetIdentifier(), m_curr_frames_sp});
   }
 
   return m_curr_frames_sp;
+}
+
+lldb::StackFrameListSP
+Thread::GetFrameListByIdentifier(lldb::frame_list_id_t id) {
+  std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
+
+  // ID 0 is reserved for the unwinder frame list. Always return the unwinder
+  // frame list for ID 0.
+  if (id == 0) {
+    return m_unwinder_frames_sp;
+  }
+
+  auto it = m_frame_lists_by_id.find(id);
+  if (it != m_frame_lists_by_id.end()) {
+    return it->second.lock();
+  }
+  return nullptr;
 }
 
 llvm::Error Thread::LoadScriptedFrameProvider(
     const ScriptedFrameProviderDescriptor &descriptor) {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
 
-  // Create input frames for this provider:
-  // - If no providers exist yet, use real unwinder frames.
-  // - If providers exist, wrap the previous provider in a
-  // SyntheticStackFrameList.
-  //   This creates the chain: each provider's OUTPUT becomes the next
-  //   provider's INPUT.
-  StackFrameListSP new_provider_input_frames;
+  StackFrameListSP input_frames;
   if (m_frame_providers.empty()) {
-    // First provider gets real unwinder frames.
-    new_provider_input_frames =
-        std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true);
+    // First provider gets real unwinder frames with stable ID = 0.
+    m_unwinder_frames_sp =
+        std::make_shared<StackFrameList>(*this, m_prev_frames_sp, true,
+                                         /*provider_id=*/0);
+    input_frames = m_unwinder_frames_sp;
   } else {
-    // Subsequent providers get the previous provider's OUTPUT.
-    // We create a SyntheticStackFrameList that wraps the previous provider.
-    SyntheticFrameProviderSP prev_provider = m_frame_providers.back();
-    StackFrameListSP prev_provider_frames = prev_provider->GetInputFrames();
-    new_provider_input_frames = std::make_shared<SyntheticStackFrameList>(
-        *this, prev_provider_frames, m_prev_frames_sp, true, prev_provider);
+    // Subsequent providers wrap the previous provider.
+    auto [last_desc, last_id] = m_provider_chain_ids.back();
+    auto it = m_frame_providers.find(last_id);
+    if (it == m_frame_providers.end())
+      return llvm::createStringError("Previous frame provider not found");
+    SyntheticFrameProviderSP last_provider = it->second;
+    StackFrameListSP last_provider_frames = last_provider->GetInputFrames();
+    input_frames = std::make_shared<SyntheticStackFrameList>(
+        *this, last_provider_frames, m_prev_frames_sp, true, last_provider,
+        last_id);
   }
 
-  auto provider_or_err = SyntheticFrameProvider::CreateInstance(
-      new_provider_input_frames, descriptor);
+  auto provider_or_err =
+      SyntheticFrameProvider::CreateInstance(input_frames, descriptor);
   if (!provider_or_err)
     return provider_or_err.takeError();
 
-  // Append to the chain.
-  m_frame_providers.push_back(*provider_or_err);
+  if (m_next_provider_id == std::numeric_limits<lldb::frame_list_id_t>::max())
+    m_next_provider_id = 1;
+  else
+    m_next_provider_id++;
+
+  lldb::frame_list_id_t provider_id = m_next_provider_id;
+  m_frame_providers.insert({provider_id, *provider_or_err});
+
+  // Add to the provider chain.
+  m_provider_chain_ids.push_back({descriptor, provider_id});
+
   return llvm::Error::success();
+}
+
+llvm::Expected<ScriptedFrameProviderDescriptor>
+Thread::GetScriptedFrameProviderDescriptorForID(
+    lldb::frame_list_id_t id) const {
+  if (id == LLDB_UNWINDER_FRAME_LIST_ID)
+    return ScriptedFrameProviderDescriptor();
+
+  auto it = llvm::find_if(
+      m_provider_chain_ids,
+      [id](const std::pair<ScriptedFrameProviderDescriptor,
+                           lldb::frame_list_id_t> &provider_id_pair) {
+        return provider_id_pair.second == id;
+      });
+
+  if (it == m_provider_chain_ids.end())
+    return llvm::createStringError(
+        "Couldn't find ScriptedFrameProviderDescriptor for id = %u.", id);
+
+  return it->first;
 }
 
 void Thread::ClearScriptedFrameProvider() {
   std::lock_guard<std::recursive_mutex> guard(m_frame_mutex);
   m_frame_providers.clear();
+  m_provider_chain_ids.clear();
+  m_next_provider_id = 1; // Reset counter.
+  m_unwinder_frames_sp.reset();
   m_curr_frames_sp.reset();
   m_prev_frames_sp.reset();
 }
@@ -1570,8 +1638,13 @@ void Thread::ClearStackFrames() {
   if (m_curr_frames_sp && m_curr_frames_sp->WereAllFramesFetched())
     m_prev_frames_sp.swap(m_curr_frames_sp);
   m_curr_frames_sp.reset();
+  m_unwinder_frames_sp.reset();
 
+  // Clear the provider instances, but keep the chain configuration
+  // (m_provider_chain_ids and m_next_provider_id) so provider IDs
+  // remain stable across ClearStackFrames() calls.
   m_frame_providers.clear();
+  m_frame_lists_by_id.clear();
   m_extended_info.reset();
   m_extended_info_fetched = false;
 }
@@ -1888,9 +1961,9 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
                          uint32_t num_frames, uint32_t num_frames_with_source,
                          bool stop_format, bool show_hidden, bool only_stacks) {
 
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
   if (!only_stacks) {
-    ExecutionContext exe_ctx(shared_from_this());
-    Target *target = exe_ctx.GetTargetPtr();
     Process *process = exe_ctx.GetProcessPtr();
     strm.Indent();
     bool is_selected = false;
@@ -1924,16 +1997,19 @@ size_t Thread::GetStatus(Stream &strm, uint32_t start_frame,
 
     const bool show_frame_info = true;
     const bool show_frame_unique = only_stacks;
-    const char *selected_frame_marker = nullptr;
+    bool show_selected_frame = false;
     if (num_frames == 1 || only_stacks ||
         (GetID() != GetProcess()->GetThreadList().GetSelectedThread()->GetID()))
       strm.IndentMore();
     else
-      selected_frame_marker = "* ";
+      show_selected_frame = true;
 
+    bool show_hidden_marker =
+        target && target->GetDebugger().GetMarkHiddenFrames();
     num_frames_shown = GetStackFrameList()->GetStatus(
         strm, start_frame, num_frames, show_frame_info, num_frames_with_source,
-        show_frame_unique, show_hidden, selected_frame_marker);
+        show_frame_unique, show_hidden, show_hidden_marker,
+        show_selected_frame);
     if (num_frames == 1)
       strm.IndentLess();
     strm.IndentLess();
@@ -2033,9 +2109,13 @@ size_t Thread::GetStackFrameStatus(Stream &strm, uint32_t first_frame,
                                    uint32_t num_frames, bool show_frame_info,
                                    uint32_t num_frames_with_source,
                                    bool show_hidden) {
-  return GetStackFrameList()->GetStatus(strm, first_frame, num_frames,
-                                        show_frame_info, num_frames_with_source,
-                                        /*show_unique*/ false, show_hidden);
+  ExecutionContext exe_ctx(shared_from_this());
+  Target *target = exe_ctx.GetTargetPtr();
+  bool show_hidden_marker =
+      target && target->GetDebugger().GetMarkHiddenFrames();
+  return GetStackFrameList()->GetStatus(
+      strm, first_frame, num_frames, show_frame_info, num_frames_with_source,
+      /*show_unique*/ false, show_hidden, show_hidden_marker);
 }
 
 Unwind &Thread::GetUnwinder() {

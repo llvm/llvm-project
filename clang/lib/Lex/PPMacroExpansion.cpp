@@ -1287,11 +1287,8 @@ EmbedResult Preprocessor::EvaluateHasEmbed(Token &Tok, IdentifierInfo *II) {
       this->GetIncludeFilenameSpelling(FilenameTok.getLocation(), Filename);
   // If GetIncludeFilenameSpelling set the start ptr to null, there was an
   // error.
-  const FileEntry *LookupFromFile =
-      this->getCurrentFileLexer() ? *this->getCurrentFileLexer()->getFileEntry()
-                                  : static_cast<FileEntry *>(nullptr);
   OptionalFileEntryRef MaybeFileEntry =
-      this->LookupEmbedFile(Filename, isAngled, false, LookupFromFile);
+      this->LookupEmbedFile(Filename, isAngled, false);
   if (Callbacks) {
     Callbacks->HasEmbed(LParenLoc, Filename, isAngled, MaybeFileEntry);
   }
