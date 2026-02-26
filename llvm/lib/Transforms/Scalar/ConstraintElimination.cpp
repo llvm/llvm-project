@@ -1149,7 +1149,7 @@ void State::addPointerBoundInfo(Value *PtrOp, Value *IdxOp, DomTreeNode *DTN,
 // AnnotationRemarks pass.
 static void annotateMissedPhiOptimisation(Instruction *PtrPHI, int64_t PHIStep,
                                           int64_t IntPHIStep) {
-  if (abs(PHIStep) == abs(IntPHIStep)) {
+  if (std::abs(PHIStep) == std::abs(IntPHIStep)) {
     annotateRuntimeChecks(
         PtrPHI, BoundsSafetyOptRemarkKind::BNS_MISSED_REMARK_PHI_DIRECTION);
   } else if (PHIStep != IntPHIStep)
