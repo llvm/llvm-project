@@ -1598,6 +1598,7 @@ def Arith_IndexCastOp
     ```mlir
       %0 = arith.index_cast %a : index to i64
       %1 = arith.index_cast %a exact : index to i64
+      %2 = arith.index_cast %b exact : i32 to index
     ```
   }];
 
