@@ -24,3 +24,50 @@ __uint256_t load_atomic_unsigned(void) {
 void store_atomic_unsigned(__uint256_t val) {
   __c11_atomic_store(&atomic_u256, val, __ATOMIC_SEQ_CST);
 }
+
+// Atomic exchange
+__int256_t exchange_atomic(__int256_t val) {
+  return __c11_atomic_exchange(&atomic_s256, val, __ATOMIC_SEQ_CST);
+}
+
+__uint256_t exchange_atomic_unsigned(__uint256_t val) {
+  return __c11_atomic_exchange(&atomic_u256, val, __ATOMIC_RELAXED);
+}
+
+// Atomic compare-exchange (strong and weak)
+_Bool cas_strong(__int256_t *expected, __int256_t desired) {
+  return __c11_atomic_compare_exchange_strong(
+      &atomic_s256, expected, desired, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+}
+
+_Bool cas_weak(__int256_t *expected, __int256_t desired) {
+  return __c11_atomic_compare_exchange_weak(
+      &atomic_s256, expected, desired, __ATOMIC_RELEASE, __ATOMIC_RELAXED);
+}
+
+_Bool cas_strong_unsigned(__uint256_t *expected, __uint256_t desired) {
+  return __c11_atomic_compare_exchange_strong(
+      &atomic_u256, expected, desired, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
+_Bool cas_weak_unsigned(__uint256_t *expected, __uint256_t desired) {
+  return __c11_atomic_compare_exchange_weak(
+      &atomic_u256, expected, desired, __ATOMIC_ACQ_REL, __ATOMIC_ACQUIRE);
+}
+
+// Different memory orderings for load/store
+__int256_t load_relaxed(void) {
+  return __c11_atomic_load(&atomic_s256, __ATOMIC_RELAXED);
+}
+
+__int256_t load_acquire(void) {
+  return __c11_atomic_load(&atomic_s256, __ATOMIC_ACQUIRE);
+}
+
+void store_relaxed(__int256_t val) {
+  __c11_atomic_store(&atomic_s256, val, __ATOMIC_RELAXED);
+}
+
+void store_release(__int256_t val) {
+  __c11_atomic_store(&atomic_s256, val, __ATOMIC_RELEASE);
+}

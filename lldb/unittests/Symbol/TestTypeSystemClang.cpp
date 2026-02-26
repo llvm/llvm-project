@@ -89,6 +89,8 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
       context.hasSameType(GetBasicQualType(eBasicTypeInt), context.IntTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeInt128),
                                   context.Int128Ty));
+  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeInt256),
+                                  context.Int256Ty));
   EXPECT_TRUE(
       context.hasSameType(GetBasicQualType(eBasicTypeLong), context.LongTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeLongDouble),
@@ -116,6 +118,8 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromEnum) {
                                   context.UnsignedIntTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeUnsignedInt128),
                                   context.UnsignedInt128Ty));
+  EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeUnsignedInt256),
+                                  context.UnsignedInt256Ty));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeUnsignedLong),
                                   context.UnsignedLongTy));
   EXPECT_TRUE(context.hasSameType(GetBasicQualType(eBasicTypeUnsignedLongLong),
@@ -171,6 +175,12 @@ TEST_F(TestTypeSystemClang, TestGetBasicTypeFromName) {
   EXPECT_EQ(GetBasicQualType(eBasicTypeInt128), GetBasicQualType("__int128"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt128),
             GetBasicQualType("unsigned __int128"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeInt256), GetBasicQualType("__int256_t"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt256),
+            GetBasicQualType("__uint256_t"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeInt256), GetBasicQualType("__int256"));
+  EXPECT_EQ(GetBasicQualType(eBasicTypeUnsignedInt256),
+            GetBasicQualType("unsigned __int256"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeVoid), GetBasicQualType("void"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeBool), GetBasicQualType("bool"));
   EXPECT_EQ(GetBasicQualType(eBasicTypeFloat), GetBasicQualType("float"));

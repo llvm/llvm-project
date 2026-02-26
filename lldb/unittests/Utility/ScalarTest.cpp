@@ -112,6 +112,15 @@ TEST(ScalarTest, Getters) {
             Scalar(-std::pow(2.0, 70.0)).SInt128(APInt()));
   EXPECT_EQ(APInt(128, 1) << 70, Scalar(std::pow(2.0, 70.0)).UInt128(APInt()));
   EXPECT_EQ(APInt(128, 0), Scalar(-std::pow(2.0, 70.0)).UInt128(APInt()));
+
+  // Int256: use double (not float) since 2^200 exceeds float range (~3.4e38)
+  EXPECT_EQ(APInt(256, 1) << 200,
+            Scalar(std::pow(2.0, 200.0)).SInt256(APInt()));
+  EXPECT_EQ(APInt(256, -1, true) << 200,
+            Scalar(-std::pow(2.0, 200.0)).SInt256(APInt()));
+  EXPECT_EQ(APInt(256, 1) << 200,
+            Scalar(std::pow(2.0, 200.0)).UInt256(APInt()));
+  EXPECT_EQ(APInt(256, 0), Scalar(-std::pow(2.0, 200.0)).UInt256(APInt()));
 }
 
 TEST(ScalarTest, RightShiftOperator) {
