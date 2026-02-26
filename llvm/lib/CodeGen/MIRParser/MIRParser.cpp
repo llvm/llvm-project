@@ -326,7 +326,7 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
 Function *MIRParserImpl::getNextUnusedUnnamedFunction(Module &M) {
   for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
     if (!FirstUnvisitedFunction->hasName()) {
-      auto *F = static_cast<Function *>(&*FirstUnvisitedFunction);
+      auto *F = &*FirstUnvisitedFunction;
       ++FirstUnvisitedFunction;
       return F;
     }
