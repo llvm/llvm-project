@@ -371,6 +371,7 @@ add_fp_unittest(
     .exhaustive_test
     libc.src.math.hypotbf16
     libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.bfloat16
   LINK_LIBRARIES
     -lpthread
 )
