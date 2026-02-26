@@ -22,6 +22,7 @@
 #include "math/asinf16.h"
 #include "math/asinhf.h"
 #include "math/asinhf16.h"
+#include "math/asinpif.h"
 #include "math/asinpif16.h"
 #include "math/atan.h"
 #include "math/atan2.h"
@@ -220,5 +221,6 @@
 #include "math/tanhf.h"
 #include "math/tanhf16.h"
 #include "math/tanpif.h"
+#include "math/tanpif16.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H
