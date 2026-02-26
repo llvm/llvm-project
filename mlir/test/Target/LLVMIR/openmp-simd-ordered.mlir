@@ -1,5 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
-// XFAIL: *
+
 // Test that linear variables in SIMD loops with ordered regions
 // are correctly rewritten to use .linear_result in:
 // 1. The ordered region (omp.ordered.region)
