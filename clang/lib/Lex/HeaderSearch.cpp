@@ -1913,7 +1913,8 @@ bool HeaderSearch::findUsableModuleForHeader(
     // If we don't have a module yet, try to find/load module maps
     if (!Module) {
       hasModuleMap(File.getNameAsRequested(), Root, IsSystemHeaderDir);
-      // Try again after loading module maps
+      // Try again after loading module maps, this time bypassing loading module
+      // map data from PCMs.
       Module = ModMap.findModuleForHeader(File, /*AllowTextual=*/true);
     }
 
@@ -2068,7 +2069,7 @@ HeaderSearch::parseModuleMapFileImpl(FileEntryRef File, bool IsSystem,
 
   // Try to parse a corresponding private module map.
   if (OptionalFileEntryRef PMMFile =
-          getPrivateModuleMap(File, FileMgr, Diags, false)) {
+          getPrivateModuleMap(File, FileMgr, Diags, /*Diagnose=*/false)) {
     if (ModMap.parseModuleMapFile(*PMMFile, IsSystem, Dir)) {
       ParsedModuleMaps[File] = false;
       return MMR_InvalidModuleMap;
