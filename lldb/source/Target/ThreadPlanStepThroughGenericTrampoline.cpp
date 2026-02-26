@@ -99,6 +99,8 @@ bool ThreadPlanStepThroughGenericTrampoline::ShouldStop(Event *event_ptr) {
               s.GetData());
   }
 
+  ClearNextBranchBreakpointExplainedStop();
+
   if (IsPlanComplete())
     return true;
 

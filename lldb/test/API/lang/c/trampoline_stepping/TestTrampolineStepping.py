@@ -101,4 +101,4 @@ class TestTrampoline(TestBase):
         thread.StepInto()
         name = thread.frames[0].GetFunctionName()
         self.assertIn('unused_target', name)
-        
+
