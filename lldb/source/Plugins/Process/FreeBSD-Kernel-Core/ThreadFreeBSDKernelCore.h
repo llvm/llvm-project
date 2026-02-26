@@ -38,9 +38,9 @@ public:
   lldb::RegisterContextSP
   CreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
-  void SetIsCrashedThread(bool is_crashed) { m_is_crashed = is_crashed; }
-
   bool CalculateStopInfo() override;
+
+  void SetIsCrashedThread(bool is_crashed) { m_is_crashed = is_crashed; }
 
 private:
   std::string m_thread_name;

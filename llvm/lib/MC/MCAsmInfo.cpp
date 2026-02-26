@@ -42,23 +42,6 @@ cl::opt<cl::boolOrDefault> UseLEB128Directives(
 }
 
 MCAsmInfo::MCAsmInfo() {
-  SeparatorString = ";";
-  CommentString = "#";
-  LabelSuffix = ":";
-  PrivateGlobalPrefix = "L";
-  PrivateLabelPrefix = PrivateGlobalPrefix;
-  LinkerPrivateGlobalPrefix = "";
-  InlineAsmStart = "APP";
-  InlineAsmEnd = "NO_APP";
-  ZeroDirective = "\t.zero\t";
-  AsciiDirective = "\t.ascii\t";
-  AscizDirective = "\t.asciz\t";
-  Data8bitsDirective = "\t.byte\t";
-  Data16bitsDirective = "\t.short\t";
-  Data32bitsDirective = "\t.long\t";
-  Data64bitsDirective = "\t.quad\t";
-  GlobalDirective = "\t.globl\t";
-  WeakDirective = "\t.weak\t";
   if (DwarfExtendedLoc != Default)
     SupportsExtendedDwarfLocDirective = DwarfExtendedLoc == Enable;
   if (UseLEB128Directives != cl::BOU_UNSET)

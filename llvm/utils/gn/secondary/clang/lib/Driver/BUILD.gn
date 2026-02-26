@@ -35,6 +35,7 @@ static_library("Driver") {
     "Distro.cpp",
     "Driver.cpp",
     "Job.cpp",
+    "ModulesDriver.cpp",
     "Multilib.cpp",
     "MultilibBuilder.cpp",
     "OffloadBundler.cpp",

@@ -17,7 +17,7 @@ class TestCase(TestBase):
             substrs=["`po` was unsuccessful, running `p` instead\n", "(Bad *) 0x"],
         )
         self.filecheck(
-            f"platform shell -h -- cat {log}", __file__, f"-check-prefix=CHECK-EXPR"
+            f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-EXPR"
         )
         # CHECK-EXPR: Object description fallback due to error: could not evaluate print object function: expression interrupted
 
@@ -26,8 +26,6 @@ class TestCase(TestBase):
             substrs=["`po` was unsuccessful, running `p` instead\n", "_lookHere = NO"],
         )
         self.filecheck(
-            f"platform shell -h -- cat {log}",
-            __file__,
-            f"-check-prefix=CHECK-DWIM-PRINT",
+            f"platform shell cat {log}", __file__, f"-check-prefix=CHECK-DWIM-PRINT"
         )
         # CHECK-DWIM-PRINT: Object description fallback due to error: could not evaluate print object function: expression interrupted
