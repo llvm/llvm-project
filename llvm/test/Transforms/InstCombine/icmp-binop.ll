@@ -499,3 +499,146 @@ entry:
   %cmp = icmp eq <2 x i16> %and, zeroinitializer
   ret <2 x i1> %cmp
 }
+
+; verify icmp(binop(bool_map, bool_map), constant) coverage
+
+
+define i1 @icmp_ne_add_sext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_ne_add_sext_select(
+; CHECK-NEXT:    ret i1 true
+;
+  %s2 = sext i1 %a to i8
+  %s1 = select i1 %b, i8 5, i8 10
+  %add = add i8 %s1, %s2
+  %cmp = icmp ne i8 %add, 1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_ult_sub_sext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_ult_sub_sext_select(
+; CHECK-NEXT:    ret i1 false
+;
+  %s2 = sext i1 %a to i8
+  %s1 = select i1 %b, i8 5, i8 10
+  %sub = sub i8 %s1, %s2
+  %cmp = icmp ult i8 %sub, 3
+  ret i1 %cmp
+}
+
+define i1 @icmp_ugt_mul_select_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_ugt_mul_select_select(
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = select i1 %a, i8 2, i8 1
+  %s1 = select i1 %b, i8 2, i8 1
+  %mul = mul i8 %s1, %s2
+  %cmp = icmp ugt i8 %mul, 1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_uge_or_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_uge_or_zext_select(
+; CHECK-NEXT:    ret i1 true
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 10, i8 3
+  %or = or i8 %s1, %s2
+  %cmp = icmp uge i8 %or, 3
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_slt_xor_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_slt_xor_zext_select(
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 10, i8 3
+  %xor = xor i8 %s1, %s2
+  %cmp = icmp slt i8 %xor, 5
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_sle_lshr_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_sle_lshr_zext_select(
+; CHECK-NEXT:    ret i1 true
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 4, i8 2
+  %lshr = lshr i8 %s1, %s2
+  %cmp = icmp sle i8 %lshr, 5
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_sgt_ashr_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_sgt_ashr_zext_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[B:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 4, i8 2
+  %ashr = ashr i8 %s1, %s2
+  %cmp = icmp sgt i8 %ashr, 1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_sge_shl_zext_sext(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_sge_shl_zext_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = sext i1 %b to i8
+  %shl = shl i8 %s1, %s2
+  %cmp = icmp sge i8 %shl, -1
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_eq_add_zext_select(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_add_zext_select(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[B:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[A:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i8
+  %s1 = select i1 %b, i8 13, i8 19
+  %add = add i8 %s1, %s2
+  %cmp = icmp eq i8 %add, 20
+  ret i1 %cmp
+}
+
+
+define i1 @icmp_eq_add_zext_select_i64(i1 %a, i1 %b) {
+; CHECK-LABEL: @icmp_eq_add_zext_select_i64(
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[B:%.*]], [[TMP1]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %s2 = zext i1 %a to i64
+  %s1 = select i1 %b, i64 13, i64 19
+  %add = add i64 %s1, %s2
+  %cmp = icmp eq i64 %add, 13
+  ret i1 %cmp
+}
+
+define <4 x i1> @icmp_ugt_mul_select_select_vec(<4 x i1> %a, <4 x i1> %b) {
+; CHECK-LABEL: @icmp_ugt_mul_select_select_vec(
+; CHECK-NEXT:    [[CMP:%.*]] = or <4 x i1> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    ret <4 x i1> [[CMP]]
+;
+  %s2 = select <4 x i1> %a, <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
+  %s1 = select <4 x i1> %b, <4 x i8> splat (i8 2), <4 x i8> splat (i8 1)
+  %mul = mul <4 x i8> %s1, %s2
+  %cmp = icmp ugt <4 x i8> %mul, splat (i8 1)
+  ret <4 x i1> %cmp
+}

@@ -70,6 +70,9 @@ Hover
 Code completion
 ^^^^^^^^^^^^^^^
 
+- Now also provides include files without extension, if they are in a directory
+  only called ``include``.
+
 Code actions
 ^^^^^^^^^^^^
 
@@ -159,11 +162,20 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/bad-signal-to-kill-thread>` check by fixing false
   negatives when the ``SIGTERM`` macro is obtained from a precompiled header.
 
+- Improved :doc:`bugprone-casting-through-void
+  <clang-tidy/checks/bugprone/casting-through-void>` check by running only on
+  C++ files because suggested ``reinterpret_cast`` is not available in pure C.
+
 - Improved :doc:`bugprone-exception-escape
   <clang-tidy/checks/bugprone/exception-escape>` check by adding
   `TreatFunctionsWithoutSpecificationAsThrowing` option to support reporting
   for unannotated functions, enabling reporting when no explicit ``throw``
   is seen and allowing separate tuning for known and unknown implementations.
+
+- Improved :doc:`bugprone-fold-init-type
+  <clang-tidy/checks/bugprone/fold-init-type>` check by detecting precision
+  loss in overloads with transparent standard functors (e.g. ``std::plus<>``)
+  for ``std::accumulate``, ``std::reduce``, and ``std::inner_product``.
 
 - Improved :doc:`bugprone-macro-parentheses
   <clang-tidy/checks/bugprone/macro-parentheses>` check by printing the macro
@@ -214,6 +226,11 @@ Changes in existing checks
 
 - Improved :doc:`modernize-redundant-void-arg
   <clang-tidy/checks/modernize/redundant-void-arg>` check to work in C23.
+
+- Improved :doc:`modernize-use-equals-delete
+  <clang-tidy/checks/modernize/use-equals-delete>` check by only warning on
+  private deleted functions, if they do not have a public overload or are a
+  special member function.
 
 - Improved :doc:`modernize-use-std-format
   <clang-tidy/checks/modernize/use-std-format>` check by fixing a crash

@@ -726,10 +726,10 @@ let Predicates = [HasVendorXAndesBFHCvt] in {
 
 let Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
-  let RVVConstraint = VS2Constraint, DestEEW = EEWSEWx2 in
-    def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
+  let VS1VS2Constraint = VS2Constraint, DestEEW = EEWSEWx2 in
+  def NDS_VFWCVT_S_BF16 : NDSRVInstVBFHCvt<0b00000, "nds.vfwcvt.s.bf16">;
   let Uses = [FRM, VL, VTYPE] in
-    def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
+  def NDS_VFNCVT_BF16_S : NDSRVInstVBFHCvt<0b00001, "nds.vfncvt.bf16.s">;
 } // Predicates = [HasVendorXAndesVBFHCvt], Constraints = "@earlyclobber $vd",
   // mayRaiseFPException = true
 
@@ -935,18 +935,19 @@ defm : VPatTernaryVD4DOT_VV<"int_riscv_nds_vd4dotsu", "PseudoNDS_VD4DOTSU",
 // Pseudo-instructions for SFB (Short Forward Branch)
 //===----------------------------------------------------------------------===//
 
-let Predicates = [HasShortForwardBranchIALU], hasSideEffects = 0,
-    mayLoad = 0, mayStore = 0, Size = 8, Constraints = "$dst = $falsev" in {
-  def PseudoCCNDS_BFOS : Pseudo<(outs GPR:$dst),
-                                (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                                 GPR:$falsev, GPR:$rs1,
-                                 uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-                         Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                                ReadSFBALU]>;
-  def PseudoCCNDS_BFOZ : Pseudo<(outs GPR:$dst),
-                                (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                                 GPR:$falsev, GPR:$rs1,
-                                 uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
-                         Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU,
-                                ReadSFBALU]>;
+class SFBNDS_BFO
+    : Pseudo<(outs GPR:$dst),
+             (ins GPR:$lhs, GPR:$rhs, cond_code:$cc, GPR:$falsev, GPR:$rs1,
+                  uimmlog2xlen:$msb, uimmlog2xlen:$lsb), []>,
+      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+  let Size = 8;
+  let Constraints = "$dst = $falsev";
+}
+
+let Predicates = [HasShortForwardBranchIALU] in {
+  def PseudoCCNDS_BFOS : SFBNDS_BFO;
+  def PseudoCCNDS_BFOZ : SFBNDS_BFO;
 }
