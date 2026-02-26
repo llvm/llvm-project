@@ -55,6 +55,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "systemz-II"
 
+STATISTIC(NumRSWorkaround, "The # of times the RegScavenger workaround for the FIE bug was triggered.");
+
 // Return a mask with Count low bits set.
 static uint64_t allOnes(unsigned int Count) {
   return Count == 0 ? 0 : (uint64_t(1) << (Count - 1) << 1) - 1;
@@ -1797,6 +1799,7 @@ namespace {
 // This is a workaround for https://github.com/llvm/llvm-project/issues/172511
 // and should be removed once that issue is resolved.
 Register scavengeAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
+  NumRSWorkaround++;
   // create fresh RegScavanger instance.
   RegScavenger RS;
   // initialize RegScavenger to correct location
