@@ -55,7 +55,6 @@ class MIRParserImpl {
   StringRef Filename;
   SlotMapping IRSlots;
   std::unique_ptr<PerTargetMIParsingState> Target;
-  Module::iterator FirstUnvisitedFunction;
 
   /// True when the MIR file doesn't have LLVM IR. Dummy IR functions are
   /// created and inserted into the given module when this is true.
@@ -107,7 +106,8 @@ public:
   ///
   /// Return true if an error occurred.
   bool parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                            ModuleAnalysisManager *FAM);
+                            ModuleAnalysisManager *FAM,
+                            Module::iterator &FirstUnvisitedFunction);
 
   /// Initialize the machine function to the state that's described in the MIR
   /// file.
@@ -196,7 +196,9 @@ private:
   bool parseMachineInst(MachineFunction &MF, yaml::MachineInstrLoc MILoc,
                         MachineInstr const *&MI);
 
-  Function *getNextUnusedUnnamedFunction(Module &M);
+  static Function *
+  getNextUnusedUnnamedFunction(Module &M,
+                               Module::iterator &FirstUnvisitedFunction);
 };
 
 } // end namespace llvm
@@ -299,9 +301,9 @@ bool MIRParserImpl::parseMachineFunctions(Module &M, MachineModuleInfo &MMI,
     return false;
 
   // Parse the machine functions.
-  FirstUnvisitedFunction = M.begin();
+  auto FirstUnvisitedFunction = M.begin();
   do {
-    if (parseMachineFunction(M, MMI, MAM))
+    if (parseMachineFunction(M, MMI, MAM, FirstUnvisitedFunction))
       return true;
     In.nextDocument();
   } while (In.setCurrentDocument());
@@ -323,7 +325,8 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   return F;
 }
 
-Function *MIRParserImpl::getNextUnusedUnnamedFunction(Module &M) {
+Function *MIRParserImpl::getNextUnusedUnnamedFunction(
+    Module &M, Module::iterator &FirstUnvisitedFunction) {
   for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
     if (!FirstUnvisitedFunction->hasName()) {
       auto *F = &*FirstUnvisitedFunction;
@@ -334,8 +337,9 @@ Function *MIRParserImpl::getNextUnusedUnnamedFunction(Module &M) {
   return nullptr;
 }
 
-bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
-                                         ModuleAnalysisManager *MAM) {
+bool MIRParserImpl::parseMachineFunction(
+    Module &M, MachineModuleInfo &MMI, ModuleAnalysisManager *MAM,
+    Module::iterator &FirstUnvisitedFunction) {
   // Parse the yaml.
   yaml::MachineFunction YamlMF;
   yaml::EmptyContext Ctx;
@@ -355,7 +359,7 @@ bool MIRParserImpl::parseMachineFunction(Module &M, MachineModuleInfo &MMI,
     if (NoLLVMIR) {
       F = createDummyFunction(FunctionName, M);
     } else if (!FunctionName.empty() ||
-               !(F = getNextUnusedUnnamedFunction(M))) {
+               !(F = getNextUnusedUnnamedFunction(M, FirstUnvisitedFunction))) {
       return error(Twine("function '") + FunctionName +
                    "' isn't defined in the provided LLVM IR");
     }
