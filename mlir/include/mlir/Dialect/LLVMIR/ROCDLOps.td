@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Interfaces/InferIntRangeInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
 //===----------------------------------------------------------------------===//
@@ -381,7 +382,10 @@ def ROCDL_BallotOp :
   let assemblyFormat = "$pred attr-dict `:` type($res)";
 }
 
-def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatch<["res", "src"]>], 1>,
+def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0],
+  [AllTypesMatch<["res", "src"]>,
+   DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>],
+  1>,
   Arguments<(ins LLVM_Type:$src)> {
   let results = (outs LLVM_Type:$res);
   let summary = "Get the value in first active lane.";
@@ -402,9 +406,20 @@ def ROCDL_ReadfirstlaneOp : ROCDL_IntrOp<"readfirstlane", [], [0], [AllTypesMatc
   let assemblyFormat = [{
     $src attr-dict `:` type($res)
   }];
+
+  let extraClassDefinition = [{
+    void $cppClass::inferResultRanges(
+        ArrayRef<::mlir::ConstantIntRanges> argRanges,
+        SetIntRangeFn setResultRanges) {
+      setResultRanges(getResult(), argRanges[0]);
+    }
+  }];
 }
 
-def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", "src0"]>], 1>,
+def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0],
+  [AllTypesMatch<["res", "src0"]>,
+   DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>],
+  1>,
   Arguments<(ins LLVM_Type:$src0,
                  I32:$src1)> {
   let results = (outs LLVM_Type:$res);
@@ -425,6 +440,14 @@ def ROCDL_ReadlaneOp : ROCDL_IntrOp<"readlane", [], [0], [AllTypesMatch<["res", 
 
   let assemblyFormat = [{
     $src0 `,` $src1  attr-dict `:` `(` type($src0) `,` type($src1) `)` `->` type($res)
+  }];
+
+  let extraClassDefinition = [{
+    void $cppClass::inferResultRanges(
+        ArrayRef<::mlir::ConstantIntRanges> argRanges,
+        SetIntRangeFn setResultRanges) {
+      setResultRanges(getResult(), argRanges[0]);
+    }
   }];
 }
 

@@ -86,6 +86,7 @@ add_mlir_dialect_library(MLIRROCDLDialect
   Core
 
   LINK_LIBS PUBLIC
+  MLIRInferIntRangeInterface
   MLIRIR
   MLIRLLVMDialect
   MLIRSideEffectInterfaces
