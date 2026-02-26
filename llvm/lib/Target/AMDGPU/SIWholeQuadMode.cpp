@@ -1309,6 +1309,12 @@ void SIWholeQuadMode::processBlock(MachineBasicBlock &MBB, BlockInfo &BI,
 
   for (unsigned Idx = 0;; ++Idx) {
     MachineBasicBlock::iterator Next = II;
+
+    if (II != IE && II->isMetaInstruction()) {
+      II = ++Next;
+      continue;
+    }
+
     char Needs = StateExact | StateWQM; // Strict mode is disabled by default.
     char OutNeeds = 0;
 
