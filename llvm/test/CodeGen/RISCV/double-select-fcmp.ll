@@ -674,8 +674,7 @@ define double @CascadedSelect(double noundef %a) {
 ; CHECKRV32ZDINX-NEXT:  # %bb.2: # %entry
 ; CHECKRV32ZDINX-NEXT:    fmv.d a2, a0
 ; CHECKRV32ZDINX-NEXT:  .LBB20_3: # %entry
-; CHECKRV32ZDINX-NEXT:    mv a0, a2
-; CHECKRV32ZDINX-NEXT:    mv a1, a3
+; CHECKRV32ZDINX-NEXT:    fmv.d a0, a2
 ; CHECKRV32ZDINX-NEXT:    ret
 ;
 ; CHECKRV64ZDINX-LABEL: CascadedSelect:

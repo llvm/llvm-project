@@ -344,8 +344,9 @@ mlir::LogicalResult CIRGenFunction::emitCXXTryStmt(const CXXTryStmt &s) {
         if (!hasCatchAll) {
           // Create unwind region.
           mlir::Region *region = result.addRegion();
-          builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
-          cir::ResumeOp::create(builder, loc);
+          mlir::Block *unwindBlock =
+              builder.createBlock(region, /*insertPt=*/{}, {ehTokenTy}, {loc});
+          cir::ResumeOp::create(builder, loc, unwindBlock->getArgument(0));
           handlerAttrs.push_back(cir::UnwindAttr::get(&getMLIRContext()));
         }
       });

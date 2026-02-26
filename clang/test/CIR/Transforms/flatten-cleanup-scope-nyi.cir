@@ -99,7 +99,7 @@ cir.func @test_eh_cleanup_in_try_catch_unwind() {
     }
     cir.yield
   } unwind (%eh_token_1 : !cir.eh_token) {
-    cir.resume
+    cir.resume %eh_token_1 : !cir.eh_token
   }
   cir.return
 }
