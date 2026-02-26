@@ -1691,6 +1691,18 @@ func.func @linearize_dont_fold_dynamic_basis(%arg0: index) -> index {
 
 // -----
 
+// Folding a linearize_index with a ub.poison basis must not crash.
+// CHECK-LABEL: @linearize_dont_fold_poison_basis
+// CHECK: %[[RET:.+]] = affine.linearize_index
+// CHECK: return %[[RET]]
+func.func @linearize_dont_fold_poison_basis(%arg0: index, %arg1: index) -> index {
+  %poison = ub.poison : index
+  %ret = affine.linearize_index [%arg0, %arg1] by (%poison) : index
+  return %ret : index
+}
+
+// -----
+
 // CHECK-LABEL: func @cancel_delinearize_linearize_disjoint_exact(
 //  CHECK-SAME:     %[[ARG0:[a-zA-Z0-9]+]]: index,
 //  CHECK-SAME:     %[[ARG1:[a-zA-Z0-9]+]]: index,
