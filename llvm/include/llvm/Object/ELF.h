@@ -332,7 +332,8 @@ public:
     if (!RealShStrNdx) {
       if (Error E = const_cast<ELFFile<ELFT> *>(this)->readShdrZero()) {
         // If RealShStrNdx is set, the error was not emitted due to reading the
-        // section header table index, so we can ignore it in this context.
+        // section header string table index, so we can ignore it in this
+        // context.
         if (RealShStrNdx) {
           consumeError(std::move(E));
           return *RealShStrNdx;
