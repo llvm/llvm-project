@@ -4725,7 +4725,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     auto *C = isConstOrConstSplat(Val.getOperand(0), DemandedElts);
     if (C && C->getAPIntValue().isSignMask())
       return true;
-    return (OrZero || isKnownNeverZero(Val, Depth)) &&
+    return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
            isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
                                   Depth + 1);
   }
