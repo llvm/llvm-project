@@ -638,17 +638,6 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
     WList->enqueue(Succ, Block, Idx+1);
 }
 
-ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N,
-                                                    const ReturnStmt *RS) {
-  // Create a CallExitBegin node and enqueue it.
-  const auto *LocCtx = cast<StackFrameContext>(N->getLocationContext());
-
-  // Use the callee location context.
-  CallExitBegin Loc(LocCtx, RS);
-
-  return makeNode(Loc, N->getState(), N);
-}
-
 std::optional<unsigned>
 CoreEngine::getCompletedIterationCount(const CFGBlock *B,
                                        ExplodedNode *Pred) const {
@@ -688,7 +677,12 @@ void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS
   for (auto *I : Set) {
     // If we are in an inlined call, generate CallExitBegin node.
     if (I->getLocationContext()->getParent()) {
-      I = generateCallExitBeginNode(I, RS);
+      const auto *LocCtx = cast<StackFrameContext>(I->getLocationContext());
+
+      // Use the callee location context.
+      CallExitBegin Loc(LocCtx, RS);
+
+      I = makeNode(Loc, I->getState(), I);
       if (I)
         WList->enqueue(I);
     } else {

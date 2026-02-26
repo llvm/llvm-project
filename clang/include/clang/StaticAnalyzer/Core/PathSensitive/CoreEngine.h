@@ -121,9 +121,6 @@ private:
   void HandleVirtualBaseBranch(const CFGBlock *B, ExplodedNode *Pred);
 
 private:
-  ExplodedNode *generateCallExitBeginNode(ExplodedNode *N,
-                                          const ReturnStmt *RS);
-
   /// Helper function called by `HandleBranch()`. If the currently handled
   /// branch corresponds to a loop, this returns the number of already
   /// completed iterations in that loop, otherwise the return value is
