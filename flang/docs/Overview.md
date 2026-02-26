@@ -180,50 +180,10 @@ perform various optimizations and transformations.  The final pass creates an
 LLVM IR representation of the program.
 
 **Commands:**
-  - `flang -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
   - `flang -fc1 -emit-llvm src.f90` dumps the LLVM IR to src.ll
+  - `flang -mmlir --mlir-print-ir-after-all -S src.f90` dumps the FIR code after each pass to standard error
   - `flang -mmlir --mlir-print-ir-before=<pass> -S src.f90` dumps the FIR code before a specific pass to standard error
   - `flang -mmlir --mlir-print-ir-after=<pass> -S src.f90` dumps the FIR code after a specific pass to standard error
-
-The following pass names are valid arguments to `--mlir-print-ir-before=` and
-`--mlir-print-ir-after=` (listed in pipeline order):
-
-| Pass name | Description |
-|---|---|
-| `inline-elementals` | Inline elemental functions |
-| `lower-hlfir-ordered-assignments` | Lower HLFIR ordered assignments |
-| `lower-hlfir-intrinsics` | Lower HLFIR intrinsics |
-| `bufferize-hlfir` | Bufferize HLFIR |
-| `convert-hlfir-to-fir` | Convert HLFIR to FIR |
-| `cse` | Common subexpression elimination |
-| `array-value-copy` | Array value copy |
-| `character-conversion` | Character conversion |
-| `canonicalize` | Canonicalize |
-| `simplify-region-lite` | Simplify region (lite) |
-| `stack-arrays` | Convert heap allocations to stack allocations (requires `-fstack-arrays`) |
-| `inline` | Inliner |
-| `fir-polymorphic-op` | Polymorphic operation conversion |
-| `fir-assumed-rank-op` | Assumed rank operation conversion |
-| `lower-repack-arrays` | Lower repack arrays |
-| `simplify-fir-operations` | Simplify FIR operations |
-| `stack-reclaim` | Stack reclaim |
-| `cfg-conversion` | CFG conversion |
-| `convert-scf-to-cf` | Convert SCF to control flow |
-| `convert-complex-pow` | Convert complex power operations |
-| `mif-convert` | MIF conversion |
-| `boxed-procedure` | Boxed procedure conversion |
-| `abstract-result` | Abstract result optimization |
-| `cg-rewrite` | Code generation rewrite |
-| `external-name-interop` | External name interop conversion |
-| `target-rewrite` | Target rewrite |
-| `compiler-generated-names` | Compiler generated names conversion |
-| `function-attr` | Function attributes |
-| `fir-to-llvm-ir` | FIR to LLVM IR lowering |
-| `convert-math-to-funcs` | Convert math operations to function calls |
-| `convert-complex-to-standard` | Convert complex operations to standard |
-| `convert-math-to-llvm` | Convert math operations to LLVM |
-| `llvm-add-comdats` | Add COMDAT sections |
-| `reconcile-unrealized-casts` | Reconcile unrealized casts |
 
 Note: The exact set of passes depends on compilation options.  For example,
 `stack-arrays` only appears when `-fstack-arrays` is enabled.  To see the
