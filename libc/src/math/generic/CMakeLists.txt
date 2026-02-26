@@ -457,15 +457,7 @@ add_entrypoint_object(
   HDRS
     ../tanpif16.h
   DEPENDS
-    libc.hdr.errno_macros
-    libc.hdr.fenv_macros
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.except_value_utils
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.macros.optimization
-    libc.src.__support.math.sincosf16_utils
+    libc.src.__support.math.tanpif16
 )
 
 add_entrypoint_object(
@@ -4011,6 +4003,16 @@ add_entrypoint_object(
     ../asinhf16.h
   DEPENDS
     libc.src.__support.math.asinhf16
+)
+
+add_entrypoint_object(
+  asinpif
+  SRCS
+    asinpif.cpp
+  HDRS
+    ../asinpif.h
+  DEPENDS
+    libc.src.__support.math.asinpif
 )
 
 add_entrypoint_object(
