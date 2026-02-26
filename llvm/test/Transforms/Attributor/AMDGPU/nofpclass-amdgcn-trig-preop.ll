@@ -2,9 +2,9 @@
 ; RUN: opt -S -passes=attributor -attributor-manifest-internal < %s | FileCheck %s
 
 define double @ret_trig_preop_f64(double %x, i32 %n) {
-; CHECK-LABEL: define nofpclass(nan inf) double @ret_trig_preop_f64(
+; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) double @ret_trig_preop_f64(
 ; CHECK-SAME: double [[X:%.*]], i32 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan inf) double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[RET:%.*]] = call nofpclass(nan inf nzero nsub nnorm) double @llvm.amdgcn.trig.preop.f64(double [[X]], i32 [[N]]) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    ret double [[RET]]
 ;
   %ret = call double @llvm.amdgcn.trig.preop.f64(double %x, i32 %n)

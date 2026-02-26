@@ -1273,7 +1273,7 @@ std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(
   auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
     Error = SMDiagnostic(Filename, SourceMgr::DK_Error,
-                         "Could not open input file: " + EC.message());
+                         "could not open input file: " + EC.message());
     return nullptr;
   }
   return createMIRParser(std::move(FileOrErr.get()), Context,
@@ -1290,7 +1290,7 @@ llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
         DS_Error,
         SMDiagnostic(
             Filename, SourceMgr::DK_Error,
-            "Can't read MIR with a Context that discards named Values")));
+            "cannot read MIR with a Context that discards named Values")));
     return nullptr;
   }
   return std::make_unique<MIRParser>(std::make_unique<MIRParserImpl>(

@@ -81,20 +81,60 @@ exit:
 define ptr @low_trip_count_small_with_live_out(i32 %x, ptr %dst) {
 ; CHECK-LABEL: define ptr @low_trip_count_small_with_live_out(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[DST:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i32 @llvm.smax.i32(i32 [[X]], i32 1)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SMAX]], i32 4)
+; CHECK-NEXT:    [[TMP0:%.*]] = zext nneg i32 [[SMAX]] to i64
+; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 4)
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[PTR:%.*]] = phi ptr [ [[DST]], %[[ENTRY]] ], [ [[PTR_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
-; CHECK-NEXT:    [[PTR_NEXT]] = getelementptr i8, ptr [[PTR]], i64 1
+; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = sub i64 [[UMIN1]], 1
+; CHECK-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = getelementptr i8, ptr [[DST]], i64 [[UMIN1]]
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[PTR:%.*]] = getelementptr i8, ptr [[DST]], i64 0
+; CHECK-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[DST]], i64 1
+; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[DST]], i64 2
+; CHECK-NEXT:    [[NEXT_GEP4:%.*]] = getelementptr i8, ptr [[DST]], i64 3
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x ptr> poison, ptr [[PTR]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x ptr> [[TMP2]], ptr [[NEXT_GEP2]], i32 1
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x ptr> [[TMP3]], ptr [[NEXT_GEP3]], i32 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x ptr> [[TMP4]], ptr [[NEXT_GEP4]], i32 3
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ule <4 x i64> <i64 0, i64 1, i64 2, i64 3>, [[BROADCAST_SPLAT]]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <4 x i1> [[TMP6]], i32 0
+; CHECK-NEXT:    br i1 [[TMP7]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; CHECK:       [[PRED_STORE_IF]]:
+; CHECK-NEXT:    [[PTR_NEXT:%.*]] = getelementptr i8, ptr [[PTR]], i64 1
 ; CHECK-NEXT:    store i8 0, ptr [[PTR_NEXT]], align 1
-; CHECK-NEXT:    [[IV_NEXT]] = add i32 [[IV]], 1
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[IV_NEXT]], [[UMIN]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; CHECK:       [[PRED_STORE_CONTINUE]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <4 x i1> [[TMP6]], i32 1
+; CHECK-NEXT:    br i1 [[TMP9]], label %[[EXIT:.*]], label %[[PRED_STORE_CONTINUE6:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[PTR_NEXT_LCSSA:%.*]] = phi ptr [ [[PTR_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP10]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE6]]
+; CHECK:       [[PRED_STORE_CONTINUE6]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i1> [[TMP6]], i32 2
+; CHECK-NEXT:    br i1 [[TMP11]], label %[[PRED_STORE_IF7:.*]], label %[[PRED_STORE_CONTINUE8:.*]]
+; CHECK:       [[PRED_STORE_IF7]]:
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP12]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE8]]
+; CHECK:       [[PRED_STORE_CONTINUE8]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
+; CHECK-NEXT:    br i1 [[TMP13]], label %[[PRED_STORE_IF9:.*]], label %[[PRED_STORE_CONTINUE10:.*]]
+; CHECK:       [[PRED_STORE_IF9]]:
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[NEXT_GEP4]], i64 1
+; CHECK-NEXT:    store i8 0, ptr [[TMP14]], align 1
+; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE10]]
+; CHECK:       [[PRED_STORE_CONTINUE10]]:
+; CHECK-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret ptr [[PTR_NEXT_LCSSA]]
 ;
 entry:

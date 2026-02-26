@@ -775,7 +775,6 @@ define i1 @pow2_and(i32 %x, i32 %y) {
   ret i1 %r
 }
 
-; FIXME: Missing isKnownToBeAPowerOfTwo DemandedElts handling
 define <4 x i32> @pow2_and_vector(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: pow2_and_vector:
 ; CHECK:       # %bb.0:
@@ -783,16 +782,11 @@ define <4 x i32> @pow2_and_vector(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; CHECK-NEXT:    cvttps2dq %xmm1, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,2,4,9]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [2,2,9,9]
-; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
-; CHECK-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-NEXT:    pxor %xmm2, %xmm2
-; CHECK-NEXT:    psubd %xmm1, %xmm2
-; CHECK-NEXT:    pand %xmm1, %xmm2
-; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm2[0,2,1,0]
-; CHECK-NEXT:    pand %xmm1, %xmm0
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [1,2,4,u]
+; CHECK-NEXT:    pmuludq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2 # [2,2,u,u]
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm1[0]
+; CHECK-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,2],xmm2[0,2]
+; CHECK-NEXT:    andps %xmm1, %xmm0
 ; CHECK-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %yy = shl nuw nsw <4 x i32> <i32 1, i32 2, i32 4, i32 9>, %y

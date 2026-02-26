@@ -130,6 +130,131 @@ TEST(AnsiTerminal, TrimAndPad) {
   EXPECT_EQ(ansi::TrimAndPad(quick, 12), quick);
 }
 
+TEST(AnsiTerminal, TrimAtWordBoundary) {
+  // Nothing in, nothing out.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("", 0), "");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("", 1), "");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("", 1), "");
+
+  // All whitespace, return nothing.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("    ", 1), "");
+
+  // Leading and trailing whitespace are removed.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("     ab     ", 0), "ab");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("     ab     ", 5), "ab");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("    🦊🦊     ", 0), "🦊🦊");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("    🦊🦊     ", 5), "🦊🦊");
+
+  // When it is a single word, we ignore the max columns and return the word.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("abc", 0), "abc");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("abc", 1), "abc");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("abc", 2), "abc");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("abc", 3), "abc");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("abc", 4), "abc");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("abcdefghij", 2), "abcdefghij");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("🦊🦊", 0), "🦊🦊");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("🦊🦊", 4), "🦊🦊");
+
+  // If it fits, return the entire word.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("abc", 5), "abc");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("🦊🦊", 5), "🦊🦊");
+
+  // ANSI codes do not add to width.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m", 0), "\x1B[0m");
+  // Preceding ANSI codes are included.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0mab cd", 2), "\x1B[0mab");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m🦊  🐱", 2), "\x1B[0m🦊");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("🦊\x1B[0m\x1B[0m🐱 🐈", 4),
+            "🦊\x1B[0m\x1B[0m🐱");
+  // If there's more than one, include all of them.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m\x1B[0m\x1B[0mab cd", 2),
+            "\x1B[0m\x1B[0m\x1B[0mab");
+  // Proceeding ANSI codes are included.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0mab\x1B[0m cd", 2),
+            "\x1B[0mab\x1B[0m");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0mab\x1B[0m", 4),
+            "\x1B[0mab\x1B[0m");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m🦊\x1B[0m 🐱", 2),
+            "\x1B[0m🦊\x1B[0m");
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m🦊\x1B[0m", 4),
+            "\x1B[0m🦊\x1B[0m");
+  // Include all if more than one.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0mab\x1B[0m\x1B[0m\x1B[0m cd", 2),
+            "\x1B[0mab\x1B[0m\x1B[0m\x1B[0m");
+  // Mutliple pre and proceding ANSI codes.
+  EXPECT_EQ(ansi::TrimAtWordBoundary("\x1B[0m\x1B[0mab\x1B[0m\x1B[0m cd", 2),
+            "\x1B[0m\x1B[0mab\x1B[0m\x1B[0m");
+
+  // When multiple words fit, include as many as we can while still ending on
+  // a word boundary.
+  const char *fox_ascii = "The quick brown fox jumped.";
+  // Can't fit one word, just returns first word.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 0), "The");
+  // Exactly 3 is required for one word.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 3), "The");
+  // Exactly 9 is required to fit 2 words.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 9), "The quick");
+  // So anything less than 9 is just one word.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 8), "The");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 4), "The");
+  // 3 words is exactly 15.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 15), "The quick brown");
+  // Anything less is 2 words.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 14), "The quick");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, 10), "The quick");
+  // The whole string.
+  size_t fox_ascii_len = strlen(fox_ascii);
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, fox_ascii_len), fox_ascii);
+  // Anything less and we remove the last word.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_ascii, fox_ascii_len - 1),
+            "The quick brown fox");
+
+  // Width calculation is Unicode aware and a run of Unicode is a word just
+  // like a run of ASCII is.
+  // Note that these emoji avoid any compound emoji where there are
+  // non-printable modifiers. This is because llvm::sys::locale::columnWidth
+  // returns -1 for these non-printable adjustment characters. At this time,
+  // TrimAtWordBoundary simply cannot handle them well.
+  const char *fox_unicode = "🦊 💨🟤 🔼";
+  // Emoji have width 2, so this "word" would not fit so we just return it.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_unicode, 0), "🦊");
+  // It does fit width 2.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_unicode, 2), "🦊");
+  // Need 7 to fit 2 words.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_unicode, 7), "🦊 💨🟤");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_unicode, 6), "🦊");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_unicode, 4), "🦊");
+  // The entire string.
+  size_t fox_unicode_len = llvm::sys::locale::columnWidth(fox_unicode);
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_unicode, fox_unicode_len),
+            "🦊 💨🟤 🔼");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_unicode, fox_unicode_len - 1),
+            "🦊 💨🟤");
+
+  const char *fox_everything =
+      "The \x1B[0mquick\x1B[0m 💨\x1B[0m brown \x1B[0m🟤 fox🦊 🔼jumped.";
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, 0), "The");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, 3), "The");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, 6), "The");
+  // Exactly 9 to fit two words.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, 9),
+            "The \x1B[0mquick\x1B[0m");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, 10),
+            "The \x1B[0mquick\x1B[0m");
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, 11),
+            "The \x1B[0mquick\x1B[0m");
+  // <space><2 wide emoji> adds 3 more to get to 12.
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, 12),
+            "The \x1B[0mquick\x1B[0m 💨\x1B[0m");
+  // The entire string. We use the ansi:: width function here because it strips
+  // ANSI codes that llvm::sys::locale's function cannot cope with.
+  size_t fox_everything_len = ansi::ColumnWidth(fox_everything);
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, fox_everything_len),
+            fox_everything);
+  EXPECT_EQ(ansi::TrimAtWordBoundary(fox_everything, fox_everything_len - 1),
+            "The \x1B[0mquick\x1B[0m 💨\x1B[0m brown \x1B[0m🟤 fox🦊");
+}
+
 static void TestLines(const std::string &input, int indent,
                       uint32_t output_max_columns,
                       const llvm::StringRef &expected) {
@@ -140,55 +265,44 @@ static void TestLines(const std::string &input, int indent,
 }
 
 TEST(AnsiTerminal, OutputWordWrappedLines) {
-  TestLines("", 0, 0, "");
-  TestLines("", 0, 1, "");
-  TestLines("", 2, 1, "");
+  // Nothing in, nothing out. No newline, no indent.
+  TestLines("", 0, 5, "");
+  TestLines("", 5, 5, "");
 
-  // When it is a single word, we ignore the max columns and do not split it.
+  // A single line will have a newline on the end.
   TestLines("abc", 0, 1, "abc\n");
-  TestLines("abc", 0, 2, "abc\n");
-  TestLines("abc", 0, 3, "abc\n");
-  TestLines("abc", 0, 4, "abc\n");
-  TestLines("abc", 1, 5, " abc\n");
   TestLines("abc", 2, 5, "  abc\n");
+  TestLines("🦊🦊", 0, 0, "🦊🦊\n");
+  TestLines("🦊🦊", 0, 2, "🦊🦊\n");
+
+  // If the indent uses up all the columns, print the word on the same line
+  // anyway. This prevents us outputting indent only lines forever.
+  TestLines("abcdefghij", 4, 2, "    abcdefghij\n");
 
   // Leading whitespace is ignored because we're going to indent using the
   // stream.
+  TestLines("       ", 3, 10, "");
   TestLines("  abc", 0, 4, "abc\n");
   TestLines("        abc", 2, 6, "  abc\n");
 
+  // Multiple lines. Each one ends with a newline.
   TestLines("abc def", 0, 4, "abc\ndef\n");
   TestLines("abc def", 0, 5, "abc\ndef\n");
-  // Length is 6, 7 required. Has to split at whitespace.
-  TestLines("abc def", 0, 6, "abc\ndef\n");
-  // FIXME: This should split after abc, and not print
-  // more whitespace on the end of the line or the start
-  // of the new one. Resulting in "abc\ndef\n".
-  TestLines("abc           def", 0, 6, "abc  \ndef\n");
+  // Indent applied to each line.
+  TestLines("abc def", 2, 4, "  abc\n  def\n");
+  // First word is wider than a whole line, do not split that word.
+  TestLines("aabbcc ddee", 0, 5, "aabbcc\nddee\n");
 
   const char *fox_str = "The quick brown fox.";
   TestLines(fox_str, 0, 30, "The quick brown fox.\n");
   TestLines(fox_str, 5, 30, "     The quick brown fox.\n");
-  TestLines(fox_str, 0, 15, "The quick\nbrown fox.\n");
-  // FIXME: Trim the spaces off of the end of the first line.
-  TestLines("The quick       brown fox.", 0, 15,
-            "The quick     \nbrown fox.\n");
+  TestLines(fox_str, 2, 15, "  The quick\n  brown fox.\n");
+  // Must remove the spaces from the end of the first line.
+  TestLines("The quick       brown fox.", 0, 15, "The quick\nbrown fox.\n");
 
-  // As ANSI codes do not add to visible length, the results
-  // should be the same as the plain text verison.
-  const char *fox_str_ansi = "\x1B[4mT\x1B[0mhe quick brown fox.";
-  TestLines(fox_str_ansi, 0, 30, "\x1B[4mT\x1B[0mhe quick brown fox.\n");
-  TestLines(fox_str_ansi, 5, 30, "     \x1B[4mT\x1B[0mhe quick brown fox.\n");
-  // FIXME: Account for ANSI codes not contributing to visible length.
-  TestLines(fox_str_ansi, 0, 15, "\x1B[4mT\x1B[0mhe\nquick br\n");
-
-  const std::string fox_str_emoji = "🦊 The quick brown fox. 🦊";
-  TestLines(fox_str_emoji, 0, 30, "🦊 The quick brown fox. 🦊\n");
-  // FIXME: This crashes when max columns is exactly 31.
-  // TestLines(fox_str_emoji, 5, 31, "     🦊 The quick brown fox. 🦊\n");
-  TestLines(fox_str_emoji, 5, 32, "     🦊 The quick brown fox. 🦊\n");
-  // FIXME: Final fox is missing.
-  TestLines(fox_str_emoji, 0, 15, "🦊 The quick\nbrown fox. \n");
-  // FIXME: should not split the middle of an emoji.
-  TestLines("🦊🦊🦊 🦊🦊", 0, 5, "\n\n\n\n\n\n\n\x8A\xF0\x9F\xA6\n");
+  // FIXME: ANSI codes applied to > 1 word end up applying to all those words
+  // and the indent if those words are split up. We should use cursor
+  // positioning to do the indentation instead.
+  TestLines("\x1B[4mabc def\x1B[0m ghi", 2, 6,
+            "  \x1B[4mabc\n  def\x1B[0m\n  ghi\n");
 }

@@ -234,9 +234,6 @@ def IsN64       :     Predicate<"Subtarget->isABI_N64()">;
 def IsNotN64    :     Predicate<"!Subtarget->isABI_N64()">;
 def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
 def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
-def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
-def UseAbs :          Predicate<"Subtarget->inAbs2008Mode() ||"
-                                "TM.Options.NoNaNsFPMath">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
                       AssemblerPredicate<(all_of (not FeatureMips16))>;
 def NotDSP :          Predicate<"!Subtarget->hasDSP()">;

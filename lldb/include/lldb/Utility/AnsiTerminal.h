@@ -241,6 +241,120 @@ inline std::string StripAnsiTerminalCodes(llvm::StringRef str) {
   return stripped;
 }
 
+inline size_t ColumnWidth(llvm::StringRef str) {
+  std::string stripped = ansi::StripAnsiTerminalCodes(str);
+  return llvm::sys::locale::columnWidth(stripped);
+}
+
+/// Trim the given string to the given visible length, at a word boundary.
+/// Visible length means its width when rendered to the terminal.
+/// The string can include ANSI codes and Unicode.
+///
+/// For a single word string, that word is returned in its entirety regardless
+/// of its visible length.
+///
+/// This function is similar to TrimAndPad, except that it must split on a word
+/// boundary. So there are some notable differences:
+/// * Has a special case for single words that exceed desired visible
+///   length.
+/// * Must track whether the most recent modifications was on a word boundary
+///   or not.
+/// * If the trimming finishes without the result ending on a word boundary,
+///   it must find the nearest boundary to that trim point by trimming more.
+inline std::string TrimAtWordBoundary(llvm::StringRef str,
+                                      size_t visible_length) {
+  str = str.trim();
+  if (str.empty())
+    return str.str();
+
+  auto first_whitespace = str.find_first_of(" \t\n");
+  // No whitespace means a single word, which we cannot split.
+  if (first_whitespace == llvm::StringRef::npos)
+    return str.str();
+
+  // If the first word of a multi-word string is too wide, return that whole
+  // word only.
+  auto to_first_word_boundary = str.substr(0, first_whitespace);
+  // We use ansi::ColumnWidth here because it can handle ANSI and Unicode.
+  if (ansi::ColumnWidth(to_first_word_boundary) > visible_length)
+    return to_first_word_boundary.str();
+
+  std::string result;
+  result.reserve(visible_length);
+  // When there is Unicode or ANSI codes, the visible length will not equal
+  // result.size(), so we track it separately.
+  size_t result_visible_length = 0;
+
+  // The loop below makes many adjustments, and we never know which will be the
+  // last. This tracks whether the most recent adjustment put us at a word
+  // boundary and is checked after the main loop.
+  bool at_word_boundary = false;
+
+  // Trim the string to the given visible length.
+  while (!str.empty()) {
+    auto [left, escape, right] = FindNextAnsiSequence(str);
+    str = right;
+
+    // We know that left does not include ANSI codes. Compute its visible length
+    // and if it fits, append it together with the invisible escape code.
+    size_t column_width = llvm::sys::locale::columnWidth(left);
+    if (result_visible_length + column_width <= visible_length) {
+      result.append(left).append(escape);
+      result_visible_length += column_width;
+      at_word_boundary = right.empty() || std::isspace(right[0]);
+
+      continue;
+    }
+
+    // The string might contain unicode which means it's not safe to truncate.
+    // Repeatedly trim the string until it is valid unicode and fits.
+    llvm::StringRef trimmed = left;
+
+    // A word break can happen at the character we trim to, or the one we
+    // trimmed before that (we are going backwards, so before in the loop is
+    // after in the string).
+
+    // A word break can happen at the point we trim, or just beyond that point.
+    // In other words: at the current back of trimmed, or what was the back last
+    // time around. following_char records the character popped in the previous
+    // loop iteration.
+    std::optional<char> following_char = std::nullopt;
+    while (!trimmed.empty()) {
+      int trimmed_width = llvm::sys::locale::columnWidth(trimmed);
+      if (
+          // If we have a partial Unicode character, keep trimming.
+          trimmed_width !=
+              llvm::sys::unicode::ColumnWidthErrors::ErrorInvalidUTF8 &&
+          // If the trimmed string fits in the column limit, stop trimming.
+          (result_visible_length + static_cast<size_t>(trimmed_width) <=
+           visible_length)) {
+        result.append(trimmed);
+        result_visible_length += trimmed_width;
+        at_word_boundary = std::isspace(trimmed.back()) ||
+                           (following_char && std::isspace(*following_char));
+
+        break;
+      }
+
+      following_char = trimmed.back();
+      trimmed = trimmed.drop_back();
+    }
+  }
+
+  if (!at_word_boundary) {
+    // Walk backwards to find a word boundary.
+    auto last_whitespace = result.find_last_of(" \t\n");
+    if (last_whitespace != std::string::npos)
+      result = result.substr(0, last_whitespace);
+  }
+
+  // We may have split on whitespace that was the first of a word boundary, or
+  // somewhere in a run of whitespace. Trim the trailing spaces. This must be
+  // done here instead of in the loop because in the loop we may still be
+  // accumulating the result string.
+  return llvm::StringRef(result).rtrim().str();
+}
+
 inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
                               char padding = ' ') {
   std::string result;
@@ -288,74 +402,34 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
   return result;
 }
 
-inline size_t ColumnWidth(llvm::StringRef str) {
-  std::string stripped = ansi::StripAnsiTerminalCodes(str);
-  return llvm::sys::locale::columnWidth(stripped);
-}
-
 // Output text that may contain ANSI codes, word wrapped (wrapped at whitespace)
 // to the given stream. The indent level of the stream is counted towards the
 // output line length.
-// FIXME: This contains several bugs and does not handle unicode.
+// FIXME: If an ANSI code is applied to multiple words and those words are split
+//        across lines, the code will apply to the indentation as well as the
+//        text.
 inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
                                    uint32_t output_max_columns) {
   // We will indent using the stream, so leading whitespace is not significant.
   text = text.ltrim();
-  if (text.size() == 0)
+  if (text.empty())
     return;
 
-  const size_t visible_length = ansi::ColumnWidth(text);
+  // 1 column border on the right side.
+  const uint32_t max_text_width =
+      output_max_columns - strm.GetIndentLevel() - 1;
+  bool first_line = true;
 
-  // Will it all fit on one line, or is it a single word that we must not break?
-  if (static_cast<uint32_t>(visible_length + strm.GetIndentLevel()) <
-          output_max_columns ||
-      text.find_first_of(" \t\n") == llvm::StringRef::npos) {
-    // Output it as a single line.
-    strm.Indent(text);
-    strm.EOL();
-    return;
-  }
-
-  // We need to break it up into multiple lines. We can do this based on the
-  // formatted text because we know that:
-  // * We only break lines on whitespace, therefore we will not break in the
-  //   middle of a Unicode character or escape code.
-  // * Escape codes are so far not applied to multiple words, so there is no
-  //   risk of breaking up a phrase and the escape code being incorrectly
-  //   applied to the indent too.
-
-  const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
-  int start = 0;
-  int end = start;
-  const int final_end = visible_length;
-
-  while (end < final_end) {
-    // Don't start the 'text' on a space, since we're already outputting the
-    // indentation.
-    while ((start < final_end) && (text[start] == ' '))
-      start++;
-
-    end = start + max_text_width;
-    if (end > final_end)
-      end = final_end;
-
-    if (end != final_end) {
-      // If we're not at the end of the text, make sure we break the line on
-      // white space.
-      while (end > start && text[end] != ' ' && text[end] != '\t' &&
-             text[end] != '\n')
-        end--;
-    }
-
-    const int sub_len = end - start;
-    if (start != 0)
+  while (!text.empty()) {
+    std::string split = TrimAtWordBoundary(text, max_text_width);
+    if (!first_line)
       strm.EOL();
-    strm.Indent();
-    assert(start < final_end);
-    assert(start + sub_len <= final_end);
-    strm << text.substr(start, sub_len);
-    start = end + 1;
+    first_line = false;
+    strm.Indent(split);
+
+    text = text.drop_front(split.size()).ltrim();
   }
+
   strm.EOL();
 }
 

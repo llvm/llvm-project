@@ -129,10 +129,11 @@ let mayRaiseFPException = 1, Uses = [FCR31] in
 defm FSQRT : ABSS_MMM<"sqrt.d", II_SQRT_D, fsqrt>, ROUND_W_FM_MM<1, 0x28>;
 defm FABS : ABSS_MMM<"abs.d", II_SQRT_D, fabs>, ABS_FM_MM<1, 0xd>;
 
-let DecoderNamespace = "MicroMips", AdditionalPredicates = [UseAbs] in {
-  def FABS_S_MM : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS, fabs>,
+let DecoderNamespace = "MicroMips" in {
+  def FABS_S_MM : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS>,
                   ABS_FM_MM<0, 0xd>, ISA_MICROMIPS;
 }
+def : Pat<(ABSS_FT_PatFrag<fabs> FGR32Opnd:$fs), (FABS_S_MM FGR32Opnd:$fs)>;
 
 def FMOV_S_MM : MMRel, ABSS_FT<"mov.s", FGR32Opnd, FGR32Opnd, II_MOV_S>,
                 ABS_FM_MM<0, 0x1>, ISA_MICROMIPS {
@@ -213,7 +214,7 @@ let DecoderNamespace = "MicroMips" in {
                        MADDS_FM_MM<0x29>, ISA_MICROMIPS32_NOT_MIPS32R6, FGR_32,
                        MADD4;
 
-    let AdditionalPredicates = [NoNaNsFPMath, HasMadd4] in {
+    let AdditionalPredicates = [HasMadd4] in {
       def NMADD_S_MM : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S>,
                        MADDS_FM_MM<0x2>, ISA_MICROMIPS32_NOT_MIPS32R6;
       def NMSUB_S_MM : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S>,
@@ -415,8 +416,7 @@ defm : BC1_ALIASES<BC1T_MM, "bc1t", BC1F_MM, "bc1f">,
 
 
 // To generate NMADD and NMSUB instructions when fneg node is present
-let AdditionalPredicates = [NoNaNsFPMath, HasMadd4,
-                            InMicroMips, NotMips32r6] in {
+let AdditionalPredicates = [HasMadd4, InMicroMips, NotMips32r6] in {
   defm : NMADD_NMSUB<NMADD_S_MM, NMSUB_S_MM, FGR32Opnd>,
          ISA_MICROMIPS32_NOT_MIPS32R6;
   defm : NMADD_NMSUB<NMADD_D32_MM, NMSUB_D32_MM, AFGR64Opnd>,
