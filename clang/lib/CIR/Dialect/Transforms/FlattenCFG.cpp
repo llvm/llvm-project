@@ -628,17 +628,15 @@ collectThrowingCalls(mlir::Region &region,
 // directly to the caller. Nested cleanup scopes and try ops are always
 // flattened before their enclosing parents, so there are no nested regions
 // to skip here.
-static void
-collectResumeOps(mlir::Region &region,
-                 llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) {
-  region.walk(
-      [&](cir::ResumeOp resumeOp) { resumeOps.push_back(resumeOp); });
+static void collectResumeOps(mlir::Region &region,
+                             llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) {
+  region.walk([&](cir::ResumeOp resumeOp) { resumeOps.push_back(resumeOp); });
 }
 
 // Replace a cir.call with a cir.try_call that unwinds to the `unwindDest`
 // block if an exception is thrown.
-static void replaceCallWithTryCall(cir::CallOp callOp,
-                                   mlir::Block *unwindDest, mlir::Location loc,
+static void replaceCallWithTryCall(cir::CallOp callOp, mlir::Block *unwindDest,
+                                   mlir::Location loc,
                                    mlir::PatternRewriter &rewriter) {
   mlir::Block *callBlock = callOp->getBlock();
 
@@ -1171,9 +1169,8 @@ public:
       // need a shared unwind destination. Resume ops from inner cleanups
       // branch directly to the EH cleanup entry.
       if (!callsToRewrite.empty())
-        unwindBlock =
-            buildUnwindBlock(ehCleanupEntry, /*hasCleanup=*/true, loc,
-                             ehCleanupEntry, rewriter);
+        unwindBlock = buildUnwindBlock(ehCleanupEntry, /*hasCleanup=*/true, loc,
+                                       ehCleanupEntry, rewriter);
     }
 
     // All normal flow blocks are inserted before this point — either before
@@ -1508,14 +1505,14 @@ public:
     // Nested try ops and cleanup scopes must be flattened before the enclosing
     // try so that EH cleanup inside them is properly handled. Fail the match so
     // the pattern rewriter will process nested ops first.
-    bool hasNestedOps = tryOp
-                            ->walk([&](mlir::Operation *op) {
-                              if (isa<cir::CleanupScopeOp, cir::TryOp>(op) &&
-                                  op != tryOp)
-                                return mlir::WalkResult::interrupt();
-                              return mlir::WalkResult::advance();
-                            })
-                            .wasInterrupted();
+    bool hasNestedOps =
+        tryOp
+            ->walk([&](mlir::Operation *op) {
+              if (isa<cir::CleanupScopeOp, cir::TryOp>(op) && op != tryOp)
+                return mlir::WalkResult::interrupt();
+              return mlir::WalkResult::advance();
+            })
+            .wasInterrupted();
     if (hasNestedOps)
       return mlir::failure();
 
@@ -1571,8 +1568,8 @@ public:
       mlir::Region &handlerRegion = handlerRegions[idx];
 
       if (mlir::isa<cir::UnwindAttr>(typeAttr)) {
-        mlir::Block *unwindEntry = flattenUnwindHandler(
-            handlerRegion, loc, continueBlock, rewriter);
+        mlir::Block *unwindEntry =
+            flattenUnwindHandler(handlerRegion, loc, continueBlock, rewriter);
         catchHandlerBlocks.push_back(unwindEntry);
       } else {
         mlir::Block *handlerEntry = flattenCatchHandler(
@@ -1582,9 +1579,9 @@ public:
     }
 
     // Build the catch dispatch block.
-    mlir::Block *dispatchBlock = buildCatchDispatchBlock(
-        tryOp, handlerTypes, catchHandlerBlocks, loc,
-        catchHandlerBlocks.front(), rewriter);
+    mlir::Block *dispatchBlock =
+        buildCatchDispatchBlock(tryOp, handlerTypes, catchHandlerBlocks, loc,
+                                catchHandlerBlocks.front(), rewriter);
 
     // Build a block to be the unwind desination for throwing calls and replace
     // the calls with try_call ops. Note that the unwind block created here is
@@ -1595,8 +1592,8 @@ public:
     bool hasCleanup = tryOp.getCleanup();
     if (!callsToRewrite.empty()) {
       // Create a shared unwind block for all throwing calls.
-      mlir::Block *unwindBlock = buildUnwindBlock(
-          dispatchBlock, hasCleanup, loc, dispatchBlock, rewriter);
+      mlir::Block *unwindBlock = buildUnwindBlock(dispatchBlock, hasCleanup,
+                                                  loc, dispatchBlock, rewriter);
 
       for (cir::CallOp callOp : callsToRewrite)
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
