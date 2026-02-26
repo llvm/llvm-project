@@ -913,54 +913,63 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     QualType SrcType = SubExpr->getType();
     QualType DestType = CE->getType();
 
+    // Allowed SrcTypes
+    const auto *SrcVT = SrcType->getAs<VectorType>();
+    const auto *SrcMT = SrcType->getAs<ConstantMatrixType>();
+    const auto *SrcAT = SrcType->getAsArrayTypeUnsafe();
+    const auto *SrcCAT = SrcAT ? dyn_cast<ConstantArrayType>(SrcAT) : nullptr;
+
+    // Allowed DestTypes
+    const auto *DestVT = DestType->getAs<VectorType>();
+    const auto *DestMT = DestType->getAs<ConstantMatrixType>();
+    const auto *DestAT = DestType->getAsArrayTypeUnsafe();
+    const auto *DestCAT =
+        DestAT ? dyn_cast<ConstantArrayType>(DestAT) : nullptr;
+    const OptPrimType DestPT = classify(DestType);
+
+    if (!SrcVT && !SrcMT && !SrcCAT)
+      return false;
+    if (!DestVT && !DestMT && !DestCAT && !DestPT)
+      return false;
+
     unsigned SrcNumElems;
     PrimType SrcElemT;
-    if (const auto *VT = SrcType->getAs<VectorType>()) {
-      SrcNumElems = VT->getNumElements();
-      SrcElemT = classifyPrim(VT->getElementType());
-    } else if (const auto *MT = SrcType->getAs<ConstantMatrixType>()) {
-      SrcNumElems = MT->getNumElementsFlattened();
-      SrcElemT = classifyPrim(MT->getElementType());
-    } else if (const auto *AT = SrcType->getAsArrayTypeUnsafe()) {
-      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        SrcNumElems = CAT->getZExtSize();
-        SrcElemT = classifyPrim(CAT->getElementType());
-      } else {
-        return false;
-      }
-    } else {
-      return false;
+    if (SrcVT) {
+      SrcNumElems = SrcVT->getNumElements();
+      SrcElemT = classifyPrim(SrcVT->getElementType());
+    } else if (SrcMT) {
+      SrcNumElems = SrcMT->getNumElementsFlattened();
+      SrcElemT = classifyPrim(SrcMT->getElementType());
+    } else if (SrcCAT) {
+      SrcNumElems = SrcCAT->getZExtSize();
+      SrcElemT = classifyPrim(SrcCAT->getElementType());
     }
 
-    unsigned DestNumElems;
-    PrimType DestElemT;
-    QualType DestElemType;
-    if (const auto *VT = DestType->getAs<VectorType>()) {
-      DestNumElems = VT->getNumElements();
-      DestElemType = VT->getElementType();
-    } else if (const auto *MT = DestType->getAs<ConstantMatrixType>()) {
-      DestNumElems = MT->getNumElementsFlattened();
-      DestElemType = MT->getElementType();
-    } else if (const auto *AT = DestType->getAsArrayTypeUnsafe()) {
-      if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        DestNumElems = CAT->getZExtSize();
-        DestElemType = CAT->getElementType();
-      } else {
-        return false;
-      }
-    } else if (OptPrimType DestT = classify(DestType)) {
+    if (DestPT) {
       // Scalar destination: extract element 0 and cast.
       if (!this->visit(SubExpr))
         return false;
       if (!this->emitArrayElemPop(SrcElemT, 0, CE))
         return false;
-      if (SrcElemT != *DestT) {
-        if (!this->emitPrimCast(SrcElemT, *DestT, DestType, CE))
+      if (SrcElemT != *DestPT) {
+        if (!this->emitPrimCast(SrcElemT, *DestPT, DestType, CE))
           return false;
       }
       return true;
-    } else {
-      return false;
+    }
+
+    unsigned DestNumElems;
+    PrimType DestElemT;
+    QualType DestElemType;
+    if (DestVT) {
+      DestNumElems = DestVT->getNumElements();
+      DestElemType = DestVT->getElementType();
+    } else if (DestMT) {
+      DestNumElems = DestMT->getNumElementsFlattened();
+      DestElemType = DestMT->getElementType();
+    } else if (DestCAT) {
+      DestNumElems = DestCAT->getZExtSize();
+      DestElemType = DestCAT->getElementType();
     }
     DestElemT = classifyPrim(DestElemType);
 
