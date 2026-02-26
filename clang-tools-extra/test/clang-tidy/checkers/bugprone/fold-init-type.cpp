@@ -257,6 +257,24 @@ int accumulatePositiveBitOr() {
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'unsigned int' into type 'int'
 }
 
+int accumulatePositiveExplicitFunctor1() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::plus<int>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveExplicitFunctor2() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::plus<float>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveExplicitFunctor3() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::multiplies<double>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
 // Negatives.
 
 int negative1() {
