@@ -42,7 +42,6 @@ TEST_F(LlvmLibcHypotBf16Test,NormalPositiveRange){
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-
     }
   }
 }
@@ -57,7 +56,6 @@ TEST_F(LlvmLibcHypotBf16Test,NormalNegativeRange){
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-
     }
   }
 }
@@ -72,7 +70,6 @@ TEST_F(LlvmLibcHypotBf16Test, SubnormalNegativeRange) {
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-
     }
   }
 }
@@ -87,7 +84,6 @@ TEST_F(LlvmLibcHypotBf16Test, SubnormalPositiveRange) {
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-
     }
   }
 }
@@ -102,7 +98,6 @@ TEST_F(LlvmLibcHypotBf16Test, SpecialNumbers) {
 
         EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
                                        LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
-
     }
   }
 }
