@@ -2533,8 +2533,8 @@ bool Lexer::SkipWhitespace(Token &Result, const char *CurPtr) {
 
   // Skip consecutive spaces efficiently.
   while (true) {
-    // Skip horizontal whitespace very aggressively.
-    while (isHorizontalWhitespace(Char))
+    // Skip horizontal whitespace, especially space, very aggressively.
+    while (Char == ' ' || isHorizontalWhitespace(Char))
       Char = *++CurPtr;
 
     // Otherwise if we have something other than whitespace, we're done.
@@ -3757,10 +3757,12 @@ LexStart:
   const char *CurPtr = BufferPtr;
 
   // Small amounts of horizontal whitespace is very common between tokens.
-  if (isHorizontalWhitespace(*CurPtr)) {
+  // Check for space character separately to skip the expensive
+  // isHorizontalWhitespace() check
+  if (*CurPtr == ' ' || isHorizontalWhitespace(*CurPtr)) {
     do {
       ++CurPtr;
-    } while (isHorizontalWhitespace(*CurPtr));
+    } while (*CurPtr == ' ' || isHorizontalWhitespace(*CurPtr));
 
     // If we are keeping whitespace and other tokens, just return what we just
     // skipped.  The next lexer invocation will return the token after the
