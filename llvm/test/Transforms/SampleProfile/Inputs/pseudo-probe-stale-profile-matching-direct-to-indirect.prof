@@ -1,0 +1,7 @@
+test_direct_call_matched_to_indirect:500:80
+ 1: 80
+ 2: 83 A:43 B:40
+ 3: 84
+ 4: 84 B:84
+ 5: 91 C:91
+ !CFGChecksum: 123456

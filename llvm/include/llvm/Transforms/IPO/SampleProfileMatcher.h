@@ -23,6 +23,11 @@ namespace llvm {
 
 using AnchorList = std::vector<std::pair<LineLocation, FunctionId>>;
 using AnchorMap = std::map<LineLocation, FunctionId>;
+// When multiple callees are found at the same location (creating an
+// UnknownIndirectCallee anchor), save the individual targets for later
+// matching. This allows a direct call in the IR to match against one of
+// the actual call targets in the profile.
+using AnchorTargetMap = std::map<LineLocation, SmallVector<FunctionId, 2>>;
 
 // Sample profile matching - fuzzy match.
 class SampleProfileMatcher {
@@ -162,12 +167,13 @@ private:
                              AnchorList &FilteredProfileAnchorList);
   void runOnFunction(Function &F);
   void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
-  void findProfileAnchors(const FunctionSamples &FS,
-                          AnchorMap &ProfileAnchors) const;
+  void findProfileAnchors(const FunctionSamples &FS, AnchorMap &ProfileAnchors,
+                          AnchorTargetMap &ProfileAnchorTargets) const;
   // Record the callsite match states for profile staleness report, the result
   // is saved in FuncCallsiteMatchStates.
   void recordCallsiteMatchStates(const Function &F, const AnchorMap &IRAnchors,
                                  const AnchorMap &ProfileAnchors,
+                                 const AnchorTargetMap &ProfileAnchorTargets,
                                  const LocToLocMap *IRToProfileLocationMap);
 
   bool isMismatchState(const enum MatchState &State) {
@@ -209,12 +215,14 @@ private:
   void distributeIRToProfileLocationMap(FunctionSamples &FS);
   LocToLocMap longestCommonSequence(const AnchorList &IRCallsiteAnchors,
                                     const AnchorList &ProfileCallsiteAnchors,
+                                    const AnchorTargetMap &ProfileAnchorTargets,
                                     bool MatchUnusedFunction);
   void matchNonCallsiteLocs(const LocToLocMap &AnchorMatchings,
                             const AnchorMap &IRAnchors,
                             LocToLocMap &IRToProfileLocationMap);
   void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
+                               const AnchorTargetMap &ProfileAnchorTargets,
                                LocToLocMap &IRToProfileLocationMap,
                                bool RunCFGMatching, bool RunCGMatching);
   // If the function doesn't have profile, return the pointer to the function.
