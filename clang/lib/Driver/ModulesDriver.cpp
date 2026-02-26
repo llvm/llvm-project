@@ -1324,7 +1324,10 @@ static void createRegularEdges(CompilationGraph &Graph) {
   }
 }
 
-/// Create edges for regular (non-module) dependencies in \p Graph.
+/// Create edges for module dependencies in \p Graph.
+///
+/// \returns false if there are multiple definitions for a named module, with
+/// diagnostics reported to \p Diags; otherwise returns true.
 static bool createModuleDependencyEdges(CompilationGraph &Graph,
                                         DiagnosticsEngine &Diags) {
   llvm::DenseMap<deps::ModuleID, CGNode *> ClangModuleNodeByID;
