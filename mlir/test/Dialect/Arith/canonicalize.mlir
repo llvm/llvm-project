@@ -643,7 +643,7 @@ func.func @indexCastUIOfUnsignedExtend_nneg_exact(%arg0: i8) -> index {
   return %idx : index
 }
 
-// index_castui(index_castui(x)) -> x only when at least one exact is set.
+// index_castui(index_castui(x)) -> x only when exact is on the inner cast.
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_no_exact
 //       CHECK:   arith.index_castui
 //       CHECK:   arith.index_castui
@@ -661,8 +661,11 @@ func.func @indexCastUIOfIndexCastUI_exact_inner(%arg0: i32) -> i32 {
   return %res : i32
 }
 
+// exact on outer only does NOT trigger the fold (outer exact on widening
+// is vacuously true and does not guarantee the inner truncation is lossless).
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_exact_outer
-//       CHECK:   return %arg0 : i32
+//       CHECK:   arith.index_castui
+//       CHECK:   arith.index_castui
 func.func @indexCastUIOfIndexCastUI_exact_outer(%arg0: i32) -> i32 {
   %idx = arith.index_castui %arg0 : i32 to index
   %res = arith.index_castui %idx exact : index to i32
