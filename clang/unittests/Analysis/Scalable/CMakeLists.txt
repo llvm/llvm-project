@@ -35,7 +35,3 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   FrontendOpenMP
   Support
   )
-
-target_include_directories(ClangScalableAnalysisTests PRIVATE
-  ${CMAKE_CURRENT_SOURCE_DIR}/../../../lib/Analysis/Scalable
-  )
