@@ -46,15 +46,22 @@ TEST_F(VPUncountableExitTest, FindUncountableExitRecipes) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader, /*HasUncountableExit=*/true);
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
-  VPlanTransforms::optimize(*Plan);
+  VPlanPtr Plan = buildVPlan0(LoopHeader);
+
+  // TODO: This will run getRecipesForUncountableExit as part of the transform,
+  //       can we separate out the formation of the any-of condition?
+  VPlanTransforms::handleEarlyExits(*Plan,
+                                    UncountableEarlyExitDetail::ReadWrite);
 
   SmallVector<VPRecipeBase *> Recipes;
   SmallVector<VPRecipeBase *> GEPs;
 
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan->getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
+      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs, LatchVPBB);
   ASSERT_TRUE(UncountableCondition.has_value());
   ASSERT_EQ(GEPs.size(), 1ull);
   ASSERT_EQ(Recipes.size(), 3ull);
@@ -82,15 +89,18 @@ TEST_F(VPUncountableExitTest, NoUncountableExit) {
 
   Function *F = M.getFunction("f");
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
-  auto Plan = buildVPlan(LoopHeader);
-  VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI);
-  VPlanTransforms::optimize(*Plan);
+  auto Plan = buildVPlan0(LoopHeader);
+  VPlanTransforms::handleEarlyExits(*Plan, UncountableEarlyExitDetail::None);
 
   SmallVector<VPRecipeBase *> Recipes;
   SmallVector<VPRecipeBase *> GEPs;
 
+  auto *MiddleVPBB = cast<VPBasicBlock>(
+      Plan->getScalarHeader()->getSinglePredecessor()->getPredecessors()[0]);
+  auto *LatchVPBB = cast<VPBasicBlock>(MiddleVPBB->getSinglePredecessor());
+
   std::optional<VPValue *> UncountableCondition =
-      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs);
+      vputils::getRecipesForUncountableExit(*Plan, Recipes, GEPs, LatchVPBB);
   ASSERT_FALSE(UncountableCondition.has_value());
   ASSERT_EQ(GEPs.size(), 0ull);
   ASSERT_EQ(Recipes.size(), 0ull);
