@@ -34277,6 +34277,24 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     Results.push_back(Res);
     return;
   }
+  case X86ISD::VPMADD52L: {
+    SDLoc dl(N);
+    EVT VT = N->getValueType(0);
+
+    SDValue Op0Lo, Op0Hi, Op1Lo, Op1Hi, Op2Lo, Op2Hi;
+    std::tie(Op0Lo, Op0Hi) = DAG.SplitVectorOperand(N, 0);
+    std::tie(Op1Lo, Op1Hi) = DAG.SplitVectorOperand(N, 1);
+    std::tie(Op2Lo, Op2Hi) = DAG.SplitVectorOperand(N, 2);
+
+    EVT HalfVT = Op0Lo.getValueType();
+    SDValue ResLo =
+        DAG.getNode(N->getOpcode(), dl, HalfVT, Op0Lo, Op1Lo, Op2Lo);
+    SDValue ResHi =
+        DAG.getNode(N->getOpcode(), dl, HalfVT, Op0Hi, Op1Hi, Op2Hi);
+
+    Results.push_back(DAG.getNode(ISD::CONCAT_VECTORS, dl, VT, ResLo, ResHi));
+    return;
+  }
   case X86ISD::STRICT_CVTPH2PS: {
     EVT VT = N->getValueType(0);
     SDValue Lo, Hi;
