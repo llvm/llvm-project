@@ -52,7 +52,7 @@ expand_template(
         "@MLIR_RUN_AMX_TESTS@": "0",
         "@MLIR_RUN_ARM_SVE_TESTS@": "0",
         "@MLIR_RUN_ARM_SME_TESTS@": "0",
-        "@MLIR_RUN_X86VECTOR_TESTS@": "0",
+        "@MLIR_RUN_X86_TESTS@": "0",
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_LT_TESTS@": "0",
@@ -854,7 +854,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 
@@ -1152,7 +1152,7 @@ cc_library(
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 
