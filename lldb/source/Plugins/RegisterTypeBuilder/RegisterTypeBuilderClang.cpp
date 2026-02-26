@@ -58,9 +58,8 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
                                                          byte_size * 8);
 
     fields_type = type_system->CreateRecordType(
-        nullptr, OptionalClangModuleID(), lldb::eAccessPublic,
-        register_type_name, llvm::to_underlying(clang::TagTypeKind::Struct),
-        lldb::eLanguageTypeC);
+        nullptr, OptionalClangModuleID(), register_type_name,
+        llvm::to_underlying(clang::TagTypeKind::Struct), lldb::eLanguageTypeC);
     type_system->StartTagDeclarationDefinition(fields_type);
 
     // We assume that RegisterFlags has padded and sorted the fields
@@ -107,8 +106,7 @@ CompilerType RegisterTypeBuilderClang::GetRegisterType(
       }
 
       type_system->AddFieldToRecordType(fields_type, field.GetName(),
-                                        field_type, lldb::eAccessPublic,
-                                        field.GetSizeInBits());
+                                        field_type, field.GetSizeInBits());
     }
 
     type_system->CompleteTagDeclarationDefinition(fields_type);
