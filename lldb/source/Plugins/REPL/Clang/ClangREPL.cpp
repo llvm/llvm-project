@@ -85,9 +85,13 @@ lldb::offset_t ClangREPL::GetDesiredIndentation(const StringList &lines,
 lldb::LanguageType ClangREPL::GetLanguage() { return m_language; }
 
 bool ClangREPL::PrintOneVariable(Debugger &debugger,
-                                 lldb::StreamFileSP &output_sp,
+                                 lldb::LockableStreamFileSP &output_stream_sp,
                                  lldb::ValueObjectSP &valobj_sp,
                                  ExpressionVariable *var) {
+  // Suspend the statusline while printing to prevent its ANSI cursor
+  // save/restore sequences from interleaving with the output.
+  LockedStreamFile locked_stream = output_stream_sp->Lock();
+
   // If a ExpressionVariable was passed, check first if that variable is just
   // an automatically created expression result. These variables are already
   // printed by the REPL so this is done to prevent printing the variable twice.
@@ -95,8 +99,8 @@ bool ClangREPL::PrintOneVariable(Debugger &debugger,
     if (m_implicit_expr_result_regex.Execute(var->GetName().GetStringRef()))
       return true;
   }
-  if (llvm::Error error = valobj_sp->Dump(*output_sp))
-    *output_sp << "error: " << toString(std::move(error));
+  if (llvm::Error error = valobj_sp->Dump(locked_stream))
+    locked_stream << "error: " << toString(std::move(error));
 
   return true;
 }

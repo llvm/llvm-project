@@ -219,10 +219,14 @@ static bool ReadCode(const std::string &path, std::string &code,
 }
 
 void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
-  lldb::StreamFileSP output_sp = std::make_shared<StreamFile>(
-      io_handler.GetOutputStreamFileSP()->GetUnlockedFileSP());
-  lldb::StreamFileSP error_sp = std::make_shared<StreamFile>(
-      io_handler.GetErrorStreamFileSP()->GetUnlockedFileSP());
+  lldb::LockableStreamFileSP output_stream_sp =
+      io_handler.GetOutputStreamFileSP();
+  lldb::StreamFileSP output_sp =
+      std::make_shared<StreamFile>(output_stream_sp->GetUnlockedFileSP());
+  lldb::LockableStreamFileSP error_stream_sp =
+      io_handler.GetErrorStreamFileSP();
+  lldb::StreamFileSP error_sp =
+      std::make_shared<StreamFile>(error_stream_sp->GetUnlockedFileSP());
   bool extra_line = false;
   bool did_quit = false;
 
@@ -355,7 +359,8 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           lldb::Format format = m_format_options.GetFormat();
 
           if (result_valobj_sp->GetError().Success()) {
-            handled |= PrintOneVariable(debugger, output_sp, result_valobj_sp);
+            handled |=
+                PrintOneVariable(debugger, output_stream_sp, result_valobj_sp);
           } else if (result_valobj_sp->GetError().GetError() ==
                      UserExpression::kNoResult) {
             if (format != lldb::eFormatVoid && debugger.GetNotifyVoid()) {
@@ -372,7 +377,7 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
                 persistent_state->GetVariableAtIndex(vi);
             lldb::ValueObjectSP valobj_sp = persistent_var_sp->GetValueObject();
 
-            PrintOneVariable(debugger, output_sp, valobj_sp,
+            PrintOneVariable(debugger, output_stream_sp, valobj_sp,
                              persistent_var_sp.get());
           }
         }
