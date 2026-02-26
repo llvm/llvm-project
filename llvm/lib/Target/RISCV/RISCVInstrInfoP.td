@@ -1560,6 +1560,12 @@ let Predicates = [HasStdExtP] in {
   def : Pat<(XLenVT (riscv_merge GPR:$rd, GPR:$rs1, GPR:$rs2)),
             (PseudoMERGE GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
+  // Match a pattern of 2 bytes being inserted into bits [15:8] when only the
+  // upper 16 bits are being demanded.
+  def : Pat<(binop_allhusers<or> (shl GPR:$rs2, (XLenVT 8)),
+                                 zexti8:$rs1),
+            (PPAIRE_B zexti8:$rs1, GPR:$rs2)>;
+
   // Basic 8-bit arithmetic patterns
   def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
   def: Pat<(XLenVecI8VT (sub GPR:$rs1, GPR:$rs2)), (PSUB_B GPR:$rs1, GPR:$rs2)>;
@@ -1745,6 +1751,16 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def : Pat<(i32 (riscv_nsra GPR:$lo, GPR:$hi, shiftMask64:$shamt)),
             (NSRA (BuildGPRPair GPR:$lo, GPR:$hi), shiftMask64:$shamt)>;
 
+  // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+  // bits [15:0] coming from a zero extended value. We can use pack with
+  // ppaire.b for bits [31:16]. If bits [15:0] can also be a ppaire.b, it can be
+  // matched separately.
+  def : Pat<(i32 (or (or (shl GPR:$op1rs2, (XLenVT 24)),
+                       (shl zexti8:$op1rs1, (XLenVT 16))),
+                     zexti16:$rs1)),
+            (PACK zexti16:$rs1,
+                  (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
+
   // 8/16-bit multiply low patterns
   def: Pat<(v4i8 (mul GPR:$rs1, GPR:$rs2)),
            (PNSRLI_B (PWMUL_B GPR:$rs1, GPR:$rs2), 0)>;
@@ -1767,6 +1783,17 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def : PatGpr<riscv_clsw, CLSW>;
 
   def : PatGpr<bitreverse, REV_RV64>;
+
+  // Match a pattern of 2 bytes being inserted into bits [31:16], with bits
+  // bits [15:0] coming from a zero extended value, and bits [63:32] being
+  // ignored. We can use ppaire.h with ppaire.b for bits [31:16]. If bits [15:0]
+  // can also be a ppaire.b, it can be matched separately.
+  def : Pat<(binop_allwusers<or>
+                 (or (shl GPR:$op1rs2, (XLenVT 24)),
+                     (shl zexti8:$op1rs1, (XLenVT 16))),
+                 zexti16:$rs1),
+            (PPAIRE_H zexti16:$rs1,
+                      (XLenVT (PPAIRE_B zexti8:$op1rs1, GPR:$op1rs2)))>;
 
   // 32-bit PLI SD node pattern
   def: Pat<(v2i32 (splat_vector simm10:$imm10)), (PLI_W simm10:$imm10)>;
