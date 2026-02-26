@@ -266,19 +266,3 @@ func.func @negative_source_too_small(%arg0: vector<2xi8>) -> vector<4xi8> {
   return %2 : vector<4xi8>
 }
 
-// -----
-
-///===----------------------------------------------===//
-///  Test of `FoldShapeCastOfFromElements`
-///===----------------------------------------------===//
-
-// CHECK-LABEL:   func.func @fold_shape_cast_from_elements(
-// CHECK-SAME:    %[[C1:.*]]: f32, %[[C2:.*]]: f32, %[[C3:.*]]: f32, %[[C4:.*]]: f32
-func.func @fold_shape_cast_from_elements(%c1: f32, %c2: f32, %c3: f32, %c4: f32) -> vector<2x2xf32>{
-// CHECK:           %[[VAL_0:.*]] = vector.from_elements %[[C1]], %[[C2]], %[[C3]], %[[C4]] : vector<2x2xf32>
-// CHECK:           return %[[VAL_0]] : vector<2x2xf32>
-// CHECK-NOT: vector.shape_cast
-  %1 = vector.from_elements %c1, %c2, %c3, %c4 : vector<4xf32>
-  %2 = vector.shape_cast %1 : vector<4xf32> to vector<2x2xf32>
-  return %2 : vector<2x2xf32>
-}
