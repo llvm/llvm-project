@@ -46,7 +46,7 @@ define <4 x i1> @remove_all_false_subvector() {
   ret <4 x i1> %ext
 }
 
-define <vscale x 4 x i1> @remove_all_false_subvector_vscale() #0 {
+define <vscale x 4 x i1> @remove_all_false_subvector_vscale() vscale_range(2,16) {
 ; CHECK-LABEL: define <vscale x 4 x i1> @remove_all_false_subvector_vscale(
 ; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    ret <vscale x 4 x i1> zeroinitializer
@@ -76,5 +76,3 @@ define <4 x i1> @ext_has_active_lanes() {
   %ext = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 4)
   ret <4 x i1> %ext
 }
-
-attributes #0 = { vscale_range(2,16) }
