@@ -478,7 +478,6 @@ bool GCOVProfiler::isFunctionInstrumented(const Function &F) {
   }
 
   SmallString<256> RealPath;
-  StringRef RealFilename;
 
   // Path can be
   // /usr/lib/gcc/x86_64-linux-gnu/8/../../../../include/c++/8/bits/*.h so for
