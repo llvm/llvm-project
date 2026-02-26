@@ -61,6 +61,9 @@ public:
                                       cir::PointerType destCIRTy,
                                       bool isRefCast, Address src) = 0;
 
+  virtual cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
+                                                 const CXXMethodDecl *md) = 0;
+
 public:
   /// Similar to AddedStructorArgs, but only notes the number of additional
   /// arguments.
@@ -127,7 +130,8 @@ public:
   virtual void emitBadCastCall(CIRGenFunction &cgf, mlir::Location loc) = 0;
 
   virtual void emitBeginCatch(CIRGenFunction &cgf,
-                              const CXXCatchStmt *catchStmt) = 0;
+                              const CXXCatchStmt *catchStmt,
+                              mlir::Value ehToken) = 0;
 
   virtual mlir::Attribute getAddrOfRTTIDescriptor(mlir::Location loc,
                                                   QualType ty) = 0;

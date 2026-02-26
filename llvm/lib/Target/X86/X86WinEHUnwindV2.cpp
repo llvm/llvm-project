@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -32,35 +33,62 @@ STATISTIC(MeetsUnwindV2Criteria,
 STATISTIC(FailsUnwindV2Criteria,
           "Number of functions that fail Unwind v2 criteria");
 
-static cl::opt<unsigned> MaximumUnwindCodes(
-    "x86-wineh-unwindv2-max-unwind-codes", cl::Hidden,
-    cl::desc("Maximum number of unwind codes permitted in each unwind info."),
-    cl::init(UINT8_MAX));
+static cl::opt<unsigned>
+    UnwindCodeThreshold("x86-wineh-unwindv2-unwind-codes-threshold", cl::Hidden,
+                        cl::desc("Maximum number of unwind codes before "
+                                 "splitting into a new unwind info."),
+                        cl::init(UINT8_MAX));
 
 static cl::opt<unsigned>
     ForceMode("x86-wineh-unwindv2-force-mode", cl::Hidden,
               cl::desc("Overwrites the Unwind v2 mode for testing purposes."));
 
+// This threshold is for the *approximate* number of instructions, see the
+// comment in runAnalysisOnFuncOrFunclet for more details.
+static cl::opt<unsigned> InstructionCountThreshold(
+    "x86-wineh-unwindv2-instruction-count-threshold", cl::Hidden,
+    cl::desc("Maximum number of (approximate) instructions before splitting "
+             "into a new unwind info."),
+    cl::init(600));
+
 namespace {
 
-class X86WinEHUnwindV2 : public MachineFunctionPass {
+struct EpilogInfo {
+  MachineInstr *UnwindV2StartLocation;
+  unsigned ApproximateInstructionPosition;
+};
+
+struct FrameInfo {
+  unsigned ApproximatePrologCodeCount;
+  unsigned ApproximateInstructionCount;
+  SmallVector<EpilogInfo> EpilogInfos;
+};
+
+class X86WinEHUnwindV2Legacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  X86WinEHUnwindV2() : MachineFunctionPass(ID) {
-    initializeX86WinEHUnwindV2Pass(*PassRegistry::getPassRegistry());
+  X86WinEHUnwindV2Legacy() : MachineFunctionPass(ID) {
+    initializeX86WinEHUnwindV2LegacyPass(*PassRegistry::getPassRegistry());
   }
 
   StringRef getPassName() const override { return "WinEH Unwind V2"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-
-private:
-  /// Rejects the current function due to an internal error within LLVM.
-  static bool rejectCurrentFunctionInternalError(const MachineFunction &MF,
-                                                 WinX64EHUnwindV2Mode Mode,
-                                                 StringRef Reason);
 };
+
+/// Rejects the current function due to an internal error within LLVM.
+std::nullopt_t rejectCurrentFunctionInternalError(const MachineFunction &MF,
+                                                  WinX64EHUnwindV2Mode Mode,
+                                                  StringRef Reason) {
+  if (Mode == WinX64EHUnwindV2Mode::Required)
+    reportFatalInternalError("Windows x64 Unwind v2 is required, but LLVM has "
+                             "generated incompatible code in function '" +
+                             MF.getName() + "': " + Reason);
+
+  FailsUnwindV2Criteria++;
+  return std::nullopt;
+}
 
 enum class FunctionState {
   InProlog,
@@ -71,14 +99,14 @@ enum class FunctionState {
 
 } // end anonymous namespace
 
-char X86WinEHUnwindV2::ID = 0;
+char X86WinEHUnwindV2Legacy::ID = 0;
 
-INITIALIZE_PASS(X86WinEHUnwindV2, "x86-wineh-unwindv2",
+INITIALIZE_PASS(X86WinEHUnwindV2Legacy, "x86-wineh-unwindv2",
                 "Analyze and emit instructions for Win64 Unwind v2", false,
                 false)
 
-FunctionPass *llvm::createX86WinEHUnwindV2Pass() {
-  return new X86WinEHUnwindV2();
+FunctionPass *llvm::createX86WinEHUnwindV2LegacyPass() {
+  return new X86WinEHUnwindV2Legacy();
 }
 
 DebugLoc findDebugLoc(const MachineBasicBlock &MBB) {
@@ -89,14 +117,11 @@ DebugLoc findDebugLoc(const MachineBasicBlock &MBB) {
   return DebugLoc::getUnknown();
 }
 
-bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
-  WinX64EHUnwindV2Mode Mode =
-      ForceMode.getNumOccurrences()
-          ? static_cast<WinX64EHUnwindV2Mode>(ForceMode.getValue())
-          : MF.getFunction().getParent()->getWinX64EHUnwindV2Mode();
-
-  if (Mode == WinX64EHUnwindV2Mode::Disabled)
-    return false;
+// Continues running the analysis on the given function or funclet.
+std::optional<FrameInfo>
+runAnalysisOnFuncOrFunclet(MachineFunction &MF, MachineFunction::iterator &Iter,
+                           WinX64EHUnwindV2Mode Mode) {
+  const TargetFrameLowering &TFL = *MF.getSubtarget().getFrameLowering();
 
   // Current state of processing the function. We'll assume that all functions
   // start with a prolog.
@@ -108,17 +133,47 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
   bool HasSetFrame = false;
   unsigned ApproximatePrologCodeCount = 0;
 
-  // Requested changes.
-  SmallVector<MachineInstr *> UnwindV2StartLocations;
+  SmallVector<EpilogInfo> EpilogInfos;
 
-  for (MachineBasicBlock &MBB : MF) {
+  // Unwind v2 requires that the epilog is no more than 4Kb away from the last
+  // instruction that the current unwind info covers. If we believe that we are
+  // going over that limit then we need to split the unwind info. Ideally we'd
+  // do this at the point where we actually know how far away we are from the
+  // last instruction, but that's not possible here and splitting unwind infos
+  // in MC would be difficult. However, the cost of splitting an unwind info is
+  // fairly cheap (in the other of bytes in the xdata section), so we can
+  // instead use a heuristic based on the number of MachineInstrs to decide when
+  // to split unwind infos, and allow users to tune the threshold if needed.
+  // This is not a perfect solution, but 1) it is cheap to calculate, 2) allows
+  // the common case for small functions or large functions with multiple
+  // returns at the end to have a single unwind info, and 3) allows unwind v2 to
+  // be used in large functions (that would otherwise be rejected) for a small
+  // binary size cost.
+  unsigned ApproximateInstructionCount = 0;
+
+  for (; Iter != MF.end(); ++Iter) {
+    MachineBasicBlock &MBB = *Iter;
+
+    // If we're already been processing a function, then come across a funclet
+    // then break since the funclet will get a fresh frame info.
+    if (MBB.isEHFuncletEntry() && State != FunctionState::InProlog)
+      break;
+
     // Current epilog information. We assume that epilogs cannot cross basic
     // block boundaries.
     unsigned PoppedRegCount = 0;
     bool HasStackDealloc = false;
+    bool HasSetFrameBack = false;
     MachineInstr *UnwindV2StartLocation = nullptr;
 
     for (MachineInstr &MI : MBB) {
+      // This is an *approximation* of the number of instructions that will be
+      // emitted. It is not the actual number of instructions, but that doesn't
+      // matter: see the comment at the declaration of
+      // ApproximateInstructionCount.
+      if (!MI.isPseudo() && !MI.isMetaInstruction())
+        ApproximateInstructionCount++;
+
       switch (MI.getOpcode()) {
       //
       // Prolog handling.
@@ -192,7 +247,8 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
         // epilog.
         if (!UnwindV2StartLocation)
           UnwindV2StartLocation = &MI;
-        UnwindV2StartLocations.push_back(UnwindV2StartLocation);
+        EpilogInfos.push_back(
+            {UnwindV2StartLocation, ApproximateInstructionCount});
         State = FunctionState::FinishedEpilog;
         break;
 
@@ -214,6 +270,7 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
                 MF, Mode,
                 "Cannot set the frame back after the stack "
                 "allocation has been deallocated");
+          HasSetFrameBack = true;
         } else if (State == FunctionState::FinishedEpilog)
           return rejectCurrentFunctionInternalError(
               MF, Mode, "Unexpected mov instruction after the epilog");
@@ -251,6 +308,12 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
             // registers, then assume it was used to adjust the stack pointer.
             HasStackDealloc = true;
           } else {
+            // Special case: no explicit stack dealloc is required if SetFrame
+            // was used and the function has a frame pointer.
+            if (PoppedRegCount == 0 && HasStackAlloc && !HasStackDealloc &&
+                HasSetFrameBack && TFL.hasFP(MF))
+              HasStackDealloc = true;
+
             // After the stack pointer has been adjusted, the epilog must
             // POP each register in reverse order of the PUSHes in the prolog.
             PoppedRegCount++;
@@ -305,37 +368,66 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  if (UnwindV2StartLocations.empty())
+  return FrameInfo{ApproximatePrologCodeCount, ApproximateInstructionCount,
+                   EpilogInfos};
+}
+
+bool runX86WinEHUnwindV2(MachineFunction &MF) {
+  WinX64EHUnwindV2Mode Mode =
+      ForceMode.getNumOccurrences()
+          ? static_cast<WinX64EHUnwindV2Mode>(ForceMode.getValue())
+          : MF.getFunction().getParent()->getWinX64EHUnwindV2Mode();
+
+  if (Mode == WinX64EHUnwindV2Mode::Disabled)
     return false;
 
-  MachineBasicBlock &FirstMBB = MF.front();
-  // Assume +1 for the "header" UOP_Epilog that contains the epilog size, and
-  // that we won't be able to use the "last epilog at the end of function"
-  // optimization.
-  if (ApproximatePrologCodeCount + UnwindV2StartLocations.size() + 1 >
-      static_cast<unsigned>(MaximumUnwindCodes)) {
-    if (Mode == WinX64EHUnwindV2Mode::Required)
-      MF.getFunction().getContext().diagnose(DiagnosticInfoGenericWithLoc(
-          "Windows x64 Unwind v2 is required, but the function '" +
-              MF.getName() +
-              "' has too many unwind codes. Try splitting the function or "
-              "reducing the number of places where it exits early with a tail "
-              "call.",
-          MF.getFunction(), findDebugLoc(FirstMBB)));
-
-    FailsUnwindV2Criteria++;
-    return false;
+  // Requested changes.
+  SmallVector<FrameInfo> FrameInfos;
+  MachineFunction::iterator Iter = MF.begin();
+  while (Iter != MF.end()) {
+    auto FI = runAnalysisOnFuncOrFunclet(MF, Iter, Mode);
+    if (!FI)
+      return false;
+    if (!FI->EpilogInfos.empty())
+      FrameInfos.push_back(std::move(*FI));
   }
+
+  if (FrameInfos.empty())
+    return false;
 
   MeetsUnwindV2Criteria++;
 
-  // Emit the pseudo instruction that marks the start of each epilog.
   const TargetInstrInfo *TII = MF.getSubtarget().getInstrInfo();
-  for (MachineInstr *MI : UnwindV2StartLocations) {
-    BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
-            TII->get(X86::SEH_UnwindV2Start));
+  for (auto &FI : FrameInfos) {
+    // Walk the list of epilogs backwards and add new SEH pseudo instructions:
+    // * SEH_UnwindV2Start at the start of each epilog.
+    // * If the current instruction is too far away from where the last unwind
+    //   info ended OR there are too many unwind codes in the info, then add
+    //   SEH_SplitChainedAtEndOfBlock to finish the current info.
+    unsigned LastUnwindInfoEndPosition = FI.ApproximateInstructionCount;
+    unsigned UnwindCodeCount = FI.ApproximatePrologCodeCount + 1;
+    for (auto &Info : llvm::reverse(FI.EpilogInfos)) {
+      MachineBasicBlock &MBB = *Info.UnwindV2StartLocation->getParent();
+      const DebugLoc &DL = Info.UnwindV2StartLocation->getDebugLoc();
+      BuildMI(MBB, Info.UnwindV2StartLocation, DL,
+              TII->get(X86::SEH_UnwindV2Start));
+
+      if ((LastUnwindInfoEndPosition - Info.ApproximateInstructionPosition >=
+           InstructionCountThreshold) ||
+          (UnwindCodeCount >= UnwindCodeThreshold)) {
+        BuildMI(MBB, MBB.begin(), DL,
+                TII->get(X86::SEH_SplitChainedAtEndOfBlock));
+        LastUnwindInfoEndPosition = Info.ApproximateInstructionPosition;
+        // Doesn't reset to 0, as the prolog unwind codes are now in this info.
+        UnwindCodeCount = FI.ApproximatePrologCodeCount + 1;
+      }
+
+      UnwindCodeCount++;
+    }
   }
+
   // Note that the function is using Unwind v2.
+  MachineBasicBlock &FirstMBB = MF.front();
   BuildMI(FirstMBB, FirstMBB.front(), findDebugLoc(FirstMBB),
           TII->get(X86::SEH_UnwindVersion))
       .addImm(2);
@@ -343,13 +435,15 @@ bool X86WinEHUnwindV2::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-bool X86WinEHUnwindV2::rejectCurrentFunctionInternalError(
-    const MachineFunction &MF, WinX64EHUnwindV2Mode Mode, StringRef Reason) {
-  if (Mode == WinX64EHUnwindV2Mode::Required)
-    reportFatalInternalError("Windows x64 Unwind v2 is required, but LLVM has "
-                             "generated incompatible code in function '" +
-                             MF.getName() + "': " + Reason);
+PreservedAnalyses
+X86WinEHUnwindV2Pass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  const bool Modified = runX86WinEHUnwindV2(MF);
+  return Modified ? getMachineFunctionPassPreservedAnalyses()
+                        .preserveSet<CFGAnalyses>()
+                  : PreservedAnalyses::all();
+}
 
-  FailsUnwindV2Criteria++;
-  return false;
+bool X86WinEHUnwindV2Legacy::runOnMachineFunction(MachineFunction &MF) {
+  return runX86WinEHUnwindV2(MF);
 }

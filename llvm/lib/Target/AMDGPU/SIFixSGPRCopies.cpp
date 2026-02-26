@@ -1013,7 +1013,7 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
       AnalysisWorklist.push_back(U);
     }
   }
-  V2SCopies[Info.ID] = Info;
+  V2SCopies[Info.ID] = std::move(Info);
 }
 
 // The main function that computes the VGPR to SGPR copy score
@@ -1129,7 +1129,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
       Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
       BuildMI(*MBB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), VReg32)
-          .addReg(SrcReg, 0, SubReg)
+          .addReg(SrcReg, {}, SubReg)
           .addImm(AMDGPU::lo16)
           .addReg(Undef)
           .addImm(AMDGPU::hi16);
@@ -1140,7 +1140,7 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
           TII->get(AMDGPU::V_READFIRSTLANE_B32);
       const TargetRegisterClass *OpRC = TII->getRegClass(ReadFirstLaneDesc, 1);
       BuildMI(*MBB, MI, MI->getDebugLoc(), ReadFirstLaneDesc, DstReg)
-          .addReg(SrcReg, 0, SubReg);
+          .addReg(SrcReg, {}, SubReg);
 
       const TargetRegisterClass *ConstrainRC =
           SubReg == AMDGPU::NoSubRegister

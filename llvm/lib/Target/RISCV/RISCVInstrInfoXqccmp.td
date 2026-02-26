@@ -79,12 +79,12 @@ let DecoderNamespace = "Xqccmp", Predicates = [HasVendorXqccmp] in {
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
-def QC_CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
+def QC_CM_MVA01S : RVInst16CA<0b101011, 0b11, OPC_C2, (outs),
                               (ins SR07:$rs1, SR07:$rs2), "qc.cm.mva01s", "$rs1, $rs2">,
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 
 let Uses = [X10, X11] in
-def QC_CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
+def QC_CM_MVSA01 : RVInst16CA<0b101011, 0b01, OPC_C2, (outs SR07:$rs1, SR07:$rs2),
                               (ins), "qc.cm.mvsa01", "$rs1, $rs2">,
                    Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0

@@ -224,10 +224,10 @@ struct AffineInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void AffineDialect::initialize() {
-  addOperations<AffineDmaStartOp, AffineDmaWaitOp,
+  addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Affine/IR/AffineOps.cpp.inc"
-                >();
+      >();
   addInterfaces<AffineInlinerInterface>();
   declarePromisedInterfaces<ValueBoundsOpInterface, AffineApplyOp, AffineMaxOp,
                             AffineMinOp>();
@@ -1885,32 +1885,6 @@ void AffineDmaStartOp::build(OpBuilder &builder, OperationState &result,
   }
 }
 
-AffineDmaStartOp AffineDmaStartOp::create(
-    OpBuilder &builder, Location location, Value srcMemRef, AffineMap srcMap,
-    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
-    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
-    ValueRange tagIndices, Value numElements, Value stride,
-    Value elementsPerStride) {
-  mlir::OperationState state(location, getOperationName());
-  build(builder, state, srcMemRef, srcMap, srcIndices, destMemRef, dstMap,
-        destIndices, tagMemRef, tagMap, tagIndices, numElements, stride,
-        elementsPerStride);
-  auto result = dyn_cast<AffineDmaStartOp>(builder.create(state));
-  assert(result && "builder didn't return the right type");
-  return result;
-}
-
-AffineDmaStartOp AffineDmaStartOp::create(
-    ImplicitLocOpBuilder &builder, Value srcMemRef, AffineMap srcMap,
-    ValueRange srcIndices, Value destMemRef, AffineMap dstMap,
-    ValueRange destIndices, Value tagMemRef, AffineMap tagMap,
-    ValueRange tagIndices, Value numElements, Value stride,
-    Value elementsPerStride) {
-  return create(builder, builder.getLoc(), srcMemRef, srcMap, srcIndices,
-                destMemRef, dstMap, destIndices, tagMemRef, tagMap, tagIndices,
-                numElements, stride, elementsPerStride);
-}
-
 void AffineDmaStartOp::print(OpAsmPrinter &p) {
   p << " " << getSrcMemRef() << '[';
   p.printAffineMapOfSSAIds(getSrcMapAttr(), getSrcIndices());
@@ -2009,7 +1983,7 @@ ParseResult AffineDmaStartOp::parse(OpAsmParser &parser,
   return success();
 }
 
-LogicalResult AffineDmaStartOp::verifyInvariantsImpl() {
+LogicalResult AffineDmaStartOp::verify() {
   if (!llvm::isa<MemRefType>(getOperand(getSrcMemRefOperandIndex()).getType()))
     return emitOpError("expected DMA source to be of memref type");
   if (!llvm::isa<MemRefType>(getOperand(getDstMemRefOperandIndex()).getType()))
@@ -2050,7 +2024,7 @@ LogicalResult AffineDmaStartOp::verifyInvariantsImpl() {
   return success();
 }
 
-LogicalResult AffineDmaStartOp::fold(ArrayRef<Attribute> cstOperands,
+LogicalResult AffineDmaStartOp::fold(FoldAdaptor adaptor,
                                      SmallVectorImpl<OpFoldResult> &results) {
   /// dma_start(memrefcast) -> dma_start
   return memref::foldMemRefCast(*this);
@@ -2079,25 +2053,6 @@ void AffineDmaWaitOp::build(OpBuilder &builder, OperationState &result,
   result.addAttribute(getTagMapAttrStrName(), AffineMapAttr::get(tagMap));
   result.addOperands(tagIndices);
   result.addOperands(numElements);
-}
-
-AffineDmaWaitOp AffineDmaWaitOp::create(OpBuilder &builder, Location location,
-                                        Value tagMemRef, AffineMap tagMap,
-                                        ValueRange tagIndices,
-                                        Value numElements) {
-  mlir::OperationState state(location, getOperationName());
-  build(builder, state, tagMemRef, tagMap, tagIndices, numElements);
-  auto result = dyn_cast<AffineDmaWaitOp>(builder.create(state));
-  assert(result && "builder didn't return the right type");
-  return result;
-}
-
-AffineDmaWaitOp AffineDmaWaitOp::create(ImplicitLocOpBuilder &builder,
-                                        Value tagMemRef, AffineMap tagMap,
-                                        ValueRange tagIndices,
-                                        Value numElements) {
-  return create(builder, builder.getLoc(), tagMemRef, tagMap, tagIndices,
-                numElements);
 }
 
 void AffineDmaWaitOp::print(OpAsmPrinter &p) {
@@ -2145,7 +2100,7 @@ ParseResult AffineDmaWaitOp::parse(OpAsmParser &parser,
   return success();
 }
 
-LogicalResult AffineDmaWaitOp::verifyInvariantsImpl() {
+LogicalResult AffineDmaWaitOp::verify() {
   if (!llvm::isa<MemRefType>(getOperand(0).getType()))
     return emitOpError("expected DMA tag to be of memref type");
   Region *scope = getAffineScope(*this);
@@ -2159,7 +2114,7 @@ LogicalResult AffineDmaWaitOp::verifyInvariantsImpl() {
   return success();
 }
 
-LogicalResult AffineDmaWaitOp::fold(ArrayRef<Attribute> cstOperands,
+LogicalResult AffineDmaWaitOp::fold(FoldAdaptor adaptor,
                                     SmallVectorImpl<OpFoldResult> &results) {
   /// dma_wait(memrefcast) -> dma_wait
   return memref::foldMemRefCast(*this);
@@ -2741,18 +2696,18 @@ void AffineForOp::getSuccessorRegions(
       // From the loop body, if the trip count is one, we can only branch back
       // to the parent.
       if (tripCount == 1) {
-        regions.push_back(RegionSuccessor::parent(getResults()));
+        regions.push_back(RegionSuccessor::parent());
         return;
       }
       if (tripCount == 0)
         return;
     } else {
       if (tripCount.value() > 0) {
-        regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
+        regions.push_back(RegionSuccessor(&getRegion()));
         return;
       }
       if (tripCount.value() == 0) {
-        regions.push_back(RegionSuccessor::parent(getResults()));
+        regions.push_back(RegionSuccessor::parent());
         return;
       }
     }
@@ -2760,8 +2715,14 @@ void AffineForOp::getSuccessorRegions(
 
   // In all other cases, the loop may branch back to itself or the parent
   // operation.
-  regions.push_back(RegionSuccessor(&getRegion(), getRegionIterArgs()));
-  regions.push_back(RegionSuccessor::parent(getResults()));
+  regions.push_back(RegionSuccessor(&getRegion()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AffineForOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  return getRegionIterArgs();
 }
 
 AffineBound AffineForOp::getLowerBound() {
@@ -3146,21 +3107,29 @@ void AffineIfOp::getSuccessorRegions(
   // `else` region is valid.
   if (point.isParent()) {
     regions.reserve(2);
-    regions.push_back(
-        RegionSuccessor(&getThenRegion(), getThenRegion().getArguments()));
+    regions.push_back(RegionSuccessor(&getThenRegion()));
     // If the "else" region is empty, branch bach into parent.
     if (getElseRegion().empty()) {
-      regions.push_back(RegionSuccessor::parent(getResults()));
+      regions.push_back(RegionSuccessor::parent());
     } else {
-      regions.push_back(
-          RegionSuccessor(&getElseRegion(), getElseRegion().getArguments()));
+      regions.push_back(RegionSuccessor(&getElseRegion()));
     }
     return;
   }
 
   // If the predecessor is the `else`/`then` region, then branching into parent
   // op is valid.
-  regions.push_back(RegionSuccessor::parent(getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AffineIfOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  if (successor == &getThenRegion())
+    return getThenRegion().getArguments();
+  if (successor == &getElseRegion())
+    return getElseRegion().getArguments();
+  llvm_unreachable("invalid region successor");
 }
 
 LogicalResult AffineIfOp::verify() {
@@ -3464,11 +3433,8 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
   if (!getGlobalOp)
     return {};
   // Get to the memref.global defining the symbol.
-  auto *symbolTableOp = getGlobalOp->getParentWithTrait<OpTrait::SymbolTable>();
-  if (!symbolTableOp)
-    return {};
-  auto global = dyn_cast_or_null<memref::GlobalOp>(
-      SymbolTable::lookupSymbolIn(symbolTableOp, getGlobalOp.getNameAttr()));
+  auto global = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
+      getGlobalOp, getGlobalOp.getNameAttr());
   if (!global)
     return {};
 
@@ -3483,9 +3449,9 @@ OpFoldResult AffineLoadOp::fold(FoldAdaptor adaptor) {
   // Otherwise, we can fold only if we know the indices.
   if (!getAffineMap().isConstant())
     return {};
-  auto indices = llvm::to_vector<4>(
-      llvm::map_range(getAffineMap().getConstantResults(),
-                      [](int64_t v) -> uint64_t { return v; }));
+  auto indices =
+      llvm::map_to_vector<4>(getAffineMap().getConstantResults(),
+                             [](int64_t v) -> uint64_t { return v; });
   return cstAttr.getValues<Attribute>()[indices];
 }
 
@@ -4044,9 +4010,9 @@ void AffineParallelOp::build(OpBuilder &builder, OperationState &result,
                              ArrayRef<arith::AtomicRMWKind> reductions,
                              ArrayRef<int64_t> ranges) {
   SmallVector<AffineMap> lbs(ranges.size(), builder.getConstantAffineMap(0));
-  auto ubs = llvm::to_vector<4>(llvm::map_range(ranges, [&](int64_t value) {
+  auto ubs = llvm::map_to_vector<4>(ranges, [&](int64_t value) {
     return builder.getConstantAffineMap(value);
-  }));
+  });
   SmallVector<int64_t> steps(ranges.size(), 1);
   build(builder, result, resultTypes, reductions, lbs, /*lbArgs=*/{}, ubs,
         /*ubArgs=*/{}, steps);

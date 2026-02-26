@@ -260,9 +260,7 @@ class ShrinkWrapLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  ShrinkWrapLegacy() : MachineFunctionPass(ID) {
-    initializeShrinkWrapLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ShrinkWrapLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
@@ -784,7 +782,11 @@ void ShrinkWrapImpl::updateSaveRestorePoints(MachineBasicBlock &MBB,
       if (MLI->getLoopDepth(Save) > MLI->getLoopDepth(Restore)) {
         // Push Save outside of this loop if immediate dominator is different
         // from save block. If immediate dominator is not different, bail out.
-        Save = FindIDom<>(*Save, Save->predecessors(), *MDT);
+        SmallVector<MachineBasicBlock *> Preds;
+        for (auto *PBB : Save->predecessors())
+          if (MDT->isReachableFromEntry(PBB))
+            Preds.push_back(PBB);
+        Save = FindIDom<>(*Save, Preds, *MDT);
         if (!Save)
           break;
       } else {

@@ -736,7 +736,7 @@ func.func @cross(%arg0 : vector<3xf32>, %arg1 : vector<3xf32>) {
 // -----
 
 func.func @cross_invalid_type(%arg0 : vector<3xi32>, %arg1 : vector<3xi32>) {
-  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  // expected-error @+1 {{'spirv.GL.Cross' op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'vector<3xi32>'}}
   %0 = spirv.GL.Cross %arg0, %arg1 : vector<3xi32>
   return
 }
@@ -1126,7 +1126,7 @@ func.func @lengthvec(%arg0 : vector<3xf32>) -> () {
 // -----
 
 func.func @length_i32_in(%arg0 : i32) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'i32'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'i32'}}
   %0 = spirv.GL.Length %arg0 : i32 -> f32
   return
 }
@@ -1142,7 +1142,7 @@ func.func @length_f16_in(%arg0 : f16) -> () {
 // -----
 
 func.func @length_i32vec_in(%arg0 : vector<3xi32>) -> () {
-  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16, but got 'vector<3xi32>'}}
+  // expected-error @+1 {{op operand #0 must be 16/32/64-bit float or fixed-length vector of 16/32/64-bit float values of length 2/3/4/8/16 of ranks 1, but got 'vector<3xi32>'}}
   %0 = spirv.GL.Length %arg0 : vector<3xi32> -> f32
   return
 }

@@ -194,6 +194,7 @@ add_header(Elf32_Lword HDR Elf32_Lword.h DEPENDS libc.include.llvm-libc-macros.s
 add_header(Elf32_Off HDR Elf32_Off.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(Elf32_Sword HDR Elf32_Sword.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(Elf32_Word HDR Elf32_Word.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(Elf32_Xword HDR Elf32_Xword.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
 add_header(
   Elf32_Chdr
   HDR

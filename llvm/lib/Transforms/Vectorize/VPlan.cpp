@@ -52,6 +52,10 @@
 using namespace llvm;
 using namespace llvm::VPlanPatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // namespace llvm
+
 /// @{
 /// Metadata attribute names
 const char LLVMLoopVectorizeFollowupAll[] = "llvm.loop.vectorize.followup_all";
@@ -62,6 +66,8 @@ const char LLVMLoopVectorizeFollowupEpilogue[] =
 /// @}
 
 extern cl::opt<unsigned> ForceTargetInstructionCost;
+
+extern cl::opt<unsigned> NumberOfStoresToPredicate;
 
 static cl::opt<bool> PrintVPlansInDotFormat(
     "vplan-print-in-dot-format", cl::Hidden,
@@ -107,27 +113,25 @@ void VPValue::dump() const {
   dbgs() << "\n";
 }
 
-void VPDef::dump() const {
-  const VPRecipeBase *Instr = dyn_cast_or_null<VPRecipeBase>(this);
-  VPSlotTracker SlotTracker(
-      (Instr && Instr->getParent()) ? Instr->getParent()->getPlan() : nullptr);
+void VPRecipeBase::dump() const {
+  VPSlotTracker SlotTracker(getParent() ? getParent()->getPlan() : nullptr);
   print(dbgs(), "", SlotTracker);
   dbgs() << "\n";
 }
 #endif
 
+#if !defined(NDEBUG)
+bool VPRecipeValue::isDefinedBy(const VPDef *D) const { return Def == D; }
+#endif
+
 VPRecipeBase *VPValue::getDefiningRecipe() {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  if (!DefValue)
-    return nullptr;
-  return cast<VPRecipeBase>(DefValue->Def);
+  return DefValue ? DefValue->Def : nullptr;
 }
 
 const VPRecipeBase *VPValue::getDefiningRecipe() const {
   auto *DefValue = dyn_cast<VPRecipeValue>(this);
-  if (!DefValue)
-    return nullptr;
-  return cast<VPRecipeBase>(DefValue->Def);
+  return DefValue ? DefValue->Def : nullptr;
 }
 
 Value *VPValue::getLiveInIRValue() const {
@@ -136,7 +140,7 @@ Value *VPValue::getLiveInIRValue() const {
 
 Type *VPIRValue::getType() const { return getUnderlyingValue()->getType(); }
 
-VPRecipeValue::VPRecipeValue(VPDef *Def, Value *UV)
+VPRecipeValue::VPRecipeValue(VPRecipeBase *Def, Value *UV)
     : VPValue(VPVRecipeValueSC, UV), Def(Def) {
   assert(Def && "VPRecipeValue requires a defining recipe");
   Def->addDefinedValue(this);
@@ -342,7 +346,7 @@ void VPTransformState::setDebugLocFrom(DebugLoc DL) {
           ->shouldEmitDebugInfoForProfiling() &&
       !EnableFSDiscriminator) {
     // FIXME: For scalable vectors, assume vscale=1.
-    unsigned UF = Plan->getUF();
+    unsigned UF = Plan->getConcreteUF();
     auto NewDIL =
         DIL->cloneByMultiplyingDuplicationFactor(UF * VF.getKnownMinValue());
     if (NewDIL)
@@ -910,6 +914,9 @@ bool VPlan::isExitBlock(VPBlockBase *VPBB) {
   return is_contained(ExitBlocks, VPBB);
 }
 
+/// To make RUN_VPLAN_PASS print final VPlan.
+static void printFinalVPlan(VPlan &) {}
+
 /// Generate the code inside the preheader and body of the vectorized loop.
 /// Assumes a single pre-header basic-block was created for this. Introduce
 /// additional basic-blocks as needed, and fill them all.
@@ -929,9 +936,13 @@ void VPlan::execute(VPTransformState *State) {
       {{DominatorTree::Delete, VectorPreHeader, State->CFG.ExitBB}});
 
   LLVM_DEBUG(dbgs() << "Executing best plan with VF=" << State->VF
-                    << ", UF=" << getUF() << '\n');
+                    << ", UF=" << getConcreteUF() << '\n');
   setName("Final VPlan");
+  // TODO: RUN_VPLAN_PASS/VPlanTransforms::runPass should automatically dump
+  // VPlans after some specific stages when "-debug" is specified, but that
+  // hasn't been implemented yet. For now, just do both:
   LLVM_DEBUG(dump());
+  RUN_VPLAN_PASS(printFinalVPlan, *this);
 
   BasicBlock *ScalarPh = State->CFG.ExitBB;
   VPBasicBlock *ScalarPhVPBB = getScalarPreheader();
@@ -1042,6 +1053,12 @@ void VPlan::printLiveIns(raw_ostream &O) const {
     O << "\nLive-in ";
     VF.printAsOperand(O, SlotTracker);
     O << " = VF";
+  }
+
+  if (UF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    UF.printAsOperand(O, SlotTracker);
+    O << " = UF";
   }
 
   if (VFxUF.getNumUsers() > 0) {
@@ -1184,6 +1201,7 @@ VPlan *VPlan::duplicate() {
     Old2NewVPValues[OldLiveIn] = NewPlan->getOrAddLiveIn(OldLiveIn);
   Old2NewVPValues[&VectorTripCount] = &NewPlan->VectorTripCount;
   Old2NewVPValues[&VF] = &NewPlan->VF;
+  Old2NewVPValues[&UF] = &NewPlan->UF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
     NewPlan->BackedgeTakenCount = new VPSymbolicValue();
@@ -1473,6 +1491,8 @@ void VPSlotTracker::assignName(const VPValue *V) {
 void VPSlotTracker::assignNames(const VPlan &Plan) {
   if (Plan.VF.getNumUsers() > 0)
     assignName(&Plan.VF);
+  if (Plan.UF.getNumUsers() > 0)
+    assignName(&Plan.UF);
   if (Plan.VFxUF.getNumUsers() > 0)
     assignName(&Plan.VFxUF);
   assignName(&Plan.VectorTripCount);
@@ -1692,17 +1712,33 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   // For scalable vectorization we can't know at compile time how many
   // iterations of the loop are handled in one vector iteration, so instead
   // use the value of vscale used for tuning.
-  if (!OrigAverageTripCount)
-    return;
-  // Calculate number of iterations in unrolled loop.
-  unsigned AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
-  // Calculate number of iterations for remainder loop.
-  unsigned RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
-
+  unsigned AverageVectorTripCount = 0;
+  unsigned RemainderAverageTripCount = 0;
+  auto EC = VectorLoop->getLoopPreheader()->getParent()->getEntryCount();
+  auto IsProfiled = EC && EC->getCount();
+  if (!OrigAverageTripCount) {
+    if (!IsProfiled)
+      return;
+    auto &SE = *PSE.getSE();
+    AverageVectorTripCount = SE.getSmallConstantTripCount(VectorLoop);
+    if (ProfcheckDisableMetadataFixes || !AverageVectorTripCount)
+      return;
+    if (Plan.getScalarPreheader()->hasPredecessors())
+      RemainderAverageTripCount =
+          SE.getSmallConstantTripCount(OrigLoop) % EstimatedVFxUF;
+    // Setting to 1 should be sufficient to generate the correct branch weights.
+    OrigLoopInvocationWeight = 1;
+  } else {
+    // Calculate number of iterations in unrolled loop.
+    AverageVectorTripCount = *OrigAverageTripCount / EstimatedVFxUF;
+    // Calculate number of iterations for remainder loop.
+    RemainderAverageTripCount = *OrigAverageTripCount % EstimatedVFxUF;
+  }
   if (HeaderVPBB) {
     setLoopEstimatedTripCount(VectorLoop, AverageVectorTripCount,
                               OrigLoopInvocationWeight);
   }
+
   if (Plan.getScalarPreheader()->hasPredecessors()) {
     setLoopEstimatedTripCount(OrigLoop, RemainderAverageTripCount,
                               OrigLoopInvocationWeight);
@@ -1743,7 +1779,7 @@ VPCostContext::getOperandInfo(VPValue *V) const {
 
 InstructionCost VPCostContext::getScalarizationOverhead(
     Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
-    bool AlwaysIncludeReplicatingR) {
+    TTI::VectorInstrContext VIC, bool AlwaysIncludeReplicatingR) {
   if (VF.isScalar())
     return 0;
 
@@ -1757,8 +1793,8 @@ InstructionCost VPCostContext::getScalarizationOverhead(
          to_vector(getContainedTypes(toVectorizedTy(ResultTy, VF)))) {
       ScalarizationCost += TTI.getScalarizationOverhead(
           cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
-          /*Insert=*/true,
-          /*Extract=*/false, CostKind);
+          /*Insert=*/true, /*Extract=*/false, CostKind,
+          /*ForPoisonSrc=*/true, {}, VIC);
     }
   }
   // Compute the cost of scalarizing the operands, skipping ones that do not
@@ -1776,5 +1812,45 @@ InstructionCost VPCostContext::getScalarizationOverhead(
     Tys.push_back(toVectorizedTy(Types.inferScalarType(Op), VF));
   }
   return ScalarizationCost +
-         TTI.getOperandsScalarizationOverhead(Tys, CostKind);
+         TTI.getOperandsScalarizationOverhead(Tys, CostKind, VIC);
+}
+
+bool VPCostContext::useEmulatedMaskMemRefHack(const VPReplicateRecipe *R,
+                                              ElementCount VF) {
+  const Instruction *UI = R->getUnderlyingInstr();
+  if (isa<LoadInst>(UI))
+    return true;
+  assert(isa<StoreInst>(UI) && "R must either be a load or store");
+
+  if (!NumPredStores) {
+    // Count the number of predicated stores in the VPlan, caching the result.
+    // Only stores where scatter is not legal are counted, matching the legacy
+    // cost model behavior.
+    const VPlan &Plan = *R->getParent()->getPlan();
+    NumPredStores = 0;
+    for (const VPRegionBlock *VPRB :
+         VPBlockUtils::blocksOnly<const VPRegionBlock>(
+             vp_depth_first_shallow(Plan.getVectorLoopRegion()->getEntry()))) {
+      assert(VPRB->isReplicator() && "must only contain replicate regions");
+      for (const VPBasicBlock *VPBB :
+           VPBlockUtils::blocksOnly<const VPBasicBlock>(
+               vp_depth_first_shallow(VPRB->getEntry()))) {
+        for (const VPRecipeBase &Recipe : *VPBB) {
+          auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
+          if (!RepR)
+            continue;
+          if (!isa<StoreInst>(RepR->getUnderlyingInstr()))
+            continue;
+          // Check if scatter is legal for this store. If so, don't count it.
+          Type *Ty = Types.inferScalarType(RepR->getOperand(0));
+          auto *VTy = VectorType::get(Ty, VF);
+          const Align Alignment =
+              getLoadStoreAlignment(RepR->getUnderlyingInstr());
+          if (!TTI.isLegalMaskedScatter(VTy, Alignment))
+            ++(*NumPredStores);
+        }
+      }
+    }
+  }
+  return *NumPredStores > NumberOfStoresToPredicate;
 }
