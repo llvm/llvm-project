@@ -318,7 +318,7 @@ return:
 ; support this yet.
 define i64 @uncountable_exit_on_last_block() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_on_last_block'
-; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Cannot determine exact exit count for latch block.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -346,12 +346,10 @@ loop.end:
 }
 
 
-; Multiple uncountable early exits pass legality but are not yet supported
-; in VPlan transformations.
+; Multiple uncountable early exits are now supported.
 define i64 @multiple_uncountable_exits() {
 ; CHECK-LABEL: LV: Checking a loop in 'multiple_uncountable_exits'
 ; CHECK:       LV: We can vectorize this loop!
-; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with multiple uncountable early exits is not yet supported.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -493,42 +491,6 @@ for.body:                                         ; preds = %for.body, %entry
 exit:                                             ; preds = %for.body
   ret void
 }
-
-define i64 @uncountable_exit_in_conditional_block(ptr %mask) {
-; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_in_conditional_block'
-; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
-entry:
-  %p1 = alloca [1024 x i8]
-  %p2 = alloca [1024 x i8]
-  call void @init_mem(ptr %p1, i64 1024)
-  call void @init_mem(ptr %p2, i64 1024)
-  br label %loop
-
-loop:
-  %index = phi i64 [ %index.next, %loop.inc ], [ 3, %entry ]
-  %arrayidx1 = getelementptr inbounds i8, ptr %mask, i64 %index
-  %ld1 = load i8, ptr %arrayidx1, align 1
-  %cmp1 = icmp ne i8 %ld1, 0
-  br i1 %cmp1, label %loop.search, label %loop.inc
-
-loop.search:
-  %arrayidx2 = getelementptr inbounds i8, ptr %p1, i64 %index
-  %ld2 = load i8, ptr %arrayidx2, align 1
-  %arrayidx3 = getelementptr inbounds i8, ptr %p2, i64 %index
-  %ld3 = load i8, ptr %arrayidx3, align 1
-  %cmp2 = icmp eq i8 %ld2, %ld3
-  br i1 %cmp2, label %loop.inc, label %loop.end
-
-loop.inc:
-  %index.next = add i64 %index, 1
-  %exitcond = icmp ne i64 %index.next, 67
-  br i1 %exitcond, label %loop, label %loop.end
-
-loop.end:
-  %retval = phi i64 [ %index, %loop.search ], [ 67, %loop.inc ]
-  ret i64 %retval
-}
-
 
 define i64 @same_exit_block_pre_inc_use1_with_reduction() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_with_reduction'

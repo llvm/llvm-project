@@ -1725,7 +1725,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
 
       // Handle case when index is zero.
       Constant *CIndex = dyn_cast<Constant>(Index);
-      if (CIndex && CIndex->isZeroValue())
+      if (CIndex && CIndex->isNullValue())
         continue;
 
       if (StructType *STy = GTI.getStructTypeOrNull()) {
@@ -4965,6 +4965,13 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
   }
 }
 
+/// \return true if this is a floating point value that is known to have a
+/// magnitude smaller than 1. i.e., fabs(X) <= 1.0
+static bool isAbsoluteValueLessEqualOne(const Value *V) {
+  // TODO: Handle frexp and x - floor(x)?
+  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5362,7 +5369,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                        ExponentKnownBits, Q, Depth + 1);
 
       KnownFPClass KnownSrc;
-      if (!ExponentKnownBits.isEven()) {
+      if (ExponentKnownBits.isZero() || !ExponentKnownBits.isEven()) {
         computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
                             KnownSrc, Q, Depth + 1);
       }
@@ -5500,7 +5507,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::amdgcn_trig_preop: {
-      Known.knownNot(fcNan | fcInf);
+      // Always returns a value [0, 1)
+      Known.knownNot(fcNan | fcInf | fcNegative);
       break;
     }
     default:
@@ -5573,51 +5581,44 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                 Op->getType()->getScalarType()->getFltSemantics())
           : DenormalMode::getDynamic();
 
+    Value *LHS = Op->getOperand(0);
+    Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
     // FIXME: Should check isGuaranteedNotToBeUndef
-    if (Op->getOperand(0) == Op->getOperand(1)) {
+    if (LHS == RHS) {
       KnownFPClass KnownSrc;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
-                          Q, Depth + 1);
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
+                          Depth + 1);
       Known = KnownFPClass::square(KnownSrc, Mode);
       break;
     }
 
     KnownFPClass KnownLHS, KnownRHS;
 
-    bool CannotBeSubnormal = false;
     const APFloat *CRHS;
-    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
-      // Match denormal scaling pattern, similar to the case in ldexp. If the
-      // constant's exponent is sufficiently large, the result cannot be
-      // subnormal.
-
-      // TODO: Should do general ConstantFPRange analysis.
-      const fltSemantics &Flt =
-          Op->getType()->getScalarType()->getFltSemantics();
-      unsigned Precision = APFloat::semanticsPrecision(Flt);
-      const int MantissaBits = Precision - 1;
-
-      int MinKnownExponent = ilogb(*CRHS);
-      if (MinKnownExponent >= MantissaBits)
-        CannotBeSubnormal = true;
-
-      KnownRHS = KnownFPClass(*CRHS);
+    if (match(RHS, m_APFloat(CRHS))) {
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
+      Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
     } else {
-      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
-                          Q, Depth + 1);
+      computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Q,
+                          Depth + 1);
+      // TODO: Improve accuracy in unfused FMA pattern. We can prove an
+      // additional not-nan if the addend is known-not negative infinity if the
+      // multiply is known-not infinity.
+
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
+      Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
     }
 
-    // TODO: Improve accuracy in unfused FMA pattern. We can prove an additional
-    // not-nan if the addend is known-not negative infinity if the multiply is
-    // known-not infinity.
+    /// Propgate no-infs if the other source is known smaller than one, such
+    /// that this cannot introduce overflow.
+    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(RHS))
+      Known.knownNot(fcInf);
+    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(LHS))
+      Known.knownNot(fcInf);
 
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                        Q, Depth + 1);
-
-    Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
-    if (CannotBeSubnormal)
-      Known.knownNot(fcSubnormal);
     break;
   }
   case Instruction::FDiv:
@@ -6282,22 +6283,18 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   // Constant floating-point values can be handled as integer values if the
   // corresponding integer value is "byteable".  An important case is 0.0.
   if (ConstantFP *CFP = dyn_cast<ConstantFP>(C)) {
-    Type *Ty = nullptr;
-    if (CFP->getType()->isHalfTy())
-      Ty = Type::getInt16Ty(Ctx);
-    else if (CFP->getType()->isFloatTy())
-      Ty = Type::getInt32Ty(Ctx);
-    else if (CFP->getType()->isDoubleTy())
-      Ty = Type::getInt64Ty(Ctx);
+    Type *ScalarTy = CFP->getType()->getScalarType();
+    if (ScalarTy->isHalfTy() || ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
+      return isBytewiseValue(
+          ConstantInt::get(Ctx, CFP->getValue().bitcastToAPInt()), DL);
+
     // Don't handle long double formats, which have strange constraints.
-    return Ty ? isBytewiseValue(ConstantExpr::getBitCast(CFP, Ty), DL)
-              : nullptr;
+    return nullptr;
   }
 
   // We can handle constant integers that are multiple of 8 bits.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(C)) {
     if (CI->getBitWidth() % 8 == 0) {
-      assert(CI->getBitWidth() > 8 && "8 bits should be handled above!");
       if (!CI->getValue().isSplat(8))
         return nullptr;
       return ConstantInt::get(Ctx, CI->getValue().trunc(8));
