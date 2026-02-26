@@ -40,11 +40,11 @@ void p(char *str, int x) {
 // CHECK-NEXT:    call void @p(ptr noundef @.str.1, i32 noundef [[FPCLASSIFY_RESULT]]) #[[ATTR4]]
 // CHECK-NEXT:    ret void
 // CHECK:       fpclassify_not_nan:
-// CHECK-NEXT:    br i1 [[TMP2]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_INF:%.*]]
+// CHECK-NEXT:    br i1 [[TMP2]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_INF]]
 // CHECK:       fpclassify_not_inf:
-// CHECK-NEXT:    br i1 [[TMP3]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_NORMAL:%.*]]
+// CHECK-NEXT:    br i1 [[TMP3]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_NORMAL]]
 // CHECK:       fpclassify_not_normal:
-// CHECK-NEXT:    br i1 [[TMP4]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_SUBNORMAL:%.*]]
+// CHECK-NEXT:    br i1 [[TMP4]], label [[FPCLASSIFY_END]], label [[FPCLASSIFY_NOT_SUBNORMAL]]
 // CHECK:       fpclassify_not_subnormal:
 // CHECK-NEXT:    br label [[FPCLASSIFY_END]]
 //
@@ -155,7 +155,7 @@ void test_double_isfinite(double d) {
 // CHECK-NEXT:    [[D_ADDR:%.*]] = alloca double, align 8
 // CHECK-NEXT:    store double [[D:%.*]], ptr [[D_ADDR]], align 8
 // CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[D_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[TMP0]]) #5
+// CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.fabs.f64(double [[TMP0]]) #[[ATTR5:[0-9]+]]
 // CHECK-NEXT:    [[ISINF:%.*]] = call i1 @llvm.experimental.constrained.fcmp.f64(double [[TMP1]], double 0x7FF0000000000000, metadata !"oeq", metadata !"fpexcept.strict") #[[ATTR4]]
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast double [[TMP0]] to i64
 // CHECK-NEXT:    [[TMP3:%.*]] = icmp slt i64 [[TMP2]], 0
