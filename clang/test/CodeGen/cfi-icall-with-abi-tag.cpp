@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=gnu++20 -fsanitize=cfi-icall -fsanitize-minimal-runtime \
+// RUN: %clang_cc1 -std=c++20 -fsanitize=cfi-icall \
 // RUN: -fsanitize-cfi-icall-experimental-normalize-integers \
-// RUN: -fsized-deallocation  -flto=thin -std=gnu++20 -S %s -o- 
+// RUN: -S %s -o-
 
 template <class _Fn>
 void invoke(_Fn) {
