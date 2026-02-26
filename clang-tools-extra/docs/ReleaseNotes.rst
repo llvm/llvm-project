@@ -129,7 +129,6 @@ New checks
 
   Warns when a class or struct publicly inherits from a base whose destructor
   is neither virtual nor protected, and the derived type adds data members.
-  This pattern causes resource leaks when deleting through a base pointer.
 
 - New :doc:`modernize-use-string-view
   <clang-tidy/checks/modernize/use-string-view>` check.
