@@ -7,7 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Interpreter/ScriptInterpreter.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBModule.h"
+#include "lldb/API/SBModuleSpec.h"
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/PseudoTerminal.h"
@@ -170,6 +174,23 @@ ScriptInterpreter::GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const {
 
   lldb_private::ValueLocker locker;
   return locker.GetLockedSP(*value.m_opaque_sp);
+}
+
+FileSpec ScriptInterpreter::GetOpaqueTypeFromSBFileSpec(
+    const lldb::SBFileSpec &file_spec) const {
+  return file_spec.ref();
+}
+
+lldb::ModuleSP ScriptInterpreter::GetOpaqueTypeFromSBModule(
+    const lldb::SBModule &module) const {
+  return module.GetSP();
+}
+
+ModuleSpec ScriptInterpreter::GetOpaqueTypeFromSBModuleSpec(
+    const lldb::SBModuleSpec &module_spec) const {
+  if (module_spec.m_opaque_up)
+    return *module_spec.m_opaque_up;
+  return {};
 }
 
 lldb::ScriptLanguage

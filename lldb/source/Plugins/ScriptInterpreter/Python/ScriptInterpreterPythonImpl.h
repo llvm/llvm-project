@@ -93,6 +93,9 @@ public:
   lldb::ScriptedBreakpointInterfaceSP
   CreateScriptedBreakpointInterface() override;
 
+  lldb::ScriptedSymbolLocatorInterfaceSP
+  CreateScriptedSymbolLocatorInterface() override;
+
   lldb::ScriptedThreadInterfaceSP CreateScriptedThreadInterface() override;
 
   lldb::ScriptedFrameInterfaceSP CreateScriptedFrameInterface() override;

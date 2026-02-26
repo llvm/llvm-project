@@ -12,6 +12,13 @@
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBFileSpec.h"
 
+namespace lldb_private {
+class ScriptInterpreter;
+namespace python {
+class SWIGBridge;
+} // namespace python
+} // namespace lldb_private
+
 namespace lldb {
 
 class LLDB_API SBModuleSpec {
@@ -102,6 +109,8 @@ private:
   friend class SBModule;
   friend class SBPlatform;
   friend class SBTarget;
+  friend class lldb_private::ScriptInterpreter;
+  friend class lldb_private::python::SWIGBridge;
 
   SBModuleSpec(const lldb_private::ModuleSpec &module_spec);
 

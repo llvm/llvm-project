@@ -147,6 +147,11 @@ PythonObject SWIGBridge::ToSWIGWrapper(
   return ToSWIGHelper(module_spec_sb.release(), SWIGTYPE_p_lldb__SBModuleSpec);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(const ModuleSpec &module_spec) {
+  return ToSWIGHelper(new lldb::SBModuleSpec(module_spec),
+                      SWIGTYPE_p_lldb__SBModuleSpec);
+}
+
 PythonObject SWIGBridge::ToSWIGWrapper(lldb::DescriptionLevel level) {
   return PythonInteger((int64_t) level);
 }

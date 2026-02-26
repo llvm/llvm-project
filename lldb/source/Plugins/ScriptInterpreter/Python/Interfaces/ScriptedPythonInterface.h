@@ -657,6 +657,18 @@ protected:
     return python::SWIGBridge::ToSWIGWrapper(arg);
   }
 
+  python::PythonObject Transform(lldb::ModuleSP arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(const ModuleSpec &arg) {
+    return python::SWIGBridge::ToSWIGWrapper(arg);
+  }
+
+  python::PythonObject Transform(const std::string &arg) {
+    return python::PythonString(arg);
+  }
+
   template <typename T, typename U>
   void ReverseTransform(T &original_arg, U transformed_arg, Status &error) {
     // If U is not a PythonObject, don't touch it!
@@ -666,6 +678,11 @@ protected:
   void ReverseTransform(T &original_arg, python::PythonObject transformed_arg,
                         Status &error) {
     original_arg = ExtractValueFromPythonObject<T>(transformed_arg, error);
+  }
+
+  void ReverseTransform(std::string &original_arg,
+                        python::PythonObject transformed_arg, Status &error) {
+    // No-op: string arguments are input-only, no reverse transformation needed.
   }
 
   void ReverseTransform(bool &original_arg,
@@ -823,6 +840,19 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
 template <>
 lldb::ValueObjectListSP
 ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
+    python::PythonObject &p, Status &error);
+
+template <>
+lldb::ModuleSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ModuleSP>(
+    python::PythonObject &p, Status &error);
+
+template <>
+ModuleSpec ScriptedPythonInterface::ExtractValueFromPythonObject<ModuleSpec>(
     python::PythonObject &p, Status &error);
 
 } // namespace lldb_private

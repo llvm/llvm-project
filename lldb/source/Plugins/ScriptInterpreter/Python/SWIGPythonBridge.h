@@ -112,6 +112,8 @@ public:
   ToSWIGWrapper(std::unique_ptr<lldb::SBFileSpec> file_spec_sb);
   static PythonObject
   ToSWIGWrapper(std::unique_ptr<lldb::SBModuleSpec> module_spec_sb);
+  static PythonObject
+  ToSWIGWrapper(const lldb_private::ModuleSpec &module_spec);
 
   static python::ScopedPythonObject<lldb::SBCommandReturnObject>
   ToSWIGWrapper(CommandReturnObject &cmd_retobj);
@@ -269,6 +271,9 @@ void *LLDBSWIGPython_CastPyObjectToSBValueList(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBModule(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBModuleSpec(PyObject *data);
 } // namespace python
 
 } // namespace lldb_private

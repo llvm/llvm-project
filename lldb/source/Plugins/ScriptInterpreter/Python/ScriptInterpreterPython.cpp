@@ -1513,6 +1513,11 @@ ScriptInterpreterPythonImpl::CreateScriptedBreakpointInterface() {
   return std::make_shared<ScriptedBreakpointPythonInterface>(*this);
 }
 
+ScriptedSymbolLocatorInterfaceSP
+ScriptInterpreterPythonImpl::CreateScriptedSymbolLocatorInterface() {
+  return std::make_shared<ScriptedSymbolLocatorPythonInterface>(*this);
+}
+
 ScriptedThreadInterfaceSP
 ScriptInterpreterPythonImpl::CreateScriptedThreadInterface() {
   return std::make_shared<ScriptedThreadPythonInterface>(*this);

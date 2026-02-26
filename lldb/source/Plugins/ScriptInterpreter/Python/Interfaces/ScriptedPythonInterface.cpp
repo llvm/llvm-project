@@ -15,6 +15,7 @@
 
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
+#include "lldb/Core/ModuleSpec.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include <optional>
@@ -307,4 +308,57 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
   }
 
   return out;
+}
+
+template <>
+FileSpec ScriptedPythonInterface::ExtractValueFromPythonObject<FileSpec>(
+    python::PythonObject &p, Status &error) {
+  if (!p.IsAllocated())
+    return {};
+
+  void *sb_file_spec_ptr =
+      python::LLDBSWIGPython_CastPyObjectToSBFileSpec(p.get());
+  if (!sb_file_spec_ptr) {
+    error = Status::FromErrorString("Couldn't cast to SBFileSpec");
+    return {};
+  }
+
+  auto *sb_file_spec = reinterpret_cast<lldb::SBFileSpec *>(sb_file_spec_ptr);
+  FileSpec result = m_interpreter.GetOpaqueTypeFromSBFileSpec(*sb_file_spec);
+  return result;
+}
+
+template <>
+lldb::ModuleSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ModuleSP>(
+    python::PythonObject &p, Status &error) {
+  if (!p.IsAllocated())
+    return {};
+
+  void *sb_module_ptr = python::LLDBSWIGPython_CastPyObjectToSBModule(p.get());
+  if (!sb_module_ptr) {
+    error = Status::FromErrorString("Couldn't cast to SBModule");
+    return {};
+  }
+
+  auto *sb_module = reinterpret_cast<lldb::SBModule *>(sb_module_ptr);
+  return m_interpreter.GetOpaqueTypeFromSBModule(*sb_module);
+}
+
+template <>
+ModuleSpec ScriptedPythonInterface::ExtractValueFromPythonObject<ModuleSpec>(
+    python::PythonObject &p, Status &error) {
+  if (!p.IsAllocated())
+    return {};
+
+  void *sb_module_spec_ptr =
+      python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(p.get());
+  if (!sb_module_spec_ptr) {
+    error = Status::FromErrorString("Couldn't cast to SBModuleSpec");
+    return {};
+  }
+
+  auto *sb_module_spec =
+      reinterpret_cast<lldb::SBModuleSpec *>(sb_module_spec_ptr);
+  return m_interpreter.GetOpaqueTypeFromSBModuleSpec(*sb_module_spec);
 }

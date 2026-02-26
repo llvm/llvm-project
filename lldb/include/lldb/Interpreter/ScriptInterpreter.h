@@ -33,6 +33,7 @@
 #include "lldb/Interpreter/Interfaces/ScriptedFrameProviderInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedPlatformInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedProcessInterface.h"
+#include "lldb/Interpreter/Interfaces/ScriptedSymbolLocatorInterface.h"
 #include "lldb/Interpreter/Interfaces/ScriptedThreadInterface.h"
 #include "lldb/Interpreter/ScriptObject.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -567,6 +568,11 @@ public:
     return {};
   }
 
+  virtual lldb::ScriptedSymbolLocatorInterfaceSP
+  CreateScriptedSymbolLocatorInterface() {
+    return {};
+  }
+
   virtual StructuredData::ObjectSP
   CreateStructuredDataFromScriptObject(ScriptObject obj) {
     return {};
@@ -611,6 +617,13 @@ public:
 
   lldb::ValueObjectSP
   GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
+
+  FileSpec GetOpaqueTypeFromSBFileSpec(const lldb::SBFileSpec &file_spec) const;
+
+  lldb::ModuleSP GetOpaqueTypeFromSBModule(const lldb::SBModule &module) const;
+
+  ModuleSpec
+  GetOpaqueTypeFromSBModuleSpec(const lldb::SBModuleSpec &module_spec) const;
 
 protected:
   Debugger &m_debugger;

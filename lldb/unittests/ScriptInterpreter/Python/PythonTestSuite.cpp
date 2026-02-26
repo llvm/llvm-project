@@ -171,6 +171,21 @@ lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data) {
   return nullptr;
 }
 
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBFileSpec(PyObject *data) {
+  return nullptr;
+}
+
+void *
+lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModule(PyObject *data) {
+  return nullptr;
+}
+
+void *lldb_private::python::LLDBSWIGPython_CastPyObjectToSBModuleSpec(
+    PyObject *data) {
+  return nullptr;
+}
+
 lldb::ValueObjectSP
 lldb_private::python::SWIGBridge::LLDBSWIGPython_GetValueObjectSPFromSBValue(
     void *data) {
@@ -361,5 +376,10 @@ lldb_private::python::SWIGBridge::ToSWIGWrapper(const Stream *stream) {
 
 python::PythonObject lldb_private::python::SWIGBridge::ToSWIGWrapper(
     std::shared_ptr<lldb::SBStream> stream_sb) {
+  return python::PythonObject();
+}
+
+python::PythonObject lldb_private::python::SWIGBridge::ToSWIGWrapper(
+    const lldb_private::ModuleSpec &module_spec) {
   return python::PythonObject();
 }
