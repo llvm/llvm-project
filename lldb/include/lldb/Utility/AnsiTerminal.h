@@ -98,6 +98,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Locale.h"
+#include "llvm/Support/Unicode.h"
 
 #include "lldb/Utility/Stream.h"
 
@@ -264,13 +265,16 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
     // Repeatedly trim the string until it its valid unicode and fits.
     llvm::StringRef trimmed = left;
     while (!trimmed.empty()) {
-      // This relies on columnWidth returning -2 for invalid/partial unicode
-      // characters, which after conversion to size_t will be larger than the
-      // visible width.
-      column_width = llvm::sys::locale::columnWidth(trimmed);
-      if (result_visibile_length + column_width <= visible_length) {
+      int trimmed_width = llvm::sys::locale::columnWidth(trimmed);
+      if (
+          // If we have only part of a Unicode character, keep trimming.
+          trimmed_width !=
+              llvm::sys::unicode::ColumnWidthErrors::ErrorInvalidUTF8 &&
+          // If the trimmed string fits, take it.
+          result_visibile_length + static_cast<size_t>(trimmed_width) <=
+              visible_length) {
         result.append(trimmed);
-        result_visibile_length += column_width;
+        result_visibile_length += static_cast<size_t>(trimmed_width);
         break;
       }
       trimmed = trimmed.drop_back();
