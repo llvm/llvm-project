@@ -797,9 +797,7 @@ public:
   }
 
   /// Tests whether the OS is QURT.
-  bool isOSQurt() const {
-    return getOS() == Triple::QURT;
-  }
+  bool isOSQurt() const { return getOS() == Triple::QURT; }
 
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
