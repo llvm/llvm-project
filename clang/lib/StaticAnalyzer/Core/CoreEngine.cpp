@@ -674,20 +674,18 @@ void CoreEngine::enqueue(ExplodedNodeSet &Set,
 }
 
 void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
-  for (auto *I : Set) {
+  for (ExplodedNode *Node : Set) {
+    const LocationContext *LocCtx = Node->getLocationContext();
+
     // If we are in an inlined call, generate CallExitBegin node.
-    if (I->getLocationContext()->getParent()) {
-      const auto *LocCtx = cast<StackFrameContext>(I->getLocationContext());
-
+    if (LocCtx->getParent()) {
       // Use the callee location context.
-      CallExitBegin Loc(LocCtx, RS);
-
-      I = makeNode(Loc, I->getState(), I);
-      if (I)
-        WList->enqueue(I);
+      CallExitBegin Loc(cast<StackFrameContext>(LocCtx), RS);
+      if (ExplodedNode *Succ = makeNode(Loc, Node->getState(), Node))
+        WList->enqueue(Succ);
     } else {
       // TODO: We should run remove dead bindings here.
-      G.addEndOfPath(I);
+      G.addEndOfPath(Node);
       NumPathsExplored++;
     }
   }
