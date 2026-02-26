@@ -315,7 +315,7 @@ void Generator::emitPrint(StringRef kind, StringRef type,
         StringRef pred = rec->getValueAsString("printerPredicate");
         if (vec.size() > 1 && pred.empty())
           PrintError(rec->getLoc(),
-                     "Requires parsing predicate given common cType");
+                     "Requires printing predicate given common cType");
       }
       PrintFatalError("Unspecified for shared cType " + type);
     }
