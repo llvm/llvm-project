@@ -24270,7 +24270,7 @@ static SDValue combineToExtendBoolVectorInReg(
   SmallVector<SDValue, 32> Bits;
   for (unsigned I = 0; I != NumElts; ++I) {
     unsigned ScalarBit = IsBE ? (NumElts - 1 - I) : I;
-    int BitIdx = (ScalarBit % EltSizeInBits);
+    int BitIdx = ScalarBit % EltSizeInBits;
     APInt Bit = APInt::getBitsSet(EltSizeInBits, BitIdx, BitIdx + 1);
     Bits.push_back(DAG.getConstant(Bit, DL, SVT));
   }
