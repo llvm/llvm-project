@@ -199,25 +199,12 @@ public:
   ///
   /// The format of the raw buffer is a densely packed array of values that
   /// can be bitcast to the storage format of the element type specified.
-  /// Types that are not byte aligned will be:
-  ///   - For bitwidth > 1: Rounded up to the next byte.
-  ///   - For bitwidth = 1: Packed into 8bit bytes with bits corresponding to
-  ///     the linear order of the shape type from MSB to LSB, padded to on the
-  ///     right.
+  /// Types that are not byte aligned will be rounded up to the next byte.
   static DenseElementsAttr getFromRawBuffer(ShapedType type,
                                             ArrayRef<char> rawBuffer);
 
   /// Returns true if the given buffer is a valid raw buffer for the given type.
-  /// `detectedSplat` is set if the buffer is valid and represents a splat
-  /// buffer. The definition may be expanded over time, but currently, a
-  /// splat buffer is detected if:
-  ///   - For >1bit: The buffer consists of a single element.
-  ///   - For 1bit: The buffer consists of a single byte with value 0 or 255.
-  ///
-  /// User code should be prepared for additional, conformant patterns to be
-  /// identified as splats in the future.
-  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer,
-                               bool &detectedSplat);
+  static bool isValidRawBuffer(ShapedType type, ArrayRef<char> rawBuffer);
 
   //===--------------------------------------------------------------------===//
   // Iterators

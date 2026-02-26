@@ -30,15 +30,17 @@ class FileSpec;
 
 struct SharedCacheImageInfo {
   SharedCacheImageInfo()
-      : m_uuid(), m_extractor_sp(), m_create_data_extractor(nullptr),
-        m_image_baton(nullptr) {}
-  SharedCacheImageInfo(UUID uuid, lldb::DataExtractorSP extractor_sp)
-      : m_uuid(uuid), m_extractor_sp(extractor_sp),
+      : m_filename(), m_uuid(), m_extractor_sp(),
+        m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
+  SharedCacheImageInfo(ConstString filename, UUID uuid,
+                       lldb::DataExtractorSP extractor_sp)
+      : m_filename(filename), m_uuid(uuid), m_extractor_sp(extractor_sp),
         m_create_data_extractor(nullptr), m_image_baton(nullptr) {}
   SharedCacheImageInfo(
-      UUID uuid, lldb::DataExtractorSP (*create_data_extractor)(void *image),
+      ConstString filename, UUID uuid,
+      lldb::DataExtractorSP (*create_data_extractor)(void *image),
       void *image_baton)
-      : m_uuid(uuid), m_extractor_sp(),
+      : m_filename(filename), m_uuid(uuid), m_extractor_sp(),
         m_create_data_extractor(create_data_extractor),
         m_image_baton(image_baton) {}
 
@@ -47,6 +49,7 @@ struct SharedCacheImageInfo {
       m_extractor_sp = m_create_data_extractor(m_image_baton);
     return m_extractor_sp;
   }
+  ConstString GetFilename() const { return m_filename; }
   const UUID &GetUUID() const { return m_uuid; }
   void *GetImageBaton();
   void SetExtractor(lldb::DataExtractorSP extractor_sp) {
@@ -57,6 +60,7 @@ struct SharedCacheImageInfo {
       lldb::DataExtractorSP (*create_data_extractor)(void *image));
 
 private:
+  ConstString m_filename;
   UUID m_uuid;
   lldb::DataExtractorSP m_extractor_sp;
   lldb::DataExtractorSP (*m_create_data_extractor)(void *image);
@@ -183,11 +187,81 @@ public:
     return llvm::errorCodeToError(llvm::errc::no_such_file_or_directory);
   }
 
-  /// Return information about module \p image_name if it is loaded in
+  /// Return information about module \p filepath if it is loaded in
   /// the current process's address space.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(llvm::StringRef image_name) {
+  GetSharedCacheImageInfo(ConstString filepath,
+                          lldb::SymbolSharedCacheUse sc_mode) {
     return {};
+  }
+
+  /// Return information about module \p uuid if it is loaded in
+  /// the current process's address space.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(const UUID &uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Return information about module \p filepath, if it is loaded in
+  /// the current process's address space using shared cache \p sc_uuid.
+  /// The shared cache must have been previously indexed.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(ConstString filepath, const UUID &sc_uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Return information about module \p uuid, if it is loaded in
+  /// the current process's address space using shared cache \p sc_uuid.
+  /// The shared cache must have been previously indexed.
+  ///
+  /// \param[in] sc_mode
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(const UUID &uuid, const UUID &sc_uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Return information about module \p image_name if it is loaded in
+  /// the current process's address space using shared cache \p uuid.
+  /// The shared cache UUID must have been previously indexed.
+  ///
+  /// \param[in] use_sc_binary_directly
+  ///     Flag to control if this method can try to read a shared
+  ///     cache binary blob directly, needed to keep user settings out of
+  ///     Host.
+  static SharedCacheImageInfo
+  GetSharedCacheImageInfo(llvm::StringRef image_name, const UUID &uuid,
+                          lldb::SymbolSharedCacheUse sc_mode) {
+    return {};
+  }
+
+  /// Scan the files in a shared cache, if the filepath and uuid match
+  /// on the debug host.
+  /// Returns false if the shared cache filepath did not exist, or uuid
+  /// did not match.
+  static bool SharedCacheIndexFiles(FileSpec &filepath, UUID &uuid,
+                                    lldb::SymbolSharedCacheUse sc_mode) {
+    return false;
   }
 
   /// Returns the distribution id of the host
