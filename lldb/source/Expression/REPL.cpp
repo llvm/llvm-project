@@ -383,28 +383,29 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
         }
 
         if (!handled) {
+          LockedStreamFile locked_error_stream = error_stream_sp->Lock();
           bool useColors =
-              error_stream_sp->Lock().GetFile().GetIsTerminalWithColors();
+              locked_error_stream.GetFile().GetIsTerminalWithColors();
           switch (execution_results) {
           case lldb::eExpressionSetupError:
           case lldb::eExpressionParseError:
             add_to_code = false;
             [[fallthrough]];
           case lldb::eExpressionDiscarded:
-            error_stream_sp->Lock().Printf("%s\n", error.AsCString());
+            locked_error_stream.Printf("%s\n", error.AsCString());
             break;
 
           case lldb::eExpressionCompleted:
             break;
           case lldb::eExpressionInterrupted:
             if (useColors) {
-              error_stream_sp->Lock().Printf(ANSI_ESCAPE1(ANSI_FG_COLOR_RED));
-              error_stream_sp->Lock().Printf(ANSI_ESCAPE1(ANSI_CTRL_BOLD));
+              locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_FG_COLOR_RED));
+              locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_CTRL_BOLD));
             }
-            error_stream_sp->Lock().Printf("Execution interrupted. ");
+            locked_error_stream.Printf("Execution interrupted. ");
             if (useColors)
-              error_stream_sp->Lock().Printf(ANSI_ESCAPE1(ANSI_CTRL_NORMAL));
-            error_stream_sp->Lock().Printf(
+              locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_CTRL_NORMAL));
+            locked_error_stream.Printf(
                 "Enter code to recover and continue.\nEnter LLDB "
                 "commands to investigate (type :help for "
                 "assistance.)\n");
@@ -413,14 +414,14 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
           case lldb::eExpressionHitBreakpoint:
             // Breakpoint was hit, drop into LLDB command interpreter
             if (useColors) {
-              error_stream_sp->Lock().Printf(ANSI_ESCAPE1(ANSI_FG_COLOR_RED));
-              error_stream_sp->Lock().Printf(ANSI_ESCAPE1(ANSI_CTRL_BOLD));
+              locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_FG_COLOR_RED));
+              locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_CTRL_BOLD));
             }
             output_stream_sp->Lock().Printf(
                 "Execution stopped at breakpoint.  ");
             if (useColors)
-              error_stream_sp->Lock().Printf(ANSI_ESCAPE1(ANSI_CTRL_NORMAL));
-            output_stream_sp->Lock().Printf(
+              locked_error_stream.Printf(ANSI_ESCAPE1(ANSI_CTRL_NORMAL));
+            locked_error_stream.Printf(
                 "Enter LLDB commands to investigate (type help "
                 "for assistance.)\n");
             {
@@ -433,23 +434,23 @@ void REPL::IOHandlerInputComplete(IOHandler &io_handler, std::string &code) {
             break;
 
           case lldb::eExpressionTimedOut:
-            error_stream_sp->Lock().Printf("error: timeout\n");
+            locked_error_stream.Printf("error: timeout\n");
             if (error.AsCString())
-              error_stream_sp->Lock().Printf("error: %s\n", error.AsCString());
+              locked_error_stream.Printf("error: %s\n", error.AsCString());
             break;
           case lldb::eExpressionResultUnavailable:
             // Shoulnd't happen???
-            error_stream_sp->Lock().Printf(
-                "error: could not fetch result -- %s\n", error.AsCString());
+            locked_error_stream.Printf("error: could not fetch result -- %s\n",
+                                       error.AsCString());
             break;
           case lldb::eExpressionStoppedForDebug:
             // Shoulnd't happen???
-            error_stream_sp->Lock().Printf("error: stopped for debug -- %s\n",
-                                           error.AsCString());
+            locked_error_stream.Printf("error: stopped for debug -- %s\n",
+                                       error.AsCString());
             break;
           case lldb::eExpressionThreadVanished:
             // Shoulnd't happen???
-            error_stream_sp->Lock().Printf(
+            locked_error_stream.Printf(
                 "error: expression thread vanished -- %s\n", error.AsCString());
             break;
           }
