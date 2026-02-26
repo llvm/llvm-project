@@ -69,6 +69,7 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
 
 static std::string genRawText(const std::vector<CommentInfo> &Comments) {
   std::string Result;
+  llvm::raw_string_ostream OS(Result);
   std::queue<const CommentInfo *> Q;
   for (const auto &CI : Comments)
     Q.push(&CI);
@@ -77,7 +78,7 @@ static std::string genRawText(const std::vector<CommentInfo> &Comments) {
     Comment = Q.front();
     Q.pop();
     if (!Comment->Text.empty())
-      Result += Comment->Text;
+      OS << Comment->Text;
     for (const auto &CI : Comment->Children)
       Q.push(CI.get());
   }
@@ -185,7 +186,6 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
   if (!I.Members.empty()) {
-    OS << "| Name | Value |";
     bool HasComments = false;
     for (const auto &Member : I.Members) {
       if (!Member.Description.empty()) {
@@ -193,9 +193,6 @@ static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
         break;
       }
     }
-    if (HasComments)
-      OS << " Comments |";
-    OS << "\n\n";
     for (const auto &N : I.Members) {
       Members << "| " << N.Name << " ";
       if (!N.Value.empty())
