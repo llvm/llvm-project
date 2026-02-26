@@ -9630,8 +9630,10 @@ bool SelectionDAGBuilder::visitFPOperation(const CallInst &I, unsigned Opcode) {
   if (auto *FPOp = dyn_cast<FPMathOperator>(&I))
     Flags.copyFMF(*FPOp);
   fp::ExceptionBehavior EB = I.getExceptionBehavior();
-  if (EB == fp::ExceptionBehavior::ebIgnore)
+  if (DAG.getMachineFunction().getFunction().getAttributes().hasFnAttr(
+    llvm::Attribute::StrictFP) && EB == fp::ExceptionBehavior::ebIgnore) {
     Flags.setNoFPExcept(true);
+  }
 
   // Temporary solution: use STRICT_* nodes.
   if (HasChain)
