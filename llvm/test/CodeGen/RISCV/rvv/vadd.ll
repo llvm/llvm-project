@@ -1381,21 +1381,12 @@ entry:
 }
 
 define <vscale x 1 x i64> @intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64(<vscale x 1 x i64> %0, ptr %1, iXLen %2) nounwind {
-; RV32-LABEL: intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64:
-; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    lw a0, 0(a0)
-; RV32-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; RV32-NEXT:    vadd.vx v8, v8, a0
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64:
-; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64-NEXT:    vle32.v v9, (a0)
-; RV64-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
-; RV64-NEXT:    vmv.x.s a0, v9
-; RV64-NEXT:    vadd.vx v8, v8, a0
-; RV64-NEXT:    ret
+; CHECK-LABEL: intrinsic_vadd_vx_sextload_nxv1i64_nxv1i64_i64:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    lw a0, 0(a0)
+; CHECK-NEXT:    vsetvli zero, a1, e64, m1, ta, ma
+; CHECK-NEXT:    vadd.vx v8, v8, a0
+; CHECK-NEXT:    ret
 entry:
   %load = load i32, ptr %1
   %ext = sext i32 %load to i64

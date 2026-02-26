@@ -1884,34 +1884,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setTargetDAGCombine({ISD::ZERO_EXTEND, ISD::FP_TO_SINT, ISD::FP_TO_UINT,
                          ISD::FP_TO_SINT_SAT, ISD::FP_TO_UINT_SAT});
   if (Subtarget.hasVInstructions())
-    setTargetDAGCombine({ISD::FCOPYSIGN,
-                         ISD::MGATHER,
-                         ISD::MSCATTER,
-                         ISD::VP_GATHER,
-                         ISD::VP_SCATTER,
-                         ISD::SRA,
-                         ISD::SRL,
-                         ISD::SHL,
-                         ISD::LOAD,
-                         ISD::STORE,
-                         ISD::SPLAT_VECTOR,
-                         ISD::BUILD_VECTOR,
-                         ISD::CONCAT_VECTORS,
-                         ISD::VP_STORE,
-                         ISD::VP_TRUNCATE,
-                         ISD::EXPERIMENTAL_VP_REVERSE,
-                         ISD::MUL,
-                         ISD::SDIV,
-                         ISD::UDIV,
-                         ISD::SREM,
-                         ISD::UREM,
-                         ISD::INSERT_VECTOR_ELT,
-                         ISD::ABS,
-                         ISD::CTPOP,
-                         ISD::VECTOR_SHUFFLE,
-                         ISD::FMA,
-                         ISD::VSELECT,
-                         ISD::VECREDUCE_ADD});
+    // clang-format off
+    setTargetDAGCombine(
+        {ISD::FCOPYSIGN,    ISD::MGATHER,      ISD::MSCATTER,
+         ISD::VP_GATHER,    ISD::VP_SCATTER,   ISD::SRA,
+         ISD::SRL,          ISD::SHL,          ISD::STORE,
+         ISD::SPLAT_VECTOR, ISD::BUILD_VECTOR, ISD::CONCAT_VECTORS,
+         ISD::VP_STORE,     ISD::VP_TRUNCATE,  ISD::EXPERIMENTAL_VP_REVERSE,
+         ISD::MUL,          ISD::SDIV,         ISD::UDIV,
+         ISD::SREM,         ISD::UREM,         ISD::INSERT_VECTOR_ELT,
+         ISD::ABS,          ISD::CTPOP,        ISD::VECTOR_SHUFFLE,
+         ISD::FMA,          ISD::VSELECT,      ISD::VECREDUCE_ADD,
+         ISD::LOAD});
+  // clang-format on
 
   if (Subtarget.hasVendorXTHeadMemPair())
     setTargetDAGCombine({ISD::LOAD, ISD::STORE});
@@ -22191,28 +22176,28 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
         return V;
 
     if (N->getOpcode() == ISD::LOAD) {
-      // Replace misaligned scalar load with aligned vector load + bitcast.
+      // Replace unaligned scalar load with naturally aligned vector load and a
+      // bitcast. TODO: vector-to-scalar cast is very expensive on some
+      // hardware, and this transformation wouldn't be profitable; model and use
+      // the costs here.
       auto *LD = cast<LoadSDNode>(N);
       if (!LD->isUnindexed() || !LD->isSimple())
         break;
       SDValue Chain = LD->getChain();
       SDValue Ptr = LD->getBasePtr();
-      const DataLayout &DL = DAG.getDataLayout();
-      EVT SrcVT = LD->getExtensionType() == ISD::NON_EXTLOAD
-                      ? N->getValueType(0)
-                      : Ptr.getValueType();
+      EVT MemVT = LD->getMemoryVT();
       EVT RetVT = N->getValueType(0);
-      if (!SrcVT.isSimple() || SrcVT.isVector() || SrcVT.isScalableVT())
+      if (!RetVT.isSimple() || RetVT.isVector() || RetVT.isScalableVT())
         break;
       Align SrcAlign = LD->getBaseAlign();
-      if (allowsMemoryAccess(*DAG.getContext(), DL, SrcVT,
+      if (allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
                              LD->getAddressSpace(), SrcAlign,
                              LD->getMemOperand()->getFlags()))
         break;
       unsigned SrcBW = RetVT.getScalarSizeInBits();
       unsigned TargetBW = SrcAlign.value() * 8;
       unsigned TargetNumElts = SrcBW / TargetBW;
-      MVT TargetEltVT = SrcVT.isFloatingPoint()
+      MVT TargetEltVT = MemVT.isFloatingPoint()
                             ? MVT::getFloatingPointVT(TargetBW)
                             : MVT::getIntegerVT(TargetBW);
       MVT TargetVecVT = MVT::getVectorVT(TargetEltVT, TargetNumElts);

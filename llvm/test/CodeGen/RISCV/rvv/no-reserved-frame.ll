@@ -19,43 +19,23 @@ define signext i32 @foo(i32 signext %aa) #0 {
 ; CHECK-NEXT:    sub sp, sp, a1
 ; CHECK-NEXT:    andi sp, sp, -16
 ; CHECK-NEXT:    mv s1, sp
-; CHECK-NEXT:    addi a1, s1, 44
-; CHECK-NEXT:    addi a2, s1, 40
-; CHECK-NEXT:    addi a3, s1, 36
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    addi a1, s1, 32
-; CHECK-NEXT:    vle32.v v9, (a2)
-; CHECK-NEXT:    addi a4, s1, 28
-; CHECK-NEXT:    vmv.x.s t0, v8
-; CHECK-NEXT:    vle32.v v8, (a3)
-; CHECK-NEXT:    vmv.x.s a2, v9
-; CHECK-NEXT:    vle32.v v9, (a1)
-; CHECK-NEXT:    addi a1, s1, 24
-; CHECK-NEXT:    vmv.x.s a3, v8
-; CHECK-NEXT:    vle32.v v8, (a4)
-; CHECK-NEXT:    vmv.x.s a4, v9
-; CHECK-NEXT:    vle32.v v9, (a1)
-; CHECK-NEXT:    addi a1, s1, 20
-; CHECK-NEXT:    vmv.x.s a5, v8
-; CHECK-NEXT:    vle32.v v8, (a1)
-; CHECK-NEXT:    vmv.x.s a6, v9
+; CHECK-NEXT:    lw t0, 44(s1)
+; CHECK-NEXT:    lw a2, 40(s1)
+; CHECK-NEXT:    lw a3, 36(s1)
+; CHECK-NEXT:    lw a4, 32(s1)
+; CHECK-NEXT:    lw a5, 28(s1)
+; CHECK-NEXT:    lw a6, 24(s1)
+; CHECK-NEXT:    lw a7, 20(s1)
+; CHECK-NEXT:    lw t1, 16(s1)
+; CHECK-NEXT:    lw t2, 12(s1)
+; CHECK-NEXT:    lw t3, 8(s1)
 ; CHECK-NEXT:    sw a0, 52(s1)
 ; CHECK-NEXT:    sw a0, 48(s1)
-; CHECK-NEXT:    vmv.x.s a7, v8
 ; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    addi a0, s1, 8
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, s1, 12
-; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    addi a0, sp, 16
-; CHECK-NEXT:    vse32.v v8, (a0)
-; CHECK-NEXT:    addi a0, s1, 16
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    addi a0, sp, 8
-; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:    addi a1, s1, 48
-; CHECK-NEXT:    vse32.v v8, (sp)
+; CHECK-NEXT:    sd t1, 0(sp)
+; CHECK-NEXT:    sd t2, 8(sp)
+; CHECK-NEXT:    sd t3, 16(sp)
 ; CHECK-NEXT:    mv a0, t0
 ; CHECK-NEXT:    call gfunc
 ; CHECK-NEXT:    addi sp, sp, 32

@@ -7,53 +7,18 @@ define void @matmul_min(ptr %vptr, ptr %scalars, ptr %acc0_ptr, ptr %acc1_ptr) {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a4, 64
 ; CHECK-NEXT:    li a5, 32
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vle8.v v16, (a1)
-; CHECK-NEXT:    addi a1, a1, 1
-; CHECK-NEXT:    vle8.v v17, (a1)
-; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-NEXT:    vle8.v v12, (a2)
-; CHECK-NEXT:    vle8.v v8, (a3)
 ; CHECK-NEXT:    vsetvli zero, a5, e8, m2, ta, ma
-; CHECK-NEXT:    vle8.v v28, (a0)
-; CHECK-NEXT:    vmv1r.v v18, v16
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v18, v16, 2
-; CHECK-NEXT:    vmv1r.v v19, v17
-; CHECK-NEXT:    vsetivli zero, 6, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v18, v16, 4
-; CHECK-NEXT:    vsetivli zero, 4, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v19, v17, 2
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v18, v16, 6
-; CHECK-NEXT:    vsetivli zero, 6, e8, mf2, tu, ma
-; CHECK-NEXT:    vslideup.vi v19, v17, 4
-; CHECK-NEXT:    vmv1r.v v16, v18
-; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vi v19, v17, 6
-; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v16, v18, 8
-; CHECK-NEXT:    vmv1r.v v24, v19
-; CHECK-NEXT:    vslideup.vi v24, v19, 8
-; CHECK-NEXT:    vmv2r.v v20, v16
+; CHECK-NEXT:    vle8.v v16, (a0)
+; CHECK-NEXT:    lb a0, 0(a1)
+; CHECK-NEXT:    lb a1, 1(a1)
+; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a2)
+; CHECK-NEXT:    vle8.v v12, (a3)
 ; CHECK-NEXT:    vsetvli zero, a5, e8, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v20, v16, 16
-; CHECK-NEXT:    vmv4r.v v16, v20
+; CHECK-NEXT:    vwmacc.vx v8, a0, v16
+; CHECK-NEXT:    vwmacc.vx v12, a1, v16
 ; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-NEXT:    vslideup.vx v16, v20, a5
-; CHECK-NEXT:    vmv2r.v v20, v24
-; CHECK-NEXT:    vsetvli zero, a5, e8, m2, ta, ma
-; CHECK-NEXT:    vslideup.vi v20, v24, 16
-; CHECK-NEXT:    vsetvli zero, zero, e16, m4, ta, ma
-; CHECK-NEXT:    vsext.vf2 v24, v28
-; CHECK-NEXT:    vmadd.vv v16, v24, v12
-; CHECK-NEXT:    vmv4r.v v12, v20
-; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-NEXT:    vslideup.vx v12, v20, a5
-; CHECK-NEXT:    vsetvli zero, a5, e16, m4, ta, ma
-; CHECK-NEXT:    vmadd.vv v12, v24, v8
-; CHECK-NEXT:    vsetvli zero, a4, e8, m4, ta, ma
-; CHECK-NEXT:    vse8.v v16, (a2)
+; CHECK-NEXT:    vse8.v v8, (a2)
 ; CHECK-NEXT:    vse8.v v12, (a3)
 ; CHECK-NEXT:    ret
 entry:

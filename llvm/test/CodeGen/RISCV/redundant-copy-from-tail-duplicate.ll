@@ -7,17 +7,15 @@ define signext i32 @sum(ptr %a, i32 signext %n, i1 %prof.min.iters.check, <vscal
 ; CHECK-NEXT:    andi a2, a2, 1
 ; CHECK-NEXT:    beqz a2, .LBB0_4
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
-; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:  .LBB0_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    vmv.x.s a2, v8
+; CHECK-NEXT:    mv a2, a3
+; CHECK-NEXT:    lw a3, 0(a0)
 ; CHECK-NEXT:    addi a0, a0, 4
 ; CHECK-NEXT:    bnez a1, .LBB0_2
 ; CHECK-NEXT:  # %bb.3: # %for.end
-; CHECK-NEXT:    sext.w a0, a3
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_4: # %vector.ph
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
@@ -25,8 +23,7 @@ define signext i32 @sum(ptr %a, i32 signext %n, i1 %prof.min.iters.check, <vscal
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m4, ta, ma
 ; CHECK-NEXT:    vredsum.vs v8, v8, v12, v0.t
-; CHECK-NEXT:    vmv.x.s a3, v8
-; CHECK-NEXT:    sext.w a0, a3
+; CHECK-NEXT:    vmv.x.s a0, v8
 ; CHECK-NEXT:    ret
 entry:
   br i1 %prof.min.iters.check, label %for.body, label %vector.ph

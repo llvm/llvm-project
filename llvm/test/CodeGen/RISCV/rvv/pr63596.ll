@@ -12,18 +12,10 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    csrr a1, vlenb
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    sub sp, sp, a1
-; CHECK-NEXT:    addi a1, a0, 2
-; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    addi a2, a0, 4
-; CHECK-NEXT:    addi a0, a0, 6
-; CHECK-NEXT:    vle16.v v9, (a1)
-; CHECK-NEXT:    vle16.v v10, (a2)
-; CHECK-NEXT:    vle16.v v11, (a0)
-; CHECK-NEXT:    vmv.x.s s0, v8
-; CHECK-NEXT:    vmv.x.s s1, v9
-; CHECK-NEXT:    vmv.x.s s2, v10
-; CHECK-NEXT:    vmv.x.s a0, v11
+; CHECK-NEXT:    lhu s0, 0(a0)
+; CHECK-NEXT:    lhu s1, 2(a0)
+; CHECK-NEXT:    lhu s2, 4(a0)
+; CHECK-NEXT:    lhu a0, 6(a0)
 ; CHECK-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NEXT:    call __extendhfsf2
 ; CHECK-NEXT:    fmv.w.x fa5, s2
@@ -42,9 +34,9 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # vscale x 8-byte Folded Spill
-; CHECK-NEXT:    fmv.w.x fa0, s0
+; CHECK-NEXT:    fmv.w.x fa0, s1
 ; CHECK-NEXT:    call __extendhfsf2
-; CHECK-NEXT:    fmv.w.x fa5, s1
+; CHECK-NEXT:    fmv.w.x fa5, s0
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
@@ -55,14 +47,13 @@ define <4 x float> @foo(ptr %0) nounwind {
 ; CHECK-NEXT:    vfmv.s.f v8, fa0
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
-; CHECK-NEXT:    vslideup.vi v9, v8, 1
+; CHECK-NEXT:    vslideup.vi v8, v9, 1
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
-; CHECK-NEXT:    vl1r.v v8, (a0) # vscale x 8-byte Folded Reload
+; CHECK-NEXT:    vl1r.v v9, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vslideup.vi v9, v8, 2
-; CHECK-NEXT:    vmv.v.v v8, v9
+; CHECK-NEXT:    vslideup.vi v8, v9, 2
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
 ; CHECK-NEXT:    add sp, sp, a0

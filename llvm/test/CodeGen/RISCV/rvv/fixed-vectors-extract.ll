@@ -1050,9 +1050,7 @@ define i32 @extractelt_v64i32_idx(<64 x i32> %a, i32 zeroext %idx) nounwind {
 ; RV64-NEXT:    add a0, a1, a0
 ; RV64-NEXT:    vse32.v v16, (a3)
 ; RV64-NEXT:    vse32.v v8, (a1)
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vle32.v v8, (a0)
-; RV64-NEXT:    vmv.x.s a0, v8
+; RV64-NEXT:    lw a0, 0(a0)
 ; RV64-NEXT:    addi sp, s0, -384
 ; RV64-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; RV64-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload
@@ -1077,9 +1075,7 @@ define i32 @extractelt_v64i32_idx(<64 x i32> %a, i32 zeroext %idx) nounwind {
 ; VISNI-NEXT:    add a0, a1, a0
 ; VISNI-NEXT:    vse32.v v16, (a3)
 ; VISNI-NEXT:    vse32.v v8, (a1)
-; VISNI-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; VISNI-NEXT:    vle32.v v8, (a0)
-; VISNI-NEXT:    vmv.x.s a0, v8
+; VISNI-NEXT:    lw a0, 0(a0)
 ; VISNI-NEXT:    addi sp, s0, -384
 ; VISNI-NEXT:    ld ra, 376(sp) # 8-byte Folded Reload
 ; VISNI-NEXT:    ld s0, 368(sp) # 8-byte Folded Reload

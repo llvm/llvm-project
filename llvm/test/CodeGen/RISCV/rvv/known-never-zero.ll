@@ -35,9 +35,7 @@ define i32 @vscale_known_nonzero() {
 ; CHECK-NEXT:    lui a1, %hi(.LCPI0_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI0_0)
 ; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    lbu a0, 0(a0)
 ; CHECK-NEXT:    ret
   %x = call i32 @llvm.vscale()
   %r = call i32 @llvm.cttz.i32(i32 %x, i1 false)

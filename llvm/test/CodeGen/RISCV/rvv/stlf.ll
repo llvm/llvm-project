@@ -17,61 +17,34 @@ define void @test_stlf_i32_to_v2i8_assertion(ptr %arg, ptr %arg1) {
 ; CHECK-NEXT:    addi sp, sp, -16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    sw zero, 0(zero)
-; CHECK-NEXT:    addi a5, a0, 4
-; CHECK-NEXT:    addi a2, sp, 12
-; CHECK-NEXT:    addi a6, a0, 5
-; CHECK-NEXT:    addi a7, a0, 3
-; CHECK-NEXT:    addi a4, a0, 2
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; CHECK-NEXT:    addi a2, a0, 4
+; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    addi a3, a0, 1
-; CHECK-NEXT:    addi t0, sp, 8
-; CHECK-NEXT:    vle8.v v9, (a5)
-; CHECK-NEXT:    vmv.x.s a5, v8
-; CHECK-NEXT:    sb a5, 0(a1)
-; CHECK-NEXT:    vle8.v v8, (a6)
-; CHECK-NEXT:    vmv.x.s a6, v9
-; CHECK-NEXT:    sw a5, 8(sp)
-; CHECK-NEXT:    sh a6, 12(sp)
-; CHECK-NEXT:    vmv.x.s a5, v8
-; CHECK-NEXT:    sb a6, 4(a1)
-; CHECK-NEXT:    sb a5, 5(a1)
-; CHECK-NEXT:    addi a5, sp, 11
-; CHECK-NEXT:    vle8.v v8, (a7)
-; CHECK-NEXT:    addi a6, sp, 10
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vle32.v v9, (t0)
-; CHECK-NEXT:    addi a7, sp, 9
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vle8.v v10, (a5)
-; CHECK-NEXT:    vmv.x.s a5, v8
-; CHECK-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
-; CHECK-NEXT:    vle16.v v8, (a6)
-; CHECK-NEXT:    addi a6, sp, 13
-; CHECK-NEXT:    sb a5, 3(a1)
-; CHECK-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; CHECK-NEXT:    vmv.x.s a5, v9
-; CHECK-NEXT:    vle8.v v9, (a4)
-; CHECK-NEXT:    vmv.x.s a4, v10
-; CHECK-NEXT:    vle8.v v10, (a7)
-; CHECK-NEXT:    vmv.x.s a7, v8
-; CHECK-NEXT:    vle8.v v8, (a6)
-; CHECK-NEXT:    vmv.x.s a6, v9
-; CHECK-NEXT:    sb a6, 2(a1)
-; CHECK-NEXT:    vle8.v v9, (a3)
-; CHECK-NEXT:    vmv.x.s a3, v10
+; CHECK-NEXT:    vle8.v v9, (a2)
+; CHECK-NEXT:    addi a3, a0, 2
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vle32.v v10, (a2)
-; CHECK-NEXT:    vmv.x.s a2, v8
-; CHECK-NEXT:    vmv.x.s a6, v9
-; CHECK-NEXT:    sb a6, 1(a1)
-; CHECK-NEXT:    vmv.x.s a1, v10
-; CHECK-NEXT:    sb a5, 0(a0)
-; CHECK-NEXT:    sb a3, 1(a0)
-; CHECK-NEXT:    sb a7, 2(a0)
-; CHECK-NEXT:    sb a4, 3(a0)
-; CHECK-NEXT:    sb a1, 4(a0)
-; CHECK-NEXT:    sb a2, 5(a0)
+; CHECK-NEXT:    vle8.v v10, (a0)
+; CHECK-NEXT:    vmv.x.s a4, v8
+; CHECK-NEXT:    vmv.x.s a5, v9
+; CHECK-NEXT:    sw a4, 8(sp)
+; CHECK-NEXT:    sh a5, 12(sp)
+; CHECK-NEXT:    addi a4, sp, 10
+; CHECK-NEXT:    vle8.v v8, (a4)
+; CHECK-NEXT:    addi a4, sp, 8
+; CHECK-NEXT:    vse8.v v10, (a1)
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vle8.v v9, (a3)
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vle8.v v10, (a4)
+; CHECK-NEXT:    addi a4, sp, 12
+; CHECK-NEXT:    addi a1, a1, 2
+; CHECK-NEXT:    vle8.v v11, (a4)
+; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
+; CHECK-NEXT:    vse8.v v9, (a1)
+; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
+; CHECK-NEXT:    vse8.v v8, (a3)
+; CHECK-NEXT:    vse8.v v10, (a0)
+; CHECK-NEXT:    vse8.v v11, (a2)
 ; CHECK-NEXT:    addi sp, sp, 16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 0
 ; CHECK-NEXT:    ret
