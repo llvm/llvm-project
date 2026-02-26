@@ -71,14 +71,12 @@ define double @func(double %d, i32 %n) nounwind {
 ; RV32IZFINXZDINX-NEXT:    beqz a2, .LBB0_2
 ; RV32IZFINXZDINX-NEXT:  # %bb.1: # %if.else
 ; RV32IZFINXZDINX-NEXT:    addi a2, a2, -1
-; RV32IZFINXZDINX-NEXT:    mv a0, s0
-; RV32IZFINXZDINX-NEXT:    mv a1, s1
+; RV32IZFINXZDINX-NEXT:    fmv.d a0, s0
 ; RV32IZFINXZDINX-NEXT:    call func
 ; RV32IZFINXZDINX-NEXT:    fadd.d a0, a0, s0
 ; RV32IZFINXZDINX-NEXT:    j .LBB0_3
 ; RV32IZFINXZDINX-NEXT:  .LBB0_2: # %return
-; RV32IZFINXZDINX-NEXT:    mv a0, s0
-; RV32IZFINXZDINX-NEXT:    mv a1, s1
+; RV32IZFINXZDINX-NEXT:    fmv.d a0, s0
 ; RV32IZFINXZDINX-NEXT:  .LBB0_3: # %return
 ; RV32IZFINXZDINX-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32IZFINXZDINX-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
