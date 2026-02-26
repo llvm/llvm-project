@@ -41,7 +41,7 @@ struct CoreDefinition {
 } // namespace lldb_private
 
 // This core information can be looked using the ArchSpec::Core as the index
-static const CoreDefinition g_core_definitions[] = {
+static constexpr const CoreDefinition g_core_definitions[] = {
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_generic,
      "arm"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::arm, ArchSpec::eCore_arm_armv4,
@@ -90,12 +90,12 @@ static const CoreDefinition g_core_definitions[] = {
      "thumbv6m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7,
      "thumbv7"},
-    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f,
-     "thumbv7f"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7s,
      "thumbv7s"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7k,
      "thumbv7k"},
+    {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7f,
+     "thumbv7f"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7m,
      "thumbv7m"},
     {eByteOrderLittle, 4, 2, 4, llvm::Triple::thumb, ArchSpec::eCore_thumbv7em,
@@ -256,6 +256,15 @@ static const CoreDefinition g_core_definitions[] = {
 static_assert(sizeof(g_core_definitions) / sizeof(CoreDefinition) ==
                   ArchSpec::kNumCores,
               "make sure we have one core definition for each core");
+
+template <int I> struct ArchSpecValidator : ArchSpecValidator<I + 1> {
+  static_assert(g_core_definitions[I].core == I,
+                "g_core_definitions order doesn't match Core enumeration");
+};
+
+template <> struct ArchSpecValidator<ArchSpec::kNumCores> {};
+
+ArchSpecValidator<ArchSpec::eCore_arm_generic> validator;
 
 struct ArchDefinitionEntry {
   ArchSpec::Core core;
@@ -545,6 +554,8 @@ const char *ArchSpec::GetArchitectureName() const {
 
 bool ArchSpec::IsMIPS() const { return GetTriple().isMIPS(); }
 
+bool ArchSpec::IsNVPTX() const { return GetTriple().isNVPTX(); }
+
 std::string ArchSpec::GetTargetABI() const {
 
   std::string abi;
@@ -659,10 +670,6 @@ uint32_t ArchSpec::GetMachOCPUSubType() const {
   return LLDB_INVALID_CPUTYPE;
 }
 
-uint32_t ArchSpec::GetDataByteSize() const { return 1; }
-
-uint32_t ArchSpec::GetCodeByteSize() const { return 1; }
-
 llvm::Triple::ArchType ArchSpec::GetMachine() const {
   const CoreDefinition *core_def = FindCoreDefinition(m_core);
   if (core_def)
@@ -710,6 +717,8 @@ bool ArchSpec::CharIsSignedByDefault() const {
   case llvm::Triple::ppc64:
     return m_triple.isOSDarwin();
 
+  case llvm::Triple::riscv64:
+  case llvm::Triple::riscv32:
   case llvm::Triple::ppc64le:
   case llvm::Triple::systemz:
   case llvm::Triple::xcore:

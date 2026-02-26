@@ -24,6 +24,8 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "amp";
   case Kind::arrow:
     return "arrow";
+  case Kind::colon:
+    return "colon";
   case Kind::coloncolon:
     return "coloncolon";
   case Kind::eof:
@@ -34,6 +36,10 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "identifier";
   case Kind::integer_constant:
     return "integer_constant";
+  case Kind::kw_false:
+    return "false";
+  case Kind::kw_true:
+    return "true";
   case Kind::l_paren:
     return "l_paren";
   case Kind::l_square:
@@ -42,7 +48,6 @@ llvm::StringRef Token::GetTokenName(Kind kind) {
     return "minus";
   case Kind::period:
     return "period";
-    return "l_square";
   case Kind::plus:
     return "plus";
   case Kind::r_paren:
@@ -106,12 +111,41 @@ static std::optional<llvm::StringRef> IsNumber(llvm::StringRef &remainder,
   return std::nullopt;
 }
 
-llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr) {
+static llvm::Error IsNotAllowedByMode(llvm::StringRef expr, Token token,
+                                      lldb::DILMode mode) {
+  switch (mode) {
+  case lldb::eDILModeSimple:
+    if (!token.IsOneOf({Token::identifier, Token::period, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL simple mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeLegacy:
+    if (!token.IsOneOf({Token::identifier, Token::integer_constant,
+                        Token::period, Token::arrow, Token::star, Token::amp,
+                        Token::l_square, Token::r_square, Token::eof})) {
+      return llvm::make_error<DILDiagnosticError>(
+          expr, llvm::formatv("{0} is not allowed in DIL legacy mode", token),
+          token.GetLocation());
+    }
+    break;
+  case lldb::eDILModeFull:
+    break;
+  }
+  return llvm::Error::success();
+}
+
+llvm::Expected<DILLexer> DILLexer::Create(llvm::StringRef expr,
+                                          lldb::DILMode mode) {
   std::vector<Token> tokens;
   llvm::StringRef remainder = expr;
   do {
     if (llvm::Expected<Token> t = Lex(expr, remainder)) {
-      tokens.push_back(std::move(*t));
+      Token token = *t;
+      if (llvm::Error error = IsNotAllowedByMode(expr, token, mode))
+        return error;
+      tokens.push_back(std::move(token));
     } else {
       return t.takeError();
     }
@@ -137,14 +171,20 @@ llvm::Expected<Token> DILLexer::Lex(llvm::StringRef expr,
     return Token(kind, maybe_number->str(), position);
   }
   std::optional<llvm::StringRef> maybe_word = IsWord(expr, remainder);
-  if (maybe_word)
-    return Token(Token::identifier, maybe_word->str(), position);
+  if (maybe_word) {
+    llvm::StringRef word = *maybe_word;
+    Token::Kind kind = llvm::StringSwitch<Token::Kind>(word)
+                           .Case("false", Token::kw_false)
+                           .Case("true", Token::kw_true)
+                           .Default(Token::identifier);
+    return Token(kind, word.str(), position);
+  }
 
   constexpr std::pair<Token::Kind, const char *> operators[] = {
-      {Token::amp, "&"},      {Token::arrow, "->"},   {Token::coloncolon, "::"},
-      {Token::l_paren, "("},  {Token::l_square, "["}, {Token::minus, "-"},
-      {Token::period, "."},   {Token::plus, "+"},     {Token::r_paren, ")"},
-      {Token::r_square, "]"}, {Token::star, "*"},
+      {Token::amp, "&"},     {Token::arrow, "->"},   {Token::coloncolon, "::"},
+      {Token::colon, ":"},   {Token::l_paren, "("},  {Token::l_square, "["},
+      {Token::minus, "-"},   {Token::period, "."},   {Token::plus, "+"},
+      {Token::r_paren, ")"}, {Token::r_square, "]"}, {Token::star, "*"},
   };
   for (auto [kind, str] : operators) {
     if (remainder.consume_front(str))

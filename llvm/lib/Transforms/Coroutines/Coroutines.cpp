@@ -93,6 +93,7 @@ static Intrinsic::ID NonOverloadedCoroIntrinsics[] = {
     Intrinsic::coro_save,
     Intrinsic::coro_subfn_addr,
     Intrinsic::coro_suspend,
+    Intrinsic::coro_is_in_ramp,
 };
 
 bool coro::isSuspendBlock(BasicBlock *BB) {
@@ -275,6 +276,9 @@ void coro::Shape::analyze(Function &F,
           }
         }
         break;
+      case Intrinsic::coro_is_in_ramp:
+        CoroIsInRampInsts.push_back(cast<CoroIsInRampInst>(II));
+        break;
       case Intrinsic::coro_promise:
         assert(CoroPromise == nullptr &&
                "CoroEarly must ensure coro.promise unique");
@@ -356,9 +360,9 @@ void coro::Shape::invalidateCoroutine(
     // present.
     for (AnyCoroSuspendInst *CS : CoroSuspends) {
       CS->replaceAllUsesWith(PoisonValue::get(CS->getType()));
-      CS->eraseFromParent();
       if (auto *CoroSave = CS->getCoroSave())
         CoroSave->eraseFromParent();
+      CS->eraseFromParent();
     }
     CoroSuspends.clear();
 
@@ -662,7 +666,7 @@ void CoroIdAsyncInst::checkWellFormed() const {
 
 static void checkAsyncContextProjectFunction(const Instruction *I,
                                              Function *F) {
-  auto *FunTy = cast<FunctionType>(F->getValueType());
+  auto *FunTy = F->getFunctionType();
   if (!FunTy->getReturnType()->isPointerTy())
     fail(I,
          "llvm.coro.suspend.async resume function projection function must "

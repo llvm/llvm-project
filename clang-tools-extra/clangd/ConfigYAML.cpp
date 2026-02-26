@@ -255,6 +255,10 @@ private:
       if (auto CodePatterns = scalarValue(N, "CodePatterns"))
         F.CodePatterns = *CodePatterns;
     });
+    Dict.handle("MacroFilter", [&](Node &N) {
+      if (auto MacroFilter = scalarValue(N, "MacroFilter"))
+        F.MacroFilter = *MacroFilter;
+    });
     Dict.parse(N);
   }
 

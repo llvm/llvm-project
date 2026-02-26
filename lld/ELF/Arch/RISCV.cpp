@@ -8,6 +8,7 @@
 
 #include "InputFiles.h"
 #include "OutputSections.h"
+#include "RelocScan.h"
 #include "Symbols.h"
 #include "SyntheticSections.h"
 #include "Target.h"
@@ -38,12 +39,15 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
+  template <class ELFT, class RelTy>
+  void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
+  void scanSection(InputSectionBase &) override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
                      const uint8_t *loc) const override;
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
-  void relocateAlloc(InputSectionBase &sec, uint8_t *buf) const override;
+  void relocateAlloc(InputSection &sec, uint8_t *buf) const override;
   bool relaxOnce(int pass) const override;
   template <class ELFT, class RelTy>
   bool synthesizeAlignForInput(uint64_t &dot, InputSection *sec,
@@ -278,6 +282,7 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
                           const uint8_t *loc) const {
   switch (type) {
   case R_RISCV_NONE:
+  case R_RISCV_VENDOR:
     return R_NONE;
   case R_RISCV_32:
   case R_RISCV_64:
@@ -343,6 +348,52 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
              << ") against symbol " << &s;
     return R_NONE;
   }
+}
+
+template <class ELFT, class RelTy>
+void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
+  RelocScan rs(ctx, &sec);
+  // Many relocations end up in sec.relocations.
+  sec.relocations.reserve(rels.size());
+
+  StringRef rvVendor;
+  for (auto it = rels.begin(); it != rels.end(); ++it) {
+    RelType type = it->getType(false);
+    uint32_t symIndex = it->getSymbol(false);
+    Symbol &sym = sec.getFile<ELFT>()->getSymbol(symIndex);
+    const uint8_t *loc = sec.content().data() + it->r_offset;
+
+    if (type == R_RISCV_VENDOR) {
+      if (!rvVendor.empty())
+        Err(ctx) << getErrorLoc(ctx, loc)
+                 << "malformed consecutive R_RISCV_VENDOR relocations";
+      rvVendor = sym.getName();
+      continue;
+    } else if (!rvVendor.empty()) {
+      Err(ctx) << getErrorLoc(ctx, loc)
+               << "unknown vendor-specific relocation (" << type.v
+               << ") in namespace '" << rvVendor << "' against symbol '" << &sym
+               << "'";
+      rvVendor = "";
+      continue;
+    }
+
+    rs.scan<ELFT, RelTy>(it, type, rs.getAddend<ELFT>(*it, type));
+  }
+
+  // Sort relocations by offset for more efficient searching for
+  // R_RISCV_PCREL_HI20.
+  llvm::stable_sort(sec.relocs(),
+                    [](const Relocation &lhs, const Relocation &rhs) {
+                      return lhs.offset < rhs.offset;
+                    });
+}
+
+void RISCV::scanSection(InputSectionBase &sec) {
+  if (ctx.arg.is64)
+    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
+  else
+    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
 }
 
 void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
@@ -603,12 +654,8 @@ static void tlsdescToLe(uint8_t *loc, const Relocation &rel, uint64_t val) {
   }
 }
 
-void RISCV::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
-  uint64_t secAddr = sec.getOutputSection()->addr;
-  if (auto *s = dyn_cast<InputSection>(&sec))
-    secAddr += s->outSecOff;
-  else if (auto *ehIn = dyn_cast<EhInputSection>(&sec))
-    secAddr += ehIn->getParent()->outSecOff;
+void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
+  uint64_t secAddr = sec.getOutputSection()->addr + sec.outSecOff;
   uint64_t tlsdescVal = 0;
   bool tlsdescRelax = false, isToLe = false;
   const ArrayRef<Relocation> relocs = sec.relocs();
@@ -705,28 +752,33 @@ void elf::initSymbolAnchors(Ctx &ctx) {
       }
     }
   }
-  // Store anchors (st_value and st_value+st_size) for symbols relative to text
-  // sections.
+  // Store symbol anchors for adjusting st_value/st_size during relaxation.
+  // We include symbols where d->file == file for the prevailing copies.
   //
   // For a defined symbol foo, we may have `d->file != file` with --wrap=foo.
   // We should process foo, as the defining object file's symbol table may not
-  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. To
-  // avoid adding a Defined that is undefined in one object file, use
-  // `!d->scriptDefined` to exclude symbols that are definitely not wrapped.
+  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. Use
+  // `d->scriptDefined` to include such symbols.
   //
   // `relaxAux->anchors` may contain duplicate symbols, but that is fine.
+  auto addAnchor = [](Defined *d) {
+    if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
+      if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
+        // If sec is discarded, relaxAux will be nullptr.
+        sec->relaxAux->anchors.push_back({d->value, d, false});
+        sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
+      }
+  };
   for (InputFile *file : ctx.objectFiles)
     for (Symbol *sym : file->getSymbols()) {
       auto *d = dyn_cast<Defined>(sym);
-      if (!d || (d->file != file && !d->scriptDefined))
-        continue;
-      if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
-        if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
-          // If sec is discarded, relaxAux will be nullptr.
-          sec->relaxAux->anchors.push_back({d->value, d, false});
-          sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
-        }
+      if (d && (d->file == file || d->scriptDefined))
+        addAnchor(d);
     }
+  // Add anchors for IRELATIVE symbols (see `handleNonPreemptibleIfunc`).
+  // Their values must be adjusted so IRELATIVE addends remain correct.
+  for (Defined *d : ctx.irelativeSyms)
+    addAnchor(d);
   // Sort anchors by offset so that we can find the closest relocation
   // efficiently. For a zero size symbol, ensure that its start anchor precedes
   // its end anchor. For two symbols with anchors at the same offset, their
@@ -756,7 +808,7 @@ static void relaxCall(Ctx &ctx, const InputSection &sec, size_t i, uint64_t loc,
 
   // When the caller specifies the old value of `remove`, disallow its
   // increment.
-  if (remove >= 6 && rvc && isInt<12>(displace) && rd == 0) {
+  if (remove >= 6 && rvc && isInt<12>(displace) && rd == X_X0) {
     sec.relaxAux->relocTypes[i] = R_RISCV_RVC_JUMP;
     sec.relaxAux->writes.push_back(0xa001); // c.j
     remove = 6;

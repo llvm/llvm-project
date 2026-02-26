@@ -13,10 +13,13 @@
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Runtime/entry-names.h"
 
+#include "cuda_runtime.h"
+
 namespace Fortran::runtime::cuda {
 
 extern "C" {
-
+cudaStream_t RTDECL(CUFGetAssociatedStream)(void *);
+int RTDECL(CUFSetAssociatedStream)(void *, cudaStream_t);
 void RTDECL(CUFRegisterAllocator)();
 }
 

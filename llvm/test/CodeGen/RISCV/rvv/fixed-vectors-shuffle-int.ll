@@ -295,12 +295,9 @@ define <4 x i8> @interleave_shuffles(<4 x i8> %x) {
 ; CHECK-LABEL: interleave_shuffles:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; CHECK-NEXT:    vrgather.vi v9, v8, 0
-; CHECK-NEXT:    vrgather.vi v10, v8, 1
-; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
-; CHECK-NEXT:    vwaddu.vv v8, v9, v10
-; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vwmaccu.vx v8, a0, v10
+; CHECK-NEXT:    vmv1r.v v9, v8
+; CHECK-NEXT:    vslideup.vi v9, v8, 2
+; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
   %y = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %z = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
@@ -840,7 +837,6 @@ define <8 x i32> @shuffle_spread3_singlesrc_e32(<8 x i32> %v) {
   ret <8 x i32> %out
 }
 
-; TODO: This should be a single vslideup.vi
 define <8 x i32> @shuffle_spread4_singlesrc_e32(<8 x i32> %v) {
 ; CHECK-LABEL: shuffle_spread4_singlesrc_e32:
 ; CHECK:       # %bb.0:
@@ -937,7 +933,6 @@ define <8 x i32> @shuffle_decompress_singlesrc_e32(<8 x i32> %v) {
   ret <8 x i32> %out
 }
 
-; TODO: This should be a single vslideup.vi
 define <8 x i8> @shuffle_decompress_singlesrc_e8(<8 x i8> %v) {
 ; CHECK-LABEL: shuffle_decompress_singlesrc_e8:
 ; CHECK:       # %bb.0:

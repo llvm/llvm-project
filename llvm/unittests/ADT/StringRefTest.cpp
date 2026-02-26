@@ -391,6 +391,34 @@ TEST(StringRefTest, ConsumeFront) {
   EXPECT_TRUE(Str.consume_front(""));
 }
 
+TEST(StringRefTest, ConsumeFrontChar) {
+  {
+    StringRef Str("hello");
+    EXPECT_EQ("hello", Str);
+    EXPECT_TRUE(Str.consume_front('h'));
+    EXPECT_EQ("ello", Str);
+    EXPECT_FALSE(Str.consume_front('h'));
+    EXPECT_EQ("ello", Str);
+  }
+
+  {
+    StringRef Str("\0");
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+  }
+
+  {
+    char Prefix = 'h';
+    StringRef Str("h");
+    EXPECT_TRUE(Str.consume_front(Prefix));
+    EXPECT_EQ("", Str);
+    EXPECT_FALSE(Str.consume_front('\0'));
+    EXPECT_EQ("", Str);
+  }
+}
+
 TEST(StringRefTest, ConsumeFrontInsensitive) {
   StringRef Str("heLLo");
   EXPECT_TRUE(Str.consume_front_insensitive(""));
@@ -1065,7 +1093,7 @@ TEST(StringRefTest, Take) {
 }
 
 TEST(StringRefTest, FindIf) {
-  StringRef Punct("Test.String");
+  StringRef Punct("This.Is.Test.String");
   StringRef NoPunct("ABCDEFG");
   StringRef Empty;
 
@@ -1078,6 +1106,16 @@ TEST(StringRefTest, FindIf) {
   EXPECT_EQ(4U, Punct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, NoPunct.find_if_not(IsAlpha));
   EXPECT_EQ(StringRef::npos, Empty.find_if_not(IsAlpha));
+
+  EXPECT_EQ(12U, Punct.rfind_if(IsPunct));
+  EXPECT_EQ(7U, Punct.rfind_if(IsPunct, /*End=*/12));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if(IsPunct, /*End=*/0));
+
+  EXPECT_EQ(12U, Punct.rfind_if_not(IsAlpha));
+  EXPECT_EQ(7U, Punct.rfind_if_not(IsAlpha, /*End=*/12));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/4));
+  EXPECT_EQ(StringRef::npos, Punct.rfind_if_not(IsAlpha, /*End=*/0));
 }
 
 TEST(StringRefTest, TakeWhileUntil) {
@@ -1124,14 +1162,13 @@ TEST(StringRefTest, StringLiteral) {
   constexpr StringRef StringRefs[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), StringRefs[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, StringRefs[0].size()>::value));
-  EXPECT_EQ(false,
-            (std::integral_constant<bool, StringRefs[0].empty()>::value));
+  EXPECT_EQ(false, (std::bool_constant<StringRefs[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), StringRefs[1]);
 
   constexpr StringLiteral Strings[] = {"Foo", "Bar"};
   EXPECT_EQ(StringRef("Foo"), Strings[0]);
   EXPECT_EQ(3u, (std::integral_constant<size_t, Strings[0].size()>::value));
-  EXPECT_EQ(false, (std::integral_constant<bool, Strings[0].empty()>::value));
+  EXPECT_EQ(false, (std::bool_constant<Strings[0].empty()>::value));
   EXPECT_EQ(StringRef("Bar"), Strings[1]);
 }
 

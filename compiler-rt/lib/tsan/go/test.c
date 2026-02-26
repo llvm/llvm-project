@@ -91,6 +91,10 @@ int main(void) {
   __tsan_go_start(thr0, &thr1, (char*)&barfoo + 1);
   void *thr2 = 0;
   __tsan_go_start(thr0, &thr2, (char*)&barfoo + 1);
+  // Goroutine that exits without a single event.
+  void *thr3 = 0;
+  __tsan_go_start(thr0, &thr3, (char*)&barfoo + 1);
+  __tsan_go_end(thr3);
   __tsan_func_exit(thr0);
   __tsan_func_enter(thr1, (char*)&foobar + 1);
   __tsan_func_enter(thr1, (char*)&foobar + 1);

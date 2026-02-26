@@ -204,10 +204,10 @@ public:
       : getTTI(GTTI), getIRSI(GIRSI), getORE(GORE) {
     
     // Check that the DenseMap implementation has not changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
+                  static_cast<unsigned>(-1));
+    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
+                  static_cast<unsigned>(-2));
   }
   bool run(Module &M);
 
@@ -312,6 +312,22 @@ private:
                                     std::vector<Function *> &FuncsToRemove,
                                     unsigned &OutlinedFunctionNum);
 
+  /// Fill the new function that will serve as the replacement function for all
+  /// of the extracted regions of a certain structure from the first region in
+  /// the list of regions.  Replace this first region's extracted function with
+  /// the new overall function.
+  ///
+  /// \param [in] M - The module we are outlining from.
+  /// \param [in] CurrentGroup - The group of regions to be outlined.
+  /// \param [in,out] OutputStoreBBs - The output blocks for each different
+  /// set of stores needed for the different functions.
+  /// \param [in,out] FuncsToRemove - Extracted functions to erase from module
+  /// once outlining is complete.
+  void fillOverallFunction(
+      Module &M, OutlinableGroup &CurrentGroup,
+      std::vector<DenseMap<Value *, BasicBlock *>> &OutputStoreBBs,
+      std::vector<Function *> &FuncsToRemove);
+
   /// If true, enables us to outline from functions that have LinkOnceFromODR
   /// linkages.
   bool OutlineFromLinkODRs = false;
@@ -389,6 +405,13 @@ private:
         return false;
       // TODO: Update the outliner to capture whether the outlined function
       // needs these extra attributes.
+
+      // `nomerge` states that calls to this function should never be merged
+      // during optimisation. Outlining would have the effect of merging
+      // callsites from separate functions into a single callsite in the
+      // outlined function.
+      if (CI.hasFnAttr(Attribute::NoMerge))
+        return false;
 
       // Functions marked with the swifttailcc and tailcc calling conventions
       // require special handling when outlining musttail functions.  The

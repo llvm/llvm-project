@@ -5,6 +5,10 @@ set(CLANGD_TEST_DEPS
   split-file
   )
 
+if (LLVM_INCLUDE_BENCHMARKS)
+  list(APPEND CLANGD_TEST_DEPS IndexBenchmark)
+endif()
+
 if(CLANGD_BUILD_XPC)
   list(APPEND CLANGD_TEST_DEPS clangd-xpc-test-client)
   list(APPEND CLANGD_TEST_DEPS ClangdXpcUnitTests)

@@ -40,8 +40,10 @@ using namespace lldb_private::formatters;
 static void consumeInlineNamespace(llvm::StringRef &name) {
   // Delete past an inline namespace, if any: __[a-zA-Z0-9_]+::
   auto scratch = name;
-  if (scratch.consume_front("__") && std::isalnum(scratch[0])) {
-    scratch = scratch.drop_while([](char c) { return std::isalnum(c); });
+  if (scratch.consume_front("__") &&
+      std::isalnum(static_cast<unsigned char>(scratch[0]))) {
+    scratch = scratch.drop_while(
+        [](char c) { return std::isalnum(static_cast<unsigned char>(c)); });
     if (scratch.consume_front("::")) {
       // Successfully consumed a namespace.
       name = scratch;
@@ -102,21 +104,12 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
 
 std::pair<lldb::ValueObjectSP, bool>
 lldb_private::formatters::GetValueOrOldCompressedPair(
-    ValueObject &obj, size_t anon_struct_idx, llvm::StringRef child_name,
+    ValueObject &obj, llvm::StringRef child_name,
     llvm::StringRef compressed_pair_name) {
   auto is_old_compressed_pair = [](ValueObject &pair_obj) -> bool {
     return isStdTemplate(pair_obj.GetTypeName(), "__compressed_pair");
   };
 
-  // Try searching the child member in an anonymous structure first.
-  if (auto unwrapped = obj.GetChildAtIndex(anon_struct_idx)) {
-    ValueObjectSP node_sp(obj.GetChildMemberWithName(child_name));
-    if (node_sp)
-      return {node_sp, is_old_compressed_pair(*node_sp)};
-  }
-
-  // Older versions of libc++ don't wrap the children in anonymous structures.
-  // Try that instead.
   ValueObjectSP node_sp(obj.GetChildMemberWithName(child_name));
   if (node_sp)
     return {node_sp, is_old_compressed_pair(*node_sp)};
@@ -238,8 +231,8 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
   if (!valobj_sp)
     return false;
 
-  auto [ptr_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      *valobj_sp, /*anon_struct_idx=*/0, "__ptr_", "__ptr_");
+  auto [ptr_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*valobj_sp, "__ptr_", "__ptr_");
   if (!ptr_sp)
     return false;
 
@@ -251,6 +244,83 @@ bool lldb_private::formatters::LibcxxUniquePointerSummaryProvider(
 
   DumpCxxSmartPtrPointerSummary(stream, *ptr_sp, options);
 
+  return true;
+}
+
+static std::optional<int64_t> LibcxxExtractOrderingValue(ValueObject &valobj) {
+  lldb::ValueObjectSP value_sp = valobj.GetChildMemberWithName("__value_");
+  if (!value_sp)
+    return std::nullopt;
+  bool success;
+  int64_t value = value_sp->GetValueAsSigned(0, &success);
+  if (!success)
+    return std::nullopt;
+  return value;
+}
+
+bool lldb_private::formatters::LibcxxPartialOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  case -127:
+    stream << "unordered";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxWeakOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equivalent";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
+  return true;
+}
+
+bool lldb_private::formatters::LibcxxStrongOrderingSummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  std::optional<int64_t> value = LibcxxExtractOrderingValue(valobj);
+  if (!value)
+    return false;
+  switch (*value) {
+  case -1:
+    stream << "less";
+    break;
+  case 0:
+    stream << "equal";
+    break;
+  case 1:
+    stream << "greater";
+    break;
+  default:
+    return false;
+  }
   return true;
 }
 
@@ -413,8 +483,8 @@ lldb_private::formatters::LibcxxUniquePtrSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  auto [ptr_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      *valobj_sp, /*anon_struct_idx=*/0, "__ptr_", "__ptr_");
+  auto [ptr_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*valobj_sp, "__ptr_", "__ptr_");
   if (!ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 
@@ -459,8 +529,8 @@ enum class StringLayout { CSD, DSC };
 }
 
 static ValueObjectSP ExtractLibCxxStringData(ValueObject &valobj) {
-  auto [valobj_r_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      valobj, /*anon_struct_idx=*/0, "__rep_", "__r_");
+  auto [valobj_r_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(valobj, "__rep_", "__r_");
   if (!valobj_r_sp)
     return nullptr;
 

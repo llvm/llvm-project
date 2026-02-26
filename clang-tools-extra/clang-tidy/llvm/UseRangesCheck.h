@@ -1,4 +1,4 @@
-//===--- UseRangesCheck.h - clang-tidy --------------------------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -17,7 +17,7 @@ namespace clang::tidy::llvm_check {
 /// range-based algorithms from `llvm/ADT/STLExtras.h`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/use-ranges.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/llvm/use-ranges.html
 class UseRangesCheck : public utils::UseRangesCheck {
 public:
   UseRangesCheck(StringRef Name, ClangTidyContext *Context);

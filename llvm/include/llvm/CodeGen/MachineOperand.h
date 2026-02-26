@@ -16,6 +16,7 @@
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/MC/LaneBitmask.h"
 #include "llvm/Support/Compiler.h"
 #include <cassert>
 
@@ -69,7 +70,8 @@ public:
     MO_Predicate,         ///< Generic predicate for ISel
     MO_ShuffleMask,       ///< Other IR Constant for ISel (shuffle masks)
     MO_DbgInstrRef, ///< Integer indices referring to an instruction+operand
-    MO_Last = MO_DbgInstrRef
+    MO_LaneMask,    ///< Mask to represent active parts of registers
+    MO_Last = MO_LaneMask
   };
 
 private:
@@ -178,6 +180,7 @@ private:
     Intrinsic::ID IntrinsicID; // For MO_IntrinsicID.
     unsigned Pred;           // For MO_Predicate
     ArrayRef<int> ShuffleMask; // For MO_ShuffleMask
+    LaneBitmask LaneMask;      // For MO_LaneMask
 
     struct {                  // For MO_Register.
       // Register number is in SmallContents.RegNo.
@@ -360,6 +363,7 @@ public:
   bool isIntrinsicID() const { return OpKind == MO_IntrinsicID; }
   bool isPredicate() const { return OpKind == MO_Predicate; }
   bool isShuffleMask() const { return OpKind == MO_ShuffleMask; }
+  bool isLaneMask() const { return OpKind == MO_LaneMask; }
   //===--------------------------------------------------------------------===//
   // Accessors for Register Operands
   //===--------------------------------------------------------------------===//
@@ -624,6 +628,11 @@ public:
     return Contents.ShuffleMask;
   }
 
+  LaneBitmask getLaneMask() const {
+    assert(isLaneMask() && "Wrong MachineOperand accessor");
+    return Contents.LaneMask;
+  }
+
   /// Return the offset from the symbol in this operand. This always returns 0
   /// for ExternalSymbol operands.
   int64_t getOffset() const {
@@ -787,6 +796,9 @@ public:
   /// ChangeToBA - Replace this operand with a new block address operand.
   LLVM_ABI void ChangeToBA(const BlockAddress *BA, int64_t Offset,
                            unsigned TargetFlags = 0);
+
+  /// ChangeToCPI - Replace this operand with a new constant pool index operand.
+  LLVM_ABI void ChangeToCPI(unsigned Idx, int Offset, unsigned TargetFlags = 0);
 
   /// ChangeToMCSymbol - Replace this operand with a new MC symbol operand.
   LLVM_ABI void ChangeToMCSymbol(MCSymbol *Sym, unsigned TargetFlags = 0);
@@ -986,6 +998,12 @@ public:
   static MachineOperand CreateShuffleMask(ArrayRef<int> Mask) {
     MachineOperand Op(MachineOperand::MO_ShuffleMask);
     Op.Contents.ShuffleMask = Mask;
+    return Op;
+  }
+
+  static MachineOperand CreateLaneMask(LaneBitmask LaneMask) {
+    MachineOperand Op(MachineOperand::MO_LaneMask);
+    Op.Contents.LaneMask = LaneMask;
     return Op;
   }
 

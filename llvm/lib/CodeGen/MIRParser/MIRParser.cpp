@@ -127,7 +127,7 @@ public:
   bool initializeSaveRestorePoints(
       PerFunctionMIParsingState &PFS,
       const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
-      SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints);
+      llvm::SaveRestorePoints &SaveRestorePoints);
 
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
                               const yaml::MachineFunction &YamlMF);
@@ -872,11 +872,11 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
-  SmallVector<MachineBasicBlock *, 4> SavePoints;
+  llvm::SaveRestorePoints SavePoints;
   if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints, SavePoints))
     return true;
   MFI.setSavePoints(SavePoints);
-  SmallVector<MachineBasicBlock *, 4> RestorePoints;
+  llvm::SaveRestorePoints RestorePoints;
   if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints, RestorePoints))
     return true;
   MFI.setRestorePoints(RestorePoints);
@@ -1098,14 +1098,22 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
 bool MIRParserImpl::initializeSaveRestorePoints(
     PerFunctionMIParsingState &PFS,
     const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
-    SmallVectorImpl<MachineBasicBlock *> &SaveRestorePoints) {
+    llvm::SaveRestorePoints &SaveRestorePoints) {
+  SMDiagnostic Error;
   MachineBasicBlock *MBB = nullptr;
   for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
     if (parseMBBReference(PFS, MBB, Entry.Point.Value))
       return true;
-    SaveRestorePoints.push_back(MBB);
-  }
 
+    std::vector<CalleeSavedInfo> Registers;
+    for (auto &RegStr : Entry.Registers) {
+      Register Reg;
+      if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
+        return error(Error, RegStr.SourceRange);
+      Registers.push_back(CalleeSavedInfo(Reg));
+    }
+    SaveRestorePoints.try_emplace(MBB, std::move(Registers));
+  }
   return false;
 }
 
@@ -1265,7 +1273,7 @@ std::unique_ptr<MIRParser> llvm::createMIRParserFromFile(
   auto FileOrErr = MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
     Error = SMDiagnostic(Filename, SourceMgr::DK_Error,
-                         "Could not open input file: " + EC.message());
+                         "could not open input file: " + EC.message());
     return nullptr;
   }
   return createMIRParser(std::move(FileOrErr.get()), Context,
@@ -1282,7 +1290,7 @@ llvm::createMIRParser(std::unique_ptr<MemoryBuffer> Contents,
         DS_Error,
         SMDiagnostic(
             Filename, SourceMgr::DK_Error,
-            "Can't read MIR with a Context that discards named Values")));
+            "cannot read MIR with a Context that discards named Values")));
     return nullptr;
   }
   return std::make_unique<MIRParser>(std::make_unique<MIRParserImpl>(

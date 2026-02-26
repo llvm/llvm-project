@@ -10,6 +10,7 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/VersionTuple.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -137,6 +138,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::Android, T.getEnvironment());
+
+  T = Triple("aarch64-unknown-hurd-gnu");
+  EXPECT_EQ(Triple::aarch64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Hurd, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
   // PS4 has two spellings for the vendor.
   T = Triple("x86_64-scei-ps4");
@@ -607,6 +614,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::WASI, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("wasm32-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm32-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm32, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("wasm64-unknown-unknown");
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
@@ -617,6 +642,24 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::wasm64, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::WASI, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip1");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp1, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip2");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp2, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("wasm64-unknown-wasip3");
+  EXPECT_EQ(Triple::wasm64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::WASIp3, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
   T = Triple("avr-unknown-unknown");
@@ -804,6 +847,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::SUSE, T.getVendor());
   EXPECT_EQ(Triple::Linux, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("riscv64-unknown-hurd-gnu");
+  EXPECT_EQ(Triple::riscv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Hurd, T.getOS());
+  EXPECT_EQ(Triple::GNU, T.getEnvironment());
 
   T = Triple("armv7hl-suse-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
@@ -1415,6 +1464,11 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::riscv32, T.getArch());
   EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
   EXPECT_EQ(Triple::CheriotRTOS, T.getOS());
+
+  T = Triple("spirv64-unknown-chipstar");
+  EXPECT_EQ(Triple::spirv64, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::ChipStar, T.getOS());
 }
 
 static std::string Join(StringRef A, StringRef B, StringRef C) {
@@ -1694,6 +1748,26 @@ TEST(TripleTest, Normalization) {
             Triple::normalize("wasm32-wasi")); // wasm32-unknown-wasi
   EXPECT_EQ("wasm64-unknown-wasi",
             Triple::normalize("wasm64-wasi")); // wasm64-unknown-wasi
+
+  // Firmware should only be allowed for the Apple vendor
+  EXPECT_DEATH(Triple::normalize("arm-none-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-unknown-firmware"), "");
+  EXPECT_EQ("arm-apple-firmware", Triple::normalize("arm-apple-firmware"));
+  EXPECT_DEATH(Triple::normalize("arm-pc-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-scei-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-sie-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-fsl-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-ibm-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-img-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mti-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-nvidia-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-csr-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-amd-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-mesa-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-suse-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-oe-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-intel-firmware"), "");
+  EXPECT_DEATH(Triple::normalize("arm-meta-firmware"), "");
 }
 
 TEST(TripleTest, MutateName) {
@@ -2617,6 +2691,17 @@ TEST(TripleTest, isMacOSVersionLT) {
   EXPECT_FALSE(T.isMacOSXVersionLT(10, 15, 0));
 }
 
+TEST(TripleTest, isMacOSVersionGE) {
+  Triple T = Triple("x86_64-apple-macos11");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+
+  T = Triple("x86_64-apple-darwin20");
+  EXPECT_FALSE(T.isMacOSXVersionGE(11, 1, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(11, 0, 0));
+  EXPECT_TRUE(T.isMacOSXVersionGE(10, 15, 0));
+}
+
 TEST(TripleTest, CanonicalizeOSVersion) {
   EXPECT_EQ(VersionTuple(10, 15, 4),
             Triple::getCanonicalVersionForOS(Triple::MacOSX,
@@ -3300,4 +3385,12 @@ TEST(TripleTest, isCompatibleWith) {
     EXPECT_TRUE(DoTest(C.B, C.A, C.Result));
   }
 }
+
+TEST(DataLayoutTest, UEFI) {
+  Triple TT = Triple("x86_64-unknown-uefi");
+
+  // Test UEFI X86_64 Mangling Component.
+  EXPECT_THAT(TT.computeDataLayout(), testing::HasSubstr("-m:w-"));
+}
+
 } // end anonymous namespace

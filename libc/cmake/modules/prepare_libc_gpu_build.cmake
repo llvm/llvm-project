@@ -17,14 +17,8 @@ if(NOT LLVM_LIBC_FULL_BUILD)
 endif()
 
 # Set the required flags globally so standard CMake utilities can compile.
-if(LIBC_TARGET_TRIPLE)
-  set(CMAKE_REQUIRED_FLAGS "--target=${LIBC_TARGET_TRIPLE}")
-endif()
-if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
-  set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -nogpulib")
-elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
-  set(CMAKE_REQUIRED_FLAGS
-      "${CMAKE_REQUIRED_FLAGS} -flto -c -Wno-unused-command-line-argument")
+if(NOT CMAKE_CXX_COMPILER_TARGET)
+  set(CMAKE_REQUIRED_FLAGS "${LIBC_COMPILE_OPTIONS_DEFAULT}")
 endif()
 
 # Optionally set up a job pool to limit the number of GPU tests run in parallel.

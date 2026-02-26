@@ -64,6 +64,8 @@ protected:
   /// A worklist of the instructions that need to be simplified.
   InstructionWorklist &Worklist;
 
+  Function &F;
+
   // Mode in which we are running the combiner.
   const bool MinimizeSize;
 
@@ -98,17 +100,17 @@ protected:
   bool ComputedBackEdges = false;
 
 public:
-  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
-               bool MinimizeSize, AAResults *AA, AssumptionCache &AC,
-               TargetLibraryInfo &TLI, TargetTransformInfo &TTI,
-               DominatorTree &DT, OptimizationRemarkEmitter &ORE,
-               BlockFrequencyInfo *BFI, BranchProbabilityInfo *BPI,
-               ProfileSummaryInfo *PSI, const DataLayout &DL,
+  InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder, Function &F,
+               AAResults *AA, AssumptionCache &AC, TargetLibraryInfo &TLI,
+               TargetTransformInfo &TTI, DominatorTree &DT,
+               OptimizationRemarkEmitter &ORE, BlockFrequencyInfo *BFI,
+               BranchProbabilityInfo *BPI, ProfileSummaryInfo *PSI,
+               const DataLayout &DL,
                ReversePostOrderTraversal<BasicBlock *> &RPOT)
       : TTIForTargetIntrinsicsOnly(TTI), Builder(Builder), Worklist(Worklist),
-        MinimizeSize(MinimizeSize), AA(AA), AC(AC), TLI(TLI), DT(DT), DL(DL),
-        SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
-           /*CanUseUndef*/ true, &DC),
+        F(F), MinimizeSize(F.hasMinSize()), AA(AA), AC(AC), TLI(TLI), DT(DT),
+        DL(DL), SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
+                   /*CanUseUndef*/ true, &DC),
         ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
@@ -327,6 +329,17 @@ public:
       Out[i] = isa<UndefValue>(C) ? SafeC : C;
     }
     return ConstantVector::get(Out);
+  }
+
+  /// Ignore all operations which only change the sign of a value, returning the
+  /// underlying magnitude value.
+  static Value *stripSignOnlyFPOps(Value *Val) {
+    using namespace llvm::PatternMatch;
+
+    match(Val, m_FNeg(m_Value(Val)));
+    match(Val, m_FAbs(m_Value(Val)));
+    match(Val, m_CopySign(m_Value(Val), m_Value()));
+    return Val;
   }
 
   void addToWorklist(Instruction *I) { Worklist.push(I); }

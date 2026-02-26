@@ -10,6 +10,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -41,9 +42,16 @@ static cl::opt<unsigned> FunctionSizeThreshold(
              "or equal than this threshold."),
     cl::init(50));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+} // end namespace llvm
 
 #define DEBUG_TYPE "jump-table-to-switch"
+
+STATISTIC(NumEligibleJumpTables, "The number of jump tables seen by the pass "
+                                 "that can be converted if deemed profitable.");
+STATISTIC(NumJumpTablesConverted,
+          "The number of jump tables converted into switches.");
 
 namespace {
 struct JumpTableTy {
@@ -76,9 +84,10 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
   if (!ConstantOffset.isZero())
     return std::nullopt;
   APInt StrideBytes = VariableOffsets.front().second;
-  const uint64_t JumpTableSizeBytes = DL.getTypeAllocSize(GV->getValueType());
+  const uint64_t JumpTableSizeBytes = GV->getGlobalSize(DL);
   if (JumpTableSizeBytes % StrideBytes.getZExtValue() != 0)
     return std::nullopt;
+  ++NumEligibleJumpTables;
   const uint64_t N = JumpTableSizeBytes / StrideBytes.getZExtValue();
   if (N > JumpTableSizeThreshold)
     return std::nullopt;
@@ -105,6 +114,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
                OptimizationRemarkEmitter &ORE,
                llvm::function_ref<GlobalValue::GUID(const Function &)>
                    GetGuidForFunction) {
+  ++NumJumpTablesConverted;
   const bool IsVoid = CB->getType() == Type::getVoidTy(CB->getContext());
 
   SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
@@ -182,11 +192,11 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
   });
   if (HadProfile && !ProfcheckDisableMetadataFixes) {
     // At least one of the targets must've been taken.
-    assert(llvm::any_of(BranchWeights, [](uint64_t V) { return V != 0; }));
+    assert(llvm::any_of(BranchWeights, not_equal_to(0)));
     setBranchWeights(*Switch, downscaleWeights(BranchWeights),
                      /*IsExpected=*/false);
   } else
-    setExplicitlyUnknownBranchWeights(*Switch);
+    setExplicitlyUnknownBranchWeights(*Switch, DEBUG_TYPE);
   if (PHI)
     CB->replaceAllUsesWith(PHI);
   CB->eraseFromParent();
@@ -201,14 +211,12 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
   PostDominatorTree *PDT = AM.getCachedResult<PostDominatorTreeAnalysis>(F);
   DomTreeUpdater DTU(DT, PDT, DomTreeUpdater::UpdateStrategy::Lazy);
   bool Changed = false;
-  InstrProfSymtab Symtab;
-  if (auto E = Symtab.create(*F.getParent()))
-    F.getContext().emitError(
-        "Could not create indirect call table, likely corrupted IR" +
-        toString(std::move(E)));
-  DenseMap<const Function *, GlobalValue::GUID> FToGuid;
-  for (const auto &[G, FPtr] : Symtab.getIDToNameMap())
-    FToGuid.insert({FPtr, G});
+  auto FuncToGuid = [&](const Function &Fct) {
+    if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
+      return AssignGUIDPass::getGUID(Fct);
+
+    return Function::getGUIDAssumingExternalLinkage(getIRPGOFuncName(F, InLTO));
+  };
 
   for (BasicBlock &BB : make_early_inc_range(F)) {
     BasicBlock *CurrentBB = &BB;
@@ -230,12 +238,8 @@ PreservedAnalyses JumpTableToSwitchPass::run(Function &F,
         std::optional<JumpTableTy> JumpTable = parseJumpTable(GEP, PtrTy);
         if (!JumpTable)
           continue;
-        SplittedOutTail = expandToSwitch(
-            Call, *JumpTable, DTU, ORE, [&](const Function &Fct) {
-              if (Fct.getMetadata(AssignGUIDPass::GUIDMetadataName))
-                return AssignGUIDPass::getGUID(Fct);
-              return FToGuid.lookup_or(&Fct, 0U);
-            });
+        SplittedOutTail =
+            expandToSwitch(Call, *JumpTable, DTU, ORE, FuncToGuid);
         Changed = true;
         break;
       }

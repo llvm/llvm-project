@@ -949,9 +949,9 @@ loadTestingFormat(StringRef Data, StringRef CompilationDir) {
   if (Data.size() < sizeof(uint64_t))
     return make_error<CoverageMapError>(coveragemap_error::malformed,
                                         "the size of data is too small");
-  auto TestingVersion =
-      support::endian::byte_swap<uint64_t, llvm::endianness::little>(
-          *reinterpret_cast<const uint64_t *>(Data.data()));
+  auto TestingVersion = support::endian::byte_swap<uint64_t>(
+      *reinterpret_cast<const uint64_t *>(Data.data()),
+      llvm::endianness::little);
   Data = Data.substr(sizeof(uint64_t));
 
   // Read the ProfileNames data.
@@ -1232,8 +1232,7 @@ loadBinaryFormat(std::unique_ptr<Binary> Bin, StringRef Arch,
       if (!CoverageRecordsOrErr)
         return CoverageRecordsOrErr.takeError();
       const auto &CoverageRecords = CoverageRecordsOrErr.get();
-      FuncRecordsBuffer = std::copy(CoverageRecords.begin(),
-                                    CoverageRecords.end(), FuncRecordsBuffer);
+      FuncRecordsBuffer = llvm::copy(CoverageRecords, FuncRecordsBuffer);
       FuncRecordsBuffer =
           std::fill_n(FuncRecordsBuffer,
                       alignAddr(FuncRecordsBuffer, RecordAlignment) -
@@ -1274,9 +1273,9 @@ BinaryCoverageReader::create(
   std::vector<std::unique_ptr<BinaryCoverageReader>> Readers;
 
   if (ObjectBuffer.getBuffer().size() > sizeof(TestingFormatMagic)) {
-    uint64_t Magic =
-        support::endian::byte_swap<uint64_t, llvm::endianness::little>(
-            *reinterpret_cast<const uint64_t *>(ObjectBuffer.getBufferStart()));
+    uint64_t Magic = support::endian::byte_swap<uint64_t>(
+        *reinterpret_cast<const uint64_t *>(ObjectBuffer.getBufferStart()),
+        llvm::endianness::little);
     if (Magic == TestingFormatMagic) {
       // This is a special format used for testing.
       auto ReaderOrErr =

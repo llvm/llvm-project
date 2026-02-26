@@ -7,9 +7,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510-LABEL: define void @sve_add(
 ; CHECK-CA510-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA510-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA510-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA510-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA510-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA510-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA510-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA510-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA510-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA510-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA510:       [[FOR_BODY_PREHEADER]]:
@@ -29,17 +29,17 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA510:       [[VECTOR_BODY]]:
 ; CHECK-CA510-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-CA510-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP2]]
-; CHECK-CA510-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i32 4
+; CHECK-CA510-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i64 4
 ; CHECK-CA510-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-CA510-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-CA510-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP2]]
-; CHECK-CA510-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i32 4
+; CHECK-CA510-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 4
 ; CHECK-CA510-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
 ; CHECK-CA510-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
 ; CHECK-CA510-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[WIDE_LOAD6]], [[WIDE_LOAD]]
 ; CHECK-CA510-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD5]]
 ; CHECK-CA510-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw float, ptr [[DST]], i64 [[TMP2]]
-; CHECK-CA510-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i32 4
+; CHECK-CA510-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 4
 ; CHECK-CA510-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP11]], align 4
 ; CHECK-CA510-NEXT:    store <4 x float> [[TMP10]], ptr [[TMP13]], align 4
 ; CHECK-CA510-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], 8
@@ -71,9 +71,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520-LABEL: define void @sve_add(
 ; CHECK-CA520-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA520-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA520-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA520-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA520-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA520-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA520-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA520-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA520-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA520-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA520:       [[FOR_BODY_PREHEADER]]:
@@ -93,17 +93,17 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA520:       [[VECTOR_BODY]]:
 ; CHECK-CA520-NEXT:    [[TMP2:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-CA520-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[TMP2]]
-; CHECK-CA520-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i32 4
+; CHECK-CA520-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP3]], i64 4
 ; CHECK-CA520-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-CA520-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-CA520-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[TMP2]]
-; CHECK-CA520-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i32 4
+; CHECK-CA520-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[TMP6]], i64 4
 ; CHECK-CA520-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP6]], align 4
 ; CHECK-CA520-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP8]], align 4
 ; CHECK-CA520-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[WIDE_LOAD6]], [[WIDE_LOAD]]
 ; CHECK-CA520-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD5]]
 ; CHECK-CA520-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw float, ptr [[DST]], i64 [[TMP2]]
-; CHECK-CA520-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i32 4
+; CHECK-CA520-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw float, ptr [[TMP11]], i64 4
 ; CHECK-CA520-NEXT:    store <4 x float> [[TMP9]], ptr [[TMP11]], align 4
 ; CHECK-CA520-NEXT:    store <4 x float> [[TMP10]], ptr [[TMP13]], align 4
 ; CHECK-CA520-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[TMP2]], 8
@@ -135,9 +135,9 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320-LABEL: define void @sve_add(
 ; CHECK-CA320-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-CA320-NEXT:  [[ENTRY:.*:]]
-; CHECK-CA320-NEXT:    [[B3:%.*]] = ptrtoint ptr [[B]] to i64
-; CHECK-CA320-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A]] to i64
-; CHECK-CA320-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
+; CHECK-CA320-NEXT:    [[B3:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-CA320-NEXT:    [[A2:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-CA320-NEXT:    [[DST1:%.*]] = ptrtoaddr ptr [[DST]] to i64
 ; CHECK-CA320-NEXT:    [[CMP9_NOT:%.*]] = icmp eq i64 [[N]], 0
 ; CHECK-CA320-NEXT:    br i1 [[CMP9_NOT]], label %[[FOR_COND_CLEANUP:.*]], label %[[FOR_BODY_PREHEADER:.*]]
 ; CHECK-CA320:       [[FOR_BODY_PREHEADER]]:
@@ -157,17 +157,17 @@ define void @sve_add(ptr  %dst, ptr  %a, ptr  %b, i64 %n) {
 ; CHECK-CA320:       [[VECTOR_BODY]]:
 ; CHECK-CA320-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-CA320-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw float, ptr [[A]], i64 [[INDEX]]
-; CHECK-CA320-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP2]], i32 4
+; CHECK-CA320-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw float, ptr [[TMP2]], i64 4
 ; CHECK-CA320-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-CA320-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-CA320-NEXT:    [[TMP4:%.*]] = getelementptr inbounds nuw float, ptr [[B]], i64 [[INDEX]]
-; CHECK-CA320-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP4]], i32 4
+; CHECK-CA320-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw float, ptr [[TMP4]], i64 4
 ; CHECK-CA320-NEXT:    [[WIDE_LOAD6:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
 ; CHECK-CA320-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x float>, ptr [[TMP5]], align 4
 ; CHECK-CA320-NEXT:    [[TMP6:%.*]] = fadd fast <4 x float> [[WIDE_LOAD6]], [[WIDE_LOAD]]
 ; CHECK-CA320-NEXT:    [[TMP7:%.*]] = fadd fast <4 x float> [[WIDE_LOAD7]], [[WIDE_LOAD5]]
 ; CHECK-CA320-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw float, ptr [[DST]], i64 [[INDEX]]
-; CHECK-CA320-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i32 4
+; CHECK-CA320-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw float, ptr [[TMP8]], i64 4
 ; CHECK-CA320-NEXT:    store <4 x float> [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-CA320-NEXT:    store <4 x float> [[TMP7]], ptr [[TMP9]], align 4
 ; CHECK-CA320-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

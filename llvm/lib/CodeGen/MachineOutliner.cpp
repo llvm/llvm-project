@@ -65,6 +65,7 @@
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/CGData/CodeGenDataReader.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
+#include "llvm/CodeGen/MachineInstrBundle.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/Passes.h"
@@ -420,10 +421,10 @@ struct InstructionMapper {
   InstructionMapper(const MachineModuleInfo &MMI_) : MMI(MMI_) {
     // Make sure that the implementation of DenseMapInfo<unsigned> hasn't
     // changed.
-    assert(DenseMapInfo<unsigned>::getEmptyKey() == (unsigned)-1 &&
-           "DenseMapInfo<unsigned>'s empty key isn't -1!");
-    assert(DenseMapInfo<unsigned>::getTombstoneKey() == (unsigned)-2 &&
-           "DenseMapInfo<unsigned>'s tombstone key isn't -2!");
+    static_assert(DenseMapInfo<unsigned>::getEmptyKey() ==
+                  static_cast<unsigned>(-1));
+    static_assert(DenseMapInfo<unsigned>::getTombstoneKey() ==
+                  static_cast<unsigned>(-2));
   }
 };
 
@@ -488,9 +489,7 @@ struct MachineOutliner : public ModulePass {
     ModulePass::getAnalysisUsage(AU);
   }
 
-  MachineOutliner() : ModulePass(ID) {
-    initializeMachineOutlinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachineOutliner() : ModulePass(ID) {}
 
   /// Remark output explaining that not outlining a set of candidates would be
   /// better than outlining that set.
@@ -593,14 +592,11 @@ struct MachineOutliner : public ModulePass {
 
 char MachineOutliner::ID = 0;
 
-namespace llvm {
-ModulePass *createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
+ModulePass *llvm::createMachineOutlinerPass(RunOutliner RunOutlinerMode) {
   MachineOutliner *OL = new MachineOutliner();
   OL->RunOutlinerMode = RunOutlinerMode;
   return OL;
 }
-
-} // namespace llvm
 
 INITIALIZE_PASS(MachineOutliner, DEBUG_TYPE, "Machine Function Outliner", false,
                 false)
@@ -976,6 +972,12 @@ MachineFunction *MachineOutliner::createOutlinedFunction(
       MachineInstr &NewMI = TII.duplicate(MBB, MBB.end(), MI);
       NewMI.dropMemRefs(MF);
       NewMI.setDebugLoc(DL);
+      // Also clear debug locations on any bundled instructions.
+      if (NewMI.isBundledWithSucc()) {
+        auto BundleEnd = getBundleEnd(NewMI.getIterator());
+        for (auto I = std::next(NewMI.getIterator()); I != BundleEnd; ++I)
+          I->setDebugLoc(DL);
+      }
     }
   }
 
@@ -1260,7 +1262,7 @@ void MachineOutliner::populateMapper(InstructionMapper &Mapper, Module &M) {
   for (Function &F : M) {
     LLVM_DEBUG(dbgs() << "MAPPING FUNCTION: " << F.getName() << "\n");
 
-    if (F.hasFnAttribute("nooutline")) {
+    if (F.hasFnAttribute(Attribute::NoOutline)) {
       LLVM_DEBUG(dbgs() << "SKIP: Function has nooutline attribute\n");
       continue;
     }

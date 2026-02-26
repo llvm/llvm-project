@@ -13,7 +13,8 @@ target_link_libraries(fir-lsp-server PRIVATE
   FIRDialect
   FIROpenACCSupport
   FIROpenMPSupport
-  HLFIRDialect)
+  HLFIRDialect
+  MIFDialect)
 
 mlir_target_link_libraries(fir-lsp-server PRIVATE
   MLIRLspServerLib

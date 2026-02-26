@@ -81,18 +81,17 @@ File::GetStreamOpenModeFromOptions(File::OpenOptions options) {
 Expected<File::OpenOptions> File::GetOptionsFromMode(llvm::StringRef mode) {
   OpenOptions opts =
       llvm::StringSwitch<OpenOptions>(mode)
-          .Cases("r", "rb", eOpenOptionReadOnly)
-          .Cases("w", "wb", eOpenOptionWriteOnly)
-          .Cases("a", "ab",
-                 eOpenOptionWriteOnly | eOpenOptionAppend |
-                 eOpenOptionCanCreate)
-          .Cases("r+", "rb+", "r+b", eOpenOptionReadWrite)
-          .Cases("w+", "wb+", "w+b",
-                 eOpenOptionReadWrite | eOpenOptionCanCreate |
-                 eOpenOptionTruncate)
-          .Cases("a+", "ab+", "a+b",
-                 eOpenOptionReadWrite | eOpenOptionAppend |
-                     eOpenOptionCanCreate)
+          .Cases({"r", "rb"}, eOpenOptionReadOnly)
+          .Cases({"w", "wb"}, eOpenOptionWriteOnly)
+          .Cases({"a", "ab"}, eOpenOptionWriteOnly | eOpenOptionAppend |
+                                  eOpenOptionCanCreate)
+          .Cases({"r+", "rb+", "r+b"}, eOpenOptionReadWrite)
+          .Cases({"w+", "wb+", "w+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionCanCreate |
+                                           eOpenOptionTruncate)
+          .Cases({"a+", "ab+", "a+b"}, eOpenOptionReadWrite |
+                                           eOpenOptionAppend |
+                                           eOpenOptionCanCreate)
           .Default(eOpenOptionInvalid);
   if (opts != eOpenOptionInvalid)
     return opts;
@@ -250,8 +249,8 @@ uint32_t File::GetPermissions(Status &error) const {
 
 NativeFile::NativeFile() = default;
 
-NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
-    : m_stream(fh), m_own_stream(transfer_ownership) {
+NativeFile::NativeFile(FILE *fh, OpenOptions options, bool transfer_ownership)
+    : m_stream(fh), m_options(options), m_own_stream(transfer_ownership) {
 #ifdef _WIN32
   // In order to properly display non ASCII characters in Windows, we need to
   // use Windows APIs to print to the console. This is only required if the
@@ -259,6 +258,26 @@ NativeFile::NativeFile(FILE *fh, bool transfer_ownership)
   int fd = _fileno(fh);
   is_windows_console =
       ::GetFileType((HANDLE)::_get_osfhandle(fd)) == FILE_TYPE_CHAR;
+#else
+#ifndef NDEBUG
+  int fd = fileno(fh);
+  if (fd != -1) {
+    int required_mode = ConvertOpenOptionsForPOSIXOpen(options) & O_ACCMODE;
+    int mode = fcntl(fd, F_GETFL);
+    if (mode != -1) {
+      mode &= O_ACCMODE;
+      // Check that the file is open with a valid subset of the requested file
+      // access mode, e.g. if we expected the file to be writable then ensure it
+      // was opened with O_WRONLY or O_RDWR.
+      assert(
+          (required_mode == O_RDWR && mode == O_RDWR) ||
+          (required_mode == O_RDONLY && (mode == O_RDWR || mode == O_RDONLY) ||
+           (required_mode == O_WRONLY &&
+            (mode == O_RDWR || mode == O_WRONLY))) &&
+              "invalid file access mode");
+    }
+  }
+#endif
 #endif
 }
 
@@ -275,7 +294,8 @@ NativeFile::NativeFile(int fd, OpenOptions options, bool transfer_ownership)
 }
 
 bool NativeFile::IsValid() const {
-  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex, m_stream_mutex);
+  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex,
+                                                m_stream_mutex);
   return DescriptorIsValidUnlocked() || StreamIsValidUnlocked();
 }
 
@@ -344,7 +364,8 @@ FILE *NativeFile::GetStream() {
 }
 
 Status NativeFile::Close() {
-  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex, m_stream_mutex);
+  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex,
+                                                m_stream_mutex);
 
   Status error;
 
@@ -549,6 +570,10 @@ Status NativeFile::Sync() {
 Status NativeFile::Read(void *buf, size_t &num_bytes) {
   Status error;
 
+  // Ensure the file is open for reading.
+  if ((m_options & File::OpenOptionsModeMask) == eOpenOptionWriteOnly)
+    return Status(std::make_error_code(std::errc::bad_file_descriptor));
+
 #if defined(MAX_READ_SIZE)
   if (num_bytes > MAX_READ_SIZE) {
     uint8_t *p = (uint8_t *)buf;
@@ -613,6 +638,10 @@ Status NativeFile::Read(void *buf, size_t &num_bytes) {
 Status NativeFile::Write(const void *buf, size_t &num_bytes) {
   Status error;
 
+  // Ensure the file is open for writing.
+  if ((m_options & File::OpenOptionsModeMask) == File::eOpenOptionReadOnly)
+    return Status(std::make_error_code(std::errc::bad_file_descriptor));
+
 #if defined(MAX_WRITE_SIZE)
   if (num_bytes > MAX_WRITE_SIZE) {
     const uint8_t *p = (const uint8_t *)buf;
@@ -659,7 +688,7 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes) {
 #ifdef _WIN32
     if (is_windows_console) {
       llvm::raw_fd_ostream(_fileno(m_stream), false)
-          .write((char *)buf, num_bytes);
+          .write((const char *)buf, num_bytes);
       return error;
     }
 #endif
@@ -777,8 +806,8 @@ Status NativeFile::Write(const void *buf, size_t &num_bytes, off_t &offset) {
   int fd = GetDescriptor();
   if (fd != kInvalidDescriptor) {
 #ifndef _WIN32
-    ssize_t bytes_written =
-        llvm::sys::RetryAfterSignal(-1, ::pwrite, m_descriptor, buf, num_bytes, offset);
+    ssize_t bytes_written = llvm::sys::RetryAfterSignal(
+        -1, ::pwrite, m_descriptor, buf, num_bytes, offset);
     if (bytes_written < 0) {
       num_bytes = 0;
       error = Status::FromErrno();

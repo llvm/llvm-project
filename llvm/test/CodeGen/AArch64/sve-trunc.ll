@@ -56,6 +56,87 @@ entry:
   ret <vscale x 2 x i32> %out
 }
 
+; <vscale x 1 x ...> types are tricky because their element type cannot be
+; promoted to form a legal vector type. Instead, they need widening.
+; Note: The uzp1 operations are due to vector.insert(), which is required
+; to avoid relying on an undefined ABI.
+
+define <vscale x 4 x i32> @trunc_1i64toi32(<vscale x 2 x i64> %in) {
+; CHECK-LABEL: trunc_1i64toi32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %in, i64 0)
+  %out = trunc <vscale x 1 x i64> %subvec to <vscale x 1 x i32>
+  %out.legal = call <vscale x 4 x i32> @llvm.vector.insert.nxv4i32.nxv1i32(<vscale x 4 x i32> poison, <vscale x 1 x i32> %out, i64 0)
+  ret <vscale x 4 x i32> %out.legal
+}
+
+define <vscale x 8 x i16> @trunc_1i64toi16(<vscale x 2 x i64> %in) {
+; CHECK-LABEL: trunc_1i64toi16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %in, i64 0)
+  %out = trunc <vscale x 1 x i64> %subvec to <vscale x 1 x i16>
+  %out.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %out, i64 0)
+  ret <vscale x 8 x i16> %out.legal
+}
+
+define <vscale x 16 x i8> @trunc_1i64toi8(<vscale x 2 x i64> %in) {
+; CHECK-LABEL: trunc_1i64toi8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i64> @llvm.vector.extract.nxv1i64.nxv2i64(<vscale x 2 x i64> %in, i64 0)
+  %out = trunc <vscale x 1 x i64> %subvec to <vscale x 1 x i8>
+  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %out, i64 0)
+  ret <vscale x 16 x i8> %out.legal
+}
+
+define <vscale x 8 x i16> @trunc_1i32toi16(<vscale x 4 x i32> %in) {
+; CHECK-LABEL: trunc_1i32toi16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %in, i64 0)
+  %out = trunc <vscale x 1 x i32> %subvec to <vscale x 1 x i16>
+  %out.legal = call <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16> poison, <vscale x 1 x i16> %out, i64 0)
+  ret <vscale x 8 x i16> %out.legal
+}
+
+define <vscale x 16 x i8> @trunc_1i32toi8(<vscale x 4 x i32> %in) {
+; CHECK-LABEL: trunc_1i32toi8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i32> @llvm.vector.extract.nxv1i32.nxv4i32(<vscale x 4 x i32> %in, i64 0)
+  %out = trunc <vscale x 1 x i32> %subvec to <vscale x 1 x i8>
+  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %out, i64 0)
+  ret <vscale x 16 x i8> %out.legal
+}
+
+define <vscale x 16 x i8> @trunc_1i16toi8(<vscale x 8 x i16> %in) {
+; CHECK-LABEL: trunc_1i16toi8:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    uzp1 z0.b, z0.b, z0.b
+; CHECK-NEXT:    ret
+entry:
+  %subvec = call <vscale x 1 x i16> @llvm.vector.extract.nxv1i16.nxv8i16(<vscale x 8 x i16> %in, i64 0)
+  %out = trunc <vscale x 1 x i16> %subvec to <vscale x 1 x i8>
+  %out.legal = call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.nxv1i8(<vscale x 16 x i8> poison, <vscale x 1 x i8> %out, i64 0)
+  ret <vscale x 16 x i8> %out.legal
+}
+
 ; Truncating to i1 requires convert it to a cmp
 
 define <vscale x 2 x i1> @trunc_i64toi1(<vscale x 2 x i64> %in) {
@@ -111,10 +192,10 @@ define <vscale x 16 x i1> @trunc_i64toi1_split3(<vscale x 16 x i64> %in) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
 ; CHECK-NEXT:    addvl sp, sp, #-1
-; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Folded Spill
-; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Folded Spill
+; CHECK-NEXT:    str p7, [sp, #4, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p6, [sp, #5, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p5, [sp, #6, mul vl] // 2-byte Spill
+; CHECK-NEXT:    str p4, [sp, #7, mul vl] // 2-byte Spill
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x38, 0x1e, 0x22 // sp + 16 + 8 * VG
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    and z7.d, z7.d, #0x1
@@ -136,13 +217,13 @@ define <vscale x 16 x i1> @trunc_i64toi1_split3(<vscale x 16 x i64> %in) {
 ; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
 ; CHECK-NEXT:    uzp1 p1.s, p2.s, p1.s
 ; CHECK-NEXT:    uzp1 p2.s, p4.s, p3.s
-; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p4, [sp, #7, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p3.s, p6.s, p5.s
-; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p6, [sp, #5, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p0.s, p0.s, p7.s
-; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p7, [sp, #4, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p1.h, p2.h, p1.h
-; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Folded Reload
+; CHECK-NEXT:    ldr p5, [sp, #6, mul vl] // 2-byte Reload
 ; CHECK-NEXT:    uzp1 p0.h, p0.h, p3.h
 ; CHECK-NEXT:    uzp1 p0.b, p0.b, p1.b
 ; CHECK-NEXT:    addvl sp, sp, #1

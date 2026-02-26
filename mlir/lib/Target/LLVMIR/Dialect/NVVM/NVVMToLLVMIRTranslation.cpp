@@ -34,34 +34,31 @@ using mlir::LLVM::detail::createIntrinsicCall;
   hasAbs ? REDUX_F32_ID_IMPL(op, _abs, hasNaN) : REDUX_F32_ID_IMPL(op, , hasNaN)
 
 static llvm::Intrinsic::ID getReduxIntrinsicId(llvm::Type *resultType,
-                                               NVVM::ReduxKind kind,
+                                               NVVM::ReductionKind kind,
                                                bool hasAbs, bool hasNaN) {
-  if (!(resultType->isIntegerTy(32) || resultType->isFloatTy()))
-    llvm_unreachable("unsupported data type for redux");
-
   switch (kind) {
-  case NVVM::ReduxKind::ADD:
+  case NVVM::ReductionKind::ADD:
     return llvm::Intrinsic::nvvm_redux_sync_add;
-  case NVVM::ReduxKind::UMAX:
+  case NVVM::ReductionKind::UMAX:
     return llvm::Intrinsic::nvvm_redux_sync_umax;
-  case NVVM::ReduxKind::UMIN:
+  case NVVM::ReductionKind::UMIN:
     return llvm::Intrinsic::nvvm_redux_sync_umin;
-  case NVVM::ReduxKind::AND:
+  case NVVM::ReductionKind::AND:
     return llvm::Intrinsic::nvvm_redux_sync_and;
-  case NVVM::ReduxKind::OR:
+  case NVVM::ReductionKind::OR:
     return llvm::Intrinsic::nvvm_redux_sync_or;
-  case NVVM::ReduxKind::XOR:
+  case NVVM::ReductionKind::XOR:
     return llvm::Intrinsic::nvvm_redux_sync_xor;
-  case NVVM::ReduxKind::MAX:
+  case NVVM::ReductionKind::MAX:
     return llvm::Intrinsic::nvvm_redux_sync_max;
-  case NVVM::ReduxKind::MIN:
+  case NVVM::ReductionKind::MIN:
     return llvm::Intrinsic::nvvm_redux_sync_min;
-  case NVVM::ReduxKind::FMIN:
+  case NVVM::ReductionKind::FMIN:
     return GET_REDUX_F32_ID(min, hasAbs, hasNaN);
-  case NVVM::ReduxKind::FMAX:
+  case NVVM::ReductionKind::FMAX:
     return GET_REDUX_F32_ID(max, hasAbs, hasNaN);
   }
-  llvm_unreachable("unknown redux kind");
+  llvm_unreachable("unknown reduction kind");
 }
 
 static llvm::Intrinsic::ID getShflIntrinsicId(llvm::Type *resultType,
@@ -253,8 +250,8 @@ getStMatrixIntrinsicId(NVVM::MMALayout layout, int32_t num,
 /// Return the intrinsic ID associated with st.bulk for the given address type.
 static llvm::Intrinsic::ID
 getStBulkIntrinsicId(LLVM::LLVMPointerType addrType) {
-  bool isSharedMemory =
-      addrType.getAddressSpace() == NVVM::NVVMMemorySpace::kSharedMemorySpace;
+  bool isSharedMemory = addrType.getAddressSpace() ==
+                        static_cast<unsigned>(NVVM::NVVMMemorySpace::Shared);
   return isSharedMemory ? llvm::Intrinsic::nvvm_st_bulk_shared_cta
                         : llvm::Intrinsic::nvvm_st_bulk;
 }
@@ -292,6 +289,20 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
     llvm_unreachable("Unknown scope for uni-directional fence.proxy operation");
   }
   llvm_unreachable("Unsupported proxy kinds");
+}
+
+static unsigned getMembarIntrinsicID(NVVM::MemScopeKind scope) {
+  switch (scope) {
+  case NVVM::MemScopeKind::CTA:
+    return llvm::Intrinsic::nvvm_membar_cta;
+  case NVVM::MemScopeKind::CLUSTER:
+    return llvm::Intrinsic::nvvm_fence_sc_cluster;
+  case NVVM::MemScopeKind::GPU:
+    return llvm::Intrinsic::nvvm_membar_gl;
+  case NVVM::MemScopeKind::SYS:
+    return llvm::Intrinsic::nvvm_membar_sys;
+  }
+  llvm_unreachable("Unknown scope for memory barrier");
 }
 
 #define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
@@ -398,6 +409,41 @@ getTcgen05StIntrinsicID(mlir::NVVM::Tcgen05LdStShape shape, uint32_t num) {
     return Shape16x32bx2[Idx];
   }
   llvm_unreachable("unhandled tcgen05.st lowering");
+}
+
+static llvm::Intrinsic::ID getFenceSyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_release_sync_restrict_space_cta_scope_cluster;
+}
+
+static llvm::Intrinsic::ID
+getFenceProxyID(NVVM::ProxyKind kind, std::optional<NVVM::SharedSpace> space) {
+  switch (kind) {
+  case NVVM::ProxyKind::alias:
+    return llvm::Intrinsic::nvvm_fence_proxy_alias;
+  case NVVM::ProxyKind::async:
+    return llvm::Intrinsic::nvvm_fence_proxy_async;
+  case NVVM::ProxyKind::async_global:
+    return llvm::Intrinsic::nvvm_fence_proxy_async_global;
+  case NVVM::ProxyKind::async_shared:
+    return *space == NVVM::SharedSpace::shared_cta
+               ? llvm::Intrinsic::nvvm_fence_proxy_async_shared_cta
+               : llvm::Intrinsic::nvvm_fence_proxy_async_shared_cluster;
+  default:
+    llvm_unreachable("unsupported proxy kind");
+  }
+}
+
+static llvm::Intrinsic::ID
+getFenceProxySyncRestrictID(NVVM::MemOrderKind order) {
+  return order == NVVM::MemOrderKind::ACQUIRE
+             ? llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_acquire_sync_restrict_space_cluster_scope_cluster
+             : llvm::Intrinsic::
+                   nvvm_fence_proxy_async_generic_release_sync_restrict_space_cta_scope_cluster;
 }
 
 namespace {

@@ -31,7 +31,7 @@
 // CHECK:                 } do {
 // CHECK:                   %[[D3:.*]] = "subsect<trivial<compressed[0,1]>>.deref"
 // CHECK:                   "trivial<batch[1,1]>.locate"(%{{.*}}, %[[D3]])
-// CHECK:                   tensor.extract %{{.*}}{{\[}}%[[D2]], %[[D3]]]
+// CHECK:                   memref.load %{{.*}}{{\[}}%[[D2]], %[[D3]]]
 // CHECK:                   arith.muli
 // CHECK:                   arith.addi
 // CHECK:                   "subsect<trivial<compressed[0,1]>>.next

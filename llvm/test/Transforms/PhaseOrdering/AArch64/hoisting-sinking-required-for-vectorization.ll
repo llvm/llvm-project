@@ -41,8 +41,8 @@ return:                                           ; preds = %if.end3, %if.then2,
 define void @loop(ptr %X, ptr %Y) {
 ; CHECK-LABEL: @loop(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X6:%.*]] = ptrtoint ptr [[X:%.*]] to i64
-; CHECK-NEXT:    [[Y7:%.*]] = ptrtoint ptr [[Y:%.*]] to i64
+; CHECK-NEXT:    [[X6:%.*]] = ptrtoaddr ptr [[X:%.*]] to i64
+; CHECK-NEXT:    [[Y7:%.*]] = ptrtoaddr ptr [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 [[X6]], [[Y7]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[DIFF_CHECK]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
@@ -168,9 +168,8 @@ define void @loop2(ptr %A, ptr %B, ptr %C, float %x) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = fadd <4 x float> [[TMP7]], [[WIDE_LOAD11]]
 ; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP6]], <4 x float> [[TMP10]]
 ; CHECK-NEXT:    [[PREDPHI12:%.*]] = select <4 x i1> [[TMP3]], <4 x float> [[TMP7]], <4 x float> [[TMP11]]
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds nuw i8, ptr [[TMP8]], i64 16
 ; CHECK-NEXT:    store <4 x float> [[PREDPHI]], ptr [[TMP8]], align 4, !alias.scope [[META9]], !noalias [[META11]]
-; CHECK-NEXT:    store <4 x float> [[PREDPHI12]], ptr [[TMP12]], align 4, !alias.scope [[META9]], !noalias [[META11]]
+; CHECK-NEXT:    store <4 x float> [[PREDPHI12]], ptr [[TMP9]], align 4, !alias.scope [[META9]], !noalias [[META11]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], 10000
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[EXIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

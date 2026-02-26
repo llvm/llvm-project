@@ -22,6 +22,7 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSFrame.h"
 #include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
@@ -199,6 +200,7 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
+  case MCFragment::FT_SFrame:
   case MCFragment::FT_CVInlineLines:
   case MCFragment::FT_CVDefRange:
     return F.getSize();
@@ -399,6 +401,7 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
   case MCFragment::FT_LEB:
   case MCFragment::FT_Dwarf:
   case MCFragment::FT_DwarfFrame:
+  case MCFragment::FT_SFrame:
   case MCFragment::FT_CVInlineLines:
   case MCFragment::FT_CVDefRange: {
     if (F.getKind() == MCFragment::FT_Data)
@@ -656,7 +659,7 @@ void MCAssembler::layout() {
 
   // Some targets might want to adjust fragment offsets. If so, perform another
   // layout iteration.
-  if (getBackend().finishLayout(*this))
+  if (getBackend().finishLayout())
     for (MCSection &Sec : *this)
       layoutSection(Sec);
 
@@ -730,8 +733,11 @@ void MCAssembler::layout() {
 void MCAssembler::Finish() {
   layout();
 
-  // Write the object file.
-  stats::ObjectBytes += getWriter().writeObject();
+  // Write the object file if there is no error. The output would be discarded
+  // anyway, and this avoids wasting time writing large files (e.g. when testing
+  // fixup overflow with `.space 0x80000000`).
+  if (!getContext().hadError())
+    stats::ObjectBytes += getWriter().writeObject();
 
   HasLayout = false;
   assert(PendingErrors.empty());
@@ -914,6 +920,24 @@ void MCAssembler::relaxDwarfCallFrameFragment(MCFragment &F) {
   F.clearVarFixups();
 }
 
+void MCAssembler::relaxSFrameFragment(MCFragment &F) {
+  assert(F.getKind() == MCFragment::FT_SFrame);
+  MCContext &C = getContext();
+  int64_t Value;
+  bool Abs = F.getSFrameAddrDelta().evaluateAsAbsolute(Value, *this);
+  if (!Abs) {
+    C.reportError(F.getSFrameAddrDelta().getLoc(),
+                  "invalid CFI advance_loc expression in sframe");
+    F.setSFrameAddrDelta(MCConstantExpr::create(0, C));
+    return;
+  }
+
+  SmallVector<char, 4> Data;
+  MCSFrameEmitter::encodeFuncOffset(Context, Value, Data, F.getSFrameFDE());
+  F.setVarContents(Data);
+  F.clearVarFixups();
+}
+
 bool MCAssembler::relaxFragment(MCFragment &F) {
   auto Size = computeFragmentSize(F);
   switch (F.getKind()) {
@@ -931,6 +955,9 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
     break;
   case MCFragment::FT_DwarfFrame:
     relaxDwarfCallFrameFragment(F);
+    break;
+  case MCFragment::FT_SFrame:
+    relaxSFrameFragment(F);
     break;
   case MCFragment::FT_BoundaryAlign:
     relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));

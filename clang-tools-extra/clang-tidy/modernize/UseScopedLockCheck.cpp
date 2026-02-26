@@ -1,4 +1,4 @@
-//===--- UseScopedLockCheck.cpp - clang-tidy ------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -29,7 +29,7 @@ static bool isLockGuardDecl(const NamedDecl *Decl) {
 
 static bool isLockGuard(const QualType &Type) {
   if (const auto *Record = Type->getAsCanonical<RecordType>())
-    if (const RecordDecl *Decl = Record->getOriginalDecl())
+    if (const RecordDecl *Decl = Record->getDecl())
       return isLockGuardDecl(Decl);
 
   if (const auto *TemplateSpecType = Type->getAs<TemplateSpecializationType>())
@@ -74,7 +74,8 @@ findLocksInCompoundStmt(const CompoundStmt *Block,
 
   for (const Stmt *Stmt : Block->body()) {
     if (const auto *DS = dyn_cast<DeclStmt>(Stmt)) {
-      llvm::SmallVector<const VarDecl *> LockGuards = getLockGuardsFromDecl(DS);
+      const llvm::SmallVector<const VarDecl *> LockGuards =
+          getLockGuardsFromDecl(DS);
 
       if (!LockGuards.empty()) {
         CurrentLockGuardGroup.append(LockGuards);
@@ -136,7 +137,6 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   if (WarnOnSingleLocks) {
     Finder->addMatcher(
         compoundStmt(
-            unless(isExpansionInSystemHeader()),
             has(declStmt(has(LockVarDecl)).bind("lock-decl-single")),
             unless(has(declStmt(unless(equalsBoundNode("lock-decl-single")),
                                 has(LockVarDecl))))),
@@ -144,8 +144,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   }
 
   Finder->addMatcher(
-      compoundStmt(unless(isExpansionInSystemHeader()),
-                   has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
+      compoundStmt(has(declStmt(has(LockVarDecl)).bind("lock-decl-multiple")),
                    has(declStmt(unless(equalsBoundNode("lock-decl-multiple")),
                                 has(LockVarDecl))))
           .bind("block-multiple"),
@@ -153,22 +152,19 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
   if (WarnOnUsingAndTypedef) {
     // Match 'typedef std::lock_guard<std::mutex> Lock'
-    Finder->addMatcher(typedefDecl(unless(isExpansionInSystemHeader()),
-                                   hasType(hasUnderlyingType(LockGuardType)))
+    Finder->addMatcher(typedefDecl(hasType(hasUnderlyingType(LockGuardType)))
                            .bind("lock-guard-typedef"),
                        this);
 
     // Match 'using Lock = std::lock_guard<std::mutex>'
-    Finder->addMatcher(typeAliasDecl(unless(isExpansionInSystemHeader()),
-                                     hasType(templateSpecializationType(
+    Finder->addMatcher(typeAliasDecl(hasType(templateSpecializationType(
                                          hasDeclaration(LockGuardClassDecl))))
                            .bind("lock-guard-using-alias"),
                        this);
 
     // Match 'using std::lock_guard'
     Finder->addMatcher(
-        usingDecl(unless(isExpansionInSystemHeader()),
-                  hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
+        usingDecl(hasAnyUsingShadowDecl(hasTargetDecl(LockGuardClassDecl)))
             .bind("lock-guard-using-decl"),
         this);
   }
@@ -176,7 +172,7 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
 
 void UseScopedLockCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *DS = Result.Nodes.getNodeAs<DeclStmt>("lock-decl-single")) {
-    llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
+    const llvm::SmallVector<const VarDecl *> Decls = getLockGuardsFromDecl(DS);
     diagOnMultipleLocks({Decls}, Result);
     return;
   }
@@ -217,7 +213,8 @@ void UseScopedLockCheck::diagOnSingleLock(
 
   // Create Fix-its only if we can find the constructor call to properly handle
   // 'std::lock_guard l(m, std::adopt_lock)' case.
-  const auto *CtorCall = dyn_cast<CXXConstructExpr>(LockGuard->getInit());
+  const auto *CtorCall =
+      dyn_cast_if_present<CXXConstructExpr>(LockGuard->getInit());
   if (!CtorCall)
     return;
 

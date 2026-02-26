@@ -16,6 +16,7 @@
 #ifndef LLVM_LIB_TARGET_AMDGPUMIRFORMATTER_H
 #define LLVM_LIB_TARGET_AMDGPUMIRFORMATTER_H
 
+#include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/MIRFormatter.h"
 
 namespace llvm {
@@ -25,21 +26,20 @@ struct PerFunctionMIParsingState;
 
 class AMDGPUMIRFormatter final : public MIRFormatter {
 public:
-  AMDGPUMIRFormatter() = default;
-  virtual ~AMDGPUMIRFormatter() = default;
+  explicit AMDGPUMIRFormatter(const MCSubtargetInfo &STI) : STI(STI) {}
+  ~AMDGPUMIRFormatter() override = default;
 
   /// Implement target specific printing for machine operand immediate value, so
   /// that we can have more meaningful mnemonic than a 64-bit integer. Passing
   /// None to OpIdx means the index is unknown.
-  virtual void printImm(raw_ostream &OS, const MachineInstr &MI,
-                        std::optional<unsigned> OpIdx,
-                        int64_t Imm) const override;
+  void printImm(raw_ostream &OS, const MachineInstr &MI,
+                std::optional<unsigned> OpIdx, int64_t Imm) const override;
 
   /// Implement target specific parsing of immediate mnemonics. The mnemonic is
   /// a string with a leading dot.
-  virtual bool parseImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
-                                StringRef Src, int64_t &Imm,
-                                ErrorCallbackType ErrorCallback) const override;
+  bool parseImmMnemonic(const unsigned OpCode, const unsigned OpIdx,
+                        StringRef Src, int64_t &Imm,
+                        ErrorCallbackType ErrorCallback) const override;
 
   /// Implement target specific parsing of target custom pseudo source value.
   bool
@@ -49,8 +49,16 @@ public:
                                ErrorCallbackType ErrorCallback) const override;
 
 private:
+  const MCSubtargetInfo &STI;
+  /// Prints the string to represent s_wait_alu immediate value.
+  void printSWaitAluImm(uint64_t Imm, raw_ostream &OS) const;
   /// Print the string to represent s_delay_alu immediate value
   void printSDelayAluImm(int64_t Imm, llvm::raw_ostream &OS) const;
+
+  /// Parse the immediate pseudo literal for s_wait_alu
+  bool parseSWaitAluImmMnemonic(
+      const unsigned int OpIdx, int64_t &Imm, StringRef &Src,
+      MIRFormatter::ErrorCallbackType &ErrorCallback) const;
 
   /// Parse the immediate pseudo literal for s_delay_alu
   bool parseSDelayAluImmMnemonic(

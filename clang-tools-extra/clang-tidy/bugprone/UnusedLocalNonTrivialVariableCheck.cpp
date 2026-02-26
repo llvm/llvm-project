@@ -1,4 +1,4 @@
-//===--- UnusedLocalNonTrivialVariableCheck.cpp - clang-tidy --------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -69,13 +69,13 @@ void UnusedLocalNonTrivialVariableCheck::registerMatchers(MatchFinder *Finder) {
               unless(isExceptionVariable()), hasLocalStorage(), isDefinition(),
               unless(hasType(isReferenceType())), unless(hasType(isTrivial())),
               unless(explicitMarkUnused()),
-              hasType(hasUnqualifiedDesugaredType(
-                  anyOf(recordType(hasDeclaration(namedDecl(
-                            matchesAnyListedName(IncludeTypes),
-                            unless(matchesAnyListedName(ExcludeTypes))))),
-                        templateSpecializationType(hasDeclaration(namedDecl(
-                            matchesAnyListedName(IncludeTypes),
-                            unless(matchesAnyListedName(ExcludeTypes)))))))))
+              hasType(hasUnqualifiedDesugaredType(anyOf(
+                  recordType(hasDeclaration(namedDecl(
+                      matchesAnyListedRegexName(IncludeTypes),
+                      unless(matchesAnyListedRegexName(ExcludeTypes))))),
+                  templateSpecializationType(hasDeclaration(namedDecl(
+                      matchesAnyListedRegexName(IncludeTypes),
+                      unless(matchesAnyListedRegexName(ExcludeTypes)))))))))
           .bind("var"),
       this);
 }

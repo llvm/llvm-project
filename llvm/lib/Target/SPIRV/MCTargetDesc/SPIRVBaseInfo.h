@@ -232,6 +232,11 @@ namespace SpecConstantOpOperands {
 #include "SPIRVGenTables.inc"
 } // namespace SpecConstantOpOperands
 
+namespace FPEncoding {
+#define GET_FPEncoding_DECL
+#include "SPIRVGenTables.inc"
+} // namespace FPEncoding
+
 struct ExtendedBuiltin {
   StringRef Name;
   InstructionSet::InstructionSet Set;
@@ -240,7 +245,10 @@ struct ExtendedBuiltin {
 
 enum InstFlags {
   // It is a half type
-  INST_PRINTER_WIDTH16 = 1
+  INST_PRINTER_WIDTH16 = 1,
+  // It is a 64-bit type
+  INST_PRINTER_WIDTH64 = INST_PRINTER_WIDTH16 << 1,
+
 };
 } // namespace SPIRV
 

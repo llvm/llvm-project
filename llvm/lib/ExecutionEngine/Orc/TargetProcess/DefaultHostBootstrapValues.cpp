@@ -9,6 +9,7 @@
 #include "llvm/ExecutionEngine/Orc/TargetProcess/DefaultHostBootstrapValues.h"
 
 #include "llvm/ExecutionEngine/Orc/Shared/OrcRTBridge.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 
 #ifdef __APPLE__
@@ -26,6 +27,9 @@ void addDefaultBootstrapValuesForHostProcess(
       ExecutorAddr::fromPtr(&llvm_orc_registerEHFrameSectionAllocAction);
   BootstrapSymbols[rt::DeregisterEHFrameSectionAllocActionName] =
       ExecutorAddr::fromPtr(&llvm_orc_deregisterEHFrameSectionAllocAction);
+
+  BootstrapSymbols[rt::RegisterJITLoaderGDBAllocActionName] =
+      ExecutorAddr::fromPtr(&llvm_orc_registerJITLoaderGDBAllocAction);
 
 #ifdef __APPLE__
   if (!dlsym(RTLD_DEFAULT, "__unw_add_find_dynamic_unwind_sections"))

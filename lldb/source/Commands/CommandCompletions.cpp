@@ -777,13 +777,11 @@ void CommandCompletions::StopHookIDs(CommandInterpreter &interpreter,
   if (!target_sp)
     return;
 
-  const size_t num = target_sp->GetNumStopHooks();
-  for (size_t idx = 0; idx < num; ++idx) {
+  for (auto &stophook_sp : target_sp->GetStopHooks()) {
     StreamString strm;
     // The value 11 is an offset to make the completion description looks
     // neater.
     strm.SetIndentLevel(11);
-    const Target::StopHookSP stophook_sp = target_sp->GetStopHookAtIndex(idx);
     stophook_sp->GetDescription(strm, lldb::eDescriptionLevelInitial);
     request.TryCompleteCurrentArg(std::to_string(stophook_sp->GetID()),
                                   strm.GetString());

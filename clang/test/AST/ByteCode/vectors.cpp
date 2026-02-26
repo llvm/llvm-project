@@ -39,6 +39,10 @@ static_assert(arr4[1][0] == 0, "");
 
 constexpr VI4 B = __extension__(A);
 
+/// Can initialize atomic vectors.
+typedef char vs4 __attribute__((vector_size(4)));
+constexpr _Atomic vs4 foo = (vs4)0xDEADBEEF;
+
 /// From constant-expression-cxx11.cpp
 namespace Vector {
   typedef int __attribute__((vector_size(16))) VI4;
@@ -167,4 +171,16 @@ namespace Assign {
     return true;
   }
   static_assert(invalid()); // both-error {{not an integral constant expression}}
+}
+
+namespace CopyArrayDummy {
+  struct S {
+    long a, b, c, d;
+  };
+  typedef long T __attribute__((vector_size(4 * sizeof(long))));
+
+  void foo(void) {
+    struct S s;
+    *(T *)&s = (T){0, 1, 2, 3};
+  }
 }

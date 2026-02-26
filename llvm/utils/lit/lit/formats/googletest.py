@@ -43,7 +43,7 @@ class GoogleTest(TestFormat):
             return None
         return sum(
             map(
-                lambda line: lit.util.to_string(line).startswith("  "),
+                lambda line: line.startswith(b"  "),
                 out.splitlines(False),
             )
         )

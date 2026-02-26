@@ -1,8 +1,3 @@
-#if __has_include(<sys/hwcap.h>)
-#include <sys/hwcap.h>
-#define HAVE_SYS_HWCAP_H
-#endif
-
 #ifndef _IFUNC_ARG_HWCAP
 #define _IFUNC_ARG_HWCAP (1ULL << 62)
 #endif

@@ -128,7 +128,7 @@ class DS_0A1D_NORET<string opName, RegisterOperand rc = AVLdSt_32>
 class DS_1A1D_NORET<string opName, RegisterOperand rc = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, rc:$data0, Offset:$offset, gds:$gds),
+  (ins VGPROp_32:$addr, rc:$data0, Offset:$offset, gds:$gds),
   " $addr, $data0$offset$gds"> {
 
   let has_data1 = 0;
@@ -163,7 +163,7 @@ multiclass DS_1A1D_NORET_mc_gfx9<string opName, RegisterOperand rc = AVLdSt_32> 
 class DS_1A2D_NORET<string opName, RegisterOperand data_op = VGPROp_32>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, data_op:$data0, data_op:$data1, Offset:$offset, gds:$gds),
+  (ins VGPROp_32:$addr, data_op:$data0, data_op:$data1, Offset:$offset, gds:$gds),
   " $addr, $data0, $data1$offset$gds"> {
 
   let has_vdst = 0;
@@ -190,7 +190,7 @@ multiclass DS_1A2D_NORET_mc<string opName, RegisterOperand rc = VGPROp_32> {
 class DS_1A2D_Off8_NORET <string opName, RegisterOperand data_op = VGPROp_32>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, data_op:$data0, data_op:$data1,
+  (ins VGPROp_32:$addr, data_op:$data0, data_op:$data1,
        Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $addr, $data0, $data1$offset0$offset1$gds"> {
 
@@ -230,7 +230,7 @@ class DS_0A1D_RET_GDS<string opName, RegisterOperand dst_op = AVLdSt_32,
 class DS_1A1D_RET <string opName, RegisterOperand data_op = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
-  (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
+  (ins VGPROp_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0$offset$gds"> {
 
   let has_data1 = 0;
@@ -260,7 +260,7 @@ class DS_1A2D_RET<string opName,
                   RegisterOperand dst_rc = VGPROp_32,
                   RegisterOperand src_rc = dst_rc>: DS_Pseudo<opName,
   (outs dst_rc:$vdst),
-  (ins VGPR_32:$addr, src_rc:$data0, src_rc:$data1, Offset:$offset, gds:$gds),
+  (ins VGPROp_32:$addr, src_rc:$data0, src_rc:$data1, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
   let IsAtomicRet = 1;
@@ -286,7 +286,7 @@ class DS_1A2D_Off8_RET<string opName,
                        RegisterOperand src_rc = dst_rc>
 : DS_Pseudo<opName,
   (outs dst_rc:$vdst),
-  (ins VGPR_32:$addr, src_rc:$data0, src_rc:$data1, Offset0:$offset0, Offset1:$offset1, gds:$gds),
+  (ins VGPROp_32:$addr, src_rc:$data0, src_rc:$data1, Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
@@ -311,8 +311,8 @@ class DS_BVH_STACK<string opName,
                    RegisterOperand vdst_rc,
                    RegisterOperand data1_rc>
 : DS_Pseudo<opName,
-  (outs vdst_rc:$vdst, VGPR_32:$addr),
-  (ins VGPR_32:$addr_in, VGPR_32:$data0, data1_rc:$data1, Offset:$offset),
+  (outs vdst_rc:$vdst, VGPROp_32:$addr),
+  (ins VGPROp_32:$addr_in, VGPROp_32:$data0, data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let has_gds = 0;
@@ -327,8 +327,8 @@ class DS_1A_RET<string opName, RegisterOperand data_op = AVLdSt_32,
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
   !if(HasTiedOutput,
-    (ins VGPR_32:$addr, ofs:$offset, gds:$gds, data_op:$vdst_in),
-    (ins VGPR_32:$addr, ofs:$offset, gds:$gds)),
+    (ins VGPROp_32:$addr, ofs:$offset, gds:$gds, data_op:$vdst_in),
+    (ins VGPROp_32:$addr, ofs:$offset, gds:$gds)),
   " $vdst, $addr$offset$gds"> {
   let Constraints = !if(HasTiedOutput, "$vdst = $vdst_in", "");
   let has_data0 = 0;
@@ -366,7 +366,7 @@ class DS_1A_RET_Tied<string opName, RegisterOperand rc = AVLdSt_32> :
 class DS_1A_Off8_RET <string opName, RegisterOperand rc = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs rc:$vdst),
-  (ins VGPR_32:$addr, Offset0:$offset0, Offset1:$offset1, gds:$gds),
+  (ins VGPROp_32:$addr, Offset0:$offset0, Offset1:$offset1, gds:$gds),
   " $vdst, $addr$offset0$offset1$gds"> {
 
   let has_offset = 0;
@@ -384,7 +384,7 @@ multiclass DS_1A_Off8_RET_mc <string opName, RegisterOperand rc = VGPROp_32> {
 
 class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
   (outs AVLdSt_32:$vdst),
-  (ins VGPR_32:$addr, Offset:$offset),
+  (ins VGPROp_32:$addr, Offset:$offset),
   " $vdst, $addr$offset gds"> {
 
   let has_data0 = 0;
@@ -396,7 +396,7 @@ class DS_1A_RET_GDS <string opName> : DS_Pseudo<opName,
 class DS_1A_Off16_NORET <string opName>
 : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, Offset:$offset, gds:$gds),
+  (ins VGPROp_32:$addr, Offset:$offset, gds:$gds),
   " $addr$offset$gds"> {
 
   let has_vdst = 0;
@@ -422,7 +422,7 @@ class DS_0A_RET <string opName> : DS_Pseudo<opName,
 
 class DS_1A <string opName> : DS_Pseudo<opName,
   (outs),
-  (ins VGPR_32:$addr, Offset:$offset, gds:$gds),
+  (ins VGPROp_32:$addr, Offset:$offset, gds:$gds),
   " $addr$offset$gds"> {
 
   let mayLoad = 1;
@@ -463,7 +463,7 @@ class DS_GWS_0D <string opName>
 
 class DS_GWS_1D <string opName>
 : DS_GWS<opName,
-  (ins AVLdSt_32:$data0, Offset:$offset),
+  (ins AV_LdSt_32_Align2_RegOp:$data0, Offset:$offset),
   " $data0$offset gds"> {
 
   let has_gws_data0 = 1;
@@ -491,7 +491,7 @@ class DS_1A1D_PERMUTE <string opName, SDPatternOperator node = null_frag,
                        RegisterOperand data_op = AVLdSt_32>
 : DS_Pseudo<opName,
   (outs data_op:$vdst),
-  (ins VGPR_32:$addr, data_op:$data0, Offset:$offset),
+  (ins VGPROp_32:$addr, data_op:$data0, Offset:$offset),
   " $vdst, $addr, $data0$offset",
   [(set i32:$vdst,
    (node (DS1Addr1Offset i32:$addr, i32:$offset), i32:$data0))] > {
@@ -886,17 +886,6 @@ defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc_gfx9<"ds_sub_clamp_rtn_u32", VGPROp_3
 def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
                                              int_amdgcn_ds_bpermute_fi_b32>;
 
-multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
-                                  ValueType vt, string frag> {
-  def : DSAtomicRetPat<inst, vt,
-                        !cast<PatFrag>(frag#"_local_addrspace")>;
-
-  let OtherPredicates = [HasAtomicCSubNoRtnInsts] in
-    def : DSAtomicRetPat<noRetInst, vt,
-                          !cast<PatFrag>(frag#"_noret_local_addrspace"), /* complexity */ 1>;
-}
-
-defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
 
 let SubtargetPredicate = isGFX1250Plus in {
@@ -904,7 +893,7 @@ let SubtargetPredicate = isGFX1250Plus in {
 let WaveSizePredicate = isWave32, mayStore = 0 in {
 let OtherPredicates = [HasTransposeLoadF4F6Insts] in {
 defm DS_LOAD_TR4_B64   : DS_1A_RET_NoM0<"ds_load_tr4_b64",   VGPROp_64>;
-defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96>;
+defm DS_LOAD_TR6_B96   : DS_1A_RET_NoM0<"ds_load_tr6_b96",   VGPROp_96_Align1>;
 } // End OtherPredicates = [HasTransposeLoadF4F6Insts]
 defm DS_LOAD_TR8_B64   : DS_1A_RET_NoM0<"ds_load_tr8_b64",   VGPROp_64>;
 defm DS_LOAD_TR16_B128 : DS_1A_RET_NoM0<"ds_load_tr16_b128", VGPROp_128>;
@@ -917,7 +906,7 @@ def DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 : DS_1A_Off16_NORET<"ds_atomic_async_barr
 
 def : GCNPat <
   (int_amdgcn_ds_atomic_async_barrier_arrive_b64 (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPR_32:$ptr, Offset:$offset, (i1 0))
+  (DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 VGPROp_32:$ptr, Offset:$offset, (i1 0))
 >;
 
 defm DS_ATOMIC_BARRIER_ARRIVE_RTN_B64 : DS_1A1D_RET_mc_gfx9<"ds_atomic_barrier_arrive_rtn_b64", VGPROp_64>;
@@ -934,7 +923,7 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
   defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", AVLdSt_64>;
   defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", AVLdSt_64>;
   defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", AVLdSt_64>;
-  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", AVLdSt_96_Align1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -943,12 +932,17 @@ let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore 
 
 def : GCNPat <
   (int_amdgcn_ds_swizzle i32:$src, timm:$offset16),
-  (DS_SWIZZLE_B32 VGPR_32:$src, (as_i16timm $offset16), (i1 0))
+  (DS_SWIZZLE_B32 VGPROp_32:$src, (as_i16timm $offset16), (i1 0))
 >;
 
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
   (inst $ptr, Offset:$offset, (i1 gds))
+>;
+
+class DSReadPat_t16 <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
+  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (EXTRACT_SUBREG (inst $ptr, Offset:$offset, (i1 gds)), lo16)
 >;
 
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -968,14 +962,14 @@ multiclass DSReadPat_t16<DS_Pseudo inst, ValueType vt, string frag> {
     def : DSReadPat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
   }
 
-  let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
-    let True16Predicate = UseRealTrue16Insts in {
-      def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
-    }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = NotUseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init, D16PreservesUnusedBits], True16Predicate = UseRealTrue16Insts in {
+    def : DSReadPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
+  }
+  let OtherPredicates = [NotLDSRequiresM0Init], True16Predicate = UseTrue16WithSramECC in {
+    def : DSReadPat_t16<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
   }
 }
 
@@ -1050,10 +1044,9 @@ multiclass DSWritePat_t16 <DS_Pseudo inst, ValueType vt, string frag> {
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
-    foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
-      let True16Predicate = p in {
-        def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
-      }
+    let True16Predicate = NotUseRealTrue16Insts in {
+      def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt, !cast<PatFrag>(frag)>;
+    }
     let True16Predicate = UseRealTrue16Insts in {
       def : DSWritePat<!cast<DS_Pseudo>(!cast<string>(inst)#"_t16"), vt, !cast<PatFrag>(frag)>;
     }
@@ -1275,6 +1268,14 @@ defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_F16, DS_PK_ADD_F16, v2f16, "ato
 defm : DSAtomicRetNoRetPat_NoM0_mc<DS_PK_ADD_RTN_BF16, DS_PK_ADD_BF16, v2bf16, "atomic_load_fadd">;
 }
 
+let SubtargetPredicate = HasAtomicDsCondSubClampInsts in {
+
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "atomic_load_usub_cond">;
+
+defm : DSAtomicRetNoRetPat_NoM0_mc<DS_SUB_CLAMP_RTN_U32, DS_SUB_CLAMP_U32, i32, "atomic_load_usub_sat">;
+
+} // let SubtargetPredicate = HasAtomicDsCondSubClampInsts
+
 let SubtargetPredicate = isGFX6GFX7GFX8GFX9GFX10 in {
 defm : DSAtomicCmpXChgSwapped_mc<DS_CMPST_RTN_B32, DS_CMPST_B32, i32, "atomic_cmp_swap">;
 }
@@ -1335,28 +1336,28 @@ def : GCNPat <
 
 def : GCNPat <
   (i64 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
-  (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+  (DS_ADD_GS_REG_RTN VGPROp_32:$src, (as_i32timm $offset32))
 >;
 
 def : GCNPat <
   (i32 (int_amdgcn_ds_add_gs_reg_rtn i32:$src, timm:$offset32)),
   (EXTRACT_SUBREG
     (i64 (COPY_TO_REGCLASS
-      (DS_ADD_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+      (DS_ADD_GS_REG_RTN VGPROp_32:$src, (as_i32timm $offset32)),
       VReg_64)),
     sub0)
 >;
 
 def : GCNPat <
   (i64 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
-  (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32))
+  (DS_SUB_GS_REG_RTN VGPROp_32:$src, (as_i32timm $offset32))
 >;
 
 def : GCNPat <
   (i32 (int_amdgcn_ds_sub_gs_reg_rtn i32:$src, timm:$offset32)),
   (EXTRACT_SUBREG
     (i64 (COPY_TO_REGCLASS
-      (DS_SUB_GS_REG_RTN VGPR_32:$src, (as_i32timm $offset32)),
+      (DS_SUB_GS_REG_RTN VGPROp_32:$src, (as_i32timm $offset32)),
       VReg_64)),
     sub0)
 >;
@@ -1483,6 +1484,12 @@ let AssemblerPredicate = isGFX12Plus in {
 // Aliases that have existed since these instructions were introduced.
 def : MnemonicAlias<"ds_load_tr_b64", "ds_load_tr8_b64">, Requires<[isGFX1250Plus]>;
 def : MnemonicAlias<"ds_load_tr_b128", "ds_load_tr16_b128">, Requires<[isGFX1250Plus]>;
+
+// Additional aliases for ds load transpose instructions.
+def : MnemonicAlias<"ds_load_b64_tr_b8", "ds_load_tr8_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b128_tr_b16", "ds_load_tr16_b128">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b64_tr_b4", "ds_load_tr4_b64">, Requires<[isGFX125xOnly]>;
+def : MnemonicAlias<"ds_load_b96_tr_b6", "ds_load_tr6_b96">, Requires<[isGFX125xOnly]>;
 
 //===----------------------------------------------------------------------===//
 // GFX11.

@@ -21,7 +21,6 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
-#include <string>
 
 #define GET_SUBTARGETINFO_HEADER
 #include "SparcGenSubtargetInfo.inc"
@@ -63,6 +62,8 @@ public:
   }
 
   const SelectionDAGTargetInfo *getSelectionDAGInfo() const override;
+
+  void initLibcallLoweringInfo(LibcallLoweringInfo &Info) const override;
 
   bool enableMachineScheduler() const override;
 

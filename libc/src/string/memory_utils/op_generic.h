@@ -31,6 +31,7 @@
 #include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/compiler.h"
 #include "src/__support/macros/properties/types.h" // LIBC_TYPES_HAS_INT64
 #include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
@@ -39,12 +40,32 @@ static_assert((UINTPTR_MAX == 4294967295U) ||
                   (UINTPTR_MAX == 18446744073709551615UL),
               "We currently only support 32- or 64-bit platforms");
 
+#ifdef LIBC_COMPILER_IS_MSVC
+#ifdef LIBC_TARGET_ARCH_IS_X86
+namespace LIBC_NAMESPACE_DECL {
+using generic_v128 = __m128i;
+using generic_v256 = __m256i;
+using generic_v512 = __m512i;
+} // namespace LIBC_NAMESPACE_DECL
+#else
+// Special handling when target does not have real vector types.
+// We can potentially use uint8x16_t etc. However, MSVC does not provide
+// subscript operation.
+namespace LIBC_NAMESPACE_DECL {
+struct alignas(16) generic_v128 : public cpp::array<uint8_t, 16> {};
+struct alignas(32) generic_v256 : public cpp::array<uint8_t, 32> {};
+struct alignas(64) generic_v512 : public cpp::array<uint8_t, 64> {};
+} // namespace LIBC_NAMESPACE_DECL
+#endif
+
+#else
 namespace LIBC_NAMESPACE_DECL {
 // Compiler types using the vector attributes.
 using generic_v128 = uint8_t __attribute__((__vector_size__(16)));
 using generic_v256 = uint8_t __attribute__((__vector_size__(32)));
 using generic_v512 = uint8_t __attribute__((__vector_size__(64)));
 } // namespace LIBC_NAMESPACE_DECL
+#endif // LIBC_COMPILER_IS_MSVC
 
 namespace LIBC_NAMESPACE_DECL {
 namespace generic {
@@ -148,7 +169,8 @@ template <typename T> struct Memset {
 
   LIBC_INLINE static void block(Ptr dst, uint8_t value) {
     if constexpr (is_scalar_v<T> || is_vector_v<T>) {
-      store<T>(dst, splat<T>(value));
+      // Avoid ambiguous call due to ADL
+      generic::store<T>(dst, splat<T>(value));
     } else if constexpr (is_array_v<T>) {
       using value_type = typename T::value_type;
       const auto Splat = splat<value_type>(value);

@@ -15,7 +15,7 @@
 
 #include "mlir/Conversion/Passes.h"
 #include "mlir/Dialect/AMDGPU/Transforms/Passes.h"
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSVE/Transforms/Passes.h"
@@ -33,6 +33,7 @@
 #include "mlir/Dialect/MemRef/Transforms/Passes.h"
 #include "mlir/Dialect/NVGPU/Transforms/Passes.h"
 #include "mlir/Dialect/OpenACC/Transforms/Passes.h"
+#include "mlir/Dialect/OpenMP/Transforms/Passes.h"
 #include "mlir/Dialect/Quant/Transforms/Passes.h"
 #include "mlir/Dialect/SCF/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Transforms/Passes.h"
@@ -80,12 +81,13 @@ void mlir::registerAllPasses() {
   memref::registerMemRefPasses();
   shard::registerShardPasses();
   ml_program::registerMLProgramPasses();
+  omp::registerOpenMPPasses();
   quant::registerQuantPasses();
   registerSCFPasses();
   registerShapePasses();
   spirv::registerSPIRVPasses();
   tensor::registerTensorPasses();
-  tosa::registerTosaOptPasses();
+  tosa::registerTosaPasses();
   transform::registerTransformPasses();
   vector::registerVectorPasses();
   arm_sme::registerArmSMEPasses();
@@ -98,4 +100,5 @@ void mlir::registerAllPasses() {
   sparse_tensor::registerSparseTensorPipelines();
   tosa::registerTosaToLinalgPipelines();
   gpu::registerGPUToNVVMPipeline();
+  gpu::registerGPUToXeVMPipeline();
 }

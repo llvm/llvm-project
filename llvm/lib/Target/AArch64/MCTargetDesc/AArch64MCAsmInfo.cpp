@@ -40,6 +40,7 @@ const MCAsmInfo::AtSpecifier ELFAtSpecifiers[] = {
     {AArch64::S_GOT, "GOT"},
     {AArch64::S_GOTPCREL, "GOTPCREL"},
     {AArch64::S_PLT, "PLT"},
+    {AArch64::S_FUNCINIT, "FUNCINIT"},
 };
 
 const MCAsmInfo::AtSpecifier MachOAtSpecifiers[] = {
@@ -143,11 +144,10 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   UsesELFSectionDirectiveForBSS = true;
   SupportsDebugInformation = true;
   UseDataRegionDirectives = true;
-  UseAtForSpecifier = false;
-
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
   initializeAtSpecifiers(MachOAtSpecifiers);
+  UseAtForSpecifier = false;
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
@@ -214,7 +214,6 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   Data64bitsDirective = "\t.xword\t";
 
   UseDataRegionDirectives = false;
-  UseAtForSpecifier = false;
 
   WeakRefDirective = "\t.weak\t";
 
@@ -226,6 +225,7 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   HasIdentDirective = true;
 
   initializeAtSpecifiers(ELFAtSpecifiers);
+  UseAtForSpecifier = false;
 }
 
 void AArch64MCAsmInfoELF::printSpecifierExpr(

@@ -1,0 +1,25 @@
+RUN: %platformserver 2>&1 | FileCheck --check-prefixes=NO_LISTEN,ALL %s
+NO_LISTEN: error: either --listen or --child-platform-fd is required
+
+RUN: %lldb-server platform --listen 2>&1 | FileCheck --check-prefixes=LISTEN_MISSING,ALL %s
+LISTEN_MISSING: error: --listen: missing argument
+
+RUN: %lldb-server p --bogus 2>&1 | FileCheck --check-prefixes=BOGUS,ALL %s
+BOGUS: error: unknown argument '--bogus'
+
+RUN: %platformserver --gdbserver-port 2>&1 | FileCheck --check-prefixes=GDBPORT_MISSING,ALL %s
+GDBPORT_MISSING: error: --gdbserver-port: missing argument
+
+RUN: %platformserver --gdbserver-port notanumber --listen :1234 2>&1 | FileCheck --check-prefixes=GDBPORT_INVALID %s
+GDBPORT_INVALID: error: invalid --gdbserver-port value
+
+RUN: %platformserver --socket-file 2>&1 | FileCheck --check-prefixes=SOCKETFILE_MISSING,ALL %s
+SOCKETFILE_MISSING: error: --socket-file: missing argument
+
+RUN: %platformserver --log-file 2>&1 | FileCheck --check-prefixes=LOGFILE_MISSING,ALL %s
+LOGFILE_MISSING: error: --log-file: missing argument
+
+RUN: %platformserver --log-channels 2>&1 | FileCheck --check-prefixes=LOGCHANNELS_MISSING,ALL %s
+LOGCHANNELS_MISSING: error: --log-channels: missing argument
+
+ALL: Use 'lldb-server{{(\.exe)?}} {{p|platform}} --help' for a complete list of options.
