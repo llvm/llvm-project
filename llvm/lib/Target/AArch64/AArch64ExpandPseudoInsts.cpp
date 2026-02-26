@@ -1010,7 +1010,7 @@ bool AArch64ExpandPseudo::expandSTSHHAtomicStore(
   DebugLoc DL(MI.getDebugLoc());
 
   unsigned Order = MI.getOperand(2).getImm();
-  uint64_t Policy = MI.getOperand(3).getImm();
+  unsigned Policy = MI.getOperand(3).getImm();
   unsigned Size = MI.getOperand(4).getImm();
 
   bool IsRelaxed = Order == 0;

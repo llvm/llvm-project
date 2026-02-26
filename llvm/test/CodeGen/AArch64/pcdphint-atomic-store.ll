@@ -2,32 +2,8 @@
 ; RUN: llc -mtriple=aarch64 -mattr=+v9.6a < %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64 -mattr=+v9.6a -global-isel=1 < %s | FileCheck %s
 
-define void @test_keep_relaxed(ptr %p, i32 %v) {
-; CHECK-LABEL: test_keep_relaxed:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w1
-; CHECK-NEXT:    stshh keep
-; CHECK-NEXT:    str w8, [x0]
-; CHECK-NEXT:    ret
-  %v64 = zext i32 %v to i64
-  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 0, i32 0, i32 32)
-  ret void
-}
-
-define void @test_strm_release(ptr %p, i32 %v) {
-; CHECK-LABEL: test_strm_release:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, w1
-; CHECK-NEXT:    stshh strm
-; CHECK-NEXT:    stlr w8, [x0]
-; CHECK-NEXT:    ret
-  %v64 = zext i32 %v to i64
-  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 3, i32 1, i32 32)
-  ret void
-}
-
-define void @test_keep_i8(ptr %p, i8 %v) {
-; CHECK-LABEL: test_keep_i8:
+define void @test_keep_relaxed_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_keep_relaxed_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    and x8, x1, #0xff
@@ -39,8 +15,8 @@ define void @test_keep_i8(ptr %p, i8 %v) {
   ret void
 }
 
-define void @test_keep_i16(ptr %p, i16 %v) {
-; CHECK-LABEL: test_keep_i16:
+define void @test_keep_relaxed_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_keep_relaxed_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    and x8, x1, #0xffff
@@ -52,8 +28,8 @@ define void @test_keep_i16(ptr %p, i16 %v) {
   ret void
 }
 
-define void @test_keep_i32(ptr %p, i32 %v) {
-; CHECK-LABEL: test_keep_i32:
+define void @test_keep_relaxed_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_keep_relaxed_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w1
 ; CHECK-NEXT:    stshh keep
@@ -64,8 +40,8 @@ define void @test_keep_i32(ptr %p, i32 %v) {
   ret void
 }
 
-define void @test_keep_i64(ptr %p, i64 %v) {
-; CHECK-LABEL: test_keep_i64:
+define void @test_keep_relaxed_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_keep_relaxed_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh keep
 ; CHECK-NEXT:    str x1, [x0]
@@ -74,8 +50,104 @@ define void @test_keep_i64(ptr %p, i64 %v) {
   ret void
 }
 
-define void @test_strm_i8(ptr %p, i8 %v) {
-; CHECK-LABEL: test_strm_i8:
+define void @test_keep_release_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_keep_release_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x8, x1, #0xff
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlrb w8, [x0]
+; CHECK-NEXT:    ret
+  %v64 = zext i8 %v to i64
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 3, i32 0, i32 8)
+  ret void
+}
+
+define void @test_keep_release_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_keep_release_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x8, x1, #0xffff
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlrh w8, [x0]
+; CHECK-NEXT:    ret
+  %v64 = zext i16 %v to i64
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 3, i32 0, i32 16)
+  ret void
+}
+
+define void @test_keep_release_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_keep_release_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlr w8, [x0]
+; CHECK-NEXT:    ret
+  %v64 = zext i32 %v to i64
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 3, i32 0, i32 32)
+  ret void
+}
+
+define void @test_keep_release_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_keep_release_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v, i32 3, i32 0, i32 64)
+  ret void
+}
+
+define void @test_keep_seqcst_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_keep_seqcst_i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x8, x1, #0xff
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlrb w8, [x0]
+; CHECK-NEXT:    ret
+  %v64 = zext i8 %v to i64
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 5, i32 0, i32 8)
+  ret void
+}
+
+define void @test_keep_seqcst_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_keep_seqcst_i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
+; CHECK-NEXT:    and x8, x1, #0xffff
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlrh w8, [x0]
+; CHECK-NEXT:    ret
+  %v64 = zext i16 %v to i64
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 5, i32 0, i32 16)
+  ret void
+}
+
+define void @test_keep_seqcst_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_keep_seqcst_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, w1
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlr w8, [x0]
+; CHECK-NEXT:    ret
+  %v64 = zext i32 %v to i64
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v64, i32 5, i32 0, i32 32)
+  ret void
+}
+
+define void @test_keep_seqcst_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_keep_seqcst_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    stshh keep
+; CHECK-NEXT:    stlr x1, [x0]
+; CHECK-NEXT:    ret
+  call void @llvm.aarch64.stshh.atomic.store.p0(ptr %p, i64 %v, i32 5, i32 0, i32 64)
+  ret void
+}
+
+define void @test_strm_relaxed_i8(ptr %p, i8 %v) {
+; CHECK-LABEL: test_strm_relaxed_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    and x8, x1, #0xff
@@ -87,8 +159,8 @@ define void @test_strm_i8(ptr %p, i8 %v) {
   ret void
 }
 
-define void @test_strm_i16(ptr %p, i16 %v) {
-; CHECK-LABEL: test_strm_i16:
+define void @test_strm_relaxed_i16(ptr %p, i16 %v) {
+; CHECK-LABEL: test_strm_relaxed_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
 ; CHECK-NEXT:    and x8, x1, #0xffff
@@ -100,8 +172,8 @@ define void @test_strm_i16(ptr %p, i16 %v) {
   ret void
 }
 
-define void @test_strm_i32(ptr %p, i32 %v) {
-; CHECK-LABEL: test_strm_i32:
+define void @test_strm_relaxed_i32(ptr %p, i32 %v) {
+; CHECK-LABEL: test_strm_relaxed_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, w1
 ; CHECK-NEXT:    stshh strm
@@ -112,8 +184,8 @@ define void @test_strm_i32(ptr %p, i32 %v) {
   ret void
 }
 
-define void @test_strm_i64(ptr %p, i64 %v) {
-; CHECK-LABEL: test_strm_i64:
+define void @test_strm_relaxed_i64(ptr %p, i64 %v) {
+; CHECK-LABEL: test_strm_relaxed_i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stshh strm
 ; CHECK-NEXT:    str x1, [x0]

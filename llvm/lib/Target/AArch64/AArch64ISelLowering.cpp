@@ -17853,16 +17853,15 @@ void AArch64TargetLowering::getTgtMemIntrinsic(
       return;
     }
 
-    AtomicOrdering Ordering;
-    switch (OrderC->getZExtValue()) {
-    case 0: // __ATOMIC_RELAXED
-      Ordering = AtomicOrdering::Monotonic;
+    switch (static_cast<AtomicOrderingCABI>(OrderC->getZExtValue())) {
+    case AtomicOrderingCABI::relaxed:
+      Info.order = AtomicOrdering::Monotonic;
       break;
-    case 3: // __ATOMIC_RELEASE
-      Ordering = AtomicOrdering::Release;
+    case AtomicOrderingCABI::release:
+      Info.order = AtomicOrdering::Release;
       break;
-    case 5: // __ATOMIC_SEQ_CST
-      Ordering = AtomicOrdering::SequentiallyConsistent;
+    case AtomicOrderingCABI::seq_cst:
+      Info.order = AtomicOrdering::SequentiallyConsistent;
       break;
     default:
       return;
@@ -17879,7 +17878,6 @@ void AArch64TargetLowering::getTgtMemIntrinsic(
     Info.align = DL.getABITypeAlign(MemTy);
     Info.flags = MachineMemOperand::MOStore;
     Info.ssid = SyncScope::System;
-    Info.order = Ordering;
     Infos.push_back(Info);
     return;
   }

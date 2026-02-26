@@ -1125,11 +1125,14 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   ExprResult ValRes =
       SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(1));
 
-  if (PtrRes.isInvalid())
+  if (PtrRes.isInvalid() || ValRes.isInvalid())
     return true;
 
-  if (ValRes.isInvalid())
-    return true;
+  Expr *OrderArg = TheCall->getArg(2);
+
+  // Defer validation for dependent memory_order arguments.
+  if (OrderArg->isValueDependent())
+    return false;
 
   TheCall->setArg(0, PtrRes.get());
   Expr *PointerArg = PtrRes.get();
@@ -1184,12 +1187,6 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
     return true;
   }
 
-  Expr *OrderArg = TheCall->getArg(2);
-
-  // Defer validation for dependent memory_order arguments.
-  if (OrderArg->isValueDependent())
-    return false;
-
   // Require an order value.
   std::optional<llvm::APSInt> OrderValOpt =
       OrderArg->getIntegerConstantExpr(Context);
@@ -1208,14 +1205,13 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   }
 
   // Prepare a cast if the value type differs
-  ExprResult ValArgRes;
   CastKind CK =
       ValArg->getType().getCanonicalType() == ValType.getCanonicalType()
           ? CK_NoOp
           : CK_IntegralCast;
 
   // Apply cast to the pointee type, bail if cast failed
-  ValArgRes = SemaRef.ImpCastExprToType(ValArg, ValType, CK);
+  ExprResult ValArgRes = SemaRef.ImpCastExprToType(ValArg, ValType, CK);
   if (ValArgRes.isInvalid())
     return true;
 
