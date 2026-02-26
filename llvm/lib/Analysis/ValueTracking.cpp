@@ -4966,7 +4966,7 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
 }
 
 /// \return true if this is a floating point value that is known to have a
-/// magintude smaller than 1. i.e., fabs(X) <=1.0
+/// magnitude smaller than 1. i.e., fabs(X) <=1.0
 static bool isAbsoluteValueLessEqualOne(const Value *V) {
   // TODO: Handle frexp and x - floor(x)?
   return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
