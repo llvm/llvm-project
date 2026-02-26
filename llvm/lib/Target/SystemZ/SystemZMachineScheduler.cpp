@@ -23,55 +23,6 @@ static bool isPhysRegDef(const MachineOperand &MO) {
   return isRegDef(MO) && MO.getReg().isPhysical();
 }
 
-void SystemZPreRASchedStrategy::initializeLatencyReduction() {
-  // Enable latency reduction for a region that has a considerable amount of
-  // data sequences that should be interlaved. These are SUs that only have
-  // one data predecessor / successor edge(s) to their adjacent instruction(s)
-  // in the input order. Disable if region has many SUs relative to the
-  // overall height.
-  unsigned DAGHeight = 0;
-  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
-    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
-  RegionPolicy.DisableLatencyHeuristic =
-      DAG->SUnits.size() >= 3 * std::max(DAGHeight, 1u);
-  if ((HasDataSequences = !RegionPolicy.DisableLatencyHeuristic)) {
-    unsigned CurrSequence = 0, NumSeqNodes = 0;
-    auto countSequence = [&CurrSequence, &NumSeqNodes]() {
-      if (CurrSequence >= 2)
-        NumSeqNodes += CurrSequence;
-      CurrSequence = 0;
-    };
-    for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx) {
-      const SUnit *SU = &DAG->SUnits[Idx];
-      bool InDataSequence = true;
-      // One Data pred to MI just above, or no preds.
-      unsigned NumPreds = 0;
-      for (const SDep &Pred : SU->Preds)
-        if (++NumPreds != 1 || Pred.getKind() != SDep::Data ||
-            Pred.getSUnit()->NodeNum != Idx - 1)
-          InDataSequence = false;
-      // One Data succ or no succs (ignoring ExitSU).
-      unsigned NumSuccs = 0;
-      for (const SDep &Succ : SU->Succs)
-        if (Succ.getSUnit() != &DAG->ExitSU &&
-            (++NumSuccs != 1 || Succ.getKind() != SDep::Data))
-          InDataSequence = false;
-      // Another type of node or one that does not have a single data pred
-      // ends any previous sequence.
-      if (!InDataSequence || !NumPreds)
-        countSequence();
-      if (InDataSequence)
-        CurrSequence++;
-    }
-    countSequence();
-    if (NumSeqNodes >= std::max(size_t(4), DAG->SUnits.size() / 4)) {
-      LLVM_DEBUG(dbgs() << "Number of nodes in def-use sequences: "
-                        << NumSeqNodes << ". ";);
-    } else
-      HasDataSequences = false;
-  }
-}
-
 bool SystemZPreRASchedStrategy::definesCmp0Src(const MachineInstr *MI,
                                                bool CCDef) const {
   if (Cmp0SrcReg != SystemZ::NoRegister && MI->getNumOperands() &&
@@ -116,13 +67,8 @@ bool SystemZPreRASchedStrategy::tryCandidate(SchedCandidate &Cand,
     return TryCand.Reason != NoCand;
   }
 
-  // Don't extend the scheduled latency in regions with many nodes in data
-  // sequences, or for (single block loop) regions that are acyclically
-  // (within a single loop iteration) latency limited. IsAcyclicLatencyLimited
-  // is set only after initialization in registerRoots(), which is why it is
-  // checked here instead of earlier.
-  if (!RegionPolicy.DisableLatencyHeuristic &&
-      (HasDataSequences || Rem.IsAcyclicLatencyLimited))
+  // Don't extend the scheduled latency.
+  if (!RegionPolicy.DisableLatencyHeuristic)
     if (const SUnit *HigherSU =
             TryCand.SU->getHeight() > Cand.SU->getHeight()   ? TryCand.SU
             : TryCand.SU->getHeight() < Cand.SU->getHeight() ? Cand.SU
@@ -176,9 +122,15 @@ void SystemZPreRASchedStrategy::initialize(ScheduleDAGMI *dag) {
 
   Cmp0SrcReg = SystemZ::NoRegister;
 
-  initializeLatencyReduction();
-  LLVM_DEBUG(dbgs() << "Latency scheduling " << (HasDataSequences ? "" : "not ")
-                    << "enabled for data sequences.\n";);
+  // Disable latency reduction if region has a great number of SUs relative
+  // to the overall height.
+  unsigned DAGHeight = 1;
+  for (unsigned Idx = 0, End = DAG->SUnits.size(); Idx != End; ++Idx)
+    DAGHeight = std::max(DAGHeight, DAG->SUnits[Idx].getHeight());
+  RegionPolicy.DisableLatencyHeuristic = DAG->SUnits.size() >= 3 * DAGHeight;
+  LLVM_DEBUG(dbgs() << "Latency scheduling "
+             << (RegionPolicy.DisableLatencyHeuristic ? "not " : "")
+             << "enabled for data sequences.\n";);
 }
 
 void SystemZPreRASchedStrategy::schedNode(SUnit *SU, bool IsTopNode) {
