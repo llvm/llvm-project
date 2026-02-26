@@ -32,6 +32,7 @@ add_fp_unittest(
     libc.src.__support.math.bf16divf
     libc.src.__support.math.bf16divl
     libc.src.__support.math.bf16fmaf
+    libc.src.__support.math.bf16fmaf128
     libc.src.__support.math.bf16fmal
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
@@ -102,6 +103,12 @@ add_fp_unittest(
     libc.src.__support.math.fsqrt
     libc.src.__support.math.fsqrtf128
     libc.src.__support.math.fsqrtl
+    libc.src.__support.math.getpayload
+    libc.src.__support.math.getpayloadbf16
+    libc.src.__support.math.getpayloadf
+    libc.src.__support.math.getpayloadf128
+    libc.src.__support.math.getpayloadf16
+    libc.src.__support.math.getpayloadl
     libc.src.__support.math.hypotf
     libc.src.__support.math.hypotf16
     libc.src.__support.math.ilogb
