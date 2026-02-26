@@ -4089,13 +4089,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateBinaryIntrinsic(
           Ty->isSignedIntegerType() ? Intrinsic::smax : Intrinsic::umax, Op0,
           Op1, nullptr, "elt.max");
-    } else {
-      DiagnosticsEngine &Diags = CGM.getDiags();
-      Diags.Report(E->getBeginLoc(), diag::warn_deprecated_float_builtin)
-          << "__builtin_elementwise_max"
-          << "__builtin_elementwise_maxnum/maximum/maximumnum";
+    } else
       Result = Builder.CreateMaxNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.max");
-    }
     return RValue::get(Result);
   }
   case Builtin::BI__builtin_elementwise_min: {
@@ -4109,13 +4104,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Result = Builder.CreateBinaryIntrinsic(
           Ty->isSignedIntegerType() ? Intrinsic::smin : Intrinsic::umin, Op0,
           Op1, nullptr, "elt.min");
-    } else {
-      DiagnosticsEngine &Diags = CGM.getDiags();
-      Diags.Report(E->getBeginLoc(), diag::warn_deprecated_float_builtin)
-          << "__builtin_elementwise_min"
-          << "__builtin_elementwise_minnum/minimum/minimumnum";
+    } else
       Result = Builder.CreateMinNum(Op0, Op1, /*FMFSource=*/nullptr, "elt.min");
-    }
     return RValue::get(Result);
   }
 

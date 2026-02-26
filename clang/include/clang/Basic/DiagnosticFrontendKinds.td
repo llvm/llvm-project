@@ -58,8 +58,6 @@ def warn_fe_backend_invalid_feature_flag : Warning<
 def warn_fe_backend_readonly_feature_flag : Warning<
     "feature flag '%0' is ignored since the feature is read only">,
     InGroup<InvalidCommandLineArgument>;
-def warn_deprecated_float_builtin : Warning<"builtin %0 is deprecated; use %1 instead">,
-    InGroup<DeprecatedBuiltins>;
 
 def err_incompatible_fp_eval_method_options : Error<
     "option 'ffp-eval-method' cannot be used with option "
