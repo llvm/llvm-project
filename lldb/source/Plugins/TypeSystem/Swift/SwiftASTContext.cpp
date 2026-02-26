@@ -5719,7 +5719,8 @@ swift::irgen::IRGenModule &SwiftASTContext::GetIRGenModule() {
 }
 
 CompilerType
-SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements) {
+SwiftASTContext::CreateTupleType(const std::vector<TupleElement> &elements,
+                                 swift::Mangle::ManglingFlavor flavor) {
   VALID_OR_RETURN(CompilerType());
 
   Status error;
@@ -5783,7 +5784,8 @@ CompilerType SwiftASTContext::CreateGenericTypeParamType(
       swift::GenericTypeParamType::getType(depth, index, **ast_ctx));
 }
 
-CompilerType SwiftASTContext::GetErrorType() {
+CompilerType
+SwiftASTContext::GetErrorType(swift::Mangle::ManglingFlavor flavor) {
   VALID_OR_RETURN(CompilerType());
 
   ThreadSafeASTContext swift_ctx = GetASTContext();
@@ -9108,12 +9110,12 @@ std::string SwiftASTContext::GetSwiftName(const clang::Decl *clang_decl,
   return {};
 }
 
-CompilerType
-SwiftASTContext::ConvertClangTypeToSwiftType(CompilerType clang_type) {
+CompilerType SwiftASTContext::ConvertClangTypeToSwiftType(
+    CompilerType clang_type, swift::Mangle::ManglingFlavor flavor) {
   auto ts = GetTypeSystemSwiftTypeRef();
   if (!ts)
     return {};
-  auto typeref_type = ts->ConvertClangTypeToSwiftType(clang_type);
+  auto typeref_type = ts->ConvertClangTypeToSwiftType(clang_type, flavor);
 
   if (!typeref_type)
     return {};

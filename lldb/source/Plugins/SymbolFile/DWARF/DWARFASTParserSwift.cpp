@@ -230,7 +230,10 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       // Make sure we at least have some function type. The mangling for
       // the "top_level_code" is returning the empty tuple type "()",
       // which is not a function type.
-      compiler_type = m_swift_typesystem.GetVoidFunctionType();
+      compiler_type = m_swift_typesystem.GetVoidFunctionType(
+          mangled_name ? SwiftLanguageRuntime::GetManglingFlavor(
+                             mangled_name.GetStringRef())
+                       : swift::Mangle::ManglingFlavor::Default);
     }
     break;
   default:

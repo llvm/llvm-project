@@ -398,7 +398,9 @@ public:
           auto *key = swift_type.GetMangledTypeName().AsCString();
           m_runtime.RegisterAnonymousClangType(key, field_type);
         } else {
-          swift_type = typesystem.ConvertClangTypeToSwiftType(field_type);
+          // TODO: The mangling flavor should be threaded through getTypeInfo.
+          swift_type = typesystem.ConvertClangTypeToSwiftType(
+              field_type, swift::Mangle::ManglingFlavor::Default);
         }
         const swift::reflection::TypeRef *typeref = nullptr;
         auto typeref_or_err = m_runtime.GetTypeRef(swift_type, &typesystem);
@@ -861,7 +863,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
     auto swiftify = [&](CompilerType type) {
       if (!type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>())
         return type;
-      CompilerType swift_type = ts.ConvertClangTypeToSwiftType(type);
+      CompilerType swift_type = ts.ConvertClangTypeToSwiftType(type, m_flavor);
       return swift_type ? swift_type : type;
     };
     unsigned depth = 0;
@@ -968,7 +970,7 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
         child.language_flags = 0;
         return child;
       };
-      CompilerType type = ts.GetRawPointerType();
+      CompilerType type = ts.GetRawPointerType(m_flavor);
       if (auto err = visit_callback(type, depth, get_name, get_info))
         return err;
       return success;
@@ -1051,8 +1053,8 @@ SwiftRuntimeTypeVisitor::VisitImpl(std::optional<unsigned> visit_only,
             child.language_flags = 0;
             return child;
           };
-          if (auto err =
-                  visit_callback(ts.GetRawPointerType(), 0, get_name, get_info))
+          if (auto err = visit_callback(ts.GetRawPointerType(m_flavor), 0,
+                                        get_name, get_info))
             return err;
           return success;
         }
@@ -1669,7 +1671,7 @@ SwiftLanguageRuntime::ProjectEnum(ValueObject &valobj) {
         for (auto &field : rti->getFields())
           elts.emplace_back(ConstString(),
                             GetTypeFromTypeRef(ts, field.TR, flavor));
-        payload_type = ts.CreateTupleType(elts);
+        payload_type = ts.CreateTupleType(elts, flavor);
         break;
       }
       default:
@@ -2089,7 +2091,7 @@ SwiftLanguageRuntime::BindGenericPackType(StackFrame &frame,
     // TODO: Could we get rid of this code path?
     if (rewrite_indirect) {
       // Create a tuple type with all the concrete types in the pack.
-      CompilerType tuple = ts->CreateTupleType(elements);
+      CompilerType tuple = ts->CreateTupleType(elements, flavor);
       // TODO: Remove unnecessary mangling roundtrip.
       // Wrap the type inside a SILPackType to mark it for GetChildAtIndex.
       CompilerType sil_pack_type = ts->CreateSILPackType(tuple, rewrite_indirect);
@@ -2727,9 +2729,10 @@ CompilerType SwiftLanguageRuntime::GetTypeFromMetadata(TypeSystemSwift &ts,
   using namespace swift::Demangle;
   Demangler dem;
   NodePointer node = type_ref.getDemangling(dem);
-  // TODO: the mangling flavor should come from the TypeRef.
+  // Reading a type from an instance pointer should always result in a regular
+  // swift type.
   return ts.GetTypeSystemSwiftTypeRef()->RemangleAsType(
-      dem, node, ts.GetTypeSystemSwiftTypeRef()->GetManglingFlavor());
+      dem, node, swift::Mangle::ManglingFlavor::Default);
 }
 
 std::optional<lldb::addr_t>
@@ -3642,7 +3645,8 @@ SwiftLanguageRuntime::GetReflectionTypeSystem(CompilerType for_type,
   if (auto *tr_ts =
           llvm::dyn_cast_or_null<TypeSystemSwiftTypeRefForExpressions>(
               ts_sp.get())) {
-    if (tr_ts->GetManglingFlavor(&exe_ctx) ==
+    if (SwiftLanguageRuntime::GetManglingFlavor(
+            for_type.GetMangledTypeName()) ==
         swift::Mangle::ManglingFlavor::Embedded) {
       if (auto *frame = exe_ctx.GetFramePtr()) {
         auto &sc = frame->GetSymbolContext(eSymbolContextModule);

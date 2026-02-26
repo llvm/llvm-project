@@ -214,7 +214,7 @@ public:
   CompilerType GetPointerType(lldb::opaque_compiler_type_t type) override;
 
   /// Get a function type that returns nothing and take no parameters.
-  CompilerType GetVoidFunctionType();
+  CompilerType GetVoidFunctionType(swift::Mangle::ManglingFlavor flavor);
 
   // Exploring the type
   llvm::Expected<uint64_t>
@@ -329,7 +329,7 @@ public:
                                     bool *is_imported = nullptr);
   bool IsErrorType(lldb::opaque_compiler_type_t type,
                    const ExecutionContext *exe_ctx) override;
-  CompilerType GetErrorType() override;
+  CompilerType GetErrorType(swift::Mangle::ManglingFlavor flavor) override;
   CompilerType GetWeakReferent(lldb::opaque_compiler_type_t type) override;
   CompilerType GetReferentType(lldb::opaque_compiler_type_t type) override;
   CompilerType GetInstanceType(lldb::opaque_compiler_type_t type,
@@ -348,8 +348,8 @@ public:
   };
   std::optional<PackTypeInfo> IsSILPackType(CompilerType type);
   CompilerType GetSILPackElementAtIndex(CompilerType type, unsigned i);
-  CompilerType
-  CreateTupleType(const std::vector<TupleElement> &elements) override;
+  CompilerType CreateTupleType(const std::vector<TupleElement> &elements,
+                               swift::Mangle::ManglingFlavor flavor) override;
   bool IsTupleType(lldb::opaque_compiler_type_t type) override;
   std::optional<NonTriviallyManagedReferenceKind>
   GetNonTriviallyManagedReferenceKind(
@@ -380,7 +380,7 @@ public:
       swift::Demangle::Demangler &dem);
 
   /// Get the Swift raw pointer type.
-  CompilerType GetRawPointerType();
+  CompilerType GetRawPointerType(swift::Mangle::ManglingFlavor flavor);
   /// Determine whether \p type is a protocol.
   bool IsExistentialType(lldb::opaque_compiler_type_t type,
                          const ExecutionContext *exe_ctx);
@@ -479,7 +479,9 @@ public:
 
   /// Attempts to convert a Clang type into a Swift type.
   /// For example, int is converted to Int32.
-  CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) override;
+  CompilerType
+  ConvertClangTypeToSwiftType(CompilerType clang_type,
+                              swift::Mangle::ManglingFlavor flavor) override;
 
   /// Gets the descriptor finder belonging to this instance's
   /// module.
@@ -491,11 +493,6 @@ public:
   /// Desugar a CompilerType and resolve type aliases by looking up
   /// their types in the debug info.
   CompilerType Canonicalize(CompilerType type);
-
-  /// Returns the mangling flavor associated with the ASTContext corresponding
-  /// with this TypeSystem.
-  swift::Mangle::ManglingFlavor
-  GetManglingFlavor(const ExecutionContext *exe_ctx = nullptr);
 
 protected:
   /// Determine whether the fallback is enabled via setting.
@@ -656,10 +653,6 @@ protected:
 
   /// A cache of Clang types that this TypeSystem mapped into Swift.
   ThreadSafeDenseMap<const char *, CompilerType> m_imported_type_map;
-
-  /// An LRU cache for \ref GetManglingFlavor().
-  std::pair<CompileUnit *, swift::Mangle::ManglingFlavor> m_lru_is_embedded = {
-      nullptr, swift::Mangle::ManglingFlavor::Default};
 };
 
 /// This one owns a SwiftASTContextForExpressions.

@@ -3133,7 +3133,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
 #ifndef NDEBUG
 // Due to the lack of a symbol context, this only does the validation
 // on TypeSystemSwiftTypeRefForExpressions.
-#define VALIDATE_AND_RETURN_STATIC(IMPL, REFERENCE)                            \
+#define VALIDATE_AND_RETURN_STATIC(IMPL, REFERENCE, ...)                       \
   do {                                                                         \
     auto result = IMPL();                                                      \
     if (!ModuleList::GetGlobalModuleListProperties()                           \
@@ -3146,7 +3146,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
         SymbolContext(target_sp, target_sp->GetExecutableModule()));           \
     if (!swift_ast_ctx)                                                        \
       return result;                                                           \
-    assert(Equivalent(result, swift_ast_ctx->REFERENCE()) &&                   \
+    assert(Equivalent(result, swift_ast_ctx->REFERENCE(__VA_ARGS__)) &&        \
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");            \
     return result;                                                             \
   } while (0)
@@ -3222,8 +3222,7 @@ constexpr ExecutionContextScope *g_no_exe_ctx = nullptr;
   } while (0)
 
 #else
-#define VALIDATE_AND_RETURN_STATIC(IMPL, REFERENCE)                            \
-  return IMPL()
+#define VALIDATE_AND_RETURN_STATIC(IMPL, REFERENCE, ...) return IMPL()
 #define VALIDATE_AND_RETURN(IMPL, REFERENCE, TYPE, EXE_CTX, ARGS)  \
   return IMPL();
 #define VALIDATE_AND_RETURN_CUSTOM(IMPL, REFERENCE, TYPE, COMPARISON, EXE_CTX, ARGS)       \
@@ -3974,7 +3973,8 @@ TypeSystemSwiftTypeRef::GetPointerType(opaque_compiler_type_t type) {
                       (ReconstructType(type)));
 }
 
-CompilerType TypeSystemSwiftTypeRef::GetVoidFunctionType() {
+CompilerType TypeSystemSwiftTypeRef::GetVoidFunctionType(
+    swift::Mangle::ManglingFlavor flavor) {
   using namespace swift::Demangle;
   Demangler dem;
   NodePointer type = dem.createNode(Node::Kind::Type);
@@ -3992,7 +3992,7 @@ CompilerType TypeSystemSwiftTypeRef::GetVoidFunctionType() {
   rett->addChild(ret_ty, dem);
   NodePointer ret_tuple = dem.createNode(Node::Kind::Tuple);
   ret_ty->addChild(ret_tuple, dem);
-  return RemangleAsType(dem, type, GetManglingFlavor());
+  return RemangleAsType(dem, type, flavor);
 }
 
 // Exploring the type
@@ -4332,8 +4332,8 @@ TypeSystemSwiftTypeRef::GetClangTypeTypeNode(swift::Demangle::Demangler &dem,
   return type;
 }
 
-CompilerType
-TypeSystemSwiftTypeRef::ConvertClangTypeToSwiftType(CompilerType clang_type) {
+CompilerType TypeSystemSwiftTypeRef::ConvertClangTypeToSwiftType(
+    CompilerType clang_type, swift::Mangle::ManglingFlavor flavor) {
   assert(clang_type.GetTypeSystem().isa_and_nonnull<TypeSystemClang>() &&
          "Unexpected type system!");
 
@@ -4342,10 +4342,10 @@ TypeSystemSwiftTypeRef::ConvertClangTypeToSwiftType(CompilerType clang_type) {
 
   swift::Demangle::Demangler dem;
   swift::Demangle::NodePointer node = GetClangTypeTypeNode(dem, clang_type);
-  CompilerType result = RemangleAsType(dem, node, GetManglingFlavor());
+  CompilerType result = RemangleAsType(dem, node, flavor);
   m_imported_type_map.Insert(result.GetMangledTypeName().AsCString(),
                              clang_type);
-  return result;  
+  return result;
 }
 
 llvm::Expected<CompilerType>
@@ -4804,14 +4804,15 @@ bool TypeSystemSwiftTypeRef::IsExistentialType(
   }
 }
 
-CompilerType TypeSystemSwiftTypeRef::GetRawPointerType() {
+CompilerType TypeSystemSwiftTypeRef::GetRawPointerType(
+    swift::Mangle::ManglingFlavor flavor) {
   using namespace swift::Demangle;
   Demangler dem;
   NodePointer raw_ptr = dem.createNode(Node::Kind::BuiltinTypeName,
                                        swift::BUILTIN_TYPE_NAME_RAWPOINTER);
   NodePointer node = dem.createNode(Node::Kind::Type);
   node->addChild(raw_ptr, dem);
-  return RemangleAsType(dem, node, GetManglingFlavor());
+  return RemangleAsType(dem, node, flavor);
 }
 
 bool TypeSystemSwiftTypeRef::IsErrorType(opaque_compiler_type_t type,
@@ -4843,7 +4844,8 @@ bool TypeSystemSwiftTypeRef::IsErrorType(opaque_compiler_type_t type,
                       (ReconstructType(type, exe_ctx), exe_ctx));
 }
 
-CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
+CompilerType
+TypeSystemSwiftTypeRef::GetErrorType(swift::Mangle::ManglingFlavor flavor) {
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
@@ -4868,9 +4870,9 @@ CompilerType TypeSystemSwiftTypeRef::GetErrorType() {
         dem);
     parent->addChild(dem.createNode(Node::Kind::Identifier, "Error"), dem);
 
-    return RemangleAsType(dem, error_type, GetManglingFlavor());
+    return RemangleAsType(dem, error_type, flavor);
   };
-  VALIDATE_AND_RETURN_STATIC(impl, GetErrorType);
+  VALIDATE_AND_RETURN_STATIC(impl, GetErrorType, flavor);
 }
 
 CompilerType
@@ -5090,7 +5092,8 @@ CompilerType TypeSystemSwiftTypeRef::GetSILPackElementAtIndex(CompilerType type,
 }
 
 CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
-    const std::vector<TupleElement> &elements) {
+    const std::vector<TupleElement> &elements,
+    swift::Mangle::ManglingFlavor flavor) {
   auto impl = [&]() -> CompilerType {
     using namespace swift::Demangle;
     Demangler dem;
@@ -5098,10 +5101,7 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
     auto *tuple = dem.createNode(Node::Kind::Tuple);
     tuple_type->addChild(tuple, dem);
     if (elements.empty())
-      return RemangleAsType(dem, tuple_type, GetManglingFlavor());
-
-    auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
-        elements.front().element_type.GetMangledTypeName());
+      return RemangleAsType(dem, tuple_type, flavor);
 
     for (const auto &element : elements) {
       auto *tuple_element = dem.createNode(Node::Kind::TupleElement);
@@ -5149,11 +5149,11 @@ CompilerType TypeSystemSwiftTypeRef::CreateTupleType(
                          element.element_name,
                          ReconstructType(element.element_type, nullptr));
                    });
-    bool equivalent =
-        Equivalent(result, swift_ast_ctx->CreateTupleType(ast_elements));
+    bool equivalent = Equivalent(
+        result, swift_ast_ctx->CreateTupleType(ast_elements, flavor));
     if (!equivalent) {
       result.dump();
-      auto a = swift_ast_ctx->CreateTupleType(elements);
+      auto a = swift_ast_ctx->CreateTupleType(elements, flavor);
       llvm::dbgs() << "AST type: " << a.GetMangledTypeName() << "\n";
       llvm::dbgs() << "failing tuple type\n";
     }
@@ -5829,37 +5829,6 @@ TypeSystemSwiftTypeRef::GetDependentGenericParamListForType(
     dependent_params.emplace_back(depth->getIndex(), index->getIndex());
   }
   return dependent_params;
-}
-
-swift::Mangle::ManglingFlavor
-TypeSystemSwiftTypeRef::GetManglingFlavor(const ExecutionContext *exe_ctx) {
-  if (!exe_ctx)
-    return swift::Mangle::ManglingFlavor::Default;
-  auto sc = GetSymbolContext(exe_ctx);
-  CompileUnit *cu = sc.comp_unit;
-  // If we didn't find a compile unit, try to go up the stack until we find one.
-  // Limit the search to avoid iterating through a very large stack if
-  // interrupted during infinite recursion.
-  if (!cu) {
-    if (auto *thread = exe_ctx->GetThreadPtr()) {
-      constexpr uint32_t max_frames = 128;
-      for (uint32_t i = 0; i < max_frames; ++i) {
-        auto stack_frame = thread->GetStackFrameAtIndex(i);
-        if (!stack_frame)
-          break;
-        cu = stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit)
-                 .comp_unit;
-        if (cu)
-          break;
-      }
-    }
-  }
-  // Cache the result for the last recently used CU.
-  if (cu != m_lru_is_embedded.first)
-    m_lru_is_embedded = {cu, ShouldEnableEmbeddedSwift(cu)
-                                 ? swift::Mangle::ManglingFlavor::Embedded
-                                 : swift::Mangle::ManglingFlavor::Default};
-  return m_lru_is_embedded.second;
 }
 
 #ifndef NDEBUG
