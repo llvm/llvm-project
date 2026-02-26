@@ -281,30 +281,6 @@ static bool IsFullUnroll(const parser::OpenMPLoopConstruct &x) {
   return false;
 }
 
-void OmpStructureChecker::CheckNestedBlock(
-    const parser::OpenMPLoopConstruct &x, const parser::Block &body) {
-  using BlockRange = parser::omp::BlockRange;
-  for (auto &stmt : BlockRange(body, BlockRange::Step::Over)) {
-    if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
-      context_.Say(dir->source,
-          "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
-    } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
-      if (!IsLoopTransforming(omp->BeginDir().DirId())) {
-        context_.Say(omp->source,
-            "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
-      }
-      if (IsFullUnroll(*omp)) {
-        context_.Say(x.source,
-            "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
-      }
-    } else if (!parser::Unwrap<parser::DoConstruct>(stmt)) {
-      parser::CharBlock source{parser::GetSource(stmt).value_or(x.source)};
-      context_.Say(source,
-          "OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs"_err_en_US);
-    }
-  }
-}
-
 static std::optional<size_t> CountGeneratedNests(
     const parser::ExecutionPartConstruct &epc) {
   if (parser::Unwrap<parser::DoConstruct>(epc)) {
@@ -386,9 +362,28 @@ void OmpStructureChecker::CheckNestedConstruct(
     }
   }
 
+  // Check constructs contained in the body of the loop construct.
   auto &body{std::get<parser::Block>(x.t)};
-
-  CheckNestedBlock(x, body);
+  using BlockRange = parser::omp::BlockRange;
+  for (auto &stmt : BlockRange(body, BlockRange::Step::Over)) {
+    if (auto *dir{parser::Unwrap<parser::CompilerDirective>(stmt)}) {
+      context_.Say(dir->source,
+          "Compiler directives are not allowed inside OpenMP loop constructs"_warn_en_US);
+    } else if (auto *omp{parser::Unwrap<parser::OpenMPLoopConstruct>(stmt)}) {
+      if (!IsLoopTransforming(omp->BeginDir().DirId())) {
+        context_.Say(omp->source,
+            "Only loop-transforming OpenMP constructs are allowed inside OpenMP loop constructs"_err_en_US);
+      }
+      if (IsFullUnroll(*omp)) {
+        context_.Say(x.source,
+            "OpenMP loop construct cannot apply to a fully unrolled loop"_err_en_US);
+      }
+    } else if (!parser::Unwrap<parser::DoConstruct>(stmt)) {
+      parser::CharBlock source{parser::GetSource(stmt).value_or(x.source)};
+      context_.Say(source,
+          "OpenMP loop construct can only contain DO loops or loop-nest-generating OpenMP constructs"_err_en_US);
+    }
+  }
 
   // Check if a loop-nest-associated construct has only one top-level loop
   // in it.

@@ -319,6 +319,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
   Record::BaseList Bases;
   Record::VirtualBaseList VirtBases;
   if (const auto *CD = dyn_cast<CXXRecordDecl>(RD)) {
+    Bases.reserve(CD->getNumBases());
     for (const CXXBaseSpecifier &Spec : CD->bases()) {
       if (Spec.isVirtual())
         continue;
@@ -334,7 +335,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         return nullptr;
 
       BaseSize += align(sizeof(InlineDescriptor));
-      Bases.push_back({BD, BaseSize, Desc, BR});
+      Bases.emplace_back(BD, Desc, BR, BaseSize);
       BaseSize += align(BR->getSize());
     }
 
@@ -347,13 +348,14 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
         return nullptr;
 
       VirtSize += align(sizeof(InlineDescriptor));
-      VirtBases.push_back({BD, VirtSize, Desc, BR});
+      VirtBases.emplace_back(BD, Desc, BR, VirtSize);
       VirtSize += align(BR->getSize());
     }
   }
 
   // Reserve space for fields.
   Record::FieldList Fields;
+  Fields.reserve(RD->getNumFields());
   for (const FieldDecl *FD : RD->fields()) {
     FD = FD->getFirstDecl();
     // Note that we DO create fields and descriptors
@@ -378,7 +380,7 @@ Record *Program::getOrCreateRecord(const RecordDecl *RD) {
     }
     if (!Desc)
       return nullptr;
-    Fields.push_back({FD, BaseSize, Desc});
+    Fields.emplace_back(FD, Desc, BaseSize);
     BaseSize += align(Desc->getAllocSize());
   }
 
