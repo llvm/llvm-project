@@ -41,10 +41,6 @@ class SystemZPreRASchedStrategy : public GenericScheduler {
   // compare with 0. If CCDef is true MI must also have an implicit def of CC.
   bool definesCmp0Src(const MachineInstr *MI, bool CCDef = true) const;
 
-  // True if the region has many instructions in def-use sequences and would
-  // likely benefit from latency reduction.
-  bool HasDataSequences;
-
 protected:
   bool tryCandidate(SchedCandidate &Cand, SchedCandidate &TryCand,
                     SchedBoundary *Zone) const override;
