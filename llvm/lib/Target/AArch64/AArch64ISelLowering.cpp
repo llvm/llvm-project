@@ -12,7 +12,7 @@
 
 #include "AArch64ISelLowering.h"
 #include "AArch64CallingConvention.h"
-#include "AArch64ExpandImm.h"
+#include "AArch64ExpandPseudo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64RegisterInfo.h"
@@ -3794,8 +3794,8 @@ bool isLegalCmpImmed(APInt C) {
 
 unsigned numberOfInstrToLoadImm(APInt C) {
   uint64_t Imm = C.getZExtValue();
-  SmallVector<AArch64_IMM::ImmInsnModel> Insn;
-  AArch64_IMM::expandMOVImm(Imm, 32, Insn);
+  SmallVector<AArch64_ExpandPseudo::ImmInsnModel> Insn;
+  AArch64_ExpandPseudo::expandMOVImm(Imm, 32, Insn);
   return Insn.size();
 }
 
@@ -13212,8 +13212,9 @@ bool AArch64TargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     // cache pressure. The timings are still the same if you consider
     // movw+movk+fmov vs. adrp+ldr (it's one instruction longer, but the
     // movw+movk is fused). So we limit up to 2 instrdduction at most.
-    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-    AArch64_IMM::expandMOVImm(ImmInt.getZExtValue(), VT.getSizeInBits(), Insn);
+    SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insn;
+    AArch64_ExpandPseudo::expandMOVImm(ImmInt.getZExtValue(),
+                                       VT.getSizeInBits(), Insn);
     assert(Insn.size() <= 4 &&
            "Should be able to build any value with at most 4 moves");
     unsigned Limit = (OptForSize ? 1 : (Subtarget->hasFuseLiterals() ? 4 : 2));
@@ -16439,8 +16440,8 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
 
     // This optimization kicks in if the number of mov instructions
     // is under 2
-    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insns;
-    AArch64_IMM::expandMOVImm(PackedVal.getZExtValue(), 64, Insns);
+    SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insns;
+    AArch64_ExpandPseudo::expandMOVImm(PackedVal.getZExtValue(), 64, Insns);
     if (Insns.size() > 2)
       return SDValue();
 
@@ -19182,10 +19183,10 @@ bool AArch64TargetLowering::isMulAddWithConstProfitable(
   const APInt C1C2 = C1Node->getAPIntValue() * C2Node->getAPIntValue();
   if (!isLegalAddImmediate(C1) || isLegalAddImmediate(C1C2.getSExtValue()))
     return true;
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
+  SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insn;
   // Adapt to the width of a register.
   unsigned BitSize = VT.getSizeInBits() <= 32 ? 32 : 64;
-  AArch64_IMM::expandMOVImm(C1C2.getZExtValue(), BitSize, Insn);
+  AArch64_ExpandPseudo::expandMOVImm(C1C2.getZExtValue(), BitSize, Insn);
   if (Insn.size() > 1)
     return false;
 

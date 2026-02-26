@@ -1,4 +1,4 @@
-//===- AArch64ExpandImm.h - AArch64 Immediate Expansion ---------*- C++ -*-===//
+//===- AArch64ExpandPseudo.h - AArch64 Pseudo Expansion --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,18 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the AArch64 immediate expansion stuff.
+// This file contains the AArch64 pseudo-instruction expansion models.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64EXPANDIMM_H
-#define LLVM_LIB_TARGET_AARCH64_MCTARGETDESC_AARCH64EXPANDIMM_H
+#ifndef LLVM_LIB_TARGET_AARCH64_AARCH64EXPANDPSEUDO_H
+#define LLVM_LIB_TARGET_AARCH64_AARCH64EXPANDPSEUDO_H
 
 #include "llvm/ADT/SmallVector.h"
 
 namespace llvm {
 
-namespace AArch64_IMM {
+namespace AArch64_ExpandPseudo {
 
 struct ImmInsnModel {
   unsigned Opcode;
@@ -25,10 +25,17 @@ struct ImmInsnModel {
   uint64_t Op2;
 };
 
-void expandMOVImm(uint64_t Imm, unsigned BitSize,
-		  SmallVectorImpl<ImmInsnModel> &Insn);
+struct AddrInsnModel {
+  unsigned Opcode;
+};
 
-} // end namespace AArch64_IMM
+void expandMOVImm(uint64_t Imm, unsigned BitSize,
+                  SmallVectorImpl<ImmInsnModel> &Insn);
+
+void expandMOVAddr(unsigned Opcode, unsigned TargetFlags, bool IsTargetMachO,
+                   SmallVectorImpl<AddrInsnModel> &Insn);
+
+} // end namespace AArch64_ExpandPseudo
 
 } // end namespace llvm
 

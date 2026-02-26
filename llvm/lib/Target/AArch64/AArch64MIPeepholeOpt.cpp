@@ -69,7 +69,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AArch64ExpandImm.h"
+#include "AArch64ExpandPseudo.h"
 #include "AArch64InstrInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -245,8 +245,8 @@ bool AArch64MIPeepholeOpt::trySplitLogicalImm(unsigned Opc, MachineInstr &MI,
           return std::nullopt;
 
         // If this immediate can be handled by one instruction, don't split it.
-        SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-        AArch64_IMM::expandMOVImm(Imm, RegSize, Insn);
+        SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insn;
+        AArch64_ExpandPseudo::expandMOVImm(Imm, RegSize, Insn);
         if (Insn.size() == 1)
           return std::nullopt;
 
@@ -414,8 +414,8 @@ static bool splitAddSubImm(T Imm, unsigned RegSize, T &Imm0, T &Imm1) {
     return false;
 
   // The immediate can not be composed via a single instruction.
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(Imm, RegSize, Insn);
+  SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insn;
+  AArch64_ExpandPseudo::expandMOVImm(Imm, RegSize, Insn);
   if (Insn.size() == 1)
     return false;
 
