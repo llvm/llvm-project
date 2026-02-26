@@ -59,22 +59,6 @@ define <vscale x 2 x i32> @negative_scalar() {
   ret <vscale x 2 x i32> %b
 }
 
-define <vscale x 2 x i32> @users() {
-; CHECK-LABEL: define <vscale x 2 x i32> @users(
-; CHECK-SAME: ) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 1431655765, i64 1)
-; CHECK-NEXT:    [[TMP2:%.*]] = call <vscale x 2 x i32> @llvm.riscv.vmv.v.x.nxv2i32.i64(<vscale x 2 x i32> poison, i32 -1431655766, i64 1)
-; CHECK-NEXT:    [[RET1:%.*]] = xor <vscale x 2 x i32> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    ret <vscale x 2 x i32> [[RET1]]
-;
-  %vmv.1 = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
-  %cast.1 = bitcast <vscale x 8 x i8> %vmv.1 to <vscale x 2 x i32>
-  %vmv.2 = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 -86, i64 4)
-  %cast.2 = bitcast <vscale x 8 x i8> %vmv.2 to <vscale x 2 x i32>
-  %ret = xor <vscale x 2 x i32> %cast.1, %cast.2
-  ret <vscale x 2 x i32> %ret
-}
-
 define <vscale x 8 x i8> @no_bitcast() {
 ; CHECK-LABEL: define <vscale x 8 x i8> @no_bitcast(
 ; CHECK-SAME: ) #[[ATTR0]] {
@@ -83,6 +67,27 @@ define <vscale x 8 x i8> @no_bitcast() {
 ;
   %a = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
   ret <vscale x 8 x i8> %a
+}
+
+declare void @use.nxv2i32(<vscale x 2 x i32>)
+declare void @use.nxv1i64(<vscale x 1 x i64>)
+
+define void @bitcast_users_type_mismatch() {
+; CHECK-LABEL: define void @bitcast_users_type_mismatch(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:    [[VMV:%.*]] = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8.i64(<vscale x 8 x i8> poison, i8 85, i64 4)
+; CHECK-NEXT:    [[CAST_1:%.*]] = bitcast <vscale x 8 x i8> [[VMV]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[CAST_2:%.*]] = bitcast <vscale x 8 x i8> [[VMV]] to <vscale x 1 x i64>
+; CHECK-NEXT:    call void @use.nxv2i32(<vscale x 2 x i32> [[CAST_1]])
+; CHECK-NEXT:    call void @use.nxv1i64(<vscale x 1 x i64> [[CAST_2]])
+; CHECK-NEXT:    ret void
+;
+  %vmv = call <vscale x 8 x i8> @llvm.riscv.vmv.v.x.nxv8i8(<vscale x 8 x i8> poison, i8 85, i64 4)
+  %cast.1 = bitcast <vscale x 8 x i8> %vmv to <vscale x 2 x i32>
+  %cast.2 = bitcast <vscale x 8 x i8> %vmv to <vscale x 1 x i64>
+  call void @use.nxv2i32(<vscale x 2 x i32> %cast.1)
+  call void @use.nxv1i64(<vscale x 1 x i64> %cast.2)
+  ret void
 }
 
 define <vscale x 1 x i64> @bitcast_target_elt_type_too_large() {
