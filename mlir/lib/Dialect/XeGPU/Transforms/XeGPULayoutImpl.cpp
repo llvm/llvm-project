@@ -697,15 +697,14 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
 
   if (!isChunkedLoad) {
     if (layoutKind == xegpu::LayoutKind::InstData) {
-      instData.back() =
-          std::min(static_cast<int>(consumerInstData.back()),
-                   maxChunkSize * subgroupSize);
+      instData.back() = std::min(static_cast<int>(consumerInstData.back()),
+                                 maxChunkSize * subgroupSize);
       return xegpu::LayoutAttr::get(context, instData);
     } else if (layoutKind == xegpu::LayoutKind::Lane) {
       laneData.back() =
           std::min(static_cast<int>(consumerLaneData.back()), maxChunkSize);
-      laneLayout.back() =
-          std::min(static_cast<int64_t>(subgroupSize), resShape.back()/laneData.back());
+      laneLayout.back() = std::min(static_cast<int64_t>(subgroupSize),
+                                   resShape.back() / laneData.back());
       return xegpu::LayoutAttr::get(context, laneLayout, laneData);
     }
   } else {
@@ -741,8 +740,8 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
 
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
-                                      (chunkSize > 1), maxChunkSize,
-                                      resShape, subgroupSize);
+                                      (chunkSize > 1), maxChunkSize, resShape,
+                                      subgroupSize);
 }
 
 /// Sets up the anchor layout for load matrix operation.
