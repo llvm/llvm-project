@@ -14,8 +14,22 @@ square:
     .export_name square, "[square]"
     end_function
 
+mid$dollar:
+    .globl mid$dollar
+    .functype mid$dollar () -> ()
+    .export_name mid$dollar, mid$dollar
+    end_function
+
+mid?question:
+    .globl mid?question
+    .functype mid?question () -> ()
+    .export_name mid?question, mid?question
+    end_function
+
 # CHECK: .export_name foo, bar
 # CHECK: .export_name square, "[square]"
+# CHECK: .export_name mid$dollar, mid$dollar
+# CHECK: .export_name mid?question, mid?question
 
 # CHECK-OBJ:        - Type:            EXPORT
 # CHECK-OBJ-NEXT:     Exports:
@@ -36,3 +50,13 @@ square:
 # CHECK-OBJ-NEXT:         Name:            square
 # CHECK-OBJ-NEXT:         Flags:           [ EXPORTED ]
 # CHECK-OBJ-NEXT:         Function:        1
+# CHECK-OBJ-NEXT:       - Index:           2
+# CHECK-OBJ-NEXT:         Kind:            FUNCTION
+# CHECK-OBJ-NEXT:         Name:            'mid$dollar'
+# CHECK-OBJ-NEXT:         Flags:           [ EXPORTED ]
+# CHECK-OBJ-NEXT:         Function:        2
+# CHECK-OBJ-NEXT:       - Index:           3
+# CHECK-OBJ-NEXT:         Kind:            FUNCTION
+# CHECK-OBJ-NEXT:         Name:            'mid?question'
+# CHECK-OBJ-NEXT:         Flags:           [ EXPORTED ]
+# CHECK-OBJ-NEXT:         Function:        3
