@@ -99,6 +99,7 @@ Clang-Tidy Checks
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
+   :doc:`bugprone-exception-baseclass <bugprone/exception-baseclass>`,
    :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`bugprone-exception-escape <bugprone/exception-escape>`,
    :doc:`bugprone-float-loop-counter <bugprone/float-loop-counter>`,
@@ -240,7 +241,6 @@ Clang-Tidy Checks
    :doc:`google-runtime-int <google/runtime-int>`,
    :doc:`google-runtime-operator <google/runtime-operator>`,
    :doc:`google-upgrade-googletest-case <google/upgrade-googletest-case>`, "Yes"
-   :doc:`hicpp-exception-baseclass <hicpp/exception-baseclass>`,
    :doc:`hicpp-ignored-remove-result <hicpp/ignored-remove-result>`,
    :doc:`hicpp-multiway-paths-covered <hicpp/multiway-paths-covered>`,
    :doc:`hicpp-no-assembler <hicpp/no-assembler>`,

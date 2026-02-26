@@ -26,6 +26,7 @@ add_clang_library(clangTidyBugproneModule STATIC
   DynamicStaticInitializersCheck.cpp
   EasilySwappableParametersCheck.cpp
   EmptyCatchCheck.cpp
+  ExceptionBaseclassCheck.cpp
   ExceptionCopyConstructorThrowsCheck.cpp
   ExceptionEscapeCheck.cpp
   FloatLoopCounterCheck.cpp

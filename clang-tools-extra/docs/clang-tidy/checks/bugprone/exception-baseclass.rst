@@ -1,6 +1,6 @@
-.. title:: clang-tidy - hicpp-exception-baseclass
+.. title:: clang-tidy - bugprone-exception-baseclass
 
-hicpp-exception-baseclass
+bugprone-exception-baseclass
 =========================
 
 Ensure that every value that in a ``throw`` expression is an instance of
