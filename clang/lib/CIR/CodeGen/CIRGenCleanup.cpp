@@ -228,7 +228,6 @@ static mlir::Block *createNormalEntry(CIRGenFunction &cgf,
   return entry;
 }
 
-/// Pops a cleanup block.
 void CIRGenFunction::popCleanupBlock() {
   assert(!ehStack.empty() && "cleanup stack is empty!");
   assert(isa<EHCleanupScope>(*ehStack.begin()) && "top not a cleanup!");
