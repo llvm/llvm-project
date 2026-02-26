@@ -3,9 +3,15 @@
 
 /// CodeGenFunction::ConstantFoldsToSimpleInteger() for the if condition
 /// needs to succeed and return true.
+/// When re-visiting p during that evaluation, we need to attach the local
+/// variable to the topmost scope, otherwise we will pick the call scope
+/// of to_address and de-allocate the local variable at the end of the
+/// to_address call.
+/// FIXME: This is not currently correct since we still mark p as
+/// constexpr-unknown and then reject it when comparing.
 extern void abort2();
-constexpr const int* to_address(const int *p) {
-  return p;
+constexpr const int* to_address(const int *a) {
+  return a;
 }
 void rightscope() {
   const int p = 0;
