@@ -25,8 +25,8 @@ using namespace llvm;
 static bool shouldQuoteName(StringRef Name) {
   // Wasm export/import names and import module names can contain characters
   // that are not allowed in identifiers, so we need to quote them.
-  auto isValidStartChar = [](char C) { return isalpha(C) || C == '_' || C == '.' || C == '$'; };
-  auto isValidChar = [&](char C) { return isValidStartChar(C) || isdigit(C); };
+  auto isValidStartChar = [](char C) { return isalpha(C) || C == '_' || C == '.'; };
+  auto isValidChar = [&](char C) { return isValidStartChar(C) || isdigit(C) || C == '$'; };
   return !(Name.size() > 0 && isValidStartChar(Name.front())) || 
         llvm::any_of(Name, [&](char C) { return !isValidChar(C); });
 }

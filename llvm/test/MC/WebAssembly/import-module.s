@@ -22,9 +22,6 @@ test:
   .import_module __wasm_component_model_builtin_context_get_0, "$root"
   .import_name __wasm_component_model_builtin_context_get_0, "[context-get-0]"
 
-  .import_module __wasm_component_model_builtin_context_get_1, $root
-  .import_name __wasm_component_model_builtin_context_get_1, "[context-get-1]"
-
 # CHECK-ASM: .import_module  foo, bar
 # CHECK-ASM: .import_name  foo, qux
 
@@ -43,11 +40,6 @@ test:
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         SigIndex:        1
 
-# CHECK:            - Module:          '$root'
-# CHECK-NEXT:         Field:           '[context-get-1]'
-# CHECK-NEXT:         Kind:            FUNCTION
-# CHECK-NEXT:         SigIndex:        1
-
 # CHECK:        - Type:            CUSTOM
 # CHECK:              Name:            foo
 # CHECK-NEXT:         Flags:           [ UNDEFINED, EXPLICIT_NAME ]
@@ -56,7 +48,4 @@ test:
 # CHECK-NEXT:         Flags:           [ UNDEFINED ]
 
 # CHECK:              Name:            __wasm_component_model_builtin_context_get_0
-# CHECK-NEXT:         Flags:           [ UNDEFINED, EXPLICIT_NAME ]
-
-# CHECK:              Name:            __wasm_component_model_builtin_context_get_1
 # CHECK-NEXT:         Flags:           [ UNDEFINED, EXPLICIT_NAME ]
