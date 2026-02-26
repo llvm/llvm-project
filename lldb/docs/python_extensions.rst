@@ -38,6 +38,14 @@ Scripted Platform Plugins
     :skip: ABCMeta
     :no-inheritance-diagram:
 
+Scripted Symbol Locator Plugins
+-----------------------------------
+
+.. automodapi:: lldb.plugins.scripted_symbol_locator
+    :no-heading:
+    :skip: ABCMeta, LocalCacheSymbolLocator
+    :no-inheritance-diagram:
+
 Scripted Thread Plan Plugins
 -------------------------------
 
