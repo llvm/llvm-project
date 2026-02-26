@@ -227,16 +227,16 @@ private:
   /// successful, returns C and update UserChain as a def-use chain from C to V;
   /// otherwise, UserChain is empty.
   ///
-  /// \p V            The given expression
-  /// \p SignExtended Whether V will be sign-extended in the computation of the
-  ///                 GEP index
-  /// \p ZeroExtended Whether V will be zero-extended in the computation of the
-  ///                 GEP index
-  /// \p NonNegative  Whether V is guaranteed to be non-negative. For example,
-  ///                 an index of an inbounds GEP of a base address is
-  ///                 guaranteed to be non-negative. Leveraging this, we can
-  ///                 better split inbounds GEPs.
-  /// \p GEPInboundsNUW  Whether the GEP is both inbounds and nuw.
+  /// \p V              The given expression
+  /// \p SignExtended   Whether V will be sign-extended in the computation of
+  ///                   the GEP index
+  /// \p ZeroExtended   Whether V will be zero-extended in the computation of
+  ///                   the GEP index
+  /// \p NonNegative    Whether V is guaranteed to be non-negative. For example,
+  ///                   an index of an inbounds GEP of a base address is
+  ///                   guaranteed to be non-negative. Leveraging this, we can
+  ///                   better split inbounds GEPs.
+  /// \p GEPInboundsNUW Whether the GEP is both inbounds and nuw.
   APInt find(Value *V, bool SignExtended, bool ZeroExtended, bool NonNegative,
              bool GEPInboundsNUW);
 
@@ -294,7 +294,7 @@ private:
   /// \p ZeroExtended Whether BO is surrounded by zext
   /// \p NonNegative Whether BO is known to be non-negative, e.g., an in-bound
   ///                array index.
-  /// \p GEPInboundsNUW 
+  /// \p GEPInboundsNUW Whether the GEP is both inbounds and nuw.
   bool CanTraceInto(bool SignExtended, bool ZeroExtended, BinaryOperator *BO,
                     bool NonNegative, bool GEPInboundsNUW);
 
@@ -610,7 +610,8 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
   } else if (isa<TruncInst>(V)) {
     ConstantOffset = find(U->getOperand(0), SignExtended, ZeroExtended,
-                          NonNegative, GEPInboundsNUW).trunc(BitWidth);
+                          NonNegative, GEPInboundsNUW)
+                         .trunc(BitWidth);
   } else if (isa<SExtInst>(V)) {
     ConstantOffset = find(U->getOperand(0), /* SignExtended */ true,
                           ZeroExtended, NonNegative, GEPInboundsNUW)
@@ -625,7 +626,8 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     // Clear the NonNegative flag, because zext(a) >= 0 does not imply a >= 0.
     ConstantOffset = find(U->getOperand(0), /* SignExtended */ false,
                           /* ZeroExtended */ true, /* NonNegative */ false,
-                          /* GEPInboundsNUW */ false).zext(BitWidth);
+                          /* GEPInboundsNUW */ false)
+                         .zext(BitWidth);
   }
 
   // If we found a non-zero constant offset, add it to the path for
