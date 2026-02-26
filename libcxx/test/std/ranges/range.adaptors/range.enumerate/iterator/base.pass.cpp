@@ -17,58 +17,97 @@
 // constexpr const iterator_t<Base>& base() const & noexcept;
 // constexpr iterator_t<Base> base() &&;
 
-#include <array>
 #include <cassert>
 #include <concepts>
-#include <memory>
 #include <ranges>
 #include <utility>
-#include <tuple>
 
 #include "test_iterators.h"
+
 #include "../types.h"
 
-template <class Iterator>
-constexpr void testBase() {
-  using Sentinel          = sentinel_wrapper<Iterator>;
-  using View              = MinimalView<Iterator, Sentinel>;
-  using EnumerateView     = std::ranges::enumerate_view<View>;
-  using EnumerateIterator = std::ranges::iterator_t<EnumerateView>;
+template <typename Iter>
+constexpr void testBase_with_CommonRange() {
+  using CommonRange = MinimalRange<Iter, Iter>;
+  static_assert(std::ranges::range<CommonRange>);
+  static_assert(std::ranges::common_range<CommonRange>);
 
-  auto make_enumerate_view = [](auto begin, auto end) {
-    View view{Iterator(std::to_address(base(begin))), Sentinel(Iterator(std::to_address(base(end))))};
+  int arr[] = {94, 1, 2, 82};
 
-    return EnumerateView(std::move(view));
-  };
+  CommonRange range{Iter{arr}, Iter{arr + 4}};
 
-  std::array array{0, 1, 2, 3, 84};
-  const auto view = make_enumerate_view(array.begin(), array.end());
+  auto ev = range | std::views::enumerate;
+
+  auto it = ev.begin();
 
   // Test the const& version
   {
-    EnumerateIterator const it                          = view.begin();
-    std::same_as<const Iterator&> decltype(auto) result = it.base();
-    ASSERT_NOEXCEPT(it.base());
-    assert(base(result) == std::to_address(base(array.begin())));
+    std::same_as<const Iter&> decltype(auto) resultIt = std::as_const(it).base();
+    static_assert(noexcept((it.base())));
+
+    assert(base(resultIt) == &arr[0]);
+    assert(*resultIt == 94);
   }
 
   // Test the && version
   {
-    EnumerateIterator it                         = view.begin();
-    std::same_as<Iterator> decltype(auto) result = std::move(it).base();
-    assert(base(result) == std::to_address(base(array.begin())));
+    std::same_as<Iter> decltype(auto) resultIt = std::move(it).base();
+
+    assert(base(resultIt) == &arr[0]);
+    assert(*resultIt == 94);
+  }
+}
+
+template <typename Iter>
+constexpr void testBase_with_NonCommonRange() {
+  using Sent =sentinel_wrapper<Iter>;
+  using NonCommonRange = MinimalRange<Iter, Sent>;
+  static_assert(!std::ranges::common_range<NonCommonRange>);
+
+  int arr[] = {94, 1, 2, 82};
+
+  NonCommonRange range{Iter{arr}, Sent{Iter{arr + 4}}};
+
+  auto ev = range | std::views::enumerate;
+
+  auto it = ev.begin();
+
+  // Test the const& version
+  {
+    std::same_as<const Iter&> decltype(auto) resultIt = std::as_const(it).base();
+    static_assert(noexcept((it.base())));
+
+    assert(base(resultIt) == &arr[0]);
+    assert(*resultIt == 94);
+  }
+
+  // Test the && version
+  {
+    std::same_as<Iter> decltype(auto) resultIt = std::move(it).base();
+
+    assert(base(resultIt) == &arr[0]);
+    assert(*resultIt == 94);
   }
 }
 
 constexpr bool test() {
-  testBase<cpp17_input_iterator<int*>>();
-  testBase<cpp20_input_iterator<int*>>();
-  testBase<forward_iterator<int*>>();
-  testBase<bidirectional_iterator<int*>>();
-  testBase<random_access_iterator<int*>>();
-  testBase<contiguous_iterator<int*>>();
-  testBase<int*>();
-  testBase<int const*>();
+  // testBase_with_CommonRange<cpp17_input_iterator<int*>>();
+  // testBase_with_CommonRange<cpp20_input_iterator<int*>>();
+  testBase_with_CommonRange<forward_iterator<int*>>();
+  testBase_with_CommonRange<bidirectional_iterator<int*>>();
+  testBase_with_CommonRange<random_access_iterator<int*>>();
+  testBase_with_CommonRange<contiguous_iterator<int*>>();
+  testBase_with_CommonRange<int*>();
+  testBase_with_CommonRange<int const*>();
+
+  testBase_with_NonCommonRange<cpp17_input_iterator<int*>>();
+  testBase_with_NonCommonRange<cpp20_input_iterator<int*>>();
+  testBase_with_NonCommonRange<forward_iterator<int*>>();
+  testBase_with_NonCommonRange<bidirectional_iterator<int*>>();
+  testBase_with_NonCommonRange<random_access_iterator<int*>>();
+  testBase_with_NonCommonRange<contiguous_iterator<int*>>();
+  testBase_with_NonCommonRange<int*>();
+  testBase_with_NonCommonRange<int const*>();
 
   return true;
 }

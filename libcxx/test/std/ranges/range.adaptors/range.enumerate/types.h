@@ -55,9 +55,17 @@ struct MinimalDefaultConstructedView : std::ranges::view_base {
 
 static_assert(std::ranges::view<MinimalDefaultConstructedView>);
 
-template <class Iterator, class Sentinel>
+template <class Iterator, class Sentinel = Iterator>
 struct MinimalView : std::ranges::view_base {
   constexpr explicit MinimalView(Iterator it, Sentinel sent) : it_(base(std::move(it))), sent_(base(std::move(sent))) {}
+
+  // The view should be cheaply copyable like most standard views.  Previous
+  // versions only declared the move operations which suppressed the implicit
+  // copy constructor/assignment, making `MinimalView` move-only.  That broke
+  // the pipe expression in the iterator tests, because `std::views::all` (used
+  // by the adaptor) copies its argument when given an lvalue.
+  MinimalView(const MinimalView&)            = default;
+  MinimalView& operator=(const MinimalView&) = default;
 
   MinimalView(MinimalView&&)            = default;
   MinimalView& operator=(MinimalView&&) = default;
@@ -70,6 +78,7 @@ private:
   decltype(base(std::declval<Sentinel>())) sent_;
 };
 
+static_assert(std::ranges::view<MinimalView<random_access_iterator<int*>>>);
 static_assert(std::ranges::view<MinimalView<cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>>);
 
 struct NotInvocable {};
@@ -132,5 +141,30 @@ public:
     return tmp;
   }
 };
+
+template <class Iterator, class Sentinel = Iterator>
+struct MinimalRange  {
+  constexpr explicit MinimalRange(Iterator it, Sentinel sent) : it_(base(std::move(it))), sent_(base(std::move(sent))) {}
+
+  // The view should be cheaply copyable like most standard views.  Previous
+  // versions only declared the move operations which suppressed the implicit
+  // copy constructor/assignment, making `MinimalView` move-only.  That broke
+  // the pipe expression in the iterator tests, because `std::views::all` (used
+  // by the adaptor) copies its argument when given an lvalue.
+  MinimalRange(const MinimalRange&)            = default;
+  MinimalRange& operator=(const MinimalRange&) = default;
+
+  MinimalRange(MinimalRange&&)            = default;
+  MinimalRange& operator=(MinimalRange&&) = default;
+
+  constexpr Iterator begin() const { return Iterator(it_); }
+  constexpr Sentinel end() const { return Sentinel(sent_); }
+
+private:
+  decltype(base(std::declval<Iterator>())) it_;
+  decltype(base(std::declval<Sentinel>())) sent_;
+};
+
+static_assert(std::ranges::range<MinimalRange<cpp17_input_iterator<int*>>>);
 
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_ENUMERATE_TYPES_H
