@@ -1684,6 +1684,35 @@ SBDebugger::LoadTraceFromFile(SBError &error,
   return SBTrace::LoadTraceFromFile(error, *this, trace_description_file);
 }
 
+lldb::SBError
+SBDebugger::RegisterScriptedSymbolLocator(const char *class_name,
+                                          lldb::SBStructuredData &args) {
+  LLDB_INSTRUMENT_VA(this, class_name, args);
+
+  lldb::SBError sb_error;
+  if (!m_opaque_sp) {
+    sb_error.SetErrorString("invalid debugger");
+    return sb_error;
+  }
+
+  StructuredData::DictionarySP args_sp;
+  StructuredData::ObjectSP obj_sp = args.m_impl_up->GetObjectSP();
+  if (obj_sp && obj_sp->GetType() == lldb::eStructuredDataTypeDictionary)
+    args_sp = std::static_pointer_cast<StructuredData::Dictionary>(obj_sp);
+
+  Status error = PluginManager::RegisterScriptedSymbolLocator(
+      *m_opaque_sp, class_name, args_sp);
+  if (error.Fail())
+    sb_error.SetErrorString(error.AsCString());
+  return sb_error;
+}
+
+void SBDebugger::ClearScriptedSymbolLocators() {
+  LLDB_INSTRUMENT_VA(this);
+
+  PluginManager::ClearScriptedSymbolLocators();
+}
+
 void SBDebugger::RequestInterrupt() {
   LLDB_INSTRUMENT_VA(this);
 

@@ -4691,6 +4691,134 @@ protected:
   OptionGroupBoolean m_current_stack_option;
 };
 
+#pragma mark CommandObjectTargetSymbolsScriptedRegister
+
+class CommandObjectTargetSymbolsScriptedRegister : public CommandObjectParsed {
+public:
+  CommandObjectTargetSymbolsScriptedRegister(CommandInterpreter &interpreter)
+      : CommandObjectParsed(
+            interpreter, "target symbols scripted register",
+            "Register a scripted symbol locator globally.",
+            "target symbols scripted register -C <script-class> "
+            "[-k <key> -v <value> ...]"),
+        m_python_class_options("scripted symbol locator", true, 'C', 'k', 'v',
+                               OptionGroupPythonClassWithDict::eScriptClass) {
+    m_all_options.Append(&m_python_class_options,
+                         LLDB_OPT_SET_1 | LLDB_OPT_SET_2, LLDB_OPT_SET_1);
+    m_all_options.Finalize();
+  }
+
+  ~CommandObjectTargetSymbolsScriptedRegister() override = default;
+
+  Options *GetOptions() override { return &m_all_options; }
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    llvm::StringRef class_name = m_python_class_options.GetName();
+    if (class_name.empty()) {
+      result.AppendError("must specify a script class with -C");
+      return;
+    }
+
+    StructuredData::DictionarySP args_sp;
+    StructuredData::ObjectSP extra = m_python_class_options.GetStructuredData();
+    if (extra && extra->GetType() == lldb::eStructuredDataTypeDictionary)
+      args_sp = std::static_pointer_cast<StructuredData::Dictionary>(extra);
+
+    Debugger &debugger = GetDebugger();
+    Status error = PluginManager::RegisterScriptedSymbolLocator(
+        debugger, class_name, args_sp);
+    if (error.Fail()) {
+      result.AppendErrorWithFormat(
+          "failed to register scripted symbol locator: %s\n",
+          error.AsCString());
+      return;
+    }
+
+    result.AppendMessageWithFormat("Registered scripted symbol locator '%s'.\n",
+                                   class_name.str().c_str());
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+
+  OptionGroupPythonClassWithDict m_python_class_options;
+  OptionGroupOptions m_all_options;
+};
+
+#pragma mark CommandObjectTargetSymbolsScriptedClear
+
+class CommandObjectTargetSymbolsScriptedClear : public CommandObjectParsed {
+public:
+  CommandObjectTargetSymbolsScriptedClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target symbols scripted clear",
+                            "Clear all scripted symbol locators.",
+                            "target symbols scripted clear") {}
+
+  ~CommandObjectTargetSymbolsScriptedClear() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    PluginManager::ClearScriptedSymbolLocators();
+    result.AppendMessageWithFormat("Cleared all scripted symbol locators.\n");
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+#pragma mark CommandObjectTargetSymbolsScriptedInfo
+
+class CommandObjectTargetSymbolsScriptedInfo : public CommandObjectParsed {
+public:
+  CommandObjectTargetSymbolsScriptedInfo(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "target symbols scripted info",
+                            "List all registered scripted symbol locators.",
+                            "target symbols scripted info") {}
+
+  ~CommandObjectTargetSymbolsScriptedInfo() override = default;
+
+protected:
+  void DoExecute(Args &command, CommandReturnObject &result) override {
+    size_t num = PluginManager::GetNumScriptedSymbolLocators();
+    if (num == 0) {
+      result.AppendMessageWithFormat(
+          "No scripted symbol locators registered.\n");
+      result.SetStatus(eReturnStatusSuccessFinishResult);
+      return;
+    }
+
+    result.AppendMessageWithFormat(
+        "%zu scripted symbol locator(s) registered:\n", num);
+    for (size_t i = 0; i < num; i++) {
+      result.AppendMessageWithFormat(
+          "  [%zu] %s\n", i,
+          PluginManager::GetScriptedSymbolLocatorClassName(i).str().c_str());
+    }
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+  }
+};
+
+#pragma mark CommandObjectTargetSymbolsScripted
+
+class CommandObjectTargetSymbolsScripted : public CommandObjectMultiword {
+public:
+  CommandObjectTargetSymbolsScripted(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(
+            interpreter, "target symbols scripted",
+            "Commands for managing scripted symbol locators.",
+            "target symbols scripted <sub-command> ...") {
+    LoadSubCommand(
+        "register",
+        CommandObjectSP(
+            new CommandObjectTargetSymbolsScriptedRegister(interpreter)));
+    LoadSubCommand(
+        "clear", CommandObjectSP(
+                     new CommandObjectTargetSymbolsScriptedClear(interpreter)));
+    LoadSubCommand(
+        "info", CommandObjectSP(
+                    new CommandObjectTargetSymbolsScriptedInfo(interpreter)));
+  }
+
+  ~CommandObjectTargetSymbolsScripted() override = default;
+};
+
 #pragma mark CommandObjectTargetSymbols
 
 // CommandObjectTargetSymbols
@@ -4705,6 +4833,9 @@ public:
             "target symbols <sub-command> ...") {
     LoadSubCommand(
         "add", CommandObjectSP(new CommandObjectTargetSymbolsAdd(interpreter)));
+    LoadSubCommand(
+        "scripted",
+        CommandObjectSP(new CommandObjectTargetSymbolsScripted(interpreter)));
   }
 
   ~CommandObjectTargetSymbols() override = default;

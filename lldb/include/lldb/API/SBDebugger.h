@@ -667,6 +667,26 @@ public:
   SBTrace LoadTraceFromFile(SBError &error,
                             const SBFileSpec &trace_description_file);
 
+  /// Register a scripted symbol locator globally.
+  ///
+  /// Scripted symbol locators are consulted for all symbol/source
+  /// resolution requests across all targets. Multiple locators can be
+  /// registered; each is called in order until one returns a result.
+  ///
+  /// \param[in] class_name
+  ///     The Python class implementing the symbol locator.
+  ///
+  /// \param[in] args
+  ///     Optional structured data arguments passed to the locator.
+  ///
+  /// \return
+  ///     An SBError indicating success or failure.
+  lldb::SBError RegisterScriptedSymbolLocator(const char *class_name,
+                                              lldb::SBStructuredData &args);
+
+  /// Clear all registered scripted symbol locators.
+  void ClearScriptedSymbolLocators();
+
 protected:
   friend class lldb_private::CommandPluginInterfaceImplementation;
   friend class lldb_private::python::SWIGBridge;
