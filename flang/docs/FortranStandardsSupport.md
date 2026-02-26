@@ -48,7 +48,7 @@ status of all important Fortran 2023 features. The table entries are based on th
 | Extensions for c_f_pointer intrinsic                       | Y      | |
 | Procedures for converting between fortran and c strings    | N      | |
 | The at edit descriptor                                     | N      | |
-| Control over leading zeros in output of real values        | N      | |
+| Control over leading zeros in output of real values        | P      | LZ/LZS/LZP edit descriptors implemented; LEADING_ZERO=specifier not yet implemented     |
 | Extensions for Namelist                                    | N      | |
 | Allow an object of a type with a coarray ultimate component to be an array or allocatable | N | |
 | Put with Notify                                            | N      | |
