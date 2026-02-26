@@ -1,4 +1,4 @@
-//===-- Implementation of nexttowardl function ----------------------------===//
+//===-- Shared nexttowardl function -----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/nexttowardl.h"
+#ifndef LLVM_LIBC_SHARED_MATH_NEXTTOWARDL_H
+#define LLVM_LIBC_SHARED_MATH_NEXTTOWARDL_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/nexttowardl.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(long double, nexttowardl, (long double x, long double y)) {
-  return math::nexttowardl(x, y);
-}
+using math::nexttowardl;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_NEXTTOWARDL_H
