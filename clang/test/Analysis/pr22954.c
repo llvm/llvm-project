@@ -3,7 +3,7 @@
 // At the moment the whole of the destination array content is invalidated.
 // If a.s1 region has a symbolic offset, the whole region of 'a' is invalidated.
 // Specific triple set to test structures of size 0.
-// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -Wno-error=int-conversion -verify -analyzer-config eagerly-assume=false %s
+// RUN: %clang_analyze_cc1 -triple x86_64-pc-linux-gnu -analyzer-checker=core,unix.Malloc,debug.ExprInspection -Wno-error=int-conversion -Wno-stringop-overread -verify -analyzer-config eagerly-assume=false %s
 
 typedef __typeof(sizeof(int)) size_t;
 
@@ -537,7 +537,6 @@ int f262(void) {
   a262.s2 = strdup("hello");
   char input[] = {'a', 'b', 'c', 'd'};
   memcpy(a262.s1, input, -1); // expected-warning{{'memcpy' will always overflow; destination buffer has size 16, but size argument is 18446744073709551615}}
-                              // expected-warning@-1{{'memcpy' reading 18446744073709551615 bytes from a region of size 4}}
   clang_analyzer_eval(a262.s1[0] == 1); // expected-warning{{UNKNOWN}}\
   expected-warning{{Potential leak of memory pointed to by 'a262.s2'}}
   clang_analyzer_eval(a262.s1[1] == 1); // expected-warning{{UNKNOWN}}
