@@ -1412,11 +1412,7 @@ DIE &DwarfCompileUnit::constructCallSiteEntryDIE(
   } else if (CalleeSP) {
     DIE *CalleeDIE = getOrCreateSubprogramDIE(CalleeSP, CalleeF);
     assert(CalleeDIE && "Could not create DIE for call site entry origin");
-    if (AddLinkageNamesToDeclCallOriginsForTuning(DD) &&
-        !CalleeSP->isDefinition() &&
-        !CalleeDIE->findAttribute(dwarf::DW_AT_linkage_name)) {
-      addLinkageName(*CalleeDIE, CalleeSP->getLinkageName());
-    }
+    addLinkageNamesToDeclarations(*DD, *CalleeSP, *CalleeDIE);
 
     addDIEEntry(CallSiteDIE, getDwarf5OrGNUAttr(dwarf::DW_AT_call_origin),
                 *CalleeDIE);
@@ -1966,4 +1962,13 @@ DIE *DwarfCompileUnit::getOrCreateSubprogramDIE(const DISubprogram *SP,
   }
 
   return DwarfUnit::getOrCreateSubprogramDIE(SP, F, Minimal);
+}
+
+void DwarfCompileUnit::addLinkageNamesToDeclarations(
+    const DwarfDebug &DD, const DISubprogram &CalleeSP, DIE &CalleeDIE) {
+  if (AddLinkageNamesToDeclCallOriginsForTuning(&DD) &&
+      !CalleeSP.isDefinition() &&
+      !CalleeDIE.findAttribute(dwarf::DW_AT_linkage_name)) {
+    addLinkageName(CalleeDIE, CalleeSP.getLinkageName());
+  }
 }
