@@ -6,18 +6,16 @@ define amdgpu_ps void @test_fpclass_zext(float inreg %x, i32 %y, ptr addrspace(1
 ; GFX9-LABEL: test_fpclass_zext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX9-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX9-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[0:1]
+; GFX9-NEXT:    v_add_u32_e32 v0, v3, v0
 ; GFX9-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: test_fpclass_zext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GFX10-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX10-NEXT:    s_cselect_b32 s0, 1, 0
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, 1, s[0:1]
+; GFX10-NEXT:    v_add_nc_u32_e32 v0, v3, v0
 ; GFX10-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX10-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
@@ -31,18 +29,16 @@ define amdgpu_ps void @test_fpclass_sext(float inreg %x, i32 %y, ptr addrspace(1
 ; GFX9-LABEL: test_fpclass_sext:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX9-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX9-NEXT:    v_add_u32_e32 v0, s0, v0
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, -1, s[0:1]
+; GFX9-NEXT:    v_add_u32_e32 v0, v3, v0
 ; GFX9-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX9-NEXT:    s_endpgm
 ;
 ; GFX10-LABEL: test_fpclass_sext:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GFX10-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX10-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX10-NEXT:    v_add_nc_u32_e32 v0, s0, v0
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, -1, s[0:1]
+; GFX10-NEXT:    v_add_nc_u32_e32 v0, v3, v0
 ; GFX10-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX10-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
@@ -134,14 +130,36 @@ define amdgpu_ps void @test_fpclass_select_fconst_fconst(float inreg %x, ptr add
 ; GCN-LABEL: test_fpclass_select_fconst_fconst:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GCN-NEXT:    s_cselect_b32 s0, 1.0, -1.0
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
+; GCN-NEXT:    v_cndmask_b32_e64 v2, -1.0, 1.0, s[0:1]
 ; GCN-NEXT:    global_store_dword v[0:1], v2, off
 ; GCN-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   %sel = select i1 %cond, float 1.0, float -1.0
   store float %sel, ptr addrspace(1) %ptr
+  ret void
+}
+
+define amdgpu_ps void @test_fpclass_select_fconst_f16(half inreg %x, float inreg %y, ptr addrspace(1) %ptr) {
+; GFX9-LABEL: test_fpclass_select_fconst_f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_add_f16_e64 v2, s2, s2
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0x3c00
+; GFX9-NEXT:    v_cmp_class_f32_e64 vcc, s3, 3
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
+; GFX9-NEXT:    global_store_short v[0:1], v2, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_fpclass_select_fconst_f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_add_f16_e64 v2, s2, s2
+; GFX10-NEXT:    v_cmp_class_f32_e64 vcc, s3, 3
+; GFX10-NEXT:    v_cndmask_b32_e32 v2, 0x3c00, v2, vcc
+; GFX10-NEXT:    global_store_short v[0:1], v2, off
+; GFX10-NEXT:    s_endpgm
+  %res = fadd half %x, %x
+  %cond = call i1 @llvm.is.fpclass.f32(float %y, i32 3)
+  %sel = select i1 %cond, half %res, half 1.0
+  store half %sel, ptr addrspace(1) %ptr
   ret void
 }
 
@@ -247,14 +265,14 @@ define amdgpu_ps float @test_brcond(float inreg %x) {
 ; GCN-NEXT:    s_cselect_b32 s0, 1, 0
 ; GCN-NEXT:    s_xor_b32 s0, s0, 1
 ; GCN-NEXT:    s_cmp_lg_u32 s0, 0
-; GCN-NEXT:    s_cbranch_scc1 .LBB10_2
+; GCN-NEXT:    s_cbranch_scc1 .LBB11_2
 ; GCN-NEXT:  ; %bb.1: ; %if.true
 ; GCN-NEXT:    v_mov_b32_e32 v0, 1.0
-; GCN-NEXT:    s_branch .LBB10_3
-; GCN-NEXT:  .LBB10_2: ; %if.false
+; GCN-NEXT:    s_branch .LBB11_3
+; GCN-NEXT:  .LBB11_2: ; %if.false
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_branch .LBB10_3
-; GCN-NEXT:  .LBB10_3:
+; GCN-NEXT:    s_branch .LBB11_3
+; GCN-NEXT:  .LBB11_3:
 entry:
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   br i1 %cond, label %if.true, label %if.false
@@ -265,16 +283,22 @@ if.false:
 }
 
 define amdgpu_ps void @test_fpclass_select_readanylane_f16(half inreg %x, float inreg %y, half inreg %z, ptr addrspace(1) %ptr) {
-; GCN-LABEL: test_fpclass_select_readanylane_f16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_f16_e64 v2, s2, s2
-; GCN-NEXT:    v_cmp_class_f32_e64 s[0:1], s3, 3
-; GCN-NEXT:    v_readfirstlane_b32 s2, v2
-; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GCN-NEXT:    s_cselect_b32 s0, s4, s2
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    global_store_short v[0:1], v2, off
-; GCN-NEXT:    s_endpgm
+; GFX9-LABEL: test_fpclass_select_readanylane_f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_add_f16_e64 v2, s2, s2
+; GFX9-NEXT:    v_mov_b32_e32 v3, s4
+; GFX9-NEXT:    v_cmp_class_f32_e64 vcc, s3, 3
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GFX9-NEXT:    global_store_short v[0:1], v2, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_fpclass_select_readanylane_f16:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_add_f16_e64 v2, s2, s2
+; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s3, 3
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s4, s[0:1]
+; GFX10-NEXT:    global_store_short v[0:1], v2, off
+; GFX10-NEXT:    s_endpgm
   %res = fadd half %x, %x
   %cond = call i1 @llvm.is.fpclass.f32(float %y, i32 3)
   %sel = select i1 %cond, half %z, half %res
@@ -283,31 +307,14 @@ define amdgpu_ps void @test_fpclass_select_readanylane_f16(half inreg %x, float 
 }
 
 define amdgpu_ps void @test_fpclass_select_readanylane2_f16(half inreg %x, half inreg %y, float inreg %z, ptr addrspace(1) %ptr) {
-; GFX9-LABEL: test_fpclass_select_readanylane2_f16:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_add_f16_e64 v2, s2, s2
-; GFX9-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX9-NEXT:    v_add_f16_e64 v2, s3, s3
-; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s4, 3
-; GFX9-NEXT:    v_readfirstlane_b32 s3, v2
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX9-NEXT:    s_cselect_b32 s0, s2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-NEXT:    global_store_short v[0:1], v2, off
-; GFX9-NEXT:    s_endpgm
-;
-; GFX10-LABEL: test_fpclass_select_readanylane2_f16:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_f16_e64 v2, s2, s2
-; GFX10-NEXT:    v_add_f16_e64 v3, s3, s3
-; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s4, 3
-; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX10-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX10-NEXT:    s_cselect_b32 s0, s2, s3
-; GFX10-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-NEXT:    global_store_short v[0:1], v2, off
-; GFX10-NEXT:    s_endpgm
+; GCN-LABEL: test_fpclass_select_readanylane2_f16:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_add_f16_e64 v2, s2, s2
+; GCN-NEXT:    v_add_f16_e64 v3, s3, s3
+; GCN-NEXT:    v_cmp_class_f32_e64 vcc, s4, 3
+; GCN-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
+; GCN-NEXT:    global_store_short v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
   %res1 = fadd half %x, %x
   %res2 = fadd half %y, %y
   %cond = call i1 @llvm.is.fpclass.f32(float %z, i32 3)
@@ -317,16 +324,22 @@ define amdgpu_ps void @test_fpclass_select_readanylane2_f16(half inreg %x, half 
 }
 
 define amdgpu_ps void @test_fpclass_select_readanylane_f32(float inreg %x, float inreg %y, float inreg %z, ptr addrspace(1) %ptr) {
-; GCN-LABEL: test_fpclass_select_readanylane_f32:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_add_f32_e64 v2, s2, s2
-; GCN-NEXT:    v_cmp_class_f32_e64 s[0:1], s3, 3
-; GCN-NEXT:    v_readfirstlane_b32 s2, v2
-; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GCN-NEXT:    s_cselect_b32 s0, s4, s2
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    global_store_dword v[0:1], v2, off
-; GCN-NEXT:    s_endpgm
+; GFX9-LABEL: test_fpclass_select_readanylane_f32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_add_f32_e64 v2, s2, s2
+; GFX9-NEXT:    v_mov_b32_e32 v3, s4
+; GFX9-NEXT:    v_cmp_class_f32_e64 vcc, s3, 3
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v2, v3, vcc
+; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_fpclass_select_readanylane_f32:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_add_f32_e64 v2, s2, s2
+; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s3, 3
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, s4, s[0:1]
+; GFX10-NEXT:    global_store_dword v[0:1], v2, off
+; GFX10-NEXT:    s_endpgm
   %res = fadd float %x, %x
   %cond = call i1 @llvm.is.fpclass.f32(float %y, i32 3)
   %sel = select i1 %cond, float %z, float %res
@@ -335,31 +348,14 @@ define amdgpu_ps void @test_fpclass_select_readanylane_f32(float inreg %x, float
 }
 
 define amdgpu_ps void @test_fpclass_select_readanylane2_f32(float inreg %x, float inreg %y, float inreg %z, ptr addrspace(1) %ptr) {
-; GFX9-LABEL: test_fpclass_select_readanylane2_f32:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_add_f32_e64 v2, s2, s2
-; GFX9-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX9-NEXT:    v_add_f32_e64 v2, s3, s3
-; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s4, 3
-; GFX9-NEXT:    v_readfirstlane_b32 s3, v2
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX9-NEXT:    s_cselect_b32 s0, s2, s3
-; GFX9-NEXT:    v_mov_b32_e32 v2, s0
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
-; GFX9-NEXT:    s_endpgm
-;
-; GFX10-LABEL: test_fpclass_select_readanylane2_f32:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_add_f32_e64 v2, s2, s2
-; GFX10-NEXT:    v_add_f32_e64 v3, s3, s3
-; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s4, 3
-; GFX10-NEXT:    v_readfirstlane_b32 s2, v2
-; GFX10-NEXT:    v_readfirstlane_b32 s3, v3
-; GFX10-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX10-NEXT:    s_cselect_b32 s0, s2, s3
-; GFX10-NEXT:    v_mov_b32_e32 v2, s0
-; GFX10-NEXT:    global_store_dword v[0:1], v2, off
-; GFX10-NEXT:    s_endpgm
+; GCN-LABEL: test_fpclass_select_readanylane2_f32:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_add_f32_e64 v2, s2, s2
+; GCN-NEXT:    v_add_f32_e64 v3, s3, s3
+; GCN-NEXT:    v_cmp_class_f32_e64 vcc, s4, 3
+; GCN-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
+; GCN-NEXT:    global_store_dword v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
   %res1 = fadd float %x, %x
   %res2 = fadd float %y, %y
   %cond = call i1 @llvm.is.fpclass.f32(float %z, i32 3)
@@ -446,14 +442,22 @@ define amdgpu_ps void @test_fpclass_select_readanylane2_f64(double inreg %x, dou
 }
 
 define amdgpu_ps void @test_select_literal_imm_gfx10plus(float inreg %x, float %y, ptr addrspace(1) %ptr) {
-; GCN-LABEL: test_select_literal_imm_gfx10plus:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GCN-NEXT:    s_cselect_b32 s0, 0x42c80000, 0
-; GCN-NEXT:    v_add_f32_e32 v0, s0, v0
-; GCN-NEXT:    global_store_dword v[1:2], v0, off
-; GCN-NEXT:    s_endpgm
+; GFX9-LABEL: test_select_literal_imm_gfx10plus:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
+; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_cselect_b32 s0, 0x42c80000, 0
+; GFX9-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX9-NEXT:    global_store_dword v[1:2], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_select_literal_imm_gfx10plus:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, 0x42c80000, s[0:1]
+; GFX10-NEXT:    v_add_f32_e32 v0, v3, v0
+; GFX10-NEXT:    global_store_dword v[1:2], v0, off
+; GFX10-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   %sel = select i1 %cond, float 100.0, float 0.0
   %add = fadd float %sel, %y
@@ -462,15 +466,24 @@ define amdgpu_ps void @test_select_literal_imm_gfx10plus(float inreg %x, float %
 }
 
 define amdgpu_ps void @test_select_two_literal_imm(float inreg %x, float %y, ptr addrspace(1) %ptr) {
-; GCN-LABEL: test_select_two_literal_imm:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GCN-NEXT:    s_mov_b32 s0, 0x42c80000
-; GCN-NEXT:    s_cselect_b32 s0, s0, 0x43480000
-; GCN-NEXT:    v_add_f32_e32 v0, s0, v0
-; GCN-NEXT:    global_store_dword v[1:2], v0, off
-; GCN-NEXT:    s_endpgm
+; GFX9-LABEL: test_select_two_literal_imm:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
+; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    s_mov_b32 s0, 0x42c80000
+; GFX9-NEXT:    s_cselect_b32 s0, s0, 0x43480000
+; GFX9-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX9-NEXT:    global_store_dword v[1:2], v0, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_select_two_literal_imm:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v3, 0x43480000
+; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, 0x42c80000, s[0:1]
+; GFX10-NEXT:    v_add_f32_e32 v0, v3, v0
+; GFX10-NEXT:    global_store_dword v[1:2], v0, off
+; GFX10-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   %sel = select i1 %cond, float 100.0, float 200.0
   %add = fadd float %sel, %y
@@ -479,15 +492,22 @@ define amdgpu_ps void @test_select_two_literal_imm(float inreg %x, float %y, ptr
 }
 
 define amdgpu_ps void @test_select_two_literals_store(float inreg %x, ptr addrspace(1) %ptr) {
-; GCN-LABEL: test_select_two_literals_store:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GCN-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GCN-NEXT:    s_movk_i32 s0, 0x64
-; GCN-NEXT:    s_cselect_b32 s0, s0, 0xc8
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    global_store_dword v[0:1], v2, off
-; GCN-NEXT:    s_endpgm
+; GFX9-LABEL: test_select_two_literals_store:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    v_mov_b32_e32 v2, 0x64
+; GFX9-NEXT:    v_mov_b32_e32 v3, 0xc8
+; GFX9-NEXT:    v_cmp_class_f32_e64 vcc, s2, 3
+; GFX9-NEXT:    v_cndmask_b32_e32 v2, v3, v2, vcc
+; GFX9-NEXT:    global_store_dword v[0:1], v2, off
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_select_two_literals_store:
+; GFX10:       ; %bb.0:
+; GFX10-NEXT:    v_mov_b32_e32 v2, 0xc8
+; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, 0x64, s[0:1]
+; GFX10-NEXT:    global_store_dword v[0:1], v2, off
+; GFX10-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   %sel = select i1 %cond, i32 100, i32 200
   store i32 %sel, ptr addrspace(1) %ptr
@@ -495,24 +515,13 @@ define amdgpu_ps void @test_select_two_literals_store(float inreg %x, ptr addrsp
 }
 
 define amdgpu_ps void @test_float_select_combine_inline_const(float inreg %x, float inreg %w, ptr addrspace(1) %ptr) {
-; GFX9-LABEL: test_float_select_combine_inline_const:
-; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX9-NEXT:    s_cselect_b32 s0, 0, 1.0
-; GFX9-NEXT:    v_mov_b32_e32 v2, s3
-; GFX9-NEXT:    v_mul_f32_e32 v2, s0, v2
-; GFX9-NEXT:    global_store_dword v[0:1], v2, off
-; GFX9-NEXT:    s_endpgm
-;
-; GFX10-LABEL: test_float_select_combine_inline_const:
-; GFX10:       ; %bb.0:
-; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GFX10-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX10-NEXT:    s_cselect_b32 s0, 0, 1.0
-; GFX10-NEXT:    v_mul_f32_e64 v2, s0, s3
-; GFX10-NEXT:    global_store_dword v[0:1], v2, off
-; GFX10-NEXT:    s_endpgm
+; GCN-LABEL: test_float_select_combine_inline_const:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 1.0, 0, s[0:1]
+; GCN-NEXT:    v_mul_f32_e32 v2, s3, v2
+; GCN-NEXT:    global_store_dword v[0:1], v2, off
+; GCN-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)
   %sel = select i1 %cond, float 0.0, float 1.0
   %mul = fmul float %sel, %w
@@ -520,14 +529,15 @@ define amdgpu_ps void @test_float_select_combine_inline_const(float inreg %x, fl
   ret void
 }
 
+; TODO: Improve combine heuristic for GFX9, this is a net 0 gain.
 define amdgpu_ps void @test_select_preexisting_copy(float inreg %x, float inreg %y, float %z, ptr addrspace(1) %ptr) {
 ; GFX9-LABEL: test_select_preexisting_copy:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
-; GFX9-NEXT:    s_cmp_lg_u64 s[0:1], 0
+; GFX9-NEXT:    v_mov_b32_e32 v3, s3
+; GFX9-NEXT:    v_cmp_class_f32_e64 vcc, s2, 3
 ; GFX9-NEXT:    v_add_f32_e32 v0, s3, v0
-; GFX9-NEXT:    s_cselect_b32 s0, s3, 0
-; GFX9-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
+; GFX9-NEXT:    v_add_f32_e32 v0, v3, v0
 ; GFX9-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -535,9 +545,8 @@ define amdgpu_ps void @test_select_preexisting_copy(float inreg %x, float inreg 
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_cmp_class_f32_e64 s[0:1], s2, 3
 ; GFX10-NEXT:    v_add_f32_e32 v0, s3, v0
-; GFX10-NEXT:    s_cmp_lg_u64 s[0:1], 0
-; GFX10-NEXT:    s_cselect_b32 s0, s3, 0
-; GFX10-NEXT:    v_add_f32_e32 v0, s0, v0
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, 0, s3, s[0:1]
+; GFX10-NEXT:    v_add_f32_e32 v0, v3, v0
 ; GFX10-NEXT:    global_store_dword v[1:2], v0, off
 ; GFX10-NEXT:    s_endpgm
   %cond = call i1 @llvm.is.fpclass.f32(float %x, i32 3)

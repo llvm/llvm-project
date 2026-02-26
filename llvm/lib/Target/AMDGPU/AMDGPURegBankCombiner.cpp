@@ -63,7 +63,10 @@ public:
   bool tryCombineAll(MachineInstr &I) const override;
 
   bool isVgprRegBank(Register Reg) const;
+  bool isSgprRegBank(Register Reg) const;
   Register getAsVgpr(Register Reg) const;
+  int getAsVgprCost(Register Reg) const;
+  bool copySGPRToVGPRIsFree(Register VgprDst) const;
 
   struct MinMaxMedOpc {
     unsigned Min, Max, Med;
@@ -142,6 +145,10 @@ bool AMDGPURegBankCombinerImpl::isVgprRegBank(Register Reg) const {
   return RBI.getRegBank(Reg, MRI, TRI)->getID() == AMDGPU::VGPRRegBankID;
 }
 
+bool AMDGPURegBankCombinerImpl::isSgprRegBank(Register Reg) const {
+  return RBI.getRegBank(Reg, MRI, TRI)->getID() == AMDGPU::SGPRRegBankID;
+}
+
 Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
   if (isVgprRegBank(Reg))
     return Reg;
@@ -149,16 +156,30 @@ Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
   const RegisterBank &VgprRB = RBI.getRegBank(AMDGPU::VGPRRegBankID);
 
   // Build constants directly in VGPR instead of copying from SGPR.
-  std::optional<ValueAndVReg> Val =
-      getIConstantVRegValWithLookThrough(Reg, MRI);
-  if (Val) {
-    auto VgprCst = B.buildConstant(MRI.getType(Reg), Val->Value);
+  if (auto V = getIConstantVRegValWithLookThrough(Reg, MRI)) {
+    auto VgprCst = B.buildConstant(MRI.getType(Reg), V->Value);
     MRI.setRegBank(VgprCst.getReg(0), VgprRB);
     return VgprCst.getReg(0);
   }
+  if (auto V = getFConstantVRegValWithLookThrough(Reg, MRI)) {
+    if (MRI.getType(Reg).getSizeInBits() >= 32) {
+      auto VgprCst = B.buildFConstant(MRI.getType(Reg), V->Value);
+      MRI.setRegBank(VgprCst.getReg(0), VgprRB);
+      return VgprCst.getReg(0);
+    }
+  }
+
+  // Look through READANYLANE: the VGPR source holds the same uniform value.
+  if (const MachineInstr *Def = MRI.getVRegDef(Reg)) {
+    if (Def->getOpcode() == AMDGPU::G_AMDGPU_READANYLANE) {
+      Register Src = Def->getOperand(1).getReg();
+      if (isVgprRegBank(Src))
+        return Src;
+    }
+  }
 
   // Search for existing copy of Reg to vgpr.
-  for (MachineInstr &Use : MRI.use_instructions(Reg)) {
+  for (MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
     Register Def = Use.getOperand(0).getReg();
     if (Use.getOpcode() == AMDGPU::COPY && isVgprRegBank(Def))
       return Def;
@@ -168,6 +189,70 @@ Register AMDGPURegBankCombinerImpl::getAsVgpr(Register Reg) const {
   Register VgprReg = B.buildCopy(MRI.getType(Reg), Reg).getReg(0);
   MRI.setRegBank(VgprReg, VgprRB);
   return VgprReg;
+}
+
+// Return estimated cost of performing G_SELECT COPY_SCC_VCC combine
+int AMDGPURegBankCombinerImpl::getAsVgprCost(Register Reg) const {
+  if (isVgprRegBank(Reg))
+    return 0;
+
+  if (auto Val = getAnyConstantVRegValWithLookThrough(Reg, MRI)) {
+    // Inline constant creates no new instructions.
+    if (TII.isInlineConstant(Val->Value))
+      return 0;
+
+    // Non-inline constant requires a v_mov to materialise in VGPR. On GFX10+
+    // it fits as an instruction literal alongside VCC, so no extra instruction
+    // is needed.
+    return STI.getGeneration() >= AMDGPUSubtarget::GFX10 ? 0 : 1;
+  }
+
+  // We can eliminate a READANYLANE.
+  if (const MachineInstr *Def = MRI.getVRegDef(Reg);
+      Def && Def->getOpcode() == AMDGPU::G_AMDGPU_READANYLANE &&
+      isVgprRegBank(Def->getOperand(1).getReg()))
+    return -1;
+
+  // Check if we can use a pre-existing copy instead of creating a new one.
+  for (const MachineInstr &Use : MRI.use_nodbg_instructions(Reg)) {
+    if (Use.getOpcode() == AMDGPU::COPY &&
+        isVgprRegBank(Use.getOperand(0).getReg()))
+      return 0;
+  }
+
+  // Forced to create a new COPY.
+  return 1;
+}
+
+// Check if all consumers of VgprDst have a free constant-bus slot, which
+// would allow RA to coalesce the SGPR->VGPR COPY and read the SGPR source
+// directly.
+bool AMDGPURegBankCombinerImpl::copySGPRToVGPRIsFree(Register VgprDst) const {
+  const bool IsGFX10Plus = STI.getGeneration() >= AMDGPUSubtarget::GFX10;
+  const bool Is64Bit = MRI.getType(VgprDst).getSizeInBits() == 64;
+
+  for (const MachineInstr &Use : MRI.use_nodbg_instructions(VgprDst)) {
+    unsigned Opc = Use.getOpcode();
+    if (Opc == TargetOpcode::G_PHI || Opc == TargetOpcode::G_STORE)
+      return false;
+
+    // Conservatively models GCNSubtarget::getConstantBusLimit: 64-bit shift
+    // instructions can use only one scalar value input even on GFX10+.
+    unsigned BusLimit = IsGFX10Plus ? 2 : 1;
+    if (IsGFX10Plus && Is64Bit &&
+        (Opc == TargetOpcode::G_SHL || Opc == TargetOpcode::G_LSHR ||
+         Opc == TargetOpcode::G_ASHR))
+      BusLimit = 1;
+
+    unsigned SGPRUses = 0;
+    for (const MachineOperand &MO : Use.explicit_operands())
+      if (MO.isReg() && MO.isUse() && MO.getReg().isVirtual() &&
+          isSgprRegBank(MO.getReg()))
+        ++SGPRUses;
+    if (SGPRUses >= BusLimit)
+      return false;
+  }
+  return true;
 }
 
 AMDGPURegBankCombinerImpl::MinMaxMedOpc
@@ -499,8 +584,12 @@ bool AMDGPURegBankCombinerImpl::applyD16Load(
 }
 
 // Eliminate VCC->SGPR->VGPR register bounce for uniform boolean in VCC.
-// Match: COPY (G_SELECT (G_AMDGPU_COPY_SCC_VCC %vcc), %true, %false)
-// Replace with: G_SELECT %vcc, %vgpr_true, %vgpr_false
+// Match:
+//   %sgpr  = G_AMDGPU_COPY_SCC_VCC %vcc
+//   %sgpr2 = G_SELECT %sgpr, %true, %false
+//   %vgpr  = COPY %sgpr2
+// into:
+//   %vgpr  = G_SELECT %vcc, %vgpr_true, %vgpr_false
 bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
     MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
   assert(MI.getOpcode() == AMDGPU::COPY);
@@ -518,7 +607,6 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
   if (MRI.getType(VgprDst) != LLT::scalar(32))
     return false;
 
-  // TODO: Use a heuristic to determine when we should combine instead.
   // Only combine when the G_SELECT result has a single use (this COPY).
   // With multiple uses the SGPR G_SELECT cannot be erased after the
   // transformation, so a new VGPR G_SELECT would be added on top of the
@@ -535,6 +623,35 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
   if (CondDef->getOpcode() != AMDGPU::G_AMDGPU_COPY_SCC_VCC)
     return false;
 
+  // Combining COPY_SCC_VCC + SGPR G_SELECT + COPY, adds VALU G_SELECT.
+  // Base savings = 2 but if the COPY was free (RA coalesces it), then only 1
+  int BaseSavings = copySGPRToVGPRIsFree(VgprDst) ? 1 : 2;
+  int Cost = getAsVgprCost(TrueReg) + getAsVgprCost(FalseReg);
+
+  // Account for both True and False values being non-inline constants
+  auto TrueV = getAnyConstantVRegValWithLookThrough(TrueReg, MRI);
+  auto FalseV = getAnyConstantVRegValWithLookThrough(FalseReg, MRI);
+  if (TrueV && !TII.isInlineConstant(TrueV->Value) && FalseV &&
+      !TII.isInlineConstant(FalseV->Value)) {
+    // s_cselect requires a s_mov for the second non-inline constant so we
+    // can eliminate an additional s_mov.
+    ++BaseSavings;
+
+    // On GFX10, non-inline constants were counted as zero cost but if there are
+    // two non-inline constants then one will require v_mov.
+    if (STI.getGeneration() >= AMDGPUSubtarget::GFX10)
+      ++Cost;
+  }
+
+  if (Cost >= BaseSavings) {
+    LLVM_DEBUG(dbgs() << "matchCopySccVcc: not profitable (Cost=" << Cost
+                      << " >= BaseSavings=" << BaseSavings << "), skipping "
+                      << MI);
+    return false;
+  }
+
+  LLVM_DEBUG(dbgs() << "matchCopySccVcc: matched (Cost=" << Cost
+                    << " < BaseSavings=" << BaseSavings << ") " << MI);
   MatchInfo.VccReg = CondDef->getOperand(1).getReg();
   MatchInfo.TrueReg = TrueReg;
   MatchInfo.FalseReg = FalseReg;
@@ -543,6 +660,7 @@ bool AMDGPURegBankCombinerImpl::matchCopySccVcc(
 
 void AMDGPURegBankCombinerImpl::applyCopySccVcc(
     MachineInstr &MI, CopySccVccMatchInfo &MatchInfo) const {
+  LLVM_DEBUG(dbgs() << "applyCopySccVcc: applying to " << MI);
   Register VgprDst = MI.getOperand(0).getReg();
 
   Register VgprTrue = getAsVgpr(MatchInfo.TrueReg);
