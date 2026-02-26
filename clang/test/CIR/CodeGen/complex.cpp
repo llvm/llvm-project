@@ -1336,14 +1336,14 @@ void complex_type_argument() {
 // CIR: %[[TMP_A:.*]] = cir.load{{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[TMP_A]], %[[ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_ARG:.*]] = cir.load{{.*}} %[[ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: cir.call @_Z22complex_type_parameterCf(%[[TMP_ARG]]) : (!cir.complex<!cir.float>) -> ()
+// CIR: cir.call @_Z22complex_type_parameterCf(%[[TMP_ARG]]) : (!cir.complex<!cir.float> {llvm.noundef}) -> ()
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM: %[[ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM: %[[TMP_A:.*]] = load { float, float }, ptr %[[A_ADDR]], align 4
 // LLVM: store { float, float } %[[TMP_A]], ptr %[[ARG_ADDR]], align 4
 // LLVM: %[[TMP_ARG:.*]] = load { float, float }, ptr %[[ARG_ADDR]], align 4
-// LLVM: call void @_Z22complex_type_parameterCf({ float, float } %[[TMP_ARG]])
+// LLVM: call void @_Z22complex_type_parameterCf({ float, float } noundef %[[TMP_ARG]])
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG: %[[ARG_ADDR:.*]] = alloca { float, float }, align 4
@@ -1450,14 +1450,14 @@ void calling_function_with_default_arg() {
 // CIR: %[[DEFAULT_ARG_VAL:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.200000e+00> : !cir.float> : !cir.complex<!cir.float>
 // CIR: cir.store{{.*}} %[[DEFAULT_ARG_VAL]], %[[DEFAULT_ARG_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_DEFAULT_ARG:.*]] = cir.load{{.*}} %[[DEFAULT_ARG_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: cir.call @_Z33function_with_complex_default_argCf(%[[TMP_DEFAULT_ARG]]) : (!cir.complex<!cir.float>) -> ()
+// CIR: cir.call @_Z33function_with_complex_default_argCf(%[[TMP_DEFAULT_ARG]]) : (!cir.complex<!cir.float> {{.*}}) -> ()
 
 // TODO(CIR): the difference between the CIR LLVM and OGCG is because the lack of calling convention lowering,
 
 // LLVM: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, i64 1, align 4
 // LLVM: store { float, float } { float 1.000000e+00, float 0x40019999A0000000 }, ptr %[[DEFAULT_ARG_ADDR]], align 4
 // LLVM: %[[TMP_DEFAULT_ARG:.*]] = load { float, float }, ptr %[[DEFAULT_ARG_ADDR]], align 4
-// LLVM: call void @_Z33function_with_complex_default_argCf({ float, float } %[[TMP_DEFAULT_ARG]])
+// LLVM: call void @_Z33function_with_complex_default_argCf({ float, float } {{.*}} %[[TMP_DEFAULT_ARG]])
 
 // OGCG: %[[DEFAULT_ARG_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG: %[[DEFAULT_ARG_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[DEFAULT_ARG_ADDR]], i32 0, i32 0

@@ -18,6 +18,7 @@
 #include "llvm/Support/FormatVariadic.h"
 #include <OffloadAPI.h>
 
+#include <cstdint>
 #include <mutex>
 
 // TODO: Some plugins expect to be linked into libomptarget which defines these
@@ -528,11 +529,11 @@ Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
 
     auto getField = [&](StringRef Name, uint32_t &Dest) {
       if (auto F = Entry->get(Name)) {
-        if (!std::holds_alternative<size_t>((*F)->Value))
+        if (!std::holds_alternative<uint64_t>((*F)->Value))
           return makeError(
               ErrorCode::BACKEND_FAILURE,
               "plugin returned incorrect type for dimensions element");
-        Dest = std::get<size_t>((*F)->Value);
+        Dest = std::get<uint64_t>((*F)->Value);
       } else
         return makeError(ErrorCode::BACKEND_FAILURE,
                          "plugin didn't provide all values for dimensions");
