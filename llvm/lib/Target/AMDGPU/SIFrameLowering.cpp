@@ -1478,9 +1478,14 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
     BitVector SpillFIs(MFI.getObjectIndexEnd(), false);
     BitVector NonVGPRSpillFIs(MFI.getObjectIndexEnd(), false);
 
+    bool SeenDbgInstr = false;
+
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : llvm::make_early_inc_range(MBB)) {
         int FrameIndex;
+        if (MI.isDebugInstr())
+          SeenDbgInstr = true;
+
         if (TII->isVGPRSpill(MI)) {
           // Try to eliminate stack used by VGPR spills before frame
           // finalization.
@@ -1519,6 +1524,22 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
         MBB.addLiveIn(Reg);
 
       MBB.sortUniqueLiveIns();
+
+      if (!SpillFIs.empty() && SeenDbgInstr) {
+        // FIXME: The dead frame indices are replaced with a null register from
+        // the debug value instructions. We should instead, update it with the
+        // correct register value. But not sure the register value alone is
+        for (MachineInstr &MI : MBB) {
+          if (MI.isDebugValue()) {
+            for (MachineOperand &Op : MI.debug_operands()) {
+              if (Op.isFI() && !MFI.isFixedObjectIndex(Op.getIndex()) &&
+                  SpillFIs[Op.getIndex()]) {
+                Op.ChangeToRegister(Register(), false /*isDef*/);
+              }
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1526,7 +1547,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   // can. Any remaining SGPR spills will go to memory, so move them back to the
   // default stack.
   bool HaveSGPRToVMemSpill =
-      FuncInfo->removeDeadFrameIndices(MF, /*ResetSGPRSpillStackIDs*/ true);
+      FuncInfo->removeDeadFrameIndices(MFI, /*ResetSGPRSpillStackIDs*/ true);
   assert(allSGPRSpillsAreDead(MF) &&
          "SGPR spill should have been removed in SILowerSGPRSpills");
 
