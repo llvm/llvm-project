@@ -391,10 +391,9 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
       case Stmt::CXXTryStmtClass:
         // Generate a node for each of the successors.
         // Our logic for EH analysis can certainly be improved.
-        for (CFGBlock::const_succ_iterator it = B->succ_begin(),
-             et = B->succ_end(); it != et; ++it) {
-          if (const CFGBlock *succ = *it) {
-            BlockEdge BE(B, succ, Pred->getLocationContext());
+        for (const CFGBlock *Succ : B->succs()) {
+          if (Succ) {
+            BlockEdge BE(B, Succ, Pred->getLocationContext());
             if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
               WList->enqueue(N);
           }
