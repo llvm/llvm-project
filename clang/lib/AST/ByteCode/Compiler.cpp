@@ -948,15 +948,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       } else {
         return false;
       }
-    } else if (classify(DestType)) {
+    } else if (OptPrimType DestT = classify(DestType)) {
       // Scalar destination: extract element 0 and cast.
-      PrimType DestT = classifyPrim(DestType);
       if (!this->visit(SubExpr))
         return false;
       if (!this->emitArrayElemPop(SrcElemT, 0, CE))
         return false;
-      if (SrcElemT != DestT) {
-        if (!this->emitPrimCast(SrcElemT, DestT, DestType, CE))
+      if (SrcElemT != *DestT) {
+        if (!this->emitPrimCast(SrcElemT, *DestT, DestType, CE))
           return false;
       }
       return true;
