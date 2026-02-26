@@ -121,6 +121,7 @@ constexpr void test_with_common_range() {
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
+
     std::same_as<IteratorT&> decltype(auto) resultIt = (it += diff);
 
     assert(resultIt == it);
@@ -132,6 +133,7 @@ constexpr void test_with_common_range() {
   {
     auto it = ev.end();
     constexpr DifferenceT diff{4};
+
     std::same_as<IteratorT&> decltype(auto) resultIt = (it -= diff);
 
     assert(resultIt == it);
@@ -143,6 +145,7 @@ constexpr void test_with_common_range() {
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
+
     std::same_as<IteratorT> decltype(auto) resultIt = (it + diff);
 
     assert(base(resultIt.base()) == &arr[3]);
@@ -153,6 +156,7 @@ constexpr void test_with_common_range() {
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
+
     std::same_as<IteratorT> decltype(auto) resultIt = (diff + it);
 
     assert(base(resultIt.base()) == &arr[3]);
@@ -163,6 +167,7 @@ constexpr void test_with_common_range() {
   {
     auto it = ev.end();
     constexpr DifferenceT diff{4};
+
     std::same_as<IteratorT> decltype(auto) resultIt = (it - diff);
 
     assert(base(resultIt.base()) == &arr[0]);
@@ -175,11 +180,10 @@ constexpr void test_with_common_range() {
     auto it2 = ev.end();
 
     std::same_as<DifferenceT> decltype(auto) resultIt = (it2 - it1);
+    static_assert(noexcept(it1 - it2));
 
     assert(resultIt == DifferenceT{4});
     assert(((it2 - DifferenceT{1}) - (it1 + DifferenceT{1})) == DifferenceT{2});
-
-    static_assert(noexcept(it1 - it2));
   }
 }
 
@@ -226,6 +230,7 @@ constexpr void test_with_noncommon_range() {
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
+
     std::same_as<IteratorT> decltype(auto) resultIt = (it + diff);
 
     assert(base(resultIt.base()) == &arr[3]);
@@ -236,6 +241,7 @@ constexpr void test_with_noncommon_range() {
   {
     auto it = ev.begin();
     constexpr DifferenceT diff{3};
+
     std::same_as<IteratorT> decltype(auto) resultIt = (diff + it);
 
     assert(base(resultIt.base()) == &arr[3]);
@@ -245,7 +251,8 @@ constexpr void test_with_noncommon_range() {
   //    friend constexpr iterator operator-(const iterator& x, difference_type y)
   {
     constexpr DifferenceT diff{4};
-    auto it                                         = ev.begin() + diff;
+    auto it = ev.begin() + diff;
+
     std::same_as<IteratorT> decltype(auto) resultIt = (it - diff);
 
     assert(base(resultIt.base()) == &arr[0]);
