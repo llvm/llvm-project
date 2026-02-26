@@ -3905,6 +3905,26 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
           Out, MCInstBuilder(RISCV::C_NOP_HINT).addOperand(Inst.getOperand(2)));
     return false;
   }
+  case RISCV::PACK: {
+    // Convert PACK wth RS2==X0 to ZEXT_H_RV32 to match disassembler output.
+    if (Inst.getOperand(2).getReg() != RISCV::X0)
+      break;
+    if (getSTI().hasFeature(RISCV::Feature64Bit))
+      break;
+    emitToStreamer(Out, MCInstBuilder(RISCV::ZEXT_H_RV32)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1)));
+    return false;
+  }
+  case RISCV::PACKW: {
+    // Convert PACKW with RS2==X0 to ZEXT_H_RV64 to match disassembler output.
+    if (Inst.getOperand(2).getReg() != RISCV::X0)
+      break;
+    emitToStreamer(Out, MCInstBuilder(RISCV::ZEXT_H_RV64)
+                            .addOperand(Inst.getOperand(0))
+                            .addOperand(Inst.getOperand(1)));
+    return false;
+  }
   case RISCV::PseudoLLAImm:
   case RISCV::PseudoLAImm:
   case RISCV::PseudoLI: {
