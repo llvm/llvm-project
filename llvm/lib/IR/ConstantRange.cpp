@@ -113,6 +113,7 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
     return CR;
 
   uint32_t W = CR.getBitWidth();
+  ConstantRange Result = getFull(W);
   switch (Pred) {
   default:
     llvm_unreachable("Invalid ICmp predicate to makeAllowedICmpRegion()");
@@ -126,81 +127,56 @@ ConstantRange ConstantRange::makeAllowedICmpRegion(CmpPredicate Pred,
     APInt UMax(CR.getUnsignedMax());
     if (UMax.isMinValue())
       return getEmpty(W);
+    Result = ConstantRange(APInt::getMinValue(W), std::move(UMax));
     if (!Pred.hasSameSign())
-      return ConstantRange(APInt::getMinValue(W), std::move(UMax));
-    if (W == 1)
-      return getEmpty(W);
-
-    APInt CRUpper = CR.getUpper();
-    if (CR.getUnsignedMax().isMinSignedValue())
-      CRUpper = APInt::getSignedMinValue(W);
-    else if (CR.getSignedMax().isMinValue())
-      CRUpper = APInt::getMinValue(W);
-
-    if (CRUpper == CR.getLower() && !CR.isFullSet())
-      return getEmpty(W);
-
-    ConstantRange Augmented(CR.getLower(), CRUpper);
-    if (Augmented.isAllNonNegative() ||
-        (!Augmented.isAllNegative() && Augmented.isSignWrappedSet()))
-      return getNonEmpty(APInt::getMinValue(W), Augmented.getUnsignedMax());
-    return getNonEmpty(APInt::getSignedMinValue(W), Augmented.getSignedMax());
+      return Result;
   }
+    // For samesign, intersect with signed range.
+    LLVM_FALLTHROUGH;
   case CmpInst::ICMP_SLT: {
     APInt SMax(CR.getSignedMax());
     if (SMax.isMinSignedValue())
       return getEmpty(W);
-    return ConstantRange(APInt::getSignedMinValue(W), std::move(SMax));
+    return Result.intersectWith(
+        ConstantRange(APInt::getSignedMinValue(W), std::move(SMax)));
   }
-  case CmpInst::ICMP_ULE:
+  case CmpInst::ICMP_ULE: {
+    Result = getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
     if (!Pred.hasSameSign())
-      return getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
-    if (CR.isAllNegative() ||
-        (!CR.isAllNonNegative() && !CR.isSignWrappedSet()))
-      return getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1);
-    return getNonEmpty(APInt::getMinValue(W), CR.getUnsignedMax() + 1);
+      return Result;
+  }
+    // For samesign, intersect with signed range.
+    LLVM_FALLTHROUGH;
   case CmpInst::ICMP_SLE:
-    return getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1);
+    return Result.intersectWith(
+        getNonEmpty(APInt::getSignedMinValue(W), CR.getSignedMax() + 1));
   case CmpInst::ICMP_UGT: {
     APInt UMin(CR.getUnsignedMin());
     if (UMin.isMaxValue())
       return getEmpty(W);
+    Result = ConstantRange(std::move(UMin) + 1, APInt::getZero(W));
     if (!Pred.hasSameSign())
-      return ConstantRange(std::move(UMin) + 1, APInt::getZero(W));
-    if (W == 1)
-      return getEmpty(W);
-
-    // deal with edge cases
-    APInt CRLower = CR.getLower();
-    if (CR.getLower().isMaxSignedValue())
-      CRLower = APInt::getSignedMinValue(W);
-    else if (CR.getLower().isMaxValue())
-      CRLower = APInt::getMinValue(W);
-
-    if (CRLower == CR.getUpper())
-      return getEmpty(W);
-
-    ConstantRange Augmented(CRLower, CR.getUpper());
-    if (Augmented.isAllNegative())
-      return getNonEmpty(Augmented.getSignedMin() + 1, APInt::getZero(W));
-    if (!Augmented.isAllNonNegative() && Augmented.isSignWrappedSet())
-      return getNonEmpty(Augmented.getUnsignedMin() + 1, APInt::getZero(W));
-    return getNonEmpty(Augmented.getSignedMin() + 1,
-                       APInt::getSignedMinValue(W));
+      return Result;
   }
+    // For samesign, intersect with signed range.
+    LLVM_FALLTHROUGH;
   case CmpInst::ICMP_SGT: {
     APInt SMin(CR.getSignedMin());
     if (SMin.isMaxSignedValue())
       return getEmpty(W);
-    return ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W));
+    return Result.intersectWith(
+        ConstantRange(std::move(SMin) + 1, APInt::getSignedMinValue(W)));
   }
-  case CmpInst::ICMP_UGE:
-    if (Pred.hasSameSign() && (CR.isAllNonNegative() ||
-                               (!CR.isAllNegative() && !CR.isSignWrappedSet())))
-      return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
-    return getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
+  case CmpInst::ICMP_UGE: {
+    Result = getNonEmpty(CR.getUnsignedMin(), APInt::getZero(W));
+    if (!Pred.hasSameSign())
+      return Result;
+  }
+    // For samesign, intersect with signed range.
+    LLVM_FALLTHROUGH;
   case CmpInst::ICMP_SGE:
-    return getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W));
+    return Result.intersectWith(
+        getNonEmpty(CR.getSignedMin(), APInt::getSignedMinValue(W)));
   }
 }
 
