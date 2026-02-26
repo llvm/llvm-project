@@ -157,8 +157,6 @@ public:
 
   cir::PointerType getPointerTo(mlir::Type ty,
                                 mlir::ptr::MemorySpaceAttrInterface as) {
-    if (!as)
-      return cir::PointerType::get(ty);
     return cir::PointerType::get(ty, as);
   }
 

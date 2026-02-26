@@ -1058,11 +1058,20 @@ void printAddressSpaceValue(mlir::AsmPrinter &p,
 }
 
 mlir::ptr::MemorySpaceAttrInterface
+cir::skipDefaultAddressSpace(mlir::ptr::MemorySpaceAttrInterface addrSpace) {
+  if (auto langAS =
+          mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpace))
+    if (langAS.getValue() == cir::LangAddressSpace::Default)
+      return {};
+  return addrSpace;
+}
+
+mlir::ptr::MemorySpaceAttrInterface
 cir::toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS) {
   using clang::LangAS;
 
   if (langAS == LangAS::Default)
-    return {}; // Default address space is represented as an empty attribute.
+    return cir::LangAddressSpaceAttr::get(&ctx, cir::LangAddressSpace::Default);
 
   if (clang::isTargetAddressSpace(langAS)) {
     unsigned targetAS = clang::toTargetAddressSpace(langAS);
@@ -1076,7 +1085,9 @@ bool cir::isMatchingAddressSpace(mlir::ptr::MemorySpaceAttrInterface cirAS,
                                  clang::LangAS as) {
   if (!cirAS)
     return as == clang::LangAS::Default;
-  return cir::toCIRAddressSpaceAttr(*cirAS.getContext(), as) == cirAS;
+  mlir::ptr::MemorySpaceAttrInterface expected = skipDefaultAddressSpace(
+      toCIRAddressSpaceAttr(*cirAS.getContext(), as));
+  return expected == cirAS;
 }
 
 //===----------------------------------------------------------------------===//
