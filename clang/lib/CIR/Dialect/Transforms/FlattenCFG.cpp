@@ -883,6 +883,24 @@ public:
         });
   }
 
+  // Collect all cir.resume operations in the body region that come from
+  // already-flattened try or cleanup scope operations that were nested within
+  // this cleanup scope. These resume ops need to be chained through this
+  // cleanup's EH handler instead of unwinding directly to the caller.
+  void collectResumeOps(mlir::Region &bodyRegion,
+                        llvm::SmallVectorImpl<cir::ResumeOp> &resumeOps) const {
+    bodyRegion.walk<mlir::WalkOrder::PreOrder>([&](mlir::Operation *op) {
+      // Skip resume ops inside nested TryOps - those are handled by TryOp
+      // flattening.
+      if (isa<cir::TryOp>(op))
+        return mlir::WalkResult::skip();
+
+      if (auto resumeOp = dyn_cast<cir::ResumeOp>(op))
+        resumeOps.push_back(resumeOp);
+      return mlir::WalkResult::advance();
+    });
+  }
+
   // Collect all function calls in the cleanup scope body that may throw
   // exceptions and need to be replaced with try_call operations. Skips calls
   // that are marked nothrow and calls inside nested TryOps (the latter will be
@@ -1104,6 +1122,7 @@ public:
   flattenCleanup(cir::CleanupScopeOp cleanupOp,
                  llvm::SmallVectorImpl<CleanupExit> &exits,
                  llvm::SmallVectorImpl<cir::CallOp> &callsToRewrite,
+                 llvm::SmallVectorImpl<cir::ResumeOp> &resumeOpsToChain,
                  mlir::PatternRewriter &rewriter) const {
     mlir::Location loc = cleanupOp.getLoc();
     cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
@@ -1146,20 +1165,32 @@ public:
     // Build EH cleanup blocks if needed. This must be done before inlining
     // the cleanup region since buildEHCleanupBlocks clones from it. The unwind
     // block is inserted before the EH cleanup entry so that the final layout
-    // is: body -> normal cleanup -> exit ->unwind -> EH cleanup -> continue.
-    // If there are no throwing calls, we don't need to EH cleanup blocks.
+    // is: body -> normal cleanup -> exit -> unwind -> EH cleanup -> continue.
+    // EH cleanup blocks are needed when there are throwing calls that need to
+    // be rewritten to try_call, or when there are resume ops from
+    // already-flattened inner cleanup scopes that need to chain through this
+    // cleanup's EH handler.
     mlir::Block *unwindBlock = nullptr;
     mlir::Block *ehCleanupEntry = nullptr;
-    if (hasEHCleanup && !callsToRewrite.empty()) {
+    if (hasEHCleanup &&
+        (!callsToRewrite.empty() || !resumeOpsToChain.empty())) {
       ehCleanupEntry =
           buildEHCleanupBlocks(cleanupOp, loc, continueBlock, rewriter);
-      unwindBlock =
-          buildUnwindBlock(ehCleanupEntry, loc, ehCleanupEntry, rewriter);
+      // The unwind block is only needed when there are throwing calls that
+      // need a shared unwind destination. Resume ops from inner cleanups
+      // branch directly to the EH cleanup entry.
+      if (!callsToRewrite.empty())
+        unwindBlock =
+            buildUnwindBlock(ehCleanupEntry, loc, ehCleanupEntry, rewriter);
     }
 
     // All normal flow blocks are inserted before this point — either before
-    // the unwind block (if EH cleanup exists) or before the continue block.
-    mlir::Block *normalInsertPt = unwindBlock ? unwindBlock : continueBlock;
+    // the unwind block (if it exists), or before the EH cleanup entry (if EH
+    // cleanup exists but no unwind block is needed), or before the continue
+    // block.
+    mlir::Block *normalInsertPt =
+        unwindBlock ? unwindBlock
+                    : (ehCleanupEntry ? ehCleanupEntry : continueBlock);
 
     // Inline the body region.
     rewriter.inlineRegionBefore(cleanupOp.getBodyRegion(), normalInsertPt);
@@ -1274,6 +1305,20 @@ public:
         replaceCallWithTryCall(callOp, unwindBlock, loc, rewriter);
     }
 
+    // Chain inner EH cleanup resume ops to this cleanup's EH handler.
+    // Each cir.resume from an already-flattened inner cleanup is replaced
+    // with a branch to the outer EH cleanup entry, passing the eh_token
+    // from the inner's begin_cleanup so that the same in-flight exception
+    // flows through the outer cleanup before unwinding to the caller.
+    if (ehCleanupEntry) {
+      for (cir::ResumeOp resumeOp : resumeOpsToChain) {
+        mlir::Value ehToken = resumeOp.getEhToken();
+        rewriter.setInsertionPoint(resumeOp);
+        rewriter.replaceOpWithNewOp<cir::BrOp>(
+            resumeOp, mlir::ValueRange{ehToken}, ehCleanupEntry);
+      }
+    }
+
     // Erase the original cleanup scope op.
     rewriter.eraseOp(cleanupOp);
 
@@ -1285,26 +1330,20 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     mlir::OpBuilder::InsertionGuard guard(rewriter);
 
-    // Nested cleanup scopes must be lowered before the enclosing cleanup scope.
-    // Fail the match so the pattern rewriter will process inner cleanups first.
-    bool hasNestedCleanup = cleanupOp.getBodyRegion()
-                                .walk([&](cir::CleanupScopeOp) {
-                                  return mlir::WalkResult::interrupt();
-                                })
-                                .wasInterrupted();
-    if (hasNestedCleanup)
+    // Nested cleanup scopes and try operations must be flattened before the
+    // enclosing cleanup scope so that EH cleanup inside them is properly
+    // handled. Fail the match so the pattern rewriter processes them first.
+    bool hasNestedOps = cleanupOp.getBodyRegion()
+                            .walk([&](mlir::Operation *op) {
+                              if (isa<cir::CleanupScopeOp, cir::TryOp>(op))
+                                return mlir::WalkResult::interrupt();
+                              return mlir::WalkResult::advance();
+                            })
+                            .wasInterrupted();
+    if (hasNestedOps)
       return mlir::failure();
 
     cir::CleanupKind cleanupKind = cleanupOp.getCleanupKind();
-
-    // EH cleanups nested inside another cleanup scope are not yet supported
-    // because the inner EH unwind path must chain through the outer cleanup
-    // before unwinding to the caller.
-    if (cleanupKind != cir::CleanupKind::Normal) {
-      if (cleanupOp->getParentOfType<cir::CleanupScopeOp>())
-        return cleanupOp->emitError(
-            "nested EH cleanup scope flattening is not yet implemented");
-    }
 
     // Throwing calls in the cleanup region of an EH-enabled cleanup scope
     // are not yet supported. Such calls would need their own EH handling
@@ -1331,7 +1370,14 @@ public:
     if (cleanupKind != cir::CleanupKind::Normal)
       collectThrowingCalls(cleanupOp.getBodyRegion(), callsToRewrite);
 
-    return flattenCleanup(cleanupOp, exits, callsToRewrite, rewriter);
+    // Collect resume ops from already-flattened inner cleanup scopes that
+    // need to chain through this cleanup's EH handler.
+    llvm::SmallVector<cir::ResumeOp> resumeOpsToChain;
+    if (cleanupKind != cir::CleanupKind::Normal)
+      collectResumeOps(cleanupOp.getBodyRegion(), resumeOpsToChain);
+
+    return flattenCleanup(cleanupOp, exits, callsToRewrite, resumeOpsToChain,
+                          rewriter);
   }
 };
 

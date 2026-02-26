@@ -1598,15 +1598,34 @@ def Arith_IndexCastOp
 
 def Arith_IndexCastUIOp
   : Arith_CastOp<"index_castui", IndexCastTypeConstraint, IndexCastTypeConstraint,
-                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>]> {
+                 [DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
+                  DeclareOpInterfaceMethods<ArithNonNegFlagInterface>]> {
   let summary = "unsigned cast between index and integer types";
   let description = [{
     Casts between scalar or vector integers and corresponding 'index' scalar or
     vectors. Index is an integer of platform-specific bit width. If casting to
     a wider integer, the value is zero-extended. If casting to a narrower
     integer, the value is truncated.
+
+    When the `nneg` flag is present, the operand is assumed to have
+    the most significant bit set to 0. In this case, zero extension
+    is equivalent to sign extension. When this assumption is violated,
+    the result is poison.
+
+    Example:
+
+    ```mlir
+      %0 = arith.index_castui %a : i32 to index
+      %1 = arith.index_castui %a nneg : i32 to index
+      %2 = arith.index_castui %b nneg : index to i64
+    ```
   }];
 
+  let arguments = (ins IndexCastTypeConstraint:$in, UnitAttr:$nonNeg);
+  let results = (outs IndexCastTypeConstraint:$out);
+  let assemblyFormat = [{
+    $in (`nneg` $nonNeg^)? attr-dict `:` type($in) `to` type($out)
+  }];
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }

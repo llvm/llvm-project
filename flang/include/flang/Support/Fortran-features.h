@@ -58,7 +58,8 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     InaccessibleDeferredOverride,
     AmdMemoryAllocator, CudaWarpMatchFunction,
     DoConcurrentOffload, TransferBOZ, Coarray, PointerPassObject,
-    MultipleIdenticalDATA, DefaultStructConstructorNullPointer)
+    MultipleIdenticalDATA, DefaultStructConstructorNullPointer,
+    AssumedRankIoItem)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,

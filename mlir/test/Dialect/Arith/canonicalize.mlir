@@ -597,12 +597,22 @@ func.func @indexCastUIOfUnsignedExtend(%arg0: i8) -> index {
   return %idx : index
 }
 
-// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg
-//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_on_extui
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 nneg : i8 to index
 //       CHECK:   return %[[res]]
-func.func @indexCastUIOfUnsignedExtend_nneg(%arg0: i8) -> index {
+func.func @indexCastUIOfUnsignedExtend_nneg_on_extui(%arg0: i8) -> index {
   %ext = arith.extui %arg0 nneg : i8 to i16
   %idx = arith.index_castui %ext : i16 to index
+  return %idx : index
+}
+
+// CHECK-LABEL: @indexCastUIOfUnsignedExtend_nneg_on_castui
+//       CHECK:   %[[res:.+]] = arith.index_castui %arg0 : i8 to index
+//   CHECK-NOT:   nneg
+//       CHECK:   return %[[res]]
+func.func @indexCastUIOfUnsignedExtend_nneg_on_castui(%arg0: i8) -> index {
+  %ext = arith.extui %arg0 : i8 to i16
+  %idx = arith.index_castui %ext nneg : i16 to index
   return %idx : index
 }
 

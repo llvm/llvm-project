@@ -10,12 +10,22 @@ T accumulate(InputIt first, InputIt last, T init) {
   (void)*first;
   return init;
 }
+template <class InputIt, class T, class BinaryOp>
+T accumulate(InputIt first, InputIt last, T init, BinaryOp op) {
+  (void)*first;
+  return init;
+}
 
 template <class InputIt, class T>
 T reduce(InputIt first, InputIt last, T init) { (void)*first; return init; }
+template <class InputIt, class T, class BinaryOp>
+T reduce(InputIt first, InputIt last, T init, BinaryOp op) { (void)*first; return init; }
 template <class ExecutionPolicy, class InputIt, class T>
 T reduce(ExecutionPolicy &&policy,
          InputIt first, InputIt last, T init) { (void)*first; return init; }
+template <class ExecutionPolicy, class InputIt, class T, class BinaryOp>
+T reduce(ExecutionPolicy &&policy,
+         InputIt first, InputIt last, T init, BinaryOp op) { (void)*first; return init; }
 
 struct parallel_execution_policy {};
 constexpr parallel_execution_policy par{};
@@ -23,10 +33,48 @@ constexpr parallel_execution_policy par{};
 template <class InputIt1, class InputIt2, class T>
 T inner_product(InputIt1 first1, InputIt1 last1,
                 InputIt2 first2, T value) { (void)*first1; (void)*first2; return value;  }
+template <class InputIt1, class InputIt2, class T, class BinaryOp1, class BinaryOp2>
+T inner_product(InputIt1 first1, InputIt1 last1,
+                InputIt2 first2, T value, BinaryOp1 op1, BinaryOp2 op2) { (void)*first1; (void)*first2; return value; }
 
 template <class ExecutionPolicy, class InputIt1, class InputIt2, class T>
 T inner_product(ExecutionPolicy &&policy, InputIt1 first1, InputIt1 last1,
                 InputIt2 first2, T value) { (void)*first1; (void)*first2; return value; }
+template <class ExecutionPolicy, class InputIt1, class InputIt2, class T, class BinaryOp1, class BinaryOp2>
+T inner_product(ExecutionPolicy &&policy, InputIt1 first1, InputIt1 last1,
+                InputIt2 first2, T value, BinaryOp1 op1, BinaryOp2 op2) { (void)*first1; (void)*first2; return value; }
+
+template <class T = void> struct plus {
+  T operator()(T a, T b) const { return a + b; }
+};
+template <> struct plus<void> {
+  template <class T, class U>
+  auto operator()(T a, U b) const { return a + b; }
+};
+
+template <class T = void> struct minus {
+  T operator()(T a, T b) const { return a - b; }
+};
+template <> struct minus<void> {
+  template <class T, class U>
+  auto operator()(T a, U b) const { return a - b; }
+};
+
+template <class T = void> struct multiplies {
+  T operator()(T a, T b) const { return a * b; }
+};
+template <> struct multiplies<void> {
+  template <class T, class U>
+  auto operator()(T a, U b) const { return a * b; }
+};
+
+template <class T = void> struct bit_or {
+  T operator()(T a, T b) const { return a | b; }
+};
+template <> struct bit_or<void> {
+  template <class T, class U>
+  auto operator()(T a, U b) const { return a | b; }
+};
 
 } // namespace std
 
@@ -159,6 +207,80 @@ int innerProductPositive2() {
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
 }
 
+int accumulatePositiveOp1() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::plus<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveOp2() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::minus<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveOp3() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::multiplies<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int reducePositiveOp1() {
+  float a[1] = {0.5f};
+  return std::reduce(a, a + 1, 0, std::plus<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int reducePositiveOp2() {
+  float a[1] = {0.5f};
+  return std::reduce(std::par, a, a + 1, 0, std::plus<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int innerProductPositiveOp1() {
+  float a[1] = {0.5f};
+  int b[1] = {1};
+  return std::inner_product(a, a + 1, b, 0, std::plus<>(), std::multiplies<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int innerProductPositiveOp2() {
+  float a[1] = {0.5f};
+  int b[1] = {1};
+  return std::inner_product(std::par, a, a + 1, b, 0, std::plus<>(), std::multiplies<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveBitOr() {
+  unsigned a[1] = {1};
+  return std::accumulate(a, a + 1, 0, std::bit_or<>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'unsigned int' into type 'int'
+}
+
+int accumulatePositiveExplicitFunctor1() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::plus<int>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveExplicitFunctor2() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::plus<float>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveExplicitFunctor3() {
+  float a[1] = {0.5f};
+  return std::accumulate(a, a + 1, 0, std::multiplies<double>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
+}
+
+int accumulatePositiveExplicitFunctor4() {
+  double a[1] = {0.5};
+  return std::accumulate(a, a + 1, 0.0f, std::plus<double>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'double' into type 'float'
+}
+
 // Negatives.
 
 int negative1() {
@@ -189,6 +311,48 @@ int negative5() {
   float a[1] = {0.5f};
   float b[1] = {1.0f};
   return std::inner_product(std::par, a, a + 1, b, 0.0f);
+}
+
+int negativeOp1() {
+  float a[1] = {0.5f};
+  // This is OK because types match.
+  return std::accumulate(a, a + 1, 0.0f, std::plus<>());
+}
+
+int negativeOp2() {
+  float a[1] = {0.5f};
+  // This is OK because double is bigger than float.
+  return std::reduce(a, a + 1, 0.0, std::plus<>());
+}
+
+int negativeOp3() {
+  float a[1] = {0.5f};
+  // This is OK because types are compatible even with explicit functor.
+  return std::accumulate(a, a + 1, 0.0, std::plus<double>());
+}
+
+int negativeLambda1() {
+  float a[1] = {0.5f};
+  // This is currently a known limitation.
+  return std::accumulate(a, a + 1, 0, [](int acc, float val) {
+    return acc + (val > 0.0f ? 1 : 0);
+  });
+}
+
+int negativeLambda2() {
+  float a[1] = {0.5f};
+  // This is currently a known limitation.
+  return std::reduce(a, a + 1, 0, [](int acc, float val) {
+    return acc + static_cast<int>(val);
+  });
+}
+
+int negativeInnerProductMixedOps() {
+  float a[1] = {0.5f};
+  int b[1] = {1};
+  // Only one op is transparent, the other is a lambda.
+  return std::inner_product(a, a + 1, b, 0, std::plus<>(),
+                            [](float x, int y) { return x * y; });
 }
 
 namespace blah {

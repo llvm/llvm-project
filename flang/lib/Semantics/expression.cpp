@@ -3316,6 +3316,12 @@ void ExpressionAnalyzer::CheckBadExplicitType(
 
 void ExpressionAnalyzer::CheckForBadRecursion(
     parser::CharBlock callSite, const semantics::Symbol &proc) {
+  if (const Symbol *mainEntry{GetMainEntry(&proc)}) {
+    if (mainEntry != &proc) {
+      CheckForBadRecursion(callSite, *mainEntry);
+      return;
+    }
+  }
   if (const auto *scope{proc.scope()}) {
     if (scope->sourceRange().Contains(callSite)) {
       parser::Message *msg{nullptr};

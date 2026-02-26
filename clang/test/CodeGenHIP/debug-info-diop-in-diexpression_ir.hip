@@ -100,12 +100,12 @@ __device__ void func1(pair p) {}
 //.
 // DIEXPRESSION-IR: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)))
 // DIEXPRESSION-IR: [[META1]] = distinct !DIGlobalVariable(name: "GlobalSharedA", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 10, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_group)
-// DIEXPRESSION-IR: [[META2]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
-// DIEXPRESSION-IR: [[META3]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
+// DIEXPRESSION-IR: [[META2]] = distinct !DICompileUnit(language: DW_LANG_HIP, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+// DIEXPRESSION-IR: [[META3]] = !DIFile(filename: "{{.*}}clang/test/CodeGenHIP/<stdin>", directory: "")
 // DIEXPRESSION-IR: [[META4]] = !{[[META0]], [[META5:![0-9]+]], [[META9:![0-9]+]], [[META11:![0-9]+]], [[META13:![0-9]+]], [[META15:![0-9]+]], [[META17:![0-9]+]], [[META31:![0-9]+]]}
 // DIEXPRESSION-IR: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)))
 // DIEXPRESSION-IR: [[META6]] = distinct !DIGlobalVariable(name: "GlobalSharedB", scope: [[META2]], file: [[META7]], line: 11, type: [[META8]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_group)
-// DIEXPRESSION-IR: [[META7]] = !DIFile(filename: "{{.*}}debug-info-diop-in-diexpression_ir.hip", directory: {{.*}})
+// DIEXPRESSION-IR: [[META7]] = !DIFile(filename: "{{.*}}clang/test/CodeGenHIP/debug-info-diop-in-diexpression_ir.hip", directory: "")
 // DIEXPRESSION-IR: [[META8]] = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
 // DIEXPRESSION-IR: [[META9]] = !DIGlobalVariableExpression(var: [[META10:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)))
 // DIEXPRESSION-IR: [[META10]] = distinct !DIGlobalVariable(name: "GlobalDeviceA", scope: [[META2]], file: [[META7]], line: 12, type: [[META8]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)

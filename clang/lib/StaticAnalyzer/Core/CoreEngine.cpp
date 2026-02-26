@@ -391,11 +391,11 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
       case Stmt::CXXTryStmtClass:
         // Generate a node for each of the successors.
         // Our logic for EH analysis can certainly be improved.
-        for (CFGBlock::const_succ_iterator it = B->succ_begin(),
-             et = B->succ_end(); it != et; ++it) {
-          if (const CFGBlock *succ = *it) {
-            generateNode(BlockEdge(B, succ, Pred->getLocationContext()),
-                         Pred->State, Pred);
+        for (const CFGBlock *Succ : B->succs()) {
+          if (Succ) {
+            BlockEdge BE(B, Succ, Pred->getLocationContext());
+            if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
+              WList->enqueue(N);
           }
         }
         return;
@@ -479,8 +479,9 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
   assert(B->succ_size() == 1 &&
          "Blocks with no terminator should have at most 1 successor.");
 
-  generateNode(BlockEdge(B, *(B->succ_begin()), Pred->getLocationContext()),
-               Pred->State, Pred);
+  BlockEdge BE(B, *(B->succ_begin()), Pred->getLocationContext());
+  if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
+    WList->enqueue(N);
 }
 
 void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
@@ -577,24 +578,6 @@ ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
   return IsNew ? N : nullptr;
 }
 
-/// generateNode - Utility method to generate nodes, hook up successors,
-///  and add nodes to the worklist.
-/// TODO: This and other similar methods should call CoreEngine::makeNode()
-/// instead of duplicating its logic. This would also fix that currently these
-/// can generate non-sink nodes with PosteriorlyOverconstrained state.
-void CoreEngine::generateNode(const ProgramPoint &Loc,
-                              ProgramStateRef State,
-                              ExplodedNode *Pred) {
-  assert(Pred);
-  bool IsNew;
-  ExplodedNode *Node = G.getNode(Loc, State, false, &IsNew);
-
-  Node->addPredecessor(Pred, G); // Link 'Node' with its predecessor.
-
-  // Only add 'Node' to the worklist if it was freshly generated.
-  if (IsNew) WList->enqueue(Node);
-}
-
 void CoreEngine::enqueueStmtNode(ExplodedNode *N,
                                  const CFGBlock *Block, unsigned Idx) {
   assert(Block);
@@ -637,26 +620,10 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
     return;
   }
 
-  bool IsNew;
-  ExplodedNode *Succ = G.getNode(Loc, N->getState(), false, &IsNew);
-  Succ->addPredecessor(N, G);
+  ExplodedNode *Succ = makeNode(Loc, N->getState(), N);
 
-  if (IsNew)
+  if (Succ)
     WList->enqueue(Succ, Block, Idx+1);
-}
-
-ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N,
-                                                    const ReturnStmt *RS) {
-  // Create a CallExitBegin node and enqueue it.
-  const auto *LocCtx = cast<StackFrameContext>(N->getLocationContext());
-
-  // Use the callee location context.
-  CallExitBegin Loc(LocCtx, RS);
-
-  bool isNew;
-  ExplodedNode *Node = G.getNode(Loc, N->getState(), false, &isNew);
-  Node->addPredecessor(N, G);
-  return isNew ? Node : nullptr;
 }
 
 std::optional<unsigned>
@@ -695,15 +662,18 @@ void CoreEngine::enqueue(ExplodedNodeSet &Set,
 }
 
 void CoreEngine::enqueueEndOfFunction(ExplodedNodeSet &Set, const ReturnStmt *RS) {
-  for (auto *I : Set) {
+  for (ExplodedNode *Node : Set) {
+    const LocationContext *LocCtx = Node->getLocationContext();
+
     // If we are in an inlined call, generate CallExitBegin node.
-    if (I->getLocationContext()->getParent()) {
-      I = generateCallExitBeginNode(I, RS);
-      if (I)
-        WList->enqueue(I);
+    if (LocCtx->getParent()) {
+      // Use the callee location context.
+      CallExitBegin Loc(cast<StackFrameContext>(LocCtx), RS);
+      if (ExplodedNode *Succ = makeNode(Loc, Node->getState(), Node))
+        WList->enqueue(Succ);
     } else {
       // TODO: We should run remove dead bindings here.
-      G.addEndOfPath(I);
+      G.addEndOfPath(Node);
       NumPathsExplored++;
     }
   }
