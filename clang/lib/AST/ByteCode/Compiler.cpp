@@ -858,14 +858,14 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // TODO: Aggregate splat to struct and array types
     assert(canClassify(SubExpr->getType()));
 
-    unsigned NumElts;
+    unsigned NumElems;
     PrimType DestElemT;
     QualType DestElemType;
     if (const auto *VT = CE->getType()->getAs<VectorType>()) {
-      NumElts = VT->getNumElements();
+      NumElems = VT->getNumElements();
       DestElemType = VT->getElementType();
     } else if (const auto *MT = CE->getType()->getAs<ConstantMatrixType>()) {
-      NumElts = MT->getNumElementsFlattened();
+      NumElems = MT->getNumElementsFlattened();
       DestElemType = MT->getElementType();
     } else {
       return false;
@@ -895,7 +895,7 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->emitSetLocal(DestElemT, SrcOffset, CE))
       return false;
 
-    for (unsigned I = 0; I != NumElts; ++I) {
+    for (unsigned I = 0; I != NumElems; ++I) {
       if (!this->emitGetLocal(DestElemT, SrcOffset, CE))
         return false;
       if (!this->emitInitElem(DestElemT, I, CE))
@@ -912,17 +912,17 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     QualType SrcType = SubExpr->getType();
     QualType DestType = CE->getType();
 
-    unsigned SrcNumElts;
+    unsigned SrcNumElems;
     PrimType SrcElemT;
     if (const auto *VT = SrcType->getAs<VectorType>()) {
-      SrcNumElts = VT->getNumElements();
+      SrcNumElems = VT->getNumElements();
       SrcElemT = classifyPrim(VT->getElementType());
     } else if (const auto *MT = SrcType->getAs<ConstantMatrixType>()) {
-      SrcNumElts = MT->getNumElementsFlattened();
+      SrcNumElems = MT->getNumElementsFlattened();
       SrcElemT = classifyPrim(MT->getElementType());
     } else if (const auto *AT = SrcType->getAsArrayTypeUnsafe()) {
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        SrcNumElts = CAT->getZExtSize();
+        SrcNumElems = CAT->getZExtSize();
         SrcElemT = classifyPrim(CAT->getElementType());
       } else {
         return false;
@@ -931,18 +931,18 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return false;
     }
 
-    unsigned DestNumElts;
+    unsigned DestNumElems;
     PrimType DestElemT;
     QualType DestElemType;
     if (const auto *VT = DestType->getAs<VectorType>()) {
-      DestNumElts = VT->getNumElements();
+      DestNumElems = VT->getNumElements();
       DestElemType = VT->getElementType();
     } else if (const auto *MT = DestType->getAs<ConstantMatrixType>()) {
-      DestNumElts = MT->getNumElementsFlattened();
+      DestNumElems = MT->getNumElementsFlattened();
       DestElemType = MT->getElementType();
     } else if (const auto *AT = DestType->getAsArrayTypeUnsafe()) {
       if (const auto *CAT = dyn_cast<ConstantArrayType>(AT)) {
-        DestNumElts = CAT->getZExtSize();
+        DestNumElems = CAT->getZExtSize();
         DestElemType = CAT->getElementType();
       } else {
         return false;
@@ -968,8 +968,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     if (!this->emitSetLocal(PT_Ptr, SrcOffset, CE))
       return false;
 
-    unsigned NumElts = std::min(SrcNumElts, DestNumElts);
-    for (unsigned I = 0; I != NumElts; ++I) {
+    unsigned NumElems = std::min(SrcNumElems, DestNumElems);
+    for (unsigned I = 0; I != NumElems; ++I) {
       if (!this->emitGetLocal(PT_Ptr, SrcOffset, CE))
         return false;
       if (!this->emitArrayElemPop(SrcElemT, I, CE))
@@ -1987,11 +1987,11 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
   }
 
   if (const auto *MT = E->getType()->getAs<ConstantMatrixType>()) {
-    unsigned NumElts = MT->getNumElementsFlattened();
+    unsigned NumElems = MT->getNumElementsFlattened();
     QualType ElemQT = MT->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
 
-    for (unsigned I = 0; I < NumElts; ++I) {
+    for (unsigned I = 0; I < NumElems; ++I) {
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, I, E))
@@ -2317,15 +2317,15 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
   }
 
   if (const auto *MT = QT->getAs<ConstantMatrixType>()) {
-    unsigned NumElts = MT->getNumElementsFlattened();
-    assert(Inits.size() == NumElts);
+    unsigned NumElems = MT->getNumElementsFlattened();
+    assert(Inits.size() == NumElems);
 
     QualType ElemQT = MT->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
 
     // InitListExpr elements are in column-major order.
     // Store in row-major order to match APValue convention.
-    for (unsigned I = 0; I < NumElts; ++I) {
+    for (unsigned I = 0; I < NumElems; ++I) {
       if (!this->visit(Inits[I]))
         return false;
       if (!this->emitInitElem(ElemT,

@@ -939,11 +939,11 @@ std::optional<APValue> Pointer::toRValue(const Context &Ctx,
       assert(Ptr.getFieldDesc()->isPrimitiveArray());
       QualType ElemTy = MT->getElementType();
       PrimType ElemT = *Ctx.classify(ElemTy);
-      unsigned NumElts = MT->getNumElementsFlattened();
+      unsigned NumElems = MT->getNumElementsFlattened();
 
       SmallVector<APValue> Values;
-      Values.reserve(NumElts);
-      for (unsigned I = 0; I != NumElts; ++I) {
+      Values.reserve(NumElems);
+      for (unsigned I = 0; I != NumElems; ++I) {
         TYPE_SWITCH(ElemT,
                     { Values.push_back(Ptr.elem<T>(I).toAPValue(ASTCtx)); });
       }
