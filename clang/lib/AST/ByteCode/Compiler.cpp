@@ -2003,7 +2003,7 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
     QualType ElemQT = MT->getElementType();
     PrimType ElemT = classifyPrim(ElemQT);
 
-    for (unsigned I = 0; I < NumElems; ++I) {
+    for (unsigned I = 0; I != NumElems; ++I) {
       if (!this->visitZeroInitializer(ElemT, ElemQT, E))
         return false;
       if (!this->emitInitElem(ElemT, I, E))
@@ -2337,7 +2337,7 @@ bool Compiler<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
 
     // InitListExpr elements are in column-major order.
     // Store in row-major order to match APValue convention.
-    for (unsigned I = 0; I < NumElems; ++I) {
+    for (unsigned I = 0; I != NumElems; ++I) {
       if (!this->visit(Inits[I]))
         return false;
       if (!this->emitInitElem(ElemT,
