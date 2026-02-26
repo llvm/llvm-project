@@ -6819,6 +6819,14 @@ the configuration (without a prefix: ``Auto``).
       AfterControlStatements: true
       AfterFunctionDefinitionName: true
 
+  * ``bool AfterCatchMacros`` If ``true``, put space between catch macros and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       CATCH (...)                     vs.    CATCH(...)
+         <catch-body>                           <catch-body>
+
   * ``bool AfterControlStatements`` If ``true``, put space between control statement keywords
     (for/if/while...) and opening parentheses.
 
@@ -6905,6 +6913,14 @@ the configuration (without a prefix: ``Auto``).
        concept C = requires (T t) {           concept C = requires(T t) {
                      ...                                    ...
                    }                                      }
+
+  * ``bool AfterTryMacros`` If ``true``, put space between try macros and opening parentheses.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       TRY (...)                       vs.    TRY(...)
+         <try-body>                             <try-body>
 
   * ``bool BeforeNonEmptyParentheses`` If ``true``, put a space before opening parentheses only if the
     parentheses are not empty.

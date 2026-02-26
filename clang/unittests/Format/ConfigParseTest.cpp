@@ -252,6 +252,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtEndOfFile);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfBlock);
   CHECK_PARSE_NESTED_BOOL(KeepEmptyLines, AtStartOfFile);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterCatchMacros);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterControlStatements);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterForeachMacros);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions,
@@ -262,6 +263,7 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterNot);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterOverloadedOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterPlacementOperator);
+  CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterTryMacros);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, ExceptDoubleParentheses);
   CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InCStyleCasts);

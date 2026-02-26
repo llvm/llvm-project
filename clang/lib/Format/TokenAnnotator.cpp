@@ -4935,6 +4935,14 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
       return Style.SpaceBeforeParensOptions.AfterIfMacros ||
              spaceRequiredBeforeParens(Right);
     }
+    if (Left.is(TT_TryMacro)) {
+      return Style.SpaceBeforeParensOptions.AfterTryMacros ||
+             spaceRequiredBeforeParens(Right);
+    }
+    if (Left.is(TT_CatchMacro)) {
+      return Style.SpaceBeforeParensOptions.AfterCatchMacros ||
+             spaceRequiredBeforeParens(Right);
+    }
     if (Style.SpaceBeforeParens == FormatStyle::SBPO_Custom &&
         Left.isPlacementOperator() &&
         Right.isNot(TT_OverloadedOperatorLParen) &&
@@ -5065,11 +5073,6 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
 
   const bool IsVerilog = Style.isVerilog();
   assert(!IsVerilog || !IsCpp);
-
-  // TryMacros/CatchMacros should look like macro invocations, not keywords.
-  // Don't add a space before their argument list.
-  if (Left.isOneOf(TT_TryMacro, TT_CatchMacro) && Right.is(tok::l_paren))
-    return false;
 
   // Never ever merge two words.
   if (Keywords.isWordLike(Right, IsVerilog) &&

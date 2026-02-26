@@ -5068,6 +5068,13 @@ struct FormatStyle {
   ///     AfterFunctionDefinitionName: true
   /// \endcode
   struct SpaceBeforeParensCustom {
+    /// If ``true``, put space between catch macros and opening parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    CATCH (...)                     vs.    CATCH(...)
+    ///      <catch-body>                           <catch-body>
+    /// \endcode
+    bool AfterCatchMacros;
     /// If ``true``, put space between control statement keywords
     /// (for/if/while...) and opening parentheses.
     /// \code
@@ -5145,6 +5152,13 @@ struct FormatStyle {
     ///                }                                      }
     /// \endcode
     bool AfterRequiresInExpression;
+    /// If ``true``, put space between try macros and opening parentheses.
+    /// \code
+    ///    true:                                  false:
+    ///    TRY (...)                       vs.    TRY(...)
+    ///      <try-body>                             <try-body>
+    /// \endcode
+    bool AfterTryMacros;
     /// If ``true``, put a space before opening parentheses only if the
     /// parentheses are not empty.
     /// \code
@@ -5155,15 +5169,17 @@ struct FormatStyle {
     bool BeforeNonEmptyParentheses;
 
     SpaceBeforeParensCustom()
-        : AfterControlStatements(false), AfterForeachMacros(false),
-          AfterFunctionDeclarationName(false),
+        : AfterCatchMacros(false), AfterControlStatements(false),
+          AfterForeachMacros(false), AfterFunctionDeclarationName(false),
           AfterFunctionDefinitionName(false), AfterIfMacros(false),
           AfterNot(false), AfterOverloadedOperator(false),
           AfterPlacementOperator(true), AfterRequiresInClause(false),
-          AfterRequiresInExpression(false), BeforeNonEmptyParentheses(false) {}
+          AfterRequiresInExpression(false), AfterTryMacros(false),
+          BeforeNonEmptyParentheses(false) {}
 
     bool operator==(const SpaceBeforeParensCustom &Other) const {
-      return AfterControlStatements == Other.AfterControlStatements &&
+      return AfterCatchMacros == Other.AfterCatchMacros &&
+             AfterControlStatements == Other.AfterControlStatements &&
              AfterForeachMacros == Other.AfterForeachMacros &&
              AfterFunctionDeclarationName ==
                  Other.AfterFunctionDeclarationName &&
@@ -5174,6 +5190,7 @@ struct FormatStyle {
              AfterPlacementOperator == Other.AfterPlacementOperator &&
              AfterRequiresInClause == Other.AfterRequiresInClause &&
              AfterRequiresInExpression == Other.AfterRequiresInExpression &&
+             AfterTryMacros == Other.AfterTryMacros &&
              BeforeNonEmptyParentheses == Other.BeforeNonEmptyParentheses;
     }
   };

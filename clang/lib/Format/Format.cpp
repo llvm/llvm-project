@@ -831,6 +831,7 @@ struct ScalarEnumerationTraits<FormatStyle::SpaceAroundPointerQualifiersStyle> {
 
 template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
   static void mapping(IO &IO, FormatStyle::SpaceBeforeParensCustom &Spacing) {
+    IO.mapOptional("AfterCatchMacros", Spacing.AfterCatchMacros);
     IO.mapOptional("AfterControlStatements", Spacing.AfterControlStatements);
     IO.mapOptional("AfterForeachMacros", Spacing.AfterForeachMacros);
     IO.mapOptional("AfterFunctionDefinitionName",
@@ -844,6 +845,7 @@ template <> struct MappingTraits<FormatStyle::SpaceBeforeParensCustom> {
     IO.mapOptional("AfterRequiresInClause", Spacing.AfterRequiresInClause);
     IO.mapOptional("AfterRequiresInExpression",
                    Spacing.AfterRequiresInExpression);
+    IO.mapOptional("AfterTryMacros", Spacing.AfterTryMacros);
     IO.mapOptional("BeforeNonEmptyParentheses",
                    Spacing.BeforeNonEmptyParentheses);
   }
@@ -1680,9 +1682,11 @@ static void expandPresetsSpaceBeforeParens(FormatStyle &Expanded) {
 
   switch (Expanded.SpaceBeforeParens) {
   case FormatStyle::SBPO_ControlStatements:
+    Expanded.SpaceBeforeParensOptions.AfterCatchMacros = true;
     Expanded.SpaceBeforeParensOptions.AfterControlStatements = true;
     Expanded.SpaceBeforeParensOptions.AfterForeachMacros = true;
     Expanded.SpaceBeforeParensOptions.AfterIfMacros = true;
+    Expanded.SpaceBeforeParensOptions.AfterTryMacros = true;
     break;
   case FormatStyle::SBPO_ControlStatementsExceptControlMacros:
     Expanded.SpaceBeforeParensOptions.AfterControlStatements = true;
@@ -1885,9 +1889,11 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.SpaceBeforeJsonColon = false;
   LLVMStyle.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
   LLVMStyle.SpaceBeforeParensOptions = {};
+  LLVMStyle.SpaceBeforeParensOptions.AfterCatchMacros = true;
   LLVMStyle.SpaceBeforeParensOptions.AfterControlStatements = true;
   LLVMStyle.SpaceBeforeParensOptions.AfterForeachMacros = true;
   LLVMStyle.SpaceBeforeParensOptions.AfterIfMacros = true;
+  LLVMStyle.SpaceBeforeParensOptions.AfterTryMacros = true;
   LLVMStyle.SpaceBeforeRangeBasedForLoopColon = true;
   LLVMStyle.SpaceBeforeSquareBrackets = false;
   LLVMStyle.SpaceInEmptyBraces = FormatStyle::SIEB_Never;
