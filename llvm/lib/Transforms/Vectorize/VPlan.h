@@ -640,6 +640,11 @@ public:
     llvm_unreachable("Unhandled VPRecipeID");
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);

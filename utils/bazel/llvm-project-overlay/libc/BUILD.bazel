@@ -1547,6 +1547,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16sqrtf128",
+    hdrs = ["src/__support/math/f16sqrtf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16sqrtl",
     hdrs = ["src/__support/math/f16sqrtl.h"],
     deps = [
@@ -5378,6 +5390,23 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_tanpif16",
+    hdrs = ["src/__support/math/tanpif16.h"],
+    deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_math_sincosf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_tanhf",
     hdrs = ["src/__support/math/tanhf.h"],
     deps = [
@@ -6319,7 +6348,7 @@ libc_math_function(
 libc_math_function(
     name = "f16sqrtf128",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_f16sqrtf128",
     ],
 )
 
@@ -7670,14 +7699,7 @@ libc_math_function(
 
 libc_math_function(
     name = "tanpif16",
-    additional_deps = [
-        ":__support_macros_optimization",
-        ":__support_math_sincosf16_utils",
-        ":hdr_errno_macros",
-        ":hdr_fenv_macros",
-        ":__support_fputil_cast",
-        ":__support_fputil_multiply_add",
-    ],
+    additional_deps = [":__support_math_tanpif16"],
 )
 
 libc_math_function(name = "totalorder")
