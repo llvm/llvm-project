@@ -409,12 +409,12 @@ def PACKW  : ALUW_rr<0b0000100, 0b100, "packw">,
 let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in {
 def ZEXT_H_RV32 : RVBUnaryR<0b0000100, 0b100, OPC_OP, "zext.h">,
                   Sched<[WriteIALU, ReadIALU]>;
-} // Predicates = [HasStdExtZbb, IsRV32]
+} // Predicates = [HasStdExtZbbOrZbkb, IsRV32]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV64], IsSignExtendingOpW = 1 in {
 def ZEXT_H_RV64 : RVBUnaryR<0b0000100, 0b100, OPC_OP_32, "zext.h">,
                   Sched<[WriteIALU, ReadIALU]>;
-} // Predicates = [HasStdExtZbb, IsRV64]
+} // Predicates = [HasStdExtZbbOrZbkb, IsRV64]
 
 let Predicates = [HasStdExtZbbOrZbkb, IsRV32] in {
 def REV8_RV32 : Unary_r<0b011010011000, 0b101, "rev8">,
