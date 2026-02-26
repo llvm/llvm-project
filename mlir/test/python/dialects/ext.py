@@ -94,6 +94,8 @@ def testMyInt():
         # CHECK: True
         print(issubclass(AddOp.Adaptor, OpAdaptor))
         adaptor1 = AddOp.Adaptor(list(add1.operands), add1)
+        # CHECK: myint.add
+        print(adaptor1.OPERATION_NAME)
         # CHECK: OpResult(%0 = "myint.constant"() {value = 2 : i32} : () -> i32)
         print(adaptor1.lhs)
         # CHECK: OpResult(%1 = "myint.constant"() {value = 3 : i32} : () -> i32)
