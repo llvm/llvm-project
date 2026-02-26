@@ -1277,6 +1277,7 @@ bool VPInstruction::isVectorToScalar() const {
 
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
+  case Instruction::Load:
   case Instruction::PHI:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
@@ -1382,6 +1383,7 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
   case VPInstruction::Not:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
+  case Instruction::Load:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::CalculateTripCountMinusVF:
@@ -1603,6 +1605,10 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::VScale:
     O << "vscale " << *ResultTy;
+    break;
+  case Instruction::Load:
+    O << "load ";
+    printOperands(O, SlotTracker);
     break;
   default:
     assert(Instruction::isCast(getOpcode()) && "unhandled opcode");
