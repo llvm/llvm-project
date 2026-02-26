@@ -483,6 +483,27 @@ public:
   static FileSpec LocateSourceFile(const lldb::ModuleSP &module_sp,
                                    const FileSpec &original_source_file);
 
+  /// Scripted symbol locator instance management.
+  /// These manage globally-registered scripted locator instances that are
+  /// consulted by the SymbolLocatorScripted plugin for all symbol/source
+  /// resolution requests.
+  /// @{
+  static Status
+  RegisterScriptedSymbolLocator(Debugger &debugger, llvm::StringRef class_name,
+                                StructuredData::DictionarySP args_sp);
+  static void ClearScriptedSymbolLocators();
+  static size_t GetNumScriptedSymbolLocators();
+  static llvm::StringRef GetScriptedSymbolLocatorClassName(size_t index);
+
+  struct ScriptedSymbolLocatorInstance {
+    lldb::ScriptedSymbolLocatorInterfaceSP interface_sp;
+    llvm::StringMap<std::optional<FileSpec>> source_file_cache;
+    std::string class_name;
+  };
+  static std::vector<ScriptedSymbolLocatorInstance> &
+  GetScriptedSymbolLocatorInstances();
+  /// @}
+
   // Trace
   static bool RegisterPlugin(
       llvm::StringRef name, llvm::StringRef description,

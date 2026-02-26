@@ -12,6 +12,7 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
+#include "lldb/Interpreter/ScriptInterpreter.h"
 #include "lldb/Symbol/SaveCoreOptions.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
@@ -1607,6 +1608,59 @@ FileSpec PluginManager::LocateSourceFile(const lldb::ModuleSP &module_sp,
     }
   }
   return {};
+}
+
+static std::vector<PluginManager::ScriptedSymbolLocatorInstance> &
+GetScriptedSymbolLocatorInstancesImpl() {
+  static std::vector<PluginManager::ScriptedSymbolLocatorInstance> g_instances;
+  return g_instances;
+}
+
+std::vector<PluginManager::ScriptedSymbolLocatorInstance> &
+PluginManager::GetScriptedSymbolLocatorInstances() {
+  return GetScriptedSymbolLocatorInstancesImpl();
+}
+
+Status PluginManager::RegisterScriptedSymbolLocator(
+    Debugger &debugger, llvm::StringRef class_name,
+    StructuredData::DictionarySP args_sp) {
+  ScriptInterpreter *interp =
+      debugger.GetScriptInterpreter(/*can_create=*/true);
+  if (!interp)
+    return Status::FromErrorString("no script interpreter");
+
+  auto interface_sp = interp->CreateScriptedSymbolLocatorInterface();
+  if (!interface_sp)
+    return Status::FromErrorString(
+        "failed to create scripted symbol locator interface");
+
+  ExecutionContext exe_ctx;
+  auto obj_or_err =
+      interface_sp->CreatePluginObject(class_name, exe_ctx, args_sp);
+  if (!obj_or_err)
+    return Status::FromError(obj_or_err.takeError());
+
+  ScriptedSymbolLocatorInstance inst;
+  inst.interface_sp = std::move(interface_sp);
+  inst.class_name = class_name.str();
+
+  GetScriptedSymbolLocatorInstancesImpl().push_back(std::move(inst));
+  return Status();
+}
+
+void PluginManager::ClearScriptedSymbolLocators() {
+  GetScriptedSymbolLocatorInstancesImpl().clear();
+}
+
+size_t PluginManager::GetNumScriptedSymbolLocators() {
+  return GetScriptedSymbolLocatorInstancesImpl().size();
+}
+
+llvm::StringRef PluginManager::GetScriptedSymbolLocatorClassName(size_t index) {
+  auto &instances = GetScriptedSymbolLocatorInstancesImpl();
+  if (index >= instances.size())
+    return {};
+  return instances[index].class_name;
 }
 
 #pragma mark Trace
