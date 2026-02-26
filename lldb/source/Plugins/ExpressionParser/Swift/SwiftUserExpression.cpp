@@ -339,7 +339,8 @@ static llvm::Error AddVariableInfo(
   // parameters, and we can't have a type with unbound generics in a non-generic
   // function.
   if (should_not_bind_generic_types && is_self)
-    target_type = ast_context.GetBuiltinRawPointerType();
+    target_type =
+        ast_context.GetBuiltinRawPointerType(ast_context.GetManglingFlavor());
   else if (is_unbound_pack)
     target_type = variable_sp->GetType()->GetForwardCompilerType();
   else {

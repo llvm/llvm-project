@@ -23,6 +23,8 @@
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Target/Target.h"
 
+#include "swift/Demangling/ManglingFlavor.h"
+
 #include <functional>
 
 namespace lldb_private {
@@ -71,9 +73,8 @@ private:
   CreateCocoaHandler(lldb::ValueObjectSP storage_sp) const;
 
   lldb::ValueObjectSP
-  StorageObjectAtAddress(
-    const ExecutionContext &exe_ctx,
-    lldb::addr_t address) const;
+  StorageObjectAtAddress(const ExecutionContext &exe_ctx, lldb::addr_t address,
+                         ::swift::Mangle::ManglingFlavor flavor) const;
 
   lldb::ValueObjectSP
   CocoaObjectAtAddress(
@@ -96,8 +97,8 @@ protected:
   ConstString m_syntheticChildrenName;
 
   ConstString m_collection_demangledRegex;
-  
-  ConstString m_nativeStorageRoot_mangled;
+
+  ConstString m_nativeStorageRoot_mangledSuffix;
   ConstString m_nativeStorageRoot_demangled;
 
   ConstString m_nativeStorage_mangledRegex_ObjC;

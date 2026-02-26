@@ -759,7 +759,9 @@ private:
   bool m_indirect = false;
 };
 
-static std::string mangledTypenameForTasksTuple(size_t count) {
+static std::string
+mangledTypenameForTasksTuple(size_t count,
+                             ::swift::Mangle::ManglingFlavor flavor) {
   /*
   Global > TypeMangling > Type > Tuple
     TupleElement > Type > Structure
@@ -784,7 +786,7 @@ static std::string mangledTypenameForTasksTuple(size_t count) {
     }
   }
 
-  return mangleNode(root).result();
+  return mangleNode(root, flavor).result();
 }
 
 /// Synthetic provider for `Swift.Task`.
@@ -842,9 +844,10 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
     auto target_sp = m_backend.GetTargetSP();
 
-    // TypeMangling for "Swift.Bool"
-    CompilerType bool_type =
-        m_ts->GetTypeFromMangledTypename(ConstString("$sSbD"));
+    auto flavor =
+        SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName());
+
+    CompilerType bool_type = ts->GetBoolType(flavor);
 
 #define RETURN_CHILD(FIELD, NAME, TYPE)                                        \
   if (!FIELD) {                                                                \
@@ -859,9 +862,7 @@ public:
     switch (idx) {
     case 0:
       if (!m_address_sp) {
-        // TypeMangling for "Swift.UnsafeRawPointer"
-        CompilerType raw_pointer_type =
-            m_ts->GetTypeFromMangledTypename(ConstString("$sSVD"));
+        CompilerType raw_pointer_type = ts->GetUnsafeRawPointerType(flavor);
 
         addr_t value = m_task_ptr;
         if (auto process_sp = m_backend.GetProcessSP())
@@ -875,15 +876,11 @@ public:
       }
       return m_address_sp;
     case 1: {
-      // TypeMangling for "Swift.UInt64"
-      CompilerType uint64_type =
-          m_ts->GetTypeFromMangledTypename(ConstString("$ss6UInt64VD"));
+      CompilerType uint64_type = ts->GetUInt64Type(flavor);
       RETURN_CHILD(m_id_sp, id, uint64_type);
     }
     case 2: {
-      // TypeMangling for "Swift.TaskPriority"
-      CompilerType priority_type =
-          m_ts->GetTypeFromMangledTypename(ConstString("$sScPD"));
+      CompilerType priority_type = ts->GetTaskPriorityType(flavor);
       RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, priority_type);
     }
     case 3: {
@@ -892,9 +889,8 @@ public:
         if (!process_sp)
           return {};
 
-        // TypeMangling for "Swift.Optional<Swift.UnsafeRawPointer>"
         CompilerType raw_pointer_type =
-            m_ts->GetTypeFromMangledTypename(ConstString("$sSVSgD"));
+            ts->GetOptionalUnsafeRawPointerType(flavor);
 
         addr_t parent_addr = 0;
         if (m_task_info.isChildTask) {
@@ -935,7 +931,7 @@ public:
           });
 
         std::string mangled_typename =
-            mangledTypenameForTasksTuple(tasks.size());
+            mangledTypenameForTasksTuple(tasks.size(), flavor);
         CompilerType tasks_tuple_type =
             m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
         DataExtractor data{tasks.data(), tasks.size() * sizeof(task_type),
@@ -1056,9 +1052,11 @@ public:
       if (auto ts_or_err =
               target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift)) {
         if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-                ts_or_err->get()))
-          // TypeMangling for "Swift.UnsafeCurrentTask"
-          m_task_type = ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+                ts_or_err->get())) {
+          auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+              m_backend.GetCompilerType().GetMangledTypeName());
+          m_task_type = ts->GetUnsafeCurrentTaskType(flavor);
+        }
       } else {
         LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
                        ts_or_err.takeError(),
@@ -1136,9 +1134,11 @@ public:
       if (auto ts_or_err =
               target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeSwift)) {
         if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-                ts_or_err->get()))
-          // TypeMangling for "Swift.UnsafeCurrentTask"
-          m_task_type = ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+                ts_or_err->get())) {
+          auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+              m_backend.GetCompilerType().GetMangledTypeName());
+          m_task_type = ts->GetUnsafeCurrentTaskType(flavor);
+        }
       } else {
         LLDB_LOG_ERROR(
             GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
@@ -1275,9 +1275,11 @@ public:
         if (auto ts_or_err = target_sp->GetScratchTypeSystemForLanguage(
                 eLanguageTypeSwift)) {
           if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-                  ts_or_err->get()))
-            // TypeMangling for "Swift.UnsafeCurrentTask"
-            m_task_type = ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+                  ts_or_err->get())) {
+            auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+                m_backend.GetCompilerType().GetMangledTypeName());
+            m_task_type = ts->GetUnsafeCurrentTaskType(flavor);
+          }
         } else {
           LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
                          ts_or_err.takeError(),
@@ -1443,8 +1445,10 @@ public:
       return {};
 
     if (!m_unprioritised_jobs_sp) {
+      auto flavor =
+          SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName());
       std::string mangled_typename =
-          mangledTypenameForTasksTuple(m_job_addrs.size());
+          mangledTypenameForTasksTuple(m_job_addrs.size(), flavor);
       CompilerType tasks_tuple_type =
           m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
       DataExtractor data{m_job_addrs.data(),
@@ -1475,9 +1479,11 @@ public:
         if (auto ts_or_err = target_sp->GetScratchTypeSystemForLanguage(
                 eLanguageTypeSwift)) {
           if (auto *ts = llvm::dyn_cast_or_null<TypeSystemSwiftTypeRef>(
-                  ts_or_err->get()))
-            // TypeMangling for "Swift.UnsafeCurrentTask"
-            m_task_type = ts->GetTypeFromMangledTypename(ConstString("$sSctD"));
+                  ts_or_err->get())) {
+            auto flavor = SwiftLanguageRuntime::GetManglingFlavor(
+                m_backend.GetCompilerType().GetMangledTypeName());
+            m_task_type = ts->GetUnsafeCurrentTaskType(flavor);
+          }
         } else {
           LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters | LLDBLog::Types),
                          ts_or_err.takeError(),

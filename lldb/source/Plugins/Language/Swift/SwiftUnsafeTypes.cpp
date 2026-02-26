@@ -309,8 +309,9 @@ lldb::ChildCacheState SwiftUnsafeRawBufferPointer::Update() {
       return ChildCacheState::eRefetch;
     }
 
-    CompilerType compiler_type =
-        type_system->GetTypeFromMangledTypename(ConstString("$ss5UInt8VD"));
+    auto flavor =
+        SwiftLanguageRuntime::GetManglingFlavor(type.GetMangledTypeName());
+    CompilerType compiler_type = type_system->GetUInt8Type(flavor);
     if (!compiler_type.IsValid()) {
       LLDB_LOG(GetLog(LLDBLog::DataFormatters),
                "{0}: Couldn't get a valid compiler type for 'Swift.UInt8'.",

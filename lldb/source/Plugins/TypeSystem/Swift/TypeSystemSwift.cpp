@@ -142,12 +142,58 @@ bool TypeSystemSwift::IsScalarType(opaque_compiler_type_t type) {
   return (GetTypeInfo(type, nullptr) & eTypeIsScalar) != 0;
 }
 
-CompilerType TypeSystemSwift::GetBuiltinRawPointerType() {
-  return GetTypeFromMangledTypename(ConstString("$sBpD"));
+CompilerType TypeSystemSwift::GetBuiltinRawPointerType(
+    swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("BpD", flavor)));
 }
 
-CompilerType TypeSystemSwift::GetBuiltinUnknownObjectType() {
-  return GetTypeFromMangledTypename(ConstString("$sBOD"));
+CompilerType TypeSystemSwift::GetBuiltinUnknownObjectType(
+    swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("BOD", flavor)));
+}
+
+CompilerType
+TypeSystemSwift::GetBoolType(swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("SbD", flavor)));
+}
+
+CompilerType
+TypeSystemSwift::GetUnsafeRawPointerType(swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("SVD", flavor)));
+}
+
+CompilerType
+TypeSystemSwift::GetUInt64Type(swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("s6UInt64VD", flavor)));
+}
+
+CompilerType
+TypeSystemSwift::GetTaskPriorityType(swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("ScPD", flavor)));
+}
+
+CompilerType TypeSystemSwift::GetOptionalUnsafeRawPointerType(
+    swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("SVSgD", flavor)));
+}
+
+CompilerType TypeSystemSwift::GetUnsafeCurrentTaskType(
+    swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("SctD", flavor)));
+}
+
+CompilerType
+TypeSystemSwift::GetUInt8Type(swift::Mangle::ManglingFlavor flavor) {
+  return GetTypeFromMangledTypename(
+      ConstString(SwiftLanguageRuntime::MakeMangledName("s5UInt8VD", flavor)));
 }
 
 bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(

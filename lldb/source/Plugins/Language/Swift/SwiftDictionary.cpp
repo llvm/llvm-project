@@ -41,8 +41,9 @@ DictionaryConfig::DictionaryConfig()
   // Note: We need have use the old _Tt names here because those are
   // still used to name classes in the ObjC runtime.
 
-  m_nativeStorageRoot_mangled =
-    ConstString("$ss22__RawDictionaryStorageCD");
+  // This is stored WITHOUT the mangling flavor suffix.
+  m_nativeStorageRoot_mangledSuffix =
+      ConstString("s22__RawDictionaryStorageCD");
   m_nativeStorageRoot_demangled =
     ConstString("Swift.__RawDictionaryStorage");
 

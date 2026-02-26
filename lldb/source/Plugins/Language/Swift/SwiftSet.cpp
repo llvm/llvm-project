@@ -42,8 +42,8 @@ SetConfig::SetConfig()
   // Note: We need to have the old _Tt names here because those are
   // still used to name classes in the ObjC runtime.
 
-  m_nativeStorageRoot_mangled =
-    ConstString("$ss15__RawSetStorageCD");
+  // This is stored WITHOUT the mangling flavor suffix.
+  m_nativeStorageRoot_mangledSuffix = ConstString("s15__RawSetStorageCD");
   m_nativeStorageRoot_demangled =
     ConstString("Swift.__RawSetStorage");
 
