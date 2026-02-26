@@ -17,6 +17,8 @@
 // Instructions
 //===----------------------------------------------------------------------===//
 
+let ElementsDependOn = EltDepsNone in {
+
 let Predicates = [HasStdExtZvfbfminOrZvfofp8min],
     Constraints = "@earlyclobber $vd",
     mayRaiseFPException = true in {
@@ -31,6 +33,8 @@ let Predicates = [HasStdExtZvfbfwma],
     DestEEW = EEWSEWx2 in {
 defm VFWMACCBF16_V : VWMAC_FV_V_F<"vfwmaccbf16", 0b111011>;
 }
+
+} // ElementsDependOn = EltDepsNone
 
 //===----------------------------------------------------------------------===//
 // Pseudo instructions
