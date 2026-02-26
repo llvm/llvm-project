@@ -578,6 +578,28 @@ TEST_F(FileManagerTest, getBypassFile) {
   EXPECT_EQ(&FE, &SearchRef->getFileEntry());
 }
 
+TEST_F(FileManagerTest, TraceCount) {
+  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+
+  InMemoryFS->addFile("/foo", 0, llvm::MemoryBuffer::getMemBuffer(""));
+
+  auto InstrumentingFS =
+      llvm::makeIntrusiveRefCnt<llvm::vfs::TracingFileSystem>(InMemoryFS);
+
+  FileSystemOptions Opts;
+  FileManager Manager(Opts, InstrumentingFS);
+
+  llvm::vfs::Status Status;
+  Manager.getNoncachedStatValue("/foo", Status);
+  EXPECT_EQ(InstrumentingFS->NumStatusCalls, 1u);
+
+  Manager.getBufferForFile("/foo");
+  EXPECT_EQ(InstrumentingFS->NumOpenFileForReadCalls, 1u);
+
+  Manager.getBufferForFile("/foo");
+  EXPECT_EQ(InstrumentingFS->NumOpenFileForReadCalls, 2u);
+}
+
 TEST_F(FileManagerTest, CASProvider) {
   std::shared_ptr<ObjectStore> DB = llvm::cas::createInMemoryCAS();
   auto FS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();

@@ -590,8 +590,7 @@ FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
       else
         *CASContents = std::nullopt;
     }
-    return FS->getBufferForFile(Name, FileSize, RequiresNullTerminator,
-                                isVolatile, IsText);
+    return (*F)->getBuffer(Name, FileSize, RequiresNullTerminator, isVolatile);
   };
 
   if (FileSystemOpts.WorkingDir.empty())
