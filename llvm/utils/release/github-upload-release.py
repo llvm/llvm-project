@@ -102,9 +102,9 @@ release_links = (
             "* Windows x64 (64-bit): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-win64.exe",
-                "LLVM-{release}-win64.exe.sig",
+                "LLVM-{release}-win64.exe.jsonl",
                 "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz",
-                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.sig",
+                "clang+llvm-{release}-x86_64-pc-windows-msvc.tar.xz.jsonl",
             ),
         ),
         (
@@ -117,9 +117,9 @@ release_links = (
             "* Windows on Arm (ARM64): [installer]({0}) ([signature]({1})), [archive]({2}) ([signature]({3}))",
             (
                 "LLVM-{release}-woa64.exe",
-                "LLVM-{release}-woa64.exe.sig",
+                "LLVM-{release}-woa64.exe.jsonl",
                 "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz",
-                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.sig",
+                "clang+llvm-{release}-aarch64-pc-windows-msvc.tar.xz.jsonl",
             ),
         ),
     ),
