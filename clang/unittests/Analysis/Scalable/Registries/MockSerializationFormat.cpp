@@ -163,7 +163,7 @@ MockSerializationFormat::readTUSummaryEncoding(llvm::StringRef Path) {
 }
 
 llvm::Error MockSerializationFormat::writeTUSummaryEncoding(
-    const TUSummaryEncoding &Encoding, llvm::StringRef Path) {
+    const TUSummaryEncoding &SummaryEncoding, llvm::StringRef Path) {
   llvm_unreachable(
       "MockSerializationFormat does not support TUSummaryEncoding");
 }

@@ -30,7 +30,7 @@ public:
   llvm::Expected<TUSummaryEncoding>
   readTUSummaryEncoding(llvm::StringRef Path) override;
 
-  llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &Encoding,
+  llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
                                      llvm::StringRef Path) override;
 
   struct SpecialFileRepresentation {
