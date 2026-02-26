@@ -331,7 +331,6 @@ public:
     }
   }
 
-  bool enablePExtSIMDCodeGen() const;
   bool isPExtPackedType(MVT VT) const;
 
   // Returns VLEN divided by DLEN. Where DLEN is the datapath width of the
