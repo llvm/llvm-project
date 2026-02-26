@@ -91,8 +91,6 @@ constexpr void testBase_with_NonCommonRange() {
 }
 
 constexpr bool test() {
-  // testBase_with_CommonRange<cpp17_input_iterator<int*>>();
-  // testBase_with_CommonRange<cpp20_input_iterator<int*>>();
   testBase_with_CommonRange<forward_iterator<int*>>();
   testBase_with_CommonRange<bidirectional_iterator<int*>>();
   testBase_with_CommonRange<random_access_iterator<int*>>();
