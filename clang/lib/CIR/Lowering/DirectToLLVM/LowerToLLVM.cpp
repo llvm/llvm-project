@@ -2489,8 +2489,9 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        away when the placeholders are no longer needed.
   const bool isConst = op.getConstant();
   unsigned addrSpace = 0;
-if(auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(op.getAddrSpaceAttr()))
-      addrSpace = targetAS.getValue();
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -2546,10 +2547,14 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // This is the LLVM dialect type.
   const mlir::Type llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
+
+  // FIXME: These default values are placeholders until the the equivalent
+  //        attributes are available on cir.global ops. 
   const bool isConst = op.getConstant();
   unsigned addrSpace = 0;
-if(auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(op.getAddrSpaceAttr()))
-      addrSpace = targetAS.getValue();
+  if (auto targetAS = mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
+          op.getAddrSpaceAttr()))
+    addrSpace = targetAS.getValue();
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
