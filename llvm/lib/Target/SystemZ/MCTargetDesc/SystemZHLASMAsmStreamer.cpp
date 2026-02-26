@@ -205,18 +205,13 @@ static void emitXATTR(raw_ostream &OS, StringRef Name, bool IsIndirectReference,
   const bool NotUnspecified = (Executable != GOFF::ESD_EXE_Unspecified);
   if (NotUnspecified || IsIndirectReference) {
     OS << Sep << "REFERENCE(";
-    bool RequiresComma = false;
+    llvm::ListSeparator SepRef(",");
 
-    if (NotUnspecified) {
-      OS << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA");
-      RequiresComma = true;
-    }
+    if (NotUnspecified)
+      OS << SepRef << (Executable == GOFF::ESD_EXE_CODE ? "CODE" : "DATA");
 
-    if (IsIndirectReference) {
-      if (RequiresComma)
-        OS << ",";
-      OS << "INDIRECT";
-    }
+    if (IsIndirectReference)
+      OS << SepRef << "INDIRECT";
 
     OS << ")";
   }
