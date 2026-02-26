@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-amx" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
+// RUN: mlir-opt %s -convert-vector-to-scf -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-x86" -finalize-memref-to-llvm -convert-func-to-llvm -reconcile-unrealized-casts | \
 // RUN: mlir-translate -mlir-to-llvmir | \
 // RUN: %lli --entry-function=entry --mattr="+amx-tile,+amx-int8,+amx-bf16" --dlopen=%mlir_c_runner_utils | \
 // RUN: FileCheck %s
@@ -6,8 +6,8 @@
 // Note: To run this test, your CPU must support AMX.
 
 func.func @tilezero(%arg0: memref<?x?xi32>, %i: index, %j: index) {
-  %1 = amx.tile_zero : vector<16x16xi32>
-  amx.tile_store %arg0[%i, %j], %1 : memref<?x?xi32>, vector<16x16xi32>
+  %1 = x86.amx.tile_zero : vector<16x16xi32>
+  x86.amx.tile_store %arg0[%i, %j], %1 : memref<?x?xi32>, vector<16x16xi32>
   return
 }
 
