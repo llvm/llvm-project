@@ -14,7 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 def C1UltraModel : SchedMachineModel {
-  let IssueWidth            =  23; 
+  let IssueWidth            =  11;
   let MicroOpBufferSize     = 320; // Entries in micro-op re-order buffer. NOTE: Copied from Neoverse-V3
   let LoadLatency           =   4; // Optimistic load latency. NOTE: Copied from Neoverse-V3
   let MispredictPenalty     =  10; // Extra cycles for mispredicted branch.  NOTE: Copied from N3.
@@ -102,7 +102,7 @@ def : WriteRes<WriteLDHi,    []> { let Latency = 4; }
 def C1UWrite_0c : SchedWriteRes<[]> { let Latency = 0; }
 
 // Define a small set of generic 1 micro-op types as placeholders.
-def C1UWrite_1c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 2; }
+def C1UWrite_1c_1B      : SchedWriteRes<[C1UUnitB]>  { let Latency = 1; }
 def C1UWrite_1c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 1; }
 def C1UWrite_2c_1I      : SchedWriteRes<[C1UUnitI]>  { let Latency = 2; }
 def C1UWrite_2c_1I4     : SchedWriteRes<[C1UUnitI4]> { let Latency = 2; }
@@ -152,11 +152,6 @@ def C1UWrite_2c_1B_1S : SchedWriteRes<[C1UUnitB, C1UUnitS]> {
   let NumMicroOps = 2;
 }
 
-def C1UWrite_1c_1F_1Flg : SchedWriteRes<[C1UUnitI, C1UUnitFlg]> {
-  let Latency = 1;
-  let NumMicroOps = 2;
-}
-
 def C1UWrite_1c_1SA_1D : SchedWriteRes<[C1UUnitSA, C1UUnitD]> {
   let Latency     = 1;
   let NumMicroOps = 2;
@@ -173,11 +168,6 @@ def C1UWrite_2c_1SA_V01 : SchedWriteRes<[C1UUnitSA, C1UUnitV01]> {
 
 def C1UWrite_2c_1SA_V01_1I : SchedWriteRes<[C1UUnitSA, C1UUnitV01, C1UUnitI]> {
   let Latency     = 2;
-}
-
-def C1UWrite_2c_1F_1Flg : SchedWriteRes<[C1UUnitI, C1UUnitFlg]> {
-  let Latency = 2;
-  let NumMicroOps = 2;
 }
 
 def C1UWrite_2c_1I_1M : SchedWriteRes<[C1UUnitI, C1UUnitM]> {
@@ -680,14 +670,14 @@ def : InstRW<[C1UWrite_2c_1B_1S], (instrs BL, BLR)>;
 def : SchedAlias<WriteI, C1UWrite_1c_1I>;
 
 // ALU, basic, flagset
-def : InstRW<[C1UWrite_1c_1F_1Flg],
+def : InstRW<[C1UWrite_1c_1I],
              (instregex "^(ADD|SUB)S[WX]r[ir]$",
                         "^(ADC|SBC)S[WX]r$",
                         "^ANDS[WX]ri$",
                         "^(AND|BIC)S[WX]rr$")>;
 
 // ALU, extend and shift
-def : SchedAlias<WriteIEReg, C1UWrite_2c_1F_1Flg>;
+def : SchedAlias<WriteIEReg, C1UWrite_2c_1I>;
 
 // Arithmetic, LSL shift, shift <= 4
 // Arithmetic, flagset, LSL shift, shift <= 4
@@ -699,10 +689,10 @@ def : SchedAlias<WriteISReg, C1UWrite_ArithI>;
 def : InstRW<[C1UWrite_2c_1I], (instrs ADDG, SUBG)>;
 
 // Conditional compare
-def : InstRW<[C1UWrite_1c_1F_1Flg], (instregex "^CCM[NP][WX][ir]")>;
+def : InstRW<[C1UWrite_1c_1I], (instregex "^CCM[NP][WX][ir]")>;
 
 // Conditional select
-def : InstRW<[C1UWrite_1c_1F_1Flg],
+def : InstRW<[C1UWrite_1c_1I],
               (instregex "(CSEL|CSINC|CSINV|CSNEG)(X|W)[ir]")>;
 
 // Convert floating-point condition flags
@@ -717,7 +707,7 @@ def : InstRW<[C1UWrite_2c_1M], (instrs IRG, IRGstack)>;
 def : InstRW<[C1UWrite_1c_1I], (instrs GMI, SUBP)>;
 
 // Subtract Pointer, flagset
-def : InstRW<[C1UWrite_1c_1F_1Flg], (instrs SUBPS)>;
+def : InstRW<[C1UWrite_1c_1I], (instrs SUBPS)>;
 
 // Logical, shift, no flagset
 def : InstRW<[C1UWrite_1c_1I],
@@ -725,7 +715,7 @@ def : InstRW<[C1UWrite_1c_1I],
                         "^ORR[WX]rs$")>;
 
 // Logical, shift, flagset
-def : InstRW<[C1UWrite_1c_1F_1Flg], (instregex "^(AND|BIC)S[WX]rs$")>;
+def : InstRW<[C1UWrite_1c_1I], (instregex "^(AND|BIC)S[WX]rs$")>;
 
 // Move and shift instructions
 // -----------------------------------------------------------------------------
