@@ -46,10 +46,10 @@ Getting the Source Code and Building LLVM
      stacked pull requests and reverts), you can filter them from your
      `git fetch` (or `git pull`) with this configuration:
 
-.. code-block:: console
-
-  git config --add remote.origin.fetch '^refs/heads/users/*'
-  git config --add remote.origin.fetch '^refs/heads/revert-*'
+   .. code-block:: console
+   
+     git config --add remote.origin.fetch '^refs/heads/users/*'
+     git config --add remote.origin.fetch '^refs/heads/revert-*'
 
 #. Configure and build LLVM and Clang:
 
@@ -904,13 +904,13 @@ for a tool by typing ``tool_name -help``.  The following is a brief introduction
 to the most important tools.  More detailed information is in
 the `Command Guide <CommandGuide/index.html>`_.
 
-``bugpoint``
+``llvm-reduce``
 
-  ``bugpoint`` is used to debug optimization passes or code generation backends
+  ``llvm-reduce`` is used to debug optimization passes or code generation backends
   by narrowing down the given test case to the minimum number of passes and/or
   instructions that still cause a problem, whether it is a crash or
   miscompilation. See `<HowToSubmitABug.html>`_ for more information on using
-  ``bugpoint``.
+  ``llvm-reduce``.
 
 ``llvm-ar``
 

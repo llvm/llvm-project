@@ -135,7 +135,9 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.acoshf
     libc.src.math.asin
     libc.src.math.asinf
+    libc.src.math.asinpif
     libc.src.math.asinhf
+    libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan
@@ -349,6 +351,7 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.llogbbf16
   libc.src.math.llrintbf16
   libc.src.math.llroundbf16
+  libc.src.math.log_bf16
   libc.src.math.logbbf16
   libc.src.math.lrintbf16
   libc.src.math.lroundbf16

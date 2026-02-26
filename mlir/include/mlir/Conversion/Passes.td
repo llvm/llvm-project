@@ -187,6 +187,22 @@ def ArithToLLVMConversionPass : Pass<"convert-arith-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ArithToAPFloat
+//===----------------------------------------------------------------------===//
+
+def ArithToAPFloatConversionPass
+    : Pass<"convert-arith-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Arith ops to APFloat runtime library calls";
+  let description = [{
+    This pass converts supported Arith ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point arithmetic operations.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "vector::VectorDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // ArithToSPIRV
 //===----------------------------------------------------------------------===//
 
@@ -613,6 +629,8 @@ def ConvertGpuOpsToNVVMOps : Pass<"convert-gpu-to-nvvm", "gpu::GPUModuleOp"> {
            /*default=*/"false",
            "Replace memref arguments in GPU functions with bare pointers. "
            "All memrefs must have static shape.">,
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">,
     ListOption<"allowedDialects", "allowed-dialects", "std::string",
                "Run conversion patterns of only the specified dialects">,
   ];
@@ -758,6 +776,21 @@ def ConvertMathToLibmPass : Pass<"convert-math-to-libm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// MathToAPFloat
+//===----------------------------------------------------------------------===//
+
+def MathToAPFloatConversionPass
+    : Pass<"convert-math-to-apfloat", "ModuleOp"> {
+  let summary = "Convert Math ops to APFloat runtime library calls";
+  let description = [{
+    This pass converts supported Math ops to APFloat-based runtime library
+    calls (APFloatWrappers.cpp). APFloat is a software implementation of
+    floating-point mathmetic operations.
+  }];
+  let dependentDialects = ["math::MathDialect", "func::FuncDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // MathToLLVM
 //===----------------------------------------------------------------------===//
 
@@ -778,12 +811,33 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
   let summary = "Convert Math dialect to ROCDL library calls";
   let description = [{
     This pass converts supported Math ops to ROCDL library calls.
+
+    The chipset option specifies the target AMDGPU architecture. If the chipset
+    is empty, none of the chipset-dependent patterns are added, and the pass
+    will not attempt to parse the chipset.
   }];
   let dependentDialects = [
     "arith::ArithDialect",
     "func::FuncDialect",
     "ROCDL::ROCDLDialect",
     "vector::VectorDialect",
+  ];
+  let options = [Option<"chipset", "chipset", "std::string",
+                        /*default=*/"\"\"",
+                        "Chipset that these operations will run on">];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToNVVM
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToNVVM : Pass<"convert-math-to-nvvm", "ModuleOp"> {
+  let summary = "Convert Math dialect to CUDA libdevice calls";
+  let description = [{
+    This pass converts supported Math ops to CUDA libdevice calls.
+  }];
+  let dependentDialects = ["arith::ArithDialect", "func::FuncDialect",
+                           "NVVM::NVVMDialect", "vector::VectorDialect",
   ];
 }
 
@@ -794,6 +848,31 @@ def ConvertMathToROCDL : Pass<"convert-math-to-rocdl", "ModuleOp"> {
 def ConvertMathToSPIRVPass : Pass<"convert-math-to-spirv"> {
   let summary = "Convert Math dialect to SPIR-V dialect";
   let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
+// MathToXeVM
+//===----------------------------------------------------------------------===//
+
+def ConvertMathToXeVM : Pass<"convert-math-to-xevm"> {
+  let summary =
+      "Convert (fast) math operations to native XeVM/SPIRV equivalents";
+  let description = [{
+    This pass converts supported math ops marked with the `afn` fastmath flag
+    to function calls for OpenCL `native_` math intrinsics: These intrinsics
+    are typically mapped directly to native device instructions, often resulting
+    in better performance. However, the precision/error of these intrinsics
+    are implementation-defined, and thus math ops are only converted when they
+    have the `afn` fastmath flag enabled.
+  }];
+  let options = [Option<
+      "convertArith", "convert-arith", "bool", /*default=*/"true",
+      "Convert supported Arith ops (e.g. arith.divf) as well.">];
+  let dependentDialects = [
+    "arith::ArithDialect",
+    "xevm::XeVMDialect",
+    "LLVM::LLVMDialect",
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -936,10 +1015,12 @@ def ConvertShardToMPIPass : Pass<"convert-shard-to-mpi"> {
   let dependentDialects = [
     "affine::AffineDialect",
     "arith::ArithDialect",
+    "bufferization::BufferizationDialect",
+    "cf::ControlFlowDialect",
     "memref::MemRefDialect",
     "mpi::MPIDialect",
     "scf::SCFDialect",
-    "bufferization::BufferizationDialect"
+    "tensor::TensorDialect"
   ];
 }
 
@@ -1037,6 +1118,10 @@ def SCFToControlFlowPass : Pass<"convert-scf-to-cf"> {
   let summary = "Convert SCF dialect to ControlFlow dialect, replacing structured"
                 " control flow with a CFG";
   let dependentDialects = ["cf::ControlFlowDialect"];
+  let options = [
+    Option<"allowPatternRollback", "allow-pattern-rollback", "bool", "true",
+           "Experimental performance flag to disallow pattern rollback">
+  ];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1436,7 +1521,7 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
     operations. The lowering pass provides several options to control
     the kinds of optimizations that are allowed. It also provides options
     that enable the use of one or more architectural-specific dialects
-    (AMX, X86Vector, ArmNeon, ArmSVE, etc.) in combination with the
+    (AMX, X86, ArmNeon, ArmSVE, etc.) in combination with the
     architectural-neutral vector dialect lowering.
 
   }];
@@ -1479,10 +1564,9 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "bool", /*default=*/"false",
            "Enables the use of Arm FEAT_BF16 instructions while lowering "
            "the vector dialect.">,
-    Option<"x86Vector", "enable-x86vector",
+    Option<"x86", "enable-x86",
            "bool", /*default=*/"false",
-           "Enables the use of X86Vector dialect while lowering the vector "
-	   "dialect.">,
+           "Enables the use of X86 dialect while lowering the vector dialect.">,
     Option<"vectorContractLowering", "vector-contract-lowering",
            "vector::VectorContractLowering",
            /*default=*/"vector::VectorContractLowering::Dot",

@@ -160,6 +160,43 @@ define i64 @test_ptrauth_resign_ptrauth_constant(ptr %p) {
   ret i64 %authed
 }
 
+@ds = external global i8
+
+define i64 @test_ptrauth_nop_ds1(ptr %p) {
+; CHECK-LABEL: @test_ptrauth_nop_ds1(
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[SIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[TMP0]], i32 1, i64 1234) [ "deactivation-symbol"(ptr @ds) ]
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[SIGNED]], i32 1, i64 1234)
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %tmp0 = ptrtoint ptr %p to i64
+  %signed = call i64 @llvm.ptrauth.sign(i64 %tmp0, i32 1, i64 1234) [ "deactivation-symbol"(ptr @ds) ]
+  %authed = call i64 @llvm.ptrauth.auth(i64 %signed, i32 1, i64 1234)
+  ret i64 %authed
+}
+
+define i64 @test_ptrauth_nop_ds2(ptr %p) {
+; CHECK-LABEL: @test_ptrauth_nop_ds2(
+; CHECK-NEXT:    [[TMP0:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[SIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[TMP0]], i32 1, i64 1234)
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[SIGNED]], i32 1, i64 1234) [ "deactivation-symbol"(ptr @ds) ]
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %tmp0 = ptrtoint ptr %p to i64
+  %signed = call i64 @llvm.ptrauth.sign(i64 %tmp0, i32 1, i64 1234)
+  %authed = call i64 @llvm.ptrauth.auth(i64 %signed, i32 1, i64 1234) [ "deactivation-symbol"(ptr @ds) ]
+  ret i64 %authed
+}
+
+define i64 @test_ptrauth_nop_ds_constant() {
+; CHECK-LABEL: @test_ptrauth_nop_ds_constant(
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 ptrtoint (ptr ptrauth (ptr @foo, i32 1, i64 1234, ptr null, ptr @ds) to i64), i32 1, i64 1234)
+; CHECK-NEXT:    ret i64 [[AUTHED]]
+;
+  %authed = call i64 @llvm.ptrauth.auth(i64 ptrtoint(ptr ptrauth(ptr @foo, i32 1, i64 1234, ptr null, ptr @ds) to i64), i32 1, i64 1234)
+  ret i64 %authed
+}
+
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
 declare i64 @llvm.ptrauth.sign(i64, i32, i64)
 declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)

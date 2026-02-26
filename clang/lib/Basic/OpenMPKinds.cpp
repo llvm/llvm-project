@@ -196,6 +196,16 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
       return OMPC_GRAINSIZE_unknown;
     return Type;
   }
+  case OMPC_dyn_groupprivate: {
+    return llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name)                                 \
+  .Case(#Name, OMPC_DYN_GROUPPRIVATE_##Name)
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  .Case(#Name, OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name)                          \
+      .Case("fallback(" #Name ")", OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+        .Default(OMPC_DYN_GROUPPRIVATE_unknown);
+  }
   case OMPC_num_tasks: {
     unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_NUMTASKS_MODIFIER(Name) .Case(#Name, OMPC_NUMTASKS_##Name)
@@ -210,6 +220,15 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
 #define OPENMP_ALLOCATE_MODIFIER(Name) .Case(#Name, OMPC_ALLOCATE_##Name)
 #include "clang/Basic/OpenMPKinds.def"
         .Default(OMPC_ALLOCATE_unknown);
+  case OMPC_threadset: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_THREADSET_KIND(Name) .Case(#Name, OMPC_THREADSET_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_THREADSET_unknown);
+    if (LangOpts.OpenMP < 60)
+      return OMPC_THREADSET_unknown;
+    return Type;
+  }
   case OMPC_num_threads: {
     unsigned Type = llvm::StringSwitch<unsigned>(Str)
 #define OPENMP_NUMTHREADS_MODIFIER(Name) .Case(#Name, OMPC_NUMTHREADS_##Name)
@@ -217,6 +236,16 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
                         .Default(OMPC_NUMTHREADS_unknown);
     if (LangOpts.OpenMP < 60)
       return OMPC_NUMTHREADS_unknown;
+    return Type;
+  }
+  case OMPC_use_device_ptr: {
+    unsigned Type = llvm::StringSwitch<unsigned>(Str)
+#define OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(Name)                          \
+  .Case(#Name, OMPC_USE_DEVICE_PTR_FALLBACK_##Name)
+#include "clang/Basic/OpenMPKinds.def"
+                        .Default(OMPC_USE_DEVICE_PTR_FALLBACK_unknown);
+    if (LangOpts.OpenMP < 61)
+      return OMPC_USE_DEVICE_PTR_FALLBACK_unknown;
     return Type;
   }
   case OMPC_unknown:
@@ -261,7 +290,6 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_nogroup:
   case OMPC_hint:
   case OMPC_uniform:
-  case OMPC_use_device_ptr:
   case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_has_device_addr:
@@ -282,6 +310,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;
@@ -534,6 +563,20 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'grainsize' clause modifier");
+  case OMPC_dyn_groupprivate:
+    switch (Type) {
+    case OMPC_DYN_GROUPPRIVATE_unknown:
+    case OMPC_DYN_GROUPPRIVATE_FALLBACK_last:
+      return "unknown";
+#define OPENMP_DYN_GROUPPRIVATE_MODIFIER(Name)                                 \
+  case OMPC_DYN_GROUPPRIVATE_##Name:                                           \
+    return #Name;
+#define OPENMP_DYN_GROUPPRIVATE_FALLBACK_MODIFIER(Name)                        \
+  case OMPC_DYN_GROUPPRIVATE_FALLBACK_##Name:                                  \
+    return "fallback(" #Name ")";
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'dyn_groupprivate' clause modifier");
   case OMPC_num_tasks:
     switch (Type) {
     case OMPC_NUMTASKS_unknown:
@@ -564,6 +607,26 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 #include "clang/Basic/OpenMPKinds.def"
     }
     llvm_unreachable("Invalid OpenMP 'num_threads' clause modifier");
+  case OMPC_threadset:
+    switch (Type) {
+    case OMPC_THREADSET_unknown:
+      return "unknown";
+#define OPENMP_THREADSET_KIND(Name)                                            \
+  case OMPC_THREADSET_##Name:                                                  \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'threadset' clause modifier");
+  case OMPC_use_device_ptr:
+    switch (Type) {
+    case OMPC_USE_DEVICE_PTR_FALLBACK_unknown:
+      return "unknown";
+#define OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(Name)                          \
+  case OMPC_USE_DEVICE_PTR_FALLBACK_##Name:                                    \
+    return #Name;
+#include "clang/Basic/OpenMPKinds.def"
+    }
+    llvm_unreachable("Invalid OpenMP 'use_device_ptr' clause modifier");
   case OMPC_unknown:
   case OMPC_threadprivate:
   case OMPC_groupprivate:
@@ -606,7 +669,6 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_nogroup:
   case OMPC_hint:
   case OMPC_uniform:
-  case OMPC_use_device_ptr:
   case OMPC_use_device_addr:
   case OMPC_is_device_ptr:
   case OMPC_has_device_addr:
@@ -627,6 +689,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_affinity:
   case OMPC_when:
   case OMPC_append_args:
+  case OMPC_looprange:
     break;
   default:
     break;
@@ -635,7 +698,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
 }
 
 bool clang::isOpenMPLoopDirective(OpenMPDirectiveKind DKind) {
-  return getDirectiveAssociation(DKind) == Association::Loop;
+  return getDirectiveAssociation(DKind) == Association::LoopNest;
 }
 
 bool clang::isOpenMPWorksharingDirective(OpenMPDirectiveKind DKind) {
@@ -677,6 +740,11 @@ bool clang::isOpenMPTargetDataManagementDirective(OpenMPDirectiveKind DKind) {
          DKind == OMPD_target_exit_data || DKind == OMPD_target_update;
 }
 
+bool clang::isOpenMPTargetMapEnteringDirective(OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_target_data || DKind == OMPD_target_enter_data ||
+         isOpenMPTargetExecutionDirective(DKind);
+}
+
 bool clang::isOpenMPNestingTeamsDirective(OpenMPDirectiveKind DKind) {
   if (DKind == OMPD_teams)
     return true;
@@ -691,7 +759,7 @@ bool clang::isOpenMPTeamsDirective(OpenMPDirectiveKind DKind) {
 
 bool clang::isOpenMPSimdDirective(OpenMPDirectiveKind DKind) {
   // Avoid OMPD_declare_simd
-  if (getDirectiveAssociation(DKind) != Association::Loop)
+  if (getDirectiveAssociation(DKind) != Association::LoopNest)
     return false;
   // Formally, OMPD_end_do_simd also has a loop association, but
   // it's a Fortran-specific directive.
@@ -750,9 +818,14 @@ bool clang::isOpenMPCanonicalLoopNestTransformationDirective(
          DKind == OMPD_interchange || DKind == OMPD_stripe;
 }
 
+bool clang::isOpenMPCanonicalLoopSequenceTransformationDirective(
+    OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_fuse;
+}
+
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
-  // FIXME: There will be more cases when we implement 'fuse'.
-  return isOpenMPCanonicalLoopNestTransformationDirective(DKind);
+  return isOpenMPCanonicalLoopNestTransformationDirective(DKind) ||
+         isOpenMPCanonicalLoopSequenceTransformationDirective(DKind);
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
@@ -842,7 +915,7 @@ void clang::getOpenMPCaptureRegions(
 
   auto GetRegionsForLeaf = [&](OpenMPDirectiveKind LKind) {
     assert(isLeafConstruct(LKind) && "Epecting leaf directive");
-    // Whether a leaf would require OMPD_unknown if it occured on its own.
+    // Whether a leaf would require OMPD_unknown if it occurred on its own.
     switch (LKind) {
     case OMPD_metadirective:
       CaptureRegions.push_back(OMPD_metadirective);

@@ -102,8 +102,7 @@ ABIArgInfo LanaiABIInfo::classifyArgumentType(QualType Ty,
 
   if (isAggregateTypeForABI(Ty)) {
     // Structures with flexible arrays are always indirect.
-    if (RT &&
-        RT->getOriginalDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
+    if (RT && RT->getDecl()->getDefinitionOrSelf()->hasFlexibleArrayMember())
       return getIndirectResult(Ty, /*ByVal=*/true, State);
 
     // Ignore empty structs/unions.

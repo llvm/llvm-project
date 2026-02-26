@@ -39,41 +39,41 @@ class HexagonMCChecker {
   bool ReportErrors;
 
   /// Set of definitions: register #, if predicated, if predicated true.
-  using PredSense = std::pair<unsigned, bool>;
+  using PredSense = std::pair<MCRegister, bool>;
   static const PredSense Unconditional;
   using PredSet = std::multiset<PredSense>;
   using PredSetIterator = std::multiset<PredSense>::iterator;
 
-  using DefsIterator = DenseMap<unsigned, PredSet>::iterator;
-  DenseMap<unsigned, PredSet> Defs;
+  using DefsIterator = DenseMap<MCRegister, PredSet>::iterator;
+  DenseMap<MCRegister, PredSet> Defs;
 
   /// Set of weak definitions whose clashes should be enforced selectively.
-  using SoftDefsIterator = std::set<unsigned>::iterator;
-  std::set<unsigned> SoftDefs;
+  using SoftDefsIterator = std::set<MCRegister>::iterator;
+  std::set<MCRegister> SoftDefs;
 
   /// Set of temporary definitions not committed to the register file.
-  using TmpDefsIterator = std::set<unsigned>::iterator;
-  std::set<unsigned> TmpDefs;
+  using TmpDefsIterator = std::set<MCRegister>::iterator;
+  std::set<MCRegister> TmpDefs;
 
   /// Set of new predicates used.
-  using NewPredsIterator = std::set<unsigned>::iterator;
-  std::set<unsigned> NewPreds;
+  using NewPredsIterator = std::set<MCRegister>::iterator;
+  std::set<MCRegister> NewPreds;
 
   /// Set of predicates defined late.
-  using LatePredsIterator = std::multiset<unsigned>::iterator;
-  std::multiset<unsigned> LatePreds;
+  using LatePredsIterator = std::multiset<MCRegister>::iterator;
+  std::multiset<MCRegister> LatePreds;
 
   /// Set of uses.
-  using UsesIterator = std::set<unsigned>::iterator;
-  std::set<unsigned> Uses;
+  using UsesIterator = std::set<MCRegister>::iterator;
+  std::set<MCRegister> Uses;
 
   /// Pre-defined set of read-only registers.
-  using ReadOnlyIterator = std::set<unsigned>::iterator;
-  std::set<unsigned> ReadOnly;
+  using ReadOnlyIterator = std::set<MCRegister>::iterator;
+  std::set<MCRegister> ReadOnly;
 
   // Contains the vector-pair-registers with the even number
   // first ("v0:1", e.g.) used/def'd in this packet.
-  std::set<unsigned> ReversePairs;
+  std::set<MCRegister> ReversePairs;
 
   void init();
   void init(MCInst const &);
@@ -107,7 +107,7 @@ class HexagonMCChecker {
 
   static void compoundRegisterMap(unsigned &);
 
-  bool isLoopRegister(unsigned R) const {
+  bool isLoopRegister(MCRegister R) const {
     return (Hexagon::SA0 == R || Hexagon::LC0 == R || Hexagon::SA1 == R ||
             Hexagon::LC1 == R);
   }
@@ -120,8 +120,8 @@ public:
                             MCSubtargetInfo const &STI, bool CopyReportErrors);
 
   bool check(bool FullCheck = true);
-  void reportErrorRegisters(unsigned Register);
-  void reportErrorNewValue(unsigned Register);
+  void reportErrorRegisters(MCRegister Register);
+  void reportErrorNewValue(MCRegister Register);
   void reportError(SMLoc Loc, Twine const &Msg);
   void reportNote(SMLoc Loc, Twine const &Msg);
   void reportError(Twine const &Msg);

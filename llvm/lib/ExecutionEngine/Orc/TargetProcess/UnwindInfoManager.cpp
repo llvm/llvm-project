@@ -20,7 +20,7 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionBuffer
 llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
                                            size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>, SPSExecutorAddr,
@@ -37,7 +37,7 @@ llvm_orc_rt_alt_UnwindInfoManager_register(const char *ArgData,
       .release();
 }
 
-static orc::shared::CWrapperFunctionResult
+static orc::shared::CWrapperFunctionBuffer
 llvm_orc_rt_alt_UnwindInfoManager_deregister(const char *ArgData,
                                              size_t ArgSize) {
   using SPSSig = SPSError(SPSSequence<SPSExecutorAddrRange>);

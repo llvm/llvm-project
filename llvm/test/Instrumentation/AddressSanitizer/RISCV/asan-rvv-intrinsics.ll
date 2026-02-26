@@ -180,7 +180,29 @@ define <vscale x 1 x i32> @test_vlseg2_nxv1i32(ptr %base, i64 %vl) sanitize_addr
 ; CHECK-LABEL: @test_vlseg2_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i64>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 8)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP24]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP25]]
 ;
@@ -194,7 +216,29 @@ define <vscale x 1 x i32> @test_vlseg2_mask_nxv1i32(ptr %base, i64 %vl, <vscale 
 ; CHECK-LABEL: @test_vlseg2_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i64>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 8)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP24]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP25]]
 ;
@@ -212,7 +256,29 @@ define <vscale x 1 x i32> @test_vlseg3_nxv1i32(ptr %base, i64 %vl) sanitize_addr
 ; CHECK-LABEL: @test_vlseg3_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i96>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 12)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP37:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP36]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP37]]
 ;
@@ -226,7 +292,29 @@ define <vscale x 1 x i32> @test_vlseg3_mask_nxv1i32(ptr %base, i64 %vl, <vscale 
 ; CHECK-LABEL: @test_vlseg3_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i96>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 12)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP37:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP36]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP37]]
 ;
@@ -244,7 +332,29 @@ define <vscale x 1 x i32> @test_vlseg4_nxv1i32(ptr %base, i64 %vl) sanitize_addr
 ; CHECK-LABEL: @test_vlseg4_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i128>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 16)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP49:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP48]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP49]]
 ;
@@ -258,7 +368,29 @@ define <vscale x 1 x i32> @test_vlseg4_mask_nxv1i32(ptr %base, i64 %vl, <vscale 
 ; CHECK-LABEL: @test_vlseg4_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i128>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 16)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP49:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP48]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP49]]
 ;
@@ -276,7 +408,29 @@ define <vscale x 1 x i32> @test_vlseg5_nxv1i32(ptr %base, i64 %vl) sanitize_addr
 ; CHECK-LABEL: @test_vlseg5_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i160>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 20)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP61:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP60]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP61]]
 ;
@@ -290,7 +444,29 @@ define <vscale x 1 x i32> @test_vlseg5_mask_nxv1i32(ptr %base, i64 %vl, <vscale 
 ; CHECK-LABEL: @test_vlseg5_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i160>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 20)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP61:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP60]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP61]]
 ;
@@ -308,7 +484,29 @@ define <vscale x 1 x i32> @test_vlseg6_nxv1i32(ptr %base, i64 %vl) sanitize_addr
 ; CHECK-LABEL: @test_vlseg6_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i192>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 24)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP73:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP72]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP73]]
 ;
@@ -322,7 +520,29 @@ define <vscale x 1 x i32> @test_vlseg6_mask_nxv1i32(ptr %base, i64 %vl, <vscale 
 ; CHECK-LABEL: @test_vlseg6_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i192>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 24)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP73:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP72]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP73]]
 ;
@@ -340,7 +560,29 @@ define <vscale x 1 x i32> @test_vlseg7_nxv1i32(ptr %base, i64 %vl) sanitize_addr
 ; CHECK-LABEL: @test_vlseg7_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i224>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 28)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP85:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP84]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP85]]
 ;
@@ -354,7 +596,29 @@ define <vscale x 1 x i32> @test_vlseg7_mask_nxv1i32(ptr %base, i64 %vl, <vscale 
 ; CHECK-LABEL: @test_vlseg7_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i224>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 28)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP85:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP84]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP85]]
 ;
@@ -372,7 +636,29 @@ define <vscale x 1 x i32> @test_vlseg8_nxv1i32(ptr %base, i64 %vl) sanitize_addr
 ; CHECK-LABEL: @test_vlseg8_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i256>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 32)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP97:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP96]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP97]]
 ;
@@ -386,7 +672,29 @@ define <vscale x 1 x i32> @test_vlseg8_mask_nxv1i32(ptr %base, i64 %vl, <vscale 
 ; CHECK-LABEL: @test_vlseg8_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i256>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP8]], i64 32)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP97:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP96]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP97]]
 ;
@@ -404,7 +712,29 @@ define void @test_vsseg2_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>,
 ; CHECK-LABEL: @test_vsseg2_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i64>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 8)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -416,7 +746,29 @@ define void @test_vsseg2_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x
 ; CHECK-LABEL: @test_vsseg2_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i64>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 8)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -432,7 +784,29 @@ define void @test_vsseg3_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>,
 ; CHECK-LABEL: @test_vsseg3_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i96>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 12)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -444,7 +818,29 @@ define void @test_vsseg3_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x
 ; CHECK-LABEL: @test_vsseg3_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i96>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 12)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -460,7 +856,29 @@ define void @test_vsseg4_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>,
 ; CHECK-LABEL: @test_vsseg4_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i128>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 16)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -472,7 +890,29 @@ define void @test_vsseg4_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x
 ; CHECK-LABEL: @test_vsseg4_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i128>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 16)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -488,7 +928,29 @@ define void @test_vsseg5_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>,
 ; CHECK-LABEL: @test_vsseg5_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i160>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 20)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -500,7 +962,29 @@ define void @test_vsseg5_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x
 ; CHECK-LABEL: @test_vsseg5_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i160>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 20)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -516,7 +1000,29 @@ define void @test_vsseg6_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>,
 ; CHECK-LABEL: @test_vsseg6_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i192>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 24)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -528,7 +1034,29 @@ define void @test_vsseg6_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x
 ; CHECK-LABEL: @test_vsseg6_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i192>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 24)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -544,7 +1072,29 @@ define void @test_vsseg7_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>,
 ; CHECK-LABEL: @test_vsseg7_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i224>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 28)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -556,7 +1106,29 @@ define void @test_vsseg7_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x
 ; CHECK-LABEL: @test_vsseg7_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i224>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 28)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -572,7 +1144,29 @@ define void @test_vsseg8_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>,
 ; CHECK-LABEL: @test_vsseg8_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i256>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 32)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -584,7 +1178,29 @@ define void @test_vsseg8_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x
 ; CHECK-LABEL: @test_vsseg8_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP10:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP9:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP9]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr <vscale x 1 x i256>, ptr [[BASE:%.*]], i64 0, i64 [[IV]]
+; CHECK-NEXT:    [[TMP8:%.*]] = ptrtoint ptr [[TMP7]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP8]], i64 32)
+; CHECK-NEXT:    br label [[TMP9]]
+; CHECK:       9:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -792,7 +1408,30 @@ define <vscale x 1 x i32> @test_vlsseg2_nxv1i32(ptr %base, i64 %offset, i64 %vl)
 ; CHECK-LABEL: @test_vlsseg2_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlsseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 8)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlsseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP24]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP25]]
 ;
@@ -806,7 +1445,30 @@ define <vscale x 1 x i32> @test_vlsseg2_mask_nxv1i32(ptr %base, i64 %offset, i64
 ; CHECK-LABEL: @test_vlsseg2_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlsseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 8)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP24:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vlsseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP25:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP24]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP25]]
 ;
@@ -824,7 +1486,30 @@ define <vscale x 1 x i32> @test_vlsseg3_nxv1i32(ptr %base, i64 %offset, i64 %vl)
 ; CHECK-LABEL: @test_vlsseg3_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlsseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 12)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlsseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP37:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP36]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP37]]
 ;
@@ -838,7 +1523,30 @@ define <vscale x 1 x i32> @test_vlsseg3_mask_nxv1i32(ptr %base, i64 %offset, i64
 ; CHECK-LABEL: @test_vlsseg3_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlsseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 12)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP36:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vlsseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP37:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP36]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP37]]
 ;
@@ -856,7 +1564,30 @@ define <vscale x 1 x i32> @test_vlsseg4_nxv1i32(ptr %base, i64 %offset, i64 %vl)
 ; CHECK-LABEL: @test_vlsseg4_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlsseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 16)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlsseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP49:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP48]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP49]]
 ;
@@ -870,7 +1601,30 @@ define <vscale x 1 x i32> @test_vlsseg4_mask_nxv1i32(ptr %base, i64 %offset, i64
 ; CHECK-LABEL: @test_vlsseg4_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlsseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 16)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP48:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vlsseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP49:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP48]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP49]]
 ;
@@ -888,7 +1642,30 @@ define <vscale x 1 x i32> @test_vlsseg5_nxv1i32(ptr %base, i64 %offset, i64 %vl)
 ; CHECK-LABEL: @test_vlsseg5_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlsseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 20)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlsseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP61:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP60]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP61]]
 ;
@@ -902,7 +1679,30 @@ define <vscale x 1 x i32> @test_vlsseg5_mask_nxv1i32(ptr %base, i64 %offset, i64
 ; CHECK-LABEL: @test_vlsseg5_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlsseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 20)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP60:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vlsseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP61:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP60]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP61]]
 ;
@@ -920,7 +1720,30 @@ define <vscale x 1 x i32> @test_vlsseg6_nxv1i32(ptr %base, i64 %offset, i64 %vl)
 ; CHECK-LABEL: @test_vlsseg6_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlsseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 24)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlsseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP73:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP72]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP73]]
 ;
@@ -934,7 +1757,30 @@ define <vscale x 1 x i32> @test_vlsseg6_mask_nxv1i32(ptr %base, i64 %offset, i64
 ; CHECK-LABEL: @test_vlsseg6_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlsseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 24)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP72:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vlsseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP73:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP72]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP73]]
 ;
@@ -952,7 +1798,30 @@ define <vscale x 1 x i32> @test_vlsseg7_nxv1i32(ptr %base, i64 %offset, i64 %vl)
 ; CHECK-LABEL: @test_vlsseg7_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlsseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 28)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlsseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP85:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP84]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP85]]
 ;
@@ -966,7 +1835,30 @@ define <vscale x 1 x i32> @test_vlsseg7_mask_nxv1i32(ptr %base, i64 %offset, i64
 ; CHECK-LABEL: @test_vlsseg7_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlsseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 28)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP84:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vlsseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP85:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP84]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP85]]
 ;
@@ -984,7 +1876,30 @@ define <vscale x 1 x i32> @test_vlsseg8_nxv1i32(ptr %base, i64 %offset, i64 %vl)
 ; CHECK-LABEL: @test_vlsseg8_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlsseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 32)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlsseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP97:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP96]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP97]]
 ;
@@ -998,7 +1913,30 @@ define <vscale x 1 x i32> @test_vlsseg8_mask_nxv1i32(ptr %base, i64 %offset, i64
 ; CHECK-LABEL: @test_vlsseg8_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlsseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP9]], i64 32)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP96:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vlsseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP97:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP96]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP97]]
 ;
@@ -1016,7 +1954,30 @@ define void @test_vssseg2_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>
 ; CHECK-LABEL: @test_vssseg2_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 8)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg2.triscv.vector.tuple_nxv4i8_2t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1028,7 +1989,30 @@ define void @test_vssseg2_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 
 ; CHECK-LABEL: @test_vssseg2_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 8)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1044,7 +2028,30 @@ define void @test_vssseg3_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>
 ; CHECK-LABEL: @test_vssseg3_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 12)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg3.triscv.vector.tuple_nxv4i8_3t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1056,7 +2063,30 @@ define void @test_vssseg3_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 
 ; CHECK-LABEL: @test_vssseg3_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 12)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1072,7 +2102,30 @@ define void @test_vssseg4_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>
 ; CHECK-LABEL: @test_vssseg4_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 16)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg4.triscv.vector.tuple_nxv4i8_4t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1084,7 +2137,30 @@ define void @test_vssseg4_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 
 ; CHECK-LABEL: @test_vssseg4_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 16)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1100,7 +2176,30 @@ define void @test_vssseg5_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>
 ; CHECK-LABEL: @test_vssseg5_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 20)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg5.triscv.vector.tuple_nxv4i8_5t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1112,7 +2211,30 @@ define void @test_vssseg5_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 
 ; CHECK-LABEL: @test_vssseg5_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 20)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1128,7 +2250,30 @@ define void @test_vssseg6_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>
 ; CHECK-LABEL: @test_vssseg6_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 24)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg6.triscv.vector.tuple_nxv4i8_6t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1140,7 +2285,30 @@ define void @test_vssseg6_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 
 ; CHECK-LABEL: @test_vssseg6_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 24)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1156,7 +2324,30 @@ define void @test_vssseg7_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>
 ; CHECK-LABEL: @test_vssseg7_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 28)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg7.triscv.vector.tuple_nxv4i8_7t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1168,7 +2359,30 @@ define void @test_vssseg7_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 
 ; CHECK-LABEL: @test_vssseg7_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 28)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1184,7 +2398,30 @@ define void @test_vssseg8_nxv1i32(target("riscv.vector.tuple", <vscale x 4 x i8>
 ; CHECK-LABEL: @test_vssseg8_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 32)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg8.triscv.vector.tuple_nxv4i8_8t.p0.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1196,7 +2433,30 @@ define void @test_vssseg8_mask_nxv1i32(target("riscv.vector.tuple", <vscale x 4 
 ; CHECK-LABEL: @test_vssseg8_mask_nxv1i32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vssseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], i64 [[OFFSET:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP1]], label [[TMP2:%.*]], label [[TMP11:%.*]]
+; CHECK:       2:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP3]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP2]] ], [ [[IV_NEXT:%.*]], [[TMP10:%.*]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP5]], label [[TMP6:%.*]], label [[TMP10]]
+; CHECK:       6:
+; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[IV]], [[OFFSET:%.*]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = ptrtoint ptr [[TMP8]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP9]], i64 32)
+; CHECK-NEXT:    br label [[TMP10]]
+; CHECK:       10:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP4]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    tail call void @llvm.riscv.vssseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.i64.nxv1i1(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], i64 [[OFFSET]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1256,7 +2516,31 @@ define <vscale x 1 x i32> @intrinsic_vloxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 
 ; CHECK-LABEL: @intrinsic_vloxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0:%.*]], <vscale x 1 x i16> [[TMP1:%.*]], i64 [[TMP2:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i16> [[TMP1:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], <vscale x 1 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP2:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP15:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP8]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[TMP14:%.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP14]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x ptr> [[TMP5]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP13]], i64 4)
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP9]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0]], <vscale x 1 x i16> [[TMP1]], i64 [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1281,7 +2565,31 @@ define <vscale x 1 x i32> @intrinsic_vloxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vsca
 ; CHECK-LABEL: @intrinsic_vloxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vloxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]], i64 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1305,7 +2613,31 @@ define <vscale x 1 x float> @intrinsic_vloxei_v_nxv1f32_nxv1f32_nxv1i16(<vscale 
 ; CHECK-LABEL: @intrinsic_vloxei_v_nxv1f32_nxv1f32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x float> @llvm.riscv.vloxei.nxv1f32.p0.nxv1i16.i64(<vscale x 1 x float> poison, ptr [[TMP0:%.*]], <vscale x 1 x i16> [[TMP1:%.*]], i64 [[TMP2:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i16> [[TMP1:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], <vscale x 1 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP2:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP15:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP8]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[TMP14:%.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP14]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x ptr> [[TMP5]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP13]], i64 4)
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP9]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x float> @llvm.riscv.vloxei.nxv1f32.p0.nxv1i16.i64(<vscale x 1 x float> poison, ptr [[TMP0]], <vscale x 1 x i16> [[TMP1]], i64 [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 1 x float> [[A]]
 ;
 entry:
@@ -1328,7 +2660,31 @@ define <vscale x 1 x i32> @intrinsic_vluxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 
 ; CHECK-LABEL: @intrinsic_vluxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP3:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0:%.*]], <vscale x 1 x i16> [[TMP1:%.*]], i64 [[TMP2:%.*]])
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <vscale x 1 x i16> [[TMP1:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0:%.*]], <vscale x 1 x i64> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne i64 [[TMP2:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP6]], label [[TMP7:%.*]], label [[TMP15:%.*]]
+; CHECK:       7:
+; CHECK-NEXT:    [[TMP8:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 [[TMP8]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP7]] ], [ [[IV_NEXT:%.*]], [[TMP14:%.*]] ]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[TMP11:%.*]], label [[TMP14]]
+; CHECK:       11:
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x ptr> [[TMP5]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[TMP12]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP13]], i64 4)
+; CHECK-NEXT:    br label [[TMP14]]
+; CHECK:       14:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP9]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> poison, ptr [[TMP0]], <vscale x 1 x i16> [[TMP1]], i64 [[TMP2]])
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1353,7 +2709,31 @@ define <vscale x 1 x i32> @intrinsic_vluxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vsca
 ; CHECK-LABEL: @intrinsic_vluxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]], i64 1)
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    [[A:%.*]] = call <vscale x 1 x i32> @llvm.riscv.vluxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]], i64 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[A]]
 ;
 entry:
@@ -1377,7 +2757,31 @@ define void @intrinsic_vsoxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> %0, <
 ; CHECK-LABEL: @intrinsic_vsoxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsoxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], i64 [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP3:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP16:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP9]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP8]] ], [ [[IV_NEXT:%.*]], [[TMP15:%.*]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 1 x ptr> [[TMP6]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP13]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP14]], i64 4)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    call void @llvm.riscv.vsoxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], i64 [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1401,7 +2805,31 @@ define void @intrinsic_vsoxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> 
 ; CHECK-LABEL: @intrinsic_vsoxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    call void @llvm.riscv.vsoxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1425,7 +2853,31 @@ define void @intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> %0, <
 ; CHECK-LABEL: @intrinsic_vsuxei_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsuxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], i64 [[TMP3:%.*]])
+; CHECK-NEXT:    [[TMP5:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp ne i64 [[TMP3:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP16:%.*]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP3]], i64 [[TMP9]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP8]] ], [ [[IV_NEXT:%.*]], [[TMP15:%.*]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[TMP12:%.*]], label [[TMP15]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <vscale x 1 x ptr> [[TMP6]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP14:%.*]] = ptrtoint ptr [[TMP13]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP14]], i64 4)
+; CHECK-NEXT:    br label [[TMP15]]
+; CHECK:       15:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP10]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    call void @llvm.riscv.vsuxei.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], i64 [[TMP3]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1449,7 +2901,31 @@ define void @intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i16(<vscale x 1 x i32> 
 ; CHECK-LABEL: @intrinsic_vsuxei_mask_v_nxv1i32_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP5:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    call void @llvm.riscv.vsuxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1:%.*]], <vscale x 1 x i16> [[TMP2:%.*]], <vscale x 1 x i1> [[TMP3:%.*]], i64 [[TMP4:%.*]])
+; CHECK-NEXT:    [[TMP6:%.*]] = zext <vscale x 1 x i16> [[TMP2:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP1:%.*]], <vscale x 1 x i64> [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp ne i64 [[TMP4:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP8]], label [[TMP9:%.*]], label [[TMP17:%.*]]
+; CHECK:       9:
+; CHECK-NEXT:    [[TMP10:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP11:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP4]], i64 [[TMP10]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP9]] ], [ [[IV_NEXT:%.*]], [[TMP16:%.*]] ]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <vscale x 1 x i1> [[TMP3:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP12]], label [[TMP13:%.*]], label [[TMP16]]
+; CHECK:       13:
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <vscale x 1 x ptr> [[TMP7]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[TMP14]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP15]], i64 4)
+; CHECK-NEXT:    br label [[TMP16]]
+; CHECK:       16:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP11]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP17]]
+; CHECK:       17:
+; CHECK-NEXT:    call void @llvm.riscv.vsuxei.mask.nxv1i32.p0.nxv1i16.i64(<vscale x 1 x i32> [[TMP0:%.*]], ptr [[TMP1]], <vscale x 1 x i16> [[TMP2]], <vscale x 1 x i1> [[TMP3]], i64 [[TMP4]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1471,7 +2947,31 @@ define <vscale x 1 x i32> @test_vloxseg2_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vloxseg2_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vloxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vloxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP25]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP26]]
 ;
@@ -1485,7 +2985,31 @@ define <vscale x 1 x i32> @test_vloxseg2_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vloxseg2_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vloxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vloxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP25]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP26]]
 ;
@@ -1503,7 +3027,31 @@ define <vscale x 1 x i32> @test_vloxseg3_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vloxseg3_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vloxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vloxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP38:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP37]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP38]]
 ;
@@ -1517,7 +3065,31 @@ define <vscale x 1 x i32> @test_vloxseg3_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vloxseg3_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vloxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vloxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP38:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP37]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP38]]
 ;
@@ -1535,7 +3107,31 @@ define <vscale x 1 x i32> @test_vloxseg4_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vloxseg4_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vloxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vloxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP50:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP49]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP50]]
 ;
@@ -1549,7 +3145,31 @@ define <vscale x 1 x i32> @test_vloxseg4_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vloxseg4_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vloxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vloxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP50:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP49]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP50]]
 ;
@@ -1567,7 +3187,31 @@ define <vscale x 1 x i32> @test_vloxseg5_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vloxseg5_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vloxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vloxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP62:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP61]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP62]]
 ;
@@ -1581,7 +3225,31 @@ define <vscale x 1 x i32> @test_vloxseg5_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vloxseg5_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vloxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vloxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP62:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP61]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP62]]
 ;
@@ -1599,7 +3267,31 @@ define <vscale x 1 x i32> @test_vloxseg6_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vloxseg6_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vloxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vloxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP74:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP73]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP74]]
 ;
@@ -1613,7 +3305,31 @@ define <vscale x 1 x i32> @test_vloxseg6_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vloxseg6_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vloxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vloxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP74:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP73]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP74]]
 ;
@@ -1631,7 +3347,31 @@ define <vscale x 1 x i32> @test_vloxseg7_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vloxseg7_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vloxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vloxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP86:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP85]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP86]]
 ;
@@ -1645,7 +3385,31 @@ define <vscale x 1 x i32> @test_vloxseg7_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vloxseg7_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vloxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vloxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP86:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP85]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP86]]
 ;
@@ -1663,7 +3427,31 @@ define <vscale x 1 x i32> @test_vloxseg8_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vloxseg8_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vloxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vloxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP98:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP97]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP98]]
 ;
@@ -1677,7 +3465,31 @@ define <vscale x 1 x i32> @test_vloxseg8_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vloxseg8_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vloxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vloxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP98:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP97]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP98]]
 ;
@@ -1695,7 +3507,31 @@ define <vscale x 1 x i32> @test_vluxseg2_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vluxseg2_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vluxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vluxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP25]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP26]]
 ;
@@ -1709,7 +3545,31 @@ define <vscale x 1 x i32> @test_vluxseg2_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vluxseg2_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vluxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP25:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 2) @llvm.riscv.vluxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP26:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_2t(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[TMP25]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP26]]
 ;
@@ -1727,7 +3587,31 @@ define <vscale x 1 x i32> @test_vluxseg3_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vluxseg3_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vluxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vluxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP38:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP37]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP38]]
 ;
@@ -1741,7 +3625,31 @@ define <vscale x 1 x i32> @test_vluxseg3_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vluxseg3_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vluxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP37:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 3) @llvm.riscv.vluxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP38:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_3t(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[TMP37]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP38]]
 ;
@@ -1759,7 +3667,31 @@ define <vscale x 1 x i32> @test_vluxseg4_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vluxseg4_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vluxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vluxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP50:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP49]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP50]]
 ;
@@ -1773,7 +3705,31 @@ define <vscale x 1 x i32> @test_vluxseg4_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vluxseg4_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vluxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP49:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 4) @llvm.riscv.vluxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP50:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_4t(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[TMP49]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP50]]
 ;
@@ -1791,7 +3747,31 @@ define <vscale x 1 x i32> @test_vluxseg5_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vluxseg5_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vluxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vluxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP62:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP61]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP62]]
 ;
@@ -1805,7 +3785,31 @@ define <vscale x 1 x i32> @test_vluxseg5_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vluxseg5_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vluxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP61:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 5) @llvm.riscv.vluxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP62:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_5t(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[TMP61]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP62]]
 ;
@@ -1823,7 +3827,31 @@ define <vscale x 1 x i32> @test_vluxseg6_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vluxseg6_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vluxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vluxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP74:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP73]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP74]]
 ;
@@ -1837,7 +3865,31 @@ define <vscale x 1 x i32> @test_vluxseg6_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vluxseg6_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vluxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP73:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 6) @llvm.riscv.vluxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP74:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_6t(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[TMP73]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP74]]
 ;
@@ -1855,7 +3907,31 @@ define <vscale x 1 x i32> @test_vluxseg7_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vluxseg7_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vluxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vluxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP86:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP85]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP86]]
 ;
@@ -1869,7 +3945,31 @@ define <vscale x 1 x i32> @test_vluxseg7_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vluxseg7_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vluxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP85:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 7) @llvm.riscv.vluxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP86:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_7t(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[TMP85]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP86]]
 ;
@@ -1887,7 +3987,31 @@ define <vscale x 1 x i32> @test_vluxseg8_nxv1i32_nxv1i16(ptr %base, <vscale x 1 
 ; CHECK-LABEL: @test_vluxseg8_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vluxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vluxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    [[TMP98:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP97]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP98]]
 ;
@@ -1901,7 +4025,31 @@ define <vscale x 1 x i32> @test_vluxseg8_mask_nxv1i32_nxv1i16(ptr %base, <vscale
 ; CHECK-LABEL: @test_vluxseg8_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vluxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 1, i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_loadN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    [[TMP97:%.*]] = tail call target("riscv.vector.tuple", <vscale x 4 x i8>, 8) @llvm.riscv.vluxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) poison, ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 1, i64 5)
 ; CHECK-NEXT:    [[TMP98:%.*]] = call <vscale x 1 x i32> @llvm.riscv.tuple.extract.nxv1i32.triscv.vector.tuple_nxv4i8_8t(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[TMP97]], i32 1)
 ; CHECK-NEXT:    ret <vscale x 1 x i32> [[TMP98]]
 ;
@@ -1919,7 +4067,31 @@ define void @test_vsoxseg2_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsoxseg2_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1931,7 +4103,31 @@ define void @test_vsoxseg2_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsoxseg2_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1947,7 +4143,31 @@ define void @test_vsoxseg3_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsoxseg3_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1959,7 +4179,31 @@ define void @test_vsoxseg3_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsoxseg3_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1975,7 +4219,31 @@ define void @test_vsoxseg4_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsoxseg4_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -1987,7 +4255,31 @@ define void @test_vsoxseg4_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsoxseg4_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2003,7 +4295,31 @@ define void @test_vsoxseg5_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsoxseg5_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2015,7 +4331,31 @@ define void @test_vsoxseg5_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsoxseg5_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2031,7 +4371,31 @@ define void @test_vsoxseg6_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsoxseg6_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2043,7 +4407,31 @@ define void @test_vsoxseg6_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsoxseg6_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2059,7 +4447,31 @@ define void @test_vsoxseg7_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsoxseg7_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2071,7 +4483,31 @@ define void @test_vsoxseg7_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsoxseg7_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2087,7 +4523,31 @@ define void @test_vsoxseg8_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsoxseg8_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2099,7 +4559,31 @@ define void @test_vsoxseg8_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsoxseg8_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2115,7 +4599,31 @@ define void @test_vsuxseg2_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsuxseg2_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg2.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2127,7 +4635,31 @@ define void @test_vsuxseg2_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsuxseg2_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 8)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg2.mask.triscv.vector.tuple_nxv4i8_2t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 2) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2143,7 +4675,31 @@ define void @test_vsuxseg3_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsuxseg3_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg3.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2155,7 +4711,31 @@ define void @test_vsuxseg3_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsuxseg3_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 12)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg3.mask.triscv.vector.tuple_nxv4i8_3t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 3) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2171,7 +4751,31 @@ define void @test_vsuxseg4_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsuxseg4_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg4.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2183,7 +4787,31 @@ define void @test_vsuxseg4_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsuxseg4_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 16)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg4.mask.triscv.vector.tuple_nxv4i8_4t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 4) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2199,7 +4827,31 @@ define void @test_vsuxseg5_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsuxseg5_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg5.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2211,7 +4863,31 @@ define void @test_vsuxseg5_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsuxseg5_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 20)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg5.mask.triscv.vector.tuple_nxv4i8_5t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 5) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2227,7 +4903,31 @@ define void @test_vsuxseg6_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsuxseg6_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg6.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2239,7 +4939,31 @@ define void @test_vsuxseg6_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsuxseg6_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 24)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg6.mask.triscv.vector.tuple_nxv4i8_6t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 6) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2255,7 +4979,31 @@ define void @test_vsuxseg7_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsuxseg7_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg7.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2267,7 +5015,31 @@ define void @test_vsuxseg7_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsuxseg7_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 28)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg7.mask.triscv.vector.tuple_nxv4i8_7t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 7) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2283,7 +5055,31 @@ define void @test_vsuxseg8_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vscale 
 ; CHECK-LABEL: @test_vsuxseg8_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> splat (i1 true), i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsuxseg8.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -2295,7 +5091,31 @@ define void @test_vsuxseg8_mask_nxv1i32_nxv1i16(target("riscv.vector.tuple", <vs
 ; CHECK-LABEL: @test_vsuxseg8_mask_nxv1i32_nxv1i16(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__asan_shadow_memory_dynamic_address, align 8
-; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE:%.*]], <vscale x 1 x i16> [[INDEX:%.*]], <vscale x 1 x i1> [[MASK:%.*]], i64 [[VL:%.*]], i64 5)
+; CHECK-NEXT:    [[TMP1:%.*]] = zext <vscale x 1 x i16> [[INDEX:%.*]] to <vscale x 1 x i64>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[BASE:%.*]], <vscale x 1 x i64> [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ne i64 [[VL:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP3]], label [[TMP4:%.*]], label [[TMP12:%.*]]
+; CHECK:       4:
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.umin.i64(i64 [[VL]], i64 [[TMP5]])
+; CHECK-NEXT:    br label [[DOTSPLIT:%.*]]
+; CHECK:       .split:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[TMP4]] ], [ [[IV_NEXT:%.*]], [[TMP11:%.*]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <vscale x 1 x i1> [[MASK:%.*]], i64 [[IV]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[TMP8:%.*]], label [[TMP11]]
+; CHECK:       8:
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <vscale x 1 x ptr> [[TMP2]], i64 [[IV]]
+; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[TMP9]] to i64
+; CHECK-NEXT:    call void @__asan_storeN(i64 [[TMP10]], i64 32)
+; CHECK-NEXT:    br label [[TMP11]]
+; CHECK:       11:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[IV_CHECK:%.*]] = icmp eq i64 [[IV_NEXT]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[IV_CHECK]], label [[DOTSPLIT_SPLIT:%.*]], label [[DOTSPLIT]]
+; CHECK:       .split.split:
+; CHECK-NEXT:    br label [[TMP12]]
+; CHECK:       12:
+; CHECK-NEXT:    tail call void @llvm.riscv.vsoxseg8.mask.triscv.vector.tuple_nxv4i8_8t.p0.nxv1i16.nxv1i1.i64(target("riscv.vector.tuple", <vscale x 4 x i8>, 8) [[VAL:%.*]], ptr [[BASE]], <vscale x 1 x i16> [[INDEX]], <vscale x 1 x i1> [[MASK]], i64 [[VL]], i64 5)
 ; CHECK-NEXT:    ret void
 ;
 entry:

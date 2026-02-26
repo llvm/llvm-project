@@ -6,9 +6,9 @@ source_filename = "bugpoint-output-09f7a24.bc"
 @WHOLELINE = external local_unnamed_addr global i32, align 4
 
 ; Function Attrs: nounwind uwtable
-define void @sgrep() local_unnamed_addr #0 {
+define void @sgrep() local_unnamed_addr {
 ; CHECK-LABEL: define void @sgrep(
-; CHECK-SAME: ) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @WHOLELINE, align 4, !tbaa [[INT_TBAA1:![0-9]+]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i32 [[TMP0]], 0
@@ -36,10 +36,7 @@ while.body.us:                                    ; preds = %while.body.us, %ent
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64) #1
-
-attributes #0 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "polly-optimized" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
+declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)
 
 !llvm.ident = !{!0}
 

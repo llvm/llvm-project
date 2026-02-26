@@ -43,6 +43,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TrailingObjects.h"
 #include "llvm/Support/raw_ostream.h"
@@ -419,13 +420,18 @@ public:
     // The expression for this variable, OR
     const Expr *Exp = nullptr;
 
-    // Reference to another VarDefinition
-    unsigned Ref = 0;
+    // Direct reference to another VarDefinition
+    unsigned DirectRef = 0;
+
+    // Reference to underlying canonical non-reference VarDefinition.
+    unsigned CanonicalRef = 0;
 
     // The map with which Exp should be interpreted.
     Context Ctx;
 
     bool isReference() const { return !Exp; }
+
+    void invalidateRef() { DirectRef = CanonicalRef = 0; }
 
   private:
     // Create ordinary variable definition
@@ -433,8 +439,9 @@ public:
         : Dec(D), Exp(E), Ctx(C) {}
 
     // Create reference to previous definition
-    VarDefinition(const NamedDecl *D, unsigned R, Context C)
-        : Dec(D), Ref(R), Ctx(C) {}
+    VarDefinition(const NamedDecl *D, unsigned DirectRef, unsigned CanonicalRef,
+                  Context C)
+        : Dec(D), DirectRef(DirectRef), CanonicalRef(CanonicalRef), Ctx(C) {}
   };
 
 private:
@@ -445,7 +452,7 @@ private:
 public:
   LocalVariableMap() {
     // index 0 is a placeholder for undefined variables (aka phi-nodes).
-    VarDefinitions.push_back(VarDefinition(nullptr, 0u, getEmptyContext()));
+    VarDefinitions.push_back(VarDefinition(nullptr, 0, 0, getEmptyContext()));
   }
 
   /// Look up a definition, within the given context.
@@ -471,7 +478,7 @@ public:
         Ctx = VarDefinitions[i].Ctx;
         return VarDefinitions[i].Exp;
       }
-      i = VarDefinitions[i].Ref;
+      i = VarDefinitions[i].DirectRef;
     }
     return nullptr;
   }
@@ -508,7 +515,7 @@ public:
   void dump() {
     for (unsigned i = 1, e = VarDefinitions.size(); i < e; ++i) {
       const Expr *Exp = VarDefinitions[i].Exp;
-      unsigned Ref = VarDefinitions[i].Ref;
+      unsigned Ref = VarDefinitions[i].DirectRef;
 
       dumpVarDefinitionName(i);
       llvm::errs() << " = ";
@@ -539,9 +546,9 @@ protected:
   friend class VarMapBuilder;
 
   // Resolve any definition ID down to its non-reference base ID.
-  unsigned getCanonicalDefinitionID(unsigned ID) {
+  unsigned getCanonicalDefinitionID(unsigned ID) const {
     while (ID > 0 && VarDefinitions[ID].isReference())
-      ID = VarDefinitions[ID].Ref;
+      ID = VarDefinitions[ID].CanonicalRef;
     return ID;
   }
 
@@ -564,10 +571,11 @@ protected:
   }
 
   // Add a new reference to an existing definition.
-  Context addReference(const NamedDecl *D, unsigned i, Context Ctx) {
+  Context addReference(const NamedDecl *D, unsigned Ref, Context Ctx) {
     unsigned newID = VarDefinitions.size();
     Context NewCtx = ContextFactory.add(Ctx, D, newID);
-    VarDefinitions.push_back(VarDefinition(D, i, Ctx));
+    VarDefinitions.push_back(
+        VarDefinition(D, Ref, getCanonicalDefinitionID(Ref), Ctx));
     return NewCtx;
   }
 
@@ -718,11 +726,12 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
       }
     }
 
-    if (VDec && Ctx.lookup(VDec)) {
+    if (VDec)
       Ctx = VMap->clearDefinition(VDec, Ctx);
-      VMap->saveContext(CE, Ctx);
-    }
   }
+  // Save the context after the call where escaped variables' definitions (if
+  // they exist) are cleared.
+  VMap->saveContext(CE, Ctx);
 }
 
 // Computes the intersection of two contexts.  The intersection is the
@@ -769,15 +778,14 @@ void LocalVariableMap::intersectBackEdge(Context C1, Context C2) {
     const unsigned *I2 = C2.lookup(P.first);
     if (!I2) {
       // Variable does not exist at the end of the loop, invalidate.
-      VDef->Ref = 0;
+      VDef->invalidateRef();
       continue;
     }
 
     // Compare the canonical IDs. This correctly handles chains of references
     // and determines if the variable is truly loop-invariant.
-    if (getCanonicalDefinitionID(VDef->Ref) != getCanonicalDefinitionID(*I2)) {
-      VDef->Ref = 0; // Mark this variable as undefined
-    }
+    if (VDef->CanonicalRef != getCanonicalDefinitionID(*I2))
+      VDef->invalidateRef(); // Mark this variable as undefined
   }
 }
 
@@ -1675,7 +1683,7 @@ void ThreadSafetyAnalyzer::getEdgeLockset(FactSet& Result,
           return LocalVarMap.lookupExpr(D, Ctx);
         });
   }
-  auto Cleanup = llvm::make_scope_exit(
+  llvm::scope_exit Cleanup(
       [this] { SxBuilder.setLookupLocalVarExpr(nullptr); });
 
   const auto *Exp = getTrylockCallExpr(Cond, LVarCtx, Negate);
@@ -1722,7 +1730,8 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
-  // To update and adjust the context.
+  // To update the context used in attr-expr translation.  If `S` is non-null,
+  // the context is updated to the program point right after 'S'.
   void updateLocalVarMapCtx(const Stmt *S) {
     if (S)
       LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
@@ -1764,6 +1773,8 @@ public:
   }
 
   ~BuildLockset() { Analyzer->SxBuilder.setLookupLocalVarExpr(nullptr); }
+  BuildLockset(const BuildLockset &) = delete;
+  BuildLockset &operator=(const BuildLockset &) = delete;
 
   void VisitUnaryOperator(const UnaryOperator *UO);
   void VisitBinaryOperator(const BinaryOperator *BO);
@@ -2026,9 +2037,7 @@ void BuildLockset::handleCall(const Expr *Exp, const NamedDecl *D,
       assert(inserted.second && "Are we visiting the same expression again?");
       if (isa<CXXConstructExpr>(Exp))
         Self = Placeholder;
-      if (TagT->getOriginalDecl()
-              ->getMostRecentDecl()
-              ->hasAttr<ScopedLockableAttr>())
+      if (TagT->getDecl()->getMostRecentDecl()->hasAttr<ScopedLockableAttr>())
         Scp = CapabilityExpr(Placeholder, Exp->getType(), /*Neg=*/false);
     }
 
@@ -2265,9 +2274,8 @@ void BuildLockset::VisitUnaryOperator(const UnaryOperator *UO) {
 void BuildLockset::VisitBinaryOperator(const BinaryOperator *BO) {
   if (!BO->isAssignmentOp())
     return;
-
-  updateLocalVarMapCtx(BO);
   checkAccess(BO->getLHS(), AK_Written);
+  updateLocalVarMapCtx(BO);
 }
 
 /// Whenever we do an LValue to Rvalue cast, we are reading a variable and
@@ -2312,8 +2320,6 @@ void BuildLockset::examineArguments(const FunctionDecl *FD,
 }
 
 void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
-  updateLocalVarMapCtx(Exp);
-
   if (const auto *CE = dyn_cast<CXXMemberCallExpr>(Exp)) {
     const auto *ME = dyn_cast<MemberExpr>(CE->getCallee());
     // ME can be null when calling a method pointer
@@ -2377,9 +2383,9 @@ void BuildLockset::VisitCallExpr(const CallExpr *Exp) {
   }
 
   auto *D = dyn_cast_or_null<NamedDecl>(Exp->getCalleeDecl());
-  if (!D)
-    return;
-  handleCall(Exp, D);
+  if (D)
+    handleCall(Exp, D);
+  updateLocalVarMapCtx(Exp);
 }
 
 void BuildLockset::VisitCXXConstructExpr(const CXXConstructExpr *Exp) {
@@ -2408,8 +2414,6 @@ static const Expr *UnpackConstruction(const Expr *E) {
 }
 
 void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
-  updateLocalVarMapCtx(S);
-
   for (auto *D : S->getDeclGroup()) {
     if (auto *VD = dyn_cast_or_null<VarDecl>(D)) {
       const Expr *E = VD->getInit();
@@ -2429,6 +2433,7 @@ void BuildLockset::VisitDeclStmt(const DeclStmt *S) {
       }
     }
   }
+  updateLocalVarMapCtx(S);
 }
 
 void BuildLockset::VisitMaterializeTemporaryExpr(
@@ -2816,7 +2821,13 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
           const auto *DD = AD.getDestructorDecl(AC.getASTContext());
-          if (!DD->hasAttrs())
+          // Function parameters as they are constructed in caller's context and
+          // the CFG does not contain the ctors. Ignore them as their
+          // capabilities cannot be analysed because of this missing
+          // information.
+          if (isa_and_nonnull<ParmVarDecl>(AD.getVarDecl()))
+            break;
+          if (!DD || !DD->hasAttrs())
             break;
 
           LocksetBuilder.handleCall(

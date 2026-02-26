@@ -97,7 +97,7 @@ available, should be contacted first, as they're more active in those areas.
 * ‘rocdl’ Dialect ([@krzysz00](https://github.com/krzysz00))
 * ‘nvgpu’ Dialect ([@grypp](https://github.com/grypp))
 * ‘nvvm’ Dialect ([@grypp](https://github.com/grypp))
-* ‘xegpu’ Dialect ([@chencha3](https://github.com/chencha3), [@Jianhui-Li](https://github.com/Jianhui-Li))
+* ‘xegpu’ Dialect ([@charithaintc](https://github.com/charithaintc), [@Jianhui-Li](https://github.com/Jianhui-Li))
 * 'xevm' Dialect ([@silee2](https://github.com/silee2))
 
 #### CPU Dialects
@@ -105,7 +105,7 @@ available, should be contacted first, as they're more active in those areas.
 * ‘arm_sve’ Dialect ([@banach-space](https://github.com/banach-space))
 * ‘ArmSME’ Dialect ([@banach-space](https://github.com/banach-space))
 * ‘amx’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
-* ‘x86vector’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
+* ‘x86’ Dialect ([@adam-smnk](https://github.com/adam-smnk))
 * ‘vcix’ Dialect ([@mshockwave](https://github.com/mshockwave))
 
 #### Paradigm Dialects

@@ -430,3 +430,98 @@ TYPED_TEST(RepeatTests, Repeat) {
     RunRepeatTest<TypeParam>(t.ncopies, t.input, t.output);
   }
 }
+
+// Test F_C_STRING()
+TEST(CharacterTests, FCString) {
+  // Test 1: Default behavior (trim trailing blanks)
+  {
+    static char buffer[11]; // "abc       " = 10 chars
+    std::memset(buffer, ' ', 10);
+    std::memcpy(buffer, "abc", 3);
+
+    StaticDescriptor<0> inputStaticDescriptor;
+    Descriptor &input{inputStaticDescriptor.descriptor()};
+    input.Establish(TypeCode{CFI_type_char}, /*elemLen=*/10, buffer, 0, nullptr,
+        CFI_attribute_pointer);
+
+    OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
+        nullptr, 0, nullptr, CFI_attribute_allocatable)};
+
+    RTNAME(FCString)(*result, input, /*asis=*/false);
+
+    EXPECT_EQ(result->ElementBytes(), std::size_t(4)); // "abc\0" = 4 bytes
+    const char *data = result->OffsetElement<char>();
+    EXPECT_EQ(std::string(data, 4), std::string("abc\0", 4));
+
+    result->Destroy();
+  }
+
+  // Test 2: Keep trailing blanks (asis=true)
+  {
+    static char buffer[11];
+    std::memset(buffer, ' ', 10);
+    std::memcpy(buffer, "abc", 3);
+
+    StaticDescriptor<0> inputStaticDescriptor;
+    Descriptor &input{inputStaticDescriptor.descriptor()};
+    input.Establish(TypeCode{CFI_type_char}, /*elemLen=*/10, buffer, 0, nullptr,
+        CFI_attribute_pointer);
+
+    OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
+        nullptr, 0, nullptr, CFI_attribute_allocatable)};
+
+    RTNAME(FCString)(*result, input, /*asis=*/true);
+
+    EXPECT_EQ(
+        result->ElementBytes(), std::size_t(11)); // "abc       \0" = 11 bytes
+    const char *data = result->OffsetElement<char>();
+    EXPECT_EQ(data[3], ' '); // Verify space preserved
+    EXPECT_EQ(data[10], '\0'); // Verify null terminator
+
+    result->Destroy();
+  }
+
+  // Test 3: All blanks, trimmed
+  {
+    static char buffer[11];
+    std::memset(buffer, ' ', 10);
+
+    StaticDescriptor<0> inputStaticDescriptor;
+    Descriptor &input{inputStaticDescriptor.descriptor()};
+    input.Establish(TypeCode{CFI_type_char}, /*elemLen=*/10, buffer, 0, nullptr,
+        CFI_attribute_pointer);
+
+    OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
+        nullptr, 0, nullptr, CFI_attribute_allocatable)};
+
+    RTNAME(FCString)(*result, input, /*asis=*/false);
+
+    EXPECT_EQ(result->ElementBytes(), std::size_t(1)); // Just "\0"
+    const char *data = result->OffsetElement<char>();
+    EXPECT_EQ(data[0], '\0');
+
+    result->Destroy();
+  }
+
+  // Test 4: No trailing blanks
+  {
+    static char buffer[11];
+    std::memcpy(buffer, "hello", 5);
+
+    StaticDescriptor<0> inputStaticDescriptor;
+    Descriptor &input{inputStaticDescriptor.descriptor()};
+    input.Establish(TypeCode{CFI_type_char}, /*elemLen=*/5, buffer, 0, nullptr,
+        CFI_attribute_pointer);
+
+    OwningPtr<Descriptor> result{Descriptor::Create(TypeCode{CFI_type_char}, 1,
+        nullptr, 0, nullptr, CFI_attribute_allocatable)};
+
+    RTNAME(FCString)(*result, input, /*asis=*/false);
+
+    EXPECT_EQ(result->ElementBytes(), std::size_t(6)); // "hello\0"
+    const char *data = result->OffsetElement<char>();
+    EXPECT_EQ(std::string(data, 6), std::string("hello\0", 6));
+
+    result->Destroy();
+  }
+}

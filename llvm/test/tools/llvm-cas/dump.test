@@ -1,0 +1,27 @@
+RUN: rm -rf %t
+RUN: mkdir %t
+
+RUN: llvm-cas --cas %t/cas --make-blob \
+RUN:   --data - </dev/null
+
+RUN: llvm-cas --cas %t/cas --make-blob \
+RUN:   --data %s
+
+RUN: llvm-cas --cas %t/cas --dump | FileCheck %s
+
+// check the dump format.
+CHECK:      index:
+CHECK-NEXT: hash-num-bits=
+CHECK-NEXT: root addr=
+// it should has at least one index
+CHECK-NEXT: - index=
+
+// two records
+CHECK:      record
+CHECK-NEXT: - addr=
+CHECK-NEXT: - addr=
+
+// both should be small enough to be in data pool
+CHECK:      pool:
+CHECK-NEXT: - addr=
+CHECK-NEXT: - addr=

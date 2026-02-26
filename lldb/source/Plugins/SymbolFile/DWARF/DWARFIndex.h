@@ -86,6 +86,11 @@ public:
                const CompilerDeclContext &parent_decl_ctx,
                llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
   virtual void
+  GetFunctions(const std::vector<Module::LookupInfo> &lookup_infos,
+               SymbolFileDWARF &dwarf,
+               const CompilerDeclContext &parent_decl_ctx,
+               llvm::function_ref<IterationAction(DWARFDIE die)> callback);
+  virtual void
   GetFunctions(const RegularExpression &regex,
                llvm::function_ref<IterationAction(DWARFDIE die)> callback) = 0;
 

@@ -51,10 +51,6 @@
 //          Moreover, the order of operands reflects the order of operands
 //          in the encoding.
 
-//-------------------------- Predicate definitions ---------------------------//
-def IsPPC32 : Predicate<"!Subtarget->isPPC64()">;
-
-
 //===----------------------------------------------------------------------===//
 // PowerPC ISA 3.1 specific type constraints.
 //
@@ -87,15 +83,31 @@ def SDT_PPCsetbc : SDTypeProfile<1, 1, [
 // ISA 3.1 specific PPCISD nodes.
 //
 
+// XXSPLTI32DX - The PPC XXSPLTI32DX instruction.
 def PPCxxsplti32dx : SDNode<"PPCISD::XXSPLTI32DX", SDT_PPCSplat32, []>;
+
+// ACC_BUILD = Build an accumulator register from 4 VSX registers.
 def PPCAccBuild : SDNode<"PPCISD::ACC_BUILD", SDT_PPCAccBuild, []>;
+
+// PAIR_BUILD = Build a vector pair register from 2 VSX registers.
 def PPCPairBuild : SDNode<"PPCISD::PAIR_BUILD", SDT_PPCPairBuild, []>;
+
+// EXTRACT_VSX_REG = Extract one of the underlying vsx registers of
+// an accumulator or pair register. This node is needed because
+// EXTRACT_SUBVECTOR expects the input and output vectors to have the same
+// element type.
 def PPCAccExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCAccExtractVsx,
                        []>;
 def PPCPairExtractVsx : SDNode<"PPCISD::EXTRACT_VSX_REG", SDT_PPCPairExtractVsx,
                         []>;
+
+// XXMFACC = This corresponds to the xxmfacc instruction.
 def PPCxxmfacc : SDNode<"PPCISD::XXMFACC", SDT_PPCxxmfacc, []>;
+
+// SETBC - The ISA 3.1 (P10) SETBC instruction.
 def PPCsetbc  : SDNode<"PPCISD::SETBC",   SDT_PPCsetbc, []>;
+
+// SETBCR - The ISA 3.1 (P10) SETBCR instruction.
 def PPCsetbcr : SDNode<"PPCISD::SETBCR",  SDT_PPCsetbc, []>;
 
 //===----------------------------------------------------------------------===//
@@ -109,7 +121,10 @@ def SDT_PPCLXVRZX : SDTypeProfile<1, 2, [
   SDTCisVT<0, v1i128>, SDTCisPtrTy<1>, SDTCisPtrTy<2>
 ]>;
 
-// PPC Specific DAG Nodes.
+// LXVRZX - Load VSX Vector Rightmost and Zero Extend
+// This node represents v1i128 BUILD_VECTOR of a zero extending load
+// instruction from <byte, halfword, word, or doubleword> to i128.
+// Allows utilization of the Load VSX Vector Rightmost Instructions.
 def PPClxvrzx : SDNode<"PPCISD::LXVRZX", SDT_PPCLXVRZX,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
@@ -634,9 +649,6 @@ multiclass 8LS_DForm_R_SI34_XT6_RA5_MEM_p<bits<5> opcode, dag OOL, dag IOL,
   }
 }
 
-def PrefixInstrs : Predicate<"Subtarget->hasPrefixInstrs()">;
-def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
-def PairedVectorMemops : Predicate<"Subtarget->pairedVectorMemops()">;
 def RCCp {
   dag AToVSRC = (COPY_TO_REGCLASS $XA, VSRC);
   dag BToVSRC = (COPY_TO_REGCLASS $XB, VSRC);
@@ -645,18 +657,18 @@ def RCCp {
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     defm PADDI8 :
-      MLS_DForm_R_SI34_RTA5_p<14, (outs g8rc:$RT), (ins g8rc_nox0:$RA, s34imm:$SI),
-                              (ins immZero:$RA, s34imm_pcrel:$SI),
+      MLS_DForm_R_SI34_RTA5_p<14, (outs g8rc:$RT), (ins g8rc_nox0:$RA, s34imm64:$SI),
+                              (ins immZero:$RA, s34imm64_pcrel:$SI),
                               "paddi $RT, $RA, $SI", IIC_LdStLFD>;
     let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
       def PLI8 : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
-                                    (ins s34imm:$SI),
+                                    (ins s34imm64:$SI),
                                     "pli $RT, $SI", IIC_IntSimple, []>;
     }
   }
   defm PADDI :
     MLS_DForm_R_SI34_RTA5_p<14, (outs gprc:$RT), (ins gprc_nor0:$RA, s34imm:$SI),
-                            (ins immZero:$RA, s34imm_pcrel:$SI),
+                            (ins immZero:$RA, s34imm64_pcrel:$SI),
                             "paddi $RT, $RA, $SI", IIC_LdStLFD>;
   let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
     def PLI : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
@@ -669,59 +681,59 @@ let Predicates = [PrefixInstrs] in {
       defm PLBZ8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<34, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plbz $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plbz $RST, $addr",
                                     "plbz $RST, $D", IIC_LdStLFD>;
       defm PLHZ8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<40, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plhz $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plhz $RST, $addr",
                                     "plhz $RST, $D", IIC_LdStLFD>;
       defm PLHA8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<42, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plha $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plha $RST, $addr",
                                     "plha $RST, $D", IIC_LdStLFD>;
       defm PLWA8 :
         8LS_DForm_R_SI34_RTA5_MEM_p<41, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D),
+                                    (ins s34imm64_pcrel:$D),
                                     "plwa $RST, $addr", "plwa $RST, $D",  IIC_LdStLFD>;
       defm PLWZ8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<32, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plwz $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plwz $RST, $addr",
                                     "plwz $RST, $D", IIC_LdStLFD>;
     }
     defm PLBZ :
       MLS_DForm_R_SI34_RTA5_MEM_p<34, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plbz $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plbz $RST, $addr",
                                   "plbz $RST, $D", IIC_LdStLFD>;
     defm PLHZ :
       MLS_DForm_R_SI34_RTA5_MEM_p<40, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plhz $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plhz $RST, $addr",
                                   "plhz $RST, $D", IIC_LdStLFD>;
     defm PLHA :
       MLS_DForm_R_SI34_RTA5_MEM_p<42, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plha $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plha $RST, $addr",
                                   "plha $RST, $D", IIC_LdStLFD>;
     defm PLWZ :
       MLS_DForm_R_SI34_RTA5_MEM_p<32, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plwz $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plwz $RST, $addr",
                                   "plwz $RST, $D", IIC_LdStLFD>;
     defm PLWA :
       8LS_DForm_R_SI34_RTA5_MEM_p<41, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "plwa $RST, $addr", "plwa $RST, $D",
                                   IIC_LdStLFD>;
     defm PLD :
       8LS_DForm_R_SI34_RTA5_MEM_p<57, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "pld $RST, $addr", "pld $RST, $D",
                                   IIC_LdStLFD>;
   }
@@ -731,38 +743,38 @@ let Predicates = [PrefixInstrs] in {
       defm PSTB8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<38, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                     (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                    (ins g8rc:$RST, s34imm_pcrel:$D),
+                                    (ins g8rc:$RST, s34imm64_pcrel:$D),
                                     "pstb $RST, $addr", "pstb $RST, $D", IIC_LdStLFD>;
       defm PSTH8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<44, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                     (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                    (ins g8rc:$RST, s34imm_pcrel:$D),
+                                    (ins g8rc:$RST, s34imm64_pcrel:$D),
                                     "psth $RST, $addr", "psth $RST, $D", IIC_LdStLFD>;
       defm PSTW8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<36, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                     (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                    (ins g8rc:$RST, s34imm_pcrel:$D),
+                                    (ins g8rc:$RST, s34imm64_pcrel:$D),
                                     "pstw $RST, $addr", "pstw $RST, $D", IIC_LdStLFD>;
     }
     defm PSTB :
       MLS_DForm_R_SI34_RTA5_MEM_p<38, (outs), (ins gprc:$RST, (memri34 $D, $RA):$addr),
                                   (ins gprc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins gprc:$RST, s34imm_pcrel:$D),
+                                  (ins gprc:$RST, s34imm64_pcrel:$D),
                                   "pstb $RST, $addr", "pstb $RST, $D", IIC_LdStLFD>;
     defm PSTH :
       MLS_DForm_R_SI34_RTA5_MEM_p<44, (outs), (ins gprc:$RST, (memri34 $D, $RA):$addr),
                                   (ins gprc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins gprc:$RST, s34imm_pcrel:$D),
+                                  (ins gprc:$RST, s34imm64_pcrel:$D),
                                   "psth $RST, $addr", "psth $RST, $D", IIC_LdStLFD>;
     defm PSTW :
       MLS_DForm_R_SI34_RTA5_MEM_p<36, (outs), (ins gprc:$RST, (memri34 $D, $RA):$addr),
                                   (ins gprc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins gprc:$RST, s34imm_pcrel:$D),
+                                  (ins gprc:$RST, s34imm64_pcrel:$D),
                                   "pstw $RST, $addr", "pstw $RST, $D", IIC_LdStLFD>;
     defm PSTD :
       8LS_DForm_R_SI34_RTA5_MEM_p<61, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                   (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins g8rc:$RST, s34imm_pcrel:$D),
+                                  (ins g8rc:$RST, s34imm64_pcrel:$D),
                                   "pstd $RST, $addr", "pstd $RST, $D", IIC_LdStLFD>;
   }
 }
@@ -772,24 +784,24 @@ let Predicates = [PrefixInstrs, HasFPU] in {
     defm PLFS :
       MLS_DForm_R_SI34_RTA5_MEM_p<48, (outs f4rc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plfs $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plfs $RST, $addr",
                                   "plfs $RST, $D", IIC_LdStLFD>;
     defm PLFD :
       MLS_DForm_R_SI34_RTA5_MEM_p<50, (outs f8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins  (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plfd $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plfd $RST, $addr",
                                   "plfd $RST, $D", IIC_LdStLFD>;
   }
   let mayStore = 1, mayLoad = 0 in {
     defm PSTFS :
       MLS_DForm_R_SI34_RTA5_MEM_p<52, (outs), (ins f4rc:$RST, (memri34 $D, $RA):$addr),
                                   (ins f4rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins f4rc:$RST, s34imm_pcrel:$D),
+                                  (ins f4rc:$RST, s34imm64_pcrel:$D),
                                   "pstfs $RST, $addr", "pstfs $RST, $D", IIC_LdStLFD>;
     defm PSTFD :
       MLS_DForm_R_SI34_RTA5_MEM_p<54, (outs), (ins f8rc:$RST, (memri34 $D, $RA):$addr),
                                   (ins f8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins f8rc:$RST, s34imm_pcrel:$D),
+                                  (ins f8rc:$RST, s34imm64_pcrel:$D),
                                   "pstfd $RST, $addr", "pstfd $RST, $D", IIC_LdStLFD>;
   }
 }
@@ -799,18 +811,18 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     defm PLXV :
       8LS_DForm_R_SI34_XT6_RA5_MEM_p<25, (outs vsrc:$XST), (ins (memri34 $D, $RA):$addr),
                                      (ins (memri34_pcrel $D, $RA):$addr),
-                                     (ins s34imm_pcrel:$D),
+                                     (ins s34imm64_pcrel:$D),
                                      "plxv $XST, $addr", "plxv $XST, $D", IIC_LdStLFD>;
     defm PLXSSP :
       8LS_DForm_R_SI34_RTA5_MEM_p<43, (outs vfrc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "plxssp $RST, $addr",  "plxssp $RST, $D",
                                   IIC_LdStLFD>;
     defm PLXSD :
       8LS_DForm_R_SI34_RTA5_MEM_p<42, (outs vfrc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "plxsd $RST, $addr", "plxsd $RST, $D",
                                   IIC_LdStLFD>;
   }
@@ -818,17 +830,17 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     defm PSTXV :
       8LS_DForm_R_SI34_XT6_RA5_MEM_p<27, (outs), (ins vsrc:$XST, (memri34 $D, $RA):$addr),
                                      (ins vsrc:$XST, (memri34_pcrel $D, $RA):$addr),
-                                     (ins vsrc:$XST, s34imm_pcrel:$D),
+                                     (ins vsrc:$XST, s34imm64_pcrel:$D),
                                      "pstxv $XST, $addr", "pstxv $XST, $D", IIC_LdStLFD>;
     defm PSTXSSP :
       8LS_DForm_R_SI34_RTA5_MEM_p<47, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
                                   (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins vfrc:$RST, s34imm_pcrel:$D),
+                                  (ins vfrc:$RST, s34imm64_pcrel:$D),
                                   "pstxssp $RST, $addr", "pstxssp $RST, $D", IIC_LdStLFD>;
     defm PSTXSD :
       8LS_DForm_R_SI34_RTA5_MEM_p<46, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
                                   (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins vfrc:$RST, s34imm_pcrel:$D),
+                                  (ins vfrc:$RST, s34imm64_pcrel:$D),
                                   "pstxsd $RST, $addr", "pstxsd $RST, $D", IIC_LdStLFD>;
   }
   def XXPERMX :
@@ -870,7 +882,7 @@ class DQForm_XTp5_RA17_MEM<bits<6> opcode, bits<4> xo, dag OOL, dag IOL,
   let Inst{28...31} = xo;
 }
 
-class XForm_XTp5_XAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
+class XForm_XTp5_RAB5<bits<6> opcode, bits<10> xo, dag OOL, dag IOL,
                       string asmstr, InstrItinClass itin, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, itin>, XFormMemOp {
   bits<5> XTp;
@@ -1159,7 +1171,7 @@ let Predicates = [PairedVectorMemops] in {
     def LXVP : DQForm_XTp5_RA17_MEM<6, 0, (outs vsrprc:$XTp),
                                     (ins (memrix16 $DQ, $RA):$addr), "lxvp $XTp, $addr",
                                     IIC_LdStLFD, []>;
-    def LXVPX : XForm_XTp5_XAB5<31, 333, (outs vsrprc:$XTp), (ins (memrr $RA, $RB):$addr),
+    def LXVPX : XForm_XTp5_RAB5<31, 333, (outs vsrprc:$XTp), (ins (memrr $RA, $RB):$addr),
                                 "lxvpx $XTp, $addr", IIC_LdStLFD,
                                 []>;
   }
@@ -1168,7 +1180,7 @@ let Predicates = [PairedVectorMemops] in {
     def STXVP : DQForm_XTp5_RA17_MEM<6, 1, (outs), (ins vsrprc:$XTp,
                                      (memrix16 $DQ, $RA):$addr), "stxvp $XTp, $addr",
                                      IIC_LdStLFD, []>;
-    def STXVPX : XForm_XTp5_XAB5<31, 461, (outs), (ins vsrprc:$XTp, (memrr $RA, $RB):$addr),
+    def STXVPX : XForm_XTp5_RAB5<31, 461, (outs), (ins vsrprc:$XTp, (memrr $RA, $RB):$addr),
                                  "stxvpx $XTp, $addr", IIC_LdStLFD,
                                  []>;
   }
@@ -1177,7 +1189,7 @@ let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs, H
   defm PLXVP :
     8LS_DForm_R_XTp5_SI34_MEM_p<58, (outs vsrprc:$XTp), (ins (memri34 $D, $RA):$addr),
                                 (ins (memri34_pcrel $D, $RA):$addr),
-                                (ins s34imm_pcrel:$D),
+                                (ins s34imm64_pcrel:$D),
                                 "plxvp $XTp, $addr", "plxvp $XTp, $D",
                                 IIC_LdStLFD>;
 }
@@ -1186,7 +1198,7 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs, H
   defm PSTXVP :
     8LS_DForm_R_XTp5_SI34_MEM_p<62, (outs), (ins vsrprc:$XTp, (memri34 $D, $RA):$addr),
                                 (ins vsrprc:$XTp, (memri34_pcrel $D, $RA):$addr),
-                                (ins vsrprc:$XTp, s34imm_pcrel:$D),
+                                (ins vsrprc:$XTp, s34imm64_pcrel:$D),
                                 "pstxvp $XTp, $addr", "pstxvp $XTp, $D", IIC_LdStLFD>;
 }
 
@@ -1329,7 +1341,7 @@ let Predicates = [PCRelativeMemops, HasFPU] in {
             (PSTFDpc $FRS, $ga, 0)>;
 
   def : Pat<(v4f32 (PPCldvsxlh (PPCmatpcreladdr PCRelForm:$addr))),
-            (SUBREG_TO_REG (i64 1), (PLFDpc $addr, 0), sub_64)>;
+            (SUBREG_TO_REG (PLFDpc $addr, 0), sub_64)>;
 }
 
 let Predicates = [PCRelativeMemops, HasP10Vector] in {
@@ -1436,15 +1448,15 @@ let Predicates = [IsISA3_1] in {
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsldbi v16i8:$VRA,
                                                               v16i8:$VRB,
-                                                              timm:$SD))]>;
+                                                              u3imm_timm:$SD))]>;
   def VSRDBI : VNForm_VTAB5_SD3<22, 1, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SD),
                                 "vsrdbi $VRT, $VRA, $VRB, $SD",
                                 IIC_VecGeneral,
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
-                                                              v16i8:$VRB, 
-                                                              timm:$SD))]>;
+                                                              v16i8:$VRB,
+                                                              u3imm_timm:$SD))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$VT), (ins vrrc:$VB),
                                  "vstribr", "$VT, $VB", IIC_VecGeneral,
 				 [(set v16i8:$VT,
@@ -1465,13 +1477,13 @@ let Predicates = [IsISA3_1] in {
     VXForm_1<207, (outs vrrc:$VD), (ins vrrc:$VDi, u4imm:$VA, gprc:$VB),
              "vinsw $VD, $VB, $VA", IIC_VecGeneral,
              [(set v4i32:$VD,
-                   (int_ppc_altivec_vinsw v4i32:$VDi, i32:$VB, timm:$VA))]>,
+                   (int_ppc_altivec_vinsw v4i32:$VDi, i32:$VB, u4imm_timm:$VA))]>,
              RegConstraint<"$VDi = $VD">;
   def VINSD :
     VXForm_1<463, (outs vrrc:$VD), (ins vrrc:$VDi, u4imm:$VA, g8rc:$VB),
              "vinsd $VD, $VB, $VA", IIC_VecGeneral,
              [(set v2i64:$VD,
-                   (int_ppc_altivec_vinsd v2i64:$VDi, i64:$VB, timm:$VA))]>,
+                   (int_ppc_altivec_vinsd v2i64:$VDi, i64:$VB, u4imm_timm:$VA))]>,
              RegConstraint<"$VDi = $VD">;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
@@ -1617,22 +1629,22 @@ let Predicates = [IsISA3_1] in {
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbb $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbb
-                                        v16i8:$VB, timm:$MP))]>;
+                                        v16i8:$VB, u1imm_timm:$MP))]>;
   def VCNTMBH : VXForm_RD5_MP_VB5<1602, 13, (outs g8rc:$RD),
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbh $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbh
-                                        v8i16:$VB, timm:$MP))]>;
+                                        v8i16:$VB, u1imm_timm:$MP))]>;
   def VCNTMBW : VXForm_RD5_MP_VB5<1602, 14, (outs g8rc:$RD),
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbw $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbw
-                                        v4i32:$VB, timm:$MP))]>;
+                                        v4i32:$VB, u1imm_timm:$MP))]>;
   def VCNTMBD : VXForm_RD5_MP_VB5<1602, 15, (outs g8rc:$RD),
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbd $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbd
-                                        v2i64:$VB, timm:$MP))]>;
+                                        v2i64:$VB, u1imm_timm:$MP))]>;
   def VEXTDUBVLX : VAForm_1a<24, (outs vrrc:$RT),
                              (ins vrrc:$RA, vrrc:$RB, gprc:$RC),
                              "vextdubvlx $RT, $RA, $RB, $RC",
@@ -1718,7 +1730,7 @@ let Predicates = [IsISA3_1] in {
    def VGNB : VXForm_RD5_N3_VB5<1228, (outs g8rc:$RD), (ins vrrc:$VB, u3imm:$N),
                                 "vgnb $RD, $VB, $N", IIC_VecGeneral,
                                 [(set i64:$RD,
-                                (int_ppc_altivec_vgnb v1i128:$VB, timm:$N))]>;
+                                (int_ppc_altivec_vgnb v1i128:$VB, u3imm_timm:$N))]>;
    def CFUGED : XForm_6<31, 220, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                         "cfuged $RA, $RST, $RB", IIC_IntGeneral,
                         [(set i64:$RA, (int_ppc_cfuged i64:$RST, i64:$RB))]>;
@@ -1727,7 +1739,7 @@ let Predicates = [IsISA3_1] in {
                             vsrc:$XC, u8imm:$IMM),
                             "xxeval $XT, $XA, $XB, $XC, $IMM", IIC_VecGeneral,
                             [(set v2i64:$XT, (int_ppc_vsx_xxeval v2i64:$XA,
-                                  v2i64:$XB, v2i64:$XC, timm:$IMM))]>;
+                                  v2i64:$XB, v2i64:$XC, u8imm_timm:$IMM))]>;
    def VCLZDM : VXForm_1<1924, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
                          "vclzdm $VD, $VA, $VB", IIC_VecGeneral,
                          [(set v2i64:$VD,
@@ -2411,6 +2423,190 @@ multiclass XXEvalTernarySelectOr<ValueType Vt> {
             126>;
 }
 
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNor
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOR(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, AND(B,C), XOR(B,C), NOT(C),
+//   NOT(B), NAND(B,C)}
+// - C is the "false" case op NOR(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectNor<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOR(B,C)) XXEVAL immediate value: 129
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          129>;
+
+  // Pattern: (A ? B : NOR(B,C)) XXEVAL immediate value: 131
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vB, (VNor Vt:$vB, Vt:$vC)),131>;
+
+  // Pattern: (A ? C : NOR(B,C)) XXEVAL immediate value: 133
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vC, (VNor Vt:$vB, Vt:$vC)),
+          133>;
+
+  // Pattern: (A ? XOR(B,C) : NOR(B,C)) XXEVAL immediate value: 134
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          134>;
+
+  // Pattern: (A ? NOT(C) : NOR(B,C)) XXEVAL immediate value: 138
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          138>;
+
+  // Pattern: (A ? NOT(B) : NOR(B,C)) XXEVAL immediate value: 140
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VNor Vt:$vB, Vt:$vC)),
+          140>;
+
+  // Pattern: (A ? NAND(B,C) : NOR(B,C)) XXEVAL immediate value: 142
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNor Vt:$vB, Vt:$vC)),
+          142>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectEqv
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : EQV(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {OR(B,C), NOR(B,C), NAND(B,C), NOT(B),
+//   NOT(C)}
+// - C is the "false" case op EQV(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectEqv<ValueType Vt>{
+  // Pattern: (A ? OR(B,C) : EQV(B,C)) XXEVAL immediate value: 151
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          151>;
+
+  // Pattern: (A ? NOR(B,C) : EQV(B,C)) XXEVAL immediate value: 152
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNor Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          152>;
+
+  // Pattern: (A ? NOT(C) : EQV(B,C)) XXEVAL immediate value: 154
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          154>;
+
+  // Pattern: (A ? NAND(B,C) : EQV(B,C)) XXEVAL immediate value: 158
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VEqv Vt:$vB, Vt:$vC)),
+          158>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNotC
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOT(C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {AND(B,C), OR(B,C), XOR(B,C), NAND(B,C),
+//   B, NOT(B)}
+// - C is the "false" case op NOT(C)
+// =============================================================================
+multiclass XXEvalTernarySelectNotC<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOT(C)) XXEVAL immediate value: 161
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 161>;
+
+  // Pattern: (A ? B : NOT(C)) XXEVAL immediate value: 163
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vB, (VNot Vt:$vC)), 163>;
+
+  // Pattern: (A ? XOR(B,C) : NOT(C)) XXEVAL immediate value: 166
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 166>;
+
+  // Pattern: (A ? OR(B,C) : NOT(C)) XXEVAL immediate value: 167
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 167>;
+  
+  // Pattern: (A ? NOT(B) : NOT(C)) XXEVAL immediate value: 172
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNot Vt:$vB), (VNot Vt:$vC)), 172>;
+
+  // Pattern: (A ? NAND(B,C) : NOT(C)) XXEVAL immediate value: 174
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNot Vt:$vC)), 174>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNotB
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NOT(B)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {AND(B,C), OR(B,C), XOR(B,C), NAND(B,C),
+//   C, NOT(B)}
+// - C is the "false" case op NOT(B)
+// =============================================================================
+multiclass XXEvalTernarySelectNotB<ValueType Vt>{
+  // Pattern: (A ? AND(B,C) : NOT(B)) XXEVAL immediate value: 193
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VAnd Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 193>;
+
+  // Pattern: (A ? C : NOT(B)) XXEVAL immediate value: 197
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, Vt:$vC, (VNot Vt:$vB)), 197>;
+
+  // Pattern: (A ? XOR(B,C) : NOT(B)) XXEVAL immediate value: 198
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 198>;
+
+  // Pattern: (A ? OR(B,C) : NOT(B)) XXEVAL immediate value: 199
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 199>;
+  
+  // Pattern: (A ? NOT(C) : NOT(B)) XXEVAL immediate value: 202
+  def : XXEvalPattern<Vt, (vselect Vt:$vA, (VNot Vt:$vC), (VNot Vt:$vB)), 202>;
+
+  // Pattern: (A ? NAND(B,C) : NOT(B)) XXEVAL immediate value: 206
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VNand Vt:$vB, Vt:$vC), (VNot Vt:$vB)), 206>;
+}
+
+// =============================================================================
+// XXEVAL Ternary Pattern Multiclass: XXEvalTernarySelectNand
+// This class matches the equivalent Ternary Operation: A ? f(B,C) : NAND(B,C)
+// and emit the corresponding xxeval instruction with the imm value.
+//
+// The patterns implement xxeval vector select operations where:
+// - A is the selector vector
+// - f(B,C) is the "true" case op in set {B, C, XOR(B,C), OR(B,C), EQV(B,C)}
+// - C is the "false" case op NAND(B,C)
+// =============================================================================
+multiclass XXEvalTernarySelectNand<ValueType Vt>{
+  // Pattern: (A ? B : NAND(B,C)) XXEVAL immediate value: 227
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vB, (VNand Vt:$vB, Vt:$vC)), 227>;
+
+  // Pattern: (A ? C : NAND(B,C)) XXEVAL immediate value: 229
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, Vt:$vC, (VNand Vt:$vB, Vt:$vC)), 229>;
+
+  // Pattern: (A ? XOR(B,C) : NAND(B,C)) XXEVAL immediate value: 230
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VXor Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          230>;
+
+  // Pattern: (A ? OR(B,C) : NAND(B,C)) XXEVAL immediate value: 231
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VOr Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          231>;
+
+  // Pattern: (A ? EQV(B,C) : NAND(B,C)) XXEVAL immediate value: 233
+  def : XXEvalPattern<
+          Vt, (vselect Vt:$vA, (VEqv Vt:$vB, Vt:$vC), (VNand Vt:$vB, Vt:$vC)),
+          233>;
+}
+
 let Predicates = [PrefixInstrs, HasP10Vector] in {
   let AddedComplexity = 400 in {
     def : Pat<(v4i32 (build_vector i32immNonAllOneNonZero:$A,
@@ -2526,6 +2722,11 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
         defm : XXEvalTernarySelectC<Ty>;
         defm : XXEvalTernarySelectXor<Ty>;
         defm : XXEvalTernarySelectOr<Ty>;
+        defm : XXEvalTernarySelectNor<Ty>;
+        defm : XXEvalTernarySelectEqv<Ty>;
+        defm : XXEvalTernarySelectNotC<Ty>;
+        defm : XXEvalTernarySelectNotB<Ty>;
+        defm : XXEvalTernarySelectNand<Ty>;
     }
 
     // Anonymous patterns to select prefixed VSX loads and stores.
@@ -2559,9 +2760,9 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     }
 
 
-  def : Pat<(i32 imm34:$imm), (PLI (getImmAs64BitInt imm:$imm))>;
-  def : Pat<(i64 imm34:$imm), (PLI8 (getImmAs64BitInt imm:$imm))>;
-  def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, timm:$D)),
+  def : Pat<(i32 s34imm_pat:$imm), (PLI (getImmAs64BitInt imm:$imm))>;
+  def : Pat<(i64 s34imm64_pat:$imm), (PLI8 (getImmAs64BitInt imm:$imm))>;
+  def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, u3imm_timm:$D)),
             (COPY_TO_REGCLASS (XXPERMX (COPY_TO_REGCLASS $A, VSRC),
                                        (COPY_TO_REGCLASS $B, VSRC),
                                        (COPY_TO_REGCLASS $C, VSRC), $D), VSRC)>;
@@ -2642,7 +2843,7 @@ let Predicates = [PrefixInstrs, HasFPU] in {
   def : Pat<(store f64:$FRS, PDForm:$dst), (PSTFD $FRS, memri34:$dst)>;
   // Prefixed fpext to v2f64
   def : Pat<(v4f32 (PPCldvsxlh PDForm:$src)),
-            (SUBREG_TO_REG (i64 1), (PLFD PDForm:$src), sub_64)>;
+            (SUBREG_TO_REG (PLFD PDForm:$src), sub_64)>;
 
 }
 
@@ -2763,26 +2964,26 @@ let Predicates = [IsISA3_1] in {
   def : InstAlias<"stcisync", (SYNCP10 0, 2)>;
   def : InstAlias<"stsync", (SYNCP10 0, 3)>;
 
-  def : InstAlias<"paddi $RT, $RA, $SI", (PADDI8 g8rc:$RT, g8rc_nox0:$RA, s34imm:$SI)>;
+  def : InstAlias<"paddi $RT, $RA, $SI", (PADDI8 g8rc:$RT, g8rc_nox0:$RA, s34imm64:$SI)>;
 }
 
 let Predicates = [IsISA3_1, PrefixInstrs], isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
   let Interpretation64Bit = 1 in {
     def PLA8 : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
-                                  (ins g8rc_nox0:$RA, s34imm:$SI),
+                                  (ins g8rc_nox0:$RA, s34imm64:$SI),
                                   "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemriOp;
     def PLA8pc : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
-                                    (ins s34imm_pcrel:$SI),
+                                    (ins s34imm64_pcrel:$SI),
                                     "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;
   }
 
   def PSUBI : PPCAsmPseudo<"psubi $RT, $RA, $SI",
-                           (ins g8rc:$RT, g8rc_nox0:$RA, s34imm:$SI)>;
+                           (ins g8rc:$RT, g8rc_nox0:$RA, s34imm64:$SI)>;
 
   def PLA : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
-                               (ins gprc_nor0:$RA, s34imm:$SI),
+                               (ins gprc_nor0:$RA, s34imm64:$SI),
                                "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemriOp;
   def PLApc : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
-                                 (ins s34imm_pcrel:$SI),
+                                 (ins s34imm64_pcrel:$SI),
                                  "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;
 }

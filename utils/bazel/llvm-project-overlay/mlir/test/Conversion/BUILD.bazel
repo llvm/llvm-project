@@ -1,4 +1,5 @@
 load("//llvm:lit_test.bzl", "lit_test")
+load("//llvm:targets.bzl", "llvm_targets")
 
 licenses(["notice"])
 
@@ -15,6 +16,9 @@ package(default_visibility = ["//visibility:public"])
     )
     for src in glob(
         include = ["**/*.mlir"],
-        exclude = ["GPUToROCm/lower-rocdl-kernel-to-hsaco.mlir"],
+        exclude = ["GPUToROCm/lower-rocdl-kernel-to-hsaco.mlir"] + (
+            # MathToXeVM needs SPIRV; see MathToXeVM/lit.local.cfg
+            ["MathToXeVM/**"] if "SPIRV" not in llvm_targets else []
+        ),
     )
 ]

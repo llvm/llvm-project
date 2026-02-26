@@ -33,6 +33,8 @@ public:
   CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy,
                    clang::GlobalDecl calleeDecl)
       : calleeProtoTy(calleeProtoTy), calleeDecl(calleeDecl) {}
+  CIRGenCalleeInfo(const clang::FunctionProtoType *calleeProtoTy)
+      : calleeProtoTy(calleeProtoTy) {}
   CIRGenCalleeInfo(clang::GlobalDecl calleeDecl)
       : calleeProtoTy(nullptr), calleeDecl(calleeDecl) {}
 
@@ -224,6 +226,8 @@ public:
   }
 
   bool isAggregate() const { return hasLV || rv.isAggregate(); }
+
+  void copyInto(CIRGenFunction &cgf, Address addr, mlir::Location loc) const;
 };
 
 class CallArgList : public llvm::SmallVector<CallArg, 8> {

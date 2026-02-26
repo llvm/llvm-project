@@ -21,6 +21,7 @@
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCLFI.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCParser/AsmLexer.h"
@@ -40,6 +41,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/TargetParser/Host.h"
 #include <memory>
@@ -394,7 +396,7 @@ int main(int argc, char **argv) {
   if (TimeTrace)
     timeTraceProfilerInitialize(TimeTraceGranularity, argv[0]);
 
-  auto TimeTraceScopeExit = make_scope_exit([]() {
+  llvm::scope_exit TimeTraceScopeExit([]() {
     if (!TimeTrace)
       return;
     if (auto E = timeTraceProfilerWrite(TimeTraceFile, OutputFilename)) {
@@ -439,6 +441,7 @@ int main(int argc, char **argv) {
   // Record the location of the include directories so that the lexer can find
   // it later.
   SrcMgr.setIncludeDirs(IncludeDirs);
+  SrcMgr.setVirtualFileSystem(vfs::getRealFileSystem());
 
   std::unique_ptr<MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TheTriple));
   assert(MRI && "Unable to create target register info!");
@@ -624,6 +627,11 @@ int main(int argc, char **argv) {
     Str.reset(TheTarget->createAsmStreamer(Ctx, std::move(FOut), std::move(IP),
                                            std::move(CE), std::move(MAB)));
 
+    Triple T(TripleName);
+    if (T.isLFI()) {
+      Str->initSections(NoExecStack, *STI);
+      initializeLFIMCStreamer(*Str.get(), Ctx, T);
+    }
   } else if (FileType == OFT_Null) {
     Str.reset(TheTarget->createNullStreamer(Ctx));
   } else {
@@ -642,7 +650,8 @@ int main(int argc, char **argv) {
                : MAB->createObjectWriter(*OS),
         std::unique_ptr<MCCodeEmitter>(CE), *STI));
     if (NoExecStack)
-      Str->switchSection(Ctx.getAsmInfo()->getNonexecutableStackSection(Ctx));
+      Str->switchSection(
+          Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }

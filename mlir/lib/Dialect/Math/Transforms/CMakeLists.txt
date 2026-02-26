@@ -3,6 +3,7 @@ add_mlir_dialect_library(MLIRMathTransforms
   ExpandOps.cpp
   ExtendToSupportedTypes.cpp
   PolynomialApproximation.cpp
+  SincosFusion.cpp
   UpliftToFMA.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -20,6 +21,6 @@ add_mlir_dialect_library(MLIRMathTransforms
   MLIRSCFDialect
   MLIRPass
   MLIRTransforms
-  MLIRX86VectorDialect
+  MLIRX86Dialect
   MLIRVectorDialect
   )

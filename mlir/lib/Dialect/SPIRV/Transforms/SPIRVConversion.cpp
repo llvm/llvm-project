@@ -502,6 +502,11 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
                << type << " illegal: cannot handle zero-element tensors\n");
     return nullptr;
   }
+  if (arrayElemCount > std::numeric_limits<unsigned>::max()) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot fit tensor into target type\n");
+    return nullptr;
+  }
 
   Type arrayElemType = convertScalarType(targetEnv, options, scalarType);
   if (!arrayElemType)
@@ -622,10 +627,10 @@ static spirv::Dim convertRank(int64_t rank) {
 }
 
 static spirv::ImageFormat getImageFormat(Type elementType) {
-  return llvm::TypeSwitch<Type, spirv::ImageFormat>(elementType)
-      .Case<Float16Type>([](Float16Type) { return spirv::ImageFormat::R16f; })
-      .Case<Float32Type>([](Float32Type) { return spirv::ImageFormat::R32f; })
-      .Case<IntegerType>([](IntegerType intType) {
+  return TypeSwitch<Type, spirv::ImageFormat>(elementType)
+      .Case([](Float16Type) { return spirv::ImageFormat::R16f; })
+      .Case([](Float32Type) { return spirv::ImageFormat::R32f; })
+      .Case([](IntegerType intType) {
         auto const isSigned = intType.isSigned() || intType.isSignless();
 #define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
   case BIT_WIDTH:                                                              \
@@ -639,11 +644,7 @@ static spirv::ImageFormat getImageFormat(Type elementType) {
           llvm_unreachable("Unhandled integer type!");
         }
       })
-      .Default([](Type) {
-        llvm_unreachable("Unhandled element type!");
-        // We need to return something here to satisfy the type switch.
-        return spirv::ImageFormat::R32f;
-      });
+      .DefaultUnreachable("Unhandled element type!");
 #undef BIT_WIDTH_CASE
 }
 
@@ -1017,7 +1018,7 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                             : TypeRange()));
 
     // Copy over all attributes other than the function name and type.
-    for (const auto &namedAttr : funcOp->getAttrs()) {
+    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
         newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());
@@ -1471,7 +1472,7 @@ mlir::spirv::getNativeVectorShape(Operation *op) {
   return TypeSwitch<Operation *, std::optional<SmallVector<int64_t>>>(op)
       .Case<vector::ReductionOp, vector::TransposeOp>(
           [](auto typedOp) { return getNativeVectorShapeImpl(typedOp); })
-      .Default([](Operation *) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 LogicalResult mlir::spirv::unrollVectorsInSignatures(Operation *op) {

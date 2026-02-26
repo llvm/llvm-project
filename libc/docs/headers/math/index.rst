@@ -88,17 +88,21 @@ Implementation Status
 
   - `darwin-x86_64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/x86_64/entrypoints.txt>`_
 
-  - `darwin-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/arm/entrypoints.txt>`_
+  - `darwin-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/darwin/aarch64/entrypoints.txt>`_
 
 * To check math functions enabled for GPU:
 
-  - `gpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/entrypoints.txt>`_
+  - `amdgpu-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/amdgpu/entrypoints.txt>`_
+
+  - `nvptx-entrypoints <https://github.com/llvm/llvm-project/tree/main/libc/config/gpu/nvptx/entrypoints.txt>`_
 
 * To check math functions enabled for embedded system:
 
+  - `baremetal-aarch64 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/aarch64/entrypoints.txt>`_
+
   - `baremetal-aarch32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/arm/entrypoints.txt>`_
 
-  - baremetal-riscv32 - to be added
+  - `baremetal-riscv32 <https://github.com/llvm/llvm-project/tree/main/libc/config/baremetal/riscv/entrypoints.txt>`_
 
 
 Basic Operations
@@ -269,7 +273,7 @@ Higher Math Functions
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | asinh     | |check|          |                 |                        | |check|              |                        |                        | 7.12.5.2               | F.10.2.2                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
-| asinpi    |                  |                 |                        | |check|              |                        |                        | 7.12.4.9               | F.10.1.9                   |
+| asinpi    | |check|          |                 |                        | |check|              |                        |                        | 7.12.4.9               | F.10.1.9                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | atan      | |check|          | 1 ULP           |                        | |check|              |                        |                        | 7.12.4.3               | F.10.1.3                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
@@ -319,7 +323,7 @@ Higher Math Functions
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | lgamma    |                  |                 |                        |                      |                        |                        | 7.12.8.3               | F.10.5.3                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
-| log       | |check|          | |check|         |                        | |check|              |                        |                        | 7.12.6.11              | F.10.3.11                  |
+| log       | |check|          | |check|         |                        | |check|              |                        | |check| ?              | 7.12.6.11              | F.10.3.11                  |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | log10     | |check|          | |check|         |                        | |check|              |                        |                        | 7.12.6.12              | F.10.3.12                  |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
@@ -343,7 +347,7 @@ Higher Math Functions
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | rootn     |                  |                 |                        |                      |                        |                        | 7.12.7.8               | F.10.4.8                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
-| rsqrt     |                  |                 |                        | |check|              |                        |                        | 7.12.7.9               | F.10.4.9                   |
+| rsqrt     | |check|          |                 |                        | |check|              |                        |                        | 7.12.7.9               | F.10.4.9                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
 | sin       | |check|          | |check|         |                        | |check|              |                        |                        | 7.12.4.6               | F.10.1.6                   |
 +-----------+------------------+-----------------+------------------------+----------------------+------------------------+------------------------+------------------------+----------------------------+
@@ -373,6 +377,7 @@ Legends:
 * x ULPs: largest errors recorded.
 * N/A: Not defined in the standard or will not be added.
 * \*: LLVM libc extension.
+* ? Because of a conflict between float16 logb function and bfloat16 log function, the latter is implemented as `log_bf16`.
 
 ..
   TODO(lntue): Add a new page to discuss about the algorithms used in the

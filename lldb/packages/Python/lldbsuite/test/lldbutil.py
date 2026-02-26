@@ -319,20 +319,33 @@ def sort_stopped_threads(
 # Utility functions for setting breakpoints
 # ==================================================
 
+g_use_break_add = True
+
+
+def set_use_break_add(use_it):
+    global g_use_break_add
+    g_use_break_add = use_it
+
+
+def get_use_break_add():
+    global g_use_break_add
+    return g_use_break_add
 
 def run_break_set_by_script(
     test, class_name, extra_options=None, num_expected_locations=1
 ):
     """Set a scripted breakpoint.  Check that it got the right number of locations."""
     test.assertTrue(class_name is not None, "Must pass in a class name.")
-    command = "breakpoint set -P " + class_name
+    if get_use_break_add():
+        command = f"breakpoint add scripted -P {class_name}"
+    else:
+        command = "breakpoint set -P " + class_name
     if extra_options is not None:
         command += " " + extra_options
 
     break_results = run_break_set_command(test, command)
     check_breakpoint_result(test, break_results, num_locations=num_expected_locations)
     return get_bpno_from_match(break_results)
-
 
 def run_break_set_by_file_and_line(
     test,
@@ -353,10 +366,16 @@ def run_break_set_by_file_and_line(
     If loc_exact is true, we check that there is one location, and that location must be at the input file and line number.
     """
 
-    if file_name is None:
-        command = "breakpoint set -l %d" % (line_number)
+    if get_use_break_add():
+        if file_name is None:
+            command = f"breakpoint add file {line_number} "
+        else:
+            command = f"breakpoint add file -f {file_name} -l {line_number} "
     else:
-        command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
+        if file_name is None:
+            command = "breakpoint set -l %d" % (line_number)
+        else:
+            command = 'breakpoint set -f "%s" -l %d' % (file_name, line_number)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
@@ -395,13 +414,19 @@ def run_break_set_by_symbol(
 
     If sym_exact is true, then the output symbol must match the input exactly, otherwise we do a substring match.
     """
-    command = 'breakpoint set -n "%s"' % (symbol)
+    if get_use_break_add():
+        command = f"breakpoint add name"
+    else:
+        command = 'breakpoint set -n "%s"' % (symbol)
 
     if module_name:
         command += " --shlib '%s'" % (module_name)
 
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- '{symbol}'"
 
     break_results = run_break_set_command(test, command)
 
@@ -426,7 +451,10 @@ def run_break_set_by_selector(
 ):
     """Set a breakpoint by selector.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -S "%s"' % (selector)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style selector '{selector}'"
+    else:
+        command = 'breakpoint set -S "%s"' % (selector)
 
     if module_name:
         command += ' --shlib "%s"' % (module_name)
@@ -458,7 +486,10 @@ def run_break_set_by_regexp(
 ):
     """Set a breakpoint by regular expression match on symbol name.  Common options are the same as run_break_set_by_file_and_line."""
 
-    command = 'breakpoint set -r "%s"' % (regexp)
+    if get_use_break_add():
+        command = f"breakpoint add name --match-style regex '{regexp}'"
+    else:
+        command = 'breakpoint set -r "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
 
@@ -473,9 +504,15 @@ def run_break_set_by_source_regexp(
     test, regexp, extra_options=None, num_expected_locations=-1
 ):
     """Set a breakpoint by source regular expression.  Common options are the same as run_break_set_by_file_and_line."""
-    command = 'breakpoint set -p "%s"' % (regexp)
+    if get_use_break_add():
+        command = "breakpoint add pattern"
+    else:
+        command = 'breakpoint set -p "%s"' % (regexp)
     if extra_options:
         command += " " + extra_options
+
+    if get_use_break_add():
+        command += f" -- {regexp}"
 
     break_results = run_break_set_command(test, command)
 
@@ -493,7 +530,11 @@ def run_break_set_by_file_colon_line(
     extra_options=None,
     num_expected_locations=-1,
 ):
-    command = 'breakpoint set -y "%s"' % (specifier)
+    if get_use_break_add():
+        command = f"breakpoint add file '{specifier}'"
+    else:
+        command = 'breakpoint set -y "%s"' % (specifier)
+
     if extra_options:
         command += " " + extra_options
 

@@ -156,11 +156,14 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
+  OS << "| enum ";
   if (I.Scoped)
-    writeLine("| enum class " + I.Name + " |", OS);
-  else
-    writeLine("| enum " + I.Name + " |", OS);
-  writeLine("--", OS);
+    OS << "class ";
+  OS << (I.Name.empty() ? "(unnamed)" : StringRef(I.Name)) << " ";
+  if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
+    OS << ": " << I.BaseType->Type.QualName << " ";
+  }
+  OS << "|\n\n" << "--\n\n";
 
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
@@ -398,9 +401,9 @@ class MDGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocs(StringRef RootDir,
-                           llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                           const ClangDocContext &CDCtx) override;
+  llvm::Error generateDocumentation(
+      StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+      const ClangDocContext &CDCtx, std::string DirName) override;
   llvm::Error createResources(ClangDocContext &CDCtx) override;
   llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
                                  const ClangDocContext &CDCtx) override;
@@ -408,10 +411,9 @@ public:
 
 const char *MDGenerator::Format = "md";
 
-llvm::Error
-MDGenerator::generateDocs(StringRef RootDir,
-                          llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
-                          const ClangDocContext &CDCtx) {
+llvm::Error MDGenerator::generateDocumentation(
+    StringRef RootDir, llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+    const ClangDocContext &CDCtx, std::string DirName) {
   // Track which directories we already tried to create.
   llvm::StringSet<> CreatedDirs;
 

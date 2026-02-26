@@ -43,5 +43,5 @@ Options
    Specify the function used for forwarding. Default is `::std::forward`.
 
 This check implements `F.19
-<http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-forward>`_
+<http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#rf-forward>`_
 from the C++ Core Guidelines.

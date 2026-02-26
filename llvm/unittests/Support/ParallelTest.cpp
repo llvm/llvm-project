@@ -15,7 +15,6 @@
 #include "llvm/Config/llvm-config.h" // for LLVM_ENABLE_THREADS
 #include "llvm/Support/ThreadPool.h"
 #include "gtest/gtest.h"
-#include <array>
 #include <random>
 
 uint32_t array[1024 * 1024];

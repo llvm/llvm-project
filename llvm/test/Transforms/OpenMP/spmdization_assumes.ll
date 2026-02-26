@@ -55,7 +55,7 @@ define weak ptx_kernel void @__omp_offloading_fd02_404433c2_main_l5(ptr %dyn, pt
 ; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB2]], i32 [[TMP2]])
 ; CHECK-NEXT:    br label %[[REGION_EXIT:.*]]
 ; CHECK:       [[REGION_EXIT]]:
-; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 0) #[[ATTR3]]
+; CHECK-NEXT:    call void @__kmpc_parallel_60(ptr nonnull @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull [[CAPTURED_VARS_ADDRS]], i64 0, i32 0) #[[ATTR3]]
 ; CHECK-NEXT:    call void @__kmpc_target_deinit() #[[ATTR3]]
 ; CHECK-NEXT:    br label %[[COMMON_RET]]
 ;
@@ -72,7 +72,7 @@ user_code.entry:                                  ; preds = %entry
   %1 = call i32 @__kmpc_global_thread_num(ptr nonnull @1)
   %call.i = call double @__nv_sin(double 0x400921FB54442D18) #6
   store double %call.i, ptr %x, align 8, !tbaa !8
-  call void @__kmpc_parallel_51(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs, i64 0) #3
+  call void @__kmpc_parallel_60(ptr nonnull @1, i32 %1, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr nonnull %captured_vars_addrs, i64 0, i32 0) #3
   call void @__kmpc_target_deinit() #3
   br label %common.ret
 }
@@ -111,7 +111,7 @@ declare void @__kmpc_get_shared_variables(ptr) local_unnamed_addr
 declare i32 @__kmpc_global_thread_num(ptr) local_unnamed_addr #3
 
 ; Function Attrs: alwaysinline
-declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64) local_unnamed_addr #4
+declare void @__kmpc_parallel_60(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64, i32) local_unnamed_addr #4
 
 declare void @__kmpc_target_deinit() local_unnamed_addr
 
