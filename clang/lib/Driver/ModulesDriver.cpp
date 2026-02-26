@@ -609,7 +609,8 @@ static std::optional<DependencyScanResult> scanDependencies(
   // scanning when discovered as dependencies.
   SmallVector<size_t> UserInputScanIndices;
   llvm::DenseMap<ModuleNameAndTriple, size_t> StdlibModuleScanIndexByID;
-  for (const auto &&[ScanIndex, JobIndex] : llvm::enumerate(ScannableJobIndices)) {
+  for (const auto &&[ScanIndex, JobIndex] :
+       llvm::enumerate(ScannableJobIndices)) {
     const Command &ScanJob = *Jobs[JobIndex];
     if (const auto *Entry =
             getManifestEntryForCommand(ScanJob, ManifestLookup)) {
