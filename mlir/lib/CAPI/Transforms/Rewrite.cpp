@@ -590,6 +590,11 @@ void mlirTypeConverterAddConversion(
           });
 }
 
+MlirType mlirTypeConverterConvertType(MlirTypeConverter typeConverter,
+                                      MlirType type) {
+  return wrap(unwrap(typeConverter)->convertType(unwrap(type)));
+}
+
 //===----------------------------------------------------------------------===//
 /// ConversionPattern API
 //===----------------------------------------------------------------------===//
