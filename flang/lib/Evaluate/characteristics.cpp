@@ -1887,6 +1887,12 @@ bool DistinguishUtils::Distinguishable(const TypeAndShape &x,
   if (ignoreTKR.test(common::IgnoreTKR::Rank)) {
   } else if (x.attrs().test(TypeAndShape::Attr::AssumedRank) ||
       y.attrs().test(TypeAndShape::Attr::AssumedRank)) {
+  } else if ((x.attrs().test(TypeAndShape::Attr::AssumedSize) &&
+                 x.type().IsAssumedType() && y.Rank() == 0) ||
+      (y.attrs().test(TypeAndShape::Attr::AssumedSize) &&
+          y.type().IsAssumedType() && x.Rank() == 0)) {
+    // F'2023 15.5.2.5 p14, third bullet: scalar actual can be passed
+    // to TYPE(*) assumed-size dummy argument
   } else if (x.Rank() != y.Rank()) {
     return true;
   }

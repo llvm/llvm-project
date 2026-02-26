@@ -79,9 +79,6 @@ class LLVMConfig(object):
             if not self.use_lit_shell and lit_config.update_tests:
                 print("note: --update-tests is not supported when using external shell")
 
-        if not self.use_lit_shell:
-            features.add("shell")
-
         self.with_system_environment(
             [
                 "ASAN_SYMBOLIZER_PATH",

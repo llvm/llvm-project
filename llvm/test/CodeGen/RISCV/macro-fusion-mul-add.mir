@@ -1,0 +1,67 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
+# RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
+# RUN:   -mattr=+m,+fusion-mul-add | FileCheck %s
+
+# Test mul-add fusion: MUL + ADD and MULW + ADDW
+# This fusion combines a multiplication followed by an addition.
+# Both instructions must have the same width (W suffix or not).
+
+# CHECK: mul_add
+# CHECK: Macro fuse: {{.*}}MUL - ADD
+---
+name: mul_add
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = MUL %1, %2
+    %5:gpr = XORI %3, 3
+    %6:gpr = ADD %4, %3
+    $x10 = COPY %5
+    $x11 = COPY %6
+    PseudoRET
+...
+
+# CHECK: mulw_addw
+# CHECK: Macro fuse: {{.*}}MULW - ADDW
+---
+name: mulw_addw
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = MULW %1, %2
+    %5:gpr = XORI %3, 3
+    %6:gpr = ADDW %4, %3
+    $x10 = COPY %5
+    $x11 = COPY %6
+    PseudoRET
+...
+
+# Test that fusion does not happen with different widths
+# CHECK: mul_addw_no_fusion
+# CHECK-NOT: Macro fuse: {{.*}}MUL - ADDW
+---
+name: mul_addw_no_fusion
+tracksRegLiveness: true
+body:             |
+  bb.0.entry:
+    liveins: $x10, $x11, $x12
+    %1:gpr = COPY $x10
+    %2:gpr = COPY $x11
+    %3:gpr = COPY $x12
+    %4:gpr = MUL %1, %2
+    %5:gpr = XORI %3, 3
+    %6:gpr = ADDW %4, %3
+    $x10 = COPY %5
+    $x11 = COPY %6
+    PseudoRET
+...
+

@@ -2,7 +2,7 @@
 // the ASan dylib from the environment variable (both when using an absolute
 // or relative path) and also that the other dylibs are left untouched.
 
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 
 // RUN: rm -rf %t && mkdir -p %t
 // RUN: %clang_asan -print-file-name=lib | tr -d '\n' > %t.lib_name

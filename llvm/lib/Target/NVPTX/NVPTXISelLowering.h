@@ -32,8 +32,8 @@ public:
                                const NVPTXSubtarget &STI);
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
 
-  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
-                          MachineFunction &MF,
+  void getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
+                          const CallBase &I, MachineFunction &MF,
                           unsigned Intrinsic) const override;
 
   Align getFunctionArgumentAlignment(const Function *F, Type *Ty, unsigned Idx,
@@ -173,7 +173,7 @@ public:
   }
 
   AtomicExpansionKind
-  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
     // There's rarely any point of packing something into a vector type if we

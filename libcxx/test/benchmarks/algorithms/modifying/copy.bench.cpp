@@ -45,9 +45,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::copy(vector<int>)", std_copy);
     bm.operator()<std::deque<int>>("std::copy(deque<int>)", std_copy);
     bm.operator()<std::list<int>>("std::copy(list<int>)", std_copy);
-    bm.operator()<std::vector<int>>("rng::copy(vector<int>)", std::ranges::copy);
-    bm.operator()<std::deque<int>>("rng::copy(deque<int>)", std::ranges::copy);
-    bm.operator()<std::list<int>>("rng::copy(list<int>)", std::ranges::copy);
   }
 
   // {std,ranges}::copy(vector<bool>)
@@ -70,10 +67,6 @@ int main(int argc, char** argv) {
     };
     bm.operator()<true>("std::copy(vector<bool>) (aligned)", std_copy);
     bm.operator()<false>("std::copy(vector<bool>) (unaligned)", std_copy);
-#if TEST_STD_VER >= 23 // vector<bool>::iterator is not an output_iterator before C++23
-    bm.operator()<true>("rng::copy(vector<bool>) (aligned)", std::ranges::copy);
-    bm.operator()<false>("rng::copy(vector<bool>) (unaligned)", std::ranges::copy);
-#endif
   }
 
   benchmark::Initialize(&argc, argv);

@@ -810,7 +810,8 @@ void MipsAsmPrinter::emitInlineAsmStart() const {
 }
 
 void MipsAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                      const MCSubtargetInfo *EndInfo) const {
+                                      const MCSubtargetInfo *EndInfo,
+                                      const MachineInstr *MI) {
   OutStreamer->addBlankLine();
   getTargetStreamer().emitDirectiveSetPop();
 }

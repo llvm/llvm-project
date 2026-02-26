@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 
 void test_basic_type_checks() {
+  static_assert(__is_same(bool, decltype(__builtin_bswapg((bool)0))), "");
   static_assert(__is_same(char, decltype(__builtin_bswapg((char)0))), "");
   static_assert(__is_same(unsigned char, decltype(__builtin_bswapg((unsigned char)0))), "");
   static_assert(__is_same(short, decltype(__builtin_bswapg((short)0))), "");
@@ -135,13 +136,13 @@ void test_lambda_errors() {
   
   lambda(1.0f);
   // expected-error@#lambda_use {{1st argument must be a scalar integer type (was 'float')}}
-  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(anonymous class)::operator()<float>' requested here}}
+  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(lambda)::operator()<float>' requested here}}
   lambda(1.0l);
   // expected-error@#lambda_use {{1st argument must be a scalar integer type (was 'long double')}}
-  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(anonymous class)::operator()<long double>' requested here}}
+  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(lambda)::operator()<long double>' requested here}}
   lambda("hello");
   // expected-error@#lambda_use {{1st argument must be a scalar integer type (was 'const char *')}}
-  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(anonymous class)::operator()<const char *>' requested here}}
+  // expected-note@-2 {{in instantiation of function template specialization 'test_lambda_errors()::(lambda)::operator()<const char *>' requested here}}
 }
 
 template <class... Args> void test_variadic_template_argument_count(Args... args) {

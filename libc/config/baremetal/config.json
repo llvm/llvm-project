@@ -27,6 +27,20 @@
     },
     "LIBC_CONF_PRINTF_DISABLE_STRERROR": {
       "value": true
+    },
+    "LIBC_CONF_PRINTF_DISABLE_WIDE": {
+      "value": true
+    },
+    "LIBC_COPT_PRINTF_DISABLE_BITINT": {
+      "value": true
+    }
+  },
+  "scanf": {
+    "LIBC_CONF_SCANF_DISABLE_INDEX_MODE": {
+      "value": true
+    },
+    "LIBC_CONF_SCANF_DISABLE_FLOAT": {
+      "value": true
     }
   },
   "qsort": {
@@ -34,13 +48,26 @@
       "value": "LIBC_QSORT_HEAP_SORT"
     }
   },
+  "str_to_float": {
+    "LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE": {
+      "value": true
+    },
+    "LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH": {
+      "value": true
+    }
+  },
   "math": {
     "LIBC_CONF_MATH_OPTIMIZATIONS": {
-      "value": "(LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES | LIBC_MATH_NO_ERRNO | LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT)"
+      "value": "(LIBC_MATH_SKIP_ACCURATE_PASS | LIBC_MATH_SMALL_TABLES | LIBC_MATH_NO_ERRNO | LIBC_MATH_NO_EXCEPT | LIBC_MATH_INTERMEDIATE_COMP_IN_FLOAT)"
     }
   },
   "general": {
     "LIBC_ADD_NULL_CHECKS": {
+      "value": false
+    }
+  },
+  "codegen": {
+    "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
       "value": false
     }
   }

@@ -239,7 +239,7 @@ TEST(LoopUtils, zeroEstimatedTripCount) {
           SmallVector<uint32_t, 2> Weights;
           EXPECT_EQ(extractBranchWeights(LatchBranch, Weights), true);
           EXPECT_EQ(Weights[0], 0u);
-          EXPECT_EQ(Weights[1], 0u);
+          EXPECT_EQ(Weights[1], 1u);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, "foo"), Foo);
           EXPECT_EQ(getOptionalIntLoopAttribute(L, LLVMLoopEstimatedTripCount),
                     0);

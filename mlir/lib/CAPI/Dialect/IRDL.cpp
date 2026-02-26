@@ -26,6 +26,10 @@ MlirAttribute mlirIRDLVariadicityAttrGet(MlirContext ctx, MlirStringRef value) {
       unwrap(ctx), mlir::irdl::symbolizeVariadicity(unwrap(value)).value()));
 }
 
+MlirStringRef mlirIRDLVariadicityAttrGetName(void) {
+  return wrap(mlir::irdl::VariadicityAttr::name);
+}
+
 //===----------------------------------------------------------------------===//
 // VariadicityArrayAttr
 //===----------------------------------------------------------------------===//
@@ -42,4 +46,8 @@ MlirAttribute mlirIRDLVariadicityArrayAttrGet(MlirContext ctx, intptr_t nValues,
 
   return wrap(
       mlir::irdl::VariadicityArrayAttr::get(unwrap(ctx), variadicities));
+}
+
+MlirStringRef mlirIRDLVariadicityArrayAttrGetName(void) {
+  return wrap(mlir::irdl::VariadicityArrayAttr::name);
 }

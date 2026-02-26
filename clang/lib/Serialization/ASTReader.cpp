@@ -960,35 +960,45 @@ bool SimpleASTReaderListener::ReadPreprocessorOptions(
 ///
 /// \param Diags If non-null, produce diagnostics for any mismatches incurred.
 /// \returns true when the module cache paths differ.
-static bool checkModuleCachePath(llvm::vfs::FileSystem &VFS,
-                                 StringRef SpecificModuleCachePath,
-                                 StringRef ExistingModuleCachePath,
-                                 StringRef ModuleFilename,
-                                 DiagnosticsEngine *Diags,
-                                 const LangOptions &LangOpts,
-                                 const PreprocessorOptions &PPOpts) {
+static bool checkModuleCachePath(
+    llvm::vfs::FileSystem &VFS, StringRef SpecificModuleCachePath,
+    StringRef ExistingSpecificModuleCachePath, StringRef ASTFilename,
+    DiagnosticsEngine *Diags, const LangOptions &LangOpts,
+    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+    const HeaderSearchOptions &ASTFileHSOpts) {
   if (!LangOpts.Modules || PPOpts.AllowPCHWithDifferentModulesCachePath ||
-      SpecificModuleCachePath == ExistingModuleCachePath)
+      SpecificModuleCachePath == ExistingSpecificModuleCachePath)
     return false;
   auto EqualOrErr =
-      VFS.equivalent(SpecificModuleCachePath, ExistingModuleCachePath);
+      VFS.equivalent(SpecificModuleCachePath, ExistingSpecificModuleCachePath);
   if (EqualOrErr && *EqualOrErr)
     return false;
-  if (Diags)
-    Diags->Report(diag::err_ast_file_modulecache_mismatch)
-        << SpecificModuleCachePath << ExistingModuleCachePath << ModuleFilename;
+  if (Diags) {
+    // If the module cache arguments provided from the command line are the
+    // same, the mismatch must come from other arguments of the configuration
+    // and not directly the cache path.
+    EqualOrErr =
+        VFS.equivalent(ASTFileHSOpts.ModuleCachePath, HSOpts.ModuleCachePath);
+    if (EqualOrErr && *EqualOrErr)
+      Diags->Report(clang::diag::warn_ast_file_config_mismatch) << ASTFilename;
+    else
+      Diags->Report(diag::err_ast_file_modulecache_mismatch)
+          << SpecificModuleCachePath << ExistingSpecificModuleCachePath
+          << ASTFilename;
+  }
   return true;
 }
 
 bool PCHValidator::ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                           StringRef ModuleFilename,
+                                           StringRef ASTFilename,
                                            StringRef SpecificModuleCachePath,
                                            bool Complain) {
+  const HeaderSearch &HeaderSearchInfo = PP.getHeaderSearchInfo();
   return checkModuleCachePath(
       Reader.getFileManager().getVirtualFileSystem(), SpecificModuleCachePath,
-      PP.getHeaderSearchInfo().getModuleCachePath(), ModuleFilename,
+      HeaderSearchInfo.getSpecificModuleCachePath(), ASTFilename,
       Complain ? &Reader.Diags : nullptr, PP.getLangOpts(),
-      PP.getPreprocessorOpts());
+      PP.getPreprocessorOpts(), HeaderSearchInfo.getHeaderSearchOpts(), HSOpts);
 }
 
 void PCHValidator::ReadCounter(const ModuleFile &M, uint32_t Value) {
@@ -1637,9 +1647,9 @@ bool ASTReader::ReadSpecializations(ModuleFile &M, BitstreamCursor &Cursor,
 void ASTReader::Error(StringRef Msg) const {
   Error(diag::err_fe_ast_file_malformed, Msg);
   if (PP.getLangOpts().Modules &&
-      !PP.getHeaderSearchInfo().getModuleCachePath().empty()) {
+      !PP.getHeaderSearchInfo().getSpecificModuleCachePath().empty()) {
     Diag(diag::note_module_cache_path)
-      << PP.getHeaderSearchInfo().getModuleCachePath();
+        << PP.getHeaderSearchInfo().getSpecificModuleCachePath();
   }
 }
 
@@ -2975,8 +2985,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       StringRef TopLevelASTFileName(ImportStack.back()->FileName);
       Diag(diag::err_fe_ast_file_modified)
           << *Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
-          << TopLevelASTFileName << FileChange.Kind
-          << (FileChange.Old && FileChange.New)
+          << TopLevelASTFileName;
+      Diag(diag::note_fe_ast_file_modified)
+          << FileChange.Kind << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
           << llvm::itostr(FileChange.New.value_or(0));
 
@@ -2989,7 +3000,10 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
               << ImportStack[I - 1]->FileName << ImportStack[I]->FileName;
       }
 
-      Diag(diag::note_ast_file_rebuild_required) << TopLevelASTFileName;
+      if (F.InputFilesValidationStatus == InputFilesValidation::Disabled)
+        Diag(diag::note_ast_file_rebuild_required) << TopLevelASTFileName;
+      Diag(diag::note_ast_file_input_files_validation_status)
+          << F.InputFilesValidationStatus;
     }
 
     IsOutOfDate = true;
@@ -3218,10 +3232,18 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // files.
 
         unsigned N = ValidateSystemInputs ? NumInputs : NumUserInputs;
+        F.InputFilesValidationStatus = ValidateSystemInputs
+                                           ? InputFilesValidation::AllFiles
+                                           : InputFilesValidation::UserFiles;
         if (HSOpts.ModulesValidateOncePerBuildSession &&
             F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
-            F.Kind == MK_ImplicitModule)
+            F.Kind == MK_ImplicitModule) {
           N = ForceValidateUserInputs ? NumUserInputs : 0;
+          F.InputFilesValidationStatus =
+              ForceValidateUserInputs
+                  ? InputFilesValidation::UserFiles
+                  : InputFilesValidation::SkippedInBuildSession;
+        }
 
         if (N != 0)
           Diag(diag::remark_module_validation)
@@ -3232,6 +3254,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           if (!IF.getFile() || IF.isOutOfDate())
             return OutOfDate;
         }
+      } else {
+        F.InputFilesValidationStatus = InputFilesValidation::Disabled;
       }
 
       if (Listener)
@@ -4223,7 +4247,7 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
             TULocalLocalOffset ? BaseOffset + TULocalLocalOffset : 0;
 
         DelayedNamespaceOffsetMap[ID] = {
-            {VisibleOffset, TULocalOffset, ModuleLocalOffset}, LexicalOffset};
+            {VisibleOffset, ModuleLocalOffset, TULocalOffset}, LexicalOffset};
 
         assert(!GetExistingDecl(ID) &&
                "We shouldn't load the namespace in the front of delayed "
@@ -4766,10 +4790,10 @@ bool ASTReader::loadGlobalIndex() {
 
   // Try to load the global index.
   TriedLoadingGlobalIndex = true;
-  StringRef ModuleCachePath
-    = getPreprocessor().getHeaderSearchInfo().getModuleCachePath();
+  StringRef SpecificModuleCachePath =
+      getPreprocessor().getHeaderSearchInfo().getSpecificModuleCachePath();
   std::pair<GlobalModuleIndex *, llvm::Error> Result =
-      GlobalModuleIndex::readIndex(ModuleCachePath);
+      GlobalModuleIndex::readIndex(SpecificModuleCachePath);
   if (llvm::Error Err = std::move(Result.second)) {
     assert(!Result.first);
     consumeError(std::move(Err)); // FIXME this drops errors on the floor.
@@ -5166,7 +5190,7 @@ ASTReader::ReadASTCore(StringRef FileName,
   assert(M && "Missing module file");
 
   bool ShouldFinalizePCM = false;
-  auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
+  llvm::scope_exit FinalizeOrDropPCM([&]() {
     auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);
@@ -5763,7 +5787,8 @@ namespace {
     const CodeGenOptions &ExistingCGOpts;
     const TargetOptions &ExistingTargetOpts;
     const PreprocessorOptions &ExistingPPOpts;
-    std::string ExistingModuleCachePath;
+    const HeaderSearchOptions &ExistingHSOpts;
+    std::string ExistingSpecificModuleCachePath;
     FileManager &FileMgr;
     bool StrictOptionMatches;
 
@@ -5772,13 +5797,14 @@ namespace {
                        const CodeGenOptions &ExistingCGOpts,
                        const TargetOptions &ExistingTargetOpts,
                        const PreprocessorOptions &ExistingPPOpts,
-                       StringRef ExistingModuleCachePath, FileManager &FileMgr,
-                       bool StrictOptionMatches)
+                       const HeaderSearchOptions &ExistingHSOpts,
+                       StringRef ExistingSpecificModuleCachePath,
+                       FileManager &FileMgr, bool StrictOptionMatches)
         : ExistingLangOpts(ExistingLangOpts), ExistingCGOpts(ExistingCGOpts),
           ExistingTargetOpts(ExistingTargetOpts),
-          ExistingPPOpts(ExistingPPOpts),
-          ExistingModuleCachePath(ExistingModuleCachePath), FileMgr(FileMgr),
-          StrictOptionMatches(StrictOptionMatches) {}
+          ExistingPPOpts(ExistingPPOpts), ExistingHSOpts(ExistingHSOpts),
+          ExistingSpecificModuleCachePath(ExistingSpecificModuleCachePath),
+          FileMgr(FileMgr), StrictOptionMatches(StrictOptionMatches) {}
 
     bool ReadLanguageOptions(const LangOptions &LangOpts,
                              StringRef ModuleFilename, bool Complain,
@@ -5802,13 +5828,13 @@ namespace {
     }
 
     bool ReadHeaderSearchOptions(const HeaderSearchOptions &HSOpts,
-                                 StringRef ModuleFilename,
+                                 StringRef ASTFilename,
                                  StringRef SpecificModuleCachePath,
                                  bool Complain) override {
-      return checkModuleCachePath(FileMgr.getVirtualFileSystem(),
-                                  SpecificModuleCachePath,
-                                  ExistingModuleCachePath, ModuleFilename,
-                                  nullptr, ExistingLangOpts, ExistingPPOpts);
+      return checkModuleCachePath(
+          FileMgr.getVirtualFileSystem(), SpecificModuleCachePath,
+          ExistingSpecificModuleCachePath, ASTFilename, nullptr,
+          ExistingLangOpts, ExistingPPOpts, ExistingHSOpts, HSOpts);
     }
 
     bool ReadPreprocessorOptions(const PreprocessorOptions &PPOpts,
@@ -6150,10 +6176,10 @@ bool ASTReader::isAcceptableASTFile(
     StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
     const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
     const CodeGenOptions &CGOpts, const TargetOptions &TargetOpts,
-    const PreprocessorOptions &PPOpts, StringRef ExistingModuleCachePath,
-    bool RequireStrictOptionMatches) {
-  SimplePCHValidator validator(LangOpts, CGOpts, TargetOpts, PPOpts,
-                               ExistingModuleCachePath, FileMgr,
+    const PreprocessorOptions &PPOpts, const HeaderSearchOptions &HSOpts,
+    StringRef SpecificModuleCachePath, bool RequireStrictOptionMatches) {
+  SimplePCHValidator validator(LangOpts, CGOpts, TargetOpts, PPOpts, HSOpts,
+                               SpecificModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
   return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,
                                   /*FindModuleFileExtensions=*/false, validator,
@@ -7533,6 +7559,10 @@ void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
 }
 
+void TypeLocReader::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
+  TL.setAttrLoc(readSourceLocation());
+}
+
 void TypeLocReader::VisitHLSLAttributedResourceTypeLoc(
     HLSLAttributedResourceTypeLoc TL) {
   // Nothing to do.
@@ -8136,14 +8166,8 @@ void ASTReader::CompleteRedeclChain(const Decl *D) {
     }
   }
 
-  if (Template) {
-    // For partitial specialization, load all the specializations for safety.
-    if (isa<ClassTemplatePartialSpecializationDecl,
-            VarTemplatePartialSpecializationDecl>(D))
-      Template->loadLazySpecializationsImpl();
-    else
-      Template->loadLazySpecializationsImpl(Args);
-  }
+  if (Template)
+    Template->loadLazySpecializationsImpl(Args);
 }
 
 CXXCtorInitializer **
@@ -11351,6 +11375,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_threadset:
     C = new (Context) OMPThreadsetClause();
     break;
+  case llvm::omp::OMPC_transparent:
+    C = new (Context) OMPTransparentClause();
+    break;
   case llvm::omp::OMPC_read:
     C = new (Context) OMPReadClause();
     break;
@@ -11766,6 +11793,11 @@ void OMPClauseReader::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
   OpenMPThreadsetKind TKind =
       static_cast<OpenMPThreadsetKind>(Record.readInt());
   C->setThreadsetKind(TKind);
+}
+
+void OMPClauseReader::VisitOMPTransparentClause(OMPTransparentClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setImpexTypeKind(Record.readSubExpr());
 }
 
 void OMPClauseReader::VisitOMPProcBindClause(OMPProcBindClause *C) {
@@ -12567,6 +12599,8 @@ void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
 
 void OMPClauseReader::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
   C->setLParenLoc(Record.readSourceLocation());
+  C->setFallbackModifier(Record.readEnum<OpenMPUseDevicePtrFallbackModifier>());
+  C->setFallbackModifierLoc(Record.readSourceLocation());
   auto NumVars = C->varlist_size();
   auto UniqueDecls = C->getUniqueDeclarationsNum();
   auto TotalLists = C->getTotalComponentListNum();

@@ -19,12 +19,10 @@ Record::Record(const RecordDecl *Decl, BaseList &&SrcBases,
       BaseSize(BaseSize), VirtualSize(VirtualSize), IsUnion(Decl->isUnion()),
       IsAnonymousUnion(IsUnion && Decl->isAnonymousStructOrUnion()) {
   for (Base &V : SrcVirtualBases)
-    VirtualBases.push_back({V.Decl, V.Offset + BaseSize, V.Desc, V.R});
+    VirtualBases.emplace_back(V.Decl, V.Desc, V.R, V.Offset + BaseSize);
 
   for (Base &B : Bases)
     BaseMap[B.Decl] = &B;
-  for (Field &F : Fields)
-    FieldMap[F.Decl] = &F;
   for (Base &V : VirtualBases)
     VirtualBaseMap[V.Decl] = &V;
 }
@@ -42,12 +40,6 @@ bool Record::hasTrivialDtor() const {
     return true;
   const CXXDestructorDecl *Dtor = getDestructor();
   return !Dtor || Dtor->isTrivial();
-}
-
-const Record::Field *Record::getField(const FieldDecl *FD) const {
-  auto It = FieldMap.find(FD->getFirstDecl());
-  assert(It != FieldMap.end() && "Missing field");
-  return It->second;
 }
 
 const Record::Base *Record::getBase(const RecordDecl *FD) const {

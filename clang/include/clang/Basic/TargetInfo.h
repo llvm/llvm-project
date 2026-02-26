@@ -1013,10 +1013,12 @@ public:
     return ComplexLongDoubleUsesFP2Ret;
   }
 
-  /// Check whether llvm intrinsics such as llvm.convert.to.fp16 should be used
-  /// to convert to and from __fp16.
-  /// FIXME: This function should be removed once all targets stop using the
-  /// conversion intrinsics.
+  /// Check whether conversions to and from __fp16 should go through an integer
+  /// bitcast with i16.
+  ///
+  /// FIXME: This function should be removed. The intrinsics / no longer exist,
+  /// and are emulated with bitcast + fp cast. This only exists because of
+  /// misuse in ABI determining contexts.
   virtual bool useFP16ConversionIntrinsics() const {
     return true;
   }
@@ -1131,6 +1133,7 @@ public:
       CI_HasMatchingInput = 0x08,  // This output operand has a matching input.
       CI_ImmediateConstant = 0x10, // This operand must be an immediate constant
       CI_EarlyClobber = 0x20,      // "&" output constraint (early clobber).
+      CI_OutputOperandBounds = 0x40, // Output operand bounds.
     };
     unsigned Flags;
     int TiedOperand;
@@ -1227,11 +1230,11 @@ public:
     void setOutputOperandBounds(unsigned Min, unsigned Max) {
       ImmRange.Min = Min;
       ImmRange.Max = Max;
-      ImmRange.isConstrained = true;
+      Flags |= CI_OutputOperandBounds;
     }
     std::optional<std::pair<unsigned, unsigned>>
     getOutputOperandBounds() const {
-      return ImmRange.isConstrained
+      return (Flags & CI_OutputOperandBounds) != 0
                  ? std::make_pair(ImmRange.Min, ImmRange.Max)
                  : std::optional<std::pair<unsigned, unsigned>>();
     }
@@ -1575,6 +1578,9 @@ public:
       return true;
     if (getTriple().getArch() == llvm::Triple::ArchType::avr)
       return true;
+    if (getTriple().isOSAIX())
+      return getTriple().getOSMajorVersion() == 0 ||
+             getTriple().getOSVersion() >= VersionTuple(7, 2);
     return getTriple().isOSBinFormatELF() &&
            ((getTriple().isOSLinux() && !getTriple().isMusl()) ||
             getTriple().isOSFreeBSD());

@@ -615,7 +615,7 @@ std::optional<TypeSize> llvm::getBaseObjectSize(const Value *Ptr,
     if (!GV->getValueType()->isSized() || GV->hasExternalWeakLinkage() ||
         !GV->hasInitializer() || GV->isInterposable())
       return std::nullopt;
-    return Align(DL.getTypeAllocSize(GV->getValueType()), GV->getAlign());
+    return Align(TypeSize::getFixed(GV->getGlobalSize(DL)), GV->getAlign());
   }
 
   if (auto *A = dyn_cast<Argument>(Ptr)) {
@@ -1048,7 +1048,7 @@ OffsetSpan ObjectSizeOffsetVisitor::visitGlobalVariable(GlobalVariable &GV) {
        Options.EvalMode != ObjectSizeOpts::Mode::Min))
     return ObjectSizeOffsetVisitor::unknown();
 
-  APInt Size(IntTyBits, DL.getTypeAllocSize(GV.getValueType()));
+  APInt Size(IntTyBits, GV.getGlobalSize(DL));
   return OffsetSpan(Zero, align(Size, GV.getAlign()));
 }
 
@@ -1346,15 +1346,11 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitAllocaInst(AllocaInst &I) {
 
   // If needed, adjust the alloca's operand size to match the pointer indexing
   // size. Subsequent math operations expect the types to match.
-  Value *ArraySize = Builder.CreateZExtOrTrunc(
-      I.getArraySize(),
-      DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace()));
-  assert(ArraySize->getType() == Zero->getType() &&
+  Type *IndexTy = DL.getIndexType(I.getContext(), DL.getAllocaAddrSpace());
+  assert(IndexTy == Zero->getType() &&
          "Expected zero constant to have pointer index type");
 
-  Value *Size = Builder.CreateTypeSize(
-      ArraySize->getType(), DL.getTypeAllocSize(I.getAllocatedType()));
-  Size = Builder.CreateMul(Size, ArraySize);
+  Value *Size = Builder.CreateAllocationSize(IndexTy, &I);
   return SizeOffsetValue(Size, Zero);
 }
 

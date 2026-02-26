@@ -414,7 +414,6 @@ static bool initTargetOptions(const CompilerInstance &CI,
   if (CodeGenOpts.hasWasmExceptions())
     Options.ExceptionModel = llvm::ExceptionHandling::Wasm;
 
-  Options.NoInfsFPMath = LangOpts.NoHonorInfs;
   Options.NoNaNsFPMath = LangOpts.NoHonorNaNs;
   Options.NoZerosInBSS = CodeGenOpts.NoZeroInitializedInBSS;
 
@@ -439,6 +438,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
   }
 
   Options.EnableMachineFunctionSplitter = CodeGenOpts.SplitMachineFunctions;
+  Options.EnableStaticDataPartitioning =
+      CodeGenOpts.PartitionStaticDataSections;
   Options.FunctionSections = CodeGenOpts.FunctionSections;
   Options.DataSections = CodeGenOpts.DataSections;
   Options.IgnoreXCOFFVisibility = LangOpts.IgnoreXCOFFVisibility;
@@ -451,7 +452,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.EmulatedTLS = CodeGenOpts.EmulatedTLS;
   Options.DebuggerTuning = CodeGenOpts.getDebuggerTuning();
   Options.EmitStackSizeSection = CodeGenOpts.StackSizeSection;
-  Options.StackUsageOutput = CodeGenOpts.StackUsageOutput;
+  Options.StackUsageFile = CodeGenOpts.StackUsageFile;
   Options.EmitAddrsig = CodeGenOpts.Addrsig;
   Options.ForceDwarfFrameSection = CodeGenOpts.ForceDwarfFrameSection;
   Options.EmitCallGraphSection = CodeGenOpts.CallGraphSection;
@@ -464,36 +465,8 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.Hotpatch = CodeGenOpts.HotPatch;
   Options.JMCInstrument = CodeGenOpts.JMCInstrument;
   Options.XCOFFReadOnlyPointers = CodeGenOpts.XCOFFReadOnlyPointers;
-
-  switch (CodeGenOpts.getVecLib()) {
-  case llvm::driver::VectorLibrary::NoLibrary:
-    Options.VecLib = llvm::VectorLibrary::NoLibrary;
-    break;
-  case llvm::driver::VectorLibrary::Accelerate:
-    Options.VecLib = llvm::VectorLibrary::Accelerate;
-    break;
-  case llvm::driver::VectorLibrary::Darwin_libsystem_m:
-    Options.VecLib = llvm::VectorLibrary::DarwinLibSystemM;
-    break;
-  case llvm::driver::VectorLibrary::LIBMVEC:
-    Options.VecLib = llvm::VectorLibrary::LIBMVEC;
-    break;
-  case llvm::driver::VectorLibrary::MASSV:
-    Options.VecLib = llvm::VectorLibrary::MASSV;
-    break;
-  case llvm::driver::VectorLibrary::SVML:
-    Options.VecLib = llvm::VectorLibrary::SVML;
-    break;
-  case llvm::driver::VectorLibrary::SLEEF:
-    Options.VecLib = llvm::VectorLibrary::SLEEFGNUABI;
-    break;
-  case llvm::driver::VectorLibrary::ArmPL:
-    Options.VecLib = llvm::VectorLibrary::ArmPL;
-    break;
-  case llvm::driver::VectorLibrary::AMDLIBM:
-    Options.VecLib = llvm::VectorLibrary::AMDLIBM;
-    break;
-  }
+  Options.VecLib =
+      convertDriverVectorLibraryToVectorLibrary(CodeGenOpts.getVecLib());
 
   switch (CodeGenOpts.getSwiftAsyncFramePointer()) {
   case CodeGenOptions::SwiftAsyncFramePointerKind::Auto:
@@ -514,6 +487,7 @@ static bool initTargetOptions(const CompilerInstance &CI,
   Options.MCOptions.EmitDwarfUnwind = CodeGenOpts.getEmitDwarfUnwind();
   Options.MCOptions.EmitCompactUnwindNonCanonical =
       CodeGenOpts.EmitCompactUnwindNonCanonical;
+  Options.MCOptions.EmitSFrameUnwind = CodeGenOpts.EmitSFrameUnwind;
   Options.MCOptions.MCRelaxAll = CodeGenOpts.RelaxAll;
   Options.MCOptions.MCSaveTempLabels = CodeGenOpts.SaveTempLabels;
   Options.MCOptions.MCUseDwarfDirectory =
@@ -810,15 +784,27 @@ static void addSanitizers(const Triple &TargetTriple,
     // LastEP does not need GlobalsAA.
     PB.registerOptimizerLastEPCallback(SanitizersCallback);
   }
+}
 
+void addLowerAllowCheckPass(const CodeGenOptions &CodeGenOpts,
+                            const LangOptions &LangOpts, PassBuilder &PB) {
   // SanitizeSkipHotCutoffs: doubles with range [0, 1]
   // Opts.cutoffs: unsigned ints with range [0, 1000000]
   auto ScaledCutoffs = CodeGenOpts.SanitizeSkipHotCutoffs.getAllScaled(1000000);
   uint64_t AllowRuntimeCheckSkipHotCutoff =
       CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.value_or(0.0) * 1000000;
+  // Only register the pass if one of the relevant sanitizers is enabled.
+  // This avoids pipeline overhead for builds that do not use these sanitizers.
+  bool LowerAllowSanitize = LangOpts.Sanitize.hasOneOf(
+      SanitizerKind::Address | SanitizerKind::KernelAddress |
+      SanitizerKind::Thread | SanitizerKind::Memory |
+      SanitizerKind::KernelMemory | SanitizerKind::HWAddress |
+      SanitizerKind::KernelHWAddress);
+
   // TODO: remove IsRequested()
   if (LowerAllowCheckPass::IsRequested() || ScaledCutoffs.has_value() ||
-      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value()) {
+      CodeGenOpts.AllowRuntimeCheckSkipHotCutoff.has_value() ||
+      LowerAllowSanitize) {
     // We want to call it after inline, which is about OptimizerEarlyEPCallback.
     PB.registerOptimizerEarlyEPCallback(
         [ScaledCutoffs, AllowRuntimeCheckSkipHotCutoff](
@@ -1084,6 +1070,7 @@ void EmitAssemblyHelper::RunOptimizationPipeline(
       // Most sanitizers only run during PreLink stage.
       addSanitizers(TargetTriple, CodeGenOpts, LangOpts, PB);
       addKCFIPass(TargetTriple, LangOpts, PB);
+      addLowerAllowCheckPass(CodeGenOpts, LangOpts, PB);
 
       PB.registerPipelineStartEPCallback(
           [&](ModulePassManager &MPM, OptimizationLevel Level) {

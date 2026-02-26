@@ -341,7 +341,7 @@ define i64 @condition_code() {
   ; CHECK-NEXT:   INLINEASM_BR &"", 16 /* maystore attdialect */, 2359306 /* regdef:GR32 */, def %1, 13 /* imm */, %bb.2
   ; CHECK-NEXT:   [[SETCCr:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   [[MOVZX32rr8_:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr]]
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOVZX32rr8_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOVZX32rr8_]], %subreg.sub_32bit
   ; CHECK-NEXT:   JMP_1 %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.b:
@@ -351,7 +351,7 @@ define i64 @condition_code() {
   ; CHECK-NEXT: bb.2.c (inlineasm-br-indirect-target):
   ; CHECK-NEXT:   [[SETCCr1:%[0-9]+]]:gr8 = SETCCr 4, implicit $eflags
   ; CHECK-NEXT:   [[MOVZX32rr8_1:%[0-9]+]]:gr32 = MOVZX32rr8 killed [[SETCCr1]]
-  ; CHECK-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOVZX32rr8_1]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOVZX32rr8_1]], %subreg.sub_32bit
   ; CHECK-NEXT:   $rax = COPY [[SUBREG_TO_REG1]]
   ; CHECK-NEXT:   RET 0, $rax
   %a = callbr i64 asm "", "={@ccz},!i"()

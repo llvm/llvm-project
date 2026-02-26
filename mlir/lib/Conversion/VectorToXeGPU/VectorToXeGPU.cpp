@@ -42,10 +42,8 @@ static bool isZeroConstant(Value val) {
     return false;
 
   return TypeSwitch<Attribute, bool>(constant.getValue())
-      .Case<FloatAttr>(
-          [](auto floatAttr) { return floatAttr.getValue().isZero(); })
-      .Case<IntegerAttr>(
-          [](auto intAttr) { return intAttr.getValue().isZero(); })
+      .Case([](FloatAttr floatAttr) { return floatAttr.getValue().isZero(); })
+      .Case([](IntegerAttr intAttr) { return intAttr.getValue().isZero(); })
       .Default(false);
 }
 
@@ -56,6 +54,10 @@ static LogicalResult storeLoadPreconditions(PatternRewriter &rewriter,
   unsigned vecRank = vecTy.getRank();
   if (!(vecRank == 1 || vecRank == 2))
     return rewriter.notifyMatchFailure(op, "Expects 1D or 2D vector");
+
+  if (!vecTy.getElementType().isIntOrFloat())
+    return rewriter.notifyMatchFailure(
+        op, "Expected scalar type with known bitwidth");
 
   return success();
 }

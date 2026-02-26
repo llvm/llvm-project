@@ -159,6 +159,9 @@ def OMPC_Depobj : Clause<[Spelling<"depobj">]> {
   let clangClass = "OMPDepobjClause";
   let isImplicit = true;
 }
+def OMPC_Depth : Clause<[Spelling<"depth">]> {
+  let flangClass = "ScalarIntConstantExpr";
+}
 def OMPC_Destroy : Clause<[Spelling<"destroy">]> {
   let clangClass = "OMPDestroyClause";
   let flangClass = "OmpDestroyClause";
@@ -581,6 +584,7 @@ def OMPC_To : Clause<[Spelling<"to">]> {
   let flangClass = "OmpToClause";
 }
 def OMPC_Transparent : Clause<[Spelling<"transparent">]> {
+  let clangClass = "OMPTransparentClause";
   let flangClass = "OmpTransparentClause";
   let isValueOptional = true;
 }
@@ -853,6 +857,7 @@ def OMP_Depobj : Directive<[Spelling<"depobj">]> {
     // OMPKinds.def.
     VersionedClause<OMPC_Depobj, 50>,
     VersionedClause<OMPC_Destroy, 50>,
+    VersionedClause<OMPC_Init, 60>,
     VersionedClause<OMPC_Update, 50>,
   ];
   let association = AS_None;
@@ -888,6 +893,7 @@ def OMP_Distribute : Directive<[Spelling<"distribute">]> {
 }
 def OMP_Do : Directive<[Spelling<"do">]> {
   let allowedClauses = [
+    VersionedClause<OMPC_Allocate, 50>,
     VersionedClause<OMPC_FirstPrivate>,
     VersionedClause<OMPC_LastPrivate>,
     VersionedClause<OMPC_Linear>,
@@ -963,7 +969,10 @@ def OMP_Groupprivate : Directive<[Spelling<"groupprivate">]> {
   let languages = [L_C, L_Fortran];
 }
 def OMP_Fuse : Directive<[Spelling<"fuse">]> {
-  let allowedOnceClauses = [VersionedClause<OMPC_LoopRange, 60>];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Depth, 61>,
+    VersionedClause<OMPC_LoopRange, 60>,
+  ];
   let association = AS_LoopSeq;
   let category = CA_Executable;
 }
@@ -1789,6 +1798,7 @@ def OMP_MasterTaskloopSimd : Directive<[Spelling<"master taskloop simd">]> {
 }
 def OMP_ParallelDo : Directive<[Spelling<"parallel do">]> {
   let allowedClauses = [
+    VersionedClause<OMPC_Allocate, 50>,
     VersionedClause<OMPC_Copyin>,
     VersionedClause<OMPC_Default>,
     VersionedClause<OMPC_FirstPrivate>,
