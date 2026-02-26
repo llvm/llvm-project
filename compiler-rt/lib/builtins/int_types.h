@@ -151,14 +151,11 @@ typedef struct {
 } uqwords;
 
 // Check if the target supports 80 bit extended precision long doubles.
-// Notably, on x86 Windows, MSVC only provides a 64-bit long double, but GCC
-// still makes it 80 bits. Clang will match whatever compiler it is trying to
-// be compatible with. On 32-bit x86 Android, long double is 64 bits, while on
-// x86_64 Android, long double is 128 bits.
-#if (defined(__i386__) || defined(__x86_64__)) &&                              \
-    !(defined(_MSC_VER) || defined(__ANDROID__))
-#define HAS_80_BIT_LONG_DOUBLE 1
-#elif defined(__m68k__) || defined(__ia64__)
+// - Windows does not support FP80 on any platform
+// - Android uses FP64 on x86 and FP128 on x86_64
+#if (defined(__i386__) || defined(__x86_64__) || defined(__m68k__) ||          \
+     defined(__ia64__)) &&                                                     \
+    !((defined(_WIN32) && !defined(__MINGW32__)) || defined(__ANDROID__))
 #define HAS_80_BIT_LONG_DOUBLE 1
 #else
 #define HAS_80_BIT_LONG_DOUBLE 0
