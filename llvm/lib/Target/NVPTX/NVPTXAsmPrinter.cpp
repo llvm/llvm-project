@@ -1761,26 +1761,36 @@ void NVPTXAsmPrinter::bufferAggregateConstVec(const ConstantVector *CV,
   assert(ElemTy->isIntegerTy() && "Expected integer data type.");
   unsigned ElemTySize = ElemTy->getPrimitiveSizeInBits();
   assert(ElemTySize < 8 && "Expected sub-byte data type.");
+  assert(8 % ElemTySize == 0 && "Element type size must evenly divide a byte.");
   // Number of elements to merge to form a full byte.
   unsigned ChunkSize = 8 / ElemTySize;
 
   // Iterate through elements of vector one chunk at a time and buffer that
   // chunk.
   for (unsigned I = 0; I < NumElems; I += ChunkSize) {
-    unsigned CurrVal = 0;
-    for (unsigned J = I; J < std::min(I + ChunkSize, NumElems); ++J) {
-      auto *Elem = cast<ConstantInt>(CV->getAggregateElement(J));
-      unsigned ElemVal = Elem->getZExtValue();
-      // PTX datalayout is little-endian, so shift element based on its position
-      // in the chunk.
-      unsigned ShiftAmount = (J - I) * ElemTySize;
-      CurrVal |= ElemVal << ShiftAmount;
-    }
+    // Collect elements in chunk to create sub-vector.
+    SmallVector<Constant *, 8> SubCVElems;
+    for (unsigned J = I; J < std::min(I + ChunkSize, NumElems); ++J)
+      SubCVElems.push_back(CV->getAggregateElement(J));
 
-    // Create a new constant to represent the merged value of the chunk and
-    // buffer it.
-    auto *MergedElem =
-        ConstantInt::get(Type::getInt8Ty(ElemTy->getContext()), CurrVal);
+    // For unevenly sized vectors add padding zeros.
+    unsigned PaddingZeroCount = ChunkSize - SubCVElems.size();
+    for (unsigned I = 0; I < PaddingZeroCount; ++I)
+      SubCVElems.push_back(ConstantInt::getNullValue(ElemTy));
+
+    auto SubCV = ConstantVector::get(SubCVElems);
+    Type *Int8Ty = IntegerType::get(CV->getContext(), 8);
+
+    // Merge elements of the chunk using ConstantFolding and buffer it.
+    ConstantInt *MergedElem =
+        dyn_cast_or_null<ConstantInt>(ConstantFoldConstant(
+            ConstantExpr::getBitCast(const_cast<Constant *>(SubCV), Int8Ty),
+            getDataLayout()));
+
+    if (!MergedElem)
+      report_fatal_error(
+          "Cannot lower vector global with unusual element type");
+
     bufferLEByte(MergedElem, 0, aggBuffer);
   }
 }
