@@ -886,8 +886,6 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
     if (!this->visit(SubExpr))
       return false;
-    if (classifyPrim(SubExpr) == PT_Ptr && !this->emitLoadPop(SrcElemT, CE))
-      return false;
     if (SrcElemT != DestElemT) {
       if (!this->emitPrimCast(SrcElemT, DestElemT, DestElemType, CE))
         return false;
