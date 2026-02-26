@@ -1200,11 +1200,17 @@ public:
     case Match_Success: {
       ensureLocals(Out);
       // Fix unknown p2align operands.
-      auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
-      if (Align != -1U) {
-        auto &Op0 = Inst.getOperand(0);
-        if (Op0.isImm() && Op0.getImm() == -1)
-          Op0.setImm(Align);
+      const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
+      for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
+        if (i < Desc.getNumOperands() &&
+            Desc.operands()[i].OperandType == WebAssembly::OPERAND_P2ALIGN) {
+          auto &Op = Inst.getOperand(i);
+          if (Op.isImm() && Op.getImm() == -1) {
+            auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
+            if (Align != -1U)
+              Op.setImm(Align);
+          }
+        }
       }
       if (Is64) {
         // Upgrade 32-bit loads/stores to 64-bit. These mostly differ by having

@@ -84,9 +84,9 @@ void WebAssemblyMCCodeEmitter::encodeMemArg(
   unsigned P2AlignIdx = I;
   std::optional<unsigned> MemOrderIdx;
 
-  if (I + 1 < Desc.getNumOperands() &&
-      Desc.operands()[I + 1].OperandType == WebAssembly::OPERAND_MEMORDER)
-    MemOrderIdx = I + 1;
+  if (I > 0 &&
+      Desc.operands()[I - 1].OperandType == WebAssembly::OPERAND_MEMORDER)
+    MemOrderIdx = I - 1;
 
   uint64_t P2Align = MI.getOperand(P2AlignIdx).getImm();
   uint8_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
@@ -181,6 +181,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                                           llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_MEMORDER: {
+          if (I + 1 < Desc.getNumOperands() &&
+              Desc.operands()[I + 1].OperandType ==
+                  WebAssembly::OPERAND_P2ALIGN)
+            break;
           uint8_t Val = MO.getImm();
           if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
             if (Val == wasm::WASM_MEM_ORDER_ACQ_REL) {

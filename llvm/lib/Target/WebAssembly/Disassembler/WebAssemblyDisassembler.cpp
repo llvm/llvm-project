@@ -213,11 +213,25 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         return MCDisassembler::Fail;
       if (OT == WebAssembly::OPERAND_P2ALIGN) {
         int64_t Val = MI.getOperand(MI.getNumOperands() - 1).getImm();
-        if (Val & 0x20) {
-          MI.getOperand(MI.getNumOperands() - 1).setImm(Val & ~0x20);
+        if (Val & wasm::WASM_MEMARG_HAS_MEM_ORDER) {
+          MI.getOperand(MI.getNumOperands() - 1).setImm(Val & ~wasm::WASM_MEMARG_HAS_MEM_ORDER);
           if (Size >= Bytes.size())
             return MCDisassembler::Fail;
           DecodedOrder = Bytes[Size++];
+
+          // If we already added a MEMORDER placeholder, update it.
+          for (unsigned J = 0; J < MI.getNumOperands(); J++) {
+            auto JOT = OperandTable[WasmInst->OperandStart + J];
+            if (JOT == WebAssembly::OPERAND_MEMORDER) {
+              uint8_t Order = DecodedOrder;
+              if (Order == wasm::WASM_MEM_ORDER_RMW_ACQ_REL ||
+                  Order == wasm::WASM_MEM_ORDER_ACQ_REL)
+                MI.getOperand(J).setImm(wasm::WASM_MEM_ORDER_ACQ_REL);
+              else
+                MI.getOperand(J).setImm(wasm::WASM_MEM_ORDER_SEQ_CST);
+              break;
+            }
+          }
         }
       }
       break;
@@ -277,7 +291,7 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
         Val = DecodedOrder;
       } else {
         bool HasP2Align = false;
-        for (uint8_t J = 0; J < OPI; J++)
+        for (uint8_t J = 0; J < WasmInst->NumOperands; J++)
           if (OperandTable[WasmInst->OperandStart + J] ==
               WebAssembly::OPERAND_P2ALIGN)
             HasP2Align = true;
@@ -286,10 +300,14 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
             return MCDisassembler::Fail;
           Val = Bytes[Size++];
         } else {
+          // If we have P2ALIGN, it will be encoded as part of the memarg,
+          // which might not have been parsed yet. Default to SEQ_CST
+          // and we will update it when we parse P2ALIGN if necessary.
           Val = wasm::WASM_MEM_ORDER_SEQ_CST;
         }
       }
-      if (Val == wasm::WASM_MEM_ORDER_RMW_ACQ_REL || Val == wasm::WASM_MEM_ORDER_ACQ_REL)
+      if (Val == wasm::WASM_MEM_ORDER_RMW_ACQ_REL ||
+          Val == wasm::WASM_MEM_ORDER_ACQ_REL)
         MI.addOperand(MCOperand::createImm(wasm::WASM_MEM_ORDER_ACQ_REL));
       else
         MI.addOperand(MCOperand::createImm(wasm::WASM_MEM_ORDER_SEQ_CST));
