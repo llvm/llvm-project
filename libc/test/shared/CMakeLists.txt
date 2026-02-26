@@ -1,3 +1,5 @@
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
+
 add_custom_target(libc-shared-tests)
 
 add_fp_unittest(
@@ -19,6 +21,7 @@ add_fp_unittest(
     libc.src.__support.math.asinf16
     libc.src.__support.math.asinhf
     libc.src.__support.math.asinhf16
+    libc.src.__support.math.asinpif
     libc.src.__support.math.asinpif16
     libc.src.__support.math.atan
     libc.src.__support.math.atan2
@@ -219,3 +222,5 @@ add_fp_unittest(
     libc.src.__support.math.tanhf16
     libc.src.__support.math.tanpif
 )
+
+endif()

@@ -4307,6 +4307,12 @@ bool RISCVDAGToDAGISel::hasAllNBitUsers(SDNode *Node, unsigned Bits,
       if (Bits >= (Subtarget->getXLen() / 2))
         break;
       return false;
+    case RISCV::PPAIRE_H:
+      // If only the lower 32-bits of the result are used, then only the
+      // lower 16 bits of the inputs are used.
+      if (Bits >= 16 && hasAllNBitUsers(User, 32, Depth + 1))
+        break;
+      return false;
     case RISCV::ADD_UW:
     case RISCV::SH1ADD_UW:
     case RISCV::SH2ADD_UW:
