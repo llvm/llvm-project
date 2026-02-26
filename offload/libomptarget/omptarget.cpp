@@ -1856,6 +1856,97 @@ public:
   }
 };
 
+/// Try to determine if kernel argument is unused. This method
+/// takes a conservative approach, i.e. it may return false
+/// negatives but it should never return a false positive.
+static bool isArgUnused(tgt_map_type ArgType) {
+  bool IsArgUnused = ArgType == OMP_TGT_MAPTYPE_NONE ||
+                     ArgType == OMP_TGT_MAPTYPE_FROM ||
+                     ArgType == OMP_TGT_MAPTYPE_TO ||
+                     ArgType == (OMP_TGT_MAPTYPE_FROM | OMP_TGT_MAPTYPE_TO);
+  return IsArgUnused;
+}
+
+/// Try to find redundant mappings associated with a kernel launch,
+/// and provide a masked version of the kernel argument types that
+/// avoid redundant data transfers between the host and the device.
+static std::unique_ptr<int64_t[]> maskRedundantTransfers(DeviceTy &Device, int32_t ArgNum,
+                                                         int64_t *ArgTypes, int64_t *ArgSizes,
+                                                         map_var_info_t *ArgNames, void **ArgPtrs,
+                                                         void **ArgMappers) {
+    std::unique_ptr<int64_t[]> ArgTypesOverride = std::make_unique<int64_t[]>(ArgNum);
+
+    bool AllArgsUnused = true;
+
+    for (int32_t I = 0; I < ArgNum; ++I) {
+      bool IsCustomMapped = ArgMappers && ArgMappers[I];
+
+      if (IsCustomMapped) {
+        ArgTypesOverride[I] = ArgTypes[I];
+        AllArgsUnused = false;
+        continue;
+      }
+
+        tgt_map_type ArgType = (tgt_map_type) ArgTypes[I];
+
+        bool IsArgUnused = false;
+
+        // Check for unused `map(buf[0:size])` mappings
+        IsArgUnused |= isArgUnused(ArgType);
+
+        bool IsArgMemberPtr = ArgType & OMP_TGT_MAPTYPE_MEMBER_OF &&
+                              ArgType & OMP_TGT_MAPTYPE_PTR_AND_OBJ;
+
+        tgt_map_type ArgTypeMemberPtrMasked =
+            (tgt_map_type)(ArgType & ~(OMP_TGT_MAPTYPE_MEMBER_OF |
+                                       OMP_TGT_MAPTYPE_PTR_AND_OBJ));
+
+        // Check for unused `map(wrapper.buf[0:size])` mappings
+        IsArgUnused |= AllArgsUnused && IsArgMemberPtr &&
+                       isArgUnused(ArgTypeMemberPtrMasked);
+
+        if (!IsArgUnused) {
+          ArgTypesOverride[I] = ArgTypes[I];
+          AllArgsUnused = false;
+          continue;
+        }
+
+        MappingInfoTy &MappingInfo = Device.getMappingInfo();
+        MappingInfoTy::HDTTMapAccessorTy HDTTMap =
+            MappingInfo.HostDataToTargetMap.getExclusiveAccessor();
+
+        bool IsExistingMapping =
+            !MappingInfo.lookupMapping(HDTTMap, ArgPtrs[I], ArgSizes[I])
+                 .isEmpty();
+
+        if (IsExistingMapping) {
+          ArgTypesOverride[I] = ArgTypes[I];
+          AllArgsUnused = false;
+          continue;
+        }
+
+        [[maybe_unused]] const std::string Name =
+            ArgNames && ArgNames[I] ? getNameFromMapping(ArgNames[I])
+                                    : std::string("unknown");
+
+        bool IsArgFrom = ArgType & OMP_TGT_MAPTYPE_FROM;
+        bool IsArgTo = ArgType & OMP_TGT_MAPTYPE_TO;
+
+        [[maybe_unused]] const char *Type = IsArgFrom && IsArgTo ? "tofrom"
+                                            : IsArgFrom          ? "from"
+                                            : IsArgTo            ? "to"
+                                                                 : "unknown";
+
+        INFO(OMP_INFOTYPE_REDUNDANT_TRANSFER, Device.DeviceID, "%s(%s)[%" PRId64 "] %s\n", Type,
+             Name.c_str(), ArgSizes[I], "is not used and will not be copied");
+
+        ArgTypesOverride[I] =
+            ArgType & ~(OMP_TGT_MAPTYPE_TO | OMP_TGT_MAPTYPE_FROM);
+    }
+
+    return ArgTypesOverride;
+}
+
 /// Process data before launching the kernel, including calling targetDataBegin
 /// to map and transfer data to target device, transferring (first-)private
 /// variables.
@@ -2124,11 +2215,16 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
 
   int NumClangLaunchArgs = KernelArgs.NumArgs;
   int Ret = OFFLOAD_SUCCESS;
+
+    std::unique_ptr<int64_t[]> ArgTypesOverride =
+            maskRedundantTransfers(Device, NumClangLaunchArgs, KernelArgs.ArgTypes,
+                                  KernelArgs.ArgSizes, KernelArgs.ArgNames, KernelArgs.ArgPtrs, KernelArgs.ArgMappers);
+
   if (NumClangLaunchArgs) {
     // Process data, such as data mapping, before launching the kernel
     Ret = processDataBefore(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
                             KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
-                            KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                            KernelArgs.ArgSizes, ArgTypesOverride.get(),
                             KernelArgs.ArgNames, KernelArgs.ArgMappers, TgtArgs,
                             TgtOffsets, PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
@@ -2181,7 +2277,7 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
     // variables
     Ret = processDataAfter(Loc, DeviceId, HostPtr, NumClangLaunchArgs,
                            KernelArgs.ArgBasePtrs, KernelArgs.ArgPtrs,
-                           KernelArgs.ArgSizes, KernelArgs.ArgTypes,
+                           KernelArgs.ArgSizes, ArgTypesOverride.get(),
                            KernelArgs.ArgNames, KernelArgs.ArgMappers,
                            PrivateArgumentManager, AsyncInfo);
     if (Ret != OFFLOAD_SUCCESS) {
