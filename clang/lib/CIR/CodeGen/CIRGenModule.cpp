@@ -824,9 +824,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       return entry;
   }
 
-  mlir::ptr::MemorySpaceAttrInterface declCIRAS =
-      cir::toCIRAddressSpaceAttr(getMLIRContext(), getGlobalVarAddressSpace(d));
-
   mlir::Location loc = getLoc(d->getSourceRange());
 
   // Calculate constant storage flag before creating the global. This was moved
@@ -839,6 +836,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
     isConstant = d->getType().isConstantStorage(
         astContext, /*ExcludeCtor=*/true, /*ExcludeDtor=*/!needsDtor);
   }
+
+  mlir::ptr::MemorySpaceAttrInterface declCIRAS =
+      cir::toCIRAddressSpaceAttr(getMLIRContext(), getGlobalVarAddressSpace(d));
 
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
@@ -1000,18 +1000,26 @@ void CIRGenModule::emitGlobalVarDefinition(const clang::VarDecl *vd,
 
   std::optional<ConstantEmitter> emitter;
 
-  assert(!cir::MissingFeatures::cudaSupport());
-
   // CUDA E.2.4.1 "__shared__ variables cannot have an initialization
   // as part of their declaration."  Sema has already checked for
-  // error cases, so we just need to set Init to UndefValue.
+  // error cases, so we just need to set Init to PoisonValue.
   bool isCUDASharedVar =
       getLangOpts().CUDAIsDevice && vd->hasAttr<CUDASharedAttr>();
-  // TODO(cir): implement isCUDAShadowVar and isCUDADeviceShadowVar, reference:
-  // OGCG
+  // Shadows of initialized device-side global variables are also left
+  // undefined.
+  // Managed Variables should be initialized on both host side and device side.
+  bool isCUDAShadowVar =
+      !getLangOpts().CUDAIsDevice && !vd->hasAttr<HIPManagedAttr>() &&
+      (vd->hasAttr<CUDAConstantAttr>() || vd->hasAttr<CUDADeviceAttr>() ||
+       vd->hasAttr<CUDASharedAttr>());
+  bool isCUDADeviceShadowVar =
+      getLangOpts().CUDAIsDevice && !vd->hasAttr<HIPManagedAttr>() &&
+      (vd->getType()->isCUDADeviceBuiltinSurfaceType() ||
+       vd->getType()->isCUDADeviceBuiltinTextureType());
 
-  if (getLangOpts().CUDA && isCUDASharedVar) {
-    init = cir::UndefAttr::get(&getMLIRContext(), convertType(vd->getType()));
+  if (getLangOpts().CUDA &&
+      (isCUDASharedVar || isCUDAShadowVar || isCUDADeviceShadowVar)) {
+    init = cir::PoisonAttr::get(convertType(vd->getType()));
   } else if (vd->hasAttr<LoaderUninitializedAttr>()) {
     errorNYI(vd->getSourceRange(),
              "emitGlobalVarDefinition: loader uninitialized attribute");
