@@ -2391,8 +2391,6 @@ def err_undeclared_destructor_name : Error<
   "undeclared identifier %0 in destructor name">;
 def err_destructor_name : Error<
   "expected the class name after '~' to name the enclosing class">;
-def err_destructor_name_nontype : Error<
-  "identifier %0 after '~' in destructor name does not name a type">;
 def err_destructor_expr_mismatch : Error<
   "identifier %0 in object destruction expression does not name the type "
   "%1 of the object being destroyed">;
