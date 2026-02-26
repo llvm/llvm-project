@@ -638,8 +638,8 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                           Plan.getScalarPreheader()) &&
              "last lane must be extracted in the middle block");
       VPBuilder Builder(ExtractLastLane);
-      ExtractLastLane->replaceAllUsesWith(Builder.createNaryOp(
-          VPInstruction::ExitingIVValue, {WideIV, BackedgeVal}));
+      ExtractLastLane->replaceAllUsesWith(
+          Builder.createNaryOp(VPInstruction::ExitingIVValue, {WideIV}));
       ExtractLastLane->eraseFromParent();
       ExtractLastPart->eraseFromParent();
     }
@@ -1038,9 +1038,8 @@ void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
 void VPlanTransforms::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
-    bool TailFolded, bool CheckNeededWithTailFolding, Loop *OrigLoop,
-    const uint32_t *MinItersBypassWeights, DebugLoc DL,
-    PredicatedScalarEvolution &PSE) {
+    bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
+    DebugLoc DL, PredicatedScalarEvolution &PSE) {
   // Generate code to check if the loop's trip count is less than VF * UF, or
   // equal to it in case a scalar epilogue is required; this implies that the
   // vector trip count is zero. This check also covers the case where adding one
@@ -1071,30 +1070,9 @@ void VPlanTransforms::addMinimumIterationCheck(
   VPBuilder Builder(EntryVPBB);
   VPValue *TripCountCheck = Plan.getFalse();
   const SCEV *Step = GetMinTripCount();
-  if (TailFolded) {
-    if (CheckNeededWithTailFolding) {
-      // vscale is not necessarily a power-of-2, which means we cannot guarantee
-      // an overflow to zero when updating induction variables and so an
-      // additional overflow check is required before entering the vector loop.
-
-      VPValue *StepVPV = Builder.createExpandSCEV(Step);
-
-      // Get the maximum unsigned value for the type.
-      VPValue *MaxUIntTripCount =
-          Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
-      VPValue *DistanceToMax =
-          Builder.createSub(MaxUIntTripCount, TripCountVPV);
-
-      // Don't execute the vector loop if (UMax - n) < (VF * UF).
-      // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
-      // minProfitableTripCount).
-      TripCountCheck =
-          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax, StepVPV, DL);
-    } else {
-      // TripCountCheck = false, folding tail implies positive vector trip
-      // count.
-    }
-  } else {
+  // TripCountCheck = false, folding tail implies positive vector trip
+  // count.
+  if (!TailFolded) {
     // TODO: Emit unconditional branch to vector preheader instead of
     // conditional branch with known condition.
     TripCount = SE.applyLoopGuards(TripCount, OrigLoop);
@@ -1288,17 +1266,19 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   // Update resume phis for inductions in the scalar preheader. If AnyNaNLane is
   // true, the resume from the start of the last vector iteration via the
   // canonical IV, otherwise from the original value.
+  auto IsTC = [&Plan](VPValue *V) {
+    return V == &Plan.getVectorTripCount() || V == Plan.getTripCount();
+  };
   for (auto &R : Plan.getScalarPreheader()->phis()) {
     auto *ResumeR = cast<VPPhi>(&R);
     VPValue *VecV = ResumeR->getOperand(0);
     if (RdxResults.contains(VecV))
       continue;
     if (auto *DerivedIV = dyn_cast<VPDerivedIVRecipe>(VecV)) {
-      if (DerivedIV->getNumUsers() == 1 &&
-          DerivedIV->getOperand(1) == &Plan.getVectorTripCount()) {
-        auto *NewSel =
-            MiddleBuilder.createSelect(AnyNaNLane, LoopRegion->getCanonicalIV(),
-                                       &Plan.getVectorTripCount());
+      VPValue *DIVTC = DerivedIV->getOperand(1);
+      if (DerivedIV->getNumUsers() == 1 && IsTC(DIVTC)) {
+        auto *NewSel = MiddleBuilder.createSelect(
+            AnyNaNLane, LoopRegion->getCanonicalIV(), DIVTC);
         DerivedIV->moveAfter(&*MiddleBuilder.getInsertPoint());
         DerivedIV->setOperand(1, NewSel);
         continue;
@@ -1306,7 +1286,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
     }
     // Bail out and abandon the current, partially modified, VPlan if we
     // encounter resume phi that cannot be updated yet.
-    if (VecV != &Plan.getVectorTripCount()) {
+    if (!IsTC(VecV)) {
       LLVM_DEBUG(dbgs() << "Found resume phi we cannot update for VPlan with "
                            "FMaxNum/FMinNum reduction.\n");
       return false;
@@ -1350,6 +1330,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   //   ...extract-last-active replaces compute-reduction-result.
   //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
 
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
     if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
@@ -1357,7 +1338,16 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       continue;
 
     // Find the condition for the select/blend.
-    auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
+    VPValue *BackedgeSelect = PhiR->getBackedgeValue();
+    VPValue *CondSelect = BackedgeSelect;
+
+    // If there's a header mask, the backedge select will not be the find-last
+    // select.
+    if (HeaderMask && !match(BackedgeSelect,
+                             m_Select(m_Specific(HeaderMask),
+                                      m_VPValue(CondSelect), m_Specific(PhiR))))
+      llvm_unreachable("expected header mask select");
+
     VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
 
     // If we're matching a blend rather than a select, there should be one
@@ -1381,10 +1371,21 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
       return NumIncomingDataValues == 1;
     };
 
+    VPSingleDefRecipe *SelectR =
+        cast<VPSingleDefRecipe>(CondSelect->getDefiningRecipe());
     if (!match(SelectR,
                m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))) &&
         !MatchBlend(SelectR))
       return false;
+
+    assert(Cond != HeaderMask && "Cond must not be HeaderMask");
+
+    // Find final reduction computation and replace it with an
+    // extract.last.active intrinsic.
+    auto *RdxResult =
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
+            BackedgeSelect);
+    assert(RdxResult && "Could not find reduction result");
 
     // Add mask phi.
     VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
@@ -1402,6 +1403,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     }
     assert(Op2 == PhiR && "data value must be selected if Cond is true");
 
+    if (HeaderMask)
+      Cond = Builder.createLogicalAnd(HeaderMask, Cond);
+
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addOperand(MaskSelect);
@@ -1410,15 +1414,9 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     VPValue *DataSelect =
         Builder.createSelect(AnyOf, Op1, Op2, SelectR->getDebugLoc());
     SelectR->replaceAllUsesWith(DataSelect);
+    PhiR->setBackedgeValue(DataSelect);
     SelectR->eraseFromParent();
 
-    // Find final reduction computation and replace it with an
-    // extract.last.active intrinsic.
-    auto *RdxResult =
-        vputils::findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
-    // TODO: Handle tail-folding.
-    if (!RdxResult)
-      return false;
     Builder.setInsertPoint(RdxResult);
     auto *ExtractLastActive =
         Builder.createNaryOp(VPInstruction::ExtractLastActive,
