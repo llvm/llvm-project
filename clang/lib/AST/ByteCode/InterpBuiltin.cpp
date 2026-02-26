@@ -4526,14 +4526,13 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call, [](const APSInt &Val) {
           unsigned BitWidth = Val.getBitWidth();
           if (Val.ule(1))
-            return llvm::APInt(BitWidth, 1);
-          if (Val.isAllOnes())
-            return static_cast<const llvm::APInt &>(Val);
-          llvm::APInt ValMinusOne = static_cast<const llvm::APInt &>(Val) - 1;
+            return APInt(BitWidth, 1);
+          APInt V = Val;
+          APInt ValMinusOne = V - 1;
           unsigned LeadingZeros = ValMinusOne.countl_zero();
           if (LeadingZeros == 0)
-            return static_cast<const llvm::APInt &>(Val); // would overflow
-          return llvm::APInt::getOneBitSet(BitWidth, BitWidth - LeadingZeros);
+            return V; // would overflow; return input unchanged
+          return APInt::getOneBitSet(BitWidth, BitWidth - LeadingZeros);
         });
 
   case Builtin::BI__builtin_ffs:

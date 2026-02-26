@@ -3838,32 +3838,16 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     }
     case Builtin::BI__builtin_stdc_bit_floor: {
       // Spec: arg == 0 ? 0 : 1 << (prec - 1 - clz(arg))
-      Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
-      BasicBlock *ZeroBB = createBasicBlock("bitfloor.zero", CurFn);
-      BasicBlock *CalcBB = createBasicBlock("bitfloor.calc", CurFn);
-      BasicBlock *MergeBB = createBasicBlock("bitfloor.merge", CurFn);
-
-      Builder.CreateCondBr(IsZero, ZeroBB, CalcBB);
-
-      // Zero path.
-      Builder.SetInsertPoint(ZeroBB);
-      Builder.CreateBr(MergeBB);
-
-      // General path.
-      Builder.SetInsertPoint(CalcBB);
+      // Use ctlz with is_zero_poison=true and a select so the zero case never
+      // materialises the poison value.  This avoids a branch and PHI node and
+      // allows the backend to emit a conditional move.
       Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-      Value *LZ = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+      Value *LZ = Builder.CreateCall(F, {ArgValue, Builder.getTrue()});
       Value *ShiftAmt =
           Builder.CreateSub(ConstantInt::get(ArgType, BitWidth - 1), LZ);
-      Value *Tmp = Builder.CreateShl(One, ShiftAmt);
-      Builder.CreateBr(MergeBB);
-
-      // Merge.
-      Builder.SetInsertPoint(MergeBB);
-      PHINode *Phi = Builder.CreatePHI(ArgType, 2);
-      Phi->addIncoming(Zero, ZeroBB);
-      Phi->addIncoming(Tmp, CalcBB);
-      Result = Phi;
+      Value *Shifted = Builder.CreateShl(One, ShiftAmt);
+      Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
+      Result = Builder.CreateSelect(IsZero, Zero, Shifted);
       break;
     }
     case Builtin::BI__builtin_stdc_bit_ceil: {
@@ -3875,29 +3859,21 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           return RValue::get(ConstantInt::get(ArgType, 1));
       }
 
-      Value *AllOnes = Constant::getAllOnesValue(ArgType);
-      Value *IsAllOnes = Builder.CreateICmpEQ(ArgValue, AllOnes, "isallones");
       Value *IsLEOne = Builder.CreateICmpULE(ArgValue, One, "isleone");
 
-      BasicBlock *AllOnesBB = createBasicBlock("bitceil.allones", CurFn);
-      BasicBlock *LEOneBB = createBasicBlock("bitceil.leone", CurFn);
+      BasicBlock *EntryBB = Builder.GetInsertBlock();
       BasicBlock *CalcBB = createBasicBlock("bitceil.calc", CurFn);
       BasicBlock *MergeBB = createBasicBlock("bitceil.merge", CurFn);
 
-      // If all ones -> return operand
-      Builder.CreateCondBr(IsAllOnes, AllOnesBB, LEOneBB);
-
-      Builder.SetInsertPoint(AllOnesBB);
-      Builder.CreateBr(MergeBB);
-
       // If <= 1 -> return 1, else compute.
-      Builder.SetInsertPoint(LEOneBB);
       Builder.CreateCondBr(IsLEOne, MergeBB, CalcBB);
 
       Builder.SetInsertPoint(CalcBB);
       Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
       Value *ArgMinusOne = Builder.CreateSub(ArgValue, One);
       Value *LZ = Builder.CreateCall(F, {ArgMinusOne, Builder.getFalse()});
+      // LZ == 0 means arg-1 has the MSB set, so the next power of 2 would
+      // overflow the type; return arg unchanged.
       Value *LZIsZero = Builder.CreateICmpEQ(LZ, Zero, "lzzero");
       Value *ShiftAmt =
           Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), LZ);
@@ -3906,9 +3882,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       Builder.CreateBr(MergeBB);
 
       Builder.SetInsertPoint(MergeBB);
-      PHINode *Phi = Builder.CreatePHI(ArgType, 3);
-      Phi->addIncoming(ArgValue, AllOnesBB);
-      Phi->addIncoming(One, LEOneBB);
+      PHINode *Phi = Builder.CreatePHI(ArgType, 2);
+      Phi->addIncoming(One, EntryBB);
       Phi->addIncoming(Tmp, CalcBB);
       Result = Phi;
       break;

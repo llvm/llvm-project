@@ -174,10 +174,10 @@ void test_bit_width(unsigned char uc, unsigned short us, unsigned int ui, unsign
 }
 
 // CHECK-LABEL: test_bit_floor
-// CHECK: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 false)
-// CHECK: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 false)
-// CHECK: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 false)
-// CHECK: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 false)
+// CHECK: call i8 @llvm.ctlz.i8(i8 %{{.*}}, i1 true)
+// CHECK: call i16 @llvm.ctlz.i16(i16 %{{.*}}, i1 true)
+// CHECK: call i32 @llvm.ctlz.i32(i32 %{{.*}}, i1 true)
+// CHECK: call i64 @llvm.ctlz.i64(i64 %{{.*}}, i1 true)
 void test_bit_floor(unsigned char uc, unsigned short us, unsigned int ui, unsigned long long ull) {
   volatile unsigned char rc;
   volatile unsigned short rs;
@@ -219,7 +219,7 @@ void test_bitint(unsigned _BitInt(37) bi) {
 
 // Additional _BitInt coverage
 // CHECK-LABEL: test_bitint_floor_ceil
-// CHECK: call i9 @llvm.ctlz.i9(i9 %{{.*}}, i1 false)
+// CHECK: call i9 @llvm.ctlz.i9(i9 %{{.*}}, i1 true)
 // CHECK: call i9 @llvm.ctlz.i9(i9 %{{.*}}, i1 false)
 void test_bitint_floor_ceil(unsigned _BitInt(9) bi9) {
   volatile unsigned _BitInt(9) rb;
@@ -317,7 +317,7 @@ void test_int128_count_has_width(unsigned __int128 u128) {
 }
 
 // INT128-LABEL: test_int128_floor_ceil
-// INT128: call i128 @llvm.ctlz.i128(i128 %{{.*}}, i1 false)
+// INT128: call i128 @llvm.ctlz.i128(i128 %{{.*}}, i1 true)
 // INT128: call i128 @llvm.ctlz.i128(i128 %{{.*}}, i1 false)
 void test_int128_floor_ceil(unsigned __int128 u128) {
   volatile unsigned __int128 r;
