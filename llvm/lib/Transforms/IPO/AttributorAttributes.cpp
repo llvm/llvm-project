@@ -4556,6 +4556,9 @@ struct AAIsDeadFunction : public AAIsDead {
         HasChanged = ChangeStatus::CHANGED;
       }
 
+    if (HasChanged == ChangeStatus::CHANGED)
+      FirstDeadInstCache.clear();
+
     return HasChanged;
   }
 
@@ -4606,14 +4609,41 @@ struct AAIsDeadFunction : public AAIsDead {
     if (!AssumedLiveBlocks.count(I->getParent()))
       return true;
 
-    // If it is not after a liveness barrier it is live.
-    const Instruction *PrevI = I->getPrevNode();
-    while (PrevI) {
-      if (KnownDeadEnds.count(PrevI) || ToBeExploredFrom.count(PrevI))
-        return true;
-      PrevI = PrevI->getPrevNode();
+    // We cache the *first* dead instruction in the block.
+    // If such an instruction exists and precedes I, then I is dead.
+    // Previously, we used to a do a backwards linear scan from I to
+    // the beginning of the block, checking KnownDeadEnds and ToBeExploredFrom
+    // at each step. By caching we trade complexity for storage.
+
+    const BasicBlock *BB = I->getParent();
+    auto It = FirstDeadInstCache.find(BB);
+    if (It == FirstDeadInstCache.end()) {
+      // Cache miss. Scan the block forward to find the first dead end.
+      const Instruction *FirstDead = nullptr;
+      for (const Instruction &Inst : *BB) {
+        if (KnownDeadEnds.count(&Inst) || ToBeExploredFrom.count(&Inst)) {
+          FirstDead = &Inst;
+          break;
+        }
+      }
+      It = FirstDeadInstCache.insert({BB, FirstDead}).first;
     }
-    return false;
+
+    const Instruction *FirstDead = It->second;
+
+    // If no dead end in the block, I is not dead (via this mechanism).
+    if (!FirstDead)
+      return false;
+
+    // If I is the first dead end, it is not dead *after* a barrier (it IS the
+    // barrier).
+    if (FirstDead == I)
+      return false;
+
+    // If FirstDead comes before I, then I is dead.
+    // Note: comesBefore is O(N), but it avoids the hash lookups of the original
+    // loop. Also, we only scan from FirstDead to I, not from I to start.
+    return FirstDead->comesBefore(I);
   }
 
   /// See AAIsDead::isKnownDead(Instruction *I).
@@ -4651,6 +4681,12 @@ struct AAIsDeadFunction : public AAIsDead {
 
   /// Collection of all assumed live BasicBlocks.
   DenseSet<const BasicBlock *> AssumedLiveBlocks;
+
+  /// Cache to store the first "dead end" instruction for each basic block.
+  /// A "dead end" is an instruction in KnownDeadEnds or ToBeExploredFrom.
+  /// If the mapped value is nullptr, the block has no dead ends.
+  /// If it is non-null, it points to the first such instruction in the block.
+  mutable DenseMap<const BasicBlock *, const Instruction *> FirstDeadInstCache;
 };
 
 static bool
@@ -4884,6 +4920,11 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
     Change = ChangeStatus::CHANGED;
     ToBeExploredFrom = std::move(NewToBeExploredFrom);
   }
+
+  // If the state changed (KnownDeadEnds or ToBeExploredFrom), the cache is
+  // invalid.
+  if (Change == ChangeStatus::CHANGED)
+    FirstDeadInstCache.clear();
 
   // If we know everything is live there is no need to query for liveness.
   // Instead, indicating a pessimistic fixpoint will cause the state to be
