@@ -27,7 +27,7 @@ entry:
   ret double %add
 }
 
-define dso_local double @fma_combine1_safe(double %a, double %b, double %c) {
+define double @fma_combine1_safe(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine1_safe:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 3
@@ -74,7 +74,7 @@ entry:
   ret double %add
 }
 
-define dso_local double @fma_combine2_safe(double %a, double %b, double %c) {
+define double @fma_combine2_safe(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine2_safe:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 3
@@ -177,7 +177,7 @@ entry:
   ret double %add
 }
 
-define dso_local double @fma_combine_one_use_safe(double %a, double %b, double %c) {
+define double @fma_combine_one_use_safe(double %a, double %b, double %c) {
 ; CHECK-FAST-LABEL: fma_combine_one_use_safe:
 ; CHECK-FAST:       # %bb.0: # %entry
 ; CHECK-FAST-NEXT:    xsnegdp 0, 1
@@ -213,55 +213,69 @@ entry:
   ret double %add
 }
 
-define dso_local float @fma_combine_no_ice() {
+define dso_local float @fma_combine_no_ice(ptr %ptmp, ptr %ptmp2, ptr %ptmp6, ptr %ptmp7) {
 ; CHECK-FAST-LABEL: fma_combine_no_ice:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    vspltisw 2, 1
+; CHECK-FAST-NEXT:    lfs 0, 0(3)
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
+; CHECK-FAST-NEXT:    lfs 5, 0(6)
+; CHECK-FAST-NEXT:    lfs 2, 0(4)
 ; CHECK-FAST-NEXT:    xvcvsxwdp 3, 34
-; CHECK-FAST-NEXT:    lfs 0, .LCPI7_0@toc@l(3)
-; CHECK-FAST-NEXT:    lfs 2, 0(3)
+; CHECK-FAST-NEXT:    lfs 1, .LCPI7_0@toc@l(3)
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI7_1@toc@ha
+; CHECK-FAST-NEXT:    fmr 4, 3
+; CHECK-FAST-NEXT:    xsmaddasp 3, 5, 1
+; CHECK-FAST-NEXT:    xsmaddasp 4, 0, 1
 ; CHECK-FAST-NEXT:    lfs 1, .LCPI7_1@toc@l(3)
-; CHECK-FAST-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-FAST-NEXT:    xsmaddasp 1, 2, 3
-; CHECK-FAST-NEXT:    xsnmsubasp 1, 3, 2
+; CHECK-FAST-NEXT:    lfs 0, 0(5)
+; CHECK-FAST-NEXT:    xsmaddasp 1, 2, 4
+; CHECK-FAST-NEXT:    xsnmsubasp 1, 3, 0
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_no_ice:
 ; CHECK-FAST-NOVSX:       # %bb.0:
 ; CHECK-FAST-NOVSX-NEXT:    lfs 0, 0(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    lfs 1, .LCPI7_0@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    lfs 5, 0(6)
+; CHECK-FAST-NOVSX-NEXT:    lfs 1, 0(4)
+; CHECK-FAST-NOVSX-NEXT:    lfs 4, 0(5)
+; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI7_0@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI7_1@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI7_1@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    lfs 3, .LCPI7_1@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI7_2@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    fmadds 1, 0, 2, 1
-; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI7_2@toc@l(3)
-; CHECK-FAST-NOVSX-NEXT:    fmadds 2, 0, 1, 2
-; CHECK-FAST-NOVSX-NEXT:    fnmsubs 1, 1, 0, 2
+; CHECK-FAST-NOVSX-NEXT:    fmadds 0, 0, 3, 2
+; CHECK-FAST-NOVSX-NEXT:    fmadds 2, 5, 3, 2
+; CHECK-FAST-NOVSX-NEXT:    lfs 3, .LCPI7_2@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    fmadds 0, 1, 0, 3
+; CHECK-FAST-NOVSX-NEXT:    fnmsubs 1, 2, 4, 0
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine_no_ice:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisw 2, 1
+; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    addis 3, 2, .LCPI7_0@toc@ha
+; CHECK-NEXT:    lfs 5, 0(6)
+; CHECK-NEXT:    lfs 2, 0(4)
 ; CHECK-NEXT:    xvcvsxwdp 3, 34
-; CHECK-NEXT:    lfs 0, .LCPI7_0@toc@l(3)
-; CHECK-NEXT:    lfs 2, 0(3)
+; CHECK-NEXT:    lfs 1, .LCPI7_0@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, .LCPI7_1@toc@ha
+; CHECK-NEXT:    fmr 4, 3
+; CHECK-NEXT:    xsmaddasp 3, 5, 1
+; CHECK-NEXT:    xsmaddasp 4, 0, 1
 ; CHECK-NEXT:    lfs 1, .LCPI7_1@toc@l(3)
-; CHECK-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-NEXT:    xsmaddasp 1, 2, 3
-; CHECK-NEXT:    xsnmsubasp 1, 3, 2
+; CHECK-NEXT:    lfs 0, 0(5)
+; CHECK-NEXT:    xsmaddasp 1, 2, 4
+; CHECK-NEXT:    xsnmsubasp 1, 3, 0
 ; CHECK-NEXT:    blr
-  %tmp = load float, ptr poison, align 4
-  %tmp2 = load float, ptr poison, align 4
+  %tmp = load float, ptr %ptmp, align 4
+  %tmp2 = load float, ptr %ptmp2, align 4
   %tmp3 = fmul contract reassoc float %tmp, 0x3FE372D780000000
   %tmp4 = fadd nsz contract reassoc float %tmp3, 1.000000e+00
   %tmp5 = fmul contract reassoc float %tmp2, %tmp4
-  %tmp6 = load float, ptr poison, align 4
-  %tmp7 = load float, ptr poison, align 4
+  %tmp6 = load float, ptr %ptmp6, align 4
+  %tmp7 = load float, ptr %ptmp7, align 4
   %tmp8 = fmul contract reassoc float %tmp7, 0x3FE372D780000000
   %tmp9 = fsub contract reassoc nsz float -1.000000e+00, %tmp8
   %tmp10 = fmul contract reassoc float %tmp9, %tmp6
@@ -270,60 +284,69 @@ define dso_local float @fma_combine_no_ice() {
   ret float %tmp12
 }
 
-define dso_local float @fma_combine_no_ice_safe() {
+define float @fma_combine_no_ice_safe(ptr %ptmp, ptr %ptmp2, ptr %ptmp6, ptr %ptmp7) {
 ; CHECK-FAST-LABEL: fma_combine_no_ice_safe:
 ; CHECK-FAST:       # %bb.0:
 ; CHECK-FAST-NEXT:    vspltisw 2, 1
+; CHECK-FAST-NEXT:    lfs 0, 0(3)
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
+; CHECK-FAST-NEXT:    lfs 5, 0(6)
+; CHECK-FAST-NEXT:    lfs 2, 0(4)
 ; CHECK-FAST-NEXT:    xvcvsxwdp 3, 34
-; CHECK-FAST-NEXT:    lfs 0, .LCPI8_0@toc@l(3)
-; CHECK-FAST-NEXT:    lfs 2, 0(3)
+; CHECK-FAST-NEXT:    lfs 1, .LCPI8_0@toc@l(3)
 ; CHECK-FAST-NEXT:    addis 3, 2, .LCPI8_1@toc@ha
-; CHECK-FAST-NEXT:    lfs 1, .LCPI8_1@toc@l(3)
 ; CHECK-FAST-NEXT:    fmr 4, 3
-; CHECK-FAST-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-FAST-NEXT:    xsnmaddasp 4, 2, 0
-; CHECK-FAST-NEXT:    xsmaddasp 1, 2, 3
-; CHECK-FAST-NEXT:    xsmaddasp 1, 4, 2
+; CHECK-FAST-NEXT:    xsnmaddasp 3, 5, 1
+; CHECK-FAST-NEXT:    xsmaddasp 4, 0, 1
+; CHECK-FAST-NEXT:    lfs 1, .LCPI8_1@toc@l(3)
+; CHECK-FAST-NEXT:    lfs 0, 0(5)
+; CHECK-FAST-NEXT:    xsmaddasp 1, 2, 4
+; CHECK-FAST-NEXT:    xsmaddasp 1, 3, 0
 ; CHECK-FAST-NEXT:    blr
 ;
 ; CHECK-FAST-NOVSX-LABEL: fma_combine_no_ice_safe:
 ; CHECK-FAST-NOVSX:       # %bb.0:
 ; CHECK-FAST-NOVSX-NEXT:    lfs 0, 0(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    lfs 1, .LCPI8_0@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    lfs 5, 0(6)
+; CHECK-FAST-NOVSX-NEXT:    lfs 1, 0(4)
+; CHECK-FAST-NOVSX-NEXT:    lfs 4, 0(5)
+; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI8_0@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI8_1@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI8_1@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    lfs 3, .LCPI8_1@toc@l(3)
 ; CHECK-FAST-NOVSX-NEXT:    addis 3, 2, .LCPI8_2@toc@ha
-; CHECK-FAST-NOVSX-NEXT:    fnmadds 3, 0, 2, 1
-; CHECK-FAST-NOVSX-NEXT:    fmadds 1, 0, 2, 1
-; CHECK-FAST-NOVSX-NEXT:    lfs 2, .LCPI8_2@toc@l(3)
-; CHECK-FAST-NOVSX-NEXT:    fmadds 1, 0, 1, 2
-; CHECK-FAST-NOVSX-NEXT:    fmadds 1, 3, 0, 1
+; CHECK-FAST-NOVSX-NEXT:    fmadds 0, 0, 3, 2
+; CHECK-FAST-NOVSX-NEXT:    fnmadds 2, 5, 3, 2
+; CHECK-FAST-NOVSX-NEXT:    lfs 3, .LCPI8_2@toc@l(3)
+; CHECK-FAST-NOVSX-NEXT:    fmadds 0, 1, 0, 3
+; CHECK-FAST-NOVSX-NEXT:    fmadds 1, 2, 4, 0
 ; CHECK-FAST-NOVSX-NEXT:    blr
 ;
 ; CHECK-LABEL: fma_combine_no_ice_safe:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vspltisw 2, 1
+; CHECK-NEXT:    lfs 0, 0(3)
 ; CHECK-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
+; CHECK-NEXT:    lfs 5, 0(6)
+; CHECK-NEXT:    lfs 2, 0(4)
 ; CHECK-NEXT:    xvcvsxwdp 3, 34
-; CHECK-NEXT:    lfs 0, .LCPI8_0@toc@l(3)
-; CHECK-NEXT:    lfs 2, 0(3)
+; CHECK-NEXT:    lfs 1, .LCPI8_0@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, .LCPI8_1@toc@ha
-; CHECK-NEXT:    lfs 1, .LCPI8_1@toc@l(3)
 ; CHECK-NEXT:    fmr 4, 3
-; CHECK-NEXT:    xsmaddasp 3, 2, 0
-; CHECK-NEXT:    xsnmaddasp 4, 2, 0
-; CHECK-NEXT:    xsmaddasp 1, 2, 3
-; CHECK-NEXT:    xsmaddasp 1, 4, 2
+; CHECK-NEXT:    xsnmaddasp 3, 5, 1
+; CHECK-NEXT:    xsmaddasp 4, 0, 1
+; CHECK-NEXT:    lfs 1, .LCPI8_1@toc@l(3)
+; CHECK-NEXT:    lfs 0, 0(5)
+; CHECK-NEXT:    xsmaddasp 1, 2, 4
+; CHECK-NEXT:    xsmaddasp 1, 3, 0
 ; CHECK-NEXT:    blr
-  %tmp = load float, ptr poison, align 4
-  %tmp2 = load float, ptr poison, align 4
+  %tmp = load float, ptr %ptmp, align 4
+  %tmp2 = load float, ptr %ptmp2, align 4
   %tmp3 = fmul contract reassoc float %tmp, 0x3FE372D780000000
   %tmp4 = fadd contract reassoc float %tmp3, 1.000000e+00
   %tmp5 = fmul contract reassoc float %tmp2, %tmp4
-  %tmp6 = load float, ptr poison, align 4
-  %tmp7 = load float, ptr poison, align 4
+  %tmp6 = load float, ptr %ptmp6, align 4
+  %tmp7 = load float, ptr %ptmp7, align 4
   %tmp8 = fmul contract reassoc float %tmp7, 0x3FE372D780000000
   %tmp9 = fsub contract reassoc nsz float -1.000000e+00, %tmp8
   %tmp10 = fmul contract reassoc float %tmp9, %tmp6
