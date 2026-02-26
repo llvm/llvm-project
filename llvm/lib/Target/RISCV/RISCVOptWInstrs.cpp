@@ -619,7 +619,7 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         B = 1;
         E = 4;
         break;
-       }
+      }
 
       for (unsigned I = B; I != E; I += D) {
         if (!MI->getOperand(I).isReg())
