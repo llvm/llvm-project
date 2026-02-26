@@ -1585,6 +1585,28 @@ func.func @adduiExtendedConstantsSplatVector() -> (vector<4xi32>, vector<4xi1>) 
   return %sum, %overflow : vector<4xi32>, vector<4xi1>
 }
 
+// CHECK-LABEL: @adduiExtendedPoisonLhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @adduiExtendedPoisonLhs() -> (i32, i1) {
+  %poison = ub.poison : i32
+  %c5 = arith.constant 5 : i32
+  %sum, %overflow = arith.addui_extended %poison, %c5 : i32, i1
+  return %sum, %overflow : i32, i1
+}
+
+// CHECK-LABEL: @adduiExtendedPoisonRhs
+//  CHECK-NEXT:   %[[P0:.+]] = ub.poison : i32
+//  CHECK-NEXT:   %[[P1:.+]] = ub.poison : i1
+//  CHECK-NEXT:   return %[[P0]], %[[P1]]
+func.func @adduiExtendedPoisonRhs() -> (i32, i1) {
+  %c5 = arith.constant 5 : i32
+  %poison = ub.poison : i32
+  %sum, %overflow = arith.addui_extended %c5, %poison : i32, i1
+  return %sum, %overflow : i32, i1
+}
+
 // CHECK-LABEL: @mulsiExtendedZeroRhs
 //  CHECK-NEXT:   %[[zero:.+]] = arith.constant 0 : i32
 //  CHECK-NEXT:   return %[[zero]], %[[zero]]
