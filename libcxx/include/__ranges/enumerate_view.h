@@ -308,7 +308,7 @@ public:
 
   template <bool _OtherConst>
     requires sized_sentinel_for<sentinel_t<_Base>, iterator_t<__maybe_const<_OtherConst, _View>>>
-  _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend constexpr range_difference_t<__maybe_const<_OtherConst, _View>>
   operator-(const __sentinel& __x, const __iterator<_OtherConst>& __y) {
     return __x.__end_ - __y.__current_;
   }
