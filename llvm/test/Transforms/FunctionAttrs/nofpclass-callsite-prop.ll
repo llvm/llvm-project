@@ -18,13 +18,16 @@ define void @parent_poison(float %a) {
 ; FNATTRS-LABEL: define void @parent_poison(
 ; FNATTRS-SAME: float [[A:%.*]]) {
 ; FNATTRS-NEXT:    call void @use1_nofpclass_without_noundef(float [[A]])
+; FNATTRS-NEXT:    call void @use1_nofpclass_without_noundef(float [[A]])
 ; FNATTRS-NEXT:    ret void
 ;
 ; ATTRIBUTOR-LABEL: define void @parent_poison(
 ; ATTRIBUTOR-SAME: float nofpclass(nan) [[A:%.*]]) {
 ; ATTRIBUTOR-NEXT:    call void @use1_nofpclass_without_noundef(float nofpclass(nan) [[A]])
+; ATTRIBUTOR-NEXT:    call void @use1_nofpclass_without_noundef(float [[A]])
 ; ATTRIBUTOR-NEXT:    ret void
 ;
+  call void @use1_nofpclass_without_noundef(float %a)
   call void @use1_nofpclass_without_noundef(float %a)
   ret void
 }
