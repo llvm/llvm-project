@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 class StdVariantDataFormatterTestCase(TestBase):
     TEST_WITH_PDB_DEBUG_INFO = True
+    SHARED_BUILD_TESTCASE = False
 
     def do_test(self):
         """Test that that file and class static variables display correctly."""
@@ -77,11 +78,15 @@ class StdVariantDataFormatterTestCase(TestBase):
             substrs=["v3 =  Active Type = char  {", "Value = 'A'", "}"],
         )
 
-        string_name = (
-            "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
-            if self.getDebugInfo() == "pdb"
-            else "std::basic_string<char>"
-        )
+        if self.getDebugInfo() == "pdb":
+            string_name = (
+                "std::basic_string<char, std::char_traits<char>, std::allocator<char>>"
+            )
+        elif self.platformIsDarwin():
+            string_name = "std::string"
+        else:
+            string_name = "std::basic_string<char>"
+
         self.expect_expr(
             "v4",
             result_summary=f" Active Type = {string_name} ",

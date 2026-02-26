@@ -816,8 +816,7 @@ define <1 x i64> @sdiv_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    sdiv x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = sdiv <1 x i64> %op1, %op2
@@ -1698,8 +1697,7 @@ define <1 x i64> @udiv_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    udiv x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = udiv <1 x i64> %op1, %op2
@@ -1798,15 +1796,12 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #-64]!
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x10, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
 ; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
 ; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x10, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -1814,14 +1809,12 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
 ; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #56]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x10, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
 ; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
 ; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x10, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -1829,14 +1822,12 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
 ; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #48]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #12]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x10, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
 ; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
 ; NONEON-NOSVE-NEXT:    lsr w11, w9, #6
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #8]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x10, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
@@ -1844,14 +1835,12 @@ define void @udiv_constantsplat_v8i32(ptr %a)  {
 ; NONEON-NOSVE-NEXT:    lsr w9, w9, #6
 ; NONEON-NOSVE-NEXT:    stp w9, w11, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #4]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x10, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x10, x10, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w10
 ; NONEON-NOSVE-NEXT:    add w9, w10, w9, lsr #1
 ; NONEON-NOSVE-NEXT:    lsr w10, w9, #6
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
 ; NONEON-NOSVE-NEXT:    umull x8, w9, w8
 ; NONEON-NOSVE-NEXT:    lsr x8, x8, #32
 ; NONEON-NOSVE-NEXT:    sub w9, w9, w8

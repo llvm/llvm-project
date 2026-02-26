@@ -299,7 +299,8 @@ std::string loongarch::getLoongArchTargetCPU(const llvm::opt::ArgList &Args,
   // If we have -march, use that.
   if (const Arg *A = Args.getLastArg(options::OPT_march_EQ)) {
     Arch = A->getValue();
-    if (Arch == "la64v1.0" || Arch == "la64v1.1")
+    if (Arch == "la64v1.0" || Arch == "la64v1.1" || Arch == "la32v1.0" ||
+        Arch == "la32rv1.0")
       CPU = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
     else
       CPU = Arch;

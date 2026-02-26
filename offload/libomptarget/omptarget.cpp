@@ -600,8 +600,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // then no argument is marked as TARGET_PARAM ("omp target data map" is not
     // associated with a target region, so there are no target parameters). This
     // may be considered a hack, we could revise the scheme in the future.
-    bool UpdateRef =
-        !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) && !(FromMapper && I == 0);
+    bool UpdateRef = !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF);
 
     MappingInfoTy::HDTTMapAccessorTy HDTTMap =
         Device.getMappingInfo().HostDataToTargetMap.getExclusiveAccessor();
@@ -707,14 +706,20 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
         // to references to a local device pointer that refers to this device
         // address.
         //
-        // TODO: Add a new map-type bit to support OpenMP 6.1's `fb_nullify`
-        // and set the result to `nullptr - Delta`. Note that `fb_nullify` is
-        // already the default for `need_device_ptr`, but clang/flang do not
-        // support its codegen yet.
-        TgtPtrBase = reinterpret_cast<void *>(
-            reinterpret_cast<uintptr_t>(HstPtrBegin) - Delta);
-        ODBG(ODT_Mapping) << "Returning host pointer " << TgtPtrBase
-                          << " as fallback (lookup failed)";
+        // OpenMP 6.1's `fb_nullify` fallback behavior: when the FB_NULLIFY bit
+        // is set by the compiler, e.g. for `use/need_device_ptr(fb_nullify)`),
+        // return `nullptr - Delta` when lookup fails.
+        if (ArgTypes[I] & OMP_TGT_MAPTYPE_FB_NULLIFY) {
+          TgtPtrBase = reinterpret_cast<void *>(
+              reinterpret_cast<uintptr_t>(nullptr) - Delta);
+          ODBG(ODT_Mapping) << "Returning offsetted null pointer " << TgtPtrBase
+                            << " as fallback (lookup failed)";
+        } else {
+          TgtPtrBase = reinterpret_cast<void *>(
+              reinterpret_cast<uintptr_t>(HstPtrBegin) - Delta);
+          ODBG(ODT_Mapping) << "Returning host pointer " << TgtPtrBase
+                            << " as fallback (lookup failed)";
+        }
       }
       ArgsBase[I] = TgtPtrBase;
     }
@@ -1104,9 +1109,8 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     void *HstPtrBegin = Args[I];
     int64_t DataSize = ArgSizes[I];
     bool IsImplicit = ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT;
-    bool UpdateRef = (!(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
-                      (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) &&
-                     !(FromMapper && I == 0);
+    bool UpdateRef = !(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
+                     (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ);
     bool ForceDelete = ArgTypes[I] & OMP_TGT_MAPTYPE_DELETE;
     bool HasPresentModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_PRESENT;
     bool HasHoldModifier = ArgTypes[I] & OMP_TGT_MAPTYPE_OMPX_HOLD;
@@ -1254,12 +1258,12 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                   << "Restoring target descriptor " << ShadowPtr.TgtPtrAddr
                   << " to its original content (" << ShadowPtr.PtrSize
                   << " bytes), containing pointee address "
-                  << ShadowPtr.TgtPtrContent.data();
+                  << static_cast<const void *>(ShadowPtr.TgtPtrContent.data());
             } else {
               ODBG(ODT_Mapping)
                   << "Restoring target pointer " << ShadowPtr.TgtPtrAddr
                   << " to its original value "
-                  << ShadowPtr.TgtPtrContent.data();
+                  << static_cast<const void *>(ShadowPtr.TgtPtrContent.data());
             }
             Ret = Device.submitData(ShadowPtr.TgtPtrAddr,
                                     ShadowPtr.TgtPtrContent.data(),
@@ -1299,12 +1303,14 @@ static int targetDataContiguous(ident_t *Loc, DeviceTy &Device, void *ArgsBase,
                     << "Restoring host descriptor " << ShadowPtr.HstPtrAddr
                     << " to its original content (" << ShadowPtr.PtrSize
                     << " bytes), containing pointee address "
-                    << ShadowPtr.HstPtrContent.data();
+                    << static_cast<const void *>(
+                           ShadowPtr.HstPtrContent.data());
               } else {
                 ODBG(ODT_Mapping)
                     << "Restoring host pointer " << ShadowPtr.HstPtrAddr
                     << " to its original value "
-                    << ShadowPtr.HstPtrContent.data();
+                    << static_cast<const void *>(
+                           ShadowPtr.HstPtrContent.data());
               }
               std::memcpy(ShadowPtr.HstPtrAddr, ShadowPtr.HstPtrContent.data(),
                           ShadowPtr.PtrSize);

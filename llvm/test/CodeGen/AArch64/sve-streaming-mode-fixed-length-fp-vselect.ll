@@ -482,8 +482,6 @@ define <1 x double> @select_v1f64(<1 x double> %op1, <1 x double> %op2, <1 x i1>
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 16
 ; NONEON-NOSVE-NEXT:    tst w0, #0x1
 ; NONEON-NOSVE-NEXT:    fcsel d0, d0, d1, ne
-; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %sel = select <1 x i1> %mask, <1 x double> %op1, <1 x double> %op2
@@ -508,14 +506,12 @@ define <2 x double> @select_v2f64(<2 x double> %op1, <2 x double> %op2, <2 x i1>
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 64
 ; NONEON-NOSVE-NEXT:    str d2, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldp w9, w8, [sp, #8]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    stp q0, q1, [sp, #16]
-; NONEON-NOSVE-NEXT:    sbfx x8, x8, #0, #1
 ; NONEON-NOSVE-NEXT:    ldp d1, d2, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #40]
-; NONEON-NOSVE-NEXT:    cmp x8, #0
-; NONEON-NOSVE-NEXT:    mov w8, w9
 ; NONEON-NOSVE-NEXT:    sbfx x8, x8, #0, #1
+; NONEON-NOSVE-NEXT:    cmp x8, #0
+; NONEON-NOSVE-NEXT:    sbfx x8, x9, #0, #1
 ; NONEON-NOSVE-NEXT:    fcsel d3, d2, d0, ne
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    cmp x8, #0

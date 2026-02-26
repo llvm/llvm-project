@@ -26,20 +26,16 @@ define <4 x i8> @ashr_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    ldrb w10, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    ldrsb w11, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldrb w12, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x10 killed $w10
 ; NONEON-NOSVE-NEXT:    ldrsb w13, [sp, #10]
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldrsb w14, [sp, #8]
 ; NONEON-NOSVE-NEXT:    asr w10, w11, w10
-; NONEON-NOSVE-NEXT:    mov w11, w12
+; NONEON-NOSVE-NEXT:    asr w11, w13, w12
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    mov w8, w9
-; NONEON-NOSVE-NEXT:    asr w11, w13, w11
-; NONEON-NOSVE-NEXT:    asr w8, w14, w8
+; NONEON-NOSVE-NEXT:    asr w8, w14, w9
 ; NONEON-NOSVE-NEXT:    strh w10, [sp, #28]
 ; NONEON-NOSVE-NEXT:    strh w11, [sp, #26]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #24]
@@ -64,42 +60,34 @@ define <8 x i8> @ashr_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #15]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #29]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #27]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #25]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -122,82 +110,66 @@ define <16 x i8> @ashr_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #15]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #47]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #29]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #45]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #44]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #27]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #43]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #42]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #25]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #41]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #7]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #39]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #5]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #38]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #37]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #3]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #36]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #35]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #1]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #34]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #33]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -228,162 +200,130 @@ define void @ashr_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #63]
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #47]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #46]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #95]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #62]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #45]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #94]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #61]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #44]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #93]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #43]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #92]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #59]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #42]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #91]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #58]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #41]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #57]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #40]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #89]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #39]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #55]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #38]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #87]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #54]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #37]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #86]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #53]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #36]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #85]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #35]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #84]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #51]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #34]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #83]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #50]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #33]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #82]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #49]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #81]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #15]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #31]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #79]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #78]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #29]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #77]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #27]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #75]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #74]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #25]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #73]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #7]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #71]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #5]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #70]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #69]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #3]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #68]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #67]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp, #1]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #66]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsb w9, [sp]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #65]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -415,10 +355,8 @@ define <2 x i16> @ashr_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldrh w10, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldrsh w11, [sp, #8]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
-; NONEON-NOSVE-NEXT:    mov w9, w10
-; NONEON-NOSVE-NEXT:    asr w9, w11, w9
+; NONEON-NOSVE-NEXT:    asr w9, w11, w10
 ; NONEON-NOSVE-NEXT:    stp w9, w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
@@ -441,22 +379,18 @@ define <4 x i16> @ashr_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #14]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -479,42 +413,34 @@ define <8 x i16> @ashr_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #14]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #44]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #42]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #38]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #36]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #34]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -545,82 +471,66 @@ define void @ashr_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #46]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #44]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #94]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #42]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #92]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #58]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #40]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #38]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #54]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #36]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #86]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #34]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #84]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #50]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #82]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #78]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #74]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #70]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #68]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrsh w9, [sp]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #66]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -648,10 +558,8 @@ define <2 x i32> @ashr_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -674,18 +582,14 @@ define <4 x i32> @ashr_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -716,34 +620,26 @@ define void @ashr_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    asr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -771,8 +667,7 @@ define <1 x i64> @ashr_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    asr x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = ashr <1 x i64> %op1, %op2
@@ -866,20 +761,16 @@ define <4 x i8> @lshr_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    ldrb w10, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    ldrb w11, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldrb w12, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x10 killed $w10
 ; NONEON-NOSVE-NEXT:    ldrb w13, [sp, #10]
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldrb w14, [sp, #8]
 ; NONEON-NOSVE-NEXT:    lsr w10, w11, w10
-; NONEON-NOSVE-NEXT:    mov w11, w12
+; NONEON-NOSVE-NEXT:    lsr w11, w13, w12
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    mov w8, w9
-; NONEON-NOSVE-NEXT:    lsr w11, w13, w11
-; NONEON-NOSVE-NEXT:    lsr w8, w14, w8
+; NONEON-NOSVE-NEXT:    lsr w8, w14, w9
 ; NONEON-NOSVE-NEXT:    strh w10, [sp, #28]
 ; NONEON-NOSVE-NEXT:    strh w11, [sp, #26]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #24]
@@ -904,42 +795,34 @@ define <8 x i8> @lshr_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #15]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #29]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #27]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #25]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -962,82 +845,66 @@ define <16 x i8> @lshr_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #15]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #47]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #29]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #45]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #44]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #27]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #43]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #42]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #25]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #41]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #7]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #39]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #5]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #38]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #37]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #3]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #36]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #35]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #1]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #34]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #33]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -1068,162 +935,130 @@ define void @lshr_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #63]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #47]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #46]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #95]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #62]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #45]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #94]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #61]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #44]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #93]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #43]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #92]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #59]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #42]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #91]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #58]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #41]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #57]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #40]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #89]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #39]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #55]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #38]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #87]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #54]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #37]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #86]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #53]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #36]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #85]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #35]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #84]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #51]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #34]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #83]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #50]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #33]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #82]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #49]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #81]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #15]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #31]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #79]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #78]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #29]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #77]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #27]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #75]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #74]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #25]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #73]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #7]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #71]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #5]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #70]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #69]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #3]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #68]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #67]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #1]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #66]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #65]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -1255,10 +1090,8 @@ define <2 x i16> @lshr_v2i16(<2 x i16> %op1, <2 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldrh w10, [sp, #16]
 ; NONEON-NOSVE-NEXT:    ldrh w11, [sp, #8]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
-; NONEON-NOSVE-NEXT:    mov w9, w10
-; NONEON-NOSVE-NEXT:    lsr w9, w11, w9
+; NONEON-NOSVE-NEXT:    lsr w9, w11, w10
 ; NONEON-NOSVE-NEXT:    stp w9, w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:    add sp, sp, #32
@@ -1281,22 +1114,18 @@ define <4 x i16> @lshr_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #14]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -1319,42 +1148,34 @@ define <8 x i16> @lshr_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #14]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #44]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #42]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #38]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #36]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #34]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -1385,82 +1206,66 @@ define void @lshr_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #46]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #44]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #94]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #42]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #92]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #58]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #40]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #38]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #54]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #36]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #86]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #34]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #84]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #50]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #82]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #78]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #74]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #70]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #68]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #66]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -1488,10 +1293,8 @@ define <2 x i32> @lshr_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -1514,18 +1317,14 @@ define <4 x i32> @lshr_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -1556,34 +1355,26 @@ define void @lshr_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsr w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -1611,8 +1402,7 @@ define <1 x i64> @lshr_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    lsr x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = lshr <1 x i64> %op1, %op2
@@ -1705,8 +1495,6 @@ define <2 x i8> @shl_v2i8(<2 x i8> %op1, <2 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #20]
 ; NONEON-NOSVE-NEXT:    ldr w10, [sp, #12]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w9
 ; NONEON-NOSVE-NEXT:    ldr w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
@@ -1734,13 +1522,9 @@ define <4 x i8> @shl_v4i8(<4 x i8> %op1, <4 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    ldrb w11, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldrh w12, [sp, #14]
 ; NONEON-NOSVE-NEXT:    ldrb w10, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x11 killed $w11
-; NONEON-NOSVE-NEXT:    // kill: def $x10 killed $w10
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #18]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
 ; NONEON-NOSVE-NEXT:    lsl w11, w12, w11
-; NONEON-NOSVE-NEXT:    // kill: def $x9 killed $w9
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    strh w11, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrh w11, [sp, #12]
 ; NONEON-NOSVE-NEXT:    lsl w10, w11, w10
@@ -1772,42 +1556,34 @@ define <8 x i8> @shl_v8i8(<8 x i8> %op1, <8 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #15]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #29]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #27]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #25]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -1830,82 +1606,66 @@ define <16 x i8> @shl_v16i8(<16 x i8> %op1, <16 x i8> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #15]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #47]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #29]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #45]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #44]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #27]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #43]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #42]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #25]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #41]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #7]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #39]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #5]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #38]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #37]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #3]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #36]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #35]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #1]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #34]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #33]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -1936,162 +1696,130 @@ define void @shl_v32i8(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #63]
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #47]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #46]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #95]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #62]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #45]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #94]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #61]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #44]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #93]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #43]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #92]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #59]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #42]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #91]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #58]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #41]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #57]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #40]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #89]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #39]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #55]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #38]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #87]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #54]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #37]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #86]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #53]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #36]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #85]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #35]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #84]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #51]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #34]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #83]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #50]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #33]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #82]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #49]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #81]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #15]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #31]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #79]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #13]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #78]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #29]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #77]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #11]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #27]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #75]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #9]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #74]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #25]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #73]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #7]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #23]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #71]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #5]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #70]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #21]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #69]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #3]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #68]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #19]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #67]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp, #1]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #66]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #17]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrb w9, [sp]
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #65]
 ; NONEON-NOSVE-NEXT:    ldrb w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -2119,22 +1847,18 @@ define <4 x i16> @shl_v4i16(<4 x i16> %op1, <4 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #14]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #28]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #26]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -2157,42 +1881,34 @@ define <8 x i16> @shl_v8i16(<8 x i16> %op1, <8 x i16> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #30]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #14]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #44]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #42]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #38]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #36]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #34]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -2223,82 +1939,66 @@ define void @shl_v16i16(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #62]
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #46]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #44]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #94]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #42]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #92]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #58]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #40]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #90]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #38]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #54]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #36]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #86]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #34]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #84]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #50]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #32]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #82]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #14]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #30]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #12]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #78]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #10]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #76]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #26]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #8]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #74]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #6]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #22]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #4]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #70]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp, #2]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #68]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #18]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldrh w9, [sp]
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #66]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    strh w8, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -2326,10 +2026,8 @@ define <2 x i32> @shl_v2i32(<2 x i32> %op1, <2 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    stp d0, d1, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #24]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
@@ -2352,18 +2050,14 @@ define <4 x i32> @shl_v4i32(<4 x i32> %op1, <4 x i32> %op2) {
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 48
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
@@ -2394,34 +2088,26 @@ define void @shl_v8i32(ptr %a, ptr %b) {
 ; NONEON-NOSVE-NEXT:    stp q1, q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #60]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #56]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #32]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #88]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #52]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #48]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp, #8]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #80]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #28]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #24]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    ldp w9, w10, [sp]
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #72]
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #20]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w11, w10, w8
 ; NONEON-NOSVE-NEXT:    ldr w8, [sp, #16]
-; NONEON-NOSVE-NEXT:    // kill: def $x8 killed $w8
 ; NONEON-NOSVE-NEXT:    lsl w8, w9, w8
 ; NONEON-NOSVE-NEXT:    stp w8, w11, [sp, #64]
 ; NONEON-NOSVE-NEXT:    ldp q0, q1, [sp, #64]
@@ -2449,8 +2135,7 @@ define <1 x i64> @shl_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    lsl x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = shl <1 x i64> %op1, %op2

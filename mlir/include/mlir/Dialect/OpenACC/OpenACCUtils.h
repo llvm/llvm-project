@@ -13,6 +13,7 @@
 #include "mlir/IR/Remarks.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include <functional>
 
 namespace mlir {
 class DominanceInfo;
@@ -67,6 +68,23 @@ mlir::Value getBaseEntity(mlir::Value val);
 bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
                       mlir::Operation **definingOpPtr = nullptr);
 
+/// Check if a value represents device data.
+/// This checks if the value represents device data via the
+/// MappableType, PointerLikeType, and GlobalVariableOpInterface interfaces.
+/// \param val The value to check
+/// \return true if the value is device data, false otherwise
+bool isDeviceValue(mlir::Value val);
+
+/// Check if a value use is valid in an OpenACC region.
+/// This is true if:
+/// - The value is produced by an ACC data entry operation
+/// - The value is device data
+/// - The value is only used by private clauses in the region
+/// \param val The value to check
+/// \param region The OpenACC region
+/// \return true if the value use is valid, false otherwise
+bool isValidValueUse(mlir::Value val, mlir::Region &region);
+
 /// Collects all data clauses that dominate the compute construct.
 /// This includes data clauses from:
 /// - The compute construct itself
@@ -83,6 +101,20 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
                          mlir::DominanceInfo &domInfo,
                          mlir::PostDominanceInfo &postDomInfo);
 
+/// Emit an OpenACC remark with lazy message generation.
+///
+/// The messageFn is only invoked if remarks are enabled, allowing callers
+/// to avoid constructing expensive messages when remarks are disabled.
+///
+/// \param op The operation to emit the remark for.
+/// \param messageFn A callable that returns the remark message.
+/// \param category Optional category for the remark. Defaults to "openacc".
+/// \return An in-flight remark object that can be used to append
+///         additional information to the remark.
+remark::detail::InFlightRemark
+emitRemark(mlir::Operation *op, const std::function<std::string()> &messageFn,
+           llvm::StringRef category = "openacc");
+
 /// Emit an OpenACC remark for the given operation with the given message.
 ///
 /// \param op The operation to emit the remark for.
@@ -90,9 +122,13 @@ getDominatingDataClauses(mlir::Operation *computeConstructOp,
 /// \param category Optional category for the remark. Defaults to "openacc".
 /// \return An in-flight remark object that can be used to append
 ///         additional information to the remark.
-remark::detail::InFlightRemark emitRemark(mlir::Operation *op,
-                                          const llvm::Twine &message,
-                                          llvm::StringRef category = "openacc");
+inline remark::detail::InFlightRemark
+emitRemark(mlir::Operation *op, const llvm::Twine &message,
+           llvm::StringRef category = "openacc") {
+  return emitRemark(
+      op, std::function<std::string()>([msg = message.str()]() { return msg; }),
+      category);
+}
 
 } // namespace acc
 } // namespace mlir

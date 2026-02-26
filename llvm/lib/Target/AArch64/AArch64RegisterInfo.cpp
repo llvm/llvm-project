@@ -1385,9 +1385,8 @@ bool AArch64RegisterInfo::shouldCoalesce(
   MachineFunction &MF = *MI->getMF();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  // Coalescing of SUBREG_TO_REG is broken when using subreg liveness tracking,
-  // we must disable it for now.
-  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled())
+  if (MI->isSubregToReg() && MRI.subRegLivenessEnabled() &&
+      !MF.getSubtarget<AArch64Subtarget>().enableSRLTSubregToRegMitigation())
     return false;
 
   if (MI->isCopy() &&
