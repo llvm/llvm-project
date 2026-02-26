@@ -532,6 +532,8 @@ static mlir::Value genInlinedStructureCtorLitImpl(
   for (const auto &[sym, expr] : ctor.values()) {
     const Fortran::semantics::DerivedTypeSpec *componentParentType =
         sym->owner().derivedTypeSpec();
+    if (!componentParentType)
+      componentParentType = &ctor.derivedTypeSpec();
     assert(componentParentType && "failed to retrieve component parent type");
     if (!res) {
       mlir::Type parentType = converter.genType(*componentParentType);
