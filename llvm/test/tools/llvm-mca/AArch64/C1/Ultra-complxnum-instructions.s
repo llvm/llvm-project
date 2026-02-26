@@ -19,39 +19,39 @@
 # CHECK-NEXT: [0.0] - C1UUnitB
 # CHECK-NEXT: [0.1] - C1UUnitB
 # CHECK-NEXT: [0.2] - C1UUnitB
-# CHECK-NEXT: [1]   - C1UUnitC1U
-# CHECK-NEXT: [2]   - C1UUnitCME
-# CHECK-NEXT: [3.0] - C1UUnitD
-# CHECK-NEXT: [3.1] - C1UUnitD
-# CHECK-NEXT: [4.0] - C1UUnitFlg
-# CHECK-NEXT: [4.1] - C1UUnitFlg
-# CHECK-NEXT: [4.2] - C1UUnitFlg
-# CHECK-NEXT: [4.3] - C1UUnitFlg
-# CHECK-NEXT: [5.0] - C1UUnitL23
-# CHECK-NEXT: [5.1] - C1UUnitL23
-# CHECK-NEXT: [6]   - C1UUnitLS0
-# CHECK-NEXT: [7]   - C1UUnitLS1
-# CHECK-NEXT: [8]   - C1UUnitM0
-# CHECK-NEXT: [9]   - C1UUnitM1
-# CHECK-NEXT: [10]  - C1UUnitS0
-# CHECK-NEXT: [11]  - C1UUnitS1
-# CHECK-NEXT: [12]  - C1UUnitS2
-# CHECK-NEXT: [13]  - C1UUnitS3
-# CHECK-NEXT: [14]  - C1UUnitS4
-# CHECK-NEXT: [15]  - C1UUnitS5
-# CHECK-NEXT: [16]  - C1UUnitV0
-# CHECK-NEXT: [17]  - C1UUnitV1
-# CHECK-NEXT: [18]  - C1UUnitV2
+# CHECK-NEXT: [1]   - C1UUnitCME
+# CHECK-NEXT: [2.0] - C1UUnitD
+# CHECK-NEXT: [2.1] - C1UUnitD
+# CHECK-NEXT: [3.0] - C1UUnitFlg
+# CHECK-NEXT: [3.1] - C1UUnitFlg
+# CHECK-NEXT: [3.2] - C1UUnitFlg
+# CHECK-NEXT: [3.3] - C1UUnitFlg
+# CHECK-NEXT: [4.0] - C1UUnitL23
+# CHECK-NEXT: [4.1] - C1UUnitL23
+# CHECK-NEXT: [5]   - C1UUnitLS0
+# CHECK-NEXT: [6]   - C1UUnitLS1
+# CHECK-NEXT: [7]   - C1UUnitM0
+# CHECK-NEXT: [8]   - C1UUnitM1
+# CHECK-NEXT: [9]   - C1UUnitS0
+# CHECK-NEXT: [10]  - C1UUnitS1
+# CHECK-NEXT: [11]  - C1UUnitS2
+# CHECK-NEXT: [12]  - C1UUnitS3
+# CHECK-NEXT: [13]  - C1UUnitS4
+# CHECK-NEXT: [14]  - C1UUnitS5
+# CHECK-NEXT: [15]  - C1UUnitV0
+# CHECK-NEXT: [16]  - C1UUnitV1
+# CHECK-NEXT: [17]  - C1UUnitV2
+# CHECK-NEXT: [18]  - C1UUnitV3
 # CHECK-NEXT: [19]  - C1UUnitV4
 # CHECK-NEXT: [20]  - C1UUnitV5
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [4.2]  [4.3]  [5.0]  [5.1]  [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]
-# CHECK-NEXT:  -      -      -     0.67    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67   0.67   0.67
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.67   0.67   0.67   0.67   0.67   0.67
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2]    [3.0]  [3.1]  [4.0]  [4.1]  [4.2]  [4.3]  [5.0]  [5.1]  [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   Instructions:
-# CHECK-NEXT:  -      -      -     0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   fcadd	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  -      -      -     0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   fcadd	v0.4s, v0.4s, v0.4s, #270
-# CHECK-NEXT:  -      -      -     0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   fcmla	v0.2s, v0.2s, v0.2s, #90
-# CHECK-NEXT:  -      -      -     0.17    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   fcmla	v0.4s, v0.4s, v0.s[1], #0
+# CHECK-NEXT: [0.0]  [0.1]  [0.2]  [1]    [2.0]  [2.1]  [3.0]  [3.1]  [3.2]  [3.3]  [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   [16]   [17]   [18]   [19]   [20]   Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fcadd	v0.2s, v0.2s, v0.2s, #90
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fcadd	v0.4s, v0.4s, v0.4s, #270
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fcmla	v0.2s, v0.2s, v0.2s, #90
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17   fcmla	v0.4s, v0.4s, v0.s[1], #0
