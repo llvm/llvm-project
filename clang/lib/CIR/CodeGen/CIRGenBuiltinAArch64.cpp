@@ -202,6 +202,9 @@ mlir::Value CIRGenFunction::emitSVEPredicateCast(mlir::Value pred,
   return call;
 }
 
+//===----------------------------------------------------------------------===//
+//  SVE helpers
+//===----------------------------------------------------------------------===//
 // Get the minimum number of elements in an SVE vector for the given element
 // type. The actual number of elements in the vector would be an integer (power
 // of two) multiple of this value.
@@ -240,6 +243,19 @@ static unsigned getSVEMinEltCount(clang::SVETypeFlags::EltType sveType) {
   }
 }
 
+// TODO: Share with OGCG
+constexpr unsigned sveBitsPerBlock = 128;
+
+static cir::VectorType getSVEVectorForElementType(CIRGenModule &cgm,
+                                                  mlir::Type eltTy) {
+  unsigned numElts =
+      sveBitsPerBlock / cgm.getDataLayout().getTypeSizeInBits(eltTy);
+  return cir::VectorType::get(eltTy, numElts, /*is_scalable=*/true);
+}
+
+//===----------------------------------------------------------------------===//
+//  NEON helpers
+//===----------------------------------------------------------------------===//
 /// Return true if BuiltinID is an overloaded Neon intrinsic with an extra
 /// argument that specifies the vector type. The additional argument is meant
 /// for Sema checking (see `CheckNeonBuiltinFunctionCall`) and this function
@@ -277,6 +293,8 @@ static bool hasExtraNeonArgument(unsigned builtinID) {
 std::optional<mlir::Value>
 CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
                                           const CallExpr *expr) {
+  mlir::Type ty = convertType(expr->getType());
+
   if (builtinID >= SVE::BI__builtin_sve_reinterpret_s8_s8 &&
       builtinID <= SVE::BI__builtin_sve_reinterpret_f64_f64_x4) {
     cgm.errorNYI(expr->getSourceRange(),
@@ -327,9 +345,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
     }
 
     if (typeFlags.getMergeType() == SVETypeFlags::MergeAnyExp)
-      cgm.errorNYI(expr->getSourceRange(),
-                   std::string("unimplemented AArch64 builtin call: ") +
-                       getContext().BuiltinInfo.getName(builtinID));
+      ops.insert(ops.begin(),
+                 builder.getConstant(loc, cir::UndefAttr::get(ty)));
 
     // Some ACLE builtins leave out the argument to specify the predicate
     // pattern, which is expected to be expanded to an SV_ALL pattern.
@@ -352,9 +369,10 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
     // Splat scalar operand to vector (intrinsics with _n infix)
     if (typeFlags.hasSplatOperand()) {
-      cgm.errorNYI(expr->getSourceRange(),
-                   std::string("unimplemented AArch64 builtin call: ") +
-                       getContext().BuiltinInfo.getName(builtinID));
+      unsigned opNo = typeFlags.getSplatOperand();
+      ops[opNo] = cir::VecSplatOp::create(
+          builder, loc, getSVEVectorForElementType(cgm, ops[opNo].getType()),
+          ops[opNo]);
     }
 
     if (typeFlags.isReverseCompare())

@@ -11337,11 +11337,12 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn(ptr inreg %sbase, i32 %voff
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[0:1], v6, off
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, -1, v0
-; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
 ; GFX950-GISEL-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 v6, v[2:3], off
@@ -11546,11 +11547,12 @@ define amdgpu_ps <2 x float> @flat_dec_saddr_i64_rtn_neg128(ptr inreg %sbase, i3
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[0:1], v6, off
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v2, vcc, -1, v0
-; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v3, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
 ; GFX950-GISEL-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v2, v2, v4, vcc
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v3, v3, v5, vcc
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 v6, v[2:3], off
@@ -11717,11 +11719,12 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn(ptr inreg %sbase, i32 %voffset, 
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[0:1], v2, off
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v3, vcc, -1, v0
-; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v6, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
 ; GFX950-GISEL-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 v2, v[0:1], off
@@ -11895,11 +11898,12 @@ define amdgpu_ps void @flat_dec_saddr_i64_nortn_neg128(ptr inreg %sbase, i32 %vo
 ; GFX950-GISEL-NEXT:    scratch_load_dwordx2 v[0:1], v2, off
 ; GFX950-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX950-GISEL-NEXT:    v_add_co_u32_e32 v3, vcc, -1, v0
-; GFX950-GISEL-NEXT:    s_nop 1
+; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_addc_co_u32_e32 v6, vcc, -1, v1, vcc
 ; GFX950-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc, 0, v[0:1]
-; GFX950-GISEL-NEXT:    v_cmp_gt_u64_e64 s[0:1], v[0:1], v[4:5]
 ; GFX950-GISEL-NEXT:    s_or_b64 vcc, vcc, s[0:1]
+; GFX950-GISEL-NEXT:    s_nop 0
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
 ; GFX950-GISEL-NEXT:    v_cndmask_b32_e32 v1, v6, v5, vcc
 ; GFX950-GISEL-NEXT:    scratch_store_dwordx2 v2, v[0:1], off

@@ -49,6 +49,7 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/YAMLParser.h"
@@ -5500,6 +5501,20 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back(Args.MakeArgString(std::to_string(FunctionAlignment)));
   }
 
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fpreferred_function_alignment_EQ)) {
+    unsigned Value = 0;
+    if (StringRef(A->getValue()).getAsInteger(10, Value) || Value > 65536)
+      TC.getDriver().Diag(diag::err_drv_invalid_int_value)
+          << A->getAsString(Args) << A->getValue();
+    else if (!llvm::isPowerOf2_32(Value))
+      TC.getDriver().Diag(diag::err_drv_alignment_not_power_of_two)
+          << A->getAsString(Args) << A->getValue();
+
+    CmdArgs.push_back(Args.MakeArgString("-fpreferred-function-alignment=" +
+                                         Twine(std::min(Value, 65536u))));
+  }
+
   // We support -falign-loops=N where N is a power of 2. GCC supports more
   // forms.
   if (const Arg *A = Args.getLastArg(options::OPT_falign_loops_EQ)) {
@@ -8581,16 +8596,22 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
   else if (Args.hasArg(options::OPT__SLASH_d2epilogunwind))
     CmdArgs.push_back("-fwinx64-eh-unwindv2=best-effort");
 
+  // Handle the various /guard options. We don't immediately push back clang
+  // args since there are /d2 args that can modify the behavior of /guard:cf.
+  bool HasCFGuard = false;
+  bool HasCFGuardNoChecks = false;
   for (const Arg *A : Args.filtered(options::OPT__SLASH_guard)) {
     StringRef GuardArgs = A->getValue();
     // The only valid options are "cf", "cf,nochecks", "cf-", "ehcont" and
     // "ehcont-".
     if (GuardArgs.equals_insensitive("cf")) {
       // Emit CFG instrumentation and the table of address-taken functions.
-      CmdArgs.push_back("-cfguard");
+      HasCFGuard = true;
+      HasCFGuardNoChecks = false;
     } else if (GuardArgs.equals_insensitive("cf,nochecks")) {
       // Emit only the table of address-taken functions.
-      CmdArgs.push_back("-cfguard-no-checks");
+      HasCFGuard = false;
+      HasCFGuardNoChecks = true;
     } else if (GuardArgs.equals_insensitive("ehcont")) {
       // Emit EH continuation table.
       CmdArgs.push_back("-ehcontguard");
@@ -8602,6 +8623,20 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     }
     A->claim();
   }
+
+  // /d2guardnochecks downgrades /guard:cf to /guard:cf,nochecks (table only).
+  // If CFG is not enabled, it is a no-op.
+  if (Args.hasArg(options::OPT__SLASH_d2guardnochecks)) {
+    if (HasCFGuard) {
+      HasCFGuard = false;
+      HasCFGuardNoChecks = true;
+    }
+  }
+
+  if (HasCFGuard)
+    CmdArgs.push_back("-cfguard");
+  else if (HasCFGuardNoChecks)
+    CmdArgs.push_back("-cfguard-no-checks");
 
   for (const auto &FuncOverride :
        Args.getAllArgValues(options::OPT__SLASH_funcoverride)) {
