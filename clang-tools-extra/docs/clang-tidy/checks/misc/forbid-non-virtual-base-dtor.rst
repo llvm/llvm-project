@@ -29,24 +29,21 @@ The following patterns are safe and will **not** trigger a warning:
 
 .. code-block:: c++
 
-  // safe: base has a virtual destructor
   class Base1 {
   public:
       virtual ~Base1() {}
   };
   class Derived1 : public Base1 { int data; };
 
-  // safe: base has a protected destructor (prevents delete-through-base)
+destructor (prevents delete-through-base)
   class Base2 {
   protected:
       ~Base2() {}
   };
   class Derived2 : public Base2 { int data; };
 
-  // safe: derived adds no data members
   class Base3 {};
   class Derived3 : public Base3 {};  // OK
 
-  // safe: private/protected inheritance (base pointer not accessible)
   class Base4 {};
   class Derived4 : private Base4 { int data; };
