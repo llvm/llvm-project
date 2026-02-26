@@ -36,7 +36,12 @@
   }
 
 // TODO: support more targets
-#if defined(__AVX__)
+#if defined(__HVX__)
+#  if __HVX_LENGTH__ != 128
+#    error "Only 128-byte HVX vectors are supported by <experimental/simd>"
+#  endif
+#  define _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES 128
+#elif defined(__AVX__)
 #  define _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES 32
 #else
 #  define _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES 16
