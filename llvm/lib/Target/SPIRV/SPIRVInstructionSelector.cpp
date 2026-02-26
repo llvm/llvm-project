@@ -307,8 +307,7 @@ private:
   bool selectBranch(MachineInstr &I) const;
   bool selectBranchCond(MachineInstr &I) const;
 
-  bool selectPhi(Register ResVReg, SPIRVTypeInst ResType,
-                 MachineInstr &I) const;
+  bool selectPhi(Register ResVReg, MachineInstr &I) const;
 
   bool selectExtInst(Register ResVReg, SPIRVTypeInst RestType, MachineInstr &I,
                      GL::GLSLExtInst GLInst) const;
@@ -947,7 +946,7 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return selectBranchCond(I);
 
   case TargetOpcode::G_PHI:
-    return selectPhi(ResVReg, ResType, I);
+    return selectPhi(ResVReg, I);
 
   case TargetOpcode::G_FPTOSI:
     return selectUnOp(ResVReg, ResType, I, SPIRV::OpConvertFToS);
@@ -5235,19 +5234,16 @@ bool SPIRVInstructionSelector::selectBranchCond(MachineInstr &I) const {
 }
 
 bool SPIRVInstructionSelector::selectPhi(Register ResVReg,
-                                         SPIRVTypeInst ResType,
                                          MachineInstr &I) const {
-  auto MIB = BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpPhi))
-                 .addDef(ResVReg)
-                 .addUse(GR.getSPIRVTypeID(ResType));
+  auto MIB =
+      BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::PHI))
+          .addDef(ResVReg);
   const unsigned NumOps = I.getNumOperands();
   for (unsigned i = 1; i < NumOps; i += 2) {
     MIB.addUse(I.getOperand(i + 0).getReg());
     MIB.addMBB(I.getOperand(i + 1).getMBB());
   }
   MIB.constrainAllUses(TII, TRI, RBI);
-  MIB->setDesc(TII.get(TargetOpcode::PHI));
-  MIB->removeOperand(1);
   return true;
 }
 
