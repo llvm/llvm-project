@@ -245,6 +245,9 @@ void arith::TruncIOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
                                         SetIntRangeFn setResultRange) {
   unsigned destWidth =
       ConstantIntRanges::getStorageBitwidth(getResult().getType());
+  // i0 has no bits; APInt arithmetic is undefined for width 0, skip it.
+  if (destWidth == 0)
+    return;
   setResultRange(getResult(), truncRange(argRanges[0], destWidth));
 }
 

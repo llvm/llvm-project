@@ -417,3 +417,12 @@ func.func @narrow_loop_bounds() {
   }
   return
 }
+
+// Verify that truncating to i0 does not crash (issue #177822).
+// The pass cannot narrow i0 types; the trunci should be preserved.
+// CHECK-LABEL: @trunci_to_i0_no_crash
+// CHECK: arith.trunci %arg0 : i32 to i0
+func.func @trunci_to_i0_no_crash(%arg0: i32) -> i0 {
+  %0 = arith.trunci %arg0 : i32 to i0
+  return %0 : i0
+}
