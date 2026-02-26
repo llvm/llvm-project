@@ -2582,7 +2582,7 @@ bool LoopAccessInfo::analyzeLoop(AAResults *AA, const LoopInfo *LI,
         auto *Ld = dyn_cast<LoadInst>(&I);
         if (!Ld) {
           recordAnalysis("CantVectorizeInstruction", &I)
-            << "instruction cannot be vectorized";
+              << "instruction cannot be vectorized";
           HasComplexMemInst = true;
           continue;
         }
