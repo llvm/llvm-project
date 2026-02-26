@@ -405,27 +405,26 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
-  if (DriverArgs.hasArg(options::OPT_nostdlibinc))
-    return;
+  if (!DriverArgs.hasArg(options::OPT_nostdlibinc)) {
+    const Driver &D = getDriver();
 
-  const Driver &D = getDriver();
+    if (std::optional<std::string> Path = getStdlibIncludePath())
+      addSystemInclude(DriverArgs, CC1Args, *Path);
 
-  if (std::optional<std::string> Path = getStdlibIncludePath())
-    addSystemInclude(DriverArgs, CC1Args, *Path);
-
-  const SmallString<128> SysRootDir(computeSysRoot());
-  if (!SysRootDir.empty()) {
-    for (const Multilib &M : getOrderedMultilibs()) {
+    const SmallString<128> SysRootDir(computeSysRoot());
+    if (!SysRootDir.empty()) {
+      for (const Multilib &M : getOrderedMultilibs()) {
+        SmallString<128> Dir(SysRootDir);
+        llvm::sys::path::append(Dir, M.includeSuffix());
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
       SmallString<128> Dir(SysRootDir);
-      llvm::sys::path::append(Dir, M.includeSuffix());
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
-    }
-    SmallString<128> Dir(SysRootDir);
-    llvm::sys::path::append(Dir, getTripleString());
-    if (D.getVFS().exists(Dir)) {
-      llvm::sys::path::append(Dir, "include");
-      addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      llvm::sys::path::append(Dir, getTripleString());
+      if (D.getVFS().exists(Dir)) {
+        llvm::sys::path::append(Dir, "include");
+        addSystemInclude(DriverArgs, CC1Args, Dir.str());
+      }
     }
   }
 
