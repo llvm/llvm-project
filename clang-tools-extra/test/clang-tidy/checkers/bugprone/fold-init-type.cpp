@@ -275,6 +275,12 @@ int accumulatePositiveExplicitFunctor3() {
   // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'float' into type 'int'
 }
 
+int accumulatePositiveExplicitFunctor4() {
+  double a[1] = {0.5};
+  return std::accumulate(a, a + 1, 0.0f, std::plus<double>());
+  // CHECK-MESSAGES: [[@LINE-1]]:10: warning: folding type 'double' into type 'float'
+}
+
 // Negatives.
 
 int negative1() {
@@ -317,6 +323,12 @@ int negativeOp2() {
   float a[1] = {0.5f};
   // This is OK because double is bigger than float.
   return std::reduce(a, a + 1, 0.0, std::plus<>());
+}
+
+int negativeOp3() {
+  float a[1] = {0.5f};
+  // This is OK because types are compatible even with explicit functor.
+  return std::accumulate(a, a + 1, 0.0, std::plus<double>());
 }
 
 int negativeLambda1() {
