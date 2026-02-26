@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++98 %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++11 %s
 // RUN: %clang_cc1 -flax-vector-conversions=all -triple x86_64-apple-darwin10 -fsyntax-only -verify -std=c++20 %s
@@ -476,6 +477,10 @@ struct PR45298Consumer {
 
   PR45298<T> s;
 };
+
+constexpr int PR180563(int __attribute__((vector_size(8))) v) {
+  return v[~0UL];
+}
 #endif // __cplusplus >= 201103L
 
 void use() {
