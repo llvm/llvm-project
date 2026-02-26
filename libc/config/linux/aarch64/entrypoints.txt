@@ -426,6 +426,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.asin
     libc.src.math.asinf
     libc.src.math.asinhf
+    libc.src.math.asinpif
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan
@@ -1178,7 +1179,16 @@ if(LLVM_LIBC_FULL_BUILD)
   )
 endif()
 
+set(TARGET_LIBMVEC_ENTRYPOINTS)
+
+if(LIBC_COMPILER_HAS_EXT_VECTOR_TYPE)
+  list(APPEND TARGET_LIBMVEC_ENTRYPOINTS
+    libc.src.mathvec.expf
+  )
+endif()
+
 set(TARGET_LLVMLIBC_ENTRYPOINTS
   ${TARGET_LIBC_ENTRYPOINTS}
   ${TARGET_LIBM_ENTRYPOINTS}
+  ${TARGET_LIBMVEC_ENTRYPOINTS}
 )

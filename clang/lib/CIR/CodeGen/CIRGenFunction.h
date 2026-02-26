@@ -186,6 +186,21 @@ public:
   /// Sanitizers enabled for this function.
   clang::SanitizerSet sanOpts;
 
+  class CIRGenFPOptionsRAII {
+  public:
+    CIRGenFPOptionsRAII(CIRGenFunction &cgf, FPOptions FPFeatures);
+    CIRGenFPOptionsRAII(CIRGenFunction &cgf, const clang::Expr *E);
+    ~CIRGenFPOptionsRAII();
+
+  private:
+    void ConstructorHelper(clang::FPOptions FPFeatures);
+    CIRGenFunction &cgf;
+    clang::FPOptions oldFPFeatures;
+    llvm::fp::ExceptionBehavior oldExcept;
+    llvm::RoundingMode oldRounding;
+  };
+  clang::FPOptions curFPFeatures;
+
   /// The symbol table maps a variable name to a value in the current scope.
   /// Entering a function creates a new scope, and the function arguments are
   /// added to the mapping. When the processing of a function is terminated,
@@ -1039,13 +1054,10 @@ public:
     /// until this object is destroyed.
     void forceCleanup() {
       assert(performCleanup && "Already forced cleanup");
-      {
-        mlir::OpBuilder::InsertionGuard guard(cgf.getBuilder());
-        cgf.didCallStackSave = oldDidCallStackSave;
-        cgf.popCleanupBlocks(cleanupStackDepth);
-        performCleanup = false;
-        cgf.currentCleanupStackDepth = oldCleanupStackDepth;
-      }
+      cgf.didCallStackSave = oldDidCallStackSave;
+      cgf.popCleanupBlocks(cleanupStackDepth);
+      performCleanup = false;
+      cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
   };
 
@@ -1379,6 +1391,8 @@ public:
       const Expr *memOrder, bool isStore, bool isLoad, bool isFence,
       llvm::function_ref<void(cir::MemOrder)> emitAtomicOp);
 
+  mlir::LogicalResult emitAttributedStmt(const AttributedStmt &s);
+
   AutoVarEmission emitAutoVarAlloca(const clang::VarDecl &d,
                                     mlir::OpBuilder::InsertPoint ip = {});
 
@@ -1574,6 +1588,9 @@ public:
   RValue emitCXXOperatorMemberCallExpr(const CXXOperatorCallExpr *e,
                                        const CXXMethodDecl *md,
                                        ReturnValueSlot returnValue);
+
+  RValue emitCUDAKernelCallExpr(const CUDAKernelCallExpr *expr,
+                                ReturnValueSlot returnValue);
 
   RValue emitCXXPseudoDestructorExpr(const CXXPseudoDestructorExpr *expr);
 

@@ -327,6 +327,14 @@ InstructionCost HexagonTTIImpl::getVectorInstrCost(
   return 1;
 }
 
+bool HexagonTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_add:
+    return false;
+  }
+  return true;
+}
+
 bool HexagonTTIImpl::isLegalMaskedStore(Type *DataType, Align /*Alignment*/,
                                         unsigned /*AddressSpace*/,
                                         TTI::MaskKind /*MaskKind*/) const {

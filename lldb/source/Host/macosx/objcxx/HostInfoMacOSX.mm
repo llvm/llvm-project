@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/RWMutex.h"
 #include "llvm/Support/raw_ostream.h"
 
 // C++ Includes
@@ -686,7 +687,7 @@ namespace {
 class SharedCacheInfo {
 public:
   SharedCacheImageInfo GetByFilename(UUID sc_uuid, ConstString filename) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
     if (!m_filename_map.contains(sc_uuid))
@@ -698,7 +699,7 @@ public:
   }
 
   SharedCacheImageInfo GetByUUID(UUID sc_uuid, UUID file_uuid) {
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    llvm::sys::ScopedReader guard(m_mutex);
     if (!sc_uuid)
       sc_uuid = m_host_uuid;
     if (!m_uuid_map.contains(sc_uuid))
@@ -729,7 +730,7 @@ private:
 
   UUID m_host_uuid;
 
-  std::recursive_mutex m_mutex;
+  llvm::sys::RWMutex m_mutex;
 
   // macOS 26.4 and newer
   void (*m_dyld_image_retain_4HWTrace)(void *image);
@@ -869,7 +870,7 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
 // create a new entry in m_caches.
 bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
                                                  std::string filepath) {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  llvm::sys::ScopedWriter guard(m_mutex);
   if (!m_dyld_image_retain_4HWTrace || !m_dyld_image_release_4HWTrace ||
       !m_dyld_image_segment_data_4HWTrace)
     return false;
@@ -939,7 +940,6 @@ bool SharedCacheInfo::CreateSharedCacheImageList(UUID sc_uuid,
 // Get the filename and uuid of lldb's own shared cache, scan
 // the files in it using the macOS 26.4 and newer libdyld SPI.
 bool SharedCacheInfo::CreateHostSharedCacheImageList() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   std::string host_shared_cache_file = dyld_shared_cache_file_path();
   __block UUID host_sc_uuid;
   dyld_shared_cache_for_file(host_shared_cache_file.c_str(),
@@ -959,7 +959,7 @@ bool SharedCacheInfo::CreateHostSharedCacheImageList() {
 // libdyld SPI present on macOS 12 and newer, when building against
 // the internal SDK, and add an entry to the m_caches map.
 bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  llvm::sys::ScopedWriter guard(m_mutex);
 #if defined(SDK_HAS_NEW_DYLD_INTROSPECTION_SPIS)
   dyld_process_t dyld_process = dyld_process_create_for_current_task();
   if (!dyld_process)
@@ -1026,7 +1026,7 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
 // libdyld SPI available on macOS 10.13 or newer, add an entry to
 // m_caches.
 void SharedCacheInfo::CreateSharedCacheInfoLLDBsVirtualMemory() {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
+  llvm::sys::ScopedWriter guard(m_mutex);
   size_t shared_cache_size;
   uint8_t *shared_cache_start =
       _dyld_get_shared_cache_range(&shared_cache_size);
