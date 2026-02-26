@@ -581,13 +581,17 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCANDN:
     case RISCV::PseudoCCORN:
     case RISCV::PseudoCCXNOR:
-    case RISCV::PHI: {
+    case RISCV::PHI:
+    case RISCV::MERGE:
+    case RISCV::MVM:
+    case RISCV::MVMN: {
       // If all incoming values are sign-extended, the output of AND, OR, XOR,
-      // MIN, MAX, or PHI is also sign-extended.
+      // MIN, MAX, PHI, or bitwise merge instructions is also sign-extended.
 
       // The input registers for PHI are operand 1, 3, ...
       // The input registers for PseudoCCMOVGPR(NoX0) are 4 and 5.
       // The input registers for PseudoCCAND/OR/XOR are 4, 5, and 6.
+      // The input registers for MERGE/MVM/MVMN are 1, 2, and 3.
       // The input registers for others are operand 1 and 2.
       unsigned B = 1, E = 3, D = 1;
       switch (MI->getOpcode()) {
@@ -609,7 +613,13 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
         B = 4;
         E = 7;
         break;
-       }
+      case RISCV::MERGE:
+      case RISCV::MVM:
+      case RISCV::MVMN:
+        B = 1;
+        E = 4;
+        break;
+      }
 
       for (unsigned I = B; I != E; I += D) {
         if (!MI->getOperand(I).isReg())

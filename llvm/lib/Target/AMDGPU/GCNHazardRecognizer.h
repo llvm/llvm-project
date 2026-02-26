@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include <list>
@@ -49,6 +50,10 @@ private:
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const TargetSchedModel &TSchedModel;
+
+  // Loop info for V_NOP hoisting, passed from the pass manager.
+  MachineLoopInfo *MLI = nullptr;
+
   bool RunLdsBranchVmemWARHazardFixup;
 
   /// RegUnits of uses in the current soft memory clause.
@@ -98,9 +103,10 @@ private:
   int checkReadM0Hazards(MachineInstr *SMovRel);
   int checkNSAtoVMEMHazard(MachineInstr *MI);
   int checkFPAtomicToDenormModeHazard(MachineInstr *MI);
-  // Emit V_NOP instructions. \p WaitStatesNeeded is the number of V_NOPs we
-  // need to insert, negative means not needed.
-  bool emitVNops(MachineInstr *MI, int WaitStatesNeeded);
+  // Emit \p WaitStatesNeeded V_NOP instructions before \p InsertPt.
+  // If IsHoisting is true, uses empty DebugLoc for compiler-inserted NOPs.
+  void emitVNops(MachineBasicBlock &MBB, MachineBasicBlock::iterator InsertPt,
+                 int WaitStatesNeeded, bool IsHoisting = false);
   void fixHazards(MachineInstr *MI);
   bool fixVcmpxPermlaneHazards(MachineInstr *MI);
   bool fixVMEMtoScalarWriteHazards(MachineInstr *MI);
@@ -114,6 +120,16 @@ private:
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
   bool fixWMMAHazards(MachineInstr *MI);
   int checkWMMACoexecutionHazards(MachineInstr *MI);
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
+  bool tryHoistWMMAVnopsFromLoop(MachineInstr *MI, int WaitStatesNeeded);
+  bool hasWMMAHazardInLoop(MachineLoop *L, MachineInstr *MI,
+                           bool IncludeSubloops = true);
+  bool hasWMMAToWMMARegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool hasWMMAToVALURegOverlap(const MachineInstr &WMMA,
+                               const MachineInstr &MI) const;
+  bool isCoexecutionHazardFor(const MachineInstr &I,
+                              const MachineInstr &MI) const;
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);
@@ -146,7 +162,8 @@ private:
   int checkPermlaneHazards(MachineInstr *MI);
 
 public:
-  GCNHazardRecognizer(const MachineFunction &MF);
+  GCNHazardRecognizer(const MachineFunction &MF,
+                      MachineLoopInfo *MLI = nullptr);
   // We can only issue one instruction per cycle.
   bool atIssueLimit() const override { return true; }
   void EmitInstruction(SUnit *SU) override;
