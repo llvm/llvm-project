@@ -153,8 +153,8 @@ attention, are useful, and generally don't interfere with other activities.
 
 We've only made one formally approved policy exception, but perhaps this list
 will grow. We're aware of the [@llvmgnsyncbot][llvmgnsyncbot] tool, but the
-project has not made a decision to approve this tool, therefore doesn't appear
-in the list above.
+project has not made a decision to approve this tool, therefore it doesn't
+appear in the list above.
 
 [bazel-rfc]: https://discourse.llvm.org/t/rfc-ai-assisted-bazel-fixer-bot/89178/93
 [dwyu]: https://github.com/hzeller/bant?tab=readme-ov-file#dwyu--depend-on-what-you-use
