@@ -18,8 +18,7 @@ body:             |
     ; CHECK-NEXT: [[ADDW1:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: [[ADDW2:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY2]]
     ; CHECK-NEXT: [[MERGE:%[0-9]+]]:gpr = MERGE [[ADDW]], [[ADDW1]], [[ADDW2]]
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[MERGE]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[MERGE]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
@@ -50,8 +49,7 @@ body:             |
     ; CHECK-NEXT: [[ADDW1:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: [[ADDW2:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY2]]
     ; CHECK-NEXT: [[MVM:%[0-9]+]]:gpr = MVM [[ADDW]], [[ADDW1]], [[ADDW2]]
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[MVM]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[MVM]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
@@ -81,8 +79,7 @@ body:             |
     ; CHECK-NEXT: [[ADDW1:%[0-9]+]]:gpr = ADDW [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: [[ADDW2:%[0-9]+]]:gpr = ADDW [[COPY]], [[COPY2]]
     ; CHECK-NEXT: [[MVMN:%[0-9]+]]:gpr = MVMN [[ADDW]], [[ADDW1]], [[ADDW2]]
-    ; CHECK-NEXT: [[ADDIW:%[0-9]+]]:gpr = ADDIW [[MVMN]], 0
-    ; CHECK-NEXT: $x10 = COPY [[ADDIW]]
+    ; CHECK-NEXT: $x10 = COPY [[MVMN]]
     ; CHECK-NEXT: PseudoRET
     %0:gpr = COPY $x10
     %1:gpr = COPY $x11
