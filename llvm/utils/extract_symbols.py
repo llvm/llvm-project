@@ -147,9 +147,10 @@ def should_keep_microsoft_symbol(symbol, calling_convention_decoration):
     #                 ::= .*Z (list of types, varargs)
     # <throw-spec> ::= exceptions are not allowed
     elif re.search(r"@(llvm|clang)@@[A-Z][A-Z0-9_]*[A-JQ].+(X|.+@|.*Z)$", symbol):
-        # Remove llvm::<Class>::dump and clang::<Class>::dump methods because
-        # they are used for debugging only.
-        if symbol.startswith("?dump@"):
+        # Remove llvm::<Class>::dump, clang::<Class>::dump,
+        # clang::<Class>::dumpColor, and clang::<Class>::printPretty methods
+        # because they are used for debugging only.
+        if symbol.startswith(("?dump@", "?dumpColor@", "?printPretty@")):
             return None
         return symbol
     # Keep mangled global variables and static class members in llvm:: namespace.
