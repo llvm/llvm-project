@@ -278,3 +278,16 @@ void testNoUninitAttr(void) {
   user_free(p);
 }
 
+// Regression test for GH#183344 — crash when a function has both
+// ownership_returns and ownership_takes attributes.
+typedef struct GH183344_X GH183344_X;
+typedef struct GH183344_Y GH183344_Y;
+
+GH183344_Y *GH183344_X_to_Y(GH183344_X *x)
+    __attribute__((ownership_returns(GH183344_Y)))
+    __attribute__((ownership_takes(GH183344_X, 1)));
+
+void testGH183344(void) {
+  GH183344_Y *y = GH183344_X_to_Y(0); // no-crash
+  (void)y;
+} // expected-warning{{Potential leak of memory pointed to by 'y'}}
