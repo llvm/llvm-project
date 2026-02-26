@@ -147,6 +147,11 @@
 ; CHECK-O23-NEXT: Running pass: JumpThreadingPass on foo
 ; CHECK-O23-NEXT: Running pass: LowerTypeTestsPass
 ; CHECK-O-NEXT: Running pass: DropTypeTestsPass
+; CHECK-O23-NEXT: Running pass: SimplifyCFGPass
+; CHECK-O23-NEXT: Running pass: LoopSimplifyPass on foo
+; CHECK-O23-NEXT: Running pass: LCSSAPass on foo
+; CHECK-O23-NEXT: Running pass: LICMPass on loop %loop
+; CHECK-O23-NEXT: Running pass: EarlyCSEPass on foo
 ; CHECK-O23-NEXT: Running pass: LoopSink
 ; CHECK-O23-NEXT: Running pass: DivRemPairs
 ; CHECK-O23-NEXT: Running pass: SimplifyCFGPass

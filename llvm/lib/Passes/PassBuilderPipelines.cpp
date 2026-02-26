@@ -2266,6 +2266,21 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // Add late LTO optimization passes.
   FunctionPassManager LateFPM;
 
+  // Delete basic blocks, which optimization passes may have killed.
+  LateFPM.addPass(SimplifyCFGPass(SimplifyCFGOptions()
+                                      .convertSwitchRangeToICmp(true)
+                                      .convertSwitchToArithmetic(true)
+                                      .hoistCommonInsts(true)
+                                      .speculateUnpredictables(true)));
+
+  LateFPM.addPass(createFunctionToLoopPassAdaptor(
+      LICMPass(PTO.LicmMssaOptCap, PTO.LicmMssaNoAccForPromotionCap,
+               /*AllowSpeculation=*/true),
+      /*USeMemorySSA=*/true));
+
+  // Catch trivial redundancies
+  LateFPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
+
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
   // canonicalization pass that enables other optimizations. As a result,
   // LoopSink pass needs to be a very late IR pass to avoid undoing LICM
@@ -2283,6 +2298,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
                                       .convertSwitchToArithmetic(true)
                                       .hoistCommonInsts(true)
                                       .speculateUnpredictables(true)));
+
   MPM.addPass(createModuleToFunctionPassAdaptor(std::move(LateFPM)));
 
   // Drop bodies of available eternally objects to improve GlobalDCE.
