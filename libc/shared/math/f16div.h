@@ -1,4 +1,4 @@
-//===-- Implementation of f16div function ---------------------------------===//
+//===-- Shared f16div function ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/f16div.h"
+#ifndef LLVM_LIBC_SHARED_MATH_F16DIV_H
+#define LLVM_LIBC_SHARED_MATH_F16DIV_H
+
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/math/f16div.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, f16div, (double x, double y)) {
-  return math::f16div(x, y);
-}
+using math::f16div;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SHARED_MATH_F16DIV_H
