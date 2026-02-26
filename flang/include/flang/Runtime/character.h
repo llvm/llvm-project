@@ -93,6 +93,9 @@ void RTDECL(Repeat)(Descriptor &result, const Descriptor &string,
 void RTDECL(Trim)(Descriptor &result, const Descriptor &string,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
+void RTDECL(FCString)(Descriptor &result, const Descriptor &string,
+    bool asis = false, const char *sourceFile = nullptr, int sourceLine = 0);
+
 void RTDECL(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile = nullptr, int sourceLine = 0);
 void RTDECL(CharacterMin)(Descriptor &accumulator, const Descriptor &x,

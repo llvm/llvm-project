@@ -21,6 +21,48 @@
 // types and definitions from that file.
 
 //===----------------------------------------------------------------------===//
+// acc.reduction_combine
+//===----------------------------------------------------------------------===//
+
+def OpenACC_ReductionCombineOp: OpenACC_Op<"reduction_combine", 
+    [SameTypeOperands, DeclareOpInterfaceMethods<MemoryEffectsOpInterface>]> {
+  let summary = "Combine a reduction partial sum with its original value";
+  let description = [{
+    This operation is a composite to do a typical update of a reduction
+    variable. The intention of this operator is to facilitate codegen
+    decisions (such as generate an atomic update). E.g.
+
+    ```
+      acc.reduction_combine %src into %dest <addi> : memref<i32>
+    ```
+
+    Might lower to something similar to
+
+    ```
+      %loadSrc = memref.load %src[] : memref<i32>
+      %loadDest = memref.load %dest[] : memref<i32>
+      %combine = arith.addi %loadSrc, %loadDest : i32
+      memref.store %combine, %dest[] : memref<i32>
+    ```
+    
+    The $destMemref operand is a "pointer" to the original reduction 
+    variable (typically shared). The $srcMemref operand is a "pointer"
+    to the partial sum of the reduction (typically private).
+
+    The $kind is the OpenACC reduction operator that determines how to 
+    accumulate the two values.
+  }];
+
+  let arguments = (ins OpenACC_AnyPointerOrMappableType:$destMemref,
+                       OpenACC_AnyPointerOrMappableType:$srcMemref,
+                       OpenACC_ReductionOperatorAttr:$reductionOperator);
+  
+  let assemblyFormat = [{
+    $srcMemref `into` $destMemref $reductionOperator `:` type($destMemref) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // acc.kernel_environment
 //===----------------------------------------------------------------------===//
 
@@ -79,9 +121,10 @@ def OpenACC_KernelEnvironmentOp
 // acc.firstprivate_map
 //===----------------------------------------------------------------------===//
 
-def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
-    "mlir::acc::DataClause::acc_firstprivate", "", [],
-    (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
+def OpenACC_FirstprivateMapInitialOp
+    : OpenACC_DataEntryOp<
+          "firstprivate_map", "mlir::acc::DataClause::acc_firstprivate", "", [],
+          (ins Arg<OpenACC_AnyPointerOrMappableType, "Host variable">:$var)> {
   let summary = "Represents the mapping of the initial value for firstprivate "
                 "semantics.";
   let description = [{
@@ -97,7 +140,7 @@ def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
       being accessed directly
   }];
   let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
-                          "Accelerator mapped variable",[MemWrite]>:$accVar);
+                          "Accelerator mapped variable">:$accVar);
   let extraClassDeclaration = extraClassDeclarationBase;
 }
 

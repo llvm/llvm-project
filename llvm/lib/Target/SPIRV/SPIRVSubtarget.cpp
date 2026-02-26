@@ -89,15 +89,18 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
   // Set the environment based on the target triple.
   if (TargetTriple.getOS() == Triple::Vulkan)
     Env = Shader;
-  else if (TargetTriple.getEnvironment() == Triple::OpenCL ||
+  else if (TargetTriple.getOS() == Triple::OpenCL ||
            TargetTriple.getVendor() == Triple::AMD)
     Env = Kernel;
   else
     Env = Unknown;
 
   // Set the default extensions based on the target triple.
-  if (TargetTriple.getVendor() == Triple::Intel)
+  if (TargetTriple.getVendor() == Triple::Intel) {
     Extensions.insert(SPIRV::Extension::SPV_INTEL_function_pointers);
+    Extensions.insert(
+        SPIRV::Extension::SPV_EXT_relaxed_printf_string_address_space);
+  }
   if (TargetTriple.getVendor() == Triple::AMD)
     Extensions = SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
