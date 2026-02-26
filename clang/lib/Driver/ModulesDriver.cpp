@@ -542,6 +542,7 @@ static SmallVector<std::string, 0> buildCommandLine(const Command &Job) {
 static std::pair<std::optional<deps::TranslationUnitDeps>,
                  SmallVector<StandaloneDiagnostic, 0>>
 scanDependenciesForJob(const Command &Job, ScanningWorkerPool &WorkerPool,
+                       StringRef WorkingDirectory,
                        ModuleLookupController &LookupController) {
   StandaloneDiagCollector DiagConsumer;
   std::optional<deps::TranslationUnitDeps> MaybeTUDeps;
@@ -552,8 +553,8 @@ scanDependenciesForJob(const Command &Job, ScanningWorkerPool &WorkerPool,
     deps::FullDependencyConsumer DepConsumer(WorkerBundleHandle->SeenModules);
 
     if (WorkerBundleHandle->Worker->computeDependencies(
-            /*WorkingDirectory*/ ".", CC1CommandLine, DepConsumer,
-            LookupController, DiagConsumer))
+            WorkingDirectory, CC1CommandLine, DepConsumer, LookupController,
+            DiagConsumer))
       MaybeTUDeps = DepConsumer.takeTranslationUnitDeps();
   }
 
@@ -590,7 +591,7 @@ struct DependencyScanResult {
 static std::optional<DependencyScanResult> scanDependencies(
     ArrayRef<std::unique_ptr<Command>> Jobs,
     llvm::DenseMap<StringRef, const StdModuleManifest::Module *> ManifestLookup,
-    StringRef ModuleCachePath, IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
+    StringRef ModuleCachePath, StringRef WorkingDirectory,
     DiagnosticsEngine &Diags) {
   llvm::PrettyStackTraceString CrashInfo("Performing module dependency scan.");
 
@@ -629,7 +630,6 @@ static std::optional<DependencyScanResult> scanDependencies(
   const bool HasStdlibModuleInputs = !StdlibModuleScanIndexByID.empty();
 
   deps::DependencyScanningServiceOptions Opts;
-  Opts.MakeVFS = [&] { return BaseFS; };
   deps::DependencyScanningService ScanningService(std::move(Opts));
 
   std::unique_ptr<llvm::ThreadPoolInterface> ThreadPool;
@@ -654,8 +654,8 @@ static std::optional<DependencyScanResult> scanDependencies(
   ScanOneAndScheduleNew = [&](size_t ScanIndex) {
     const size_t JobIndex = ScannableJobIndices[ScanIndex];
     const Command &Job = *Jobs[JobIndex];
-    auto [MaybeTUDeps, ScanDiags] =
-        scanDependenciesForJob(Job, *WorkerPool, LookupController);
+    auto [MaybeTUDeps, ScanDiags] = scanDependenciesForJob(
+        Job, *WorkerPool, WorkingDirectory, LookupController);
 
     // Store diagnostics even for successful scans to also capture any warnings
     // or notes.
@@ -1466,22 +1466,26 @@ void driver::modules::runModulesDriver(
   llvm::PrettyStackTraceString CrashInfo("Running modules driver.");
 
   auto Jobs = C.getJobs().takeJobs();
+
   const auto ManifestEntryBySource = buildManifestLookupMap(ManifestEntries);
   // Apply manifest-entry specific command-line modifications before the scan as
   // they might affect it.
   applyArgsForStdModuleManifestInputs(C, ManifestEntryBySource, Jobs);
 
   DiagnosticsEngine &Diags = C.getDriver().getDiags();
+
+  // Run the dependency scan.
   const auto MaybeModuleCachePath = getModuleCachePath(C.getArgs());
   if (!MaybeModuleCachePath) {
     Diags.Report(diag::err_default_modules_cache_not_available);
     return;
   }
 
-  // Run the dependency scan.
-  auto MaybeScanResults =
-      scanDependencies(Jobs, ManifestEntryBySource, *MaybeModuleCachePath,
-                       &C.getDriver().getVFS(), Diags);
+  auto MaybeCWD = C.getDriver().getVFS().getCurrentWorkingDirectory();
+  const auto CWD = MaybeCWD ? std::move(*MaybeCWD) : ".";
+
+  auto MaybeScanResults = scanDependencies(Jobs, ManifestEntryBySource,
+                                           *MaybeModuleCachePath, CWD, Diags);
   if (!MaybeScanResults) {
     Diags.Report(diag::err_dependency_scan_failed);
     return;
