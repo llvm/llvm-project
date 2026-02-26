@@ -720,10 +720,17 @@ ExprDependence clang::computeDependence(GenericSelectionExpr *E,
   auto D = ContainsUnexpandedPack ? ExprDependence::UnexpandedPack
                                   : ExprDependence::None;
   for (auto *AE : E->getAssocExprs())
-    D |= AE->getDependence() & ExprDependence::Error;
+    D |= AE->getDependence() &
+         (ExprDependence::Error | ExprDependence::Instantiation);
+  for (TypeSourceInfo *TSI : E->getAssocTypeSourceInfos()) {
+    if (TSI)
+      D |= toExprDependenceAsWritten(TSI->getType()->getDependence()) &
+           (ExprDependence::Error | ExprDependence::Instantiation);
+  }
 
   if (E->isExprPredicate())
-    D |= E->getControllingExpr()->getDependence() & ExprDependence::Error;
+    D |= E->getControllingExpr()->getDependence() &
+         (ExprDependence::Error | ExprDependence::Instantiation);
   else
     D |= toExprDependenceAsWritten(
         E->getControllingType()->getType()->getDependence());
