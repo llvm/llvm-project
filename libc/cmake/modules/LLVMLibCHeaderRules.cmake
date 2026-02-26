@@ -109,11 +109,10 @@ function(add_gen_header target_name)
     set(entry_points "${TARGET_ENTRYPOINT_NAME_LIST}")
   endif()
 
+  # TODO: Use $<LIST:PREPEND,list,item,...> after we bump CMake to 3.27.
   list(TRANSFORM entry_points PREPEND "--entry-point=")
-
-  set(rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${out_file}.rsp")
-  string(REPLACE ";" " " entry_points "${entry_points}")
-  file(WRITE ${rsp_file} "${entry_points}")
+  set(rsp_file "${CMAKE_CURRENT_BINARY_DIR}/${relative_path}.rsp")
+  file(GENERATE OUTPUT ${rsp_file} CONTENT "$<JOIN:${entry_points},\n>")
 
   add_custom_command(
     OUTPUT ${out_file}
