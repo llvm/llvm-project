@@ -199,8 +199,7 @@ Error Config::addSaveTemps(std::string OutputFileName, bool UseInputModulePath,
 #include "llvm/Support/Extension.def"
 #undef HANDLE_EXTENSION
 
-static void RegisterPassPlugins(const Config &Conf,
-                                PassBuilder &PB) {
+static void RegisterPassPlugins(const Config &Conf, PassBuilder &PB) {
 #define HANDLE_EXTENSION(Ext)                                                  \
   get##Ext##PluginInfo().RegisterPassBuilderCallbacks(PB);
 #include "llvm/Support/Extension.def"
