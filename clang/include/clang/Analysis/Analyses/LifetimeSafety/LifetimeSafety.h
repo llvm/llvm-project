@@ -28,15 +28,24 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/MovedLoans.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include <cstdint>
 #include <memory>
 
 namespace clang::lifetimes {
 
+// TODO: Deprecate and remove Confidence as this is no more used as a
+// differentiator between strict and permissive warnings.
 /// Enum to track the confidence level of a potential error.
 enum class Confidence : uint8_t {
   None,
   Maybe,   // Reported as a potential error (-Wlifetime-safety-strict)
   Definite // Reported as a definite error (-Wlifetime-safety-permissive)
+};
+
+struct LifetimeSafetyOpts {
+  /// Maximum number of CFG blocks to analyze. Functions with larger CFGs will
+  /// be skipped.
+  size_t MaxCFGBlocks;
 };
 
 /// Enum to track functions visible across or within TU.
@@ -130,7 +139,8 @@ struct LifetimeFactory {
 class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                         LifetimeSafetySemaHelper *SemaHelper);
+                         LifetimeSafetySemaHelper *SemaHelper,
+                         const LifetimeSafetyOpts &LSOpts);
 
   void run();
 
@@ -144,6 +154,7 @@ public:
 private:
   AnalysisDeclContext &AC;
   LifetimeSafetySemaHelper *SemaHelper;
+  const LifetimeSafetyOpts LSOpts;
   LifetimeFactory Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;

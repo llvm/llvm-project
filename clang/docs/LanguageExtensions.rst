@@ -926,27 +926,31 @@ Example:
 
 Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
 
-======================================= ====================================================================== ==================================
-         Name                            Operation                                                              Supported element types
-======================================= ====================================================================== ==================================
- ET __builtin_reduce_max(VT a)           return the largest element of the vector. The floating point result    integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_min(VT a)           return the smallest element of the vector. The floating point result   integer and floating point types
-                                         will always be a number unless all elements of the vector are NaN.
- ET __builtin_reduce_add(VT a)           \+                                                                     integer types
- ET __builtin_reduce_mul(VT a)           \*                                                                     integer types
- ET __builtin_reduce_and(VT a)           &                                                                      integer types
- ET __builtin_reduce_or(VT a)            \|                                                                     integer types
- ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
- ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
-                                         for the comparison.
- ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
-                                         semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
-                                         for the comparison.
-======================================= ====================================================================== ==================================
+============================================== ====================================================================== ==================================
+         Name                                   Operation                                                              Supported element types
+============================================== ====================================================================== ==================================
+ ET __builtin_reduce_max(VT a)                  return the largest element of the vector. The floating point result    integer and floating point types
+                                                will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_min(VT a)                  return the smallest element of the vector. The floating point result   integer and floating point types
+                                                will always be a number unless all elements of the vector are NaN.
+ ET __builtin_reduce_add(VT a)                  \+                                                                     integer types
+ ET __builtin_reduce_mul(VT a)                  \*                                                                     integer types
+ ET __builtin_reduce_and(VT a)                  &                                                                      integer types
+ ET __builtin_reduce_or(VT a)                   \|                                                                     integer types
+ ET __builtin_reduce_xor(VT a)                  ^                                                                      integer types
+ ET __builtin_reduce_maximum(VT a)              return the largest element of the vector. Follows IEEE 754-2019        floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                                for the comparison.
+ ET __builtin_reduce_minimum(VT a)              return the smallest element of the vector. Follows IEEE 754-2019       floating point types
+                                                semantics, see `LangRef
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
+                                                for the comparison.
+ ET __builtin_reduce_assoc_fadd(VT a[, ET s])   associative floating-point add reduction.                              floating point types
+ ET __builtin_reduce_in_order_fadd(VT a, ET s)  in order floating-point add reduction, initializing the accumulator    floating point types
+                                                with `(ET)s`, then adding each lane of the `a` in-order, starting
+                                                from lane 0. The additions cannot be reassociated.
+============================================== ====================================================================== ==================================
 
 *Masked Builtins*
 
@@ -975,15 +979,15 @@ Example:
     using v8i = int [[clang::ext_vector_type(8)]];
 
     v8i load(v8b mask, int *ptr) { return __builtin_masked_load(mask, ptr); }
-    
+
     v8i load_expand(v8b mask, int *ptr) {
       return __builtin_masked_expand_load(mask, ptr);
     }
-    
+
     void store(v8b mask, v8i val, int *ptr) {
       __builtin_masked_store(mask, val, ptr);
     }
-    
+
     void store_compress(v8b mask, v8i val, int *ptr) {
       __builtin_masked_compress_store(mask, val, ptr);
     }
@@ -1075,7 +1079,7 @@ The matrix type extension supports explicit casts. Implicit type conversion betw
 
 The matrix type extension supports column and row major memory layouts, but not
 all builtins are supported with row-major layout. The layout defaults to column
-major and can be specified using `-fmatrix-memory-layout`. To enable column 
+major and can be specified using `-fmatrix-memory-layout`. To enable column
 major layout, use `-fmatrix-memory-layout=column-major`, and for row major
 layout use `-fmatrix-memory-layout=row-major`
 
@@ -1236,6 +1240,133 @@ generated saying the pragma didn't resolve to a declaration.  For example:
 
   #pragma export(func)
   int func(double) { return 0; } // warning: failed to resolve '#pragma export' to a declaration
+
+Overflow behavior types
+=======================
+
+Clang provides an extension that allows developers to annotate integer types
+with explicit overflow behavior. This enables fine-grained control over whether
+arithmetic operations should wrap on overflow (with two's complement semantics)
+or be checked for overflow (trapping or reporting via sanitizers).
+
+This feature is experimental and must be enabled with the ``-cc1`` option
+``-fexperimental-overflow-behavior-types``.
+
+Query for this feature with ``__has_extension(overflow_behavior_types)``.
+
+Syntax
+------
+
+Overflow behavior can be specified using either attribute syntax or keyword
+syntax:
+
+**Attribute syntax:**
+
+.. code-block:: c
+
+  typedef int __attribute__((overflow_behavior(wrap))) wrapping_int;
+  typedef int __attribute__((overflow_behavior(trap))) checked_int;
+
+**Keyword syntax:**
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrapping_int;
+  typedef int __ob_trap checked_int;
+
+The annotation can also be applied directly to variable declarations:
+
+.. code-block:: c
+
+  int __ob_wrap counter = 0;
+  unsigned __ob_trap safe_index = 0;
+
+Semantics
+---------
+
+**wrap behavior:**
+
+When an integer type is annotated with ``wrap`` (or ``__ob_wrap``), arithmetic
+operations on values of that type use two's complement wrapping semantics on
+overflow. This behavior is well-defined regardless of signedness. Compilers
+must not optimize based on the assumption that overflow does not occur.
+
+**trap behavior:**
+
+When an integer type is annotated with ``trap`` (or ``__ob_trap``), arithmetic
+operations on values of that type are checked for overflow. If overflow occurs,
+the program traps or reports via sanitizers (depending on compiler settings).
+
+Integer Promotions and Conversions
+----------------------------------
+
+Overflow behavior types follow standard C integer promotion and conversion
+rules. The overflow behavior annotation is preserved through implicit
+promotions and conversions.
+
+**Standard promotion rules apply:**
+
+Integer literals without a suffix have type ``int`` (or a larger type if the
+value requires it), following normal C rules. When such a literal is used in
+an operation with an overflow behavior type, standard promotion rules determine
+the result type, and the overflow behavior is propagated:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  wrap_int x = 100;
+  wrap_int y = x + 1;  // 1 is promoted; result is __ob_wrap int
+
+**Combining different overflow behaviors:**
+
+When operands have different overflow behaviors, ``trap`` takes precedence
+over ``wrap``:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  typedef int __ob_trap trap_int;
+  wrap_int a = 1;
+  trap_int b = 2;
+  auto c = a + b;  // Result is __ob_trap int (trap dominates)
+
+**Conversion to standard types:**
+
+When an overflow behavior type is converted to a standard integer type (without
+an overflow behavior annotation), the overflow behavior is discarded. Compilers
+may warn about this:
+
+.. code-block:: c
+
+  typedef int __ob_wrap wrap_int;
+  wrap_int w = 42;
+  int i = w;  // Warning: discards overflow behavior
+
+Interaction with Compiler Flags
+-------------------------------
+
+Overflow behavior annotations take precedence over global compiler flags:
+
+- A ``wrap`` type wraps on overflow even when ``-ftrapv`` is enabled.
+- A ``trap`` type is checked for overflow even when ``-fwrapv`` is enabled.
+
+This allows mixing different overflow behaviors within the same program,
+enabling developers to selectively apply wrapping or checking to specific
+types while using different defaults elsewhere.
+
+Incompatible Assignments
+------------------------
+
+Direct assignment between types with different overflow behaviors (``wrap``
+vs ``trap``) is an error:
+
+.. code-block:: c
+
+  int __ob_wrap w;
+  int __ob_trap t;
+  w = t;  // Error: incompatible overflow behaviors
+
+For more detailed documentation, see :doc:`OverflowBehaviorTypes`.
 
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
