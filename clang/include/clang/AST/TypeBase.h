@@ -4425,10 +4425,19 @@ public:
   }
 
   /// Returns the column-major flattened index of a matrix element located at
-  /// row
-  /// \p Row, and column \p Column
+  /// row \p Row, and column \p Column
   unsigned getColumnMajorFlattenedIndex(unsigned Row, unsigned Column) const {
     return Column * NumRows + Row;
+  }
+
+  /// Returns the flattened index of a matrix element located at
+  /// row \p Row, and column \p Column. If \p IsRowMajor is true, returns the
+  /// row-major order flattened index. Otherwise, returns the column-major order
+  /// flattened index.
+  unsigned getFlattenedIndex(unsigned Row, unsigned Column,
+                             bool IsRowMajor = false) {
+    return IsRowMajor ? getRowMajorFlattenedIndex(Row, Column)
+                      : getColumnMajorFlattenedIndex(Row, Column);
   }
 
   /// Given a column-major flattened index \p ColumnMajorIdx, return the
