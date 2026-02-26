@@ -1728,6 +1728,8 @@ void cir::GlobalOp::build(
   if (isConstant)
     odsState.addAttribute(getConstantAttrName(odsState.name),
                           odsBuilder.getUnitAttr());
+
+  addrSpace = skipDefaultAddressSpace(addrSpace);
   if (addrSpace)
     odsState.addAttribute(getAddrSpaceAttrName(odsState.name), addrSpace);
 
