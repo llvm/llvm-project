@@ -412,6 +412,9 @@ RTLIB::Libcall RTLIB::getFPTOSINT(EVT OpVT, EVT RetVT) {
       return FPTOSINT_PPCF128_I64;
     if (RetVT == MVT::i128)
       return FPTOSINT_PPCF128_I128;
+    // Note: ppcf128 -> i256 conversion is not yet supported.
+    // ppc_fp128 uses a unique double-double representation that requires
+    // dedicated builtins. Falls back to expansion through smaller types.
   }
   return UNKNOWN_LIBCALL;
 }
@@ -469,6 +472,9 @@ RTLIB::Libcall RTLIB::getFPTOUINT(EVT OpVT, EVT RetVT) {
       return FPTOUINT_PPCF128_I64;
     if (RetVT == MVT::i128)
       return FPTOUINT_PPCF128_I128;
+    // Note: ppcf128 -> i256 conversion is not yet supported.
+    // ppc_fp128 uses a unique double-double representation that requires
+    // dedicated builtins. Falls back to expansion through smaller types.
   }
   return UNKNOWN_LIBCALL;
 }
@@ -526,6 +532,9 @@ RTLIB::Libcall RTLIB::getSINTTOFP(EVT OpVT, EVT RetVT) {
       return SINTTOFP_I256_F80;
     if (RetVT == MVT::f128)
       return SINTTOFP_I256_F128;
+    // Note: i256 -> ppcf128 conversion is not yet supported.
+    // ppc_fp128 uses a unique double-double representation that requires
+    // dedicated builtins. Falls back to expansion through smaller types.
   }
   return UNKNOWN_LIBCALL;
 }
@@ -583,6 +592,9 @@ RTLIB::Libcall RTLIB::getUINTTOFP(EVT OpVT, EVT RetVT) {
       return UINTTOFP_I256_F80;
     if (RetVT == MVT::f128)
       return UINTTOFP_I256_F128;
+    // Note: i256 -> ppcf128 conversion is not yet supported.
+    // ppc_fp128 uses a unique double-double representation that requires
+    // dedicated builtins. Falls back to expansion through smaller types.
   }
   return UNKNOWN_LIBCALL;
 }

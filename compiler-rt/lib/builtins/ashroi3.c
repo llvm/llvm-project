@@ -8,6 +8,11 @@
 //
 // This file implements __ashroi3 for the compiler_rt library.
 //
+// NOTE: This builtin is not called by the compiler (shift libcalls are not
+// registered for i256 to avoid sanitizer link failures -- ASan embeds UBSan
+// but does not link against compiler-rt builtins). It exists for direct use
+// by libraries and applications that need 256-bit shift operations.
+//
 //===----------------------------------------------------------------------===//
 
 #include "int_lib.h"
