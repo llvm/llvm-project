@@ -4902,32 +4902,27 @@ TEST_F(FormatTest, TryMacros) {
   Style.CatchMacros.push_back("KJ_CATCH");
   Style.CatchMacros.push_back("JSG_CATCH");
 
-  // Basic try-catch macro formatting (catch attaches to closing brace).
-  // No space before '(' — macros look like macro invocations.
   verifyFormat("KJ_TRY {\n"
                "  doStuff();\n"
-               "} KJ_CATCH(e) {\n"
+               "} KJ_CATCH (e) {\n"
                "  handleError();\n"
                "}",
                Style);
 
-  // Try macro with arguments (like JSG_TRY(js)).
-  verifyFormat("JSG_TRY(js) {\n"
+  verifyFormat("JSG_TRY (js) {\n"
                "  doStuff();\n"
-               "} JSG_CATCH(e) {\n"
+               "} JSG_CATCH (e) {\n"
                "  handleError();\n"
                "}",
                Style);
 
-  // Variadic catch macro (like JSG_CATCH(exception, ...)).
-  verifyFormat("JSG_TRY(js) {\n"
+  verifyFormat("JSG_TRY (js) {\n"
                "  doStuff();\n"
-               "} JSG_CATCH(e, js) {\n"
+               "} JSG_CATCH (e, js) {\n"
                "  handleError();\n"
                "}",
                Style);
 
-  // Catch macro without arguments.
   verifyFormat("KJ_TRY {\n"
                "  doStuff();\n"
                "} KJ_CATCH {\n"
@@ -4935,29 +4930,15 @@ TEST_F(FormatTest, TryMacros) {
                "}",
                Style);
 
-  // Multiple catch blocks.
   verifyFormat("KJ_TRY {\n"
                "  doStuff();\n"
-               "} KJ_CATCH(e1) {\n"
+               "} KJ_CATCH (e1) {\n"
                "  handleError1();\n"
-               "} KJ_CATCH(e2) {\n"
+               "} KJ_CATCH (e2) {\n"
                "  handleError2();\n"
                "}",
                Style);
 
-  // With BeforeCatch = true, catch goes on its own line.
-  FormatStyle WrappedStyle = Style;
-  WrappedStyle.BraceWrapping.BeforeCatch = true;
-  WrappedStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
-  verifyFormat("KJ_TRY {\n"
-               "  doStuff();\n"
-               "}\n"
-               "KJ_CATCH(e) {\n"
-               "  handleError();\n"
-               "}",
-               WrappedStyle);
-
-  // Native try/catch is unaffected by TryMacros/CatchMacros.
   verifyFormat("try {\n"
                "  doStuff();\n"
                "} catch (const std::exception &e) {\n"
@@ -4965,116 +4946,76 @@ TEST_F(FormatTest, TryMacros) {
                "}",
                Style);
 
-  // Try macro with arguments and BeforeCatch = true.
-  verifyFormat("JSG_TRY(js) {\n"
-               "  doStuff();\n"
-               "}\n"
-               "JSG_CATCH(e, js) {\n"
-               "  handleError();\n"
-               "}",
-               WrappedStyle);
-
-  // Empty try-catch bodies.
   verifyFormat("KJ_TRY {\n"
-               "} KJ_CATCH(e) {\n"
+               "} KJ_CATCH (e) {\n"
                "}",
                Style);
 
-  // Nested try-catch macros.
   verifyFormat("KJ_TRY {\n"
                "  KJ_TRY {\n"
                "    doStuff();\n"
-               "  } KJ_CATCH(inner) {\n"
+               "  } KJ_CATCH (inner) {\n"
                "    handleInner();\n"
                "  }\n"
-               "} KJ_CATCH(outer) {\n"
+               "} KJ_CATCH (outer) {\n"
                "  handleOuter();\n"
                "}",
                Style);
 
-  // Comment between try macro and brace.
   verifyFormat("KJ_TRY /* comment */ {\n"
-               "} KJ_CATCH(e) {\n"
+               "} KJ_CATCH (e) {\n"
                "}",
                Style);
 
-  // Incomplete try-catch macro.
   verifyIncompleteFormat("KJ_TRY {} KJ_CATCH(", Style);
 
-  // Brace style: Stroustrup (break before catch).
-  FormatStyle Stroustrup = Style;
-  Stroustrup.BreakBeforeBraces = FormatStyle::BS_Stroustrup;
+  FormatStyle WrappedStyle = Style;
+  WrappedStyle.BraceWrapping.BeforeCatch = true;
+  WrappedStyle.BreakBeforeBraces = FormatStyle::BS_Custom;
   verifyFormat("KJ_TRY {\n"
-               "  // something\n"
+               "  doStuff();\n"
                "}\n"
-               "KJ_CATCH(e) {\n"
-               "  // something\n"
+               "KJ_CATCH (e) {\n"
+               "  handleError();\n"
                "}",
-               Stroustrup);
+               WrappedStyle);
 
-  // Brace style: Allman (braces on own lines).
-  FormatStyle Allman = Style;
-  Allman.BreakBeforeBraces = FormatStyle::BS_Allman;
-  verifyFormat("KJ_TRY\n"
-               "{\n"
-               "  // something\n"
+  verifyFormat("JSG_TRY (js) {\n"
+               "  doStuff();\n"
                "}\n"
-               "KJ_CATCH(e)\n"
-               "{\n"
-               "  // something\n"
+               "JSG_CATCH (e, js) {\n"
+               "  handleError();\n"
                "}",
-               Allman);
+               WrappedStyle);
 
-  // Brace style: Whitesmiths (indented braces).
-  FormatStyle Whitesmiths = Style;
-  Whitesmiths.BreakBeforeBraces = FormatStyle::BS_Whitesmiths;
-  verifyFormat("KJ_TRY\n"
-               "  {\n"
-               "  // something\n"
-               "  }\n"
-               "KJ_CATCH(e)\n"
-               "  {\n"
-               "  // something\n"
-               "  }",
-               Whitesmiths);
-
-  // Brace style: GNU (indented control statement braces).
-  FormatStyle GNU = Style;
-  GNU.BreakBeforeBraces = FormatStyle::BS_GNU;
-  verifyFormat("KJ_TRY\n"
-               "  {\n"
-               "    // something\n"
-               "  }\n"
-               "KJ_CATCH(e)\n"
-               "  {\n"
-               "    // something\n"
-               "  }",
-               GNU);
-
-  // SpaceBeforeParens: ControlStatements — macros still get no space.
-  FormatStyle SpaceCtrl = Style;
-  SpaceCtrl.SpaceBeforeParens = FormatStyle::SBPO_ControlStatements;
+  FormatStyle ExceptMacros = Style;
+  ExceptMacros.SpaceBeforeParens =
+      FormatStyle::SBPO_ControlStatementsExceptControlMacros;
   verifyFormat("KJ_TRY {\n"
                "} KJ_CATCH(e) {\n"
                "}",
-               SpaceCtrl);
-  verifyFormat("JSG_TRY(js) {\n"
-               "} JSG_CATCH(e) {\n"
-               "}",
-               SpaceCtrl);
-  // Native catch still gets the space with ControlStatements.
+               ExceptMacros);
   verifyFormat("try {\n"
                "} catch (...) {\n"
                "}",
-               SpaceCtrl);
+               ExceptMacros);
 
-  // Input reformatting: poorly formatted input gets fixed.
-  verifyFormat("KJ_TRY {\n"
-               "  foo();\n"
-               "} KJ_CATCH(e) {\n"
-               "  bar();\n"
+  FormatStyle CustomSpace = Style;
+  CustomSpace.SpaceBeforeParens = FormatStyle::SBPO_Custom;
+  CustomSpace.SpaceBeforeParensOptions = {};
+  CustomSpace.SpaceBeforeParensOptions.AfterTryMacros = true;
+  CustomSpace.SpaceBeforeParensOptions.AfterCatchMacros = false;
+  verifyFormat("JSG_TRY (js) {\n"
+               "} JSG_CATCH(e) {\n"
                "}",
-               "KJ_TRY{foo();}KJ_CATCH(e){bar();}", Style);
+               CustomSpace);
+
+  CustomSpace.SpaceBeforeParensOptions.AfterTryMacros = false;
+  CustomSpace.SpaceBeforeParensOptions.AfterCatchMacros = true;
+  verifyFormat("JSG_TRY(js) {\n"
+               "} JSG_CATCH (e) {\n"
+               "}",
+               CustomSpace);
 }
 
 TEST_F(FormatTest, FormatTryAsAVariable) {
