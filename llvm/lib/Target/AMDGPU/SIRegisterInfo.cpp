@@ -1551,13 +1551,9 @@ void SIRegisterInfo::buildSpillLoadStore(
         TII->getRegClass(TII->get(SpillOpcode), VDataIdx);
     unsigned NumRegs = std::min(RegWidth / 4, 4u);
     unsigned SubIdx = getSubRegFromChannel(0, NumRegs);
-    const TargetRegisterClass *MatchRC =
-        getMatchingSuperRegClass(RC, ExpectedRC, SubIdx);
-    // getMatchingSuperRegClass can return null for same-size VReg/AV pairs
-    // (e.g. VReg_64_Align2 vs AV_64_Align2). Just to be sure, check for a
-    // common subclass as well.
-    if (!MatchRC)
-      MatchRC = getCommonSubClass(RC, ExpectedRC);
+    const TargetRegisterClass *MatchRC = findCommonRegClass(
+        RC, getRegSizeInBits(*ExpectedRC) == getRegSizeInBits(*RC) ? 0 : SubIdx,
+        ExpectedRC, 0);
     if (MatchRC && !MatchRC->contains(ValueReg))
       IsRegMisaligned = true;
   }
