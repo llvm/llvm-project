@@ -1617,7 +1617,7 @@ def Arith_IndexCastUIOp
     ```mlir
       %0 = arith.index_castui %a : i32 to index
       %1 = arith.index_castui %a nneg : i32 to index
-      %2 = arith.index_castui %b nneg : index to i32
+      %2 = arith.index_castui %b nneg : index to i64
     ```
   }];
 
