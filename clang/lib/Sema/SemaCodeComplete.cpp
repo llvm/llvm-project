@@ -5399,6 +5399,48 @@ AddObjCProperties(const CodeCompletionContext &CCContext,
   }
 }
 
+static void AddExtVectorElementsCompletionResults(QualType BaseType,
+                                                  ResultBuilder &Results) {
+  const auto *VecType = BaseType->getAs<ExtVectorType>();
+  if (!VecType)
+    return;
+
+  unsigned NumElements = VecType->getNumElements();
+  unsigned MaxElements = std::min(NumElements, 4u);
+
+  auto AddResult = [&](const std::string &Name) {
+    CodeCompletionBuilder Builder(Results.getAllocator(),
+                                  Results.getCodeCompletionTUInfo());
+
+    char *SafeStr = Results.getAllocator().Allocate<char>(Name.length() + 1);
+    std::memcpy(SafeStr, Name.c_str(), Name.length() + 1);
+
+    Builder.AddTypedTextChunk(SafeStr);
+    Results.AddResult(CodeCompletionResult(Builder.TakeString()));
+  };
+
+  const char Coords[] = {'x', 'y', 'z', 'w'};
+  const char Colors[] = {'r', 'g', 'b', 'a'};
+
+  auto GenerateSwizzles = [&](auto &Self, const char *CharSet,
+                              std::string Current) -> void {
+    if (!Current.empty()) {
+      AddResult(Current);
+    }
+
+    if (Current.length() == 4) {
+      return;
+    }
+
+    for (unsigned i = 0; i < MaxElements; ++i) {
+      Self(Self, CharSet, Current + CharSet[i]);
+    }
+  };
+
+  GenerateSwizzles(GenerateSwizzles, Coords, "");
+  GenerateSwizzles(GenerateSwizzles, Colors, "");
+}
+
 static void
 AddRecordMembersCompletionResults(Sema &SemaRef, ResultBuilder &Results,
                                   Scope *S, QualType BaseType,
@@ -5924,6 +5966,8 @@ void SemaCodeCompletion::CodeCompleteMemberReferenceExpr(
     if (RecordDecl *RD = getAsRecordDecl(BaseType, Resolver)) {
       AddRecordMembersCompletionResults(SemaRef, Results, S, BaseType, BaseKind,
                                         RD, std::move(AccessOpFixIt));
+    } else if (BaseType->isExtVectorType()) {
+      AddExtVectorElementsCompletionResults(BaseType, Results);
     } else if (const auto *TTPT =
                    dyn_cast<TemplateTypeParmType>(BaseType.getTypePtr())) {
       auto Operator =
