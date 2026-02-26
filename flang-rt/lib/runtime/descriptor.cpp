@@ -11,6 +11,7 @@
 #include "memory.h"
 #include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/derived.h"
+#include "flang-rt/runtime/environment.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/type-info.h"
@@ -176,7 +177,13 @@ RT_API_ATTRS int Descriptor::Allocate(std::int64_t *asyncObject) {
   // Zero size allocation is possible in Fortran and the resulting
   // descriptor must be allocated/associated. Since std::malloc(0)
   // result is implementation defined, always allocate at least one byte.
-  void *p{alloc(byteSize ? byteSize : 1, asyncObject)};
+  if (byteSize < 1) {
+    if (executionEnvironment.noEmptyAllocation) {
+      return CFI_ERROR_MEM_ALLOCATION;
+    }
+    byteSize = 1;
+  }
+  void *p{alloc(byteSize, asyncObject)};
   if (!p) {
     return CFI_ERROR_MEM_ALLOCATION;
   }
