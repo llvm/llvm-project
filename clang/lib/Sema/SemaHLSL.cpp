@@ -4061,7 +4061,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(SemaRef.getASTContext().VoidTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_interlocked_or_ret: {
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_int:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_uint: {
     if (SemaRef.checkArgCountRange(TheCall, 4, 5))
       return true;
     auto checkResTy = [this](const HLSLAttributedResourceType *ResTy) -> bool {
@@ -4094,8 +4095,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       if (CheckArgTypeMatches(&SemaRef, TheCall->getArg(4),
                               SemaRef.getASTContext().UnsignedIntTy))
         return true;
-
-    TheCall->setType(SemaRef.getASTContext().UnsignedIntTy);
     break;
   }
   case Builtin::BI__builtin_hlsl_interlocked_or64: {
@@ -4140,7 +4139,8 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(SemaRef.getASTContext().VoidTy);
     break;
   }
-  case Builtin::BI__builtin_hlsl_interlocked_or_ret64: {
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret64_longlong:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret64_ulonglong: {
     if (SemaRef.checkArgCountRange(TheCall, 4, 5))
       return true;
     if (CheckShaderModelVersion(&SemaRef, TheCall, VersionTuple(6, 6)))
@@ -4180,8 +4180,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
                               SemaRef.getASTContext().UnsignedLongTy))
         return true;
     }
-
-    TheCall->setType(SemaRef.getASTContext().UnsignedLongTy);
     break;
   }
   }

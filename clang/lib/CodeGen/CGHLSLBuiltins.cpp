@@ -366,19 +366,11 @@ static Value *handleInterlockedOr(CodeGenFunction &CGF, const CallExpr *E,
 
     // atomicBinOp
     // opcode, handle, binary operation code, coordinates c0, c1, c2, new val
-    if (Is32Bit) {
-      Intrinsic::ID ID = Intrinsic::dx_interlocked_or;
-      OldValueOp = CGF.Builder.CreateIntrinsic(
-          /*ReturnType=*/CGF.Int32Ty, ID,
-          ArrayRef<Value *>{HandleOp, C0, C1, C2, NewValueOp}, nullptr,
-          "hlsl.interlocked.or");
-    } else {
-      Intrinsic::ID ID = Intrinsic::dx_interlocked_or;
-      OldValueOp = CGF.Builder.CreateIntrinsic(
-          /*ReturnType=*/CGF.Int64Ty, ID,
-          ArrayRef<Value *>{HandleOp, C0, C1, C2, NewValueOp}, nullptr,
-          "hlsl.interlocked.or");
-    }
+    llvm::Type *ReturnType = Is32Bit ? CGF.Int32Ty : CGF.Int64Ty;
+    OldValueOp = CGF.Builder.CreateIntrinsic(
+        ReturnType, Intrinsic::dx_interlocked_or,
+        ArrayRef<Value *>{HandleOp, C0, C1, C2, NewValueOp}, nullptr,
+        "hlsl.interlocked.or");
     break;
   }
   default:
@@ -1427,10 +1419,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_interlocked_or64: {
     return handleInterlockedOr(*this, E, false, false);
   }
-  case Builtin::BI__builtin_hlsl_interlocked_or_ret: {
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_int:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret_uint: {
     return handleInterlockedOr(*this, E, true, true);
   }
-  case Builtin::BI__builtin_hlsl_interlocked_or_ret64: {
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret64_longlong:
+  case Builtin::BI__builtin_hlsl_interlocked_or_ret64_ulonglong: {
     return handleInterlockedOr(*this, E, true, false);
   }
   }

@@ -5439,10 +5439,11 @@ def HLSLInterlockedOr : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLInterlockedOrRet : LangBuiltin<"HLSL_LANG"> {
+def HLSLInterlockedOrRet : LangBuiltin<"HLSL_LANG">,
+    Template<["unsigned int", "int"], ["_uint", "_int"]> {
   let Spellings = ["__builtin_hlsl_interlocked_or_ret"];
   let Attributes = [NoThrow, CustomTypeChecking];
-  let Prototype = "void(...)";
+  let Prototype = "T(...)";
 }
 
 def HLSLInterlockedOr64 : LangBuiltin<"HLSL_LANG"> {
@@ -5451,10 +5452,12 @@ def HLSLInterlockedOr64 : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "void(...)";
 }
 
-def HLSLInterlockedOrRet64 : LangBuiltin<"HLSL_LANG"> {
+def HLSLInterlockedOrRet64 : LangBuiltin<"HLSL_LANG">,
+    Template<["unsigned long long int", "long long int"],
+             ["_ulonglong",             "_longlong"]> {
   let Spellings = ["__builtin_hlsl_interlocked_or_ret64"];
   let Attributes = [NoThrow, CustomTypeChecking];
-  let Prototype = "void(...)";
+  let Prototype = "T(...)";
 }
 
 // Builtins for XRay.
