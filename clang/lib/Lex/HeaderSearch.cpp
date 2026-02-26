@@ -1759,7 +1759,7 @@ bool HeaderSearch::hasModuleMap(StringRef FileName,
     if (DirState == DirectoryModuleMap.end() || !DirState->second.ModuleMapFile)
       continue;
 
-    if (!HSOpts.LazyLoadModMaps)
+    if (!HSOpts.LazyLoadModuleMaps)
       return true;
 
     auto &MMState = DirState->second;
@@ -1895,7 +1895,7 @@ bool HeaderSearch::findUsableModuleForHeader(
     FileEntryRef File, const DirectoryEntry *Root, Module *RequestingModule,
     ModuleMap::KnownHeader *SuggestedModule, bool IsSystemHeaderDir) {
   if (needModuleLookup(RequestingModule, SuggestedModule)) {
-    if (!HSOpts.LazyLoadModMaps) {
+    if (!HSOpts.LazyLoadModuleMaps) {
       // NOTE: This is required for `shadowed-submodule.m` to pass as it relies
       //       on A1/module.modulemap being loaded even though we already know
       //       which module the header belongs to. We will remove this behavior
@@ -2195,7 +2195,7 @@ HeaderSearch::parseModuleMapFile(StringRef DirName, bool IsSystem,
 HeaderSearch::ModuleMapResult
 HeaderSearch::parseModuleMapFile(DirectoryEntryRef Dir, bool IsSystem,
                                  bool IsFramework) {
-  if (!HSOpts.LazyLoadModMaps)
+  if (!HSOpts.LazyLoadModuleMaps)
     return parseAndLoadModuleMapFile(Dir, IsSystem, IsFramework);
 
   auto InsertRes = DirectoryModuleMap.insert(std::pair{

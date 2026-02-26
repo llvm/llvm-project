@@ -286,7 +286,7 @@ public:
   /// Whether modules from module maps should only be loaded when used, not just
   /// when parsed.
   LLVM_PREFERRED_TYPE(bool)
-  unsigned LazyLoadModMaps : 1;
+  unsigned LazyLoadModuleMaps : 1;
 
   HeaderSearchOptions(StringRef _Sysroot = "/")
       : Sysroot(_Sysroot), ModuleFormat("raw"), DisableModuleHash(false),
@@ -306,7 +306,7 @@ public:
         ModulesPruneNonAffectingModuleMaps(true), ModulesHashContent(false),
         ModulesSerializeOnlyPreprocessor(false),
         ModulesStrictContextHash(false), ModulesIncludeVFSUsage(false),
-        AllowModuleMapSubdirectorySearch(true), LazyLoadModMaps(false) {}
+        AllowModuleMapSubdirectorySearch(true), LazyLoadModuleMaps(false) {}
 
   /// AddPath - Add the \p Path path to the specified \p Group list.
   void AddPath(StringRef Path, frontend::IncludeDirGroup Group,

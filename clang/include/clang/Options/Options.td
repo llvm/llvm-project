@@ -8527,7 +8527,7 @@ def ftest_module_file_extension_EQ :
            "The argument is parsed as blockname:major:minor:hashed:user info">;
 def fmodules_lazy_load_module_maps : Flag<["-"], "fmodules-lazy-load-module-maps">,
   HelpText<"Load modules from module maps only when needed">,
-  MarshallingInfoFlag<HeaderSearchOpts<"LazyLoadModMaps">>;
+  MarshallingInfoFlag<HeaderSearchOpts<"LazyLoadModuleMaps">>;
 
 defm recovery_ast : BoolOption<"f", "recovery-ast",
   LangOpts<"RecoveryAST">, DefaultTrue,

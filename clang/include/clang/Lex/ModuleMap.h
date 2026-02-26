@@ -440,8 +440,8 @@ public:
   ///
   /// \param M The module in which we're resolving the header directive.
   /// \param NameAsWritten The name of the header as written in the module map.
-  /// \param RelativePathName Filled in with the relative path name from the
-  ///        module to the resolved header.
+  /// \param[out] RelativePathName Filled in with the relative path name from
+  ///             the module to the resolved header.
   /// \return The resolved file, if any.
   OptionalFileEntryRef
   findUmbrellaHeaderForModule(Module *M, std::string NameAsWritten,
