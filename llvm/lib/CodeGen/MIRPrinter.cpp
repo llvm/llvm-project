@@ -778,7 +778,7 @@ void printMBB(raw_ostream &OS, MFPrintState &State,
     for (unsigned I : MBB.getPrefetchTargetCallsiteIndexes()) {
       OS << LS << I;
     }
-    OS << "\n";
+    OS << '\n';
     HasLineAttributes = true;
   }
 
