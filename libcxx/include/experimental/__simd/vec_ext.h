@@ -33,7 +33,8 @@ struct __vec_ext {
 } // namespace simd_abi
 
 template <int _Np>
-inline constexpr bool is_abi_tag_v<simd_abi::__vec_ext<_Np>> = _Np > 0 && _Np <= 32;
+inline constexpr bool is_abi_tag_v<simd_abi::__vec_ext<_Np>> =
+    _Np > 0 && _Np <= (_LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES > 32 ? _LIBCPP_NATIVE_SIMD_WIDTH_IN_BYTES : 32);
 
 template <class _Tp, int _Np>
 struct __simd_storage<_Tp, simd_abi::__vec_ext<_Np>> {
