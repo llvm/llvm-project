@@ -1045,8 +1045,22 @@ void AsmPrinter::emitFunctionHeader() {
     emitVisibility(CurrentFnSym, F.getVisibility());
 
   emitLinkage(&F, CurrentFnSym);
-  if (MAI->hasFunctionAlignment())
-    emitAlignment(MF->getPreferredAlignment(), &F);
+  if (MAI->hasFunctionAlignment()) {
+    // Make sure that the preferred alignment directive (.prefalign) is
+    // supported before using it. The preferred alignment directive will not
+    // have the intended effect unless function sections are enabled, so check
+    // for that as well.
+    if (MAI->useIntegratedAssembler() && MAI->hasPreferredAlignment() &&
+        TM.getFunctionSections()) {
+      Align Alignment = MF->getAlignment();
+      Align PrefAlignment = MF->getPreferredAlignment();
+      emitAlignment(Alignment, &F);
+      if (Alignment != PrefAlignment)
+        OutStreamer->emitPrefAlign(PrefAlignment);
+    } else {
+      emitAlignment(MF->getPreferredAlignment(), &F);
+    }
+  }
 
   if (MAI->hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(CurrentFnSym, MCSA_ELF_TypeFunction);
