@@ -4133,6 +4133,23 @@ TEST_F(TokenAnnotatorTest, TypenameMacro) {
   EXPECT_TOKEN(Tokens[6], tok::l_brace, TT_Unknown);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsTryCatchMacros) {
+  auto Style = getLLVMStyle();
+  Style.TryMacros.push_back("KJ_TRY");
+  Style.CatchMacros.push_back("KJ_CATCH");
+
+  auto Tokens = annotate("KJ_TRY {} KJ_CATCH(e) {}", Style);
+  ASSERT_EQ(Tokens.size(), 10u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_try, TT_TryMacro);
+  EXPECT_TOKEN(Tokens[3], tok::kw_catch, TT_CatchMacro);
+
+  Tokens = annotate("KJ_TRY(js) {} KJ_CATCH(e) {}", Style);
+  ASSERT_EQ(Tokens.size(), 13u) << Tokens;
+  EXPECT_TOKEN(Tokens[0], tok::kw_try, TT_TryMacro);
+  EXPECT_TOKEN(Tokens[6], tok::kw_catch, TT_CatchMacro);
+  EXPECT_TOKEN(Tokens[10], tok::l_brace, TT_ControlStatementLBrace);
+}
+
 TEST_F(TokenAnnotatorTest, GNULanguageStandard) {
   auto Style = getGNUStyle();
   EXPECT_EQ(Style.Standard, FormatStyle::LS_Latest);
