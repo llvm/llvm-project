@@ -3562,9 +3562,9 @@ bool RISCVTTIImpl::shouldCopyAttributeWhenOutliningFrom(
 
 std::optional<Instruction *>
 RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
-  // If all operands of a vmv.v.vx are constant, fold a bitcast(vmv.v.vx) to
-  // scale the vmv.v.vx, enabling removal of the bitcast. The transform helps
-  // avoid creating redundant masks.
+  // If all operands of a vmv.v.x are constant, fold a bitcast(vmv.v.x) to scale
+  // the vmv.v.x, enabling removal of the bitcast. The transform helps avoid
+  // creating redundant masks.
   const DataLayout &DL = IC.getDataLayout();
   if (II.user_empty())
     return {};
@@ -3588,17 +3588,15 @@ RISCVTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   if (VL % TargetScale)
     return {};
   Type *VLTy = II.getOperand(2)->getType();
-  ElementCount ScaleEC = ElementCount::getScalable(TargetScale);
   ElementCount SourceEC = SourceVecTy->getElementCount();
   unsigned NewEltBW = SourceEltBW * TargetScale;
-  if (!SourceEC.hasKnownScalarFactor(ScaleEC) ||
+  if (!SourceEC.isKnownMultipleOf(TargetScale) ||
       !DL.fitsInLegalInteger(NewEltBW))
     return {};
   auto *NewEltTy = IntegerType::get(II.getContext(), NewEltBW);
   if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, NewEltTy)))
     return {};
-  ElementCount NewEC =
-      ElementCount::getScalable(SourceEC.getKnownScalarFactor(ScaleEC));
+  ElementCount NewEC = SourceEC.divideCoefficientBy(TargetScale);
   Type *RetTy = VectorType::get(NewEltTy, NewEC);
   assert(SourceVecTy->canLosslesslyBitCastTo(RetTy) &&
          "Lossless bitcast between types expected");
