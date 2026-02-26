@@ -74,4 +74,4 @@ declare signext i32 @callout(i32 signext)
 ; CHECK: EXTRN DoFunc@indirect
 ; CHECK: DoFunc@indirect XATTR LINKAGE(XPLINK),REFERENCE(CODE,INDIRECT),SCOPE(EX
 ; CHECK:                PORT)
-; CHECK: DoFunc@indirect ALIAS "DoFunc"
+; CHECK: DoFunc@indirect ALIAS C'DoFunc'
