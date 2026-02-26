@@ -19,10 +19,10 @@ __device__ void kernel1() {
 }
 
 //.
-// CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
-// CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: "")
+// CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_HIP, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, splitDebugInlining: false, nameTableKind: None)
+// CHECK: [[META1]] = !DIFile(filename: "{{.*}}/clang/test/CodeGenHIP/<stdin>", directory: "")
 // CHECK: [[DBG7]] = distinct !DISubprogram(name: "kernel1", linkageName: "_Z7kernel1v", scope: [[META8:![0-9]+]], file: [[META8]], line: 17, type: [[META9:![0-9]+]], scopeLine: 17, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: [[META0]], retainedNodes: [[META11:![0-9]+]])
-// CHECK: [[META8]] = !DIFile(filename: "{{.*}}debug-info-anonymous-union-heterogeneous-dwarf.hip", directory: "")
+// CHECK: [[META8]] = !DIFile(filename: "{{.*}}/clang/test/CodeGenHIP/debug-info-anonymous-union-heterogeneous-dwarf.hip", directory: "")
 // CHECK: [[META9]] = !DISubroutineType(types: [[META10:![0-9]+]])
 // CHECK: [[META10]] = !{null}
 // CHECK: [[META11]] = !{[[META12:![0-9]+]], [[META18]], [[META19]], [[META20]]}

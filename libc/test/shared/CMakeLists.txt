@@ -101,6 +101,7 @@ add_fp_unittest(
     libc.src.__support.math.f16mull
     libc.src.__support.math.f16sqrt
     libc.src.__support.math.f16sqrtf
+    libc.src.__support.math.f16sqrtf128
     libc.src.__support.math.f16sqrtl
     libc.src.__support.math.f16sub
     libc.src.__support.math.f16subf
@@ -219,4 +220,5 @@ add_fp_unittest(
     libc.src.__support.math.tanhf
     libc.src.__support.math.tanhf16
     libc.src.__support.math.tanpif
+    libc.src.__support.math.tanpif16
 )
