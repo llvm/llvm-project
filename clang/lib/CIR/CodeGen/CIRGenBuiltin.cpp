@@ -825,7 +825,7 @@ decodeFixedType(CIRGenFunction &cgf,
   case IITDescriptor::Pointer: {
     mlir::Builder builder(context);
     auto addrSpace = cir::TargetAddressSpaceAttr::get(
-        context, builder.getUI32IntegerAttr(descriptor.Pointer_AddressSpace));
+        context, descriptor.Pointer_AddressSpace);
     return cir::PointerType::get(cir::VoidType::get(context), addrSpace);
   }
   default:
