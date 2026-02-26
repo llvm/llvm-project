@@ -181,7 +181,8 @@ bool NaryReassociateLegacyPass::runOnFunction(Function &F) {
 
   // UniformityInfo is required on all targets, but on targets without branch
   // divergence it does no work and reports everything as uniform.
-  auto *UI = &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
+  UniformityInfo *UI =
+      &getAnalysis<UniformityInfoWrapperPass>().getUniformityInfo();
 
   return Impl.runImpl(F, AC, DT, SE, TLI, TTI, UI);
 }
@@ -196,7 +197,7 @@ PreservedAnalyses NaryReassociatePass::run(Function &F,
 
   // UniformityInfo is required on all targets, but on targets without branch
   // divergence it does no work and reports everything as uniform.
-  auto *UI = &AM.getResult<UniformityInfoAnalysis>(F);
+  UniformityInfo *UI = &AM.getResult<UniformityInfoAnalysis>(F);
 
   if (!runImpl(F, AC, DT, SE, TLI, TTI, UI))
     return PreservedAnalyses::all();
@@ -395,38 +396,29 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // tryReassociateGEPAtIndex(GEP, I, LHS, RHS, ...) looks for a dominating
     // GEP with LHS as index, then creates: NewGEP = existingGEP + RHS * scale.
     // So the RHS becomes the "remaining" index calculation.
-    //
-    // For uniformity: prefer the remaining calculation to be uniform, as it
-    // can then stay in scalar registers.
-    //
+
+    // When LHS == RHS, both call orders are identical, so only try once.
+    if (LHS == RHS)
+      return tryReassociateGEPAtIndex(GEP, I, LHS, RHS, IndexedType);
+
+    // When uniformity analysis is available, prefer the remaining calculation
+    // to be uniform, keeping uniform computations grouped together.
     // Default order tries LHS first (RHS as remainder). If LHS is uniform and
-    // RHS is divergent, we want to try RHS first so uniform LHS becomes the
-    // remainder. The case where RHS is uniform and LHS is divergent is already
-    // handled by the default order.
+    // RHS is divergent, try RHS first so uniform LHS becomes the remainder.
     if (UI && UI->isUniform(LHS) && !UI->isUniform(RHS)) {
       LLVM_DEBUG(
           dbgs() << "NARY: Preferring uniform remainder for GEP index\n");
-      // LHS is uniform, prefer it as remainder - try RHS first
-      if (LHS != RHS) {
-        if (auto *NewGEP =
-                tryReassociateGEPAtIndex(GEP, I, RHS, LHS, IndexedType))
-          return NewGEP;
-      }
-      if (auto *NewGEP =
-              tryReassociateGEPAtIndex(GEP, I, LHS, RHS, IndexedType))
-        return NewGEP;
-      return nullptr;
-    }
-
-    // Default order
-    if (auto *NewGEP = tryReassociateGEPAtIndex(GEP, I, LHS, RHS, IndexedType))
-      return NewGEP;
-    // Symmetrically, try IndexToSplit = RHS + LHS.
-    if (LHS != RHS) {
-      if (auto *NewGEP =
+      if (GetElementPtrInst *NewGEP =
               tryReassociateGEPAtIndex(GEP, I, RHS, LHS, IndexedType))
         return NewGEP;
+      return tryReassociateGEPAtIndex(GEP, I, LHS, RHS, IndexedType);
     }
+
+    // Default order: try (LHS, RHS) first, then (RHS, LHS).
+    if (GetElementPtrInst *NewGEP =
+            tryReassociateGEPAtIndex(GEP, I, LHS, RHS, IndexedType))
+      return NewGEP;
+    return tryReassociateGEPAtIndex(GEP, I, RHS, LHS, IndexedType);
   }
   return nullptr;
 }
@@ -731,11 +723,11 @@ Value *NaryReassociatePass::tryReassociateMinOrMax(Instruction *I,
                       << "\n");
     // Try (B op RHS) op A first - groups uniform B with uniform RHS
     if (AExpr != RHSExpr) {
-      if (auto *NewMinMax = tryCombination(RHS, RHSExpr, B, BExpr, A, AExpr))
+      if (Value *NewMinMax = tryCombination(RHS, RHSExpr, B, BExpr, A, AExpr))
         return NewMinMax;
     }
     if (BExpr != RHSExpr) {
-      if (auto *NewMinMax = tryCombination(A, AExpr, RHS, RHSExpr, B, BExpr))
+      if (Value *NewMinMax = tryCombination(A, AExpr, RHS, RHSExpr, B, BExpr))
         return NewMinMax;
     }
     return nullptr;
