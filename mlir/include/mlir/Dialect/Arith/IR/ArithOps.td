@@ -1589,9 +1589,10 @@ def Arith_IndexCastOp
     a wider integer, the value is sign-extended. If casting to a narrower
     integer, the value is truncated.
 
-    If the `exact` attribute is present, it is assumed that the index type width
-    is such that the conversion does not lose information. When this assumption
-    is violated, the result is poison.
+    If the `exact` attribute is present, it is assumed that the operand
+    contains a value that fits in the destination's representation, therefore
+    the cast does not lose any information. When this assumption is violated,
+    the result is poison.
 
     Example:
 
@@ -1632,9 +1633,10 @@ def Arith_IndexCastUIOp
     is equivalent to sign extension. When this assumption is violated,
     the result is poison.
 
-    If the `exact` attribute is present, it is assumed that the index type width
-    is such that the conversion does not lose information. When this assumption
-    is violated, the result is poison.
+    If the `exact` attribute is present, it is assumed that the operand
+    contains a value that fits in the destination's representation, therefore
+    the cast does not lose any information. When this assumption is violated,
+    the result is poison.
 
     Example:
 
