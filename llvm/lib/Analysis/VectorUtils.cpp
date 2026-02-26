@@ -152,6 +152,8 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
     return true;
 
   switch (ID) {
+  case Intrinsic::vp_reduce_or:
+    return ScalarOpdIdx == 0;
   case Intrinsic::abs:
   case Intrinsic::vp_abs:
   case Intrinsic::ctlz:
