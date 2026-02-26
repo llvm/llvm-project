@@ -22177,9 +22177,7 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (N->getOpcode() == ISD::LOAD) {
       // Replace unaligned scalar load with naturally aligned vector load and a
-      // bitcast. TODO: vector-to-scalar cast is very expensive on some
-      // hardware, and this transformation wouldn't be profitable; model and use
-      // the costs here.
+      // bitcast.
       auto *LD = cast<LoadSDNode>(N);
       if (!LD->isUnindexed() || !LD->isSimple())
         break;
@@ -22202,23 +22200,40 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                                           : MVT::getIntegerVT(TargetBW);
       MVT MemVecVT = MVT::getVectorVT(EltVT, TargetNumElts);
 
-      // Scale the MemVecVT to ExtScale to get the VT of the ExtLoad.
-      unsigned ExtScale =
-          RetVT.getScalarSizeInBits() / MemVT.getScalarSizeInBits();
-      MVT ExtEltVT = MemVT.isFloatingPoint()
-                         ? MVT::getFloatingPointVT(TargetBW * ExtScale)
-                         : MVT::getIntegerVT(TargetBW * ExtScale);
-      MVT ExtVecVT = MemVecVT.changeVectorElementType(ExtEltVT);
-
-      // If the proposed ExtLoad would require further legalization, abort.
-      if (!isLegalElementTypeForRVV(ExtEltVT) || !isTypeLegal(ExtVecVT))
+      // If the proposed VT to perform the load in is illegal, abort.
+      if (!isLegalElementTypeForRVV(EltVT) || !isTypeLegal(MemVecVT))
         break;
 
-      SDValue TargetLoad = DAG.getExtLoad(
-          LD->getExtensionType(), SDLoc(N), ExtVecVT, LD->getChain(),
-          LD->getBasePtr(), MemVecVT, LD->getMemOperand());
-      return DCI.CombineTo(N, DAG.getBitcast(RetVT, TargetLoad),
-                           cast<LoadSDNode>(TargetLoad)->getChain());
+      // If the proposed VT to perform the bitcast in is illegal, abort.
+      MVT MemScalarVT = MemVT.isFloatingPoint()
+                            ? MVT::getFloatingPointVT(TargetBW * TargetNumElts)
+                            : MVT::getIntegerVT(TargetBW * TargetNumElts);
+      if (!isTypeLegal(MemScalarVT))
+        break;
+
+      // Create a non-extending load in the MemVecVT.
+      SDValue TargetLoad = DAG.getLoad(
+          MemVecVT, SDLoc(N), LD->getChain(), LD->getBasePtr(),
+          LD->getPointerInfo(), SrcAlign, LD->getMemOperand()->getFlags());
+
+      // Finally, replace the original load with the bitcasted-extended
+      // TargetLoad, depending on the extension type.
+      SDValue Res;
+      switch (LD->getExtensionType()) {
+      case ISD::NON_EXTLOAD:
+        Res = DAG.getBitcast(RetVT, TargetLoad);
+        break;
+      case ISD::ZEXTLOAD:
+        Res = DAG.getBitcastedZExtOrTrunc(TargetLoad, SDLoc(N), RetVT);
+        break;
+      case ISD::SEXTLOAD:
+        Res = DAG.getBitcastedSExtOrTrunc(TargetLoad, SDLoc(N), RetVT);
+        break;
+      case ISD::EXTLOAD:
+        Res = DAG.getBitcastedAnyExtOrTrunc(TargetLoad, SDLoc(N), RetVT);
+        break;
+      }
+      return DCI.CombineTo(N, Res, cast<LoadSDNode>(TargetLoad)->getChain());
     }
 
     auto *Store = cast<StoreSDNode>(N);

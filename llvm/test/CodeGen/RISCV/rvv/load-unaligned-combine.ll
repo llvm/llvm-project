@@ -35,13 +35,12 @@ define i64 @unaligned_i64_factor4(ptr %p) {
 ;
 ; RV32V-LABEL: unaligned_i64_factor4:
 ; RV32V:       # %bb.0:
-; RV32V-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV32V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
 ; RV32V-NEXT:    vle16.v v8, (a0)
-; RV32V-NEXT:    li a0, 32
-; RV32V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
-; RV32V-NEXT:    vsrl.vx v9, v8, a0
-; RV32V-NEXT:    vmv.x.s a1, v9
+; RV32V-NEXT:    addi a0, a0, 4
+; RV32V-NEXT:    vle16.v v9, (a0)
 ; RV32V-NEXT:    vmv.x.s a0, v8
+; RV32V-NEXT:    vmv.x.s a1, v9
 ; RV32V-NEXT:    ret
 ;
 ; RV64V-LABEL: unaligned_i64_factor4:
@@ -192,25 +191,19 @@ define void @extload_unaligned_f16_factor2(ptr %p, ptr %q) {
 ;
 ; RV32NOHALF-LABEL: extload_unaligned_f16_factor2:
 ; RV32NOHALF:       # %bb.0:
-; RV32NOHALF-NEXT:    lbu a2, 0(a0)
-; RV32NOHALF-NEXT:    lbu a0, 1(a0)
-; RV32NOHALF-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
-; RV32NOHALF-NEXT:    vmv.v.x v8, a2
-; RV32NOHALF-NEXT:    vslide1down.vx v8, v8, a0
-; RV32NOHALF-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV32NOHALF-NEXT:    vmv.x.s a0, v8
+; RV32NOHALF-NEXT:    lbu a2, 1(a0)
+; RV32NOHALF-NEXT:    lbu a0, 0(a0)
+; RV32NOHALF-NEXT:    slli a2, a2, 8
+; RV32NOHALF-NEXT:    or a0, a2, a0
 ; RV32NOHALF-NEXT:    sh a0, 0(a1)
 ; RV32NOHALF-NEXT:    ret
 ;
 ; RV64NOHALF-LABEL: extload_unaligned_f16_factor2:
 ; RV64NOHALF:       # %bb.0:
-; RV64NOHALF-NEXT:    lbu a2, 0(a0)
-; RV64NOHALF-NEXT:    lbu a0, 1(a0)
-; RV64NOHALF-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV64NOHALF-NEXT:    vmv.v.x v8, a2
-; RV64NOHALF-NEXT:    vslide1down.vx v8, v8, a0
-; RV64NOHALF-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
-; RV64NOHALF-NEXT:    vmv.x.s a0, v8
+; RV64NOHALF-NEXT:    lbu a2, 1(a0)
+; RV64NOHALF-NEXT:    lbu a0, 0(a0)
+; RV64NOHALF-NEXT:    slli a2, a2, 8
+; RV64NOHALF-NEXT:    or a0, a2, a0
 ; RV64NOHALF-NEXT:    sh a0, 0(a1)
 ; RV64NOHALF-NEXT:    ret
 ;
