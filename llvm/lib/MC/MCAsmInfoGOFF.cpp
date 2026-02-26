@@ -121,8 +121,8 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
   auto &Sec =
       const_cast<MCSectionGOFF &>(static_cast<const MCSectionGOFF &>(Section));
   auto EmitExternalName = [&Sec, &OS]() {
-  if (Sec.hasExternalName())
-    OS << Sec.getName() << " ALIAS C'" << Sec.getExternalName() << "'\n";
+    if (Sec.hasExternalName())
+      OS << Sec.getName() << " ALIAS C'" << Sec.getExternalName() << "'\n";
   };
   switch (Sec.SymbolType) {
   case GOFF::ESD_ST_SectionDefinition: {
