@@ -60,7 +60,7 @@ constexpr void testBase_with_CommonRange() {
 
 template <typename Iter>
 constexpr void testBase_with_NonCommonRange() {
-  using Sent =sentinel_wrapper<Iter>;
+  using Sent           = sentinel_wrapper<Iter>;
   using NonCommonRange = MinimalRange<Iter, Sent>;
   static_assert(!std::ranges::common_range<NonCommonRange>);
 
