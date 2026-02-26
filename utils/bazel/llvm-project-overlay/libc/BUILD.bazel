@@ -6331,7 +6331,7 @@ libc_math_function(
 libc_math_function(
     name = "f16sqrtf128",
     additional_deps = [
-        ":__support_fputil_f16sqrtf128",
+        ":__support_math_f16sqrtf128",
     ],
 )
 
