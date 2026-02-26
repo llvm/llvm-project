@@ -1473,6 +1473,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
     return;
   }
 
+  // Simplify MaskedCond with no block mask to its single operand.
+  if (match(Def, m_VPInstruction<VPInstruction::MaskedCond>()) &&
+      !cast<VPInstruction>(Def)->isMasked())
+    return Def->replaceAllUsesWith(Def->getOperand(0));
+
   // Look through ExtractLastLane.
   if (match(Def, m_ExtractLastLane(m_VPValue(A)))) {
     if (match(A, m_BuildVector())) {
@@ -3990,6 +3995,17 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
         continue;
       }
 
+      // Lower MaskedCond with block mask to LogicalAnd.
+      if (match(&R, m_VPInstruction<VPInstruction::MaskedCond>())) {
+        auto *VPI = cast<VPInstruction>(&R);
+        assert(VPI->isMasked() &&
+               "Unmasked MaskedCond should be simplified earlier");
+        VPI->replaceAllUsesWith(Builder.createNaryOp(
+            VPInstruction::LogicalAnd, {VPI->getOperand(0), VPI->getMask()}));
+        ToRemove.push_back(VPI);
+        continue;
+      }
+
       // Lower BranchOnCount to ICmp + BranchOnCond.
       VPValue *IV, *TC;
       if (match(&R, m_BranchOnCount(m_VPValue(IV), m_VPValue(TC)))) {
@@ -4070,10 +4086,17 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
           match(EarlyExitingVPBB->getTerminator(),
                 m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
       assert(Matched && "Terminator must be BranchOnCond");
-      auto *CondToEarlyExit = TrueSucc == ExitBlock
-                                  ? CondOfEarlyExitingVPBB
-                                  : Builder.createNot(CondOfEarlyExitingVPBB);
+
+      // Insert the MaskedCond in the EarlyExitingVPBB so the predicator adds
+      // the correct block mask.
+      VPBuilder EarlyExitingBuilder(EarlyExitingVPBB->getTerminator());
+      auto *CondToEarlyExit = EarlyExitingBuilder.createNaryOp(
+          VPInstruction::MaskedCond,
+          TrueSucc == ExitBlock
+              ? CondOfEarlyExitingVPBB
+              : EarlyExitingBuilder.createNot(CondOfEarlyExitingVPBB));
       assert((isa<VPIRValue>(CondOfEarlyExitingVPBB) ||
+              !VPDT.properlyDominates(EarlyExitingVPBB, LatchVPBB) ||
               VPDT.properlyDominates(
                   CondOfEarlyExitingVPBB->getDefiningRecipe()->getParent(),
                   LatchVPBB)) &&
@@ -5674,6 +5697,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     return std::nullopt;
   };
 
+  VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   for (VPRecipeBase &Phi :
        make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
@@ -5681,16 +5705,24 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                      PhiR->getRecurrenceKind()))
       continue;
 
-    // Get the IV and condition from the backedge value of the reduction phi.
-    // The backedge value should be a select between the phi and the IV.
+    // If there's a header mask, the backedge select will not be the find-last
+    // select.
     VPValue *BackedgeVal = PhiR->getBackedgeValue();
+    VPValue *CondSelect = BackedgeVal;
+    if (HeaderMask &&
+        !match(BackedgeVal, m_Select(m_Specific(HeaderMask),
+                                     m_VPValue(CondSelect), m_Specific(PhiR))))
+      llvm_unreachable("expected header mask select");
+
+    // Get the IV from the conditional select of the reduction phi.
+    // The conditional select should be a select between the phi and the IV.
     VPValue *Cond, *TrueVal, *FalseVal;
-    if (!match(BackedgeVal, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
-                                     m_VPValue(FalseVal))))
+    if (!match(CondSelect, m_Select(m_VPValue(Cond), m_VPValue(TrueVal),
+                                    m_VPValue(FalseVal))))
       continue;
 
     // The non-phi operand of the select is the IV.
-    assert(is_contained(BackedgeVal->getDefiningRecipe()->operands(), PhiR));
+    assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
     VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
 
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
@@ -5782,8 +5814,7 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *BackedgeVal, RdxUnordered{1}, {},
-        PhiR->hasUsesOutsideReductionChain());
+        *CondSelect, RdxUnordered{1}, {}, PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
     PhiR->eraseFromParent();
