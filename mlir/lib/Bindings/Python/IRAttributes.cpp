@@ -929,6 +929,7 @@ PyType_Slot PyDenseElementsAttribute::slots[] = {
      reinterpret_cast<void *>(PyDenseElementsAttribute::bf_getbuffer)},
     {Py_bf_releasebuffer,
      reinterpret_cast<void *>(PyDenseElementsAttribute::bf_releasebuffer)},
+    {0, nullptr},
 };
 
 /*static*/ int PyDenseElementsAttribute::bf_getbuffer(PyObject *obj,
