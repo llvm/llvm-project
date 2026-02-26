@@ -939,11 +939,13 @@ let Predicates = [HasStdExtP] in {
   def PMQR2ADDA_H : RVPTernary_rrr<0b0111, 0b10, 0b101, "pmqr2adda.h">;
 
   def PM2SUB_H    : RVPBinary_rr<0b1000, 0b00, 0b101, "pm2sub.h">;
+  let Defs = [VXSAT] in
   def PM2SADD_H   : RVPBinary_rr<0b1000, 0b10, 0b101, "pm2sadd.h", Commutable=1>;
 
   def PM2SUBA_H   : RVPTernary_rrr<0b1001, 0b00, 0b101, "pm2suba.h">;
 
   def PM2SUB_HX   : RVPBinary_rr<0b1010, 0b00, 0b101, "pm2sub.hx">;
+  let Defs = [VXSAT] in
   def PM2SADD_HX  : RVPBinary_rr<0b1010, 0b10, 0b101, "pm2sadd.hx", Commutable=1>;
 
   def PM2SUBA_HX  : RVPTernary_rrr<0b1011, 0b00, 0b101, "pm2suba.hx">;
@@ -1096,8 +1098,10 @@ let Predicates = [HasStdExtP] in {
   def PMHACCSU_H    : RVPTernary_rrr<0b1001, 0b00, 0b111, "pmhaccsu.h">;
   def PMHRACCSU_H   : RVPTernary_rrr<0b1001, 0b10, 0b111, "pmhraccsu.h">;
 
+  let Defs = [VXSAT] in {
   def PMULQ_H       : RVPBinary_rr<0b1010, 0b00, 0b111, "pmulq.h", Commutable=1>;
   def PMULQR_H      : RVPBinary_rr<0b1010, 0b10, 0b111, "pmulqr.h", Commutable=1>;
+  } // Defs = [VXSAT]
 } // Predicates = [HasStdExtP]
 let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MULHR      : RVPBinary_rr<0b0000, 0b11, 0b111, "mulhr", Commutable=1>;
@@ -1127,8 +1131,10 @@ let Predicates = [HasStdExtP, IsRV32], DecoderNamespace = "RV32Only" in {
   def MHACCSU    : RVPTernary_rrr<0b1001, 0b01, 0b111, "mhaccsu">;
   def MHRACCSU   : RVPTernary_rrr<0b1001, 0b11, 0b111, "mhraccsu">;
 
+  let Defs = [VXSAT] in {
   def MULQ       : RVPBinary_rr<0b1010, 0b01, 0b111, "mulq", Commutable=1>;
   def MULQR      : RVPBinary_rr<0b1010, 0b11, 0b111, "mulqr", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def MQACC_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "mqacc.h00">;
   def MQRACC_H00 : RVPTernary_rrr<0b1101, 0b10, 0b111, "mqracc.h00">;
@@ -1167,8 +1173,10 @@ let Predicates = [HasStdExtP, IsRV64] in {
   def PMHACCSU_W   : RVPTernary_rrr<0b1001, 0b01, 0b111, "pmhaccsu.w">;
   def PMHRACCSU_W  : RVPTernary_rrr<0b1001, 0b11, 0b111, "pmhraccsu.w">;
 
+  let Defs = [VXSAT] in {
   def PMULQ_W      : RVPBinary_rr<0b1010, 0b01, 0b111, "pmulq.w", Commutable=1>;
   def PMULQR_W     : RVPBinary_rr<0b1010, 0b11, 0b111, "pmulqr.w", Commutable=1>;
+  } // Defs = [VXSAT]
 
   def PMQACC_W_H00  : RVPTernary_rrr<0b1101, 0b00, 0b111, "pmqacc.w.h00">;
   def MQACC_W00     : RVPTernary_rrr<0b1101, 0b01, 0b111, "mqacc.w00">;
