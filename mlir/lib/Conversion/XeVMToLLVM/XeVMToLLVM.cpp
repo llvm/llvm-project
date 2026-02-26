@@ -9,6 +9,7 @@
 #include "mlir/Conversion/XeVMToLLVM/XeVMToLLVM.h"
 
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/FunctionCallUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/XeVMDialect.h"
@@ -848,13 +849,22 @@ class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
   LogicalResult
   matchAndRewrite(LLVM::AllocaOp op, LLVM::AllocaOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto moduleOp = op->getParentWithTrait<OpTrait::SymbolTable>();
-    if (!moduleOp)
-      return failure();
     auto ptrType = cast<LLVM::LLVMPointerType>(op.getType());
     auto addrSpace = ptrType.getAddressSpace();
     if (addrSpace != 3)
       return failure();
+    auto symTable = op->getParentWithTrait<OpTrait::SymbolTable>();
+    if (!symTable)
+      return failure();
+    Block *moduleBody;
+    if (ModuleOp mod = dyn_cast<ModuleOp>(*symTable)) {
+      moduleBody = mod.getBody();
+    } else if (gpu::GPUModuleOp gpuMod =
+                   dyn_cast<gpu::GPUModuleOp>(*symTable)) {
+      moduleBody = gpuMod.getBody();
+    } else {
+      return failure();
+    }
     auto val = op.getArraySize();
     APInt cst;
     if (!matchPattern(val, m_ConstantInt(&cst)))
@@ -862,17 +872,19 @@ class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
     auto loc = op.getLoc();
     auto globalType = LLVM::LLVMArrayType::get(
         rewriter.getContext(), op.getElemType(), cst.getZExtValue());
-    auto saveIP = rewriter.saveInsertionPoint();
-    rewriter.setInsertionPointToStart(moduleOp.getBody());
-    auto alignment = op.getAlignment();
-    auto globalVar = LLVM::GlobalOp::create(
-        rewriter, loc, globalType, /*isConstant=*/false,
-        /*linkage=*/LLVM::Linkage::Internal,
-        /*name=*/std::string("__global_alloca_") +
-            std::to_string(getNextGlobalIdx()),
-        /*value=*/Attribute(),
-        /*alignment=*/alignment ? *alignment : 0, /*addrSpace=*/addrSpace);
-    rewriter.restoreInsertionPoint(saveIP);
+    LLVM::GlobalOp globalVar;
+    {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPointToStart(moduleBody);
+      auto alignment = op.getAlignment();
+      globalVar = LLVM::GlobalOp::create(
+          rewriter, loc, globalType, /*isConstant=*/false,
+          /*linkage=*/LLVM::Linkage::Internal,
+          /*name=*/std::string("__global_alloca_") +
+              std::to_string(getNextGlobalIdx()),
+          /*value=*/Attribute(),
+          /*alignment=*/alignment ? *alignment : 0, /*addrSpace=*/addrSpace);
+    }
     rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, globalVar);
     return success();
   }
