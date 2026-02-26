@@ -1547,6 +1547,18 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_f16sqrtf128",
+    hdrs = ["src/__support/math/f16sqrtf128.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_sqrt",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_f16sqrtl",
     hdrs = ["src/__support/math/f16sqrtl.h"],
     deps = [
@@ -6336,7 +6348,7 @@ libc_math_function(
 libc_math_function(
     name = "f16sqrtf128",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_f16sqrtf128",
     ],
 )
 
