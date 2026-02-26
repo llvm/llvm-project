@@ -839,11 +839,6 @@ class SubgroupOpWorkitemOpToOCLPattern : public OpConversionPattern<OpType> {
   }
 };
 
-static unsigned getNextGlobalIdx() {
-  static unsigned globalIdx = 0;
-  return globalIdx++;
-}
-
 class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
   using OpConversionPattern::OpConversionPattern;
   LogicalResult
@@ -887,6 +882,12 @@ class AllocaToGlobalPattern : public OpConversionPattern<LLVM::AllocaOp> {
     }
     rewriter.replaceOpWithNewOp<LLVM::AddressOfOp>(op, globalVar);
     return success();
+  }
+
+private:
+  static unsigned getNextGlobalIdx() {
+    static unsigned globalIdx = 0;
+    return globalIdx++;
   }
 };
 
