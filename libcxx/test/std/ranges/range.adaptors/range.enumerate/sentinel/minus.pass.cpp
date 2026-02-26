@@ -27,12 +27,14 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <utility>
 
 #include "test_iterators.h"
 
-#include "../test_concepts.h"
-// #include "../types_iterators.h"
 #include "../types.h"
+
+template <class T>
+concept HasMemberSize = requires(T t) { t.size(); };
 
 template <bool Const>
 struct Iter {

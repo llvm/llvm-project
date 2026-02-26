@@ -17,11 +17,14 @@
 
 #include <cassert>
 #include <ranges>
+#include <utility>
 
 #include "test_iterators.h"
 
-#include "test_concepts.h"
 #include "types.h"
+
+template <class T>
+concept HasMemberSize = requires(T t) { t.size(); };
 
 struct NonSizedRangeView : std::ranges::view_base {
   using iterator = forward_iterator<int*>;

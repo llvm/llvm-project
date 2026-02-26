@@ -17,6 +17,7 @@
 
 #include <cassert>
 #include <ranges>
+#include <utility>
 
 #include "MoveOnly.h"
 
