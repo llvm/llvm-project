@@ -3570,9 +3570,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (Ty0->isFloatingType() || Ty1->isFloatingType() ||
         (VecTy0 && VecTy0->getElementType()->isFloatingType()) ||
         (VecTy1 && VecTy1->getElementType()->isFloatingType()))
-      Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
-          << "__builtin_elementwise_min"
-          << "__builtin_elementwise_minnum/minimum/minimumnum";
+      Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin_no_suggestion)
+          << "__builtin_elementwise_min";
     break;
   }
   case Builtin::BI__builtin_elementwise_max: {
@@ -3587,9 +3586,8 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (Ty0->isFloatingType() || Ty1->isFloatingType() ||
         (VecTy0 && VecTy0->getElementType()->isFloatingType()) ||
         (VecTy1 && VecTy1->getElementType()->isFloatingType()))
-      Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin)
-          << "__builtin_elementwise_max"
-          << "__builtin_elementwise_maxnum/maximum/maximumnum";
+      Diag(TheCall->getBeginLoc(), diag::warn_deprecated_builtin_no_suggestion)
+          << "__builtin_elementwise_max";
     break;
   }
   case Builtin::BI__builtin_elementwise_popcount:
