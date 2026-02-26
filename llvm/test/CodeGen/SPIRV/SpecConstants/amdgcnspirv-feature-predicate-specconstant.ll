@@ -58,32 +58,32 @@ declare void @llvm.amdgcn.s.ttracedata.imm(i16 immarg) addrspace(4) #6
 define void @kernel() addrspace(4) {
 ; CHECK-DAG: %[[#KERNEL]] = OpFunction %33 None %34 ; -- Begin function kernel
 ; CHECK-NEXT: %2 = OpLabel
-; CHECK-NEXT: %99 = OpLoad %36 %74 Aligned 4
+; CHECK-NEXT: %101 = OpLoad %36 %76 Aligned 4
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX950]] %4 %3
 ; CHECK-NEXT: %3 = OpLabel
-; CHECK-NEXT: %100 = OpFunctionCall %33 %[[#SET_FPENV_I64]] %50
+; CHECK-NEXT: %102 = OpFunctionCall %33 %[[#SET_FPENV_I64]] %50
 ; CHECK-NEXT: OpBranch %5
 ; CHECK-NEXT: %4 = OpLabel
-; CHECK-NEXT: %101 = OpFunctionCall %39 %[[#ASHR_PK_I8_I32]] %49 %49 %49
+; CHECK-NEXT: %103 = OpFunctionCall %39 %[[#ASHR_PK_I8_I32]] %49 %49 %49
 ; CHECK-NEXT: OpBranch %5
 ; CHECK-NEXT: %5 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX950_1]] %7 %6
 ; CHECK-NEXT: %6 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1201]] %7 %8
 ; CHECK-NEXT: %7 = OpLabel
-; CHECK-NEXT: %102 = OpFunctionCall %33 %[[#S_SLEEP_VAR]] %99
+; CHECK-NEXT: %104 = OpFunctionCall %33 %[[#S_SLEEP_VAR]] %101
 ; CHECK-NEXT: OpBranch %8
 ; CHECK-NEXT: %8 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#HAS_GFX12_INSTS]] %10 %9
 ; CHECK-NEXT: %9 = OpLabel
-; CHECK-NEXT: %103 = OpFunctionCall %33 %[[#S_WAIT_EVENT_EXPORT_READY]]
+; CHECK-NEXT: %105 = OpFunctionCall %33 %[[#S_WAIT_EVENT_EXPORT_READY]]
 ; CHECK-NEXT: OpBranch %14
 ; CHECK-NEXT: %10 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX906]] %12 %11
 ; CHECK-NEXT: %11 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1010]] %12 %13
 ; CHECK-NEXT: %12 = OpLabel
-; CHECK-NEXT: %104 = OpFunctionCall %33 %[[#S_TTRACEDATA_IMM]] %48
+; CHECK-NEXT: %106 = OpFunctionCall %33 %[[#S_TTRACEDATA_IMM]] %48
 ; CHECK-NEXT: OpBranch %13
 ; CHECK-NEXT: %13 = OpLabel
 ; CHECK-NEXT: OpBranch %14
@@ -92,16 +92,16 @@ define void @kernel() addrspace(4) {
 ; CHECK-NEXT: %15 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#IS_GFX1101]] %16 %17
 ; CHECK-NEXT: %16 = OpLabel
-; CHECK-NEXT: %105 = OpLoad %36 %86 Aligned 4
-; CHECK-NEXT: %106 = OpIAdd %36 %105 %99
-; CHECK-NEXT: OpStore %86 %106 Aligned 4
+; CHECK-NEXT: %107 = OpLoad %36 %88 Aligned 4
+; CHECK-NEXT: %108 = OpIAdd %36 %107 %101
+; CHECK-NEXT: OpStore %88 %108 Aligned 4
 ; CHECK-NEXT: OpBranch %17
 ; CHECK-NEXT: %17 = OpLabel
 ; CHECK-NEXT: OpBranch %18
 ; CHECK-NEXT: %18 = OpLabel
-; CHECK-NEXT: %107 = OpLoad %36 %86 Aligned 4
-; CHECK-NEXT: %108 = OpISub %36 %107 %99
-; CHECK-NEXT: OpStore %86 %108 Aligned 4
+; CHECK-NEXT: %109 = OpLoad %36 %88 Aligned 4
+; CHECK-NEXT: %110 = OpISub %36 %109 %101
+; CHECK-NEXT: OpStore %88 %110 Aligned 4
 ; CHECK-NEXT: OpBranch %19
 ; CHECK-NEXT: %19 = OpLabel
 ; CHECK-NEXT: OpBranch %20
@@ -114,19 +114,19 @@ define void @kernel() addrspace(4) {
 ; CHECK-NEXT: %23 = OpLabel
 ; CHECK-NEXT: OpBranchConditional %[[#HAS_GFX11_INSTS]] %24 %25
 ; CHECK-NEXT: %24 = OpLabel
-; CHECK-NEXT: %109 = OpFunctionCall %33 %[[#S_TTRACEDATA_IMM]] %48
+; CHECK-NEXT: %111 = OpFunctionCall %33 %[[#S_TTRACEDATA_IMM]] %48
 ; CHECK-NEXT: OpBranch %25
 ; CHECK-NEXT: %25 = OpLabel
 ; CHECK-NEXT: OpBranch %27
 ; CHECK-NEXT: %26 = OpLabel
-; CHECK-NEXT: %110 = OpFunctionCall %33 %[[#S_WAIT_EVENT_EXPORT_READY]]
+; CHECK-NEXT: %112 = OpFunctionCall %33 %[[#S_WAIT_EVENT_EXPORT_READY]]
 ; CHECK-NEXT: OpBranch %27
 ; CHECK-NEXT: %27 = OpLabel
 ; CHECK-NEXT: OpBranch %28
 ; CHECK-NEXT: %28 = OpLabel
-; CHECK-NEXT: %111 = OpLoad %36 %86 Aligned 4
-; CHECK-NEXT: %112 = OpISub %36 %111 %99
-; CHECK-NEXT: OpStore %86 %112 Aligned 4
+; CHECK-NEXT: %113 = OpLoad %36 %88 Aligned 4
+; CHECK-NEXT: %114 = OpISub %36 %113 %101
+; CHECK-NEXT: OpStore %88 %114 Aligned 4
 ; CHECK-NEXT: OpBranch %29
 ; CHECK-NEXT: %29 = OpLabel
 ; CHECK-NEXT: OpBranch %30
