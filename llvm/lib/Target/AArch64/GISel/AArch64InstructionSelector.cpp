@@ -2743,7 +2743,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     }
 
     MachineOperand &ImmOp = I.getOperand(1);
-    // FIXME: Is going through int64_t always correct?
     ImmOp.ChangeToImmediate(
         ImmOp.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
 
