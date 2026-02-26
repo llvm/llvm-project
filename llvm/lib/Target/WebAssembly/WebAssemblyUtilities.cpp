@@ -14,6 +14,7 @@
 #include "WebAssemblyUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/IR/Function.h"
 #include "llvm/MC/MCContext.h"
@@ -109,9 +110,10 @@ MCSymbolWasm *WebAssembly::getOrCreateFunctionTableSymbol(
     if (!Sym->isFunctionTable())
       Ctx.reportError(SMLoc(), "symbol is not a wasm funcref table");
   } else {
-    bool is64 = Subtarget && Subtarget->getTargetTriple().isArch64Bit();
+    bool Is64 = Subtarget ? Subtarget->hasAddr64()
+                          : Ctx.getTargetTriple().isArch64Bit();
     Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
-    Sym->setFunctionTable(is64);
+    Sym->setFunctionTable(Is64);
     // The default function table is synthesized by the linker.
   }
   // MVP object files can't have symtab entries for tables.
@@ -134,7 +136,13 @@ MCSymbolWasm *WebAssembly::getOrCreateFuncrefCallTableSymbol(
     // modules define the table.
     Sym->setWeak(true);
 
-    wasm::WasmLimits Limits = {0, 1, 1, 0};
+    bool Is64 = Subtarget ? Subtarget->hasAddr64()
+                          : Ctx.getTargetTriple().isArch64Bit();
+
+    wasm::WasmLimits Limits = {(uint8_t)(Is64 ? wasm::WASM_LIMITS_FLAG_IS_64
+                                              : wasm::WASM_LIMITS_FLAG_NONE),
+                               1, 1, 0};
+
     wasm::WasmTableType TableType = {wasm::ValType::FUNCREF, Limits};
     Sym->setType(wasm::WASM_SYMBOL_TYPE_TABLE);
     Sym->setTableType(TableType);
