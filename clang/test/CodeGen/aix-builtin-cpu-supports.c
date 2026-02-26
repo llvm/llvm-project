@@ -39,7 +39,7 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=1 %s
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"htm\");}" > %t.c
-// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=ugt -DLABLE=59  -DBIT=i64 -DVALUE=0 \
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=ugt -DLABEL=59  -DBIT=i64 -DVALUE=0 \
 // RUN:   --check-prefixes=CHECKOP,OPRT,SYSCALL
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"htm-nosc\");}" > %t.c
@@ -55,7 +55,7 @@
 // RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck -DBOOL=1 %s
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"mma\");}" > %t.c
-// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=ugt -DLABLE=62 -DBIT=i64 -DVALUE=0 \
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.2.0.0 -emit-llvm -o - %t.c | FileCheck %s -DPOS=1 -DOP=ugt -DLABEL=62 -DBIT=i64 -DVALUE=0 \
 // RUN:   --check-prefixes=CHECKOP,OPRT,SYSCALL
 
 // RUN: echo "int main() { return __builtin_cpu_supports(\"mmu\");}" > %t.c
