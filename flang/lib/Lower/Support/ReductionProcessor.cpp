@@ -13,6 +13,7 @@
 #include "flang/Lower/Support/ReductionProcessor.h"
 
 #include "flang/Lower/AbstractConverter.h"
+#include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertType.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/Support/PrivateReductionUtils.h"
@@ -47,6 +48,7 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template bool ReductionProcessor::processReductionArguments<
@@ -57,6 +59,7 @@ template bool ReductionProcessor::processReductionArguments<
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache);
 
 template mlir::omp::DeclareReductionOp
@@ -368,6 +371,14 @@ mlir::Value ReductionProcessor::createScalarCombiner(
   return reductionOp;
 }
 
+bool ReductionProcessor::isExpressionLoweredAsReductionObject(
+    const Object *object) {
+  if (!object || !object->ref())
+    return false;
+  const SomeExpr &expr = *object->ref();
+  return evaluate::IsArrayElement(expr);
+}
+
 template <typename ParentDeclOpType>
 static void genYield(fir::FirOpBuilder &builder, mlir::Location loc,
                      mlir::Value yieldedValue) {
@@ -675,6 +686,7 @@ bool ReductionProcessor::processReductionArguments(
     llvm::SmallVectorImpl<bool> &reduceVarByRef,
     llvm::SmallVectorImpl<mlir::Attribute> &reductionDeclSymbols,
     const llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSymbols,
+    llvm::ArrayRef<Object> reductionObjects, lower::SymMap &symMap,
     llvm::DenseMap<const semantics::Symbol *, mlir::Value> *reductionVarCache) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
@@ -717,79 +729,104 @@ bool ReductionProcessor::processReductionArguments(
         builder.getRegion().getParentOfType<fir::DoConcurrentOp>());
   }
 
-  for (const semantics::Symbol *symbol : reductionSymbols) {
+  assert((reductionObjects.empty() ||
+          reductionSymbols.size() == reductionObjects.size()) &&
+         "mismatched reduction symbol and object lists");
+
+  for (unsigned i = 0; i < reductionSymbols.size(); ++i) {
+    const Object *object =
+        reductionObjects.empty() ? nullptr : &reductionObjects[i];
+    const semantics::Symbol *symbol =
+        object ? object->sym() : reductionSymbols[i];
+    const SomeExpr *expr = object && object->ref() ? &*object->ref() : nullptr;
+    const bool isObjectExpr =
+        ReductionProcessor::isExpressionLoweredAsReductionObject(object);
+
     // If a cached reduction variable exists for this symbol, reuse it.
     // This ensures that composite constructs (e.g. DO SIMD) where both
     // the outer wrapper (wsloop) and inner wrapper (simd) process the same
     // reduction clause share the same SSA value, enabling genLoopVars()'s
     // IRMapping to correctly remap inner wrapper operands to outer wrapper
-    // block arguments.
-    if (reductionVarCache) {
-      auto it = reductionVarCache->find(symbol);
-      if (it != reductionVarCache->end()) {
+    // block arguments. Array element reductions are intentionally not cached:
+    // block-argument object tracking maps their scoped uses.
+    if (reductionVarCache && !isObjectExpr) {
+      if (auto it = reductionVarCache->find(symbol);
+          it != reductionVarCache->end()) {
         reductionVars.push_back(it->second);
         reduceVarByRef.push_back(doReductionByRef(it->second));
         continue;
       }
     }
 
-    mlir::Value symVal = converter.getSymbolAddress(*symbol);
+    mlir::Value reductionVal;
+    mlir::Type refTy;
 
-    if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
-      symVal = declOp.getBase();
+    if (isObjectExpr) {
+      StatementContext stmtCtx;
+      hlfir::EntityWithAttributes entity = convertExprToHLFIR(
+          converter.getCurrentLocation(), converter, *expr, symMap, stmtCtx);
+      reductionVal = entity.getBase();
+      refTy = reductionVal.getType();
+    } else {
+      mlir::Value symVal = converter.getSymbolAddress(*symbol);
 
-    mlir::Type eleType;
-    auto refType = mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
-    if (refType)
-      eleType = refType.getEleTy();
-    else
-      eleType = symVal.getType();
+      if (auto declOp = symVal.getDefiningOp<hlfir::DeclareOp>())
+        symVal = declOp.getBase();
 
-    // all arrays must be boxed so that we have convenient access to all the
-    // information needed to iterate over the array
-    if (mlir::isa<fir::SequenceType>(eleType)) {
-      // For Host associated symbols, use `SymbolBox` instead
-      lower::SymbolBox symBox = converter.lookupOneLevelUpSymbol(*symbol);
-      hlfir::Entity entity{symBox.getAddr()};
-      entity = genVariableBox(currentLocation, builder, entity);
-      mlir::Value box = entity.getBase();
+      mlir::Type eleType;
+      auto refType =
+          mlir::dyn_cast_or_null<fir::ReferenceType>(symVal.getType());
+      if (refType)
+        eleType = refType.getEleTy();
+      else
+        eleType = symVal.getType();
 
-      // Always pass the box by reference so that the OpenMP dialect
-      // verifiers don't need to know anything about fir.box
-      auto alloca =
-          fir::AllocaOp::create(builder, currentLocation, box.getType());
-      fir::StoreOp::create(builder, currentLocation, box, alloca);
+      // all arrays must be boxed so that we have convenient access to all the
+      // information needed to iterate over the array
+      if (mlir::isa<fir::SequenceType>(eleType)) {
+        // For Host associated symbols, use `SymbolBox` instead
+        lower::SymbolBox symBox = converter.lookupOneLevelUpSymbol(*symbol);
+        hlfir::Entity entity{symBox.getAddr()};
+        entity = genVariableBox(currentLocation, builder, entity);
+        mlir::Value box = entity.getBase();
 
-      symVal = alloca;
-    } else if (mlir::isa<fir::BaseBoxType>(symVal.getType())) {
-      // boxed arrays are passed as values not by reference. Unfortunately,
-      // we can't pass a box by value to omp.redution_declare, so turn it
-      // into a reference
-      auto oldIP = builder.saveInsertionPoint();
-      builder.setInsertionPointToStart(builder.getAllocaBlock());
-      auto alloca =
-          fir::AllocaOp::create(builder, currentLocation, symVal.getType());
-      builder.restoreInsertionPoint(oldIP);
-      fir::StoreOp::create(builder, currentLocation, symVal, alloca);
-      symVal = alloca;
+        // Always pass the box by reference so that the OpenMP dialect
+        // verifiers don't need to know anything about fir.box
+        auto alloca =
+            fir::AllocaOp::create(builder, currentLocation, box.getType());
+        fir::StoreOp::create(builder, currentLocation, box, alloca);
+
+        symVal = alloca;
+      } else if (mlir::isa<fir::BaseBoxType>(symVal.getType())) {
+        // boxed arrays are passed as values not by reference. Unfortunately,
+        // we can't pass a box by value to omp.redution_declare, so turn it
+        // into a reference
+        auto oldIP = builder.saveInsertionPoint();
+        builder.setInsertionPointToStart(builder.getAllocaBlock());
+        auto alloca =
+            fir::AllocaOp::create(builder, currentLocation, symVal.getType());
+        builder.restoreInsertionPoint(oldIP);
+        fir::StoreOp::create(builder, currentLocation, symVal, alloca);
+        symVal = alloca;
+      }
+
+      // this isn't the same as the by-val and by-ref passing later in the
+      // pipeline. Both styles assume that the variable is a reference at
+      // this point
+      assert(fir::isa_ref_type(symVal.getType()) &&
+             "reduction input var is passed by reference");
+      mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
+      const bool symIsVolatile = fir::isa_volatile_type(symVal.getType());
+      refTy = fir::ReferenceType::get(elementType, symIsVolatile);
+      reductionVal = symVal;
     }
-
-    // this isn't the same as the by-val and by-ref passing later in the
-    // pipeline. Both styles assume that the variable is a reference at
-    // this point
-    assert(fir::isa_ref_type(symVal.getType()) &&
-           "reduction input var is passed by reference");
-    mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
-    const bool symIsVolatile = fir::isa_volatile_type(symVal.getType());
-    mlir::Type refTy = fir::ReferenceType::get(elementType, symIsVolatile);
-
     reductionVars.push_back(
-        builder.createConvert(currentLocation, refTy, symVal));
+        builder.createConvert(currentLocation, refTy, reductionVal));
     reduceVarByRef.push_back(doReductionByRef(reductionVars.back()));
 
     // Cache the final SSA value for this symbol so that subsequent calls
     // (e.g. for the inner wrapper in a composite construct) reuse it.
-    if (reductionVarCache)
+    if (reductionVarCache && !isObjectExpr)
       reductionVarCache->try_emplace(symbol, reductionVars.back());
   }
 
