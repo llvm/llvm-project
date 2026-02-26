@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ModelStringConversions.h"
+#include "../../../lib/Analysis/Scalable/ModelStringConversions.h"
 #include "gtest/gtest.h"
 
 using namespace clang::ssaf;
@@ -45,11 +45,12 @@ TEST(BuildNamespaceKindStringTest, FromStringUnknown) {
 }
 
 TEST(BuildNamespaceKindStringTest, RoundTrip) {
-  for (auto Kind :
-       {BuildNamespaceKind::CompilationUnit, BuildNamespaceKind::LinkUnit}) {
-    EXPECT_EQ(buildNamespaceKindFromString(buildNamespaceKindToString(Kind)),
-              Kind);
-  }
+  EXPECT_EQ(buildNamespaceKindFromString(buildNamespaceKindToString(
+                BuildNamespaceKind::CompilationUnit)),
+            BuildNamespaceKind::CompilationUnit);
+  EXPECT_EQ(buildNamespaceKindFromString(
+                buildNamespaceKindToString(BuildNamespaceKind::LinkUnit)),
+            BuildNamespaceKind::LinkUnit);
 }
 
 //===----------------------------------------------------------------------===//
@@ -91,10 +92,15 @@ TEST(EntityLinkageTypeStringTest, FromStringUnknown) {
 }
 
 TEST(EntityLinkageTypeStringTest, RoundTrip) {
-  for (auto LT : {EntityLinkageType::None, EntityLinkageType::Internal,
-                  EntityLinkageType::External}) {
-    EXPECT_EQ(entityLinkageTypeFromString(entityLinkageTypeToString(LT)), LT);
-  }
+  EXPECT_EQ(entityLinkageTypeFromString(
+                entityLinkageTypeToString(EntityLinkageType::None)),
+            EntityLinkageType::None);
+  EXPECT_EQ(entityLinkageTypeFromString(
+                entityLinkageTypeToString(EntityLinkageType::Internal)),
+            EntityLinkageType::Internal);
+  EXPECT_EQ(entityLinkageTypeFromString(
+                entityLinkageTypeToString(EntityLinkageType::External)),
+            EntityLinkageType::External);
 }
 
 } // namespace
