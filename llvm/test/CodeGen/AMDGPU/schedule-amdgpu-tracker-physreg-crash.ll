@@ -1,5 +1,6 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1 2>&1 < %s | FileCheck -check-prefixes=GCN-TRACKERS %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack 2>&1 < %s | FileCheck -check-prefixes=GCN %s
+; RUN: not llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -mattr=+xnack -amdgpu-use-amdgpu-trackers=1 -amdgpu-trackers-physical-register-tracking=0 2>&1 < %s | FileCheck --check-prefix=GCN-NOPHYS-FAIL %s
 
 %asm.output = type { <16 x i32>, <16 x i32>, <16 x i32>, <8 x i32>, <2 x i32>, i32, ; sgprs
                      <16 x i32>, <7 x i32>, ; vgprs
@@ -18,6 +19,7 @@
 
 ; GCN-TRACKERS-NOT: ran out of registers during register allocation
 ; GCN-NOT: ran out of registers during register allocation
+; GCN-NOPHYS-FAIL: ran out of registers during register allocation
 
 ; GCN Trackers now track physical register pressure correctly, so this test
 ; verifies that both trackers can successfully handle code with heavy physical
