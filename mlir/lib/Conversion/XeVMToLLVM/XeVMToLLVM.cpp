@@ -1071,13 +1071,14 @@ void ::mlir::populateXeVMToLLVMConversionPatterns(ConversionTarget &target,
                                                   RewritePatternSet &patterns) {
   // some LLVM operations need to be converted.
   target.addDynamicallyLegalDialect<LLVM::LLVMDialect>([](Operation *op) {
-    // addrspace 0 (function) is the default for alloca, and it is legal.
-    // other address spaces need to replaced with llvm global.
+    // llvm alloca op with addrspace 3 for OpenCL (Workgroup) is not handled
+    // properly by SPIRV backend. It needs to be rewritten as a sequence with
+    // llvm global.
     if (isa<LLVM::AllocaOp>(op)) {
       LLVM::AllocaOp aOp = cast<LLVM::AllocaOp>(op);
       LLVM::LLVMPointerType pTy = cast<LLVM::LLVMPointerType>(aOp.getType());
       auto addrSpace = pTy.getAddressSpace();
-      return addrSpace == 0;
+      return addrSpace != 3;
     }
     // cache_control attribute should be converted.
     return !op->hasAttr("cache_control");
