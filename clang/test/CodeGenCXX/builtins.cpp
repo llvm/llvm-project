@@ -120,17 +120,28 @@ void test_char_reference(char& a) {
 // CHECK-NOT: call i8 @llvm.bswap.i8
 // CHECK: ret void
 
-void test_bitint() {
-  _BitInt(8) a = 0x12;
+void test_bool_reference(bool& a) {
   __builtin_bswapg(a);
-  _BitInt(16) b = 0x1234;
+}
+// CHECK-LABEL: @_Z19test_bool_referenceRb
+// CHECK: store ptr %a, ptr
+// CHECK: load ptr, ptr
+// CHECK-NOT: call i8 @llvm.bswap.i8
+// CHECK: ret void
+
+void test_bitint() {
+  bool a = true;
+  __builtin_bswapg(a);
+  _BitInt(8) b = 0x12;
   __builtin_bswapg(b);
-  _BitInt(32) c = 0x00001234;
+  _BitInt(16) c = 0x1234;
   __builtin_bswapg(c);
-  _BitInt(64) d = 0x0000000000001234;
+  _BitInt(32) d = 0x00001234;
   __builtin_bswapg(d);
-  _BitInt(128) e = ~(_BitInt(128))0;
+  _BitInt(64) e = 0x0000000000001234;
   __builtin_bswapg(e);
+  _BitInt(128) f = ~(_BitInt(128))0;
+  __builtin_bswapg(f);
 }
 // CHECK-LABEL: @_Z11test_bitintv
 // CHECK-NOT: call i8 @llvm.bswap.i8
@@ -138,4 +149,60 @@ void test_bitint() {
 // CHECK: call i32 @llvm.bswap.i32
 // CHECK: call i64 @llvm.bswap.i64
 // CHECK: call i128 @llvm.bswap.i128
+// CHECK: ret void
+
+void test_int_reference(int* a) {
+  __builtin_bitreverseg(*a);
+// CHECK-LABEL: @_Z18test_int_referencePi
+  // CHECK: store ptr %a, ptr
+  // CHECK: load ptr, ptr
+  // CHECK: load i32, ptr
+  // CHECK: call i32 @llvm.bitreverse.i32
+}
+
+void test_long_reference(long* a) {
+  __builtin_bitreverseg(*a);
+// CHECK-LABEL: @_Z19test_long_referencePl
+  // CHECK: store ptr %a, ptr
+  // CHECK: load ptr, ptr
+  // CHECK: load i64, ptr
+  // CHECK: call i64 @llvm.bitreverse.i64
+}
+
+void test_short_reference(short* a) {
+  __builtin_bitreverseg(*a);
+// CHECK-LABEL: @_Z20test_short_referencePs
+  // CHECK: store ptr %a, ptr
+  // CHECK: load ptr, ptr
+  // CHECK: load i16, ptr
+  // CHECK: call i16 @llvm.bitreverse.i16
+}
+
+void test_char_reference(char* a) {
+  __builtin_bitreverseg(*a);
+// CHECK-LABEL: @_Z19test_char_referencePc
+  // CHECK: store ptr %a, ptr
+  // CHECK: load ptr, ptr
+  // CHECK: load i8, ptr
+  // CHECK: call i8 @llvm.bitreverse.i8
+  // CHECK: ret void
+}
+
+void test_bitint_reference() {
+  _BitInt(8) a = 0x12;
+  __builtin_bitreverseg(a);
+  _BitInt(16) b = 0x1234;
+  __builtin_bitreverseg(b);
+  _BitInt(32) c = 0x00001234;
+  __builtin_bitreverseg(c);
+  _BitInt(64) d = 0x0000000000001234;
+  __builtin_bitreverseg(d);
+  _BitInt(128) e = ~(_BitInt(128))0;
+  __builtin_bitreverseg(e);
+}
+// CHECK-LABEL: @_Z21test_bitint_referencev
+// CHECK: call i16 @llvm.bitreverse.i16
+// CHECK: call i32 @llvm.bitreverse.i32
+// CHECK: call i64 @llvm.bitreverse.i64
+// CHECK: call i128 @llvm.bitreverse.i128
 // CHECK: ret void

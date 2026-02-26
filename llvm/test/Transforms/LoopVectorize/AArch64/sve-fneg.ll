@@ -9,8 +9,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define void @fneg(ptr nocapture noundef writeonly %d, ptr nocapture noundef readonly %s, i32 noundef %n) #0 {
 ; CHECK-LABEL: @fneg(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[S2:%.*]] = ptrtoint ptr [[S:%.*]] to i64
-; CHECK-NEXT:    [[D1:%.*]] = ptrtoint ptr [[D:%.*]] to i64
+; CHECK-NEXT:    [[S2:%.*]] = ptrtoaddr ptr [[S:%.*]] to i64
+; CHECK-NEXT:    [[D1:%.*]] = ptrtoaddr ptr [[D:%.*]] to i64
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp sgt i32 [[N:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY_PREHEADER:%.*]], label [[FOR_COND_CLEANUP:%.*]]
 ; CHECK:       for.body.preheader:

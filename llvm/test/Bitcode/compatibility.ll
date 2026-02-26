@@ -763,6 +763,24 @@ declare void @f.align4() align 4
 declare void @f.align8() align 8
 ; CHECK: declare void @f.align8() align 8
 
+; Functions -- prefalign
+define void @f.prefalign2() prefalign(2) {
+  ret void
+}
+; CHECK: define void @f.prefalign2() prefalign(2)
+define void @f.prefalign4() prefalign(4) {
+  ret void
+}
+; CHECK: define void @f.prefalign4() prefalign(4)
+define void @f.prefalign8() prefalign(8) {
+  ret void
+}
+; CHECK: define void @f.prefalign8() prefalign(8)
+define void @f.prefalign4294967296() prefalign(4294967296) {
+  ret void
+}
+; CHECK: define void @f.prefalign4294967296() prefalign(4294967296)
+
 ; Functions -- GC
 declare void @f.gcshadow() gc "shadow-stack"
 ; CHECK: declare void @f.gcshadow() gc "shadow-stack"
@@ -1722,7 +1740,7 @@ exit:
   ; CHECK: select <2 x i1> <i1 true, i1 false>, <2 x i8> <i8 2, i8 3>, <2 x i8> <i8 3, i8 2>
 
   call void @f.nobuiltin() builtin
-  ; CHECK: call void @f.nobuiltin() #55
+  ; CHECK: call void @f.nobuiltin() #87
 
   call fastcc noalias ptr @f.noalias() noinline
   ; CHECK: call fastcc noalias ptr @f.noalias() #12
@@ -2237,6 +2255,200 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
   ret float %add1
 }
 
+; CHECK: define void @denormal_fpenv__ieee_ieee() #55 {
+define void @denormal_fpenv__ieee_ieee() denormal_fpenv(ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_preservesign() #56 {
+define void @denormal_fpenv__ieee_preservesign() denormal_fpenv(ieee|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_positivezero() #57 {
+define void @denormal_fpenv__ieee_positivezero() denormal_fpenv(ieee|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_dynamic() #58 {
+define void @denormal_fpenv__ieee_dynamic() denormal_fpenv(ieee|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_ieee() #59 {
+define void @denormal_fpenv__preservesign_ieee() denormal_fpenv(preservesign|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign() #60 {
+define void @denormal_fpenv__preservesign_preservesign() denormal_fpenv(preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_positivezero() #61 {
+define void @denormal_fpenv__preservesign_positivezero() denormal_fpenv(preservesign|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_dynamic() #62 {
+define void @denormal_fpenv__preservesign_dynamic() denormal_fpenv(preservesign|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_ieee() #63 {
+define void @denormal_fpenv__positivezero_ieee() denormal_fpenv(positivezero|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_preservesign() #64 {
+define void @denormal_fpenv__positivezero_preservesign() denormal_fpenv(positivezero|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_positivezero() #65 {
+define void @denormal_fpenv__positivezero_positivezero() denormal_fpenv(positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_dynamix() #66 {
+define void @denormal_fpenv__positivezero_dynamix() denormal_fpenv(positivezero|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_ieee() #67 {
+define void @denormal_fpenv__dynamic_ieee() denormal_fpenv(dynamic|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_preservesign() #68 {
+define void @denormal_fpenv__dynamic_preservesign() denormal_fpenv(dynamic|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_positivezero() #69 {
+define void @denormal_fpenv__dynamic_positivezero() denormal_fpenv(dynamic|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_dynamic() #70 {
+define void @denormal_fpenv__dynamic_dynamic() denormal_fpenv(dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_ieee() #55 {
+define void @denormal_fpenv_float__ieee_ieee() denormal_fpenv(float: ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_preservesign() #71 {
+define void @denormal_fpenv_float__ieee_preservesign() denormal_fpenv(float: ieee|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_positivezero() #72 {
+define void @denormal_fpenv_float__ieee_positivezero() denormal_fpenv(float: ieee|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__ieee_dynamic() #73 {
+define void @denormal_fpenv_float__ieee_dynamic() denormal_fpenv(float: ieee|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_ieee() #74 {
+define void @denormal_fpenv_float__preservesign_ieee() denormal_fpenv(float: preservesign|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_preservesign() #75 {
+define void @denormal_fpenv_float__preservesign_preservesign() denormal_fpenv(float: preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_positivezero() #76 {
+define void @denormal_fpenv_float__preservesign_positivezero() denormal_fpenv(float: preservesign|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__preservesign_dynamic() #77 {
+define void @denormal_fpenv_float__preservesign_dynamic() denormal_fpenv(float: preservesign|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_ieee() #78 {
+define void @denormal_fpenv_float__positivezero_ieee() denormal_fpenv(float: positivezero|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_preservesign() #79 {
+define void @denormal_fpenv_float__positivezero_preservesign() denormal_fpenv(float: positivezero|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_positivezero() #80 {
+define void @denormal_fpenv_float__positivezero_positivezero() denormal_fpenv(float: positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__positivezero_dynamix() #81 {
+define void @denormal_fpenv_float__positivezero_dynamix() denormal_fpenv(float: positivezero|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_ieee() #82 {
+define void @denormal_fpenv_float__dynamic_ieee() denormal_fpenv(float: dynamic|ieee) {
+  ret void
+}
+
+; Function Attrs: denormal_fpenv(float: dynamic|preservesign)
+define void @denormal_fpenv_float__dynamic_preservesign() denormal_fpenv(float: dynamic|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_positivezero() #84 {
+define void @denormal_fpenv_float__dynamic_positivezero() denormal_fpenv(float: dynamic|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv_float__dynamic_dynamic() #85 {
+define void @denormal_fpenv_float__dynamic_dynamic() denormal_fpenv(float: dynamic|dynamic) {
+  ret void
+}
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() #55 {
+define void @denormal_fpenv__ieee_ieee_float_ieee_ieee() denormal_fpenv(ieee|ieee, float: ieee|ieee) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() #75 {
+define void @denormal_fpenv__ieee_ieee_float_preservesign_preservesign() denormal_fpenv(ieee|ieee, float: preservesign|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() #60 {
+define void @denormal_fpenv__preservesign_preservesign_float_preservesign_preservesign() denormal_fpenv(preservesign|preservesign, float: preservesign|preservesign) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() #65 {
+define void @denormal_fpenv__positivezero_positivezero_float_positivezero_positivezero() denormal_fpenv(positivezero|positivezero, float: positivezero|positivezero) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() #70 {
+define void @denormal_fpenv__dynamic_dynamic_float_dynamic_dynamic() denormal_fpenv(dynamic|dynamic, float: dynamic|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() #85 {
+define void @denormal_fpenv__ieee_ieee_float_dynamic_dynamic() denormal_fpenv(ieee|ieee, float: dynamic|dynamic) {
+  ret void
+}
+
+; CHECK: define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() #86 {
+define void @denormal_fpenv__preservesign_preservesign_float_dynamic_dynamic() denormal_fpenv(preservesign|preservesign, float: dynamic|dynamic) {
+  ret void
+}
+
 ; CHECK: attributes #0 = { alignstack=4 }
 ; CHECK: attributes #1 = { alignstack=8 }
 ; CHECK: attributes #2 = { alwaysinline }
@@ -2292,7 +2504,39 @@ define float @nofpclass_callsites(float %arg, { float } %arg1) {
 ; CHECK: attributes #52 = { sanitize_realtime }
 ; CHECK: attributes #53 = { sanitize_realtime_blocking }
 ; CHECK: attributes #54 = { sanitize_alloc_token }
-; CHECK: attributes #55 = { builtin }
+; CHECK: attributes #55 = { denormal_fpenv(ieee) }
+; CHECK: attributes #56 = { denormal_fpenv(ieee|preservesign) }
+; CHECK: attributes #57 = { denormal_fpenv(ieee|positivezero) }
+; CHECK: attributes #58 = { denormal_fpenv(ieee|dynamic) }
+; CHECK: attributes #59 = { denormal_fpenv(preservesign|ieee) }
+; CHECK: attributes #60 = { denormal_fpenv(preservesign) }
+; CHECK: attributes #61 = { denormal_fpenv(preservesign|positivezero) }
+; CHECK: attributes #62 = { denormal_fpenv(preservesign|dynamic) }
+; CHECK: attributes #63 = { denormal_fpenv(positivezero|ieee) }
+; CHECK: attributes #64 = { denormal_fpenv(positivezero|preservesign) }
+; CHECK: attributes #65 = { denormal_fpenv(positivezero) }
+; CHECK: attributes #66 = { denormal_fpenv(positivezero|dynamic) }
+; CHECK: attributes #67 = { denormal_fpenv(dynamic|ieee) }
+; CHECK: attributes #68 = { denormal_fpenv(dynamic|preservesign) }
+; CHECK: attributes #69 = { denormal_fpenv(dynamic|positivezero) }
+; CHECK: attributes #70 = { denormal_fpenv(dynamic) }
+; CHECK: attributes #71 = { denormal_fpenv(float: ieee|preservesign) }
+; CHECK: attributes #72 = { denormal_fpenv(float: ieee|positivezero) }
+; CHECK: attributes #73 = { denormal_fpenv(float: ieee|dynamic) }
+; CHECK: attributes #74 = { denormal_fpenv(float: preservesign|ieee) }
+; CHECK: attributes #75 = { denormal_fpenv(float: preservesign) }
+; CHECK: attributes #76 = { denormal_fpenv(float: preservesign|positivezero) }
+; CHECK: attributes #77 = { denormal_fpenv(float: preservesign|dynamic) }
+; CHECK: attributes #78 = { denormal_fpenv(float: positivezero|ieee) }
+; CHECK: attributes #79 = { denormal_fpenv(float: positivezero|preservesign) }
+; CHECK: attributes #80 = { denormal_fpenv(float: positivezero) }
+; CHECK: attributes #81 = { denormal_fpenv(float: positivezero|dynamic) }
+; CHECK: attributes #82 = { denormal_fpenv(float: dynamic|ieee) }
+; CHECK: attributes #83 = { denormal_fpenv(float: dynamic|preservesign) }
+; CHECK: attributes #84 = { denormal_fpenv(float: dynamic|positivezero) }
+; CHECK: attributes #85 = { denormal_fpenv(float: dynamic) }
+; CHECK: attributes #86 = { denormal_fpenv(preservesign, float: dynamic) }
+; CHECK: attributes #87 = { builtin }
 
 ;; Metadata
 
