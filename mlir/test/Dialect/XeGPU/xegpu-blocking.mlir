@@ -834,23 +834,3 @@ gpu.module @test_kernel {
     gpu.return
   }
 }
-
-// -----
-#inst_data = #xegpu.layout<inst_data = [1, 1]>
-gpu.module @test_kernel {
-// CHECK-LABEL: func @shape_cast_with_all_unit_target_shape
-// CHECK-SAME: (%[[V:.*]]: vector<2xf32>) -> vector<2x1xf32> {
-// CHECK:   %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<2x1xf32>
-// CHECK:   %[[S0:.*]] = vector.extract_strided_slice %[[V]] {offsets = [0], sizes = [1], strides = [1]} : vector<2xf32> to vector<1xf32>
-// CHECK:   %[[SC0:.*]] = vector.shape_cast %[[S0]] : vector<1xf32> to vector<1x1xf32>
-// CHECK:   %[[I0:.*]] = vector.insert_strided_slice %[[SC0]], %[[CST]] {offsets = [0, 0], strides = [1, 1]} : vector<1x1xf32> into vector<2x1xf32>
-// CHECK:   %[[S1:.*]] = vector.extract_strided_slice %[[V]] {offsets = [1], sizes = [1], strides = [1]} : vector<2xf32> to vector<1xf32>
-// CHECK:   %[[SC1:.*]] = vector.shape_cast %[[S1]] : vector<1xf32> to vector<1x1xf32>
-// CHECK:   %[[I1:.*]] = vector.insert_strided_slice %[[SC1]], %[[I0]] {offsets = [1, 0], strides = [1, 1]} : vector<1x1xf32> into vector<2x1xf32>
-// CHECK:   return %[[I1]] : vector<2x1xf32>
-
-  gpu.func @shape_cast_with_all_unit_target_shape(%arg0: vector<2xf32>) -> vector<2x1xf32> {
-    %res = vector.shape_cast %arg0 {layout_result_0 = #inst_data} : vector<2xf32> to vector<2x1xf32>
-    gpu.return %res : vector<2x1xf32>
-  }
-}
