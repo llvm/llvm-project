@@ -304,14 +304,14 @@ def IndexCastOfExtSI :
 
 // index_castui(index_castui(x)) -> x, if dstType == srcType.
 def IndexCastUIOfIndexCastUI :
-    Pat<(Arith_IndexCastUIOp:$res (Arith_IndexCastUIOp $x)),
+    Pat<(Arith_IndexCastUIOp:$res (Arith_IndexCastUIOp $x, $nneg1), $nneg2),
         (replaceWithValue $x),
         [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
 
 // index_castui(extui(x)) -> index_castui(x)
 def IndexCastUIOfExtUI :
-    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg)),
-        (Arith_IndexCastUIOp $x)>;
+    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
+        (Arith_IndexCastUIOp $x, $nneg1)>;
 
 
 //===----------------------------------------------------------------------===//
