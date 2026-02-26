@@ -80,22 +80,7 @@ template <typename SubPattern_t, int Flag> struct AllowFmf_match {
   SubPattern_t SubPattern;
   FastMathFlags FMF;
 
-  AllowFmf_match(const SubPattern_t &SP) : SubPattern(SP) {
-    if (Flag & FastMathFlags::AllowReassoc)
-      FMF.setAllowReassoc();
-    if (Flag & FastMathFlags::AllowReciprocal)
-      FMF.setAllowReciprocal();
-    if (Flag & FastMathFlags::AllowContract)
-      FMF.setAllowContract();
-    if (Flag & FastMathFlags::ApproxFunc)
-      FMF.setApproxFunc();
-    if (Flag & FastMathFlags::NoNaNs)
-      FMF.setNoNaNs();
-    if (Flag & FastMathFlags::NoInfs)
-      FMF.setNoInfs();
-    if (Flag & FastMathFlags::NoSignedZeros)
-      FMF.setNoSignedZeros();
-  }
+  AllowFmf_match(const SubPattern_t &SP) : SubPattern(SP), FMF(Flag) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *I = dyn_cast<FPMathOperator>(V);
