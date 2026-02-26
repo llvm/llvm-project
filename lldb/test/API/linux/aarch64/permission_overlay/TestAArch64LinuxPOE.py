@@ -89,6 +89,9 @@ class AArch64LinuxPOE(TestBase):
         # A region not assigned to a protection key has the default key 0.
         self.expect("memory region key_zero_page", substrs=["rwx", "protection key: 0"])
 
+        # Protection keys should be on their own line.
+        self.expect("memory region --all", patterns=["\nprotection key: [0-9]+\n"])
+
         # Not passing this to the application allows us to fix the permissions
         # using lldb, then continue to a normal exit.
         self.runCmd("process handle SIGSEGV --pass false")
