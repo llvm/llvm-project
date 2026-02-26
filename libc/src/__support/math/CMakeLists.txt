@@ -1150,6 +1150,18 @@ add_header_library(
 )
 
 add_header_library(
+  f16sqrtf128
+  HDRS
+    f16sqrtf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   f16sqrtl
   HDRS
     f16sqrtl.h
