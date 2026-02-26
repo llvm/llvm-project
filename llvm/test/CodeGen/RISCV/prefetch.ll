@@ -9,6 +9,7 @@ define void @test_prefetch_read_locality_0(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_read_locality_0:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_read_locality_0:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.all
@@ -22,6 +23,7 @@ define void @test_prefetch_write_locality_0(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_write_locality_0:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_write_locality_0:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.all
@@ -35,6 +37,7 @@ define void @test_prefetch_instruction_locality_0(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_instruction_locality_0:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_instruction_locality_0:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.all
@@ -48,6 +51,7 @@ define void @test_prefetch_read_locality_1(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_read_locality_1:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_read_locality_1:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.pall
@@ -61,6 +65,7 @@ define void @test_prefetch_write_locality_1(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_write_locality_1:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_write_locality_1:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.pall
@@ -74,6 +79,7 @@ define void @test_prefetch_instruction_locality_1(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_instruction_locality_1:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_instruction_locality_1:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.pall
@@ -87,6 +93,7 @@ define void @test_prefetch_read_locality_2(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_read_locality_2:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_read_locality_2:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.p1
@@ -100,6 +107,7 @@ define void @test_prefetch_write_locality_2(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_write_locality_2:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_write_locality_2:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.p1
@@ -113,6 +121,7 @@ define void @test_prefetch_instruction_locality_2(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_instruction_locality_2:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_instruction_locality_2:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.p1
@@ -126,6 +135,7 @@ define void @test_prefetch_read_locality_3(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_read_locality_3:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_read_locality_3:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    prefetch.r 0(a0)
@@ -138,6 +148,7 @@ define void @test_prefetch_write_locality_3(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_write_locality_3:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_write_locality_3:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    prefetch.w 0(a0)
@@ -150,6 +161,7 @@ define void @test_prefetch_instruction_locality_3(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_instruction_locality_3:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_instruction_locality_3:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    prefetch.i 0(a0)
@@ -162,6 +174,7 @@ define void @test_prefetch_offsetable_0(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_0:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_0:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.all
@@ -176,6 +189,7 @@ define void @test_prefetch_offsetable_1(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_1:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_1:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.all
@@ -190,6 +204,7 @@ define void @test_prefetch_offsetable_2(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_2:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_2:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.all
@@ -204,6 +219,7 @@ define void @test_prefetch_offsetable_3(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_3:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_3:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    ntl.all
@@ -218,6 +234,7 @@ define void @test_prefetch_offsetable_4(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_4:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_4:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi a0, a0, 32
@@ -233,6 +250,7 @@ define void @test_prefetch_offsetable_5(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_5:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_5:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi a0, a0, -1
@@ -248,6 +266,7 @@ define void @test_prefetch_offsetable_6(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_6:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_6:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi a0, a0, 16
@@ -263,6 +282,7 @@ define void @test_prefetch_offsetable_7(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_7:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_7:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi a0, a0, -16
@@ -278,6 +298,7 @@ define void @test_prefetch_offsetable_9(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_9:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_9:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a1, 1
@@ -294,6 +315,7 @@ define void @test_prefetch_offsetable_8(ptr %a) nounwind {
 ; NOZICBOP-LABEL: test_prefetch_offsetable_8:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_offsetable_8:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a1, 1048575
@@ -312,6 +334,7 @@ define void @test_prefetch_frameindex_0() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_0:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -336,6 +359,7 @@ define void @test_prefetch_frameindex_1() nounwind {
 ; NOZICBOP-NEXT:    addi a0, a0, 16
 ; NOZICBOP-NEXT:    add sp, sp, a0
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_1:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, 1
@@ -360,6 +384,7 @@ define void @test_prefetch_frameindex_2() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_2:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -381,6 +406,7 @@ define void @test_prefetch_frameindex_3() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_3:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -402,6 +428,7 @@ define void @test_prefetch_frameindex_4() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_4:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -422,6 +449,7 @@ define void @test_prefetch_frameindex_5() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_5:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -442,6 +470,7 @@ define void @test_prefetch_frameindex_6() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_6:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -462,6 +491,7 @@ define void @test_prefetch_frameindex_7() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_7:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -482,6 +512,7 @@ define void @test_prefetch_frameindex_8() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_8:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -503,6 +534,7 @@ define void @test_prefetch_frameindex_9() nounwind {
 ; NOZICBOP-NEXT:    addi sp, sp, -512
 ; NOZICBOP-NEXT:    addi sp, sp, 512
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_frameindex_9:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    addi sp, sp, -512
@@ -523,6 +555,7 @@ define void @test_prefetch_constant_address_0() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_constant_address_0:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_constant_address_0:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, 1
@@ -538,6 +571,7 @@ define void @test_prefetch_constant_address_1() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_constant_address_1:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_constant_address_1:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, 1
@@ -554,6 +588,7 @@ define void @test_prefetch_constant_address_2() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_constant_address_2:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_constant_address_2:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, 1048561
@@ -569,6 +604,7 @@ define void @test_prefetch_constant_address_3() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_constant_address_3:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_constant_address_3:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, 1048561
@@ -587,6 +623,7 @@ define void @test_prefetch_global_0() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_0:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_0:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g)
@@ -603,6 +640,7 @@ define void @test_prefetch_global_1() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_1:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_1:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g+16)
@@ -619,6 +657,7 @@ define void @test_prefetch_global_2() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_2:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_2:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g-16)
@@ -635,6 +674,7 @@ define void @test_prefetch_global_3() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_3:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_3:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g)
@@ -651,6 +691,7 @@ define void @test_prefetch_global_4() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_4:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_4:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g)
@@ -667,6 +708,7 @@ define void @test_prefetch_global_5() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_5:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_5:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g)
@@ -683,6 +725,7 @@ define void @test_prefetch_global_6() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_6:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_6:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g)
@@ -699,6 +742,7 @@ define void @test_prefetch_global_7() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_7:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_7:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g+2020)
@@ -715,6 +759,7 @@ define void @test_prefetch_global_8() nounwind {
 ; NOZICBOP-LABEL: test_prefetch_global_8:
 ; NOZICBOP:       # %bb.0:
 ; NOZICBOP-NEXT:    ret
+;
 ; ZICBOP-LABEL: test_prefetch_global_8:
 ; ZICBOP:       # %bb.0:
 ; ZICBOP-NEXT:    lui a0, %hi(g-4)
