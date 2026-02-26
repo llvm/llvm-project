@@ -101,6 +101,15 @@ public:
         convert.ptr());
   }
 
+  nb::typed<nb::object, std::optional<PyType>> convertType(PyType &type) {
+    MlirType converted = mlirTypeConverterConvertType(typeConverter, type);
+    if (mlirTypeIsNull(converted))
+      return nb::none();
+    return PyType(PyMlirContext::forContext(mlirTypeGetContext(converted)),
+                  converted)
+        .maybeDownCast();
+  }
+
   MlirTypeConverter get() { return typeConverter; }
 
 private:
@@ -621,7 +630,9 @@ void populateRewriteSubmodule(nb::module_ &m) {
   nb::class_<PyTypeConverter>(m, "TypeConverter")
       .def(nb::init<>(), "Create a new TypeConverter.")
       .def("add_conversion", &PyTypeConverter::addConversion, "convert"_a,
-           nb::keep_alive<0, 1>(), "Register a type conversion function.");
+           nb::keep_alive<0, 1>(), "Register a type conversion function.")
+      .def("convert_type", &PyTypeConverter::convertType, "type"_a,
+           "Convert the given type. Returns None if conversion fails.");
 
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
@@ -769,10 +780,11 @@ void populateRewriteSubmodule(nb::module_ &m) {
              std::optional<PyConversionConfig> config) {
             if (!config)
               config.emplace(PyConversionConfig());
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirApplyPartialConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error("partial conversion failed");
+              throw MLIRError("partial conversion failed", errors.take());
           },
           "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
           "Applies a partial conversion on the given operation.")
@@ -783,10 +795,11 @@ void populateRewriteSubmodule(nb::module_ &m) {
              std::optional<PyConversionConfig> config) {
             if (!config)
               config.emplace(PyConversionConfig());
+            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
             MlirLogicalResult status = mlirApplyFullConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
-              throw std::runtime_error("full conversion failed");
+              throw MLIRError("full conversion failed", errors.take());
           },
           "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
           "Applies a full conversion on the given operation.");

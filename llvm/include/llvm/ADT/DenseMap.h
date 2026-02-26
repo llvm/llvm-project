@@ -1057,7 +1057,7 @@ private:
 #if defined(__SANITIZE_ADDRESS__) || defined(__SANITIZE_HWADDRESS__)
     __asm__ volatile("" ::: "memory");
 #endif
-    return (reinterpret_cast<const LargeRep *>(&storage));
+    return reinterpret_cast<const LargeRep *>(&storage);
   }
 
   LargeRep *getLargeRep() {
