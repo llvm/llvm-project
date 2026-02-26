@@ -769,6 +769,12 @@ LLVMSymbolizer::getOrCreateModuleInfo(StringRef ModuleName) {
   }
   ObjectPair Objects = ObjectsOrErr.get();
 
+  // Register the build ID so that build-ID-based lookups (e.g., from
+  // --filter-markup) can resolve to this path.
+  BuildIDRef BID = getBuildID(Objects.first);
+  if (!BID.empty())
+    BuildIDPaths[getBuildIDStr(BID)] = std::string(BinaryName);
+
   std::unique_ptr<DIContext> Context;
   // If this is a COFF object containing PDB info and not containing DWARF
   // section, use a PDBContext to symbolize. Otherwise, use DWARF.

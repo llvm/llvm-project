@@ -463,7 +463,8 @@ static object::BuildID parseBuildIDArg(const opt::InputArgList &Args, int ID) {
 }
 
 // Symbolize markup from stdin and write the result to stdout.
-static void filterMarkup(const opt::InputArgList &Args, LLVMSymbolizer &Symbolizer) {
+static void filterMarkup(const opt::InputArgList &Args,
+                         LLVMSymbolizer &Symbolizer) {
   MarkupFilter Filter(outs(), Symbolizer, parseColorArg(Args));
   std::string InputString;
   while (std::getline(std::cin, InputString)) {
@@ -540,11 +541,6 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
   if (Args.hasFlag(OPT_debuginfod, OPT_no_debuginfod, canUseDebuginfod()))
     enableDebuginfod(Symbolizer, Args);
 
-  if (Args.hasArg(OPT_filter_markup)) {
-    filterMarkup(Args, Symbolizer);
-    return 0;
-  }
-
   auto Style = IsAddr2Line ? OutputStyle::GNU : OutputStyle::LLVM;
   if (const opt::Arg *A = Args.getLastArg(OPT_output_style_EQ)) {
     if (strcmp(A->getValue(), "GNU") == 0)
@@ -559,7 +555,6 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
     errs() << "error: cannot specify both --build-id and --obj\n";
     return EXIT_FAILURE;
   }
-  object::BuildID BuildID = parseBuildIDArg(Args, OPT_build_id_EQ);
 
   std::unique_ptr<DIPrinter> Printer;
   if (Style == OutputStyle::GNU)
@@ -582,6 +577,15 @@ int llvm_symbolizer_main(int argc, char **argv, const llvm::ToolContext &) {
       return EXIT_FAILURE;
     }
   }
+
+  // This is sequenced after object loading so that the build ID cache can
+  // participate in the resolution of modules referenced in the markup.
+  if (Args.hasArg(OPT_filter_markup)) {
+    filterMarkup(Args, Symbolizer);
+    return 0;
+  }
+
+  object::BuildID BuildID = parseBuildIDArg(Args, OPT_build_id_EQ);
 
   std::vector<std::string> InputAddresses = Args.getAllArgValues(OPT_INPUT);
   if (InputAddresses.empty()) {
