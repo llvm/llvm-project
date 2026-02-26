@@ -150,4 +150,15 @@ void test_memcpy_dependent_dest() {
 void call_test_memcpy_dependent_dest() {
   test_memcpy_dependent_dest<100>(); // expected-note {{in instantiation}}
 }
+
+// FIXME: We should warn here at the template definition since src and size are
+// not dependent, but checkFortifiedBuiltinMemoryFunction exits when any part of
+// the call is dependent (and thus uninstantiated).
+template <int N>
+void test_memcpy_dependent_dest_uninstantiated() {
+  char dst[N];
+  int src = 0;
+  memcpy(dst, &src, sizeof(src) + 1); // missing-warning {{'memcpy' reading 5 bytes from a region of size 4}}
+}
+
 #endif
