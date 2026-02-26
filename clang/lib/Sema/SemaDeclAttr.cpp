@@ -705,6 +705,18 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
         << AL << /*IsMember=*/!isa<CXXRecordDecl>(D);
     return;
   }
+  if (const auto *RD = dyn_cast_if_present<CXXRecordDecl>(
+          D->getDeclContext()->getRedeclContext())) {
+    if (!isa<TemplateDecl>(RD) && !RD->isDependentType() &&
+        !isTemplateInstantiation(RD->getTemplateSpecializationKind())) {
+      S.Diag(AL.getLoc(), diag::warn_attribute_ignored_on_non_template) << AL;
+      return;
+    }
+  } else {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored_on_non_member) << AL;
+    return;
+  }
+
   D->addAttr(::new (S.Context)
                  ExcludeFromExplicitInstantiationAttr(S.Context, AL));
 }
