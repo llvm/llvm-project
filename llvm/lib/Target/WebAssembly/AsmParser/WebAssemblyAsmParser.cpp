@@ -475,20 +475,20 @@ public:
   bool parseMemOrderMaybe(OperandVector &Operands) {
     auto &Tok = Lexer.getTok();
     if (Tok.isNot(AsmToken::Identifier))
-      return false;
+      return true;
     StringRef S = Tok.getString();
     int64_t Order = StringSwitch<int64_t>(S)
                         .Case("acqrel", wasm::WASM_MEM_ORDER_ACQ_REL)
                         .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
                         .Default(-1);
     if (Order == -1)
-      return false;
+      return true;
     if (!STI->checkFeatures("+shared-everything"))
       return error("memory ordering requires shared-everything feature: ", Tok);
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
         Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{Order}));
     Parser.Lex();
-    return true;
+    return false;
   }
 
   bool checkForP2AlignIfLoadStore(OperandVector &Operands, StringRef InstName) {
@@ -513,21 +513,12 @@ public:
         // index. We need to avoid parsing an extra alignment operand for the
         // lane index.
         auto IsLoadStoreLane = InstName.contains("_lane");
-        if (IsLoadStoreLane && Operands.size() == 4) {
+        if (IsLoadStoreLane && Operands.size() == 4)
           return false;
-        }
         // Alignment not specified (or atomics, must use default alignment).
         auto Tok = Lexer.getTok();
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
             Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
-      }
-      if (IsAtomic && !InstName.contains("fence")) {
-        if (!parseMemOrderMaybe(Operands)) {
-          auto Tok = Lexer.getTok();
-          Operands.push_back(std::make_unique<WebAssemblyOperand>(
-              Tok.getLoc(), Tok.getEndLoc(),
-              WebAssemblyOperand::IntOp{wasm::WASM_MEM_ORDER_SEQ_CST}));
-        }
       }
     }
     return false;
@@ -676,7 +667,7 @@ public:
       if (pop(Name, Try))
         return true;
     } else if (Name == "atomic.fence") {
-      if (!parseMemOrderMaybe(Operands)) {
+      if(parseMemOrderMaybe(Operands)) {
         auto Tok = Lexer.getTok();
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
             Tok.getLoc(), Tok.getEndLoc(),
@@ -704,6 +695,16 @@ public:
       // When we get support for wasm-gc types, this should become
       // ExpectRefType.
       ExpectFuncType = true;
+    }
+
+    bool IsAtomic = Name.contains("atomic.");
+    if (IsAtomic && Name != "atomic.fence") {
+      if(parseMemOrderMaybe(Operands)) {
+        auto Tok = Lexer.getTok();
+        Operands.push_back(std::make_unique<WebAssemblyOperand>(
+            Tok.getLoc(), Tok.getEndLoc(),
+            WebAssemblyOperand::IntOp{wasm::WASM_MEM_ORDER_SEQ_CST}));
+      }
     }
 
     // Returns true if the next tokens are a catch clause

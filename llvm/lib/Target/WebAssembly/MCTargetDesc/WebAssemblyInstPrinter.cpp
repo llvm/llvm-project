@@ -375,17 +375,20 @@ void WebAssemblyInstPrinter::printWebAssemblyMemOrderOperand(const MCInst *MI,
                                                              unsigned OpNo,
                                                              raw_ostream &O) {
   int64_t Imm = MI->getOperand(OpNo).getImm();
-  if (Imm == wasm::WASM_MEM_ORDER_SEQ_CST &&
-      (!STI || !STI->getFeatureBits()[WebAssembly::FeatureSharedEverything]))
+  unsigned Opcode = MI->getOpcode();
+  bool IsFence = Opcode == WebAssembly::ATOMIC_FENCE ||
+                 Opcode == WebAssembly::ATOMIC_FENCE_S;
+
+  if (Imm == wasm::WASM_MEM_ORDER_SEQ_CST && !IsFence)
     return;
 
   switch (Imm) {
   case wasm::WASM_MEM_ORDER_RMW_ACQ_REL:
   case wasm::WASM_MEM_ORDER_ACQ_REL:
-    O << " acqrel";
+    O << "acqrel";
     break;
   case wasm::WASM_MEM_ORDER_SEQ_CST:
-    O << " seqcst";
+    O << "seqcst";
     break;
   default:
     llvm_unreachable("Unknown memory ordering");

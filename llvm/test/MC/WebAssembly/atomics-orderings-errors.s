@@ -6,10 +6,10 @@ main:
   # CHECK: :[[@LINE+1]]:16: error: memory ordering requires shared-everything feature: acqrel
   atomic.fence acqrel
 
-  # CHECK: :[[@LINE+1]]:21: error: memory ordering requires shared-everything feature: acqrel
-  i32.atomic.load 0 acqrel
+  # CHECK: :[[@LINE+1]]:19: error: memory ordering requires shared-everything feature: acqrel
+  i32.atomic.load acqrel 0
 
-  # CHECK: :[[@LINE+1]]:24: error: memory ordering requires shared-everything feature: seqcst
-  i32.atomic.rmw.add 0 seqcst
+  # CHECK: :[[@LINE+1]]:22: error: memory ordering requires shared-everything feature: seqcst
+  i32.atomic.rmw.add seqcst 0
 
   end_function
