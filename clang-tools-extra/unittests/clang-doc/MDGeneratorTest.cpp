@@ -199,8 +199,6 @@ TEST_F(MDGeneratorTest, emitEnumMD) {
 
 --
 
-| Name | Value |
-
 | X | 0 |
 
 

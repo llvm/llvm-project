@@ -565,22 +565,20 @@ static void serializeInfo(const EnumValueInfo &I, Object &Obj) {
     Obj["ValueExpr"] = I.ValueExpr;
   else
     Obj["Value"] = I.Value;
-  if (!I.Description.empty()) {
-    json::Value CommentsArray = Array();
-    auto &CommentsArrayRef = *CommentsArray.getAsArray();
-    Object TempObj, ChildJson;
-    for (const auto &Child : I.Description) {
-      for (const auto &CI : Child.Children) {
-        ChildJson = serializeComment(*CI, TempObj);
-        if (!ChildJson.empty()) {
-          CommentsArrayRef.push_back(std::move(ChildJson));
-        }
-      }
-    }
-    if (!CommentsArrayRef.empty()) {
-      Obj["Description"] = CommentsArray;
-    }
+
+  if (I.Description.empty())
+    return;
+
+  json::Value CommentsArray = Array();
+  auto &CommentsArrayRef = *CommentsArray.getAsArray();
+  Object TempObj;
+  for (const auto &Child : I.Description) {
+    for (const auto &CI : Child.Children)
+      if(Object ChildJson = serializeComment(*CI, TempObj); !ChildJson.empty())
+        CommentsArrayRef.push_back(std::move(ChildJson));
   }
+  if (!CommentsArrayRef.empty())
+    Obj["Description"] = CommentsArray;
 }
 
 static void serializeInfo(const EnumInfo &I, json::Object &Obj,
