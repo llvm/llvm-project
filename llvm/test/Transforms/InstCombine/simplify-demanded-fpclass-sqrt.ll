@@ -12,7 +12,7 @@ declare nofpclass(pinf pnorm psub pzero) float @returns_negative_or_nan()
 declare nofpclass(pinf pnorm psub zero nan) float @returns_negative_nonzero()
 declare nofpclass(pinf pnorm psub zero nan) <2 x float> @returns_negative_nonzero_vec()
 declare nofpclass(pinf pnorm psub zero) float @returns_negative_nonzero_or_nan()
-
+declare nofpclass(qnan inf norm sub zero) float @returns_snan()
 
 ; -> qnan
 define nofpclass(inf norm sub zero) float @ret_only_nan_sqrt(float %x) {
@@ -34,6 +34,18 @@ define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt(float %x) {
 ;
   %result = call float @llvm.sqrt.f32(float %x)
   ret float %result
+}
+
+define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt_insert_point(float %x) {
+; CHECK-LABEL: define nofpclass(nan inf sub norm) float @ret_only_zero_sqrt_insert_point(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float 0.000000e+00, float [[X]])
+; CHECK-NEXT:    [[BARRIER:%.*]] = call float @llvm.arithmetic.fence.f32(float [[RESULT]])
+; CHECK-NEXT:    ret float [[BARRIER]]
+;
+  %result = call float @llvm.sqrt.f32(float %x)
+  %barrier = call float @llvm.arithmetic.fence.f32(float %result)
+  ret float %barrier
 }
 
 define nofpclass(inf nan norm sub) float @ret_only_zero_sqrt_preserve_flags(float %x) {
@@ -345,5 +357,19 @@ define nofpclass(nan) float @ret_no_nan__sqrt__no_inf_inputs(float nofpclass(inf
   ret float %result
 }
 
-attributes #0 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
-attributes #1 = { "denormal-fp-math"="dynamic,dynamic" }
+define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown
+  %result = call float @llvm.sqrt.f32(float %select)
+  ret float %result
+}
+
+attributes #0 = { denormal_fpenv(preservesign) }
+attributes #1 = { denormal_fpenv(dynamic) }

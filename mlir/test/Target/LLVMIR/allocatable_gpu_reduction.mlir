@@ -24,6 +24,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     "llvm.intr.memcpy"(%5, %arg0, %6) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
     %7 = llvm.mlir.constant(24 : i32) : i32
     "llvm.intr.memcpy"(%2, %arg1, %7) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i32) -> ()
+    llvm.br ^bb1
+  ^bb1:
     %8 = llvm.getelementptr %5[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
     %9 = llvm.load %8 : !llvm.ptr -> !llvm.ptr
     %10 = llvm.getelementptr %2[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8)>
@@ -62,6 +64,21 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     llvm.return
   }
 }
+
+// CHECK: define internal void @"{{.*}}$reduction$reduction_func"(ptr noundef %[[ARG_0:.*]], ptr noundef %[[ARG_1:.*]]) {{.*}} {
+// CHECK: entry:
+// CHECK:   %[[TEMP_1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
+// CHECK:   %[[TEMP_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }
+// CHECK:   br label %[[RED_BODY:omp.reduction.nonatomic.body]]
+// Verify that no allocas are emitted beyond the entry block.
+// CHECK-NOT: alloca
+
+// CHECK: [[RED_BODY]]:
+// CHECK:   %[[TEMP_1_ACAST:.*]] = addrspacecast ptr addrspace(5) %[[TEMP_1]] to ptr
+// CHECK:   %[[TEMP_2_ACAST:.*]] = addrspacecast ptr addrspace(5) %[[TEMP_2]] to ptr
+// CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr %[[TEMP_2_ACAST]], ptr %{{.*}}, i32 24, i1 false)
+// CHECK:   call void @llvm.memcpy.p0.p0.i32(ptr %[[TEMP_1_ACAST]], ptr %{{.*}}, i32 24, i1 false)
+// CHECK: }
 
 // CHECK: define {{.*}} @_omp_reduction_shuffle_and_reduce_func({{.*}}) {{.*}} {
 // CHECK:   %[[REMOTE_RED_LIST:.omp.reduction.remote_reduce_list]] = alloca [1 x ptr], align 8, addrspace(5)

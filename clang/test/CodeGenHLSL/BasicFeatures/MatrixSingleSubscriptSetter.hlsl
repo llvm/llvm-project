@@ -127,7 +127,7 @@ void setBoolMatrixScalar(out bool2x1 M, int index, bool S) {
 // CHECK-SAME: ptr noalias noundef nonnull align 4 dereferenceable(64) [[M:%.*]], <16 x i32> noundef [[N:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[M_ADDR:%.*]] = alloca ptr, align 4
-// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [16 x i32], align 4
+// CHECK-NEXT:    [[N_ADDR:%.*]] = alloca [4 x <4 x i32>], align 4
 // CHECK-NEXT:    store ptr [[M]], ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    store <16 x i32> [[N]], ptr [[N_ADDR]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i32>, ptr [[N_ADDR]], align 4

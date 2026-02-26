@@ -272,6 +272,7 @@ def TuneX1 : SubtargetFeature<"cortex-x1", "ARMProcFamily", "CortexX1",
                                   FeatureALULSLFast,
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
+                                  FeatureMaxInterleaveFactor4,
                                   FeaturePredictableSelectIsExpensive]>;
 
 def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
@@ -283,6 +284,7 @@ def TuneX2 : SubtargetFeature<"cortex-x2", "ARMProcFamily", "CortexX2",
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
                                   FeatureUseFixedOverScalableIfEqualCost,
+                                  FeatureMaxInterleaveFactor4,
                                   FeaturePredictableSelectIsExpensive]>;
 
 def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
@@ -293,6 +295,7 @@ def TuneX3 : SubtargetFeature<"cortex-x3", "ARMProcFamily", "CortexX3",
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
                                FeatureUseFixedOverScalableIfEqualCost,
+                               FeatureMaxInterleaveFactor4,
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
 
@@ -306,6 +309,7 @@ def TuneX4 : SubtargetFeature<"cortex-x4", "ARMProcFamily", "CortexX4",
                                FeaturePostRAScheduler,
                                FeatureEnableSelectOptimize,
                                FeatureUseFixedOverScalableIfEqualCost,
+                               FeatureMaxInterleaveFactor4,
                                FeatureAvoidLDAPUR,
                                FeaturePredictableSelectIsExpensive]>;
 
@@ -319,6 +323,7 @@ def TuneX925 : SubtargetFeature<"cortex-x925", "ARMProcFamily",
                                 FeaturePostRAScheduler,
                                 FeatureEnableSelectOptimize,
                                 FeatureUseFixedOverScalableIfEqualCost,
+                                FeatureMaxInterleaveFactor4,
                                 FeatureAvoidLDAPUR,
                                 FeaturePredictableSelectIsExpensive]>;
 
@@ -345,6 +350,7 @@ def TuneC1Ultra : SubtargetFeature<"c1-ultra", "ARMProcFamily",
                                   FeaturePostRAScheduler,
                                   FeatureEnableSelectOptimize,
                                   FeatureUseFixedOverScalableIfEqualCost,
+                                  FeatureMaxInterleaveFactor4,
                                   FeatureAvoidLDAPUR,
                                   FeaturePredictableSelectIsExpensive]>;
 
@@ -743,6 +749,7 @@ def TuneNeoverseV3 : SubtargetFeature<"neoversev3", "ARMProcFamily", "NeoverseV3
                                       FeatureFuseCmpCSet,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;
@@ -756,6 +763,7 @@ def TuneNeoverseV3AE : SubtargetFeature<"neoversev3AE", "ARMProcFamily", "Neover
                                       FeatureFuseCmpCSet,
                                       FeaturePostRAScheduler,
                                       FeatureEnableSelectOptimize,
+                                      FeatureUseFixedOverScalableIfEqualCost,
                                       FeatureAvoidLDAPUR,
                                       FeaturePredictableSelectIsExpensive,
                                       FeatureMaxInterleaveFactor4]>;

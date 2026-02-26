@@ -266,6 +266,15 @@ add_proxy_header_library(
     libc.include.stdint
 )
 
+add_proxy_header_library(
+  elf_macros
+  HDRS
+    elf_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.elf_macros
+    libc.include.elf
+)
+
 add_gen_header(
   elf_proxy
   YAML_FILE
@@ -294,6 +303,7 @@ add_gen_header(
     libc.include.llvm-libc-types.Elf32_Verneed
     libc.include.llvm-libc-types.Elf32_Versym
     libc.include.llvm-libc-types.Elf32_Word
+    libc.include.llvm-libc-types.Elf32_Xword
     libc.include.llvm-libc-types.Elf64_Addr
     libc.include.llvm-libc-types.Elf64_Chdr
     libc.include.llvm-libc-types.Elf64_Dyn

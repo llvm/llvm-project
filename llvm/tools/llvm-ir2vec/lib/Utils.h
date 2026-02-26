@@ -16,6 +16,7 @@
 #define LLVM_TOOLS_LLVM_IR2VEC_UTILS_UTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/Analysis/IR2Vec.h"
 #include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/CodeGen/MIRParser/MIRParser.h"
@@ -72,6 +73,7 @@ struct TripletResult {
 
 /// Entity mappings: [entity_name]
 using EntityList = std::vector<std::string>;
+using FuncEmbMap = DenseMap<const Function *, ir2vec::Embedding>;
 
 namespace ir2vec {
 
@@ -87,13 +89,13 @@ class IR2VecTool {
 private:
   Module &M;
   ModuleAnalysisManager MAM;
-  const Vocabulary *Vocab = nullptr;
+  std::unique_ptr<Vocabulary> Vocab;
 
 public:
   explicit IR2VecTool(Module &M) : M(M) {}
 
-  /// Initialize the IR2Vec vocabulary analysis
-  bool initializeVocabulary();
+  /// Initialize the IR2Vec vocabulary from the specified file path.
+  Error initializeVocabulary(StringRef VocabPath);
 
   /// Generate triplets for a single function
   /// Returns a TripletResult with:
@@ -114,6 +116,17 @@ public:
 
   /// Dump entity ID to string mappings
   static void writeEntitiesToStream(raw_ostream &OS);
+
+  // Get embedding for a single function
+  Expected<Embedding> getFunctionEmbedding(const Function &F,
+                                           IR2VecKind Kind) const;
+
+  /// Get embeddings for all functions in the module
+  Expected<FuncEmbMap> getFunctionEmbeddingsMap(IR2VecKind Kind) const;
+
+  /// Get embeddings for all basic blocks in a function
+  Expected<BBEmbeddingsMap> getBBEmbeddingsMap(const Function &F,
+                                               IR2VecKind Kind) const;
 
   /// Generate embeddings for the entire module
   void writeEmbeddingsToStream(raw_ostream &OS, EmbeddingLevel Level) const;
