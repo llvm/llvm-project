@@ -7229,6 +7229,15 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
   bool HasMethodWithOverrideControl = false,
        HasOverridingMethodWithoutOverrideControl = false;
   for (auto *D : Record->decls()) {
+    if (auto *EA = D->getAttr<ExcludeFromExplicitInstantiationAttr>()) {
+      if (auto *DA = getDLLAttr(D)) {
+        Diag(DA->getRange().getBegin(),
+             diag::warn_dllattr_ignored_exclusion_takes_precedence)
+            << *DA << EA;
+        D->dropAttrs<DLLExportAttr, DLLImportAttr>();
+      }
+    }
+
     if (auto *M = dyn_cast<CXXMethodDecl>(D)) {
       // FIXME: We could do this check for dependent types with non-dependent
       // bases.

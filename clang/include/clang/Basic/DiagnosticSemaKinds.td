@@ -3784,6 +3784,9 @@ def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
 def warn_redeclaration_without_import_attribute : Warning<
   "%q0 redeclared without 'dllimport' attribute: 'dllexport' attribute added">,
   InGroup<MicrosoftInconsistentDllImport>;
+def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
+  "%0 attribute ignored; %1 takes precedence">,
+  InGroup<IgnoredAttributes>;
 def warn_dllimport_dropped_from_inline_function : Warning<
   "%q0 redeclared inline; %1 attribute ignored">,
   InGroup<IgnoredAttributes>;
