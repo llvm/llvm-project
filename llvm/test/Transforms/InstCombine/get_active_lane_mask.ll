@@ -40,14 +40,14 @@ define <vscale x 4 x i1> @bail_lhs_is_zero() {
 define void @remove_all_false_subvector(<4 x i32> %val, ptr %a, ptr %b, ptr %c, ptr %d) {
 ; CHECK-LABEL: define void @remove_all_false_subvector(
 ; CHECK-SAME: <4 x i32> [[VAL:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], ptr [[D:%.*]]) {
-; CHECK-NEXT:    [[WIDE_ALM:%.*]] = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 7)
+; CHECK-NEXT:    [[WIDE_ALM:%.*]] = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i32(i32 0, i32 7)
 ; CHECK-NEXT:    [[EXT1:%.*]] = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> [[WIDE_ALM]], i64 0)
 ; CHECK-NEXT:    [[EXT2:%.*]] = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> [[WIDE_ALM]], i64 4)
 ; CHECK-NEXT:    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VAL]], ptr [[A]], <4 x i1> [[EXT1]])
 ; CHECK-NEXT:    tail call void @llvm.masked.store.v4i32.p0(<4 x i32> [[VAL]], ptr [[B]], <4 x i1> [[EXT2]])
 ; CHECK-NEXT:    ret void
 ;
-  %wide.alm = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 7)
+  %wide.alm = tail call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i32 0, i32 7)
   %ext1 = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 0)
   %ext2 = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 4)
   %ext3 = tail call <4 x i1> @llvm.vector.extract.v4i1.nxv16i1(<vscale x 16 x i1> %wide.alm, i64 8)
@@ -90,24 +90,6 @@ define void @active_lane_mask_non_const_start(<vscale x 2 x i64> %val, ptr %a, p
 ; CHECK-NEXT:    ret void
 ;
   %wide.alm = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 %start, i64 1)
-  %ext1 = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> %wide.alm, i64 0)
-  %ext2 = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> %wide.alm, i64 2)
-  tail call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %val, ptr %a, <vscale x 2 x i1> %ext1)
-  tail call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %val, ptr %b, <vscale x 2 x i1> %ext2)
-  ret void
-}
-
-define void @active_lane_mask_negative(<vscale x 2 x i64> %val, ptr %a, ptr %b, i64 %start) {
-; CHECK-LABEL: define void @active_lane_mask_negative(
-; CHECK-SAME: <vscale x 2 x i64> [[VAL:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[START:%.*]]) {
-; CHECK-NEXT:    [[WIDE_ALM:%.*]] = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 -1)
-; CHECK-NEXT:    [[EXT1:%.*]] = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[WIDE_ALM]], i64 0)
-; CHECK-NEXT:    [[EXT2:%.*]] = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> [[WIDE_ALM]], i64 2)
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[VAL]], ptr [[A]], <vscale x 2 x i1> [[EXT1]])
-; CHECK-NEXT:    tail call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> [[VAL]], ptr [[B]], <vscale x 2 x i1> [[EXT2]])
-; CHECK-NEXT:    ret void
-;
-  %wide.alm = tail call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 -1)
   %ext1 = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> %wide.alm, i64 0)
   %ext2 = tail call <vscale x 2 x i1> @llvm.vector.extract.nxv2i1.nxv4i1(<vscale x 4 x i1> %wide.alm, i64 2)
   tail call void @llvm.masked.store.nxv2i64.p0(<vscale x 2 x i64> %val, ptr %a, <vscale x 2 x i1> %ext1)

@@ -3915,8 +3915,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
                        m_Zero(), m_ConstantInt(ALMIdx)))) {
       const auto &Attrs = II->getFunction()->getAttributes().getFnAttrs();
       unsigned VScaleMin = Attrs.getVScaleRangeMin();
-      if (!ALMIdx->isNegative() &&
-          ExtractIdx * VScaleMin >= ALMIdx->getZExtValue())
+      if (ExtractIdx * VScaleMin >= ALMIdx->getZExtValue())
         return replaceInstUsesWith(CI,
                                    ConstantVector::getNullValue(ReturnType));
     }
