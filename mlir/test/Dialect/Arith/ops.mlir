@@ -993,7 +993,7 @@ func.func @test_index_castui_exact(%arg0 : i32) -> index {
 }
 
 // CHECK-LABEL: test_index_castui_nneg_exact
-// CHECK: arith.index_castui %{{.*}} nneg exact : i32 to index
+// CHECK: arith.index_castui %{{.*}} exact nneg : i32 to index
 func.func @test_index_castui_nneg_exact(%arg0 : i32) -> index {
   %0 = arith.index_castui %arg0 nneg exact : i32 to index
   return %0 : index

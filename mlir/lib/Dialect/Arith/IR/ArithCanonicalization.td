@@ -303,12 +303,14 @@ def IndexCastOfExtSI :
 // IndexCastUIOp
 //===----------------------------------------------------------------------===//
 
-// index_castui(index_castui(x)) -> x, if dstType == srcType.
+// index_castui(index_castui(x)) -> x, if dstType == srcType and at least one
+// exact flag is set (guaranteeing no information loss in either cast).
 def IndexCastUIOfIndexCastUI :
     Pat<(Arith_IndexCastUIOp:$res
           (Arith_IndexCastUIOp $x, $nneg1, $exact1), $nneg2, $exact2),
         (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
+         (Constraint<CPred<"$0 || $1">> $exact1, $exact2)]>;
 
 // index_castui(extui(x)) -> index_castui(x)
 def IndexCastUIOfExtUI :

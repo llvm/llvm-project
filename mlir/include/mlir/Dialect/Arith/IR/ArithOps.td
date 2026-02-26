@@ -1648,7 +1648,7 @@ def Arith_IndexCastUIOp
                        UnitAttr:$isExact);
   let results = (outs IndexCastTypeConstraint:$out);
   let assemblyFormat = [{
-    $in (`nneg` $nonNeg^)? (`exact` $isExact^)? attr-dict
+    $in oilist(`exact` $isExact | `nneg` $nonNeg) attr-dict
         `:` type($in) `to` type($out)
   }];
   let hasFolder = 1;
