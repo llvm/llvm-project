@@ -1098,7 +1098,7 @@ defm SWakeupBarrier : AMDGPUSubtargetFeature<"s-wakeup-barrier-inst",
 >;
 
 defm FlatSignedOffset : AMDGPUSubtargetFeature<"flat-signed-offset",
-  "Has signed flat offsets."
+  "Immediate offset of FLAT instructions are always signed"
 >;
 
 //===------------------------------------------------------------===//
