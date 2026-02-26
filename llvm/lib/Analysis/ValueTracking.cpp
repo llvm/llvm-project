@@ -4968,6 +4968,7 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
 /// \return true if this is a floating point value that is known to have a
 /// magintude smaller than 1. i.e., fabs(X) <=1.0
 static bool isAbsoluteValueLessEqualOne(const Value *V) {
+  // TODO: Handle frexp and x - floor(x)?
   return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
 }
 
@@ -5596,8 +5597,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
     const APFloat *CRHS;
     if (match(RHS, m_APFloat(CRHS))) {
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
       Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
     } else {
       computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Q,
