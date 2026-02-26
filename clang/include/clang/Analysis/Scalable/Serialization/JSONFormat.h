@@ -69,9 +69,6 @@ private:
   EntityId entityIdFromJSON(const uint64_t EntityIdIndex) const;
   uint64_t entityIdToJSON(EntityId EI) const;
 
-  llvm::Expected<BuildNamespaceKind>
-  buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) const;
-
   llvm::Expected<BuildNamespace>
   buildNamespaceFromJSON(const Object &BuildNamespaceObject) const;
   Object buildNamespaceToJSON(const BuildNamespace &BN) const;
