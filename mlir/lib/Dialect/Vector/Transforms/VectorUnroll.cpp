@@ -1196,12 +1196,11 @@ private:
 static bool isContiguous(ArrayRef<int64_t> extractShape,
                          ArrayRef<int64_t> shape) {
 
-  if (extractShape.size() > shape.size())
+  if (extractShape.empty() || extractShape.size() > shape.size())
     return false;
 
-  while (!extractShape.empty() && extractShape.front() == 1) {
+  while (extractShape.size() > 1 && extractShape.front() == 1)
     extractShape = extractShape.drop_front();
-  }
 
   while (!shape.empty() && shape.front() == 1) {
     shape = shape.drop_front();
