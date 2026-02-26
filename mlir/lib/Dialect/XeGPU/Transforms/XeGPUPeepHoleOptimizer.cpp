@@ -20,6 +20,7 @@
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/Dialect/XeGPU/uArch/uArchBase.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Types.h"
@@ -145,8 +146,9 @@ static xegpu::TensorDescType tryOptimize(xegpu::TensorDescType tdescType,
 
   SmallVector<int64_t> supportedShape = {supportedHeight, supportedWidth};
   xegpu::LayoutAttr newLayout = xegpu::LayoutAttr::get(
-      tdescType.getContext(),
-      tdescType.getLayoutAttr().getLaneLayout().asArrayRef(), {1, 1});
+      tdescType.getContext(), tdescType.getLayoutAttr().getLaneLayout(),
+      DenseI32ArrayAttr::get(tdescType.getContext(), {1, 1}),
+      tdescType.getLayoutAttr().getOrder());
   // Array length can not be larger than 1 for transpose case.
   return xegpu::TensorDescType::get(supportedShape, newElemTy, arrayLen,
                                     tdescType.getBoundaryCheck(),
