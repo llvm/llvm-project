@@ -248,3 +248,28 @@ define <4 x i32> @combine_with_shl_overflow(<8 x i16> %v) {
   %4 = add <4 x i32> %2, %3
   ret <4 x i32> %4
 }
+
+; Negative - vector index is not composed of V[2*i] and V[2*i+1].
+define void @load_sext_both_but_not_valid_vector_index(ptr %a, ptr %b, ptr %s) {
+; CHECK-LABEL: load_sext_both_but_not_valid_vector_index:
+; CHECK:         .functype load_sext_both_but_not_valid_vector_index (i32, i32, i32) -> ()
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.load 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    v128.load 0
+; CHECK-NEXT:    i32x4.dot_i16x8_s
+; CHECK-NEXT:    v128.store 0
+; CHECK-NEXT:    # fallthrough-return
+  %load = load <8 x i16>, ptr %a, align 16
+  %1 = sext <8 x i16> %load to <8 x i32>
+  %2 = load <8 x i16>, ptr %b, align 16
+  %3 = sext <8 x i16> %2 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %5 = shufflevector <8 x i32> %4, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %6 = shufflevector <8 x i32> %4, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+  %7 = add <4 x i32> %5, %6
+  store <4 x i32> %7, ptr %s, align 16
+  ret void
+}

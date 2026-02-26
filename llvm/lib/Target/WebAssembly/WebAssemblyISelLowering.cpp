@@ -3778,9 +3778,7 @@ static SDValue combineToDOT(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     if (BaseVec != VecL || BaseVec != VecR)
       return SDValue();
 
-    if (IdxL.getZExtValue() > IdxR.getZExtValue())
-      std::swap(IdxL, IdxR);
-    if (!(IdxL == I * 2 && IdxR == I * 2 + 1))
+    if (IdxL.getZExtValue() != I * 2 || IdxR.getZExtValue() != I * 2 + 1)
       return SDValue();
   }
 
