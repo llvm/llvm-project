@@ -35,8 +35,9 @@ template <typename Loc, typename Function,
           typename AnchorList = ArrayRef<std::pair<Loc, Function>>>
 void longestCommonSequence(
     AnchorList AnchorList1, AnchorList AnchorList2,
-    llvm::function_ref<bool(const Function &, const Function &)>
-        FunctionMatchesProfile,
+    llvm::function_ref<bool(const std::pair<Loc, Function> &,
+                            const std::pair<Loc, Function> &)>
+        ElementsMatch,
     llvm::function_ref<void(Loc, Loc)> InsertMatching) {
   int32_t Size1 = AnchorList1.size(), Size2 = AnchorList2.size(),
           MaxDepth = Size1 + Size2;
@@ -94,9 +95,8 @@ void longestCommonSequence(
       else
         X = V[Index(K - 1)] + 1;
       Y = X - K;
-      while (
-          X < Size1 && Y < Size2 &&
-          FunctionMatchesProfile(AnchorList1[X].second, AnchorList2[Y].second))
+      while (X < Size1 && Y < Size2 &&
+             ElementsMatch(AnchorList1[X], AnchorList2[Y]))
         X++, Y++;
 
       V[Index(K)] = X;

@@ -367,7 +367,11 @@ memprof::computeUndriftMap(Module &M, IndexedInstrProfReader *MemProfReader,
 
     LocToLocMap Matchings;
     longestCommonSequence<LineLocation, GlobalValue::GUID>(
-        ProfileAnchors, IRAnchors, std::equal_to<GlobalValue::GUID>(),
+        ProfileAnchors, IRAnchors,
+        [](const std::pair<LineLocation, GlobalValue::GUID> &A,
+           const std::pair<LineLocation, GlobalValue::GUID> &B) {
+          return A.second == B.second;
+        },
         [&](LineLocation A, LineLocation B) { Matchings.try_emplace(A, B); });
     [[maybe_unused]] bool Inserted =
         UndriftMaps.try_emplace(CallerGUID, std::move(Matchings)).second;
