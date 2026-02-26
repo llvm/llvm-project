@@ -9407,7 +9407,7 @@ bool SelectionDAGBuilder::visitMemCCpyCall(const CallInst &I) {
       getValue(I.getArgOperand(1)), getValue(I.getArgOperand(2)),
       getValue(I.getArgOperand(3)), &I);
 
-  if (Res.first.getNode()) {
+  if (Res.first) {
     processIntegerCallValue(I, Res.first, true);
     PendingLoads.push_back(Res.second);
     return true;
