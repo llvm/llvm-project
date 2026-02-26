@@ -486,6 +486,7 @@ end
 * Multiple specifications of a prefix-spec on the same procedure are allowed,
   with a warning.  C1552 (F2023) specifies that at most one of each shall be
   present.
+* An assumed-rank entity is an acceptable `NAMELIST` group item.
 
 ### Extensions supported when enabled by options
 
