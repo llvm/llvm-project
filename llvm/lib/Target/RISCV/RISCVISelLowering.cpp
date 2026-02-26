@@ -22193,13 +22193,14 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                              LD->getAddressSpace(), SrcAlign,
                              LD->getMemOperand()->getFlags()))
         break;
+
+      // First, create a vector with naturally aligned aligned elements for
+      // memory access.
       unsigned TargetBW = SrcAlign.value() * 8;
       unsigned TargetNumElts = MemVT.getScalarSizeInBits() / TargetBW;
       MVT EltVT = MemVT.isFloatingPoint() ? MVT::getFloatingPointVT(TargetBW)
                                           : MVT::getIntegerVT(TargetBW);
       MVT MemVecVT = MVT::getVectorVT(EltVT, TargetNumElts);
-      if (!isLegalElementTypeForRVV(EltVT) || !isTypeLegal(MemVecVT))
-        break;
 
       // Scale the MemVecVT to ExtScale to get the VT of the ExtLoad.
       unsigned ExtScale =
@@ -22208,6 +22209,11 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
                          ? MVT::getFloatingPointVT(TargetBW * ExtScale)
                          : MVT::getIntegerVT(TargetBW * ExtScale);
       MVT ExtVecVT = MemVecVT.changeVectorElementType(ExtEltVT);
+
+      // If the proposed ExtLoad would require further legalization, abort.
+      if (!isLegalElementTypeForRVV(ExtEltVT) || !isTypeLegal(ExtVecVT))
+        break;
+
       SDValue TargetLoad = DAG.getExtLoad(
           LD->getExtensionType(), SDLoc(N), ExtVecVT, LD->getChain(),
           LD->getBasePtr(), MemVecVT, LD->getMemOperand());
