@@ -219,7 +219,7 @@ define <4 x i32> @combine_with_shl(<8 x i16> %v) {
   ret <4 x i32> %4
 }
 
-; Negative - shifts by 16 overflow, so for x86 at least we don't optimize this.
+; Negative - shifts by 16 overflow, so we don't optimize this.
 define <4 x i32> @combine_with_shl_overflow(<8 x i16> %v) {
 ; CHECK-LABEL: combine_with_shl_overflow:
 ; CHECK:         .functype combine_with_shl_overflow (v128) -> (v128)
