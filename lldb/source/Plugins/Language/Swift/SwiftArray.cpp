@@ -26,6 +26,7 @@
 #include "Plugins/Language/ObjC/Cocoa.h"
 #include "lldb/lldb-enumerations.h"
 #include "swift/Demangling/Demangler.h"
+#include "swift/Demangling/ManglingFlavor.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -66,11 +67,12 @@ ValueObjectSP SwiftArrayNativeBufferHandler::GetElementAtIndex(size_t idx) {
 
 SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
     ValueObject &valobj, lldb::addr_t native_ptr, CompilerType elem_type)
-    : m_metadata_ptr(LLDB_INVALID_ADDRESS),
-      m_reserved_word(LLDB_INVALID_ADDRESS), m_size(0), m_capacity(0),
-      m_first_elem_ptr(LLDB_INVALID_ADDRESS), m_elem_type(elem_type),
-      m_element_size(0), m_element_stride(0),
-      m_exe_ctx_ref(valobj.GetExecutionContextRef()) {
+    : m_elem_type(elem_type), m_exe_ctx_ref(valobj.GetExecutionContextRef()) {
+  if (ConstString mangled = valobj.GetCompilerType().GetMangledTypeName())
+    m_is_embedded_swift =
+        SwiftLanguageRuntime::GetManglingFlavor(mangled.GetStringRef()) ==
+        ::swift::Mangle::ManglingFlavor::Embedded;
+
   if (native_ptr == LLDB_INVALID_ADDRESS)
     return;
   if (native_ptr == 0) {
@@ -118,7 +120,12 @@ SwiftArrayNativeBufferHandler::SwiftArrayNativeBufferHandler(
 }
 
 bool SwiftArrayNativeBufferHandler::IsValid() {
-  return m_metadata_ptr != LLDB_INVALID_ADDRESS && m_metadata_ptr &&
+  // In embedded Swift, the empty array singleton (_swiftEmptyArrayStorage)
+  // has metadata_ptr = 0 because there's no runtime type metadata, so we check
+  // if either the metadata ptr is valid OR if we're dealing with an embedded
+  // swift type.
+  return (m_is_embedded_swift ||
+          (m_metadata_ptr != LLDB_INVALID_ADDRESS && m_metadata_ptr)) &&
          m_first_elem_ptr != LLDB_INVALID_ADDRESS && m_capacity >= m_size &&
          m_elem_type.IsValid();
 }
