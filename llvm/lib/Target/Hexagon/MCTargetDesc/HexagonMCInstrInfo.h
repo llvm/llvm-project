@@ -117,9 +117,6 @@ MCInst const *extenderForIndex(MCInst const &MCB, size_t Index);
 void extendIfNeeded(MCContext &Context, MCInstrInfo const &MCII, MCInst &MCB,
                     MCInst const &MCI);
 
-// Return memory access size in bytes
-unsigned getMemAccessSize(MCInstrInfo const &MCII, MCInst const &MCI);
-
 // Return memory access size
 unsigned getAddrMode(MCInstrInfo const &MCII, MCInst const &MCI);
 

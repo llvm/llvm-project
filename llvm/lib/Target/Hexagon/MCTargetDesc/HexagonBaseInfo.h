@@ -16,8 +16,11 @@
 #ifndef LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 #define LLVM_LIB_TARGET_HEXAGON_MCTARGETDESC_HEXAGONBASEINFO_H
 
+#include <cassert>
+
 #include "HexagonDepITypes.h"
 #include "MCTargetDesc/HexagonMCTargetDesc.h"
+#include "llvm/MC/MCInstrDesc.h" // included for inline functions
 
 namespace llvm {
 
@@ -48,7 +51,7 @@ namespace HexagonII {
 
   // MCInstrDesc TSFlags
   // *** Must match HexagonInstrFormat*.td ***
-  enum {
+  enum HexagonTSFlagsVal {
     // This 7-bit field describes the insn type.
     TypePos = 0,
     TypeMask = 0x7f,
@@ -129,7 +132,7 @@ namespace HexagonII {
     AddrModeMask = 0x7,
     // Access size for load/store instructions.
     MemAccessSizePos = 43,
-    MemAccesSizeMask = 0xf,
+    MemAccessSizeMask = 0xf,
 
     // Branch predicted taken.
     TakenPos = 47,
@@ -172,6 +175,22 @@ namespace HexagonII {
     hasUnaryRestrictionPos = 62,
     hasUnaryRestrictionMask = 0x1,
   };
+
+  inline unsigned getTSFlags(const MCInstrDesc &MID, HexagonTSFlagsVal Pos,
+                             unsigned Mask) {
+    return (MID.TSFlags >> Pos) & Mask;
+  }
+
+  enum HexagonTSFlags2Val {
+    // To be filled in with Hexagon-specific Flags
+  };
+
+  inline unsigned getTSFlags(const MCInstrDesc &MID, HexagonTSFlags2Val Pos,
+                             unsigned Mask) {
+    unsigned Shift = static_cast<unsigned>(Pos);
+    assert(Shift >= 64 && "HexagonTSFlags2Val position must be >= 64");
+    return (MID.TSFlags2 >> (Shift - 64)) & Mask;
+  }
 
   // *** The code above must match HexagonInstrFormat*.td *** //
 
@@ -275,14 +294,30 @@ namespace HexagonII {
     INST_ICLASS_ALU32_3   = 0xf0000000
   };
 
-  [[maybe_unused]]
-  static unsigned getMemAccessSizeInBytes(MemAccessSize S) {
-    switch (S) {
-      case ByteAccess:        return 1;
-      case HalfWordAccess:    return 2;
-      case WordAccess:        return 4;
-      case DoubleWordAccess:  return 8;
-      default:                return 0;
+  inline bool isCVI(const MCInstrDesc &MID) {
+    return getTSFlags(MID, isCVIPos, isCVIMask) != 0;
+  }
+
+  inline Type getType(const MCInstrDesc &MID) {
+    return Type(getTSFlags(MID, TypePos, TypeMask));
+  }
+
+  inline MemAccessSize getMemAccessEnum(const MCInstrDesc &MID) {
+    return MemAccessSize(getTSFlags(MID, MemAccessSizePos, MemAccessSizeMask));
+  }
+
+  inline unsigned getMemAccessSizeInBytesNoVector(MemAccessSize SizeEnum) {
+    switch (SizeEnum) {
+    case ByteAccess:
+      return 1;
+    case HalfWordAccess:
+      return 2;
+    case WordAccess:
+      return 4;
+    case DoubleWordAccess:
+      return 8;
+    default:
+      return 0; // handles HVXVectorAccess
     }
   }
 } // end namespace HexagonII
