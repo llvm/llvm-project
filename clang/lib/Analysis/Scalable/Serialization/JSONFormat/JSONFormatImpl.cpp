@@ -54,7 +54,7 @@ llvm::Expected<Value> readJSON(llvm::StringRef Path) {
   return llvm::json::parse(BufferOrError.get()->getBuffer());
 }
 
-llvm::Error writeJSON(Value &&V, llvm::StringRef Path) {
+llvm::Error writeJSON(Value &&Value, llvm::StringRef Path) {
   if (llvm::sys::fs::exists(Path)) {
     return ErrorBuilder::create(std::errc::file_exists,
                                 ErrorMessages::FailedToWriteFile, Path,
@@ -87,7 +87,7 @@ llvm::Error writeJSON(Value &&V, llvm::StringRef Path) {
         .build();
   }
 
-  OutStream << llvm::formatv("{0:2}\n", V);
+  OutStream << llvm::formatv("{0:2}\n", Value);
   OutStream.flush();
 
   // This path handles post-write stream errors (e.g. ENOSPC after buffered
@@ -160,6 +160,7 @@ buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
   return *OptBuildNamespaceKind;
 }
 
+// Provided for consistency with respect to rest of the codebase.
 llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
   return buildNamespaceKindToString(BNK);
 }
@@ -316,6 +317,7 @@ entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
   return *OptEntityLinkageType;
 }
 
+// Provided for consistency with respect to rest of the codebase.
 llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
   return entityLinkageTypeToString(LT);
 }
@@ -454,8 +456,9 @@ Array JSONFormat::entityIdTableToJSON(const EntityIdTable &IdTable) const {
   const auto &Entities = getEntities(IdTable);
   EntityIdTableArray.reserve(Entities.size());
 
-  for (const auto &[EN, EI] : Entities) {
-    EntityIdTableArray.push_back(entityIdTableEntryToJSON(EN, EI));
+  for (const auto &[EntityName, EntityId] : Entities) {
+    EntityIdTableArray.push_back(
+        entityIdTableEntryToJSON(EntityName, EntityId));
   }
 
   return EntityIdTableArray;
