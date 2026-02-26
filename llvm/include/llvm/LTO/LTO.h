@@ -465,10 +465,10 @@ public:
 
 protected:
   // Called at the start of run().
-  virtual Error handleArchiveInputs() { return Error::success(); }
+  virtual Error serializeInputsForDistribution() { return Error::success(); }
 
   // Called before returning from run().
-  virtual void cleanup() {}
+  virtual void cleanup();
 
 private:
   Config Conf;
@@ -642,7 +642,23 @@ private:
   // Diagnostic optimization remarks file
   LLVMRemarkFileHandle DiagnosticOutputFile;
 
+  // A dummy module to host the dummy function.
+  std::unique_ptr<Module> DummyModule;
+
+  // A dummy function created in a private module to provide a context for
+  // LTO-link optimization remarks. This is needed for ThinLTO where we
+  // may not have any IR functions available, because the optimization remark
+  // handling requires a function.
+  Function *LinkerRemarkFunction = nullptr;
+
+  // Setup optimization remarks according to the provided configuration.
+  Error setupOptimizationRemarks();
+
 public:
+  /// Helper to emit an optimization remark during the LTO link when outside of
+  /// the standard optimization pass pipeline.
+  void emitRemark(OptimizationRemark &Remark);
+
   virtual Expected<std::shared_ptr<lto::InputFile>>
   addInput(std::unique_ptr<lto::InputFile> InputPtr) {
     return std::shared_ptr<lto::InputFile>(InputPtr.release());

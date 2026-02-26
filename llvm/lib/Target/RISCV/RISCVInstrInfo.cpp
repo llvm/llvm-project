@@ -42,7 +42,6 @@ using namespace llvm;
 #include "RISCVGenCompressInstEmitter.inc"
 
 #define GET_INSTRINFO_CTOR_DTOR
-#define GET_INSTRINFO_NAMED_OPS
 #include "RISCVGenInstrInfo.inc"
 
 #define DEBUG_TYPE "riscv-instr-info"
@@ -531,13 +530,23 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 
   if (RISCV::GPRPairRegClass.contains(DstReg, SrcReg)) {
-    if (STI.isRV32() && STI.hasStdExtZdinx()) {
-      // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
-      // registers, in one instruction.
-      BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D_IN32X), DstReg)
-          .addReg(SrcReg, getRenamableRegState(RenamableSrc))
-          .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
-      return;
+    if (STI.isRV32()) {
+      if (STI.hasStdExtZdinx()) {
+        // On RV32_Zdinx, FMV.D will move a pair of registers to another pair of
+        // registers, in one instruction.
+        BuildMI(MBB, MBBI, DL, get(RISCV::FSGNJ_D_IN32X), DstReg)
+            .addReg(SrcReg, getRenamableRegState(RenamableSrc))
+            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc));
+        return;
+      }
+
+      if (STI.hasStdExtP()) {
+        // On RV32P, `padd.dw` is a GPR Pair Add
+        BuildMI(MBB, MBBI, DL, get(RISCV::PADD_DW), DstReg)
+            .addReg(SrcReg, KillFlag | getRenamableRegState(RenamableSrc))
+            .addReg(RISCV::X0_Pair);
+        return;
+      }
     }
 
     MCRegister EvenReg = TRI->getSubReg(SrcReg, RISCV::sub_gpr_even);
@@ -1591,11 +1600,19 @@ bool RISCVInstrInfo::reverseBranchCondition(
 }
 
 // Return true if the instruction is a load immediate instruction (i.e.
-// ADDI x0, imm).
+// (ADDI x0, imm) or (BSETI x0, imm)).
 static bool isLoadImm(const MachineInstr *MI, int64_t &Imm) {
   if (MI->getOpcode() == RISCV::ADDI && MI->getOperand(1).isReg() &&
       MI->getOperand(1).getReg() == RISCV::X0) {
     Imm = MI->getOperand(2).getImm();
+    return true;
+  }
+  // BSETI can be used to create power of 2 constants. Only 2048 is currently
+  // interesting because it is 1 more than the maximum ADDI constant.
+  if (MI->getOpcode() == RISCV::BSETI && MI->getOperand(1).isReg() &&
+      MI->getOperand(1).getReg() == RISCV::X0 &&
+      MI->getOperand(2).getImm() == 11) {
+    Imm = 2048;
     return true;
   }
   return false;
@@ -1702,7 +1719,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // return that.
   if (isFromLoadImm(MRI, LHS, C0) && C0 != 0 && LHS.getReg().isVirtual() &&
       MRI.hasOneUse(LHS.getReg()) && (IsSigned || C0 != -1)) {
-    assert(isInt<12>(C0) && "Unexpected immediate");
+    assert((isInt<12>(C0) || C0 == 2048) && "Unexpected immediate");
     if (Register RegZ = searchConst(C0 + 1)) {
       BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
           .add(RHS)
@@ -1723,7 +1740,7 @@ bool RISCVInstrInfo::optimizeCondBranch(MachineInstr &MI) const {
   // return that.
   if (isFromLoadImm(MRI, RHS, C0) && C0 != 0 && RHS.getReg().isVirtual() &&
       MRI.hasOneUse(RHS.getReg())) {
-    assert(isInt<12>(C0) && "Unexpected immediate");
+    assert((isInt<12>(C0) || C0 == 2048) && "Unexpected immediate");
     if (Register RegZ = searchConst(C0 - 1)) {
       BuildMI(*MBB, MI, MI.getDebugLoc(), get(NewOpc))
           .addReg(RegZ)
@@ -2358,8 +2375,9 @@ bool RISCVInstrInfo::areRVVInstsReassociable(const MachineInstr &Root,
   }
 
   // Rounding modes
-  if (RISCVII::hasRoundModeOp(TSFlags) &&
-      !checkImmOperand(RISCVII::getVLOpNum(Desc) - 1))
+  if (int Idx = RISCVII::getFRMOpNum(Desc); Idx >= 0 && !checkImmOperand(Idx))
+    return false;
+  if (int Idx = RISCVII::getVXRMOpNum(Desc); Idx >= 0 && !checkImmOperand(Idx))
     return false;
 
   return true;
