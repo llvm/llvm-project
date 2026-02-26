@@ -107,13 +107,18 @@ private:
                                          const Decl *targetDecl, bool isThunk,
                                          mlir::NamedAttrList &retAttrs);
   /// A helper for constructAttributeList that handles argument attributes.
-  void constructFunctionArgumentAttributes();
+  void constructFunctionArgumentAttributes(
+      const CIRGenFunctionInfo &info, bool isThunk,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs);
   /// A helper function for constructAttributeList that determines whether a
   /// return value might have been discarded.
   bool mayDropFunctionReturn(const ASTContext &context, QualType retTy);
   /// A helper function for constructAttributeList that determines whether
   /// `noundef` on a return is possible.
   bool hasStrictReturn(QualType retTy, const Decl *targetDecl);
+
+  llvm::DenseMap<const Expr *, mlir::Operation *>
+      materializedGlobalTemporaryMap;
 
 public:
   mlir::ModuleOp getModule() const { return theModule; }
@@ -292,6 +297,7 @@ public:
   void constructAttributeList(
       llvm::StringRef name, const CIRGenFunctionInfo &info,
       CIRGenCalleeInfo calleeInfo, mlir::NamedAttrList &attrs,
+      llvm::MutableArrayRef<mlir::NamedAttrList> argAttrs,
       mlir::NamedAttrList &retAttrs, cir::CallingConv &callingConv,
       cir::SideEffect &sideEffect, bool attrOnCallSite, bool isThunk);
   /// Helper function for constructAttributeList/others.  Builds a set of
@@ -655,6 +661,11 @@ public:
   // Finalize CIR code generation.
   void release();
 
+  /// Returns a pointer to a global variable representing a temporary with
+  /// static or thread storage duration.
+  mlir::Operation *getAddrOfGlobalTemporary(const MaterializeTemporaryExpr *mte,
+                                            const Expr *init);
+
   /// -------
   /// Visibility and Linkage
   /// -------
@@ -730,8 +741,7 @@ private:
   llvm::StringMap<clang::GlobalDecl, llvm::BumpPtrAllocator> manglings;
 
   // FIXME: should we use llvm::TrackingVH<mlir::Operation> here?
-  typedef llvm::StringMap<mlir::Operation *> ReplacementsTy;
-  ReplacementsTy replacements;
+  llvm::MapVector<StringRef, mlir::Operation *> replacements;
   /// Call replaceAllUsesWith on all pairs in replacements.
   void applyReplacements();
 
