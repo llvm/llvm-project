@@ -2030,9 +2030,10 @@ MVT TargetLoweringBase::getPreferredSwitchConditionType(LLVMContext &Context,
   return getRegisterType(Context, ConditionVT);
 }
 
-TargetLoweringBase::LegalizeAction TargetLoweringBase::getLoadAction(
-    EVT ValVT, EVT MemVT, Align Alignment, MachineMemOperand::Flags MMOFlags,
-    unsigned AddrSpace, unsigned ExtType, bool Atomic) const {
+TargetLoweringBase::LegalizeAction
+TargetLoweringBase::getLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
+                                  unsigned AddrSpace, unsigned ExtType,
+                                  bool Atomic) const {
   if (ValVT.isExtended() || MemVT.isExtended())
     return Expand;
   unsigned ValI = (unsigned)ValVT.getSimpleVT().SimpleTy;

@@ -7516,7 +7516,6 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
   // Reject cases that won't be matched as extloads.
   if (!LoadResultVT.bitsGT(TruncVT) || !TruncVT.isRound() ||
       !TLI->isLoadLegal(LoadResultVT, TruncVT, Load->getAlign(),
-                        TLI->getLoadMemOperandFlags(*Load, *DL),
                         Load->getPointerAddressSpace(), ISD::ZEXTLOAD, false))
     return false;
 

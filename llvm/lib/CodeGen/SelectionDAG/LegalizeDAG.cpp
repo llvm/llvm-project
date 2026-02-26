@@ -353,8 +353,9 @@ SelectionDAGLegalize::ExpandConstantFP(ConstantFPSDNode *CFP, bool UseCP) {
           // Only do this if the target has a native EXTLOAD instruction from
           // smaller type.
           TLI.isLoadLegal(
-              OrigVT, SVT, Align(DAG.getDataLayout().getPrefTypeAlign(SVT.getTypeForEVT(*DAG.getContext()))),
-              MachineMemOperand::Flags::MOLoad,
+              OrigVT, SVT,
+              Align(DAG.getDataLayout().getPrefTypeAlign(
+                  SVT.getTypeForEVT(*DAG.getContext()))),
               MachinePointerInfo::getConstantPool(DAG.getMachineFunction())
                   .getAddrSpace(),
               ISD::EXTLOAD, false) &&
@@ -750,8 +751,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
       // Until such a way is found, don't insist on promoting i1 here.
       (SrcVT != MVT::i1 ||
        TLI.getLoadAction(Node->getValueType(0), MVT::i1, LD->getAlign(),
-                         LD->getMemOperand()->getFlags(), LD->getAddressSpace(),
-                         ExtType, false) == TargetLowering::Promote)) {
+                         LD->getAddressSpace(), ExtType,
+                         false) == TargetLowering::Promote)) {
     // Promote to a byte-sized load if not loading an integral number of
     // bytes.  For example, promote EXTLOAD:i20 -> EXTLOAD:i24.
     unsigned NewWidth = SrcVT.getStoreSizeInBits();
@@ -862,8 +863,8 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
   } else {
     bool isCustom = false;
     switch (TLI.getLoadAction(Node->getValueType(0), SrcVT.getSimpleVT(),
-                              LD->getAlign(), LD->getMemOperand()->getFlags(),
-                              LD->getAddressSpace(), ExtType, false)) {
+                              LD->getAlign(), LD->getAddressSpace(), ExtType,
+                              false)) {
     default:
       llvm_unreachable("This action is not supported yet!");
     case TargetLowering::Custom:
@@ -892,16 +893,14 @@ void SelectionDAGLegalize::LegalizeLoadOps(SDNode *Node) {
 
     case TargetLowering::Expand: {
       EVT DestVT = Node->getValueType(0);
-      if (!TLI.isLoadLegal(DestVT, SrcVT, LD->getAlign(),
-                           LD->getMemOperand()->getFlags(),
-                           LD->getAddressSpace(), ISD::EXTLOAD, false)) {
+      if (!TLI.isLoadLegal(DestVT, SrcVT, LD->getAlign(), LD->getAddressSpace(),
+                           ISD::EXTLOAD, false)) {
         // If the source type is not legal, see if there is a legal extload to
         // an intermediate type that we can then extend further.
         EVT LoadVT = TLI.getRegisterType(SrcVT.getSimpleVT());
         if ((LoadVT.isFloatingPoint() == SrcVT.isFloatingPoint()) &&
             (TLI.isTypeLegal(SrcVT) || // Same as SrcVT == LoadVT?
              TLI.isLoadLegal(LoadVT, SrcVT, LD->getAlign(),
-                             LD->getMemOperand()->getFlags(),
                              LD->getAddressSpace(), ExtType, false))) {
           // If we are loading a legal type, this is a non-extload followed by a
           // full extend.
@@ -1865,9 +1864,9 @@ SDValue SelectionDAGLegalize::EmitStackConvert(SDValue SrcOp, EVT SlotVT,
   if ((SrcVT.bitsGT(SlotVT) &&
        !TLI.isTruncStoreLegalOrCustom(SrcOp.getValueType(), SlotVT)) ||
       (SlotVT.bitsLT(DestVT) &&
-       !TLI.isLoadLegalOrCustom(
-           DestVT, SlotVT, DestAlign, MachineMemOperand::Flags::MOLoad,
-           DAG.getDataLayout().getAllocaAddrSpace(), ISD::EXTLOAD, false)))
+       !TLI.isLoadLegalOrCustom(DestVT, SlotVT, DestAlign,
+                                DAG.getDataLayout().getAllocaAddrSpace(),
+                                ISD::EXTLOAD, false)))
     return SDValue();
 
   // Create the stack frame object.

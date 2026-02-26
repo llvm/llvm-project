@@ -1513,28 +1513,24 @@ public:
   /// needs to be promoted to a larger size, needs to be expanded to some other
   /// code sequence, or the target has a custom expander for it.
   virtual LegalizeAction getLoadAction(EVT ValVT, EVT MemVT, Align Alignment,
-                                       MachineMemOperand::Flags MMOFlags,
                                        unsigned AddrSpace, unsigned ExtType,
                                        bool Atomic) const;
 
   /// Return true if the specified load with extension is legal on this target.
-  bool isLoadLegal(EVT ValVT, EVT MemVT, Align Alignment,
-                   MachineMemOperand::Flags MMOFlags, unsigned AddrSpace,
+  bool isLoadLegal(EVT ValVT, EVT MemVT, Align Alignment, unsigned AddrSpace,
                    unsigned ExtType, bool Atomic) const {
-    return getLoadAction(ValVT, MemVT, Alignment, MMOFlags, AddrSpace, ExtType,
-                         Atomic) == Legal;
+    return getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType, Atomic) ==
+           Legal;
   }
 
   /// Return true if the specified load with extension is legal or custom
   /// on this target.
   bool isLoadLegalOrCustom(EVT ValVT, EVT MemVT, Align Alignment,
-                           MachineMemOperand::Flags MMOFlags,
                            unsigned AddrSpace, unsigned ExtType,
                            bool Atomic) const {
-    return getLoadAction(ValVT, MemVT, Alignment, MMOFlags, AddrSpace, ExtType,
-                         Atomic) == Legal ||
-           getLoadAction(ValVT, MemVT, Alignment, MMOFlags, AddrSpace, ExtType,
-                         Atomic) == Custom;
+    LegalizeAction Action =
+        getLoadAction(ValVT, MemVT, Alignment, AddrSpace, ExtType, Atomic);
+    return Action == Legal || Action == Custom;
   }
 
   /// Return how this store with truncation should be treated: either it is
@@ -3164,7 +3160,6 @@ public:
     }
 
     return isLoadLegal(VT, LoadVT, Load->getAlign(),
-                       getLoadMemOperandFlags(*Load, DL),
                        Load->getPointerAddressSpace(), LType, false);
   }
 

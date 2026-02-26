@@ -7046,7 +7046,6 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   // multiple sets of vector unpacks after each load.
   if (auto *Ld = dyn_cast<MaskedLoadSDNode>(ExtVal->getOperand(0))) {
     if (!isLoadLegalOrCustom(ExtVT, Ld->getValueType(0), Ld->getAlign(),
-                             Ld->getMemOperand()->getFlags(),
                              Ld->getAddressSpace(), ISD::ZEXTLOAD, false)) {
       // Disable extending masked loads for fixed-width for now, since the code
       // quality doesn't look great.

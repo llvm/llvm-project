@@ -299,7 +299,6 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
     EVT LoadedVT = LD->getMemoryVT();
     if (LoadedVT.isVector() && ExtType != ISD::NON_EXTLOAD)
       Action = TLI.getLoadAction(LD->getValueType(0), LoadedVT, LD->getAlign(),
-                                 LD->getMemOperand()->getFlags(),
                                  LD->getAddressSpace(), ExtType, false);
     break;
   }

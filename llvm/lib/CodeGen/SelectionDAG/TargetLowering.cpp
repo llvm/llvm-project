@@ -12733,7 +12733,6 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
     // extending load instead.
     ISD::LoadExtType ExtType =
         isLoadLegal(ResultVT, VecEltVT, Alignment,
-                    OriginalLoad->getMemOperand()->getFlags(),
                     OriginalLoad->getAddressSpace(), ISD::ZEXTLOAD, false)
             ? ISD::ZEXTLOAD
             : ISD::EXTLOAD;
