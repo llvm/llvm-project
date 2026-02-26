@@ -185,6 +185,12 @@ add_fp_unittest(
     libc.src.__support.math.nexttowardf
     libc.src.__support.math.nexttowardf16
     libc.src.__support.math.nexttowardl
+    libc.src.__support.math.nextafter
+    libc.src.__support.math.nextafterbf16
+    libc.src.__support.math.nextafterf
+    libc.src.__support.math.nextafterf16
+    libc.src.__support.math.nextafterl
+    libc.src.__support.math.nextafterf128
     libc.src.__support.math.pow
     libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf
