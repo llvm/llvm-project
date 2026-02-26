@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file --convert-amdgpu-to-rocdl 2>&1 | FileCheck %s
+// RUN: not mlir-opt %s -split-input-file --convert-amdgpu-to-rocdl 2>&1 | FileCheck %s
 
 // CHECK: failed to legalize operation 'amdgpu.swizzle_bitmode'
 func.func @swizzle_bitmode_non_multiple_of_32() {

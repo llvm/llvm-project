@@ -2543,7 +2543,7 @@ struct AMDGPUSwizzleBitModeLowering
       srcBitWidth = srcType.getIntOrFloatBitWidth();
     }
 
-    if (srcBitWidth % 32 != 0) {
+    if (srcBitWidth > 32 && srcBitWidth % 32 != 0) {
       return rewriter.notifyMatchFailure(
           op, "swizzle_bitmode requires src bit width to be a multiple of 32");
     }
