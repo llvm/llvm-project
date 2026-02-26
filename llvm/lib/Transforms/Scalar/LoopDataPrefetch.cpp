@@ -394,7 +394,7 @@ bool LoopDataPrefetch::runOnLoop(Loop *L) {
     const SCEV *NextLSCEV = SE->getAddExpr(
         P.LSCEVAddRec,
         SE->getMulExpr(SE->getConstant(P.LSCEVAddRec->getType(), ItersAhead),
-                       P.LSCEVAddRec->getStepRecurrence(*SE).getPointer()));
+                       P.LSCEVAddRec->getStepRecurrence(*SE)));
     if (!SCEVE.isSafeToExpand(NextLSCEV))
       continue;
 

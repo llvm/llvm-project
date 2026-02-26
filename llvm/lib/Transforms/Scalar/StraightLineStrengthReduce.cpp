@@ -1100,10 +1100,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
 
     // The base of this candidate is GEP's base plus the offsets of all
     // indices except this current one.
-    SmallVector<SCEVUse, 4> IndexPtrs;
-    for (SCEVUse U : IndexExprs)
-      IndexPtrs.push_back(U);
-    SCEVUse BaseExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexPtrs);
+    SCEVUse BaseExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
     Value *ArrayIdx = GEP->getOperand(I);
     uint64_t ElementSize = GTI.getSequentialElementStride(*DL);
     IntegerType *PtrIdxTy = cast<IntegerType>(DL->getIndexType(GEP->getType()));

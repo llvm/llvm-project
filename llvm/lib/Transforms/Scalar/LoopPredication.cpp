@@ -1018,10 +1018,7 @@ static const SCEV *getMinAnalyzeableBackedgeTakenCount(ScalarEvolution &SE,
   }
   if (ExitCounts.size() < 2)
     return SE.getCouldNotCompute();
-  SmallVector<SCEVUse, 4> ExitCountPtrs;
-  for (SCEVUse U : ExitCounts)
-    ExitCountPtrs.push_back(U);
-  return SE.getUMinFromMismatchedTypes(ExitCountPtrs);
+  return SE.getUMinFromMismatchedTypes(ExitCounts);
 }
 
 /// This implements an analogous, but entirely distinct transform from the main

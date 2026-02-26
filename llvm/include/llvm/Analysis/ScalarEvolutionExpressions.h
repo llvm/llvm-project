@@ -219,10 +219,10 @@ protected:
   // arrays with its SCEVAllocator, so this class just needs a simple
   // pointer rather than a more elaborate vector-like data structure.
   // This also avoids the need for a non-trivial destructor.
-  SCEVUse const *Operands;
+  const SCEVUse *Operands;
   size_t NumOperands;
 
-  SCEVNAryExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T, SCEVUse const *O,
+  SCEVNAryExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T, const SCEVUse *O,
                size_t N)
       : SCEV(ID, T, computeExpressionSize(ArrayRef(O, N))), Operands(O),
         NumOperands(N) {}
@@ -266,7 +266,7 @@ public:
 class SCEVCommutativeExpr : public SCEVNAryExpr {
 protected:
   SCEVCommutativeExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
-                      SCEVUse const *O, size_t N)
+                      const SCEVUse *O, size_t N)
       : SCEVNAryExpr(ID, T, O, N) {}
 
 public:
@@ -287,7 +287,7 @@ class SCEVAddExpr : public SCEVCommutativeExpr {
 
   Type *Ty;
 
-  SCEVAddExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O, size_t N)
+  SCEVAddExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O, size_t N)
       : SCEVCommutativeExpr(ID, scAddExpr, O, N) {
     auto *FirstPointerTypedOp = find_if(
         operands(), [](SCEVUse Op) { return Op->getType()->isPointerTy(); });
@@ -309,7 +309,7 @@ public:
 class SCEVMulExpr : public SCEVCommutativeExpr {
   friend class ScalarEvolution;
 
-  SCEVMulExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O, size_t N)
+  SCEVMulExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O, size_t N)
       : SCEVCommutativeExpr(ID, scMulExpr, O, N) {}
 
 public:
@@ -369,7 +369,7 @@ class SCEVAddRecExpr : public SCEVNAryExpr {
 
   const Loop *L;
 
-  SCEVAddRecExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O, size_t N,
+  SCEVAddRecExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O, size_t N,
                  const Loop *l)
       : SCEVNAryExpr(ID, scAddRecExpr, O, N), L(l) {}
 
@@ -453,7 +453,7 @@ class SCEVMinMaxExpr : public SCEVCommutativeExpr {
 protected:
   /// Note: Constructing subclasses via this constructor is allowed
   SCEVMinMaxExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
-                 SCEVUse const *O, size_t N)
+                 const SCEVUse *O, size_t N)
       : SCEVCommutativeExpr(ID, T, O, N) {
     assert(isMinMaxType(T));
     // Min and max never overflow
@@ -485,7 +485,7 @@ public:
 class SCEVSMaxExpr : public SCEVMinMaxExpr {
   friend class ScalarEvolution;
 
-  SCEVSMaxExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O, size_t N)
+  SCEVSMaxExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O, size_t N)
       : SCEVMinMaxExpr(ID, scSMaxExpr, O, N) {}
 
 public:
@@ -497,7 +497,7 @@ public:
 class SCEVUMaxExpr : public SCEVMinMaxExpr {
   friend class ScalarEvolution;
 
-  SCEVUMaxExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O, size_t N)
+  SCEVUMaxExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O, size_t N)
       : SCEVMinMaxExpr(ID, scUMaxExpr, O, N) {}
 
 public:
@@ -509,7 +509,7 @@ public:
 class SCEVSMinExpr : public SCEVMinMaxExpr {
   friend class ScalarEvolution;
 
-  SCEVSMinExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O, size_t N)
+  SCEVSMinExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O, size_t N)
       : SCEVMinMaxExpr(ID, scSMinExpr, O, N) {}
 
 public:
@@ -521,7 +521,7 @@ public:
 class SCEVUMinExpr : public SCEVMinMaxExpr {
   friend class ScalarEvolution;
 
-  SCEVUMinExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O, size_t N)
+  SCEVUMinExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O, size_t N)
       : SCEVMinMaxExpr(ID, scUMinExpr, O, N) {}
 
 public:
@@ -548,7 +548,7 @@ class SCEVSequentialMinMaxExpr : public SCEVNAryExpr {
 protected:
   /// Note: Constructing subclasses via this constructor is allowed
   SCEVSequentialMinMaxExpr(const FoldingSetNodeIDRef ID, enum SCEVTypes T,
-                           SCEVUse const *O, size_t N)
+                           const SCEVUse *O, size_t N)
       : SCEVNAryExpr(ID, T, O, N) {
     assert(isSequentialMinMaxType(T));
     // Min and max never overflow
@@ -582,7 +582,7 @@ public:
 class SCEVSequentialUMinExpr : public SCEVSequentialMinMaxExpr {
   friend class ScalarEvolution;
 
-  SCEVSequentialUMinExpr(const FoldingSetNodeIDRef ID, SCEVUse const *O,
+  SCEVSequentialUMinExpr(const FoldingSetNodeIDRef ID, const SCEVUse *O,
                          size_t N)
       : SCEVSequentialMinMaxExpr(ID, scSequentialUMinExpr, O, N) {}
 
@@ -969,18 +969,16 @@ public:
   }
 
   const SCEV *visitAddRecExpr(const SCEVAddRecExpr *Expr) {
+    SmallVector<SCEVUse, 2> Operands;
+    for (SCEVUse Op : Expr->operands())
+      Operands.push_back(visit(Op));
+
     const Loop *L = Expr->getLoop();
     auto It = Map.find(L);
     if (It == Map.end()) {
-      SmallVector<SCEVUse, 2> Operands2;
-      for (const SCEV *Op : Expr->operands())
-        Operands2.push_back(visit(Op));
-      return SE.getAddRecExpr(Operands2, L, Expr->getNoWrapFlags());
+      return SE.getAddRecExpr(Operands, L, Expr->getNoWrapFlags());
     }
 
-    SmallVector<SCEVUse, 2> Operands;
-    for (const SCEV *Op : Expr->operands())
-      Operands.push_back(visit(Op));
     return SCEVAddRecExpr::evaluateAtIteration(Operands, It->second, SE);
   }
 

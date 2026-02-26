@@ -414,10 +414,7 @@ NaryReassociatePass::tryReassociateGEPAtIndex(GetElementPtrInst *GEP,
     // @reassociate_gep_assume for an example of this canonicalization.
     IndexExprs[I] = SE->getZeroExtendExpr(IndexExprs[I], GEPArgType);
   }
-  SmallVector<SCEVUse, 4> IndexPtrs;
-  for (SCEVUse U : IndexExprs)
-    IndexPtrs.push_back(U);
-  SCEVUse CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexPtrs);
+  SCEVUse CandidateExpr = SE->getGEPExpr(cast<GEPOperator>(GEP), IndexExprs);
 
   Value *Candidate = findClosestMatchingDominator(CandidateExpr, GEP);
   if (Candidate == nullptr)
