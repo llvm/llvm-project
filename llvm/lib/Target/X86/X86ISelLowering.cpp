@@ -55290,19 +55290,18 @@ static SDValue combineFaddCFmul(SDNode *N, SelectionDAG &DAG,
   if (GetCFmulFrom(LHS)) {
     FAddOp0 = LHS;
     FAddOp1 = RHS;
-  }
-  else if (GetCFmulFrom(RHS)) {
+  } else if (GetCFmulFrom(RHS)) {
     FAddOp0 = RHS;
     FAddOp1 = LHS;
-  }
-  else
+  } else
     return SDValue();
 
   MVT CVT = MVT::getVectorVT(MVT::f32, VT.getVectorNumElements() / 2);
   FAddOp1 = DAG.getBitcast(CVT, FAddOp1);
   unsigned NewOp = IsConj ? X86ISD::VFCMADDC : X86ISD::VFMADDC;
-  SDValue CFmul = DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1,
-                              N->getFlags() & FAddOp0.getOperand(0)->getFlags());
+  SDValue CFmul =
+      DAG.getNode(NewOp, SDLoc(N), CVT, MulOp0, MulOp1, FAddOp1,
+                  N->getFlags() & FAddOp0.getOperand(0)->getFlags());
   return DAG.getBitcast(VT, CFmul);
 }
 
