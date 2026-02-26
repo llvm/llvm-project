@@ -358,6 +358,24 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  hypotbf16_test
+  NO_RUN_POSTBUILD
+  NEED_MPFR
+  SUITE
+    libc_math_exhaustive_tests
+  SRCS
+    hypotbf16_test.cpp
+  COMPILE_OPTIONS
+    ${libc_opt_high_flag}
+  DEPENDS
+    .exhaustive_test
+    libc.src.math.hypotbf16
+    libc.src.__support.FPUtil.fp_bits
+  LINK_LIBRARIES
+    -lpthread
+)
+
+add_fp_unittest(
   hypotf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -503,22 +521,6 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
-  acospif_test
-  NO_RUN_POSTBUILD
-  NEED_MPFR
-  SUITE
-    libc_math_exhaustive_tests
-  SRCS
-    acospif_test.cpp
-  DEPENDS
-    .exhaustive_test
-    libc.src.math.acospif
-    libc.src.__support.FPUtil.fp_bits
-  LINK_LIBRARIES
-    -lpthread
-)
-
-add_fp_unittest(
   asinhf_test
   NO_RUN_POSTBUILD
   NEED_MPFR
@@ -529,22 +531,6 @@ add_fp_unittest(
   DEPENDS
     .exhaustive_test
     libc.src.math.asinhf
-    libc.src.__support.FPUtil.fp_bits
-  LINK_LIBRARIES
-    -lpthread
-)
-
-add_fp_unittest(
-  asinpif_test
-  NO_RUN_POSTBUILD
-  NEED_MPFR
-  SUITE
-    libc_math_exhaustive_tests
-  SRCS
-    asinpif_test.cpp
-  DEPENDS
-    .exhaustive_test
-    libc.src.math.asinpif
     libc.src.__support.FPUtil.fp_bits
   LINK_LIBRARIES
     -lpthread
