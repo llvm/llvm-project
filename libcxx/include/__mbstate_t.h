@@ -43,8 +43,15 @@
 #  include <bits/types/mbstate_t.h> // works on most Unixes
 #elif __has_include(<sys/_types/_mbstate_t.h>)
 #  include <sys/_types/_mbstate_t.h> // works on Darwin
+// include_next works differently for module builders.
 #elif __has_include_next(<wchar.h>)
+#  define _LIBCPP_INCLUDE_NEXT_WCHAR
 #  include_next <wchar.h> // use the C standard provider of mbstate_t if present
+#  undef _LIBCPP_INCLUDE_NEXT_WCHAR
+#  ifdef _LIBCPP_WCHAR_NOT_FOUND
+#    undef _LIBCPP_WCHAR_NOT_FOUND
+#    include <uchar.h>
+#  endif
 #elif __has_include_next(<uchar.h>)
 #  include_next <uchar.h> // Try <uchar.h> in absence of <wchar.h> for mbstate_t
 #else
