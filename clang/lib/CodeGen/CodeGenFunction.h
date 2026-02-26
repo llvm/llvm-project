@@ -2931,7 +2931,8 @@ public:
                            RawAddress *Alloca = nullptr);
   RawAddress CreateMemTemp(QualType T, CharUnits Align,
                            const Twine &Name = "tmp",
-                           RawAddress *Alloca = nullptr);
+                           RawAddress *Alloca = nullptr,
+                           LangAS OverrideSemaForOpenCL = LangAS::Default);
 
   /// CreateMemTemp - Create a temporary memory object of the given type, with
   /// appropriate alignmen without casting it to the default address space.
