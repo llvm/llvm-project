@@ -41,7 +41,11 @@ int test__comparesf2(uint32_t a_rep, uint32_t b_rep, enum Result result,
   int gt = __gtsf2(a, b);
   int le = __lesf2(a, b);
   int lt = __ltsf2(a, b);
+#ifdef __ELF__
+  // The generic builtins/comparedf2.c does not define this function
+  // for object formats other than ELF
   int cmp = __cmpsf2(a, b);
+#endif
   int unord = __unordsf2(a, b);
 
   int ret = 0;
@@ -54,7 +58,9 @@ int test__comparesf2(uint32_t a_rep, uint32_t b_rep, enum Result result,
     ret |= expect(a_rep, b_rep, "__gtsf2", gt, gt <= 0, "<= 0", line);
     ret |= expect(a_rep, b_rep, "__lesf2", le, le <= 0, "<= 0", line);
     ret |= expect(a_rep, b_rep, "__ltsf2", lt, lt < 0, "< 0", line);
+#ifdef __ELF__
     ret |= expect(a_rep, b_rep, "__cmpsf2", cmp, cmp == -1, "== -1", line);
+#endif
     ret |= expect(a_rep, b_rep, "__unordsf2", unord, unord == 0, "== 0", line);
     break;
   case RESULT_GT:
@@ -64,7 +70,9 @@ int test__comparesf2(uint32_t a_rep, uint32_t b_rep, enum Result result,
     ret |= expect(a_rep, b_rep, "__gtsf2", gt, gt > 0, "> 0", line);
     ret |= expect(a_rep, b_rep, "__lesf2", le, le > 0, "> 0", line);
     ret |= expect(a_rep, b_rep, "__ltsf2", lt, lt >= 0, ">= 0", line);
+#ifdef __ELF__
     ret |= expect(a_rep, b_rep, "__cmpsf2", cmp, cmp == 1, "== 1", line);
+#endif
     ret |= expect(a_rep, b_rep, "__unordsf2", unord, unord == 0, "== 0", line);
     break;
   case RESULT_EQ:
@@ -74,7 +82,9 @@ int test__comparesf2(uint32_t a_rep, uint32_t b_rep, enum Result result,
     ret |= expect(a_rep, b_rep, "__gtsf2", gt, gt <= 0, "<= 0", line);
     ret |= expect(a_rep, b_rep, "__lesf2", le, le <= 0, "<= 0", line);
     ret |= expect(a_rep, b_rep, "__ltsf2", lt, lt >= 0, ">= 0", line);
+#ifdef __ELF__
     ret |= expect(a_rep, b_rep, "__cmpsf2", cmp, cmp == 0, "== 0", line);
+#endif
     ret |= expect(a_rep, b_rep, "__unordsf2", unord, unord == 0, "== 0", line);
     break;
   case RESULT_UN:
@@ -84,7 +94,9 @@ int test__comparesf2(uint32_t a_rep, uint32_t b_rep, enum Result result,
     ret |= expect(a_rep, b_rep, "__gtsf2", gt, gt <= 0, "<= 0", line);
     ret |= expect(a_rep, b_rep, "__lesf2", le, le > 0, "> 0", line);
     ret |= expect(a_rep, b_rep, "__ltsf2", lt, lt >= 0, ">= 0", line);
+#ifdef __ELF__
     ret |= expect(a_rep, b_rep, "__cmpsf2", cmp, cmp == 1, "== 1", line);
+#endif
     ret |= expect(a_rep, b_rep, "__unordsf2", unord, unord == 1, "== 1", line);
     break;
   }
