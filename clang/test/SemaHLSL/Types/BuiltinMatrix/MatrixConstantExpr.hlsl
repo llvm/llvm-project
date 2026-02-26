@@ -45,6 +45,8 @@ export void fn() {
     _Static_assert(FA4[1] == 2.5, "Woo!");
     _Static_assert(FA4[2] == 3.5, "Woo!");
     _Static_assert(FA4[3] == 4.5, "Woo!");
+    constexpr float F = (float)FA4;
+    _Static_assert(F == 1.5, "Woo!");
   }
 
   // Array cast to matrix to vector

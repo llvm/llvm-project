@@ -854,7 +854,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_HLSLAggregateSplatCast: {
-    // Aggregate splat cast: convert a scalar value to one of an aggregate type.
+    // Aggregate splat cast: convert a scalar value to one of an aggregate type,
+    // inserting casts when necessary to convert the scalar to the aggregate's
+    // element type(s).
     // TODO: Aggregate splat to struct and array types
     assert(canClassify(SubExpr->getType()));
 
@@ -904,7 +906,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_HLSLElementwiseCast: {
     // Elementwise cast: flatten source elements of one aggregate type and store
-    // to a destination aggregate type of the same or fewer number of elements.
+    // to a destination scalar or aggregate type of the same or fewer number of
+    // elements, while inserting casts as necessary.
     // TODO: Elementwise cast to structs, nested arrays, and arrays of composite
     // types
     QualType SrcType = SubExpr->getType();
@@ -945,14 +948,25 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
       } else {
         return false;
       }
+    } else if (classify(DestType)) {
+      // Scalar destination: extract element 0 and cast.
+      PrimType DestT = classifyPrim(DestType);
+      if (!this->visit(SubExpr))
+        return false;
+      if (!this->emitArrayElemPop(SrcElemT, 0, CE))
+        return false;
+      if (SrcElemT != DestT) {
+        if (!this->emitPrimCast(SrcElemT, DestT, DestType, CE))
+          return false;
+      }
+      return true;
     } else {
       return false;
     }
     DestElemT = classifyPrim(DestElemType);
 
     if (!Initializing) {
-      UnsignedOrNone LocalIndex =
-          classify(DestType) ? allocateLocal(CE) : allocateTemporary(CE);
+      UnsignedOrNone LocalIndex = allocateTemporary(CE);
       if (!LocalIndex)
         return false;
       if (!this->emitGetPtrLocal(*LocalIndex, CE))
