@@ -24,10 +24,10 @@
 
 ; CHECK-LABEL: trunc_v128i8_to_v128i1:
 ; CHECK: q{{[0-9]+}} = vand(v{{[0-9]+}},r{{[0-9]+}})
-define void @trunc_v128i8_to_v128i1(<128 x i8> %v, ptr %p) {
+define i128 @trunc_v128i8_to_v128i1(<128 x i8> %v) {
   %1 = trunc <128 x i8> %v to <128 x i1>
-  store <128 x i1> %1, ptr %p, align 16
-  ret void
+  %2 = bitcast <128 x i1> %1 to i128
+  ret i128 %2
 }
 
 ; CHECK-LABEL: trunc_v64i16_to_v64i1:
@@ -55,19 +55,19 @@ define i32 @trunc_v32i32_to_v32i1(<32 x i32> %v) {
 ; CHECK-LABEL: trunc_v64i32_to_v64i1:
 ; CHECK-DAG: q{{[0-9]+}} = vand(v{{[0-9]+}},r{{[0-9]+}})
 ; CHECK-DAG: q{{[0-9]+}} = vand(v{{[0-9]+}},r{{[0-9]+}})
-define void @trunc_v64i32_to_v64i1(<64 x i32> %v, ptr %p) {
+define i64 @trunc_v64i32_to_v64i1(<64 x i32> %v) {
   %1 = trunc <64 x i32> %v to <64 x i1>
-  store <64 x i1> %1, ptr %p, align 8
-  ret void
+  %2 = bitcast <64 x i1> %1 to i64
+  ret i64 %2
 }
 
 ; CHECK-LABEL: trunc_v128i16_to_v128i1:
 ; CHECK-DAG: q{{[0-9]+}} = vand(v{{[0-9]+}},r{{[0-9]+}})
 ; CHECK-DAG: q{{[0-9]+}} = vand(v{{[0-9]+}},r{{[0-9]+}})
-define void @trunc_v128i16_to_v128i1(<128 x i16> %v, ptr %p) {
+define i128 @trunc_v128i16_to_v128i1(<128 x i16> %v) {
   %1 = trunc <128 x i16> %v to <128 x i1>
-  store <128 x i1> %1, ptr %p, align 16
-  ret void
+  %2 = bitcast <128 x i1> %1 to i128
+  ret i128 %2
 }
 
 ; ===========================================================================
