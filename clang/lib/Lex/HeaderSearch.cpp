@@ -1620,7 +1620,7 @@ StringRef HeaderSearch::getIncludeNameForHeader(const FileEntry *File) const {
 }
 
 void HeaderSearch::buildModuleMapIndex(DirectoryEntryRef Dir,
-                                            ModuleMapDirectoryState &MMState) {
+                                       ModuleMapDirectoryState &MMState) {
   if (!MMState.ModuleMapFile)
     return;
   const modulemap::ModuleMapFile *ParsedMM =
@@ -1636,10 +1636,9 @@ void HeaderSearch::buildModuleMapIndex(DirectoryEntryRef Dir,
     processModuleMapForIndex(*ParsedPrivateMM, Dir, "", MMState);
 }
 
-void HeaderSearch::addToModuleMapIndex(StringRef RelPath,
-                                            StringRef ModuleName,
-                                            StringRef PathPrefix,
-                                            ModuleMapDirectoryState &MMState) {
+void HeaderSearch::addToModuleMapIndex(StringRef RelPath, StringRef ModuleName,
+                                       StringRef PathPrefix,
+                                       ModuleMapDirectoryState &MMState) {
   SmallString<128> RelFromRootPath(PathPrefix);
   llvm::sys::path::append(RelFromRootPath, RelPath);
   llvm::sys::path::native(RelFromRootPath);
@@ -1666,16 +1665,16 @@ void HeaderSearch::processExternModuleDeclForIndex(
         llvm::sys::path::append(NewPrefix, ExternDir);
         llvm::sys::path::native(NewPrefix);
       }
-      processModuleMapForIndex(*ExtMMF, EFile->getDir(),
-                                             NewPrefix, MMState);
+      processModuleMapForIndex(*ExtMMF, EFile->getDir(), NewPrefix, MMState);
     }
   }
 }
 
-void HeaderSearch::processModuleDeclForIndex(
-    const modulemap::ModuleDecl &MD, StringRef ModuleName,
-    DirectoryEntryRef MMDir, StringRef PathPrefix,
-    ModuleMapDirectoryState &MMState) {
+void HeaderSearch::processModuleDeclForIndex(const modulemap::ModuleDecl &MD,
+                                             StringRef ModuleName,
+                                             DirectoryEntryRef MMDir,
+                                             StringRef PathPrefix,
+                                             ModuleMapDirectoryState &MMState) {
   // Skip inferred submodules (module *)
   if (MD.Id.front().first == "*")
     return;
@@ -1696,12 +1695,11 @@ void HeaderSearch::processModuleDeclForIndex(
             std::make_pair(std::string(FullPath), ModuleName));
       },
       [&](const modulemap::ModuleDecl &SubMD) {
-        processModuleDeclForIndex(SubMD, ModuleName, MMDir,
-                                                PathPrefix, MMState);
+        processModuleDeclForIndex(SubMD, ModuleName, MMDir, PathPrefix,
+                                  MMState);
       },
       [&](const modulemap::ExternModuleDecl &EMD) {
-        processExternModuleDeclForIndex(EMD, MMDir, PathPrefix,
-                                                      MMState);
+        processExternModuleDeclForIndex(EMD, MMDir, PathPrefix, MMState);
       },
       [](const auto &) {
         // Ignore other decls.
@@ -1712,18 +1710,19 @@ void HeaderSearch::processModuleDeclForIndex(
   }
 }
 
-void HeaderSearch::processModuleMapForIndex(
-    const modulemap::ModuleMapFile &MMF, DirectoryEntryRef MMDir,
-    StringRef PathPrefix, ModuleMapDirectoryState &MMState) {
+void HeaderSearch::processModuleMapForIndex(const modulemap::ModuleMapFile &MMF,
+                                            DirectoryEntryRef MMDir,
+                                            StringRef PathPrefix,
+                                            ModuleMapDirectoryState &MMState) {
   for (const auto &Decl : MMF.Decls) {
     std::visit(llvm::makeVisitor(
                    [&](const modulemap::ModuleDecl &MD) {
-                     processModuleDeclForIndex(
-                         MD, MD.Id.front().first, MMDir, PathPrefix, MMState);
+                     processModuleDeclForIndex(MD, MD.Id.front().first, MMDir,
+                                               PathPrefix, MMState);
                    },
                    [&](const modulemap::ExternModuleDecl &EMD) {
-                     processExternModuleDeclForIndex(
-                         EMD, MMDir, PathPrefix, MMState);
+                     processExternModuleDeclForIndex(EMD, MMDir, PathPrefix,
+                                                     MMState);
                    }),
                Decl);
   }

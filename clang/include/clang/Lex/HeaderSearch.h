@@ -386,24 +386,25 @@ class HeaderSearch {
   /// This fills a ModuleMapDirectoryState with index information from its
   /// directory's module map.
   void buildModuleMapIndex(DirectoryEntryRef Dir,
+                           ModuleMapDirectoryState &MMState);
+
+  void processModuleMapForIndex(const modulemap::ModuleMapFile &MMF,
+                                DirectoryEntryRef MMDir, StringRef PathPrefix,
                                 ModuleMapDirectoryState &MMState);
 
-  void processModuleMapForIndex(
-      const modulemap::ModuleMapFile &MMF, DirectoryEntryRef MMDir,
-      StringRef PathPrefix, ModuleMapDirectoryState &MMState);
+  void processExternModuleDeclForIndex(const modulemap::ExternModuleDecl &EMD,
+                                       DirectoryEntryRef MMDir,
+                                       StringRef PathPrefix,
+                                       ModuleMapDirectoryState &MMState);
 
-  void processExternModuleDeclForIndex(
-      const modulemap::ExternModuleDecl &EMD, DirectoryEntryRef MMDir,
-      StringRef PathPrefix, ModuleMapDirectoryState &MMState);
-
-  void processModuleDeclForIndex(
-      const modulemap::ModuleDecl &MD, StringRef ModuleName,
-      DirectoryEntryRef MMDir, StringRef PathPrefix,
-      ModuleMapDirectoryState &MMState);
+  void processModuleDeclForIndex(const modulemap::ModuleDecl &MD,
+                                 StringRef ModuleName, DirectoryEntryRef MMDir,
+                                 StringRef PathPrefix,
+                                 ModuleMapDirectoryState &MMState);
 
   void addToModuleMapIndex(StringRef RelPath, StringRef ModuleName,
-                                StringRef PathPrefix,
-                                ModuleMapDirectoryState &MMState);
+                           StringRef PathPrefix,
+                           ModuleMapDirectoryState &MMState);
 
 public:
   HeaderSearch(const HeaderSearchOptions &HSOpts, SourceManager &SourceMgr,
