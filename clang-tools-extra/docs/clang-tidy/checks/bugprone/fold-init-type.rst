@@ -35,8 +35,7 @@ cause loss of precision through:
   auto a = {65536LL * 65536 * 65536};
   return std::accumulate(std::begin(a), std::end(a), 0);
 
-The check also handles overloads with the following transparent standard
-functors:
+The check handles overloads with the following transparent standard functors:
 
 - ``std::plus``
 - ``std::minus``
