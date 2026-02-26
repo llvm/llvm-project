@@ -2,12 +2,10 @@
 ; RUN: llc -start-before=codegenprepare -mtriple=aarch64-gnu-linux -mattr=+neon,+sve \
 ; RUN:   -vector-library=ArmPL < %s | FileCheck %s -check-prefix=ARMPL
 
-define <4 x float> @test_pow_v4f32(<4 x float> %x, <4 x float> %y) {
+define <4 x float> @test_pow_v4f32(<4 x float> %x, <4 x float> %y) nounwind {
 ; ARMPL-LABEL: test_pow_v4f32:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    bl armpl_vpowq_f32
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret
@@ -15,12 +13,10 @@ define <4 x float> @test_pow_v4f32(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %result
 }
 
-define <2 x double> @test_pow_v2f64(<2 x double> %x, <2 x double> %y) {
+define <2 x double> @test_pow_v2f64(<2 x double> %x, <2 x double> %y) nounwind {
 ; ARMPL-LABEL: test_pow_v2f64:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    bl armpl_vpowq_f64
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; ARMPL-NEXT:    ret
@@ -28,12 +24,10 @@ define <2 x double> @test_pow_v2f64(<2 x double> %x, <2 x double> %y) {
   ret <2 x double> %result
 }
 
-define <vscale x 4 x float> @test_pow_nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y) {
+define <vscale x 4 x float> @test_pow_nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y) nounwind {
 ; ARMPL-LABEL: test_pow_nxv4f32:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    ptrue p0.s
 ; ARMPL-NEXT:    bl armpl_svpow_f32_x
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -42,12 +36,10 @@ define <vscale x 4 x float> @test_pow_nxv4f32(<vscale x 4 x float> %x, <vscale x
   ret <vscale x 4 x float> %result
 }
 
-define <vscale x 2 x double> @test_pow_nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y) {
+define <vscale x 2 x double> @test_pow_nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y) nounwind {
 ; ARMPL-LABEL: test_pow_nxv2f64:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
-; ARMPL-NEXT:    .cfi_def_cfa_offset 16
-; ARMPL-NEXT:    .cfi_offset w30, -16
 ; ARMPL-NEXT:    ptrue p0.d
 ; ARMPL-NEXT:    bl armpl_svpow_f64_x
 ; ARMPL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
@@ -56,7 +48,7 @@ define <vscale x 2 x double> @test_pow_nxv2f64(<vscale x 2 x double> %x, <vscale
   ret <vscale x 2 x double> %result
 }
 
-define <4 x float> @test_pow_v4f32_025(<4 x float> %x) {
+define <4 x float> @test_pow_v4f32_025(<4 x float> %x) nounwind {
 ; ARMPL-LABEL: test_pow_v4f32_025:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    fsqrt v0.4s, v0.4s
@@ -66,7 +58,7 @@ define <4 x float> @test_pow_v4f32_025(<4 x float> %x) {
   ret <4 x float> %result
 }
 
-define <vscale x 2 x double> @test_pow_nxv2f64_075(<vscale x 2 x double> %x) {
+define <vscale x 2 x double> @test_pow_nxv2f64_075(<vscale x 2 x double> %x) nounwind {
 ; ARMPL-LABEL: test_pow_nxv2f64_075:
 ; ARMPL:       // %bb.0:
 ; ARMPL-NEXT:    ptrue p0.d
