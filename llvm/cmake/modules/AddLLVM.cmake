@@ -1091,6 +1091,8 @@ macro(generate_llvm_objects name)
 
     set(INITLLVM_ARGS "")
 
+    # When Clang is invoked as an OS utility (e.g., c17), it needs to follow the POSIX specification
+    # for how utilities respond to signals.
     if(${name} STREQUAL "clang")
       set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
     endif()

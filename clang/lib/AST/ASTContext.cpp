@@ -7346,9 +7346,12 @@ TemplateName ASTContext::getCanonicalTemplateName(TemplateName Name,
     return TemplateName(cast<TemplateDecl>(Template->getCanonicalDecl()));
   }
 
-  case TemplateName::OverloadedTemplate:
   case TemplateName::AssumedTemplate:
-    llvm_unreachable("cannot canonicalize unresolved template");
+    // An assumed template is just a name, so it is already canonical.
+    return Name;
+
+  case TemplateName::OverloadedTemplate:
+    llvm_unreachable("cannot canonicalize overloaded template");
 
   case TemplateName::DependentTemplate: {
     DependentTemplateName *DTN = Name.getAsDependentTemplateName();

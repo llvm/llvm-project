@@ -787,6 +787,11 @@ public:
     return IsFunctionTrivial(Callee);
   }
 
+  bool VisitCXXRewrittenBinaryOperator(const CXXRewrittenBinaryOperator *Op) {
+    auto *SemanticExpr = Op->getSemanticForm();
+    return SemanticExpr && Visit(SemanticExpr);
+  }
+
   bool VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *E) {
     if (auto *Expr = E->getExpr()) {
       if (!Visit(Expr))

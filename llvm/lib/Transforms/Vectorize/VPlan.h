@@ -640,6 +640,11 @@ public:
     llvm_unreachable("Unhandled VPRecipeID");
   }
 
+  static inline bool classof(const VPValue *V) {
+    auto *R = V->getDefiningRecipe();
+    return R && classof(R);
+  }
+
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
@@ -1267,10 +1272,10 @@ public:
     VScale,
     /// Compute the exiting value of a wide induction after vectorization, that
     /// is the value of the last lane of the induction increment (i.e. its
-    /// backedge value). Takes the wide induction recipe and the original
-    /// backedge value as operands.
+    /// backedge value). Has the wide induction recipe as operand.
     ExitingIVValue,
-    OpsEnd = ExitingIVValue,
+    MaskedCond,
+    OpsEnd = MaskedCond,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1304,6 +1309,9 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
+    if (Opcode == VPInstruction::MaskedCond)
+      return false;
+
     // For now only VPInstructions with underlying values use masks.
     // TODO: provide masks to VPInstructions w/o underlying values.
     if (!getUnderlyingValue())

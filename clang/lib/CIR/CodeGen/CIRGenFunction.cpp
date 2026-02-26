@@ -842,7 +842,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
-    cgm.errorNYI(dtor->getSourceRange(), "abstract base class destructors");
+    SourceLocation loc =
+        dtor->hasBody() ? dtor->getBody()->getBeginLoc() : dtor->getLocation();
+    emitTrap(getLoc(loc), true);
     return;
   }
 
@@ -1071,10 +1073,14 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitLValue(cast<GenericSelectionExpr>(e)->getResultExpr());
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
+  case Expr::ImplicitCastExprClass:
   case Expr::CStyleCastExprClass:
   case Expr::CXXStaticCastExprClass:
   case Expr::CXXDynamicCastExprClass:
-  case Expr::ImplicitCastExprClass:
+  case Expr::CXXReinterpretCastExprClass:
+  case Expr::CXXConstCastExprClass:
+    // TODO(cir): The above list is missing CXXFunctionalCastExprClass,
+    // CXXAddrSpaceCastExprClass, and ObjCBridgedCastExprClass.
     return emitCastLValue(cast<CastExpr>(e));
   case Expr::MaterializeTemporaryExprClass:
     return emitMaterializeTemporaryExpr(cast<MaterializeTemporaryExpr>(e));
@@ -1082,6 +1088,8 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     return emitOpaqueValueLValue(cast<OpaqueValueExpr>(e));
   case Expr::ChooseExprClass:
     return emitLValue(cast<ChooseExpr>(e)->getChosenSubExpr());
+  case Expr::SubstNonTypeTemplateParmExprClass:
+    return emitLValue(cast<SubstNonTypeTemplateParmExpr>(e)->getReplacement());
   }
 }
 

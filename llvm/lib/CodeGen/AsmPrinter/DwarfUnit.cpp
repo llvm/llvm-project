@@ -2045,7 +2045,9 @@ DIE *DwarfUnit::getOrCreateStaticMemberDIE(const DIDerivedType *DT) {
     auto *Block = new (DIEValueAllocator) DIEBlock;
     for (unsigned char Byte : RawData)
       addUInt(*Block, dwarf::DW_FORM_data1, Byte);
-    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block);
+    Block->computeSize(Asm->getDwarfFormParams());
+    addBlock(StaticMemberDIE, dwarf::DW_AT_const_value, Block->BestForm(),
+             Block);
   }
 
   if (uint32_t AlignInBytes = DT->getAlignInBytes())

@@ -508,7 +508,7 @@
 # CHECK: attribute      5, "rv32i2p1_sdtrig1p0"
 
 .attribute arch, "rv32i_p0p19"
-# CHECK: attribute      5, "rv32i2p1_p0p19"
+# CHECK: attribute      5, "rv32i2p1_p0p19_zicsr2p0_zmmul1p0_zba1p0_zbb1p0"
 
 .attribute arch, "rv64i_p0p19"
-# CHECK: attribute      5, "rv64i2p1_p0p19"
+# CHECK: attribute      5, "rv64i2p1_p0p19_zicsr2p0_zmmul1p0_zba1p0_zbb1p0"

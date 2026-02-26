@@ -580,7 +580,8 @@ public:
 
 private:
   template <typename A>
-  void AnalyzeAndNoteUses(const A &x, bool isDefinition = false) {
+  void AnalyzeAndNoteUses(
+      const A &x, [[maybe_unused]] bool isDefinition = false) {
     exprAnalyzer_.Analyze(x);
     if constexpr (parser::HasTypedExpr<A>::value) {
       if (x.typedExpr && x.typedExpr->v) {

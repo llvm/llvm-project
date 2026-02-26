@@ -9911,8 +9911,9 @@ SIInstrInfo::CreateTargetPostRAHazardRecognizer(const InstrItineraryData *II,
 /// This is the hazard recognizer used at -O0 by the PostRAHazardRecognizer
 /// pass.
 ScheduleHazardRecognizer *
-SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF) const {
-  return new GCNHazardRecognizer(MF);
+SIInstrInfo::CreateTargetPostRAHazardRecognizer(const MachineFunction &MF,
+                                                MachineLoopInfo *MLI) const {
+  return new GCNHazardRecognizer(MF, MLI);
 }
 
 // Called during:
