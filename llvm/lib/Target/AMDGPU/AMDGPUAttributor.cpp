@@ -401,7 +401,6 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-
     if (!getAssumed())
       return ChangeStatus::UNCHANGED;
 
@@ -409,7 +408,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     return A.manifestAttrs(
         getIRPosition(),
         {Attribute::get(Ctx, "uniform-work-group-size", "true")},
-        /* ForceReplace */ true);
+        /*ForceReplace=*/true);
   }
 
   bool isValidState() const override {
