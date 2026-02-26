@@ -5814,24 +5814,20 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
   // -> reduce.add(mul(ext(A), ext(trunc(C))))
   const APInt *Const;
   if (match(BinOp, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
-    auto *Mul = cast<VPWidenRecipe>(BinOp);
     auto *ExtA = cast<VPWidenCastRecipe>(BinOp->getOperand(0));
-    VPValue *ValB = BinOp->getOperand(1);
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
     Type *NarrowTy = TypeInfo.inferScalarType(ExtA->getOperand(0));
-    if (llvm::canConstantBeExtended(
-            Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc))) {
-      VPBuilder Builder(BinOp);
-      auto *Trunc =
-          Builder.createWidenCast(Instruction::CastOps::Trunc, ValB, NarrowTy);
-      Type *WideTy = TypeInfo.inferScalarType(ExtA);
-      ValB = Builder.createWidenCast(ExtOpc, Trunc, WideTy);
-      auto *BinOpRecipe =
-          new VPWidenRecipe(Instruction::Mul, {ExtA, ValB}, VPIRFlags(*Mul),
-                            VPIRMetadata(*Mul), BinOp->getDebugLoc());
-      Builder.insert(BinOpRecipe);
-      BinOp = BinOpRecipe;
-    }
+    if (!BinOp->hasOneUse() ||
+        !llvm::canConstantBeExtended(
+            Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
+      return BinOp;
+
+    VPBuilder Builder(BinOp);
+    auto *Trunc = Builder.createWidenCast(Instruction::CastOps::Trunc,
+                                          BinOp->getOperand(1), NarrowTy);
+    Type *WideTy = TypeInfo.inferScalarType(ExtA);
+    BinOp->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
+    return BinOp;
   }
 
   // reduce.add(ext(mul(ext(A), ext(B))))
@@ -5842,21 +5838,20 @@ optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
     auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
-    bool IsSame = MulLHS == MulRHS;
-    if (Mul->hasOneUse() &&
-        (Ext->getOpcode() == MulLHS->getOpcode() || MulLHS == MulRHS) &&
-        MulLHS->getOpcode() == MulRHS->getOpcode()) {
-      VPBuilder Builder(Mul);
-      Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
-                                                 MulLHS->getOperand(0),
-                                                 Ext->getResultType()));
-      Mul->setOperand(1, IsSame
-                             ? Mul->getOperand(0)
-                             : Builder.createWidenCast(MulRHS->getOpcode(),
-                                                       MulRHS->getOperand(0),
-                                                       Ext->getResultType()));
-      BinOp = Mul;
-    }
+    if (!Mul->hasOneUse() ||
+        (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
+        MulLHS->getOpcode() != MulRHS->getOpcode())
+      return BinOp;
+    VPBuilder Builder(Mul);
+    Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
+                                               MulLHS->getOperand(0),
+                                               Ext->getResultType()));
+    Mul->setOperand(1, MulLHS == MulRHS
+                           ? Mul->getOperand(0)
+                           : Builder.createWidenCast(MulRHS->getOpcode(),
+                                                     MulRHS->getOperand(0),
+                                                     Ext->getResultType()));
+    return Mul;
   }
 
   return BinOp;
@@ -5874,7 +5869,7 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPValue *Accumulator = WidenRecipe->getOperand(1);
 
   // Swap if needed to ensure Accumulator is the PHI or partial reduction.
-  if (isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(BinOpVal) ||
+  if (isa<VPReductionPHIRecipe, VPReductionRecipe>(BinOpVal) ||
       isa<VPExpressionRecipe>(BinOpVal))
     std::swap(BinOpVal, Accumulator);
   auto *BinOp = cast<VPSingleDefRecipe>(BinOpVal->getDefiningRecipe());
