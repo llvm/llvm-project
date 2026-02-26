@@ -4965,6 +4965,13 @@ static constexpr KnownFPClass::MinMaxKind getMinMaxKind(Intrinsic::ID IID) {
   }
 }
 
+/// \return true if this is a floating point value that is known to have a
+/// magnitude smaller than 1. i.e., fabs(X) <= 1.0
+static bool isAbsoluteValueLessEqualOne(const Value *V) {
+  // TODO: Handle frexp and x - floor(x)?
+  return match(V, m_Intrinsic<Intrinsic::amdgcn_trig_preop>(m_Value()));
+}
+
 void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                          FPClassTest InterestedClasses, KnownFPClass &Known,
                          const SimplifyQuery &Q, unsigned Depth) {
@@ -5574,36 +5581,43 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                 Op->getType()->getScalarType()->getFltSemantics())
           : DenormalMode::getDynamic();
 
+    Value *LHS = Op->getOperand(0);
+    Value *RHS = Op->getOperand(1);
     // X * X is always non-negative or a NaN.
     // FIXME: Should check isGuaranteedNotToBeUndef
-    if (Op->getOperand(0) == Op->getOperand(1)) {
+    if (LHS == RHS) {
       KnownFPClass KnownSrc;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
-                          Q, Depth + 1);
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownSrc, Q,
+                          Depth + 1);
       Known = KnownFPClass::square(KnownSrc, Mode);
       break;
     }
 
-    const APFloat *CRHS;
-    if (match(Op->getOperand(1), m_APFloat(CRHS))) {
-      KnownFPClass KnownLHS;
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+    KnownFPClass KnownLHS, KnownRHS;
 
+    const APFloat *CRHS;
+    if (match(RHS, m_APFloat(CRHS))) {
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
       Known = KnownFPClass::fmul(KnownLHS, *CRHS, Mode);
     } else {
-      KnownFPClass KnownLHS, KnownRHS;
-
-      computeKnownFPClass(Op->getOperand(1), DemandedElts, fcAllFlags, KnownRHS,
-                          Q, Depth + 1);
+      computeKnownFPClass(RHS, DemandedElts, fcAllFlags, KnownRHS, Q,
+                          Depth + 1);
       // TODO: Improve accuracy in unfused FMA pattern. We can prove an
       // additional not-nan if the addend is known-not negative infinity if the
       // multiply is known-not infinity.
 
-      computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownLHS,
-                          Q, Depth + 1);
+      computeKnownFPClass(LHS, DemandedElts, fcAllFlags, KnownLHS, Q,
+                          Depth + 1);
       Known = KnownFPClass::fmul(KnownLHS, KnownRHS, Mode);
     }
+
+    /// Propgate no-infs if the other source is known smaller than one, such
+    /// that this cannot introduce overflow.
+    if (KnownLHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(RHS))
+      Known.knownNot(fcInf);
+    else if (KnownRHS.isKnownNever(fcInf) && isAbsoluteValueLessEqualOne(LHS))
+      Known.knownNot(fcInf);
 
     break;
   }
