@@ -547,6 +547,189 @@ struct SgToWiVectorExtract : public OpConversionPattern<vector::ExtractOp> {
   }
 };
 
+/// Distributes a subgroup-level vector.extract_strided_slice op to
+/// workitem-level. If the result is distributed, the offsets and sizes are
+/// adjusted to match the distributed types. Supports both distributed and
+/// non-distributed cases.
+struct SgToWiVectorExtractStridedSlice
+    : public OpConversionPattern<vector::ExtractStridedSliceOp> {
+  using OpConversionPattern<vector::ExtractStridedSliceOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ExtractStridedSliceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!resultLayout || !resultLayout.isForSubgroup())
+      return failure();
+
+    VectorType resultType = op.getType();
+    auto distResultTyOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, resultType);
+    // If distribution fails (e.g., dimension smaller than lane layout),
+    // the type stays unchanged (same behavior as TypeConverter).
+    VectorType distResultTy =
+        succeeded(distResultTyOrFailure) ? *distResultTyOrFailure : resultType;
+
+    // Find distributed dimensions by comparing original and distributed
+    // result types.
+    SmallVector<int64_t> distributedDims;
+    for (int64_t i = 0; i < resultType.getRank(); ++i) {
+      if (distResultTy.getDimSize(i) != resultType.getDimSize(i))
+        distributedDims.push_back(i);
+    }
+
+    // Collect updated sizes, offsets, strides. Pad to full source rank.
+    int64_t sourceRank = op.getSourceVectorType().getRank();
+    SmallVector<Attribute> updatedSizes =
+        llvm::map_to_vector(op.getSizes(), [](Attribute attr) { return attr; });
+    SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
+        op.getOffsets(), [](Attribute attr) { return attr; });
+    SmallVector<Attribute> updatedStrides = llvm::map_to_vector(
+        op.getStrides(), [](Attribute attr) { return attr; });
+    for (int64_t i = op.getSizes().size(); i < sourceRank; ++i) {
+      updatedSizes.push_back(
+          rewriter.getI64IntegerAttr(op.getSourceVectorType().getDimSize(i)));
+      updatedOffsets.push_back(rewriter.getI64IntegerAttr(0));
+      updatedStrides.push_back(rewriter.getI64IntegerAttr(1));
+    }
+
+    // If the result is distributed, adjust offsets and sizes in the
+    // distributed dimension.
+    if (!distributedDims.empty()) {
+      if (distributedDims.size() != 1)
+        return rewriter.notifyMatchFailure(
+            op, "only single dimension distribution is supported");
+      int64_t distDim = distributedDims[0];
+      auto sourceLayout = xegpu::getTemporaryLayout(op->getOpOperand(0));
+      if (!sourceLayout || sourceLayout.getEffectiveLaneLayoutAsInt().empty())
+        return rewriter.notifyMatchFailure(
+            op, "source of extract_strided_slice lacks distribution layout");
+      auto sourceLaneLayout = sourceLayout.getEffectiveLaneLayoutAsInt();
+      int subgroupSize = sourceLaneLayout[distDim];
+      int sourceDistrDimSize = op.getSourceVectorType().getShape()[distDim];
+      if (sourceDistrDimSize % subgroupSize != 0)
+        return rewriter.notifyMatchFailure(
+            op, "source size along distributed dim is not a multiple of "
+                "subgroup size");
+      auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
+      if (!llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
+        return rewriter.notifyMatchFailure(
+            op, "expecting unit lane data in source layout");
+      int64_t distrDimOffset =
+          cast<IntegerAttr>(updatedOffsets[distDim]).getInt();
+      if (distrDimOffset % subgroupSize != 0)
+        return rewriter.notifyMatchFailure(
+            op, "offset along distributed dim is not a multiple of "
+                "subgroup size");
+      // Adjust sizes and offsets for the distributed dimension.
+      updatedSizes[distDim] =
+          rewriter.getI64IntegerAttr(distResultTy.getDimSize(distDim));
+      updatedOffsets[distDim] =
+          rewriter.getI64IntegerAttr(distrDimOffset / subgroupSize);
+    }
+
+    auto newOp = vector::ExtractStridedSliceOp::create(
+        rewriter, op.getLoc(), distResultTy, adaptor.getSource(),
+        ArrayAttr::get(rewriter.getContext(), updatedOffsets),
+        ArrayAttr::get(rewriter.getContext(), updatedSizes),
+        ArrayAttr::get(rewriter.getContext(), updatedStrides));
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level vector.insert_strided_slice op to
+/// workitem-level. If the dest is distributed, the offsets are adjusted to
+/// match the distributed types. Supports both distributed and non-distributed
+/// cases.
+struct SgToWiVectorInsertStridedSlice
+    : public OpConversionPattern<vector::InsertStridedSliceOp> {
+  using OpConversionPattern<vector::InsertStridedSliceOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::InsertStridedSliceOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr resultLayout =
+        xegpu::getTemporaryLayout(op->getOpResult(0));
+    if (!resultLayout || !resultLayout.isForSubgroup())
+      return failure();
+
+    VectorType destType = op.getDestVectorType();
+    auto distDestTyOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(resultLayout, destType);
+    // If distribution fails (e.g., dimension smaller than lane layout),
+    // the type stays unchanged (same behavior as TypeConverter).
+    VectorType distDestTy =
+        succeeded(distDestTyOrFailure) ? *distDestTyOrFailure : destType;
+
+    // Find distributed dimensions of the dest vector.
+    SmallVector<int64_t> destDistributedDims;
+    for (int64_t i = 0; i < destType.getRank(); ++i) {
+      if (distDestTy.getDimSize(i) != destType.getDimSize(i))
+        destDistributedDims.push_back(i);
+    }
+
+    SmallVector<Attribute> updatedOffsets = llvm::map_to_vector(
+        op.getOffsets(), [](Attribute attr) { return attr; });
+
+    if (!destDistributedDims.empty()) {
+      if (destDistributedDims.size() != 1)
+        return rewriter.notifyMatchFailure(
+            op, "only single dimension distribution is supported");
+      int64_t destDistDim = destDistributedDims[0];
+
+      VectorType srcType = op.getSourceVectorType();
+      // The distributed dim must be in the last k (source rank) dims of dest.
+      int64_t sourceDistDim =
+          destDistDim - (destType.getRank() - srcType.getRank());
+      if (sourceDistDim < 0)
+        return rewriter.notifyMatchFailure(
+            op, "distributed dimension must be in the last k dims of dest");
+
+      auto destLayout = xegpu::getTemporaryLayout(op->getOpOperand(1));
+      auto sourceLayout = xegpu::getTemporaryLayout(op->getOpOperand(0));
+      if (!destLayout || !sourceLayout ||
+          destLayout.getEffectiveLaneLayoutAsInt().empty() ||
+          sourceLayout.getEffectiveLaneLayoutAsInt().empty())
+        return rewriter.notifyMatchFailure(
+            op, "source or dest of insert_strided_slice lacks distribution "
+                "layout");
+
+      int subgroupSize = destLayout.getEffectiveLaneLayoutAsInt()[destDistDim];
+      auto destLaneData = destLayout.getEffectiveLaneDataAsInt();
+      auto sourceLaneData = sourceLayout.getEffectiveLaneDataAsInt();
+      if (!llvm::all_of(destLaneData, [](int64_t v) { return v == 1; }) ||
+          !llvm::all_of(sourceLaneData, [](int64_t v) { return v == 1; }))
+        return rewriter.notifyMatchFailure(
+            op, "expecting unit lane data in source and dest layouts");
+
+      int64_t srcDistrDimSize = srcType.getDimSize(sourceDistDim);
+      if (srcDistrDimSize % subgroupSize != 0)
+        return rewriter.notifyMatchFailure(
+            op, "source distributed dim size is not a multiple of "
+                "subgroup size");
+
+      int64_t destDistrDimOffset =
+          cast<IntegerAttr>(op.getOffsets()[destDistDim]).getInt();
+      if (destDistrDimOffset % subgroupSize != 0)
+        return rewriter.notifyMatchFailure(
+            op, "offset along distributed dim is not a multiple of "
+                "subgroup size");
+      // Adjust offset for the distributed dimension.
+      updatedOffsets[destDistDim] =
+          rewriter.getI64IntegerAttr(destDistrDimOffset / subgroupSize);
+    }
+
+    auto newOp = vector::InsertStridedSliceOp::create(
+        rewriter, op.getLoc(), distDestTy, adaptor.getValueToStore(),
+        adaptor.getDest(),
+        ArrayAttr::get(rewriter.getContext(), updatedOffsets), op.getStrides());
+    rewriter.replaceOp(op, newOp.getResult());
+    return success();
+  }
+};
+
 /// Distributes a subgroup-level vector.insert op to workitem-level. Only
 /// handles sub-vector insertion (value to store is VectorType, not scalar).
 struct SgToWiVectorInsert : public OpConversionPattern<vector::InsertOp> {
@@ -792,12 +975,25 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
       [=](vector::InsertOp op) -> bool {
         return !xegpu::getTemporaryLayout(op->getOpResult(0));
       });
+  // vector::ExtractStridedSliceOp is legal only if its result has no temporary
+  // layout attribute.
+  target.addDynamicallyLegalOp<vector::ExtractStridedSliceOp>(
+      [=](vector::ExtractStridedSliceOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
+  // vector::InsertStridedSliceOp is legal only if its result has no temporary
+  // layout attribute.
+  target.addDynamicallyLegalOp<vector::InsertStridedSliceOp>(
+      [=](vector::InsertStridedSliceOp op) -> bool {
+        return !xegpu::getTemporaryLayout(op->getOpResult(0));
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
                SgToWiVectorReduction, SgToWiMultiDimReduction,
-               SgToWiVectorExtract, SgToWiVectorInsert>(typeConverter,
-                                                        patterns.getContext());
+               SgToWiVectorExtract, SgToWiVectorInsert,
+               SgToWiVectorExtractStridedSlice, SgToWiVectorInsertStridedSlice>(
+      typeConverter, patterns.getContext());
 }
 
 void xegpu::populateXeGPUSgToWiLowerVectorMultiReductionAndLegality(
