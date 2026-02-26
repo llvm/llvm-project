@@ -4414,60 +4414,56 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
 
   case Builtin::BI__builtin_fpclassify: {
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
-    // FIXME: for strictfp/IEEE-754 we need to not trap on SNaN here.
     Value *V = EmitScalarExpr(E->getArg(5));
-    llvm::Type *Ty = ConvertType(E->getArg(5)->getType());
 
-    // Create Result
-    BasicBlock *Begin = Builder.GetInsertBlock();
-    BasicBlock *End = createBasicBlock("fpclassify_end", this->CurFn);
-    Builder.SetInsertPoint(End);
-    PHINode *Result =
-      Builder.CreatePHI(ConvertType(E->getArg(0)->getType()), 4,
-                        "fpclassify_result");
-
-    // if (V==0) return FP_ZERO
-    Builder.SetInsertPoint(Begin);
-    Value *IsZero = Builder.CreateFCmpOEQ(V, Constant::getNullValue(Ty),
-                                          "iszero");
-    Value *ZeroLiteral = EmitScalarExpr(E->getArg(4));
-    BasicBlock *NotZero = createBasicBlock("fpclassify_not_zero", this->CurFn);
-    Builder.CreateCondBr(IsZero, End, NotZero);
-    Result->addIncoming(ZeroLiteral, Begin);
-
-    // if (V != V) return FP_NAN
-    Builder.SetInsertPoint(NotZero);
-    Value *IsNan = Builder.CreateFCmpUNO(V, V, "cmp");
     Value *NanLiteral = EmitScalarExpr(E->getArg(0));
-    BasicBlock *NotNan = createBasicBlock("fpclassify_not_nan", this->CurFn);
-    Builder.CreateCondBr(IsNan, End, NotNan);
-    Result->addIncoming(NanLiteral, NotZero);
-
-    // if (fabs(V) == infinity) return FP_INFINITY
-    Builder.SetInsertPoint(NotNan);
-    Value *VAbs = EmitFAbs(*this, V);
-    Value *IsInf =
-      Builder.CreateFCmpOEQ(VAbs, ConstantFP::getInfinity(V->getType()),
-                            "isinf");
     Value *InfLiteral = EmitScalarExpr(E->getArg(1));
-    BasicBlock *NotInf = createBasicBlock("fpclassify_not_inf", this->CurFn);
+    Value *NormalLiteral = EmitScalarExpr(E->getArg(2));
+    Value *SubnormalLiteral = EmitScalarExpr(E->getArg(3));
+    Value *ZeroLiteral = EmitScalarExpr(E->getArg(4));
+
+    Value *IsNan = Builder.createIsFPClass(V, 0b0000000011);
+    Value *IsInf = Builder.createIsFPClass(V, 0b1000000100);
+    Value *IsNormal = Builder.createIsFPClass(V, 0b0100001000);
+    Value *IsSubnormal = Builder.createIsFPClass(V, 0b0010010000);
+
+    BasicBlock *Entry = Builder.GetInsertBlock();
+
+    BasicBlock *End = createBasicBlock("fpclassify_end", CurFn);
+    Builder.SetInsertPoint(End);
+    PHINode *Result = Builder.CreatePHI(ConvertType(E->getArg(0)->getType()), 5,
+                                        "fpclassify_result");
+
+    // Check if V is NaN
+    Builder.SetInsertPoint(Entry);
+    BasicBlock *NotNan = createBasicBlock("fpclassify_not_nan", CurFn);
+    Builder.CreateCondBr(IsNan, End, NotNan);
+    Result->addIncoming(NanLiteral, Entry);
+
+    // Check if V is infinity
+    Builder.SetInsertPoint(NotNan);
+    BasicBlock *NotInf = createBasicBlock("fpclassify_not_inf", CurFn);
     Builder.CreateCondBr(IsInf, End, NotInf);
     Result->addIncoming(InfLiteral, NotNan);
 
-    // if (fabs(V) >= MIN_NORMAL) return FP_NORMAL else FP_SUBNORMAL
+    // Check if V is normal
     Builder.SetInsertPoint(NotInf);
-    APFloat Smallest = APFloat::getSmallestNormalized(
-        getContext().getFloatTypeSemantics(E->getArg(5)->getType()));
-    Value *IsNormal =
-      Builder.CreateFCmpUGE(VAbs, ConstantFP::get(V->getContext(), Smallest),
-                            "isnormal");
-    Value *NormalResult =
-      Builder.CreateSelect(IsNormal, EmitScalarExpr(E->getArg(2)),
-                           EmitScalarExpr(E->getArg(3)));
-    Builder.CreateBr(End);
-    Result->addIncoming(NormalResult, NotInf);
+    BasicBlock *NotNormal = createBasicBlock("fpclassify_not_normal", CurFn);
+    Builder.CreateCondBr(IsNormal, End, NotNormal);
+    Result->addIncoming(NormalLiteral, NotInf);
 
-    // return Result
+    // Check if V is subnormal
+    Builder.SetInsertPoint(NotNormal);
+    BasicBlock *NotSubnormal =
+        createBasicBlock("fpclassify_not_subnormal", CurFn);
+    Builder.CreateCondBr(IsSubnormal, End, NotSubnormal);
+    Result->addIncoming(SubnormalLiteral, NotNormal);
+
+    // If V is not one of the above, it is zero
+    Builder.SetInsertPoint(NotSubnormal);
+    Builder.CreateBr(End);
+    Result->addIncoming(ZeroLiteral, NotSubnormal);
+
     Builder.SetInsertPoint(End);
     return RValue::get(Result);
   }
