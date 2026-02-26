@@ -72,8 +72,10 @@ struct VPlanTransforms {
           dbgs() << Plan << '\n';
       }
 #endif
-      if (VerifyEachVPlan && EnableVerify)
-        verifyVPlanIsValid(Plan);
+      if (VerifyEachVPlan && EnableVerify) {
+        if (!verifyVPlanIsValid(Plan))
+          report_fatal_error("Broken VPlan found, compilation aborted!");
+      }
     }};
 
     return std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
