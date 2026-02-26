@@ -35,7 +35,6 @@ The following patterns are safe and will **not** trigger a warning:
   };
   class Derived1 : public Base1 { int data; };
 
-destructor (prevents delete-through-base)
   class Base2 {
   protected:
       ~Base2() {}
