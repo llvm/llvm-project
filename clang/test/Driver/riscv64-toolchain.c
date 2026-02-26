@@ -159,8 +159,8 @@
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir 2>&1 \
 // RUN:   | FileCheck -check-prefix=RESOURCE-INC %s
-// RESOURCE-INC: "-internal-isystem" "{{.*}}/Inputs/resource_dir/include"
 // RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv64_tree/{{.*}}riscv64-unknown-linux-gnu/include"
+// RESOURCE-INC: "-internal-isystem" "{{.*}}/Inputs/resource_dir/include"
 
 // RUN: %clang -### %s --target=riscv64 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \

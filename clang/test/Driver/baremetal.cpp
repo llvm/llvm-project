@@ -244,24 +244,24 @@
 // CHECK-AARCH64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-AARCH64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-AARCH64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 
 // RUN: %clang -no-canonical-prefixes %s -### --target=riscv32-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RISCV32-NO-HOST-INC %s
 // CHECK-RISCV32-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-RISCV32-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-RISCV32-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 
 // RUN: %clang -no-canonical-prefixes %s -### --target=riscv64-unknown-elf 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-RISCV64-NO-HOST-INC %s
 // CHECK-RISCV64-NO-HOST-INC: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-RISCV64-NO-HOST-INC: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-RISCV64-NO-HOST-INC-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 
 // RUN: %clang %s -### --target=riscv64-unknown-elf -o %t.out -L some/directory/user/asked/for \
 // RUN:     --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
@@ -525,8 +525,8 @@
 // CHECK-PPCEABI: "-nostdsysteminc"
 // CHECK-PPCEABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-PPCEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-PPCEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPCEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPCEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPCEABI-NEXT: ld{{(.exe)?}}" "-Bstatic"
 // CHECK-PPCEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
 // CHECK-PPCEABI-SAME:"{{.*}}.o"
@@ -540,8 +540,8 @@
 // CHECK-PPC64EABI: "-nostdsysteminc"
 // CHECK-PPC64EABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-PPC64EABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-PPC64EABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPC64EABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPC64EABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPC64EABI-NEXT: ld{{(.exe)?}}" "-Bstatic"
 // CHECK-PPC64EABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
 // CHECK-PPC64EABI-SAME:"{{.*}}.o"
@@ -555,8 +555,8 @@
 // CHECK-PPCLEEABI: "-nostdsysteminc"
 // CHECK-PPCLEEABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPCLEEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPCLEEABI-NEXT: ld{{(.exe)?}}" "-Bstatic"
 // CHECK-PPCLEEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
 // CHECK-PPCLEEABI-SAME:"{{.*}}.o"
@@ -570,8 +570,8 @@
 // CHECK-PPC64LEEABI: "-nostdsysteminc"
 // CHECK-PPC64LEEABI-SAME: "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include{{[/\\]+}}c++{{[/\\]+}}v1"
-// CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}include"
+// CHECK-PPC64LEEABI-SAME: "-internal-isystem" "[[RESOURCE]]{{[/\\]+}}include"
 // CHECK-PPC64LEEABI-NEXT: ld{{(.exe)?}}" "-Bstatic"
 // CHECK-PPC64LEEABI-SAME: "-L[[INSTALLEDDIR]]{{[/\\]+}}..{{[/\\]+}}lib{{[/\\]+}}clang-runtimes{{[/\\]+[^"]*}}lib"
 // CHECK-PPC64LEEABI-SAME:"{{.*}}.o"
