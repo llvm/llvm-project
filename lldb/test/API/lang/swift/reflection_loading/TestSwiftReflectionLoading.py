@@ -26,6 +26,6 @@ class TestSwiftReflectionLoading(lldbtest.TestBase):
         lldbutil.check_variable(self, var_c_x, value="23")
 
         # Scan through the types log.
-        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        self.filecheck_log(types_log, __file__)
         # CHECK: {{Adding reflection metadata in .*a\.out}}
         # CHECK: {{Adding reflection metadata in .*dynamic_lib}}

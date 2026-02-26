@@ -17,6 +17,6 @@ class TestSwiftExpressionNoDebugInfo(TestBase):
         types_log = self.getBuildArtifact("types.log")
         self.expect("log enable lldb types -f " + types_log)
         self.expect('expr -l Swift -- 1')
-        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        self.filecheck_log(types_log, __file__)
         # CHECK: No Swift debug info: prefer target triple.
         # CHECK: Using SDK: {{.*}}MacOSX

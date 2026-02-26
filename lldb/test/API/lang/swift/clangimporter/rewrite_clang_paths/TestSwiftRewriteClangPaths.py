@@ -89,8 +89,9 @@ class TestSwiftRewriteClangPaths(TestBase):
 
         # Scan through the types log.
         suffix = "REMAP" if remap else "NORMAL"
-        self.filecheck('platform shell cat "%s"' % log, __file__,
-                       '--check-prefix=CHECK_' + suffix)
+        self.filecheck_log(log, __file__, "--check-prefix=CHECK_" + suffix)
+
+
 # CHECK_REMAP-NOT: remapped -iquote
 # CHECK_REMAP-NOT: error:{{.*}}Foo
 # CHECK_NORMAL: error:{{.*}}Foo

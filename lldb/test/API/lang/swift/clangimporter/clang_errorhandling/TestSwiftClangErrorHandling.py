@@ -30,5 +30,5 @@ class TestSwiftExtraClangFlags(TestBase):
 
         self.expect("expr 0", error=True,
                     substrs=['failed to import bridging header'])
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: Clang error: {{.*}}bridging-header.h

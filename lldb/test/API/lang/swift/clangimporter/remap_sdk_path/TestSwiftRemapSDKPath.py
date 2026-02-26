@@ -18,5 +18,5 @@ class TestSwiftRewriteClangPaths(TestBase):
         self.expect("expression 1", substrs=["1"])
 
         # Scan through the types log.
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK:  SwiftASTContextForExpressions(module: "a", cu: "main.swift")::RemapClangImporterOptions() -- remapped{{.*}}/LocalSDK/

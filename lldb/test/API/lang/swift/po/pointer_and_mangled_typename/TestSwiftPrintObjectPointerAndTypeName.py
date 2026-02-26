@@ -13,7 +13,7 @@ class TestCase(TestBase):
         self.runCmd(f"log enable lldb expr -f {self.log}")
 
     def _filecheck(self, key):
-        self.filecheck(f"platform shell cat {self.log}", __file__, f"-check-prefix=CHECK-{key}")
+        self.filecheck_log(self.log, __file__, f"-check-prefix=CHECK-{key}")
 
     @swiftTest
     def test_int(self):

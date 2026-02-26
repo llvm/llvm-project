@@ -58,14 +58,17 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
                              "sub", "x = 1", "y = 2", "z = 3",
                              "swift struct c member"])
         self.expect("target variable typedef", substrs=["x = 5", "y = 6"])
-        self.expect("target variable union",
-                    substrs=["(DoubleLongUnion)", "long_val = 42"])
-        self.expect("target variable fromSubmodule",
-                    substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"])
-        self.expect("target variable withPointer",
-                    substrs=["(WithPointer)", "ptr = nil"])
-        self.filecheck('platform shell cat ""%s"' % log, __file__,
-                       '--check-prefix=CHECK-TYPEINFO')
+        self.expect(
+            "target variable union", substrs=["(DoubleLongUnion)", "long_val = 42"]
+        )
+        self.expect(
+            "target variable fromSubmodule",
+            substrs=["(FromSubmodule)", "x = 1", "y = 2", "z = 3"],
+        )
+        self.expect(
+            "target variable withPointer", substrs=["(WithPointer)", "ptr = nil"]
+        )
+        self.filecheck_log(log, __file__, "--check-prefix=CHECK-TYPEINFO")
         # CHECK-TYPEINFO: [LLDBTypeInfoProvider] Looking up debug type info for So4CMYKV
 
     @skipIf(archs=['ppc64le'], bugnumber='SR-10214')
@@ -112,6 +115,5 @@ class TestSwiftDWARFImporterC(lldbtest.TestBase):
         # This can't be resolved.
         self.expect("expr swiftStructCMember", error=True)
 
-        self.filecheck('platform shell cat ""%s"' % log, __file__,
-                       '--check-prefix=CHECK-MISSING')
+        self.filecheck_log(log, __file__, "--check-prefix=CHECK-MISSING")
         # CHECK-MISSING: missing required module

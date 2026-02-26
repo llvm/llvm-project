@@ -55,7 +55,7 @@ class TestSwiftForwardInteropExpressions(TestBase):
         # Check that po prints the fields of a base class
         self.expect('po cxxClass', substrs=['CxxClass', 'a : 100', 'b : 101'])
 
-        self.filecheck('platform shell cat "%s"' % types_log, __file__)
+        self.filecheck_log(types_log, __file__)
         # CHECK: [CheckFlagInCU] Found flag -enable-experimental-cxx-interop in CU:
 
     @expectedFailureAll(bugnumber="rdar://106216567")

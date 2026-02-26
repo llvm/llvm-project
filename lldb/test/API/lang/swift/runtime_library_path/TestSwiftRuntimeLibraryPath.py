@@ -25,5 +25,5 @@ class TestSwiftRuntimeLibraryPath(lldbtest.TestBase):
             self, 'main')
 
         self.expect("expression 1")
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
         # CHECK: SwiftASTContextForExpressions(module: "a", cu: "main.swift")::LogConfiguration(){{.*}}Runtime library paths{{.*}}2 items

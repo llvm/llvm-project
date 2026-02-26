@@ -28,7 +28,7 @@ class TestSwiftPrivateImport(TestBase):
         # because type reconstruction will still trigger an import of
         # the "Invisible" module that we can't prevent later one.
         self.expect("expression 1+1")
-        self.filecheck('platform shell cat "%s"' % log, __file__)
+        self.filecheck_log(log, __file__)
 #       CHECK:  Module import remark: loaded module 'Library'
 #       CHECK-NOT: Module import remark: loaded module 'Invisible'
 

@@ -35,9 +35,10 @@ class TestSwiftImportSearchPaths(lldbtest.TestBase):
         if flag == 'true':
             prefix = 'POSITIVE'
         else:
-            prefix = 'NEGATIVE'
-        self.filecheck('platform shell cat "%s"' % types_log, __file__,
-                       '--check-prefix=CHECK_EXP_'+prefix)
+            prefix = "NEGATIVE"
+        self.filecheck_log(types_log, __file__, "--check-prefix=CHECK_EXP_" + prefix)
+
+
 # CHECK_EXP_POSITIVE: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*hidden$}}
 # CHECK_EXP_NEGATIVE-NOT: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*hidden$}}
 # CHECK_EXP_NEGATIVE: SwiftASTContextForExpressions{{.*}}::LogConfiguration(){{.*}}Extra clang arguments
