@@ -412,13 +412,13 @@ protected:
   /// constructors) when failing to parse a valid piece of assembly (inline
   /// or otherwise) is considered a bug. It may then be overridden after
   /// construction (see CodeGenTargetMachineImpl::initAsmInfo()).
-  bool UseIntegratedAssembler;
+  bool UseIntegratedAssembler = true;
 
   /// Use AsmParser to parse inlineAsm when UseIntegratedAssembler is not set.
-  bool ParseInlineAsmUsingAsmParser;
+  bool ParseInlineAsmUsingAsmParser = false;
 
   /// Preserve Comments in assembly
-  bool PreserveAsmComments;
+  bool PreserveAsmComments = true;
 
   /// The column (zero-based) at which asm comments should be printed.
   unsigned CommentColumn = 40;
