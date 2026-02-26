@@ -189,7 +189,7 @@ static lldb::BasicType BasicTypeToUnsigned(lldb::BasicType basic_type) {
 llvm::Expected<CompilerType>
 Interpreter::PromoteSignedInteger(CompilerType &lhs_type,
                                   CompilerType &rhs_type) {
-  // This expects that Rank(lhs_type) < Rank(rhs_type).
+  assert(lhs_type.IsInteger() && rhs_type.IsInteger());
   if (!lhs_type.IsSigned() && rhs_type.IsSigned()) {
     llvm::Expected<uint64_t> lhs_size =
         lhs_type.GetBitSize(m_exe_ctx_scope.get());

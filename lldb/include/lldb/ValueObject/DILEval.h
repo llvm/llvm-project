@@ -78,6 +78,7 @@ private:
   /// If `lhs_type` is unsigned and `rhs_type` is signed, check whether it
   /// can represent all of the values of `lhs_type`.
   /// If not, then promote `rhs_type` to the unsigned version of its type.
+  /// This expects that Rank(lhs_type) < Rank(rhs_type).
   /// \returns Unchanged `rhs_type` or promoted unsigned version.
   llvm::Expected<CompilerType> PromoteSignedInteger(CompilerType &lhs_type,
                                                     CompilerType &rhs_type);
