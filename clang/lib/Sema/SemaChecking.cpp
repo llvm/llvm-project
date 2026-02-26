@@ -1179,7 +1179,8 @@ public:
     if (!SizeArg->EvaluateAsInt(Result, S.getASTContext()))
       return std::nullopt;
     llvm::APSInt Integer = Result.Val.getInt();
-    Integer.setIsUnsigned(true);
+    assert(Integer.isUnsigned() &&
+           "size arg should be unsigned after implicit conversion to size_t");
     return Integer;
   }
 
