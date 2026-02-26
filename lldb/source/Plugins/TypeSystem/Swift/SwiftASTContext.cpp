@@ -2286,7 +2286,7 @@ static std::string GetSDKPathFromDebugInfo(std::string m_description,
         sdk_or_err.takeError(), [&](const UnimplementedError &error) {},
         [&](const llvm::ErrorInfoBase &error) {
           Debugger::ReportError(
-              "Error while parsing SDK path from debug info: " +
+              "error while parsing SDK path from debug info: " +
               toString(sdk_or_err.takeError()));
         });
     return {};
@@ -2958,7 +2958,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
             sdk_or_err.takeError(), [&](const UnimplementedError &error) {},
             [&](const llvm::ErrorInfoBase &error) {
               Debugger::ReportError(
-                  "Error while parsing SDK path from debug info: " +
+                  "error while parsing SDK path from debug info: " +
                   toString(sdk_or_err.takeError()));
             });
 
