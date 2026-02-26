@@ -503,7 +503,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Check the scalar type to handle both scalar and vector types.
   Type *ScalarTy = RecurrenceType->getScalarType();
   if (ScalarTy->isFloatingPointTy()) {
-    if (!isFloatingPointRecurrenceKind(Kind))
+    if (Kind != RecurKind::FindLast && !isFloatingPointRecurrenceKind(Kind))
       return false;
   } else if (ScalarTy->isIntegerTy()) {
     if (!isIntegerRecurrenceKind(Kind))
@@ -938,9 +938,7 @@ RecurrenceDescriptor::isFindPattern(Loop *TheLoop, PHINode *OrigPhi,
                                      m_Value(NonRdxPhi)))))
     return InstDesc(false, I);
 
-  return OrigPhi->getType()->isFloatingPointTy()
-             ? InstDesc(I, RecurKind::FFindLast)
-             : InstDesc(I, RecurKind::FindLast);
+  return InstDesc(I, RecurKind::FindLast);
 }
 
 /// Returns true if the select instruction has users in the compare-and-add
@@ -1123,11 +1121,6 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
     LLVM_DEBUG(dbgs() << "Found a Find reduction PHI." << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::FFindLast, TheLoop, FMF, RedDes, DB, AC,
-                      DT, SE)) {
-    LLVM_DEBUG(dbgs() << "Found a float Find reduction PHI." << *Phi << "\n");
-    return true;
-  }
   if (AddReductionVar(Phi, RecurKind::FMul, TheLoop, FMF, RedDes, DB, AC, DT,
                       SE)) {
     LLVM_DEBUG(dbgs() << "Found an FMult reduction PHI." << *Phi << "\n");
@@ -1269,7 +1262,6 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::FMinimumNum:
     return Instruction::FCmp;
   case RecurKind::FindLast:
-  case RecurKind::FFindLast:
   case RecurKind::AnyOf:
   case RecurKind::FindIV:
     // TODO: Set AnyOf and FindIV to Instruction::Select once in-loop reductions

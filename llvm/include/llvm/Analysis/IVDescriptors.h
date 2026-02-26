@@ -65,9 +65,6 @@ enum class RecurKind {
   FindLast, ///< FindLast reduction with select(cmp(),x,y) where x and y
                   ///< are an integer type, one is the current recurrence value,
                   ///< and the other is an arbitrary value.
-  FFindLast, ///< FindLast reduction with select(cmp(),x,y) where x and y are
-              ///< a floating-point type, one is the current recurrence value,
-              ///< and the other is an arbitrary value.
   // clang-format on
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
@@ -288,7 +285,7 @@ public:
   ///   select(cmp(),x,y) where one of (x,y) is an arbitrary value and the
   ///   other is a recurrence.
   static bool isFindLastRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::FindLast || Kind == RecurKind::FFindLast;
+    return Kind == RecurKind::FindLast;
   }
 
   static bool isFindRecurrenceKind(RecurKind Kind) {
