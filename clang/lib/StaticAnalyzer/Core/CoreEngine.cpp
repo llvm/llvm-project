@@ -394,8 +394,9 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
         for (CFGBlock::const_succ_iterator it = B->succ_begin(),
              et = B->succ_end(); it != et; ++it) {
           if (const CFGBlock *succ = *it) {
-            generateNode(BlockEdge(B, succ, Pred->getLocationContext()),
-                         Pred->State, Pred);
+            BlockEdge BE(B, succ, Pred->getLocationContext());
+            if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
+              WList->enqueue(N);
           }
         }
         return;
@@ -479,8 +480,9 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
   assert(B->succ_size() == 1 &&
          "Blocks with no terminator should have at most 1 successor.");
 
-  generateNode(BlockEdge(B, *(B->succ_begin()), Pred->getLocationContext()),
-               Pred->State, Pred);
+  BlockEdge BE(B, *(B->succ_begin()), Pred->getLocationContext());
+  if (ExplodedNode *N = makeNode(BE, Pred->State, Pred))
+    WList->enqueue(N);
 }
 
 void CoreEngine::HandleCallEnter(const CallEnter &CE, ExplodedNode *Pred) {
@@ -575,19 +577,6 @@ ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
   N->addPredecessor(Pred, G);
 
   return IsNew ? N : nullptr;
-}
-
-/// generateNode - Utility method to generate nodes, hook up successors,
-///  and add nodes to the worklist.
-void CoreEngine::generateNode(const ProgramPoint &Loc,
-                              ProgramStateRef State,
-                              ExplodedNode *Pred) {
-  assert(Pred);
-  ExplodedNode *Node = makeNode(Loc, State, Pred);
-
-  // Only add 'Node' to the worklist if it was freshly generated.
-  if (Node)
-    WList->enqueue(Node);
 }
 
 void CoreEngine::enqueueStmtNode(ExplodedNode *N,

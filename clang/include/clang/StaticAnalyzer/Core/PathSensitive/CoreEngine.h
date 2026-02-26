@@ -97,10 +97,6 @@ private:
 
   void setBlockCounter(BlockCounter C);
 
-  void generateNode(const ProgramPoint &Loc,
-                    ProgramStateRef State,
-                    ExplodedNode *Pred);
-
   void HandleBlockEdge(const BlockEdge &E, ExplodedNode *Pred);
   void HandleBlockEntrance(const BlockEntrance &E, ExplodedNode *Pred);
   void HandleBlockExit(const CFGBlock *B, ExplodedNode *Pred);
