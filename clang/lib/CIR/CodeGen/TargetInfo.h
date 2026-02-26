@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
 #include <memory>
 #include <utility>
@@ -50,7 +51,8 @@ public:
 
   /// Get the address space for alloca.
   virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
-    return {};
+    return cir::LangAddressSpaceAttr::get(&info->cgt.getMLIRContext(),
+                                          cir::LangAddressSpace::Default);
   }
 
   /// Determine whether a call to an unprototyped functions under

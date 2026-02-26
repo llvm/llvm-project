@@ -3263,10 +3263,10 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     if (auto langAsAttr =
             mlir::dyn_cast_if_present<cir::LangAddressSpaceAttr>(addrSpaceAttr))
       llvm_unreachable("lowering LangAddressSpaceAttr NYI");
-    else if (auto langAsAttr =
+    else if (auto targetAsAttr =
                  mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(
                      addrSpaceAttr))
-      numericAS = langAsAttr.getValue();
+      numericAS = targetAsAttr.getValue();
     return mlir::LLVM::LLVMPointerType::get(type.getContext(), numericAS);
   });
   converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
