@@ -854,7 +854,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:VectorDialect",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 
@@ -1152,7 +1152,7 @@ cc_library(
         "//mlir:VectorDialect",
         "//mlir:VectorToSCF",
         "//mlir:VectorTransforms",
-        "//mlir:X86VectorDialect",
+        "//mlir:X86Dialect",
     ],
 )
 
