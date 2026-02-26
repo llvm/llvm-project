@@ -5663,6 +5663,43 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
   }
 }
 
+/// Check if \p V is a binary expression of a widened IV and a loop-invariant
+/// value. Returns the widened IV if found, nullptr otherwise.
+static VPWidenIntOrFpInductionRecipe *
+getExpressionIV(VPValue *V, VPRegionBlock *VectorLoopRegion) {
+  auto *BinOp = dyn_cast<VPWidenRecipe>(V);
+  if (!BinOp || !Instruction::isBinaryOp(BinOp->getOpcode()))
+    return nullptr;
+
+  VPWidenIntOrFpInductionRecipe *WideIV = nullptr;
+  for (VPValue *Op : BinOp->operands()) {
+    // Operands must be a single IV and others must be loop invariant.
+    auto *Cand = dyn_cast<VPWidenIntOrFpInductionRecipe>(Op);
+    if (Cand) {
+      if (WideIV)
+        return nullptr;
+      WideIV = Cand;
+      continue;
+    }
+    if (!Op->isDefinedOutsideLoopRegions())
+      return nullptr;
+  }
+  return WideIV;
+}
+
+/// Create a scalar version of the binary op \p V in the middle block,
+/// replacing \p WidenIV with \p ScalarIV.
+static VPValue *sinkBinOpToMiddleBlock(VPValue *V, VPValue *ScalarIV,
+                                       VPWidenIntOrFpInductionRecipe *WidenIV,
+                                       VPBuilder &Builder) {
+  auto *BinOp = cast<VPWidenRecipe>(V->getDefiningRecipe());
+  auto Ops = to_vector(map_range(BinOp->operands(), [&](VPValue *Op) {
+    return Op == WidenIV ? ScalarIV : Op;
+  }));
+  return Builder.createNaryOp(BinOp->getOpcode(), Ops, VPIRFlags(*BinOp),
+                              BinOp->getDebugLoc());
+}
+
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                                PredicatedScalarEvolution &PSE,
                                                Loop &L) {
@@ -5709,11 +5746,17 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                     m_VPValue(FalseVal))))
       continue;
 
-    // The non-phi operand of the select is the IV.
-    assert(is_contained(CondSelect->getDefiningRecipe()->operands(), PhiR));
+    // The non-phi operand of the select is the IV (or expression of IV).
+    assert(is_contained(BackedgeVal->getDefiningRecipe()->operands(), PhiR));
     VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
 
-    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
+    // Check if IV is a simple expression of a widened IV.
+    // If so, we can track the underlying IV and sink the expression.
+    VPWidenIntOrFpInductionRecipe *ExpressionIV =
+        getExpressionIV(IV, VectorLoopRegion);
+    VPValue *IVToTrack = ExpressionIV ? ExpressionIV : IV;
+
+    const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IVToTrack, PSE, &L);
     const SCEV *Step;
     if (!match(IVSCEV, m_scev_AffineAddRec(m_SCEV(), m_SCEV(Step))))
       continue;
@@ -5750,6 +5793,17 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
         BackedgeVal,
         match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
 
+    VPValue *NewBackedgeVal = CondSelect;
+    // If IV is an expression, create a new select that tracks the underlying
+    // IV directly and update the backedge value.
+    if (ExpressionIV) {
+      auto *SelectR = BackedgeVal->getDefiningRecipe();
+      VPBuilder LoopBuilder(SelectR);
+      NewBackedgeVal = LoopBuilder.createSelect(Cond, ExpressionIV, PhiR,
+                                                SelectR->getDebugLoc());
+    }
+
+    // Create the reduction result in the middle block using sentinel directly.
     RecurKind MinMaxKind =
         UseMax ? (UseSigned ? RecurKind::SMax : RecurKind::UMax)
                : (UseSigned ? RecurKind::SMin : RecurKind::UMin);
@@ -5757,9 +5811,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                     FastMathFlags());
     DebugLoc ExitDL = RdxResult->getDebugLoc();
     VPBuilder MiddleBuilder(RdxResult);
-    VPValue *ReducedIV =
-        MiddleBuilder.createNaryOp(VPInstruction::ComputeReductionResult,
-                                   RdxResult->getOperand(0), Flags, ExitDL);
+    VPValue *ReducedIV = MiddleBuilder.createNaryOp(
+        VPInstruction::ComputeReductionResult, NewBackedgeVal, Flags, ExitDL);
 
     VPValue *NewRdxResult;
     VPValue *StartVPV = PhiR->getStartValue();
@@ -5769,8 +5822,15 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
       auto *Cmp = MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV,
                                            Sentinel, ExitDL);
+
+      // If IV was an expression, sink the expression to the middle block.
+      VPValue *ResultVal = ReducedIV;
+      if (ExpressionIV)
+        ResultVal =
+            sinkBinOpToMiddleBlock(IV, ReducedIV, ExpressionIV, MiddleBuilder);
+
       NewRdxResult =
-          MiddleBuilder.createSelect(Cmp, ReducedIV, StartVPV, ExitDL);
+          MiddleBuilder.createSelect(Cmp, ResultVal, StartVPV, ExitDL);
       StartVPV = Sentinel;
     } else {
       // Introduce a boolean AnyOf reduction to track if the condition was ever
@@ -5802,7 +5862,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     auto *NewPhiR = new VPReductionPHIRecipe(
         cast<PHINode>(PhiR->getUnderlyingInstr()), RecurKind::FindIV, *StartVPV,
-        *CondSelect, RdxUnordered{1}, {}, PhiR->hasUsesOutsideReductionChain());
+        *NewBackedgeVal, RdxUnordered{1}, {},
+        PhiR->hasUsesOutsideReductionChain());
     NewPhiR->insertBefore(PhiR);
     PhiR->replaceAllUsesWith(NewPhiR);
     PhiR->eraseFromParent();
