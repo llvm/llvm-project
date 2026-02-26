@@ -2916,6 +2916,22 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_atan2f16",
+    hdrs = ["src/__support/math/atan2f16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_cast",
+        ":__support_fputil_except_value_utils",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_atanf",
     hdrs = ["src/__support/math/atanf.h"],
     deps = [
@@ -5774,6 +5790,11 @@ libc_math_function(
     additional_deps = [
         ":__support_math_atan2f128",
     ],
+)
+
+libc_math_function(
+    name = "atan2f16",
+    additional_deps = [":__support_math_atan2f16"],
 )
 
 libc_math_function(
