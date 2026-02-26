@@ -17,6 +17,14 @@ TEST(VersionTuple, getAsString) {
   EXPECT_EQ("1.2", VersionTuple(1, 2).getAsString());
   EXPECT_EQ("1.2.3", VersionTuple(1, 2, 3).getAsString());
   EXPECT_EQ("1.2.3.4", VersionTuple(1, 2, 3, 4).getAsString());
+  EXPECT_EQ("1.2.3.4.5", VersionTuple(1, 2, 3, 4, 5).getAsString());
+
+  VersionTuple v(1, 2, 3, 4, 5);
+  EXPECT_EQ(v.getMajor(), 1u);
+  EXPECT_EQ(v.getMinor(), 2u);
+  EXPECT_EQ(v.getSubminor(), 3u);
+  EXPECT_EQ(v.getBuild(), 4u);
+  EXPECT_EQ(v.getSubbuild(), 5u);
 }
 
 TEST(VersionTuple, tryParse) {
@@ -34,18 +42,24 @@ TEST(VersionTuple, tryParse) {
   EXPECT_FALSE(VT.tryParse("1.2.3.4"));
   EXPECT_EQ("1.2.3.4", VT.getAsString());
 
+  EXPECT_FALSE(VT.tryParse("1.2.3.4.5"));
+  EXPECT_EQ("1.2.3.4.5", VT.getAsString());
+
   EXPECT_TRUE(VT.tryParse(""));
   EXPECT_TRUE(VT.tryParse("1."));
   EXPECT_TRUE(VT.tryParse("1.2."));
   EXPECT_TRUE(VT.tryParse("1.2.3."));
   EXPECT_TRUE(VT.tryParse("1.2.3.4."));
-  EXPECT_TRUE(VT.tryParse("1.2.3.4.5"));
+  EXPECT_TRUE(VT.tryParse("1.2.3.4.5."));
+  EXPECT_TRUE(VT.tryParse("1.2.3.4.5.6"));
   EXPECT_TRUE(VT.tryParse("1-2"));
   EXPECT_TRUE(VT.tryParse("1+2"));
   EXPECT_TRUE(VT.tryParse(".1"));
   EXPECT_TRUE(VT.tryParse(" 1"));
   EXPECT_TRUE(VT.tryParse("1 "));
   EXPECT_TRUE(VT.tryParse("."));
+  EXPECT_TRUE(VT.tryParse("1.2.3.1048576"));
+  EXPECT_TRUE(VT.tryParse("1.2.3.4.1024"));
 }
 
 TEST(VersionTuple, withMajorReplaced) {
@@ -76,4 +90,12 @@ TEST(VersionTuple, withMajorReplaced) {
   EXPECT_TRUE(ReplacedVersion.getSubminor().has_value());
   EXPECT_TRUE(ReplacedVersion.getBuild().has_value());
   EXPECT_EQ(VersionTuple(7, 11, 12, 2), ReplacedVersion);
+
+  VT = VersionTuple(101, 11, 12, 2, 8);
+  ReplacedVersion = VT.withMajorReplaced(7);
+  EXPECT_TRUE(ReplacedVersion.getMinor().has_value());
+  EXPECT_TRUE(ReplacedVersion.getSubminor().has_value());
+  EXPECT_TRUE(ReplacedVersion.getBuild().has_value());
+  EXPECT_TRUE(ReplacedVersion.getSubbuild().has_value());
+  EXPECT_EQ(VersionTuple(7, 11, 12, 2, 8), ReplacedVersion);
 }

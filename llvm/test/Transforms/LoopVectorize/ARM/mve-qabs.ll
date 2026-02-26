@@ -7,8 +7,8 @@ target triple = "thumbv8.1m.main-arm-none-eabi"
 define void @arm_abs_q7(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @arm_abs_q7(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoint ptr [[PSRC:%.*]] to i32
-; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoint ptr [[PDST:%.*]] to i32
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC:%.*]] to i32
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST:%.*]] to i32
 ; CHECK-NEXT:    [[CMP_NOT19:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT19]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
@@ -98,8 +98,8 @@ while.end:                                        ; preds = %while.end.loopexit,
 define void @arm_abs_q15(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @arm_abs_q15(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoint ptr [[PSRC:%.*]] to i32
-; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoint ptr [[PDST:%.*]] to i32
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC:%.*]] to i32
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST:%.*]] to i32
 ; CHECK-NEXT:    [[CMP_NOT20:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT20]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
@@ -193,8 +193,8 @@ while.end:                                        ; preds = %while.end.loopexit,
 define void @arm_abs_q31(ptr nocapture readonly %pSrc, ptr nocapture %pDst, i32 %blockSize) #0 {
 ; CHECK-LABEL: @arm_abs_q31(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoint ptr [[PSRC:%.*]] to i32
-; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoint ptr [[PDST:%.*]] to i32
+; CHECK-NEXT:    [[PSRC2:%.*]] = ptrtoaddr ptr [[PSRC:%.*]] to i32
+; CHECK-NEXT:    [[PDST1:%.*]] = ptrtoaddr ptr [[PDST:%.*]] to i32
 ; CHECK-NEXT:    [[CMP_NOT14:%.*]] = icmp eq i32 [[BLOCKSIZE:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT14]], label [[WHILE_END:%.*]], label [[WHILE_BODY_PREHEADER:%.*]]
 ; CHECK:       while.body.preheader:
