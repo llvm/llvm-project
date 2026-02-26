@@ -1038,8 +1038,8 @@ struct PackOpTiling
     assert(packOp.hasPureBufferSemantics() &&
            "expected operation to have buffer semantics");
     OpBuilder::InsertionGuard g(builder);
-    // The `ivs` already represent the position into the output tensor for the
-    // non data-tile dimensions.
+    // The `ivs` already represent the position into the output for the non
+    // data-tile dimensions.
     SmallVector<Value> ivVec(ivs);
 
     // Get output shape - for memrefs, get dimensions from dest directly.
@@ -1482,9 +1482,9 @@ struct UnPackOpTiling
 
     DenseMap<int64_t, OpFoldResult> dimAndTileMapping =
         unpackOp.getDimAndTileMapping();
-    // untiled loops and tile loops induction variables.
+    // Untiled loops and tile loops induction variables.
     SmallVector<Value> inputIvs;
-    // point loops induction variables.
+    // Point loops induction variables.
     SmallVector<Value> inputIvsPointLoops;
     inputIvs.reserve(unpackOp.getDestRank());
     inputIvsPointLoops.reserve(dimAndTileMapping.size());
