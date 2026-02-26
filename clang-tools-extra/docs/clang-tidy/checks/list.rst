@@ -99,6 +99,7 @@ Clang-Tidy Checks
    :doc:`bugprone-dynamic-static-initializers <bugprone/dynamic-static-initializers>`,
    :doc:`bugprone-easily-swappable-parameters <bugprone/easily-swappable-parameters>`,
    :doc:`bugprone-empty-catch <bugprone/empty-catch>`,
+   :doc:`bugprone-exception-baseclass <bugprone/exception-baseclass>`,
    :doc:`bugprone-exception-copy-constructor-throws <bugprone/exception-copy-constructor-throws>`,
    :doc:`bugprone-exception-escape <bugprone/exception-escape>`,
    :doc:`bugprone-float-loop-counter <bugprone/float-loop-counter>`,

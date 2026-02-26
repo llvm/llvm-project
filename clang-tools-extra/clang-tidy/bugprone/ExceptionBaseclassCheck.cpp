@@ -12,7 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang::tidy::hicpp {
+namespace clang::tidy::bugprone {
 
 void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -54,4 +54,4 @@ void ExceptionBaseclassCheck::check(const MatchFinder::MatchResult &Result) {
     diag(TypeDecl->getBeginLoc(), "type defined here", DiagnosticIDs::Note);
 }
 
-} // namespace clang::tidy::hicpp
+} // namespace clang::tidy::bugprone
