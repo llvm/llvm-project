@@ -16,6 +16,7 @@
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
@@ -912,6 +913,79 @@ struct AllReduceOpLowering : public ConvertOpToLLVMPattern<mpi::AllReduceOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// ReduceScatterBlockOpLowering
+//===----------------------------------------------------------------------===//
+
+struct ReduceScatterBlockOpLowering
+    : public ConvertOpToLLVMPattern<mpi::ReduceScatterBlockOp> {
+  using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(mpi::ReduceScatterBlockOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+    MLIRContext *context = rewriter.getContext();
+    Type i32 = rewriter.getI32Type();
+    Type i64 = rewriter.getI64Type();
+    Type elemType = op.getSendbuf().getType().getElementType();
+    int64_t sRank = op.getSendbuf().getType().getRank();
+    int64_t rRank = op.getRecvbuf().getType().getRank();
+
+    // ptrType `!llvm.ptr`
+    Type ptrType = LLVM::LLVMPointerType::get(context);
+    auto moduleOp = op->getParentOfType<ModuleOp>();
+    auto mpiTraits = MPIImplTraits::get(moduleOp);
+    auto [sendPtr, sendSize] =
+        getRawPtrAndSize(loc, rewriter, adaptor.getSendbuf(), sRank, elemType);
+    auto [recvPtr, recvSize] =
+        getRawPtrAndSize(loc, rewriter, adaptor.getRecvbuf(), rRank, elemType);
+
+    // If input and output are the same, request in-place operation.
+    if (adaptor.getSendbuf() == adaptor.getRecvbuf()) {
+      sendPtr = LLVM::ConstantOp::create(
+          rewriter, loc, i64,
+          reinterpret_cast<int64_t>(mpiTraits->getInPlace()));
+      sendPtr = LLVM::IntToPtrOp::create(rewriter, loc, ptrType, sendPtr);
+    }
+
+    Value dataType = mpiTraits->getDataType(loc, rewriter, elemType);
+    Value mpiOp = mpiTraits->getMPIOp(loc, rewriter, op.getOp());
+    Value comm = mpiTraits->castComm(loc, rewriter, adaptor.getComm());
+
+    // recvCnt should be the size of the block -> we need to divide by the
+    // number of ranks to get the count argument for the function call.
+    Value nRanks = createOrFoldCommSize(rewriter, loc, op.getComm(), adaptor.getComm());
+    Value recvCnt = LLVM::UDivOp::create(rewriter, loc, i32, recvSize, nRanks);
+
+    // Check that recvSize is a multiple of the number of ranks
+    Value checkSize = LLVM::MulOp::create(rewriter, loc, i32, recvCnt, nRanks);
+    Value sizeIsValid = LLVM::ICmpOp::create(rewriter, loc, LLVM::ICmpPredicate::eq, checkSize, recvSize);
+    cf::AssertOp::create(rewriter, loc, sizeIsValid, "Output buffer's size must be a multiple of the number of ranks");
+
+    // 'int MPI_Reduce_scatter_block(const void *sendbuf, void *recvbuf,
+    //     int recvcount, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)'
+    auto funcType = LLVM::LLVMFunctionType::get(
+        i32, {ptrType, ptrType, i32, dataType.getType(), mpiOp.getType(),
+              comm.getType()});
+    // get or create function declaration:
+    LLVM::LLVMFuncOp funcDecl = getOrDefineFunction(
+        moduleOp, loc, rewriter, "MPI_Reduce_scatter_block", funcType);
+
+    // replace op with function call
+    auto funcCall = LLVM::CallOp::create(
+        rewriter, loc, funcDecl,
+        ValueRange{sendPtr, recvPtr, recvCnt, dataType, mpiOp, comm});
+
+    if (op.getRetval())
+      rewriter.replaceOp(op, funcCall.getResult());
+    else
+      rewriter.eraseOp(op);
+
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // ConvertToLLVMPatternInterface implementation
 //===----------------------------------------------------------------------===//
 
@@ -943,7 +1017,7 @@ void mpi::populateMPIToLLVMConversionPatterns(LLVMTypeConverter &converter,
   patterns.add<CommRankOpLowering, CommSizeOpLowering, CommSplitOpLowering,
                CommWorldOpLowering, FinalizeOpLowering, InitOpLowering,
                SendOpLowering, RecvOpLowering, AllGatherOpLowering,
-               AllReduceOpLowering>(converter);
+               AllReduceOpLowering, ReduceScatterBlockOpLowering>(converter);
 }
 
 void mpi::registerConvertMPIToLLVMInterface(DialectRegistry &registry) {
