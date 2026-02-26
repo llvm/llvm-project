@@ -602,7 +602,10 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
 
 mlir::Type CIRGenTypes::convertTypeForMem(clang::QualType qualType,
                                           bool forBitField) {
-  assert(!qualType->isConstantMatrixType() && "Matrix types NYI");
+  if (qualType->isConstantMatrixType()) {
+    cgm.errorNYI("Matrix type conversion");
+    return cgm.sInt32Ty;
+  }
 
   mlir::Type convertedType = convertType(qualType);
 
@@ -667,13 +670,15 @@ bool CIRGenTypes::isZeroInitializable(const RecordDecl *rd) {
 }
 
 const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
-    CanQualType returnType, llvm::ArrayRef<CanQualType> argTypes,
-    FunctionType::ExtInfo info, RequiredArgs required) {
+    CanQualType returnType, bool isInstanceMethod,
+    llvm::ArrayRef<CanQualType> argTypes, FunctionType::ExtInfo info,
+    RequiredArgs required) {
   assert(llvm::all_of(argTypes,
                       [](CanQualType t) { return t.isCanonicalAsParam(); }));
   // Lookup or create unique function info.
   llvm::FoldingSetNodeID id;
-  CIRGenFunctionInfo::Profile(id, info, required, returnType, argTypes);
+  CIRGenFunctionInfo::Profile(id, isInstanceMethod, info, required, returnType,
+                              argTypes);
 
   void *insertPos = nullptr;
   CIRGenFunctionInfo *fi = functionInfos.FindNodeOrInsertPos(id, insertPos);
@@ -690,7 +695,8 @@ const CIRGenFunctionInfo &CIRGenTypes::arrangeCIRFunctionInfo(
   assert(!cir::MissingFeatures::opCallCallConv());
 
   // Construction the function info. We co-allocate the ArgInfos.
-  fi = CIRGenFunctionInfo::create(info, returnType, argTypes, required);
+  fi = CIRGenFunctionInfo::create(info, isInstanceMethod, returnType, argTypes,
+                                  required);
   functionInfos.InsertNode(fi, insertPos);
 
   return *fi;

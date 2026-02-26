@@ -21,11 +21,11 @@ define void @tail_call_i32_inreg_divergent(i32 %vgpr) {
 ; CHECK-NEXT:    s_addk_i32 s32, 0x400
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-NEXT:    s_getpc_b64 s[16:17]
-; CHECK-NEXT:    s_add_u32 s16, s16, void_func_i32_inreg@rel32@lo+4
-; CHECK-NEXT:    s_addc_u32 s17, s17, void_func_i32_inreg@rel32@hi+12
-; CHECK-NEXT:     ; illegal copy v0 to s0
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    s_getpc_b64 s[18:19]
+; CHECK-NEXT:    s_add_u32 s18, s18, void_func_i32_inreg@rel32@lo+4
+; CHECK-NEXT:    s_addc_u32 s19, s19, void_func_i32_inreg@rel32@hi+12
+; CHECK-NEXT:     ; illegal copy v0 to s16
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33
@@ -56,12 +56,12 @@ define void @indirect_tail_call_i32_inreg_divergent(i32 %vgpr) {
 ; CHECK-NEXT:    s_getpc_b64 s[16:17]
 ; CHECK-NEXT:    s_add_u32 s16, s16, constant@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s17, s17, constant@rel32@hi+12
-; CHECK-NEXT:    s_load_dwordx2 s[16:17], s[16:17], 0x0
+; CHECK-NEXT:    s_load_dwordx2 s[18:19], s[16:17], 0x0
 ; CHECK-NEXT:    v_writelane_b32 v40, s30, 0
 ; CHECK-NEXT:    v_writelane_b32 v40, s31, 1
-; CHECK-NEXT:     ; illegal copy v0 to s0
+; CHECK-NEXT:     ; illegal copy v0 to s16
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
-; CHECK-NEXT:    s_swappc_b64 s[30:31], s[16:17]
+; CHECK-NEXT:    s_swappc_b64 s[30:31], s[18:19]
 ; CHECK-NEXT:    v_readlane_b32 s31, v40, 1
 ; CHECK-NEXT:    v_readlane_b32 s30, v40, 0
 ; CHECK-NEXT:    s_mov_b32 s32, s33

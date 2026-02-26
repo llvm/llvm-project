@@ -24,6 +24,14 @@ enum class EmitDwarfUnwindType {
   Default,         // Default behavior is based on the target
 };
 
+// For ELF targets, whether to adjust relocations referencing eligible local
+// symbols to use section symbols.
+enum class RelocSectionSymType {
+  All,      // For all eligible local symbols (default)
+  Internal, // For .L symbols
+  None,     // Never use section symbols
+};
+
 class StringRef;
 
 class MCTargetOptions {
@@ -61,6 +69,9 @@ public:
   bool X86RelaxRelocations = true;
 
   bool X86Sse2Avx = false;
+
+  // For ELF relocations, controls section symbol conversion.
+  RelocSectionSymType RelocSectionSym = RelocSectionSymType::All;
 
   std::optional<unsigned> OutputAsmVariant;
 
