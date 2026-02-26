@@ -547,10 +547,17 @@ define void @unaligned_memcpy196(ptr nocapture %dest, ptr %src) nounwind {
 ; RV64-NEXT:    vsetvli zero, a3, e8, m4, ta, ma
 ; RV64-NEXT:    vle8.v v8, (a2)
 ; RV64-NEXT:    addi a2, a0, 128
-; RV64-NEXT:    addi a1, a1, 192
 ; RV64-NEXT:    vse8.v v8, (a2)
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64-NEXT:    vle8.v v8, (a1)
+; RV64-NEXT:    lbu a2, 192(a1)
+; RV64-NEXT:    lbu a3, 193(a1)
+; RV64-NEXT:    lbu a4, 194(a1)
+; RV64-NEXT:    lbu a1, 195(a1)
+; RV64-NEXT:    vsetivli zero, 4, e16, mf2, ta, ma
+; RV64-NEXT:    vmv.v.x v8, a2
+; RV64-NEXT:    vslide1down.vx v8, v8, a3
+; RV64-NEXT:    vslide1down.vx v8, v8, a4
+; RV64-NEXT:    vslide1down.vx v8, v8, a1
+; RV64-NEXT:    vsetvli zero, zero, e64, m2, ta, ma
 ; RV64-NEXT:    vmv.x.s a1, v8
 ; RV64-NEXT:    srli a2, a1, 24
 ; RV64-NEXT:    srli a3, a1, 16

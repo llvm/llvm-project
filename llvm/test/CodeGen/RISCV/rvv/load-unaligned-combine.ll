@@ -192,16 +192,24 @@ define void @extload_unaligned_f16_factor2(ptr %p, ptr %q) {
 ;
 ; RV32NOHALF-LABEL: extload_unaligned_f16_factor2:
 ; RV32NOHALF:       # %bb.0:
-; RV32NOHALF-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; RV32NOHALF-NEXT:    vle8.v v8, (a0)
+; RV32NOHALF-NEXT:    lbu a2, 0(a0)
+; RV32NOHALF-NEXT:    lbu a0, 1(a0)
+; RV32NOHALF-NEXT:    vsetivli zero, 2, e16, mf4, ta, ma
+; RV32NOHALF-NEXT:    vmv.v.x v8, a2
+; RV32NOHALF-NEXT:    vslide1down.vx v8, v8, a0
+; RV32NOHALF-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
 ; RV32NOHALF-NEXT:    vmv.x.s a0, v8
 ; RV32NOHALF-NEXT:    sh a0, 0(a1)
 ; RV32NOHALF-NEXT:    ret
 ;
 ; RV64NOHALF-LABEL: extload_unaligned_f16_factor2:
 ; RV64NOHALF:       # %bb.0:
-; RV64NOHALF-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
-; RV64NOHALF-NEXT:    vle8.v v8, (a0)
+; RV64NOHALF-NEXT:    lbu a2, 0(a0)
+; RV64NOHALF-NEXT:    lbu a0, 1(a0)
+; RV64NOHALF-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; RV64NOHALF-NEXT:    vmv.v.x v8, a2
+; RV64NOHALF-NEXT:    vslide1down.vx v8, v8, a0
+; RV64NOHALF-NEXT:    vsetvli zero, zero, e64, m1, ta, ma
 ; RV64NOHALF-NEXT:    vmv.x.s a0, v8
 ; RV64NOHALF-NEXT:    sh a0, 0(a1)
 ; RV64NOHALF-NEXT:    ret
@@ -226,28 +234,14 @@ define void @extload_unaligned_f16_factor2(ptr %p, ptr %q) {
   ret void
 }
 
-define i22 @unaligned_post_legalize_i22(ptr %p) {
-; RVNOV-LABEL: unaligned_post_legalize_i22:
-; RVNOV:       # %bb.0:
-; RVNOV-NEXT:    lbu a1, 2(a0)
-; RVNOV-NEXT:    lhu a0, 0(a0)
-; RVNOV-NEXT:    slli a1, a1, 16
-; RVNOV-NEXT:    or a0, a0, a1
-; RVNOV-NEXT:    ret
-;
-; RV32V-LABEL: unaligned_post_legalize_i22:
-; RV32V:       # %bb.0:
-; RV32V-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32V-NEXT:    vle16.v v8, (a0)
-; RV32V-NEXT:    vmv.x.s a0, v8
-; RV32V-NEXT:    ret
-;
-; RV64V-LABEL: unaligned_post_legalize_i22:
-; RV64V:       # %bb.0:
-; RV64V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64V-NEXT:    vle16.v v8, (a0)
-; RV64V-NEXT:    vmv.x.s a0, v8
-; RV64V-NEXT:    ret
+define i22 @unaligned_illegal_i22(ptr %p) {
+; CHECK-LABEL: unaligned_illegal_i22:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    lbu a1, 2(a0)
+; CHECK-NEXT:    lhu a0, 0(a0)
+; CHECK-NEXT:    slli a1, a1, 16
+; CHECK-NEXT:    or a0, a0, a1
+; CHECK-NEXT:    ret
   %ld = load i22, ptr %p, align 2
   ret i22 %ld
 }

@@ -22183,29 +22183,34 @@ SDValue RISCVTargetLowering::PerformDAGCombine(SDNode *N,
       auto *LD = cast<LoadSDNode>(N);
       if (!LD->isUnindexed() || !LD->isSimple())
         break;
-      SDValue Chain = LD->getChain();
-      SDValue Ptr = LD->getBasePtr();
       EVT MemVT = LD->getMemoryVT();
       EVT RetVT = N->getValueType(0);
-      if (!RetVT.isSimple() || RetVT.isVector() || RetVT.isScalableVT())
+      if (!RetVT.isSimple() || !MemVT.isSimple() || RetVT.isVector() ||
+          RetVT.isScalableVT())
         break;
       Align SrcAlign = LD->getBaseAlign();
       if (allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), MemVT,
                              LD->getAddressSpace(), SrcAlign,
                              LD->getMemOperand()->getFlags()))
         break;
-      unsigned SrcBW = RetVT.getScalarSizeInBits();
       unsigned TargetBW = SrcAlign.value() * 8;
-      unsigned TargetNumElts = SrcBW / TargetBW;
-      MVT TargetEltVT = MemVT.isFloatingPoint()
-                            ? MVT::getFloatingPointVT(TargetBW)
-                            : MVT::getIntegerVT(TargetBW);
-      MVT TargetVecVT = MVT::getVectorVT(TargetEltVT, TargetNumElts);
-      if (!isLegalElementTypeForRVV(TargetEltVT) || !isTypeLegal(TargetVecVT))
+      unsigned TargetNumElts = MemVT.getScalarSizeInBits() / TargetBW;
+      MVT EltVT = MemVT.isFloatingPoint() ? MVT::getFloatingPointVT(TargetBW)
+                                          : MVT::getIntegerVT(TargetBW);
+      MVT MemVecVT = MVT::getVectorVT(EltVT, TargetNumElts);
+      if (!isLegalElementTypeForRVV(EltVT) || !isTypeLegal(MemVecVT))
         break;
-      SDValue TargetLoad =
-          DAG.getLoad(TargetVecVT, SDLoc(N), Chain, Ptr, LD->getPointerInfo(),
-                      LD->getBaseAlign(), LD->getMemOperand()->getFlags());
+
+      // Scale the MemVecVT to ExtScale to get the VT of the ExtLoad.
+      unsigned ExtScale =
+          RetVT.getScalarSizeInBits() / MemVT.getScalarSizeInBits();
+      MVT ExtEltVT = MemVT.isFloatingPoint()
+                         ? MVT::getFloatingPointVT(TargetBW * ExtScale)
+                         : MVT::getIntegerVT(TargetBW * ExtScale);
+      MVT ExtVecVT = MemVecVT.changeVectorElementType(ExtEltVT);
+      SDValue TargetLoad = DAG.getExtLoad(
+          LD->getExtensionType(), SDLoc(N), ExtVecVT, LD->getChain(),
+          LD->getBasePtr(), MemVecVT, LD->getMemOperand());
       return DCI.CombineTo(N, DAG.getBitcast(RetVT, TargetLoad),
                            cast<LoadSDNode>(TargetLoad)->getChain());
     }
