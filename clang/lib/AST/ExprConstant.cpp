@@ -14638,11 +14638,10 @@ bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   Elements.reserve(MT->getNumElementsFlattened());
 
   // The initializer list elements are stored in column-major order, but APValue
-  // stores matrix elements in row-major order. Convert by iterating in
-  // row-major order and computing the corresponding column-major index.
+  // stores matrix elements in row-major order.
   for (unsigned Row = 0; Row < NumRows; ++Row) {
     for (unsigned Col = 0; Col < NumCols; ++Col) {
-      unsigned ColMajorIdx = Col * NumRows + Row;
+      unsigned ColMajorIdx = MT->getColumnMajorFlattenedIndex(Row, Col);
       if (EltTy->isIntegerType()) {
         llvm::APSInt IntVal;
         if (!EvaluateInteger(E->getInit(ColMajorIdx), IntVal, Info))
