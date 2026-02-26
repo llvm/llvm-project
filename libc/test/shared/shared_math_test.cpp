@@ -99,6 +99,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::tanf16(0.0f16));
   EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::sinpif16(0.0f16));
   EXPECT_FP_EQ(0.0f16, LIBC_NAMESPACE::shared::tanhf16(0.0f16));
+  EXPECT_FP_EQ(0x0p+0f16, LIBC_NAMESPACE::shared::tanpif16(0.0f16));
 
   float16 canonicalizef16_cx = 0.0f16;
   float16 canonicalizef16_x = 0.0f16;
