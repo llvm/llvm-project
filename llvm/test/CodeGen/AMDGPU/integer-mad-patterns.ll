@@ -4435,20 +4435,20 @@ define <4 x i32> @clpeak_imad_pat_v4i32(<4 x i32> %x, <4 x i32> %y) {
 ; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v3, v3, v7
 ; GFX1250-GISEL-NEXT:    v_dual_add_nc_u32 v4, 1, v8 :: v_dual_add_nc_u32 v5, 1, v9
 ; GFX1250-GISEL-NEXT:    v_dual_add_nc_u32 v6, 1, v10 :: v_dual_add_nc_u32 v7, 1, v11
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v4, v0, v4
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v5, v1, v5
+; GFX1250-GISEL-NEXT:    v_add_nc_u32_e32 v8, 1, v0
 ; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v6, v2, v6
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v7, v3, v7
-; GFX1250-GISEL-NEXT:    v_dual_add_nc_u32 v0, 1, v0 :: v_dual_add_nc_u32 v1, 1, v1
-; GFX1250-GISEL-NEXT:    v_dual_add_nc_u32 v2, 1, v2 :: v_dual_add_nc_u32 v3, 1, v3
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v0, v4, v0
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v1, v5, v1
-; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v2, v6, v2
-; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v3, v7, v3
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v4
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v4, v1, v5
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_4) | instid1(VALU_DEP_3)
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v5, v2, v6
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v6, v3, v7
+; GFX1250-GISEL-NEXT:    v_dual_add_nc_u32 v1, 1, v1 :: v_dual_add_nc_u32 v2, 1, v2
+; GFX1250-GISEL-NEXT:    v_add_nc_u32_e32 v3, 1, v3
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v0, v0, v8
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v1, v4, v1
+; GFX1250-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v2, v5, v2
+; GFX1250-GISEL-NEXT:    v_mul_lo_u32 v3, v6, v3
 ; GFX1250-GISEL-NEXT:    s_set_pc_i64 s[30:31]
 entry:
   %y18 = add <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>

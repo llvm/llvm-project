@@ -735,7 +735,7 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
   const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SpirvLoadGatherInstruction>(
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
 
@@ -757,8 +757,9 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   auto context = resVecTy.getContext();
   auto elemBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
 
-  const auto *uArchInstruction = dyn_cast<xegpu::uArch::LoadMatrixInstruction>(
-      uArch->getInstruction(xegpu::uArch::InstructionKind::LoadMatrix));
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::LoadGatherInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::LoadGather));
   int maxChunkSize = uArchInstruction->getMaxLaneLoadSize(elemBitWidth);
   return setupGenericLoadAnchorLayout(layoutKind, context, consumerLayout,
                                       false, maxChunkSize, resShapeSize,
@@ -828,7 +829,7 @@ xegpu::setupStoreScatterAnchorLayout(xegpu::LayoutKind layoutKind,
   auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
 
   const auto *uArchInstruction =
-      dyn_cast<xegpu::uArch::SpirvStoreScatterInstruction>(
+      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
           uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
   return setupGenericStoreAnchorLayout(layoutKind, context, (chunkSize > 1),
@@ -846,8 +847,9 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   auto context = srcVecTy.getContext();
   auto elemBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
 
-  const auto *uArchInstruction = dyn_cast<xegpu::uArch::StoreMatrixInstruction>(
-      uArch->getInstruction(xegpu::uArch::InstructionKind::StoreMatrix));
+  const auto *uArchInstruction =
+      dyn_cast<xegpu::uArch::StoreScatterInstructionInterface>(
+          uArch->getInstruction(xegpu::uArch::InstructionKind::StoreScatter));
   int maxChunkSize = uArchInstruction->getMaxLaneStoreSize(elemBitWidth);
 
   return setupGenericStoreAnchorLayout(layoutKind, context, false, maxChunkSize,
@@ -1070,4 +1072,85 @@ xegpu::setupDpasLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
     return std::make_tuple(aLayout, bLayout, cdLayout);
   }
   return std::nullopt;
+}
+
+xegpu::DistributeLayoutAttr xegpu::getConsumerLayoutAt(OpOperand &operand) {
+  Operation *op = operand.getOwner();
+  unsigned idx = operand.getOperandNumber();
+  xegpu::DistributeLayoutAttr resLayout;
+  if (op->getNumResults() == 1 && isa<VectorType>(op->getResult(0).getType()))
+    resLayout = xegpu::getDistributeLayoutAttr(op->getResult(0));
+
+  // For vector::BroadcastOp, infer the source layout from the result layout.
+  if (auto broadcast = dyn_cast<vector::BroadcastOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    auto srcTy = dyn_cast<VectorType>(broadcast.getSourceType());
+    if (!srcTy)
+      return xegpu::DistributeLayoutAttr();
+    return xegpu::inferBroadcastSourceLayout(
+        resLayout, broadcast.getResultVectorType().getShape(),
+        srcTy.getShape());
+  }
+
+  // For vector::MultiDimReductionOp, infer source layout from result layout
+  // using reduction dims. Acc operand is expected to have the same layout as
+  // the result.
+  if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    if (idx == 0) {
+      SmallVector<int64_t> reductionDims(reduction.getReductionDims());
+      return xegpu::inferMultiReductionSourceLayout(resLayout, reductionDims);
+    }
+    if (idx == 1)
+      return resLayout;
+  }
+
+  // For vector::BitCastOp, infer source layout from result layout using
+  // element type bitwidths.
+  if (auto bitcast = dyn_cast<vector::BitCastOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    int resElemBitWidth =
+        bitcast.getResultVectorType().getElementType().getIntOrFloatBitWidth();
+    int srcElemBitWidth =
+        bitcast.getSourceVectorType().getElementType().getIntOrFloatBitWidth();
+    return xegpu::inferBitCastSourceLayout(resLayout, resElemBitWidth,
+                                           srcElemBitWidth);
+  }
+
+  // For vector::ShapeCastOp, infer source layout from result layout using
+  // shapes.
+  if (auto shapeCast = dyn_cast<vector::ShapeCastOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    return xegpu::inferShapeCastSourceLayout(
+        resLayout, shapeCast.getResultVectorType().getShape(),
+        shapeCast.getSourceVectorType().getShape());
+  }
+
+  // For vector::InsertStridedSliceOp, infer source layout from result layout.
+  // Dest vector must have the same layout as the result.
+  if (auto insertSlice = dyn_cast<vector::InsertStridedSliceOp>(op)) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    if (idx == 0)
+      return xegpu::inferInsertStridedSliceSourceLayout(
+          resLayout, insertSlice.getDestVectorType().getShape(),
+          insertSlice.getSourceVectorType().getShape());
+    if (idx == 1)
+      return resLayout;
+  }
+  // For elementwise operations, all operands must have the same layout as the
+  // result.
+  if (OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1) {
+    if (!resLayout)
+      return xegpu::DistributeLayoutAttr();
+    return resLayout;
+  }
+  // TODO: Handle more cases as needed here.
+  // By default, assume no layout conflict and return the current layout of the
+  // operand.
+  return xegpu::getDistributeLayoutAttr(operand.get());
 }
