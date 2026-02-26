@@ -822,15 +822,15 @@ define i64 @red_mla_dup_ext_u8_s8_s64(ptr noalias noundef readonly captures(none
 ; CHECK-SD-NEXT:  // %bb.9: // %vec.epilog.iter.check
 ; CHECK-SD-NEXT:    cbz x11, .LBB6_13
 ; CHECK-SD-NEXT:  .LBB6_10: // %vec.epilog.ph
-; CHECK-SD-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-SD-NEXT:    mov w11, w1
+; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    movi v1.2d, #0000000000000000
-; CHECK-SD-NEXT:    sxtb x11, w11
+; CHECK-SD-NEXT:    sxtb x8, w11
 ; CHECK-SD-NEXT:    movi v3.2d, #0x000000000000ff
-; CHECK-SD-NEXT:    dup v2.2s, w11
 ; CHECK-SD-NEXT:    mov x11, x10
 ; CHECK-SD-NEXT:    and x10, x9, #0xfffffffc
-; CHECK-SD-NEXT:    mov v0.d[0], x8
+; CHECK-SD-NEXT:    fmov d0, d0
+; CHECK-SD-NEXT:    dup v2.2s, w8
 ; CHECK-SD-NEXT:    sub x8, x11, x10
 ; CHECK-SD-NEXT:    add x11, x0, x11
 ; CHECK-SD-NEXT:  .LBB6_11: // %vec.epilog.vector.body
