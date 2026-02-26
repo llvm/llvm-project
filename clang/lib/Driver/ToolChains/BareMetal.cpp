@@ -54,7 +54,7 @@ static bool isPPCBareMetal(const llvm::Triple &Triple) {
 /// Is the triple {ix86,x86_64}-*-none-elf?
 static bool isPCBareMetal(const llvm::Triple &Triple) {
   return Triple.isX86() && Triple.getOS() == llvm::Triple::UnknownOS &&
-         Triple.getObjectFormat() == llvm::Triple::ELF;
+         Triple.getEnvironmentName() == "elf";
 }
 
 static bool findRISCVMultilibs(const Driver &D,
@@ -405,12 +405,6 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   if (DriverArgs.hasArg(options::OPT_nostdinc))
     return;
 
-  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
-    SmallString<128> Dir(getDriver().ResourceDir);
-    llvm::sys::path::append(Dir, "include");
-    addSystemInclude(DriverArgs, CC1Args, Dir.str());
-  }
-
   if (DriverArgs.hasArg(options::OPT_nostdlibinc))
     return;
 
@@ -433,6 +427,12 @@ void BareMetal::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
       llvm::sys::path::append(Dir, "include");
       addSystemInclude(DriverArgs, CC1Args, Dir.str());
     }
+  }
+
+  if (!DriverArgs.hasArg(options::OPT_nobuiltininc)) {
+    SmallString<128> Dir(getDriver().ResourceDir);
+    llvm::sys::path::append(Dir, "include");
+    addSystemInclude(DriverArgs, CC1Args, Dir.str());
   }
 }
 
