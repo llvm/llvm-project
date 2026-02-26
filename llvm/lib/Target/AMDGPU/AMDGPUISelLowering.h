@@ -85,6 +85,7 @@ protected:
   SDValue lowerFEXP10Unsafe(SDValue Op, const SDLoc &SL, SelectionDAG &DAG,
                             SDNodeFlags Flags) const;
   SDValue lowerFEXP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFEXPF64(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerCTLZResults(SDValue Op, SelectionDAG &DAG) const;
 

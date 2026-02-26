@@ -10,7 +10,6 @@
 
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/ThreadList.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Stream.h"
@@ -22,14 +21,14 @@ using namespace lldb_private;
 // the pc.
 
 ThreadPlanStepOverBreakpoint::ThreadPlanStepOverBreakpoint(Thread &thread)
-    : ThreadPlan(ThreadPlan::eKindStepOverBreakpoint,
-                 "Step over breakpoint trap", thread, eVoteNo,
-                 eVoteNoOpinion), // We need to report the run since this
-                                  // happens first in the thread plan stack when
-                                  // stepping over a breakpoint
-      m_breakpoint_addr(LLDB_INVALID_ADDRESS), m_auto_continue(false),
-      m_reenabled_breakpoint_site(false),
-      m_defer_reenable_breakpoint_site(false)
+    : ThreadPlan(
+          ThreadPlan::eKindStepOverBreakpoint, "Step over breakpoint trap",
+          thread, eVoteNo,
+          eVoteNoOpinion), // We need to report the run since this happens
+                           // first in the thread plan stack when stepping over
+                           // a breakpoint
+      m_breakpoint_addr(LLDB_INVALID_ADDRESS),
+      m_auto_continue(false), m_reenabled_breakpoint_site(false)
 
 {
   m_breakpoint_addr = thread.GetRegisterContext()->GetPC();
@@ -156,18 +155,10 @@ bool ThreadPlanStepOverBreakpoint::MischiefManaged() {
 void ThreadPlanStepOverBreakpoint::ReenableBreakpointSite() {
   if (!m_reenabled_breakpoint_site) {
     m_reenabled_breakpoint_site = true;
-
-    if (m_defer_reenable_breakpoint_site) {
-      // Let ThreadList track all threads stepping over this breakpoint.
-      // It will re-enable the breakpoint only when ALL threads have finished.
-      m_process.GetThreadList().ThreadFinishedSteppingOverBreakpoint(
-          m_breakpoint_addr, GetThread().GetID());
-    } else {
-      // Default behavior: re-enable the breakpoint directly.
-      if (BreakpointSiteSP bp_site_sp =
-              m_process.GetBreakpointSiteList().FindByAddress(
-                  m_breakpoint_addr))
-        m_process.EnableBreakpointSite(bp_site_sp.get());
+    BreakpointSiteSP bp_site_sp(
+        m_process.GetBreakpointSiteList().FindByAddress(m_breakpoint_addr));
+    if (bp_site_sp) {
+      m_process.EnableBreakpointSite(bp_site_sp.get());
     }
   }
 }
