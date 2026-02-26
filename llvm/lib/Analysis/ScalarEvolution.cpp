@@ -5821,14 +5821,19 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   if (!Accum)
     return nullptr;
 
-  SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+  SCEV::NoWrapFlags IRFlags = SCEV::FlagAnyWrap;
   if (BO->IsNUW)
-    Flags = setFlags(Flags, SCEV::FlagNUW);
+    IRFlags = setFlags(IRFlags, SCEV::FlagNUW);
   if (BO->IsNSW)
-    Flags = setFlags(Flags, SCEV::FlagNSW);
+    IRFlags = setFlags(IRFlags, SCEV::FlagNSW);
 
+  auto *BEInst = dyn_cast<Instruction>(BEValueV);
+  SCEV::NoWrapFlags PreIncFlags =
+      BEInst && canPreservePreIncAddRecNoWrapFlags(PN, BEInst, L)
+          ? IRFlags
+          : SCEV::FlagAnyWrap;
   const SCEV *StartVal = getSCEV(StartValueV);
-  const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
+  const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, PreIncFlags);
   insertValueToMap(PN, PHISCEV);
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
@@ -5840,11 +5845,11 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
   // overflow.
-  if (auto *BEInst = dyn_cast<Instruction>(BEValueV)) {
+  if (BEInst) {
     assert(isLoopInvariant(Accum, L) &&
            "Accum is defined outside L, but is not invariant?");
-    if (isAddRecNeverPoison(BEInst, L))
-      (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, Flags);
+    if (isPostIncAddRecNeverPoison(BEInst, L))
+      (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, IRFlags);
   }
 
   return PHISCEV;
@@ -5924,14 +5929,14 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
       if (isLoopInvariant(Accum, L) ||
           (isa<SCEVAddRecExpr>(Accum) &&
            cast<SCEVAddRecExpr>(Accum)->getLoop() == L)) {
-        SCEV::NoWrapFlags Flags = SCEV::FlagAnyWrap;
+        SCEV::NoWrapFlags IRFlags = SCEV::FlagAnyWrap;
 
         if (auto BO = MatchBinaryOp(BEValueV, getDataLayout(), AC, DT, PN)) {
           if (BO->Opcode == Instruction::Add && BO->LHS == PN) {
             if (BO->IsNUW)
-              Flags = setFlags(Flags, SCEV::FlagNUW);
+              IRFlags = setFlags(IRFlags, SCEV::FlagNUW);
             if (BO->IsNSW)
-              Flags = setFlags(Flags, SCEV::FlagNSW);
+              IRFlags = setFlags(IRFlags, SCEV::FlagNSW);
           }
         } else if (GEPOperator *GEP = dyn_cast<GEPOperator>(BEValueV)) {
           if (GEP->getOperand(0) == PN) {
@@ -5939,13 +5944,13 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
             // If the increment has any nowrap flags, then we know the address
             // space cannot be wrapped around.
             if (NW != GEPNoWrapFlags::none())
-              Flags = setFlags(Flags, SCEV::FlagNW);
+              IRFlags = setFlags(IRFlags, SCEV::FlagNW);
             // If the GEP is nuw or nusw with non-negative offset, we know that
             // no unsigned wrap occurs. We cannot set the nsw flag as only the
             // offset is treated as signed, while the base is unsigned.
             if (NW.hasNoUnsignedWrap() ||
                 (NW.hasNoUnsignedSignedWrap() && isKnownNonNegative(Accum)))
-              Flags = setFlags(Flags, SCEV::FlagNUW);
+              IRFlags = setFlags(IRFlags, SCEV::FlagNUW);
           }
 
           // We cannot transfer nuw and nsw flags from subtraction
@@ -5954,7 +5959,12 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         }
 
         const SCEV *StartVal = getSCEV(StartValueV);
-        const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, Flags);
+        auto *BEInst = dyn_cast<Instruction>(BEValueV);
+        SCEV::NoWrapFlags PreIncFlags =
+            BEInst && canPreservePreIncAddRecNoWrapFlags(PN, BEInst, L)
+                ? IRFlags
+                : SCEV::FlagAnyWrap;
+        const SCEV *PHISCEV = getAddRecExpr(StartVal, Accum, L, PreIncFlags);
 
         // Okay, for the entire analysis of this edge we assumed the PHI
         // to be symbolic.  We now need to go back and purge all of the
@@ -5971,9 +5981,9 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // We can add Flags to the post-inc expression only if we
         // know that it is *undefined behavior* for BEValueV to
         // overflow.
-        if (auto *BEInst = dyn_cast<Instruction>(BEValueV))
-          if (isLoopInvariant(Accum, L) && isAddRecNeverPoison(BEInst, L))
-            (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, Flags);
+        if (BEInst && isLoopInvariant(Accum, L) &&
+            isPostIncAddRecNeverPoison(BEInst, L))
+          (void)getAddRecExpr(getAddExpr(StartVal, Accum), Accum, L, IRFlags);
 
         return PHISCEV;
       }
@@ -7482,9 +7492,41 @@ bool ScalarEvolution::isSCEVExprNeverPoison(const Instruction *I) {
   return isGuaranteedToTransferExecutionTo(DefI, I);
 }
 
-bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
-  // If we know that \c I can never be poison period, then that's enough.
-  if (isSCEVExprNeverPoison(I))
+/// Check whether there is an instruction dominating BB that would cause
+/// undefined behavior if I is poison. (The caller is responsible for making
+/// sure the instruction actually executes.)
+static bool poisonCausesDominatingUB(const Instruction *I, const BasicBlock *BB,
+                                     const Loop *L, const DominatorTree &DT) {
+  SmallPtrSet<const Value *, 16> KnownPoison;
+  SmallVector<const Instruction *, 8> Worklist;
+
+  // We start by assuming \c I is poison. Only things that are known to be
+  // poison under that assumption go on the Worklist.
+  KnownPoison.insert(I);
+  Worklist.push_back(I);
+
+  while (!Worklist.empty()) {
+    const Instruction *Poison = Worklist.pop_back_val();
+
+    for (const Use &U : Poison->uses()) {
+      const Instruction *PoisonUser = cast<Instruction>(U.getUser());
+      if (mustTriggerUB(PoisonUser, KnownPoison) &&
+          DT.dominates(PoisonUser->getParent(), BB))
+        return true;
+
+      if (propagatesPoison(U) && L->contains(PoisonUser))
+        if (KnownPoison.insert(PoisonUser).second)
+          Worklist.push_back(PoisonUser);
+    }
+  }
+
+  return false;
+}
+
+bool ScalarEvolution::isPostIncAddRecNeverPoison(const Instruction *PostIncI,
+                                                 const Loop *L) {
+  // If we know that \c PostIncI can never be poison period, then that's enough.
+  if (isSCEVExprNeverPoison(PostIncI))
     return true;
 
   // If the loop only has one exit, then we know that, if the loop is entered,
@@ -7499,31 +7541,25 @@ bool ScalarEvolution::isAddRecNeverPoison(const Instruction *I, const Loop *L) {
   if (!ExitingBB || !loopHasNoAbnormalExits(L))
     return false;
 
-  SmallPtrSet<const Value *, 16> KnownPoison;
-  SmallVector<const Instruction *, 8> Worklist;
+  return poisonCausesDominatingUB(PostIncI, ExitingBB, L, DT);
+}
 
-  // We start by assuming \c I, the post-inc add recurrence, is poison.  Only
-  // things that are known to be poison under that assumption go on the
-  // Worklist.
-  KnownPoison.insert(I);
-  Worklist.push_back(I);
+bool ScalarEvolution::canPreservePreIncAddRecNoWrapFlags(
+    const Instruction *PreIncI, const Instruction *PostIncI, const Loop *L) {
+  // If we know that PreIncI can never be poison period, then that's enough.
+  if (programUndefinedIfPoison(PreIncI))
+    return true;
 
-  while (!Worklist.empty()) {
-    const Instruction *Poison = Worklist.pop_back_val();
+  // Nowrap flags are always valid on the first iteration. For subsequent
+  // iterations, we use the post-inc value after taking the loop latch. As such,
+  // if a poison post-inc value would cause UB in any instruction dominating
+  // the latch, we know that it cannot be poison.
 
-    for (const Use &U : Poison->uses()) {
-      const Instruction *PoisonUser = cast<Instruction>(U.getUser());
-      if (mustTriggerUB(PoisonUser, KnownPoison) &&
-          DT.dominates(PoisonUser->getParent(), ExitingBB))
-        return true;
+  auto *Latch = L->getLoopLatch();
+  if (!Latch)
+    return false;
 
-      if (propagatesPoison(U) && L->contains(PoisonUser))
-        if (KnownPoison.insert(PoisonUser).second)
-          Worklist.push_back(PoisonUser);
-    }
-  }
-
-  return false;
+  return poisonCausesDominatingUB(PostIncI, Latch, L, DT);
 }
 
 ScalarEvolution::LoopProperties
