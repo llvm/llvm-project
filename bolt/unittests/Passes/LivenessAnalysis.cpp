@@ -1,4 +1,4 @@
-//===- bolt/unittest/Core/MCPlusBuilder.cpp -------------------------------===//
+//===- bolt/unittest/Passes/LivenessAnalysis.cpp --------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -132,6 +132,11 @@ TEST_P(LivenessAnalysisTester, AArch64_scavengeRegAfter) {
   DataflowInfoManager Info(*BF, &RA, nullptr);
 
   auto II = EntryBB->begin();
+
+  // Test that parameter registers are LiveIn.
+  BitVector ParamRegs = BC->MIB->getRegsUsedAsParams();
+  ASSERT_TRUE(ParamRegs.subsetOf(Info.getLivenessAnalysis().getLiveIn(&*II)));
+
   // mov x8, #1 -> LiveIn = {x0}, LiveOut = {x0, x8}
   ASSERT_TRUE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X0));
   ASSERT_FALSE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X8));
@@ -159,6 +164,12 @@ TEST_P(LivenessAnalysisTester, AArch64_scavengeRegAfter) {
   ASSERT_TRUE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X0));
   ASSERT_FALSE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X8));
   ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegAfter(&*II), AArch64::X8);
+
+  // Test that callee saved registers and return registers are LiveOut.
+  BitVector DefaultLiveOutRegs;
+  BC->MIB->getDefaultLiveOut(DefaultLiveOutRegs);
+  ASSERT_TRUE(
+      DefaultLiveOutRegs.subsetOf(Info.getLivenessAnalysis().getLiveOut(&*II)));
 }
 
 #endif // AARCH64_AVAILABLE

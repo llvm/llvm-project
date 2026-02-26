@@ -8,6 +8,7 @@
 
 #ifdef AARCH64_AVAILABLE
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
@@ -528,6 +529,9 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  BinaryBasicBlock *BB = BF->addBasicBlock();
+
   // mov x0, xzr
   MCInst ORRXrs = MCInstBuilder(AArch64::ORRXrs)
                       .addReg(AArch64::X0)
@@ -553,6 +557,15 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
   MCInst MOVZWi =
       MCInstBuilder(AArch64::MOVZWi).addReg(AArch64::W0).addImm(0).addImm(0);
   ASSERT_TRUE(BC->MIB->isCleanRegXOR(MOVZWi));
+
+  // movz x0, #:abs_g3:symbol
+  MCInst MOVZXiWithExpr =
+      MCInstBuilder(AArch64::MOVZXi)
+          .addReg(AArch64::X0)
+          .addExpr(MCSpecifierExpr::create(BB->getLabel(), AArch64::S_ABS_G3,
+                                           *BC->Ctx.get()))
+          .addImm(48);
+  ASSERT_FALSE(BC->MIB->isCleanRegXOR(MOVZXiWithExpr));
 }
 
 #endif // AARCH64_AVAILABLE

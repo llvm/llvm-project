@@ -2518,7 +2518,7 @@ public:
              Inst.getOperand(3).getImm() == 0;
     case AArch64::MOVZXi:
     case AArch64::MOVZWi:
-      return Inst.getOperand(1).getImm() == 0 &&
+      return Inst.getOperand(1).isImm() && Inst.getOperand(1).getImm() == 0 &&
              Inst.getOperand(2).getImm() == 0;
     default:
       return false;
