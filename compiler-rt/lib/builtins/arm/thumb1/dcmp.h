@@ -26,12 +26,13 @@
 //  - But a function with the reversed semantics of __aeabi_cdrcmple wil define
 //    them the other way round.
 //
-// SetReturnRegister: an assembly macro that looks at the PSR flags and sets up
-// an appropriate return value in r0, for the cases that do *not* involve NaN.
+// ReturnResult: an assembly macro that looks at the PSR flags, sets up an
+// appropriate return value in r0, and returns it, for the cases that do *not*
+// involve NaN.
 //  - On entry to this macro, the condition codes LO, EQ and HI indicate that
 //    op0 < op1, op0 == op1 or op0 > op1 respectively.
-//  - For functions that return a result in the flags, this macro can be empty,
-//    because those are the correct flags to return anyway.
+//  - For functions that return a result in the flags, this macro can just
+//    return immediately, because those are the correct flags to return anyway.
 //  - Functions that return a boolean in r0 should set it up by checking the
 //    flags.
 //
@@ -73,12 +74,10 @@
   // were no NaNs. So we just compare op0 and op1 as unsigned integers.
   cmp     op0h, op1h
   beq     LOCAL_LABEL(low_word_positive)
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
 LOCAL_LABEL(low_word_positive):
   cmp     op0l, op1l
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
 
 LOCAL_LABEL(NaNInf_check_positive):
   // Second tier for positive numbers. We come here if both inputs are
@@ -107,8 +106,7 @@ LOCAL_LABEL(NaNInf_check_positive):
   // must have a set bit not present in the other). So we only need to compare
   // the high words.
   cmp     op0h, op1h
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
 
 LOCAL_LABEL(NaN_check_positive):
   // Third tier for positive numbers. Here we know that at least one of the
@@ -140,8 +138,7 @@ LOCAL_LABEL(NaN_check_positive):
   // again. (The fact that we've just shifted them left doesn't make a
   // difference.)
   cmp     op0h, op1h
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
 
 LOCAL_LABEL(negative):
   // We come here if at least one operand is negative. We haven't checked for
@@ -183,12 +180,10 @@ LOCAL_LABEL(negative):
   // reverse sense.
   cmp     op1h, op0h
   beq     LOCAL_LABEL(low_word_negative)
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
 LOCAL_LABEL(low_word_negative):
   cmp     op1l, op0l
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
 
 LOCAL_LABEL(equal):
   // We come here if we know the inputs are supposed to compare equal. Set up
@@ -197,8 +192,7 @@ LOCAL_LABEL(equal):
   // (We might have come here via a BEQ, in which case we know Z=1, but we also
   // need C=1 for our caller to get _all_ the right flags.)
   cmp     r0, r0             // compare a register with itself
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
 
 LOCAL_LABEL(NaNInf_check_negative):
   // Second tier for negative numbers: we know the OR of the exponents is 0xFF,
@@ -234,5 +228,4 @@ LOCAL_LABEL(NaNInf_check_negative):
   // exponent fields was 0x7FF, which means the exponents can't both have been
   // zero! So we can _just_ do the reversed CMP and finish.
   cmp     op1h, op0h
-  SetReturnRegister
-  pop     {r4,r5,r6,pc}
+  ReturnResult
