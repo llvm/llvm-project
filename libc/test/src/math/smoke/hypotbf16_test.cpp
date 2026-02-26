@@ -30,4 +30,3 @@ TEST_F(LlvmLibcHypotBf16Test, SpecialNumbers) {
     }
   }
 }
-

@@ -32,16 +32,16 @@ static constexpr uint16_t SUBNORM_POS_STOP = 0x007FU;
 static constexpr uint16_t SUBNORM_NEG_START = 0x8001U;
 static constexpr uint16_t SUBNORM_NEG_STOP = 0x807FU;
 
-TEST_F(LlvmLibcHypotBf16Test,NormalPositiveRange){
-    for (uint16_t v1 = POS_START; v1 <= POS_STOP; v1++) {
+TEST_F(LlvmLibcHypotBf16Test, NormalPositiveRange) {
+  for (uint16_t v1 = POS_START; v1 <= POS_STOP; v1++) {
     for (uint16_t v2 = v1; v2 <= POS_STOP; v2++) {
 
       bfloat16 x = FPBits(v1).get_val();
       bfloat16 y = FPBits(v2).get_val();
-        mpfr::BinaryInput<bfloat16> input{x, y};
+      mpfr::BinaryInput<bfloat16> input{x, y};
 
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
-                                       LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                     LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
     }
   }
 }
@@ -52,10 +52,10 @@ TEST_F(LlvmLibcHypotBf16Test,NormalNegativeRange){
 
       bfloat16 x = FPBits(v1).get_val();
       bfloat16 y = FPBits(v2).get_val();
-        mpfr::BinaryInput<bfloat16> input{x, y};
+      mpfr::BinaryInput<bfloat16> input{x, y};
 
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
-                                       LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                     LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
     }
   }
 }
@@ -66,10 +66,10 @@ TEST_F(LlvmLibcHypotBf16Test, SubnormalNegativeRange) {
 
       bfloat16 x = FPBits(v1).get_val();
       bfloat16 y = FPBits(v2).get_val();
-        mpfr::BinaryInput<bfloat16> input{x, y};
+      mpfr::BinaryInput<bfloat16> input{x, y};
 
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
-                                       LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                     LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
     }
   }
 }
@@ -80,10 +80,10 @@ TEST_F(LlvmLibcHypotBf16Test, SubnormalPositiveRange) {
 
       bfloat16 x = FPBits(v1).get_val();
       bfloat16 y = FPBits(v2).get_val();
-        mpfr::BinaryInput<bfloat16> input{x, y};
+      mpfr::BinaryInput<bfloat16> input{x, y};
 
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
-                                       LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                     LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
     }
   }
 }
@@ -94,10 +94,10 @@ TEST_F(LlvmLibcHypotBf16Test, SpecialNumbers) {
     for (size_t j = i; j < 6; ++j) {
       bfloat16 x = VALUES[i];
       bfloat16 y = VALUES[j];
-        mpfr::BinaryInput<bfloat16> input{x, y};
+      mpfr::BinaryInput<bfloat16> input{x, y};
 
-        EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
-                                       LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Hypot, input,
+                                     LIBC_NAMESPACE::hypotbf16(x, y), 0.5);
     }
   }
 }
