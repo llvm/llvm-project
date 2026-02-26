@@ -14937,8 +14937,8 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
         LoadSDNode *Ld = cast<LoadSDNode>(V.getNode());
 
         if (!Ld->isSimple() ||
-              !TLI.isLoadLegal(VT, V.getValueType(), Ld->getAlign(),
-                              Ld->getAddressSpace(), LoadOpcode, false))
+            !TLI.isLoadLegal(VT, V.getValueType(), Ld->getAlign(),
+                             Ld->getAddressSpace(), LoadOpcode, false))
           return false;
 
         // Non-chain users of this value must either be the setcc in this
