@@ -7495,6 +7495,8 @@ void testPointerAliasEscapeMultiple(Foo *F) {
 } // expected-warning{{mutex 'F->mu' is still held at the end of function}}
 
 void unlockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
+void lockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_LOCK_FUNCTION((*Fp)->mu);
+bool tryLockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_LOCK_FUNCTION((*Fp)->mu);
 void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
   Foo* L;
   L = F;
@@ -7517,6 +7519,44 @@ void testEscapeInvalidationHappensRightAfterTheCtorCall(Foo* F) {
 void testCleanUpFunctionWithLocalVarUpdated(Foo* F) {
   F->mu.Lock();
   Foo * __attribute__((unused, cleanup(unlockFooWithEscapablePointer))) L = F;
+}
+
+void testAcquireReleaseNotInvalidate() {
+  Foo* F = 0;
+
+  struct {
+    int DataMember GUARDED_BY(F->mu);
+  } Data;
+
+  lockFooWithEscapablePointer(&F);
+  Data.DataMember = 0;
+  unlockFooWithEscapablePointer(&F);
+}
+
+void testAcquireReleaseNotInvalidate2() {
+  Foo* F = 0;
+
+  struct {
+    int DataMember GUARDED_BY(F->mu);
+  } Data;
+
+  bool success = tryLockFooWithEscapablePointer(&F);
+  if (success)
+    Data.DataMember = 0;
+  unlockFooWithEscapablePointer(&F);
+}
+
+void invalidateFooWithEscapablePointer(Foo **Fp);
+void testAcquireReleaseNotInvalidate3() {
+  Foo* F = 0;
+
+  struct {
+    int DataMember GUARDED_BY(F->mu);
+  } Data;
+
+  invalidateFooWithEscapablePointer(&F);
+  Data.DataMember = 0; // expected-warning{{writing variable 'DataMember' requires holding mutex 'F->mu' exclusively}}
+  unlockFooWithEscapablePointer(&F); //expected-warning{{releasing mutex 'F->mu' that was not held}}
 }
 
 void testPointerAliasTryLock1() {

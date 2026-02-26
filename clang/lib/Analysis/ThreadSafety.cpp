@@ -697,6 +697,20 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
     if (II->isStr("bind") || II->isStr("bind_front"))
       return;
   }
+  // Heuristic for annotated functions: acquire and release functions may mutate
+  // out parameters so that locks can be acquired/released. We do not want false
+  // positives on them.
+  if (llvm::any_of(FD->attrs(), [](const clang::Attr *At) -> bool {
+        switch (At->getKind()) {
+        case attr::AcquireCapability:
+        case attr::TryAcquireCapability:
+        case attr::ReleaseCapability:
+          return true;
+        default:
+          return false;
+        }
+      }))
+    return;
 
   // Invalidate local variable definitions that are passed by non-const
   // reference or non-const pointer.
