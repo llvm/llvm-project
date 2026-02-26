@@ -334,9 +334,9 @@ class HelpCommandTestCase(TestBase):
         self.expect(
             "help breakpoint set",
             matching=True,
-            patterns=[
+            substrs=[
                 # The "S" of "Set" is underlined.
-                r"\x1b\[12C\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
+                "\x1b[12C\x1b[4mS\x1b[0met the breakpoint only in this shared library.  Can repeat this option multiple times to specify multiple shared libraries.\n"
             ],
         )
 
@@ -344,9 +344,9 @@ class HelpCommandTestCase(TestBase):
         self.expect(
             "help breakpoint set",
             matching=True,
-            patterns=[
-                r"\x1b\[12C\x1b\[4mS\x1b\[0met the breakpoint only in this shared library.  Can repeat this option multiple times\n"
-                r"\x1b\[12Cto specify multiple shared libraries.\n"
+            substrs=[
+                "\x1b[12C\x1b[4mS\x1b[0met the breakpoint only in this shared library.  Can repeat this option multiple times\n"
+                "\x1b[12Cto specify multiple shared libraries.\n"
             ],
         )
 

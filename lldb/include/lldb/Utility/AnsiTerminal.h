@@ -419,6 +419,8 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
   const uint32_t max_text_width =
       output_max_columns - strm.GetIndentLevel() - 1;
   bool first_line = true;
+  const std::string ansi_indent =
+      ANSI_CSI_CUF(std::to_string(strm.GetIndentLevel()));
 
   while (!text.empty()) {
     std::string split = TrimAtWordBoundary(text, max_text_width);
@@ -431,8 +433,6 @@ inline void OutputWordWrappedLines(Stream &strm, llvm::StringRef text,
       // ANSI cursor movement. This means that if an ANSI formatted range of
       // text is split across two lines, the indentation is not also formatted.
       // Which it would be if we just emitted spaces.
-      const std::string ansi_indent =
-          ANSI_CSI_CUF(std::to_string(strm.GetIndentLevel()));
       strm << ansi_indent << split;
     } else
       strm.Indent(split);
