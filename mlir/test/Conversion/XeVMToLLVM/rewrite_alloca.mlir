@@ -25,3 +25,22 @@ module {
     llvm.return %1 : !llvm.ptr<3>
   }
 }
+
+// -----
+
+module {
+  llvm.func @test() -> !llvm.ptr {
+    %0 = llvm.mlir.constant(10 : i32) : i32
+    // CHECK: %[[VAR1:.*]] = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    // CHECK: %[[VAR2:.*]] = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    // CHECK: %[[VAR3:.*]] = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    %1 = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    %2 = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    %3 = llvm.alloca %0 x i32 {alignment = 8 : i64} : (i32) -> !llvm.ptr
+    %4 = llvm.load %2 : !llvm.ptr -> i32
+    %5 = llvm.load %3 : !llvm.ptr -> i32
+    %6 = llvm.add %4, %5 : i32
+    llvm.store %6, %1 : i32, !llvm.ptr
+    llvm.return %1 : !llvm.ptr
+  }
+}
