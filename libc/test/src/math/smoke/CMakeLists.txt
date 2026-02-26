@@ -4704,6 +4704,18 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  asinpif_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    libc.hdr.errno_macros
+    libc.src.math.asinpif
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   asinpif16_test
   NEED_MPFR
   SUITE
