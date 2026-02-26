@@ -579,20 +579,15 @@ ExplodedNode *CoreEngine::makeNode(const ProgramPoint &Loc,
 
 /// generateNode - Utility method to generate nodes, hook up successors,
 ///  and add nodes to the worklist.
-/// TODO: This and other similar methods should call CoreEngine::makeNode()
-/// instead of duplicating its logic. This would also fix that currently these
-/// can generate non-sink nodes with PosteriorlyOverconstrained state.
 void CoreEngine::generateNode(const ProgramPoint &Loc,
                               ProgramStateRef State,
                               ExplodedNode *Pred) {
   assert(Pred);
-  bool IsNew;
-  ExplodedNode *Node = G.getNode(Loc, State, false, &IsNew);
-
-  Node->addPredecessor(Pred, G); // Link 'Node' with its predecessor.
+  ExplodedNode *Node = makeNode(Loc, State, Pred);
 
   // Only add 'Node' to the worklist if it was freshly generated.
-  if (IsNew) WList->enqueue(Node);
+  if (Node)
+    WList->enqueue(Node);
 }
 
 void CoreEngine::enqueueStmtNode(ExplodedNode *N,
@@ -637,11 +632,9 @@ void CoreEngine::enqueueStmtNode(ExplodedNode *N,
     return;
   }
 
-  bool IsNew;
-  ExplodedNode *Succ = G.getNode(Loc, N->getState(), false, &IsNew);
-  Succ->addPredecessor(N, G);
+  ExplodedNode *Succ = makeNode(Loc, N->getState(), N);
 
-  if (IsNew)
+  if (Succ)
     WList->enqueue(Succ, Block, Idx+1);
 }
 
@@ -653,10 +646,7 @@ ExplodedNode *CoreEngine::generateCallExitBeginNode(ExplodedNode *N,
   // Use the callee location context.
   CallExitBegin Loc(LocCtx, RS);
 
-  bool isNew;
-  ExplodedNode *Node = G.getNode(Loc, N->getState(), false, &isNew);
-  Node->addPredecessor(N, G);
-  return isNew ? Node : nullptr;
+  return makeNode(Loc, N->getState(), N);
 }
 
 std::optional<unsigned>
