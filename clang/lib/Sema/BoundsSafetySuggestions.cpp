@@ -69,7 +69,7 @@ public:
 
   // These statements are sources of variable values.
   void VisitDeclStmt(const DeclStmt *DS);
-  void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitBinaryOperator(const clang::BinaryOperator *BO);
 
   // Unevaluated context visitors
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *) {
@@ -107,7 +107,7 @@ void DefinitionVisitor::VisitDeclStmt(const DeclStmt *DS) {
       }
 }
 
-void DefinitionVisitor::VisitBinaryOperator(const BinaryOperator *BO) {
+void DefinitionVisitor::VisitBinaryOperator(const clang::BinaryOperator *BO) {
   // Compound assignment operations (+= etc.) don't count as definitions.
   // They just reuse whatever's already there.
   if (BO->getOpcode() == BO_Assign) {
@@ -326,8 +326,8 @@ public:
 
   // These are the individual unsafe operations we'll react upon.
   void VisitArraySubscriptExpr(const ArraySubscriptExpr *ASE);
-  void VisitUnaryOperator(const UnaryOperator *UO);
-  void VisitBinaryOperator(const BinaryOperator *BO);
+  void VisitUnaryOperator(const clang::UnaryOperator *UO);
+  void VisitBinaryOperator(const clang::BinaryOperator *BO);
   void VisitMemberExpr(const MemberExpr *ME);
   void VisitOpaqueValueExpr(const OpaqueValueExpr *OVE);
   void VisitDeclStmt(const DeclStmt *DS);
@@ -965,7 +965,7 @@ void UnsafeOperationVisitor::
     return true;
   };
 
-  if (auto *UO = dyn_cast<UnaryOperator>(UnsafeOp)) {
+  if (auto *UO = dyn_cast<clang::UnaryOperator>(UnsafeOp)) {
     std::optional<bool> IsIncrement;
     switch (UO->getOpcode()) {
     case UO_PostInc:
@@ -991,7 +991,7 @@ void UnsafeOperationVisitor::
 
     return;
   }
-  if (auto *BO = dyn_cast<BinaryOperator>(UnsafeOp)) {
+  if (auto *BO = dyn_cast<clang::BinaryOperator>(UnsafeOp)) {
     const Expr *Offset;
 
     bool IsIncrement = false;
@@ -1041,7 +1041,7 @@ void UnsafeOperationVisitor::
         llvm::SmallVectorImpl<BoundsSafetySuggestionHandler::SingleEntity>
             &SingleEntities) {
 
-  if (auto *UO = dyn_cast<UnaryOperator>(UnsafeOp)) {
+  if (auto *UO = dyn_cast<clang::UnaryOperator>(UnsafeOp)) {
     assert(UO->getOpcode() == UO_Deref);
     const auto *BasePtrTy = UO->getSubExpr()->getType()->getAs<clang::PointerType>();
     assert(BasePtrTy);
@@ -1618,7 +1618,7 @@ void UnsafeOperationVisitor::VisitArraySubscriptExpr(
   VisitChildren(ASE);
 }
 
-void UnsafeOperationVisitor::VisitUnaryOperator(const UnaryOperator *UO) {
+void UnsafeOperationVisitor::VisitUnaryOperator(const clang::UnaryOperator *UO) {
 
   switch (UO->getOpcode()) {
   case UO_PostInc:
@@ -1638,7 +1638,7 @@ void UnsafeOperationVisitor::VisitUnaryOperator(const UnaryOperator *UO) {
   VisitChildren(UO);
 }
 
-void UnsafeOperationVisitor::VisitBinaryOperator(const BinaryOperator *BO) {
+void UnsafeOperationVisitor::VisitBinaryOperator(const clang::BinaryOperator *BO) {
   const Expr *Lhs = BO->getLHS(), *Rhs = BO->getRHS();
   QualType LhsTy = Lhs->getType(), RhsTy = Rhs->getType();
 
