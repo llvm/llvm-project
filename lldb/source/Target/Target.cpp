@@ -2619,8 +2619,8 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
 
   if (language == eLanguageTypeMipsAssembler // GNU AS and LLVM use it for all
                                              // assembly code
-      || language == eLanguageTypeAssembly
-      || language == eLanguageTypeUnknown) {
+      || language == eLanguageTypeAssembly ||
+      language == eLanguageTypeUnknown) {
     LanguageSet languages_for_expressions =
         Language::GetLanguagesSupportingTypeSystemsForExpressions();
 
