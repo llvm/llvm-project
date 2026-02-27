@@ -21,7 +21,7 @@ using namespace llvm;
 
 namespace {
 
-/// CallbackVH that removes the value from UniformValues on deletion or RAUW.
+/// CallbackVH that removes the value from UniformValues on deletion.
 /// Prevents stale pointers when a deleted value's address is reused.
 class UniformValueHandle : public CallbackVH {
   DenseSet<const Value *> &UniformSet;
@@ -35,8 +35,6 @@ public:
     UniformSet.erase(getValPtr());
     CallbackVH::deleted();
   }
-
-  void allUsesReplacedWith(Value *) override { UniformSet.erase(getValPtr()); }
 };
 
 /// IR implementation: registers CallbackVH for each uniform value.
@@ -48,9 +46,9 @@ public:
   explicit IRUniformValueCallbackManager(DenseSet<const Value *> &S)
       : UniformSet(S) {}
 
-  void registerValue(const void *V) override {
+  void registerValue(const Value *V) {
     Handles.push_back(std::make_unique<UniformValueHandle>(
-        const_cast<Value *>(static_cast<const Value *>(V)), UniformSet));
+        const_cast<Value *>(V), UniformSet));
   }
 };
 
@@ -108,8 +106,8 @@ void llvm::GenericUniformityAnalysisImpl<SSAContext>::finalizeUniformValues() {
     }
   }
 
-  // Register CallbackVH for each uniform value so we remove them on deletion
-  // or RAUW. Prevents stale pointers when addresses are reused.
+  // Register CallbackVH for each uniform value so we remove them on deletion.
+  // Prevents stale pointers when addresses are reused.
   auto Manager = std::make_unique<IRUniformValueCallbackManager>(UniformValues);
   for (const Value *V : UniformValues)
     Manager->registerValue(V);
