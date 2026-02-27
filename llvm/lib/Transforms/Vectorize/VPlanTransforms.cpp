@@ -4441,10 +4441,11 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   // creates two uniform extends that can more easily be matched by the rest of
   // the bundling code. The ExtB reference, ValB and operand 1 of Mul are all
   // replaced with the new extend of the constant.
-  auto ExtendAndReplaceConstantOp = [&Ctx](VPWidenCastRecipe *ExtA,
-                                           VPWidenCastRecipe *&ExtB,
-                                           VPValue *&ValB, VPWidenRecipe *Mul) {
-    if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
+  auto ExtendAndReplaceConstantOp = [&Ctx, &Red](VPWidenCastRecipe *ExtA,
+                                                 VPWidenCastRecipe *&ExtB,
+                                                 VPValue *&ValB,
+                                                 VPWidenRecipe *Mul) {
+    if (!ExtA || ExtB || !isa<VPIRValue>(ValB) || Red->isPartialReduction())
       return;
     Type *NarrowTy = Ctx.Types.inferScalarType(ExtA->getOperand(0));
     Instruction::CastOps ExtOpc = ExtA->getOpcode();
@@ -4494,7 +4495,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
     return nullptr;
 
   // Match reduce.add(ext(mul(A, B))).
-  if (match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
+  if (!Red->isPartialReduction() &&
+      match(VecOp, m_ZExtOrSExt(m_Mul(m_VPValue(A), m_VPValue(B))))) {
     auto *Ext = cast<VPWidenCastRecipe>(VecOp);
     auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
     auto *Ext0 = dyn_cast_if_present<VPWidenCastRecipe>(A);
@@ -5849,6 +5851,56 @@ struct VPPartialReductionChain {
   RecurKind RK;
 };
 
+static VPSingleDefRecipe *
+optimizeExtendsForPartialReduction(VPSingleDefRecipe *BinOp,
+                                   VPTypeAnalysis &TypeInfo) {
+  // reduce.add(mul(ext(A), C))
+  // -> reduce.add(mul(ext(A), ext(trunc(C))))
+  const APInt *Const;
+  if (match(BinOp, m_Mul(m_ZExtOrSExt(m_VPValue()), m_APInt(Const)))) {
+    auto *ExtA = cast<VPWidenCastRecipe>(BinOp->getOperand(0));
+    Instruction::CastOps ExtOpc = ExtA->getOpcode();
+    Type *NarrowTy = TypeInfo.inferScalarType(ExtA->getOperand(0));
+    if (!BinOp->hasOneUse() ||
+        !llvm::canConstantBeExtended(
+            Const, NarrowTy, TTI::getPartialReductionExtendKind(ExtOpc)))
+      return BinOp;
+
+    VPBuilder Builder(BinOp);
+    auto *Trunc = Builder.createWidenCast(Instruction::CastOps::Trunc,
+                                          BinOp->getOperand(1), NarrowTy);
+    Type *WideTy = TypeInfo.inferScalarType(ExtA);
+    BinOp->setOperand(1, Builder.createWidenCast(ExtOpc, Trunc, WideTy));
+    return BinOp;
+  }
+
+  // reduce.add(ext(mul(ext(A), ext(B))))
+  // -> reduce.add(mul(wider_ext(A), wider_ext(B)))
+  if (match(BinOp, m_ZExtOrSExt(m_Mul(m_ZExtOrSExt(m_VPValue()),
+                                      m_ZExtOrSExt(m_VPValue()))))) {
+    auto *Ext = cast<VPWidenCastRecipe>(BinOp);
+    auto *Mul = cast<VPWidenRecipe>(Ext->getOperand(0));
+    auto *MulLHS = cast<VPWidenCastRecipe>(Mul->getOperand(0));
+    auto *MulRHS = cast<VPWidenCastRecipe>(Mul->getOperand(1));
+    if (!Mul->hasOneUse() ||
+        (Ext->getOpcode() != MulLHS->getOpcode() && MulLHS != MulRHS) ||
+        MulLHS->getOpcode() != MulRHS->getOpcode())
+      return BinOp;
+    VPBuilder Builder(Mul);
+    Mul->setOperand(0, Builder.createWidenCast(MulLHS->getOpcode(),
+                                               MulLHS->getOperand(0),
+                                               Ext->getResultType()));
+    Mul->setOperand(1, MulLHS == MulRHS
+                           ? Mul->getOperand(0)
+                           : Builder.createWidenCast(MulRHS->getOpcode(),
+                                                     MulRHS->getOperand(0),
+                                                     Ext->getResultType()));
+    return Mul;
+  }
+
+  return BinOp;
+}
+
 // Helper to transform a partial reduction chain into a partial reduction
 // recipe. Assumes profitability has been checked.
 static void transformToPartialReduction(const VPPartialReductionChain &Chain,
@@ -5857,12 +5909,14 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
 
-  VPValue *BinOp = WidenRecipe->getOperand(0);
+  VPValue *BinOpVal = WidenRecipe->getOperand(0);
   VPValue *Accumulator = WidenRecipe->getOperand(1);
 
   // Swap if needed to ensure Accumulator is the PHI or partial reduction.
-  if (isa_and_present<VPReductionPHIRecipe, VPReductionRecipe>(BinOp))
-    std::swap(BinOp, Accumulator);
+  if (isa<VPReductionPHIRecipe, VPReductionRecipe>(BinOpVal) ||
+      isa<VPExpressionRecipe>(BinOpVal))
+    std::swap(BinOpVal, Accumulator);
+  auto *BinOp = cast<VPSingleDefRecipe>(BinOpVal->getDefiningRecipe());
 
   // Sub-reductions can be implemented in two ways:
   // (1) negate the operand in the vector loop (the default way).
@@ -5891,6 +5945,9 @@ static void transformToPartialReduction(const VPPartialReductionChain &Chain,
     Builder.insert(NegRecipe);
     BinOp = NegRecipe;
   }
+
+  // FIXME: Do these transforms before invoking the cost-model.
+  BinOp = optimizeExtendsForPartialReduction(BinOp, TypeInfo);
 
   // Check if WidenRecipe is the final result of the reduction. If so look
   // through selects for predicated reductions.
