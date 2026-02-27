@@ -822,7 +822,7 @@ TEST_P(TUSummaryTest, LinkageTableEntryLinkageInvalidType) {
           HasSubstr("reading LinkageTable from field 'linkage_table'"),
           HasSubstr("reading LinkageTable entry from index '0'"),
           HasSubstr("reading EntityLinkage from field 'linkage'"),
-          HasSubstr("invalid 'type' EntityLinkageType value 'invalid_type'"))));
+          HasSubstr("invalid EntityLinkageType value 'invalid_type' for field 'type'"))));
 }
 
 // ============================================================================
@@ -1073,7 +1073,7 @@ TEST_P(TUSummaryTest, InvalidKind) {
           HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
           HasSubstr("reading BuildNamespaceKind from field 'kind'"),
           HasSubstr(
-              "invalid 'kind' BuildNamespaceKind value 'invalid_kind'"))));
+              "invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'"))));
 }
 
 // ============================================================================
@@ -1242,7 +1242,7 @@ TEST_P(TUSummaryTest, NamespaceElementInvalidKind) {
           HasSubstr("reading BuildNamespace from index '0'"),
           HasSubstr("reading BuildNamespaceKind from field 'kind'"),
           HasSubstr(
-              "invalid 'kind' BuildNamespaceKind value 'invalid_kind'"))));
+              "invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'"))));
 }
 
 TEST_P(TUSummaryTest, NamespaceElementMissingName) {
