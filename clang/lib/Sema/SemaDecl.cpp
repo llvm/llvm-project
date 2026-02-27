@@ -6850,10 +6850,6 @@ Sema::GetNameFromUnqualifiedId(const UnqualifiedId &Name) {
   }
 
   case UnqualifiedIdKind::IK_TemplateId: {
-
-    if (Name.TemplateId->isInvalid())
-      return DeclarationNameInfo();
-
     TemplateName TName = Name.TemplateId->Template.get();
     SourceLocation TNameLoc = Name.TemplateId->TemplateNameLoc;
     return Context.getNameForTemplate(TName, TNameLoc);

@@ -321,7 +321,6 @@ Bug Fixes to C++ Support
   when used inside decltype in the return type. (#GH180460)
 - Fixed a crash when evaluating uninitialized GCC vector/ext_vector_type vectors in ``constexpr``. (#GH180044)
 - Fixed a crash on ``typeid`` of incomplete local types during template instantiation. (#GH63242), (#GH176397)
-- Fixed a crash when handling invalid template-ids during error recovery in C++ code. (#GH177549)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
