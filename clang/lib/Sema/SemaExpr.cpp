@@ -25901,7 +25901,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
 
   switch (placeholderType->getKind()) {
   case BuiltinType::UnresolvedTemplate: {
-    auto *ULE = cast<UnresolvedLookupExpr>(E);
+    auto *ULE = cast<UnresolvedLookupExpr>(E->IgnoreParens());
     const DeclarationNameInfo &NameInfo = ULE->getNameInfo();
     // There's only one FoundDecl for UnresolvedTemplate type. See
     // BuildTemplateIdExpr.
@@ -26068,7 +26068,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
     // shouldn't need to do any further diagnostic here.
     if (!E->containsErrors())
       Diag(E->getBeginLoc(), diag::err_array_section_use)
-          << cast<ArraySectionExpr>(E)->isOMPArraySection();
+          << cast<ArraySectionExpr>(E->IgnoreParens())->isOMPArraySection();
     return ExprError();
 
   // Expressions of unknown type.
