@@ -2169,6 +2169,7 @@ functions:
     arguments:
       - type: _Float16
       - type: _Float16
+    guard: LIBC_TYPES_HAS_FLOAT16
   - name: powi
     standards: llvm_libc_ext
     return_type: double

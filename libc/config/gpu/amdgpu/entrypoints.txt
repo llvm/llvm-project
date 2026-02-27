@@ -591,6 +591,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.nextdownf16
     libc.src.math.nexttowardf16
     libc.src.math.nextupf16
+    libc.src.math.powf16
     libc.src.math.remainderf16
     libc.src.math.remquof16
     libc.src.math.rintf16
@@ -671,7 +672,6 @@ list(APPEND TARGET_LIBM_ENTRYPOINTS
   libc.src.math.nextdownbf16
   libc.src.math.nexttowardbf16
   libc.src.math.nextupbf16
-  libc.src.math.powf16
   libc.src.math.remainderbf16
   libc.src.math.remquobf16
   libc.src.math.rintbf16
