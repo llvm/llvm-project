@@ -1064,9 +1064,6 @@ struct ConvertXeGPUToXeVMPass
       return VectorType::get(sum, elemType);
     });
     typeConverter.addConversion([&](xegpu::TensorDescType type) -> Type {
-      // Scattered descriptors are not supported in XeVM lowering.
-      if (type.isScattered())
-        return {};
       if (type.getRank() == 1)
         return IntegerType::get(&getContext(), 64);
       auto i32Type = IntegerType::get(&getContext(), 32);

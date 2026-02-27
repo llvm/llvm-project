@@ -211,24 +211,6 @@ func.func @store_nd_vc_5(%dst: memref<24x32xf32>, %data: vector<8x1xf32>) {
 }
 
 // -----
-func.func @prefetch_vc_1(%src: memref<24x32xf16>) {
-  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<24x32xf16>
-  // expected-error@+1 {{Expects a scattered TensorDesc}}
-  xegpu.prefetch %1 <{l1_hint = #xegpu.cache_hint<write_back>}>: !xegpu.tensor_desc<24x32xf16>
-  return
-}
-
-// -----
-func.func @load_gather_vc_1(%src: memref<24x32xf16>) {
-  %0 = arith.constant dense<1>: vector<4xi1>
-  %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf16> -> !xegpu.tensor_desc<4x2xf16>
-  // expected-error@+1 {{Expects a scattered TensorDesc}}
-  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>}>
-      : !xegpu.tensor_desc<4x2xf16>, vector<4xi1> -> vector<4x2xf16>
-  return
-}
-
-// -----
 func.func @prefetch_offset_wi_1(%src: memref<4x4xf32>) {
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{op operand #0 must be TensorDesc describing regions of interested data}}
@@ -312,22 +294,22 @@ func.func @store_scatter_offset_wi_3(%src: memref<16xf16>) {
 }
 
 // -----
-func.func @store_scatter_offset_wi_4(%src: !xegpu.tensor_desc<1x1xf32, #xegpu.scatter_tdesc_attr<>>) {
+func.func @store_scatter_offset_wi_4(%src: !xegpu.tensor_desc<1x1xf32>) {
   %val = arith.constant dense<2.9>: vector<1xf16>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   %mask = arith.constant dense<1>: vector<1xi1>
   // expected-error@+1 {{offsets not allowed}}
   xegpu.store %val, %src[%offsets], %mask
-        : vector<1xf16>, !xegpu.tensor_desc<1x1xf32, #xegpu.scatter_tdesc_attr<>>, vector<1xindex>, vector<1xi1>
+        : vector<1xf16>, !xegpu.tensor_desc<1x1xf32>, vector<1xindex>, vector<1xi1>
   return
 }
 
 // -----
-func.func @load_gather_offset_wi_4(%src: !xegpu.tensor_desc<1x2xf16, #xegpu.scatter_tdesc_attr<>>) {
+func.func @load_gather_offset_wi_4(%src: !xegpu.tensor_desc<1x2xf16>) {
   %mask = arith.constant dense<1>: vector<1xi1>
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{offsets not allowed}}
-  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : !xegpu.tensor_desc<1x2xf16, #xegpu.scatter_tdesc_attr<>>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
+  %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : !xegpu.tensor_desc<1x2xf16>, vector<1xindex>, vector<1xi1> -> vector<2xf16>
   return
 }
 
@@ -354,17 +336,6 @@ func.func @load_gather_offset_wi_1(%src: memref<4x4xf32>) {
   %offsets = arith.constant dense<[0]> : vector<1xindex>
   // expected-error@+1 {{op operand #0 must be TensorDesc describing regions of interested data}}
   %2 = xegpu.load %src[%offsets], %mask <{chunk_size = 2}> : memref<4x4xf32>,  vector<1xindex>, vector<1xi1> -> vector<2xf32>
-  return
-}
-
-// -----
-func.func @store_scatter_vc_1(%src: memref<24x32xf32>) {
-  %0 = arith.constant dense<1>: vector<4xi1>
-  %1 = arith.constant dense<2.9>: vector<4x2xf32>
-  %2 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> -> !xegpu.tensor_desc<4x2xf32>
-  // expected-error@+1 {{Expects a scattered TensorDesc}}
-  xegpu.store %1, %2, %0 <{l1_hint = #xegpu.cache_hint<cached>}>
-        : vector<4x2xf32>, !xegpu.tensor_desc<4x2xf32>, vector<4xi1>
   return
 }
 

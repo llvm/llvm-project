@@ -1062,59 +1062,6 @@ def XeGPU_StoreScatterOp : XeGPU_Op<"store", [MemoryEffects<[MemWrite]>, AnchorL
   let hasVerifier = 1;
 }
 
-def XeGPU_UpdateOffsetOp: XeGPU_Op<"update_offset",
-          [AllTypesMatch<["TensorDesc", "result"]>]> {
-  let summary = "It updates the offsets for the given tensor descriptor";
-
-  let description = [{It behaves similar to `update_nd_offset` in terms that
-    it updates offset of a TensorDesc, and the offsets are relative offset to
-    the current position in the number of elements. However, `update_nd_offset`
-    is to update the start point of a 2D block, so its offset constains two
-    elements representing the shift in each dimension. `update_offset` is to
-    update the offset per lane, so its offsets contains values representing
-    shifts for each lane.
-
-    Example:
-    ```mlir
-      %off = arith.constant dense<[32, 32, 32, 32]> : vector<4xindex>
-      %2 = xegpu.update_offset %1, %off :
-              !xegpu.tensor_desc<4x2xf32, #xegpu.scattered_tdesc_attr<chunk_size=2>>, vector<4xindex>
-    ```
-
-  }];
-
-  let arguments = (ins XeGPU_TensorDesc: $TensorDesc,
-                       XeGPU_OffsetType: $offsets);
-  let results = (outs XeGPU_TensorDesc: $result);
-
-  let builders = [
-    OpBuilder<(ins "mlir::Value": $TensorDesc,
-                   "llvm::ArrayRef<OpFoldResult>": $offsets)>,
-    OpBuilder<(ins "mlir::Value": $TensorDesc,
-                   "llvm::ArrayRef<int64_t>": $offsets)>
-  ];
-
-  let extraClassDeclaration = [{
-    xegpu::TensorDescType getTensorDescType() {
-      return getTensorDesc().getType();
-    }
-
-    mlir::VectorType getOffsetsType() {
-      return getOffsets().getType();
-    }
-
-    size_t getNumOffsets() {
-      return getOffsetsType().getNumElements();
-    }
-  }];
-
-  let assemblyFormat = [{
-    $TensorDesc `,` $offsets attr-dict `:` qualified(type($TensorDesc)) `,` type($offsets)
-  }];
-
-  let hasVerifier = 1;
-}
-
 def XeGPU_DpasOp : XeGPU_Op<"dpas", [Pure, AllElementTypesMatch<["lhs", "rhs"]>, AnchorLayoutInterface]> {
   let summary = "It performs mma computation";
 
