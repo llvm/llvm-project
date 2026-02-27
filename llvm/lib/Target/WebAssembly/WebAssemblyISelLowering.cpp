@@ -3359,9 +3359,8 @@ static SDValue performAnyAllCombine(SDNode *N, SelectionDAG &DAG) {
       return SDValue();
 
     SDLoc DL(N);
-    SDValue Ret =
-        DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
-                    {DAG.getConstant(InPost, DL, MVT::i32), LHS});
+    SDValue Ret = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i32,
+                              {DAG.getConstant(InPost, DL, MVT::i32), LHS});
     if (SetType == ISD::SETEQ)
       Ret = DAG.getNode(ISD::XOR, DL, MVT::i32, Ret,
                         DAG.getConstant(1, DL, MVT::i32));
