@@ -245,25 +245,25 @@ define void @exp_f32() {
 
 define void @exp_f64() {
 ; ALL-LABEL: 'exp_f64'
-; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %f64 = call double @llvm.exp.f64(double undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 20 for instruction: %v2f64 = call <2 x double> @llvm.exp.v2f64(<2 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 30 for instruction: %v3f64 = call <3 x double> @llvm.exp.v3f64(<3 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 40 for instruction: %v4f64 = call <4 x double> @llvm.exp.v4f64(<4 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 50 for instruction: %v5f64 = call <5 x double> @llvm.exp.v5f64(<5 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 80 for instruction: %v8f64 = call <8 x double> @llvm.exp.v8f64(<8 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 160 for instruction: %v16f64 = call <16 x double> @llvm.exp.v16f64(<16 x double> undef)
-; ALL-NEXT:  Cost Model: Found an estimated cost of 170 for instruction: %v17f64 = call <17 x double> @llvm.exp.v17f64(<17 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %f64 = call double @llvm.exp.f64(double undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v2f64 = call <2 x double> @llvm.exp.v2f64(<2 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 252 for instruction: %v3f64 = call <3 x double> @llvm.exp.v3f64(<3 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 336 for instruction: %v4f64 = call <4 x double> @llvm.exp.v4f64(<4 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2016 for instruction: %v5f64 = call <5 x double> @llvm.exp.v5f64(<5 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 2016 for instruction: %v8f64 = call <8 x double> @llvm.exp.v8f64(<8 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 6720 for instruction: %v16f64 = call <16 x double> @llvm.exp.v16f64(<16 x double> undef)
+; ALL-NEXT:  Cost Model: Found an estimated cost of 9408 for instruction: %v17f64 = call <17 x double> @llvm.exp.v17f64(<17 x double> undef)
 ; ALL-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: ret void
 ;
 ; ALL-SIZE-LABEL: 'exp_f64'
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %f64 = call double @llvm.exp.f64(double undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v2f64 = call <2 x double> @llvm.exp.v2f64(<2 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3 for instruction: %v3f64 = call <3 x double> @llvm.exp.v3f64(<3 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %v4f64 = call <4 x double> @llvm.exp.v4f64(<4 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v5f64 = call <5 x double> @llvm.exp.v5f64(<5 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 8 for instruction: %v8f64 = call <8 x double> @llvm.exp.v8f64(<8 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 16 for instruction: %v16f64 = call <16 x double> @llvm.exp.v16f64(<16 x double> undef)
-; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 17 for instruction: %v17f64 = call <17 x double> @llvm.exp.v17f64(<17 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 42 for instruction: %f64 = call double @llvm.exp.f64(double undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 84 for instruction: %v2f64 = call <2 x double> @llvm.exp.v2f64(<2 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 126 for instruction: %v3f64 = call <3 x double> @llvm.exp.v3f64(<3 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 168 for instruction: %v4f64 = call <4 x double> @llvm.exp.v4f64(<4 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1008 for instruction: %v5f64 = call <5 x double> @llvm.exp.v5f64(<5 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1008 for instruction: %v8f64 = call <8 x double> @llvm.exp.v8f64(<8 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 3360 for instruction: %v16f64 = call <16 x double> @llvm.exp.v16f64(<16 x double> undef)
+; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 4704 for instruction: %v17f64 = call <17 x double> @llvm.exp.v17f64(<17 x double> undef)
 ; ALL-SIZE-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: ret void
 ;
   %f64 = call double @llvm.exp.f64(double undef)

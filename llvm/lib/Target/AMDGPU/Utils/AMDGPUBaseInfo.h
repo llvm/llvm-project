@@ -56,6 +56,7 @@ static constexpr unsigned GFX10_1 = 1;
 static constexpr unsigned GFX10_3 = 1;
 static constexpr unsigned GFX11 = 1;
 static constexpr unsigned GFX12 = 1;
+static constexpr unsigned GFX12_5 = 1;
 } // namespace GenericVersion
 
 enum { AMDHSA_COV4 = 4, AMDHSA_COV5 = 5, AMDHSA_COV6 = 6 };
@@ -1111,7 +1112,7 @@ namespace AMDGPU {
 ///
 /// Large values (including the maximum possible integer) can be used to
 /// represent "don't care" waits.
-struct Waitcnt {
+class Waitcnt {
   unsigned LoadCnt = ~0u; // Corresponds to Vmcnt prior to gfx12.
   unsigned ExpCnt = ~0u;
   unsigned DsCnt = ~0u;     // Corresponds to LGKMcnt prior to gfx12.
@@ -1123,6 +1124,7 @@ struct Waitcnt {
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
 
+public:
   unsigned get(InstCounterType T) const {
     switch (T) {
     case LOAD_CNT:

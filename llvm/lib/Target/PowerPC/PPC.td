@@ -376,10 +376,6 @@ def HasSPE  : Predicate<"Subtarget->hasSPE()">;
 def HasICBT : Predicate<"Subtarget->hasICBT()">;
 def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
 def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
-def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
 def HasFPU : Predicate<"Subtarget->hasFPU()">;
