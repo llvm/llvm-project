@@ -629,6 +629,16 @@ using the ``let`` statement.
   field, it will be assigned an integer value. Values are assigned in
   alphabetical order starting with 0.
 
+* ``bit Scoped``. When set to 1, the generated C++ declaration will use
+  ``enum class`` instead of an unscoped ``enum``. This defaults to 0.
+
+* ``int Size``. (Optional) When emitting a scoped enum, provides the bit width
+  of the underlying integer type. Supported values are 8, 16, 32, and 64; when
+  unset, the compiler's default underlying type is used.
+
+To make it easier to request scoped enums, the ``GenericEnumClass`` helper
+derives from ``GenericEnum`` and sets ``Scoped = 1``.
+
 Here is an example where the values of the elements are specified
 explicitly, as a template argument to the ``BEntry`` class. The resulting
 C++ code is shown.
@@ -688,6 +698,31 @@ by element name.
   };
   #endif
 
+Here is an example of a ``GenericEnumClass`` that generates scoped enumerated
+values by emitting an ``enum class`` declaration.
+
+.. code-block:: text
+
+  class FEntry;
+
+  def FApple : FEntry;
+  def FBanana : FEntry;
+  def FCherry : FEntry;
+
+  def FEnum : GenericEnumClass {
+    let FilterClass = "FEntry";
+    let Size = 8;
+  }
+
+.. code-block:: text
+
+  #ifdef GET_FEnum_DECL
+  enum class FEnum : uint8_t {
+    FApple = 0,
+    FBanana = 1,
+    FCherry = 2,
+  }
+  #endif
 
 Generic Tables
 ~~~~~~~~~~~~~~

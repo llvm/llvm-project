@@ -43,6 +43,20 @@ static int64_t getInt(const Record *R, StringRef Field) {
   return getAsInt(R->getValueInit(Field));
 }
 
+static std::string bitWidthToUInt(unsigned NumBits) {
+  if (NumBits == 0)
+    return "";
+  if (NumBits <= 8)
+    return "uint8_t";
+  if (NumBits <= 16)
+    return "uint16_t";
+  if (NumBits <= 32)
+    return "uint32_t";
+  if (NumBits <= 64)
+    return "uint64_t";
+  return "";
+}
+
 namespace {
 struct GenericEnum {
   struct Entry {
@@ -55,6 +69,8 @@ struct GenericEnum {
   const Record *Class = nullptr;
   std::string PreprocessorGuard;
   MapVector<const Record *, Entry> Entries;
+  bool Scoped = false;
+  unsigned ScopedSize = 0;
 
   const Entry *getEntry(const Record *Def) const {
     auto II = Entries.find(Def);
@@ -146,6 +162,12 @@ private:
       if (!Entry)
         PrintFatalError(Loc,
                         Twine("Entry for field '") + Field.Name + "' is null");
+      if (Field.Enum->Scoped) {
+        std::string QualifiedName = Field.Enum->Name;
+        QualifiedName += "::";
+        QualifiedName += Entry->Name;
+        return QualifiedName;
+      }
       return Entry->Name.str();
     }
     PrintFatalError(Loc, Twine("invalid field type for field '") + Field.Name +
@@ -177,15 +199,10 @@ private:
       return "StringRef";
     }
     if (const auto *BI = dyn_cast<BitsRecTy>(Field.RecType)) {
-      unsigned NumBits = BI->getNumBits();
-      if (NumBits <= 8)
-        return "uint8_t";
-      if (NumBits <= 16)
-        return "uint16_t";
-      if (NumBits <= 32)
-        return "uint32_t";
-      if (NumBits <= 64)
-        return "uint64_t";
+      std::string Type = bitWidthToUInt(BI->getNumBits());
+      if (!Type.empty())
+        return Type;
+
       PrintFatalError(Index.Loc, Twine("In table '") + Table.Name +
                                      "' lookup method '" + Index.Name +
                                      "', key field '" + Field.Name +
@@ -193,7 +210,12 @@ private:
     }
     if (isa<BitRecTy>(Field.RecType))
       return "bool";
-    if (Field.Enum || Field.IsIntrinsic || Field.IsInstruction)
+    if (Field.Enum) {
+      if (Field.Enum->Scoped)
+        return Field.Enum->Name;
+      return "unsigned";
+    }
+    if (Field.IsIntrinsic || Field.IsInstruction)
       return "unsigned";
     PrintFatalError(Index.Loc,
                     Twine("In table '") + Table.Name + "' lookup method '" +
@@ -214,7 +236,8 @@ private:
   parseSearchIndex(GenericTable &Table, const RecordVal *RecVal, StringRef Name,
                    ArrayRef<StringRef> Key, bool EarlyOut, bool ReturnRange);
   void collectEnumEntries(GenericEnum &Enum, StringRef NameField,
-                          StringRef ValueField, ArrayRef<const Record *> Items);
+                          StringRef ValueField, ArrayRef<const Record *> Items,
+                          const Record *EnumRec = nullptr);
   void collectTableEntries(GenericTable &Table, ArrayRef<const Record *> Items);
   int64_t getNumericKey(const SearchIndex &Index, const Record *Rec);
 };
@@ -336,7 +359,13 @@ void SearchableTableEmitter::emitGenericEnum(const GenericEnum &Enum,
                                              raw_ostream &OS) {
   emitIfdef((Twine("GET_") + Enum.PreprocessorGuard + "_DECL").str(), OS);
 
-  OS << "enum " << Enum.Name << " {\n";
+  OS << "enum " << (Enum.Scoped ? "class " : "") << Enum.Name;
+  if (Enum.Scoped && Enum.ScopedSize != 0) {
+    std::string Type = bitWidthToUInt(Enum.ScopedSize);
+    assert(!Type.empty() && "Invalid enum underlying size");
+    OS << " : " << Type;
+  }
+  OS << " {\n";
   for (const auto &[Name, Value] :
        make_second_range(Enum.Entries.getArrayRef()))
     OS << "  " << Name << " = " << Value << ",\n";
@@ -437,7 +466,12 @@ void SearchableTableEmitter::emitLookupFunction(const GenericTable &Table,
 
     if (IsContiguous && !Index.EarlyOut) {
       OS << "  auto Table = ArrayRef(" << IndexName << ");\n";
-      OS << "  size_t Idx = " << Field.Name << " - " << FirstRepr << ";\n";
+      std::string NumericField =
+          Field.Enum ? "(unsigned)" + Field.Name : Field.Name;
+      std::string NumericFirstRepr =
+          Field.Enum ? "(unsigned)" + FirstRepr : FirstRepr;
+      OS << "  size_t Idx = " << NumericField << " - " << NumericFirstRepr
+         << ";\n";
       OS << "  return ";
       if (IsPrimary)
         OS << "&Table[Idx]";
@@ -650,9 +684,11 @@ std::unique_ptr<SearchIndex> SearchableTableEmitter::parseSearchIndex(
   return Index;
 }
 
-void SearchableTableEmitter::collectEnumEntries(
-    GenericEnum &Enum, StringRef NameField, StringRef ValueField,
-    ArrayRef<const Record *> Items) {
+void SearchableTableEmitter::collectEnumEntries(GenericEnum &Enum,
+                                                StringRef NameField,
+                                                StringRef ValueField,
+                                                ArrayRef<const Record *> Items,
+                                                const Record *EnumRec) {
   Enum.Entries.reserve(Items.size());
   for (const Record *EntryRec : Items) {
     StringRef Name = NameField.empty() ? EntryRec->getName()
@@ -675,6 +711,22 @@ void SearchableTableEmitter::collectEnumEntries(
     // Repopulate entries using the new sorted order.
     for (auto [Idx, Entry] : enumerate(SavedEntries))
       Enum.Entries.try_emplace(Entry.first, Entry.second.Name, Idx);
+  }
+
+  // If this is a scoped enum with custom type size, check if all entries can
+  // fit.
+  if (Enum.Scoped && Enum.ScopedSize != 0 &&
+      (1 << Enum.ScopedSize) < Enum.Entries.size()) {
+    auto Msg = Twine("Scoped enum '") + Enum.Name + "' with size in bits of '" +
+               Twine(Enum.ScopedSize) +
+               "' is too small for the total number of entries '" +
+               Twine(Enum.Entries.size()) + "'";
+    if (EnumRec && !EnumRec->isValueUnset("Size"))
+      if (const RecordVal *SizeVal = EnumRec->getValue("Size"))
+        PrintFatalError(SizeVal, Msg);
+    if (EnumRec)
+      PrintFatalError(EnumRec, Msg);
+    PrintFatalError(Msg);
   }
 }
 
@@ -755,6 +807,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
     auto Enum = std::make_unique<GenericEnum>();
     Enum->Name = EnumRec->getName().str();
     Enum->PreprocessorGuard = EnumRec->getName().str();
+    Enum->Scoped = EnumRec->getValueAsBit("Scoped");
 
     StringRef FilterClass = EnumRec->getValueAsString("FilterClass");
     Enum->Class = Records.getClass(FilterClass);
@@ -763,8 +816,21 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
                       Twine("Enum FilterClass '") + FilterClass +
                           "' does not exist");
 
+    if (!EnumRec->isValueUnset("Size")) {
+      int Size = EnumRec->getValueAsInt("Size");
+      if (Size <= 0)
+        PrintFatalError(EnumRec->getValue("Size"),
+                        Twine("Enum Size must be positive, got ") +
+                            Twine(Size));
+      std::string Type = bitWidthToUInt(static_cast<unsigned>(Size));
+      if (Type.empty())
+        PrintFatalError(EnumRec->getValue("Size"),
+                        "Enum Size must be between 1 and 64");
+      Enum->ScopedSize = static_cast<unsigned>(Size);
+    }
+
     collectEnumEntries(*Enum, NameField, ValueField,
-                       Records.getAllDerivedDefinitions(FilterClass));
+                       Records.getAllDerivedDefinitions(FilterClass), EnumRec);
     EnumMap.try_emplace(EnumRec, Enum.get());
     Enums.emplace_back(std::move(Enum));
   }
@@ -790,7 +856,7 @@ void SearchableTableEmitter::run(raw_ostream &OS) {
                          FieldName +
                          "': " + TypeOfRecordVal->getValue()->getAsString());
           PrintFatalNote("The 'TypeOf_xxx' field must be a string naming a "
-                         "GenericEnum record, or \"code\"");
+                         "GenericEnum(Class) record, or \"code\"");
         }
       }
     }
