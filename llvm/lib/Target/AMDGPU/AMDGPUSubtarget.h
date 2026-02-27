@@ -59,6 +59,7 @@ protected:
   unsigned LocalMemorySize = 0;
   unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
+  unsigned FlatOffsetBitWidth = 13;
 
 public:
   AMDGPUSubtarget(Triple TT) : TargetTriple(std::move(TT)) {}
@@ -234,6 +235,8 @@ public:
   unsigned getAddressableLocalMemorySize() const {
     return AddressableLocalMemorySize;
   }
+
+  unsigned getFlatOffsetBitWidth() const { return FlatOffsetBitWidth; }
 
   /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
   /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
