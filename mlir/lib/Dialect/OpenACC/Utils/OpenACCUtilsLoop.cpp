@@ -152,7 +152,8 @@ namespace acc {
 /// Wrap a multi-block region with scf.execute_region.
 scf::ExecuteRegionOp
 wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
-                                         Location loc, RewriterBase &rewriter) {
+                                         Location loc, RewriterBase &rewriter,
+                                         bool convertFuncReturn) {
   auto exeRegionOp = scf::ExecuteRegionOp::create(rewriter, loc, TypeRange{});
 
   rewriter.cloneRegionBefore(region, exeRegionOp.getRegion(),
@@ -160,21 +161,20 @@ wrapMultiBlockRegionWithSCFExecuteRegion(Region &region, IRMapping &mapping,
 
   // Find and replace the ACC terminators with scf.yield in each block
   for (Block &block : exeRegionOp.getRegion().getBlocks()) {
-    if (block.empty()) {
+    if (block.empty())
       continue;
-    }
     Operation *blockTerminator = block.getTerminator();
-    if (isa<func::ReturnOp>(*blockTerminator) ||
+    if ((convertFuncReturn && isa<func::ReturnOp>(*blockTerminator)) ||
         isa<acc::YieldOp>(*blockTerminator)) {
       if (blockTerminator->getNumOperands()) {
         region.getParentOp()->emitError(
-            "acc.loop with results not yet supported");
+            "region with results not yet supported");
         return nullptr;
       }
       rewriter.setInsertionPointToEnd(&block);
       (void)scf::YieldOp::create(rewriter, blockTerminator->getLoc());
       blockTerminator->erase();
-    } 
+    }
   }
 
   return exeRegionOp;
