@@ -6,8 +6,17 @@ See https://lldb.llvm.org/resources/formatterbytecode.html for more details.
 """
 
 from __future__ import annotations
+
+# Work around the fact that one of the local files is called
+# types.py, which breaks some versions of python.
+import os, sys
+
+path = os.path.abspath(os.path.dirname(__file__))
+sys.path.remove(path)
+
 import re
-from typing import BinaryIO, Iterable, Iterator, TextIO, Tuple, Union
+import io
+from typing import BinaryIO, TextIO, Tuple, Union
 
 BINARY_VERSION = 1
 
@@ -257,8 +266,6 @@ def compile_tokens(tokens: list[str]) -> bytearray:
 
 
 def disassemble_file(input: BinaryIO, output: TextIO) -> None:
-    import io
-
     stream = io.BytesIO(input.read())
 
     version = stream.read(1)[0]
@@ -663,13 +670,6 @@ def _main():
 
 
 if __name__ == "__main__":
-    # Work around the fact that one of the local files is called
-    # types.py, which breaks some versions of python.
-    import os, sys
-
-    path = os.path.abspath(os.path.dirname(__file__))
-    sys.path.remove(path)
-
     if not ("-t" in sys.argv or "--test" in sys.argv):
         _main()
         sys.exit()
@@ -706,8 +706,6 @@ if __name__ == "__main__":
             )
 
         def test_compile_file(self):
-            import io
-
             def run_compile(type_name, asm):
                 out = io.BytesIO()
                 compile_file(type_name, io.StringIO(asm), out)
