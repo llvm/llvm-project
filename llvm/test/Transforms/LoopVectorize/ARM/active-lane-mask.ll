@@ -31,7 +31,7 @@ define void @f0(ptr noalias %dst, ptr readonly %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i8, ptr [[TMP6]], i32 16
 ; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP4]], ptr align 1 [[TMP6]], <16 x i1> [[ACTIVE_LANE_MASK]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v16i8.p0(<16 x i8> [[TMP5]], ptr align 1 [[TMP8]], <16 x i1> [[ACTIVE_LANE_MASK1]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 32
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 32
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP9]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
