@@ -108,22 +108,22 @@ exit:
 define void @truncate_to_i1_used_by_branch(i8 %x, ptr %dst) #0 {
 ; CHECK-LABEL: define void @truncate_to_i1_used_by_branch(
 ; CHECK-SAME: i8 [[X:%.*]], ptr [[DST:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x ptr> poison, ptr [[DST]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 4 x ptr> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x ptr> poison, <vscale x 4 x i32> zeroinitializer
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[AVL:%.*]] = phi i32 [ 9, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i32(i32 [[AVL]], i32 4, i1 true)
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv4i8.nxv4p0(<vscale x 4 x i8> zeroinitializer, <vscale x 4 x ptr> align 1 [[BROADCAST_SPLAT2]], <vscale x 4 x i1> splat (i1 true), i32 [[TMP6]])
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i32 [[AVL]], [[TMP6]]
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
+; CHECK-NEXT:    [[F_039:%.*]] = phi i8 [ 0, %[[VECTOR_PH]] ], [ [[ADD:%.*]], %[[EXIT:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = or i8 23, [[X]]
+; CHECK-NEXT:    [[EXTRACT_T:%.*]] = trunc i8 [[TMP0]] to i1
+; CHECK-NEXT:    br i1 [[EXTRACT_T]], label %[[MIDDLE_BLOCK:.*]], label %[[EXIT]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK-NEXT:    store i8 0, ptr [[DST]], align 1
+; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[ADD]] = add i8 [[F_039]], 1
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 [[F_039]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CONV]], 8
+; CHECK-NEXT:    br i1 [[CMP]], label %[[VECTOR_BODY]], label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -214,7 +214,7 @@ define void @icmp_only_first_op_truncated(ptr noalias %dst, i32 %x, i64 %N, i64 
 ; CHECK-NEXT:    [[TMP11:%.*]] = zext i32 [[TMP14]] to i64
 ; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
@@ -306,5 +306,4 @@ attributes #1 = { "target-features"="+64bit,+v" }
 ; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]], [[META2]]}
 ; CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]], [[META2]]}
-; CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]]}
 ;.

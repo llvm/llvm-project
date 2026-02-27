@@ -7,28 +7,28 @@ define void @pr154103(ptr noalias %a, ptr noalias %b, ptr noalias %c, ptr noalia
 ; CHECK-LABEL: define void @pr154103(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    br label %[[LOOP:.*]]
-; CHECK:       [[LOOP]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[VECTOR_BODY:.*]] ]
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    [[X:%.*]] = load i8, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[X]] to i64
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i64 0, [[CONV]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[DIV]], 0
-; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[LATCH]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[THEN:.*]], label %[[VECTOR_BODY]]
 ; CHECK:       [[THEN]]:
 ; CHECK-NEXT:    [[Y:%.*]] = load i8, ptr [[B]], align 1
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i8 [[Y]] to i64
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i64 [[ZEXT]], 0
-; CHECK-NEXT:    br label %[[LATCH]]
-; CHECK:       [[LATCH]]:
-; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[NOT]], %[[THEN]] ], [ 0, %[[LOOP]] ]
+; CHECK-NEXT:    br label %[[VECTOR_BODY]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[COND:%.*]] = phi i64 [ [[NOT]], %[[THEN]] ], [ 0, %[[VECTOR_PH]] ]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[COND]] to i16
 ; CHECK-NEXT:    store i16 [[TRUNC]], ptr [[C]], align 2
 ; CHECK-NEXT:    store i32 0, ptr [[D]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 7
 ; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[IV]], 0
-; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[VECTOR_PH]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;

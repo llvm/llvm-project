@@ -9,20 +9,20 @@ define void @truncate_to_minimal_bitwidths_widen_cast_recipe(ptr %src) {
 ; CHECK-LABEL: define void @truncate_to_minimal_bitwidths_widen_cast_recipe(
 ; CHECK-SAME: ptr [[SRC:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
-; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
-; CHECK:       [[VECTOR_BODY]]:
-; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 9, %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
-; CHECK-NEXT:    call void @llvm.vp.scatter.nxv8i8.nxv8p0(<vscale x 8 x i8> zeroinitializer, <vscale x 8 x ptr> align 1 zeroinitializer, <vscale x 8 x i1> splat (i1 true), i32 [[TMP7]])
-; CHECK-NEXT:    [[TMP9:%.*]] = zext i32 [[TMP7]] to i64
-; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP9]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
-; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    br label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[AVL:%.*]] = phi i64 [ 9, %[[LOOP]] ], [ [[AVL_NEXT:%.*]], %[[EXIT]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 1, i1 true)
+; CHECK-NEXT:    call void @llvm.vp.scatter.nxv1i8.nxv1p0(<vscale x 1 x i8> zeroinitializer, <vscale x 1 x ptr> align 1 zeroinitializer, <vscale x 1 x i1> splat (i1 true), i32 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
+; CHECK-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[EXIT]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[MIDDLE_BLOCK]]:
+; CHECK-NEXT:    br label %[[EXIT1:.*]]
+; CHECK:       [[EXIT1]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
