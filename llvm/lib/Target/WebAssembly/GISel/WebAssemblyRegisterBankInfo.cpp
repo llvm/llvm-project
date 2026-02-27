@@ -75,25 +75,26 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       return Mapping;
   }
 
-  using namespace TargetOpcode;
-
   const unsigned NumOperands = MI.getNumOperands();
   const ValueMapping *OperandsMapping = nullptr;
   unsigned MappingID = DefaultMappingID;
 
+#ifndef NDEBUG
   // Check if LLT sizes match sizes of available register banks.
   for (const MachineOperand &Op : MI.operands()) {
-    if (Op.isReg()) {
-      LLT RegTy = MRI.getType(Op.getReg());
+    if (!Op.isReg())
+      continue;
 
-      if (RegTy.isScalar() &&
-          (RegTy.getSizeInBits() != 32 && RegTy.getSizeInBits() != 64))
-        return getInvalidInstructionMapping();
+    LLT RegTy = MRI.getType(Op.getReg());
 
-      if (RegTy.isVector() && RegTy.getSizeInBits() != 128)
-        return getInvalidInstructionMapping();
-    }
+    if (RegTy.isScalar() &&
+        (RegTy.getSizeInBits() != 32 && RegTy.getSizeInBits() != 64))
+      return getInvalidInstructionMapping();
+
+    if (RegTy.isVector() && RegTy.getSizeInBits() != 128)
+      return getInvalidInstructionMapping();
   }
+#endif
 
   const LLT Op0Ty = MRI.getType(MI.getOperand(0).getReg());
   unsigned Op0Size = Op0Ty.getSizeInBits();
@@ -102,6 +103,7 @@ WebAssemblyRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       WebAssembly::ValueMappings[Op0Size == 64 ? WebAssembly::I64Idx
                                                : WebAssembly::I32Idx];
 
+  using namespace TargetOpcode;
   switch (Opc) {
   case G_ADD:
   case G_AND:

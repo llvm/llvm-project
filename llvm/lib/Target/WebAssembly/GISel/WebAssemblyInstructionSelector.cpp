@@ -84,7 +84,7 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 }
 
 bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
-  if (!isPreISelGenericOpcode(I.getOpcode())) {
+  if (!I.isPreISelOpcode()) {
     return true;
   }
 
