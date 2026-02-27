@@ -626,6 +626,14 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   if (auto *VTy = dyn_cast<ScalableVectorType>(RetTy))
     if (VTy->getElementCount() == ElementCount::getScalable(1))
       return InstructionCost::getInvalid();
+  // Likewise if we return a scalar but the first operand is <vscale x 1 x
+  // eltty>.
+  if (ICA.getArgTypes().size()) {
+    Type *Ty = ICA.getArgTypes()[0];
+    if (auto *VTy = dyn_cast<ScalableVectorType>(Ty))
+      if (VTy->getElementCount() == ElementCount::getScalable(1))
+        return InstructionCost::getInvalid();
+  }
 
   switch (ICA.getID()) {
   case Intrinsic::experimental_vector_histogram_add: {

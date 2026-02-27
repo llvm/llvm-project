@@ -509,10 +509,7 @@ bool RecurrenceDescriptor::AddReductionVar(
     if (!isIntegerRecurrenceKind(Kind))
       return false;
     Start = lookThroughAnd(Phi, RecurrenceType, VisitedInsts, CastInsts);
-  } else if (ScalarTy->isPointerTy()) {
-    if (Kind != RecurKind::FindLast)
-      return false;
-  } else {
+  } else if (!ScalarTy->isPointerTy() || Kind != RecurKind::FindLast) {
     // Pointer min/max may exist, but it is not supported as a reduction op.
     return false;
   }

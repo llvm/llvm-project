@@ -1088,9 +1088,6 @@ exit:                                     ; preds = %loop
   ret i32 %sel
 }
 
-;; Negative tests
-
-; We don't support FP reduction variables at the moment.
 define float @select_const_f32_from_icmp(ptr %v, i64 %n) {
 ; CHECK-VF4IC1-LABEL: define float @select_const_f32_from_icmp(
 ; CHECK-VF4IC1-SAME: ptr [[V:%.*]], i64 [[N:%.*]]) {
@@ -1356,6 +1353,8 @@ loop:                                      ; preds = %entry, %loop
 exit:                                     ; preds = %loop
   ret i32 %sel
 }
+
+;; Negative tests
 
 ; We only support selects where the input comes from the same PHI as the
 ; reduction PHI. In the example below, the select uses the induction

@@ -5704,12 +5704,18 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
     return std::nullopt;
   };
 
+  VPTypeAnalysis TypeInfo(Plan);
+
   VPValue *HeaderMask = vputils::findHeaderMask(Plan);
   for (VPRecipeBase &Phi :
        make_early_inc_range(VectorLoopRegion->getEntryBasicBlock()->phis())) {
     auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
     if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
                      PhiR->getRecurrenceKind()))
+      continue;
+
+    Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+    if (PhiTy->isPointerTy() || PhiTy->isFloatingPointTy())
       continue;
 
     // If there's a header mask, the backedge select will not be the find-last
@@ -5739,9 +5745,6 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
 
     // Determine direction from SCEV step.
     if (!SE.isKnownNonZero(Step))
-      continue;
-
-    if (IVSCEV->getType()->isPointerTy())
       continue;
 
     // Positive step means we need UMax/SMax to find the last IV value, and
