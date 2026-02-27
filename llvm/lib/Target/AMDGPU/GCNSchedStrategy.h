@@ -724,7 +724,7 @@ private:
   bool setObjective();
 
   /// Unsets target regions in \p Regions whose RP target has been reached.
-  void unsetSatisifedRPTargets(const BitVector &Regions);
+  void unsetSatisfiedRPTargets(const BitVector &Regions);
 
   /// Fully recomputes RP from the DAG in \p Regions. Among those regions, sets
   /// again all \ref TargetRegions that were optimistically marked as satisfied

@@ -426,21 +426,21 @@ bool GCNRPTarget::isSaveBeneficial(Register Reg) const {
 
 unsigned GCNRPTarget::getNumRegsBenefit(const GCNRegPressure &SaveRP) const {
   RegExcess Excess(MF, RP, *this);
-  unsigned NumRegsSaved = 0;
-  unsigned NumVGPRAboveAddrLimit = 0;
-
-  if (Excess.SGPR)
-    NumRegsSaved += std::min(Excess.SGPR, SaveRP.getSGPRNum());
-  if (Excess.ArchVGPR)
-    NumVGPRAboveAddrLimit += std::min(Excess.ArchVGPR, SaveRP.getArchVGPRNum());
-  if (Excess.AGPR)
-    NumVGPRAboveAddrLimit += std::min(Excess.AGPR, SaveRP.getAGPRNum());
-  NumRegsSaved += NumVGPRAboveAddrLimit;
+  const unsigned NumVGPRAboveAddrLimit =
+      std::min(Excess.ArchVGPR, SaveRP.getArchVGPRNum()) +
+      std::min(Excess.AGPR, SaveRP.getAGPRNum());
+  unsigned NumRegsSaved =
+      std::min(Excess.SGPR, SaveRP.getSGPRNum()) + NumVGPRAboveAddrLimit;
 
   if (UnifiedRF && Excess.VGPR) {
-    // Do not double-count VGPRs that are both above the addressable limit in
-    // their respective class and contribute to an overall excess in VGPR.
-    const unsigned VGPRSave = SaveRP.getVGPRNum(true);
+    // We have already accounted for excess pressure above addressive limits for
+    // the individual VGPR classes. However for targets with unified RFs there
+    // is also a unified VGPR pressure (ArchVGPR + AGPR combination) limit to
+    // honor that may be more restrictive that the per-VGPR-class limits. We
+    // must also be careful not to double-count VGPR saves that may contribute
+    // to lowering pressure both above the addressable limit in their respective
+    // class as well as in the unified VGPR limit.
+    const unsigned VGPRSave = SaveRP.getArchVGPRNum() + SaveRP.getAGPRNum();
     if (NumVGPRAboveAddrLimit < VGPRSave)
       NumRegsSaved += std::min(Excess.VGPR, VGPRSave - NumVGPRAboveAddrLimit);
   }

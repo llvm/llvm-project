@@ -1596,7 +1596,7 @@ bool PreRARematStage::initGCNSchedStage() {
         DAG.deleteMI(Remat.DefRegion, Remat.DefMI);
       }
 
-      unsetSatisifedRPTargets(Remat.Live);
+      unsetSatisfiedRPTargets(Remat.Live);
     }
 
     REMAT_DEBUG({
@@ -3025,7 +3025,7 @@ void PreRARematStage::commitRematerializations() const {
     DAG.deleteMI(Rollback.Remat->DefRegion, Rollback.Remat->DefMI);
 }
 
-void PreRARematStage::unsetSatisifedRPTargets(const BitVector &Regions) {
+void PreRARematStage::unsetSatisfiedRPTargets(const BitVector &Regions) {
   for (unsigned I : Regions.set_bits()) {
     if (TargetRegions[I] && RPTargets[I].satisfied()) {
       REMAT_DEBUG(dbgs() << "  [" << I << "] Target reached!\n");
