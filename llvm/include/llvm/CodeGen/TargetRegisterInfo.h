@@ -257,7 +257,8 @@ public:
 
 private:
   const TargetRegisterInfoDesc *InfoDesc;     // Extra desc array for codegen
-  const char *const *SubRegIndexNames;        // Names of subreg indexes.
+  const char *SubRegIndexStrings;             // Names of subreg indexes.
+  ArrayRef<uint32_t> SubRegIndexNameOffsets;
   const SubRegCoveredBits *SubRegIdxRanges;   // Pointer to the subreg covered
                                               // bit ranges array.
 
@@ -271,11 +272,14 @@ private:
   unsigned HwMode;
 
 protected:
-  TargetRegisterInfo(const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-                     regclass_iterator RCE, const char *const *SRINames,
-                     const SubRegCoveredBits *SubIdxRanges,
-                     const LaneBitmask *SRILaneMasks, LaneBitmask CoveringLanes,
-                     const RegClassInfo *const RCIs,
+  TargetRegisterInfo(const TargetRegisterInfoDesc *ID,
+                     ArrayRef<const TargetRegisterClass *> RegisterClasses,
+                     const char *SubRegIndexStrings,
+                     ArrayRef<uint32_t> SubRegIndexNameOffsets,
+                     const SubRegCoveredBits *SubRegIdxRanges,
+                     const LaneBitmask *SubRegIndexLaneMasks,
+                     LaneBitmask CoveringLanes,
+                     const RegClassInfo *const RCInfos,
                      const MVT::SimpleValueType *const RCVTLists,
                      unsigned Mode = 0);
 
@@ -403,12 +407,12 @@ public:
     return InfoDesc->InAllocatableClass[RegNo];
   }
 
-  /// Return the human-readable symbolic target-specific
-  /// name for the specified SubRegIndex.
+  /// Return the human-readable symbolic target-specific name for the specified
+  /// SubRegIndex.
   const char *getSubRegIndexName(unsigned SubIdx) const {
     assert(SubIdx && SubIdx < getNumSubRegIndices() &&
            "This is not a subregister index");
-    return SubRegIndexNames[SubIdx-1];
+    return SubRegIndexStrings + SubRegIndexNameOffsets[SubIdx - 1];
   }
 
   /// Get the size of the bit range covered by a sub-register index.

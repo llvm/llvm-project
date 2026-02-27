@@ -358,7 +358,7 @@ float my_ceilf(float f) {
   // CHECK: cir.func no_inline dso_local @my_ceilf
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_ceilf(float %0)
+  // LLVM: define dso_local float @my_ceilf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.ceil.f32(float %{{.+}})
   // LLVM: }
 
@@ -371,7 +371,7 @@ double my_ceil(double f) {
   // CHECK: cir.func no_inline dso_local @my_ceil
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_ceil(double %0)
+  // LLVM: define dso_local double @my_ceil(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.ceil.f64(double %{{.+}})
   // LLVM: }
 
@@ -385,7 +385,7 @@ long double my_ceill(long double f) {
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_ceill(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_ceill(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.ceil.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -402,7 +402,7 @@ float call_ceilf(float f) {
   // CHECK: cir.func no_inline dso_local @call_ceilf
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_ceilf(float %0)
+  // LLVM: define dso_local float @call_ceilf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.ceil.f32(float %{{.+}})
   // LLVM: }
 
@@ -415,7 +415,7 @@ double call_ceil(double f) {
   // CHECK: cir.func no_inline dso_local @call_ceil
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_ceil(double %0)
+  // LLVM: define dso_local double @call_ceil(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.ceil.f64(double %{{.+}})
   // LLVM: }
 
@@ -429,7 +429,7 @@ long double call_ceill(long double f) {
   // CHECK: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.ceil {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_ceill(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_ceill(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.ceil.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -444,7 +444,7 @@ float my_cosf(float f) {
   // CHECK: cir.func no_inline dso_local @my_cosf
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_cosf(float %0)
+  // LLVM: define dso_local float @my_cosf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.cos.f32(float %{{.+}})
   // LLVM: }
 
@@ -457,7 +457,7 @@ double my_cos(double f) {
   // CHECK: cir.func no_inline dso_local @my_cos
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_cos(double %0)
+  // LLVM: define dso_local double @my_cos(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.cos.f64(double %{{.+}})
   // LLVM: }
 
@@ -471,7 +471,7 @@ long double my_cosl(long double f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_cosl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_cosl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.cos.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -488,7 +488,7 @@ float call_cosf(float f) {
   // CHECK: cir.func no_inline dso_local @call_cosf
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_cosf(float %0)
+  // LLVM: define dso_local float @call_cosf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.cos.f32(float %{{.+}})
   // LLVM: }
 
@@ -501,7 +501,7 @@ double call_cos(double f) {
   // CHECK: cir.func no_inline dso_local @call_cos
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_cos(double %0)
+  // LLVM: define dso_local double @call_cos(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.cos.f64(double %{{.+}})
   // LLVM: }
 
@@ -515,7 +515,7 @@ long double call_cosl(long double f) {
   // CHECK: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.cos {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_cosl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_cosl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.cos.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -530,7 +530,7 @@ float my_expf(float f) {
   // CHECK: cir.func no_inline dso_local @my_expf
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_expf(float %0)
+  // LLVM: define dso_local float @my_expf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.exp.f32(float %{{.+}})
   // LLVM: }
 
@@ -543,7 +543,7 @@ double my_exp(double f) {
   // CHECK: cir.func no_inline dso_local @my_exp
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_exp(double %0)
+  // LLVM: define dso_local double @my_exp(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.exp.f64(double %{{.+}})
   // LLVM: }
 
@@ -557,7 +557,7 @@ long double my_expl(long double f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_expl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_expl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -574,7 +574,7 @@ float call_expf(float f) {
   // CHECK: cir.func no_inline dso_local @call_expf
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_expf(float %0)
+  // LLVM: define dso_local float @call_expf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.exp.f32(float %{{.+}})
   // LLVM: }
 
@@ -587,7 +587,7 @@ double call_exp(double f) {
   // CHECK: cir.func no_inline dso_local @call_exp
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_exp(double %0)
+  // LLVM: define dso_local double @call_exp(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.exp.f64(double %{{.+}})
   // LLVM: }
 
@@ -601,7 +601,7 @@ long double call_expl(long double f) {
   // CHECK: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.exp {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_expl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_expl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -616,7 +616,7 @@ float my_exp2f(float f) {
   // CHECK: cir.func no_inline dso_local @my_exp2f
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_exp2f(float %0)
+  // LLVM: define dso_local float @my_exp2f(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.exp2.f32(float %{{.+}})
   // LLVM: }
 
@@ -629,7 +629,7 @@ double my_exp2(double f) {
   // CHECK: cir.func no_inline dso_local @my_exp2
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_exp2(double %0)
+  // LLVM: define dso_local double @my_exp2(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.exp2.f64(double %{{.+}})
   // LLVM: }
 
@@ -643,7 +643,7 @@ long double my_exp2l(long double f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_exp2l(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_exp2l(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -660,7 +660,7 @@ float call_exp2f(float f) {
   // CHECK: cir.func no_inline dso_local @call_exp2f
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_exp2f(float %0)
+  // LLVM: define dso_local float @call_exp2f(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.exp2.f32(float %{{.+}})
   // LLVM: }
 
@@ -673,7 +673,7 @@ double call_exp2(double f) {
   // CHECK: cir.func no_inline dso_local @call_exp2
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_exp2(double %0)
+  // LLVM: define dso_local double @call_exp2(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.exp2.f64(double %{{.+}})
   // LLVM: }
 
@@ -687,7 +687,7 @@ long double call_exp2l(long double f) {
   // CHECK: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.exp2 {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_exp2l(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_exp2l(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.exp2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -702,7 +702,7 @@ float my_floorf(float f) {
   // CHECK: cir.func no_inline dso_local @my_floorf
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_floorf(float %0)
+  // LLVM: define dso_local float @my_floorf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.floor.f32(float %{{.+}})
   // LLVM: }
 
@@ -715,7 +715,7 @@ double my_floor(double f) {
   // CHECK: cir.func no_inline dso_local @my_floor
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_floor(double %0)
+  // LLVM: define dso_local double @my_floor(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.floor.f64(double %{{.+}})
   // LLVM: }
 
@@ -729,7 +729,7 @@ long double my_floorl(long double f) {
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_floorl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_floorl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.floor.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -746,7 +746,7 @@ float call_floorf(float f) {
   // CHECK: cir.func no_inline dso_local @call_floorf
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_floorf(float %0)
+  // LLVM: define dso_local float @call_floorf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.floor.f32(float %{{.+}})
   // LLVM: }
 
@@ -759,7 +759,7 @@ double call_floor(double f) {
   // CHECK: cir.func no_inline dso_local @call_floor
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_floor(double %0)
+  // LLVM: define dso_local double @call_floor(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.floor.f64(double %{{.+}})
   // LLVM: }
 
@@ -773,7 +773,7 @@ long double call_floorl(long double f) {
   // CHECK: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.floor {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_floorl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_floorl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.floor.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -788,7 +788,7 @@ float my_logf(float f) {
   // CHECK: cir.func no_inline dso_local @my_logf
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_logf(float %0)
+  // LLVM: define dso_local float @my_logf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.log.f32(float %{{.+}})
   // LLVM: }
 
@@ -801,7 +801,7 @@ double my_log(double f) {
   // CHECK: cir.func no_inline dso_local @my_log
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_log(double %0)
+  // LLVM: define dso_local double @my_log(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.log.f64(double %{{.+}})
   // LLVM: }
 
@@ -815,7 +815,7 @@ long double my_logl(long double f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_logl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_logl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.log.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -832,7 +832,7 @@ float call_logf(float f) {
   // CHECK: cir.func no_inline dso_local @call_logf
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_logf(float %0)
+  // LLVM: define dso_local float @call_logf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.log.f32(float %{{.+}})
   // LLVM: }
 
@@ -845,7 +845,7 @@ double call_log(double f) {
   // CHECK: cir.func no_inline dso_local @call_log
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_log(double %0)
+  // LLVM: define dso_local double @call_log(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.log.f64(double %{{.+}})
   // LLVM: }
 
@@ -859,7 +859,7 @@ long double call_logl(long double f) {
   // CHECK: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.log {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_logl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_logl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.log.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -874,7 +874,7 @@ float my_log10f(float f) {
   // CHECK: cir.func no_inline dso_local @my_log10f
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_log10f(float %0)
+  // LLVM: define dso_local float @my_log10f(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.log10.f32(float %{{.+}})
   // LLVM: }
 
@@ -887,7 +887,7 @@ double my_log10(double f) {
   // CHECK: cir.func no_inline dso_local @my_log10
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_log10(double %0)
+  // LLVM: define dso_local double @my_log10(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.log10.f64(double %{{.+}})
   // LLVM: }
 
@@ -901,7 +901,7 @@ long double my_log10l(long double f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_log10l(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_log10l(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.log10.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -918,7 +918,7 @@ float call_log10f(float f) {
   // CHECK: cir.func no_inline dso_local @call_log10f
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_log10f(float %0)
+  // LLVM: define dso_local float @call_log10f(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.log10.f32(float %{{.+}})
   // LLVM: }
 
@@ -931,7 +931,7 @@ double call_log10(double f) {
   // CHECK: cir.func no_inline dso_local @call_log10
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_log10(double %0)
+  // LLVM: define dso_local double @call_log10(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.log10.f64(double %{{.+}})
   // LLVM: }
 
@@ -945,7 +945,7 @@ long double call_log10l(long double f) {
   // CHECK: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.log10 {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_log10l(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_log10l(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.log10.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -960,7 +960,7 @@ float my_log2f(float f) {
   // CHECK: cir.func no_inline dso_local @my_log2f
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_log2f(float %0)
+  // LLVM: define dso_local float @my_log2f(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.log2.f32(float %{{.+}})
   // LLVM: }
 
@@ -973,7 +973,7 @@ double my_log2(double f) {
   // CHECK: cir.func no_inline dso_local @my_log2
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_log2(double %0)
+  // LLVM: define dso_local double @my_log2(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.log2.f64(double %{{.+}})
   // LLVM: }
 
@@ -987,7 +987,7 @@ long double my_log2l(long double f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_log2l(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_log2l(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.log2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1004,7 +1004,7 @@ float call_log2f(float f) {
   // CHECK: cir.func no_inline dso_local @call_log2f
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_log2f(float %0)
+  // LLVM: define dso_local float @call_log2f(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.log2.f32(float %{{.+}})
   // LLVM: }
 
@@ -1017,7 +1017,7 @@ double call_log2(double f) {
   // CHECK: cir.func no_inline dso_local @call_log2
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_log2(double %0)
+  // LLVM: define dso_local double @call_log2(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.log2.f64(double %{{.+}})
   // LLVM: }
 
@@ -1031,7 +1031,7 @@ long double call_log2l(long double f) {
   // CHECK: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.log2 {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_log2l(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_log2l(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.log2.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1046,7 +1046,7 @@ float my_nearbyintf(float f) {
   // CHECK: cir.func no_inline dso_local @my_nearbyintf
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_nearbyintf(float %0)
+  // LLVM: define dso_local float @my_nearbyintf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.nearbyint.f32(float %{{.+}})
   // LLVM: }
 
@@ -1059,7 +1059,7 @@ double my_nearbyint(double f) {
   // CHECK: cir.func no_inline dso_local @my_nearbyint
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_nearbyint(double %0)
+  // LLVM: define dso_local double @my_nearbyint(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.nearbyint.f64(double %{{.+}})
   // LLVM: }
 
@@ -1073,7 +1073,7 @@ long double my_nearbyintl(long double f) {
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_nearbyintl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_nearbyintl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1090,7 +1090,7 @@ float call_nearbyintf(float f) {
   // CHECK: cir.func no_inline dso_local @call_nearbyintf
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_nearbyintf(float %0)
+  // LLVM: define dso_local float @call_nearbyintf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.nearbyint.f32(float %{{.+}})
   // LLVM: }
 
@@ -1103,7 +1103,7 @@ double call_nearbyint(double f) {
   // CHECK: cir.func no_inline dso_local @call_nearbyint
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_nearbyint(double %0)
+  // LLVM: define dso_local double @call_nearbyint(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.nearbyint.f64(double %{{.+}})
   // LLVM: }
 
@@ -1117,7 +1117,7 @@ long double call_nearbyintl(long double f) {
   // CHECK: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.nearbyint {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_nearbyintl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_nearbyintl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.nearbyint.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1132,7 +1132,7 @@ float my_rintf(float f) {
   // CHECK: cir.func no_inline dso_local @my_rintf
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_rintf(float %0)
+  // LLVM: define dso_local float @my_rintf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.rint.f32(float %{{.+}})
   // LLVM: }
 
@@ -1145,7 +1145,7 @@ double my_rint(double f) {
   // CHECK: cir.func no_inline dso_local @my_rint
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_rint(double %0)
+  // LLVM: define dso_local double @my_rint(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.rint.f64(double %{{.+}})
   // LLVM: }
 
@@ -1159,7 +1159,7 @@ long double my_rintl(long double f) {
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_rintl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_rintl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.rint.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1176,7 +1176,7 @@ float call_rintf(float f) {
   // CHECK: cir.func no_inline dso_local @call_rintf
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_rintf(float %0)
+  // LLVM: define dso_local float @call_rintf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.rint.f32(float %{{.+}})
   // LLVM: }
 
@@ -1189,7 +1189,7 @@ double call_rint(double f) {
   // CHECK: cir.func no_inline dso_local @call_rint
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_rint(double %0)
+  // LLVM: define dso_local double @call_rint(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.rint.f64(double %{{.+}})
   // LLVM: }
 
@@ -1203,7 +1203,7 @@ long double call_rintl(long double f) {
   // CHECK: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.rint {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_rintl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_rintl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.rint.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1218,7 +1218,7 @@ float my_roundf(float f) {
   // CHECK: cir.func no_inline dso_local @my_roundf
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_roundf(float %0)
+  // LLVM: define dso_local float @my_roundf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.round.f32(float %{{.+}})
   // LLVM: }
 
@@ -1231,7 +1231,7 @@ double my_round(double f) {
   // CHECK: cir.func no_inline dso_local @my_round
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_round(double %0)
+  // LLVM: define dso_local double @my_round(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.round.f64(double %{{.+}})
   // LLVM: }
 
@@ -1245,7 +1245,7 @@ long double my_roundl(long double f) {
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_roundl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_roundl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.round.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1262,7 +1262,7 @@ float call_roundf(float f) {
   // CHECK: cir.func no_inline dso_local @call_roundf
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_roundf(float %0)
+  // LLVM: define dso_local float @call_roundf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.round.f32(float %{{.+}})
   // LLVM: }
 
@@ -1275,7 +1275,7 @@ double call_round(double f) {
   // CHECK: cir.func no_inline dso_local @call_round
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_round(double %0)
+  // LLVM: define dso_local double @call_round(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.round.f64(double %{{.+}})
   // LLVM: }
 
@@ -1289,7 +1289,7 @@ long double call_roundl(long double f) {
   // CHECK: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.round {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_roundl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_roundl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.round.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1304,7 +1304,7 @@ float my_sinf(float f) {
   // CHECK: cir.func no_inline dso_local @my_sinf
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_sinf(float %0)
+  // LLVM: define dso_local float @my_sinf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.sin.f32(float %{{.+}})
   // LLVM: }
 
@@ -1317,7 +1317,7 @@ double my_sin(double f) {
   // CHECK: cir.func no_inline dso_local @my_sin
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_sin(double %0)
+  // LLVM: define dso_local double @my_sin(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.sin.f64(double %{{.+}})
   // LLVM: }
 
@@ -1331,7 +1331,7 @@ long double my_sinl(long double f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_sinl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_sinl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.sin.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1348,7 +1348,7 @@ float call_sinf(float f) {
   // CHECK: cir.func no_inline dso_local @call_sinf
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_sinf(float %0)
+  // LLVM: define dso_local float @call_sinf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.sin.f32(float %{{.+}})
   // LLVM: }
 
@@ -1361,7 +1361,7 @@ double call_sin(double f) {
   // CHECK: cir.func no_inline dso_local @call_sin
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_sin(double %0)
+  // LLVM: define dso_local double @call_sin(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.sin.f64(double %{{.+}})
   // LLVM: }
 
@@ -1375,7 +1375,7 @@ long double call_sinl(long double f) {
   // CHECK: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.sin {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_sinl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_sinl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.sin.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1390,7 +1390,7 @@ float my_sqrtf(float f) {
   // CHECK: cir.func no_inline dso_local @my_sqrtf
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_sqrtf(float %0)
+  // LLVM: define dso_local float @my_sqrtf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.sqrt.f32(float %{{.+}})
   // LLVM: }
 
@@ -1403,7 +1403,7 @@ double my_sqrt(double f) {
   // CHECK: cir.func no_inline dso_local @my_sqrt
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_sqrt(double %0)
+  // LLVM: define dso_local double @my_sqrt(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.sqrt.f64(double %{{.+}})
   // LLVM: }
 
@@ -1417,7 +1417,7 @@ long double my_sqrtl(long double f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_sqrtl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_sqrtl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.sqrt.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1434,7 +1434,7 @@ float call_sqrtf(float f) {
   // CHECK: cir.func no_inline dso_local @call_sqrtf
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_sqrtf(float %0)
+  // LLVM: define dso_local float @call_sqrtf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.sqrt.f32(float %{{.+}})
   // LLVM: }
 
@@ -1447,7 +1447,7 @@ double call_sqrt(double f) {
   // CHECK: cir.func no_inline dso_local @call_sqrt
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_sqrt(double %0)
+  // LLVM: define dso_local double @call_sqrt(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.sqrt.f64(double %{{.+}})
   // LLVM: }
 
@@ -1461,7 +1461,7 @@ long double call_sqrtl(long double f) {
   // CHECK: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.sqrt {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_sqrtl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_sqrtl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.sqrt.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1476,7 +1476,7 @@ float my_tanf(float f) {
   // CHECK: cir.func no_inline dso_local @my_tanf
   // CHECK: {{.+}} = cir.tan {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_tanf(float %0)
+  // LLVM: define dso_local float @my_tanf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.tan.f32(float %{{.+}})
   // LLVM: }
 
@@ -1489,7 +1489,7 @@ double my_tan(double f) {
   // CHECK: cir.func no_inline dso_local @my_tan
   // CHECK: {{.+}} = cir.tan {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_tan(double %0)
+  // LLVM: define dso_local double @my_tan(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.tan.f64(double %{{.+}})
   // LLVM: }
 
@@ -1503,7 +1503,7 @@ long double my_tanl(long double f) {
   // CHECK: {{.+}} = cir.tan {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.tan {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_tanl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_tanl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.tan.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1520,7 +1520,7 @@ float call_tanf(float f) {
   // CHECK: cir.func no_inline dso_local @call_tanf
   // CHECK: {{.+}} = cir.tan {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_tanf(float %0)
+  // LLVM: define dso_local float @call_tanf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.tan.f32(float %{{.+}})
   // LLVM: }
 
@@ -1533,7 +1533,7 @@ double call_tan(double f) {
   // CHECK: cir.func no_inline dso_local @call_tan
   // CHECK: {{.+}} = cir.tan {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_tan(double %0)
+  // LLVM: define dso_local double @call_tan(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.tan.f64(double %{{.+}})
   // LLVM: }
 
@@ -1547,7 +1547,7 @@ long double call_tanl(long double f) {
   // CHECK: {{.+}} = cir.tan {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.tan {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_tanl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_tanl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.tan.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1562,7 +1562,7 @@ float my_truncf(float f) {
   // CHECK: cir.func no_inline dso_local @my_truncf
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @my_truncf(float %0)
+  // LLVM: define dso_local float @my_truncf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.trunc.f32(float %{{.+}})
   // LLVM: }
 
@@ -1575,7 +1575,7 @@ double my_trunc(double f) {
   // CHECK: cir.func no_inline dso_local @my_trunc
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @my_trunc(double %0)
+  // LLVM: define dso_local double @my_trunc(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.trunc.f64(double %{{.+}})
   // LLVM: }
 
@@ -1589,7 +1589,7 @@ long double my_truncl(long double f) {
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @my_truncl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @my_truncl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.trunc.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
@@ -1606,7 +1606,7 @@ float call_truncf(float f) {
   // CHECK: cir.func no_inline dso_local @call_truncf
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.float
 
-  // LLVM: define dso_local float @call_truncf(float %0)
+  // LLVM: define dso_local float @call_truncf(float noundef %0)
   // LLVM:   %{{.+}} = call float @llvm.trunc.f32(float %{{.+}})
   // LLVM: }
 
@@ -1619,7 +1619,7 @@ double call_trunc(double f) {
   // CHECK: cir.func no_inline dso_local @call_trunc
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.double
 
-  // LLVM: define dso_local double @call_trunc(double %0)
+  // LLVM: define dso_local double @call_trunc(double noundef %0)
   // LLVM:   %{{.+}} = call double @llvm.trunc.f64(double %{{.+}})
   // LLVM: }
 
@@ -1633,7 +1633,7 @@ long double call_truncl(long double f) {
   // CHECK: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.f80>
   // AARCH64: {{.+}} = cir.trunc {{.+}} : !cir.long_double<!cir.double>
 
-  // LLVM: define dso_local x86_fp80 @call_truncl(x86_fp80 %0)
+  // LLVM: define dso_local x86_fp80 @call_truncl(x86_fp80 noundef %0)
   // LLVM:   %{{.+}} = call x86_fp80 @llvm.trunc.f80(x86_fp80 %{{.+}})
   // LLVM: }
 
