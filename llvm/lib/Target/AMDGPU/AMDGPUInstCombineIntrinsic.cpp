@@ -1451,7 +1451,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   case Intrinsic::amdgcn_s_sendmsg:
   case Intrinsic::amdgcn_s_sendmsghalt: {
     // The second operand is copied to m0, but is only actually used for
-    // GS_ALLOC_REQ. For other message types, fold it to poison.
+    // GS_ALLOC_REQ. For other message types that are known to not use m0,
+    // fold it to poison.
     using namespace AMDGPU::SendMsg;
 
     Value *M0Val = II.getArgOperand(1);
@@ -1461,16 +1462,43 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     auto *MsgImm = cast<ConstantInt>(II.getArgOperand(0));
     uint64_t Msg = MsgImm->getZExtValue();
     // Extract the message ID. Pre-GFX11 uses the lower 4 bits, GFX11+ uses
-    // the lower 8 bits. Since ID_GS_ALLOC_REQ is 9, we need to check the
-    // appropriate mask. For simplicity, extract the lower 8 bits which covers
-    // both cases.
-    uint64_t MsgId = Msg & ID_MASK_GFX11Plus_;
+    // the lower 8 bits. Use 4-bit mask for extracting base message ID since
+    // all message types we handle fit in 4 bits, and the upper bits encode
+    // stream ID or other parameters for some message types (e.g., MSG_GS).
+    uint64_t MsgId = Msg & ID_MASK_PreGFX11_;
 
-    // Only GS_ALLOC_REQ uses the m0 value.
-    if (MsgId == ID_GS_ALLOC_REQ)
+    // Explicitly list message types that are known to not use m0.
+    // This is safer than excluding only GS_ALLOC_REQ, in case new message
+    // types are added in the future that do use m0.
+    bool M0Unused;
+    switch (MsgId) {
+    case ID_INTERRUPT:
+    case ID_GS_PreGFX11:
+    case ID_GS_DONE_PreGFX11:
+    // ID_HS_TESSFACTOR_GFX11Plus and ID_DEALLOC_VGPRS_GFX11Plus have the
+    // same values as ID_GS_PreGFX11 and ID_GS_DONE_PreGFX11 respectively.
+    case ID_SAVEWAVE:
+    case ID_STALL_WAVE_GEN:
+    case ID_HALT_WAVES:
+    case ID_ORDERED_PS_DONE:
+    case ID_EARLY_PRIM_DEALLOC:
+    case ID_GET_DOORBELL:
+    case ID_GET_DDID:
+    case ID_SYSMSG:
+      M0Unused = true;
+      break;
+    default:
+      M0Unused = false;
+      break;
+    }
+
+    if (!M0Unused)
       break;
 
-    return IC.replaceOperand(II, 1, PoisonValue::get(M0Val->getType()));
+    // Drop noundef attribute since we're replacing with poison.
+    II.removeParamAttr(1, Attribute::NoUndef);
+    IC.replaceOperand(II, 1, PoisonValue::get(M0Val->getType()));
+    return nullptr;
   }
   case Intrinsic::amdgcn_update_dpp: {
     Value *Old = II.getArgOperand(0);
