@@ -6743,7 +6743,7 @@ OpFoldResult BitCastOp::fold(FoldAdaptor adaptor) {
     if (intPack.isSplat()) {
       auto splat = intPack.getSplatValue<IntegerAttr>();
 
-      if (llvm::isa<IntegerType>(dstElemType)) {
+      if (llvm::isa<IntegerType>(dstElemType) && srcElemType.isIntOrFloat()) {
         uint64_t srcBitWidth = srcElemType.getIntOrFloatBitWidth();
         uint64_t dstBitWidth = dstElemType.getIntOrFloatBitWidth();
 
@@ -7612,10 +7612,8 @@ static LogicalResult foldEmptyMaskOp(MaskOp maskOp, MaskOp::FoldAdaptor adaptor,
 
   Block *block = maskOp.getMaskBlock();
   auto terminator = cast<vector::YieldOp>(block->front());
-  if (terminator.getNumOperands() == 0) {
-    // `vector.mask` has no results, just remove the `vector.mask`.
-    return success();
-  }
+  if (terminator.getNumOperands() == 0)
+    return failure();
 
   // `vector.mask` has results, propagate the results.
   llvm::append_range(results, terminator.getOperands());
