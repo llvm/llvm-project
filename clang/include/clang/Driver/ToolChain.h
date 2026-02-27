@@ -615,6 +615,10 @@ public:
   // i.e. a value of 'true' does not imply that debugging is wanted.
   virtual bool GetDefaultStandaloneDebug() const { return false; }
 
+  /// Returns true if this toolchain adds '-gsimple-template-names=simple'
+  /// by default when generating debug-info.
+  virtual bool getDefaultDebugSimpleTemplateNames() const { return false; }
+
   // Return the default debugger "tuning."
   virtual llvm::DebuggerKind getDefaultDebuggerTuning() const {
     return llvm::DebuggerKind::GDB;
@@ -749,8 +753,8 @@ public:
                                    llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddFilePathLibArgs - Add each thing in getFilePaths() as a "-L" option.
-  void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
-                          llvm::opt::ArgStringList &CmdArgs) const;
+  virtual void AddFilePathLibArgs(const llvm::opt::ArgList &Args,
+                                  llvm::opt::ArgStringList &CmdArgs) const;
 
   /// AddCCKextLibArgs - Add the system specific linker arguments to use
   /// for kernel extensions (Darwin-specific).

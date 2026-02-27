@@ -126,6 +126,8 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     if (os == llvm::Triple::Linux &&
         Triple.getEnvironment() == llvm::Triple::Musl)
       return std::make_unique<LinuxTargetInfo<HexagonTargetInfo>>(Triple, Opts);
+    if (Triple.isOSQurt())
+      return std::make_unique<QURTTargetInfo<HexagonTargetInfo>>(Triple, Opts);
     return std::make_unique<HexagonTargetInfo>(Triple, Opts);
 
   case llvm::Triple::lanai:
@@ -682,13 +684,13 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     return std::make_unique<SPIRVTargetInfo>(Triple, Opts);
   }
   case llvm::Triple::spirv32: {
-    if (os != llvm::Triple::UnknownOS ||
+    if ((os != llvm::Triple::UnknownOS && os != llvm::Triple::ChipStar) ||
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment)
       return nullptr;
     return std::make_unique<SPIRV32TargetInfo>(Triple, Opts);
   }
   case llvm::Triple::spirv64: {
-    if (os != llvm::Triple::UnknownOS ||
+    if ((os != llvm::Triple::UnknownOS && os != llvm::Triple::ChipStar) ||
         Triple.getEnvironment() != llvm::Triple::UnknownEnvironment) {
       if (os == llvm::Triple::OSType::AMDHSA)
         return std::make_unique<SPIRV64AMDGCNTargetInfo>(Triple, Opts);

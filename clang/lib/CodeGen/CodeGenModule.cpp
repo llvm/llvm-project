@@ -980,6 +980,7 @@ void CodeGenModule::Release() {
   applyGlobalValReplacements();
   applyReplacements();
   emitMultiVersionFunctions();
+  emitPFPFieldsWithEvaluatedOffset();
 
   if (Context.getLangOpts().IncrementalExtensions &&
       GlobalTopLevelStmtBlockInFlight.first) {
@@ -2928,15 +2929,25 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       B.addAttribute(llvm::Attribute::MinSize);
   }
 
+  // Add `nooutline` if Outlining is disabled with a command-line flag or a
+  // function attribute.
+  if (CodeGenOpts.DisableOutlining || D->hasAttr<NoOutlineAttr>())
+    B.addAttribute(llvm::Attribute::NoOutline);
+
   F->addFnAttrs(B);
 
-  unsigned alignment = D->getMaxAlignment() / Context.getCharWidth();
-  if (alignment)
-    F->setAlignment(llvm::Align(alignment));
+  llvm::MaybeAlign ExplicitAlignment;
+  if (unsigned alignment = D->getMaxAlignment() / Context.getCharWidth())
+    ExplicitAlignment = llvm::Align(alignment);
+  else if (LangOpts.FunctionAlignment)
+    ExplicitAlignment = llvm::Align(1ull << LangOpts.FunctionAlignment);
 
-  if (!D->hasAttr<AlignedAttr>())
-    if (LangOpts.FunctionAlignment)
-      F->setAlignment(llvm::Align(1ull << LangOpts.FunctionAlignment));
+  if (ExplicitAlignment) {
+    F->setAlignment(ExplicitAlignment);
+    F->setPreferredAlignment(ExplicitAlignment);
+  } else if (LangOpts.PreferredFunctionAlignment) {
+    F->setPreferredAlignment(llvm::Align(LangOpts.PreferredFunctionAlignment));
+  }
 
   // Some C++ ABIs require 2-byte alignment for member functions, in order to
   // reserve a bit for differentiating between virtual and non-virtual member
@@ -4891,6 +4902,40 @@ void CodeGenModule::emitMultiVersionFunctions() {
     emitMultiVersionFunctions();
 }
 
+// Symbols with this prefix are used as deactivation symbols for PFP fields.
+// See clang/docs/StructureProtection.rst for more information.
+static const char PFPDeactivationSymbolPrefix[] = "__pfp_ds_";
+
+llvm::GlobalValue *
+CodeGenModule::getPFPDeactivationSymbol(const FieldDecl *FD) {
+  std::string DSName = PFPDeactivationSymbolPrefix + getPFPFieldName(FD);
+  llvm::GlobalValue *DS = TheModule.getNamedValue(DSName);
+  if (!DS) {
+    DS = new llvm::GlobalVariable(TheModule, Int8Ty, false,
+                                  llvm::GlobalVariable::ExternalWeakLinkage,
+                                  nullptr, DSName);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+  }
+  return DS;
+}
+
+void CodeGenModule::emitPFPFieldsWithEvaluatedOffset() {
+  llvm::Constant *Nop = llvm::ConstantExpr::getIntToPtr(
+      llvm::ConstantInt::get(Int64Ty, 0xd503201f), VoidPtrTy);
+  for (auto *FD : getContext().PFPFieldsWithEvaluatedOffset) {
+    std::string DSName = PFPDeactivationSymbolPrefix + getPFPFieldName(FD);
+    llvm::GlobalValue *OldDS = TheModule.getNamedValue(DSName);
+    llvm::GlobalValue *DS = llvm::GlobalAlias::create(
+        Int8Ty, 0, llvm::GlobalValue::ExternalLinkage, DSName, Nop, &TheModule);
+    DS->setVisibility(llvm::GlobalValue::HiddenVisibility);
+    if (OldDS) {
+      DS->takeName(OldDS);
+      OldDS->replaceAllUsesWith(DS);
+      OldDS->eraseFromParent();
+    }
+  }
+}
+
 static void replaceDeclarationWith(llvm::GlobalValue *Old,
                                    llvm::Constant *New) {
   assert(cast<llvm::Function>(Old)->isDeclaration() && "Not a declaration");
@@ -5721,11 +5766,9 @@ CodeGenModule::GetOrCreateLLVMGlobal(StringRef MangledName, llvm::Type *Ty,
       D ? D->getType().getAddressSpace()
         : (LangOpts.OpenCL ? LangAS::opencl_global : LangAS::Default);
   assert(getContext().getTargetAddressSpace(ExpectedAS) == TargetAS);
-  if (DAddrSpace != ExpectedAS) {
-    return getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, DAddrSpace,
-        llvm::PointerType::get(getLLVMContext(), TargetAS));
-  }
+  if (DAddrSpace != ExpectedAS)
+    return performAddrSpaceCast(
+        GV, llvm::PointerType::get(getLLVMContext(), TargetAS));
 
   return GV;
 }
@@ -5957,11 +6000,10 @@ castStringLiteralToDefaultAddressSpace(CodeGenModule &CGM,
   if (!CGM.getLangOpts().OpenCL) {
     auto AS = CGM.GetGlobalConstantAddressSpace();
     if (AS != LangAS::Default)
-      Cast = CGM.getTargetCodeGenInfo().performAddrSpaceCast(
-          CGM, GV, AS,
-          llvm::PointerType::get(
-              CGM.getLLVMContext(),
-              CGM.getContext().getTargetAddressSpace(LangAS::Default)));
+      Cast = CGM.performAddrSpaceCast(
+          GV, llvm::PointerType::get(
+                  CGM.getLLVMContext(),
+                  CGM.getContext().getTargetAddressSpace(LangAS::Default)));
   }
   return Cast;
 }
@@ -6224,7 +6266,8 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   // / cudaMemcpyToSymbol() / cudaMemcpyFromSymbol())."
   if (LangOpts.CUDA) {
     if (LangOpts.CUDAIsDevice) {
-      if (Linkage != llvm::GlobalValue::InternalLinkage &&
+      if (Linkage != llvm::GlobalValue::InternalLinkage && !D->isConstexpr() &&
+          !D->getType().isConstQualified() &&
           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
            D->getType()->isCUDADeviceBuiltinSurfaceType() ||
            D->getType()->isCUDADeviceBuiltinTextureType()))
@@ -7384,11 +7427,10 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
     setTLSMode(GV, *VD);
   llvm::Constant *CV = GV;
   if (AddrSpace != LangAS::Default)
-    CV = getTargetCodeGenInfo().performAddrSpaceCast(
-        *this, GV, AddrSpace,
-        llvm::PointerType::get(
-            getLLVMContext(),
-            getContext().getTargetAddressSpace(LangAS::Default)));
+    CV = performAddrSpaceCast(
+        GV, llvm::PointerType::get(
+                getLLVMContext(),
+                getContext().getTargetAddressSpace(LangAS::Default)));
 
   // Update the map with the new temporary. If we created a placeholder above,
   // replace it with the new global now.
@@ -8472,4 +8514,13 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
+}
+
+std::string CodeGenModule::getPFPFieldName(const FieldDecl *FD) {
+  std::string OutName;
+  llvm::raw_string_ostream Out(OutName);
+  getCXXABI().getMangleContext().mangleCanonicalTypeName(
+      getContext().getCanonicalTagType(FD->getParent()), Out, false);
+  Out << "." << FD->getName();
+  return OutName;
 }

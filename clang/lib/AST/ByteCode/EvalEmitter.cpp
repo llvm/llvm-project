@@ -37,7 +37,7 @@ EvaluationResult EvalEmitter::interpretExpr(const Expr *E,
                                             bool DestroyToplevelScope) {
   S.setEvalLocation(E->getExprLoc());
   this->ConvertResultToRValue = ConvertResultToRValue && !isa<ConstantExpr>(E);
-  this->CheckFullyInitialized = isa<ConstantExpr>(E);
+  this->CheckFullyInitialized = isa<ConstantExpr>(E) && !E->isGLValue();
   EvalResult.setSource(E);
 
   if (!this->visitExpr(E, DestroyToplevelScope)) {
