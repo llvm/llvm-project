@@ -72,8 +72,10 @@ struct VPlanTransforms {
           dbgs() << Plan << '\n';
       }
 #endif
-      if (VerifyEachVPlan && EnableVerify)
-        verifyVPlanIsValid(Plan);
+      if (VerifyEachVPlan && EnableVerify) {
+        if (!verifyVPlanIsValid(Plan))
+          report_fatal_error("Broken VPlan found, compilation aborted!");
+      }
     }};
 
     return std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
@@ -158,13 +160,11 @@ struct VPlanTransforms {
                                                bool TailFolded);
 
   // Create a check to \p Plan to see if the vector loop should be executed.
-  static void
-  addMinimumIterationCheck(VPlan &Plan, ElementCount VF, unsigned UF,
-                           ElementCount MinProfitableTripCount,
-                           bool RequiresScalarEpilogue, bool TailFolded,
-                           bool CheckNeededWithTailFolding, Loop *OrigLoop,
-                           const uint32_t *MinItersBypassWeights, DebugLoc DL,
-                           PredicatedScalarEvolution &PSE);
+  static void addMinimumIterationCheck(
+      VPlan &Plan, ElementCount VF, unsigned UF,
+      ElementCount MinProfitableTripCount, bool RequiresScalarEpilogue,
+      bool TailFolded, Loop *OrigLoop, const uint32_t *MinItersBypassWeights,
+      DebugLoc DL, PredicatedScalarEvolution &PSE);
 
   /// Add a check to \p Plan to see if the epilogue vector loop should be
   /// executed.
@@ -238,6 +238,11 @@ struct VPlanTransforms {
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                  unsigned BestUF,
                                  PredicatedScalarEvolution &PSE);
+
+  /// Try to simplify VPInstruction::ExplicitVectorLength recipes when the AVL
+  /// is known to be <= VF, replacing them with the AVL directly.
+  static bool simplifyKnownEVL(VPlan &Plan, ElementCount VF,
+                               PredicatedScalarEvolution &PSE);
 
   /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
   /// optimizations, dead recipe removal, replicate region optimizations and
@@ -463,9 +468,8 @@ struct VPlanTransforms {
   /// Update the resume phis in the scalar preheader after creating wide recipes
   /// for first-order recurrences, reductions and inductions. End values for
   /// inductions are added to \p IVEndValues.
-  static void
-  updateScalarResumePhis(VPlan &Plan,
-                         DenseMap<VPValue *, VPValue *> &IVEndValues);
+  static void updateScalarResumePhis(
+      VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues, bool FoldTail);
 
   /// Handle users in the exit block for first order reductions in the original
   /// exit block. The penultimate value of recurrences is fed to their LCSSA phi

@@ -236,3 +236,9 @@
 // RUN: %s -check-prefix CHECK-INTERFERENCE-73
 // CHECK-INTERFERENCE-73: #define __GCC_CONSTRUCTIVE_SIZE 64
 // CHECK-INTERFERENCE-73: #define __GCC_DESTRUCTIVE_SIZE 64
+
+// RUN: %clang_cc1 -E -dM -triple hexagon-unknown-qurt %s | FileCheck \
+// RUN: %s -check-prefix CHECK-QURT
+// CHECK-QURT: #define __hexagon__ 1
+// CHECK-QURT: #define __qurt__ 1
+// CHECK-QURT-NOT: #define __linux__
