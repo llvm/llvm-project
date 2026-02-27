@@ -515,6 +515,47 @@ TEST_F(IRBuilderTest, ConstrainedFPFunctionCall) {
   EXPECT_FALSE(verifyModule(*M));
 }
 
+TEST_F(IRBuilderTest, DetectDefaultStrictFP) {
+  // Create an empty constrained FP function.
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Ctx),
+                                        /*isVarArg=*/false);
+  Function *FStrict =
+      Function::Create(FTy, Function::ExternalLinkage, "", M.get());
+  FStrict->addFnAttr(Attribute::StrictFP);
+  BasicBlock *BBStrict = BasicBlock::Create(Ctx, "", FStrict);
+
+  struct TestInserter : public IRBuilderDefaultInserter {
+    TestInserter() = default;
+  };
+  InstSimplifyFolder Folder(M->getDataLayout());
+
+  IRBuilder Builder1(BBStrict, Folder);
+
+  // A simple check is sufficient since we already check that StrictFP
+  // mode works correctly in previous tests above.
+  EXPECT_TRUE(Builder1.getIsFPConstrained());
+
+  MDBuilder MDB(M->getContext());
+  MDNode *FPMath = MDB.createFPMath(0.01f);
+
+  IRBuilder Builder2(BBStrict, FPMath);
+  EXPECT_TRUE(Builder2.getIsFPConstrained());
+
+  Value *V = Builder2.CreateLoad(GV->getValueType(), GV);
+  V = Builder2.CreateFAdd(V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  auto *II = cast<IntrinsicInst>(V);
+
+  IRBuilder Builder3(II, FPMath);
+  EXPECT_TRUE(Builder3.getIsFPConstrained());
+
+  IRBuilder Builder4(BBStrict, BBStrict->back().getIterator(), Folder);
+  EXPECT_TRUE(Builder4.getIsFPConstrained());
+
+  IRBuilder Builder5(BBStrict, BBStrict->back().getIterator(), FPMath);
+  EXPECT_TRUE(Builder5.getIsFPConstrained());
+}
+
 TEST_F(IRBuilderTest, Lifetime) {
   IRBuilder<> Builder(BB);
   AllocaInst *Var1 = Builder.CreateAlloca(Builder.getInt8Ty());
