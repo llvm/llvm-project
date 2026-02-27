@@ -22,8 +22,10 @@ class KnownBitsDataflow;
 class Value;
 class User;
 class Function;
+class Operator;
 class DataLayout;
 class raw_ostream;
+struct SimplifyQuery;
 
 class KnownBitsDataflow : protected DenseMap<const Value *, KnownBits> {
   /// The roots are the arguments of the function, and PHI nodes and
@@ -98,6 +100,41 @@ public:
 };
 
 class KnownBitsCache : protected KnownBitsDataflow {
+  KnownBits computeKnownBitsForHorizontalOperation(
+      const Operator *I, const APInt &DemandedElts, const SimplifyQuery &Q,
+      const function_ref<KnownBits(const KnownBits &, const KnownBits &)>
+          KnownBitsFunc);
+  void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
+                                       const APInt &DemandedElts,
+                                       KnownBits &KnownOut,
+                                       const SimplifyQuery &Q);
+  void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
+                              bool NSW, bool NUW, const APInt &DemandedElts,
+                              KnownBits &KnownOut, KnownBits &Known2,
+                              const SimplifyQuery &Q);
+  void computeKnownBitsMul(const Value *Op0, const Value *Op1, bool NSW,
+                           bool NUW, const APInt &DemandedElts,
+                           KnownBits &Known, KnownBits &Known2,
+                           const SimplifyQuery &Q);
+  void computeKnownBitsFromShiftOperator(
+      const Operator *I, const APInt &DemandedElts, KnownBits &Known,
+      KnownBits &Known2, const SimplifyQuery &Q,
+      function_ref<KnownBits(const KnownBits &, const KnownBits &, bool)> KF);
+  KnownBits getKnownBitsFromAndXorOr(const Operator *I,
+                                     const APInt &DemandedElts,
+                                     const KnownBits &KnownLHS,
+                                     const KnownBits &KnownRHS,
+                                     const SimplifyQuery &Q);
+  void computeKnownBitsFromOperator(const Operator *I,
+                                    const APInt &DemandedElts, KnownBits &Known,
+                                    const SimplifyQuery &Q);
+  KnownBits computeKnownBits(const Value *V, const SimplifyQuery &Q);
+  KnownBits computeKnownBits(const Value *V, const APInt &DemandedElts,
+                             const SimplifyQuery &Q);
+  void computeKnownBits(const Value *V, const APInt &DemandedElts,
+                        KnownBits &Known, const SimplifyQuery &Q);
+  void computeKnownBits(const Value *V, KnownBits &Known,
+                        const SimplifyQuery &Q);
   void compute(ArrayRef<const Value *> Leaves);
 
 public:

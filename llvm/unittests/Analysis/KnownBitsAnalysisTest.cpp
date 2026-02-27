@@ -366,7 +366,12 @@ $   %cond = icmp slt i32 %next_counter, %n | !
 }
 
 /// KnownBitsCache tests follow.
-TEST_F(KnownBitsAnalysisTest, KnownBitsComputationParity) {
+struct KnownBitsCacheForTest : public KnownBitsCache {
+  KnownBitsCacheForTest(Function &F) : KnownBitsCache(F) {}
+  KnownBits at(const Value *V) const { return KnownBitsCache::at(V); }
+};
+
+TEST_F(KnownBitsAnalysisTest, KnownBitsCacheLeavesInitialization) {
   parseAssembly(R"(
 define void @test(i32 %int_arg, float %float_arg, ptr %ptr_arg, <2 x i32> %vec_int_arg, <2 x ptr> %vec_ptr_arg) {
 entry:
@@ -393,7 +398,7 @@ merge:
   store float %phi_float, ptr %phi_ptr
   ret void
 })");
-  KnownBitsCache Lat(*F);
+  KnownBitsCacheForTest Lat(*F);
   auto *ArgIt = F->arg_begin();
   Argument *IntArg = &*ArgIt++;
   ArgIt++;
@@ -413,21 +418,21 @@ merge:
   Instruction *VecPtrConv = findInstructionByName(F, "vec_ptr_conv");
   Instruction *FinalVec = findInstructionByName(F, "final_vec");
 
-  EXPECT_EQ(Lat.getOrCompute(IntArg), computeKnownBits(IntArg, DL));
-  EXPECT_EQ(Lat.getOrCompute(PtrArg), computeKnownBits(PtrArg, DL));
-  EXPECT_EQ(Lat.getOrCompute(VecIntArg), computeKnownBits(VecIntArg, DL));
-  EXPECT_EQ(Lat.getOrCompute(VecPtrArg), computeKnownBits(VecPtrArg, DL));
-  EXPECT_EQ(Lat.getOrCompute(IntVal), computeKnownBits(IntVal, DL));
-  EXPECT_EQ(Lat.getOrCompute(VecVal), computeKnownBits(VecVal, DL));
-  EXPECT_EQ(Lat.getOrCompute(IntVal2), computeKnownBits(IntVal2, DL));
-  EXPECT_EQ(Lat.getOrCompute(PtrVal), computeKnownBits(PtrVal, DL));
-  EXPECT_EQ(Lat.getOrCompute(VecVal2), computeKnownBits(VecVal2, DL));
-  EXPECT_EQ(Lat.getOrCompute(PhiInt), computeKnownBits(PhiInt, DL));
-  EXPECT_EQ(Lat.getOrCompute(PhiPtr), computeKnownBits(PhiPtr, DL));
-  EXPECT_EQ(Lat.getOrCompute(PhiVec), computeKnownBits(PhiVec, DL));
-  EXPECT_EQ(Lat.getOrCompute(FinalInt), computeKnownBits(FinalInt, DL));
-  EXPECT_EQ(Lat.getOrCompute(FPConv), computeKnownBits(FPConv, DL));
-  EXPECT_EQ(Lat.getOrCompute(VecPtrConv), computeKnownBits(VecPtrConv, DL));
-  EXPECT_EQ(Lat.getOrCompute(FinalVec), computeKnownBits(FinalVec, DL));
+  EXPECT_EQ(Lat.at(IntArg), computeKnownBits(IntArg, DL));
+  EXPECT_EQ(Lat.at(PtrArg), computeKnownBits(PtrArg, DL));
+  EXPECT_EQ(Lat.at(VecIntArg), computeKnownBits(VecIntArg, DL));
+  EXPECT_EQ(Lat.at(VecPtrArg), computeKnownBits(VecPtrArg, DL));
+  EXPECT_EQ(Lat.at(IntVal), computeKnownBits(IntVal, DL));
+  EXPECT_EQ(Lat.at(VecVal), computeKnownBits(VecVal, DL));
+  EXPECT_EQ(Lat.at(IntVal2), computeKnownBits(IntVal2, DL));
+  EXPECT_EQ(Lat.at(PtrVal), computeKnownBits(PtrVal, DL));
+  EXPECT_EQ(Lat.at(VecVal2), computeKnownBits(VecVal2, DL));
+  EXPECT_EQ(Lat.at(PhiInt), computeKnownBits(PhiInt, DL));
+  EXPECT_EQ(Lat.at(PhiPtr), computeKnownBits(PhiPtr, DL));
+  EXPECT_EQ(Lat.at(PhiVec), computeKnownBits(PhiVec, DL));
+  EXPECT_EQ(Lat.at(FinalInt), computeKnownBits(FinalInt, DL));
+  EXPECT_EQ(Lat.at(FPConv), computeKnownBits(FPConv, DL));
+  EXPECT_EQ(Lat.at(VecPtrConv), computeKnownBits(VecPtrConv, DL));
+  EXPECT_EQ(Lat.at(FinalVec), computeKnownBits(FinalVec, DL));
 }
 } // namespace

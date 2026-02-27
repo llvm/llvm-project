@@ -144,6 +144,9 @@ LLVM_ABI bool isKnownNonZero(const Value *V, const APInt &DemandedElts,
 LLVM_ABI bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                      const APInt &DemandedElts,
                                      APInt &DemandedLHS, APInt &DemandedRHS);
+LLVM_ABI void computeKnownBits(const Value *V, const APInt &DemandedElts,
+                               KnownBits &Known, const SimplifyQuery &Q,
+                               unsigned Depth);
 } // namespace vthelper
 } // namespace llvm
 

@@ -135,10 +135,6 @@ bool vthelper::getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
                                       DemandedElts, DemandedLHS, DemandedRHS);
 }
 
-static void computeKnownBits(const Value *V, const APInt &DemandedElts,
-                             KnownBits &Known, const SimplifyQuery &Q,
-                             unsigned Depth);
-
 void llvm::computeKnownBits(const Value *V, KnownBits &Known,
                             const SimplifyQuery &Q, unsigned Depth) {
   // Since the number of lanes in a scalable vector is unknown at compile time,
@@ -147,7 +143,7 @@ void llvm::computeKnownBits(const Value *V, KnownBits &Known,
   auto *FVTy = dyn_cast<FixedVectorType>(V->getType());
   APInt DemandedElts =
       FVTy ? APInt::getAllOnes(FVTy->getNumElements()) : APInt(1, 1);
-  ::computeKnownBits(V, DemandedElts, Known, Q, Depth);
+  vthelper::computeKnownBits(V, DemandedElts, Known, Q, Depth);
 }
 
 void llvm::computeKnownBits(const Value *V, KnownBits &Known,
@@ -2426,9 +2422,9 @@ KnownBits llvm::computeKnownBits(const Value *V, const SimplifyQuery &Q,
 /// where V is a vector, known zero, and known one values are the
 /// same width as the vector element, and the bit is set only if it is true
 /// for all of the demanded elements in the vector specified by DemandedElts.
-void computeKnownBits(const Value *V, const APInt &DemandedElts,
-                      KnownBits &Known, const SimplifyQuery &Q,
-                      unsigned Depth) {
+void vthelper::computeKnownBits(const Value *V, const APInt &DemandedElts,
+                                KnownBits &Known, const SimplifyQuery &Q,
+                                unsigned Depth) {
   if (!DemandedElts) {
     // No demanded elts, better to assume we don't know anything.
     Known.resetAll();
