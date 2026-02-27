@@ -9,18 +9,12 @@
 
 template <class T>
 struct C {
-  EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported();
-// expected-warning@-1{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-  EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported();
-// expected-warning@-1{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-  EXCLUDE_ATTR __declspec(dllexport) static int var_excluded_exported;
-// expected-warning@-1{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-  EXCLUDE_ATTR __declspec(dllimport) static int var_excluded_imported;
-// expected-warning@-1{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-  struct EXCLUDE_ATTR __declspec(dllexport) nested_excluded_exported {};
-// expected-warning@-1{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-  struct EXCLUDE_ATTR __declspec(dllimport) nested_excluded_imported {};
-// expected-warning@-1{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported(); // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  EXCLUDE_ATTR __declspec(dllexport) static int var_excluded_exported; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  EXCLUDE_ATTR __declspec(dllimport) static int var_excluded_imported; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  struct EXCLUDE_ATTR __declspec(dllexport) nested_excluded_exported {}; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  struct EXCLUDE_ATTR __declspec(dllimport) nested_excluded_imported {}; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
 
   // No warnings here since nested_excluded is not instantiated.
   struct EXCLUDE_ATTR nested_excluded {
@@ -39,14 +33,10 @@ struct C {
   };
 
   struct nested {
-    EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported();
-    // expected-warning@-1{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-    EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported();
-    // expected-warning@-1{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-    EXCLUDE_ATTR __declspec(dllexport) static int var_excluded_exported;
-    // expected-warning@-1{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-    EXCLUDE_ATTR __declspec(dllimport) static int var_excluded_imported;
-    // expected-warning@-1{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+    EXCLUDE_ATTR __declspec(dllexport) void fn_excluded_exported(); // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+    EXCLUDE_ATTR __declspec(dllimport) void fn_excluded_imported(); // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+    EXCLUDE_ATTR __declspec(dllexport) static int var_excluded_exported; // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+    EXCLUDE_ATTR __declspec(dllimport) static int var_excluded_imported; // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
   };
 };
 
@@ -75,12 +65,10 @@ struct E {
     __declspec(dllimport) void fn_imported();
   };
 
-  struct __declspec(dllexport) nested_exported_1 {
-    // expected-warning@-1{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  struct __declspec(dllexport) nested_exported_1 { // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
     EXCLUDE_ATTR void fn_excluded();
   };
-  struct __declspec(dllimport) nested_imported_1 {
-    // expected-warning@-1{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
+  struct __declspec(dllimport) nested_imported_1 { // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
     EXCLUDE_ATTR void fn_excluded();
   };
 
