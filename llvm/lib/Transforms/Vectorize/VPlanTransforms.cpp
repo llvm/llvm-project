@@ -987,12 +987,14 @@ static VPValue *optimizeLatchExitInductionUser(
     DenseMap<VPValue *, VPValue *> &EndValues, PredicatedScalarEvolution &PSE) {
   VPValue *Incoming;
   VPWidenInductionRecipe *WideIV = nullptr;
-  if (match(Op, m_ExitingIVValue(m_VPValue(), m_VPValue(Incoming)))) {
-    WideIV = getOptimizableIVOf(Op->getDefiningRecipe()->getOperand(0), PSE);
-    assert(WideIV && "must have an optimizable IV");
-  } else if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)))) {
+  if (match(Op, m_ExitingIVValue(m_VPValue(Incoming)))) {
     WideIV = getOptimizableIVOf(Incoming, PSE);
+    assert(WideIV && "must have an optimizable IV");
+    return EndValues.lookup(WideIV);
   }
+
+  if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming))))
+    WideIV = getOptimizableIVOf(Incoming, PSE);
 
   if (!WideIV)
     return nullptr;
@@ -5150,14 +5152,14 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
 /// must be the operand at index \p OpIdx for both the recipe at lane 0, \p
 /// WideMember0). A VPInterleaveRecipe can be narrowed to a wide load, if \p V
 /// is defined at \p Idx of a load interleave group.
-static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
+static bool canNarrowLoad(VPSingleDefRecipe *WideMember0, unsigned OpIdx,
                           VPValue *OpV, unsigned Idx) {
   VPValue *Member0Op = WideMember0->getOperand(OpIdx);
   VPRecipeBase *Member0OpR = Member0Op->getDefiningRecipe();
   if (!Member0OpR)
     return Member0Op == OpV;
   if (auto *W = dyn_cast<VPWidenLoadRecipe>(Member0OpR))
-    return !W->getMask() && Member0Op == OpV;
+    return !W->getMask() && W->isConsecutive() && Member0Op == OpV;
   if (auto *IR = dyn_cast<VPInterleaveRecipe>(Member0OpR))
     return IR->getInterleaveGroup()->isFull() && IR->getVPValue(Idx) == OpV;
   return false;
@@ -5165,14 +5167,14 @@ static bool canNarrowLoad(VPWidenRecipe *WideMember0, unsigned OpIdx,
 
 static bool canNarrowOps(ArrayRef<VPValue *> Ops) {
   SmallVector<VPValue *> Ops0;
-  auto *WideMember0 = dyn_cast<VPWidenRecipe>(Ops[0]);
+  auto *WideMember0 = dyn_cast<VPSingleDefRecipe>(Ops[0]);
   if (!WideMember0)
     return false;
-
-  for (const auto &[_, V] : enumerate(Ops)) {
-    auto *R = dyn_cast<VPWidenRecipe>(V);
-    if (!R || R->getOpcode() != WideMember0->getOpcode() ||
-        R->getNumOperands() > 2)
+  for (VPValue *V : Ops) {
+    if (!isa<VPWidenRecipe, VPWidenCastRecipe>(V))
+      return false;
+    auto *R = cast<VPSingleDefRecipe>(V);
+    if (getOpcodeOrIntrinsicID(R) != getOpcodeOrIntrinsicID(WideMember0))
       return false;
   }
 
@@ -5262,7 +5264,8 @@ narrowInterleaveGroupOp(VPValue *V, SmallPtrSetImpl<VPValue *> &NarrowedOps) {
   if (isAlreadyNarrow(V))
     return V;
 
-  if (auto *WideMember0 = dyn_cast<VPWidenRecipe>(R)) {
+  if (isa<VPWidenRecipe, VPWidenCastRecipe>(R)) {
+    auto *WideMember0 = cast<VPSingleDefRecipe>(R);
     for (unsigned Idx = 0, E = WideMember0->getNumOperands(); Idx != E; ++Idx)
       WideMember0->setOperand(
           Idx,
@@ -5515,7 +5518,7 @@ static VPValue *tryToComputeEndValueForInduction(VPWidenInductionRecipe *WideIV,
 }
 
 void VPlanTransforms::updateScalarResumePhis(
-    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues) {
+    VPlan &Plan, DenseMap<VPValue *, VPValue *> &IVEndValues, bool FoldTail) {
   VPTypeAnalysis TypeInfo(Plan);
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getPredecessors()[0]);
@@ -5530,8 +5533,12 @@ void VPlanTransforms::updateScalarResumePhis(
     // pre-computed end value together in optimizeInductionExitUsers.
     auto *VectorPhiR = cast<VPHeaderPHIRecipe>(ResumePhiR->getOperand(0));
     if (auto *WideIVR = dyn_cast<VPWidenInductionRecipe>(VectorPhiR)) {
+      // TODO: Check if tail is folded directly in VPlan.
+      VPValue *TC = !FoldTail
+                        ? static_cast<VPValue *>(&Plan.getVectorTripCount())
+                        : Plan.getTripCount();
       if (VPValue *EndValue = tryToComputeEndValueForInduction(
-              WideIVR, VectorPHBuilder, TypeInfo, &Plan.getVectorTripCount())) {
+              WideIVR, VectorPHBuilder, TypeInfo, TC)) {
         IVEndValues[WideIVR] = EndValue;
         ResumePhiR->setOperand(0, EndValue);
         ResumePhiR->setName("bc.resume.val");
