@@ -61,13 +61,6 @@ static cl::opt<bool>
                          cl::desc("Do not align and prefetch loops"),
                          cl::init(false));
 
-static cl::opt<bool> AlignFunctionsForFetchOnly(
-    "amdgpu-align-functions-for-fetch-only", cl::Hidden,
-    cl::desc("Align non-entry functions to instruction fetch granularity "
-             "instead of cache line size (less padding, sufficient for "
-             "measured architectures)"),
-    cl::init(false));
-
 static cl::opt<bool> UseDivergentRegisterIndexing(
     "amdgpu-use-divergent-register-indexing", cl::Hidden,
     cl::desc("Use indirect register addressing for divergent indexes"),
@@ -204,9 +197,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
   setMinFunctionAlignment(Align(4));
-  unsigned PrefAlign = AlignFunctionsForFetchOnly ? STI.getInstFetchAlignment()
-                                                  : STI.getInstCacheLineSize();
-  setPrefFunctionAlignment(Align(PrefAlign));
+  setPrefFunctionAlignment(Align(STI.getInstCacheLineSize()));
 
   // The boolean content concept here is too inflexible. Compares only ever
   // really produce a 1-bit result. Any copy/extend from these will turn into a

@@ -1,25 +1,17 @@
 ; Test preferred alignment of non-entry functions on different AMDGPU
-; architectures. Cache-line alignment (default) and fetch-only alignment
-; (via -amdgpu-align-functions-for-fetch-only) are both tested.
+; architectures. Preferred alignment matches the instruction cache line size:
 ;
-; GFX9:  cache line = 64B  (.p2align 6), fetch = 32B (.p2align 5)
-; GFX10: cache line = 64B  (.p2align 6), fetch = 4B  (.p2align 2)
-; GFX11: cache line = 128B (.p2align 7), fetch = 4B  (.p2align 2)
-; GFX12: cache line = 128B (.p2align 7), fetch = 4B  (.p2align 2)
+; GFX9  - cache line = 64B  (.p2align 6)
+; GFX10 - cache line = 64B  (.p2align 6)
+; GFX11 - cache line = 128B (.p2align 7)
+; GFX12 - cache line = 128B (.p2align 7)
 
 ; --- Default (cache line alignment) ---
 
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9-CACHE %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefix=GFX10-CACHE %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11-CACHE %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12-CACHE %s
-
-; --- Fetch-only alignment ---
-
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -amdgpu-align-functions-for-fetch-only < %s | FileCheck -check-prefix=GFX9-FETCH %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -amdgpu-align-functions-for-fetch-only < %s | FileCheck -check-prefix=GFX10-FETCH %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -amdgpu-align-functions-for-fetch-only < %s | FileCheck -check-prefix=GFX11-FETCH %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 -amdgpu-align-functions-for-fetch-only < %s | FileCheck -check-prefix=GFX12-FETCH %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 < %s | FileCheck -check-prefix=GFX10 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck -check-prefix=GFX11 %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1200 < %s | FileCheck -check-prefix=GFX12 %s
 
 ; --- Optsize: alignment drops to minimum (Align(4) = .p2align 2) ---
 
@@ -42,31 +34,19 @@
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=ENTRY %s
 
 
-; Non-entry function: alignment depends on architecture and option.
+; Non-entry function: alignment matches instruction cache line size.
 define void @non_entry_func() {
-; GFX9-CACHE:       .p2align 6{{$}}
-; GFX9-CACHE:       non_entry_func:
+; GFX9:       .p2align 6{{$}}
+; GFX9:       non_entry_func:
 
-; GFX10-CACHE:      .p2align 6{{$}}
-; GFX10-CACHE:      non_entry_func:
+; GFX10:      .p2align 6{{$}}
+; GFX10:      non_entry_func:
 
-; GFX11-CACHE:      .p2align 7{{$}}
-; GFX11-CACHE:      non_entry_func:
+; GFX11:      .p2align 7{{$}}
+; GFX11:      non_entry_func:
 
-; GFX12-CACHE:      .p2align 7{{$}}
-; GFX12-CACHE:      non_entry_func:
-
-; GFX9-FETCH:       .p2align 5{{$}}
-; GFX9-FETCH:       non_entry_func:
-
-; GFX10-FETCH:      .p2align 2{{$}}
-; GFX10-FETCH:      non_entry_func:
-
-; GFX11-FETCH:      .p2align 2{{$}}
-; GFX11-FETCH:      non_entry_func:
-
-; GFX12-FETCH:      .p2align 2{{$}}
-; GFX12-FETCH:      non_entry_func:
+; GFX12:      .p2align 7{{$}}
+; GFX12:      non_entry_func:
   ret void
 }
 
@@ -85,11 +65,11 @@ define void @explicit_align_func() align 128 {
   ret void
 }
 
-; Non-entry function with explicit IR align 32 on GFX9: lower than preferred
-; (64), so preferred alignment wins. Result: .p2align 6.
+; Non-entry function with explicit IR align 32 on gfx900 -- lower than
+; preferred (64), so preferred alignment wins. Result: .p2align 6.
 define void @low_align_func() align 32 {
-; GFX9-CACHE:       .globl low_align_func
-; GFX9-CACHE-NEXT:  .p2align 6{{$}}
+; GFX9:       .globl low_align_func
+; GFX9-NEXT:  .p2align 6{{$}}
   ret void
 }
 
@@ -102,20 +82,29 @@ define void @align_all_optsize_func() optsize {
   ret void
 }
 
-; prefalign(16) on GFX9: overrides target preferred (64) with 16.
+; prefalign(16) on gfx900 overrides target preferred (64) with 16.
 ; getPreferredAlignment uses prefalign directly instead of getPrefFunctionAlignment.
-; Result: max(16, 4) = 16 → .p2align 4.
+; Result: max(16, 4) = 16 -> .p2align 4.
 define void @prefalign_low_func() prefalign(16) {
 ; PREFALIGN:        .globl prefalign_low_func
 ; PREFALIGN-NEXT:   .p2align 4{{$}}
   ret void
 }
 
-; prefalign(256) on GFX9: higher than target preferred (64).
-; Result: max(256, 4) = 256 → .p2align 8.
+; prefalign(256) on gfx900 -- higher than target preferred (64).
+; Result: max(256, 4) = 256 -> .p2align 8.
 define void @prefalign_high_func() prefalign(256) {
 ; PREFALIGN:        .globl prefalign_high_func
 ; PREFALIGN-NEXT:   .p2align 8{{$}}
+  ret void
+}
+
+; prefalign(2) on gfx900 -- below the 4-byte instruction alignment floor.
+; ensureAlignment(4) in AsmPrinter guarantees the minimum.
+; Result: max(2, 4) = 4 -> .p2align 2.
+define void @prefalign_floor_func() prefalign(2) {
+; PREFALIGN:        .globl prefalign_floor_func
+; PREFALIGN-NEXT:   .p2align 2{{$}}
   ret void
 }
 

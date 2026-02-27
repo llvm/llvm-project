@@ -66,10 +66,8 @@ protected:
   int LDSBankCount = 0;
   unsigned MaxPrivateElementSize = 0;
 
-  // Instruction cache parameters, set per-generation in
-  // initializeSubtargetDependencies.
-  unsigned InstCacheLineSize = 64;
-  unsigned InstFetchAlignment = 4;
+  // Instruction cache line size in bytes; set from TableGen subtarget features.
+  unsigned InstCacheLineSize = 0;
 
   // Dynamically set bits that enable features.
   bool DynamicVGPR = false;
@@ -177,9 +175,6 @@ public:
 
   /// Instruction cache line size in bytes (64 for pre-GFX11, 128 for GFX11+).
   unsigned getInstCacheLineSize() const { return InstCacheLineSize; }
-
-  /// Minimum function alignment needed to avoid instruction fetch stalls.
-  unsigned getInstFetchAlignment() const { return InstFetchAlignment; }
 
   unsigned getMaxPrivateElementSize(bool ForBufferRSrc = false) const {
     return (ForBufferRSrc || !hasFlatScratchEnabled()) ? MaxPrivateElementSize
