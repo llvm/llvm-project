@@ -520,6 +520,9 @@ public:
         if (IsLoadStoreLane && Operands.size() == 4)
           return false;
         // Alignment not specified (or atomics, must use default alignment).
+        // We can't just call WebAssembly::GetDefaultP2Align since we don't have
+        // an opcode until after the assembly matcher, so set a default to fix
+        // up later.
         auto Tok = Lexer.getTok();
         Operands.push_back(std::make_unique<WebAssemblyOperand>(
             Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{-1}));
