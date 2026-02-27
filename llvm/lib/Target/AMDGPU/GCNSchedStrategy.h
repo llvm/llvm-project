@@ -596,6 +596,14 @@ private:
     ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
                 const GCNScheduleDAGMILive &DAG);
 
+    /// Rematerializes the candidate and returns the new MI. This removes the
+    /// rematerialized register from live-in/out lists in the \p DAG and updates
+    /// \p RPTargets in all affected regions. Regions in which RP savings are
+    /// not guaranteed are set in \p RecomputeRP.
+    MachineInstr *rematerialize(BitVector &RecomputeRP,
+                                SmallVectorImpl<GCNRPTarget> &RPTargets,
+                                GCNScheduleDAGMILive &DAG) const;
+
     /// Updates the rematerialization's score w.r.t. the current \p RPTargets.
     /// \p RegionFreq indicates the frequency of each region
     void update(const BitVector &TargetRegions, ArrayRef<GCNRPTarget> RPTargets,
@@ -631,8 +639,9 @@ private:
 #endif
 
   private:
-    /// Number of 32-bit registers this rematerialization covers.
-    unsigned NumRegs;
+    /// Expected register pressure decrease induced by rematerializing this
+    /// candidate.
+    GCNRegPressure RPSave;
 
     // The three members below are the scoring components, top to bottom from
     // most important to least important when comparing candidates.
@@ -648,8 +657,6 @@ private:
     /// Expected number of target regions impacted by the rematerialization,
     /// scaled by the size of the register being rematerialized.
     unsigned RegionImpact;
-
-    unsigned getNumRegs(const GCNScheduleDAGMILive &DAG) const;
 
     int64_t getFreqDiff(const FreqInfo &Freq) const;
   };
@@ -717,7 +724,7 @@ private:
   bool setObjective();
 
   /// Unsets target regions in \p Regions whose RP target has been reached.
-  void unsetSatisifedRPTargets(const BitVector &Regions);
+  void unsetSatisfiedRPTargets(const BitVector &Regions);
 
   /// Fully recomputes RP from the DAG in \p Regions. Among those regions, sets
   /// again all \ref TargetRegions that were optimistically marked as satisfied
@@ -728,15 +735,6 @@ private:
   /// RematRegs. \p MIRegion maps MIs to their region. Returns whether any
   /// rematerializable register was found.
   bool collectRematRegs(const DenseMap<MachineInstr *, unsigned> &MIRegion);
-
-  /// Rematerializes \p Remat. This removes the rematerialized register from
-  /// live-in/out lists in the DAG and updates RP targets in all affected
-  /// regions, which are also marked in \ref RescheduleRegions. Regions in which
-  /// RP savings are not guaranteed are set in \p RecomputeRP. When \p Rollback
-  /// is non-null, fills it with required information to be able to rollback the
-  /// rematerialization post-rescheduling.
-  void rematerialize(const RematReg &Remat, BitVector &RecomputeRP,
-                     RollbackInfo *Rollback);
 
   /// Deletes all rematerialized MIs from the MIR when they were kept around for
   /// potential rollback.
