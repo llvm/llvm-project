@@ -1194,7 +1194,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       case KnownIEEEMode::Unknown:
         break;
       }
-    }
+}
 
     if (V) {
       if (auto *CI = dyn_cast<CallInst>(V)) {
@@ -1447,6 +1447,30 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
     // amdgcn.kill(i1 1) is a no-op
     return IC.eraseInstFromFunction(II);
+  }
+  case Intrinsic::amdgcn_s_sendmsg:
+  case Intrinsic::amdgcn_s_sendmsghalt: {
+    // The second operand is copied to m0, but is only actually used for
+    // GS_ALLOC_REQ. For other message types, fold it to poison.
+    using namespace AMDGPU::SendMsg;
+
+    Value *M0Val = II.getArgOperand(1);
+    if (isa<PoisonValue>(M0Val))
+      break;
+
+    auto *MsgImm = cast<ConstantInt>(II.getArgOperand(0));
+    uint64_t Msg = MsgImm->getZExtValue();
+    // Extract the message ID. Pre-GFX11 uses the lower 4 bits, GFX11+ uses
+    // the lower 8 bits. Since ID_GS_ALLOC_REQ is 9, we need to check the
+    // appropriate mask. For simplicity, extract the lower 8 bits which covers
+    // both cases.
+    uint64_t MsgId = Msg & ID_MASK_GFX11Plus_;
+
+    // Only GS_ALLOC_REQ uses the m0 value.
+    if (MsgId == ID_GS_ALLOC_REQ)
+      break;
+
+    return IC.replaceOperand(II, 1, PoisonValue::get(M0Val->getType()));
   }
   case Intrinsic::amdgcn_update_dpp: {
     Value *Old = II.getArgOperand(0);
