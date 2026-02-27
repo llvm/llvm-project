@@ -472,22 +472,26 @@ public:
     return false;
   }
 
-  bool parseMemOrderMaybe(OperandVector &Operands) {
+  bool addMemOrderOrDefault(OperandVector &Operands) {
     auto &Tok = Lexer.getTok();
-    if (Tok.isNot(AsmToken::Identifier))
-      return true;
-    StringRef S = Tok.getString();
-    int64_t Order = StringSwitch<int64_t>(S)
-                        .Case("acqrel", wasm::WASM_MEM_ORDER_ACQ_REL)
-                        .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
-                        .Default(-1);
-    if (Order == -1)
-      return true;
-    if (!STI->checkFeatures("+shared-everything"))
-      return error("memory ordering requires shared-everything feature: ", Tok);
+    int64_t Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+    if (Tok.is(AsmToken::Identifier)) {
+      StringRef S = Tok.getString();
+      Order = StringSwitch<int64_t>(S)
+                  .Case("acqrel", wasm::WASM_MEM_ORDER_ACQ_REL)
+                  .Case("seqcst", wasm::WASM_MEM_ORDER_SEQ_CST)
+                  .Default(-1);
+      if (Order != -1) {
+        if (!STI->checkFeatures("+shared-everything"))
+          return error("memory ordering requires shared-everything feature: ",
+                       Tok);
+        Parser.Lex();
+      } else {
+        Order = wasm::WASM_MEM_ORDER_SEQ_CST;
+      }
+    }
     Operands.push_back(std::make_unique<WebAssemblyOperand>(
         Tok.getLoc(), Tok.getEndLoc(), WebAssemblyOperand::IntOp{Order}));
-    Parser.Lex();
     return false;
   }
 
@@ -667,12 +671,8 @@ public:
       if (pop(Name, Try))
         return true;
     } else if (Name == "atomic.fence") {
-      if(parseMemOrderMaybe(Operands)) {
-        auto Tok = Lexer.getTok();
-        Operands.push_back(std::make_unique<WebAssemblyOperand>(
-            Tok.getLoc(), Tok.getEndLoc(),
-            WebAssemblyOperand::IntOp{wasm::WASM_MEM_ORDER_SEQ_CST}));
-      }
+      if (addMemOrderOrDefault(Operands))
+        return true;
     } else if (Name == "end_loop") {
       if (pop(Name, Loop))
         return true;
@@ -699,12 +699,8 @@ public:
 
     bool IsAtomic = Name.contains("atomic.");
     if (IsAtomic && Name != "atomic.fence") {
-      if(parseMemOrderMaybe(Operands)) {
-        auto Tok = Lexer.getTok();
-        Operands.push_back(std::make_unique<WebAssemblyOperand>(
-            Tok.getLoc(), Tok.getEndLoc(),
-            WebAssemblyOperand::IntOp{wasm::WASM_MEM_ORDER_SEQ_CST}));
-      }
+      if (addMemOrderOrDefault(Operands))
+        return true;
     }
 
     // Returns true if the next tokens are a catch clause
