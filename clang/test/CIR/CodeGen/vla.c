@@ -5,8 +5,6 @@
 // RUN: %clang_cc1 -Wno-error=incompatible-pointer-types -triple x86_64-unknown-linux-gnu -Wno-unused-value -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
 
-// XFAIL: *
-
 void f0(int len) {
   int arr[len];
 }
@@ -158,13 +156,13 @@ void f3(unsigned len) {
 // CIR: cir.func{{.*}} @f3(%[[LEN_ARG:.*]]: !u32i {{.*}})
 // CIR:   %[[LEN_ADDR:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["len", init]
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
+// CIR:   %[[I:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["i", init]
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !u32i -> !u64i
 // CIR:   %[[STACK_PTR:.*]] = cir.stacksave
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[S1:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, %[[LEN_SIZE_T]] : !u64i, ["s1"]
-// CIR:   %[[I:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["i", init]
 // CIR:   %[[ZERO:.*]] = cir.const #cir.int<0> : !u32i
 // CIR:   cir.store{{.*}} %[[ZERO]], %[[I]]
 // CIR:   cir.scope {
@@ -196,13 +194,13 @@ void f3(unsigned len) {
 // LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr
+// LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 %[[LEN_ARG]], ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN:.*]] = load i32, ptr %[[LEN_ADDR]]
 // LLVM:   %[[LEN_SIZE_T:.*]] = zext i32 %[[LEN]] to i64
 // LLVM:   %[[STACK_PTR:.*]] = call ptr @llvm.stacksave.p0()
 // LLVM:   store ptr %[[STACK_PTR]], ptr %[[SAVED_STACK]]
 // LLVM:   %[[S1:.*]] = alloca i8, i64 %[[LEN_SIZE_T]]
-// LLVM:   %[[I:.*]] = alloca i32
 // LLVM:   store i32 0, ptr %[[I]]
 // LLVM:   br label %[[WHILE_START:.*]]
 // LLVM: [[WHILE_START]]:
