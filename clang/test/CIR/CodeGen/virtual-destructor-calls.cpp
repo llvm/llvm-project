@@ -57,14 +57,14 @@ B::~B() { }
 // Deleting (D0) dtor for B: defers to the complete dtor but also calls operator delete.
 
 // CIR: cir.func{{.*}} @_ZN1BD0Ev
-// CIR:   cir.call @_ZN1BD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_B>) -> ()
+// CIR:   cir.call @_ZN1BD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_B> {{.*}}) -> ()
 // CIR:   %[[THIS_VOID:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_B> -> !cir.ptr<!void>
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<16>
 // CIR:   cir.call @_ZdlPvm(%[[THIS_VOID]], %[[SIZE]])
 
 // LLVM: define{{.*}} void @_ZN1BD0Ev
-// LLVM:   call void @_ZN1BD1Ev(ptr %[[THIS:.*]])
-// LLVM:   call void @_ZdlPvm(ptr %[[THIS]], i64 16)
+// LLVM:   call void @_ZN1BD1Ev(ptr {{.*}} %[[THIS:.*]])
+// LLVM:   call void @_ZdlPvm(ptr {{.*}} %[[THIS]], i64 {{.*}} 16)
 
 // OGCG: define{{.*}} @_ZN1BD0Ev
 // OGCG:   call void @_ZN1BD1Ev(ptr{{.*}} %[[THIS:.*]])
@@ -97,14 +97,14 @@ C::~C() { }
 // Deleting (D0) dtor for C: defers to the complete dtor but also calls operator delete.
 
 // CIR: cir.func{{.*}} @_ZN1CD0Ev
-// CIR:   cir.call @_ZN1CD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_C>) -> ()
+// CIR:   cir.call @_ZN1CD1Ev(%[[THIS:.*]]) nothrow : (!cir.ptr<!rec_C> {{.*}}) -> ()
 // CIR:   %[[THIS_VOID:.*]] = cir.cast bitcast %[[THIS]] : !cir.ptr<!rec_C> -> !cir.ptr<!void>
 // CIR:   %[[SIZE:.*]] = cir.const #cir.int<16>
 // CIR:   cir.call @_ZdlPvm(%[[THIS_VOID]], %[[SIZE]])
 
 // LLVM: define{{.*}} void @_ZN1CD0Ev
-// LLVM:   call void @_ZN1CD1Ev(ptr %[[THIS:.*]])
-// LLVM:   call void @_ZdlPvm(ptr %[[THIS]], i64 16)
+// LLVM:   call void @_ZN1CD1Ev(ptr {{.*}} %[[THIS:.*]])
+// LLVM:   call void @_ZdlPvm(ptr {{.*}} %[[THIS]], i64 {{.*}} 16)
 
 // OGCG: define{{.*}} @_ZN1CD0Ev
 // OGCG:   call void @_ZN1CD1Ev(ptr{{.*}} %[[THIS:.*]])
@@ -127,3 +127,49 @@ namespace PR12798 {
 
   template void f(A*);
 }
+
+class D {
+  virtual ~D() = 0;
+};
+
+D::~D() = default;
+
+// CIR: cir.func{{.*}} @_ZN1DD2Ev
+// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["this", init] {alignment = 8 : i64}
+// CIR: cir.store %[[ARG0:.*]], %[[THIS]] : !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>
+// CIR: %[[THIS1:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_D>>, !cir.ptr<!rec_D>
+// CIR: cir.return
+
+// LLVM: define {{.*}} @_ZN1DD2Ev
+// LLVM: %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM: store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
+// LLVM: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
+// LLVM: ret void
+
+// OGCG: define {{.*}} @_ZN1DD2Ev
+// OGCG: %[[THIS_ADDR:.*]] = alloca ptr, align 8
+// OGCG: store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
+// OGCG: %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
+// OGCG: ret void
+
+// CIR: cir.func {{.*}} @_ZN1DD1Ev(!cir.ptr<!rec_D>) alias(@_ZN1DD2Ev)
+
+// CIR: cir.func{{.*}} @_ZN1DD0Ev
+// CIR: %[[THIS:.*]] = cir.alloca !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>, ["this", init] {alignment = 8 : i64}
+// CIR: cir.store %[[ARG0:.*]], %[[THIS]] : !cir.ptr<!rec_D>, !cir.ptr<!cir.ptr<!rec_D>>
+// CIR: %[[THIS1:.*]] = cir.load %[[THIS]] : !cir.ptr<!cir.ptr<!rec_D>>, !cir.ptr<!rec_D>
+// CIR: cir.trap
+
+// LLVM: define {{.*}} @_ZN1DD0Ev
+// LLVM:  %[[THIS_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:  store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
+// LLVM:  %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
+// LLVM:  call void @llvm.trap()
+// LLVM:  unreachable
+
+// OGCG: define {{.*}} @_ZN1DD0Ev
+// OGCG:  %[[THIS_ADDR:.*]] = alloca ptr, align 8
+// OGCG:  store ptr %[[THIS:.*]], ptr %[[THIS_ADDR]], align 8
+// OGCG:  %[[THIS1:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
+// OGCG:  call void @llvm.trap()
+// OGCG:  unreachable

@@ -11,6 +11,7 @@ package(default_visibility = ["//visibility:public"])
         data = [
             "EmitC/tosa/td.mlir",
             "Vector/vector-sink-transform.mlir",
+            "//llvm:llc",
             "//llvm:llvm-symbolizer",
             "//mlir:mlir-opt",
             "//mlir:mlir-pdll",

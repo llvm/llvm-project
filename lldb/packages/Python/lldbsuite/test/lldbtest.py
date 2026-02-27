@@ -1413,6 +1413,9 @@ class Base(unittest.TestCase):
     def isAArch64FPMR(self):
         return self.isAArch64() and self.isSupported(cpu_feature.AArch64.FPMR)
 
+    def isAArch64POE(self):
+        return self.isAArch64() and self.isSupported(cpu_feature.AArch64.POE)
+
     def isAArch64Windows(self):
         """Returns true if the architecture is AArch64 and platform windows."""
         if self.getPlatform() == "windows":
@@ -2407,6 +2410,16 @@ FileCheck output:
             print(filecheck_trace, file=sbuf)
 
         self.assertEqual(cmd_status, 0)
+
+    def filecheck_log(
+        self, log_file, check_file, filecheck_options="", expect_cmd_failure=False
+    ):
+        return self.filecheck(
+            f"platform shell -h -- cat {log_file}",
+            check_file,
+            filecheck_options,
+            expect_cmd_failure,
+        )
 
     def expect(
         self,
