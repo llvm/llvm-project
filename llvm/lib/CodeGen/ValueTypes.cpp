@@ -65,11 +65,14 @@ EVT EVT::getIntegerVectorWithElementWidth(LLVMContext &Context,
     return EVT();
 
   unsigned TotalBits = getVectorMinNumElements() * getScalarSizeInBits();
-  if (TotalBits % NewEltWidth != 0)
+  if (TotalBits % NewEltWidth != 0 || NewEltWidth > TotalBits)
     return EVT();
 
   unsigned NewNumElements = TotalBits / NewEltWidth;
   EVT NewEltVT = EVT::getIntegerVT(Context, NewEltWidth);
+
+  if (NewNumElements == 1)
+    return NewEltVT;
 
   // Preserve scalability
   ElementCount EC = getVectorElementCount();

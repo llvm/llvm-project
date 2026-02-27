@@ -7026,19 +7026,28 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
                                    const TargetLowering &TLI, SDValue Cond,
                                    SDValue TrueVal, SDValue FalseVal) {
   EVT ResultVT = N->getValueType(0);
-  if (ResultVT.isSimple() || !ResultVT.isVector() ||
-      !ResultVT.isPow2VectorType() ||
-      TLI.getTypeAction(*DAG.getContext(), ResultVT) !=
-          TargetLowering::TypePromoteInteger)
+  if (!ResultVT.isVector() || TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
+                                  TargetLowering::TypeLegal)
     return SDValue();
 
   EVT EltVT = ResultVT.getVectorElementType();
   if (!EltVT.isInteger() || ResultVT.getVectorElementCount().isScalar())
     return SDValue();
 
-  EVT NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(), 32);
-  if (NewVT == EVT())
-    return SDValue();
+  unsigned NewEltBitSize = EltVT.getSizeInBits() * 2;
+  EVT NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
+                                                        NewEltBitSize);
+  while (true) {
+    if (NewVT == EVT())
+      return SDValue();
+    if (TLI.getTypeAction(*DAG.getContext(), NewVT) ==
+        TargetLowering::TypeLegal)
+      break;
+
+    NewEltBitSize *= 2;
+    NewVT = ResultVT.getIntegerVectorWithElementWidth(*DAG.getContext(),
+                                                      NewEltBitSize);
+  }
 
   SDValue NewTrue = DAG.getBitcast(NewVT, TrueVal);
   SDValue NewFalse = DAG.getBitcast(NewVT, FalseVal);
