@@ -663,6 +663,86 @@ exit:
   ret i16 %res
 }
 
+define i16 @uncountable_exit_with_live_out(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_live_out'
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret i16 %data
+}
+
+; Vectorizeable, requires improvements in dereferenceability checks
+define void @uncountable_exit_with_constant_nonunit_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_constant_nonunit_stride'
+; CHECK:       LV: Not vectorizing: Writes to memory unsupported in early exit loops.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 20
+  %counted.cond = icmp slt i64 %iv.next, 2001
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Vectorizeable, requires improvements in dereferenceability checks
+define void @uncountable_exit_with_invariant_but_unknown_stride(ptr dereferenceable(4000) noalias %array, ptr align 2 dereferenceable(4000) readonly %pred, i64 %stride) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_invariant_but_unknown_stride'
+; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, %stride
+  %counted.cond = icmp slt i64 %iv.next, 2001
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 ;; Avoid vectorization; similar to another invariant test above, we would either
 ;; exit immediately on the first lane or never take the early exit. Should be
 ;; versioned before reaching LV.
