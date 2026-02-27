@@ -1863,10 +1863,11 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
 
     // Fields 4 and 5: Update sizes and strides.
     Value stride = nullptr, nextSize = nullptr;
+    ArrayRef<int64_t> staticSizes = viewOp.getStaticSizes();
     for (int i = viewMemRefType.getRank() - 1; i >= 0; --i) {
       // Update size.
-      Value size = getSize(rewriter, loc, viewMemRefType.getShape(),
-                           adaptor.getSizes(), i, indexType);
+      Value size =
+          getSize(rewriter, loc, staticSizes, adaptor.getSizes(), i, indexType);
       targetMemRef.setSize(rewriter, loc, i, size);
       // Update stride.
       stride =

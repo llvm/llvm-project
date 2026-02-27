@@ -632,7 +632,7 @@ func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
 
 func.func @invalid_view(%arg0 : index, %arg1 : index, %arg2 : index) {
   %0 = memref.alloc() : memref<2048xi8>
-  // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
+  // expected-error@+1 {{incorrect number of size values, has 1, expected 2}}
   %1 = memref.view %0[%arg2][%arg0]
     : memref<2048xi8> to memref<?x?xf32>
   return

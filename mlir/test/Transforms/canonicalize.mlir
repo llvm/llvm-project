@@ -709,22 +709,22 @@ func.func @view(%arg0 : index) -> (f32, f32, f32, f32) {
   %c15 = arith.constant 15 : index
 
   // Test: fold constant sizes.
-  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<7x11xf32>
+  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][7, 11] : memref<2048xi8> to memref<7x11xf32>
   %1 = memref.view %0[%c15][%c7, %c11] : memref<2048xi8> to memref<?x?xf32>
   %r0 = memref.load %1[%c0, %c0] : memref<?x?xf32>
 
   // Test: fold one constant size.
-  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][%arg0, %arg0] : memref<2048xi8> to memref<?x?x7xf32>
+  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][%arg0, %arg0, 7] : memref<2048xi8> to memref<?x?x7xf32>
   %2 = memref.view %0[%c15][%arg0, %arg0, %c7] : memref<2048xi8> to memref<?x?x?xf32>
   %r1 = memref.load %2[%c0, %c0, %c0] : memref<?x?x?xf32>
 
   // Test: preserve an existing static size.
-  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<7x4xf32>
-  %3 = memref.view %0[%c15][%c7] : memref<2048xi8> to memref<?x4xf32>
+  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][7, 4] : memref<2048xi8> to memref<7x4xf32>
+  %3 = memref.view %0[%c15][%c7, 4] : memref<2048xi8> to memref<?x4xf32>
   %r2 = memref.load %3[%c0, %c0] : memref<?x4xf32>
 
   // Test: folding static alloc and memref.cast into a view.
-  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][] : memref<2048xi8> to memref<15x7xf32>
+  // CHECK: memref.view %[[ALLOC_MEM]][%[[C15]]][15, 7] : memref<2048xi8> to memref<15x7xf32>
   %4 = memref.cast %0 : memref<2048xi8> to memref<?xi8>
   %5 = memref.view %4[%c15][%c15, %c7] : memref<?xi8> to memref<?x?xf32>
   %r3 = memref.load %5[%c0, %c0] : memref<?x?xf32>

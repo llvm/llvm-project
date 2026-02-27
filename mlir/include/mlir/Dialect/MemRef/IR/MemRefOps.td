@@ -2422,8 +2422,11 @@ def MemRef_ViewOp : MemRef_Op<"view", [
     * A single dynamic byte-shift operand must be specified which represents a
       a shift of the base 1-D memref pointer from which to create the resulting
       contiguous memref view with identity layout.
-    * A dynamic size operand that must be specified for each dynamic dimension
-      in the resulting view memref type.
+    * A size operand for each dimension in the resulting view memref type.
+      Sizes can be either static (specified as integer literals in the
+      `static_sizes` attribute) or dynamic (specified as SSA values in
+      `sizes`). The `static_sizes` attribute uses `ShapedType::kDynamic` as
+      sentinel for dynamic entries.
 
     The "view" operation gives a structured indexing form to a flat 1-D buffer.
     Unlike "subview" it can perform a type change. The type change behavior
@@ -2443,24 +2446,40 @@ def MemRef_ViewOp : MemRef_Op<"view", [
     %0 = memref.alloc() : memref<2048xi8>
 
     // ViewOp with dynamic offset and static sizes.
-    %1 = memref.view %0[%offset_1024][] : memref<2048xi8> to memref<64x4xf32>
+    %1 = memref.view %0[%offset_1024][64, 4] : memref<2048xi8> to memref<64x4xf32>
 
-    // ViewOp with dynamic offset and two dynamic size.
-    %2 = memref.view %0[%offset_1024][%size0, %size1] :
+    // ViewOp with dynamic offset and mixed static/dynamic sizes.
+    %2 = memref.view %0[%offset_1024][%size0, 4, %size1] :
       memref<2048xi8> to memref<?x4x?xf32>
     ```
   }];
 
   let arguments = (ins MemRefRankOf<[I8], [1]>:$source,
                        Index:$byte_shift,
-                       Variadic<Index>:$sizes);
+                       Variadic<Index>:$sizes,
+                       DenseI64ArrayAttr:$static_sizes);
   let results = (outs AnyMemRef);
+
+  let builders = [
+    // Build a ViewOp with mixed static and dynamic entries.
+    OpBuilder<(ins "MemRefType":$resultType, "Value":$source,
+      "Value":$byte_shift, "ArrayRef<OpFoldResult>":$sizes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a ViewOp with static entries.
+    OpBuilder<(ins "MemRefType":$resultType, "Value":$source,
+      "Value":$byte_shift, "ArrayRef<int64_t>":$sizes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>,
+    // Build a ViewOp with dynamic entries.
+    OpBuilder<(ins "MemRefType":$resultType, "Value":$source,
+      "Value":$byte_shift, "ValueRange":$sizes,
+      CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs)>
+  ];
 
   let extraClassDeclaration = [{
     /// The result of a view is always a memref.
     MemRefType getType() { return ::llvm::cast<MemRefType>(getResult().getType()); }
 
-    // Return both static and dynamic sizes as a list of `OpFoldResult`.
+    /// Return both static and dynamic sizes as a list of `OpFoldResult`.
     SmallVector<OpFoldResult> getMixedSizes();
 
     /// Returns the dynamic sizes for this view operation. This is redundant
@@ -2476,8 +2495,9 @@ def MemRef_ViewOp : MemRef_Op<"view", [
   }];
 
   let assemblyFormat = [{
-    $source `[` $byte_shift `]` `` `[` $sizes `]` attr-dict
-    `:` type($source) `to` type(results)
+    $source `[` $byte_shift `]` ``
+    custom<DynamicIndexList>($sizes, $static_sizes)
+    attr-dict `:` type($source) `to` type(results)
   }];
 
   let hasCanonicalizer = 1;

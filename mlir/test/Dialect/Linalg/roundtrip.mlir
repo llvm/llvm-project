@@ -18,9 +18,9 @@ func.func @views(%arg0: index) {
 // CHECK-LABEL: func @views
 //  CHECK:  arith.muli %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:  memref.alloc(%{{.*}}) : memref<?xi8>
-//  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
+//  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}, %{{.*}}] :
 //  CHECK-SAME:     memref<?xi8> to memref<?x?xf32>
-//  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}] :
+//  CHECK-NEXT:  memref.view %{{.*}}[%{{.*}}][%{{.*}}, %{{.*}}] :
 //  CHECK-SAME:     memref<?xi8> to memref<?x?xvector<4x4xf32>>
 //  CHECK-NEXT:  memref.dealloc %{{.*}} : memref<?xi8>
 
