@@ -1,4 +1,6 @@
-; Test a simgple cross module promotion where the suffix '.llvm.<...>' is not needed.
+; Test a simple cross module promotion where the suffix '.llvm.<...>' is not needed
+; because when avoiding always renaming, we should detect that there is a single
+; version of local foo which doesn't need renaming.
 
 ; Set up
 ; RUN: rm -rf %t
@@ -10,7 +12,7 @@
 ;
 ; RUN: llvm-lto2 run %t/a.bc %t/b.bc \
 ; RUN:  --whole-program-visibility-enabled-in-lto=true \
-; RUN:  -disable-always-rename-promoted-locals \
+; RUN:  -always-rename-promoted-locals=false \
 ; RUN:  -save-temps -o %t/lto-out \
 ; RUN:  -r %t/a.bc,m1,px \
 ; RUN:  -r %t/b.bc,m2,p \
