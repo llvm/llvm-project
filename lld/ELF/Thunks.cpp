@@ -474,7 +474,8 @@ public:
   uint32_t size() override { return 16; }
   void writeTo(uint8_t *buf) override;
   void addSymbols(ThunkSection &isec) override;
-  bool isCompatibleWith(const InputSection &isec, const Relocation &rel) const override;
+  bool isCompatibleWith(const InputSection &isec,
+                        const Relocation &rel) const override;
 
 private:
   // Records the call site of the call stub.
@@ -666,10 +667,10 @@ bool AArch64Thunk::needsSyntheticLandingPad() {
 // AArch64 long range Thunks.
 void AArch64ABSLongThunk::writeLong(uint8_t *buf) {
   const uint8_t data[] = {
-    0x50, 0x00, 0x00, 0x58, //     ldr x16, L0
-    0x00, 0x02, 0x1f, 0xd6, //     br  x16
-    0x00, 0x00, 0x00, 0x00, // L0: .xword S
-    0x00, 0x00, 0x00, 0x00,
+      0x50, 0x00, 0x00, 0x58, //     ldr x16, L0
+      0x00, 0x02, 0x1f, 0xd6, //     br  x16
+      0x00, 0x00, 0x00, 0x00, // L0: .xword S
+      0x00, 0x00, 0x00, 0x00,
   };
   // If mayNeedLandingPad is true then destination is an
   // AArch64BTILandingPadThunk that defines landingPad.
@@ -893,7 +894,8 @@ bool ThumbThunk::isCompatibleWith(const InputSection &isec,
     return false;
 
   // ARM branch relocations can't use BLX
-  return rel.type != R_ARM_JUMP24 && rel.type != R_ARM_PC24 && rel.type != R_ARM_PLT32;
+  return rel.type != R_ARM_JUMP24 && rel.type != R_ARM_PC24 &&
+         rel.type != R_ARM_PLT32;
 }
 
 void ARMV7ABSLongThunk::writeLong(uint8_t *buf) {
