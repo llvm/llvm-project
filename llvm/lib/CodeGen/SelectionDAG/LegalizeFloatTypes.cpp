@@ -655,7 +655,12 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FP_EXTEND(SDNode *N) {
   }
 
   RTLIB::Libcall LC = RTLIB::getFPEXT(Op.getValueType(), N->getValueType(0));
-  assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unsupported FP_EXTEND!");
+  if (LC == RTLIB::UNKNOWN_LIBCALL) {
+    DAG.getContext()->emitError("do not know how to soften fp_extend");
+    if (IsStrict)
+      ReplaceValueWith(SDValue(N, 1), Chain);
+    return DAG.getPOISON(NVT);
+  }
   TargetLowering::MakeLibCallOptions CallOptions;
   EVT OpVT = N->getOperand(IsStrict ? 1 : 0).getValueType();
   CallOptions.setTypeListBeforeSoften(OpVT, N->getValueType(0));
