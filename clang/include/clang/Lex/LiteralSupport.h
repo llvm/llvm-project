@@ -311,7 +311,8 @@ public:
 private:
   void init(ArrayRef<Token> StringToks, ConversionAction Action);
   bool CopyStringFragment(const Token &Tok, const char *TokBegin,
-                          StringRef Fragment);
+                          StringRef Fragment,
+                          llvm::TextEncodingConverter *Converter);
   void DiagnoseLexingError(SourceLocation Loc);
 };
 

@@ -55,5 +55,5 @@ const char *Unicode = "ÿ";
 //CHECK-UTF8: c"\C3\BF\00"
 
 // RUN: not %clang_cc1 -fexec-charset invalid %s 2>&1 | FileCheck %s --check-prefix=CHECK-ERROR
-// CHECK-ERROR: error: failed to configure the text encoding config
+// CHECK-ERROR: error: failed to set fexec-charset to 'invalid'
 

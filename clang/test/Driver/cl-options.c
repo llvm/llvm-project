@@ -252,7 +252,7 @@
 
 // /execution-charset: should warn on invalid charsets.
 // RUN: not %clang_cl /execution-charset:invalid-charset -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-invalid %s
-// execution-charset-invalid: invalid value 'invalid-charset' in '/execution-charset:invalid-charset'
+// execution-charset-invalid: 'invalid-charset' is not a supported encoding in target
 //
 
 // RUN: %clang_cl /Umymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s

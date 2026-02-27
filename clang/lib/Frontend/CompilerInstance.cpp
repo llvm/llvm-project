@@ -546,9 +546,10 @@ void CompilerInstance::createPreprocessor(TranslationUnitKind TUKind) {
   if (GetDependencyDirectives)
     PP->setDependencyDirectivesGetter(*GetDependencyDirectives);
 
-  if (TextEncodingConfig::setConvertersFromOptions(PP->getTextEncodingConfig(),
-                                                   getLangOpts(), getTarget()))
-    PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config);
+  if (auto EC = TextEncodingConfig::setConvertersFromOptions(
+          PP->getTextEncodingConfig(), getLangOpts(), getTarget()))
+    PP->getDiagnostics().Report(clang::diag::err_fe_text_encoding_config)
+        << PP->getTextEncodingConfig().getExecEncoding();
 }
 
 std::string

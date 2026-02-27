@@ -233,7 +233,7 @@
 // CHECK-INVALID-INPUT-CHARSET: error: invalid value 'iso-8859-1' in '-finput-charset=iso-8859-1'
 
 // RUN: not %clang -### -S -fexec-charset=invalid-charset -o /dev/null %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-EXEC-CHARSET %s
-// CHECK-INVALID-EXEC-CHARSET: error: invalid value 'invalid-charset' in '-fexec-charset=invalid-charset'
+// CHECK-INVALID-EXEC-CHARSET: error: 'invalid-charset' is not a supported encoding in target
 
 // Test that we support the following exec charsets. The preferred MIME name is
 // `IBM1047`, but `IBM-1047` is the name used by z/OS USS utilities such as

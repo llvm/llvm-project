@@ -19,8 +19,6 @@
 enum ConversionAction { CA_NoConversion, CA_ToExecEncoding };
 
 class TextEncodingConfig {
-  llvm::StringRef InternalEncoding;
-  llvm::StringRef SystemEncoding;
   llvm::StringRef ExecEncoding;
   llvm::TextEncodingConverter *ToExecEncodingConverter = nullptr;
 
@@ -30,6 +28,8 @@ public:
   setConvertersFromOptions(TextEncodingConfig &TEC,
                            const clang::LangOptions &Opts,
                            const clang::TargetInfo &TInfo);
+
+  llvm::StringRef getExecEncoding() { return ExecEncoding; }
 };
 
 #endif
