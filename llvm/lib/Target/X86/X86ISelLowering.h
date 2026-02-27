@@ -1341,18 +1341,14 @@ namespace llvm {
                                              const SelectionDAG &DAG,
                                              unsigned Depth) const override;
 
-    bool SimplifyDemandedVectorEltsForTargetNode(SDValue Op,
-                                                 const APInt &DemandedElts,
-                                                 APInt &KnownUndef,
-                                                 APInt &KnownZero,
-                                                 TargetLoweringOpt &TLO,
-                                                 unsigned Depth) const override;
+    bool SimplifyDemandedVectorEltsForTargetNode(
+        SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonElts,
+        APInt &KnownUndef, APInt &KnownZero, TargetLoweringOpt &TLO,
+        unsigned Depth) const override;
 
-    bool SimplifyDemandedVectorEltsForTargetShuffle(SDValue Op,
-                                                    const APInt &DemandedElts,
-                                                    unsigned MaskIndex,
-                                                    TargetLoweringOpt &TLO,
-                                                    unsigned Depth) const;
+    bool SimplifyDemandedVectorEltsForTargetShuffle(
+        SDValue Op, const APInt &DemandedElts, const APInt &DoNotPoisonElts,
+        unsigned MaskIndex, TargetLoweringOpt &TLO, unsigned Depth) const;
 
     bool SimplifyDemandedBitsForTargetNode(SDValue Op,
                                            const APInt &DemandedBits,
@@ -1363,7 +1359,8 @@ namespace llvm {
 
     SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
         SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
-        SelectionDAG &DAG, unsigned Depth) const override;
+        const APInt &DoNotPoisonEltMask, SelectionDAG &DAG,
+        unsigned Depth) const override;
 
     bool isGuaranteedNotToBeUndefOrPoisonForTargetNode(
         SDValue Op, const APInt &DemandedElts, const SelectionDAG &DAG,
