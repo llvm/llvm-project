@@ -30,6 +30,7 @@
 using namespace llvm;
 using namespace vthelper;
 using namespace PatternMatch;
+using namespace std::placeholders;
 
 template <typename NodeRef, typename ChildIteratorType>
 struct NodeGraphTraitsBase {
@@ -94,7 +95,7 @@ void KnownBitsDataflow::emplace_all_conflict(const Value *V) {
 template <typename RangeT>
 SmallVector<Value *> KnownBitsDataflow::insert_range(RangeT R) {
   SmallVector<Value *> Filtered(
-      filter_range(R, bind_front(&KnownBitsDataflow::contains, this)));
+      filter_range(R, std::bind(&KnownBitsDataflow::contains, this, _1)));
   for (Value *V : Filtered)
     emplace_all_conflict(V);
   return Filtered;
@@ -120,7 +121,7 @@ void KnownBitsDataflow::initialize(Function &F) {
   for (BasicBlock &BB : F) {
     // Now initialize with all Instructions in the BB that weren't seen.
     initialize(filter_range(llvm::make_pointer_range(BB),
-                            bind_front(&KnownBitsDataflow::contains, this)));
+                            std::bind(&KnownBitsDataflow::contains, this, _1)));
   }
 }
 
