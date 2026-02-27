@@ -238,11 +238,8 @@ public:
 
 GCNIterativeScheduler::GCNIterativeScheduler(MachineSchedContext *C,
                                              StrategyKind S)
-  : BaseClass(C, std::make_unique<SchedStrategyStub>())
-  , Context(C)
-  , Strategy(S)
-  , UPTracker(*LIS) {
-}
+    : BaseClass(C, std::make_unique<SchedStrategyStub>()), Context(C),
+      Strategy(S), UPTracker(*LIS, Context->MF->getRegInfo()) {}
 
 // returns max pressure for a region
 GCNRegPressure
@@ -281,7 +278,7 @@ template <typename Range> GCNRegPressure
 GCNIterativeScheduler::getSchedulePressure(const Region &R,
                                            Range &&Schedule) const {
   auto const BBEnd = R.Begin->getParent()->end();
-  GCNUpwardRPTracker RPTracker(*LIS);
+  GCNUpwardRPTracker RPTracker(*LIS, MF.getRegInfo());
   if (R.End != BBEnd) {
     // R.End points to the boundary instruction but the
     // schedule doesn't include it
