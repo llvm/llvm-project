@@ -75,10 +75,12 @@ uint8_t WebAssemblyMCCodeEmitter::getEncodedMemOrder(uint8_t Order,
   return Order;
 }
 
-void WebAssemblyMCCodeEmitter::encodeMemArg(
-    const MCInst &MI, unsigned I, const MCInstrDesc &Desc,
-    const MCSubtargetInfo &STI, raw_ostream &OS,
-    SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const {
+void WebAssemblyMCCodeEmitter::encodeMemArg(const MCInst &MI, unsigned I,
+                                            const MCInstrDesc &Desc,
+                                            const MCSubtargetInfo &STI,
+                                            raw_ostream &OS,
+                                            SmallVectorImpl<MCFixup> &Fixups,
+                                            uint64_t Start) const {
   unsigned P2AlignIdx = I;
   std::optional<unsigned> MemOrderIdx;
 
@@ -106,9 +108,9 @@ void WebAssemblyMCCodeEmitter::encodeMemArg(
   // Memory index will go here once we support multi-memory.
 
   if (P2Align & wasm::WASM_MEMARG_HAS_MEM_ORDER) {
-    support::endian::write<uint8_t>(
-        OS, getEncodedMemOrder(Order, MI.getOpcode()),
-        llvm::endianness::little);
+    support::endian::write<uint8_t>(OS,
+                                    getEncodedMemOrder(Order, MI.getOpcode()),
+                                    llvm::endianness::little);
   }
 }
 
@@ -180,12 +182,10 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
             break;
           uint8_t Val = getEncodedMemOrder(MO.getImm(), Opcode);
           if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
-            support::endian::write<uint8_t>(OS, Val,
-                                            llvm::endianness::little);
+            support::endian::write<uint8_t>(OS, Val, llvm::endianness::little);
           } else if (Opcode == WebAssembly::ATOMIC_FENCE ||
                      Opcode == WebAssembly::ATOMIC_FENCE_S) {
-            support::endian::write<uint8_t>(OS, 0,
-                                            llvm::endianness::little);
+            support::endian::write<uint8_t>(OS, 0, llvm::endianness::little);
           }
           break;
         }
