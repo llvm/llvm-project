@@ -746,6 +746,10 @@ enum NodeType {
   /// is performed.
   ABS,
 
+  /// ABS with a poison result for INT_MIN. This corresponds to
+  /// llvm.abs(x, true) where the "int min is poison" flag is set.
+  ABS_MIN_POISON,
+
   /// Shift and rotation operations.  After legalization, the type of the
   /// shift amount is known to be TLI.getShiftAmountTy().  Before legalization
   /// the shift amount can be any type, but care must be taken to ensure it is
