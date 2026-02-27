@@ -7,29 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "../ModelStringConversions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <tuple>
 
 namespace clang::ssaf {
-
-llvm::StringRef toString(BuildNamespaceKind BNK) {
-  switch (BNK) {
-  case BuildNamespaceKind::CompilationUnit:
-    return "compilation_unit";
-  case BuildNamespaceKind::LinkUnit:
-    return "link_unit";
-  }
-  llvm_unreachable("Unknown BuildNamespaceKind");
-}
-
-std::optional<BuildNamespaceKind> parseBuildNamespaceKind(llvm::StringRef Str) {
-  if (Str == "compilation_unit")
-    return BuildNamespaceKind::CompilationUnit;
-  if (Str == "link_unit")
-    return BuildNamespaceKind::LinkUnit;
-  return std::nullopt;
-}
 
 BuildNamespace
 BuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
@@ -71,8 +54,12 @@ bool NestedBuildNamespace::operator<(const NestedBuildNamespace &Other) const {
   return Namespaces < Other.Namespaces;
 }
 
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, BuildNamespaceKind BNK) {
+  return OS << buildNamespaceKindToString(BNK);
+}
+
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const BuildNamespace &BN) {
-  return OS << "BuildNamespace(" << toString(BN.Kind) << ", " << BN.Name << ")";
+  return OS << "BuildNamespace(" << BN.Kind << ", " << BN.Name << ")";
 }
 
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,

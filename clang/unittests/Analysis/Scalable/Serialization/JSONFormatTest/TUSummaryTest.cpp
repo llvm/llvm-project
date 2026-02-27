@@ -586,7 +586,7 @@ TEST_F(JSONFormatTUSummaryTest, NoReadPermission) {
 
   auto ExpectedFilePath = writeJSON(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -635,7 +635,7 @@ TEST_F(JSONFormatTUSummaryTest, NotObject) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryLinkageMissingType) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -662,7 +662,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryLinkageMissingType) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryLinkageInvalidType) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -692,13 +692,13 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryLinkageInvalidType) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryMissingId) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
     "linkage_table": [
       {
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -717,14 +717,14 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryMissingId) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryIdNotUInt64) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
     "linkage_table": [
       {
         "id": "not_a_number",
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -743,7 +743,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryIdNotUInt64) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryMissingLinkage) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -772,7 +772,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableEntryMissingLinkage) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableNotArray) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -791,7 +791,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableNotArray) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -810,14 +810,14 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableElementNotObject) {
 TEST_F(JSONFormatTUSummaryTest, LinkageTableExtraId) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -829,13 +829,13 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableExtraId) {
                   HasSubstr("reading LinkageTable from field 'linkage_table'"),
                   HasSubstr("reading LinkageTable entry from index '0'"),
                   HasSubstr("failed to deserialize LinkageTable"),
-                  HasSubstr("extra EntityId '0' not present in IdTable"))));
+                  HasSubstr("extra 'EntityId(0)' not present in IdTable"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, LinkageTableMissingId) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -846,7 +846,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableMissingId) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -862,13 +862,13 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableMissingId) {
                   HasSubstr("reading TUSummary from file"),
                   HasSubstr("reading LinkageTable from field 'linkage_table'"),
                   HasSubstr("failed to deserialize LinkageTable"),
-                  HasSubstr("missing EntityId '0' present in IdTable"))));
+                  HasSubstr("missing 'EntityId(0)' present in IdTable"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, LinkageTableDuplicateId) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -879,7 +879,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableDuplicateId) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -889,11 +889,11 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableDuplicateId) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       },
       {
         "id": 0,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       }
     ],
     "data": []
@@ -904,7 +904,7 @@ TEST_F(JSONFormatTUSummaryTest, LinkageTableDuplicateId) {
                   HasSubstr("reading TUSummary from file"),
                   HasSubstr("reading LinkageTable from field 'linkage_table'"),
                   HasSubstr("failed to insert LinkageTable entry at index '1'"),
-                  HasSubstr("encountered duplicate EntityId '0'"))));
+                  HasSubstr("encountered duplicate 'EntityId(0)'"))));
 }
 
 // ============================================================================
@@ -958,7 +958,7 @@ TEST_F(JSONFormatTUSummaryTest, MissingKind) {
 TEST_F(JSONFormatTUSummaryTest, MissingName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit"
+      "kind": "CompilationUnit"
     },
     "id_table": [],
     "linkage_table": [],
@@ -981,7 +981,7 @@ TEST_F(JSONFormatTUSummaryTest, MissingName) {
 TEST_F(JSONFormatTUSummaryTest, NamespaceElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -997,7 +997,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementNotObject) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       }
     ],
     "data": []
@@ -1018,7 +1018,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementNotObject) {
 TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingKind) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1038,7 +1038,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingKind) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       }
     ],
     "data": []
@@ -1060,7 +1060,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingKind) {
 TEST_F(JSONFormatTUSummaryTest, NamespaceElementInvalidKind) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1081,7 +1081,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementInvalidKind) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -1104,7 +1104,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementInvalidKind) {
 TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1115,7 +1115,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingName) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit"
+              "kind": "CompilationUnit"
             }
           ]
         }
@@ -1124,7 +1124,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingName) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       }
     ],
     "data": []
@@ -1150,7 +1150,7 @@ TEST_F(JSONFormatTUSummaryTest, NamespaceElementMissingName) {
 TEST_F(JSONFormatTUSummaryTest, EntityNameMissingUSR) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1165,7 +1165,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityNameMissingUSR) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       }
     ],
     "data": []
@@ -1184,7 +1184,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityNameMissingUSR) {
 TEST_F(JSONFormatTUSummaryTest, EntityNameMissingSuffix) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1199,7 +1199,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityNameMissingSuffix) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -1218,7 +1218,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityNameMissingSuffix) {
 TEST_F(JSONFormatTUSummaryTest, EntityNameMissingNamespace) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1233,7 +1233,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityNameMissingNamespace) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       }
     ],
     "data": []
@@ -1258,7 +1258,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityNameMissingNamespace) {
 TEST_F(JSONFormatTUSummaryTest, IDTableEntryMissingID) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1287,7 +1287,7 @@ TEST_F(JSONFormatTUSummaryTest, IDTableEntryMissingID) {
 TEST_F(JSONFormatTUSummaryTest, IDTableEntryMissingName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1298,7 +1298,7 @@ TEST_F(JSONFormatTUSummaryTest, IDTableEntryMissingName) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       }
     ],
     "data": []
@@ -1316,7 +1316,7 @@ TEST_F(JSONFormatTUSummaryTest, IDTableEntryMissingName) {
 TEST_F(JSONFormatTUSummaryTest, IDTableEntryIDNotUInt64) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1350,7 +1350,7 @@ TEST_F(JSONFormatTUSummaryTest, IDTableEntryIDNotUInt64) {
 TEST_F(JSONFormatTUSummaryTest, IDTableNotArray) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": {},
@@ -1368,7 +1368,7 @@ TEST_F(JSONFormatTUSummaryTest, IDTableNotArray) {
 TEST_F(JSONFormatTUSummaryTest, IDTableElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [123],
@@ -1388,7 +1388,7 @@ TEST_F(JSONFormatTUSummaryTest, IDTableElementNotObject) {
 TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -1399,7 +1399,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -1412,7 +1412,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -1422,11 +1422,11 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       },
       {
         "id": 1,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -1438,7 +1438,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
           AllOf(HasSubstr("reading TUSummary from file"),
                 HasSubstr("reading IdTable from field 'id_table'"),
                 HasSubstr("failed to insert EntityIdTable entry at index '1'"),
-                HasSubstr("encountered duplicate EntityId '0'"))));
+                HasSubstr("encountered duplicate 'EntityId(0)'"))));
 }
 
 // ============================================================================
@@ -1448,7 +1448,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntity) {
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryNoFormatInfo) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1476,8 +1476,9 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryNoFormatInfo) {
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("reading EntitySummary from field 'entity_summary'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr("no FormatInfo registered for summary "
-                    "'UnregisteredEntitySummaryForJSONFormatTest'"))));
+          HasSubstr(
+              "no FormatInfo registered for "
+              "'SummaryName(UnregisteredEntitySummaryForJSONFormatTest)'"))));
 }
 
 // ============================================================================
@@ -1488,7 +1489,7 @@ TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestMissingPairsField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1522,7 +1523,7 @@ TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestInvalidPairsFieldType) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1558,7 +1559,7 @@ TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestPairsElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1594,7 +1595,7 @@ TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestMissingFirstField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1634,7 +1635,7 @@ TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestInvalidFirstField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1675,7 +1676,7 @@ TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestMissingSecondField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1715,7 +1716,7 @@ TEST_F(JSONFormatTUSummaryTest,
        PairsEntitySummaryForJSONFormatTestInvalidSecondField) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1759,7 +1760,7 @@ TEST_F(JSONFormatTUSummaryTest,
 TEST_F(JSONFormatTUSummaryTest, EntityDataMissingEntityID) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1791,7 +1792,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityDataMissingEntityID) {
 TEST_F(JSONFormatTUSummaryTest, EntityDataMissingEntitySummary) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1823,7 +1824,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityDataMissingEntitySummary) {
 TEST_F(JSONFormatTUSummaryTest, EntityIDNotUInt64) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1850,13 +1851,13 @@ TEST_F(JSONFormatTUSummaryTest, EntityIDNotUInt64) {
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("failed to read EntityId from field 'entity_id'"),
-          HasSubstr("expected JSON integer"))));
+          HasSubstr("expected JSON number (unsigned 64-bit integer)"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1883,14 +1884,14 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMissingData) {
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr("null EntitySummary data for summary "
-                    "'NullEntitySummaryForJSONFormatTest'"))));
+          HasSubstr("null EntitySummary data for "
+                    "'SummaryName(NullEntitySummaryForJSONFormatTest)'"))));
 }
 
 TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -1917,10 +1918,12 @@ TEST_F(JSONFormatTUSummaryTest, ReadEntitySummaryMismatchedSummaryName) {
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("reading EntitySummary entry from index '0'"),
           HasSubstr("failed to deserialize EntitySummary"),
-          HasSubstr("EntitySummary data for summary "
-                    "'MismatchedEntitySummaryForJSONFormatTest' reports "
-                    "mismatched summary "
-                    "'MismatchedEntitySummaryForJSONFormatTest_WrongName'"))));
+          HasSubstr(
+              "EntitySummary data for "
+              "'SummaryName(MismatchedEntitySummaryForJSONFormatTest)' reports "
+              "mismatched "
+              "'SummaryName(MismatchedEntitySummaryForJSONFormatTest_WrongName)"
+              "'"))));
 }
 
 // ============================================================================
@@ -1941,8 +1944,8 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMissingData) {
 
   EXPECT_DEATH(
       { (void)writeTUSummary(Summary, "output.json"); },
-      "JSONFormat - null EntitySummary data for summary "
-      "'NullEntitySummaryForJSONFormatTest'");
+      "JSONFormat - null EntitySummary data for "
+      "'SummaryName\\(NullEntitySummaryForJSONFormatTest\\)'");
 }
 
 TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
@@ -1960,10 +1963,10 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
 
   EXPECT_DEATH(
       { (void)writeTUSummary(Summary, "output.json"); },
-      "JSONFormat - EntitySummary data for summary "
-      "'MismatchedEntitySummaryForJSONFormatTest' reports "
-      "mismatched summary "
-      "'MismatchedEntitySummaryForJSONFormatTest_WrongName'");
+      "JSONFormat - EntitySummary data for "
+      "'SummaryName\\(MismatchedEntitySummaryForJSONFormatTest\\)' reports "
+      "mismatched "
+      "'SummaryName\\(MismatchedEntitySummaryForJSONFormatTest_WrongName\\)'");
 }
 
 // ============================================================================
@@ -1973,7 +1976,7 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryMismatchedSummaryName) {
 TEST_F(JSONFormatTUSummaryTest, EntityDataElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2000,7 +2003,7 @@ TEST_F(JSONFormatTUSummaryTest, EntityDataElementNotObject) {
 TEST_F(JSONFormatTUSummaryTest, DuplicateEntityIdInDataMap) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -2017,7 +2020,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntityIdInDataMap) {
       {
         "id": 0,
         "linkage": {
-          "type": "none"
+          "type": "None"
         }
       }
     ],
@@ -2050,7 +2053,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntityIdInDataMap) {
           HasSubstr("reading SummaryData entry from index '0'"),
           HasSubstr("reading EntitySummary entries from field 'summary_data'"),
           HasSubstr("failed to insert EntitySummary entry at index '1'"),
-          HasSubstr("encountered duplicate EntityId '0'"))));
+          HasSubstr("encountered duplicate 'EntityId(0)'"))));
 }
 
 // ============================================================================
@@ -2060,7 +2063,7 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateEntityIdInDataMap) {
 TEST_F(JSONFormatTUSummaryTest, DataEntryMissingSummaryName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2085,7 +2088,7 @@ TEST_F(JSONFormatTUSummaryTest, DataEntryMissingSummaryName) {
 TEST_F(JSONFormatTUSummaryTest, DataEntryMissingData) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2115,7 +2118,7 @@ TEST_F(JSONFormatTUSummaryTest, DataEntryMissingData) {
 TEST_F(JSONFormatTUSummaryTest, DataNotArray) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2134,7 +2137,7 @@ TEST_F(JSONFormatTUSummaryTest, DataNotArray) {
 TEST_F(JSONFormatTUSummaryTest, DataElementNotObject) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2153,7 +2156,7 @@ TEST_F(JSONFormatTUSummaryTest, DataElementNotObject) {
 TEST_F(JSONFormatTUSummaryTest, DuplicateSummaryName) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2171,12 +2174,13 @@ TEST_F(JSONFormatTUSummaryTest, DuplicateSummaryName) {
   })");
 
   EXPECT_THAT_EXPECTED(
-      Result, FailedWithMessage(AllOf(
-                  HasSubstr("reading TUSummary from file"),
-                  HasSubstr("reading SummaryData entries from field 'data'"),
-                  HasSubstr("failed to insert SummaryData entry at index '1'"),
-                  HasSubstr("encountered duplicate SummaryName "
-                            "'PairsEntitySummaryForJSONFormatTest'"))));
+      Result,
+      FailedWithMessage(AllOf(
+          HasSubstr("reading TUSummary from file"),
+          HasSubstr("reading SummaryData entries from field 'data'"),
+          HasSubstr("failed to insert SummaryData entry at index '1'"),
+          HasSubstr("encountered duplicate "
+                    "'SummaryName(PairsEntitySummaryForJSONFormatTest)'"))));
 }
 
 // ============================================================================
@@ -2201,7 +2205,7 @@ TEST_F(JSONFormatTUSummaryTest, MissingTUNamespace) {
 TEST_F(JSONFormatTUSummaryTest, MissingIDTable) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "data": []
@@ -2217,7 +2221,7 @@ TEST_F(JSONFormatTUSummaryTest, MissingIDTable) {
 TEST_F(JSONFormatTUSummaryTest, MissingLinkageTable) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2235,7 +2239,7 @@ TEST_F(JSONFormatTUSummaryTest, MissingLinkageTable) {
 TEST_F(JSONFormatTUSummaryTest, MissingData) {
   auto Result = readTUSummaryFromString(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2355,15 +2359,17 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(
-          AllOf(HasSubstr("writing TUSummary to file"),
-                HasSubstr("writing SummaryData entry to index '0'"),
-                HasSubstr("writing EntitySummary entries to field "
-                          "'summary_data'"),
-                HasSubstr("writing EntitySummary entry to index '0'"),
-                HasSubstr("failed to serialize EntitySummary"),
-                HasSubstr("no FormatInfo registered for summary "
-                          "'UnregisteredEntitySummaryForJSONFormatTest'"))));
+      FailedWithMessage(AllOf(
+          HasSubstr("writing TUSummary to file"),
+          HasSubstr("writing SummaryData entry to index '0'"),
+          HasSubstr("writing EntitySummary entries to field "
+                    "'summary_data'"),
+          HasSubstr("writing EntitySummary entry to index '0'"),
+          HasSubstr("writing EntitySummary to field 'entity_summary'"),
+          HasSubstr("failed to serialize EntitySummary"),
+          HasSubstr(
+              "no FormatInfo registered for "
+              "'SummaryName(UnregisteredEntitySummaryForJSONFormatTest)'"))));
 }
 
 // ============================================================================
@@ -2373,7 +2379,7 @@ TEST_F(JSONFormatTUSummaryTest, WriteEntitySummaryNoFormatInfo) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripEmpty) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2385,7 +2391,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripEmpty) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -2396,7 +2402,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2409,7 +2415,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2422,7 +2428,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2435,7 +2441,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2448,7 +2454,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2458,23 +2464,23 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
     "linkage_table": [
       {
         "id": 3,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       },
       {
         "id": 1,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       },
       {
         "id": 4,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       },
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       },
       {
         "id": 2,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       }
     ],
     "data": [
@@ -2555,7 +2561,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithTwoSummaryTypes) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripLinkUnit) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "link_unit",
+      "kind": "LinkUnit",
       "name": "libtest.so"
     },
     "id_table": [],
@@ -2567,7 +2573,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkUnit) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripWithEmptyDataEntry) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [],
@@ -2584,7 +2590,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripWithEmptyDataEntry) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -2595,7 +2601,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2605,7 +2611,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       }
     ],
     "data": []
@@ -2615,7 +2621,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithNoneLinkage) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -2626,7 +2632,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2636,7 +2642,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       }
     ],
     "data": []
@@ -2646,7 +2652,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithInternalLinkage) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -2657,7 +2663,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2667,7 +2673,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
@@ -2677,7 +2683,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithExternalLinkage) {
 TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
   readWriteCompareTUSummary(R"({
     "tu_namespace": {
-      "kind": "compilation_unit",
+      "kind": "CompilationUnit",
       "name": "test.cpp"
     },
     "id_table": [
@@ -2688,7 +2694,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2701,7 +2707,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2714,7 +2720,7 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
           "suffix": "",
           "namespace": [
             {
-              "kind": "compilation_unit",
+              "kind": "CompilationUnit",
               "name": "test.cpp"
             }
           ]
@@ -2724,15 +2730,15 @@ TEST_F(JSONFormatTUSummaryTest, RoundTripLinkageTableWithMultipleEntries) {
     "linkage_table": [
       {
         "id": 0,
-        "linkage": { "type": "none" }
+        "linkage": { "type": "None" }
       },
       {
         "id": 1,
-        "linkage": { "type": "internal" }
+        "linkage": { "type": "Internal" }
       },
       {
         "id": 2,
-        "linkage": { "type": "external" }
+        "linkage": { "type": "External" }
       }
     ],
     "data": []
