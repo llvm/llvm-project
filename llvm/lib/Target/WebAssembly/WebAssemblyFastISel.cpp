@@ -1294,12 +1294,26 @@ static unsigned getSExtLoadOpcode(unsigned Opc, bool A64) {
   return Opc;
 }
 
+static unsigned getFoldedLoadOpcode(MachineInstr *MI, bool A64) {
+  switch (MI->getOpcode()) {
+  case WebAssembly::I32_EXTEND8_S_I32:
+  case WebAssembly::I32_EXTEND16_S_I32:
+  case WebAssembly::I64_EXTEND8_S_I64:
+  case WebAssembly::I64_EXTEND16_S_I64:
+  case WebAssembly::I64_EXTEND32_S_I64:
+  case WebAssembly::I64_EXTEND_S_I32:
+    return getSExtLoadOpcode(MI->getOpcode(), A64);
+
+  default:
+    return WebAssembly::INSTRUCTION_LIST_END;
+  }
+}
+
 bool WebAssemblyFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                               const LoadInst *LI) {
   bool A64 = Subtarget->hasAddr64();
-  unsigned NewOpc;
-  if ((NewOpc = getSExtLoadOpcode(MI->getOpcode(), A64)) ==
-      WebAssembly::INSTRUCTION_LIST_END)
+  unsigned NewOpc = getFoldedLoadOpcode(MI, A64);
+  if (NewOpc == WebAssembly::INSTRUCTION_LIST_END)
     return false;
 
   Address Addr;
