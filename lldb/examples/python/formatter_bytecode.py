@@ -141,7 +141,7 @@ _SIGNATURE_LABEL = re.compile(f"@(?:{SIGNATURE_NAMES}):$")
 
 def _tokenize(assembler: str) -> list[str]:
     """Convert string of assembly into tokens."""
-    # With one exception, tokens are simply sequences of non-space characters.
+    # With one exception, tokens are sequences of non-space characters.
     # The one exception is string literals, which may have spaces.
 
     # To parse strings, which can contain escaped contents, use a "Friedl
@@ -190,7 +190,6 @@ def compile_file(type_name: str, input: TextIO, output: BinaryIO) -> None:
             raise ValueError(f"duplicate signature: {sig}")
         signatures[sig] = compile_tokens(tokens)
 
-    # FIXME: review use of ints below, check if any are in fact uleb.
     bin = bytearray()
     bin.extend(_to_uleb(len(type_name)))
     bin.extend(bytes(type_name, encoding="utf-8"))
@@ -201,7 +200,6 @@ def compile_file(type_name: str, input: TextIO, output: BinaryIO) -> None:
         bin.extend(_to_uleb(len(bc)))
         bin.extend(bc)
 
-    # FIXME: is version a uleb?
     output.write(_to_byte(BINARY_VERSION))
     output.write(_to_uleb(len(bin)))
     output.write(bin)
