@@ -275,7 +275,7 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
       "amdgpu-max-memory-clause", MaxClause);
 
   for (MachineBasicBlock &MBB : MF) {
-    GCNDownwardRPTracker RPT(*LIS);
+    GCNDownwardRPTracker RPT(*LIS, *MRI);
     MachineBasicBlock::instr_iterator Next;
     for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
       MachineInstr &MI = *I;
