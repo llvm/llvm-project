@@ -3003,7 +3003,7 @@ MachineInstr *PreRARematStage::ScoredRemat::rematerialize(
     if (LI.hasSubRanges() && MO.getSubReg())
       LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-    LaneBitmask LiveInMask = DAG.LiveIns[Remat.UseRegion].at(UseReg);
+    LaneBitmask LiveInMask = DAG.LiveIns[Remat->UseRegion].at(UseReg);
     LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
     // If this register has lanes not covered by the LiveIns, be sure they
     // do not map to any subrange. ref:
