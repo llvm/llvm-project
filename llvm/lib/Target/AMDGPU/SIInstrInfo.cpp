@@ -1159,7 +1159,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
-  int64_t NewOpc;
+  int32_t NewOpc;
 
   // Try to map original to commuted opcode
   NewOpc = AMDGPU::getCommuteRev(Opcode);
@@ -5792,13 +5792,13 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       return false;
     }
     if (DC >= DppCtrl::WAVE_SHL1 && DC <= DppCtrl::WAVE_ROR1 &&
-        ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+        !ST.hasDPPWavefrontShifts()) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "wavefront shifts are not supported on GFX10+";
       return false;
     }
     if (DC >= DppCtrl::BCAST15 && DC <= DppCtrl::BCAST31 &&
-        ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+        !ST.hasDPPBroadcasts()) {
       ErrInfo = "Invalid dpp_ctrl value: "
                 "broadcasts are not supported on GFX10+";
       return false;
@@ -10377,7 +10377,7 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
       Opcode = MFMAOp;
   }
 
-  int64_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+  int32_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
   if (MCOp == AMDGPU::INSTRUCTION_LIST_END && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);

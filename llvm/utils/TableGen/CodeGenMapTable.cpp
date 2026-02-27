@@ -474,7 +474,7 @@ void MapTableEmitter::emitTablesWithFunc(raw_ostream &OS) {
   const ListInit *ColFields = InstrMapDesc.getColFields();
   ArrayRef<const ListInit *> ValueCols = InstrMapDesc.getValueCols();
   OS << "// " << InstrMapDesc.getName() << "\nLLVM_READONLY\n";
-  OS << "int64_t " << InstrMapDesc.getName() << "(uint32_t Opcode";
+  OS << "int32_t " << InstrMapDesc.getName() << "(uint32_t Opcode";
   if (ValueCols.size() > 1) {
     for (const Init *CF : ColFields->getElements()) {
       std::string ColName = CF->getAsUnquotedString();
