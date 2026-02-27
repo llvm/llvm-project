@@ -29,7 +29,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include <iostream>
 
 #define DEBUG_TYPE "affine-super-vectorizer-test"
 
