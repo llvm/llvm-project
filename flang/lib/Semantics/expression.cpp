@@ -4362,44 +4362,18 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
 }
 
 // Everything comes in as an 
-// AllocateShapeSpecArrayList -> AllocateShapeSpecList at the root of the relevant tree,
-// with the assumption that it's a misparse if there is a rank-1 array in at least one of the 
-// bounds. So correct the misparse by rewriting from 
-// AllocateShapeSpecArrayList -> AllocateShapeSpecList to 
-// AllocateShapeSpecArrayList -> AllocateShapeSpecArray.
+// AllocateShapeSpecArrayList -> std::list<AllocateShapeSpec>
+// with the assumption that it's a misparse if there is a rank > 1 array in at least one of the 
+// bounds, and the original std::list<AllocateShapeSpec> is 1 element long. 
+// So correct the misparse by rewriting from std::list<AllocateShapeSpec> to AllocateShapeSpecArray.
 // This is necessary, otherwise semantic analysis will fail since AllocateShapeSpec contains
 // a BoundExpr which is just a ScalarIntExpr. We need to place the expression(s) in an
 // AllocateShapeSpecArray because that is typed as a pair of BoundsExpr, which is a
-// (more general) IntExpr. So it will still cover the case of having a scalar broadcast
+// (more general) IntExpr. It will still cover the case of having a scalar broadcast
 // to a rank-1 integer array. 
-// In short, if there is at least 1 rank-1 integer array, rewrite this part of the tree
-// to avoid the ScalarIntExpr semantic check and instead pass through the IntExpr semantic 
-// check. Since we cannot clone nodes in a tree, we will handle both cases in Lower, both
-// cases being AllocateShapeSpecList and AllocateShapeSpecArray.
-
-// AllocateShapeSpecList isn't explicitly in the dump, but can be inferred from multiple AllocateShapeSpecs.
-// | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
-// | | | Allocation
-// | | | | AllocateObject -> Name = 'arr'
-// | | | | AllocateShapeSpecArrayList -> AllocateShapeSpec
-// | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '2'
-// | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '3'
-// | | | | AllocateShapeSpec
-// | | | | | Scalar -> Integer -> Expr -> LiteralConstant -> IntLiteralConstant = '4'
-// | | ExecutionPartConstruct -> ExecutableConstruct -> ActionStmt -> AllocateStmt
-// | | | Allocation
-// | | | | AllocateObject -> Name = 'arr'
-// | | | | AllocateShapeSpecArrayList -> AllocateShapeSpec
-// | | | | | Scalar -> Integer -> Expr -> ArrayConstructor -> AcSpec
-// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '2'
-// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '1'
-// | | | | | Scalar -> Integer -> Expr -> ArrayConstructor -> AcSpec
-// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '3'
-// | | | | | | AcValue -> Expr -> LiteralConstant -> IntLiteralConstant = '4'
-// We can decide that a misparsed AllocateShapeSpecList is supposed to be 
-// an AllocateShapeSpecArray if the list is 1 entry long AND either of the expressions
-// is an array (rank > 0). We will check that it is a rank-1 array 
-// as part of other error checks in check-allocate.cpp.
+// Since we cannot clone nodes in a tree, we will handle both cases separately in Lower.
+// We will check that it is a rank-1 array as part of other error checks in 
+// check-allocate.cpp, so rewrite even if rank != 1.
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &x) {
   auto &shapeSpecList{
     std::get<std::list<parser::AllocateShapeSpec>>(x.u)};
@@ -4411,24 +4385,23 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
     // Get upper bound - BoundExpr is Scalar<Integer<Indirection<Expr>>>
     const auto &upperBound{std::get<1>(shapeSpecList.front().t)};
     const auto &lowerBoundOpt = std::get<0>(shapeSpecList.front().t);
+    const auto *lowerBound = lowerBoundOpt ? &*lowerBoundOpt : nullptr;
+
     bool foundArray{false};
     // We want to rewrite as an AllocateShapeSpecArray even if 
     // the element type is wrong (say a real instead of integer), so 
     // analyze as an unwrapped Expr for its rank, then analyze as 
     // an Integer<Indirection<Expr>>.
-    if(MaybeExpr analyzedExpr = Analyze(upperBound.thing.thing.value())) {
-      if(analyzedExpr->Rank() > 0) {
-        foundArray = true;
-        Analyze(upperBound.thing);  
-      }
+    if(MaybeExpr analyzedExpr = Analyze(upperBound.thing.thing.value());
+       analyzedExpr && (analyzedExpr->Rank() > 0)) {
+      foundArray = true;
+      Analyze(upperBound.thing);  
     } 
-    if(lowerBoundOpt) {
-      const auto &lowerBound{*lowerBoundOpt};
-      if(MaybeExpr analyzedExpr = Analyze(lowerBound.thing.thing.value())) {
-        if(analyzedExpr->Rank() > 0) {
-          foundArray = true;
-          Analyze(lowerBound.thing);
-        }
+    if(lowerBound) {
+      if(MaybeExpr analyzedExpr = Analyze(lowerBound->thing.thing.value());
+         analyzedExpr && analyzedExpr->Rank() > 0) {
+        foundArray = true;
+        Analyze(lowerBound->thing);
       }
     }
     
@@ -4439,8 +4412,8 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
       
       // Handle optional lower bound
       std::optional<parser::IntExpr> lowerIntExpr;
-      if(lowerBoundOpt) {
-        auto &mutableLowerBound{const_cast<parser::BoundExpr&>(*lowerBoundOpt)};
+      if(lowerBound) {
+        auto &mutableLowerBound{const_cast<parser::BoundExpr&>(*lowerBound)};
         lowerIntExpr = std::move(mutableLowerBound.thing);
       }
       
@@ -4454,7 +4427,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
     }
   }
 
-// Analyze each AllocateShapeSpec, as a Scalar<Int<Expr>>
+  // Analyze each AllocateShapeSpec, as a Scalar<Int<Expr>>
   for(auto it = shapeSpecList.begin(); it != shapeSpecList.end(); ++it) {
     const auto &upperBound{std::get<1>(it->t)};
     Analyze(upperBound);

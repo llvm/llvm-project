@@ -336,7 +336,6 @@ private:
     const Fortran::semantics::Symbol &getSymbol() const {
       return unwrapSymbol(getAllocObj());
     }
-    // Check if this allocation uses array bounds (F2023 feature)
     bool hasArrayBounds() const {
       const auto &shapeSpecArrayList{
           std::get<Fortran::parser::AllocateShapeSpecArrayList>(alloc.t)};
@@ -412,10 +411,7 @@ private:
       return true;
     }
     else {
-      // For AllocateShapeSpecArray, check if the optional lower bound is present
       const auto &shapeSpecArray{alloc.getShapeSpecArrays()};
-      // std::get<0> gets the optional<IntExpr> for the lower bound
-      // If it has a value, then lower bounds are not all ones
       return !std::get<0>(shapeSpecArray.t).has_value();
     }
   }
@@ -463,19 +459,17 @@ private:
       }
     }
     else {
-      // Handle AllocateShapeSpecArray (F2023 array bounds feature)
+      // Handle AllocateShapeSpecArray
       const auto &shapeSpecArray{alloc.getShapeSpecArrays()};
       const auto &lowerOptBoundsExpr{std::get<0>(shapeSpecArray.t)};
       const auto &upperBoundsExpr{std::get<1>(shapeSpecArray.t)};
       
-      // Get the semantic expressions
       const Fortran::lower::SomeExpr *ubExpr = 
           Fortran::semantics::GetExpr(upperBoundsExpr);
       const Fortran::lower::SomeExpr *lbExpr = 
           lowerOptBoundsExpr ? Fortran::semantics::GetExpr(*lowerOptBoundsExpr) 
                              : nullptr;
       
-      // Determine ranks
       int ubRank = ubExpr->Rank();
       int lbRank = lbExpr ? lbExpr->Rank() : 0;
       
@@ -498,12 +492,10 @@ private:
           }
         }
       }
-      assert(extent > 0 && "bounds array must have known constant size");
       
       // Prepare upper bounds
       llvm::SmallVector<mlir::Value> ubValues;
       if (ubRank == 1) {
-        // Upper bounds is an array - extract each element
         fir::ExtendedValue ubExv = converter.genExprAddr(loc, *ubExpr, stmtCtx);
         mlir::Value ubBase = fir::getBase(ubExv);
         auto ubRefTy = mlir::dyn_cast<fir::ReferenceType>(ubBase.getType());
@@ -520,7 +512,6 @@ private:
           ubValues.push_back(ub);
         }
       } else {
-        // Upper bounds is a scalar - broadcast to all dimensions
         mlir::Value ubScalar = fir::getBase(
             converter.genExprValue(loc, *ubExpr, stmtCtx));
         ubScalar = builder.createConvert(loc, idxTy, ubScalar);
@@ -533,7 +524,6 @@ private:
       llvm::SmallVector<mlir::Value> lbValues;
       if (lbExpr) {
         if (lbRank == 1) {
-          // Lower bounds is an array - extract each element
           fir::ExtendedValue lbExv = converter.genExprAddr(loc, *lbExpr, stmtCtx);
           mlir::Value lbBase = fir::getBase(lbExv);
           auto lbRefTy = mlir::dyn_cast<fir::ReferenceType>(lbBase.getType());
@@ -550,7 +540,6 @@ private:
             lbValues.push_back(lb);
           }
         } else {
-          // Lower bounds is a scalar - broadcast to all dimensions
           mlir::Value lbScalar = fir::getBase(
               converter.genExprValue(loc, *lbExpr, stmtCtx));
           lbScalar = builder.createConvert(loc, idxTy, lbScalar);
@@ -564,13 +553,11 @@ private:
       for (int64_t i = 0; i < extent; ++i) {
         if (!lbValues.empty()) {
           lbounds.emplace_back(lbValues[i]);
-          // extent = ub - lb + 1
           mlir::Value diff = mlir::arith::SubIOp::create(builder, loc, 
               ubValues[i], lbValues[i]);
           extents.emplace_back(
               mlir::arith::AddIOp::create(builder, loc, diff, one));
         } else {
-          // No lower bound - extent = upper bound (assumes lb = 1)
           extents.emplace_back(ubValues[i]);
         }
       }
@@ -760,6 +747,7 @@ private:
       }
     }
     else {
+      //TODO: can this code path be reached with AllocateShapeSpecArray?
       printf("UNIMPLEMENTED 3\n");
     }
   }

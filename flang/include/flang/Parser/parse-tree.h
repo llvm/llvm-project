@@ -1324,19 +1324,10 @@ WRAPPER_CLASS(ImpliedShapeSpec, std::list<AssumedImpliedSpec>);
 EMPTY_CLASS(AssumedRankSpec);
 
 // R815 array-spec ->
-//        explicit-shape-spec-list | assumed-shape-spec-list |
-//        deferred-shape-spec-list | assumed-size-spec | implied-shape-spec |
+//        explicit-shape-spec-list | explicit-shape-bounds-spec | 
+//        assumed-shape-spec-list | deferred-shape-spec-list | 
+//        assumed-size-spec | implied-shape-spec |
 //        implied-shape-or-assumed-size-spec | assumed-rank-spec
-// R814 array-spec is 
-//    explicit-shape-spec-list
-// or explicit-shape-bounds-spec
-// or assumed-shape-spec-list
-// or assumed-shape-bounds-spec
-// or deferred-shape-spec-list
-// or assumed-size-spec
-// or implied-shape-spec
-// or implied-shape-or-assumed-size-spec
-// or assumed-rank-spec
 using ExplicitBoundsExpr = IntExpr;
 
 struct ExplicitShapeBoundsSpec {
@@ -1953,10 +1944,10 @@ struct AllocateCoarraySpec {
 
 // R933 allocation ->
 //        allocate-object [( allocate-shape-spec-list )]
+//        [lbracket allocate-coarray-spec rbracket] |
+//        allocate-object ( [ lower-bounds-expr : ] upper-bounds-expr )
+//        [ lbracket allocate-coarray-spec rbracket ]
 //        [lbracket allocate-coarray-spec rbracket]
-//      | allocate-object ( allocate-shape-spec-array )
-//        [lbracket allocate-coarray-spec rbracket]
-// allocate-shape-spec-array -> [ lower-bounds-expr : ] upper-bounds-expr
 struct AllocateShapeSpecArray {
   TUPLE_CLASS_BOILERPLATE(AllocateShapeSpecArray);
   std::tuple<

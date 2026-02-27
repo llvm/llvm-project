@@ -567,10 +567,6 @@ public:
     Walk(std::get<std::optional<SpecificationExpr>>(x.t), ":");
     Walk(std::get<SpecificationExpr>(x.t));
   }
-  void Unparse(const ExplicitShapeBoundsSpec &x) {
-    // TODO: don't remember if this was needed to compile 
-    // or if I just put it here
-  }
   void Unparse(const ArraySpec &x) { // R815
     common::visit(
         common::visitors{
