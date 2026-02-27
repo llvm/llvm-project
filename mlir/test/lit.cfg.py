@@ -187,6 +187,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
+    "llvm-strings",
     "mlir-tblgen",
     "mlir-translate",
     "mlir-lsp-server",
