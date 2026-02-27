@@ -30,7 +30,7 @@ static cl::opt<bool> UseSourceFilenameForPromotedLocals(
 
 /// FIXME: The current optimization that avoids unnecessary renaming of
 /// promoted locals is incompatible with distributed ThinLTO and therefore
-/// must be disabled by default.
+/// must be enabled by default.
 cl::opt<bool>
     AlwaysRenamePromotedLocals("always-rename-promoted-locals", cl::init(true),
                                cl::Hidden,
