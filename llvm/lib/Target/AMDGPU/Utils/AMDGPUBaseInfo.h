@@ -1562,7 +1562,7 @@ void decodeMsg(unsigned Val, uint16_t &MsgId, uint16_t &OpId,
 LLVM_READNONE
 uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId);
 
-/// \returns true if the message does not use the m0 operand.
+/// Returns true if the message does not use the m0 operand.
 LLVM_READNONE
 bool msgDoesNotUseM0(int64_t MsgId);
 
