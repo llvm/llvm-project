@@ -650,7 +650,7 @@ TEST_F(OpenACCUtilsLoopTest,
 }
 
 TEST_F(OpenACCUtilsLoopTest,
-       WrapMultiBlockRegionWithSCFExecuteRegionIssue2257LoopPattern) {
+       WrapMultiBlockWithEarlyExitRegionWithSCFExecuteRegion) {
   auto [module, funcOp] = createModuleWithFunc();
 
   OwningOpRef<acc::ParallelOp> parallelOp =
