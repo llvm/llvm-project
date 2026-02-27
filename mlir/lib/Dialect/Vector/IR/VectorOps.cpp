@@ -2311,7 +2311,7 @@ public:
       return failure();
 
     auto extractedMaskType =
-        llvm::dyn_cast<VectorType>(extractOp.getResult().getType());
+        dyn_cast<VectorType>(extractOp.getResult().getType());
     if (!extractedMaskType)
       return failure();
 
