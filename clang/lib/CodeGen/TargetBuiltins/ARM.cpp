@@ -5280,8 +5280,8 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     Value *Order = EmitScalarExpr(E->getArg(2));
     Value *Policy = EmitScalarExpr(E->getArg(3));
 
-    auto *OrderC = dyn_cast<llvm::ConstantInt>(Order);
-    auto *PolicyC = dyn_cast<llvm::ConstantInt>(Policy);
+    auto *OrderC = cast<llvm::ConstantInt>(Order);
+    auto *PolicyC = cast<llvm::ConstantInt>(Policy);
 
     // Validate ordering argument; bail out if invalid
     switch (OrderC->getZExtValue()) {
@@ -5300,7 +5300,9 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     unsigned SizeBits = getContext().getTypeSize(ValQT);
     auto *SizeC = llvm::ConstantInt::get(Int32Ty, SizeBits);
 
-    Value *StoreValue64 = Builder.CreateZExtOrTrunc(StoreValue, Int64Ty);
+    const bool IsSignedValType = ValQT->isSignedIntegerType();
+    Value *StoreValue64 =
+        Builder.CreateIntCast(StoreValue, Int64Ty, IsSignedValType);
 
     Function *F = CGM.getIntrinsic(Intrinsic::aarch64_stshh_atomic_store,
                                    {StoreAddr->getType()});

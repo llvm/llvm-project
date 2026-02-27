@@ -1111,10 +1111,6 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
                                                  CallExpr *TheCall) {
   Sema &SemaRef = S.SemaRef;
   ASTContext &Context = S.getASTContext();
-  DeclRefExpr *DRE =
-      cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
-  SourceLocation Loc = DRE->getBeginLoc();
-
   // Ensure we have the proper number of arguments.
   if (SemaRef.checkArgCount(TheCall, 4))
     return true;
@@ -1129,19 +1125,20 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
     return true;
 
   Expr *OrderArg = TheCall->getArg(2);
+  TheCall->setArg(0, PtrRes.get());
+  TheCall->setArg(1, ValRes.get());
 
   // Defer validation for dependent memory_order arguments.
   if (OrderArg->isValueDependent())
     return false;
 
-  TheCall->setArg(0, PtrRes.get());
   Expr *PointerArg = PtrRes.get();
   QualType PtrType = PointerArg->getType();
 
   // Check arg 0 is a pointer type, err out if not
   const PointerType *PointerTy = PtrType->getAs<PointerType>();
   if (!PointerTy) {
-    SemaRef.Diag(Loc, diag::err_atomic_builtin_must_be_pointer)
+    SemaRef.Diag(PointerArg->getBeginLoc(), diag::err_atomic_builtin_must_be_pointer)
         << PtrType << 0 << PointerArg->getSourceRange();
     return true;
   }
@@ -1149,40 +1146,26 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   // Reject const-qualified pointee types
   QualType ValType = PointerTy->getPointeeType();
   if (ValType.isConstQualified()) {
-    SemaRef.Diag(Loc, diag::err_atomic_builtin_cannot_be_const)
+    SemaRef.Diag(PointerArg->getBeginLoc(), diag::err_atomic_builtin_cannot_be_const)
         << PtrType << PointerArg->getSourceRange();
     return true;
   }
 
   ValType = ValType.getUnqualifiedType();
-  bool BadInt = true;
-  if (ValType->isIntegerType()) {
-    unsigned Bits = Context.getTypeSize(ValType);
-    switch (Bits) {
-    case 8:
-    case 16:
-    case 32:
-    case 64:
-      BadInt = false;
-      break;
-    default:
-      break;
-    }
-  }
-
-  // Only 8/16/32/64-bit integers are supported
-  if (BadInt) {
-    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_type)
+  unsigned Bits = Context.getTypeSize(ValType);
+  if (!ValType->isIntegerType() ||
+      (Bits != 8 && Bits != 16 && Bits != 32 && Bits != 64)) {
+    SemaRef.Diag(PointerArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_type)
         << PtrType << PointerArg->getSourceRange();
     return true;
   }
 
-  Expr *ValArg = ValRes.get();
+  Expr *ValArg = TheCall->getArg(1);
   QualType ValArgType = ValArg->getType().getUnqualifiedType();
 
   // Check value type and width
   if (!Context.hasSameType(ValArgType, ValType)) {
-    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_value_type)
+    SemaRef.Diag(ValArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_value_type)
         << ValType << ValArg->getType() << ValArg->getSourceRange();
     return true;
   }
@@ -1191,7 +1174,7 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   std::optional<llvm::APSInt> OrderValOpt =
       OrderArg->getIntegerConstantExpr(Context);
   if (!OrderValOpt) {
-    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_order)
+    SemaRef.Diag(OrderArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_order)
         << OrderArg->getSourceRange();
     return true;
   }
@@ -1199,19 +1182,14 @@ static bool CheckAArch64AtomicStoreWithStshhCall(SemaARM &S,
   // __ATOMIC_RELAXED=0, __ATOMIC_RELEASE=3, __ATOMIC_SEQ_CST=5.
   int64_t Order = OrderValOpt->getSExtValue();
   if (Order != 0 && Order != 3 && Order != 5) {
-    SemaRef.Diag(Loc, diag::err_arm_atomic_store_with_stshh_bad_order)
+    SemaRef.Diag(OrderArg->getBeginLoc(), diag::err_arm_atomic_store_with_stshh_bad_order)
         << OrderArg->getSourceRange();
     return true;
   }
 
-  // Prepare a cast if the value type differs
-  CastKind CK =
-      ValArg->getType().getCanonicalType() == ValType.getCanonicalType()
-          ? CK_NoOp
-          : CK_IntegralCast;
-
-  // Apply cast to the pointee type, bail if cast failed
-  ExprResult ValArgRes = SemaRef.ImpCastExprToType(ValArg, ValType, CK);
+  // Value type already matches ValType above; apply a no-op cast for
+  // consistency with other builtin argument rewriting paths.
+  ExprResult ValArgRes = SemaRef.ImpCastExprToType(ValArg, ValType, CK_NoOp);
   if (ValArgRes.isInvalid())
     return true;
 

@@ -842,8 +842,8 @@ __rndrrs(uint64_t *__p) {
 
 /* Atomic store with PCDPHINT */
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
-#define __arm_atomic_store_with_stshh(ptr, data, memory_order, ret)            \
-  __builtin_arm_atomic_store_with_stshh(ptr, data, memory_order, ret)
+#define __arm_atomic_store_with_stshh(ptr, data, memory_order, retention_policy)            \
+  __builtin_arm_atomic_store_with_stshh(ptr, data, memory_order, retention_policy)
 #endif
 
 /* 11.2 Guarded Control Stack intrinsics */
