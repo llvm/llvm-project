@@ -840,11 +840,10 @@ Expected<StringRef>
 ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections,
                                      WarningHandler WarnHandler) const {
   Expected<uint32_t> ShStrNdxOrErr = getShStrNdx();
-  if (!ShStrNdxOrErr) {
-    consumeError(ShStrNdxOrErr.takeError());
+  if (!ShStrNdxOrErr)
     return createError(
-        "e_shstrndx == SHN_XINDEX, but the section header table is empty");
-  }
+        "e_shstrndx == SHN_XINDEX, but cannot read section header 0: " +
+        toString(ShStrNdxOrErr.takeError()));
 
   uint32_t Index = *ShStrNdxOrErr;
   // There is no section name string table. Return FakeSectionStrings which
