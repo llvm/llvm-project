@@ -608,8 +608,9 @@ performActions(raw_ostream &os,
   TimingScope outputTiming = timing.nest("Output");
   if (config.shouldEmitBytecode()) {
     std::optional<StringRef> producer = config.bytecodeProducerToEmit();
-    BytecodeWriterConfig writerConfig(
-        fallbackResourceMap, producer.value_or("MLIR" LLVM_VERSION_STRING));
+    BytecodeWriterConfig writerConfig =
+        producer ? BytecodeWriterConfig(fallbackResourceMap, producer.value())
+                 : BytecodeWriterConfig(fallbackResourceMap);
     if (auto v = config.bytecodeVersionToEmit())
       writerConfig.setDesiredBytecodeVersion(*v);
     if (config.shouldElideResourceDataFromBytecode())
