@@ -19,7 +19,7 @@ declare i1 @llvm.amdgcn.is.private(ptr nocapture) #2
 
 define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_x
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; HSA-NEXT:    ret void
@@ -31,7 +31,7 @@ define amdgpu_kernel void @use_tgid_x(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_y
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; HSA-NEXT:    ret void
@@ -43,7 +43,7 @@ define amdgpu_kernel void @use_tgid_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@multi_use_tgid_y
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
 ; HSA-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -59,7 +59,7 @@ define amdgpu_kernel void @multi_use_tgid_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_x_y
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
 ; HSA-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -75,7 +75,7 @@ define amdgpu_kernel void @use_tgid_x_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_z
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; HSA-NEXT:    ret void
@@ -87,7 +87,7 @@ define amdgpu_kernel void @use_tgid_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_x_z
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR3]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR4]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
 ; HSA-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -103,7 +103,7 @@ define amdgpu_kernel void @use_tgid_x_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_y_z
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR4:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
 ; HSA-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -119,7 +119,7 @@ define amdgpu_kernel void @use_tgid_y_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tgid_x_y_z
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR4]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR5]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
 ; HSA-NEXT:    [[VAL2:%.*]] = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -139,7 +139,7 @@ define amdgpu_kernel void @use_tgid_x_y_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_x
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; HSA-NEXT:    ret void
@@ -151,7 +151,7 @@ define amdgpu_kernel void @use_tidig_x(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_y
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR5:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; HSA-NEXT:    ret void
@@ -163,7 +163,7 @@ define amdgpu_kernel void @use_tidig_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_z
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR6:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
 ; HSA-NEXT:    [[VAL:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
 ; HSA-NEXT:    ret void
@@ -175,7 +175,7 @@ define amdgpu_kernel void @use_tidig_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_x_tgid_x
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workgroup.id.x()
 ; HSA-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -191,7 +191,7 @@ define amdgpu_kernel void @use_tidig_x_tgid_x(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_y_tgid_y
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR7:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR8:[0-9]+]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workgroup.id.y()
 ; HSA-NEXT:    store volatile i32 [[VAL0]], ptr addrspace(1) [[PTR]], align 4
@@ -207,7 +207,7 @@ define amdgpu_kernel void @use_tidig_y_tgid_y(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_tidig_x_y_z
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR8:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR9:[0-9]+]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
 ; HSA-NEXT:    [[VAL2:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
@@ -227,7 +227,7 @@ define amdgpu_kernel void @use_tidig_x_y_z(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_all_workitems
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR9:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR10:[0-9]+]] {
 ; HSA-NEXT:    [[VAL0:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
 ; HSA-NEXT:    [[VAL1:%.*]] = call i32 @llvm.amdgcn.workitem.id.y()
 ; HSA-NEXT:    [[VAL2:%.*]] = call i32 @llvm.amdgcn.workitem.id.z()
@@ -259,7 +259,7 @@ define amdgpu_kernel void @use_all_workitems(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_dispatch_ptr(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_dispatch_ptr
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR10:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR11:[0-9]+]] {
 ; HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ; HSA-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(4) [[DISPATCH_PTR]], align 4
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
@@ -273,7 +273,7 @@ define amdgpu_kernel void @use_dispatch_ptr(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_queue_ptr(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_queue_ptr
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR11:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR12:[0-9]+]] {
 ; HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
 ; HSA-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(4) [[DISPATCH_PTR]], align 4
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
@@ -287,7 +287,7 @@ define amdgpu_kernel void @use_queue_ptr(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_kernarg_segment_ptr(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_kernarg_segment_ptr
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[DISPATCH_PTR:%.*]] = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
 ; HSA-NEXT:    [[VAL:%.*]] = load i32, ptr addrspace(4) [[DISPATCH_PTR]], align 4
 ; HSA-NEXT:    store i32 [[VAL]], ptr addrspace(1) [[PTR]], align 4
@@ -301,7 +301,7 @@ define amdgpu_kernel void @use_kernarg_segment_ptr(ptr addrspace(1) %ptr) #1 {
 
 define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_group_to_flat_addrspacecast
-; HSA-SAME: (ptr addrspace(3) [[PTR:%.*]]) #[[ATTR12:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(3) [[PTR:%.*]]) #[[ATTR13:[0-9]+]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(3) [[PTR]] to ptr
 ; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4, !noalias.addrspace [[META0:![0-9]+]]
 ; HSA-NEXT:    ret void
@@ -313,7 +313,7 @@ define amdgpu_kernel void @use_group_to_flat_addrspacecast(ptr addrspace(3) %ptr
 
 define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_private_to_flat_addrspacecast
-; HSA-SAME: (ptr addrspace(5) [[PTR:%.*]]) #[[ATTR13:[0-9]+]] {
+; HSA-SAME: (ptr addrspace(5) [[PTR:%.*]]) #[[ATTR14:[0-9]+]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(5) [[PTR]] to ptr
 ; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4, !noalias.addrspace [[META1:![0-9]+]]
 ; HSA-NEXT:    ret void
@@ -325,7 +325,7 @@ define amdgpu_kernel void @use_private_to_flat_addrspacecast(ptr addrspace(5) %p
 
 define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_group_addrspacecast
-; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(3)
 ; HSA-NEXT:    store volatile i32 0, ptr addrspace(3) [[FTOS]], align 4
 ; HSA-NEXT:    ret void
@@ -337,7 +337,7 @@ define amdgpu_kernel void @use_flat_to_group_addrspacecast(ptr %ptr) #1 {
 
 define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_private_addrspacecast
-; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(5)
 ; HSA-NEXT:    store volatile i32 0, ptr addrspace(5) [[FTOS]], align 4
 ; HSA-NEXT:    ret void
@@ -350,7 +350,7 @@ define amdgpu_kernel void @use_flat_to_private_addrspacecast(ptr %ptr) #1 {
 ; No-op addrspacecast should not use queue ptr
 define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_global_to_flat_addrspacecast
-; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr addrspace(1) [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(1) [[PTR]] to ptr
 ; HSA-NEXT:    store volatile i32 0, ptr [[STOF]], align 4, !noalias.addrspace [[META2:![0-9]+]]
 ; HSA-NEXT:    ret void
@@ -362,7 +362,7 @@ define amdgpu_kernel void @use_global_to_flat_addrspacecast(ptr addrspace(1) %pt
 
 define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_constant_to_flat_addrspacecast
-; HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr addrspace(4) [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[STOF:%.*]] = addrspacecast ptr addrspace(4) [[PTR]] to ptr
 ; HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr [[STOF]], align 4, !noalias.addrspace [[META3:![0-9]+]]
 ; HSA-NEXT:    ret void
@@ -374,7 +374,7 @@ define amdgpu_kernel void @use_constant_to_flat_addrspacecast(ptr addrspace(4) %
 
 define amdgpu_kernel void @use_flat_to_global_addrspacecast(ptr %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_global_addrspacecast
-; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(1)
 ; HSA-NEXT:    store volatile i32 0, ptr addrspace(1) [[FTOS]], align 4
 ; HSA-NEXT:    ret void
@@ -386,7 +386,7 @@ define amdgpu_kernel void @use_flat_to_global_addrspacecast(ptr %ptr) #1 {
 
 define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_flat_to_constant_addrspacecast
-; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
+; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR2]] {
 ; HSA-NEXT:    [[FTOS:%.*]] = addrspacecast ptr [[PTR]] to ptr addrspace(4)
 ; HSA-NEXT:    [[LD:%.*]] = load volatile i32, ptr addrspace(4) [[FTOS]], align 4
 ; HSA-NEXT:    ret void
@@ -398,7 +398,7 @@ define amdgpu_kernel void @use_flat_to_constant_addrspacecast(ptr %ptr) #1 {
 
 define amdgpu_kernel void @use_is_shared(ptr %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_is_shared
-; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR12]] {
+; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR13]] {
 ; HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[PTR]])
 ; HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
 ; HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) poison, align 4
@@ -412,7 +412,7 @@ define amdgpu_kernel void @use_is_shared(ptr %ptr) #1 {
 
 define amdgpu_kernel void @use_is_private(ptr %ptr) #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_is_private
-; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR12]] {
+; HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR13]] {
 ; HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
 ; HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
 ; HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) poison, align 4
@@ -426,7 +426,7 @@ define amdgpu_kernel void @use_is_private(ptr %ptr) #1 {
 
 define amdgpu_kernel void @use_alloca() #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_alloca
-; HSA-SAME: () #[[ATTR1]] {
+; HSA-SAME: () #[[ATTR2]] {
 ; HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
 ; HSA-NEXT:    store i32 0, ptr addrspace(5) [[ALLOCA]], align 4
 ; HSA-NEXT:    ret void
@@ -438,7 +438,7 @@ define amdgpu_kernel void @use_alloca() #1 {
 
 define amdgpu_kernel void @use_alloca_non_entry_block() #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_alloca_non_entry_block
-; HSA-SAME: () #[[ATTR1]] {
+; HSA-SAME: () #[[ATTR2]] {
 ; HSA-NEXT:  entry:
 ; HSA-NEXT:    br label [[BB:%.*]]
 ; HSA:       bb:
@@ -457,7 +457,7 @@ bb:
 
 define void @use_alloca_func() #1 {
 ; HSA-LABEL: define {{[^@]+}}@use_alloca_func
-; HSA-SAME: () #[[ATTR1]] {
+; HSA-SAME: () #[[ATTR2]] {
 ; HSA-NEXT:    [[ALLOCA:%.*]] = alloca i32, align 4, addrspace(5)
 ; HSA-NEXT:    store i32 0, ptr addrspace(5) [[ALLOCA]], align 4
 ; HSA-NEXT:    ret void
@@ -474,19 +474,20 @@ attributes #1 = { nounwind }
 ; AKF_HSA: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ;.
 ; HSA: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; HSA: attributes #[[ATTR1]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR3]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR4]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR5]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR6]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR7]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR8]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
-; HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; HSA: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
+; HSA: attributes #[[ATTR2]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR3]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR4]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR5]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR6]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR7]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" }
+; HSA: attributes #[[ATTR8]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR9]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" }
+; HSA: attributes #[[ATTR10]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workitem-id-x" }
+; HSA: attributes #[[ATTR11]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR12]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR13]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-flat-scratch-init" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
+; HSA: attributes #[[ATTR14]] = { nounwind "amdgpu-no-cluster-id-x" "amdgpu-no-cluster-id-y" "amdgpu-no-cluster-id-z" "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 ;.
 ; HSA: [[META0]] = !{i32 1, i32 3, i32 4, i32 10}
 ; HSA: [[META1]] = !{i32 1, i32 5, i32 6, i32 10}
