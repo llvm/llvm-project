@@ -237,6 +237,8 @@ Sections:
 # RUN: not llvm-readelf --file-headers %t.invalid2 2>&1 \
 # RUN:  | FileCheck %s -DFILE=%t.invalid2 -DSECHDROFF=4096 -DPHDRCOUNT="0" -DSECHDRCOUNT="<?>" -DSECHDRSTRTABINDEX="<?>" --check-prefix=INVALID-GNU,GNU-BAD-PHDR
 
+## Check what we print when e_phnum == PN_XNUM and the section header table can't be read.
+
 # RUN: yaml2obj %s --docnum=5 -o %t.invalid3
 # RUN: llvm-readobj --file-headers %t.invalid3 2>&1 \
 # RUN:  | FileCheck %s -DFILE=%t.invalid3 \
