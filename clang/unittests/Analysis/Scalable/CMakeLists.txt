@@ -15,6 +15,7 @@ add_distinct_clang_unittest(ClangScalableAnalysisTests
   Registries/MockSummaryExtractor2.cpp
   Registries/SerializationFormatRegistryTest.cpp
   Registries/SummaryExtractorRegistryTest.cpp
+  Serialization/JSONFormatTest/LUSummaryTest.cpp
   Serialization/JSONFormatTest/TUSummaryTest.cpp
   SummaryNameTest.cpp
   TestFixture.cpp
