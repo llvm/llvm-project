@@ -354,6 +354,9 @@ if config.enable_assertions:
 else:
     config.available_features.add("noasserts")
 
+if config.enable_python_stable_abi:
+    config.available_features.add("python-stable-abi")
+
 if config.expensive_checks:
     config.available_features.add("expensive_checks")
 
@@ -393,5 +396,3 @@ if config.arm_emulator_executable:
 if sys.version_info >= (3, 11):
     config.available_features.add("python-ge-311")
 
-if config.enable_python_stable_abi:
-    config.available_features.add("python-stable-abi")
