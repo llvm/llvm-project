@@ -216,6 +216,11 @@ struct TypeInfoChars {
   }
 };
 
+struct PFPField {
+  CharUnits Offset;
+  FieldDecl *Field;
+};
+
 /// Holds long-lived AST nodes (such as types and decls) that can be
 /// referred to throughout the semantic analysis of a file.
 class ASTContext : public RefCountedBase<ASTContext> {
@@ -782,7 +787,7 @@ private:
   const TargetInfo *Target = nullptr;
   const TargetInfo *AuxTarget = nullptr;
   clang::PrintingPolicy PrintingPolicy;
-  std::unique_ptr<interp::Context> InterpContext;
+  mutable std::unique_ptr<interp::Context> InterpContext;
   std::unique_ptr<ParentMapContext> ParentMapCtx;
 
   /// Keeps track of the deallocated DeclListNodes for future reuse.
@@ -798,7 +803,7 @@ public:
   ASTMutationListener *Listener = nullptr;
 
   /// Returns the clang bytecode interpreter context.
-  interp::Context &getInterpContext();
+  interp::Context &getInterpContext() const;
 
   struct CUDAConstantEvalContext {
     /// Do not allow wrong-sided variables in constant expressions.
@@ -3840,6 +3845,24 @@ public:
                                StringRef MangledName);
 
   StringRef getCUIDHash() const;
+
+  /// Returns a list of PFP fields for the given type, including subfields in
+  /// bases or other fields, except for fields contained within fields of union
+  /// type.
+  std::vector<PFPField> findPFPFields(QualType Ty) const;
+
+  bool hasPFPFields(QualType Ty) const;
+  bool isPFPField(const FieldDecl *Field) const;
+
+  /// Returns whether this record's PFP fields (if any) are trivially
+  /// copyable (i.e. may be memcpy'd). This may also return true if the
+  /// record does not have any PFP fields, so it may be necessary for the caller
+  /// to check for PFP fields, e.g. by calling hasPFPFields().
+  bool arePFPFieldsTriviallyCopyable(const RecordDecl *RD) const;
+
+  llvm::SetVector<const FieldDecl *> PFPFieldsWithEvaluatedOffset;
+  void recordMemberDataPointerEvaluation(const ValueDecl *VD);
+  void recordOffsetOfEvaluation(const OffsetOfExpr *E);
 
 private:
   /// All OMPTraitInfo objects live in this collection, one per

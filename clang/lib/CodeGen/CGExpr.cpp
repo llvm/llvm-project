@@ -1192,7 +1192,18 @@ static bool getGEPIndicesToField(CodeGenFunction &CGF, const RecordDecl *RD,
 
 llvm::Value *CodeGenFunction::GetCountedByFieldExprGEP(
     const Expr *Base, const FieldDecl *FAMDecl, const FieldDecl *CountDecl) {
-  const RecordDecl *RD = CountDecl->getParent()->getOuterLexicalRecordContext();
+  // Find the record containing the count field. Walk up through anonymous
+  // structs/unions (which are transparent in C) but stop at named records.
+  // Using getOuterLexicalRecordContext() here would be wrong because it walks
+  // past named nested structs to the outermost record, causing a crash when a
+  // struct with a counted_by FAM is defined nested inside another struct.
+  const RecordDecl *RD = CountDecl->getParent();
+  while (RD->isAnonymousStructOrUnion()) {
+    const auto *Parent = dyn_cast<RecordDecl>(RD->getLexicalParent());
+    if (!Parent)
+      break;
+    RD = Parent;
+  }
 
   // Find the base struct expr (i.e. p in p->a.b.c.d).
   const Expr *StructBase = StructAccessBase(RD).Visit(Base);
@@ -2499,8 +2510,9 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
   if (LV.isVectorElt()) {
     llvm::LoadInst *Load = Builder.CreateLoad(LV.getVectorAddress(),
                                               LV.isVolatileQualified());
-    return RValue::get(Builder.CreateExtractElement(Load, LV.getVectorIdx(),
-                                                    "vecext"));
+    llvm::Value *Elt =
+        Builder.CreateExtractElement(Load, LV.getVectorIdx(), "vecext");
+    return RValue::get(EmitFromMemory(Elt, LV.getType()));
   }
 
   // If this is a reference to a subset of the elements of a vector, either
@@ -2515,14 +2527,18 @@ RValue CodeGenFunction::EmitLoadOfLValue(LValue LV, SourceLocation Loc) {
 
   if (LV.isMatrixElt()) {
     llvm::Value *Idx = LV.getMatrixIdx();
-    if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
-      const auto *const MatTy = LV.getType()->castAs<ConstantMatrixType>();
-      llvm::MatrixBuilder MB(Builder);
-      MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
+    QualType EltTy = LV.getType();
+    if (const auto *MatTy = EltTy->getAs<ConstantMatrixType>()) {
+      EltTy = MatTy->getElementType();
+      if (CGM.getCodeGenOpts().OptimizationLevel > 0) {
+        llvm::MatrixBuilder MB(Builder);
+        MB.CreateIndexAssumption(Idx, MatTy->getNumElementsFlattened());
+      }
     }
     llvm::LoadInst *Load =
         Builder.CreateLoad(LV.getMatrixAddress(), LV.isVolatileQualified());
-    return RValue::get(Builder.CreateExtractElement(Load, Idx, "matrixext"));
+    llvm::Value *Elt = Builder.CreateExtractElement(Load, Idx, "matrixext");
+    return RValue::get(EmitFromMemory(Elt, EltTy));
   }
   if (LV.isMatrixRow()) {
     QualType MatTy = LV.getType();
@@ -5589,12 +5605,13 @@ static Address emitAddrOfZeroSizeField(CodeGenFunction &CGF, Address Base,
   return CGF.Builder.CreateConstInBoundsByteGEP(Base, Offset);
 }
 
-/// Drill down to the storage of a field without walking into
-/// reference types.
+/// Drill down to the storage of a field without walking into reference types,
+/// and without respect for pointer field protection.
 ///
 /// The resulting address doesn't necessarily have the right type.
-static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
-                                      const FieldDecl *field, bool IsInBounds) {
+static Address emitRawAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
+                                         const FieldDecl *field,
+                                         bool IsInBounds) {
   if (isEmptyFieldForLayout(CGF.getContext(), field))
     return emitAddrOfZeroSizeField(CGF, base, field, IsInBounds);
 
@@ -5615,6 +5632,21 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
     return CGF.Builder.CreateConstGEP2_32(base, 0, idx, field->getName());
 
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
+}
+
+/// Drill down to the storage of a field without walking into reference types,
+/// wrapping the address in an llvm.protected.field.ptr intrinsic for the
+/// pointer field protection feature if necessary.
+///
+/// The resulting address doesn't necessarily have the right type.
+static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
+                                      const FieldDecl *field, bool IsInBounds) {
+  Address Addr = emitRawAddrOfFieldStorage(CGF, base, field, IsInBounds);
+
+  if (!CGF.getContext().isPFPField(field))
+    return Addr;
+
+  return CGF.EmitAddressOfPFPField(base, Addr, field);
 }
 
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,

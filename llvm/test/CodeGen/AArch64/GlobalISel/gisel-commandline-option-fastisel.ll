@@ -5,6 +5,11 @@
 ; RUN:   | FileCheck %s --check-prefixes=DISABLED,FASTISEL
 
 ; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
+; RUN:   -verify-machineinstrs=0 -O0 -aarch64-enable-global-isel-at-O=-1 \
+; RUN:   -debug-only=isel \
+; RUN:   | FileCheck %s --check-prefixes=DISABLED,FASTISEL
+
+; RUN: llc -mtriple=aarch64-- -debug-pass=Structure %s -o /dev/null 2>&1 \
 ; RUN:   -verify-machineinstrs=0 -O1 -global-isel=false -debug-only=isel \
 ; RUN:   | FileCheck %s --check-prefixes=DISABLED,NOFASTISEL
 

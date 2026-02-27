@@ -295,12 +295,16 @@ void ScriptInterpreterPython::Initialize() {
     PluginManager::RegisterPlugin(GetPluginNameStatic(),
                                   GetPluginDescriptionStatic(),
                                   lldb::eScriptLanguagePython,
-                                  ScriptInterpreterPythonImpl::CreateInstance);
+                                  ScriptInterpreterPythonImpl::CreateInstance,
+                                  ScriptInterpreterPythonImpl::GetPythonDir);
     ScriptInterpreterPythonImpl::Initialize();
   });
+  ScriptInterpreterPythonInterfaces::Initialize();
 }
 
-void ScriptInterpreterPython::Terminate() {}
+void ScriptInterpreterPython::Terminate() {
+  ScriptInterpreterPythonInterfaces::Terminate();
+}
 
 ScriptInterpreterPythonImpl::Locker::Locker(
     ScriptInterpreterPythonImpl *py_interpreter, uint16_t on_entry,

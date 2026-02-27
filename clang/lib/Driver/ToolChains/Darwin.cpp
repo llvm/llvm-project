@@ -575,7 +575,9 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfoList &Inputs,
                                   const ArgList &Args,
                                   const char *LinkingOutput) const {
-  assert(Output.getType() == types::TY_Image && "Invalid linker output type.");
+  assert((Output.getType() == types::TY_Image ||
+          Output.getType() == types::TY_Object) &&
+         "Invalid linker output type.");
 
   // If the number of arguments surpasses the system limits, we will encode the
   // input files in a separate file, shortening the command line. To this end,
@@ -1366,6 +1368,21 @@ unsigned DarwinClang::GetDefaultDwarfVersion() const {
        TargetVersion.empty())) // apple-darwin, no version.
     return 4;
   return 5;
+}
+
+bool DarwinClang::getDefaultDebugSimpleTemplateNames() const {
+  // Default to an OS version on which LLDB supports debugging
+  // -gsimple-template-names programs.
+  if ((isTargetMacOSBased() && isMacosxVersionLT(26)) ||
+      (isTargetIOSBased() && isIPhoneOSVersionLT(26)) ||
+      (isTargetWatchOSBased() && TargetVersion < llvm::VersionTuple(26)) ||
+      (isTargetXROS() && TargetVersion < llvm::VersionTuple(26)) ||
+      (isTargetDriverKit() && TargetVersion < llvm::VersionTuple(25)) ||
+      (isTargetMacOSBased() &&
+       TargetVersion.empty())) // apple-darwin, no version.
+    return false;
+
+  return true;
 }
 
 void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
