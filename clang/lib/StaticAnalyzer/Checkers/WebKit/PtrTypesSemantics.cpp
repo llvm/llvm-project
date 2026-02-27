@@ -561,32 +561,41 @@ class TrivialFunctionAnalysisVisitor
   }
 
   bool HasFieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
+    auto CacheIt = FieldDtorCache.find(Cls);
+    if (CacheIt != FieldDtorCache.end())
+      return CacheIt->second;
 
-    auto HasNonTrivialField = [&](const CXXRecordDecl *R) {
-      for (const FieldDecl *F : R->fields()) {
-        if (!CanTriviallyDestruct(F->getType()))
-          return true;
-      }
-      return false;
-    };
+    bool Result = ([&] {
+      auto HasNonTrivialField = [&](const CXXRecordDecl *R) {
+        for (const FieldDecl *F : R->fields()) {
+          if (!CanTriviallyDestruct(F->getType()))
+            return true;
+        }
+        return false;
+      };
 
-    if (HasNonTrivialField(Cls))
-      return true;
+      if (HasNonTrivialField(Cls))
+        return true;
 
-    if (!Cls->hasDefinition())
-      return false;
+      if (!Cls->hasDefinition())
+        return false;
 
-    CXXBasePaths Paths;
-    Paths.setOrigin(const_cast<CXXRecordDecl *>(Cls));
-    return Cls->lookupInBases(
-        [&](const CXXBaseSpecifier *B, CXXBasePath &) {
-          auto *T = B->getType().getTypePtrOrNull();
-          if (!T)
-            return false;
-          auto *R = T->getAsCXXRecordDecl();
-          return R && HasNonTrivialField(R);
-        },
-        Paths, /*LookupInDependent =*/true);
+      CXXBasePaths Paths;
+      Paths.setOrigin(const_cast<CXXRecordDecl *>(Cls));
+      return Cls->lookupInBases(
+          [&](const CXXBaseSpecifier *B, CXXBasePath &) {
+            auto *T = B->getType().getTypePtrOrNull();
+            if (!T)
+              return false;
+            auto *R = T->getAsCXXRecordDecl();
+            return R && HasNonTrivialField(R);
+          },
+          Paths, /*LookupInDependent =*/true);
+    })();
+    
+    FieldDtorCache[Cls] = Result;
+
+    return Result;
   }
 
 public:
@@ -955,6 +964,7 @@ public:
 
 private:
   CacheTy &Cache;
+  CacheTy FieldDtorCache;
   CacheTy RecursiveFn;
   const Stmt **OffendingStmt;
 };
