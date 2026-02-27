@@ -1174,9 +1174,10 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   // TODO(cir): create guard to restore fast math configurations.
   assert(!cir::MissingFeatures::fastMathGuard());
 
-  llvm::RoundingMode newRoundingBehavior = fpFeatures.getRoundingMode();
+  [[maybe_unused]] llvm::RoundingMode newRoundingBehavior =
+      fpFeatures.getRoundingMode();
   // TODO(cir): override rounding behaviour once FM configs are guarded.
-  llvm::fp::ExceptionBehavior newExceptionBehavior =
+  [[maybe_unused]] llvm::fp::ExceptionBehavior newExceptionBehavior =
       toConstrainedExceptMd(static_cast<LangOptions::FPExceptionModeKind>(
           fpFeatures.getExceptionMode()));
   // TODO(cir): override exception behaviour once FM configs are guarded.
