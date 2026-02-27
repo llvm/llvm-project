@@ -680,8 +680,8 @@ TYPE_PARSER(construct<format::ControlEditDesc>(
                             pure(format::ControlEditDesc::Kind::BZ))) ||
     "L " >> ("Z " >> ("S " >> construct<format::ControlEditDesc>(
                                   pure(format::ControlEditDesc::Kind::LZS)) ||
-                         "P " >> construct<format::ControlEditDesc>(
-                                     pure(format::ControlEditDesc::Kind::LZP)) ||
+                         "P " >> construct<format::ControlEditDesc>(pure(
+                                     format::ControlEditDesc::Kind::LZP)) ||
                          construct<format::ControlEditDesc>(
                              pure(format::ControlEditDesc::Kind::LZ)))) ||
     "R " >> ("U " >> construct<format::ControlEditDesc>(
