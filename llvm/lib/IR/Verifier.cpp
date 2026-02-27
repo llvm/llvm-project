@@ -797,6 +797,23 @@ void Verifier::visitGlobalValue(const GlobalValue &GV) {
         }
       }
     }
+
+    if (auto *Props = GO->getMetadata(LLVMContext::MD_elf_section_properties)) {
+      Check(Props->getNumOperands() == 2,
+            "elf_section_properties metadata must have two operands", GO,
+            Props);
+      if (Props->getNumOperands() == 2) {
+        auto *Type = dyn_cast<ConstantAsMetadata>(Props->getOperand(0));
+        Check(Type, "type field must be ConstantAsMetadata", GO, Props);
+        auto *TypeInt = dyn_cast<ConstantInt>(Type->getValue());
+        Check(TypeInt, "type field must be ConstantInt", GO, Props);
+
+        auto *Entsize = dyn_cast<ConstantAsMetadata>(Props->getOperand(1));
+        Check(Entsize, "entsize field must be ConstantAsMetadata", GO, Props);
+        auto *EntsizeInt = dyn_cast<ConstantInt>(Entsize->getValue());
+        Check(EntsizeInt, "entsize field must be ConstantInt", GO, Props);
+      }
+    }
   }
 
   Check(!GV.hasAppendingLinkage() || isa<GlobalVariable>(GV),
