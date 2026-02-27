@@ -29,6 +29,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include <iostream>
 
 #define DEBUG_TYPE "affine-super-vectorizer-test"
 
@@ -247,6 +248,7 @@ void VectorizerTestPass::testVecAffineLoopNest(llvm::raw_ostream &outs) {
     outs << "Outermost loop cannot be parallel\n";
     return;
   }
+  strategy.reductionLoops.insert({outermostLoop, reductions});
   std::vector<SmallVector<AffineForOp, 2>> loopsToVectorize;
   loopsToVectorize.push_back({outermostLoop});
   (void)vectorizeAffineLoopNest(loopsToVectorize, strategy);
