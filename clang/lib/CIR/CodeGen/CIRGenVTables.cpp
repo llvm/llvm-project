@@ -13,12 +13,10 @@
 #include "CIRGenVTables.h"
 
 #include "CIRGenCXXABI.h"
-#include "CIRGenFunction.h" // Is this needed?
 #include "CIRGenModule.h"
 #include "mlir/IR/Types.h"
 #include "clang/AST/VTTBuilder.h"
 #include "clang/AST/VTableBuilder.h"
-#include "clang/Basic/CodeGenOptions.h" // Is this needed?
 #include "llvm/ADT/SmallVector.h"
 
 using namespace llvm;
