@@ -24,22 +24,22 @@ static thread_local cudaStream_t defaultStream{nullptr};
 
 extern "C" {
 
-int RTDECL(CUFSetDefaultStream)(cudaStream_t stream) {
+int RTDEF(CUFSetDefaultStream)(cudaStream_t stream) {
   defaultStream = stream;
   return StatOk;
 }
 
-cudaStream_t RTDECL(CUFGetDefaultStream)() { return defaultStream; }
+cudaStream_t RTDEF(CUFGetDefaultStream)() { return defaultStream; }
 
-int RTDECL(CUFStreamSynchronize)(cudaStream_t stream) {
+int RTDEF(CUFStreamSynchronize)(cudaStream_t stream) {
   return cudaStreamSynchronize(stream);
 }
 
-int RTDECL(CUFStreamSynchronizeNull)() {
+int RTDEF(CUFStreamSynchronizeNull)() {
   return cudaStreamSynchronize(RTNAME(CUFGetDefaultStream)());
 }
 
-int RTDECL(CUFStreamDestroy)(cudaStream_t stream) {
+int RTDEF(CUFStreamDestroy)(cudaStream_t stream) {
   CUFResetStream(stream);
   return cudaStreamDestroy(stream);
 }
