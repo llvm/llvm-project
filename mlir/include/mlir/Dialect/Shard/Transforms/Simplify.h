@@ -1,4 +1,4 @@
-//===- Simplifications.h - Shard Simplifications ----------------*- C++ -*-===//
+//===- Simplify.h - Shard Simplify ------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_SHARD_TRANSFORMS_SIMPLIFICATIONS_H
-#define MLIR_DIALECT_SHARD_TRANSFORMS_SIMPLIFICATIONS_H
+#ifndef MLIR_DIALECT_SHARD_TRANSFORMS_SIMPLIFY_H
+#define MLIR_DIALECT_SHARD_TRANSFORMS_SIMPLIFY_H
 
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
 #include "mlir/IR/PatternMatch.h"
@@ -37,8 +37,8 @@ namespace shard {
 // Will not work with some op `f(x, y, z)` where only `x` and `y` form
 // the algebraic structure.
 template <typename AlgebraicOp>
-void populateAllReduceEndomorphismSimplificationPatterns(
-    RewritePatternSet &patterns, ReductionKind reduction) {
+void populateAllReduceEndomorphismSimplifyPatterns(RewritePatternSet &patterns,
+                                                   ReductionKind reduction) {
   auto getEndomorphismOpOperand = [](Operation *op) {
     auto allReduceOp = llvm::cast<AllReduceOp>(op);
     return &allReduceOp.getInputMutable();
@@ -105,12 +105,12 @@ void populateAllReduceEndomorphismSimplificationPatterns(
 
 // It is invalid to change ops that declare symbols during the application of
 // these patterns, because symbolTableCollection is used to cache them.
-void populateSimplificationPatterns(
-    RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection);
+void populateSimplifyPatterns(RewritePatternSet &patterns,
+                              SymbolTableCollection &symbolTableCollection);
 void populateFoldingPatterns(RewritePatternSet &patterns,
                              SymbolTableCollection &symbolTableCollection);
 
 } // namespace shard
 } // namespace mlir
 
-#endif // MLIR_DIALECT_SHARD_TRANSFORMS_SIMPLIFICATIONS_H
+#endif // MLIR_DIALECT_SHARD_TRANSFORMS_SIMPLIFY_H

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -test-grid-simplifications %s | FileCheck %s
+// RUN: mlir-opt -shard-simplify %s | FileCheck %s
 
 shard.grid @grid0(shape = 4x2)
 shard.grid @grid1(shape = 4)
@@ -176,4 +176,87 @@ func.func @no_endomorphism_op(%arg0: tensor<2xi64>) -> i64 {
   // CHECK: arith.maxsi
   %0 = arith.maxsi %extracted, %c1_i64 : i64
   return %0 : i64
+}
+
+// -----
+// AllReduceOp + AllSliceOp -> ReduceScatterOp tests
+// -----
+
+// Basic case: all_slice(all_reduce(x)) with matching grid and axes folds
+// into reduce_scatter.
+// CHECK-LABEL: func.func @all_reduce_all_slice_to_reduce_scatter
+func.func @all_reduce_all_slice_to_reduce_scatter(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<4x8xf32>
+    %arg0: tensor<4x8xf32>) -> tensor<1x8xf32> {
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0] : tensor<4x8xf32> -> tensor<4x8xf32>
+  %1 = shard.all_slice %0 on @grid0 grid_axes = [0] slice_axis = 0 : tensor<4x8xf32> -> tensor<1x8xf32>
+  // CHECK: %[[RS:.*]] = shard.reduce_scatter %[[ARG0]] on @grid0 grid_axes = [0] scatter_dim = 0
+  // CHECK-SAME: : tensor<4x8xf32> -> tensor<1x8xf32>
+  // CHECK: return %[[RS]]
+  return %1 : tensor<1x8xf32>
+}
+
+// Verify non-default reduction kind is preserved.
+// CHECK-LABEL: func.func @all_reduce_all_slice_max_reduction
+func.func @all_reduce_all_slice_max_reduction(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<4x8xf32>
+    %arg0: tensor<4x8xf32>) -> tensor<1x8xf32> {
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0] reduction = max : tensor<4x8xf32> -> tensor<4x8xf32>
+  %1 = shard.all_slice %0 on @grid0 grid_axes = [0] slice_axis = 0 : tensor<4x8xf32> -> tensor<1x8xf32>
+  // CHECK: %[[RS:.*]] = shard.reduce_scatter %[[ARG0]] on @grid0 grid_axes = [0] reduction = max scatter_dim = 0
+  // CHECK-SAME: : tensor<4x8xf32> -> tensor<1x8xf32>
+  // CHECK: return %[[RS]]
+  return %1 : tensor<1x8xf32>
+}
+
+// Slice on a different tensor axis than the reduce axes.
+// CHECK-LABEL: func.func @all_reduce_all_slice_different_slice_axis
+func.func @all_reduce_all_slice_different_slice_axis(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<4x8xf32>
+    %arg0: tensor<4x8xf32>) -> tensor<4x4xf32> {
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [1] : tensor<4x8xf32> -> tensor<4x8xf32>
+  %1 = shard.all_slice %0 on @grid0 grid_axes = [1] slice_axis = 1 : tensor<4x8xf32> -> tensor<4x4xf32>
+  // CHECK: %[[RS:.*]] = shard.reduce_scatter %[[ARG0]] on @grid0 grid_axes = [1] scatter_dim = 1
+  // CHECK-SAME: : tensor<4x8xf32> -> tensor<4x4xf32>
+  // CHECK: return %[[RS]]
+  return %1 : tensor<4x4xf32>
+}
+
+// Do not fold when grids differ.
+// CHECK-LABEL: func.func @all_reduce_all_slice_different_grid
+func.func @all_reduce_all_slice_different_grid(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<4x8xf32>
+    %arg0: tensor<4x8xf32>) -> tensor<1x8xf32> {
+  // CHECK: %[[AR:.*]] = shard.all_reduce %[[ARG0]] on @grid0
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0] : tensor<4x8xf32> -> tensor<4x8xf32>
+  // CHECK: %[[AS:.*]] = shard.all_slice %[[AR]] on @grid1
+  %1 = shard.all_slice %0 on @grid1 grid_axes = [0] slice_axis = 0 : tensor<4x8xf32> -> tensor<1x8xf32>
+  // CHECK: return %[[AS]]
+  return %1 : tensor<1x8xf32>
+}
+
+// Do not fold when grid_axes differ.
+// CHECK-LABEL: func.func @all_reduce_all_slice_different_grid_axes
+func.func @all_reduce_all_slice_different_grid_axes(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<4x8xf32>
+    %arg0: tensor<4x8xf32>) -> tensor<4x4xf32> {
+  // CHECK: %[[AR:.*]] = shard.all_reduce %[[ARG0]] on @grid0 grid_axes = [0]
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0] : tensor<4x8xf32> -> tensor<4x8xf32>
+  // CHECK: %[[AS:.*]] = shard.all_slice %[[AR]] on @grid0 grid_axes = [1]
+  %1 = shard.all_slice %0 on @grid0 grid_axes = [1] slice_axis = 1 : tensor<4x8xf32> -> tensor<4x4xf32>
+  // CHECK: return %[[AS]]
+  return %1 : tensor<4x4xf32>
+}
+
+// Verify element type conversion is preserved (all_reduce input/output types may differ).
+// CHECK-LABEL: func.func @all_reduce_all_slice_type_promotion
+func.func @all_reduce_all_slice_type_promotion(
+    // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]*]]: tensor<4x8xf32>
+    %arg0: tensor<4x8xf32>) -> tensor<1x8xf64> {
+  %0 = shard.all_reduce %arg0 on @grid0 grid_axes = [0] : tensor<4x8xf32> -> tensor<4x8xf64>
+  %1 = shard.all_slice %0 on @grid0 grid_axes = [0] slice_axis = 0 : tensor<4x8xf64> -> tensor<1x8xf64>
+  // CHECK: %[[RS:.*]] = shard.reduce_scatter %[[ARG0]] on @grid0 grid_axes = [0] scatter_dim = 0
+  // CHECK-SAME: : tensor<4x8xf32> -> tensor<1x8xf64>
+  // CHECK: return %[[RS]]
+  return %1 : tensor<1x8xf64>
 }

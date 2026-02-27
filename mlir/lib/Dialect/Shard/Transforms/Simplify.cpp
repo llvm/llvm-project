@@ -1,4 +1,4 @@
-//===- Simplifications.cpp - Shard Simplifications -_------------*- C++ -*-===//
+//===- Simplify.cpp - Shard Simplify ----------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Shard/Transforms/Simplifications.h"
+#include "mlir/Dialect/Shard/Transforms/Simplify.h"
 #include "TransformsDetail.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Shard/IR/ShardDialect.h"
 #include "mlir/Dialect/Shard/IR/ShardOps.h"
+#include "mlir/Dialect/Shard/Transforms/Passes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/SymbolTable.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include <numeric>
@@ -20,31 +23,8 @@
 namespace mlir {
 namespace shard {
 
-void populateSimplificationPatterns(
-    RewritePatternSet &patterns, SymbolTableCollection &symbolTableCollection) {
-  populateAllReduceEndomorphismSimplificationPatterns<arith::AddFOp>(
-      patterns, ReductionKind::Sum);
-  populateAllReduceEndomorphismSimplificationPatterns<arith::AddIOp>(
-      patterns, ReductionKind::Sum);
-
-  populateAllReduceEndomorphismSimplificationPatterns<arith::MinimumFOp>(
-      patterns, ReductionKind::Min);
-  populateAllReduceEndomorphismSimplificationPatterns<arith::MinSIOp>(
-      patterns, ReductionKind::Min);
-  populateAllReduceEndomorphismSimplificationPatterns<arith::MinUIOp>(
-      patterns, ReductionKind::Min);
-
-  populateAllReduceEndomorphismSimplificationPatterns<arith::MaximumFOp>(
-      patterns, ReductionKind::Max);
-  populateAllReduceEndomorphismSimplificationPatterns<arith::MaxSIOp>(
-      patterns, ReductionKind::Max);
-  populateAllReduceEndomorphismSimplificationPatterns<arith::MaxUIOp>(
-      patterns, ReductionKind::Max);
-
-  // TODO: add simplifications for all-gather and other collectives.
-
-  populateFoldingPatterns(patterns, symbolTableCollection);
-}
+#define GEN_PASS_DEF_SHARDSIMPLIFY
+#include "mlir/Dialect/Shard/Transforms/Passes.h.inc"
 
 namespace {
 
@@ -109,12 +89,86 @@ struct GridShapeFolder
   }
 };
 
+// Simplify AllSliceOp(AllReduceOp) -> ReduceScatterOp when both ops share the
+// same grid and grid_axes.
+//
+// AllReduceOp performs an element-wise reduction across all devices in the
+// group, and AllSliceOp then slices (scatters) the result along a tensor
+// dimension. This is exactly what ReduceScatterOp does in a single collective.
+struct AllReduceAllSliceSimplification : OpRewritePattern<AllSliceOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(AllSliceOp sliceOp,
+                                PatternRewriter &rewriter) const override {
+    // Check if the input to AllSliceOp is produced by an AllReduceOp.
+    auto reduceOp = sliceOp.getInput().getDefiningOp<AllReduceOp>();
+    if (!reduceOp)
+      return failure();
+
+    // Both ops must operate on the same grid and grid axes.
+    if (reduceOp.getGrid() != sliceOp.getGrid() ||
+        reduceOp.getGridAxes() != sliceOp.getGridAxes())
+      return failure();
+
+    // Replace with a single ReduceScatterOp.
+    rewriter.replaceOpWithNewOp<ReduceScatterOp>(
+        sliceOp, sliceOp.getResult().getType(), sliceOp.getGridAttr(),
+        sliceOp.getGridAxesAttr(), reduceOp.getInput(),
+        reduceOp.getReductionAttr(), sliceOp.getSliceAxisAttr());
+
+    return success();
+  }
+};
+
 } // namespace
+
+void populateSimplifyPatterns(RewritePatternSet &patterns,
+                              SymbolTableCollection &symbolTableCollection) {
+  populateAllReduceEndomorphismSimplifyPatterns<arith::AddFOp>(
+      patterns, ReductionKind::Sum);
+  populateAllReduceEndomorphismSimplifyPatterns<arith::AddIOp>(
+      patterns, ReductionKind::Sum);
+
+  populateAllReduceEndomorphismSimplifyPatterns<arith::MinimumFOp>(
+      patterns, ReductionKind::Min);
+  populateAllReduceEndomorphismSimplifyPatterns<arith::MinSIOp>(
+      patterns, ReductionKind::Min);
+  populateAllReduceEndomorphismSimplifyPatterns<arith::MinUIOp>(
+      patterns, ReductionKind::Min);
+
+  populateAllReduceEndomorphismSimplifyPatterns<arith::MaximumFOp>(
+      patterns, ReductionKind::Max);
+  populateAllReduceEndomorphismSimplifyPatterns<arith::MaxSIOp>(
+      patterns, ReductionKind::Max);
+  populateAllReduceEndomorphismSimplifyPatterns<arith::MaxUIOp>(
+      patterns, ReductionKind::Max);
+
+  patterns.add<AllReduceAllSliceSimplification>(patterns.getContext());
+
+  // TODO: add simplify patterns for all-gather and other collectives.
+
+  populateFoldingPatterns(patterns, symbolTableCollection);
+}
 
 void populateFoldingPatterns(RewritePatternSet &patterns,
                              SymbolTableCollection &symbolTableCollection) {
   patterns.add<GridShapeFolder>(symbolTableCollection, patterns.getContext());
 }
+
+namespace {
+
+struct ShardSimplifyPass : public impl::ShardSimplifyBase<ShardSimplifyPass> {
+
+  void runOnOperation() override {
+    RewritePatternSet patterns(&getContext());
+    SymbolTableCollection symbolTableCollection;
+    populateSimplifyPatterns(patterns, symbolTableCollection);
+    if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
+      signalPassFailure();
+  }
+};
+
+} // namespace
 
 } // namespace shard
 } // namespace mlir

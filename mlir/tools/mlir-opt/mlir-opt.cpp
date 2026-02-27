@@ -131,7 +131,6 @@ void registerTestMemRefDependenceCheck();
 void registerTestMemRefStrideCalculation();
 void registerTestMemRefToLLVMWithTransforms();
 void registerTestReshardingPartitionPass();
-void registerTestShardSimplificationsPass();
 void registerTestMultiBuffering();
 void registerTestNextAccessPass();
 void registerTestNVGPULowerings();
@@ -281,7 +280,6 @@ static void registerTestPasses() {
   mlir::test::registerTestMemRefStrideCalculation();
   mlir::test::registerTestMemRefToLLVMWithTransforms();
   mlir::test::registerTestReshardingPartitionPass();
-  mlir::test::registerTestShardSimplificationsPass();
   mlir::test::registerTestMultiBuffering();
   mlir::test::registerTestNextAccessPass();
   mlir::test::registerTestNVGPULowerings();
