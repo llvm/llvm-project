@@ -1149,7 +1149,7 @@ define dso_local i32 @multiple_lifetimes_unterminated() local_unnamed_addr sanit
   ret i32 0
 }
 
-; REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: multiple_lifetimes_unterminated
+; REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: multiple_lifetimes_unterminated
 
 define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-LABEL: @unreachable_exit(
@@ -1455,7 +1455,7 @@ define dso_local i32 @unreachable_exit() local_unnamed_addr sanitize_hwaddress {
   ret i32 0
 }
 
-; REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: unreachable_exit
+; REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: unreachable_exit
 
 
 define dso_local i32 @diamond_lifetime() local_unnamed_addr sanitize_hwaddress {
@@ -2175,7 +2175,7 @@ exit2:
   ret void
 }
 
-; REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: diamond4_nocover
+; REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: diamond4_nocover
 
 define dso_local i32 @multiple_starts() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-LABEL: @multiple_starts(
@@ -2820,7 +2820,7 @@ define dso_local i32 @multiple_starts_noend() local_unnamed_addr sanitize_hwaddr
   ret i32 0
 }
 
-; REMARKS: --- !Passed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: multiple_starts_noend
+; REMARKS: --- !Missed{{[[:space:]]}}Pass: hwasan{{[[:space:]]}}Name: supportedLifetime{{[[:space:]]}}Function: multiple_starts_noend
 
 define dso_local i32 @double_lifetime() local_unnamed_addr sanitize_hwaddress {
 ; X86-SCOPE-LABEL: @double_lifetime(

@@ -1528,15 +1528,19 @@ void HWAddressSanitizer::instrumentStack(OptimizationRemarkEmitter &ORE,
     // statement if return_twice functions are called.
     if (DetectUseAfterScope && !SInfo.CallsReturnTwice &&
         memtag::isSupportedLifetime(Info, &DT, &LI)) {
-      ORE.emit([&]() {
-        return OptimizationRemark(DEBUG_TYPE, "supportedLifetime", AI);
-      });
-
       TagStarts();
       if (!memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec,
                                         TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
+        ORE.emit([&]() {
+          return OptimizationRemarkMissed(DEBUG_TYPE, "supportedLifetime", AI);
+        });
+
+      } else {
+        ORE.emit([&]() {
+          return OptimizationRemark(DEBUG_TYPE, "supportedLifetime", AI);
+        });
       }
     } else if (DetectUseAfterScope && ClStrictUseAfterScope) {
       // SInfo.CallsReturnTwice || !isStandardLifetime
