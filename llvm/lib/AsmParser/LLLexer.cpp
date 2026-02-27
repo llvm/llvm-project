@@ -809,7 +809,6 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(importType);
   KEYWORD(definition);
   KEYWORD(declaration);
-  KEYWORD(noRenameOnPromotion);
   KEYWORD(function);
   KEYWORD(insts);
   KEYWORD(funcFlags);
