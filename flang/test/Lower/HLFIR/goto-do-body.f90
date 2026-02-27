@@ -6,9 +6,9 @@ subroutine sub1()
   implicit none
   integer :: i
   external foo
-! CHECK:    %[[C2:.*]] = arith.constant 2 : i32
-! CHECK:    %[[C0:.*]] = arith.constant 0 : i32
-! CHECK:    %[[C1:.*]] = arith.constant 1 : i32
+! CHECK-DAG:    %[[C2:.*]] = arith.constant 2 : i32
+! CHECK-DAG:    %[[C0:.*]] = arith.constant 0 : i32
+! CHECK-DAG:    %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK:    %[[TRIP:.*]] = fir.alloca i32
 ! CHECK:    %[[I_REF:.*]] = fir.alloca i32 {bindc_name = "i", {{.*}}}
 ! CHECK:    %[[I:.*]]:2 = hlfir.declare %[[I_REF]] {uniq_name = "_QFsub1Ei"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
