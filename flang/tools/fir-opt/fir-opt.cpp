@@ -37,10 +37,7 @@ void registerTestOpenACC();
 
 int main(int argc, char **argv) {
   fir::support::registerMLIRPassesForFortranTools();
-  fir::registerOptCodeGenPasses();
-  fir::registerOptTransformPasses();
-  hlfir::registerHLFIRPasses();
-  flangomp::registerFlangOpenMPPasses();
+  fir::support::registerFlangPipelinePasses();
   fir::acc::registerFIROpenACCPasses();
 #ifdef FLANG_INCLUDE_TESTS
   fir::test::registerTestFIRAliasAnalysisPass();
