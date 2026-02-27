@@ -1194,7 +1194,7 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       case KnownIEEEMode::Unknown:
         break;
       }
-}
+    }
 
     if (V) {
       if (auto *CI = dyn_cast<CallInst>(V)) {
