@@ -7,15 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
+#include "clang/Analysis/Scalable/Support/FormatProviders.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
 using clang::ssaf::EntityLinkage;
+using clang::ssaf::EntityLinkageType;
 
 namespace {
 
-constexpr inline auto None = EntityLinkage::LinkageType::None;
-constexpr inline auto Internal = EntityLinkage::LinkageType::Internal;
-constexpr inline auto External = EntityLinkage::LinkageType::External;
+constexpr inline auto None = EntityLinkageType::None;
+constexpr inline auto Internal = EntityLinkageType::Internal;
+constexpr inline auto External = EntityLinkageType::External;
 
 TEST(EntityLinkageTest, Constructor) {
   EntityLinkage NoneLinkage(None);
@@ -43,6 +47,71 @@ TEST(EntityLinkageTest, AssignmentOperator) {
 
   EXPECT_EQ(Linkage1.getLinkage(), External);
   EXPECT_EQ(Linkage1.getLinkage(), Linkage2.getLinkage());
+}
+
+TEST(EntityLinkageTest, EqualityOperatorReflexive) {
+  EXPECT_EQ(EntityLinkage(None), EntityLinkage(None));
+  EXPECT_EQ(EntityLinkage(Internal), EntityLinkage(Internal));
+  EXPECT_EQ(EntityLinkage(External), EntityLinkage(External));
+}
+
+TEST(EntityLinkageTest, EqualityOperatorDistinct) {
+  EXPECT_NE(EntityLinkage(None), EntityLinkage(Internal));
+  EXPECT_NE(EntityLinkage(None), EntityLinkage(External));
+  EXPECT_NE(EntityLinkage(Internal), EntityLinkage(External));
+}
+
+TEST(EntityLinkageTypeTest, FormatProvider) {
+  EXPECT_EQ(llvm::formatv("{0}", EntityLinkageType::None).str(), "None");
+  EXPECT_EQ(llvm::formatv("{0}", EntityLinkageType::Internal).str(),
+            "Internal");
+  EXPECT_EQ(llvm::formatv("{0}", EntityLinkageType::External).str(),
+            "External");
+}
+
+TEST(EntityLinkageTypeTest, StreamOutputNone) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkageType::None;
+  EXPECT_EQ(S, "None");
+}
+
+TEST(EntityLinkageTypeTest, StreamOutputInternal) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkageType::Internal;
+  EXPECT_EQ(S, "Internal");
+}
+
+TEST(EntityLinkageTypeTest, StreamOutputExternal) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkageType::External;
+  EXPECT_EQ(S, "External");
+}
+
+TEST(EntityLinkageTest, FormatProvider) {
+  EXPECT_EQ(llvm::formatv("{0}", EntityLinkage(None)).str(),
+            "EntityLinkage(None)");
+  EXPECT_EQ(llvm::formatv("{0}", EntityLinkage(Internal)).str(),
+            "EntityLinkage(Internal)");
+  EXPECT_EQ(llvm::formatv("{0}", EntityLinkage(External)).str(),
+            "EntityLinkage(External)");
+}
+
+TEST(EntityLinkageTest, StreamOutputNone) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkage(None);
+  EXPECT_EQ(S, "EntityLinkage(None)");
+}
+
+TEST(EntityLinkageTest, StreamOutputInternal) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkage(Internal);
+  EXPECT_EQ(S, "EntityLinkage(Internal)");
+}
+
+TEST(EntityLinkageTest, StreamOutputExternal) {
+  std::string S;
+  llvm::raw_string_ostream(S) << EntityLinkage(External);
+  EXPECT_EQ(S, "EntityLinkage(External)");
 }
 
 } // namespace

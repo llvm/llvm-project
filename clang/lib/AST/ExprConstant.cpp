@@ -9646,7 +9646,7 @@ bool LValueExprEvaluator::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
     if (Success) {
       Result.setFrom(Info.Ctx, Val);
       HandleLValueVectorElement(Info, E, Result, VT->getElementType(),
-                                VT->getNumElements(), Index.getExtValue());
+                                VT->getNumElements(), Index.getZExtValue());
     }
 
     return Success;
@@ -20893,7 +20893,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   QualType DeclTy = VD->getType();
 
   if (Info.EnableNewConstInterp) {
-    auto &InterpCtx = const_cast<ASTContext &>(Ctx).getInterpContext();
+    auto &InterpCtx = Ctx.getInterpContext();
     if (!InterpCtx.evaluateAsInitializer(Info, VD, this, Value))
       return false;
 

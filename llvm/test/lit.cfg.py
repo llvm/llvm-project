@@ -317,7 +317,6 @@ tools.extend(
         "obj2yaml",
         "yaml-bench",
         "verify-uselistorder",
-        "bugpoint",
         "llc",
         "llvm-symbolizer",
         "opt",

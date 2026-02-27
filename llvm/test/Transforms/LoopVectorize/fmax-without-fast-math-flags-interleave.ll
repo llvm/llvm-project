@@ -312,7 +312,7 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP50:%.*]] = phi <4 x float> [ [[TMP44]], %[[PRED_LOAD_CONTINUE13]] ], [ [[TMP49]], %[[PRED_LOAD_IF14]] ]
 ; CHECK-NEXT:    [[TMP51]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI]], <4 x float> [[TMP26]])
 ; CHECK-NEXT:    [[TMP52]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[VEC_PHI1]], <4 x float> [[TMP50]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP55:%.*]] = fcmp uno <4 x float> [[TMP26]], [[TMP50]]
 ; CHECK-NEXT:    [[TMP56:%.*]] = freeze <4 x i1> [[TMP55]]
 ; CHECK-NEXT:    [[TMP57:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP56]])
@@ -325,7 +325,7 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP52]], <4 x float> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP53]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP54]]
-; CHECK-NEXT:    [[TMP62:%.*]] = select i1 [[TMP57]], i64 [[INDEX]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP62:%.*]] = select i1 [[TMP57]], i64 [[INDEX]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP60]], <4 x float> [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[TMP64:%.*]] = xor i1 [[TMP57]], true
