@@ -379,15 +379,18 @@ JSONFormat::readTUSummaryEncoding(llvm::StringRef Path) {
   return std::move(Encoding);
 }
 
-llvm::Error JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
-                                               llvm::StringRef Path) {
+llvm::Error
+JSONFormat::writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
+                                   llvm::StringRef Path) {
   Object RootObject;
 
-  RootObject["tu_namespace"] = buildNamespaceToJSON(getTUNamespace(SummaryEncoding));
+  RootObject["tu_namespace"] =
+      buildNamespaceToJSON(getTUNamespace(SummaryEncoding));
 
   RootObject["id_table"] = entityIdTableToJSON(getIdTable(SummaryEncoding));
 
-  RootObject["linkage_table"] = linkageTableToJSON(getLinkageTable(SummaryEncoding));
+  RootObject["linkage_table"] =
+      linkageTableToJSON(getLinkageTable(SummaryEncoding));
 
   RootObject["data"] = encodingSummaryDataMapToJSON(getData(SummaryEncoding));
 

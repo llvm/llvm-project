@@ -38,8 +38,9 @@ public:
   virtual llvm::Expected<TUSummaryEncoding>
   readTUSummaryEncoding(llvm::StringRef Path) = 0;
 
-  virtual llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
-                                             llvm::StringRef Path) = 0;
+  virtual llvm::Error
+  writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
+                         llvm::StringRef Path) = 0;
 
 protected:
   // Helpers providing access to implementation details of basic data structures
