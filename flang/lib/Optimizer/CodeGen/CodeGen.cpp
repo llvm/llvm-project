@@ -2713,6 +2713,25 @@ struct XArrayCoorOpConversion
         baseIsBoxed ? getBoxTypePair(coor.getMemref().getType()) : TypePair{};
     mlir::LLVM::IntegerOverflowFlags nsw =
         mlir::LLVM::IntegerOverflowFlags::nsw;
+    mlir::LLVM::IntegerOverflowFlags nuw =
+        mlir::LLVM::IntegerOverflowFlags::nuw;
+    mlir::LLVM::IntegerOverflowFlags subFlags = nsw;
+    mlir::LLVM::IntegerOverflowFlags addMulFlags = nsw;
+    mlir::LLVM::GEPNoWrapFlags gepFlags = mlir::LLVM::GEPNoWrapFlags::none;
+
+    // In certain cases, where unsigned wrapping is known not to not occur, we
+    // can apply the nuw flag to Add/Mul operations, and `nusw nuw` flags to
+    // getelementptr's. By doing so, this enables better optimization through
+    // slp-vectorizer later in the LLVM pipeline.
+    const bool canUseNuw = !baseIsBoxed && !isShifted && !isSliced &&
+                           coor.getSubcomponent().empty() &&
+                           coor.getLenParams().empty() &&
+                           !coor.getShape().empty();
+    if (canUseNuw) {
+      addMulFlags = addMulFlags | nuw;
+      gepFlags =
+          mlir::LLVM::GEPNoWrapFlags::nusw | mlir::LLVM::GEPNoWrapFlags::nuw;
+    }
 
     // For each dimension of the array, generate the offset calculation.
     for (unsigned i = 0; i < rank; ++i, ++indexOffset, ++shapeOffset,
@@ -2734,15 +2753,16 @@ struct XArrayCoorOpConversion
           step = integerCast(loc, rewriter, idxTy, operands[sliceOffset + 2]);
       }
       auto idx =
-          mlir::LLVM::SubOp::create(rewriter, loc, idxTy, index, lb, nsw);
-      mlir::Value diff =
-          mlir::LLVM::MulOp::create(rewriter, loc, idxTy, idx, step, nsw);
+          mlir::LLVM::SubOp::create(rewriter, loc, idxTy, index, lb, subFlags);
+      mlir::Value diff = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, idx,
+                                                   step, addMulFlags);
       if (normalSlice) {
         mlir::Value sliceLb =
             integerCast(loc, rewriter, idxTy, operands[sliceOffset]);
-        auto adj =
-            mlir::LLVM::SubOp::create(rewriter, loc, idxTy, sliceLb, lb, nsw);
-        diff = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, diff, adj, nsw);
+        auto adj = mlir::LLVM::SubOp::create(rewriter, loc, idxTy, sliceLb, lb,
+                                             subFlags);
+        diff = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, diff, adj,
+                                         addMulFlags);
       }
       // Update the offset given the stride and the zero based index `diff`
       // that was just computed.
@@ -2750,21 +2770,21 @@ struct XArrayCoorOpConversion
         // Use stride in bytes from the descriptor.
         mlir::Value stride =
             getStrideFromBox(loc, baseBoxTyPair, operands[0], i, rewriter);
-        auto sc =
-            mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride, nsw);
-        offset =
-            mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset, nsw);
+        auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, stride,
+                                            addMulFlags);
+        offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
+                                           addMulFlags);
       } else {
         // Use stride computed at last iteration.
-        auto sc =
-            mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt, nsw);
-        offset =
-            mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset, nsw);
+        auto sc = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, diff, prevExt,
+                                            addMulFlags);
+        offset = mlir::LLVM::AddOp::create(rewriter, loc, idxTy, sc, offset,
+                                           addMulFlags);
         // Compute next stride assuming contiguity of the base array
         // (in element number).
         auto nextExt = integerCast(loc, rewriter, idxTy, operands[shapeOffset]);
         prevExt = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, prevExt,
-                                            nextExt, nsw);
+                                            nextExt, addMulFlags);
       }
     }
 
@@ -2777,7 +2797,7 @@ struct XArrayCoorOpConversion
           getBaseAddrFromBox(loc, baseBoxTyPair, operands[0], rewriter);
       llvm::SmallVector<mlir::LLVM::GEPArg> args{offset};
       auto addr = mlir::LLVM::GEPOp::create(rewriter, loc, llvmPtrTy, byteTy,
-                                            base, args);
+                                            base, args, gepFlags);
       if (coor.getSubcomponent().empty()) {
         rewriter.replaceOp(coor, addr);
         return mlir::success();
@@ -2802,8 +2822,8 @@ struct XArrayCoorOpConversion
           operands.slice(coor.getSubcomponentOperandIndex(),
                          coor.getSubcomponent().size()));
       args.append(indices.begin(), indices.end());
-      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(coor, llvmPtrTy,
-                                                     elementType, addr, args);
+      rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
+          coor, llvmPtrTy, elementType, addr, args, gepFlags);
       return mlir::success();
     }
 
@@ -2825,7 +2845,7 @@ struct XArrayCoorOpConversion
           auto length = integerCast(loc, rewriter, idxTy,
                                     operands[coor.getLenParamsOperandIndex()]);
           offset = mlir::LLVM::MulOp::create(rewriter, loc, idxTy, offset,
-                                             length, nsw);
+                                             length, addMulFlags);
         } else {
           TODO(loc, "compute size of derived type with type parameters");
         }
@@ -2841,7 +2861,7 @@ struct XArrayCoorOpConversion
       args.append(indices.begin(), indices.end());
     }
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
-        coor, llvmPtrTy, gepObjectType, adaptor.getMemref(), args);
+        coor, llvmPtrTy, gepObjectType, adaptor.getMemref(), args, gepFlags);
     return mlir::success();
   }
 };

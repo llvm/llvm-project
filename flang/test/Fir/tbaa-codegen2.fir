@@ -98,7 +98,7 @@ module attributes {fir.defaultkind = "a1c4d8i4l4r4", fir.kindmap = "", llvm.targ
 // access to 'a':
 // CHECK:  %[[VAL43:.*]] = load i32, ptr %[[VAL42]], align 4, !tbaa ![[A_ACCESS_TAG:.*]]
 // [...]
-// CHECK:  %[[VAL50:.*]] = getelementptr i32, ptr %{{.*}}, i64 %{{.*}}
+// CHECK:  %[[VAL50:.*]] = getelementptr nusw nuw i32, ptr %{{.*}}, i64 %{{.*}}
 // store to the temporary:
 // CHECK:  store i32 %{{.*}}, ptr %[[VAL50]], align 4, !tbaa ![[TMP_DATA_ACCESS_TAG:.*]]
 // [...]

@@ -44,7 +44,7 @@ End Program
 ! check that we use the private copy of table for table/=50
 ! CHECK:       omp.par.region3:
 ! CHECK:         %[[VAL_44:.*]] = sub nsw i64 %{{.*}}, 1
-! CHECK:         %[[VAL_45:.*]] = mul nsw i64 %[[VAL_44]], 1
-! CHECK:         %[[VAL_46:.*]] = mul nsw i64 %[[VAL_45]], 1
-! CHECK:         %[[VAL_47:.*]] = add nsw i64 %[[VAL_46]], 0
-! CHECK:         %[[VAL_48:.*]] = getelementptr i32, ptr %[[PRIV_TABLE]], i64 %[[VAL_47]]
+! CHECK:         %[[VAL_45:.*]] = mul nuw nsw i64 %[[VAL_44]], 1
+! CHECK:         %[[VAL_46:.*]] = mul nuw nsw i64 %[[VAL_45]], 1
+! CHECK:         %[[VAL_47:.*]] = add nuw nsw i64 %[[VAL_46]], 0
+! CHECK:         %[[VAL_48:.*]] = getelementptr nusw nuw i32, ptr %[[PRIV_TABLE]], i64 %[[VAL_47]]
