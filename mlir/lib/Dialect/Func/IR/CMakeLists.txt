@@ -11,7 +11,6 @@ add_mlir_dialect_library(MLIRFuncDialect
   MLIRCallInterfaces
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
-  MLIRHoistingContainerOpInterface
   MLIRInferTypeOpInterface
   MLIRIR
   MLIRSideEffectInterfaces

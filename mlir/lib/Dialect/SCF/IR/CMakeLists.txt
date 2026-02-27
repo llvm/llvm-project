@@ -14,7 +14,6 @@ add_mlir_dialect_library(MLIRSCFDialect
   MLIRControlFlowDialect
   MLIRDialectUtils
   MLIRFunctionInterfaces
-  MLIRHoistingContainerOpInterface
   MLIRIR
   MLIRLoopLikeInterface
   MLIRSideEffectInterfaces

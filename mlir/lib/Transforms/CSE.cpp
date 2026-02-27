@@ -16,7 +16,6 @@
 #include "mlir/IR/Dominance.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
-#include "mlir/Interfaces/HoistingContainerOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/Passes.h"
@@ -63,8 +62,9 @@ namespace {
 /// Simple common sub-expression elimination.
 class CSEDriver {
 public:
-  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo)
-      : rewriter(rewriter), domInfo(domInfo) {}
+  CSEDriver(RewriterBase &rewriter, DominanceInfo *domInfo,
+            bool hoistPureOps = true)
+      : rewriter(rewriter), domInfo(domInfo), hoistPureOps(hoistPureOps) {}
 
   /// Simplify all operations within the given op.
   void simplify(Operation *op, bool *changed = nullptr);
@@ -127,6 +127,7 @@ private:
   /// Operations marked as dead and to be erased.
   SmallVector<Operation *> opsToErase;
   DominanceInfo *domInfo = nullptr;
+  bool hoistPureOps = true;
   MemEffectsCache memEffectsCache;
 
   // Various statistics.
@@ -166,13 +167,6 @@ LogicalResult CSEDriver::hoistPureOp(Operation *existing, Operation *op) {
            << "failed";
     return failure();
   }
-
-  // If the ancestorBlock is in a different region than the existing operation,
-  // we need to check if the parentOp of the ancestorBlock can contain hoisted
-  // ops.
-  if (ancestorBlock->getParent() != existing->getParentRegion() &&
-      !canContainHoistedOps(ancestorBlock->getParentOp()))
-    return failure();
 
   if (isBlockCrossIsIsolatedFromAbove(domInfo, ancestorBlock,
                                       existing->getBlock()))
@@ -219,7 +213,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
     // Replace all uses, but do not remove the operation yet. This does not
     // notify the listener because the original op is not erased.
     if (!domInfo->properlyDominates(existing, op)) {
-      if (failed(hoistPureOp(existing, op)))
+      if (!hoistPureOps || failed(hoistPureOp(existing, op)))
         return;
     }
     LDBG() << "replace " << OpWithFlags(op, OpPrintingFlags().skipRegions())
@@ -242,7 +236,7 @@ void CSEDriver::replaceUsesAndDelete(ScopedMapTy &knownValues, Operation *op,
           rewriteListener->notifyOperationReplaced(op, existing);
 
     if (!domInfo->properlyDominates(existing, op)) {
-      if (failed(hoistPureOp(existing, op)))
+      if (!hoistPureOps || failed(hoistPureOp(existing, op)))
         return;
     }
     // Replace all uses, but do not remove the operation yet. This does not
@@ -539,6 +533,7 @@ void mlir::eliminateCommonSubExpressions(RewriterBase &rewriter,
 namespace {
 /// CSE pass.
 struct CSE : public impl::CSEPassBase<CSE> {
+  using impl::CSEPassBase<CSE>::CSEPassBase;
   void runOnOperation() override;
 };
 } // namespace
@@ -546,7 +541,7 @@ struct CSE : public impl::CSEPassBase<CSE> {
 void CSE::runOnOperation() {
   // Simplify the IR.
   IRRewriter rewriter(&getContext());
-  CSEDriver driver(rewriter, &getAnalysis<DominanceInfo>());
+  CSEDriver driver(rewriter, &getAnalysis<DominanceInfo>(), hoistPureOps);
   bool changed = false;
   driver.simplify(getOperation(), &changed);
 

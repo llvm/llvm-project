@@ -8,7 +8,6 @@ set(LLVM_OPTIONAL_SOURCES
   DestinationStyleOpInterface.cpp
   FunctionImplementation.cpp
   FunctionInterfaces.cpp
-  HoistingContainerOpInterface.cpp
   IndexingMapOpInterface.cpp
   InferIntRangeInterface.cpp
   InferStridedMetadataInterface.cpp
@@ -65,7 +64,7 @@ add_mlir_library(MLIRFunctionInterfaces
   MLIRCallInterfaces
   MLIRIR
 )
-add_mlir_interface_library(HoistingContainerOpInterface)
+
 add_mlir_interface_library(IndexingMapOpInterface)
 add_mlir_interface_library(InferIntRangeInterface)
 

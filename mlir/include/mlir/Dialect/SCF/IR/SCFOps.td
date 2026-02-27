@@ -18,7 +18,6 @@ include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
-include "mlir/Interfaces/HoistingContainerOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -163,8 +162,7 @@ def ForOp : SCF_Op<"for",
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
         ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
-       RecursiveMemoryEffects,
-       DeclareOpInterfaceMethods<HoistingContainerOpInterface>]> {
+       RecursiveMemoryEffects]> {
   let summary = "for operation";
   let description = [{
     The `scf.for` operation represents a loop taking 3 SSA value as operands
@@ -988,7 +986,6 @@ def WhileOp : SCF_Op<"while",
         ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getRegionIterArgs", "getYieldedValuesMutable"]>,
-     DeclareOpInterfaceMethods<HoistingContainerOpInterface>,
      RecursiveMemoryEffects, SingleBlock]> {
   let summary = "a generic 'while' loop";
   let description = [{
