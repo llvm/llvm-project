@@ -164,9 +164,9 @@ define void @uniform_gep_for_replicating_gep(ptr %dst) {
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <2 x i32> [ <i32 0, i32 1>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <2 x i32> [[VEC_IND]], splat (i32 2)
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <2 x i32> [[STEP_ADD]], splat (i32 2)
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <2 x i32> [[STEP_ADD_2]], splat (i32 2)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <2 x i32> [[VEC_IND]], splat (i32 2)
+; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add nuw <2 x i32> [[STEP_ADD]], splat (i32 2)
+; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add nuw <2 x i32> [[STEP_ADD_2]], splat (i32 2)
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[INDEX]], 6
