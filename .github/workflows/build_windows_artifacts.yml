@@ -96,6 +96,20 @@ jobs:
           git submodule status
           git submodule
 
+      - name: Update Submodule Pointer at compiler/amd-llvm for manual debug
+        if: ${{ github.event_name != 'pull_request' && github.workflow == 'ROCK CI Windows Debug Support' }}
+        run: |
+          git config --global --add safe.directory $PWD
+          echo "sha: $GITHUB_SHA"
+          # Update the submodule pointer using cacheinfo
+          git update-index --cacheinfo 160000,$GITHUB_SHA,compiler/amd-llvm
+          git config --global user.email "z1-cciauto@amd.com"
+          git config --global user.name "Z1 cciauto"
+          git commit -m "Update submodule reference for compiler/amd-llvm using branch SHA"
+          # Verify the pointer update
+          git submodule status
+          git submodule
+          
       - name: Download LLVM, SPIRV and HIPIFY PR's stored in file
         if: ${{ github.event_name == 'workflow_dispatch' }}
         continue-on-error: true
