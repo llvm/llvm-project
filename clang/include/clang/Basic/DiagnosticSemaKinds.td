@@ -10950,7 +10950,7 @@ def note_lifetime_safety_moved_here : Note<"potentially moved here">;
 def note_lifetime_safety_dangling_field_here: Note<"this field dangles">;
 def note_lifetime_safety_dangling_global_here: Note<"this global dangles">;
 def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
-def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global">;
+def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
 
 def warn_lifetime_safety_intra_tu_param_suggestion
     : Warning<"parameter in intra-TU function should be marked "

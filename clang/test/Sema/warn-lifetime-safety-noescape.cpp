@@ -113,10 +113,30 @@ View escape_through_unannotated_call(const MyObj& in [[clang::noescape]]) { // e
   return no_annotation_identity(in); // expected-note {{returned here}}
 }
 
-View global_view; // expected-note {{escapes to this global}}
+View global_view; // expected-note {{escapes to this global storage}}
 
 void escape_through_global_var(const MyObj& in [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
   global_view = in;
+}
+struct ObjWithStaticField {
+  static int *static_field; // expected-note {{escapes to this global storage}}
+}; 
+  
+void escape_to_static_data_member(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  ObjWithStaticField::static_field = data;
+}
+
+
+
+void escape_through_static_local(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  static int *static_local; // expected-note {{escapes to this global storage}}
+  static_local = data;
+}
+
+thread_local int *thread_local_storage; // expected-note {{escapes to this global storage}}
+
+void escape_through_thread_local(int *data [[clang::noescape]]) { // expected-warning {{parameter is marked [[clang::noescape]] but escapes}}
+  thread_local_storage = data;
 }
 
 struct ObjConsumer {
