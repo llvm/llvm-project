@@ -300,6 +300,42 @@ including the portion reserved for system software use.
 The '``dynamic_smem_size``' variant returns the amount of dynamic shared
 memory allocated per CTA for the kernel at launch time.
 
+'``llvm.nvvm.read.ptx.sreg.reserved_smem_offset_*``'
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+.. code-block:: llvm
+
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_begin()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_end()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_cap()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_0()
+    declare i32 @llvm.nvvm.read.ptx.sreg.reserved_smem_offset_1()
+
+Overview:
+"""""""""
+
+The '``@llvm.nvvm.read.ptx.sreg.reserved_smem_offset_*``' intrinsics provide
+access to PTX special registers that hold information about reserved shared
+memory offsets. 
+
+The '``reserved_smem_offset_begin``' intrinsic reads the start offset of
+the reserved shared memory region.
+
+The '``reserved_smem_offset_end``' intrinsic reads the end offset of the
+reserved shared memory region.
+
+The '``reserved_smem_offset_cap``' intrinsic reads the capacity limit of
+the reserved shared memory region.
+
+The '``reserved_smem_offset_0``' and '``reserved_smem_offset_1``' intrinsics
+read additional offsets in the reserved shared memory region.
+
+For more information, refer `PTX ISA
+<https://docs.nvidia.com/cuda/parallel-thread-execution/#special-registers-reserved-smem>`__.
+
 Barriers
 --------
 
