@@ -395,6 +395,105 @@ struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+/// Distributes a subgroup-level LoadGather (xegpu.load) op to workitem-level.
+///
+/// Example 1 (1D, no chunk size):
+///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+///   %mask = producer_op : vector<16xi1>
+///   %offset = producer_op : vector<16xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<16xindex>, vector<16xi1> -> vector<16xf16>
+/// Distributed to:
+///   %mask = producer_op : vector<1xi1>
+///   %offset = producer_op : vector<1xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<1xindex>, vector<1xi1> -> vector<1xf16>
+///
+/// Example 2 (2D with chunk size, same mask & offset):
+///   layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+///   %0 = xegpu.load %src[%offset], %mask <{chunk_size=8}> :
+///     memref<256xf16>, vector<16xindex>, vector<16xi1> -> vector<16x8xf16>
+/// Distributed to:
+///   %0 = xegpu.load %src[%offset], %mask <{chunk_size=8}> :
+///     memref<256xf16>, vector<1xindex>, vector<1xi1> -> vector<8xf16>
+///
+/// Example 3 (3D with leading unit dims):
+///   layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+///   %mask = producer_op : vector<1x1x16xi1>
+///   %offset = producer_op : vector<1x1x16xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<1x1x16xindex>, vector<1x1x16xi1> -> vector<1x1x16xf16>
+/// Distributed to:
+///   %mask = producer_op : vector<1x1x1xi1>
+///   %offset = producer_op : vector<1x1x1xindex>
+///   %0 = xegpu.load %src[%offset], %mask : memref<256xf16>,
+///     vector<1xindex>, vector<1xi1> -> vector<1xf16>
+struct SgToWiLoadGather : public OpConversionPattern<xegpu::LoadGatherOp> {
+  using OpConversionPattern<xegpu::LoadGatherOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::LoadGatherOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
+    if (!layout)
+      return failure();
+
+    VectorType origResultTy = op.getValueType();
+    if (!origResultTy)
+      return failure();
+
+    // Check that leading dimensions are unit.
+    int chunkSize = op.getChunkSize().value_or(1);
+    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    ArrayRef<int64_t> shape = origResultTy.getShape();
+    if (llvm::any_of(
+            shape.take_front(origResultTy.getRank() - effectiveVecRank),
+            [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Only unit dimensions allowed for the leading "
+              "dimensions of the load vector!");
+
+    auto distResultTyOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(layout, origResultTy);
+    if (failed(distResultTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op,
+          "unable to compute expected workitem vector type from lane layout");
+
+    VectorType distResultTy = distResultTyOrFailure.value();
+    VectorType distResultTy1D = VectorType::get({distResultTy.getNumElements()},
+                                                distResultTy.getElementType());
+
+    // Flatten offsets and mask to 1D to match the 1D result type.
+    Value distOffsets = adaptor.getOffsets();
+    auto distOffsetsTy = cast<VectorType>(distOffsets.getType());
+    VectorType offsetsTy1D = VectorType::get({distOffsetsTy.getNumElements()},
+                                             distOffsetsTy.getElementType());
+    distOffsets = castValueTo(
+        rewriter, cast<TypedValue<VectorType>>(distOffsets), offsetsTy1D);
+
+    Value distMask = adaptor.getMask();
+    auto distMaskTy = cast<VectorType>(distMask.getType());
+    VectorType maskTy1D = VectorType::get({distMaskTy.getNumElements()},
+                                          distMaskTy.getElementType());
+    distMask =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
+
+    Value distSource = adaptor.getSource();
+    auto newOp = xegpu::LoadGatherOp::create(
+        rewriter, op.getLoc(), distResultTy1D, distSource, distOffsets,
+        distMask, op.getChunkSizeAttr(), op.getL1HintAttr(), op.getL2HintAttr(),
+        op.getL3HintAttr(), /*layout=*/nullptr);
+
+    Value result = newOp->getResult(0);
+    if (distResultTy1D != distResultTy)
+      result = castValueTo(rewriter, cast<TypedValue<VectorType>>(result),
+                           distResultTy);
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
 /// This pattern distributes a subgroup-level vector.reduction op to
 /// workitem-level. This require shuffling the data across the workitems (using
 /// gpu::ShuffleOp) and reducing in stages until all workitems have the final
@@ -494,6 +593,105 @@ struct SgToWiMultiDimReduction
           reductionDim, reductionDimSize, op.getLoc(), rewriter);
     }
     rewriter.replaceOp(op, result);
+    return success();
+  }
+};
+
+/// Distributes a subgroup-level StoreScatter (xegpu.store) op to
+/// workitem-level.
+///
+/// Example 1 (1D, no chunk size):
+///   layout = #xegpu.layout<lane_layout = [16], lane_data = [1]>
+///   %mask = producer_op : vector<16xi1>
+///   %offset = producer_op : vector<16xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<16xf16>,
+///     memref<256xf16>, vector<16xindex>, vector<16xi1>
+/// Distributed to:
+///   %mask = producer_op : vector<1xi1>
+///   %offset = producer_op : vector<1xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<1xf16>,
+///     memref<256xf16>, vector<1xindex>, vector<1xi1>
+///
+/// Example 2 (2D with chunk size, same mask & offset):
+///   layout = #xegpu.layout<lane_layout = [16, 1], lane_data = [1, 1]>
+///   xegpu.store %payload, %src[%offset], %mask <{chunk_size=8}> :
+///     vector<16x8xf16>, memref<256xf16>, vector<16xindex>, vector<16xi1>
+/// Distributed to:
+///   xegpu.store %payload, %src[%offset], %mask <{chunk_size=8}> :
+///     vector<8xf16>, memref<256xf16>, vector<1xindex>, vector<1xi1>
+///
+/// Example 3 (3D with leading unit dims):
+///   layout = #xegpu.layout<lane_layout = [1, 1, 16], lane_data = [1, 1, 1]>
+///   %mask = producer_op : vector<1x1x16xi1>
+///   %offset = producer_op : vector<1x1x16xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<1x1x16xf16>,
+///     memref<256xf16>, vector<1x1x16xindex>, vector<1x1x16xi1>
+/// Distributed to:
+///   %mask = producer_op : vector<1x1x1xi1>
+///   %offset = producer_op : vector<1x1x1xindex>
+///   xegpu.store %payload, %src[%offset], %mask : vector<1xf16>,
+///     memref<256xf16>, vector<1xindex>, vector<1xi1>
+struct SgToWiStoreScatter : public OpConversionPattern<xegpu::StoreScatterOp> {
+  using OpConversionPattern<xegpu::StoreScatterOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(xegpu::StoreScatterOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    xegpu::DistributeLayoutAttr layout = op.getAnchorLayout();
+    if (!layout)
+      return failure();
+
+    VectorType origValueTy = op.getValueType();
+    if (!origValueTy)
+      return failure();
+
+    // Check that all leading dimensions are unit dimensions.
+    int chunkSize = op.getChunkSize().value_or(1);
+    int effectiveVecRank = (chunkSize == 1) ? 1 : 2;
+    ArrayRef<int64_t> shape = origValueTy.getShape();
+    if (llvm::any_of(shape.take_front(origValueTy.getRank() - effectiveVecRank),
+                     [](int64_t d) { return d != 1; }))
+      return rewriter.notifyMatchFailure(
+          op, "Only unit dimensions allowed for the leading "
+              "dimensions of the store vector!");
+
+    auto distValueTyOrFailure =
+        xegpu::getDistVecTypeBasedOnLaneLayout(layout, origValueTy);
+    if (failed(distValueTyOrFailure))
+      return rewriter.notifyMatchFailure(
+          op,
+          "unable to compute expected workitem vector type from lane layout");
+
+    VectorType distValueTy = distValueTyOrFailure.value();
+    VectorType distValueTy1D = VectorType::get({distValueTy.getNumElements()},
+                                               distValueTy.getElementType());
+
+    Value distValue = adaptor.getValue();
+    if (distValue.getType() != distValueTy1D)
+      distValue = castValueTo(rewriter, cast<TypedValue<VectorType>>(distValue),
+                              distValueTy1D);
+
+    // Flatten offsets and mask to 1D to match the 1D value type.
+    Value distOffsets = adaptor.getOffsets();
+    auto distOffsetsTy = cast<VectorType>(distOffsets.getType());
+    VectorType offsetsTy1D = VectorType::get({distOffsetsTy.getNumElements()},
+                                             distOffsetsTy.getElementType());
+    distOffsets = castValueTo(
+        rewriter, cast<TypedValue<VectorType>>(distOffsets), offsetsTy1D);
+
+    Value distMask = adaptor.getMask();
+    auto distMaskTy = cast<VectorType>(distMask.getType());
+    VectorType maskTy1D = VectorType::get({distMaskTy.getNumElements()},
+                                          distMaskTy.getElementType());
+    distMask =
+        castValueTo(rewriter, cast<TypedValue<VectorType>>(distMask), maskTy1D);
+
+    Value distDest = adaptor.getDest();
+    xegpu::StoreScatterOp::create(rewriter, op.getLoc(), distValue, distDest,
+                                  distOffsets, distMask, op.getChunkSizeAttr(),
+                                  op.getL1HintAttr(), op.getL2HintAttr(),
+                                  op.getL3HintAttr(), /*layout=*/nullptr);
+    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -702,6 +900,6 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
                SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
-               SgToWiVectorReduction, SgToWiMultiDimReduction>(
-      typeConverter, patterns.getContext());
+               SgToWiLoadGather, SgToWiStoreScatter, SgToWiVectorReduction,
+               SgToWiMultiDimReduction>(typeConverter, patterns.getContext());
 }
