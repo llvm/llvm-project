@@ -3202,8 +3202,12 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
                       << ", got " << Args.size() << "\n");
     return std::nullopt;
   }
-  if (Call->Builtin->MaxNumArgs && Args.size() > Call->Builtin->MaxNumArgs)
-    LLVM_DEBUG(dbgs() << "More arguments provided than required!\n");
+  if (Call->Builtin->MaxNumArgs && Args.size() > Call->Builtin->MaxNumArgs) {
+    LLVM_DEBUG(dbgs() << "Too many arguments for builtin " << DemangledCall
+                      << ": expected at most " << Call->Builtin->MaxNumArgs
+                      << ", got " << Args.size() << "\n");
+    return std::nullopt;
+  }
 
   // Match the builtin with implementation based on the grouping.
   switch (Call->Builtin->Group) {
