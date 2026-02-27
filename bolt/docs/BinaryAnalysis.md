@@ -289,10 +289,10 @@ PtrAuth gadget scanner's heuristic.
 **Notes:** Heuristics are involved to classify instructions either as a tail
 call or as another kind of branch (such as jump table or computed goto).
 
-A report is generated if tail call is performed with untrusted link register.
-This basically means that the tail-called function would have link register
-untrusted on its entry (unlike inherently correct address placed to link
-register by one of `bl*` instructions when non-tail call is performed).
+A report is generated if a tail call is performed with an untrusted link register.
+This basically means that the tail-called function would have the link register
+untrusted on its entry (unlike the inherently correct address placed in the link
+register by one of `bl*` instructions when a non-tail call is performed).
 
 ```asm
 non_protected_tail_call:
@@ -337,9 +337,9 @@ or not required at all (if `FEAT_FPAC` is known to be implemented) on the other 
 authentication: either `blr <reg>` or `br <reg>`, but not `blraa`, `braa`
 and similar instructions.
 
-**Property:** Call or branch target register must be safe-to-dereference.
+**Property:** The call or branch target register must be safe-to-dereference.
 
-Report is generated for an indirect branch or call instruction whose destination
+A report is generated for an indirect branch or call instruction whose destination
 is possibly attacker-controlled.
 
 **Examples:**
@@ -368,7 +368,7 @@ bad_call:
   ldr     x2, [x1]
   autia   x2, x1
   ; Store unprotected address.
-  stp     x2, [x3]
+  str     x2, [x3]
   ; ...
   ; The callee address may have been overwritten in memory.
   ldr     x2, [x3]
@@ -393,7 +393,7 @@ bad_call_dataflow:
   adrp    x2, callee
   add     x2, x2, :lo12:callee
 .L3:
-  ; x2 is untrusted is x0 is 0.
+  ; x2 is untrusted if x0 is 0.
   br      x2
 
 ```
