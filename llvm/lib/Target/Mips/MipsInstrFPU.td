@@ -134,9 +134,6 @@ multiclass ADDS_M<string opstr, InstrItinClass Itin, bit IsComm,
   }
 }
 
-class ABSS_FT_PatFrag<SDPatternOperator OpNode>:
-  PatFrag<(ops node:$fs), (OpNode node:$fs),
-          [{ return Subtarget->inAbs2008Mode() || N->getFlags().hasNoNaNs(); }]>;
 class ABSS_FT<string opstr, RegisterOperand DstRC, RegisterOperand SrcRC,
               InstrItinClass Itin, SDPatternOperator OpNode= null_frag> :
   InstSE<(outs DstRC:$fd), (ins SrcRC:$fs), !strconcat(opstr, "\t$fd, $fs"),
@@ -219,10 +216,6 @@ class MADDS_FT<string opstr, RegisterOperand RC, InstrItinClass Itin,
          [(set RC:$fd, (OpNode (any_fmul RC:$fs, RC:$ft), RC:$fr))], Itin,
          FrmFR, opstr>, HARDFLOAT;
 
-class NMADDS_FT_PatFrag<SDPatternOperator OpNode> :
-  PatFrag<(ops node:$fr, node:$fs, node:$ft),
-          (any_fsub fpimm0, (OpNode (any_fmul node:$fs, node:$ft), node:$fr)),
-          [{ return N->getFlags().hasNoNaNs(); }]>;
 class NMADDS_FT<string opstr, RegisterOperand RC, InstrItinClass Itin,
                 SDPatternOperator OpNode = null_frag> :
   InstSE<(outs RC:$fd), (ins RC:$fr, RC:$fs, RC:$ft),
@@ -554,17 +547,11 @@ let isPseudo = 1, isCodeGenOnly = 1 in {
   def PseudoCVT_D64_L : ABSS_FT<"", FGR64Opnd, GPR64Opnd, II_CVT>;
 }
 
-let AdditionalPredicates = [NotInMicroMips] in {
-  def FABS_S : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS>,
+let AdditionalPredicates = [NotInMicroMips, UseAbs] in {
+  def FABS_S : MMRel, ABSS_FT<"abs.s", FGR32Opnd, FGR32Opnd, II_ABS, fabs>,
                ABSS_FM<0x5, 16>, ISA_MIPS1;
-  defm FABS : ABSS_M<"abs.d", II_ABS>, ABSS_FM<0x5, 17>, ISA_MIPS1;
+  defm FABS : ABSS_M<"abs.d", II_ABS, fabs>, ABSS_FM<0x5, 17>, ISA_MIPS1;
 }
-let Predicates = FABS_S.Predicates in
-def : Pat<(ABSS_FT_PatFrag<fabs> FGR32Opnd:$fs), (FABS_S FGR32Opnd:$fs)>;
-let Predicates = FABS_D32.Predicates in
-def : Pat<(ABSS_FT_PatFrag<fabs> AFGR64Opnd:$fs), (FABS_D32 AFGR64Opnd:$fs)>;
-let Predicates = FABS_D64.Predicates in
-def : Pat<(ABSS_FT_PatFrag<fabs> FGR64Opnd:$fs), (FABS_D64 FGR64Opnd:$fs)>;
 
 def FNEG_S : MMRel, ABSS_FT<"neg.s", FGR32Opnd, FGR32Opnd, II_NEG, fneg>,
              ABSS_FM<0x7, 16>, ISA_MIPS1;
@@ -733,42 +720,24 @@ let AdditionalPredicates = [NotInMicroMips, HasMadd4], mayRaiseFPException = 1, 
   }
 }
 
-let AdditionalPredicates = [HasMadd4, NotInMicroMips], mayRaiseFPException = 1, Uses = [FCR31] in {
-  def NMADD_S : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S>,
+let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, NotInMicroMips], mayRaiseFPException = 1, Uses = [FCR31] in {
+  def NMADD_S : MMRel, NMADDS_FT<"nmadd.s", FGR32Opnd, II_NMADD_S, any_fadd>,
                 MADDS_FM<6, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
-  def NMSUB_S : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S>,
+  def NMSUB_S : MMRel, NMADDS_FT<"nmsub.s", FGR32Opnd, II_NMSUB_S, any_fsub>,
                 MADDS_FM<7, 0>, INSN_MIPS4_32R2_NOT_32R6_64R6;
 
-  def NMADD_D32 : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, II_NMADD_D>,
+  def NMADD_D32 : MMRel, NMADDS_FT<"nmadd.d", AFGR64Opnd, II_NMADD_D, any_fadd>,
                   MADDS_FM<6, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
-  def NMSUB_D32 : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D>,
+  def NMSUB_D32 : MMRel, NMADDS_FT<"nmsub.d", AFGR64Opnd, II_NMSUB_D, any_fsub>,
                   MADDS_FM<7, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_32;
 
   let DecoderNamespace = "MipsFP64" in {
-    def NMADD_D64 : NMADDS_FT<"nmadd.d", FGR64Opnd, II_NMADD_D>,
+    def NMADD_D64 : NMADDS_FT<"nmadd.d", FGR64Opnd, II_NMADD_D, any_fadd>,
                     MADDS_FM<6, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
-    def NMSUB_D64 : NMADDS_FT<"nmsub.d", FGR64Opnd, II_NMSUB_D>,
+    def NMSUB_D64 : NMADDS_FT<"nmsub.d", FGR64Opnd, II_NMSUB_D, any_fsub>,
                     MADDS_FM<7, 1>, INSN_MIPS4_32R2_NOT_32R6_64R6, FGR_64;
   }
 }
-let Predicates = NMADD_S.Predicates in
-def : Pat<(NMADDS_FT_PatFrag<any_fadd> FGR32Opnd:$fr, FGR32Opnd:$fs, FGR32Opnd:$ft),
-          (NMADD_S FGR32Opnd:$fr, FGR32Opnd:$fs, FGR32Opnd:$ft)>;
-let Predicates = NMSUB_S.Predicates in
-def : Pat<(NMADDS_FT_PatFrag<any_fsub> FGR32Opnd:$fr, FGR32Opnd:$fs, FGR32Opnd:$ft),
-          (NMSUB_S FGR32Opnd:$fr, FGR32Opnd:$fs, FGR32Opnd:$ft)>;
-let Predicates = NMADD_D32.Predicates in
-def : Pat<(NMADDS_FT_PatFrag<any_fadd> AFGR64Opnd:$fr, AFGR64Opnd:$fs, AFGR64Opnd:$ft),
-          (NMADD_D32 AFGR64Opnd:$fr, AFGR64Opnd:$fs, AFGR64Opnd:$ft)>;
-let Predicates = NMSUB_D32.Predicates in
-def : Pat<(NMADDS_FT_PatFrag<any_fsub> AFGR64Opnd:$fr, AFGR64Opnd:$fs, AFGR64Opnd:$ft),
-          (NMSUB_D32 AFGR64Opnd:$fr, AFGR64Opnd:$fs, AFGR64Opnd:$ft)>;
-let Predicates = NMADD_D64.Predicates in
-def : Pat<(NMADDS_FT_PatFrag<any_fadd> FGR64Opnd:$fr, FGR64Opnd:$fs, FGR64Opnd:$ft),
-          (NMADD_D64 FGR64Opnd:$fr, FGR64Opnd:$fs, FGR64Opnd:$ft)>;
-let Predicates = NMSUB_D64.Predicates in
-def : Pat<(NMADDS_FT_PatFrag<any_fsub> FGR64Opnd:$fr, FGR64Opnd:$fs, FGR64Opnd:$ft),
-          (NMSUB_D64 FGR64Opnd:$fr, FGR64Opnd:$fs, FGR64Opnd:$ft)>;
 //===----------------------------------------------------------------------===//
 // Floating Point Branch Codes
 //===----------------------------------------------------------------------===//
@@ -1033,17 +1002,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 
 // To generate NMADD and NMSUB instructions when fneg node is present
-class NMADD_NMSUB_PatFrag<SDPatternOperator OpNode>: PatFrag<(ops node:$fr, node:$fs, node:$ft),
-          (fneg (OpNode (any_fmul node:$fs, node:$ft), node:$fr)),
-          [{ return N->getFlags().hasNoNaNs(); }]>;
 multiclass NMADD_NMSUB<Instruction Nmadd, Instruction Nmsub, RegisterOperand RC> {
-  def : MipsPat<(NMADD_NMSUB_PatFrag<any_fadd> RC:$fr, RC:$fs, RC:$ft),
+  def : MipsPat<(fneg (any_fadd (any_fmul RC:$fs, RC:$ft), RC:$fr)),
                 (Nmadd RC:$fr, RC:$fs, RC:$ft)>;
-  def : MipsPat<(NMADD_NMSUB_PatFrag<any_fsub> RC:$fr, RC:$fs, RC:$ft),
+  def : MipsPat<(fneg (any_fsub (any_fmul RC:$fs, RC:$ft), RC:$fr)),
                 (Nmsub RC:$fr, RC:$fs, RC:$ft)>;
 }
 
-let AdditionalPredicates = [HasMadd4, NotInMicroMips] in {
+let AdditionalPredicates = [NoNaNsFPMath, HasMadd4, NotInMicroMips] in {
   defm : NMADD_NMSUB<NMADD_S, NMSUB_S, FGR32Opnd>,
          INSN_MIPS4_32R2_NOT_32R6_64R6;
   defm : NMADD_NMSUB<NMADD_D32, NMSUB_D32, AFGR64Opnd>,

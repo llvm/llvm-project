@@ -10,7 +10,6 @@
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
-#include <iterator>
 using namespace llvm;
 
 namespace {
@@ -112,9 +111,7 @@ MachineBasicBlock *llvm::PeelSingleBlockLoop(LoopPeelDirection Direction,
     Preheader->ReplaceUsesOfBlockWith(Loop, NewBB);
     NewBB->addSuccessor(Loop);
     Loop->replacePhiUsesWith(Preheader, NewBB);
-    if (auto PreheaderLayoutSuccessor = std::next(Preheader->getIterator());
-        PreheaderLayoutSuccessor != Preheader->getParent()->end())
-      Preheader->updateTerminator(&*PreheaderLayoutSuccessor);
+    Preheader->updateTerminator(Loop);
     TII->removeBranch(*NewBB);
     TII->insertBranch(*NewBB, Loop, nullptr, {}, DL);
   } else {

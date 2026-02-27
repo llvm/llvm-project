@@ -65,15 +65,12 @@ RuntimeLibcallsInfo::RuntimeLibcallsInfo(const Triple &TT,
           RTLIB::impl_armpl_svsincos_f64_x, RTLIB::impl_armpl_svsincos_f32_x,
           RTLIB::impl_armpl_vsincospiq_f32, RTLIB::impl_armpl_vsincospiq_f64,
           RTLIB::impl_armpl_svsincospi_f32_x,
-          RTLIB::impl_armpl_svsincospi_f64_x, RTLIB::impl_armpl_svpow_f32_x,
-          RTLIB::impl_armpl_svpow_f64_x, RTLIB::impl_armpl_vpowq_f32,
-          RTLIB::impl_armpl_vpowq_f64})
+          RTLIB::impl_armpl_svsincospi_f64_x})
       setAvailable(Impl);
 
     for (RTLIB::LibcallImpl Impl :
          {RTLIB::impl_armpl_vfmodq_f32, RTLIB::impl_armpl_vfmodq_f64,
-          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32,
-          RTLIB::impl_armpl_vpowq_f32, RTLIB::impl_armpl_vpowq_f64})
+          RTLIB::impl_armpl_vsincosq_f64, RTLIB::impl_armpl_vsincosq_f32})
       setLibcallImplCallingConv(Impl, CallingConv::AArch64_VectorCall);
     break;
   default:
@@ -291,24 +288,16 @@ RuntimeLibcallsInfo::getFunctionTy(LLVMContext &Ctx, const Triple &TT,
   case RTLIB::impl_armpl_vfmodq_f32:
   case RTLIB::impl_armpl_vfmodq_f64:
   case RTLIB::impl_armpl_svfmod_f32_x:
-  case RTLIB::impl_armpl_svfmod_f64_x:
-  case RTLIB::impl_armpl_vpowq_f32:
-  case RTLIB::impl_armpl_vpowq_f64:
-  case RTLIB::impl_armpl_svpow_f32_x:
-  case RTLIB::impl_armpl_svpow_f64_x: {
+  case RTLIB::impl_armpl_svfmod_f64_x: {
     bool IsF32 = LibcallImpl == RTLIB::impl__ZGVnN4vv_fmodf ||
                  LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
                  LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
-                 LibcallImpl == RTLIB::impl_armpl_vfmodq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_vpowq_f32 ||
-                 LibcallImpl == RTLIB::impl_armpl_svpow_f32_x;
+                 LibcallImpl == RTLIB::impl_armpl_vfmodq_f32;
 
     bool IsScalable = LibcallImpl == RTLIB::impl__ZGVsMxvv_fmod ||
                       LibcallImpl == RTLIB::impl__ZGVsMxvv_fmodf ||
                       LibcallImpl == RTLIB::impl_armpl_svfmod_f32_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svfmod_f64_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svpow_f32_x ||
-                      LibcallImpl == RTLIB::impl_armpl_svpow_f64_x;
+                      LibcallImpl == RTLIB::impl_armpl_svfmod_f64_x;
 
     AttrBuilder FuncAttrBuilder(Ctx);
 
@@ -459,8 +448,6 @@ bool RuntimeLibcallsInfo::hasVectorMaskArgument(RTLIB::LibcallImpl Impl) {
   case RTLIB::impl_armpl_svsincospi_f64_x:
   case RTLIB::impl__ZGVsMxvv_fmod:
   case RTLIB::impl__ZGVsMxvv_fmodf:
-  case RTLIB::impl_armpl_svpow_f32_x:
-  case RTLIB::impl_armpl_svpow_f64_x:
     return true;
   default:
     return false;

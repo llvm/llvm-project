@@ -191,9 +191,6 @@ class Register<string n, list<string> altNames = []> {
   // SubRegs.
   list<SubRegIndex> SubRegIndices = [];
 
-  assert !eq(!size(SubRegs), !size(SubRegIndices)),
-    "SubRegs and SubRegIndices must have the same size";
-
   // RegAltNameIndices - The alternate name indices which are valid for this
   // register.
   list<RegAltNameIndex> RegAltNameIndices = [];
@@ -304,7 +301,6 @@ class RegisterClass<string namespace, list<ValueType> regTypes, int alignment,
   // but different count/size of items, like SSE on x86.
   //
   list<ValueType> RegTypes = regTypes;
-  assert !not(!empty(RegTypes)), "RegTypes list must not be empty";
 
   // Size - Specify the spill size in bits of the registers. A default value of
   // zero lets tablegen pick an appropriate size.
@@ -473,11 +469,6 @@ class RegisterTuples<list<SubRegIndex> Indices, list<dag> Regs,
   // SubRegIndices - N SubRegIndex instances. This provides the names of the
   // sub-registers in the synthesized super-registers.
   list<SubRegIndex> SubRegIndices = Indices;
-
-  assert !eq(!size(SubRegs), !size(SubRegIndices)),
-    "SubRegs and SubRegIndices must have the same size";
-
-  assert !ge(!size(SubRegs), 2), "Tuples must have at least 2 sub-registers";
 
   // List of asm names for the generated tuple registers.
   list<string> RegAsmNames = RegNames;

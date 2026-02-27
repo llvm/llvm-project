@@ -640,11 +640,6 @@ public:
     llvm_unreachable("Unhandled VPRecipeID");
   }
 
-  static inline bool classof(const VPValue *V) {
-    auto *R = V->getDefiningRecipe();
-    return R && classof(R);
-  }
-
   static inline bool classof(const VPUser *U) {
     auto *R = dyn_cast<VPRecipeBase>(U);
     return R && classof(R);
@@ -1272,10 +1267,10 @@ public:
     VScale,
     /// Compute the exiting value of a wide induction after vectorization, that
     /// is the value of the last lane of the induction increment (i.e. its
-    /// backedge value). Has the wide induction recipe as operand.
+    /// backedge value). Takes the wide induction recipe and the original
+    /// backedge value as operands.
     ExitingIVValue,
-    MaskedCond,
-    OpsEnd = MaskedCond,
+    OpsEnd = ExitingIVValue,
   };
 
   /// Returns true if this VPInstruction generates scalar values for all lanes.
@@ -1309,9 +1304,6 @@ private:
 
   /// Returns true if the VPInstruction does not need masking.
   bool alwaysUnmasked() const {
-    if (Opcode == VPInstruction::MaskedCond)
-      return false;
-
     // For now only VPInstructions with underlying values use masks.
     // TODO: provide masks to VPInstructions w/o underlying values.
     if (!getUnderlyingValue())
@@ -1473,7 +1465,6 @@ public:
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
     case VPInstruction::VScale:
-    case Instruction::Load:
       return true;
     default:
       return false;
@@ -1531,10 +1522,6 @@ public:
 
   /// Returns the incoming value for \p VPBB. \p VPBB must be an incoming block.
   VPValue *getIncomingValueForBlock(const VPBasicBlock *VPBB) const;
-
-  /// Sets the incoming value for \p VPBB to \p V. \p VPBB must be an incoming
-  /// block.
-  void setIncomingValueForBlock(const VPBasicBlock *VPBB, VPValue *V) const;
 
   /// Returns the number of incoming values, also number of incoming blocks.
   virtual unsigned getNumIncoming() const {
@@ -1667,6 +1654,11 @@ public:
            "Op must be an operand of the recipe");
     return true;
   }
+
+  /// Update the recipe's first operand to the last lane of the last part of the
+  /// operand using \p Builder. Must only be used for VPIRInstructions with at
+  /// least one operand wrapping a PHINode.
+  void extractLastLaneOfLastPartOfFirstOperand(VPBuilder &Builder);
 
 protected:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

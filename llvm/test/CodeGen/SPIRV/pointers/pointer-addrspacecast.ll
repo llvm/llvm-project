@@ -19,7 +19,7 @@ entry:
   %casted = addrspacecast ptr addrspace(10) %ptr to ptr
   %val = load i32, ptr %casted
   store i32 %val, ptr @G
-; CHECK: %{{.*}} = OpLoad %[[#uint]] %[[#var]]
+; CHECK: %{{.*}} = OpLoad %[[#uint]] %[[#var]] Aligned 4
   ret void
 }
 
@@ -34,6 +34,6 @@ entry:
 
   %val = load i32, ptr %e
   store i32 %val, ptr @G
-; CHECK: %{{.*}} = OpLoad %[[#uint]] %[[#var]]
+; CHECK: %{{.*}} = OpLoad %[[#uint]] %[[#var]] Aligned 4
   ret void
 }

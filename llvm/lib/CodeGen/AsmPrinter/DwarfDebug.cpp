@@ -955,30 +955,6 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
     return true;
   };
 
-  // Create call_target connections for indirect calls.
-  auto addCallSiteTargetForIndirectCalls = [&](const MachineInstr *MI,
-                                               DIE &CallSiteDIE) {
-    const MachineFunction *MF = MI->getMF();
-    const auto &CalleesMap = MF->getCallSitesInfo();
-    auto CSInfo = CalleesMap.find(MI);
-    // Get the information for the call instruction.
-    if (CSInfo == CalleesMap.end() || !CSInfo->second.CallTarget)
-      return;
-
-    MDNode *CallTarget = CSInfo->second.CallTarget;
-    // Add DW_AT_LLVM_virtual_call_origin with the 'call_target' metadata.
-    assert(!CallSiteDIE.findAttribute(dwarf::DW_AT_LLVM_virtual_call_origin) &&
-           "DW_AT_LLVM_virtual_call_origin already exists");
-    const DISubprogram *CalleeSP = dyn_cast<DISubprogram>(CallTarget);
-    DIE *CalleeDIE = CU.getOrCreateSubprogramDIE(CalleeSP, nullptr);
-    assert(CalleeDIE && "Could not create DIE for call site entry origin");
-    CU.addDIEEntry(CallSiteDIE,
-                   CU.getDwarf5OrGNUAttr(dwarf::DW_AT_LLVM_virtual_call_origin),
-                   *CalleeDIE);
-    // Add DW_AT_linkage_name to the method declaration if needed.
-    CU.addLinkageNamesToDeclarations(*this, *CalleeSP, *CalleeDIE);
-  };
-
   // Emit call site entries for each call or tail call in the function.
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB.instrs()) {
@@ -1075,9 +1051,6 @@ void DwarfDebug::constructCallSiteEntryDIEs(const DISubprogram &SP,
       DIE &CallSiteDIE = CU.constructCallSiteEntryDIE(
           ScopeDIE, CalleeSP, CalleeDecl, IsTail, PCAddr, CallAddr, CallTarget,
           Offset, AllocSiteTy);
-
-      if (CallTarget.getReg())
-        addCallSiteTargetForIndirectCalls(TopLevelCallMI, CallSiteDIE);
 
       // Optionally emit call-site-param debug info.
       if (emitDebugEntryValues()) {
@@ -1487,7 +1460,7 @@ void DwarfDebug::finalizeModuleInfo() {
                             TLOF.getDwarfMacinfoSection()->getBeginSymbol());
       }
     }
-  }
+    }
 
   // Emit all frontend-produced Skeleton CUs, i.e., Clang modules.
   for (auto *CUNode : MMI->getModule()->debug_compile_units())

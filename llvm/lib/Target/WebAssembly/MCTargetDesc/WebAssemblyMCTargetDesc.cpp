@@ -77,8 +77,6 @@ static MCAsmBackend *createAsmBackend(const Target & /*T*/,
 
 static MCSubtargetInfo *createMCSubtargetInfo(const Triple &TT, StringRef CPU,
                                               StringRef FS) {
-  if (CPU.empty())
-    CPU = "generic";
   return createWebAssemblyMCSubtargetInfoImpl(TT, CPU, /*TuneCPU*/ CPU, FS);
 }
 

@@ -1593,15 +1593,17 @@ MachineInstr *SystemZInstrInfo::foldMemoryOperandImpl(
 
   // If RegMemOpcode clobbers CC, first make sure CC is not live at this point.
   if (get(RegMemOpcode).hasImplicitDefOfPhysReg(SystemZ::CC)) {
-    for (MachineBasicBlock::iterator MII = InsertPt;;) {
-      if (MII == MBB->begin()) {
-        if (MBB->isLiveIn(SystemZ::CC))
+    assert(LoadMI.getParent() == MI.getParent() && "Assuming a local fold.");
+    assert(LoadMI != InsertPt && "Assuming InsertPt not to be first in MBB.");
+    for (MachineBasicBlock::iterator MII = std::prev(InsertPt);;
+         --MII) {
+      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
+        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
           return nullptr;
         break;
       }
-      --MII;
-      if (MII->definesRegister(SystemZ::CC, /*TRI=*/nullptr)) {
-        if (!MII->registerDefIsDead(SystemZ::CC, /*TRI=*/nullptr))
+      if (MII == MBB->begin()) {
+        if (MBB->isLiveIn(SystemZ::CC))
           return nullptr;
         break;
       }

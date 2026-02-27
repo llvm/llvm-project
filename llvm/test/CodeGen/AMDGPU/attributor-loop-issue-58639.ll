@@ -5,7 +5,7 @@
 
 define internal fastcc i1 @widget(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@widget
-; CHECK-SAME: (ptr [[ARG:%.*]]) {
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [[TMP0:%.*]], ptr [[ARG]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[TMP]], align 8
@@ -21,7 +21,7 @@ bb:
 
 define internal fastcc double @baz(ptr %arg) {
 ; CHECK-LABEL: define {{[^@]+}}@baz
-; CHECK-SAME: (ptr [[ARG:%.*]]) {
+; CHECK-SAME: (ptr [[ARG:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[ARG]], align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call double [[TMP1]]()
@@ -50,7 +50,8 @@ bb5:                                              ; preds = %bb5, %bb3
 }
 
 define amdgpu_kernel void @entry() {
-; CHECK-LABEL: define {{[^@]+}}@entry() {
+; CHECK-LABEL: define {{[^@]+}}@entry
+; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [[TMP0:%.*]], align 8, addrspace(5)
 ; CHECK-NEXT:    [[CAST:%.*]] = addrspacecast ptr addrspace(5) [[ALLOCA]] to ptr
 ; CHECK-NEXT:    [[ARST:%.*]] = call double @baz(ptr [[CAST]])
@@ -61,3 +62,6 @@ define amdgpu_kernel void @entry() {
   %arst = call double @baz(ptr %cast)
   ret void
 }
+;.
+; CHECK: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
+;.

@@ -798,11 +798,26 @@ def ORI   : ALU_ri<0b110, "ori">;
 
 def ANDI  : ALU_ri<0b111, "andi">;
 
-def SLLI : Shift_ri<0b00000, 0b001, "slli">,
+//Old implementation
+/*def SLLI : Shift_ri<0b00000, 0b001, "slli">,
            Sched<[WriteShiftImm, ReadShiftImm]>;
 def SRLI : Shift_ri<0b00000, 0b101, "srli">,
            Sched<[WriteShiftImm, ReadShiftImm]>;
 def SRAI : Shift_ri<0b01000, 0b101, "srai">,
+           Sched<[WriteShiftImm, ReadShiftImm]>;*/
+
+//Defining the pseudo commands
+let isPseudo = 1, isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def SLLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$shamt), []>;
+  def SRLI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$shamt), []>;
+  def SRAI : Pseudo<(outs GPR:$rd), (ins GPR:$rs1, uimmlog2xlen:$shamt), []>;
+}
+
+//New shift commands
+def SLI : Shift_ri<0b00000, 0b001, "sli">,
+          Sched<[WriteShiftImm, ReadShiftImm]>;
+
+def SRI : Shift_ri<0b00000, 0b101, "sri">,
            Sched<[WriteShiftImm, ReadShiftImm]>;
 
 def ADD  : ALU_rr<0b0000000, 0b000, "add", Commutable=1>,
@@ -1192,12 +1207,14 @@ def : InstAlias<"xor $rd, $rs1, $imm12",
                 (XORI  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
 def : InstAlias<"or $rd, $rs1, $imm12",
                 (ORI  GPR:$rd, GPR:$rs1, simm12_lo:$imm12)>;
+
+//Changed so the assempler references the new definitions. Should not be needed but for safety we will do this. Could be removed
 def : InstAlias<"sll $rd, $rs1, $shamt",
-                (SLLI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
+                (SLI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
 def : InstAlias<"srl $rd, $rs1, $shamt",
-                (SRLI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
+                (SRI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
 def : InstAlias<"sra $rd, $rs1, $shamt",
-                (SRAI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
+                (SRI  GPR:$rd, GPR:$rs1, uimmlog2xlen:$shamt)>;
 let Predicates = [IsRV64] in {
 def : InstAlias<"lwu $rd, (${rs1})",
                 (LWU  GPR:$rd, GPR:$rs1, 0)>;
@@ -1464,9 +1481,9 @@ def : PatGprGpr<and, AND>;
 def : PatGprSimm12<and, ANDI>;
 def : PatGprGpr<xor, XOR>;
 def : PatGprSimm12<xor, XORI>;
-def : PatGprUimmLog2XLen<shl, SLLI>;
-def : PatGprUimmLog2XLen<srl, SRLI>;
-def : PatGprUimmLog2XLen<sra, SRAI>;
+def : PatGprUimmLog2XLen<shl, SLI>;
+def : PatGprUimmLog2XLen<srl, SRI>;
+def : PatGprUimmLog2XLen<sra, SRI>;
 
 // Select 'or' as ADDI if the immediate bits are known to be 0 in $rs1. This
 // can improve compressibility.
@@ -2355,7 +2372,7 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvabd.td"
 include "RISCVInstrInfoZvk.td"
-include "RISCVInstrInfoZvdot4a8i.td"
+include "RISCVInstrInfoZvqdotq.td"
 include "RISCVInstrInfoZvfofp8min.td"
 
 // Packed SIMD

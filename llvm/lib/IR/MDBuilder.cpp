@@ -42,12 +42,12 @@ MDNode *MDBuilder::createBranchWeights(uint32_t TrueWeight,
 
 MDNode *MDBuilder::createLikelyBranchWeights() {
   // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
-  return createBranchWeights(kLikelyBranchWeight, kUnlikelyBranchWeight);
+  return createBranchWeights((1U << 20) - 1, 1);
 }
 
 MDNode *MDBuilder::createUnlikelyBranchWeights() {
   // Value chosen to match UR_NONTAKEN_WEIGHT, see BranchProbabilityInfo.cpp
-  return createBranchWeights(kUnlikelyBranchWeight, kLikelyBranchWeight);
+  return createBranchWeights(1, (1U << 20) - 1);
 }
 
 MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,

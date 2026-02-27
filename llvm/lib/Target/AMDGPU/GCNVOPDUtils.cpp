@@ -201,7 +201,6 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
           (FirstCanBeVOPD.Y && SecondCanBeVOPD.X)))
       return false;
 
-#ifdef EXPENSIVE_CHECKS
     assert([&]() -> bool {
       for (auto MII = MachineBasicBlock::const_iterator(FirstMI);
            MII != FirstMI->getParent()->instr_end(); ++MII) {
@@ -210,7 +209,6 @@ static bool shouldScheduleVOPDAdjacent(const TargetInstrInfo &TII,
       }
       return false;
     }() && "Expected FirstMI to precede SecondMI");
-#endif
 
     return checkVOPDRegConstraints(STII, *FirstMI, SecondMI, VOPD3);
   };

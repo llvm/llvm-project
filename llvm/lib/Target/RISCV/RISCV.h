@@ -49,6 +49,10 @@ void initializeRISCVLandingPadSetupPass(PassRegistry &);
 FunctionPass *createRISCVISelDag(RISCVTargetMachine &TM,
                                  CodeGenOptLevel OptLevel);
 
+//Defining our tagged collapse pass
+FunctionPass *createRISCVTaggedPass();
+void initializeRISCVTaggedPass(PassRegistry &);
+
 FunctionPass *createRISCVLateBranchOptPass();
 void initializeRISCVLateBranchOptPass(PassRegistry &);
 

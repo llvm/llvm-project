@@ -47,7 +47,6 @@ SKIPPED = ResultCode("SKIPPED", "Skipped", False)
 UNSUPPORTED = ResultCode("UNSUPPORTED", "Unsupported", False)
 PASS = ResultCode("PASS", "Passed", False)
 FLAKYPASS = ResultCode("FLAKYPASS", "Passed With Retry", False)
-FIXED = ResultCode("FIXED", "Passed After Update", False)
 XFAIL = ResultCode("XFAIL", "Expectedly Failed", False)
 # Failures
 UNRESOLVED = ResultCode("UNRESOLVED", "Unresolved", True)
@@ -153,13 +152,7 @@ class Result(object):
     """Wrapper for the results of executing an individual test."""
 
     def __init__(
-        self,
-        code,
-        output="",
-        elapsed=None,
-        attempts=1,
-        max_allowed_attempts=None,
-        test_updater_outputs=[],
+        self, code, output="", elapsed=None, attempts=1, max_allowed_attempts=None
     ):
         # The result code.
         self.code = code
@@ -177,8 +170,6 @@ class Result(object):
         self.attempts = attempts
         # How many attempts were allowed for this test
         self.max_allowed_attempts = max_allowed_attempts
-        # Outputs from test updaters. One entry per attempt, or empty if disabled.
-        self.test_updater_outputs = test_updater_outputs
 
     def addMetric(self, name, value):
         """

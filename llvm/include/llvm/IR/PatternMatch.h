@@ -33,7 +33,6 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/FMF.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -76,55 +75,19 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
-template <typename SubPattern_t, int Flag> struct AllowFmf_match {
+template <typename SubPattern_t> struct AllowReassoc_match {
   SubPattern_t SubPattern;
-  FastMathFlags FMF;
 
-  AllowFmf_match(const SubPattern_t &SP) : SubPattern(SP), FMF(Flag) {}
+  AllowReassoc_match(const SubPattern_t &SP) : SubPattern(SP) {}
 
   template <typename OpTy> bool match(OpTy *V) const {
     auto *I = dyn_cast<FPMathOperator>(V);
-    return I && ((I->getFastMathFlags() & FMF) == FMF) && SubPattern.match(I);
+    return I && I->hasAllowReassoc() && SubPattern.match(I);
   }
 };
 
 template <typename T>
-inline AllowFmf_match<T, FastMathFlags::AllowReassoc>
-m_AllowReassoc(const T &SubPattern) {
-  return SubPattern;
-}
-
-template <typename T>
-inline AllowFmf_match<T, FastMathFlags::AllowReciprocal>
-m_AllowReciprocal(const T &SubPattern) {
-  return SubPattern;
-}
-
-template <typename T>
-inline AllowFmf_match<T, FastMathFlags::AllowContract>
-m_AllowContract(const T &SubPattern) {
-  return SubPattern;
-}
-
-template <typename T>
-inline AllowFmf_match<T, FastMathFlags::ApproxFunc>
-m_ApproxFunc(const T &SubPattern) {
-  return SubPattern;
-}
-
-template <typename T>
-inline AllowFmf_match<T, FastMathFlags::NoNaNs> m_NoNaNs(const T &SubPattern) {
-  return SubPattern;
-}
-
-template <typename T>
-inline AllowFmf_match<T, FastMathFlags::NoInfs> m_NoInfs(const T &SubPattern) {
-  return SubPattern;
-}
-
-template <typename T>
-inline AllowFmf_match<T, FastMathFlags::NoSignedZeros>
-m_NoSignedZeros(const T &SubPattern) {
+inline AllowReassoc_match<T> m_AllowReassoc(const T &SubPattern) {
   return SubPattern;
 }
 
@@ -1082,10 +1045,9 @@ struct bind_const_intval_ty {
     const APInt *ConstInt;
     if (!ap_match<APInt>(ConstInt, /*AllowPoison=*/false).match(V))
       return false;
-    std::optional<uint64_t> ZExtVal = ConstInt->tryZExtValue();
-    if (!ZExtVal)
+    if (ConstInt->getActiveBits() > 64)
       return false;
-    VR = *ZExtVal;
+    VR = ConstInt->getZExtValue();
     return true;
   }
 };

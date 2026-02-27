@@ -164,9 +164,6 @@ private:
   friend class CodeGenPassBuilder;
 };
 
-using CreateMCStreamer =
-    std::function<Expected<std::unique_ptr<MCStreamer>>(TargetMachine &)>;
-
 /// This class provides access to building LLVM's passes.
 ///
 /// Its members provide the baseline state available to passes during their
@@ -199,8 +196,8 @@ public:
   }
 
   Error buildPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
-                      raw_pwrite_stream *DwoOut, CodeGenFileType FileType,
-                      MCContext &Ctx) const;
+                      raw_pwrite_stream *DwoOut,
+                      CodeGenFileType FileType) const;
 
   PassInstrumentationCallbacks *getPassInstrumentationCallbacks() const {
     return PIC;
@@ -490,19 +487,10 @@ protected:
 
   void addPostBBSections(PassManagerWrapper &PMW) const {}
 
-  void addAsmPrinterBegin(PassManagerWrapper &PMW,
-                          CreateMCStreamer CreateStreamer) const {
-    llvm_unreachable("addAsmPrinterBegin is not overriden");
-  }
-
-  void addAsmPrinter(PassManagerWrapper &PMW,
-                     CreateMCStreamer CreateStreamer) const {
+  using CreateMCStreamer =
+      std::function<Expected<std::unique_ptr<MCStreamer>>(MCContext &)>;
+  void addAsmPrinter(PassManagerWrapper &PMW, CreateMCStreamer) const {
     llvm_unreachable("addAsmPrinter is not overridden");
-  }
-
-  void addAsmPrinterEnd(PassManagerWrapper &PMW,
-                        CreateMCStreamer CreateStreamer) const {
-    llvm_unreachable("addAsmPrinterEnd is not overriden");
   }
 
   /// Utilities for targets to add passes to the pass manager.
@@ -574,7 +562,7 @@ private:
 template <typename Derived, typename TargetMachineT>
 Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     ModulePassManager &MPM, raw_pwrite_stream &Out, raw_pwrite_stream *DwoOut,
-    CodeGenFileType FileType, MCContext &Ctx) const {
+    CodeGenFileType FileType) const {
   auto StartStopInfo = TargetPassConfig::getStartStopInfo(*PIC);
   if (!StartStopInfo)
     return StartStopInfo.takeError();
@@ -599,13 +587,6 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
   addISelPasses(PMW);
   flushFPMsToMPM(PMW);
 
-  CreateMCStreamer CreateStreamer = [&Out, DwoOut, FileType,
-                                     &Ctx](TargetMachine &TM) {
-    return TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
-  };
-  if (PrintAsm)
-    derived().addAsmPrinterBegin(PMW, CreateStreamer);
-
   if (PrintMIR)
     addModulePass(PrintMIRPreparePass(Out), PMW, /*Force=*/true);
 
@@ -619,14 +600,16 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::buildPipeline(
     addMachineFunctionPass(MachineVerifierPass(), PMW);
 
   if (PrintAsm) {
-    derived().addAsmPrinter(PMW, CreateStreamer);
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
-    derived().addAsmPrinterEnd(PMW, CreateStreamer);
-  } else {
-    if (PrintMIR)
-      addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
-    flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
+    derived().addAsmPrinter(
+        PMW, [this, &Out, DwoOut, FileType](MCContext &Ctx) {
+          return this->TM.createMCStreamer(Out, DwoOut, FileType, Ctx);
+        });
   }
+
+  if (PrintMIR)
+    addMachineFunctionPass(PrintMIRPass(Out), PMW, /*Force=*/true);
+
+  flushFPMsToMPM(PMW, /*FreeMachineFunctions=*/true);
 
   return verifyStartStop(*StartStopInfo);
 }

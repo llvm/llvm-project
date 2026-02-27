@@ -159,7 +159,6 @@ def FRMArg : AsmOperandClass {
   let DefaultMethod = "defaultFRMArgOp";
 }
 
-// Operand should be named $frm for getNamedOperandIdx
 def frmarg : Operand<XLenVT> {
   let ParserMatchClass = FRMArg;
   let PrintMethod = "printFRMArg";
@@ -182,7 +181,6 @@ def FRMArgLegacy : AsmOperandClass {
   let DefaultMethod = "defaultFRMArgLegacyOp";
 }
 
-// Operand should be named $frm for getNamedOperandIdx
 def frmarglegacy : Operand<XLenVT> {
   let ParserMatchClass = FRMArgLegacy;
   let PrintMethod = "printFRMArgLegacy";

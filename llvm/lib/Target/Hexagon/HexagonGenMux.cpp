@@ -324,18 +324,41 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
 
     MachineBasicBlock &B = *MX.At->getParent();
     const DebugLoc &DL = B.findDebugLoc(MX.At);
-    auto NewMux = BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR)
-                      .addReg(MX.PredR)
-                      .add(*MX.SrcT)
-                      .add(*MX.SrcF);
-    NewMux->clearKillInfo();
+    MachineInstrBuilder MIB = BuildMI(B, MX.At, DL, HII->get(MxOpc), MX.DefR);
+    MIB.addReg(MX.PredR);
+    auto AddSrc = [&](MachineOperand *SrcOp) {
+      if (!SrcOp->isReg()) {
+        MIB.add(*SrcOp);
+        return;
+      }
+      Register Reg = SrcOp->getReg();
+      unsigned Sub = SrcOp->getSubReg();
+      RegState RS = {};
+      if (SrcOp->isKill())
+        RS |= RegState::Kill;
+      if (SrcOp->isUndef())
+        RS |= RegState::Undef;
+      if (SrcOp->isDebug())
+        RS |= RegState::Debug;
+      if (SrcOp->isInternalRead())
+        RS |= RegState::InternalRead;
+      if (Sub) {
+        // Preserve subregister information instead of resolving to physical
+        // reg.
+        MIB.addReg(Reg, RS, Sub);
+      } else {
+        MIB.addReg(Reg, RS);
+      }
+    };
+    AddSrc(MX.SrcT);
+    AddSrc(MX.SrcF);
+    MIB.getInstr()->clearKillInfo();
     B.remove(MX.Def1);
     B.remove(MX.Def2);
     Changed = true;
   }
 
   // Fix up kill flags.
-
   LiveRegUnits LPR(*HRI);
   LPR.addLiveOuts(B);
   for (MachineInstr &I : llvm::reverse(B)) {
@@ -348,7 +371,12 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     for (MachineOperand &Op : I.operands()) {
       if (!Op.isReg() || !Op.isUse())
         continue;
-      assert(Op.getSubReg() == 0 && "Should have physical registers only");
+      if (Op.getSubReg() != 0) {
+        Register R = HRI->getSubReg(Op.getReg(), Op.getSubReg());
+        bool Live = !LPR.available(R);
+        Op.setIsKill(!Live);
+        continue;
+      }
       bool Live = !LPR.available(Op.getReg());
       Op.setIsKill(!Live);
     }

@@ -877,12 +877,12 @@ def FeatureStdExtZvksg
 
 // Vector quad widening dot product
 
-def FeatureStdExtZvdot4a8i
-    : RISCVExperimentalExtension<0, 1, "Vector 4-element Dot Product of packed 8-bit Integers",
+def FeatureStdExtZvqdotq
+    : RISCVExperimentalExtension<0, 0, "Vector quad widening 4D Dot Product",
                                  [FeatureStdExtZve32x]>;
-def HasStdExtZvdot4a8i : Predicate<"Subtarget->hasStdExtZvdot4a8i()">,
-                         AssemblerPredicate<(all_of FeatureStdExtZvdot4a8i),
-                         "'Zvdot4a8i' (Vector 4-element Dot Product of packed 8-bit Integers)">;
+def HasStdExtZvqdotq : Predicate<"Subtarget->hasStdExtZvqdotq()">,
+                       AssemblerPredicate<(all_of FeatureStdExtZvqdotq),
+                           "'Zvqdotq' (Vector quad widening 4D Dot Product)">;
 
 // Vector instruction predicates
 
@@ -1113,9 +1113,7 @@ def HasStdExtSmctrOrSsctr : Predicate<"Subtarget->hasStdExtSmctrOrSsctr()">,
 // Packed SIMD Extensions
 def FeatureStdExtP
     : RISCVExperimentalExtension<0, 19,
-                                 "'Base P' (Packed SIMD)",
-                                 [FeatureStdExtZmmul, FeatureStdExtZba,
-                                  FeatureStdExtZbb, FeatureStdExtZicsr]>;
+                                 "'Base P' (Packed SIMD)">;
 def HasStdExtP : Predicate<"Subtarget->hasStdExtP()">,
                  AssemblerPredicate<(all_of FeatureStdExtP),
                                     "'Base P' (Packed SIMD)">;

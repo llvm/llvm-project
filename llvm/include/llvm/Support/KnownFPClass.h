@@ -256,10 +256,6 @@ struct KnownFPClass {
     return Known;
   }
 
-  LLVM_ABI static KnownFPClass
-  fmul(const KnownFPClass &LHS, const APFloat &RHS,
-       DenormalMode Mode = DenormalMode::getDynamic());
-
   /// Report known values for fdiv
   LLVM_ABI static KnownFPClass
   fdiv(const KnownFPClass &LHS, const KnownFPClass &RHS,

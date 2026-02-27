@@ -965,16 +965,13 @@ bool RISCVRegisterInfo::getRegAllocationHints(
     case RISCV::ADDIW:
       return MI.getOperand(2).isImm() && isInt<6>(MI.getOperand(2).getImm());
     case RISCV::MUL:
-      // c.mul
-      NeedGPRC = true;
-      return Subtarget.hasStdExtZcb();
     case RISCV::SEXT_B:
     case RISCV::SEXT_H:
     case RISCV::ZEXT_H_RV32:
     case RISCV::ZEXT_H_RV64:
-      // c.sext.b, c.sext.h, c.zext.h
+      // c.mul, c.sext.b, c.sext.h, c.zext.h
       NeedGPRC = true;
-      return Subtarget.hasStdExtZcb() && Subtarget.hasStdExtZbb();
+      return Subtarget.hasStdExtZcb();
     case RISCV::ADD_UW:
       // c.zext.w
       NeedGPRC = true;

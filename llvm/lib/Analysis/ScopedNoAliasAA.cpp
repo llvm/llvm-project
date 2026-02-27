@@ -52,7 +52,9 @@ static cl::opt<bool> EnableScopedNoAlias("enable-scoped-noalias",
                                          cl::init(true), cl::Hidden);
 
 AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
-                                         const MemoryLocation &LocB) {
+                                         const MemoryLocation &LocB,
+                                         AAQueryInfo &AAQI,
+                                         const Instruction *) {
   if (!EnableScopedNoAlias)
     return AliasResult::MayAlias;
 
@@ -68,12 +70,6 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
     return AliasResult::NoAlias;
 
   return AliasResult::MayAlias;
-}
-
-AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
-                                         const MemoryLocation &LocB,
-                                         AAQueryInfo &, const Instruction *) {
-  return alias(LocA, LocB);
 }
 
 ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,

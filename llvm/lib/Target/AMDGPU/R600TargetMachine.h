@@ -41,7 +41,7 @@ public:
   Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opt, MCContext &Ctx,
+                             const CGPassBuilderOption &Opt,
                              PassInstrumentationCallbacks *PIC) override;
 
   const TargetSubtargetInfo *getSubtargetImpl(const Function &) const override;

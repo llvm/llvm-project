@@ -837,6 +837,10 @@ std::optional<unsigned> TargetTransformInfo::getVScaleForTuning() const {
   return TTIImpl->getVScaleForTuning();
 }
 
+bool TargetTransformInfo::isVScaleKnownToBeAPowerOfTwo() const {
+  return TTIImpl->isVScaleKnownToBeAPowerOfTwo();
+}
+
 bool TargetTransformInfo::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   return TTIImpl->shouldMaximizeVectorBandwidth(K);
@@ -1455,9 +1459,8 @@ bool TargetTransformInfo::preferPredicatedReductionSelect() const {
   return TTIImpl->preferPredicatedReductionSelect();
 }
 
-bool TargetTransformInfo::preferEpilogueVectorization(
-    ElementCount Iters) const {
-  return TTIImpl->preferEpilogueVectorization(Iters);
+bool TargetTransformInfo::preferEpilogueVectorization() const {
+  return TTIImpl->preferEpilogueVectorization();
 }
 
 bool TargetTransformInfo::shouldConsiderVectorizationRegPressure() const {

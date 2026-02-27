@@ -5,9 +5,9 @@
 
 
 ; 1. The initial value of the reduction is not a constant.
-; for (int i = 0; i < 100; i++) {
+; for (int i = 0; i < n; i++) {
 ;   r = s[i];
-;   for (int j = 0; j < 100; j++)
+;   for (int j = 0; j < n; j++)
 ;     r = r + a[j][i] * b[j][i];
 ;   s[i] = r;
 ; }
@@ -28,9 +28,10 @@
 
 ; IR-LABEL: @reduction_01(
 ; IR-NOT: split
-define void @reduction_01(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
+define void @reduction_01(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
-  br label %outerloop_header
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %outerloop_header, label %exit
 
 outerloop_header:
   %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %outerloop_latch ]
@@ -43,21 +44,21 @@ outerloop_header:
 innerloop:
   %index_j = phi i64 [ 0, %outerloop_header ], [ %index_j.next, %innerloop ]
   %reduction = phi double [ %s_init, %outerloop_header ], [ %add, %innerloop ]
-  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
+  %addr_a_j_i = getelementptr inbounds nuw double, ptr %invariant.gep.us, i64 %index_j
   %0 = load double, ptr %addr_a_j_i, align 8
-  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
+  %addr_b_j_i = getelementptr inbounds nuw double, ptr %invariant.gep32.us, i64 %index_j
   %1 = load double, ptr %addr_b_j_i, align 8
   %mul = fmul fast double %1, %0
   %add = fadd fast double %mul, %reduction
   %index_j.next = add nuw nsw i64 %index_j, 1
-  %cond1 = icmp eq i64 %index_j.next, 100
+  %cond1 = icmp eq i64 %index_j.next, %n
   br i1 %cond1, label %outerloop_latch, label %innerloop
 
 outerloop_latch:
   %lcssa = phi double [ %add, %innerloop ]
   store double %lcssa, ptr %addr_s, align 8
   %index_i.next = add nuw nsw i64 %index_i, 1
-  %cond2 = icmp eq i64 %index_i.next, 100
+  %cond2 = icmp eq i64 %index_i.next, %n
   br i1 %cond2, label %exit, label %outerloop_header
 
 exit:
@@ -65,10 +66,10 @@ exit:
 }
 
 ; 2. There are two or more reductions
-; for (int i = 0; i < 100; i++) {
+; for (int i = 0; i < n; i++) {
 ;   r1 = 0;
 ;   r2 = 0;
-;   for (int j = 0; j < 100; j++){
+;   for (int j = 0; j < n; j++){
 ;     r1 = r1 + a[j][i] * b[j][i];
 ;     r2 = r2 + a[j][i];
 ;   }
@@ -91,9 +92,10 @@ exit:
 
 ; IR-LABEL: @reduction_02(
 ; IR-NOT: split
-define void @reduction_02(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, ptr noalias writeonly %s2) {
+define void @reduction_02(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, ptr noalias writeonly %s2, i64  %n) {
 entry:
-  br label %outerloop_header
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %outerloop_header, label %exit
 
 outerloop_header:
   %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %outerloop_latch ]
@@ -107,15 +109,15 @@ innerloop:
   %index_j = phi i64 [ 0, %outerloop_header ], [ %index_j.next, %innerloop ]
   %reduction = phi double [ 0.000000e+00, %outerloop_header ], [ %add, %innerloop ]
   %reduction2 = phi double [ 0.000000e+00, %outerloop_header ], [ %add2, %innerloop ]
-  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
+  %addr_a_j_i = getelementptr inbounds nuw double, ptr %invariant.gep.us, i64 %index_j
   %0 = load double, ptr %addr_a_j_i, align 8
-  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
+  %addr_b_j_i = getelementptr inbounds nuw double, ptr %invariant.gep32.us, i64 %index_j
   %1 = load double, ptr %addr_b_j_i, align 8
   %mul = fmul fast double %1, %0
   %add = fadd fast double %mul, %reduction
   %add2 = fadd fast double %reduction2, %0
   %index_j.next = add nuw nsw i64 %index_j, 1
-  %cond1 = icmp eq i64 %index_j.next, 100
+  %cond1 = icmp eq i64 %index_j.next, %n
   br i1 %cond1, label %outerloop_latch, label %innerloop
 
 outerloop_latch:
@@ -124,7 +126,7 @@ outerloop_latch:
   store double %lcssa, ptr %addr_s, align 8
   store double %lcssa2, ptr %addr_s2, align 8
   %index_i.next = add nuw nsw i64 %index_i, 1
-  %cond2 = icmp eq i64 %index_i.next, 100
+  %cond2 = icmp eq i64 %index_i.next, %n
   br i1 %cond2, label %exit, label %outerloop_header
 
 exit:
@@ -132,9 +134,9 @@ exit:
 }
 
 ; 3. The reduction is used more than once in the outer loop.
-; for (int i = 0; i < 100; i++) {
+; for (int i = 0; i < n; i++) {
 ;   r = 0;
-;   for (int j = 0; j < 100; j++)
+;   for (int j = 0; j < n; j++)
 ;     r = r + a[j][i] * b[j][i];
 ;   r += 1;
 ;   s[i] = r;
@@ -155,9 +157,10 @@ exit:
 
 ; IR-LABEL: @reduction_03(
 ; IR-NOT: split
-define void @reduction_03(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
+define void @reduction_03(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
-  br label %outerloop_header
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %outerloop_header, label %exit
 
 outerloop_header:
   %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %outerloop_latch ]
@@ -169,14 +172,14 @@ outerloop_header:
 innerloop:
   %index_j = phi i64 [ 0, %outerloop_header ], [ %index_j.next, %innerloop ]
   %reduction = phi double [ 0.000000e+00, %outerloop_header ], [ %add, %innerloop ]
-  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
+  %addr_a_j_i = getelementptr inbounds nuw double, ptr %invariant.gep.us, i64 %index_j
   %0 = load double, ptr %addr_a_j_i, align 8
-  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
+  %addr_b_j_i = getelementptr inbounds nuw double, ptr %invariant.gep32.us, i64 %index_j
   %1 = load double, ptr %addr_b_j_i, align 8
   %mul = fmul fast double %1, %0
   %add = fadd fast double %mul, %reduction
   %index_j.next = add nuw nsw i64 %index_j, 1
-  %cond1 = icmp eq i64 %index_j.next, 100
+  %cond1 = icmp eq i64 %index_j.next, %n
   br i1 %cond1, label %outerloop_latch, label %innerloop
 
 outerloop_latch:
@@ -185,7 +188,7 @@ outerloop_latch:
   %add17.us = fadd fast double %lcssa, 1.000000e+00
   store double %add17.us, ptr %addr_s, align 8
   %index_i.next = add nuw nsw i64 %index_i, 1
-  %cond2 = icmp eq i64 %index_i.next, 100
+  %cond2 = icmp eq i64 %index_i.next, %n
   br i1 %cond2, label %exit, label %outerloop_header
 
 exit:
@@ -194,11 +197,11 @@ exit:
 
 
 ; 4. The reduction is not in the innermost loop.
-; for (int i = 0; i < 100; i++) {
+; for (int i = 0; i < n; i++) {
 ;   r = 0;
-;   for (int j = 0; j < 100; j++) {
+;   for (int j = 0; j < n; j++) {
 ;     r = r + a[j][i] * b[j][i]; // reduction
-;     for (int k = 0; k < 100; k++)
+;     for (int k = 0; k < n; k++)
 ;       c[k] = 1;
 ;   }
 ;   s[i] = r;
@@ -225,9 +228,10 @@ exit:
 
 ; IR-LABEL: @reduction_04(
 ; IR-NOT: split
-define void @reduction_04(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %c, ptr noalias writeonly %s) {
+define void @reduction_04(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %c, ptr noalias writeonly %s, i64  %n) {
 entry:
-  br label %i_loop_header
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %i_loop_header, label %exit
 
 i_loop_header:
   %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %i_loop_latch ]
@@ -239,9 +243,9 @@ i_loop_header:
 j_loop:
   %index_j = phi i64 [ 0, %i_loop_header ], [ %index_j.next, %j_loop_latch ]
   %reduction = phi double [ 0.000000e+00, %i_loop_header ], [ %add, %j_loop_latch ]
-  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
+  %addr_a_j_i = getelementptr inbounds nuw double, ptr %invariant.gep.us, i64 %index_j
   %0 = load double, ptr %addr_a_j_i, align 8
-  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
+  %addr_b_j_i = getelementptr inbounds nuw double, ptr %invariant.gep32.us, i64 %index_j
   %1 = load double, ptr %addr_b_j_i, align 8
   %mul = fmul fast double %1, %0
   %add = fadd fast double %mul, %reduction
@@ -251,19 +255,19 @@ k_loop:
   %index_k = phi i64 [ %index_k.next, %k_loop ], [ 0, %j_loop ]
   %arrayidx22.us.us = getelementptr inbounds nuw double, ptr %c, i64 %index_k
   %index_k.next = add nuw nsw i64 %index_k, 1
-  %exitcond.not = icmp eq i64 %index_k.next, 100
+  %exitcond.not = icmp eq i64 %index_k.next, %n
   br i1 %exitcond.not, label %j_loop_latch, label %k_loop
 
 j_loop_latch:    
   %index_j.next = add nuw nsw i64 %index_j, 1
-  %cond1 = icmp eq i64 %index_j.next, 100
+  %cond1 = icmp eq i64 %index_j.next, %n
   br i1 %cond1, label %i_loop_latch, label %j_loop
 
 i_loop_latch:
   %lcssa = phi double [ %add, %j_loop_latch ]
   store double %lcssa, ptr %addr_s, align 8
   %index_i.next = add nuw nsw i64 %index_i, 1
-  %cond2 = icmp eq i64 %index_i.next, 100
+  %cond2 = icmp eq i64 %index_i.next, %n
   br i1 %cond2, label %exit, label %i_loop_header
 
 exit:
@@ -272,9 +276,9 @@ exit:
 
 
 ; 5. MemRef doesn't dominate InnerLoop's HeaderBB.
-; for (int i = 0; i < 100; i++) {
+; for (int i = 0; i < n; i++) {
 ;   r = 0;
-;   for (int j = 0; j < 100; j++)
+;   for (int j = 0; j < n; j++)
 ;     r = r + a[j][i] * b[j][i];
 ;   s[i] = r;
 ; }
@@ -294,9 +298,10 @@ exit:
 
 ; IR-LABEL: @reduction_05(
 ; IR-NOT: split
-define void @reduction_05(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s) {
+define void @reduction_05(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias writeonly %s, i64  %n) {
 entry:
-  br label %outerloop_header
+  %cmp = icmp sgt i64 %n, 0
+  br i1 %cmp, label %outerloop_header, label %exit
 
 outerloop_header:
   %index_i = phi i64 [ 0, %entry ], [ %index_i.next, %outerloop_latch ]
@@ -307,14 +312,14 @@ outerloop_header:
 innerloop:
   %index_j = phi i64 [ 0, %outerloop_header ], [ %index_j.next, %innerloop ]
   %reduction = phi double [ 0.000000e+00, %outerloop_header ], [ %add, %innerloop ]
-  %addr_a_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep.us, i64 %index_j
+  %addr_a_j_i = getelementptr inbounds nuw double, ptr %invariant.gep.us, i64 %index_j
   %0 = load double, ptr %addr_a_j_i, align 8
-  %addr_b_j_i = getelementptr inbounds nuw [100 x double], ptr %invariant.gep32.us, i64 %index_j
+  %addr_b_j_i = getelementptr inbounds nuw double, ptr %invariant.gep32.us, i64 %index_j
   %1 = load double, ptr %addr_b_j_i, align 8
   %mul = fmul fast double %1, %0
   %add = fadd fast double %mul, %reduction
   %index_j.next = add nuw nsw i64 %index_j, 1
-  %cond1 = icmp eq i64 %index_j.next, 100
+  %cond1 = icmp eq i64 %index_j.next, %n
   br i1 %cond1, label %outerloop_latch, label %innerloop
 
 outerloop_latch:
@@ -322,7 +327,7 @@ outerloop_latch:
   %addr_s = getelementptr inbounds nuw double, ptr %s, i64 %index_i
   store double %lcssa, ptr %addr_s, align 8
   %index_i.next = add nuw nsw i64 %index_i, 1
-  %cond2 = icmp eq i64 %index_i.next, 100
+  %cond2 = icmp eq i64 %index_i.next, %n
   br i1 %cond2, label %exit, label %outerloop_header
 
 exit:

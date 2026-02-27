@@ -123,7 +123,6 @@ static_library("Checkers") {
     "TraversalChecker.cpp",
     "TrustNonnullChecker.cpp",
     "TrustReturnsNonnullChecker.cpp",
-    "UnconditionalVAArgChecker.cpp",
     "UndefBranchChecker.cpp",
     "UndefCapturedBlockVarChecker.cpp",
     "UndefResultChecker.cpp",

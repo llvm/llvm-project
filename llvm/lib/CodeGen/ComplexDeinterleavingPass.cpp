@@ -2472,10 +2472,8 @@ void ComplexDeinterleavingGraph::processReductionOperation(
   auto *FinalReductionReal = ReductionInfo[Real].second;
   auto *FinalReductionImag = ReductionInfo[Imag].second;
 
-  auto *Br = cast<BranchInst>(BackEdge->getTerminator());
-  BasicBlock *ExitBB = Br->getSuccessor(Br->getSuccessor(0) == BackEdge);
-  Builder.SetInsertPoint(&*ExitBB->getFirstInsertionPt());
-
+  Builder.SetInsertPoint(
+      &*FinalReductionReal->getParent()->getFirstInsertionPt());
   auto *Deinterleave = Builder.CreateIntrinsic(Intrinsic::vector_deinterleave2,
                                                OperationReplacement->getType(),
                                                OperationReplacement);

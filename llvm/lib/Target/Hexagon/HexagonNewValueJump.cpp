@@ -63,8 +63,6 @@ static cl::opt<int> DbgNVJCount("nvj-count", cl::init(-1), cl::Hidden,
 static cl::opt<bool> DisableNewValueJumps("disable-nvjump", cl::Hidden,
                                           cl::desc("Disable New Value Jumps"));
 
-extern cl::opt<bool> DisablePacketizer;
-
 namespace {
 
   struct HexagonNewValueJump : public MachineFunctionPass {
@@ -455,9 +453,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
       MF.getSubtarget().getRegisterInfo());
   MBPI = &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
 
-  // New value jumps require the feeder instruction to be in the same packet.
-  // If packetization is disabled, we cannot generate new value jumps.
-  if (DisableNewValueJumps || DisablePacketizer ||
+  if (DisableNewValueJumps ||
       !MF.getSubtarget<HexagonSubtarget>().useNewValueJumps())
     return false;
 

@@ -429,6 +429,10 @@ bool AMDGPUPrintfRuntimeBindingImpl::lowerPrintfForGpu(Module &M) {
 }
 
 bool AMDGPUPrintfRuntimeBindingImpl::run(Module &M) {
+  Triple TT(M.getTargetTriple());
+  if (TT.getArch() == Triple::r600)
+    return false;
+
   auto *PrintfFunction = M.getFunction("printf");
   if (!PrintfFunction || !PrintfFunction->isDeclaration() ||
       M.getModuleFlag("openmp"))

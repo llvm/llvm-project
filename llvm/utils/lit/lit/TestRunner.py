@@ -1190,9 +1190,8 @@ def formatOutput(title, data, limit=None):
 # from the script, and there is no execution trace.
 def executeScriptInternal(
     test, litConfig, tmpBase, commands, cwd, debug=True
-) -> Tuple[str, str, int, Optional[str], Optional[str]]:
+) -> Tuple[str, str, int, Optional[str]]:
     cmds = []
-    update_output = None
     for i, ln in enumerate(commands):
         # Within lit, we try to always add '%dbg(...)' to command lines in order
         # to maximize debuggability.  However, custom lit test formats might not
@@ -1327,14 +1326,14 @@ def executeScriptInternal(
                     output += traceback.format_exc()
                     raise TestUpdaterException(output)
                 if update_output:
+                    for line in update_output.splitlines():
+                        out += f"# {line}\n"
                     break
 
-    return out, err, exitCode, timeoutInfo, update_output
+    return out, err, exitCode, timeoutInfo
 
 
-def executeScript(
-    test, litConfig, tmpBase, commands, cwd
-) -> Tuple[str, str, int, Optional[str], Optional[str]]:
+def executeScript(test, litConfig, tmpBase, commands, cwd):
     bashPath = litConfig.getBashPath()
     isWin32CMDEXE = litConfig.isWindows and not bashPath
     script = tmpBase + ".script"
@@ -1430,9 +1429,9 @@ def executeScript(
             env=env,
             timeout=litConfig.maxIndividualTestTime,
         )
-        return (out, err, exitCode, None, None)
+        return (out, err, exitCode, None)
     except lit.util.ExecuteCommandTimeoutException as e:
-        return (e.out, e.err, e.exitCode, e.msg, None)
+        return (e.out, e.err, e.exitCode, e.msg)
 
 
 def parseIntegratedTestScriptCommands(source_path, keywords):
@@ -2339,7 +2338,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     # Always returns the tuple (out, err, exitCode, timeoutInfo, status).
     def runOnce(
         execdir,
-    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode, Optional[str]]:
+    ) -> Tuple[str, str, int, Optional[str], Test.ResultCode]:
         # script is modified below (for litConfig.per_test_coverage, and for
         # %dbg expansions).  runOnce can be called multiple times, but applying
         # the modifications multiple times can corrupt script, so always modify
@@ -2375,9 +2374,9 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                 )
         except ScriptFatal as e:
             out = f"# " + "\n# ".join(str(e).splitlines()) + "\n"
-            return out, "", 1, None, Test.UNRESOLVED, None
+            return out, "", 1, None, Test.UNRESOLVED
 
-        out, err, exitCode, timeoutInfo, test_update_output = res
+        out, err, exitCode, timeoutInfo = res
         if exitCode == 0:
             status = Test.PASS
         else:
@@ -2385,7 +2384,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
                 status = Test.FAIL
             else:
                 status = Test.TIMEOUT
-        return out, err, exitCode, timeoutInfo, status, test_update_output
+        return out, err, exitCode, timeoutInfo, status
 
     # Create the output directory if it does not already exist.
     pathlib.Path(tmpBase).parent.mkdir(parents=True, exist_ok=True)
@@ -2393,21 +2392,16 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
     # Re-run failed tests up to test.allowed_retries times.
     execdir = os.path.dirname(test.getExecPath())
     attempts = test.allowed_retries + 1
-    test_updates = []
     for i in range(attempts):
         res = runOnce(execdir)
-        out, err, exitCode, timeoutInfo, status, test_update_output = res
-        test_updates.append(test_update_output)
+        out, err, exitCode, timeoutInfo, status = res
         if status != Test.FAIL:
             break
 
     # If we had to run the test more than once, count it as a flaky pass. These
     # will be printed separately in the test summary.
     if i > 0 and status == Test.PASS:
-        if any(test_updates):
-            status = Test.FIXED
-        else:
-            status = Test.FLAKYPASS
+        status = Test.FLAKYPASS
 
     # Form the output log.
     output = f"Exit Code: {exitCode}\n"
@@ -2423,11 +2417,7 @@ def _runShTest(test, litConfig, useExternalSh, script, tmpBase) -> lit.Test.Resu
         output += """Command Output (stderr):\n--\n%s\n--\n""" % (err,)
 
     return lit.Test.Result(
-        status,
-        output,
-        attempts=i + 1,
-        max_allowed_attempts=attempts,
-        test_updater_outputs=test_updates,
+        status, output, attempts=i + 1, max_allowed_attempts=attempts
     )
 
 

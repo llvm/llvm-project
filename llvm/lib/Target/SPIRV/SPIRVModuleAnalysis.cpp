@@ -939,8 +939,7 @@ void RequirementHandler::initAvailableCapabilitiesForVulkan(
                     Capability::SampledImageArrayDynamicIndexing,
                     Capability::StorageBufferArrayDynamicIndexing,
                     Capability::StorageImageArrayDynamicIndexing,
-                    Capability::DerivativeControl, Capability::MinLod,
-                    Capability::ImageGatherExtended});
+                    Capability::DerivativeControl, Capability::MinLod});
 
   // Became core in Vulkan 1.2
   if (ST.isAtLeastSPIRVVer(VersionTuple(1, 5))) {
@@ -2160,11 +2159,6 @@ void addInstrRequirements(const MachineInstr &MI,
     addImageOperandReqs(MI, Reqs, ST, 5);
     break;
   case SPIRV::OpImageSampleDrefExplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
-    addImageOperandReqs(MI, Reqs, ST, 5);
-    break;
-  case SPIRV::OpImageDrefGather:
-  case SPIRV::OpImageGather:
     Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 5);
     break;

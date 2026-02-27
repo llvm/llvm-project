@@ -6319,12 +6319,9 @@ static bool validLookupTableConstant(Constant *C, const TargetTransformInfo &TTI
   if (C->isDLLImportDependent())
     return false;
 
-  if (!isa<ConstantDataVector, ConstantExpr, ConstantFP, ConstantInt,
-           ConstantPointerNull, GlobalValue, UndefValue>(C))
-    return false;
-
-  // Globals cannot contain scalable types.
-  if (C->getType()->isScalableTy())
+  if (!isa<ConstantFP>(C) && !isa<ConstantInt>(C) &&
+      !isa<ConstantPointerNull>(C) && !isa<GlobalValue>(C) &&
+      !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
     return false;
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {

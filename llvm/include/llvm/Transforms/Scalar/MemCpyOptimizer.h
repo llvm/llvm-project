@@ -84,8 +84,8 @@ private:
                                     Value *ByteVal);
   bool moveUp(StoreInst *SI, Instruction *P, const LoadInst *LI);
   bool performStackMoveOptzn(Instruction *Load, Instruction *Store,
-                             Value *DestPtr, Value *SrcPtr, TypeSize Size,
-                             BatchAAResults &BAA);
+                             AllocaInst *DestAlloca, AllocaInst *SrcAlloca,
+                             TypeSize Size, BatchAAResults &BAA);
   bool isMemMoveMemSetDependency(MemMoveInst *M);
 
   void eraseInstruction(Instruction *I);

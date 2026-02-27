@@ -120,6 +120,8 @@ public:
   SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFDIV(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerREADSTEADYCOUNTER(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_LABEL(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const;
   SDValue
@@ -501,7 +503,6 @@ private:
 
   SDValue CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const;
   SDValue RemoveTLWrapper(SDValue Op, SelectionDAG &DAG) const;
-  SDValue WidenHvxTruncateToBool(SDValue Op, SelectionDAG &DAG) const;
 
   std::pair<const TargetRegisterClass*, uint8_t>
   findRepresentativeClass(const TargetRegisterInfo *TRI, MVT VT)
@@ -517,10 +518,6 @@ private:
                              SelectionDAG &DAG) const;
 
   SDValue combineTruncateBeforeLegal(SDValue Op, DAGCombinerInfo &DCI) const;
-
-  SDValue combineConcatOfShuffles(SDValue Op, SelectionDAG &DAG) const;
-  SDValue combineConcatOfScalarPreds(SDValue Op, unsigned BitBytes,
-                                     SelectionDAG &DAG) const;
   SDValue combineConcatVectorsBeforeLegal(SDValue Op, DAGCombinerInfo & DCI)
       const;
   SDValue expandVecReduceAdd(SDNode *N, SelectionDAG &DAG) const;

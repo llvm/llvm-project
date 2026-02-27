@@ -16,8 +16,7 @@ TEST_F(SelectionDAGNodeConstructionTest, ADD) {
   SDLoc DL;
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
 
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, MVT::i32, Op, Poison), Poison);
   EXPECT_EQ(DAG->getNode(ISD::ADD, DL, MVT::i32, Poison, Op), Poison);
@@ -31,8 +30,7 @@ TEST_F(SelectionDAGNodeConstructionTest, ADD) {
 
 TEST_F(SelectionDAGNodeConstructionTest, AND) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -49,8 +47,7 @@ TEST_F(SelectionDAGNodeConstructionTest, AND) {
 
 TEST_F(SelectionDAGNodeConstructionTest, MUL) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -67,8 +64,7 @@ TEST_F(SelectionDAGNodeConstructionTest, MUL) {
 
 TEST_F(SelectionDAGNodeConstructionTest, OR) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue AllOnes = DAG->getAllOnesConstant(DL, MVT::i32);
@@ -85,8 +81,7 @@ TEST_F(SelectionDAGNodeConstructionTest, OR) {
 
 TEST_F(SelectionDAGNodeConstructionTest, SADDSAT) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue AllOnes = DAG->getAllOnesConstant(DL, MVT::i32);
@@ -103,8 +98,7 @@ TEST_F(SelectionDAGNodeConstructionTest, SADDSAT) {
 
 TEST_F(SelectionDAGNodeConstructionTest, SDIV) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -121,8 +115,7 @@ TEST_F(SelectionDAGNodeConstructionTest, SDIV) {
 
 TEST_F(SelectionDAGNodeConstructionTest, SMAX) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue MaxInt = DAG->getConstant(APInt::getSignedMaxValue(32), DL, MVT::i32);
@@ -139,8 +132,7 @@ TEST_F(SelectionDAGNodeConstructionTest, SMAX) {
 
 TEST_F(SelectionDAGNodeConstructionTest, SMIN) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue MinInt = DAG->getConstant(APInt::getSignedMinValue(32), DL, MVT::i32);
@@ -157,8 +149,7 @@ TEST_F(SelectionDAGNodeConstructionTest, SMIN) {
 
 TEST_F(SelectionDAGNodeConstructionTest, SREM) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -175,8 +166,7 @@ TEST_F(SelectionDAGNodeConstructionTest, SREM) {
 
 TEST_F(SelectionDAGNodeConstructionTest, SSUBSAT) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -193,8 +183,7 @@ TEST_F(SelectionDAGNodeConstructionTest, SSUBSAT) {
 
 TEST_F(SelectionDAGNodeConstructionTest, SUB) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
 
@@ -210,8 +199,7 @@ TEST_F(SelectionDAGNodeConstructionTest, SUB) {
 
 TEST_F(SelectionDAGNodeConstructionTest, UADDSAT) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue AllOnes = DAG->getAllOnesConstant(DL, MVT::i32);
@@ -228,8 +216,7 @@ TEST_F(SelectionDAGNodeConstructionTest, UADDSAT) {
 
 TEST_F(SelectionDAGNodeConstructionTest, UDIV) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -246,8 +233,7 @@ TEST_F(SelectionDAGNodeConstructionTest, UDIV) {
 
 TEST_F(SelectionDAGNodeConstructionTest, UMAX) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue AllOnes = DAG->getAllOnesConstant(DL, MVT::i32);
@@ -264,8 +250,7 @@ TEST_F(SelectionDAGNodeConstructionTest, UMAX) {
 
 TEST_F(SelectionDAGNodeConstructionTest, UMIN) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -282,8 +267,7 @@ TEST_F(SelectionDAGNodeConstructionTest, UMIN) {
 
 TEST_F(SelectionDAGNodeConstructionTest, UREM) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -300,8 +284,7 @@ TEST_F(SelectionDAGNodeConstructionTest, UREM) {
 
 TEST_F(SelectionDAGNodeConstructionTest, USUBSAT) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -318,8 +301,7 @@ TEST_F(SelectionDAGNodeConstructionTest, USUBSAT) {
 
 TEST_F(SelectionDAGNodeConstructionTest, XOR) {
   SDLoc DL;
-  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                   Register::index2VirtReg(1), MVT::i32);
+  SDValue Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i32);
   SDValue Poison = DAG->getPOISON(MVT::i32);
   SDValue Undef = DAG->getUNDEF(MVT::i32);
   SDValue Zero = DAG->getConstant(0, DL, MVT::i32);
@@ -352,8 +334,7 @@ TEST_F(SelectionDAGNodeConstructionTest, CTLS) {
   EXPECT_TRUE(isa<ConstantSDNode>(CtlsMinShort) &&
               cast<ConstantSDNode>(CtlsMinShort)->getZExtValue() == 16);
 
-  SDValue i1Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL,
-                                     Register::index2VirtReg(1), MVT::i1);
+  SDValue i1Op = DAG->getCopyFromReg(DAG->getEntryNode(), DL, 1, MVT::i1);
   SDValue Ctlsi1 = DAG->getNode(ISD::CTLS, DL, MVT::i32, i1Op);
   EXPECT_TRUE(isNullConstant(Ctlsi1));
 }

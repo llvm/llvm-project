@@ -1,0 +1,32 @@
+# RUN: llc -mtriple=hexagon -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -stop-after=tfr-cleanup -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=MIR
+
+# Ensure copyPhysReg handles int<-dbl subregister and dbl subregister<-int,
+# and does not crash on scalar copies.
+
+# CHECK-LABEL: phys_copy:
+# CHECK:       combine(
+
+# MIR-LABEL: name: phys_copy
+# MIR: $r5 = {{A2_tfr|COPY}} $r4
+# MIR: $r6 = COPY {{.*}}$r4
+# MIR: $r1 = COPY {{.*}}$r6
+
+---
+name: phys_copy
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $r4, $r0
+    ; Int<-Int
+    $r5 = COPY $r4
+    ; Use $r5 so it isn't DCE'd
+    $r0 = COPY $r5
+    ; Dbl subreg<-Int (use virtual double)
+    %0:doubleregs = REG_SEQUENCE $r4, %subreg.isub_lo, $r4, %subreg.isub_hi
+    ; Int<-Dbl subreg
+    $r6 = COPY %0.isub_lo
+    ; Use $r6 to keep it live
+    $r1 = COPY $r6
+    PS_jmpret $r31, implicit-def dead $pc, implicit $r0, implicit $r1
+...

@@ -100,7 +100,7 @@ public:
   Error buildCodeGenPipeline(ModulePassManager &MPM, raw_pwrite_stream &Out,
                              raw_pwrite_stream *DwoOut,
                              CodeGenFileType FileType,
-                             const CGPassBuilderOption &Opts, MCContext &Ctx,
+                             const CGPassBuilderOption &Opts,
                              PassInstrumentationCallbacks *PIC) override;
 
   void registerMachineRegisterInfoCallback(MachineFunction &MF) const override;

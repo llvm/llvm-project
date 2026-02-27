@@ -55,8 +55,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "packets"
 
-cl::opt<bool> DisablePacketizer("disable-packetizer", cl::Hidden,
-                                cl::desc("Disable Hexagon packetizer pass"));
+static cl::opt<bool>
+    DisablePacketizer("disable-packetizer", cl::Hidden,
+                      cl::desc("Disable Hexagon packetizer pass"));
 
 static cl::opt<bool> Slot1Store("slot1-store-slot0-load", cl::Hidden,
                                 cl::init(true),

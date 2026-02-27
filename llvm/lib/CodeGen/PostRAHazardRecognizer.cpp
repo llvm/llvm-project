@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/PostRAHazardRecognizer.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/ScheduleHazardRecognizer.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
@@ -43,7 +42,7 @@ STATISTIC(NumNoops, "Number of noops inserted");
 
 namespace {
 struct PostRAHazardRecognizer {
-  bool run(MachineFunction &MF, MachineLoopInfo *MLI);
+  bool run(MachineFunction &MF);
 };
 
 class PostRAHazardRecognizerLegacy : public MachineFunctionPass {
@@ -54,13 +53,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
-    AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
   bool runOnMachineFunction(MachineFunction &Fn) override {
-    MachineLoopInfo &MLI = getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-    return PostRAHazardRecognizer().run(Fn, &MLI);
+    return PostRAHazardRecognizer().run(Fn);
   }
 };
 char PostRAHazardRecognizerLegacy::ID = 0;
@@ -69,17 +66,13 @@ char PostRAHazardRecognizerLegacy::ID = 0;
 
 char &llvm::PostRAHazardRecognizerID = PostRAHazardRecognizerLegacy::ID;
 
-INITIALIZE_PASS_BEGIN(PostRAHazardRecognizerLegacy, DEBUG_TYPE,
-                      "Post RA hazard recognizer", false, false)
-INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(PostRAHazardRecognizerLegacy, DEBUG_TYPE,
-                    "Post RA hazard recognizer", false, false)
+INITIALIZE_PASS(PostRAHazardRecognizerLegacy, DEBUG_TYPE,
+                "Post RA hazard recognizer", false, false)
 
 PreservedAnalyses
 llvm::PostRAHazardRecognizerPass::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
-  MachineLoopInfo *MLI = &MFAM.getResult<MachineLoopAnalysis>(MF);
-  if (!PostRAHazardRecognizer().run(MF, MLI))
+  if (!PostRAHazardRecognizer().run(MF))
     return PreservedAnalyses::all();
 
   auto PA = getMachineFunctionPassPreservedAnalyses();
@@ -87,10 +80,10 @@ llvm::PostRAHazardRecognizerPass::run(MachineFunction &MF,
   return PA;
 }
 
-bool PostRAHazardRecognizer::run(MachineFunction &Fn, MachineLoopInfo *MLI) {
+bool PostRAHazardRecognizer::run(MachineFunction &Fn) {
   const TargetInstrInfo *TII = Fn.getSubtarget().getInstrInfo();
   std::unique_ptr<ScheduleHazardRecognizer> HazardRec(
-      TII->CreateTargetPostRAHazardRecognizer(Fn, MLI));
+      TII->CreateTargetPostRAHazardRecognizer(Fn));
 
   // Return if the target has not implemented a hazard recognizer.
   if (!HazardRec)

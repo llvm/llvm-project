@@ -28,8 +28,6 @@
 
 using namespace llvm;
 
-std::set<SPIRV::Extension::Extension> SPIRVExtensionsParser::DisabledExtensions;
-
 static const std::map<StringRef, SPIRV::Extension::Extension>
     SPIRVExtensionMap = {
         {"SPV_EXT_shader_atomic_float_add",
@@ -233,7 +231,7 @@ bool SPIRVExtensionsParser::parse(cl::Option &O, StringRef ArgName,
       return O.error(
           "Extension cannot be allowed and disallowed at the same time: " +
           NameValuePair->first);
-    DisabledExtensions.insert(NameValuePair->second);
+
     Vals.erase(NameValuePair->second);
   }
 
@@ -272,9 +270,14 @@ SPIRVExtensionsParser::getValidExtensions(const Triple &TT) {
         SPIRV::OperandCategory::OperandCategory::ExtensionOperand,
         ExtensionEnum);
 
-    if (llvm::is_contained(AllowedEnv, CurrentEnvironment) &&
-        !llvm::is_contained(DisabledExtensions, ExtensionEnum))
+    if (llvm::is_contained(AllowedEnv, CurrentEnvironment))
       R.insert(ExtensionEnum);
+  }
+
+  if (TT.getVendor() == Triple::AMD) {
+    // AMD uses the translator to recover LLVM-IR from SPIRV. Currently, the
+    // translator doesn't implement the SPV_KHR_float_controls2 extension.
+    R.erase(SPIRV::Extension::SPV_KHR_float_controls2);
   }
 
   return R;

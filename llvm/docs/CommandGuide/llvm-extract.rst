@@ -107,4 +107,4 @@ occurs, it will exit with a non-zero value.
 SEE ALSO
 --------
 
-:manpage:`llvm-reduce(1)`
+:manpage:`bugpoint(1)`

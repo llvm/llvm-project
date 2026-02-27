@@ -43,7 +43,9 @@ const SelectionDAGTargetInfo *R600Subtarget::getSelectionDAGInfo() const {
 R600Subtarget &R600Subtarget::initializeSubtargetDependencies(const Triple &TT,
                                                               StringRef GPU,
                                                               StringRef FS) {
-  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FS);
+  SmallString<256> FullFS("+promote-alloca,");
+  FullFS += FS;
+  ParseSubtargetFeatures(GPU, /*TuneCPU*/ GPU, FullFS);
 
   HasMulU24 = getGeneration() >= EVERGREEN;
   HasMulI24 = hasCaymanISA();
