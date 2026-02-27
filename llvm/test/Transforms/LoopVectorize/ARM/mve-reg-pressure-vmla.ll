@@ -71,7 +71,7 @@ define void @fn(i32 noundef %n, ptr %in, ptr %out) #0 {
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i8, <4 x ptr> [[VECTOR_GEP]], i32 2
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP21]], <4 x ptr> align 1 [[TMP30]], <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP29]], <4 x ptr> align 1 [[TMP31]], <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND3]] = getelementptr i8, ptr [[POINTER_PHI2]], i32 12
 ; CHECK-NEXT:    [[PTR_IND6]] = getelementptr i8, ptr [[POINTER_PHI]], i32 12
 ; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

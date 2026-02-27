@@ -566,7 +566,7 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[TMP116:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> [[TMP106]], <4 x i32> splat (i32 1)
 ; CHECK-NEXT:    [[TMP117:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP116]])
 ; CHECK-NEXT:    [[TMP118]] = mul i32 [[VEC_PHI6]], [[TMP117]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 16)
 ; CHECK-NEXT:    [[TMP119:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP119]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]

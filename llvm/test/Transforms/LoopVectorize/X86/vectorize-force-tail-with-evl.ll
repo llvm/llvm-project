@@ -34,7 +34,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    [[TMP6:%.*]] = add nsw <16 x i32> [[WIDE_MASKED_LOAD3]], [[WIDE_MASKED_LOAD]]
 ; IF-EVL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i64 [[INDEX]]
 ; IF-EVL-NEXT:    call void @llvm.masked.store.v16i32.p0(<16 x i32> [[TMP6]], ptr align 4 [[TMP7]], <16 x i1> [[TMP1]])
-; IF-EVL-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; IF-EVL-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 16
 ; IF-EVL-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; IF-EVL-NEXT:    br i1 [[TMP9]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; IF-EVL:       middle.block:
