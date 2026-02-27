@@ -479,6 +479,16 @@ void StructurizeCFG::hoistZeroCostElseBlockPhiValues(BasicBlock *ElseBB,
 
   if (!ElseSucc || !CommonDominator)
     return;
+  // Only hoist when the merge phi has exactly 2 incoming values (a simple
+  // if-else). With 3+ incoming values, multiple control-flow paths merge at
+  // ElseSucc. After structurization the hoisted instruction ends up in a
+  // dominator block that feeds a Flow phi on every edge, including edges
+  // where the else block was never taken, causing the hoisted value to
+  // leak into unrelated paths.
+  for (PHINode &Phi : ElseSucc->phis()) {
+    if (Phi.getNumIncomingValues() != 2)
+      return;
+  }
   Instruction *Term = CommonDominator->getTerminator();
   for (PHINode &Phi : ElseSucc->phis()) {
     Value *ElseVal = Phi.getIncomingValueForBlock(ElseBB);
