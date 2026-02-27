@@ -3912,6 +3912,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
       Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
       CmdArgs.push_back(Args.MakeArgString(Path));
     }
+
+    Args.AddLastArg(CmdArgs, options::OPT_fimplicit_modules_lock_timeout_EQ);
   }
 
   if (HaveModules) {
@@ -9275,7 +9277,7 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   C.addCommand(std::make_unique<Command>(
-      JA, *this, ResponseFileSupport::None(),
+      JA, *this, ResponseFileSupport::AtFileUTF8(),
       Args.MakeArgString(getToolChain().GetProgramPath(getShortName())),
       CmdArgs, Inputs, Output));
 }
@@ -9374,8 +9376,11 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
       // For SPIR-V, pass some extra flags to `spirv-link`, the out-of-tree
       // SPIR-V linker. `spirv-link` isn't called in LTO mode so restrict these
       // flags to normal compilation.
-      if (TC->getTriple().isSPIRV() && !C.getDriver().isUsingLTO() &&
-          !C.getDriver().isUsingOffloadLTO()) {
+      // SPIR-V for AMD doesn't use spirv-link and therefore doesn't need these
+      // flags.
+      if (TC->getTriple().isSPIRV() &&
+          TC->getTriple().getVendor() != llvm::Triple::VendorType::AMD &&
+          !C.getDriver().isUsingLTO() && !C.getDriver().isUsingOffloadLTO()) {
         // For SPIR-V some functions will be defined by the runtime so allow
         // unresolved symbols in `spirv-link`.
         LinkerArgs.emplace_back("--allow-partial-linkage");

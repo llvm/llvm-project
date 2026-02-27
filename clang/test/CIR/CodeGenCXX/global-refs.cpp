@@ -30,7 +30,6 @@ const int &constGlobalIntRef = 5;
 // CIR: cir.global constant external @constGlobalIntRef = #cir.global_view<@_ZGR17constGlobalIntRef_> : !cir.ptr<!s32i> {alignment = 8 : i64}
 // LLVM: @_ZGR17constGlobalIntRef_ = {{.*}}global i32 5, align 4
 // LLVM: @constGlobalIntRef = constant ptr @_ZGR17constGlobalIntRef_, align 8
-// CIR-BEFORE-LLP: FAIL
 
 DefCtor defCtor{};
 // CIR: cir.global external @defCtor = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
@@ -121,9 +120,24 @@ WithCtorDtor withCtorDtor{};
 // CIR-AFTER-NEXT: }
 // LLVM: @withCtorDtor = global %struct.WithCtorDtor zeroinitializer, align 1
 
+
 WithCtorDtor &withCtorDtorRef = withCtorDtor;
 // CIR: cir.global constant external @withCtorDtorRef = #cir.global_view<@withCtorDtor> : !cir.ptr<!rec_WithCtorDtor> {alignment = 8 : i64}
 // LLVM: @withCtorDtorRef = constant ptr @withCtorDtor, align 8
+
+extern WithCtor &ExternRef;
+// CIR: cir.global "private" constant external @ExternRef : !cir.ptr<!rec_WithCtor>
+// LLVM: @ExternRef = external constant ptr
+
+void use() {
+  // CIR-LABEL: cir.func{{.*}}use
+
+  WithCtor &local = ExternRef;
+  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca !cir.ptr<!rec_WithCtor>, !cir.ptr<!cir.ptr<!rec_WithCtor>>, ["local", init, const]
+  // CIR-NEXT: %[[EXT_REF:.*]] = cir.get_global @ExternRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
+  // CIR-NEXT: %[[EXT_REF_LOAD:.*]] = cir.load %[[EXT_REF]] : !cir.ptr<!cir.ptr<!rec_WithCtor>>, !cir.ptr<!rec_WithCtor>
+  // CIR-NEXT: cir.store{{.*}}%[[EXT_REF_LOAD]], %[[LOCAL]]
+}
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
 // LLVM:   call void @_ZN8WithCtorC1Ev(ptr {{.*}}@withCtor)
@@ -143,6 +157,11 @@ WithCtorDtor &withCtorDtorRef = withCtorDtor;
 // LLVM:   call void @_ZN12WithCtorDtorC1Ev(ptr {{.*}}@withCtorDtor)
 // LLVM-NEXT:   call {{.*}}@__cxa_atexit(ptr {{.*}}@_ZN12WithCtorDtorD1Ev, ptr {{.*}}@withCtorDtor, ptr {{.*}}@__dso_handle)
 // LLVM-NEXT:   ret void
+
+// LLVM-LABEL: define{{.*}}use
+// LLVM: %[[LOCAL:.*]] = alloca ptr
+// LLVM-NEXT: %[[EXT_REF:.*]] = load ptr, ptr @ExternRef
+// LLVM-NEXT: store ptr %[[EXT_REF]], ptr %[[LOCAL]]
 
 // TODO(cir): Once we get destructors for temporaries done, we should test them
 // here, same as the 'const-WithCtor' examples, except with the 'withCtorDtor'

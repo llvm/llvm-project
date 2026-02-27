@@ -1,5 +1,3 @@
-if(NOT LIBC_TARGET_ARCHITECTURE_IS_AARCH64)
-
 add_custom_target(libc-shared-tests)
 
 add_fp_unittest(
@@ -103,6 +101,7 @@ add_fp_unittest(
     libc.src.__support.math.f16mull
     libc.src.__support.math.f16sqrt
     libc.src.__support.math.f16sqrtf
+    libc.src.__support.math.f16sqrtf128
     libc.src.__support.math.f16sqrtl
     libc.src.__support.math.f16sub
     libc.src.__support.math.f16subf
@@ -186,6 +185,12 @@ add_fp_unittest(
     libc.src.__support.math.nexttowardf
     libc.src.__support.math.nexttowardf16
     libc.src.__support.math.nexttowardl
+    libc.src.__support.math.nextafter
+    libc.src.__support.math.nextafterbf16
+    libc.src.__support.math.nextafterf
+    libc.src.__support.math.nextafterf16
+    libc.src.__support.math.nextafterl
+    libc.src.__support.math.nextafterf128
     libc.src.__support.math.pow
     libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf
@@ -221,6 +226,5 @@ add_fp_unittest(
     libc.src.__support.math.tanhf
     libc.src.__support.math.tanhf16
     libc.src.__support.math.tanpif
+    libc.src.__support.math.tanpif16
 )
-
-endif()
