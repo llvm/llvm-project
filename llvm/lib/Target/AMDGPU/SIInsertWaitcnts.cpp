@@ -3195,7 +3195,7 @@ public:
       // If we write to the full vcc or we write partially and the target
       // updates vccz on partial writes, then vccz will be updated correctly.
       bool UpdatesVCCZ = FullyWritesToVCC || (!VCCZNotUpdatedByPartialWrites &&
-                                              PartiallyWritesToVCC);
+                                              *PartiallyWritesToVCCOpt);
       if (UpdatesVCCZ)
         MustRecomputeVCCZ = false;
     }
