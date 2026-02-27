@@ -174,13 +174,12 @@ exit:
 ;; Vectorizeable, needs runtime checks to determine whether the iteration count
 ;; might exceed known dereferenceable extents.
 ;; Alternatively, we could use masked.load.ff or vp.load.ff
-define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
+define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i64 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
 ; CHECK:       LV: Not vectorizing: Loop may fault.
 entry:
-  %n_bytes = mul nuw nsw i32 %n, 2
-  call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i32 %n_bytes) ]
-  %tc = sext i32 %n to i64
+  %n_bytes = mul nuw nsw i64 %n, 2
+  call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i64 %n_bytes) ]
   br label %for.body
 
 for.body:
@@ -196,7 +195,7 @@ for.body:
 
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
-  %counted.cond = icmp eq i64 %iv.next, %tc
+  %counted.cond = icmp eq i64 %iv.next, %n
   br i1 %counted.cond, label %exit, label %for.body
 
 exit:

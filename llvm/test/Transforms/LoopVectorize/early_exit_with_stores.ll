@@ -245,13 +245,12 @@ exit:
   ret void
 }
 
-define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
+define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i64 %n) {
 ; CHECK-LABEL: define void @loop_contains_store_assumed_bounds(
-; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i32 [[N:%.*]]) {
+; CHECK-SAME: ptr noalias [[ARRAY:%.*]], ptr readonly [[PRED:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[N_BYTES:%.*]] = mul nuw nsw i32 [[N]], 2
-; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PRED]], i64 2), "dereferenceable"(ptr [[PRED]], i32 [[N_BYTES]]) ]
-; CHECK-NEXT:    [[TC:%.*]] = sext i32 [[N]] to i64
+; CHECK-NEXT:    [[N_BYTES:%.*]] = mul nuw nsw i64 [[N]], 2
+; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[PRED]], i64 2), "dereferenceable"(ptr [[PRED]], i64 [[N_BYTES]]) ]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[FOR_INC:.*]] ]
@@ -265,15 +264,14 @@ define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly
 ; CHECK-NEXT:    br i1 [[EE_COND]], label %[[EXIT:.*]], label %[[FOR_INC]]
 ; CHECK:       [[FOR_INC]]:
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[TC]]
+; CHECK-NEXT:    [[COUNTED_COND:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[COUNTED_COND]], label %[[EXIT]], label %[[FOR_BODY]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %n_bytes = mul nuw nsw i32 %n, 2
-  call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i32 %n_bytes) ]
-  %tc = sext i32 %n to i64
+  %n_bytes = mul nuw nsw i64 %n, 2
+  call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i64 %n_bytes) ]
   br label %for.body
 
 for.body:
@@ -289,7 +287,7 @@ for.body:
 
 for.inc:
   %iv.next = add nuw nsw i64 %iv, 1
-  %counted.cond = icmp eq i64 %iv.next, %tc
+  %counted.cond = icmp eq i64 %iv.next, %n
   br i1 %counted.cond, label %exit, label %for.body
 
 exit:
