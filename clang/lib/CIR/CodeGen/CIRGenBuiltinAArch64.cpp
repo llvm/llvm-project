@@ -1834,11 +1834,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                      getContext().BuiltinInfo.getName(builtinID));
     return mlir::Value{};
   case NEON::BI__builtin_neon_vabd_v:
+  case NEON::BI__builtin_neon_vabdq_v:
     intrName = usgn ? "aarch64.neon.uabd" : "aarch64.neon.sabd";
     if (cir::isFPOrVectorOfFPType(ty))
       intrName = "aarch64.neon.fabd";
     return emitNeonCall(builder, {ty, ty}, ops, intrName, ty, loc);
-  case NEON::BI__builtin_neon_vabdq_v:
   case NEON::BI__builtin_neon_vpadal_v:
   case NEON::BI__builtin_neon_vpadalq_v:
   case NEON::BI__builtin_neon_vpmin_v:
