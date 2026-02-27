@@ -2,7 +2,7 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 
 ; InstCombineLoadStoreAlloca replaced alloca uses with null when the
-; alloca size was undef (poison is undef as per spec). This causes invalid IR:
+; alloca size was poison. This causes invalid IR:
 ;
 ;   call void @llvm.lifetime.start(ptr %i_)
 ;   becomes:
