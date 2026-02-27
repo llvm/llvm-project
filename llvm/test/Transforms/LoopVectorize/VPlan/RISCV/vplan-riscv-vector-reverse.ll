@@ -40,9 +40,9 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:     WIDEN-INTRINSIC vp<[[STORE_VAL:%.+]]> = call llvm.experimental.vp.reverse(ir<[[ADD_RESULT]]>, ir<true>, vp<[[EVL]]>)
 ; CHECK-NEXT:     vp<[[VEC_END_PTR_A:%.+]]> = vector-end-pointer ir<[[ARRAY_IDX_A]]>, vp<[[EVL]]>
 ; CHECK-NEXT:     WIDEN vp.store vp<[[VEC_END_PTR_A]]>, vp<[[STORE_VAL]]>, vp<[[EVL]]>
-; CHECK-NEXT:     EMIT vp<[[IV_NEXT]]> = add nuw vp<[[EVL]]>, vp<[[EVL_PHI]]>
+; CHECK-NEXT:     EMIT vp<[[IV_NEXT]]> = add vp<[[EVL]]>, vp<[[EVL_PHI]]>
 ; CHECK-NEXT:     EMIT vp<[[AVL_NEXT]]> = sub nuw vp<[[AVL]]>, vp<[[EVL]]>
-; CHECK-NEXT:     EMIT vp<[[INDEX_NEXT]]> = add nuw vp<[[INDUCTION]]>, vp<[[VFxUF]]>
+; CHECK-NEXT:     EMIT vp<[[INDEX_NEXT]]> = add vp<[[INDUCTION]]>, vp<[[VFxUF]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[INDEX_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

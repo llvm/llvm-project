@@ -120,7 +120,7 @@ define i32 @simple_csa_int_select(i64 %N, ptr %data, i32 %a) {
 ; CHECK-TF-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = any-of vp<[[VP9]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP11]]> = select vp<[[VP10]]>, vp<[[VP9]]>, vp<[[VP5]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP12]]> = select vp<[[VP10]]>, vp<[[VP8]]>, ir<%data.phi>
-; CHECK-TF-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-TF-NEXT:    No successors
 ; CHECK-TF-NEXT:  }
@@ -320,7 +320,7 @@ define i32 @simple_csa_int_load(ptr noalias %a, ptr noalias %b, i32 %default_val
 ; CHECK-TF-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = any-of vp<[[VP11]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP13]]> = select vp<[[VP12]]>, vp<[[VP11]]>, vp<[[VP5]]>
 ; CHECK-TF-NEXT:      EMIT vp<[[VP14]]> = select vp<[[VP12]]>, vp<[[VP10]]>, ir<%data.phi>
-; CHECK-TF-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
+; CHECK-TF-NEXT:      EMIT vp<%index.next> = add vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-TF-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-TF-NEXT:    No successors
 ; CHECK-TF-NEXT:  }

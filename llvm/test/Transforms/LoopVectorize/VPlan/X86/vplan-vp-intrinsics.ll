@@ -35,7 +35,7 @@ define void @foo(ptr noalias %a, ptr noalias %b, ptr noalias %c, i64 %N) {
 ; IF-EVL-NEXT:    CLONE ir<[[GEP3:%.+]]> = getelementptr inbounds ir<%a>, vp<[[ST]]>
 ; IF-EVL-NEXT:    vp<[[PTR3:%[0-9]+]]> = vector-pointer inbounds ir<[[GEP3]]>
 ; IF-EVL-NEXT:    WIDEN store vp<[[PTR3]]>, ir<[[ADD]]>, vp<[[MASK]]>
-; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT:%.+]]> = add nuw vp<[[IV]]>, vp<[[VFUF]]>
+; IF-EVL-NEXT:    EMIT vp<[[IV_NEXT:%.+]]> = add vp<[[IV]]>, vp<[[VFUF]]>
 ; IF-EVL-NEXT:    EMIT branch-on-count  vp<[[IV_NEXT]]>, vp<[[VTC]]>
 ; IF-EVL-NEXT:  No successors
 ; IF-EVL-NEXT: }
