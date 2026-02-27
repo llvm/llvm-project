@@ -1566,16 +1566,37 @@ bool PreRARematStage::initGCNSchedStage() {
         break;
 
       REMAT_DEBUG(dbgs() << "** REMAT " << PrintRematReg(Remat) << '\n';);
+      MachineInstr *RematMI =
+          Candidate.rematerialize(RecomputeRP, RPTargets, DAG);
+      RescheduleRegions |= Remat.Live;
+
       // Every rematerialization we do here is likely to move the instruction
       // into a higher frequency region, increasing the total sum latency of the
       // instruction itself. This is acceptable if we are eliminating a spill in
       // the process, but when the goal is increasing occupancy we get nothing
       // out of rematerialization if occupancy is not increased in the end; in
       // such cases we want to roll back the rematerialization.
-      RollbackInfo *Rollback =
-          TargetOcc ? &Rollbacks.emplace_back(&Remat) : nullptr;
-      rematerialize(Remat, RecomputeRP, Rollback);
-      unsetSatisifedRPTargets(Remat.Live);
+      if (TargetOcc) {
+        RollbackInfo &Rollback = Rollbacks.emplace_back(&Remat);
+        Rollback.RematMI = RematMI;
+        // Make the original MI a debug value so that it does not influence
+        // scheduling and replace all read registers with a sentinel register to
+        // prevent operands to appear in use-lists of other MIs during LIS
+        // updates. Store mappings between operand indices and original
+        // registers for potential rollback.
+        Remat.DefMI->setDesc(DAG.TII->get(TargetOpcode::DBG_VALUE));
+        for (auto [Idx, MO] : enumerate(Remat.DefMI->operands())) {
+          if (MO.isReg() && MO.readsReg()) {
+            Rollback.RegMap.insert({Idx, MO.getReg()});
+            MO.setReg(Register());
+          }
+        }
+      } else {
+        // Just delete the original instruction if it cannot be rolled back.
+        DAG.deleteMI(Remat.DefRegion, Remat.DefMI);
+      }
+
+      unsetSatisfiedRPTargets(Remat.Live);
     }
 
     REMAT_DEBUG({
@@ -2897,21 +2918,8 @@ PreRARematStage::ScoredRemat::FreqInfo::FreqInfo(
 
 PreRARematStage::ScoredRemat::ScoredRemat(RematReg *Remat, const FreqInfo &Freq,
                                           const GCNScheduleDAGMILive &DAG)
-    : Remat(Remat), NumRegs(getNumRegs(DAG)), FreqDiff(getFreqDiff(Freq)) {}
-
-unsigned PreRARematStage::ScoredRemat::getNumRegs(
-    const GCNScheduleDAGMILive &DAG) const {
-  const TargetRegisterClass &RC = *DAG.MRI.getRegClass(Remat->getReg());
-  unsigned RegSize = DAG.TRI->getRegSizeInBits(RC);
-  if (unsigned SubIdx = Remat->DefMI->getOperand(0).getSubReg()) {
-    // The following may return -1 (i.e., a large unsigned number) on indices
-    // that may be used to access subregisters of multiple sizes; in such cases
-    // fallback on the size derived from the register class.
-    unsigned SubRegSize = DAG.TRI->getSubRegIdxSize(SubIdx);
-    if (SubRegSize < RegSize)
-      RegSize = SubRegSize;
-  }
-  return divideCeil(RegSize, 32);
+    : Remat(Remat), FreqDiff(getFreqDiff(Freq)) {
+  RPSave.inc(Remat->getReg(), LaneBitmask::getNone(), Remat->Mask, DAG.MRI);
 }
 
 int64_t PreRARematStage::ScoredRemat::getFreqDiff(const FreqInfo &Freq) const {
@@ -2936,12 +2944,21 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
   MaxFreq = 0;
   RegionImpact = 0;
   for (unsigned I : TargetRegions.set_bits()) {
-    if (!Remat->Live[I] || !RPTargets[I].isSaveBeneficial(Remat->getReg()))
+    if (!Remat->Live[I])
       continue;
+
+    // The rematerialization must contribute positively in at least one
+    // register class with usage above the RP target for this region to
+    // contribute to the score.
+    const GCNRPTarget &RegionTarget = RPTargets[I];
+    const unsigned NumRegsBenefit = RegionTarget.getNumRegsBenefit(RPSave);
+    if (!NumRegsBenefit)
+      continue;
+
     bool UnusedLT = Remat->isUnusedLiveThrough(I);
 
     // Regions in which RP is guaranteed to decrease have more weight.
-    RegionImpact += UnusedLT ? 2 : 1;
+    RegionImpact += (UnusedLT ? 2 : 1) * NumRegsBenefit;
 
     if (ReduceSpill) {
       uint64_t Freq = FreqInfo.Regions[I];
@@ -2953,41 +2970,22 @@ void PreRARematStage::ScoredRemat::update(const BitVector &TargetRegions,
       MaxFreq = std::max(MaxFreq, Freq);
     }
   }
-  RegionImpact *= NumRegs;
 }
 
-void PreRARematStage::rematerialize(const RematReg &Remat,
-                                    BitVector &RecomputeRP,
-                                    RollbackInfo *Rollback) {
-  const SIInstrInfo *TII = MF.getSubtarget<GCNSubtarget>().getInstrInfo();
-  MachineInstr &DefMI = *Remat.DefMI;
+MachineInstr *PreRARematStage::ScoredRemat::rematerialize(
+    BitVector &RecomputeRP, SmallVectorImpl<GCNRPTarget> &RPTargets,
+    GCNScheduleDAGMILive &DAG) const {
+  const SIInstrInfo *TII = DAG.MF.getSubtarget<GCNSubtarget>().getInstrInfo();
+  MachineInstr &DefMI = *Remat->DefMI;
   Register Reg = DefMI.getOperand(0).getReg();
   Register NewReg = DAG.MRI.cloneVirtualRegister(Reg);
 
   // Rematerialize the register in the region where it is used.
-  MachineBasicBlock::iterator InsertPos = Remat.UseMI;
+  MachineBasicBlock::iterator InsertPos = Remat->UseMI;
   TII->reMaterialize(*InsertPos->getParent(), InsertPos, NewReg, 0, DefMI);
   MachineInstr *RematMI = &*std::prev(InsertPos);
-  Remat.UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
-  Remat.insertMI(Remat.UseRegion, RematMI, DAG);
-  if (Rollback) {
-    Rollback->RematMI = RematMI;
-    // Make the original MI a debug value so that it does not influence
-    // scheduling and replace all read registers with a sentinel register to
-    // prevent operands to appear in use-lists of other MIs during LIS
-    // updates. Store mappings between operand indices and original registers
-    // for potential rollback.
-    DefMI.setDesc(TII->get(TargetOpcode::DBG_VALUE));
-    for (auto [Idx, MO] : enumerate(Remat.DefMI->operands())) {
-      if (MO.isReg() && MO.readsReg()) {
-        Rollback->RegMap.insert({Idx, MO.getReg()});
-        MO.setReg(Register());
-      }
-    }
-  } else {
-    // Just delete the original instruction if it cannot be rolled back.
-    DAG.deleteMI(Remat.DefRegion, &DefMI);
-  }
+  Remat->UseMI->substituteRegister(Reg, NewReg, 0, *DAG.TRI);
+  Remat->insertMI(Remat->UseRegion, RematMI, DAG);
 
 #ifdef EXPENSIVE_CHECKS
   // All uses are known to be available / live at the remat point. Thus,
@@ -3005,7 +3003,7 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
     if (LI.hasSubRanges() && MO.getSubReg())
       LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-    LaneBitmask LiveInMask = DAG.LiveIns[Remat.UseRegion].at(UseReg);
+    LaneBitmask LiveInMask = DAG.LiveIns[Remat->UseRegion].at(UseReg);
     LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
     // If this register has lanes not covered by the LiveIns, be sure they
     // do not map to any subrange. ref:
@@ -3022,15 +3020,15 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
   // and adjust RP targets. The save is guaranteed in regions in which the
   // register is live-through and unused but optimistic in all other regions
   // where the register is live.
-  for (unsigned I : Remat.Live.set_bits()) {
-    RPTargets[I].saveReg(Reg, Remat.Mask, DAG.MRI);
+  for (unsigned I : Remat->Live.set_bits()) {
+    RPTargets[I].saveRP(RPSave);
     DAG.LiveIns[I].erase(Reg);
     DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).erase(Reg);
-    if (!Remat.isUnusedLiveThrough(I))
+    if (!Remat->isUnusedLiveThrough(I))
       RecomputeRP.set(I);
   }
 
-  RescheduleRegions |= Remat.Live;
+  return RematMI;
 }
 
 void PreRARematStage::commitRematerializations() const {
@@ -3039,7 +3037,7 @@ void PreRARematStage::commitRematerializations() const {
     DAG.deleteMI(Rollback.Remat->DefRegion, Rollback.Remat->DefMI);
 }
 
-void PreRARematStage::unsetSatisifedRPTargets(const BitVector &Regions) {
+void PreRARematStage::unsetSatisfiedRPTargets(const BitVector &Regions) {
   for (unsigned I : Regions.set_bits()) {
     if (TargetRegions[I] && RPTargets[I].satisfied()) {
       REMAT_DEBUG(dbgs() << "  [" << I << "] Target reached!\n");

@@ -775,12 +775,6 @@ std::unique_ptr<nb_buffer_info> PyDenseElementsAttribute::accessBuffer() {
 }
 
 void PyDenseElementsAttribute::bindDerived(ClassTy &c) {
-#if PY_VERSION_HEX < 0x03090000
-  PyTypeObject *tp = reinterpret_cast<PyTypeObject *>(c.ptr());
-  tp->tp_as_buffer->bf_getbuffer = PyDenseElementsAttribute::bf_getbuffer;
-  tp->tp_as_buffer->bf_releasebuffer =
-      PyDenseElementsAttribute::bf_releasebuffer;
-#endif
   c.def("__len__", &PyDenseElementsAttribute::dunderLen)
       .def_static(
           "get", PyDenseElementsAttribute::getFromBuffer, nb::arg("array"),
@@ -932,13 +926,10 @@ MlirAttribute PyDenseElementsAttribute::getAttributeFromBuffer(
 }
 
 PyType_Slot PyDenseElementsAttribute::slots[] = {
-// Python 3.8 doesn't allow setting the buffer protocol slots from a type spec.
-#if PY_VERSION_HEX >= 0x03090000
     {Py_bf_getbuffer,
      reinterpret_cast<void *>(PyDenseElementsAttribute::bf_getbuffer)},
     {Py_bf_releasebuffer,
      reinterpret_cast<void *>(PyDenseElementsAttribute::bf_releasebuffer)},
-#endif
     {0, nullptr},
 };
 

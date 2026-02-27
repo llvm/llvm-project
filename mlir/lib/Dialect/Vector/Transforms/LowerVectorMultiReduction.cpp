@@ -131,16 +131,27 @@ private:
   const bool useInnerDimsForReduction;
 };
 
-/// Reduces the rank of vector.multi_reduction nd -> 2d given all reduction
-/// dimensions are either inner most or outer most.
-class ReduceMultiDimReductionRank
+/// Flattens vector.multi_reduction to 2D
+///
+/// Given all reduction dimensions are either inner most or outer most,
+/// flattens all reduction and parallel dimensions so that there are only 2Ds.
+///
+/// BEFORE
+///     vector.multi_reduction <add>, %vec, %acc [2, 3] : vector<2x3x4x5xi32> to
+///     vector<2x3xi32>
+/// AFTER
+///     %vec_sc = vector.shape_cast %vec
+///     %acc_sc = vector.shape_cast %acc
+///     %res = vector.multi_reduction <add>, %vec_sc, %acc_cs [1] :
+///     vector<6x20xi32> to vector<6xi32> %res_sc = vector.shape_cast %res
+class FlattenMultiReduction
     : public OpRewritePattern<vector::MultiDimReductionOp> {
 public:
   using Base::Base;
 
-  explicit ReduceMultiDimReductionRank(
-      MLIRContext *context, vector::VectorMultiReductionLowering options,
-      PatternBenefit benefit = 1)
+  explicit FlattenMultiReduction(MLIRContext *context,
+                                 vector::VectorMultiReductionLowering options,
+                                 PatternBenefit benefit = 1)
       : mlir::OpRewritePattern<vector::MultiDimReductionOp>(context, benefit),
         useInnerDimsForReduction(
             options == vector::VectorMultiReductionLowering::InnerReduction) {}
@@ -552,8 +563,7 @@ void mlir::vector::populateVectorMultiReductionReorderAndExpandPatterns(
 void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
-  patterns.add<ReduceMultiDimReductionRank>(patterns.getContext(), options,
-                                            benefit);
+  patterns.add<FlattenMultiReduction>(patterns.getContext(), options, benefit);
 }
 
 void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
