@@ -2324,6 +2324,15 @@ Instruction *InstCombinerImpl::foldBinOpIntoSelectOrPhi(BinaryOperator &I) {
     if (Instruction *NewPhi = foldOpIntoPhi(I, PN))
       return NewPhi;
   }
+
+  if (I.isCommutative()) {
+    bool IsOtherParamConst = isa<Constant>(I.getOperand(0));
+    if (auto *Sel = dyn_cast<SelectInst>(I.getOperand(1))) {
+      if (Instruction *NewSel =
+              FoldOpIntoSelect(I, Sel, false, !IsOtherParamConst))
+        return NewSel;
+    }
+  }
   return nullptr;
 }
 
