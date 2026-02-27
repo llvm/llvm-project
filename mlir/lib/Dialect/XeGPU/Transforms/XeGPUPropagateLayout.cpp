@@ -1311,8 +1311,7 @@ ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
   // Get the current layout of the vector value.
   auto producerLayout = xegpu::getDistributeLayoutAttr(vectorValue);
   if (!producerLayout)
-    return consumerOp->emitError("Vector operand has no layout assigned.");
-
+    return success(); // vector with no layout is uniform
   // Get the consumer expected layout at this operand.
   auto consumerLayout = xegpu::getConsumerLayoutAt(operand);
   if (!consumerLayout)
