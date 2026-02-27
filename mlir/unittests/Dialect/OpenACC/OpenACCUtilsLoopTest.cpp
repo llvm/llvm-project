@@ -649,6 +649,84 @@ TEST_F(OpenACCUtilsLoopTest,
   EXPECT_EQ(mulCount, 1u);
 }
 
+// Exact pattern from issue2257/all.mlir: entry -> header (2 preds: entry, body);
+// header cond_br to exit or body; exit has return; body branches back to header.
+TEST_F(OpenACCUtilsLoopTest,
+       WrapMultiBlockRegionWithSCFExecuteRegionIssue2257LoopPattern) {
+  auto [module, funcOp] = createModuleWithFunc();
+
+  OwningOpRef<acc::ParallelOp> parallelOp =
+      acc::ParallelOp::create(b, loc, TypeRange{}, ValueRange{});
+  Region &region = parallelOp->getRegion();
+  // Block order as in all.mlir: ^bb0 entry, ^bb1 header, ^bb2 exit, ^bb3 body
+  Block *entry = b.createBlock(&region, region.begin());
+  Block *header = b.createBlock(&region, region.end());
+  Block *exitBlock = b.createBlock(&region, region.end());
+  Block *bodyBlock = b.createBlock(&region, region.end());
+
+  // ^bb0 (entry): setup then cf.br ^bb1
+  b.setInsertionPointToEnd(entry);
+  Value c1 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(1));
+  arith::AddIOp::create(b, loc, c1, c1); // some op like fir.store in all.mlir
+  cf::BranchOp::create(b, loc, header);
+
+  // ^bb1 (header): 2 preds (entry, body). cond_br to exit or body
+  b.setInsertionPointToEnd(header);
+  Value cond =
+      arith::ConstantOp::create(b, loc, b.getI1Type(), b.getBoolAttr(false));
+  cf::CondBranchOp::create(b, loc, cond, exitBlock, bodyBlock);
+
+  // ^bb2 (exit): return — use acc.yield (replaced with scf.yield by the util)
+  b.setInsertionPointToEnd(exitBlock);
+  acc::YieldOp::create(b, loc);
+
+  // ^bb3 (body): body ops then cf.br ^bb1
+  b.setInsertionPointToEnd(bodyBlock);
+  Value c2 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(2));
+  Value c3 =
+      arith::ConstantOp::create(b, loc, b.getIndexType(), b.getIndexAttr(3));
+  arith::MulIOp::create(b, loc, c2, c3);
+  cf::BranchOp::create(b, loc, header);
+
+  EXPECT_EQ(region.getBlocks().size(), 4u);
+
+  b.setInsertionPointAfter(parallelOp.get());
+  IRMapping mapping;
+  scf::ExecuteRegionOp exeRegionOp =
+      wrapMultiBlockRegionWithSCFExecuteRegion(region, mapping, loc, b);
+
+  ASSERT_TRUE(exeRegionOp);
+
+  EXPECT_EQ(exeRegionOp.getRegion().getBlocks().size(), 4u);
+
+  // First block (entry): branch to header
+  Block &exeEntry = exeRegionOp.getRegion().front();
+  EXPECT_TRUE(isa<cf::BranchOp>(exeEntry.getTerminator()));
+
+  // Second block (header): cond_br, 2 predecessors (entry and body)
+  Block &exeHeader = *std::next(exeRegionOp.getRegion().begin());
+  EXPECT_TRUE(isa<cf::CondBranchOp>(exeHeader.getTerminator()));
+
+  // Third block (exit): scf.yield
+  Block &exeExit = *std::next(exeRegionOp.getRegion().begin(), 2);
+  EXPECT_TRUE(isa<scf::YieldOp>(exeExit.getTerminator()));
+
+  // Fourth block (body): branch back to header
+  Block &exeBody = exeRegionOp.getRegion().back();
+  EXPECT_TRUE(isa<cf::BranchOp>(exeBody.getTerminator()));
+  EXPECT_EQ(exeBody.getTerminator()->getSuccessor(0), &exeHeader);
+
+  // Body ops preserved: one addi (entry), one muli (body)
+  unsigned addCount = 0;
+  unsigned mulCount = 0;
+  exeRegionOp.getRegion().walk([&](arith::AddIOp) { ++addCount; });
+  exeRegionOp.getRegion().walk([&](arith::MulIOp) { ++mulCount; });
+  EXPECT_EQ(addCount, 1u);
+  EXPECT_EQ(mulCount, 1u);
+}
+
 //===----------------------------------------------------------------------===//
 // Error Case Tests
 //===----------------------------------------------------------------------===//
