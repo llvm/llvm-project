@@ -470,6 +470,9 @@ OptPrimType Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<DecltypeType>(T))
     return classify(DT->getUnderlyingType());
 
+  if (const auto *OBT = T.getCanonicalType()->getAs<OverflowBehaviorType>())
+    return classify(OBT->getUnderlyingType());
+
   if (T->isObjCObjectPointerType() || T->isBlockPointerType())
     return PT_Ptr;
 
