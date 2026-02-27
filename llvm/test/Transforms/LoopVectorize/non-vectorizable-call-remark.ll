@@ -51,68 +51,51 @@
 ; YAML-NEXT:   - String:          'loop not vectorized: '
 ; YAML-NEXT:   - String:          instruction cannot be vectorized
 
-define void @call_reads_memory(ptr %p, i64 %n) !dbg !7 {
+define void @call_reads_memory(ptr %p, i64 %n) !dbg !4 {
 entry:
-  br label %loop, !dbg !9
+  br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr inbounds i32, ptr %p, i64 %iv, !dbg !10
-  %val = call i32 @opaque(ptr %gep), !dbg !11
-  store i32 %val, ptr %gep, align 4, !dbg !12
-  %iv.next = add nuw nsw i64 %iv, 1, !dbg !13
-  %exitcond = icmp eq i64 %iv.next, %n, !dbg !14
-  br i1 %exitcond, label %exit, label %loop, !dbg !15
+  %gep = getelementptr inbounds i32, ptr %p, i64 %iv
+  %val = call i32 @opaque(ptr %gep), !dbg !5
+  store i32 %val, ptr %gep, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret void, !dbg !16
+  ret void
 }
 
-define void @call_writes_memory(ptr %p, i64 %n) !dbg !17 {
+define void @call_writes_memory(ptr %p, i64 %n) !dbg !6 {
 entry:
-  br label %loop, !dbg !19
+  br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr inbounds i32, ptr %p, i64 %iv, !dbg !20
-  call void @opaque_write(ptr %gep), !dbg !21
-  %iv.next = add nuw nsw i64 %iv, 1, !dbg !22
-  %exitcond = icmp eq i64 %iv.next, %n, !dbg !23
-  br i1 %exitcond, label %exit, label %loop, !dbg !24
+  %gep = getelementptr inbounds i32, ptr %p, i64 %iv
+  call void @opaque_write(ptr %gep), !dbg !7
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, %n
+  br i1 %exitcond, label %exit, label %loop
 
 exit:
-  ret void, !dbg !25
+  ret void
 }
 
 declare i32 @opaque(ptr)
 declare void @opaque_write(ptr)
 
 !llvm.dbg.cu = !{!0}
-!llvm.module.flags = !{!3, !4}
+!llvm.module.flags = !{!2, !3}
 
-!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug)
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang", isOptimized: true, runtimeVersion: 0, emissionKind: LineTablesOnly)
 !1 = !DIFile(filename: "source.c", directory: "/tmp")
-!2 = !{}
-!3 = !{i32 2, !"Dwarf Version", i32 4}
-!4 = !{i32 2, !"Debug Info Version", i32 3}
-!5 = !DISubroutineType(types: !2)
-!6 = !DILocation(line: 5, column: 3, scope: !7)
-!7 = distinct !DISubprogram(name: "call_reads_memory", scope: !1, file: !1, line: 4, type: !5, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!8 = !DILocation(line: 5, column: 3, scope: !7)
-!9 = !DILocation(line: 5, column: 3, scope: !7)
-!10 = !DILocation(line: 6, column: 5, scope: !7)
-!11 = !DILocation(line: 7, column: 10, scope: !7)
-!12 = !DILocation(line: 8, column: 5, scope: !7)
-!13 = !DILocation(line: 5, column: 28, scope: !7)
-!14 = !DILocation(line: 5, column: 20, scope: !7)
-!15 = !DILocation(line: 5, column: 3, scope: !7)
-!16 = !DILocation(line: 10, column: 1, scope: !7)
-!17 = distinct !DISubprogram(name: "call_writes_memory", scope: !1, file: !1, line: 14, type: !5, scopeLine: 14, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
-!18 = !DILocation(line: 15, column: 3, scope: !17)
-!19 = !DILocation(line: 15, column: 3, scope: !17)
-!20 = !DILocation(line: 16, column: 5, scope: !17)
-!21 = !DILocation(line: 17, column: 5, scope: !17)
-!22 = !DILocation(line: 15, column: 28, scope: !17)
-!23 = !DILocation(line: 15, column: 20, scope: !17)
-!24 = !DILocation(line: 15, column: 3, scope: !17)
-!25 = !DILocation(line: 20, column: 1, scope: !17)
+!2 = !{i32 2, !"Dwarf Version", i32 4}
+!3 = !{i32 2, !"Debug Info Version", i32 3}
+!4 = distinct !DISubprogram(name: "call_reads_memory", scope: !1, file: !1, line: 4, type: !8, scopeLine: 4, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!5 = !DILocation(line: 7, column: 10, scope: !4)
+!6 = distinct !DISubprogram(name: "call_writes_memory", scope: !1, file: !1, line: 14, type: !8, scopeLine: 14, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!7 = !DILocation(line: 17, column: 5, scope: !6)
+!8 = !DISubroutineType(types: !{})
