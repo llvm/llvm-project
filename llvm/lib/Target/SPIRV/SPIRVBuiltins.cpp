@@ -274,7 +274,8 @@ static std::unique_ptr<const SPIRV::IncomingCall>
 lookupBuiltin(StringRef DemangledCall,
               SPIRV::InstructionSet::InstructionSet Set,
               Register ReturnRegister, SPIRVTypeInst ReturnType,
-              const SmallVectorImpl<Register> &Arguments) {
+              const SmallVectorImpl<Register> &Arguments,
+              bool ValidateArgCount = true) {
   std::string BuiltinName = SPIRV::lookupBuiltinNameHelper(DemangledCall);
 
   SmallVector<StringRef, 10> BuiltinArgumentTypes;
@@ -282,10 +283,31 @@ lookupBuiltin(StringRef DemangledCall,
       DemangledCall.slice(DemangledCall.find('(') + 1, DemangledCall.find(')'));
   BuiltinArgs.split(BuiltinArgumentTypes, ',', -1, false);
 
+  // Check if the number of arguments matches the builtin's requirements.
+  auto argsMatchBuiltin = [&Arguments, &DemangledCall,
+                           ValidateArgCount](const SPIRV::DemangledBuiltin *B) {
+    if (!ValidateArgCount)
+      return true;
+    if (Arguments.size() < B->MinNumArgs) {
+      LLVM_DEBUG(dbgs() << "Too few arguments for builtin " << DemangledCall
+                        << ": expected at least " << (unsigned)B->MinNumArgs
+                        << ", got " << Arguments.size() << "\n");
+      return false;
+    }
+    if (B->MaxNumArgs && Arguments.size() > B->MaxNumArgs) {
+      LLVM_DEBUG(dbgs() << "Too many arguments for builtin " << DemangledCall
+                        << ": expected at most " << (unsigned)B->MaxNumArgs
+                        << ", got " << Arguments.size() << "\n");
+      return false;
+    }
+    return true;
+  };
+
   // Look up the builtin in the defined set. Start with the plain demangled
   // name, expecting a 1:1 match in the defined builtin set.
   const SPIRV::DemangledBuiltin *Builtin;
-  if ((Builtin = SPIRV::lookupBuiltin(BuiltinName, Set)))
+  if ((Builtin = SPIRV::lookupBuiltin(BuiltinName, Set)) &&
+      argsMatchBuiltin(Builtin))
     return std::make_unique<SPIRV::IncomingCall>(
         BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
 
@@ -328,7 +350,8 @@ lookupBuiltin(StringRef DemangledCall,
 
     // If argument-type name prefix was added, look up the builtin again.
     if (!Prefix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(Prefix + BuiltinName, Set)))
+        (Builtin = SPIRV::lookupBuiltin(Prefix + BuiltinName, Set)) &&
+        argsMatchBuiltin(Builtin))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
 
@@ -359,12 +382,13 @@ lookupBuiltin(StringRef DemangledCall,
 
     // If argument-type name suffix was added, look up the builtin again.
     if (!Suffix.empty() &&
-        (Builtin = SPIRV::lookupBuiltin(BuiltinName + Suffix, Set)))
+        (Builtin = SPIRV::lookupBuiltin(BuiltinName + Suffix, Set)) &&
+        argsMatchBuiltin(Builtin))
       return std::make_unique<SPIRV::IncomingCall>(
           BuiltinName, Builtin, ReturnRegister, ReturnType, Arguments);
   }
 
-  // No builtin with such name was found in the set.
+  // No builtin with such name and matching argument count was found.
   return nullptr;
 }
 
@@ -3110,7 +3134,8 @@ mapBuiltinToOpcode(const StringRef DemangledCall,
   Register Reg;
   SmallVector<Register> Args;
   std::unique_ptr<const IncomingCall> Call =
-      lookupBuiltin(DemangledCall, Set, Reg, nullptr, Args);
+      lookupBuiltin(DemangledCall, Set, Reg, nullptr, Args,
+                    /*ValidateArgCount=*/false);
   if (!Call)
     return std::make_tuple(-1, 0, 0);
 
@@ -3191,21 +3216,6 @@ std::optional<bool> lowerBuiltin(const StringRef DemangledCall,
 
   if (!Call) {
     LLVM_DEBUG(dbgs() << "Builtin record was not found!\n");
-    return std::nullopt;
-  }
-
-  // Check if the provided args meet the builtin requirements. If not, treat
-  // the call as a regular function call rather than crashing.
-  if (Args.size() < Call->Builtin->MinNumArgs) {
-    LLVM_DEBUG(dbgs() << "Too few arguments for builtin " << DemangledCall
-                      << ": expected at least " << Call->Builtin->MinNumArgs
-                      << ", got " << Args.size() << "\n");
-    return std::nullopt;
-  }
-  if (Call->Builtin->MaxNumArgs && Args.size() > Call->Builtin->MaxNumArgs) {
-    LLVM_DEBUG(dbgs() << "Too many arguments for builtin " << DemangledCall
-                      << ": expected at most " << Call->Builtin->MaxNumArgs
-                      << ", got " << Args.size() << "\n");
     return std::nullopt;
   }
 
