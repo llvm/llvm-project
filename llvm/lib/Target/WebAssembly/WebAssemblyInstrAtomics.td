@@ -118,25 +118,19 @@ defm ATOMIC_FENCE : ATOMIC_NRI<(outs), (ins MemOrder:$order), [],
 // Atomic loads
 //===----------------------------------------------------------------------===//
 
-multiclass WebAssemblyAtomicLoad<WebAssemblyRegClass rc, string name, int Opcode> {
-  let mayLoad = 1, UseNamedOperandTable = 1 in {
-  defm "_A32": I<(outs rc:$dst),
-                 (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off, I32:$addr),
-                 (outs), (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off),
-                 [], !strconcat(name, "\t$dst, ${order} ${off}(${addr})${p2align}"),
-                 !strconcat(name, "\t${order} ${off}${p2align}"), Opcode, false>,
-               Requires<[HasAtomics]>;
-  defm "_A64": I<(outs rc:$dst),
-                 (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off, I64:$addr),
-                 (outs), (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off),
-                 [], !strconcat(name, "\t$dst, ${order} ${off}(${addr})${p2align}"),
-                 !strconcat(name, "\t${order} ${off}${p2align}"), Opcode, true>,
-               Requires<[HasAtomics]>;
-  }
-}
-
 multiclass AtomicLoad<WebAssemblyRegClass rc, string name, int atomic_op> {
-  defm "" : WebAssemblyAtomicLoad<rc, name, !or(0xfe00, !and(0xff, atomic_op))>;
+  let mayLoad = 1, UseNamedOperandTable = 1 in {
+  defm "_A32": ATOMIC_I<(outs rc:$dst),
+                        (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off, I32:$addr),
+                        (outs), (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off),
+                        [], !strconcat(name, "\t$dst, ${order} ${off}(${addr})${p2align}"),
+                        !strconcat(name, "\t${order} ${off}${p2align}"), atomic_op, false>;
+  defm "_A64": ATOMIC_I<(outs rc:$dst),
+                        (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off, I64:$addr),
+                        (outs), (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off),
+                        [], !strconcat(name, "\t$dst, ${order} ${off}(${addr})${p2align}"),
+                        !strconcat(name, "\t${order} ${off}${p2align}"), atomic_op, true>;
+  }
 }
 
 multiclass AtomicLoadPat<ValueType ty, SDPatternOperator kind, string Name> {
@@ -209,25 +203,19 @@ defm : AtomicLoadPat<i64, sext_aload_16_64, "ATOMIC_LOAD16_U_I64">;
 // Atomic stores
 //===----------------------------------------------------------------------===//
 
-multiclass WebAssemblyAtomicStore<WebAssemblyRegClass rc, string name, int Opcode> {
-  let mayStore = 1, UseNamedOperandTable = 1 in {
-  defm "_A32" : I<(outs),
-                  (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$val),
-                  (outs), (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off), [],
-                  !strconcat(name, "\t${order} ${off}(${addr})${p2align}, $val"),
-                  !strconcat(name, "\t${order} ${off}${p2align}"), Opcode, false>,
-                Requires<[HasAtomics]>;
-  defm "_A64" : I<(outs),
-                  (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off, I64:$addr, rc:$val),
-                  (outs), (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off), [],
-                  !strconcat(name, "\t${order} ${off}(${addr})${p2align}, $val"),
-                  !strconcat(name, "\t${order} ${off}${p2align}"), Opcode, true>,
-                Requires<[HasAtomics]>;
-  }
-}
-
 multiclass AtomicStore<WebAssemblyRegClass rc, string name, int atomic_op> {
-  defm "" : WebAssemblyAtomicStore<rc, name, !or(0xfe00, !and(0xff, atomic_op))>;
+  let mayStore = 1, UseNamedOperandTable = 1 in {
+  defm "_A32" : ATOMIC_I<(outs),
+                         (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off, I32:$addr, rc:$val),
+                         (outs), (ins MemOrder:$order, P2Align:$p2align, offset32_op:$off), [],
+                         !strconcat(name, "\t${order} ${off}(${addr})${p2align}, $val"),
+                         !strconcat(name, "\t${order} ${off}${p2align}"), atomic_op, false>;
+  defm "_A64" : ATOMIC_I<(outs),
+                         (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off, I64:$addr, rc:$val),
+                         (outs), (ins MemOrder:$order, P2Align:$p2align, offset64_op:$off), [],
+                         !strconcat(name, "\t${order} ${off}(${addr})${p2align}, $val"),
+                         !strconcat(name, "\t${order} ${off}${p2align}"), atomic_op, true>;
+  }
 }
 
 defm ATOMIC_STORE_I32 : AtomicStore<I32, "i32.atomic.store", 0x17>;
