@@ -8807,6 +8807,9 @@ def ftest_module_file_extension_EQ :
   Joined<["-"], "ftest-module-file-extension=">,
   HelpText<"introduce a module file extension for testing purposes. "
            "The argument is parsed as blockname:major:minor:hashed:user info">;
+def fmodules_lazy_load_module_maps : Flag<["-"], "fmodules-lazy-load-module-maps">,
+  HelpText<"Load modules from module maps only when needed">,
+  MarshallingInfoFlag<HeaderSearchOpts<"LazyLoadModuleMaps">>;
 def fmodule_file_cache_key : MultiArg<["-"], "fmodule-file-cache-key", 2>,
   MetaVarName<"<path> <key>">,
   HelpText<"Make the module with the given compile job cache key available as "
