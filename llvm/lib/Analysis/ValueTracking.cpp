@@ -483,6 +483,39 @@ static void computeKnownBitsFromLerpPattern(const Value *Op0, const Value *Op1,
   KnownOut.Zero.setHighBits(MinimumNumberOfLeadingZeros);
 }
 
+static bool isKnownNonNegativeICmpWithMinMax(bool Add, bool NSW, bool NUW,
+                                             const Value *Op0, const Value *Op1,
+                                             const Instruction *I,
+                                             KnownBits &KnownOut) {
+  if (Add)
+    return false;
+  // Match against A = smin(A , B) and A = smin(B, A)
+  {
+    Value *V;
+    if (NSW && match(Op1, m_SMin(m_Specific(Op0), m_Value(V))) ||
+        match(Op1, m_SMin(m_Value(V), m_Specific(Op0))))
+      return true;
+  }
+
+  // Match against non-negative select
+  {
+    Value *A, *B;
+    if (match(I, m_Select(
+                     m_SpecificICmp(ICmpInst::ICMP_SLT, m_Value(A), m_Value(B)),
+                     m_Zero(), m_NSWSub(m_Deferred(A), m_Deferred(B)))) ||
+        match(I, m_Select(
+                     m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(A), m_Value(B)),
+                     m_Zero(), m_NSWSub(m_Deferred(B), m_Deferred(A)))) ||
+        match(I, m_Select(
+                     m_SpecificICmp(ICmpInst::ICMP_SGT, m_Value(A), m_Value(B)),
+                     m_NSWSub(m_Deferred(A), m_Deferred(B)), m_Zero()))) {
+
+      return true;
+    }
+  }
+  return false;
+}
+
 static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
                                    bool NSW, bool NUW,
                                    const APInt &DemandedElts,
@@ -499,8 +532,10 @@ static void computeKnownBitsAddSub(bool Add, const Value *Op0, const Value *Op1,
   KnownOut = KnownBits::computeForAddSub(Add, NSW, NUW, Known2, KnownOut);
 
   if (!Add && NSW && !KnownOut.isNonNegative() &&
-      isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
-          .value_or(false))
+      (isImpliedByDomCondition(ICmpInst::ICMP_SLE, Op1, Op0, Q.CxtI, Q.DL)
+           .value_or(false) ||
+       isKnownNonNegativeICmpWithMinMax(Add, NSW, NUW, Op0, Op1, Q.CxtI,
+                                        KnownOut)))
     KnownOut.makeNonNegative();
 
   if (Add)
