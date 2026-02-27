@@ -96,10 +96,10 @@ inline constexpr const char
         "JSONFormat - EntitySummary data for '{0}' reports mismatched '{1}'";
 
 inline constexpr const char *InvalidBuildNamespaceKind =
-    "invalid 'kind' BuildNamespaceKind value '{0}'";
+    "invalid BuildNamespaceKind value '{0}' for field 'kind'";
 
 inline constexpr const char *InvalidEntityLinkageType =
-    "invalid 'type' EntityLinkageType value '{0}'";
+    "invalid EntityLinkageType value '{0}' for field 'type'";
 
 inline constexpr const char *FailedToDeserializeLinkageTableExtraId =
     "failed to deserialize LinkageTable: extra '{0}' not present in IdTable";

@@ -104,7 +104,7 @@ private:
 
   llvm::Expected<std::map<EntityId, EntityLinkage>>
   linkageTableFromJSON(const Array &LinkageTableArray,
-                       std::set<EntityId> EntityIds) const;
+                       std::set<EntityId> ExpectedIds) const;
   Array linkageTableToJSON(
       const std::map<EntityId, EntityLinkage> &LinkageTable) const;
 

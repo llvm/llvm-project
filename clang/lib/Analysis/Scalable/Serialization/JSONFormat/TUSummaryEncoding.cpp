@@ -19,16 +19,20 @@ namespace clang::ssaf {
 
 namespace {
 
-class JSONEntitySummaryEncoding : public EntitySummaryEncoding {
-public:
-  explicit JSONEntitySummaryEncoding(Value Data) : Data(std::move(Data)) {}
+class JSONEntitySummaryEncoding final : public EntitySummaryEncoding {
+  friend JSONFormat;
 
+public:
   void
   patch(const std::map<EntityId, EntityId> &EntityResolutionTable) override {
-    llvm_unreachable("not implemented");
+    ErrorBuilder::fatal("will be implemented in the future");
   }
 
-  Value Data;
+private:
+  explicit JSONEntitySummaryEncoding(llvm::json::Value Data)
+      : Data(std::move(Data)) {}
+
+  llvm::json::Value Data;
 };
 
 } // namespace
@@ -40,7 +44,6 @@ public:
 llvm::Expected<std::pair<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
 JSONFormat::encodingDataMapEntryFromJSON(
     const Object &EntityDataMapEntryObject) const {
-
   const Value *EntityIdIntValue = EntityDataMapEntryObject.get("entity_id");
   if (!EntityIdIntValue) {
     return ErrorBuilder::create(std::errc::invalid_argument,
@@ -71,9 +74,8 @@ JSONFormat::encodingDataMapEntryFromJSON(
         .build();
   }
 
-  std::unique_ptr<EntitySummaryEncoding> Encoding =
-      std::make_unique<JSONEntitySummaryEncoding>(
-          Value(Object(*OptEntitySummaryObject)));
+  std::unique_ptr<EntitySummaryEncoding> Encoding(
+      new JSONEntitySummaryEncoding(Value(Object(*OptEntitySummaryObject))));
 
   return std::make_pair(std::move(EI), std::move(Encoding));
 }
@@ -155,7 +157,6 @@ llvm::Expected<std::pair<
     SummaryName, std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>>
 JSONFormat::encodingSummaryDataMapEntryFromJSON(
     const Object &SummaryDataMapEntryObject) const {
-
   std::optional<llvm::StringRef> OptSummaryNameStr =
       SummaryDataMapEntryObject.getString("summary_name");
   if (!OptSummaryNameStr) {
