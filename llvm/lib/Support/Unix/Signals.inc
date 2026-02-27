@@ -157,11 +157,15 @@ public:
       if (char *OldFilename = Current->Filename.load()) {
         if (OldFilename != Filename)
           continue;
-        // Leave an empty filename.
-        OldFilename = Current->Filename.exchange(nullptr);
-        // The filename might have become null between the time we
-        // compared it and we exchanged it.
-        if (OldFilename)
+        // Leave an empty filename. Use CAS to avoid racing with the signal
+        // handler (which can't take the writer lock); only clear and free
+        // if we still own the pointer.
+        char *Expected = OldFilename;
+        while (!Current->Filename.compare_exchange_strong(Expected, nullptr)) {
+          if (Expected == nullptr)
+            break; // Another actor cleared it; nothing to free.
+        }
+        if (Expected == OldFilename)
           free(OldFilename);
       }
     }
@@ -187,20 +191,20 @@ public:
 
   // Signal-safe.
   static void removeAllFiles(std::atomic<FileToRemoveList *> &Head) {
-    // If cleanup were to occur while we're removing files we'd have a bad time.
-    // Make sure we're OK by preventing cleanup from doing anything while we're
-    // removing files. If cleanup races with us and we win we'll have a leak,
-    // but we won't crash.
+    // This signal-safe code cannot acquire the writer lock, and needs to defend
+    // against racing writes from the `erase` method above.
     FileToRemoveList *OldHead = Head.exchange(nullptr);
 
     for (FileToRemoveList *currentFile = OldHead; currentFile;
          currentFile = currentFile->Next.load()) {
-      // If erasing was occuring while we're trying to remove files we'd look
-      // at free'd data. Take away the path and put it back when done.
+      // Take exclusive ownership of the filename while we're removing it to
+      // avoid racing cleanup threads from freeing the data from under us.
       if (char *path = currentFile->Filename.exchange(nullptr)) {
         removeFile(path);
 
-        // We're done removing the file, erasing can safely proceed.
+        // We're done removing the file. Add it back to the list to create a
+        // global root referencing the heap allocation, which will pacify leak
+        // checkers that run at program exit.
         currentFile->Filename.exchange(path);
       }
     }
