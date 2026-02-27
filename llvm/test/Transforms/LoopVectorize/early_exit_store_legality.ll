@@ -570,6 +570,70 @@ exit:
   ret void
 }
 
+;; Vectorizeable, requires processing more than one exit.
+define void @loop_contains_store_before_two_early_exits(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred, ptr align 2 dereferenceable(40) readonly %pred2) {
+; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_before_two_early_exits'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp slt i16 %ee.val, 250
+  br i1 %ee.cond, label %exit, label %for.cont
+
+for.cont:
+  %ee2.addr = getelementptr inbounds nuw i16, ptr %pred2, i64 %iv
+  %ee2.val = load i16, ptr %ee2.addr, align 2
+  %ee2.cond = icmp sgt i16 %ee2.val, 500
+  br i1 %ee2.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+;; Vectorizeable, requires processing more than one exit.
+define void @one_uncountable_two_countable_exits(ptr dereferenceable(1024) noalias %array, ptr dereferenceable(1024) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'one_uncountable_two_countable_exits'
+; CHECK:       LV: Not vectorizing: Load for uncountable exit not guaranteed to execute.
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %iv.next, %loop.inc ], [ 3, %entry ]
+  %ce.ee.cmp = icmp ne i64 %iv, 64
+  br i1 %ce.ee.cmp, label %update, label %loop.end
+
+update:
+  %st.addr = getelementptr inbounds i8, ptr %array, i64 %iv
+  %data = load i8, ptr %st.addr, align 1
+  %inc = add nsw i8 %data, 1
+  store i8 %inc, ptr %st.addr, align 1
+  %ee.addr = getelementptr inbounds i8, ptr %pred, i64 %iv
+  %ee.val = load i8, ptr %ee.addr, align 1
+  %ee.cond = icmp eq i8 %ee.val, 37
+  br i1 %ee.cond, label %loop.end, label %loop.inc
+
+loop.inc:
+  %iv.next = add i64 %iv, 1
+  %ce.latch.cmp = icmp ne i64 %iv.next, 128
+  br i1 %ce.latch.cmp, label %loop, label %loop.end
+
+loop.end:
+  ret void
+}
+
 ;; Avoid vectorization; similar to another invariant test above, we would either
 ;; exit immediately on the first lane or never take the early exit. Should be
 ;; versioned before reaching LV.
