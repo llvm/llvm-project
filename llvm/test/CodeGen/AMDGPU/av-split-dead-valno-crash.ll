@@ -62,29 +62,19 @@ define amdgpu_kernel void @vgpr_mfma_pass_av_split_crash(double %arg1, i1 %arg2,
 ; CHECK-NEXT:    ; in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    v_mov_b64_e32 v[24:25], s[14:15]
 ; CHECK-NEXT:    flat_load_dwordx2 v[24:25], v[24:25]
-; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[0:1]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[2:3]
 ; CHECK-NEXT:    v_accvgpr_write_b32 a0, 0
 ; CHECK-NEXT:    v_accvgpr_write_b32 a1, 0
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[24:25]
-; CHECK-NEXT:    v_fmac_f64_e32 v[28:29], 0, v[26:27]
-; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[4:5]
-; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[28:29]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[6:7]
-; CHECK-NEXT:    v_fmac_f64_e32 v[28:29], 0, v[26:27]
-; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[8:9]
-; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[28:29]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[10:11]
-; CHECK-NEXT:    v_fmac_f64_e32 v[28:29], 0, v[26:27]
-; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[12:13]
-; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[28:29]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[14:15]
-; CHECK-NEXT:    v_fmac_f64_e32 v[28:29], 0, v[26:27]
-; CHECK-NEXT:    v_mov_b64_e32 v[26:27], v[16:17]
-; CHECK-NEXT:    v_fmac_f64_e32 v[26:27], 0, v[28:29]
-; CHECK-NEXT:    v_mov_b64_e32 v[28:29], v[18:19]
-; CHECK-NEXT:    v_fmac_f64_e32 v[28:29], 0, v[26:27]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[24:25], 0, v[0:1]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[2:3]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[4:5]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[6:7]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[8:9]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[10:11]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[12:13]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[14:15]
+; CHECK-NEXT:    v_fma_f64 v[26:27], v[26:27], 0, v[16:17]
+; CHECK-NEXT:    v_fma_f64 v[28:29], v[26:27], 0, v[18:19]
 ; CHECK-NEXT:    s_branch .LBB0_6
 ; CHECK-NEXT:  .LBB0_5: ; %Flow
 ; CHECK-NEXT:    ; in Loop: Header=BB0_6 Depth=2
