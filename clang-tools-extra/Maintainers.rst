@@ -30,6 +30,8 @@ clang-tidy
 | Victor Baranov
 | bar.victor.2002@gmail.com (email), vbvictor (GitHub), vbvictor (Discourse), vbvictor  (Discord)
 
+| Zeyi Xu
+| zeyi2@nekoarch.cc (email), zeyi2 (Github), zeyi2 (Discourse), zeyi1 (Discord)
 
 clang-query
 -----------
