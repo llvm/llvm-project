@@ -1581,11 +1581,14 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
   // Find the macro definition from the command line.
   MacroInfo *CmdLineDefinition = nullptr;
   for (auto *MD = LatestLocalMD; MD; MD = MD->getPrevious()) {
-    // We only care about the predefines buffer.
-    FileID FID = SourceMgr.getFileID(MD->getLocation());
+    SourceLocation MDLoc = MD->getLocation();
+    FileID FID = SourceMgr.getFileID(MDLoc);
     if (FID.isInvalid())
       continue;
-    if (FID != PP.getPredefinesFileID() && FID != PP.getPCHPredefinesFileID())
+    // We only care about the predefines buffer, or if the macro is defined
+    // over the command line transitively through a PCH.
+    if (FID != PP.getPredefinesFileID() &&
+        !SourceMgr.isWrittenInCommandLineFile(MDLoc))
       continue;
     if (auto *DMD = dyn_cast<DefMacroDirective>(MD))
       CmdLineDefinition = DMD->getMacroInfo();
@@ -1607,7 +1610,7 @@ static void checkConfigMacro(Preprocessor &PP, StringRef ConfigMacro,
       << true;
     return;
   } else if (!CmdLineDefinition) {
-    // There was no definition for this macro in the predefines buffer,
+    // There was no definition for this macro in the command line,
     // but there was a local definition. Complain.
     PP.Diag(ImportLoc, diag::warn_module_config_macro_undef)
       << false << ConfigMacro << Mod->getFullModuleName();
