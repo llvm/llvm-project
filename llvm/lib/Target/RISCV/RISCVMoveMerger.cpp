@@ -366,7 +366,7 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
           continue;
         }
       }
-      if (IsEven ^ IsOdd) {
+      if (IsEven != IsOdd) {
         Paired = findMatchingInstPair(MBBI, IsEven, RegPair.value());
         if (Paired != E) {
           MBBI = mergeGPRPairInsns(MBBI, Paired, IsEven);
