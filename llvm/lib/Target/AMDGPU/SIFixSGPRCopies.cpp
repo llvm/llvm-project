@@ -1019,6 +1019,37 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
 // The main function that computes the VGPR to SGPR copy score
 // and determines copy further lowering way: v_readfirstlane_b32 or moveToVALU
 bool SIFixSGPRCopies::needToBeConvertedToVALU(V2SCopyInfo *Info) {
+  // V2S copies feeding inline asm operands with SGPR constraints must be
+  // lowered to v_readfirstlane, not converted to VALU. Trace transitively
+  // through COPYs and REG_SEQUENCEs since the value may pass through
+  // intermediate SGPR registers before reaching the inline asm.
+  SmallVector<Register, 4> TraceWorklist;
+  DenseSet<Register> TraceVisited;
+  TraceWorklist.push_back(Info->Copy->getOperand(0).getReg());
+  while (!TraceWorklist.empty()) {
+    Register Reg = TraceWorklist.pop_back_val();
+    if (!TraceVisited.insert(Reg).second)
+      continue;
+    for (MachineInstr &UseMI : MRI->use_instructions(Reg)) {
+      if (UseMI.isInlineAsm()) {
+        for (unsigned OpIdx = InlineAsm::MIOp_FirstOperand;
+             OpIdx < UseMI.getNumOperands(); ++OpIdx) {
+          const MachineOperand &Op = UseMI.getOperand(OpIdx);
+          if (Op.isReg() && Op.getReg() == Reg) {
+            const TargetRegisterClass *RC =
+                UseMI.getRegClassConstraint(OpIdx, TII, TRI);
+            if (RC && TRI->isSGPRClass(RC))
+              return false;
+          }
+        }
+      }
+      if ((UseMI.isCopy() || UseMI.isRegSequence()) &&
+          UseMI.getOperand(0).getReg().isVirtual() &&
+          TRI->isSGPRReg(*MRI, UseMI.getOperand(0).getReg()))
+        TraceWorklist.push_back(UseMI.getOperand(0).getReg());
+    }
+  }
+
   if (Info->SChain.empty()) {
     Info->Score = 0;
     return true;
