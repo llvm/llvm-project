@@ -536,7 +536,7 @@ define void @vscale_ult_no_vscale_range(ptr nocapture %A) mustprogress {
 ; CHECK-NEXT:    %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.05
 ; CHECK-NEXT:    --> {%A,+,(4 * vscale)}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:    %add = add i32 %i.05, %vscale
-; CHECK-NEXT:    --> {vscale,+,vscale}<%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
+; CHECK-NEXT:    --> {vscale,+,vscale}<nw><%for.body> U: full-set S: full-set Exits: <<Unknown>> LoopDispositions: { %for.body: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @vscale_ult_no_vscale_range
 ; CHECK-NEXT:  Loop %for.body: Unpredictable backedge-taken count.
 ; CHECK-NEXT:  Loop %for.body: Unpredictable constant max backedge-taken count.
