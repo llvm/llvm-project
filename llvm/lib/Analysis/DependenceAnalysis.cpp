@@ -1810,11 +1810,9 @@ static bool isRemainderZero(const SCEVConstant *Dividend,
 // (see also weakZeroDstSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurSrcLoop,
-                                        const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *SrcConst,
+                                        const SCEVAddRecExpr *Dst,
+                                        unsigned Level,
                                         FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
     return false;
@@ -1822,6 +1820,8 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   // For the WeakSIV test, it's possible the loop isn't common to
   // the Src and Dst loops. If it isn't, then there's no need to
   // record a direction.
+  const SCEV *DstCoeff = Dst->getStepRecurrence(*SE);
+  const SCEV *DstConst = Dst->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (src) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    DstCoeff = " << *DstCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1829,6 +1829,15 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= MaxLevels && "Level out of range");
   Level--;
+
+  ConstantRange SrcRange = SE->getSignedRange(SrcConst);
+  ConstantRange DstRange = SE->getSignedRange(Dst);
+  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
+    ++WeakZeroSIVindependence;
+    ++WeakZeroSIVsuccesses;
+    return true;
+  }
+
   const SCEV *Delta = SE->getMinusSCEV(SrcConst, DstConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (SrcConst == DstConst && SE->isKnownNonZero(DstCoeff)) {
@@ -1850,17 +1859,10 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
   const SCEV *NewDelta =
       SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
 
-  // check that Delta/SrcCoeff < iteration count
-  // really check NewDelta < count*AbsCoeff
   if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
+          collectUpperBound(Dst->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
-      ++WeakZeroSIVindependence;
-      ++WeakZeroSIVsuccesses;
-      return true;
-    }
     if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
       // dependences caused by last iteration
       if (Level < CommonLevels) {
@@ -1921,17 +1923,16 @@ bool DependenceInfo::weakZeroSrcSIVtest(const SCEV *DstCoeff,
 // (see also weakZeroSrcSIVtest)
 //
 // Return true if dependence disproved.
-bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
-                                        const SCEV *SrcConst,
-                                        const SCEV *DstConst,
-                                        const Loop *CurSrcLoop,
-                                        const Loop *CurDstLoop, unsigned Level,
+bool DependenceInfo::weakZeroDstSIVtest(const SCEVAddRecExpr *Src,
+                                        const SCEV *DstConst, unsigned Level,
                                         FullDependence &Result) const {
   if (!isDependenceTestEnabled(DependenceTestType::WeakZeroSIV))
     return false;
 
   // For the WeakSIV test, it's possible the loop isn't common to the
   // Src and Dst loops. If it isn't, then there's no need to record a direction.
+  const SCEV *SrcCoeff = Src->getStepRecurrence(*SE);
+  const SCEV *SrcConst = Src->getStart();
   LLVM_DEBUG(dbgs() << "\tWeak-Zero (dst) SIV test\n");
   LLVM_DEBUG(dbgs() << "\t    SrcCoeff = " << *SrcCoeff << "\n");
   LLVM_DEBUG(dbgs() << "\t    SrcConst = " << *SrcConst << "\n");
@@ -1939,6 +1940,15 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   ++WeakZeroSIVapplications;
   assert(0 < Level && Level <= SrcLevels && "Level out of range");
   Level--;
+
+  ConstantRange SrcRange = SE->getSignedRange(Src);
+  ConstantRange DstRange = SE->getSignedRange(DstConst);
+  if (SrcRange.intersectWith(DstRange).isEmptySet()) {
+    ++WeakZeroSIVindependence;
+    ++WeakZeroSIVsuccesses;
+    return true;
+  }
+
   const SCEV *Delta = SE->getMinusSCEV(DstConst, SrcConst);
   LLVM_DEBUG(dbgs() << "\t    Delta = " << *Delta << "\n");
   if (DstConst == SrcConst && SE->isKnownNonZero(SrcCoeff)) {
@@ -1960,17 +1970,10 @@ bool DependenceInfo::weakZeroDstSIVtest(const SCEV *SrcCoeff,
   const SCEV *NewDelta =
       SE->isKnownNegative(ConstCoeff) ? SE->getNegativeSCEV(Delta) : Delta;
 
-  // check that Delta/SrcCoeff < iteration count
-  // really check NewDelta < count*AbsCoeff
   if (const SCEV *UpperBound =
-          collectUpperBound(CurSrcLoop, Delta->getType())) {
+          collectUpperBound(Src->getLoop(), Delta->getType())) {
     LLVM_DEBUG(dbgs() << "\t    UpperBound = " << *UpperBound << "\n");
     const SCEV *Product = SE->getMulExpr(AbsCoeff, UpperBound);
-    if (SE->isKnownPredicate(CmpInst::ICMP_SGT, NewDelta, Product)) {
-      ++WeakZeroSIVindependence;
-      ++WeakZeroSIVsuccesses;
-      return true;
-    }
     if (SE->isKnownPredicate(CmpInst::ICMP_EQ, NewDelta, Product)) {
       // dependences caused by last iteration
       if (Level < CommonLevels) {
@@ -2300,23 +2303,15 @@ bool DependenceInfo::testSIV(const SCEV *Src, const SCEV *Dst, unsigned &Level,
                             CurDstLoop);
   }
   if (SrcAddRec) {
-    const SCEV *SrcConst = SrcAddRec->getStart();
-    const SCEV *SrcCoeff = SrcAddRec->getStepRecurrence(*SE);
-    const SCEV *DstConst = Dst;
     const Loop *CurSrcLoop = SrcAddRec->getLoop();
     Level = mapSrcLoop(CurSrcLoop);
-    return weakZeroDstSIVtest(SrcCoeff, SrcConst, DstConst, CurSrcLoop,
-                              CurSrcLoop, Level, Result) ||
+    return weakZeroDstSIVtest(SrcAddRec, Dst, Level, Result) ||
            gcdMIVtest(Src, Dst, Result);
   }
   if (DstAddRec) {
-    const SCEV *DstConst = DstAddRec->getStart();
-    const SCEV *DstCoeff = DstAddRec->getStepRecurrence(*SE);
-    const SCEV *SrcConst = Src;
     const Loop *CurDstLoop = DstAddRec->getLoop();
     Level = mapDstLoop(CurDstLoop);
-    return weakZeroSrcSIVtest(DstCoeff, SrcConst, DstConst, CurDstLoop,
-                              CurDstLoop, Level, Result) ||
+    return weakZeroSrcSIVtest(Src, DstAddRec, Level, Result) ||
            gcdMIVtest(Src, Dst, Result);
   }
   llvm_unreachable("SIV test expected at least one AddRec");
