@@ -298,9 +298,9 @@ llvm::Function *CodeGenFunction::createTLSAtExitStub(
   CodeGenFunction CGF(CGM);
 
   FunctionArgList Args;
-  ImplicitParamDecl IPD(CGM.getContext(), CGM.getContext().IntTy,
-                        ImplicitParamKind::Other);
-  Args.push_back(&IPD);
+  auto *IPD = ImplicitParamDecl::Create(
+      CGM.getContext(), CGM.getContext().IntTy, ImplicitParamKind::Other);
+  Args.push_back(IPD);
   QualType ResTy = CGM.getContext().IntTy;
 
   CGF.StartFunction(GlobalDecl(&D, DynamicInitKind::AtExit), ResTy, DtorStub,
@@ -1197,9 +1197,9 @@ llvm::Function *CodeGenFunction::generateDestroyHelper(
     Address addr, QualType type, Destroyer *destroyer,
     bool useEHCleanupForArray, const VarDecl *VD) {
   FunctionArgList args;
-  ImplicitParamDecl Dst(getContext(), getContext().VoidPtrTy,
-                        ImplicitParamKind::Other);
-  args.push_back(&Dst);
+  auto *Dst = ImplicitParamDecl::Create(getContext(), getContext().VoidPtrTy,
+                                        ImplicitParamKind::Other);
+  args.push_back(Dst);
 
   const CGFunctionInfo &FI =
     CGM.getTypes().arrangeBuiltinFunctionDeclaration(getContext().VoidTy, args);
