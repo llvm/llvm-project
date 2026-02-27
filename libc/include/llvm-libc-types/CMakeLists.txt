@@ -87,7 +87,7 @@ add_header(
     .key_t
     .uid_t
     .gid_t
-		.mode_t
+    .mode_t
 )
 add_header(struct_pollfd HDR struct_pollfd.h)
 add_header(struct_rlimit HDR struct_rlimit.h DEPENDS .rlim_t)
