@@ -54,6 +54,7 @@
 #include "swift/Demangling/ManglingFlavor.h"
 #include "swift/Demangling/ManglingMacros.h"
 #include "swift/Frontend/CachingUtils.h"
+#include "swift/Frontend/CompileJobCacheKey.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/ModuleInterfaceLoader.h"
 #include "swift/IRGen/Linking.h"
@@ -2902,6 +2903,56 @@ SwiftASTContext::GetModuleContentsFromCAS(StringRef maybe_id) {
       swift::file_types::TY_SwiftModuleFile, maybe_id);
 }
 
+bool SwiftASTContext::SetupFileSystemFromCacheKey(llvm::StringRef cache_key) {
+  assert(m_cas);
+  auto id = m_cas->parseID(cache_key);
+  if (!id) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), id.takeError(),
+                   "'{1}' is not valid CASID: {0}", cache_key);
+    return false;
+  }
+
+  auto ref = m_cas->getReference(*id);
+  if (!ref) {
+    LOG_PRINTF(GetLog(LLDBLog::Types), "CASID does not exist in CAS: %s",
+               cache_key.data());
+    return false;
+  }
+
+  std::string includeTreeFileList;
+  auto err = swift::iterateCommandLine(
+      *m_cas, *ref, [&](llvm::StringRef cmd) -> llvm::Error {
+        if (cmd.consume_front("-clang-include-tree-filelist "))
+          includeTreeFileList = cmd;
+
+        return llvm::Error::success();
+      });
+  if (err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
+                   "failed to extract cas fs from file system: {0}");
+    return false;
+  }
+
+  auto fs = swift::createCASFileSystem(*m_cas, "", includeTreeFileList);
+  if (!fs) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), fs.takeError(),
+                   "failed to create CAS file sytem from cache key: {0}");
+    return false;
+  }
+
+  auto &source_mgr = GetSourceManager();
+  llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> overlay =
+      new llvm::vfs::OverlayFileSystem(source_mgr.getFileSystem());
+
+  overlay->pushOverlay(std::move(*fs));
+  source_mgr.setFileSystem(std::move(overlay));
+
+  LOG_PRINTF(GetLog(LLDBLog::Types), "CAS file system created from id: %s",
+             cache_key.data());
+
+  return true;
+}
+
 bool SwiftASTContext::DiscoverExplicitMainModule(const SymbolContext &sc,
                                                  const Module &image) {
   CompileUnit *compile_unit = sc.comp_unit;
@@ -2930,6 +2981,7 @@ bool SwiftASTContext::DiscoverExplicitMainModule(const SymbolContext &sc,
     }
   } else {
     moduleCacheKey = module.search_path.GetString();
+    SetupFileSystemFromCacheKey(*moduleCacheKey);
   }
   if (!buffer) {
     LOG_PRINTF(GetLog(LLDBLog::Types), "Failed to load module: %s",
@@ -4212,7 +4264,7 @@ ThreadSafeASTContext SwiftASTContext::GetASTContext() {
     // applicable.
     DisableImplicitImportsRAII(*this);
     clang_importer_up = swift::ClangImporter::create(
-        *m_ast_context_up, &GetCompilerInvocation().getIRGenOptions(), "",
+        *m_ast_context_up, &GetCompilerInvocation().getIRGenOptions(), "", "",
         m_dependency_tracker.get(), m_dwarfimporter_delegate_up.get());
 
     if (clang_importer_up) {
@@ -9798,6 +9850,20 @@ GetCUSignature(CompileUnit &compile_unit) {
   return {compile_unit.GetModule().get(), compile_unit.GetID()};
 }
 
+static std::unique_ptr<llvm::MemoryBuffer>
+loadPCHFromCAS(llvm::cas::ObjectStore &m_cas, llvm::cas::ActionCache &m_cache,
+               llvm::StringRef maybe_id) {
+  auto proxy = swift::loadCachedCompileResultProxy(m_cas, m_cache, maybe_id,
+                                                   swift::file_types::TY_PCH);
+  if (!proxy) {
+    llvm::consumeError(proxy.takeError());
+    return nullptr;
+  }
+  if (!*proxy)
+    return nullptr;
+  return (*proxy)->getMemoryBuffer();
+}
+
 void SwiftASTContext::ConfigureBridgingHeader(const SymbolContext &sc) {
   if (!m_has_explicit_modules ||
       Target::GetGlobalProperties().GetSwiftAllowImplicitModules()) {
@@ -9810,23 +9876,51 @@ void SwiftASTContext::ConfigureBridgingHeader(const SymbolContext &sc) {
   if (compile_unit->GetLanguage() != lldb::eLanguageTypeSwift)
     return;
   std::vector<SourceModule> cu_imports = compile_unit->GetImportedModules();
+  auto &source_mgr = GetSourceManager();
   for (const SourceModule &module : cu_imports) {
     if (!module.path.size() ||
         module.path.front() != swift::CLANG_HEADER_MODULE_NAME)
       continue;
-    if (!IsModuleAvailable(module.search_path)) {
+
+    llvm::SmallString<128> bridging_header_path(module.search_path);
+    if (m_cas && m_action_cache) {
+      if (auto pch_buffer =
+              loadPCHFromCAS(*m_cas, *m_action_cache, module.search_path)) {
+        LOG_PRINTF(GetLog(LLDBLog::Types), "Found bridging PCH in CAS: %s",
+                   module.search_path.GetString().c_str());
+
+        // Create the VFS that imports the bridging header from a location in
+        // module cache.
+        bridging_header_path =
+            GetCompilerInvocation().getClangModuleCachePath();
+        llvm::sys::path::append(bridging_header_path, "lldb",
+                                "bridging_header.pch");
+
+        llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> mem_fs =
+            new llvm::vfs::InMemoryFileSystem();
+        mem_fs->addFile(bridging_header_path, 0, std::move(pch_buffer));
+
+        llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> overlay =
+            new llvm::vfs::OverlayFileSystem(source_mgr.getFileSystem());
+
+        overlay->pushOverlay(std::move(mem_fs));
+        source_mgr.setFileSystem(std::move(overlay));
+      }
+    }
+
+    if (!source_mgr.getFileSystem()->exists(bridging_header_path)) {
       LOG_PRINTF(GetLog(LLDBLog::Types), "Could not find bridging PCH %s",
-                 module.search_path.GetString().c_str());
+                 bridging_header_path.c_str());
       return;
     }
     LOG_PRINTF(GetLog(LLDBLog::Types), "Found bridging PCH %s",
                module.search_path.GetString().c_str());
 
     auto &ci_opts = GetClangImporterOptions();
-    ci_opts.BridgingHeaderPCH = module.search_path.GetString();
+    ci_opts.BridgingHeaderPCH = bridging_header_path.str();
     // Since we are installing the PCH as the "BridgingHeaderPCH", it
     // gets imported when ClangImporter is created. Importing the main
-    // module normally would discover the brisging header as a
+    // module normally would discover the bridging header as a
     // dependency again. We can prevent this by putting ClangImporter
     // into chained bridging header mode. Then it assumes all headers
     // were pre-imported as part of the PCH and will not attempt to

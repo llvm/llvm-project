@@ -89,7 +89,7 @@ public:
         m_compiler_invocation.getSerializationOptions(), m_source_manager,
         m_diagnostic_engine, m_compiler_invocation.getSDKInfo()));
     m_clang_importer = swift::ClangImporter::create(*m_ast_context,
-        nullptr, "", {}, {});
+        nullptr, "", "", {}, {});
   }
   std::string ImportName(const clang::NamedDecl *decl) {
     swift::DeclName imported_name = m_clang_importer->importName(decl, {});
