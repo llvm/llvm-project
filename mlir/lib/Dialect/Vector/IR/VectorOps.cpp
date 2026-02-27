@@ -19,6 +19,7 @@
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
@@ -487,6 +488,9 @@ void VectorDialect::initialize() {
                             YieldOp>();
   declarePromisedInterfaces<SubsetOpInterface, TransferReadOp,
                             TransferWriteOp>();
+  declarePromisedInterfaces<memref::IndexedAccessOpInterface, LoadOp, StoreOp,
+                            MaskedLoadOp, MaskedStoreOp, ExpandLoadOp,
+                            CompressStoreOp>();
   declarePromisedInterface<SubsetExtractionOpInterface, TransferReadOp>();
   declarePromisedInterface<SubsetInsertionOpInterface, TransferWriteOp>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, VectorDialect>();

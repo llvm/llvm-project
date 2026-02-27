@@ -1639,6 +1639,7 @@ def Vector_TransferWriteOp :
   let hasVerifier = 1;
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_LoadOp : Vector_Op<"load", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1757,6 +1758,7 @@ def Vector_LoadOp : Vector_Op<"load", [
       "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_StoreOp : Vector_Op<"store", [
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getShapeForUnroll"]>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1864,6 +1866,7 @@ def Vector_StoreOp : Vector_Op<"store", [
                        "`:` type($base) `,` type($valueToStore)";
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_MaskedLoadOp :
   Vector_Op<"maskedload", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -1959,6 +1962,7 @@ def Vector_MaskedLoadOp :
   ];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_MaskedStoreOp :
   Vector_Op<"maskedstore", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2232,6 +2236,7 @@ def Vector_ScatterOp
     }]>];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_ExpandLoadOp :
   Vector_Op<"expandload", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2323,6 +2328,7 @@ def Vector_ExpandLoadOp :
   ];
 }
 
+// Promises IndexedAccessOpInterface.
 def Vector_CompressStoreOp :
   Vector_Op<"compressstore", [
       DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
@@ -2534,7 +2540,7 @@ def Vector_TypeCastOp :
 }
 
 def Vector_ConstantMaskOp :
-  Vector_Op<"constant_mask", [Pure, 
+  Vector_Op<"constant_mask", [Pure,
    DeclareOpInterfaceMethods<VectorUnrollOpInterface>
    ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
@@ -2594,7 +2600,7 @@ def Vector_ConstantMaskOp :
 }
 
 def Vector_CreateMaskOp :
-  Vector_Op<"create_mask", [Pure, 
+  Vector_Op<"create_mask", [Pure,
    DeclareOpInterfaceMethods<VectorUnrollOpInterface>
    ]>,
     Arguments<(ins Variadic<Index>:$operands)>,
