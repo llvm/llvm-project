@@ -25,6 +25,7 @@
 #include "clang/CodeGen/CodeGenABITypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/SaveAndRestore.h"
 
 using namespace clang;
@@ -154,13 +155,17 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   bool IsMSVC = EHPersonality::get(CGF).isMSVCPersonality();
 
   CodeGenFunction::FinallyInfo FinallyInfo;
-  if (!useFunclets)
-    if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt())
+  if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt()) {
+    if (!useFunclets) {
       // The finally statement is executed as a cleanup for the normal and
       // exceptional control flow out of a try-catch block. This is all
       // implemented in FinallyInfo. Here we enter a new EHCatchScope.
-      FinallyInfo.enter(CGF, Finally->getFinallyBody(),
-                        beginCatchFn, endCatchFn, exceptionRethrowFn);
+      FinallyInfo.enter(CGF, Finally->getFinallyBody(), beginCatchFn,
+                        endCatchFn, exceptionRethrowFn);
+    } else if (IsWasm) {
+      llvm_unreachable("@finally not implemented for WASM");
+    }
+  }
 
   SmallVector<CatchHandler, 8> Handlers;
 
