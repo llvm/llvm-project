@@ -16,7 +16,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
-#include "llvm/MC/MCAsmBaseStreamer.h"
+#include "llvm/MC/MCAsmStreamer.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
@@ -31,7 +31,7 @@
 namespace llvm {
 class MCSymbolGOFF;
 
-class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
+class SystemZHLASMAsmStreamer final : public MCAsmStreamer {
   constexpr static size_t InstLimit = 80;
   constexpr static size_t ContIndicatorColumn = 72;
   constexpr static size_t ContStartColumn = 15;
@@ -50,7 +50,7 @@ public:
                           std::unique_ptr<MCInstPrinter> Printer,
                           std::unique_ptr<MCCodeEmitter> Emitter,
                           std::unique_ptr<MCAsmBackend> AsmBackend)
-      : MCAsmBaseStreamer(Context, std::move(Emitter), std::move(AsmBackend)),
+      : MCAsmStreamer(Context, std::move(Emitter), std::move(AsmBackend)),
         FOSOwner(std::move(OS)), FOS(*FOSOwner), OS(Str),
         MAI(Context.getAsmInfo()), InstPrinter(std::move(Printer)) {
     assert(InstPrinter);

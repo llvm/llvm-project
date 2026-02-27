@@ -1,4 +1,4 @@
-//===- MCAsmBaseStreamer.h - Base Class for Asm Streamers -------*- C++ -*-===//
+//===- MCAsmStreamer.h - Base Class for Asm Streamers -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares the MCAsmBaseStreamer class, a base class for streamers
+// This file declares the MCAsmStreamer class, a base class for streamers
 // which emits assembly text.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_MC_MCASMBASESTREAMER_H
-#define LLVM_MC_MCASMBASESTREAMER_H
+#ifndef LLVM_MC_MCASMSTREAMER_H
+#define LLVM_MC_MCASMSTREAMER_H
 
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
@@ -28,15 +28,15 @@ class MCContext;
 class MCInst;
 class MCSubtargetInfo;
 
-class MCAsmBaseStreamer : public MCStreamer {
+class MCAsmStreamer : public MCStreamer {
 protected:
   std::unique_ptr<MCAssembler> Assembler;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
   raw_null_ostream NullStream;
 
-  MCAsmBaseStreamer(MCContext &Context, std::unique_ptr<MCCodeEmitter> Emitter,
-                    std::unique_ptr<MCAsmBackend> AsmBackend);
+  MCAsmStreamer(MCContext &Context, std::unique_ptr<MCCodeEmitter> Emitter,
+                std::unique_ptr<MCAsmBackend> AsmBackend);
 
 public:
   /// Return a raw_ostream that comments can be written to.
@@ -58,4 +58,4 @@ public:
 
 } // end namespace llvm
 
-#endif // LLVM_MC_MCASMBASESTREAMER_H
+#endif // LLVM_MC_MCASMSTREAMER_H
