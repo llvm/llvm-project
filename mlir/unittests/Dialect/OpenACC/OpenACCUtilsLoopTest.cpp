@@ -649,8 +649,6 @@ TEST_F(OpenACCUtilsLoopTest,
   EXPECT_EQ(mulCount, 1u);
 }
 
-// Exact pattern from issue2257/all.mlir: entry -> header (2 preds: entry, body);
-// header cond_br to exit or body; exit has return; body branches back to header.
 TEST_F(OpenACCUtilsLoopTest,
        WrapMultiBlockRegionWithSCFExecuteRegionIssue2257LoopPattern) {
   auto [module, funcOp] = createModuleWithFunc();
