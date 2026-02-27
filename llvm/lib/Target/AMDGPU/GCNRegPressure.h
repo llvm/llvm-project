@@ -324,8 +324,8 @@ public:
 
 protected:
   const LiveIntervals &LIS;
-  LiveRegSet LiveRegs;
-  GCNRegPressure CurPressure, MaxPressure;
+  LiveRegSet VirtLiveRegs;
+  GCNRegPressure CurVirtPressure, MaxVirtPressure;
   const MachineInstr *LastTrackedMI = nullptr;
   mutable const MachineRegisterInfo *MRI = nullptr;
 
@@ -347,20 +347,18 @@ protected:
   LaneBitmask getLastUsedLanes(Register Reg, SlotIndex Pos) const;
 
 public:
-  /// Resets tracker with the provided \p LiveRegs.
-  void reset(const MachineRegisterInfo &MRI, const LiveRegSet &LiveRegs);
+  /// Resets tracker with the provided \p VirtLiveRegs.
+  void reset(const MachineRegisterInfo &MRI, const LiveRegSet &VirtLiveRegs);
 
   // live regs for the current state
-  const decltype(LiveRegs) &getLiveRegs() const { return LiveRegs; }
+  const decltype(VirtLiveRegs) &getLiveRegs() const { return VirtLiveRegs; }
   const MachineInstr *getLastTrackedMI() const { return LastTrackedMI; }
 
-  void clearMaxPressure() { MaxPressure.clear(); }
+  void clearMaxPressure() { MaxVirtPressure.clear(); }
 
-  GCNRegPressure getPressure() const { return CurPressure; }
+  GCNRegPressure getPressure() const { return CurVirtPressure; }
 
-  decltype(LiveRegs) moveLiveRegs() {
-    return std::move(LiveRegs);
-  }
+  decltype(VirtLiveRegs) moveLiveRegs() { return std::move(VirtLiveRegs); }
 };
 
 GCNRPTracker::LiveRegSet
@@ -373,7 +371,7 @@ getLiveRegs(SlotIndex SI, const LiveIntervals &LIS,
 
 class GCNUpwardRPTracker : public GCNRPTracker {
 public:
-  GCNUpwardRPTracker(const LiveIntervals &LIS_) : GCNRPTracker(LIS_) {}
+  GCNUpwardRPTracker(const LiveIntervals &LIS) : GCNRPTracker(LIS) {}
 
   using GCNRPTracker::reset;
 
@@ -390,12 +388,12 @@ public:
   /// to reported by LIS.
   bool isValid() const;
 
-  const GCNRegPressure &getMaxPressure() const { return MaxPressure; }
+  const GCNRegPressure &getMaxPressure() const { return MaxVirtPressure; }
 
-  void resetMaxPressure() { MaxPressure = CurPressure; }
+  void resetMaxPressure() { MaxVirtPressure = CurVirtPressure; }
 
   GCNRegPressure getMaxPressureAndReset() {
-    GCNRegPressure RP = MaxPressure;
+    GCNRegPressure RP = MaxVirtPressure;
     resetMaxPressure();
     return RP;
   }
@@ -419,17 +417,17 @@ public:
 
   /// \p return MaxPressure and clear it.
   GCNRegPressure moveMaxPressure() {
-    auto Res = MaxPressure;
-    MaxPressure.clear();
+    auto Res = MaxVirtPressure;
+    MaxVirtPressure.clear();
     return Res;
   }
 
-  /// Reset tracker to the point before the \p MI filling \p LiveRegs upon this
-  /// point using LIS. \p End must be between the MI and the end of its parent
-  /// block (inclusive). \p returns false if the range [MI, End) is empty except
-  /// debug values.
+  /// Reset tracker to the point before the \p MI filling \p VirtLiveRegs upon
+  /// this point using LIS. \p End must be between the MI and the end of its
+  /// parent block (inclusive). \p returns false if the range [MI, End) is empty
+  /// except debug values.
   bool reset(const MachineInstr &MI, MachineBasicBlock::const_iterator End,
-             const LiveRegSet *LiveRegs = nullptr);
+             const LiveRegSet *VirtLiveRegs = nullptr);
 
   /// Move to the state right before the next MI or after the end of MBB.
   /// \p returns false if reached end of the block.
@@ -471,10 +469,10 @@ public:
   /// empty except debug values.
   bool advance(MachineBasicBlock::const_iterator Begin,
                MachineBasicBlock::const_iterator End,
-               const LiveRegSet *LiveRegsCopy = nullptr);
+               const LiveRegSet *VirtLiveRegsCopy = nullptr);
 
   /// Mostly copy/paste from CodeGen/RegisterPressure.cpp
-  /// Calculate the impact \p MI will have on CurPressure and \return the
+  /// Calculate the impact \p MI will have on CurVirtPressure and \return the
   /// speculated pressure. In order to support RP Speculation, this does not
   /// rely on the implicit program ordering in the LiveIntervals.
   GCNRegPressure bumpDownwardPressure(const MachineInstr *MI,
@@ -565,7 +563,7 @@ bool isEqual(const GCNRPTracker::LiveRegSet &S1,
 Printable print(const GCNRegPressure &RP, const GCNSubtarget *ST = nullptr,
                 unsigned DynamicVGPRBlockSize = 0);
 
-Printable print(const GCNRPTracker::LiveRegSet &LiveRegs,
+Printable print(const GCNRPTracker::LiveRegSet &VirtLiveRegs,
                 const MachineRegisterInfo &MRI);
 
 Printable reportMismatch(const GCNRPTracker::LiveRegSet &LISLR,
