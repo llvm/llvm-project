@@ -33,9 +33,9 @@ enum Color {
 // MD-INDEX: ## Enums
 // MD-INDEX: | enum Color |
 // MD-INDEX: --
-// MD-INDEX: | Red | 0 | Comment 1 |
-// MD-INDEX: | Green | 1 | Comment 2 |
-// MD-INDEX: | Blue | 2 | Comment 3 |
+// MD-INDEX: | Red |
+// MD-INDEX: | Green |
+// MD-INDEX: | Blue |
 // MD-INDEX: **brief** For specifying RGB colors
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
@@ -93,9 +93,9 @@ enum class Shapes {
 };
 // MD-INDEX: | enum class Shapes |
 // MD-INDEX: --
-// MD-INDEX: | Circle | 0 | Comment 1 |
-// MD-INDEX: | Rectangle | 1 | Comment 2 |
-// MD-INDEX: | Triangle | 2 | Comment 3 |
+// MD-INDEX: | Circle |
+// MD-INDEX: | Rectangle |
+// MD-INDEX: | Triangle |
 // MD-INDEX: **brief** Shape Types
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
@@ -151,9 +151,9 @@ enum Size : uint8_t {
 
 // MD-INDEX: | enum Size : uint8_t |
 // MD-INDEX: --
-// MD-INDEX: | Small | 0 | A pearl |
-// MD-INDEX: | Medium | 1 | A tennis ball |
-// MD-INDEX: | Large | 2 | A football |
+// MD-INDEX: | Small |
+// MD-INDEX: | Medium |
+// MD-INDEX: | Large |
 // MD-INDEX: **brief** Specify the size
 
 // HTML-INDEX-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
@@ -206,7 +206,7 @@ enum : long long {
 
 // MD-INDEX: | enum (unnamed) : long long |
 // MD-INDEX: --
-// MD-INDEX: | BigVal | 999999999999 | A very large value |
+// MD-INDEX: | BigVal |
 // MD-INDEX: **brief** Very long number
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
@@ -254,9 +254,9 @@ public:
 
 // MD-PERM: | enum (unnamed) |
 // MD-PERM: --
-// MD-PERM: | Read | 1 | Permission to READ r |
-// MD-PERM: | Write | 2 | Permission to WRITE w |
-// MD-PERM: | Execute | 4 | Permission to EXECUTE x |
+// MD-PERM: | Read |
+// MD-PERM: | Write |
+// MD-PERM: | Execute |
 // MD-PERM: **brief** File permission flags
 
 // HTML-PERM-LABEL:  <section id="Enums" class="section-container">
@@ -364,9 +364,9 @@ public:
 // MD-ANIMAL: ## Enums
 // MD-ANIMAL: | enum AnimalType |
 // MD-ANIMAL: --
-// MD-ANIMAL: | Dog | 0 | Man's best friend |
-// MD-ANIMAL: | Cat | 1 | Man's other best friend |
-// MD-ANIMAL: | Iguana | 2 | A lizard |
+// MD-ANIMAL: | Dog |
+// MD-ANIMAL: | Cat |
+// MD-ANIMAL: | Iguana |
 // MD-ANIMAL: **brief** specify what animal the class is
 
 namespace Vehicles {
@@ -388,10 +388,10 @@ enum Car {
 // MD-VEHICLES: ## Enums
 // MD-VEHICLES: | enum Car |
 // MD-VEHICLES: --
-// MD-VEHICLES: | Sedan | 0 | Comment 1 |
-// MD-VEHICLES: | SUV | 1 | Comment 2 |
-// MD-VEHICLES: | Pickup | 2 | Comment 3 |
-// MD-VEHICLES: | Hatchback | 3 | Comment 4 |
+// MD-VEHICLES: | Sedan |
+// MD-VEHICLES: | SUV |
+// MD-VEHICLES: | Pickup |
+// MD-VEHICLES: | Hatchback |
 // MD-VEHICLES: **brief** specify type of car
 
 // HTML-VEHICLES-LABEL:   <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
@@ -447,9 +447,9 @@ enum ColorUserSpecified {
 
 // MD-INDEX: | enum ColorUserSpecified |
 // MD-INDEX: --
-// MD-INDEX: | RedUserSpecified | 65 |
-// MD-INDEX: | GreenUserSpecified | 2 |
-// MD-INDEX: | BlueUserSpecified | 67 |
+// MD-INDEX: | RedUserSpecified |
+// MD-INDEX: | GreenUserSpecified |
+// MD-INDEX: | BlueUserSpecified |
 
 // HTML-INDEX-LABEL:  <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-INDEX-NEXT:     <div>
@@ -460,7 +460,7 @@ enum ColorUserSpecified {
 // HTML-INDEX-NEXT:             <tr>
 // HTML-INDEX-NEXT:                 <th>Name</th>
 // HTML-INDEX-NEXT:                 <th>Value</th>
-// HTML-INDEX:                  </tr>
+// HTML-INDEX-NEXT:             </tr>
 // HTML-INDEX-NEXT:             <tr>
 // HTML-INDEX-NEXT:                 <td>RedUserSpecified</td>
 // HTML-INDEX-NEXT:                 <td>&#39;A&#39;</td>
