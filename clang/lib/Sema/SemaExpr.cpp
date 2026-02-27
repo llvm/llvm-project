@@ -21565,7 +21565,7 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
           /*CanonicalArgs=*/{},
           HasAnyDependentTA ? Context.DependentTy : Context.IntTy);
     return CreateRecoveryExpr(NameInfo.getBeginLoc(), NameInfo.getEndLoc(), {},
-                               TST);
+                              TST);
   }
 
   // Overloaded expressions.
@@ -21629,11 +21629,11 @@ ExprResult Sema::CheckPlaceholderExpr(Expr *E) {
       unsigned BuiltinID = FD->getBuiltinID();
       if (BuiltinID == Builtin::BI__noop) {
         E = ImpCastExprToType(E, Context.getPointerType(FD->getType()),
-                               CK_BuiltinFnToFnPtr)
+                              CK_BuiltinFnToFnPtr)
                 .get();
         return CallExpr::Create(Context, E, /*Args=*/{}, Context.IntTy,
-                                 VK_PRValue, SourceLocation(),
-                                 FPOptionsOverride());
+                                VK_PRValue, SourceLocation(),
+                                FPOptionsOverride());
       }
 
       if (Context.BuiltinInfo.isInStdNamespace(BuiltinID)) {
