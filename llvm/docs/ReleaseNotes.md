@@ -80,6 +80,9 @@ Changes to LLVM infrastructure
 
 * Removed TypePromoteFloat legalization from SelectionDAG
 
+* Removed `bugpoint`. Usage has been replaced by `llvm-reduce` and
+  `llvm/utils/reduce_pipeline.py`.
+
 Changes to building LLVM
 ------------------------
 
@@ -151,6 +154,8 @@ Changes to the RISC-V Backend
 * Adds experimental assembler support for the 'Zvabd` (RISC-V Integer Vector
   Absolute Difference) extension.
 * `-mcpu=spacemit-a100` was added.
+* The opt-in `-riscv-enable-p-ext-simd-codegen` flag has been removed. P extension SIMD code generation is now enabled automatically if the P extension is supported.
+* `-mcpu=xt-c910v2` and `-mcpu=xt-c920v2` were added.
 
 Changes to the WebAssembly Backend
 ----------------------------------
@@ -211,9 +216,12 @@ Changes to LLDB
 
 #### Kernel Debugging
 
+* The plugin that analyzes FreeBSD kernel core dump and live core has been renamed from `freebsd-kernel` to
+ `freebsd-kernel-core`. Remote kernel debugging is still handled by the `gdb-remote` plugin. 
 * Support for libfbsdvmcore has been removed. As a result, FreeBSD kernel dump debugging is now only
   available on FreeBSD hosts. Live kernel debugging through the GDB remote protocol is still available
   from any platform.
+* Support for ARM has been added.
 * The crashed thread is now automatically selected on start.
 * Threads are listed in incrmental order by pid then by tid.
 * Unread kernel messages saved in msgbufp are now printed when lldb starts. This information is printed only
