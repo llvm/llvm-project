@@ -5031,8 +5031,6 @@ void VPlanTransforms::materializeVectorTripCount(VPlan &Plan,
   // overflows: the vector induction variable will eventually wrap to zero given
   // that it starts at zero and its Step is a power of two; the loop will then
   // exit, with the last early-exit vector comparison also producing all-true.
-  // For scalable vectors the VF is not guaranteed to be a power of 2, but this
-  // is accounted for in emitIterationCountCheck that adds an overflow check.
   if (TailByMasking) {
     TC = Builder.createAdd(
         TC, Builder.createSub(Step, Plan.getConstantInt(TCTy, 1)),
