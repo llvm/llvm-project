@@ -3798,17 +3798,15 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
 
   if (IntrinsicID == Intrinsic::experimental_cttz_elts) {
     auto *FVTy = dyn_cast<FixedVectorType>(Operands[0]->getType());
-    auto *Op2 = dyn_cast<ConstantInt>(Operands[1]);
+    auto *Op2 = cast<ConstantInt>(Operands[1]);
     if (!FVTy)
       return nullptr;
     for (unsigned I = 0; I < FVTy->getNumElements(); ++I) {
       Constant *Elt = Operands[0]->getAggregateElement(I);
       if (!Elt)
         return nullptr;
-      if (isa<PoisonValue>(Elt))
-        return PoisonValue::get(Ty);
       if (isa<UndefValue>(Elt))
-        return UndefValue::get(Ty);
+        continue;
       if (!Elt->isNullValue())
         return ConstantInt::get(Ty, I);
     }
