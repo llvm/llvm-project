@@ -5252,10 +5252,37 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         isIntegerWideningViable(P, LargestIntTy, DL))
       return {LargestIntTy, true, nullptr};
 
-    // Try homogeneous struct to vector canonicalization.
-    if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
-      if (auto *VTy = tryCanonicalizeStructToVector(STy, DL))
-        return {VTy, false, nullptr};
+    // Try homogeneous struct to vector canonicalization, but only when:
+    // 1. The partition type matches the alloca type (not a synthetic
+    //    sub-struct from getTypePartition for a sub-partition), AND
+    // 2. The conversion would actually benefit from vectorization: either
+    //    the alloca is involved in phi/select patterns (enabling
+    //    speculation), or the partition has non-splittable typed uses.
+    //
+    // When all uses are splittable (memcpy/lifetime only) and there's no
+    // phi/select involvement, converting to vector just changes memcpy
+    // split types without enabling promotion, propagating vector types to
+    // other allocas and causing insertelement/extractelement overhead.
+    if (TypePartitionTy == AI.getAllocatedType()) {
+      bool HasNonSplittable =
+          any_of(P, [](const Slice &S) { return !S.isSplittable(); });
+      bool ShouldConvert = HasNonSplittable;
+      if (!ShouldConvert) {
+        ShouldConvert = any_of(AI.users(), [&AI](const User *U) {
+          if (isa<PHINode>(U) || isa<SelectInst>(U))
+            return true;
+          if (const auto *MI = dyn_cast<MemTransferInst>(U))
+            for (const Value *Op : {MI->getRawSource(), MI->getRawDest()})
+              if (Op != &AI && (isa<PHINode>(Op) || isa<SelectInst>(Op)))
+                return true;
+          return false;
+        });
+      }
+      if (ShouldConvert)
+        if (auto *STy = dyn_cast<StructType>(TypePartitionTy))
+          if (auto *VTy = tryCanonicalizeStructToVector(STy, DL))
+            return {VTy, false, nullptr};
+    }
 
     // Fallback to TypePartitionTy and we probably won't promote.
     return {TypePartitionTy, false, nullptr};
