@@ -1134,7 +1134,8 @@ public:
   // gfx12+ constructor.
   Waitcnt(unsigned LoadCnt, unsigned ExpCnt, unsigned DsCnt, unsigned StoreCnt,
           unsigned SampleCnt, unsigned BvhCnt, unsigned KmCnt, unsigned XCnt,
-          unsigned VaVdst, unsigned VmVsrc) {
+          unsigned VaVdst, unsigned VmVsrc)
+      : Waitcnt() {
     Cnt[LOAD_CNT] = LoadCnt;
     Cnt[DS_CNT] = DsCnt;
     Cnt[EXP_CNT] = ExpCnt;
