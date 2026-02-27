@@ -2597,6 +2597,10 @@ let Predicates = [HasBF16, HasSVE_or_SME] in {
                 (nxv4f32 (AArch64fcvte_mt (SVEAllActive), nxv4bf16:$Zm, (undef))))),
             (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$Zn, ZPR:$Zm)>;
 
+  def : Pat<(nxv4f32 (partial_reduce_fmla nxv4f32:$acc, nxv8bf16:$LHS, nxv8bf16:$RHS)),
+            (BFMLALT_ZZZ (BFMLALB_ZZZ nxv4f32:$acc, ZPR:$LHS, ZPR:$RHS),
+                ZPR:$LHS, ZPR:$RHS)>;
+
   defm BFCVT_ZPmZ   : sve_bfloat_convert<"bfcvt", int_aarch64_sve_fcvt_bf16f32_v2, AArch64fcvtr_mt>;
   defm BFCVTNT_ZPmZ : sve_bfloat_convert_top<"bfcvtnt", int_aarch64_sve_fcvtnt_bf16f32_v2>;
 } // End HasBF16, HasSVE_or_SME
@@ -3993,6 +3997,9 @@ let Predicates = [HasSVE2_or_SME] in {
   defm PMULLB_ZZZ   : sve2_pmul_long<0b0, "pmullb", int_aarch64_sve_pmullb_pair>;
   defm PMULLT_ZZZ   : sve2_pmul_long<0b1, "pmullt", int_aarch64_sve_pmullt_pair>;
 
+  def : Pat<(nxv4i32 (clmul nxv4i32:$Rn, nxv4i32:$Rm)),
+            (TRN1_ZZZ_S (PMULLB_ZZZ_D $Rn, $Rm), (PMULLT_ZZZ_D $Rn, $Rm))>;
+
   // SVE2 bitwise shift and insert
   defm SRI_ZZI : sve2_int_bin_shift_imm_right<0b0, "sri", AArch64vsri>;
   defm SLI_ZZI : sve2_int_bin_shift_imm_left< 0b1, "sli", AArch64vsli>;
@@ -4252,6 +4259,10 @@ let Predicates = [HasSVEAES, HasNonStreamingSVE_or_SSVE_AES] in {
   // to NEON PMULL2 instruction.
   defm PMULLB_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11010, "pmullb", int_aarch64_sve_pmullb_pair>;
   defm PMULLT_ZZZ_Q : sve2_wide_int_arith_pmul<0b00, 0b11011, "pmullt", int_aarch64_sve_pmullt_pair>;
+
+  // Use low 64 bits of PMULLB/T for nxv2i64 clmul
+  def : Pat<(nxv2i64 (clmul nxv2i64:$Rn, nxv2i64:$Rm)),
+            (TRN1_ZZZ_D (PMULLB_ZZZ_Q $Rn, $Rm), (PMULLT_ZZZ_Q $Rn, $Rm))>;
 }
 
 let Predicates = [HasSVESM4] in {

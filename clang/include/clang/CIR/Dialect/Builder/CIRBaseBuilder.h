@@ -16,11 +16,13 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
 
 namespace cir {
@@ -400,34 +402,62 @@ public:
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
                            mlir::Type returnType, mlir::ValueRange operands,
-                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                           llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
     auto op = cir::CallOp::create(*this, loc, callee, returnType, operands);
     op->setAttrs(attrs);
+
+    if (!argAttrs.empty()) {
+      llvm::SmallVector<mlir::Attribute> argDictAttrs;
+      argDictAttrs.reserve(argAttrs.size());
+
+      llvm::transform(
+          argAttrs, std::back_inserter(argDictAttrs),
+          [this](llvm::ArrayRef<mlir::NamedAttribute> singleArgAttrs) {
+            return mlir::DictionaryAttr::get(getContext(), singleArgAttrs);
+          });
+
+      op.setArgAttrsAttr(mlir::ArrayAttr::get(getContext(), argDictAttrs));
+    }
+
+    if (!resAttrs.empty()) {
+      auto resultDictAttr = mlir::DictionaryAttr::get(getContext(), resAttrs);
+      op.setResAttrsAttr(mlir::ArrayAttr::get(getContext(), resultDictAttr));
+    }
     return op;
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
                            mlir::ValueRange operands,
-                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                           llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands,
-                        attrs);
+                        attrs, argAttrs, resAttrs);
   }
 
   cir::CallOp
   createIndirectCallOp(mlir::Location loc, mlir::Value indirectTarget,
                        cir::FuncType funcType, mlir::ValueRange operands,
-                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                       llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
     llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
     resOperands.append(operands.begin(), operands.end());
+
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
-                        resOperands, attrs);
+                        resOperands, attrs, argAttrs, resAttrs);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
                            mlir::ValueRange operands = mlir::ValueRange(),
-                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
-    return createCallOp(loc, callee, cir::VoidType(), operands, attrs);
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                           llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+    return createCallOp(loc, callee, cir::VoidType(), operands, attrs, argAttrs,
+                        resAttrs);
   }
 
   //===--------------------------------------------------------------------===//

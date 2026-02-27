@@ -3256,6 +3256,30 @@ void BinaryFunction::clearDisasmState() {
   clearList(TakenBranches);
 }
 
+void BinaryFunction::resetState() {
+  clearDisasmState();
+
+  // Clear CFG state too.
+  if (hasCFG()) {
+    releaseCFG();
+
+    for (BinaryBasicBlock *BB : BasicBlocks)
+      delete BB;
+    clearList(BasicBlocks);
+
+    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
+      delete BB;
+    clearList(DeletedBasicBlocks);
+
+    Layout.clear();
+  }
+
+  IsSimple = false;
+  IsIgnored = true;
+
+  CurrentState = State::Empty;
+}
+
 void BinaryFunction::setTrapOnEntry() {
   clearDisasmState();
 
@@ -3290,24 +3314,7 @@ void BinaryFunction::setIgnored() {
   if (CurrentState == State::Empty)
     return;
 
-  clearDisasmState();
-
-  // Clear CFG state too.
-  if (hasCFG()) {
-    releaseCFG();
-
-    for (BinaryBasicBlock *BB : BasicBlocks)
-      delete BB;
-    clearList(BasicBlocks);
-
-    for (BinaryBasicBlock *BB : DeletedBasicBlocks)
-      delete BB;
-    clearList(DeletedBasicBlocks);
-
-    Layout.clear();
-  }
-
-  CurrentState = State::Empty;
+  resetState();
 
   // Fix external references in the original function body.
   if (BC.HasRelocations) {
