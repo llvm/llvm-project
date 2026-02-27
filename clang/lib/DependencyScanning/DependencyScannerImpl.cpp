@@ -777,7 +777,6 @@ bool DependencyScanningAction::runInvocation(
                               std::move(PCHContainerOps), std::move(ModCache));
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
 
-  assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
   initializeScanCompilerInstance(ScanInstance, FS, DiagConsumer, Service,
                                  DepFS);
 
@@ -799,9 +798,6 @@ bool DependencyScanningAction::runInvocation(
 
   ReadPCHAndPreprocessAction Action;
   const bool Result = ScanInstance.ExecuteAction(Action);
-
-  // ExecuteAction is responsible for calling finish.
-  DiagConsumerFinished = true;
 
   if (Result) {
     if (MDC)
@@ -967,6 +963,5 @@ bool CompilerInstanceWithContext::computeDependencies(
 }
 
 bool CompilerInstanceWithContext::finalize() {
-  DiagConsumer->finish();
   return true;
 }
