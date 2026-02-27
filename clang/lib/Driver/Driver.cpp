@@ -4442,14 +4442,9 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   handleArguments(C, Args, Inputs, Actions);
 
-  bool UseNewOffloadingDriver =
-      C.isOffloadingHostKind(Action::OFK_OpenMP) ||
-      C.isOffloadingHostKind(Action::OFK_SYCL) ||
-      Args.hasFlag(options::OPT_foffload_via_llvm,
-                   options::OPT_fno_offload_via_llvm, false) ||
-      Args.hasFlag(options::OPT_offload_new_driver,
-                   options::OPT_no_offload_new_driver,
-                   C.isOffloadingHostKind(Action::OFK_Cuda));
+  bool UseNewOffloadingDriver = Args.hasFlag(
+      options::OPT_offload_new_driver, options::OPT_no_offload_new_driver,
+      C.getActiveOffloadKinds() != Action::OFK_None);
 
   // Builder to be used to build offloading actions.
   std::unique_ptr<OffloadingActionBuilder> OffloadBuilder =
@@ -5076,8 +5071,8 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
   bool ShouldBundleHIP =
       Args.hasFlag(options::OPT_gpu_bundle_output,
                    options::OPT_no_gpu_bundle_output, false) ||
-      (HIPNoRDC && offloadDeviceOnly() &&
-       llvm::none_of(OffloadActions, [](Action *A) {
+      (!Args.getLastArg(options::OPT_no_gpu_bundle_output) && HIPNoRDC &&
+       offloadDeviceOnly() && llvm::none_of(OffloadActions, [](Action *A) {
          return A->getType() != types::TY_Image;
        }));
 
@@ -5258,7 +5253,8 @@ Action *Driver::ConstructPhaseAction(
     // offload driver, where mid-end is done in linker wrapper.
     if (TargetDeviceOffloadKind == Action::OFK_HIP &&
         Args.hasFlag(options::OPT_offload_new_driver,
-                     options::OPT_no_offload_new_driver, false) &&
+                     options::OPT_no_offload_new_driver,
+                     C.getActiveOffloadKinds() != Action::OFK_None) &&
         !offloadDeviceOnly())
       return Input;
 
@@ -5315,7 +5311,8 @@ Action *Driver::ConstructPhaseAction(
          ((Args.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                         false) ||
            (Args.hasFlag(options::OPT_offload_new_driver,
-                         options::OPT_no_offload_new_driver, false) &&
+                         options::OPT_no_offload_new_driver,
+                         C.getActiveOffloadKinds() != Action::OFK_None) &&
             (!offloadDeviceOnly() ||
              (Input->getOffloadingToolChain() &&
               TargetDeviceOffloadKind == Action::OFK_HIP &&
@@ -5328,7 +5325,8 @@ Action *Driver::ConstructPhaseAction(
                    (TargetDeviceOffloadKind == Action::OFK_HIP &&
                     !Args.hasFlag(options::OPT_offload_new_driver,
                                   options::OPT_no_offload_new_driver,
-                                  C.isOffloadingHostKind(Action::OFK_Cuda))))
+                                  C.getActiveOffloadKinds() !=
+                                      Action::OFK_None)))
               ? types::TY_LLVM_IR
               : types::TY_LLVM_BC;
       return C.MakeAction<BackendJobAction>(Input, Output);
