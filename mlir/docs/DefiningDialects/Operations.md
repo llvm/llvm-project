@@ -894,7 +894,7 @@ declarative parameter to `parse` method argument is detailed below:
     -   Optional: `<Attribute-Storage-Type>(e.g. Attribute) &`
 *   Operand Variables
     -   Single: `OpAsmParser::UnresolvedOperand &`
-    -   Optional: `Optional<OpAsmParser::UnresolvedOperand> &`
+    -   Optional: `std::optional<OpAsmParser::UnresolvedOperand> &`
     -   Variadic: `SmallVectorImpl<OpAsmParser::UnresolvedOperand> &`
     -   VariadicOfVariadic:
         `SmallVectorImpl<SmallVector<OpAsmParser::UnresolvedOperand>> &`
