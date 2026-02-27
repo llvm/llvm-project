@@ -275,7 +275,7 @@ struct GPUSubgroupBroadcastOpToROCDL
     if (failed(LLVM::decomposeValue(rewriter, loc, src, i32, decomposed,
                                     /*permitVariablySizedScalars=*/true)))
       return rewriter.notifyMatchFailure(op,
-                                         "failed to decompose value to i32");
+                                         "Unexpected decomposition failure");
 
     SmallVector<Value> results;
     results.reserve(decomposed.size());
