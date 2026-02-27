@@ -135,7 +135,6 @@
 // cancel the addrspacecast pair this pass emits.
 //===----------------------------------------------------------------------===//
 
-#include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "NVPTXTargetMachine.h"
 #include "NVPTXUtilities.h"
@@ -157,12 +156,12 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
-#include <numeric>
 #include <queue>
 
 #define DEBUG_TYPE "nvptx-lower-args"
 
 using namespace llvm;
+using namespace NVPTXAS;
 
 namespace {
 class NVPTXLowerArgsLegacyPass : public FunctionPass {
@@ -288,13 +287,12 @@ static void convertToParamAS(ArrayRef<Use *> OldUses, Value *Param) {
     I->eraseFromParent();
 }
 
-static Align setByValParamAlign(Argument *Arg, const NVPTXTargetLowering *TLI) {
+static Align setByValParamAlign(Argument *Arg) {
   Function *F = Arg->getParent();
   Type *ByValType = Arg->getParamByValType();
   const DataLayout &DL = F->getDataLayout();
 
-  const Align OptimizedAlign =
-      TLI->getFunctionParamOptimizedAlign(F, ByValType, DL);
+  const Align OptimizedAlign = getFunctionParamOptimizedAlign(F, ByValType, DL);
   const Align CurrentAlign = Arg->getParamAlign().valueOrOne();
 
   if (CurrentAlign >= OptimizedAlign)
@@ -496,10 +494,9 @@ static bool argIsProcessed(Argument *Arg) {
   return false;
 }
 
-static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
+static void handleByValParam(const NVPTXSubtarget *ST, Argument *Arg) {
   Function *F = Arg->getParent();
   assert(isKernelFunction(*F));
-  const NVPTXSubtarget *ST = TM.getSubtargetImpl(*F);
 
   const DataLayout &DL = F->getDataLayout();
   IRBuilder<> IRB(&F->getEntryBlock().front());
@@ -507,7 +504,7 @@ static void handleByValParam(const NVPTXTargetMachine &TM, Argument *Arg) {
   if (argIsProcessed(Arg))
     return;
 
-  const Align NewArgAlign = setByValParamAlign(Arg, ST->getTargetLowering());
+  const Align NewArgAlign = setByValParamAlign(Arg);
 
   // (1) First check the easy case, if were able to trace through all the uses
   // and we can convert them all to param AS, then we'll do this.
@@ -594,6 +591,7 @@ static void handleIntToPtr(Value &V) {
 // Main function for this pass.
 // =============================================================================
 static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
+  const NVPTXSubtarget *ST = TM.getSubtargetImpl(F);
   // Copying of byval aggregates + SROA may result in pointers being loaded as
   // integers, followed by intotoptr. We may want to mark those as global, too,
   // but only if the loaded integer is used exclusively for conversion to a
@@ -627,21 +625,20 @@ static bool runOnKernelFunction(const NVPTXTargetMachine &TM, Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering kernel args of " << F.getName() << "\n");
   for (Argument &Arg : F.args())
     if (Arg.hasByValAttr())
-      handleByValParam(TM, &Arg);
+      handleByValParam(ST, &Arg);
 
   return true;
 }
 
 // Device functions only need to copy byval args into local memory.
-static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
+static bool runOnDeviceFunction(Function &F) {
   LLVM_DEBUG(dbgs() << "Lowering function args of " << F.getName() << "\n");
 
-  const NVPTXTargetLowering *TLI = TM.getSubtargetImpl()->getTargetLowering();
   const DataLayout &DL = F.getDataLayout();
 
   for (Argument &Arg : F.args())
     if (Arg.hasByValAttr()) {
-      const Align NewArgAlign = setByValParamAlign(&Arg, TLI);
+      const Align NewArgAlign = setByValParamAlign(&Arg);
       propagateAlignmentToLoads(&Arg, NewArgAlign, DL);
     }
 
@@ -650,7 +647,7 @@ static bool runOnDeviceFunction(const NVPTXTargetMachine &TM, Function &F) {
 
 static bool processFunction(Function &F, NVPTXTargetMachine &TM) {
   return isKernelFunction(F) ? runOnKernelFunction(TM, F)
-                             : runOnDeviceFunction(TM, F);
+                             : runOnDeviceFunction(F);
 }
 
 bool NVPTXLowerArgsLegacyPass::runOnFunction(Function &F) {
