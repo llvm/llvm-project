@@ -311,13 +311,32 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
   if constexpr (std::is_same_v<ExtCastTy, LLVM::ZExtOp>)
     isNonNeg = op.getNonNeg();
 
+  bool isExact = op.getExact();
+
+  // Map exact to the appropriate overflow flag(s) for truncation:
+  //   index_cast (signed) exact    -> trunc nsw
+  //   index_castui (unsigned) exact -> trunc nuw
+  //   index_castui nneg exact       -> trunc nuw nsw
+  LLVM::IntegerOverflowFlags truncOverflow = LLVM::IntegerOverflowFlags::none;
+  if (isExact) {
+    if constexpr (std::is_same_v<ExtCastTy, LLVM::SExtOp>) {
+      truncOverflow = LLVM::IntegerOverflowFlags::nsw;
+    } else {
+      truncOverflow = LLVM::IntegerOverflowFlags::nuw;
+      if (isNonNeg)
+        truncOverflow |= LLVM::IntegerOverflowFlags::nsw;
+    }
+  }
+
   // Handle the scalar and 1D vector cases.
   Type operandType = adaptor.getIn().getType();
   if (!isa<LLVM::LLVMArrayType>(operandType)) {
     Type targetType = this->typeConverter->convertType(resultType);
     if (targetBits < sourceBits) {
-      rewriter.replaceOpWithNewOp<LLVM::TruncOp>(op, targetType,
-                                                 adaptor.getIn());
+      auto truncOp = rewriter.replaceOpWithNewOp<LLVM::TruncOp>(
+          op, targetType, adaptor.getIn());
+      if (isExact)
+        truncOp.setOverflowFlags(truncOverflow);
     } else {
       auto extOp = rewriter.replaceOpWithNewOp<ExtCastTy>(op, targetType,
                                                           adaptor.getIn());
@@ -335,15 +354,16 @@ LogicalResult IndexCastOpLowering<OpTy, ExtCastTy>::matchAndRewrite(
       [&](Type llvm1DVectorTy, ValueRange operands) -> Value {
         typename OpTy::Adaptor adaptor(operands);
         if (targetBits < sourceBits) {
-          return LLVM::TruncOp::create(rewriter, op.getLoc(), llvm1DVectorTy,
-                                       adaptor.getIn());
+          auto truncOp = LLVM::TruncOp::create(rewriter, op.getLoc(),
+                                               llvm1DVectorTy, adaptor.getIn());
+          if (isExact)
+            truncOp.setOverflowFlags(truncOverflow);
+          return truncOp;
         }
         auto extOp = ExtCastTy::create(rewriter, op.getLoc(), llvm1DVectorTy,
                                        adaptor.getIn());
-        if constexpr (std::is_same_v<ExtCastTy, LLVM::ZExtOp>) {
-          if (isNonNeg)
-            extOp.setNonNeg(true);
-        }
+        if constexpr (std::is_same_v<ExtCastTy, LLVM::ZExtOp>)
+          extOp.setNonNeg(isNonNeg);
         return extOp;
       },
       rewriter);
