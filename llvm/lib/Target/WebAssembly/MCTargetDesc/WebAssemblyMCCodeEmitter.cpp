@@ -50,7 +50,6 @@ class WebAssemblyMCCodeEmitter final : public MCCodeEmitter {
 
   void encodeMemArg(const MCInst &MI, unsigned I, const MCInstrDesc &Desc,
                     const MCSubtargetInfo &STI, raw_ostream &OS,
-                    SmallSet<unsigned, 4> &HandledOperands,
                     SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const;
 
   uint8_t getEncodedMemOrder(uint8_t Order, unsigned Opcode) const;
@@ -79,7 +78,6 @@ uint8_t WebAssemblyMCCodeEmitter::getEncodedMemOrder(uint8_t Order,
 void WebAssemblyMCCodeEmitter::encodeMemArg(
     const MCInst &MI, unsigned I, const MCInstrDesc &Desc,
     const MCSubtargetInfo &STI, raw_ostream &OS,
-    SmallSet<unsigned, 4> &HandledOperands,
     SmallVectorImpl<MCFixup> &Fixups, uint64_t Start) const {
   unsigned P2AlignIdx = I;
   std::optional<unsigned> MemOrderIdx;
@@ -112,10 +110,6 @@ void WebAssemblyMCCodeEmitter::encodeMemArg(
         OS, getEncodedMemOrder(Order, MI.getOpcode()),
         llvm::endianness::little);
   }
-
-  // We handled the MemOrder operand, even if we didn't encode it explicitly
-  if (MemOrderIdx)
-    HandledOperands.insert(*MemOrderIdx);
 }
 
 void WebAssemblyMCCodeEmitter::encodeInstruction(
@@ -149,10 +143,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
     encodeULEB128(MI.getNumOperands() - 2, OS);
 
   const MCInstrDesc &Desc = MCII.get(Opcode);
-  SmallSet<unsigned, 4> HandledOperands;
   for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I) {
-    if (HandledOperands.count(I))
-      continue;
     const MCOperand &MO = MI.getOperand(I);
     if (MO.isReg()) {
       /* nothing to encode */
@@ -167,7 +158,7 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
           encodeSLEB128(int32_t(MO.getImm()), OS);
           break;
         case WebAssembly::OPERAND_P2ALIGN:
-          encodeMemArg(MI, I, Desc, STI, OS, HandledOperands, Fixups, Start);
+          encodeMemArg(MI, I, Desc, STI, OS, Fixups, Start);
           break;
         case WebAssembly::OPERAND_OFFSET32:
           encodeULEB128(uint32_t(MO.getImm()), OS);
@@ -181,17 +172,14 @@ void WebAssemblyMCCodeEmitter::encodeInstruction(
                                           llvm::endianness::little);
           break;
         case WebAssembly::OPERAND_MEMORDER: {
+          // If there is a p2align operand (everything but fence) it is encoded
+          // together with the mem ordering (in the next iteration).
           if (I + 1 < Desc.getNumOperands() &&
               Desc.operands()[I + 1].OperandType ==
                   WebAssembly::OPERAND_P2ALIGN)
             break;
-          uint8_t Val = MO.getImm();
+          uint8_t Val = getEncodedMemOrder(MO.getImm(), Opcode);
           if (STI.getFeatureBits()[WebAssembly::FeatureSharedEverything]) {
-            if (Val == wasm::WASM_MEM_ORDER_ACQ_REL) {
-              StringRef Name = MCII.getName(Opcode);
-              if (Name.contains("RMW") || Name.contains("CMPXCHG"))
-                Val = wasm::WASM_MEM_ORDER_RMW_ACQ_REL;
-            }
             support::endian::write<uint8_t>(OS, Val,
                                             llvm::endianness::little);
           } else if (Opcode == WebAssembly::ATOMIC_FENCE ||

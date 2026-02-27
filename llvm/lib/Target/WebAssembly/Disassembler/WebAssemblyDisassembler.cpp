@@ -164,7 +164,6 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     raw_ostream &CS) const {
   CommentStream = &CS;
   Size = 0;
-  uint8_t DecodedOrder = 0xFF;
   int Opc = nextByte(Bytes, Size);
   if (Opc < 0)
     return MCDisassembler::Fail;
@@ -212,26 +211,31 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
       if (!parseLEBImmediate(MI, Size, Bytes, false))
         return MCDisassembler::Fail;
       if (OT == WebAssembly::OPERAND_P2ALIGN) {
+        // The byte that encodes P2align also encodes whether a memory index
+        // and/or ordering is present.
         int64_t Val = MI.getOperand(MI.getNumOperands() - 1).getImm();
         if (Val & wasm::WASM_MEMARG_HAS_MEM_ORDER) {
-          MI.getOperand(MI.getNumOperands() - 1).setImm(Val & ~wasm::WASM_MEMARG_HAS_MEM_ORDER);
+          // Clear the order so we just have the alignment in this operand.
+          MI.getOperand(MI.getNumOperands() - 1)
+              .setImm(Val & ~wasm::WASM_MEMARG_HAS_MEM_ORDER);
           if (Size >= Bytes.size())
             return MCDisassembler::Fail;
-          DecodedOrder = Bytes[Size++];
-
-          // If we already added a MEMORDER placeholder, update it.
-          for (unsigned J = 0; J < MI.getNumOperands(); J++) {
-            auto JOT = OperandTable[WasmInst->OperandStart + J];
-            if (JOT == WebAssembly::OPERAND_MEMORDER) {
-              uint8_t Order = DecodedOrder;
-              if (Order == wasm::WASM_MEM_ORDER_RMW_ACQ_REL ||
-                  Order == wasm::WASM_MEM_ORDER_ACQ_REL)
-                MI.getOperand(J).setImm(wasm::WASM_MEM_ORDER_ACQ_REL);
-              else
-                MI.getOperand(J).setImm(wasm::WASM_MEM_ORDER_SEQ_CST);
-              break;
-            }
-          }
+          uint8_t Order = Bytes[Size++];
+          // If we have a memory ordering, it must have been preceded by a
+          // MEMORDER operand which was added as a placeholder (because we are
+          // iterating in MI operand order which has mem order first, but this
+          // byte is encoded first).
+          assert(OPI > 0 &&
+                 OperandTable[WasmInst->OperandStart + OPI - 1] ==
+                     WebAssembly::OPERAND_MEMORDER &&
+                 "P2ALIGN with memory order not preceded by MEMORDER");
+          if (Order == wasm::WASM_MEM_ORDER_RMW_ACQ_REL ||
+              Order == wasm::WASM_MEM_ORDER_ACQ_REL)
+            MI.getOperand(MI.getNumOperands() - 2)
+                .setImm(wasm::WASM_MEM_ORDER_ACQ_REL);
+          else
+            MI.getOperand(MI.getNumOperands() - 2)
+                .setImm(wasm::WASM_MEM_ORDER_SEQ_CST);
         }
       }
       break;
@@ -287,24 +291,17 @@ MCDisassembler::DecodeStatus WebAssemblyDisassembler::getInstruction(
     }
     case WebAssembly::OPERAND_MEMORDER: {
       uint8_t Val;
-      if (DecodedOrder != 0xFF) {
-        Val = DecodedOrder;
+      if (OPI + 1 < WasmInst->NumOperands &&
+          OperandTable[WasmInst->OperandStart + OPI + 1] ==
+              WebAssembly::OPERAND_P2ALIGN) {
+        // If we have P2ALIGN next, it will be encoded as part of the memarg,
+        // which has not been parsed yet. Default to SEQ_CST
+        // and we will update it when we parse P2ALIGN if necessary.
+        Val = wasm::WASM_MEM_ORDER_SEQ_CST;
       } else {
-        bool HasP2Align = false;
-        for (uint8_t J = 0; J < WasmInst->NumOperands; J++)
-          if (OperandTable[WasmInst->OperandStart + J] ==
-              WebAssembly::OPERAND_P2ALIGN)
-            HasP2Align = true;
-        if (!HasP2Align) {
-          if (Size >= Bytes.size())
-            return MCDisassembler::Fail;
-          Val = Bytes[Size++];
-        } else {
-          // If we have P2ALIGN, it will be encoded as part of the memarg,
-          // which might not have been parsed yet. Default to SEQ_CST
-          // and we will update it when we parse P2ALIGN if necessary.
-          Val = wasm::WASM_MEM_ORDER_SEQ_CST;
-        }
+        if (Size >= Bytes.size())
+          return MCDisassembler::Fail;
+        Val = Bytes[Size++];
       }
       if (Val == wasm::WASM_MEM_ORDER_RMW_ACQ_REL ||
           Val == wasm::WASM_MEM_ORDER_ACQ_REL)
