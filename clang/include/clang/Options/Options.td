@@ -3298,6 +3298,11 @@ def clangir_disable_verifier : Flag<["-"], "clangir-disable-verifier">,
   HelpText<"ClangIR: Disable MLIR module verifier">,
   MarshallingInfoFlag<FrontendOpts<"ClangIRDisableCIRVerifier">>;
 
+def clangir_enable_idiom_recognizer : Flag<["-"], "clangir-enable-idiom-recognizer">,
+  Visibility<[ClangOption, CC1Option]>,
+  HelpText<"ClangIR: Enable Idiom Recognizer pass">,
+  MarshallingInfoFlag<FrontendOpts<"ClangIREnableIdiomRecognizer">>;
+
 defm clangir : BoolFOption<"clangir",
   FrontendOpts<"UseClangIRPipeline">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option], "Use the ClangIR pipeline to compile">,
@@ -3576,6 +3581,17 @@ def fmodules_single_module_parse_mode :
   Flag<["-"], "fmodules-single-module-parse-mode">,
   Group<f_Group>, Flags<[]>, Visibility<[CC1Option]>,
   MarshallingInfoFlag<PreprocessorOpts<"SingleModuleParseMode">>;
+
+def fmodules_driver :
+  Flag<["-"], "fmodules-driver">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Enable support for driver managed module builds (experimental)">;
+def fno_modules_driver :
+  Flag<["-"], "fno-modules-driver">,
+  Group<f_Group>,
+  Visibility<[ClangOption]>,
+  HelpText<"Disable support for driver managed module builds (experimental)">;
 
 def fincremental_extensions :
   Flag<["-"], "fincremental-extensions">,
@@ -9499,6 +9515,8 @@ def _SLASH_d2epilogunwind : CLFlag<"d2epilogunwind">,
   HelpText<"Best effort generate unwind v2 (epilog) information for x64 Windows">;
 def _SLASH_d2epilogunwindrequirev2 : CLFlag<"d2epilogunwindrequirev2">,
   HelpText<"Require generation of unwind v2 (epilog) information for x64 Windows">;
+def _SLASH_d2guardnochecks : CLFlag<"d2guardnochecks">,
+  HelpText<"When used with /guard:cf, emits Windows Control Flow Guard tables only (no checks)">;
 def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;
@@ -9777,6 +9795,8 @@ def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
+def dxc_Fre : DXCJoinedOrSeparate<"Fre">,
+              HelpText<"Set output file name for reflection files">;
 def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
   HelpText<"Output assembly listing file">;
 def dxc_Frs : DXCJoinedOrSeparate<"Frs">,

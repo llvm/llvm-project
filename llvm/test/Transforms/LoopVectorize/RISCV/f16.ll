@@ -30,7 +30,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN:       [[VECTOR_PH]]:
 ; ZVFHMIN-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; ZVFHMIN:       [[VECTOR_BODY]]:
-; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_EVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; ZVFHMIN-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[CURRENT_ITERATION_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVFHMIN-NEXT:    [[AVL:%.*]] = phi i64 [ [[N]], %[[VECTOR_PH]] ], [ [[AVL_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; ZVFHMIN-NEXT:    [[TMP6:%.*]] = call i32 @llvm.experimental.get.vector.length.i64(i64 [[AVL]], i32 8, i1 true)
 ; ZVFHMIN-NEXT:    [[TMP1:%.*]] = getelementptr half, ptr [[A]], i64 [[INDEX]]
@@ -40,7 +40,7 @@ define void @fadd(ptr noalias %a, ptr noalias %b, i64 %n) {
 ; ZVFHMIN-NEXT:    [[TMP11:%.*]] = fadd <vscale x 8 x half> [[WIDE_LOAD]], [[WIDE_LOAD1]]
 ; ZVFHMIN-NEXT:    call void @llvm.vp.store.nxv8f16.p0(<vscale x 8 x half> [[TMP11]], ptr align 2 [[TMP1]], <vscale x 8 x i1> splat (i1 true), i32 [[TMP6]])
 ; ZVFHMIN-NEXT:    [[TMP13:%.*]] = zext i32 [[TMP6]] to i64
-; ZVFHMIN-NEXT:    [[INDEX_EVL_NEXT]] = add i64 [[TMP13]], [[INDEX]]
+; ZVFHMIN-NEXT:    [[CURRENT_ITERATION_NEXT]] = add nuw i64 [[TMP13]], [[INDEX]]
 ; ZVFHMIN-NEXT:    [[AVL_NEXT]] = sub nuw i64 [[AVL]], [[TMP13]]
 ; ZVFHMIN-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[AVL_NEXT]], 0
 ; ZVFHMIN-NEXT:    br i1 [[TMP7]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]

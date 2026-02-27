@@ -29,7 +29,7 @@ define void @arm_offset_q15(ptr nocapture readonly %pSrc, i16 signext %offset, p
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 2 [[NEXT_GEP]], <8 x i1> [[ACTIVE_LANE_MASK]], <8 x i16> poison)
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i16> @llvm.sadd.sat.v8i16(<8 x i16> [[WIDE_MASKED_LOAD]], <8 x i16> [[BROADCAST_SPLAT8]])
 ; CHECK-NEXT:    call void @llvm.masked.store.v8i16.p0(<8 x i16> [[TMP0]], ptr align 2 [[NEXT_GEP6]], <8 x i1> [[ACTIVE_LANE_MASK]])
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[WHILE_END]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       while.end:

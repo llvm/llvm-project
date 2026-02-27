@@ -50,6 +50,8 @@ TEST(ScudoReportDeathTest, Generic) {
 TEST(ScudoReportDeathTest, CSpecific) {
   EXPECT_DEATH(scudo::reportAlignmentNotPowerOfTwo(123), "Scudo ERROR.*123");
   EXPECT_DEATH(scudo::reportCallocOverflow(123, 456), "Scudo ERROR.*123.*456");
+  EXPECT_DEATH(scudo::reportReallocarrayOverflow(123, 456),
+               "Scudo ERROR.*reallocarray parameters.*123.*456");
   EXPECT_DEATH(scudo::reportInvalidPosixMemalignAlignment(789),
                "Scudo ERROR.*789");
   EXPECT_DEATH(scudo::reportPvallocOverflow(123), "Scudo ERROR.*123");
