@@ -4020,10 +4020,9 @@ public:
   ~VPScalarIVStepsRecipe() override = default;
 
   VPScalarIVStepsRecipe *clone() override {
-    auto *NewR = new VPScalarIVStepsRecipe(
-        getOperand(0), getOperand(1), getOperand(2), InductionOpcode,
-        getFastMathFlags(),
-        getDebugLoc());
+    auto *NewR = new VPScalarIVStepsRecipe(getOperand(0), getOperand(1),
+                                           getOperand(2), InductionOpcode,
+                                           getFastMathFlags(), getDebugLoc());
     if (VPValue *StartIndex = getStartIndex())
       NewR->addOperand(StartIndex);
     return NewR;
