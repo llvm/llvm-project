@@ -111,9 +111,8 @@ public:
   GetVariables(VariableReferenceStorage &storage, const Configuration &config,
                const VariablesArguments &args) override {
     LoadVariables();
-    lldb::SBError error = m_children.GetError();
-    if (error.Fail())
-      return ToError(error);
+    if (m_error.Fail())
+      return ToError(m_error);
     return make_variables(storage, config, args, m_children,
                           /*is_permanent=*/false, m_names);
   }
@@ -158,24 +157,30 @@ private:
     // annoying when the scope has arguments, return_value and locals.
     switch (m_kind) {
     case eScopeKindLocals: {
-      m_children = m_frame.GetVariables(/*arguments=*/true,
-                                        /*locals=*/true,
-                                        /*statics=*/false,
-                                        /*in_scope_only=*/true);
       // Show return value if there is any (in the local top frame)
       lldb::SBValue stop_return_value;
       if (m_frame.GetFrameID() == 0 &&
           ((stop_return_value = m_frame.GetThread().GetStopReturnValue()))) {
-        // FIXME: Cloning this value seems to change the type summary.
+        // FIXME: Cloning this value seems to change the type summary, see
+        // https://github.com/llvm/llvm-project/issues/183578
+        // m_children.Append(stop_return_value.Clone("(Return Value)"));
         m_names[stop_return_value.GetID()] = "(Return Value)";
         m_children.Append(stop_return_value);
       }
+      lldb::SBValueList locals = m_frame.GetVariables(/*arguments=*/true,
+                                                      /*locals=*/true,
+                                                      /*statics=*/false,
+                                                      /*in_scope_only=*/true);
+      m_children.Append(locals);
+      // Save the error since we cannot insert into the SBValueList
+      m_error = locals.GetError();
     } break;
     case eScopeKindGlobals:
       m_children = m_frame.GetVariables(/*arguments=*/false,
                                         /*locals=*/false,
                                         /*statics=*/true,
                                         /*in_scope_only=*/true);
+      m_error = m_children.GetError();
       break;
     case eScopeKindRegisters:
       m_children = m_frame.GetRegisters();
@@ -198,6 +203,7 @@ private:
 
   lldb::SBFrame m_frame;
   lldb::SBValueList m_children;
+  lldb::SBError m_error;
   std::map<lldb::user_id_t, std::string> m_names;
   ScopeKind m_kind;
   bool m_variables_loaded = false;
@@ -227,7 +233,8 @@ public:
     if (config.enableSyntheticChildDebugging && m_value.IsSynthetic()) {
       lldb::SBValue synthetic_value = m_value.GetSyntheticValue();
       name_overrides[synthetic_value.GetID()] = "[raw]";
-      // FIXME: Cloning the value seems to affect the type summary.
+      // FIXME: Cloning the value seems to affect the type summary, see
+      // https://github.com/llvm/llvm-project/issues/183578
       // m_value.GetSyntheticValue().Clone("[raw]");
       list.Append(synthetic_value);
     }
