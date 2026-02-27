@@ -961,7 +961,8 @@ public:
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
-  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth);
+  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
+                        ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
@@ -1012,10 +1013,10 @@ public:
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    void forceCleanup() {
+    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
-      cgf.popCleanupBlocks(cleanupStackDepth);
+      cgf.popCleanupBlocks(cleanupStackDepth, valuesToReload);
       performCleanup = false;
       cgf.currentCleanupStackDepth = oldCleanupStackDepth;
     }
@@ -2030,6 +2031,8 @@ public:
                                       const Twine &name = "tmp",
                                       mlir::Value arraySize = nullptr,
                                       mlir::OpBuilder::InsertPoint ip = {});
+  Address createDefaultAlignTempAlloca(mlir::Type ty, mlir::Location loc,
+                                       const Twine &name);
 
   /// Create a temporary memory object of the given type, with
   /// appropriate alignmen and cast it to the default address space. Returns
