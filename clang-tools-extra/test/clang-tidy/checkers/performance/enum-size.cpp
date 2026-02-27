@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++17-or-later %s performance-enum-size %t -- \
-// RUN:   -config="{CheckOptions: {performance-enum-size.EnumIgnoreList: '::IgnoredEnum;IgnoredSecondEnum'}}"
+// RUN:   -config="{CheckOptions: {performance-enum-size.EnumIgnoreList: '::IgnoredEnum;IgnoredSecondEnum;IgnoredTypedefEnum'}}"
 
 namespace std
 {
@@ -106,3 +106,15 @@ enum class EnumClassWithoutValues : int {};
 enum EnumWithoutValues {};
 
 }
+
+extern "C" {
+enum ExternCEnum {
+    ec1,
+    ec2
+};
+
+typedef enum {
+    tec1,
+    tec2
+} IgnoredTypedefEnum;
+} // extern "C"

@@ -20,17 +20,16 @@ void test_reserved_placement_new(void *p) {
 // CIR-SAME:                                   %[[ARG0:.*]]: !cir.ptr<!void>
 // CIR:           %[[P:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["p", init]
 // CIR:           cir.store %[[ARG0]], %[[P]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
-// CIR:           %[[SIZE:.*]] = cir.const #cir.int<1> : !u64i
 // CIR:           %[[PTR:.*]] = cir.load{{.*}} %[[P]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
 // CIR:           %[[PTR_A:.*]] = cir.cast bitcast %[[PTR]] : !cir.ptr<!void> -> !cir.ptr<!rec_A>
-// CIR:           cir.call @_ZN1AC1Ev(%[[PTR_A]]) : (!cir.ptr<!rec_A>) -> ()
+// CIR:           cir.call @_ZN1AC1Ev(%[[PTR_A]]) : (!cir.ptr<!rec_A>{{.*}}) -> ()
 
 // LLVM-LABEL: define dso_local void @_Z27test_reserved_placement_newPv(
-// LLVM-SAME:                                   ptr %[[ARG0:.*]]
+// LLVM-SAME:                                   ptr {{.*}} %[[ARG0:.*]]
 // LLVM:         %[[P:.*]] = alloca ptr
 // LLVM:         store ptr %[[ARG0:.*]], ptr %[[P]]
 // LLVM:         %[[PTR:.*]] = load ptr, ptr %[[P]]
-// LLVM:         call void @_ZN1AC1Ev(ptr %[[PTR]])
+// LLVM:         call void @_ZN1AC1Ev(ptr {{.*}} %[[PTR]])
 
 // OGCG-LABEL: define dso_local void @_Z27test_reserved_placement_newPv(
 // OGCG-SAME:                                   ptr {{.*}} %[[ARG0:.*]]

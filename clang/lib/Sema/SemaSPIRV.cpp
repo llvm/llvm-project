@@ -380,6 +380,42 @@ bool SemaSPIRV::CheckSPIRVBuiltinFunctionCall(const TargetInfo &TI,
     TheCall->setType(RetTy);
     break;
   }
+  case SPIRV::BI__builtin_spirv_subgroup_shuffle: {
+    if (SemaRef.checkArgCount(TheCall, 2))
+      return true;
+
+    ExprResult A =
+        SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(0));
+    if (A.isInvalid())
+      return true;
+    TheCall->setArg(0, A.get());
+
+    QualType ArgTyA = A.get()->getType();
+    if (!ArgTyA->isIntegerType() && !ArgTyA->isFloatingType()) {
+      SemaRef.Diag(A.get()->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+          << /* ordinal */ 1 << /* scalar */ 1 << /* no int */ 0
+          << /* no fp */ 0 << ArgTyA;
+      return true;
+    }
+
+    ExprResult B =
+        SemaRef.DefaultFunctionArrayLvalueConversion(TheCall->getArg(1));
+    if (B.isInvalid())
+      return true;
+
+    QualType Uint32Ty =
+        SemaRef.getASTContext().getIntTypeForBitwidth(32,
+                                                      /*Signed=*/false);
+    ExprResult ResB = SemaRef.PerformImplicitConversion(
+        B.get(), Uint32Ty, AssignmentAction::Passing);
+    if (ResB.isInvalid())
+      return true;
+    TheCall->setArg(1, ResB.get());
+
+    QualType RetTy = ArgTyA;
+    TheCall->setType(RetTy);
+    break;
+  }
   }
   return false;
 }

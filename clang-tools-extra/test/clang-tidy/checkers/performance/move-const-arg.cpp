@@ -583,3 +583,37 @@ void testTernaryMove() {
 
 };
 } // namespace GH126515
+
+namespace GH174826 {
+
+struct PrivateCopy {
+  PrivateCopy() = default;
+  PrivateCopy(PrivateCopy &&) = default;
+
+private:
+  PrivateCopy(const PrivateCopy &) = default;
+};
+
+void receive(PrivateCopy) {}
+
+void testPrivate() {
+  PrivateCopy v;
+  receive(std::move(v));
+}
+
+struct PublicCopy {
+  PublicCopy() = default;
+  PublicCopy(const PublicCopy &) = default;
+  PublicCopy(PublicCopy &&) = default;
+};
+
+void receive(PublicCopy) {}
+
+void testPublic() {
+  PublicCopy v;
+  receive(std::move(v));
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: std::move of the variable 'v' of the trivially-copyable type 'PublicCopy' has no effect; remove std::move() [performance-move-const-arg]
+  // CHECK-FIXES: receive(v);
+}
+
+} // namespace GH174826

@@ -627,6 +627,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(gc);
   KEYWORD(prefix);
   KEYWORD(prologue);
+  KEYWORD(prefalign);
 
   KEYWORD(no_sanitize_address);
   KEYWORD(no_sanitize_hwaddress);
@@ -719,6 +720,12 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(address);
   KEYWORD(provenance);
   KEYWORD(read_provenance);
+
+  // denormal_fpenv attribute
+  KEYWORD(ieee);
+  KEYWORD(preservesign);
+  KEYWORD(positivezero);
+  KEYWORD(dynamic);
 
   // nofpclass attribute
   KEYWORD(all);
@@ -822,6 +829,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(hotness);
   KEYWORD(unknown);
   KEYWORD(critical);
+  // Deprecated, keep in order to support old files.
   KEYWORD(relbf);
   KEYWORD(variable);
   KEYWORD(vTableFuncs);

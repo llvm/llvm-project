@@ -28,6 +28,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <type_traits>
 
@@ -226,18 +227,22 @@ static Value createLinalgBodyCalculationForElementwiseOp(
             rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
       } else {
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-        auto arg1 =
-            arith::ExtSIOp::create(rewriter, loc, intermediateType, args[1]);
-        auto arg2 =
-            arith::ExtSIOp::create(rewriter, loc, intermediateType, args[2]);
+        Value arg1 = args[1];
+        Value arg2 = args[2];
+        // Avoid verifier-invalid no-op sign-extends; only widen when needed.
+        if (arg1.getType() != intermediateType)
+          arg1 = arith::ExtSIOp::create(rewriter, loc, intermediateType, arg1);
+        if (arg2.getType() != intermediateType)
+          arg2 = arith::ExtSIOp::create(rewriter, loc, intermediateType, arg2);
         zpAddValue =
             arith::AddIOp::create(rewriter, loc, intermediateType, arg1, arg2);
       }
 
       // The negation can be applied by doing:
       //  outputValue = inZp + outZp - inputValue
-      auto ext =
-          arith::ExtSIOp::create(rewriter, loc, intermediateType, args[0]);
+      Value ext = args[0];
+      if (ext.getType() != intermediateType)
+        ext = arith::ExtSIOp::create(rewriter, loc, intermediateType, ext);
       auto sub = arith::SubIOp::create(rewriter, loc, zpAddValue, ext);
 
       // Clamp to the negation range.
@@ -249,7 +254,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
           APInt::getSignedMaxValue(inputBitWidth).getSExtValue());
       auto clamp = clampIntHelper(loc, sub, min, max, rewriter, false);
 
-      // Truncate to the final value.
+      // Truncate to the final value, skipping no-op trunci when widths match.
+      if (clamp.getType() == elementTy)
+        return clamp;
       return arith::TruncIOp::create(rewriter, loc, elementTy, clamp);
     }
   }
@@ -1560,15 +1567,15 @@ public:
 
     if (isMultiplierConstant && isShiftConstant) {
       // explicit cast is required here
-      shiftValues = llvm::to_vector(llvm::map_range(
+      shiftValues = llvm::map_to_vector(
           shiftElems.getValues<IntegerAttr>(), [](IntegerAttr attr) -> int32_t {
             return static_cast<int32_t>(attr.getInt());
-          }));
-      multiplierValues = llvm::to_vector(
-          llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
-                          [](IntegerAttr attr) -> int32_t {
-                            return static_cast<int32_t>(attr.getInt());
-                          }));
+          });
+      multiplierValues =
+          llvm::map_to_vector(multiplierElems.getValues<IntegerAttr>(),
+                              [](IntegerAttr attr) -> int32_t {
+                                return static_cast<int32_t>(attr.getInt());
+                              });
 
       // If we shift by more than the bitwidth, this just sets to 0.
       for (int i = 0, s = multiplierValues.size(); i < s; i++) {

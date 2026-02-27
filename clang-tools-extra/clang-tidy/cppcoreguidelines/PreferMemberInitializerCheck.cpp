@@ -7,10 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "PreferMemberInitializerCheck.h"
+#include "../utils/LexerUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Decl.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/DenseMap.h"
 
 using namespace clang::ast_matchers;
@@ -217,9 +217,9 @@ void PreferMemberInitializerCheck::check(
         continue;
       if (Init->getMember() == Field) {
         HasInitAlready = true;
-        if (isa<ImplicitValueInitExpr>(Init->getInit()))
+        if (isa<ImplicitValueInitExpr>(Init->getInit())) {
           InsertPos = Init->getRParenLoc();
-        else {
+        } else {
           ReplaceRange = Init->getInit()->getSourceRange();
           AddBrace = isa<InitListExpr>(Init->getInit());
         }
@@ -269,7 +269,7 @@ void PreferMemberInitializerCheck::check(
     }
 
     SourceLocation SemiColonEnd;
-    if (auto NextToken = Lexer::findNextToken(
+    if (auto NextToken = utils::lexer::findNextTokenSkippingComments(
             S->getEndLoc(), *Result.SourceManager, getLangOpts()))
       SemiColonEnd = NextToken->getEndLoc();
     else

@@ -181,7 +181,7 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
   Register Reg = RSI->Instr->getOperand(0).getReg();
   MachineBasicBlock::iterator Pos = RSI->Instr;
   MachineBasicBlock &MBB = *Pos->getParent();
-  DebugLoc DL = Pos->getDebugLoc();
+  const DebugLoc &DL = Pos->getDebugLoc();
 
   Register SrcVec = BaseRSI->Instr->getOperand(0).getReg();
   DenseMap<Register, unsigned> UpdatedRegToChan = BaseRSI->RegToChan;
@@ -222,8 +222,8 @@ MachineInstr *R600VectorRegMerger::RebuildVector(
 
   // Update RSI
   RSI->Instr = NewMI;
-  RSI->RegToChan = UpdatedRegToChan;
-  RSI->UndefReg = UpdatedUndef;
+  RSI->RegToChan = std::move(UpdatedRegToChan);
+  RSI->UndefReg = std::move(UpdatedUndef);
 
   return NewMI;
 }

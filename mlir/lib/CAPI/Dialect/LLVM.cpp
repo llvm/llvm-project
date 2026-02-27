@@ -27,6 +27,10 @@ MlirType mlirLLVMPointerTypeGet(MlirContext ctx, unsigned addressSpace) {
   return wrap(LLVMPointerType::get(unwrap(ctx), addressSpace));
 }
 
+MlirStringRef mlirLLVMPointerTypeGetName(void) {
+  return wrap(LLVM::LLVMPointerType::name);
+}
+
 MlirTypeID mlirLLVMPointerTypeGetTypeID() {
   return wrap(LLVM::LLVMPointerType::getTypeID());
 }
@@ -43,8 +47,14 @@ MlirType mlirLLVMVoidTypeGet(MlirContext ctx) {
   return wrap(LLVMVoidType::get(unwrap(ctx)));
 }
 
+MlirStringRef mlirLLVMVoidTypeGetName(void) { return wrap(LLVMVoidType::name); }
+
 MlirType mlirLLVMArrayTypeGet(MlirType elementType, unsigned numElements) {
   return wrap(LLVMArrayType::get(unwrap(elementType), numElements));
+}
+
+MlirStringRef mlirLLVMArrayTypeGetName(void) {
+  return wrap(LLVMArrayType::name);
 }
 
 MlirType mlirLLVMArrayTypeGetElementType(MlirType type) {
@@ -57,6 +67,10 @@ MlirType mlirLLVMFunctionTypeGet(MlirType resultType, intptr_t nArgumentTypes,
   return wrap(LLVMFunctionType::get(
       unwrap(resultType),
       unwrapList(nArgumentTypes, argumentTypes, argumentStorage), isVarArg));
+}
+
+MlirStringRef mlirLLVMFunctionTypeGetName(void) {
+  return wrap(LLVMFunctionType::name);
 }
 
 intptr_t mlirLLVMFunctionTypeGetNumInputs(MlirType type) {
@@ -79,6 +93,10 @@ bool mlirTypeIsALLVMStructType(MlirType type) {
 
 MlirTypeID mlirLLVMStructTypeGetTypeID() {
   return wrap(LLVM::LLVMStructType::getTypeID());
+}
+
+MlirStringRef mlirLLVMStructTypeGetName(void) {
+  return wrap(LLVM::LLVMStructType::name);
 }
 
 bool mlirLLVMStructTypeIsLiteral(MlirType type) {
@@ -160,6 +178,10 @@ MlirAttribute mlirLLVMDIExpressionElemAttrGet(MlirContext ctx,
   return wrap(DIExpressionElemAttr::get(unwrap(ctx), opcode, list));
 }
 
+MlirStringRef mlirLLVMDIExpressionElemAttrGetName(void) {
+  return wrap(DIExpressionElemAttr::name);
+}
+
 MlirAttribute mlirLLVMDIExpressionAttrGet(MlirContext ctx, intptr_t nOperations,
                                           MlirAttribute const *operations) {
   SmallVector<Attribute> attrStorage;
@@ -171,8 +193,16 @@ MlirAttribute mlirLLVMDIExpressionAttrGet(MlirContext ctx, intptr_t nOperations,
                           llvm::CastTo<DIExpressionElemAttr>)));
 }
 
+MlirStringRef mlirLLVMDIExpressionAttrGetName(void) {
+  return wrap(DIExpressionAttr::name);
+}
+
 MlirAttribute mlirLLVMDINullTypeAttrGet(MlirContext ctx) {
   return wrap(DINullTypeAttr::get(unwrap(ctx)));
+}
+
+MlirStringRef mlirLLVMDINullTypeAttrGetName(void) {
+  return wrap(DINullTypeAttr::name);
 }
 
 MlirAttribute mlirLLVMDIBasicTypeAttrGet(MlirContext ctx, unsigned int tag,
@@ -182,6 +212,10 @@ MlirAttribute mlirLLVMDIBasicTypeAttrGet(MlirContext ctx, unsigned int tag,
 
   return wrap(DIBasicTypeAttr::get(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)), sizeInBits, encoding));
+}
+
+MlirStringRef mlirLLVMDIBasicTypeAttrGetName(void) {
+  return wrap(DIBasicTypeAttr::name);
 }
 
 MlirAttribute mlirLLVMDICompositeTypeAttrGetRecSelf(MlirAttribute recId) {
@@ -212,17 +246,27 @@ MlirAttribute mlirLLVMDICompositeTypeAttrGet(
                           llvm::CastTo<DINodeAttr>)));
 }
 
-MlirAttribute mlirLLVMDIDerivedTypeAttrGet(
-    MlirContext ctx, unsigned int tag, MlirAttribute name,
-    MlirAttribute baseType, uint64_t sizeInBits, uint32_t alignInBits,
-    uint64_t offsetInBits, int64_t dwarfAddressSpace, MlirAttribute extraData) {
+MlirStringRef mlirLLVMDICompositeTypeAttrGetName(void) {
+  return wrap(DICompositeTypeAttr::name);
+}
+
+MlirAttribute
+mlirLLVMDIDerivedTypeAttrGet(MlirContext ctx, unsigned int tag,
+                             MlirAttribute name, MlirAttribute baseType,
+                             uint64_t sizeInBits, uint32_t alignInBits,
+                             uint64_t offsetInBits, int64_t dwarfAddressSpace,
+                             int64_t flags, MlirAttribute extraData) {
   std::optional<unsigned> addressSpace = std::nullopt;
   if (dwarfAddressSpace >= 0)
     addressSpace = (unsigned)dwarfAddressSpace;
   return wrap(DIDerivedTypeAttr::get(
       unwrap(ctx), tag, cast<StringAttr>(unwrap(name)),
       cast<DITypeAttr>(unwrap(baseType)), sizeInBits, alignInBits, offsetInBits,
-      addressSpace, cast<DINodeAttr>(unwrap(extraData))));
+      addressSpace, DIFlags(flags), cast<DINodeAttr>(unwrap(extraData))));
+}
+
+MlirStringRef mlirLLVMDIDerivedTypeAttrGetName(void) {
+  return wrap(DIDerivedTypeAttr::name);
 }
 
 MlirAttribute mlirLLVMDIStringTypeAttrGet(
@@ -237,6 +281,10 @@ MlirAttribute mlirLLVMDIStringTypeAttrGet(
       cast<DIExpressionAttr>(unwrap(stringLocationExp)), encoding));
 }
 
+MlirStringRef mlirLLVMDIStringTypeAttrGetName(void) {
+  return wrap(DIStringTypeAttr::name);
+}
+
 MlirAttribute
 mlirLLVMDIDerivedTypeAttrGetBaseType(MlirAttribute diDerivedType) {
   return wrap(cast<DIDerivedTypeAttr>(unwrap(diDerivedType)).getBaseType());
@@ -246,12 +294,20 @@ MlirAttribute mlirLLVMCConvAttrGet(MlirContext ctx, MlirLLVMCConv cconv) {
   return wrap(CConvAttr::get(unwrap(ctx), CConv(cconv)));
 }
 
+MlirStringRef mlirLLVMCConvAttrGetName(void) { return wrap(CConvAttr::name); }
+
 MlirAttribute mlirLLVMComdatAttrGet(MlirContext ctx, MlirLLVMComdat comdat) {
   return wrap(ComdatAttr::get(unwrap(ctx), comdat::Comdat(comdat)));
 }
 
+MlirStringRef mlirLLVMComdatAttrGetName(void) { return wrap(ComdatAttr::name); }
+
 MlirAttribute mlirLLVMLinkageAttrGet(MlirContext ctx, MlirLLVMLinkage linkage) {
   return wrap(LinkageAttr::get(unwrap(ctx), linkage::Linkage(linkage)));
+}
+
+MlirStringRef mlirLLVMLinkageAttrGetName(void) {
+  return wrap(LinkageAttr::name);
 }
 
 MlirAttribute mlirLLVMDIFileAttrGet(MlirContext ctx, MlirAttribute name,
@@ -259,6 +315,8 @@ MlirAttribute mlirLLVMDIFileAttrGet(MlirContext ctx, MlirAttribute name,
   return wrap(DIFileAttr::get(unwrap(ctx), cast<StringAttr>(unwrap(name)),
                               cast<StringAttr>(unwrap(directory))));
 }
+
+MlirStringRef mlirLLVMDIFileAttrGetName(void) { return wrap(DIFileAttr::name); }
 
 MlirAttribute mlirLLVMDICompileUnitAttrGet(
     MlirContext ctx, MlirAttribute id, unsigned int sourceLanguage,
@@ -272,8 +330,16 @@ MlirAttribute mlirLLVMDICompileUnitAttrGet(
       cast<StringAttr>(unwrap(splitDebugFilename))));
 }
 
+MlirStringRef mlirLLVMDICompileUnitAttrGetName(void) {
+  return wrap(DICompileUnitAttr::name);
+}
+
 MlirAttribute mlirLLVMDIFlagsAttrGet(MlirContext ctx, uint64_t value) {
   return wrap(DIFlagsAttr::get(unwrap(ctx), DIFlags(value)));
+}
+
+MlirStringRef mlirLLVMDIFlagsAttrGetName(void) {
+  return wrap(DIFlagsAttr::name);
 }
 
 MlirAttribute mlirLLVMDILexicalBlockAttrGet(MlirContext ctx,
@@ -286,6 +352,10 @@ MlirAttribute mlirLLVMDILexicalBlockAttrGet(MlirContext ctx,
                               cast<DIFileAttr>(unwrap(file)), line, column));
 }
 
+MlirStringRef mlirLLVMDILexicalBlockAttrGetName(void) {
+  return wrap(DILexicalBlockAttr::name);
+}
+
 MlirAttribute mlirLLVMDILexicalBlockFileAttrGet(MlirContext ctx,
                                                 MlirAttribute scope,
                                                 MlirAttribute file,
@@ -293,6 +363,10 @@ MlirAttribute mlirLLVMDILexicalBlockFileAttrGet(MlirContext ctx,
   return wrap(DILexicalBlockFileAttr::get(
       unwrap(ctx), cast<DIScopeAttr>(unwrap(scope)),
       cast<DIFileAttr>(unwrap(file)), discriminator));
+}
+
+MlirStringRef mlirLLVMDILexicalBlockFileAttrGetName(void) {
+  return wrap(DILexicalBlockFileAttr::name);
 }
 
 MlirAttribute mlirLLVMDILocalVariableAttrGet(
@@ -303,6 +377,10 @@ MlirAttribute mlirLLVMDILocalVariableAttrGet(
       unwrap(ctx), cast<DIScopeAttr>(unwrap(scope)),
       cast<StringAttr>(unwrap(name)), cast<DIFileAttr>(unwrap(diFile)), line,
       arg, alignInBits, cast<DITypeAttr>(unwrap(diType)), DIFlags(flags)));
+}
+
+MlirStringRef mlirLLVMDILocalVariableAttrGetName(void) {
+  return wrap(DILocalVariableAttr::name);
 }
 
 MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
@@ -316,6 +394,10 @@ MlirAttribute mlirLLVMDISubroutineTypeAttrGet(MlirContext ctx,
       unwrap(ctx), callingConvention,
       llvm::map_to_vector(unwrapList(nTypes, types, attrStorage),
                           llvm::CastTo<DITypeAttr>)));
+}
+
+MlirStringRef mlirLLVMDISubroutineTypeAttrGetName(void) {
+  return wrap(DISubroutineTypeAttr::name);
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGetRecSelf(MlirAttribute recId) {
@@ -349,6 +431,10 @@ MlirAttribute mlirLLVMDISubprogramAttrGet(
       llvm::map_to_vector(
           unwrapList(nAnnotations, annotations, annotationsStorage),
           llvm::CastTo<DINodeAttr>)));
+}
+
+MlirStringRef mlirLLVMDISubprogramAttrGetName(void) {
+  return wrap(DISubprogramAttr::name);
 }
 
 MlirAttribute mlirLLVMDISubprogramAttrGetScope(MlirAttribute diSubprogram) {
@@ -390,6 +476,10 @@ MlirAttribute mlirLLVMDIModuleAttrGet(MlirContext ctx, MlirAttribute file,
       line, isDecl));
 }
 
+MlirStringRef mlirLLVMDIModuleAttrGetName(void) {
+  return wrap(DIModuleAttr::name);
+}
+
 MlirAttribute mlirLLVMDIModuleAttrGetScope(MlirAttribute diModule) {
   return wrap(cast<DIModuleAttr>(unwrap(diModule)).getScope());
 }
@@ -408,8 +498,16 @@ MlirAttribute mlirLLVMDIImportedEntityAttrGet(
                           llvm::CastTo<DINodeAttr>)));
 }
 
+MlirStringRef mlirLLVMDIImportedEntityAttrGetName(void) {
+  return wrap(DIImportedEntityAttr::name);
+}
+
 MlirAttribute mlirLLVMDIAnnotationAttrGet(MlirContext ctx, MlirAttribute name,
                                           MlirAttribute value) {
   return wrap(DIAnnotationAttr::get(unwrap(ctx), cast<StringAttr>(unwrap(name)),
                                     cast<StringAttr>(unwrap(value))));
+}
+
+MlirStringRef mlirLLVMDIAnnotationAttrGetName(void) {
+  return wrap(DIAnnotationAttr::name);
 }

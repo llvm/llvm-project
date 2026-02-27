@@ -117,7 +117,7 @@ static bool lowerExecSyncGlobalVariables(
   for (GlobalVariable *GV : OrderedGVs) {
     unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
     unsigned BarId = NumAbsolutes + 1;
-    unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+    unsigned BarCnt = GV->getGlobalSize(DL) / 16;
     NumAbsolutes += BarCnt;
 
     // 4 bits for alignment, 5 bits for the barrier num,
@@ -160,7 +160,7 @@ static bool lowerExecSyncGlobalVariables(
       unsigned BarrierScope = AMDGPU::Barrier::BARRIER_SCOPE_WORKGROUP;
       unsigned BarId = Kernel2BarId[F];
       BarId += NumAbsolutes + 1;
-      unsigned BarCnt = DL.getTypeAllocSize(GV->getValueType()) / 16;
+      unsigned BarCnt = GV->getGlobalSize(DL) / 16;
       Kernel2BarId[F] += BarCnt;
       unsigned Offset = 0x802000u | BarrierScope << 9 | BarId << 4;
       recordLDSAbsoluteAddress(&M, NewGV, Offset);

@@ -136,6 +136,15 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
   ];
 }
 
+def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
+  let summary = "Copy globals with acc.declare into the GPU module";
+  let description = [{
+    Copies globals that have the `acc.declare` attribute into the GPU module so
+    that device code can reference them.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "mlir::gpu::GPUDialect"];
+}
+
 def ACCLegalizeSerial : Pass<"acc-legalize-serial", "mlir::func::FuncOp"> {
   let summary = "Legalize OpenACC serial constructs";
   let description = [{
@@ -285,6 +294,127 @@ def ACCIfClauseLowering : Pass<"acc-if-clause-lowering", "mlir::func::FuncOp"> {
   }];
   let dependentDialects = ["mlir::acc::OpenACCDialect",
       "mlir::scf::SCFDialect"];
+}
+
+def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicalization", "mlir::func::FuncOp"> {
+  let summary = "Canonicalize live-in values for regions destined for outlining";
+  let description = [{
+    This pass canonicalizes live-in values for regions destined for outlining.
+    It handles operations that produce synthetic types or values that cannot
+    be passed as arguments to outlined regions.
+
+    The pass performs the following transformations:
+
+    1. **Sinking**: Operations whose results are only used inside the region
+       are moved into the region. This reduces the number of live-in values
+       and keeps related operations together.
+
+    2. **Rematerialization**: Operations whose results are used both inside
+       and outside the region are cloned into the region. The uses inside
+       the region are updated to use the cloned operation's results.
+
+    Operations are considered candidates for these transformations if they
+    implement the `OutlineRematerializationOpInterface` or match constant
+    patterns. These operations typically produce synthetic types (shapes,
+    bounds, field indices) that cannot be passed as function arguments.
+
+    The pass iterates until convergence since canonicalizing one value may
+    expose new candidates (e.g., a bounds operation's operands may themselves
+    be constants that should be rematerialized).
+
+    Example transformation (rematerialization):
+    ```mlir
+    // Before:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    // %bounds is also used elsewhere
+
+    // After:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %c0_clone = arith.constant 0 : index
+      %c10_clone = arith.constant 10 : index
+      %bounds_clone = acc.bounds lowerbound(%c0_clone : index) upperbound(%c10_clone : index)
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds_clone) -> ...
+      acc.yield
+    }
+    ```
+
+    Example transformation (sinking):
+    ```mlir
+    // Before:
+    %c0 = arith.constant 0 : index
+    %c10 = arith.constant 10 : index
+    %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+    acc.parallel {
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    // %bounds is NOT used elsewhere
+
+    // After:
+    acc.parallel {
+      %c0 = arith.constant 0 : index
+      %c10 = arith.constant 10 : index
+      %bounds = acc.bounds lowerbound(%c0 : index) upperbound(%c10 : index)
+      %priv = acc.private varPtr(%ptr : ...) bounds(%bounds) -> ...
+      acc.yield
+    }
+    ```
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+}
+
+def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"> {
+  let summary = "Verify values and symbols live into offload regions for legality";
+  let description = [{
+    This pass verifies that values and symbols used within OpenACC compute
+    constructs and other offload regions are legal for the target execution
+    model.
+
+    The pass performs two main checks:
+
+    1. **Live-in Value Verification**: Checks that all values that are live
+       into an offload region are valid for use in that region. This includes
+       checking that pointer-like and mappable types have appropriate data
+       clauses or device attributes.
+
+    2. **Symbol Use Verification**: Checks that all symbol references within
+       an offload region are valid for that region. This includes checking for
+       acc.routine declarations and acc.declare attributes.
+
+    The device_type option notes the target execution model:
+    - `none`, `nvidia`, `radeon`: Device execution (GPU offload)
+    - `host`, `multicore`: Host execution
+
+    When soft_check is enabled, the pass only emits debug messages for illegal
+    values/symbols instead of failing compilation. This is useful for
+    diagnostic purposes.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect"];
+  let options = [
+    Option<"deviceType", "device-type", "mlir::acc::DeviceType",
+           "mlir::acc::DeviceType::None",
+           "Target device type for verification. Host/multicore uses host "
+           "region checking, all others use device region checking.",
+           [{::llvm::cl::values(
+              clEnumValN(mlir::acc::DeviceType::None, "none", "none"),
+              clEnumValN(mlir::acc::DeviceType::Host, "host", "host"),
+              clEnumValN(mlir::acc::DeviceType::Multicore, "multicore", "multicore"),
+              clEnumValN(mlir::acc::DeviceType::Nvidia, "nvidia", "nvidia"),
+              clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
+           }]>,
+    Option<"softCheck", "soft-check", "bool", "false",
+           "When true, illegal values are printed via LLVM_DEBUG instead of "
+           "failing compilation. Useful for diagnostic purposes.">
+  ];
 }
 
 #endif // MLIR_DIALECT_OPENACC_TRANSFORMS_PASSES

@@ -1,4 +1,5 @@
 ! REQUIRES: plugins, examples
+! XFAIL: system-aix
 
 ! RUN: %flang_fc1 -load %llvmshlibdir/flangOmpReport%pluginext -plugin flang-omp-report -fopenmp %s -o - | FileCheck %s
 
@@ -29,13 +30,13 @@ end
 
 ! CHECK:---
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-declarative-directive.f90'
-! CHECK-NEXT:  line:            11
+! CHECK-NEXT:  line:            [[@LINE-21]]
 ! CHECK-NEXT:  construct:       declare simd
 ! CHECK-NEXT:  clauses:
 ! CHECK-NEXT:    - clause:      aligned
 ! CHECK-NEXT:      details:     a
 ! CHECK-NEXT:- file:            '{{[^"]*}}omp-declarative-directive.f90'
-! CHECK-NEXT:  line:            21
+! CHECK-NEXT:  line:            [[@LINE-17]]
 ! CHECK-NEXT:  construct:       declare target
 ! CHECK-NEXT:  clauses:         []
 ! CHECK-NEXT:...

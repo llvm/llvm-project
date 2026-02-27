@@ -109,7 +109,7 @@ func.func @generic_wrong_iterator(%arg0: memref<1xi32>) {
 // -----
 
 func.func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
-  // expected-error @+1 {{expected operand rank (1) to match the result rank of indexing_map #0 (2)}}
+  // expected-error @+1 {{expected operand #0 rank (1) to match the result rank of indexing_map (2)}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> (0, 0)> ],
     iterator_types = []}
@@ -123,7 +123,7 @@ func.func @generic_one_d_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i
 
 func.func @generic_scalar_view(%arg0: memref<?xf32, affine_map<(i)[off]->(off + i)>>) {
   %cst = arith.constant 0.0 : f32
-  // expected-error @+1 {{expected operand rank (0) to match the result rank of indexing_map #0 (1)}}
+  // expected-error @+1 {{expected operand #0 rank (0) to match the result rank of indexing_map (1)}}
   linalg.generic {
     indexing_maps =  [ affine_map<() -> (0)>, affine_map<() -> (0, 0)> ],
     iterator_types = []}
@@ -163,6 +163,58 @@ func.func @generic_singular_maps(%arg0: memref<?xf32, affine_map<(i)[off]->(off 
   ^bb(%0: f32, %1: f32):
       linalg.yield %1: f32
   }
+}
+
+// -----
+
+func.func @generic_index_rank0(%arg0: tensor<f32>) -> tensor<f32> {
+// expected-error @+1 {{expected operand #0 rank (0) to match the result rank of indexing_map (1)}}
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0) -> (d0)>,
+      affine_map<(d0) -> (d0)>
+    ],
+    iterator_types = ["parallel"]}
+      ins(%arg0 : tensor<f32>)
+     outs(%arg0 : tensor<f32>) {
+  ^bb(%0: f32, %1: f32):
+    linalg.yield %1 : f32
+  } -> tensor<f32>
+  return %0 : tensor<f32>
+}
+
+// -----
+
+func.func @generic_index_domain_error(%arg0: tensor<4xf32>) -> tensor<4xf32> {
+// expected-error @+1 {{expected operand #1 rank (1) to match the result rank of indexing_map (2)}}
+  %0 = linalg.generic {
+    indexing_maps = [
+      affine_map<(d0) -> (d0)>,
+      affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+      ins(%arg0 : tensor<4xf32>)
+     outs(%arg0 : tensor<4xf32>) {
+  ^bb(%0: f32):
+    linalg.yield %0 : f32
+  } -> tensor<4xf32>
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
+#map_with_symbol = affine_map<(d0)[s0] -> (d0 + s0)>
+
+func.func @generic_indexing_map_with_symbol(%arg0: tensor<8xf32>) -> tensor<8xf32> {
+  // expected-error @+1 {{unexpected symbols in indexing_map #0}}
+  %0 = linalg.generic {
+    indexing_maps = [#map_with_symbol, #map_with_symbol],
+    iterator_types = ["parallel"]
+  } ins(%arg0 : tensor<8xf32>)
+    outs(%arg0 : tensor<8xf32>) {
+  ^bb0(%in: f32, %out: f32):
+    linalg.yield %in : f32
+  } -> tensor<8xf32>
+  return %0 : tensor<8xf32>
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -269,6 +321,24 @@ func.func @generic_result_tensor_type(%arg0: memref<?xf32, affine_map<(i)[off]->
 
 // -----
 
+// Unranked tensor inputs must be diagnosed.
+func.func @generic_unranked_input_tensor(%in: tensor<*xf32>) {
+  %out = tensor.empty() : tensor<16x16xf32>
+  // expected-error @+1 {{'linalg.generic' op operand #0 must be a ranked tensor, but got 'tensor<*xf32>'}}
+  %r = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>,
+                     affine_map<(d0, d1) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel"]}
+      ins(%in : tensor<*xf32>)
+     outs(%out : tensor<16x16xf32>) {
+      ^bb0(%a: f32, %b: f32):
+        linalg.yield %a : f32
+     } -> tensor<16x16xf32>
+  return
+}
+
+// -----
+
 func.func @generic(%arg0: memref<?x?xf32>) {
   // expected-error @+6 {{block with no terminator, has %0 = "arith.addf"(%arg1, %arg1) <{fastmath = #arith.fastmath<none>}> : (f32, f32) -> f32}}
   linalg.generic  {
@@ -296,7 +366,7 @@ func.func @generic(%arg0: memref<?x?xf32>) {
 // // -----
 
 func.func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?xf32>, %c3: memref<?x?x?xf32>) {
-  // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #1 (3)}}
+  // expected-error @+1 {{expected operand #1 rank (2) to match the result rank of indexing_map (3)}}
   linalg.batch_matmul ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?xf32>)
                      outs(%c3 : memref<?x?x?xf32>)
   return
@@ -389,7 +459,7 @@ func.func @invalid_static_matmul(%arg0: memref<2x4xf32>, %arg1: memref<3x4xf32>,
 // -----
 
 func.func @invalid_scalar_input_matmul(%arg0: f32, %arg1: memref<3x4xf32>, %arg2: memref<2x4xf32>) {
-  // expected-error @+1 {{'linalg.matmul' op expected operand rank (0) to match the result rank of indexing_map #0 (2)}}
+  // expected-error @+1 {{'linalg.matmul' op expected operand #0 rank (0) to match the result rank of indexing_map (2)}}
   linalg.matmul ins(%arg0, %arg1 : f32, memref<3x4xf32>)
                 outs(%arg2 : memref<2x4xf32>)
   return
@@ -501,7 +571,7 @@ func.func @invalid_bcast_b(%arg0: memref<3x5xf32>, %arg1: memref<7xf32>, %arg2: 
 // -----
 
 func.func @invalid_bcast_a_rank_mismatch(%arg0: memref<3x5xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
-  // expected-error @+1 {{'linalg.matmul' op expected operand rank (2) to match the result rank of indexing_map #0 (1)}}
+  // expected-error @+1 {{'linalg.matmul' op expected operand #0 rank (2) to match the result rank of indexing_map (1)}}
   linalg.matmul indexing_maps = [
                        affine_map<(d0, d1, d2) -> (d2)>,
                        affine_map<(d0, d1, d2) -> (d2, d1)>,
@@ -514,7 +584,7 @@ func.func @invalid_bcast_a_rank_mismatch(%arg0: memref<3x5xf32>, %arg1: memref<5
 // -----
 
 func.func @invalid_bcast_b_rank_mismatch(%arg0: memref<3x5xf32>, %arg1: memref<5x7xf32>, %arg2: memref<3x7xf32>) {
-  // expected-error @+1 {{'linalg.matmul' op expected operand rank (2) to match the result rank of indexing_map #1 (1)}}
+  // expected-error @+1 {{'linalg.matmul' op expected operand #1 rank (2) to match the result rank of indexing_map (1)}}
   linalg.matmul indexing_maps = [
                        affine_map<(d0, d1, d2) -> (d0, d2)>,
                        affine_map<(d0, d1, d2) -> (d2)>,
@@ -560,6 +630,15 @@ func.func @invalid_indexing_maps_placement_matmul(%lhs: tensor<4x1xf32>, %rhs: t
                        affine_map<(d0, d1, d2) -> (d2, d1)>,
                        affine_map<(d0, d1, d2) -> (d0, d1)>
                       ]
+  return
+}
+
+// -----
+
+func.func @invalid_type_matmul(%arg0 : !amx.tile<16x16xbf16>)
+{
+  // expected-error @below {{custom op 'linalg.matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %0 = linalg.matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
   return
 }
 
@@ -1016,7 +1095,7 @@ func.func @transpose_rank_permutation_size_mismatch(
 
 func.func @transpose_input_init_rank_mismatch(%input: tensor<16x32xf32>,
     %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
-  // expected-error @+1 {{'linalg.transpose' op input rank 2 does not match init rank 3}}
+  // expected-error @+1 {{'linalg.transpose' op input rank (2) does not match init rank (3)}}
   %transpose = linalg.transpose
       ins(%input:tensor<16x32xf32>)
       outs(%init:tensor<32x64x16xf32>)
@@ -1162,7 +1241,7 @@ func.func @mmt4d_dims_mismatch(%A: tensor<16x16x8x1xf32>,
 func.func @mmt4d_rank_mismatch(%A: tensor<16x16x8x1xf32>,
                  %B: tensor<16x16x8x1xf32>,
                  %C_in: tensor<8x8xf32>) -> tensor<8x8xf32> {
-    // expected-error @+1 {{expected operand rank (2) to match the result rank of indexing_map #2 (4)}}
+    // expected-error @+1 {{expected operand #2 rank (2) to match the result rank of indexing_map (4)}}
     %res = linalg.mmt4d
                      ins(%A, %B: tensor<16x16x8x1xf32>, tensor<16x16x8x1xf32>)
                      outs(%C_in: tensor<8x8xf32>)
@@ -1501,6 +1580,14 @@ func.func @invalid_C_map_result_dim_batch_matmul(%arg0: memref<?x?x?xf32>, %arg1
     return
 }
 
+// -----
+
+func.func @invalid_type_batch_matmul(%arg0 : !amx.tile<16x16xbf16>)
+{
+  // expected-error @below {{custom op 'linalg.batch_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %0 = linalg.batch_matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
+  return
+}
 
 // -----
 
@@ -1698,6 +1785,15 @@ func.func @invalid_C_map_result_dim(%A: memref<?x?x?xf32>, %B: memref<?x?x?xf32>
                        affine_map<(batch, m, n, k) -> (m, k)>]
       ins(%A, %B: memref<?x?x?xf32>, memref<?x?x?xf32>)
       outs(%C: memref<?x?xf32>)
+  return
+}
+
+// -----
+
+func.func @batch_reduce_matmul_invalid_type(%arg0 : !amx.tile<16x16xbf16>)
+{
+  // expected-error @below {{custom op 'linalg.batch_reduce_matmul' Cannot build binary Linalg operation: expects allComplex, allFloatingPoint, or allInteger, got '!amx.tile<16x16xbf16>' and '!amx.tile<16x16xbf16>'}}
+  %0 = linalg.batch_reduce_matmul ins(%arg0, %arg0 : !amx.tile<16x16xbf16>, !amx.tile<16x16xbf16>) outs(%arg0 : !amx.tile<16x16xbf16>) -> !amx.tile<16x16xbf16>
   return
 }
 

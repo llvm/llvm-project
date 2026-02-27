@@ -1030,22 +1030,21 @@ define <7 x i16> @rotl_v7i16(<7 x i16> %a, <7 x i16> %c) {
 ;
 ; CHECK-GI-LABEL: rotl_v7i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
-; CHECK-GI-NEXT:    mov w9, #15 // =0xf
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    fmov s3, w9
-; CHECK-GI-NEXT:    mov v2.h[1], w8
-; CHECK-GI-NEXT:    mov v3.h[1], w9
-; CHECK-GI-NEXT:    mov v2.h[2], w8
-; CHECK-GI-NEXT:    mov v3.h[2], w9
-; CHECK-GI-NEXT:    mov v2.h[3], w8
-; CHECK-GI-NEXT:    mov v3.h[3], w9
-; CHECK-GI-NEXT:    mov v2.h[4], w8
-; CHECK-GI-NEXT:    mov v3.h[4], w9
-; CHECK-GI-NEXT:    mov v2.h[5], w8
-; CHECK-GI-NEXT:    mov v3.h[5], w9
-; CHECK-GI-NEXT:    mov v2.h[6], w8
-; CHECK-GI-NEXT:    mov v3.h[6], w9
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
+; CHECK-GI-NEXT:    mov w8, #15 // =0xf
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    mov v2.h[1], wzr
+; CHECK-GI-NEXT:    mov v3.h[1], w8
+; CHECK-GI-NEXT:    mov v2.h[2], wzr
+; CHECK-GI-NEXT:    mov v3.h[2], w8
+; CHECK-GI-NEXT:    mov v2.h[3], wzr
+; CHECK-GI-NEXT:    mov v3.h[3], w8
+; CHECK-GI-NEXT:    mov v2.h[4], wzr
+; CHECK-GI-NEXT:    mov v3.h[4], w8
+; CHECK-GI-NEXT:    mov v2.h[5], wzr
+; CHECK-GI-NEXT:    mov v3.h[5], w8
+; CHECK-GI-NEXT:    mov v2.h[6], wzr
+; CHECK-GI-NEXT:    mov v3.h[6], w8
 ; CHECK-GI-NEXT:    sub v2.8h, v2.8h, v1.8h
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    and v2.16b, v2.16b, v3.16b
@@ -1074,22 +1073,21 @@ define <7 x i16> @rotr_v7i16(<7 x i16> %a, <7 x i16> %c) {
 ;
 ; CHECK-GI-LABEL: rotr_v7i16:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov w8, #0 // =0x0
-; CHECK-GI-NEXT:    mov w9, #15 // =0xf
-; CHECK-GI-NEXT:    fmov s2, w8
-; CHECK-GI-NEXT:    fmov s3, w9
-; CHECK-GI-NEXT:    mov v2.h[1], w8
-; CHECK-GI-NEXT:    mov v3.h[1], w9
-; CHECK-GI-NEXT:    mov v2.h[2], w8
-; CHECK-GI-NEXT:    mov v3.h[2], w9
-; CHECK-GI-NEXT:    mov v2.h[3], w8
-; CHECK-GI-NEXT:    mov v3.h[3], w9
-; CHECK-GI-NEXT:    mov v2.h[4], w8
-; CHECK-GI-NEXT:    mov v3.h[4], w9
-; CHECK-GI-NEXT:    mov v2.h[5], w8
-; CHECK-GI-NEXT:    mov v3.h[5], w9
-; CHECK-GI-NEXT:    mov v2.h[6], w8
-; CHECK-GI-NEXT:    mov v3.h[6], w9
+; CHECK-GI-NEXT:    movi d2, #0000000000000000
+; CHECK-GI-NEXT:    mov w8, #15 // =0xf
+; CHECK-GI-NEXT:    fmov s3, w8
+; CHECK-GI-NEXT:    mov v2.h[1], wzr
+; CHECK-GI-NEXT:    mov v3.h[1], w8
+; CHECK-GI-NEXT:    mov v2.h[2], wzr
+; CHECK-GI-NEXT:    mov v3.h[2], w8
+; CHECK-GI-NEXT:    mov v2.h[3], wzr
+; CHECK-GI-NEXT:    mov v3.h[3], w8
+; CHECK-GI-NEXT:    mov v2.h[4], wzr
+; CHECK-GI-NEXT:    mov v3.h[4], w8
+; CHECK-GI-NEXT:    mov v2.h[5], wzr
+; CHECK-GI-NEXT:    mov v3.h[5], w8
+; CHECK-GI-NEXT:    mov v2.h[6], wzr
+; CHECK-GI-NEXT:    mov v3.h[6], w8
 ; CHECK-GI-NEXT:    sub v2.8h, v2.8h, v1.8h
 ; CHECK-GI-NEXT:    and v1.16b, v1.16b, v3.16b
 ; CHECK-GI-NEXT:    neg v1.8h, v1.8h

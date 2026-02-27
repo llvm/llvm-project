@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compileopt-generic -fno-exceptions
 // RUN: %libomptarget-run-generic 2>&1 | %fcheck-generic
+// https://github.com/llvm/llvm-project/issues/182119
+// UNSUPPORTED: intelgpu
 
 #include <stdint.h>
 #include <stdio.h>

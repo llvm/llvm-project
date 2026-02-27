@@ -14,6 +14,7 @@
 #include "clang/Lex/Lexer.h"
 #include <optional>
 #include <utility>
+#include <vector>
 
 namespace clang {
 
@@ -21,10 +22,13 @@ class Stmt;
 
 namespace tidy::utils::lexer {
 
-/// Returns previous token or ``tok::unknown`` if not found.
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments = true);
-std::pair<Token, SourceLocation>
+/// Returns previous token or ``std::nullopt`` if not found.
+std::optional<Token> getPreviousToken(SourceLocation Location,
+                                      const SourceManager &SM,
+                                      const LangOptions &LangOpts,
+                                      bool SkipComments = true);
+
+std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments = true);
 
@@ -89,6 +93,7 @@ SourceLocation findNextAnyTokenKind(SourceLocation Start,
   }
 }
 
+// Finds next token, possibly a comment.
 inline std::optional<Token>
 findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
                                const LangOptions &LangOpts) {
@@ -96,9 +101,11 @@ findNextTokenIncludingComments(SourceLocation Start, const SourceManager &SM,
 }
 
 // Finds next token that's not a comment.
-std::optional<Token> findNextTokenSkippingComments(SourceLocation Start,
-                                                   const SourceManager &SM,
-                                                   const LangOptions &LangOpts);
+inline std::optional<Token>
+findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  return Lexer::findNextToken(Start, SM, LangOpts, false);
+}
 
 /// Re-lex the provide \p Range and return \c false if either a macro spans
 /// multiple tokens, a pre-processor directive or failure to retrieve the
@@ -106,6 +113,18 @@ std::optional<Token> findNextTokenSkippingComments(SourceLocation Start,
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts);
+
+// Represents a comment token and its source location in the original file.
+struct CommentToken {
+  SourceLocation Loc;
+  StringRef Text;
+};
+
+/// Returns comment tokens found in the given range. If a non-comment token is
+/// encountered, clears previously collected comments and continues.
+std::vector<CommentToken>
+getTrailingCommentsInRange(CharSourceRange Range, const SourceManager &SM,
+                           const LangOptions &LangOpts);
 
 /// Assuming that ``Range`` spans a CVR-qualified type, returns the
 /// token in ``Range`` that is responsible for the qualification. ``Range``

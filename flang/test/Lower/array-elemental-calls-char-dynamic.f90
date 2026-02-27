@@ -39,8 +39,8 @@ end subroutine
 ! CHECK:             %[[VAL_18:.*]] = fir.load %[[VAL_17]] : !fir.ref<i64>
 ! CHECK:             %[[VAL_19:.*]] = hlfir.designate %[[VAL_1]]#0 (%[[VAL_18]])  typeparams %[[VAL_3]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>, i64, index) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_20:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_14]] : index) {bindc_name = ".result"}
-! CHECK:             %[[VAL_21:.*]] = fir.call @_QPbug_145151_1(%[[VAL_20]], %[[VAL_14]], %[[VAL_19]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_20]] typeparams %[[VAL_14]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:             %[[VAL_21:.*]] = fir.call @_QPbug_145151_1(%[[VAL_20]], %[[VAL_14]], %[[VAL_19]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_23:.*]] = arith.constant false
 ! CHECK:             %[[VAL_24:.*]] = hlfir.as_expr %[[VAL_22]]#0 move %[[VAL_23]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.yield_element %[[VAL_24]] : !hlfir.expr<!fir.char<1,?>>
@@ -97,8 +97,8 @@ end subroutine
 ! CHECK:             %[[VAL_15:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[VAL_14]])  : (!fir.box<!fir.array<?xf32>>, index) -> !fir.ref<f32>
 ! CHECK:             %[[VAL_16:.*]] = fir.load %[[VAL_15]] : !fir.ref<f32>
 ! CHECK:             %[[VAL_17:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_12]] : index) {bindc_name = ".result"}
-! CHECK:             %[[VAL_18:.*]] = fir.call @_QPbug_145151_2(%[[VAL_17]], %[[VAL_12]], %[[VAL_16]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, f32) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_19:.*]]:2 = hlfir.declare %[[VAL_17]] typeparams %[[VAL_12]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:             %[[VAL_18:.*]] = fir.call @_QPbug_145151_2(%[[VAL_17]], %[[VAL_12]], %[[VAL_16]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, f32) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_20:.*]] = arith.constant false
 ! CHECK:             %[[VAL_21:.*]] = hlfir.as_expr %[[VAL_19]]#0 move %[[VAL_20]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.yield_element %[[VAL_21]] : !hlfir.expr<!fir.char<1,?>>
@@ -165,8 +165,8 @@ end subroutine
 ! CHECK:               fir.result %[[VAL_27]] : !fir.ref<f32>
 ! CHECK:             }
 ! CHECK:             %[[VAL_28:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_21]] : index) {bindc_name = ".result"}
-! CHECK:             %[[VAL_29:.*]] = fir.call @_QPf_opt(%[[VAL_28]], %[[VAL_21]], %[[VAL_24]], %[[VAL_25]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<f32>, !fir.ref<f32>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_30:.*]]:2 = hlfir.declare %[[VAL_28]] typeparams %[[VAL_21]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:             %[[VAL_29:.*]] = fir.call @_QPf_opt(%[[VAL_28]], %[[VAL_21]], %[[VAL_24]], %[[VAL_25]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.ref<f32>, !fir.ref<f32>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_31:.*]] = arith.constant false
 ! CHECK:             %[[VAL_32:.*]] = hlfir.as_expr %[[VAL_30]]#0 move %[[VAL_31]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.yield_element %[[VAL_32]] : !hlfir.expr<!fir.char<1,?>>
@@ -231,8 +231,8 @@ end subroutine
 ! CHECK:             %[[VAL_32:.*]] = hlfir.designate %[[VAL_1]]#0 (%[[VAL_31]])  : (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>, index) -> !fir.class<!fir.type<_QFtest_polymorphicTt>>
 ! CHECK:             %[[VAL_33:.*]] = hlfir.designate %[[VAL_2]]#0 (%[[VAL_31]])  : (!fir.class<!fir.array<?x!fir.type<_QFtest_polymorphicTt>>>, index) -> !fir.class<!fir.type<_QFtest_polymorphicTt>>
 ! CHECK:             %[[VAL_34:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_29]] : index) {bindc_name = ".result"}
-! CHECK:             %[[VAL_35:.*]] = fir.call @_QPf_poly(%[[VAL_34]], %[[VAL_29]], %[[VAL_32]], %[[VAL_33]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.class<!fir.type<_QFtest_polymorphicTt>>, !fir.class<!fir.type<_QFtest_polymorphicTt>>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_36:.*]]:2 = hlfir.declare %[[VAL_34]] typeparams %[[VAL_29]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:             %[[VAL_35:.*]] = fir.call @_QPf_poly(%[[VAL_34]], %[[VAL_29]], %[[VAL_32]], %[[VAL_33]]) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.class<!fir.type<_QFtest_polymorphicTt>>, !fir.class<!fir.type<_QFtest_polymorphicTt>>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_37:.*]] = arith.constant false
 ! CHECK:             %[[VAL_38:.*]] = hlfir.as_expr %[[VAL_36]]#0 move %[[VAL_37]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.yield_element %[[VAL_38]] : !hlfir.expr<!fir.char<1,?>>
@@ -278,8 +278,8 @@ end subroutine
 ! CHECK:             %[[VAL_18:.*]] = hlfir.as_expr %[[VAL_17]] : (!fir.boxchar<1>) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             %[[VAL_19:.*]]:3 = hlfir.associate %[[VAL_18]] typeparams %[[VAL_16]] {adapt.valuebyref} : (!hlfir.expr<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>, i1)
 ! CHECK:             %[[VAL_20:.*]] = fir.alloca !fir.char<1,?>(%[[VAL_13]] : index) {bindc_name = ".result"}
-! CHECK:             %[[VAL_21:.*]] = fir.call @_QPf_value(%[[VAL_20]], %[[VAL_13]], %[[VAL_19]]#0) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_22:.*]]:2 = hlfir.declare %[[VAL_20]] typeparams %[[VAL_13]] {uniq_name = ".tmp.func_result"} : (!fir.ref<!fir.char<1,?>>, index) -> (!fir.boxchar<1>, !fir.ref<!fir.char<1,?>>)
+! CHECK:             %[[VAL_21:.*]] = fir.call @_QPf_value(%[[VAL_20]], %[[VAL_13]], %[[VAL_19]]#0) proc_attrs<elemental, pure> fastmath<contract> : (!fir.ref<!fir.char<1,?>>, index, !fir.boxchar<1>) -> !fir.boxchar<1>
 ! CHECK:             %[[VAL_23:.*]] = arith.constant false
 ! CHECK:             %[[VAL_24:.*]] = hlfir.as_expr %[[VAL_22]]#0 move %[[VAL_23]] : (!fir.boxchar<1>, i1) -> !hlfir.expr<!fir.char<1,?>>
 ! CHECK:             hlfir.end_associate %[[VAL_19]]#1, %[[VAL_19]]#2 : !fir.ref<!fir.char<1,?>>, i1

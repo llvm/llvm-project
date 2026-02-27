@@ -9,11 +9,20 @@
 #include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticSerialization.h"
+#include "clang/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/AdvisoryLock.h"
+#include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
+
+#include <mutex>
+#include <thread>
 
 using namespace clang;
 using namespace dependencies;
@@ -379,42 +388,6 @@ DiagnosticsEngineWithDiagOpts::DiagnosticsEngineWithDiagOpts(
                                                    /*ShouldOwnClient=*/false);
 }
 
-std::pair<std::unique_ptr<driver::Driver>, std::unique_ptr<driver::Compilation>>
-dependencies::buildCompilation(ArrayRef<std::string> ArgStrs,
-                               DiagnosticsEngine &Diags,
-                               IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
-                               llvm::BumpPtrAllocator &Alloc) {
-  SmallVector<const char *, 256> Argv;
-  Argv.reserve(ArgStrs.size());
-  for (const std::string &Arg : ArgStrs)
-    Argv.push_back(Arg.c_str());
-
-  std::unique_ptr<driver::Driver> Driver = std::make_unique<driver::Driver>(
-      Argv[0], llvm::sys::getDefaultTargetTriple(), Diags,
-      "clang LLVM compiler", FS);
-  Driver->setTitle("clang_based_tool");
-
-  bool CLMode = driver::IsClangCL(
-      driver::getDriverMode(Argv[0], ArrayRef(Argv).slice(1)));
-
-  if (llvm::Error E =
-          driver::expandResponseFiles(Argv, CLMode, Alloc, FS.get())) {
-    Diags.Report(diag::err_drv_expand_response_file)
-        << llvm::toString(std::move(E));
-    return std::make_pair(nullptr, nullptr);
-  }
-
-  std::unique_ptr<driver::Compilation> Compilation(
-      Driver->BuildCompilation(Argv));
-  if (!Compilation)
-    return std::make_pair(nullptr, nullptr);
-
-  if (Compilation->containsError())
-    return std::make_pair(nullptr, nullptr);
-
-  return std::make_pair(std::move(Driver), std::move(Compilation));
-}
-
 std::unique_ptr<CompilerInvocation>
 dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
                                        DiagnosticsEngine &Diags) {
@@ -430,61 +403,6 @@ dependencies::createCompilerInvocation(ArrayRef<std::string> CommandLine,
   return Invocation;
 }
 
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-dependencies::initVFSForTUBufferScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    llvm::MemoryBufferRef TUBuffer) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  auto InputPath = TUBuffer.getBufferIdentifier();
-  InMemoryFS->addFile(
-      InputPath, 0, llvm::MemoryBuffer::getMemBufferCopy(TUBuffer.getBuffer()));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-
-  OverlayFS->pushOverlay(InMemoryOverlay);
-  std::vector<std::string> ModifiedCommandLine(CommandLine);
-  ModifiedCommandLine.emplace_back(InputPath);
-
-  return std::make_pair(OverlayFS, ModifiedCommandLine);
-}
-
-std::pair<IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>,
-          std::vector<std::string>>
-dependencies::initVFSForByNameScanning(
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS,
-    ArrayRef<std::string> CommandLine, StringRef WorkingDirectory,
-    StringRef ModuleName) {
-  // Reset what might have been modified in the previous worker invocation.
-  BaseFS->setCurrentWorkingDirectory(WorkingDirectory);
-
-  // If we're scanning based on a module name alone, we don't expect the client
-  // to provide us with an input file. However, the driver really wants to have
-  // one. Let's just make it up to make the driver happy.
-  auto OverlayFS =
-      llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(BaseFS);
-  auto InMemoryFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
-  InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
-  SmallString<128> FakeInputPath;
-  // TODO: We should retry the creation if the path already exists.
-  llvm::sys::fs::createUniquePath(ModuleName + "-%%%%%%%%.input", FakeInputPath,
-                                  /*MakeAbsolute=*/false);
-  InMemoryFS->addFile(FakeInputPath, 0, llvm::MemoryBuffer::getMemBuffer(""));
-  IntrusiveRefCntPtr<llvm::vfs::FileSystem> InMemoryOverlay = InMemoryFS;
-  OverlayFS->pushOverlay(InMemoryOverlay);
-
-  std::vector<std::string> ModifiedCommandLine(CommandLine);
-  ModifiedCommandLine.emplace_back(FakeInputPath);
-
-  return std::make_pair(OverlayFS, ModifiedCommandLine);
-}
-
 void dependencies::initializeScanCompilerInstance(
     CompilerInstance &ScanInstance,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
@@ -497,7 +415,7 @@ void dependencies::initializeScanCompilerInstance(
   ScanInstance.createSourceManager();
 
   // Use DepFS for getting the dependency directives if requested to do so.
-  if (Service.getMode() == ScanningMode::DependencyDirectivesScan) {
+  if (Service.getOpts().Mode == ScanningMode::DependencyDirectivesScan) {
     DepFS->resetBypassedPathPrefix();
     SmallString<256> ModulesCachePath;
     normalizeModuleCachePath(ScanInstance.getFileManager(),
@@ -525,7 +443,7 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
 
   if (ScanInvocation->getHeaderSearchOpts().ModulesValidateOncePerBuildSession)
     ScanInvocation->getHeaderSearchOpts().BuildSessionTimestamp =
-        Service.getBuildSessionTimestamp();
+        Service.getOpts().BuildSessionTimestamp;
 
   ScanInvocation->getFrontendOpts().DisableFree = false;
   ScanInvocation->getFrontendOpts().GenerateGlobalModuleIndex = false;
@@ -537,7 +455,7 @@ createScanCompilerInvocation(const CompilerInvocation &Invocation,
   ScanInvocation->getFrontendOpts().ModulesShareFileManager = true;
   ScanInvocation->getHeaderSearchOpts().ModuleFormat = "raw";
   ScanInvocation->getHeaderSearchOpts().ModulesIncludeVFSUsage =
-      any(Service.getOptimizeArgs() & ScanningOptimizations::VFS);
+      any(Service.getOpts().OptimizeArgs & ScanningOptimizations::VFS);
 
   // Consider different header search and diagnostic options to create
   // different modules. This avoids the unsound aliasing of module PCMs.
@@ -619,7 +537,7 @@ dependencies::initializeScanInstanceDependencyCollector(
     PrebuiltModulesAttrsMap PrebuiltModulesASTMap,
     llvm::SmallVector<StringRef> &StableDirs) {
   std::shared_ptr<ModuleDepCollector> MDC;
-  switch (Service.getFormat()) {
+  switch (Service.getOpts().Format) {
   case ScanningOutputFormat::Make:
     ScanInstance.addDependencyCollector(
         std::make_shared<DependencyConsumerForwarder>(
@@ -637,6 +555,165 @@ dependencies::initializeScanInstanceDependencyCollector(
   return MDC;
 }
 
+/// Manages (and terminates) the asynchronous compilation of modules.
+class AsyncModuleCompiles {
+  std::mutex Mutex;
+  bool Stop = false;
+  // FIXME: Have the service own a thread pool and use that instead.
+  std::vector<std::thread> Compiles;
+
+public:
+  /// Registers the module compilation, unless this instance is about to be
+  /// destroyed.
+  void add(llvm::unique_function<void()> Compile) {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    if (!Stop)
+      Compiles.emplace_back(std::move(Compile));
+  }
+
+  ~AsyncModuleCompiles() {
+    {
+      // Prevent registration of further module compiles.
+      std::lock_guard<std::mutex> Lock(Mutex);
+      Stop = true;
+    }
+
+    // Wait for outstanding module compiles to finish.
+    for (std::thread &Compile : Compiles)
+      Compile.join();
+  }
+};
+
+struct SingleModuleWithAsyncModuleCompiles : PreprocessOnlyAction {
+  DependencyScanningService &Service;
+  AsyncModuleCompiles &Compiles;
+
+  SingleModuleWithAsyncModuleCompiles(DependencyScanningService &Service,
+                                      AsyncModuleCompiles &Compiles)
+      : Service(Service), Compiles(Compiles) {}
+
+  bool BeginSourceFileAction(CompilerInstance &CI) override;
+};
+
+/// The preprocessor callback that takes care of initiating an asynchronous
+/// module compilation if needed.
+struct AsyncModuleCompile : PPCallbacks {
+  CompilerInstance &CI;
+  DependencyScanningService &Service;
+  AsyncModuleCompiles &Compiles;
+
+  AsyncModuleCompile(CompilerInstance &CI, DependencyScanningService &Service,
+                     AsyncModuleCompiles &Compiles)
+      : CI(CI), Service(Service), Compiles(Compiles) {}
+
+  void moduleLoadSkipped(Module *M) override {
+    M = M->getTopLevelModule();
+
+    HeaderSearch &HS = CI.getPreprocessor().getHeaderSearchInfo();
+    ModuleCache &ModCache = CI.getModuleCache();
+    std::string ModuleFileName = HS.getCachedModuleFileName(M);
+
+    uint64_t Timestamp = ModCache.getModuleTimestamp(ModuleFileName);
+    // Someone else already built/validated the PCM.
+    if (Timestamp > CI.getHeaderSearchOpts().BuildSessionTimestamp)
+      return;
+
+    if (!CI.getASTReader())
+      CI.createASTReader();
+    SmallVector<ASTReader::ImportedModule, 0> Imported;
+    // Only calling ReadASTCore() to avoid the expensive eager deserialization
+    // of the clang::Module objects in ReadAST().
+    // FIXME: Consider doing this in the new thread depending on how expensive
+    // the read turns out to be.
+    switch (CI.getASTReader()->ReadASTCore(
+        ModuleFileName, serialization::MK_ImplicitModule, SourceLocation(),
+        nullptr, Imported, {}, {}, {},
+        ASTReader::ARR_OutOfDate | ASTReader::ARR_Missing |
+            ASTReader::ARR_TreatModuleWithErrorsAsOutOfDate)) {
+    case ASTReader::Success:
+      // We successfully read a valid, up-to-date PCM.
+      // FIXME: This could update the timestamp. Regular calls to
+      // ASTReader::ReadAST() would do so unless they encountered corrupted
+      // AST block, corrupted extension block, or did not read the expected
+      // top-level module.
+      return;
+    case ASTReader::OutOfDate:
+    case ASTReader::Missing:
+      // The most interesting case.
+      break;
+    default:
+      // Let the regular scan diagnose this.
+      return;
+    }
+
+    ModCache.prepareForGetLock(ModuleFileName);
+    auto Lock = ModCache.getLock(ModuleFileName);
+    bool Owned;
+    llvm::Error LockErr = Lock->tryLock().moveInto(Owned);
+    // Someone else is building the PCM right now.
+    if (!LockErr && !Owned)
+      return;
+    // We should build the PCM.
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS =
+        llvm::makeIntrusiveRefCnt<DependencyScanningWorkerFilesystem>(
+            Service.getSharedCache(), Service.getOpts().MakeVFS());
+    VFS = createVFSFromCompilerInvocation(CI.getInvocation(),
+                                          CI.getDiagnostics(), std::move(VFS));
+    auto DC = std::make_unique<DiagnosticConsumer>();
+    auto MC = makeInProcessModuleCache(Service.getModuleCacheEntries());
+    CompilerInstance::ThreadSafeCloneConfig CloneConfig(std::move(VFS), *DC,
+                                                        std::move(MC));
+    auto ModCI1 = CI.cloneForModuleCompile(SourceLocation(), M, ModuleFileName,
+                                           CloneConfig);
+    auto ModCI2 = CI.cloneForModuleCompile(SourceLocation(), M, ModuleFileName,
+                                           CloneConfig);
+
+    // Note: This lock belongs to a module cache that might not outlive the
+    // thread. This works, because the in-process lock only refers to an object
+    // managed by the service, which does outlive the thread.
+    Compiles.add([Lock = std::move(Lock), ModCI1 = std::move(ModCI1),
+                  ModCI2 = std::move(ModCI2), DC = std::move(DC),
+                  Service = &Service, Compiles = &Compiles] {
+      llvm::CrashRecoveryContext CRC;
+      (void)CRC.RunSafely([&] {
+        // Quickly discovers and compiles modules for the real scan below.
+        SingleModuleWithAsyncModuleCompiles Action1(*Service, *Compiles);
+        (void)ModCI1->ExecuteAction(Action1);
+        // The real scan below.
+        ModCI2->getPreprocessorOpts().SingleModuleParseMode = false;
+        GenerateModuleFromModuleMapAction Action2;
+        (void)ModCI2->ExecuteAction(Action2);
+      });
+    });
+  }
+};
+
+/// Runs the preprocessor on a TU with single-module-parse-mode and compiles
+/// modules asynchronously without blocking or importing them.
+struct SingleTUWithAsyncModuleCompiles : PreprocessOnlyAction {
+  DependencyScanningService &Service;
+  AsyncModuleCompiles &Compiles;
+
+  SingleTUWithAsyncModuleCompiles(DependencyScanningService &Service,
+                                  AsyncModuleCompiles &Compiles)
+      : Service(Service), Compiles(Compiles) {}
+
+  bool BeginSourceFileAction(CompilerInstance &CI) override {
+    CI.getInvocation().getPreprocessorOpts().SingleModuleParseMode = true;
+    CI.getPreprocessor().addPPCallbacks(
+        std::make_unique<AsyncModuleCompile>(CI, Service, Compiles));
+    return true;
+  }
+};
+
+bool SingleModuleWithAsyncModuleCompiles::BeginSourceFileAction(
+    CompilerInstance &CI) {
+  CI.getInvocation().getPreprocessorOpts().SingleModuleParseMode = true;
+  CI.getPreprocessor().addPPCallbacks(
+      std::make_unique<AsyncModuleCompile>(CI, Service, Compiles));
+  return true;
+}
+
 bool DependencyScanningAction::runInvocation(
     std::string Executable,
     std::unique_ptr<CompilerInvocation> OriginalInvocation,
@@ -645,7 +722,7 @@ bool DependencyScanningAction::runInvocation(
     DiagnosticConsumer *DiagConsumer) {
   // Making sure that we canonicalize the defines early to avoid unnecessary
   // variants in both the scanner and in the resulting  explicit command lines.
-  if (any(Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+  if (any(Service.getOpts().OptimizeArgs & ScanningOptimizations::Macros))
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   if (Scanned) {
@@ -665,9 +742,39 @@ bool DependencyScanningAction::runInvocation(
   // Create a compiler instance to handle the actual work.
   auto ScanInvocation =
       createScanCompilerInvocation(*OriginalInvocation, Service);
+
+  // Quickly discovers and compiles modules for the real scan below.
+  std::optional<AsyncModuleCompiles> AsyncCompiles;
+  if (Service.getOpts().AsyncScanModules) {
+    auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
+    auto ScanInstanceStorage = std::make_unique<CompilerInstance>(
+        std::make_shared<CompilerInvocation>(*ScanInvocation), PCHContainerOps,
+        std::move(ModCache));
+    CompilerInstance &ScanInstance = *ScanInstanceStorage;
+
+    DiagnosticConsumer DiagConsumer;
+    initializeScanCompilerInstance(ScanInstance, FS, &DiagConsumer, Service,
+                                   DepFS);
+
+    // FIXME: Do this only once.
+    SmallVector<StringRef> StableDirs = getInitialStableDirs(ScanInstance);
+    auto MaybePrebuiltModulesASTMap =
+        computePrebuiltModulesASTMap(ScanInstance, StableDirs);
+    if (!MaybePrebuiltModulesASTMap)
+      return false;
+
+    // Normally this would be handled by GeneratePCHAction
+    if (ScanInstance.getFrontendOpts().ProgramAction == frontend::GeneratePCH)
+      ScanInstance.getLangOpts().CompilingPCH = true;
+
+    AsyncCompiles.emplace();
+    SingleTUWithAsyncModuleCompiles Action(Service, *AsyncCompiles);
+    (void)ScanInstance.ExecuteAction(Action);
+  }
+
   auto ModCache = makeInProcessModuleCache(Service.getModuleCacheEntries());
   ScanInstanceStorage.emplace(std::move(ScanInvocation),
-                              std::move(PCHContainerOps), ModCache.get());
+                              std::move(PCHContainerOps), std::move(ModCache));
   CompilerInstance &ScanInstance = *ScanInstanceStorage;
 
   assert(!DiagConsumerFinished && "attempt to reuse finished consumer");
@@ -687,17 +794,11 @@ bool DependencyScanningAction::runInvocation(
       Service, *OriginalInvocation, Controller, *MaybePrebuiltModulesASTMap,
       StableDirs);
 
-  std::unique_ptr<FrontendAction> Action;
-
-  if (Service.getFormat() == ScanningOutputFormat::P1689)
-    Action = std::make_unique<PreprocessOnlyAction>();
-  else
-    Action = std::make_unique<ReadPCHAndPreprocessAction>();
-
   if (ScanInstance.getDiagnostics().hasErrorOccurred())
     return false;
 
-  const bool Result = ScanInstance.ExecuteAction(*Action);
+  ReadPCHAndPreprocessAction Action;
+  const bool Result = ScanInstance.ExecuteAction(Action);
 
   // ExecuteAction is responsible for calling finish.
   DiagConsumerFinished = true;
@@ -737,15 +838,16 @@ bool CompilerInstanceWithContext::initialize(
     return false;
   }
 
-  if (any(Worker.Service.getOptimizeArgs() & ScanningOptimizations::Macros))
+  if (any(Worker.Service.getOpts().OptimizeArgs &
+          ScanningOptimizations::Macros))
     canonicalizeDefines(OriginalInvocation->getPreprocessorOpts());
 
   // Create the CompilerInstance.
-  IntrusiveRefCntPtr<ModuleCache> ModCache =
+  std::shared_ptr<ModuleCache> ModCache =
       makeInProcessModuleCache(Worker.Service.getModuleCacheEntries());
   CIPtr = std::make_unique<CompilerInstance>(
       createScanCompilerInvocation(*OriginalInvocation, Worker.Service),
-      Worker.PCHContainerOps, ModCache.get());
+      Worker.PCHContainerOps, std::move(ModCache));
   auto &CI = *CIPtr;
 
   initializeScanCompilerInstance(
@@ -777,9 +879,14 @@ bool CompilerInstanceWithContext::computeDependencies(
   assert(CIPtr && "CIPtr must be initialized before calling this method");
   auto &CI = *CIPtr;
 
+  // We need to reset the diagnostics, so that the diagnostics issued
+  // during a previous computeDependencies call do not affect the current call.
+  // If we do not reset, we may inherit fatal errors from a previous call.
+  CI.getDiagnostics().Reset();
+
   // We create this cleanup object because computeDependencies may exit
   // early with errors.
-  auto CleanUp = llvm::make_scope_exit([&]() {
+  llvm::scope_exit CleanUp([&]() {
     CI.clearDependencyCollectors();
     // The preprocessor may not be created at the entry of this method,
     // but it must have been created when this method returns, whether
@@ -832,6 +939,8 @@ bool CompilerInstanceWithContext::computeDependencies(
                          PPChainedCallbacks::LexedFileChangeReason::EnterFile,
                          FileType, PrevFID, IDLocation);
   }
+
+  // FIXME: Scan modules asynchronously here as well.
 
   SrcLocOffset++;
   SmallVector<IdentifierLoc, 2> Path;
