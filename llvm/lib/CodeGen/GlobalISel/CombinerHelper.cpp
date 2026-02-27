@@ -1061,7 +1061,7 @@ bool CombinerHelper::matchSextInRegOfLoad(
     return false;
 
   Register SrcReg = MI.getOperand(1).getReg();
-  auto *LoadDef = getOpcodeDef<GLoad>(SrcReg, MRI);
+  auto *LoadDef = dyn_cast<GLoad>(MRI.getVRegDef(SrcReg));
   if (!LoadDef)
     return false;
 
