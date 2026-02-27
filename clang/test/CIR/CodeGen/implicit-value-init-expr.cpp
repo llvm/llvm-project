@@ -45,7 +45,7 @@ void test_complex(void *p) { new (p) int _Complex(); }
 // CIR:   cir.store {{.*}} %[[CONST_0]], %[[P_COMPLEX]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 
 // LLVM: define{{.*}} void @_Z12test_complexPv(ptr{{.*}} %[[ARG_0:.*]])
-// LLVM:   %[[P_ADDR:.*]] = alloca ptr, i64 1, align 8
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG_0]], ptr %[[P_ADDR]], align 8
 // LLVM:   %[[TMP_P:.*]] = load ptr, ptr %[[P_ADDR]], align 8
 // LLVM:   store { i32, i32 } zeroinitializer, ptr %[[TMP_P]], align 4
