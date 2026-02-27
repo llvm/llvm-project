@@ -2484,6 +2484,31 @@ uint64_t encodeMsg(uint64_t MsgId, uint64_t OpId, uint64_t StreamId) {
   return MsgId | (OpId << OP_SHIFT_) | (StreamId << STREAM_ID_SHIFT_);
 }
 
+bool msgDoesNotUseM0(int64_t MsgId) {
+  // Explicitly list message types that are known to not use m0.
+  // This is safer than excluding only GS_ALLOC_REQ, in case new message
+  // types are added in the future that do use m0.
+  switch (MsgId) {
+  case ID_INTERRUPT:
+  case ID_GS_PreGFX11:
+  case ID_GS_DONE_PreGFX11:
+  // ID_HS_TESSFACTOR_GFX11Plus and ID_DEALLOC_VGPRS_GFX11Plus have the
+  // same values as ID_GS_PreGFX11 and ID_GS_DONE_PreGFX11 respectively.
+  case ID_SAVEWAVE:
+  case ID_STALL_WAVE_GEN:
+  case ID_HALT_WAVES:
+  case ID_ORDERED_PS_DONE:
+  case ID_EARLY_PRIM_DEALLOC:
+  case ID_GET_DOORBELL:
+  case ID_GET_DDID:
+  case ID_SYSMSG:
+    return true;
+  default:
+    return false;
+  }
+}
+
+
 } // namespace SendMsg
 
 //===----------------------------------------------------------------------===//
