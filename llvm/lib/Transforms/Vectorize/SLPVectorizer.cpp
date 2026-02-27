@@ -13436,12 +13436,12 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       if (Val.isNegative() || Val.uge(Sz) || Val.getZExtValue() % Stride != 0)
         return false;
       unsigned Pos = Val.getZExtValue() / Stride;
-      if (SeenPositions.test(Pos))
-        return false;
-      SeenPositions.set(Pos);
       // TODO: Support Pos >= VF, in this case need to shift the final value.
       if (Order[Idx] != VF || Pos >= VF)
         return false;
+      if (SeenPositions.test(Pos))
+        return false;
+      SeenPositions.set(Pos);
       Order[Idx] = Pos;
     }
     // One of the indices not set - exit.
