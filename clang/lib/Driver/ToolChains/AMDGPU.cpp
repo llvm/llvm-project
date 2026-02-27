@@ -1035,7 +1035,7 @@ RocmInstallationDetector::getCommonBitcodeLibs(
   };
   auto AddSanBCLibs = [&]() {
     if (Pref.GPUSan)
-      AddBCLib(getAsanRTLPath(), false);
+      AddBCLib(getAsanRTLPath());
   };
 
   AddSanBCLibs();
