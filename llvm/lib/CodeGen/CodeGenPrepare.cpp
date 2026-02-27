@@ -7960,9 +7960,8 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
     auto *UI = cast<Instruction>(U->get());
     // Before we clone the instruction, check if we already created an
     // equivalent instruction in the BB and use that instead.
-    bool foundEquiv = false;
     Instruction *NI = nullptr;
-    for (auto &IToCheck : *TargetBB) {
+    for (Instruction &IToCheck : *TargetBB) {
       if (&IToCheck == I)
         break;
       if (UI->isIdenticalTo(&IToCheck)) {
@@ -7971,11 +7970,10 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
         NI = &IToCheck;
         LLVM_DEBUG(dbgs() << "Found an equivalent instruction for " << *UI
                           << " in BB: " << *NI << "\n");
-        foundEquiv = true;
         break;
       }
     }
-    if (!foundEquiv) {
+    if (!NI) {
       NI = UI->clone();
 
       if (IsHugeFunc) {
