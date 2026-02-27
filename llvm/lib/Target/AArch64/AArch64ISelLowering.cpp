@@ -20482,7 +20482,7 @@ static SDValue performMulCombine(SDNode *N, SelectionDAG &DAG,
     return Ext;
   if (SDValue Ext = performVectorExtCombine(N, DAG))
     return Ext;
-  if(Subtarget->isNeonAvailable() && N->getValueType(0) == MVT::v2i64) {
+  if (Subtarget->isNeonAvailable() && N->getValueType(0) == MVT::v2i64) {
     if (SDValue Ext = convertMulToShlAdd(N, DAG))
         return Ext;
   }
