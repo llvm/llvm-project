@@ -180,6 +180,25 @@ struct __declspec(dllexport) AllDefChild : AllDefBase {
 // GNU-DAG: call {{.*}} @_ZN10AllDefBaseC2Eii(ptr {{.*}}, i32 %{{.*}}, i32 %
 
 //===----------------------------------------------------------------------===//
+// Variadic constructor: inherited variadic constructors cannot be exported
+// because delegate forwarding is not supported for variadic arguments.
+//===----------------------------------------------------------------------===//
+
+struct VariadicBase {
+  VariadicBase(int, ...);
+};
+
+struct __declspec(dllexport) VariadicChild : VariadicBase {
+  using VariadicBase::VariadicBase;
+};
+
+// The variadic inherited constructor (int, ...) should NOT be exported.
+// Match specifically to avoid matching implicitly exported copy/move ctors.
+// MSVC-NOT: dllexport{{.*}}??0VariadicChild@@QEAA@H
+// M32-NOT: dllexport{{.*}}??0VariadicChild@@QAE@H
+// GNU-NOT: dllexport{{.*}}VariadicChildCI1{{.*}}Eiz
+
+//===----------------------------------------------------------------------===//
 // Callee-cleanup parameter: struct with non-trivial destructor passed by value.
 // canEmitDelegateCallArgs returns false for this case, so the inherited
 // constructor must NOT be exported to avoid ABI incompatibility with MSVC.

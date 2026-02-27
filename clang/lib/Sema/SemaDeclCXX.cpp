@@ -6618,16 +6618,20 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
         continue;
 
       // Don't export inherited constructors whose parameters prevent ABI-
-      // compatible forwarding thunk. When canEmitDelegateCallArgs (in
-      // CodeGen) returns false, Clang inlines the constructor body instead
-      // of emitting a forwarding thunk, producing code that is not ABI-
-      // compatible with MSVC. Suppress the export so the user gets a linker
-      // error rather than a silent runtime mismatch.
+      // compatible forwarding. When canEmitDelegateCallArgs (in CodeGen)
+      // returns false, Clang inlines the constructor body instead of
+      // emitting a forwarding thunk, producing code that is not ABI-
+      // compatible with MSVC. Suppress the export and warn so the user
+      // gets a linker error rather than a silent runtime mismatch.
       if (ClassExported) {
         if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
           if (CD->getInheritedConstructor()) {
-            if (CD->isVariadic())
+            if (CD->isVariadic()) {
+              Diag(CD->getLocation(),
+                   diag::warn_dllexport_inherited_ctor_unsupported)
+                  << /*variadic=*/0;
               continue;
+            }
             if (Context.getTargetInfo()
                     .getCXXABI()
                     .areArgsDestroyedLeftToRightInCallee()) {
@@ -6635,8 +6639,12 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
               for (const auto *P : CD->parameters())
                 if (P->needsDestruction(Context))
                   HasCalleeCleanupParam = true;
-              if (HasCalleeCleanupParam)
+              if (HasCalleeCleanupParam) {
+                Diag(CD->getLocation(),
+                     diag::warn_dllexport_inherited_ctor_unsupported)
+                    << /*callee-cleanup=*/1;
                 continue;
+              }
             }
           }
         }
