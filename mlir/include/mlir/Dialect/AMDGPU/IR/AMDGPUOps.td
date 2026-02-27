@@ -1070,6 +1070,8 @@ def AMDGPU_WMMAOp :
     The `clamp` flag is used to saturate the output of type T to `numeric_limits<T>::max()`
     in case of overflow.
 
+    The `wave64`attribute indicates whether an op is designed for 64 threads wavefont.
+
     Example:
     ```mlir
       %0 = amdgpu.wmma 16x16x16 %matA * %matB + %matC : vector<8xf16>, vector<8xf16>, vector<8xf16>
@@ -1195,7 +1197,8 @@ def AMDGPU_SparseWMMAOp :
                    UnitAttr:$unsignedB,
                    UnitAttr:$reuseA,
                    UnitAttr:$reuseB,
-                   UnitAttr:$clamp)>,
+                   UnitAttr:$clamp,
+                   UnitAttr:$wave64)>,
     Results<(outs SWMMACOutTypes: $destD)> {
   let summary = "MLIR wrapper for CDNA sparse mfma (smfmac) instructions";
   let description = [{
