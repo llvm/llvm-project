@@ -351,8 +351,7 @@ define amdgpu_kernel void @sdiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX9-NEXT:    s_add_i32 s8, s6, 1
 ; GFX9-NEXT:    s_sub_i32 s9, s7, s2
 ; GFX9-NEXT:    s_cmp_ge_u32 s7, s2
-; GFX9-NEXT:    s_cselect_b32 s6, s8, s6
-; GFX9-NEXT:    s_cselect_b32 s7, s9, s7
+; GFX9-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[6:7]
 ; GFX9-NEXT:    s_add_i32 s8, s6, 1
 ; GFX9-NEXT:    s_cmp_ge_u32 s7, s2
 ; GFX9-NEXT:    s_cselect_b32 s6, s8, s6
@@ -395,8 +394,7 @@ define amdgpu_kernel void @sdiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX10-NEXT:    s_sub_i32 s7, s4, s7
 ; GFX10-NEXT:    s_sub_i32 s9, s7, s2
 ; GFX10-NEXT:    s_cmp_ge_u32 s7, s2
-; GFX10-NEXT:    s_cselect_b32 s6, s8, s6
-; GFX10-NEXT:    s_cselect_b32 s7, s9, s7
+; GFX10-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[6:7]
 ; GFX10-NEXT:    s_add_i32 s8, s6, 1
 ; GFX10-NEXT:    s_cmp_ge_u32 s7, s2
 ; GFX10-NEXT:    s_cselect_b32 s6, s8, s6
@@ -443,11 +441,10 @@ define amdgpu_kernel void @sdiv32_invariant_denom(ptr addrspace(1) nocapture %ar
 ; GFX11-NEXT:    s_mul_i32 s7, s6, s2
 ; GFX11-NEXT:    s_add_i32 s8, s6, 1
 ; GFX11-NEXT:    s_sub_i32 s7, s4, s7
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_sub_i32 s9, s7, s2
 ; GFX11-NEXT:    s_cmp_ge_u32 s7, s2
-; GFX11-NEXT:    s_cselect_b32 s6, s8, s6
-; GFX11-NEXT:    s_cselect_b32 s7, s9, s7
+; GFX11-NEXT:    s_cselect_b64 s[6:7], s[8:9], s[6:7]
 ; GFX11-NEXT:    s_add_i32 s8, s6, 1
 ; GFX11-NEXT:    s_cmp_ge_u32 s7, s2
 ; GFX11-NEXT:    s_cselect_b32 s6, s8, s6

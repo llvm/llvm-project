@@ -252,8 +252,7 @@ define amdgpu_kernel void @fptoui_f64_to_i64_to_f64(ptr addrspace(1) %out, doubl
 ; GFX6-NEXT:    s_cselect_b32 s4, 0, s4
 ; GFX6-NEXT:    s_cselect_b32 s5, s8, s5
 ; GFX6-NEXT:    s_cmp_gt_i32 s7, 51
-; GFX6-NEXT:    s_cselect_b32 s3, s3, s5
-; GFX6-NEXT:    s_cselect_b32 s2, s2, s4
+; GFX6-NEXT:    s_cselect_b64 s[2:3], s[2:3], s[4:5]
 ; GFX6-NEXT:    v_ldexp_f64 v[0:1], s[2:3], v0
 ; GFX6-NEXT:    v_mov_b32_e32 v4, -1
 ; GFX6-NEXT:    v_fract_f64_e32 v[2:3], v[0:1]

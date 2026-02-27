@@ -202,8 +202,7 @@ define amdgpu_kernel void @double5_extelt(ptr addrspace(1) %out, i32 %sel) {
 ; GCN-NEXT:    s_mov_b32 s3, 0xc28f5c29
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_cmp_eq_u32 s6, 1
-; GCN-NEXT:    s_cselect_b32 s2, s2, 0x3f847ae1
-; GCN-NEXT:    s_cselect_b32 s3, s3, 0x47ae147b
+; GCN-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0x47ae147b3f847ae1
 ; GCN-NEXT:    s_cmp_eq_u32 s6, 2
 ; GCN-NEXT:    s_cselect_b32 s8, 0xe147ae14, s3
 ; GCN-NEXT:    s_cselect_b32 s7, 0x4000147a, s2
