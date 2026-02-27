@@ -2733,8 +2733,8 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
        next = PyFrame_GetBack(pyFrame), Py_XDECREF(pyFrame), pyFrame = next) {
     PyCodeObject *code = PyFrame_GetCode(pyFrame);
     Py_ssize_t fileNameLen;
-    const char *fileNamePtr = PyUnicode_AsUTF8AndSize(code->co_filename,
-                                                      &fileNameLen);
+    const char *fileNamePtr =
+        PyUnicode_AsUTF8AndSize(code->co_filename, &fileNameLen);
     std::string_view fileName(fileNamePtr, fileNameLen);
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
