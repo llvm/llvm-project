@@ -35,6 +35,9 @@ public:
     return MBB.erase(MI);
   }
 
+  void processFunctionBeforeFrameFinalized(MachineFunction &MF,
+                                           RegScavenger *RS = nullptr) const override;
+
 protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 };

@@ -95,8 +95,14 @@ bool BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(i < MI.getNumOperands() && "Instr doesn't have FrameIndex operand!");
   }
 
-  Register FrameReg = getFrameRegister(MF);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   int FrameIndex = MI.getOperand(i).getIndex();
+  Register FrameReg;
+  if (MFI.getStackID(FrameIndex) == TargetStackID::Default)
+    FrameReg = BPF::R10;
+  else
+    FrameReg = BPF::R11;
+
   const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   if (MI.getOpcode() == BPF::MOV_rr) {

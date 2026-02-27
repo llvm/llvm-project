@@ -24,6 +24,7 @@ class BPFSubtarget;
 
 class BPFInstrInfo : public BPFGenInstrInfo {
   const BPFRegisterInfo RI;
+  const BPFSubtarget &STI;
 
 public:
   explicit BPFInstrInfo(const BPFSubtarget &STI);

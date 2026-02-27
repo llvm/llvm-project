@@ -58,6 +58,7 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   initializeBPFDAGToDAGISelLegacyPass(PR);
   initializeBPFMISimplifyPatchablePass(PR);
   initializeBPFMIPreEmitCheckingPass(PR);
+  initializeBPFAssignSpillsStackIDPass(PR);
 }
 
 static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
@@ -101,6 +102,7 @@ public:
   void addIRPasses() override;
   bool addInstSelector() override;
   void addMachineSSAOptimization() override;
+  void addPostRegAlloc() override;
   void addPreEmitPass() override;
 
   bool addIRTranslator() override;
@@ -167,6 +169,12 @@ bool BPFPassConfig::addInstSelector() {
   addPass(createBPFISelDag(getBPFTargetMachine()));
 
   return false;
+}
+
+void BPFPassConfig::addPostRegAlloc() {
+  const BPFSubtarget *Subtarget = getBPFTargetMachine().getSubtargetImpl();
+  if (Subtarget->hasSpillBaseReg())
+    addPass(createBPFAssignSpillsStackIDPass());
 }
 
 void BPFPassConfig::addMachineSSAOptimization() {

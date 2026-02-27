@@ -27,7 +27,8 @@
 using namespace llvm;
 
 BPFInstrInfo::BPFInstrInfo(const BPFSubtarget &STI)
-    : BPFGenInstrInfo(STI, RI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP) {}
+    : BPFGenInstrInfo(STI, RI, BPF::ADJCALLSTACKDOWN, BPF::ADJCALLSTACKUP),
+    STI(STI) {}
 
 void BPFInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
@@ -133,7 +134,7 @@ void BPFInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   if (I != MBB.end())
     DL = I->getDebugLoc();
 
-  if (RC == &BPF::GPRRegClass)
+  if (RC == &BPF::GPRRegClass || STI.hasSpillBaseReg())
     BuildMI(MBB, I, DL, get(BPF::STD))
         .addReg(SrcReg, getKillRegState(IsKill))
         .addFrameIndex(FI)
@@ -157,7 +158,7 @@ void BPFInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (I != MBB.end())
     DL = I->getDebugLoc();
 
-  if (RC == &BPF::GPRRegClass)
+  if (RC == &BPF::GPRRegClass || STI.hasSpillBaseReg())
     BuildMI(MBB, I, DL, get(BPF::LDD), DestReg).addFrameIndex(FI).addImm(0);
   else if (RC == &BPF::GPR32RegClass)
     BuildMI(MBB, I, DL, get(BPF::LDW32), DestReg).addFrameIndex(FI).addImm(0);
