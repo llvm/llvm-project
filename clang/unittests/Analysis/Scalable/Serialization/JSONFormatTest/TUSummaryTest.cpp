@@ -817,12 +817,13 @@ TEST_P(TUSummaryTest, LinkageTableEntryLinkageInvalidType) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading LinkageTable from field 'linkage_table'"),
-          HasSubstr("reading LinkageTable entry from index '0'"),
-          HasSubstr("reading EntityLinkage from field 'linkage'"),
-          HasSubstr("invalid EntityLinkageType value 'invalid_type' for field 'type'"))));
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading LinkageTable from field 'linkage_table'"),
+                HasSubstr("reading LinkageTable entry from index '0'"),
+                HasSubstr("reading EntityLinkage from field 'linkage'"),
+                HasSubstr("invalid EntityLinkageType value 'invalid_type' for "
+                          "field 'type'"))));
 }
 
 // ============================================================================
@@ -1068,12 +1069,12 @@ TEST_P(TUSummaryTest, InvalidKind) {
 
   EXPECT_THAT_ERROR(
       std::move(Result),
-      FailedWithMessage(AllOf(
-          HasSubstr("reading TUSummary from file"),
-          HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
-          HasSubstr("reading BuildNamespaceKind from field 'kind'"),
-          HasSubstr(
-              "invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'"))));
+      FailedWithMessage(
+          AllOf(HasSubstr("reading TUSummary from file"),
+                HasSubstr("reading BuildNamespace from field 'tu_namespace'"),
+                HasSubstr("reading BuildNamespaceKind from field 'kind'"),
+                HasSubstr("invalid BuildNamespaceKind value 'invalid_kind' for "
+                          "field 'kind'"))));
 }
 
 // ============================================================================
@@ -1241,8 +1242,8 @@ TEST_P(TUSummaryTest, NamespaceElementInvalidKind) {
           HasSubstr("reading NestedBuildNamespace from field 'namespace'"),
           HasSubstr("reading BuildNamespace from index '0'"),
           HasSubstr("reading BuildNamespaceKind from field 'kind'"),
-          HasSubstr(
-              "invalid BuildNamespaceKind value 'invalid_kind' for field 'kind'"))));
+          HasSubstr("invalid BuildNamespaceKind value 'invalid_kind' for field "
+                    "'kind'"))));
 }
 
 TEST_P(TUSummaryTest, NamespaceElementMissingName) {
