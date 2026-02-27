@@ -709,7 +709,7 @@ static void handleExcludeFromExplicitInstantiationAttr(Sema &S, Decl *D,
           D->getDeclContext()->getRedeclContext())) {
     if (!isa<TemplateDecl>(RD) && !RD->isDependentType() &&
         !isTemplateInstantiation(RD->getTemplateSpecializationKind())) {
-      S.Diag(AL.getLoc(), diag::warn_attribute_ignored_on_non_template) << AL;
+      S.Diag(AL.getLoc(), diag::warn_attribute_ignored_in_non_template) << AL;
       return;
     }
   } else {

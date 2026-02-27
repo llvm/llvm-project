@@ -3799,8 +3799,8 @@ def warn_attribute_ignored_on_inline :
 def warn_attribute_ignored_on_non_member :
   Warning<"%0 attribute ignored on a non-member declaration">,
   InGroup<IgnoredAttributes>;
-def warn_attribute_ignored_on_non_template :
-  Warning<"%0 attribute ignored on a non-template context">,
+def warn_attribute_ignored_in_non_template :
+  Warning<"%0 attribute ignored in a non-template context">,
   InGroup<IgnoredAttributes>;
 def warn_nocf_check_attribute_ignored :
   Warning<"'nocf_check' attribute ignored; use -fcf-protection to enable the attribute">,

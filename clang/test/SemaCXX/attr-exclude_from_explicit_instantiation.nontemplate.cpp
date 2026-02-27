@@ -6,22 +6,22 @@
 #define EXCLUDE_ATTR __attribute__((exclude_from_explicit_instantiation))
 
 struct C {
-  EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
-  EXCLUDE_ATTR static int var_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
-  struct EXCLUDE_ATTR nested_excluded { // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
-    EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
-    EXCLUDE_ATTR static int var_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
+  EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  EXCLUDE_ATTR static int var_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+  struct EXCLUDE_ATTR nested_excluded { // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+    EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+    EXCLUDE_ATTR static int var_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
   };
   struct nested {
-    EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
-    EXCLUDE_ATTR static int var_excluded;  // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
+    EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
+    EXCLUDE_ATTR static int var_excluded;  // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
   };
   template <class T>
-  struct EXCLUDE_ATTR class_template_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
+  struct EXCLUDE_ATTR class_template_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
   template <class T>
-  EXCLUDE_ATTR static T var_template_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
+  EXCLUDE_ATTR static T var_template_excluded; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
   template <class T>
-  EXCLUDE_ATTR void fn_template_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-template context}}
+  EXCLUDE_ATTR void fn_template_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored in a non-template context}}
 };
 
 struct EXCLUDE_ATTR class_excluded {}; // expected-warning{{'exclude_from_explicit_instantiation' attribute ignored on a non-member declaration}}
