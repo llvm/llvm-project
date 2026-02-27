@@ -1347,6 +1347,13 @@ public:
     Regs.set(AArch64::FP);
   }
 
+  void removeNonScavengeableRegs(BitVector &Regs) const override {
+    BitVector ExclusionMask = getAliases(AArch64::LR);
+    ExclusionMask |= getAliases(AArch64::FP);
+    ExclusionMask.flip();
+    Regs &= ExclusionMask;
+  }
+
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                  MCContext &Ctx,
                                  uint32_t RelType) const override {
@@ -2507,6 +2514,10 @@ public:
 
   bool isCleanRegXOR(const MCInst &Inst) const override {
     switch (Inst.getOpcode()) {
+    case AArch64::EORXrs:
+    case AArch64::EORWrs:
+      return Inst.getOperand(1).getReg() == Inst.getOperand(2).getReg() &&
+             Inst.getOperand(3).getImm() == 0;
     case AArch64::ORRXrs:
       return Inst.getOperand(1).getReg() == AArch64::XZR &&
              Inst.getOperand(2).getReg() == AArch64::XZR &&

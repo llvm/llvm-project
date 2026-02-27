@@ -63,12 +63,10 @@ public:
     BV.flip();
     BitVector GPRegs(NumRegs, false);
     this->BC.MIB->getGPRegs(GPRegs, /*IncludeAlias=*/false);
-    // Ignore the register used for frame pointer even if it is not alive (it
-    // may be used by CFI which is not represented in our dataflow).
-    BitVector FP = BC.MIB->getAliases(BC.MIB->getFramePointer());
-    FP.flip();
     BV &= GPRegs;
-    BV &= FP;
+    // Ignore target-specific special registers even if they are dead
+    // (they may be used by CFI which is not represented in our dataflow).
+    BC.MIB->removeNonScavengeableRegs(BV);
     int Reg = BV.find_first();
     return Reg != -1 ? Reg : 0;
   }

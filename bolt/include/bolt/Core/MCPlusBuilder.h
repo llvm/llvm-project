@@ -1605,6 +1605,11 @@ public:
     llvm_unreachable("not implemented");
   }
 
+  /// Remove non scavengeable special registers from \p Regs
+  virtual void removeNonScavengeableRegs(BitVector &Regs) const {
+    llvm_unreachable("not implemented");
+  }
+
   /// Change \p Regs with a bitmask with all general purpose regs that can be
   /// encoded without extra prefix bytes. For x86 only.
   virtual void getClassicGPRegs(BitVector &Regs) const {

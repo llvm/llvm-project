@@ -532,6 +532,22 @@ TEST_P(MCPlusBuilderTester, AArch64_isCleanRegXOR) {
   BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
   BinaryBasicBlock *BB = BF->addBasicBlock();
 
+  // eor x0, x0, x0
+  MCInst EORXrs = MCInstBuilder(AArch64::EORXrs)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::X0)
+                      .addReg(AArch64::X0)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORXrs));
+
+  // eor w0, w0, w0
+  MCInst EORWrs = MCInstBuilder(AArch64::EORWrs)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::W0)
+                      .addReg(AArch64::W0)
+                      .addImm(0);
+  ASSERT_TRUE(BC->MIB->isCleanRegXOR(EORWrs));
+
   // mov x0, xzr
   MCInst ORRXrs = MCInstBuilder(AArch64::ORRXrs)
                       .addReg(AArch64::X0)
