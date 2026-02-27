@@ -519,8 +519,9 @@ def sext_inreg : SDNode<"ISD::SIGN_EXTEND_INREG", SDTExtInreg>;
 def sext_invec : SDNode<"ISD::SIGN_EXTEND_VECTOR_INREG", SDTExtInvec>;
 def zext_invec : SDNode<"ISD::ZERO_EXTEND_VECTOR_INREG", SDTExtInvec>;
 
-def abs        : SDNode<"ISD::ABS"        , SDTIntUnaryOp>;
-def bitreverse : SDNode<"ISD::BITREVERSE" , SDTIntUnaryOp>;
+def abs            : SDNode<"ISD::ABS"            , SDTIntUnaryOp>;
+def abs_min_poison : SDNode<"ISD::ABS_MIN_POISON", SDTIntUnaryOp>;
+def bitreverse     : SDNode<"ISD::BITREVERSE"     , SDTIntUnaryOp>;
 def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
 def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntBitCountUnaryOp>;
 def cttz       : SDNode<"ISD::CTTZ"       , SDTIntBitCountUnaryOp>;

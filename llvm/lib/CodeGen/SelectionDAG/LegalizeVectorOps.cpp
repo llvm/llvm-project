@@ -376,6 +376,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::ROTL:
   case ISD::ROTR:
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
   case ISD::ABDS:
   case ISD::ABDU:
   case ISD::AVGCEILS:
@@ -1075,6 +1076,7 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     ExpandSETCC(Node, Results);
     return;
   case ISD::ABS:
+  case ISD::ABS_MIN_POISON:
     if (SDValue Expanded = TLI.expandABS(Node, DAG)) {
       Results.push_back(Expanded);
       return;

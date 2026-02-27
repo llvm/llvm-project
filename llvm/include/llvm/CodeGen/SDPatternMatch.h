@@ -1073,8 +1073,9 @@ template <typename Opnd> inline UnaryOpc_match<Opnd> m_Trunc(const Opnd &Op) {
   return UnaryOpc_match<Opnd>(ISD::TRUNCATE, Op);
 }
 
-template <typename Opnd> inline UnaryOpc_match<Opnd> m_Abs(const Opnd &Op) {
-  return UnaryOpc_match<Opnd>(ISD::ABS, Op);
+template <typename Opnd> inline auto m_Abs(const Opnd &Op) {
+  return m_AnyOf(UnaryOpc_match<Opnd>(ISD::ABS, Op),
+                 UnaryOpc_match<Opnd>(ISD::ABS_MIN_POISON, Op));
 }
 
 template <typename Opnd> inline UnaryOpc_match<Opnd> m_FAbs(const Opnd &Op) {
