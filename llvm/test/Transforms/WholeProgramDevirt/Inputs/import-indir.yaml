@@ -26,7 +26,7 @@ GlobalValueMap:
   43:
     - Live: true
       ImportType : 1
-      NoRenameOnPromotion: true
+      NoRenameOnPromotion: false
 TypeIdMap:
   typeid1:
     WPDRes:
