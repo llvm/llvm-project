@@ -17528,11 +17528,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     }
     break;
   case AssignConvertType::IncompatiblePointerDiscardsQualifiers: {
-    // Perform array-to-pointer decay if necessary.
-    if (SrcType->isArrayType()) SrcType = Context.getArrayDecayedType(SrcType);
-
-    // Perform function-to-pointer decay if necessary.
-    if (SrcType->isFunctionType())
+    // Perform decay if necessary.
+    if (SrcType->isArrayType() || SrcType->isFunctionType())
       SrcType = Context.getDecayedType(SrcType);
 
     isInvalid = true;
@@ -17554,11 +17551,8 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     // fallthrough
   }
   case AssignConvertType::IncompatiblePointerDiscardsOverflowBehavior:
-    if (SrcType->isArrayType())
-      SrcType = Context.getArrayDecayedType(SrcType);
-
-    // Perform function-to-pointer decay if necessary.
-    if (SrcType->isFunctionType())
+    // Perform decay if necessary.
+    if (SrcType->isArrayType() || SrcType->isFunctionType())
       SrcType = Context.getDecayedType(SrcType);
 
     DiagKind = diag::ext_typecheck_convert_discards_overflow_behavior;
