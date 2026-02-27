@@ -2298,6 +2298,59 @@ public:
   }
 };
 
+// Pattern to rewrite a ExtractOp(ConstantMask) -> ConstantMask.
+class ExtractOpFromConstantMask final : public OpRewritePattern<ExtractOp> {
+public:
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    auto constantMaskOp =
+        extractOp.getSource().getDefiningOp<vector::ConstantMaskOp>();
+    if (!constantMaskOp)
+      return failure();
+
+    auto extractedMaskType =
+        llvm::dyn_cast<VectorType>(extractOp.getResult().getType());
+    if (!extractedMaskType)
+      return failure();
+
+    ArrayRef<int64_t> extractOpPos = extractOp.getStaticPosition();
+    ArrayRef<int64_t> maskDimSizes = constantMaskOp.getMaskDimSizes();
+
+    VectorType maskType = constantMaskOp.getVectorType();
+
+    // Check if any extracted position is outside the mask bounds.
+    for (size_t dimIdx = 0; dimIdx < extractOpPos.size(); dimIdx++) {
+      int64_t pos = extractOpPos[dimIdx];
+      if (pos == ShapedType::kDynamic) {
+        // If the dim is all-true, a dynamic index is fine — any position
+        // is within the masked region.
+        if (maskDimSizes[dimIdx] == maskType.getDimSize(dimIdx))
+          continue;
+        // Otherwise we don't know if the position is inside or outside of
+        // the masked area, so bail out.
+        return failure();
+      }
+
+      // If the position is statically outside of the masked area, the result
+      // will be all-false.
+      if (pos >= maskDimSizes[dimIdx]) {
+        rewriter.replaceOpWithNewOp<arith::ConstantOp>(
+            extractOp, DenseElementsAttr::get(extractedMaskType, false));
+        return success();
+      }
+    }
+
+    // All positions are within the mask bounds. The result is a constant_mask
+    // with the remaining dimensions.
+    rewriter.replaceOpWithNewOp<vector::ConstantMaskOp>(
+        extractOp, extractedMaskType,
+        maskDimSizes.drop_front(extractOpPos.size()));
+    return success();
+  }
+};
+
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
@@ -2405,9 +2458,8 @@ struct ExtractToShapeCast final : OpRewritePattern<vector::ExtractOp> {
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results
-      .add<ExtractOpFromBroadcast, ExtractOpFromCreateMask, ExtractToShapeCast>(
-          context);
+  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask,
+              ExtractOpFromConstantMask, ExtractToShapeCast>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
