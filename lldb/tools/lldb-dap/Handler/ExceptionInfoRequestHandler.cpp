@@ -240,7 +240,7 @@ static std::string FormatExtendedStopInfo(lldb::SBThread &thread) {
             lldb::SBThreadCollection history_threads =
                 process.GetHistoryThreads(address);
             lldb::SBStream stream;
-            OS << "Memory history associated with addres: 0x"
+            OS << "Memory history associated with address: 0x"
                << llvm::utohexstr(address) << "\n";
             for (const auto history_thread : history_threads) {
               if (history_thread.GetStatus(stream))
