@@ -3853,14 +3853,14 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   SMLoc Loc = ParsedOp->getStartLoc();
 
   unsigned Lmul = getLMULFromVectorRegister(DestReg);
-  unsigned DestEncoding =
-      getContext().getRegisterInfo()->getEncodingValue(DestReg);
+  const MCRegisterInfo *RI = getContext().getRegisterInfo();
+  unsigned DestEncoding = RI->getEncodingValue(DestReg);
   if (MCID.TSFlags & RISCVII::VS2Constraint) {
     int VS2Idx =
         RISCV::getNamedOperandIdx(Inst.getOpcode(), RISCV::OpName::vs2);
     assert(VS2Idx >= 0 && "No vs2 operand?");
-    unsigned CheckEncoding = getContext().getRegisterInfo()->getEncodingValue(
-        Inst.getOperand(VS2Idx).getReg());
+    unsigned CheckEncoding =
+        RI->getEncodingValue(Inst.getOperand(VS2Idx).getReg());
     for (unsigned i = 0; i < Lmul; i++) {
       if ((DestEncoding + i) == CheckEncoding)
         return Error(Loc, "the destination vector register group cannot overlap"
@@ -3873,8 +3873,8 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     // FIXME: The vs1 constraint is used on scalar and imm instructions so we
     // need to check that the operand exists.
     if (VS1Idx >= 0) {
-      unsigned CheckEncoding = getContext().getRegisterInfo()->getEncodingValue(
-          Inst.getOperand(VS1Idx).getReg());
+      unsigned CheckEncoding =
+          RI->getEncodingValue(Inst.getOperand(VS1Idx).getReg());
       for (unsigned i = 0; i < Lmul; i++) {
         if ((DestEncoding + i) == CheckEncoding)
           return Error(Loc,

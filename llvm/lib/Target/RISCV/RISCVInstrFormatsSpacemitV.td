@@ -1,11 +1,11 @@
 //===----------------------------------------------------------------------===//
 //
-//  This file describes the RISCV SPACEMIT RVV extension instruction formats.
+//  This file describes the RISC-V SPACEMIT RVV extension instruction formats.
 //
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
-// RISCV SPACEMIT RVV class templates
+// RISC-V SPACEMIT RVV class templates
 //===----------------------------------------------------------------------===//
 //===----------------------------------------------------------------------===//
 // Operand definitions.
