@@ -28,30 +28,32 @@ namespace math {
 namespace atan2f16_internal {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
 // (x_abs, y_abs) keys for exceptional atan2f16 inputs;
 // index i -> ExceptValues input.
-constexpr size_t N_ATAN2F16_EXCEPTS = 11;
-constexpr uint16_t ATAN2F16_EXCEPT_X[] = {0x37DA, 0x3A01, 0x3EFD, 0x4059,
-                                          0x40CD, 0x3D84, 0x38C2, 0x3814,
-                                          0x3596, 0x41B5, 0x3C62};
-constexpr uint16_t ATAN2F16_EXCEPT_Y[] = {0x3631, 0x3BFE, 0x398B, 0x3E2F,
-                                          0x4378, 0x354A, 0x3A93, 0x3C1F,
-                                          0x4189, 0x3CA3, 0x3EB3};
+LIBC_INLINE_VAR constexpr size_t N_ATAN2F16_EXCEPTS = 11;
+LIBC_INLINE_VAR constexpr uint16_t ATAN2F16_EXCEPT_X[] = {
+    0x37DA, 0x3A01, 0x3EFD, 0x4059, 0x40CD, 0x3D84,
+    0x38C2, 0x3814, 0x3596, 0x41B5, 0x3C62};
+LIBC_INLINE_VAR constexpr uint16_t ATAN2F16_EXCEPT_Y[] = {
+    0x3631, 0x3BFE, 0x398B, 0x3E2F, 0x4378, 0x354A,
+    0x3A93, 0x3C1F, 0x4189, 0x3CA3, 0x3EB3};
 
 // (input = index, RZ result, RU offset, RD offset, RN offset).
-constexpr fputil::ExceptValues<float16, N_ATAN2F16_EXCEPTS> ATAN2F16_EXCEPTS{{
-    {0, 0x3957, 1, 0, 0},
-    {1, 0x3B69, 1, 0, 0},
-    {2, 0x360A, 1, 0, 1},
-    {3, 0x38F2, 1, 0, 0},
-    {4, 0x3BFE, 1, 0, 1},
-    {5, 0x3387, 1, 0, 0},
-    {6, 0x3B8D, 1, 0, 1},
-    {7, 0x3C71, 1, 0, 1},
-    {8, 0x3DC7, 1, 0, 1},
-    {9, 0x362C, 1, 0, 1},
-    {10, 0x3BEE, 1, 0, 0},
-}};
+LIBC_INLINE_VAR constexpr fputil::ExceptValues<float16, N_ATAN2F16_EXCEPTS>
+    ATAN2F16_EXCEPTS{{
+        {0, 0x3957, 1, 0, 0},
+        {1, 0x3B69, 1, 0, 0},
+        {2, 0x360A, 1, 0, 1},
+        {3, 0x38F2, 1, 0, 0},
+        {4, 0x3BFE, 1, 0, 1},
+        {5, 0x3387, 1, 0, 0},
+        {6, 0x3B8D, 1, 0, 1},
+        {7, 0x3C71, 1, 0, 1},
+        {8, 0x3DC7, 1, 0, 1},
+        {9, 0x362C, 1, 0, 1},
+        {10, 0x3BEE, 1, 0, 0},
+    }};
 
 LIBC_INLINE constexpr cpp::optional<float16>
 lookup_atan2f16_except(uint16_t x_abs, uint16_t y_abs) {
@@ -61,7 +63,8 @@ lookup_atan2f16_except(uint16_t x_abs, uint16_t y_abs) {
   }
   return cpp::nullopt;
 }
-#endif
+
+#endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 // atan(u) for u in (0, 1]: atan(u) = u * P(u^2).
 LIBC_INLINE float atan_u(float u) {

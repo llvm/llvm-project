@@ -1,4 +1,4 @@
-//===-- Half-precision atan2f16 function ----------------------------------===//
+//===-- Half-precision atan2 function ---------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
