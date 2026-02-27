@@ -5,6 +5,7 @@ add_header_library(
   DEPENDS
     libc.hdr.fcntl_macros
     libc.include.sys_syscall
+    libc.src.__support.error_or
     libc.src.__support.OSUtil.osutil
 )
 

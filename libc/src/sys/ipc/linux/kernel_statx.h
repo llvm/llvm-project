@@ -11,20 +11,21 @@
 
 #include "hdr/fcntl_macros.h"
 #include "src/__support/OSUtil/syscall.h"
+#include "src/__support/error_or.h"
 #include "sys/syscall.h"
 
 #include <linux/stat.h>
 
 namespace LIBC_NAMESPACE_DECL {
 
-LIBC_INLINE int statx_for_ftok(const char *path, struct statx &xbuf) {
+LIBC_INLINE ErrorOr<int> statx_for_ftok(const char *path, struct statx &xbuf) {
 
   // store the file stats metadata into xbuf
   int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_statx, AT_FDCWD, path, 0,
                                               STATX_BASIC_STATS, &xbuf);
 
   if (ret < 0)
-    return -ret;
+    return Error(-ret);
   return 0;
 }
 

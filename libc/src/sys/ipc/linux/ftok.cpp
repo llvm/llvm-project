@@ -1,4 +1,4 @@
-//===-- Linux implementation of ftok -------------------------------------===//
+//===-- Linux implementation of ftok --------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,6 +8,7 @@
 #include "src/sys/ipc/ftok.h"
 
 #include "src/__support/common.h"
+#include "src/__support/error_or.h"
 #include "src/__support/libc_errno.h"
 
 #include "kernel_statx.h"
@@ -17,10 +18,10 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(key_t, ftok, (const char *path, int id)) {
   struct statx xbuf;
 
-  int err = statx_for_ftok(path, xbuf);
+  ErrorOr<int> err = statx_for_ftok(path, xbuf);
 
-  if (err != 0) {
-    libc_errno = err;
+  if (!err.has_value()) {
+    libc_errno = err.error();
     return -1;
   }
 

@@ -22,10 +22,10 @@ struct ipc_perm {
   uid_t cuid;
   gid_t cgid;
   mode_t mode;
-  unsigned short seq;
-  unsigned short padding;
-  unsigned long unused_0;
-  unsigned long unused_1;
+  unsigned short __seq;
+  unsigned short __padding;
+  unsigned long __unused_0;
+  unsigned long __unused_1;
 };
 #else
 #error "ipc_perm not defined for the target platform"
