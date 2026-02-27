@@ -133,10 +133,10 @@ define i1 @foo(ptr %p) {
   ret i1 %x
 }
 
-; X86: define private void @[[JT]]() #{{.*}} align 8 {
-; ARM: define private void @[[JT]]() #{{.*}} align 4 {
-; RISCV: define private void @[[JT]]() #{{.*}} align 8 {
-; LOONGARCH64: define private void @[[JT]]() #{{.*}} align 8 {
+; X86: define private void @[[JT]]() #{{.*}} prefalign(8)
+; ARM: define private void @[[JT]]() #{{.*}} prefalign(4)
+; RISCV: define private void @[[JT]]() #{{.*}} prefalign(8)
+; LOONGARCH64: define private void @[[JT]]() #{{.*}} prefalign(8)
 
 ; CHECK-LABEL: define internal void @__cfi_global_var_init() section ".text.startup" {
 ; CHECK-NEXT: entry:
