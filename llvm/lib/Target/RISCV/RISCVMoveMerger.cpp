@@ -68,20 +68,25 @@ char RISCVMoveMerge::ID = 0;
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
-static unsigned getMoveFromOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
-  if (ST.hasStdExtZcmp())
-    return MoveFromSToA ? RISCV::CM_MVA01S : RISCV::CM_MVSA01;
-
-  if (ST.hasVendorXqccmp())
-    return MoveFromSToA ? RISCV::QC_CM_MVA01S : RISCV::QC_CM_MVSA01;
-
+static unsigned getGPRPairMoveFromOpcode(const RISCVSubtarget &ST) {
   if (ST.hasStdExtZdinx())
     return RISCV::FSGNJ_D_IN32X;
 
   if (ST.hasStdExtP())
     return RISCV::PADD_DW;
 
-  llvm_unreachable("Unhandled subtarget with paired A to S move.");
+  llvm_unreachable("Unhandled subtarget with paired move.");
+}
+
+static unsigned getMoveFromCMOpcode(const RISCVSubtarget &ST,
+                                    bool MoveFromSToA) {
+  if (ST.hasStdExtZcmp())
+    return MoveFromSToA ? RISCV::CM_MVA01S : RISCV::CM_MVSA01;
+
+  if (ST.hasVendorXqccmp())
+    return MoveFromSToA ? RISCV::QC_CM_MVA01S : RISCV::QC_CM_MVSA01;
+
+  llvm_unreachable("Unhandled subtarget with paired move.");
 }
 
 bool RISCVMoveMerge::isRegisterEven(const DestSourcePair &RegPair) {
@@ -155,7 +160,7 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
   // flag.
   MachineOperand PairedSource = *SecondPair.Source;
 
-  unsigned Opcode = getMoveFromOpcode(*ST, true);
+  unsigned Opcode = getGPRPairMoveFromOpcode(*ST);
   for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
     if (It->readsRegister(PairedSource.getReg(), TRI))
       PairedSource.setIsKill(false);
@@ -207,7 +212,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //
   //   mv a0, s2
   //   mv a1, s1    =>  cm.mva01s s2,s1
-  unsigned Opcode = getMoveFromOpcode(*ST, MoveFromSToA);
+  unsigned Opcode = getMoveFromCMOpcode(*ST, MoveFromSToA);
   if (MoveFromSToA) {
     // We are moving one of the copies earlier so its kill flag may become
     // invalid. Clear the copied kill flag if there are any reads of the
