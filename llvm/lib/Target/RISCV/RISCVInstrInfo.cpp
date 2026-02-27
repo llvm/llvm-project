@@ -5332,10 +5332,5 @@ bool RISCVInstrInfo::requireNTLHint(const MachineInstr &MI) const {
   if (!MMO->isNonTemporal())
     return false;
 
-  // MIPS's prefetch instruction already encodes the hint within the
-  // instruction itself, so no extra NTL hint is needed.
-  if (MI.getOpcode() == RISCV::MIPS_PREF)
-    return false;
-
   return true;
 }
