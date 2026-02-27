@@ -469,6 +469,7 @@ module std [system] {
     module mismatch {
       header "__algorithm/mismatch.h"
       export std.utility.pair // return type
+      export std.iterator.aliasing_iterator
     }
     module move_backward                          { header "__algorithm/move_backward.h" }
     module move                                   { header "__algorithm/move.h" }

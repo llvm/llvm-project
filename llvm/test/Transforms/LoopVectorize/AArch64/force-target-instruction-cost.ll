@@ -12,11 +12,9 @@ define double @test_reduction_costs() {
 ; COMMON:       [[VECTOR_PH]]:
 ; COMMON-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; COMMON:       [[VECTOR_BODY]]:
-; COMMON-NEXT:    [[VEC_PHI:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP0:%.*]], %[[VECTOR_BODY]] ]
-; COMMON-NEXT:    [[VEC_PHI1:%.*]] = phi double [ 0.000000e+00, %[[VECTOR_PH]] ], [ [[TMP1:%.*]], %[[VECTOR_BODY]] ]
-; COMMON-NEXT:    [[TMP0]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI]], <2 x double> splat (double 3.000000e+00))
-; COMMON-NEXT:    [[TMP1]] = call double @llvm.vector.reduce.fadd.v2f64(double [[VEC_PHI1]], <2 x double> splat (double 9.000000e+00))
-; COMMON-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; COMMON-NEXT:    [[TMP0:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> splat (double 3.000000e+00))
+; COMMON-NEXT:    [[TMP1:%.*]] = call double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> splat (double 9.000000e+00))
+; COMMON-NEXT:    br label %[[MIDDLE_BLOCK:.*]]
 ; COMMON:       [[MIDDLE_BLOCK]]:
 ; COMMON-NEXT:    br label %[[EXIT:.*]]
 ; COMMON:       [[EXIT]]:
@@ -165,6 +163,8 @@ exit:
   ret void
 }
 
+; TODO: The branch condition could be reassociated to be simplified further, see
+; the diff in 3482a9c6cba57b4e605c2b99fb6d90a023439f9b
 define void @test_exit_branch_cost(ptr %dst, ptr noalias %x.ptr, ptr noalias %y.ptr, ptr noalias %dst.1, i1 %c.4, ptr %src, ptr noalias %dst.3, i1 %c.3, ptr noalias %dst.2) {
 ; COMMON-LABEL: define void @test_exit_branch_cost(
 ; COMMON-SAME: ptr [[DST:%.*]], ptr noalias [[X_PTR:%.*]], ptr noalias [[Y_PTR:%.*]], ptr noalias [[DST_1:%.*]], i1 [[C_4:%.*]], ptr [[SRC:%.*]], ptr noalias [[DST_3:%.*]], i1 [[C_3:%.*]], ptr noalias [[DST_2:%.*]]) {
