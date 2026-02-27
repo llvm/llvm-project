@@ -84,6 +84,10 @@ WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
 }
 
 bool WebAssemblyInstructionSelector::select(MachineInstr &I) {
+  if (!isPreISelGenericOpcode(I.getOpcode())) {
+    return true;
+  }
+
   if (selectImpl(I, *CoverageInfo))
     return true;
 
