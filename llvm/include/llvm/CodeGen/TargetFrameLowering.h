@@ -110,6 +110,11 @@ public:
   ///
   virtual uint64_t getStackThreshold() const { return UINT_MAX; }
 
+  /// Return a positive scale to incorporate stack slot size into coloring
+  /// weight (weight += scale * size). When 0, only use-based weight is used;
+  /// when positive, the target also uses best-fit allocation.
+  virtual float getStackSlotColoringSizeWeightScale() const { return 0.0f; }
+
   /// alignSPAdjust - This method aligns the stack adjustment to the correct
   /// alignment.
   ///
