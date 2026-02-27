@@ -94,8 +94,7 @@ if.end:
 ; CHECK:  ret void
 
 
-; Spooked by the multiple lifetime ranges, StackTagging remove all of them and sets tags on entry and exit.
-define void @BadScope(i32 %b) sanitize_memtag {
+define void @DoubleScope(i32 %b) sanitize_memtag {
 entry:
   %x = alloca i32, align 4
   %tobool = icmp eq i32 %b, 0
@@ -115,14 +114,15 @@ if.end:
   ret void
 }
 
-; CHECK-LABEL: define void @BadScope(
-; CHECK:       call void @llvm.aarch64.settag(ptr {{.*}}, i64 16)
+; CHECK-LABEL: define void @DoubleScope(
 ; CHECK:       br i1
+; CHECK:       call void @llvm.aarch64.settag(
 ; CHECK:       call void @use8(ptr
+; CHECK:       call void @llvm.aarch64.settag(
+; CHECK:       call void @llvm.aarch64.settag(
 ; CHECK-NEXT:  call void @use8(ptr
+; CHECK:       call void @llvm.aarch64.settag(
 ; CHECK:       br label
-; CHECK:       call void @llvm.aarch64.settag(ptr {{.*}}, i64 16)
-; CHECK-NEXT:  ret void
 
 define void @DynamicAllocas(i32 %cnt) sanitize_memtag {
 entry:

@@ -10,17 +10,23 @@ define void @duplicate_shift_i128_store(ptr %base, i32 %spec_select, i32 %spec_s
 ; CHECK-NEXT:    [[ZEXT37:%.*]] = zext i32 [[SPEC_SELECT37]] to i128
 ; CHECK-NEXT:    [[SHL37:%.*]] = shl nuw nsw i128 [[ZEXT37]], 32
 ; CHECK-NEXT:    [[MASKED37:%.*]] = and i128 [[SHL37]], 18446742974197923840
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[SPEC_SELECT]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[SPEC_SELECT37]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP3:%.*]] = and <4 x i32> [[TMP2]], <i32 16711680, i32 65280, i32 255, i32 255>
+; CHECK-NEXT:    [[AND37_255:%.*]] = and i32 [[SPEC_SELECT37]], 255
+; CHECK-NEXT:    [[ZEXT37_255:%.*]] = zext nneg i32 [[AND37_255]] to i128
+; CHECK-NEXT:    [[SHL37_255:%.*]] = shl nuw nsw i128 [[ZEXT37_255]], 32
+; CHECK-NEXT:    [[P_MASK_7:%.*]] = or disjoint i128 [[P_INSERT_11]], [[MASKED37]]
+; CHECK-NEXT:    [[TMP5:%.*]] = or disjoint i128 [[P_MASK_7]], [[SHL37_255]]
 ; CHECK-NEXT:    [[PREFIX_HIGH:%.*]] = and i32 [[SPEC_SELECT]], -16777216
 ; CHECK-NEXT:    [[ZEXT_HIGH:%.*]] = zext i32 [[PREFIX_HIGH]] to i128
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i32> [[TMP4]] to i128
 ; CHECK-NEXT:    [[P_MASK_0:%.*]] = or disjoint i128 [[TMP5]], [[ZEXT_HIGH]]
-; CHECK-NEXT:    [[ZEXT_255:%.*]] = or disjoint i128 [[MASKED37]], [[P_INSERT_11]]
-; CHECK-NEXT:    [[P_INSERT_0:%.*]] = or disjoint i128 [[P_MASK_0]], [[ZEXT_255]]
+; CHECK-NEXT:    [[AND_16711680:%.*]] = and i32 [[SPEC_SELECT]], 16711680
+; CHECK-NEXT:    [[ZEXT_16711680:%.*]] = zext nneg i32 [[AND_16711680]] to i128
+; CHECK-NEXT:    [[P_MASK_4:%.*]] = or disjoint i128 [[P_MASK_0]], [[ZEXT_16711680]]
+; CHECK-NEXT:    [[AND_255:%.*]] = and i32 [[SPEC_SELECT]], 255
+; CHECK-NEXT:    [[ZEXT_255:%.*]] = zext nneg i32 [[AND_255]] to i128
+; CHECK-NEXT:    [[AND_65280:%.*]] = and i32 [[SPEC_SELECT]], 65280
+; CHECK-NEXT:    [[ZEXT_65280:%.*]] = zext nneg i32 [[AND_65280]] to i128
+; CHECK-NEXT:    [[P_MASK_1:%.*]] = or disjoint i128 [[P_MASK_4]], [[ZEXT_65280]]
+; CHECK-NEXT:    [[P_INSERT_0:%.*]] = or disjoint i128 [[P_MASK_1]], [[ZEXT_255]]
 ; CHECK-NEXT:    store i128 [[P_INSERT_0]], ptr [[ARRAYIDX]], align 16
 ; CHECK-NEXT:    ret void
 ;

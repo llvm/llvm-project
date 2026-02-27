@@ -32,13 +32,15 @@ static cl::opt<bool>
                         cl::desc("SPIR-V Translator compatibility mode"),
                         cl::Optional, cl::init(false));
 
-static cl::opt<ExtensionSet, false, SPIRVExtensionsParser>
+static cl::opt<std::set<SPIRV::Extension::Extension>, false,
+               SPIRVExtensionsParser>
     Extensions("spirv-ext",
                cl::desc("Specify list of enabled SPIR-V extensions"));
 
 // Provides access to the cl::opt<...> `Extensions` variable from outside of the
 // module.
-void SPIRVSubtarget::addExtensionsToClOpt(const ExtensionSet &AllowList) {
+void SPIRVSubtarget::addExtensionsToClOpt(
+    const std::set<SPIRV::Extension::Extension> &AllowList) {
   Extensions.insert(AllowList.begin(), AllowList.end());
 }
 
@@ -212,9 +214,9 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
 
 // Set available extensions after SPIRVSubtarget is created.
 void SPIRVSubtarget::initAvailableExtensions(
-    const ExtensionSet &AllowedExtIds) {
+    const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
   AvailableExtensions.clear();
-  const ExtensionSet &ValidExtensions =
+  const std::set<SPIRV::Extension::Extension> &ValidExtensions =
       SPIRVExtensionsParser::getValidExtensions(TargetTriple);
 
   for (const auto &Ext : AllowedExtIds) {
