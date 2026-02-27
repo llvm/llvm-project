@@ -2714,30 +2714,6 @@ namespace {
 
 #endif // Python 3.10.0a3
 
-// Python 3.9.0b1
-#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
-
-// bpo-40429 added PyThreadState_GetFrame()
-PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
-  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
-}
-
-// bpo-40421 added PyFrame_GetBack()
-PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
-}
-
-// bpo-40421 added PyFrame_GetCode()
-PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
-  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
-}
-
-#endif // Python 3.9.0b1
-
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {
@@ -4685,7 +4661,7 @@ void populateIRCore(nb::module_ &m) {
   m.attr("_T") = nb::type_var("_T", "bound"_a = m.attr("Type"));
 
   nb::class_<PyValue>(m, "Value", nb::is_generic(),
-                      nb::sig("class Value(Generic[_T])"))
+                      nb::sig("class Value(typing.Generic[_T])"))
       .def(nb::init<PyValue &>(), nb::keep_alive<0, 1>(), "value"_a,
            "Creates a Value reference from another `Value`.")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR, &PyValue::getCapsule,
@@ -4823,27 +4799,6 @@ void populateIRCore(nb::module_ &m) {
           },
           "Replace all uses of value with the new value, updating anything in "
           "the IR that uses `self` to use the other value instead.")
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, PyOperation &exception) {
-            MlirOperation exceptedUser = exception.get();
-            mlirValueReplaceAllUsesExcept(self, with, 1, &exceptedUser);
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
-      .def(
-          "replace_all_uses_except",
-          [](PyValue &self, PyValue &with, const nb::list &exceptions) {
-            // Convert Python list to a std::vector of MlirOperations
-            std::vector<MlirOperation> exceptionOps;
-            for (nb::handle exception : exceptions) {
-              exceptionOps.push_back(nb::cast<PyOperation &>(exception).get());
-            }
-
-            mlirValueReplaceAllUsesExcept(
-                self, with, static_cast<intptr_t>(exceptionOps.size()),
-                exceptionOps.data());
-          },
-          "with_"_a, "exceptions"_a, kValueReplaceAllUsesExceptDocstring)
       .def(
           "replace_all_uses_except",
           [](PyValue &self, PyValue &with, PyOperation &exception) {

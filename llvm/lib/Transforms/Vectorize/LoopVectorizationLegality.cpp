@@ -1765,8 +1765,10 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     }
   }
 
+  // For predicated early exits, we only support a single early exit for now.
   BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (LatchPredBB != UncountableExitingBlocks.back()) {
+  if (UncountableExitingBlocks.size() != 1 &&
+      LatchPredBB != UncountableExitingBlocks.back()) {
     reportVectorizationFailure(
         "Last early exiting block in the chain is not the latch predecessor",
         "Cannot vectorize early exit loop", "EarlyExitNotLatchPredecessor", ORE,
@@ -2117,19 +2119,6 @@ bool LoopVectorizationLegality::canFoldTailByMasking() const {
 
   for (const auto &Reduction : getReductionVars())
     ReductionLiveOuts.insert(Reduction.second.getLoopExitInstr());
-
-  for (const auto &Entry : getInductionVars()) {
-    PHINode *OrigPhi = Entry.first;
-    for (User *U : OrigPhi->users()) {
-      auto *UI = cast<Instruction>(U);
-      if (!TheLoop->contains(UI)) {
-        LLVM_DEBUG(dbgs() << "LV: Cannot fold tail by masking, loop IV has an "
-                             "outside user for "
-                          << *UI << "\n");
-        return false;
-      }
-    }
-  }
 
   // The list of pointers that we can safely read and write to remains empty.
   SmallPtrSet<Value *, 8> SafePointers;
