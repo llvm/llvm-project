@@ -38,7 +38,7 @@ class TestDAP_variables_children(lldbdap_testcase.DAPTestCaseBase):
             )["body"]["result"],
         )
 
-    @skipIf(archs=["arm$", "arm64", "aarch64"])
+    @expectedFailureAll(archs=["arm$", "aarch64"])
     def test_return_variable_with_children(self):
         """
         Test the stepping out of a function with return value show the children correctly
@@ -62,16 +62,12 @@ class TestDAP_variables_children(lldbdap_testcase.DAPTestCaseBase):
 
                 local_variables = self.dap_server.get_local_variables()
 
-                # verify has return variable as local
-                result_variable = list(
-                    filter(
-                        lambda val: val.get("name") == "(Return Value)", local_variables
-                    )
-                )
-                self.assertEqual(len(result_variable), 1)
-                result_variable = result_variable[0]
+                # Verify return value is the first item in as locals.
+                self.assertIsNot(len(local_variables), 0)
+                return_variable = local_variables[0]
+                self.assertEqual(return_variable["name"], "(Return Value)")
 
-                result_var_ref = result_variable.get("variablesReference")
+                result_var_ref = return_variable.get("variablesReference")
                 self.assertIsNot(result_var_ref, None, "There is no result value")
 
                 result_value = self.dap_server.request_variables(result_var_ref)
