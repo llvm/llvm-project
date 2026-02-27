@@ -15,12 +15,10 @@
 #ifndef LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
 #define LLVM_LIB_TARGET_SPIRV_SPIRVSYMBOLICOPERANDS_H
 
-#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/VersionTuple.h"
 #include <string>
-#include <type_traits>
 
 namespace llvm {
 namespace SPIRV {
@@ -257,27 +255,6 @@ enum InstFlags {
 using CapabilityList = SmallVector<SPIRV::Capability::Capability, 8>;
 using ExtensionList = SmallVector<SPIRV::Extension::Extension, 8>;
 using EnvironmentList = SmallVector<SPIRV::Environment::Environment, 8>;
-
-// Tablegen enum types don't have an underlying type which is required for
-// DenseMap so just use the DenseMapInfo for std::underlying_type_t.
-template <> struct DenseMapInfo<SPIRV::Extension::Extension> {
-  using DMI = DenseMapInfo<std::underlying_type_t<SPIRV::Extension::Extension>>;
-  static SPIRV::Extension::Extension getEmptyKey() {
-    return static_cast<SPIRV::Extension::Extension>(DMI::getEmptyKey());
-  }
-  static SPIRV::Extension::Extension getTombstoneKey() {
-    return static_cast<SPIRV::Extension::Extension>(DMI::getTombstoneKey());
-  }
-  static unsigned getHashValue(SPIRV::Extension::Extension Ty) {
-    return DMI::getHashValue(Ty);
-  }
-  static bool isEqual(SPIRV::Extension::Extension Ty1,
-                      SPIRV::Extension::Extension Ty2) {
-    return Ty1 == Ty2;
-  }
-};
-
-using ExtensionSet = DenseSet<SPIRV::Extension::Extension>;
 
 std::string
 getSymbolicOperandMnemonic(SPIRV::OperandCategory::OperandCategory Category,
