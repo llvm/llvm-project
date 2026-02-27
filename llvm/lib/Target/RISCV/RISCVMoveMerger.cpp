@@ -33,8 +33,8 @@ struct RISCVMoveMerge : public MachineFunctionPass {
   // Track which register units have been modified and used.
   LiveRegUnits ModifiedRegUnits, UsedRegUnits;
 
-  bool isRegisterEven(const DestSourcePair &RegPair);
-  bool isRegisterOdd(const DestSourcePair &RegPair);
+  bool isEvenRegisterCopy(const DestSourcePair &RegPair);
+  bool isOddRegisterCopy(const DestSourcePair &RegPair);
 
   bool isCandidateToMergeMVA01S(const DestSourcePair &RegPair);
   bool isCandidateToMergeMVSA01(const DestSourcePair &RegPair);
@@ -68,7 +68,7 @@ char RISCVMoveMerge::ID = 0;
 INITIALIZE_PASS(RISCVMoveMerge, "riscv-move-merge", RISCV_MOVE_MERGE_NAME,
                 false, false)
 
-static unsigned getGPRPairMoveFromOpcode(const RISCVSubtarget &ST) {
+static unsigned getGPRPairCopyOpcode(const RISCVSubtarget &ST) {
   if (ST.hasStdExtZdinx())
     return RISCV::FSGNJ_D_IN32X;
 
@@ -78,8 +78,7 @@ static unsigned getGPRPairMoveFromOpcode(const RISCVSubtarget &ST) {
   llvm_unreachable("Unhandled subtarget with paired move.");
 }
 
-static unsigned getMoveFromCMOpcode(const RISCVSubtarget &ST,
-                                    bool MoveFromSToA) {
+static unsigned getCM_MVOpcode(const RISCVSubtarget &ST, bool MoveFromSToA) {
   if (ST.hasStdExtZcmp())
     return MoveFromSToA ? RISCV::CM_MVA01S : RISCV::CM_MVSA01;
 
@@ -89,7 +88,7 @@ static unsigned getMoveFromCMOpcode(const RISCVSubtarget &ST,
   llvm_unreachable("Unhandled subtarget with paired move.");
 }
 
-bool RISCVMoveMerge::isRegisterEven(const DestSourcePair &RegPair) {
+bool RISCVMoveMerge::isEvenRegisterCopy(const DestSourcePair &RegPair) {
   Register Destination = RegPair.Destination->getReg();
   Register Source = RegPair.Source->getReg();
 
@@ -104,7 +103,7 @@ bool RISCVMoveMerge::isRegisterEven(const DestSourcePair &RegPair) {
   return SrcPair.isValid() && DestPair.isValid();
 }
 
-bool RISCVMoveMerge::isRegisterOdd(const DestSourcePair &RegPair) {
+bool RISCVMoveMerge::isOddRegisterCopy(const DestSourcePair &RegPair) {
   Register Destination = RegPair.Destination->getReg();
   Register Source = RegPair.Source->getReg();
 
@@ -160,13 +159,12 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
   // flag.
   MachineOperand PairedSource = *SecondPair.Source;
 
-  unsigned Opcode = getGPRPairMoveFromOpcode(*ST);
+  unsigned Opcode = getGPRPairCopyOpcode(*ST);
   for (auto It = std::next(I); It != Paired && PairedSource.isKill(); ++It)
     if (It->readsRegister(PairedSource.getReg(), TRI))
       PairedSource.setIsKill(false);
 
   Register SrcReg1, SrcReg2, DestReg;
-  // auto &EvenPair = RegPairIsEven ? FirstPair : SecondPair;
   auto GPRPairIdx = RegPairIsEven ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
   SrcReg1 = TRI->getMatchingSuperReg(FirstPair.Source->getReg(), GPRPairIdx,
                                      &RISCV::GPRPairRegClass);
@@ -212,7 +210,7 @@ RISCVMoveMerge::mergePairedInsns(MachineBasicBlock::iterator I,
   //
   //   mv a0, s2
   //   mv a1, s1    =>  cm.mva01s s2,s1
-  unsigned Opcode = getMoveFromCMOpcode(*ST, MoveFromSToA);
+  unsigned Opcode = getCM_MVOpcode(*ST, MoveFromSToA);
   if (MoveFromSToA) {
     // We are moving one of the copies earlier so its kill flag may become
     // invalid. Clear the copied kill flag if there are any reads of the
@@ -351,8 +349,8 @@ bool RISCVMoveMerge::mergeMoveSARegPair(MachineBasicBlock &MBB) {
     auto RegPair = TII->isCopyInstrImpl(*MBBI);
     if (RegPair.has_value()) {
       bool MoveFromSToA = isCandidateToMergeMVA01S(*RegPair);
-      bool IsEven = isRegisterEven(*RegPair);
-      bool IsOdd = isRegisterOdd(*RegPair);
+      bool IsEven = isEvenRegisterCopy(*RegPair);
+      bool IsOdd = isOddRegisterCopy(*RegPair);
       if (!MoveFromSToA && !isCandidateToMergeMVSA01(*RegPair) && !IsEven &&
           !IsOdd) {
         ++MBBI;
@@ -387,12 +385,9 @@ bool RISCVMoveMerge::runOnMachineFunction(MachineFunction &Fn) {
     return false;
 
   ST = &Fn.getSubtarget<RISCVSubtarget>();
-  if (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp() && !ST->hasStdExtZdinx() &&
-      !ST->hasStdExtP())
-    return false;
-
-  if ((ST->hasStdExtZdinx() || ST->hasStdExtP()) && ST->is64Bit() &&
-      !ST->hasStdExtZcmp() && !ST->hasVendorXqccmp())
+  bool HasGPRPairCopy =
+      !ST->is64Bit() && (ST->hasStdExtZdinx() || ST->hasStdExtP());
+  if (!ST->hasStdExtZcmp() && !ST->hasVendorXqccmp() && !HasGPRPairCopy)
     return false;
 
   TII = ST->getInstrInfo();
