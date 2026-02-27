@@ -116,8 +116,6 @@ STATISTIC(NumIntAssociationsHoisted,
 STATISTIC(NumBOAssociationsHoisted, "Number of invariant BinaryOp expressions "
                                     "reassociated and hoisted out of the loop");
 
-namespace llvm {
-
 /// Memory promotion is enabled by default.
 static cl::opt<bool>
     DisablePromotion("disable-licm-promotion", cl::Hidden, cl::init(false),
@@ -156,7 +154,7 @@ static cl::opt<unsigned> IntAssociationUpperLimit(
 // which may not be precise, since optimizeUses is capped. The result is
 // correct, but we may not get as "far up" as possible to get which access is
 // clobbering the one queried.
-cl::opt<unsigned> SetLicmMssaOptCap(
+cl::opt<unsigned> llvm::SetLicmMssaOptCap(
     "licm-mssa-optimization-cap", cl::init(100), cl::Hidden,
     cl::desc("Enable imprecision in LICM in pathological cases, in exchange "
              "for faster compile. Caps the MemorySSA clobbering calls."));
@@ -164,15 +162,15 @@ cl::opt<unsigned> SetLicmMssaOptCap(
 // Experimentally, memory promotion carries less importance than sinking and
 // hoisting. Limit when we do promotion when using MemorySSA, in order to save
 // compile time.
-cl::opt<unsigned> SetLicmMssaNoAccForPromotionCap(
+cl::opt<unsigned> llvm::SetLicmMssaNoAccForPromotionCap(
     "licm-mssa-max-acc-promotion", cl::init(250), cl::Hidden,
     cl::desc("[LICM & MemorySSA] When MSSA in LICM is disabled, this has no "
              "effect. When MSSA in LICM is enabled, then this is the maximum "
              "number of accesses allowed to be present in a loop in order to "
              "enable memory promotion."));
 
+namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
-
 } // end namespace llvm
 
 static bool inSubLoop(BasicBlock *BB, Loop *CurLoop, LoopInfo *LI);
@@ -923,8 +921,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AAResults *AA, LoopInfo *LI,
     for (Instruction &I : llvm::make_early_inc_range(*BB)) {
       // Try hoisting the instruction out to the preheader.  We can only do
       // this if all of the operands of the instruction are loop invariant and
-      // if it is safe to hoist the instruction. We also check block frequency
-      // to make sure instruction only gets hoisted into colder blocks.
+      // if it is safe to hoist the instruction.
       // TODO: It may be safe to hoist if we are hoisting to a conditional block
       // and we have accurately duplicated the control flow from the loop header
       // to that block.
@@ -1120,11 +1117,10 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   return false;
 }
 
-namespace {
 /// Return true if-and-only-if we know how to (mechanically) both hoist and
 /// sink a given instruction out of a loop.  Does not address legality
 /// concerns such as aliasing or speculation safety.
-bool isHoistableAndSinkableInst(Instruction &I) {
+static bool isHoistableAndSinkableInst(Instruction &I) {
   // Only these instructions are hoistable/sinkable.
   return (isa<LoadInst>(I) || isa<StoreInst>(I) || isa<CallInst>(I) ||
           isa<FenceInst>(I) || isa<CastInst>(I) || isa<UnaryOperator>(I) ||
@@ -1136,8 +1132,8 @@ bool isHoistableAndSinkableInst(Instruction &I) {
 }
 
 /// Return true if I is the only Instruction with a MemoryAccess in L.
-bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
-                        const MemorySSAUpdater &MSSAU) {
+static bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
+                               const MemorySSAUpdater &MSSAU) {
   for (auto *BB : L->getBlocks())
     if (auto *Accs = MSSAU.getMemorySSA()->getBlockAccesses(BB)) {
       int NotAPhi = 0;
@@ -1150,7 +1146,6 @@ bool isOnlyMemoryAccess(const Instruction *I, const Loop *L,
       }
     }
   return true;
-}
 }
 
 static MemoryAccess *getClobberingMemoryAccess(MemorySSA &MSSA,
@@ -2591,11 +2586,11 @@ static bool hoistAdd(ICmpInst::Predicate Pred, Value *VariantLHS,
   // Try to represent VariantLHS as sum of invariant and variant operands.
   using namespace PatternMatch;
   Value *VariantOp, *InvariantOp;
-  if (IsSigned &&
-      !match(VariantLHS, m_NSWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (IsSigned && !match(VariantLHS, m_NSWAddLike(m_Value(VariantOp),
+                                                  m_Value(InvariantOp))))
     return false;
-  if (!IsSigned &&
-      !match(VariantLHS, m_NUWAdd(m_Value(VariantOp), m_Value(InvariantOp))))
+  if (!IsSigned && !match(VariantLHS, m_NUWAddLike(m_Value(VariantOp),
+                                                   m_Value(InvariantOp))))
     return false;
 
   // LHS itself is a loop-variant, try to represent it in the form:
@@ -2760,7 +2755,7 @@ static bool isReassociableOp(Instruction *I, unsigned IntOpcode,
 /// A1, A2, ... and C are loop invariants into expressions like
 /// ((A1 * C * B1) + (A2 * C * B2) + ...) and hoist the (A1 * C), (A2 * C), ...
 /// invariant expressions. This functions returns true only if any hoisting has
-/// actually occured.
+/// actually occurred.
 static bool hoistMulAddAssociation(Instruction &I, Loop &L,
                                    ICFLoopSafetyInfo &SafetyInfo,
                                    MemorySSAUpdater &MSSAU, AssumptionCache *AC,

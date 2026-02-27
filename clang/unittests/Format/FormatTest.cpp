@@ -5126,7 +5126,8 @@ TEST_F(FormatTest, DesignatedInitializers) {
 TEST_F(FormatTest, BracedInitializerIndentWidth) {
   auto Style = getLLVMStyleWithColumns(60);
   Style.BinPackArguments = true;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakAfterOpenBracketBracedList = true;
   Style.BracedInitializerIndentWidth = 6;
 
   // Non-initializing braces are unaffected by BracedInitializerIndentWidth.
@@ -5302,7 +5303,8 @@ TEST_F(FormatTest, BracedInitializerIndentWidth) {
                Style);
 
   // Aligning after open braces unaffected by BracedInitializerIndentWidth.
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_Align;
+  Style.AlignAfterOpenBracket = true;
+  Style.BreakAfterOpenBracketBracedList = false;
   verifyFormat("SomeStruct s{\"xxxxxxxxxxxxx\", \"yyyyyyyyyyyyy\",\n"
                "             \"zzzzzzzzzzzzz\"};",
                Style);
@@ -7459,7 +7461,7 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
   Style.IndentWidth = 4;
   Style.TabWidth = 4;
   Style.UseTab = FormatStyle::UT_Always;
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.AlignOperands = FormatStyle::OAS_DontAlign;
   verifyFormat("return someVeryVeryLongConditionThatBarelyFitsOnALine\n"
                "\t&& (someOtherLongishConditionPart1\n"
@@ -7470,7 +7472,7 @@ TEST_F(FormatTest, ExpressionIndentationBreakingBeforeOperators) {
                Style);
 
   Style = getLLVMStyleWithColumns(20);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   Style.BinPackParameters = FormatStyle::BPPS_OnePerLine;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
   Style.ContinuationIndentWidth = 2;
@@ -7632,7 +7634,7 @@ TEST_F(FormatTest, NoOperandAlignment) {
                "        * cccccccccccccccccccccccccccccccccccc;",
                Style);
 
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   verifyFormat("return (a > b\n"
                "    // comment1\n"
                "    // comment2\n"
@@ -8444,6 +8446,54 @@ TEST_F(FormatTest, BreakConstructorInitializersAfterColon) {
       "  : public aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa,\n"
       "    public bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb {};",
       Style);
+}
+
+TEST_F(FormatTest, BreakConstructorInitializersAfterComma) {
+  FormatStyle Style = getLLVMStyle();
+  Style.BreakConstructorInitializers = FormatStyle::BCIS_AfterComma;
+
+  verifyFormat("Constructor() : Initializer(FitsOnTheLine) {}", Style);
+  verifyFormat("Constructor() : a(a), b(b), c(c) {}", Style);
+
+  Style.PackConstructorInitializers = FormatStyle::PCIS_Never;
+  verifyFormat("SomeClass::Constructor() : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
+               "                           aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
+               "                           aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}",
+               Style);
+  verifyFormat("SomeClassWithALongName::Constructor(\n"
+               "    int aaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "    int bbbbbbbbbbbbb) : aaaaaaaaaaaaaaaaaaaa(a),\n"
+               "                         bbbbbbbbbbbbbbbbbbbbb(b) {}",
+               Style);
+
+  Style.PackConstructorInitializers = FormatStyle::PCIS_CurrentLine;
+  verifyFormat("SomeClass::Constructor() : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
+               "                           aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
+               "                           aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}",
+               Style);
+
+  Style.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
+  verifyFormat("SomeClass::Constructor() : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
+               "                           aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
+               Style);
+
+  Style.PackConstructorInitializers = FormatStyle::PCIS_NextLine;
+  verifyFormat("SomeClass::Constructor() : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
+               "                           aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
+               Style);
+
+  Style.PackConstructorInitializers = FormatStyle::PCIS_NextLineOnly;
+  verifyFormat("SomeClass::Constructor() : aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
+               "                           aaaaaaaaaaaaaaa(aaaaaaaaaaaa) {}",
+               Style);
+
+  Style.ColumnLimit = 0;
+  Style.PackConstructorInitializers = FormatStyle::PCIS_CurrentLine;
+  verifyFormat("SomeClass::Constructor() : a(a), b(b), c(c) {}", Style);
+  verifyNoChange("SomeClass::Constructor() : a(a),\n"
+                 "                           b(b),\n"
+                 "                           c(c) {}",
+                 Style);
 }
 
 #ifndef EXPENSIVE_CHECKS
@@ -11248,7 +11298,7 @@ TEST_F(FormatTest, BreakBeforeTemplateCloser) {
 
 TEST_F(FormatTest, WrapsTemplateParameters) {
   FormatStyle Style = getLLVMStyle();
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   verifyFormat(
       "template <typename... a> struct q {};\n"
@@ -11256,7 +11306,7 @@ TEST_F(FormatTest, WrapsTemplateParameters) {
       "    aaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaa>\n"
       "    y;",
       Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_DontAlign;
+  Style.AlignAfterOpenBracket = false;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   verifyFormat(
       "template <typename... a> struct r {};\n"
@@ -11264,7 +11314,7 @@ TEST_F(FormatTest, WrapsTemplateParameters) {
       "    aaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaa>\n"
       "    y;",
       Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_None;
   verifyFormat("template <typename... a> struct s {};\n"
                "extern s<\n"
@@ -11274,7 +11324,7 @@ TEST_F(FormatTest, WrapsTemplateParameters) {
                "aaaaaaaaaaaaaaaaaaaaaa>\n"
                "    y;",
                Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
   verifyFormat("template <typename... a> struct t {};\n"
                "extern t<\n"
@@ -14302,7 +14352,7 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
                "};",
                NoBinPacking);
 
-  NoBinPacking.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  NoBinPacking.BreakAfterOpenBracketBracedList = true;
   verifyFormat("static uint8 CddDp83848Reg[] = {\n"
                "    CDDDP83848_BMCR_REGISTER,\n"
                "    CDDDP83848_BMSR_REGISTER,\n"
@@ -14363,7 +14413,7 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
       BreakBeforeLambdaBody);
 
   FormatStyle ExtraSpaces = getLLVMStyle();
-  ExtraSpaces.Cpp11BracedListStyle = false;
+  ExtraSpaces.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   ExtraSpaces.ColumnLimit = 75;
   verifyFormat("vector<int> x{ 1, 2, 3, 4 };", ExtraSpaces);
   verifyFormat("vector<T> x{ {}, {}, {}, {} };", ExtraSpaces);
@@ -15621,6 +15671,14 @@ TEST_F(FormatTest, FormatForObjectiveCMethodDecls) {
   verifyGoogleFormat("- foo:(int)foo;");
 }
 
+TEST_F(FormatTest, SpaceBeforeObjCMethodDeclColon) {
+  auto Style = getLLVMStyle();
+  EXPECT_TRUE(Style.ObjCSpaceAfterMethodDeclarationPrefix);
+  verifyFormat("- (void)method;", Style);
+  Style.ObjCSpaceAfterMethodDeclarationPrefix = false;
+  verifyFormat("-(void)method;", Style);
+}
+
 TEST_F(FormatTest, BreaksStringLiterals) {
   // FIXME: unstable test case
   EXPECT_EQ("\"some text \"\n"
@@ -15972,13 +16030,14 @@ TEST_F(FormatTest, BreaksStringLiteralOperands) {
   // In a function call with two operands, with AlignAfterOpenBracket enabled,
   // the first must be broken with a line break before it.
   FormatStyle Style = getLLVMStyleWithColumns(25);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   verifyFormat("someFunction(\n"
                "    \"long long long \"\n"
                "    \"long\",\n"
                "    a);",
                "someFunction(\"long long long long\", a);", Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Style.BreakAfterOpenBracketFunction = true;
+  Style.BreakBeforeCloseBracketFunction = true;
   verifyFormat("someFunction(\n"
                "    \"long long long \"\n"
                "    \"long\",\n"
@@ -17773,7 +17832,7 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
 
   Spaces.ColumnLimit = 80;
   Spaces.IndentWidth = 4;
-  Spaces.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Spaces.BreakAfterOpenBracketFunction = true;
   verifyFormat("void foo( ) {\n"
                "    size_t foo = (*(function))(\n"
                "        Foooo, Barrrrr, Foooo, Barrrr, FoooooooooLooooong, "
@@ -17798,7 +17857,8 @@ TEST_F(FormatTest, ConfigurableSpacesInParens) {
                "}",
                Spaces);
 
-  Spaces.AlignAfterOpenBracket = FormatStyle::BAS_BlockIndent;
+  Spaces.BreakAfterOpenBracketFunction = true;
+  Spaces.BreakBeforeCloseBracketFunction = true;
   verifyFormat("void foo( ) {\n"
                "    size_t foo = (*(function))(\n"
                "        Foooo, Barrrrr, Foooo, Barrrr, FoooooooooLooooong, "
@@ -18558,6 +18618,11 @@ TEST_F(FormatTest, AlignConsecutiveMacros) {
                "\n"
                "#define bbbb 4\n"
                "#define ccc       (5)",
+               Style);
+
+  Style.ColumnLimit = 30;
+  verifyFormat("#define MY_FUNC(x) callMe(X)\n"
+               "#define MY_LONG_CONSTANT 17",
                Style);
 }
 
@@ -19539,6 +19604,15 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
       "int j      = 2;",
       Alignment);
 
+  verifyFormat("int abcdefghijk = 111;\n"
+               "auto lambda     = [] {\n"
+               "  int c = call(1, //\n"
+               "               2, //\n"
+               "               3, //\n"
+               "               4);\n"
+               "};",
+               Alignment);
+
   verifyFormat("template <typename T, typename T_0 = very_long_type_name_0,\n"
                "          typename B   = very_long_type_name_1,\n"
                "          typename T_2 = very_long_type_name_2>\n"
@@ -19577,6 +19651,12 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                Alignment);
   verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
                "auto b                     = g([] {\n"
+               "  return \"Hello \"\n"
+               "         \"World\";\n"
+               "});",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = g([] {\n"
                "  f();\n"
                "  return;\n"
                "});",
@@ -19595,16 +19675,34 @@ TEST_F(FormatTest, AlignConsecutiveAssignments) {
                "};",
                Alignment);
 
+  // Aligning lines should not mess up the comments. However, feel free to
+  // change the test if it turns out that comments inside the closure should not
+  // be aligned with those outside it.
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};  //\n"
+               "auto b                     = [] { //\n"
+               "  return;                         //\n"
+               "};",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};  //\n"
+               "auto b                     = [] { //\n"
+               "  return aaaaaaaaaaaaaaaaaaaaa;   //\n"
+               "};",
+               Alignment);
+  verifyFormat("auto aaaaaaaaaaaaaaa = {};      //\n"
+               "auto b               = [] {     //\n"
+               "  return aaaaaaaaaaaaaaaaaaaaa; //\n"
+               "};",
+               Alignment);
+
   verifyFormat("auto b = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
                "           ccc ? aaaaa : bbbbb,\n"
                "           dddddddddddddddddddddddddd);",
                Alignment);
-  // FIXME: https://llvm.org/PR53497
-  // verifyFormat("auto aaaaaaaaaaaa = f();\n"
-  //              "auto b            = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
-  //              "    ccc ? aaaaa : bbbbb,\n"
-  //              "    dddddddddddddddddddddddddd);",
-  //              Alignment);
+  verifyFormat("auto aaaaaaaaaaaa = f();\n"
+               "auto b            = f(aaaaaaaaaaaaaaaaaaaaaaaaa,\n"
+               "                      ccc ? aaaaa : bbbbb,\n"
+               "                      dddddddddddddddddddddddddd);",
+               Alignment);
 
   // Confirm proper handling of AlignConsecutiveAssignments with
   // BinPackArguments.
@@ -19809,6 +19907,14 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  Test &operator=(const Test &) = default;\n"
                "};",
                Alignment);
+
+  // The comment to the right should still align right.
+  verifyFormat("void foo(int   name, // name\n"
+               "         float name, // name\n"
+               "         int   name) // name\n"
+               "{}",
+               Alignment);
+
   unsigned OldColumnLimit = Alignment.ColumnLimit;
   // We need to set ColumnLimit to zero, in order to stress nested alignments,
   // otherwise the function parameters will be re-flowed onto a single line.
@@ -20192,6 +20298,11 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "    i = 3    //\n"
                "};",
                Alignment);
+  // When assignments are nested, each level should be aligned.
+  verifyFormat("float i2 = 0;\n"
+               "auto  v  = type{i2 = 1, //\n"
+               "                i  = 3};",
+               Alignment);
   Alignment.AlignConsecutiveAssignments.Enabled = false;
 
   verifyFormat(
@@ -20327,7 +20438,7 @@ TEST_F(FormatTest, AlignConsecutiveDeclarations) {
                "  return 0;\n"
                "}()};",
                BracedAlign);
-  BracedAlign.Cpp11BracedListStyle = false;
+  BracedAlign.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat("const auto result{ []() {\n"
                "  const auto something = 1;\n"
                "  return 2;\n"
@@ -20634,6 +20745,16 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
 
+  verifyFormat("auto someLongName = 3;\n"
+               "auto x            = someLongExpression //\n"
+               "                    | ranges::views::values;",
+               Style);
+  verifyFormat(
+      "veryverylongvariablename = somethingelse;\n"
+      "shortervariablename      = anotherverylonglonglongvariablename + //\n"
+      "                           somevariablethatwastoolongtofitonthesamerow;",
+      Style);
+
   // clang-format off
   verifyFormat("void foo() {\n"
                "  const int capacityBefore = Entries.capacity();\n"
@@ -20681,6 +20802,21 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
 
+  verifyFormat("void foo() {\n"
+               "  int    myVar = 5;\n"
+               "  double x     = 3.14;\n"
+               "  auto   str   = (\"Hello \"\n"
+               "                  \"World\");\n"
+               "  auto   s     = (\"Hello \"\n"
+               "                  \"Again\");\n"
+               "}",
+               Style);
+
+  verifyFormat("A    B       = {\"Hello \"\n"
+               "                \"World\"};\n"
+               "BYTE payload = 2;",
+               Style);
+
   // clang-format off
   verifyFormat("void foo() {\n"
                "  const int  capacityBefore = Entries.capacity();\n"
@@ -20691,6 +20827,42 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
   // clang-format on
+
+  // The start of the closure is indented from the start of the line. It should
+  // not move with the equal sign.
+  Style.ContinuationIndentWidth = 6;
+  Style.IndentWidth = 8;
+  Style.BreakBeforeBraces = FormatStyle::BS_Custom;
+  Style.BraceWrapping.BeforeLambdaBody = true;
+  Style.BraceWrapping.IndentBraces = true;
+  Style.ColumnLimit = 32;
+  verifyFormat("auto aaaaaaaaaaa = {};\n"
+               "b = []() constexpr\n"
+               "      -> aaaaaaaaaaaaaaaaaaaaaaa\n"
+               "        {\n"
+               "                return {}; //\n"
+               "        };",
+               Style);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "b = []()\n"
+               "        {\n"
+               "                return; //\n"
+               "        };",
+               Style);
+  Style.ColumnLimit = 33;
+  verifyFormat("auto aaaaaaaaaaa = {};\n"
+               "b                = []() constexpr\n"
+               "      -> aaaaaaaaaaaaaaaaaaaaaaa\n"
+               "        {\n"
+               "                return {}; //\n"
+               "        };",
+               Style);
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "b                          = []()\n"
+               "        {\n"
+               "                return; //\n"
+               "        };",
+               Style);
 
   Style = getLLVMStyleWithColumns(20);
   Style.AlignConsecutiveAssignments.Enabled = true;
@@ -20738,6 +20910,68 @@ TEST_F(FormatTest, AlignWithLineBreaks) {
                "}",
                Style);
   // clang-format on
+
+  Style = getLLVMStyle();
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("param->fault_depth = grid->jfault * grid->dz; //\n"
+               "grid->corner       = grid->jlid + 1;          //\n"
+               "param->peclet      = param->V                 //\n"
+               "                     * param->L * 1000.0      //\n"
+               "                     / param->kappa;          //",
+               Style);
+  Style.AlignOperands = FormatStyle::OAS_AlignAfterOperator;
+  verifyFormat("param->fault_depth = grid->jfault * grid->dz; //\n"
+               "grid->corner       = grid->jlid + 1;          //\n"
+               "param->peclet      = param->V                 //\n"
+               "                   * param->L * 1000.0        //\n"
+               "                   / param->kappa;            //",
+               Style);
+
+  Style = getLLVMStyleWithColumns(70);
+  Style.AlignConsecutiveDeclarations.Enabled = true;
+  verifyFormat(
+      "ReturnType\n"
+      "MyFancyIntefaceFunction(Context       *context,\n"
+      "                        ALongTypeName *response) noexcept override;\n"
+      "ReturnType func();",
+      Style);
+
+  verifyFormat(
+      "ReturnType\n"
+      "MyFancyIntefaceFunction(B<int>          *context,\n"
+      "                        decltype(AFunc) *response) noexcept override;\n"
+      "ReturnType func();",
+      Style);
+
+  Style.AlignConsecutiveAssignments.Enabled = true;
+  verifyFormat("float i2 = 0;\n"
+               "auto  v  = false ? type{}\n"
+               "                 : type{\n"
+               "                       1,\n"
+               "                   };",
+               Style);
+
+  verifyFormat("const char *const MatHtool[] = {};\n"
+               "const char        Htool[]    = \"@article{m,\\n\"\n"
+               "                               \" \"\n"
+               "                               \" \"\n"
+               "                               \" \"\n"
+               "                               \"}\\n\";",
+               Style);
+
+  Style.ColumnLimit = 15;
+  verifyFormat("int i1 = 1;\n"
+               "k      = bar(\n"
+               "    argument1,\n"
+               "    argument2);",
+               Style);
+
+  Style.ColumnLimit = 45;
+  verifyFormat("auto xxxxxxxx = foo;\n"
+               "auto x = whatever ? some / long -\n"
+               "                        computition / stuff\n"
+               "                  : random;",
+               Style);
 }
 
 TEST_F(FormatTest, AlignWithInitializerPeriods) {
@@ -20761,6 +20995,34 @@ TEST_F(FormatTest, AlignWithInitializerPeriods) {
                "                  .three_fooooooooooooo  = 4};\n"
                "  BYTE payload = 2;\n"
                "}",
+               Style);
+
+  // The lines inside the braces are supposed to be indented by
+  // BracedInitializerIndentWidth from the start of the line. They should not
+  // move with the opening brace.
+  verifyFormat("void foo2(void) {\n"
+               "  BYTE p[1] = 1;\n"
+               "  A B       = {\n"
+               "      .one_foooooooooooooooo = 2,\n"
+               "      .two_fooooooooooooo    = 3,\n"
+               "      .three_fooooooooooooo  = 4,\n"
+               "  };\n"
+               "  BYTE payload = 2;\n"
+               "}",
+               Style);
+
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = g([] {\n"
+               "  x = {.one_foooooooooooooooo = 2, //\n"
+               "       .two_fooooooooooooo    = 3, //\n"
+               "       .three_fooooooooooooo  = 4};\n"
+               "});",
+               Style);
+
+  verifyFormat("auto aaaaaaaaaaaaaaaaaaaaa = {};\n"
+               "auto b                     = {.a = {\n"
+               "                                  .a = 0,\n"
+               "                              }};",
                Style);
 
   Style.AlignConsecutiveAssignments.Enabled = false;
@@ -21897,14 +22159,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresRightAlignment) {
                "});",
                Style);
 
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat("struct test demo[] = {\n"
                "  { 56,    23, \"hello\" },\n"
                "  { -1, 93463, \"world\" },\n"
                "  {  7,     5,    \"!!\" }\n"
                "};",
                Style);
-  Style.Cpp11BracedListStyle = true;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
 
   Style.ColumnLimit = 0;
   verifyFormat(
@@ -22157,6 +22419,19 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "});",
                Style);
 
+  verifyNoCrash(
+      "PANEL_Ic PANEL_ic[PANEL_IC_NUMBER] =\n"
+      "    {\n"
+      "        {PIC(0),   PIC(0),   PIC(99),  PIC(81),  0}, // Backbox\n"
+      "        {PIC(1),   PIC(83),  PIC(191), PIC(137), 0}, // AK47\n"
+      "\n"
+      "#define PICALL1(a, b, c, d) \\\n"
+      "    { PIC(a), PIC(b), PIC(c), PIC(d), 1 }\n"
+      "\n"
+      "        PICALL1(1, 1, 75, 50),\n"
+      "};",
+      Style);
+
   Style.AlignEscapedNewlines = FormatStyle::ENAS_DontAlign;
   verifyFormat("#define FOO \\\n"
                "  int foo[][2] = { \\\n"
@@ -22164,14 +22439,14 @@ TEST_F(FormatTest, CatchAlignArrayOfStructuresLeftAlignment) {
                "  };",
                Style);
 
-  Style.Cpp11BracedListStyle = false;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_Block;
   verifyFormat("struct test demo[] = {\n"
                "  { 56, 23,    \"hello\" },\n"
                "  { -1, 93463, \"world\" },\n"
                "  { 7,  5,     \"!!\"    }\n"
                "};",
                Style);
-  Style.Cpp11BracedListStyle = true;
+  Style.Cpp11BracedListStyle = FormatStyle::BLS_AlignFirstComment;
 
   Style.ColumnLimit = 0;
   verifyFormat(
@@ -22723,7 +22998,7 @@ TEST_F(FormatTest, ConstructorInitializerIndentWidth) {
       ": aaaaaaaaaaaaa(aaaaaaaaaaaaaa), aaaaaaaaaaaaa(aaaaaaaaaaaaaa),\n"
       "  aaaaaaaaaaaaa(aaaaaaaaaaaaaa) {}",
       Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   verifyFormat(
       "SomeLongTemplateVariableName<\n"
       "    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa, aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa>",
@@ -23978,7 +24253,7 @@ TEST_F(FormatTest, FormatsLambdas) {
                "      return aFunkyFunctionCall(qux);\n"
                "    }} {}",
                Style);
-  Style.AlignAfterOpenBracket = FormatStyle::BAS_AlwaysBreak;
+  Style.BreakAfterOpenBracketFunction = true;
   // FIXME: The following test should pass, but fails at the time of writing.
 #if 0
   // As long as all the non-lambda arguments fit on a single line, AlwaysBreak
@@ -27192,6 +27467,7 @@ TEST_F(FormatTest, Cpp20ModulesSupport) {
   verifyFormat("export", Style);
 
   verifyFormat("import /* not keyword */ = val ? 2 : 1;");
+  verifyFormat("_world->import<engine_module>();");
 }
 
 TEST_F(FormatTest, CoroutineForCoawait) {
@@ -28127,7 +28403,9 @@ TEST_F(FormatTest, SpaceBetweenKeywordAndLiteral) {
 
 TEST_F(FormatTest, BreakBinaryOperations) {
   auto Style = getLLVMStyleWithColumns(60);
-  EXPECT_EQ(Style.BreakBinaryOperations, FormatStyle::BBO_Never);
+  FormatStyle::BreakBinaryOperationsOptions ExpectedDefault = {
+      FormatStyle::BBO_Never, {}};
+  EXPECT_EQ(Style.BreakBinaryOperations, ExpectedDefault);
 
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -28166,7 +28444,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_OnePerLine;
 
   // Logical operations
   verifyFormat("if (condition1 && condition2) {\n"
@@ -28251,7 +28529,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1 +\n"
@@ -28283,7 +28561,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_OnePerLine;
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_OnePerLine;
   Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
 
   // Logical operations
@@ -28364,7 +28642,7 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    >> longOperand_3_;",
                Style);
 
-  Style.BreakBinaryOperations = FormatStyle::BBO_RespectPrecedence;
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_RespectPrecedence;
   verifyFormat("result = op1 + op2 * op3 - op4;", Style);
 
   verifyFormat("result = operand1\n"
@@ -28394,6 +28672,112 @@ TEST_F(FormatTest, BreakBinaryOperations) {
                "    >> longOperand_1\n"
                "    >> longOperand_2\n"
                "    >> longOperand_3_;",
+               Style);
+}
+
+TEST_F(FormatTest, BreakBinaryOperationsPerOperator) {
+  auto Style = getLLVMStyleWithColumns(60);
+
+  // Per-operator override: && and || are OnePerLine, rest is Never (default).
+  FormatStyle::BinaryOperationBreakRule LogicalRule;
+  LogicalRule.Operators = {tok::ampamp, tok::pipepipe};
+  LogicalRule.Style = FormatStyle::BBO_OnePerLine;
+  LogicalRule.MinChainLength = 0;
+
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  Style.BreakBinaryOperations.PerOperator = {LogicalRule};
+
+  // Logical operators break one-per-line when line is too long.
+  verifyFormat("bool valid = isConnectionReady() &&\n"
+               "             isSessionNotExpired() &&\n"
+               "             hasRequiredPermission();",
+               Style);
+
+  // Arithmetic operators stay with default (Never).
+  verifyFormat("int total = unitBasePrice + shippingCostPerItem +\n"
+               "            applicableTaxAmount + handlingFeePerUnit;",
+               Style);
+
+  // Short logical chain that fits stays on one line.
+  verifyFormat("bool x = a && b && c;", Style);
+
+  // Multiple PerOperator groups: && and || plus | operators.
+  FormatStyle::BinaryOperationBreakRule BitwiseOrRule;
+  BitwiseOrRule.Operators = {tok::pipe};
+  BitwiseOrRule.Style = FormatStyle::BBO_OnePerLine;
+  BitwiseOrRule.MinChainLength = 0;
+
+  Style.BreakBinaryOperations.PerOperator = {LogicalRule, BitwiseOrRule};
+
+  // | operators should break one-per-line.
+  verifyFormat("int flags = OPTION_VERBOSE_OUTPUT |\n"
+               "            OPTION_RECURSIVE_SCAN |\n"
+               "            OPTION_FORCE_OVERWRITE;",
+               Style);
+
+  // && still works in multi-group configuration.
+  verifyFormat("bool valid = isConnectionReady() &&\n"
+               "             isSessionNotExpired() &&\n"
+               "             hasRequiredPermission();",
+               Style);
+
+  // + stays with default (Never) even with multi-group.
+  verifyFormat("int total = unitBasePrice + shippingCostPerItem +\n"
+               "            applicableTaxAmount + handlingFeePerUnit;",
+               Style);
+
+  // | OnePerLine with << sub-expressions: << stays grouped.
+  Style.BreakBinaryOperations.PerOperator = {BitwiseOrRule};
+  verifyFormat("std::uint32_t a = byte_buffer[0] |\n"
+               "                  byte_buffer[1] << 8 |\n"
+               "                  byte_buffer[2] << 16 |\n"
+               "                  byte_buffer[3] << 24;",
+               Style);
+
+  // >> (stream extraction) OnePerLine: clang-format splits >> into two >
+  // tokens, but per-operator rules for >> must still work.
+  FormatStyle::BinaryOperationBreakRule ShiftRightRule;
+  ShiftRightRule.Operators = {tok::greatergreater};
+  ShiftRightRule.Style = FormatStyle::BBO_OnePerLine;
+  ShiftRightRule.MinChainLength = 0;
+
+  Style.BreakBinaryOperations.PerOperator = {ShiftRightRule};
+  verifyFormat("in >>\n"
+               "    packet_id >>\n"
+               "    packet_version >>\n"
+               "    packet_number >>\n"
+               "    packet_scale;",
+               Style);
+}
+
+TEST_F(FormatTest, BreakBinaryOperationsMinChainLength) {
+  auto Style = getLLVMStyleWithColumns(60);
+
+  // MinChainLength = 3: chains shorter than 3 don't force breaks.
+  FormatStyle::BinaryOperationBreakRule LogicalRule;
+  LogicalRule.Operators = {tok::ampamp, tok::pipepipe};
+  LogicalRule.Style = FormatStyle::BBO_OnePerLine;
+  LogicalRule.MinChainLength = 3;
+
+  Style.BreakBinaryOperations.Default = FormatStyle::BBO_Never;
+  Style.BreakBinaryOperations.PerOperator = {LogicalRule};
+
+  // Chain of 2 — below MinChainLength, no forced one-per-line.
+  verifyFormat("bool ok =\n"
+               "    isConnectionReady(cfg) && isSessionNotExpired(cfg);",
+               Style);
+
+  // Chain of 3 — meets MinChainLength, one-per-line.
+  verifyFormat("bool ok = isConnectionReady(cfg) &&\n"
+               "          isSessionNotExpired(cfg) &&\n"
+               "          hasRequiredPermission(cfg);",
+               Style);
+
+  // Chain of 4 — above MinChainLength, one-per-line.
+  verifyFormat("bool ok = isConnectionReady(cfg) &&\n"
+               "          isSessionNotExpired(cfg) &&\n"
+               "          hasRequiredPermission(cfg) &&\n"
+               "          isFeatureEnabled(cfg);",
                Style);
 }
 
@@ -28831,6 +29215,13 @@ TEST_F(FormatTest, KeywordedFunctionLikeMacros) {
                "                     WRITE setName\n"
                "                     NOTIFY nameChanged)",
                Style);
+}
+
+TEST_F(FormatTest, UnbalancedAngleBrackets) {
+  verifyFormat("template <");
+
+  verifyNoCrash("typename foo<bar>::value, const String &>::type f();",
+                getLLVMStyleWithColumns(50));
 }
 
 } // namespace

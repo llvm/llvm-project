@@ -376,10 +376,6 @@ def HasSPE  : Predicate<"Subtarget->hasSPE()">;
 def HasICBT : Predicate<"Subtarget->hasICBT()">;
 def HasPartwordAtomics : Predicate<"Subtarget->hasPartwordAtomics()">;
 def HasQuadwordAtomics : Predicate<"Subtarget->hasQuadwordAtomics()">;
-def NoNaNsFPMath
-    : Predicate<"Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
-def NaNsFPMath
-    : Predicate<"!Subtarget->getTargetMachine().Options.NoNaNsFPMath">;
 def HasBPERMD : Predicate<"Subtarget->hasBPERMD()">;
 def HasExtDiv : Predicate<"Subtarget->hasExtDiv()">;
 def HasFPU : Predicate<"Subtarget->hasFPU()">;
@@ -409,6 +405,7 @@ def HasP10Vector : Predicate<"Subtarget->hasP10Vector()">;
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
 def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
 def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
+def IsNotISA3_0 : Predicate<"!Subtarget->isISA3_0()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
 def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
@@ -818,6 +815,8 @@ def PPCAsmParserVariant : AsmParserVariant {
   string RegisterPrefix = "%";
   string BreakCharacters = ".";
 }
+
+defm : RemapAllTargetPseudoPointerOperands<ppc_ptr_rc>;
 
 def PPC : Target {
   // Information about the instructions.

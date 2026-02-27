@@ -550,6 +550,7 @@ StringRef llvm::dwarf::LanguageDescription(dwarf::SourceLanguageName Name,
   case DW_LNAME_Dylan:
   case DW_LNAME_Go:
   case DW_LNAME_Haskell:
+  case DW_LNAME_HIP:
   case DW_LNAME_HLSL:
   case DW_LNAME_Java:
   case DW_LNAME_Julia:
@@ -1076,10 +1077,3 @@ StringRef (*const llvm::dwarf::EnumTraits<LineNumberOps>::StringFn)(unsigned) =
     LNStandardString;
 StringRef (*const llvm::dwarf::EnumTraits<Index>::StringFn)(unsigned) =
     IndexString;
-
-constexpr char llvm::dwarf::EnumTraits<Attribute>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Form>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Index>::Type[];
-constexpr char llvm::dwarf::EnumTraits<Tag>::Type[];
-constexpr char llvm::dwarf::EnumTraits<LineNumberOps>::Type[];
-constexpr char llvm::dwarf::EnumTraits<LocationAtom>::Type[];

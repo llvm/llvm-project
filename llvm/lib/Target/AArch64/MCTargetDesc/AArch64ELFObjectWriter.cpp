@@ -109,6 +109,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
   case AArch64::S_PLT:
     if (Kind == FK_Data_4)
       break;
+    // Only R_AARCH64_PLT32/R_AARCH64_GOTPCREL32 defined at present, but can
+    // be extended to other sizes if additional relocations are defined.
     reportError(Fixup.getLoc(), AArch64::getSpecifierName(RefKind) +
                                     " can only be used in a .word directive");
     return ELF::R_AARCH64_NONE;

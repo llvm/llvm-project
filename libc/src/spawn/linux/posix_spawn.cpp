@@ -44,7 +44,7 @@ cpp::optional<int> open(const char *path, int oflags, mode_t mode) {
   int fd = LIBC_NAMESPACE::syscall_impl<int>(SYS_openat, AT_FDCWD, path, oflags,
                                              mode);
 #endif
-  if (fd > 0)
+  if (fd >= 0)
     return fd;
   // The open function is called as part of the child process' preparatory
   // steps. If an open fails, the child process just exits. So, unlike

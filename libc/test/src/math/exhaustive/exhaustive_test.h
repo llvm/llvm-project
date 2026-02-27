@@ -40,7 +40,7 @@ template <typename OutType, typename InType = OutType>
 using UnaryOp = OutType(InType);
 
 template <typename OutType, typename InType, mpfr::Operation Op,
-          UnaryOp<OutType, InType> Func>
+          UnaryOp<OutType, InType> Func, unsigned Tolerance = 0>
 struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
   using FloatType = InType;
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<FloatType>;
@@ -57,8 +57,8 @@ struct UnaryOpChecker : public virtual LIBC_NAMESPACE::testing::Test {
     do {
       FPBits xbits(bits);
       FloatType x = xbits.get_val();
-      bool correct =
-          TEST_MPFR_MATCH_ROUNDING_SILENTLY(Op, x, Func(x), 0.5, rounding);
+      bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
+          Op, x, Func(x), static_cast<double>(Tolerance) + 0.5, rounding);
       failed += (!correct);
       // Uncomment to print out failed values.
       if (!correct) {
@@ -256,9 +256,10 @@ struct LlvmLibcExhaustiveMathTest
   }
 };
 
-template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func>
-using LlvmLibcUnaryOpExhaustiveMathTest =
-    LlvmLibcExhaustiveMathTest<UnaryOpChecker<FloatType, FloatType, Op, Func>>;
+template <typename FloatType, mpfr::Operation Op, UnaryOp<FloatType> Func,
+          unsigned Tolerance = 0>
+using LlvmLibcUnaryOpExhaustiveMathTest = LlvmLibcExhaustiveMathTest<
+    UnaryOpChecker<FloatType, FloatType, Op, Func, Tolerance>>;
 
 template <typename OutType, typename InType, mpfr::Operation Op,
           UnaryOp<OutType, InType> Func>

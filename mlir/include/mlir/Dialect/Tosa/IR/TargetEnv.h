@@ -28,19 +28,22 @@ struct TosaLevel {
   int32_t MAX_LOG2_SIZE = 0;
   int32_t MAX_NESTING = 0;
   int32_t MAX_TENSOR_LIST_SIZE = 0;
+  int32_t MAX_SHAPE_LEN = 0;
 
   bool operator==(const TosaLevel &rhs) {
     return MAX_RANK == rhs.MAX_RANK && MAX_KERNEL == rhs.MAX_KERNEL &&
            MAX_STRIDE == rhs.MAX_STRIDE && MAX_SCALE == rhs.MAX_SCALE &&
            MAX_LOG2_SIZE == rhs.MAX_LOG2_SIZE &&
            MAX_NESTING == rhs.MAX_NESTING &&
-           MAX_TENSOR_LIST_SIZE == rhs.MAX_TENSOR_LIST_SIZE;
+           MAX_TENSOR_LIST_SIZE == rhs.MAX_TENSOR_LIST_SIZE &&
+           MAX_SHAPE_LEN == rhs.MAX_SHAPE_LEN;
   }
 };
 
-static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6, 8192, 8192, 256, 31, 6, 64};
+static constexpr TosaLevel TOSA_LEVEL_EIGHTK = {6,  8192, 8192, 256,
+                                                31, 6,    64,   16};
 static constexpr TosaLevel TOSA_LEVEL_NONE = {32, 2147483647, 2147483647, 2048,
-                                              63, 256,        256};
+                                              63, 256,        256,        64};
 
 TargetEnvAttr lookupTargetEnv(Operation *op);
 TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
@@ -50,28 +53,66 @@ TargetEnvAttr getDefaultTargetEnv(MLIRContext *context);
 /// returned by getDefaultTargetEnv() if not provided.
 TargetEnvAttr lookupTargetEnvOrDefault(Operation *op);
 
+/// A thin wrapper around the SpecificationVersion enum to represent
+/// and provide utilities around the TOSA specification version.
+class TosaSpecificationVersion {
+public:
+  TosaSpecificationVersion() = default;
+
+  TosaSpecificationVersion(uint32_t major, uint32_t minor)
+      : majorVersion(major), minorVersion(minor) {}
+  TosaSpecificationVersion(SpecificationVersion version)
+      : TosaSpecificationVersion(fromVersionEnum(version)) {}
+
+  bool isBackwardsCompatibleWith(TosaSpecificationVersion baseVersion) const {
+    return this->majorVersion == baseVersion.majorVersion &&
+           this->minorVersion >= baseVersion.minorVersion;
+  }
+
+  uint32_t getMajor() const { return majorVersion; }
+  uint32_t getMinor() const { return minorVersion; }
+
+private:
+  uint32_t majorVersion = 0;
+  uint32_t minorVersion = 0;
+
+  static TosaSpecificationVersion
+  fromVersionEnum(SpecificationVersion version) {
+    switch (version) {
+    case SpecificationVersion::V_1_0:
+      return TosaSpecificationVersion(1, 0);
+    case SpecificationVersion::V_1_1_DRAFT:
+      return TosaSpecificationVersion(1, 1);
+    }
+    llvm_unreachable("Unknown TOSA version");
+  }
+};
+
+TosaSpecificationVersion getMinVersion(const Profile &profile);
+TosaSpecificationVersion getMinVersion(const Extension &extension);
+TosaSpecificationVersion getMinVersion(const Level &level);
+
+llvm::SmallString<4> stringifyVersion(TosaSpecificationVersion version);
+
 /// This class represents the capability enabled in the target implementation
 /// such as profile, extension, and level. It's a wrapper class around
 /// tosa::TargetEnvAttr.
 class TargetEnv {
 public:
   TargetEnv() {}
-  explicit TargetEnv(Level level, const ArrayRef<Profile> &profiles,
-                     const ArrayRef<Extension> &extensions)
-      : level(level) {
-    enabledProfiles.insert_range(profiles);
-    enabledExtensions.insert_range(extensions);
-  }
 
-  explicit TargetEnv(TargetEnvAttr targetAttr)
-      : TargetEnv(targetAttr.getLevel(), targetAttr.getProfiles(),
-                  targetAttr.getExtensions()) {}
+  static FailureOr<TargetEnv>
+  createTargetEnvFromAttr(TargetEnvAttr targetAttr, Location targetEnvAttrLoc);
+
+  static LogicalResult verifyTargetInformation(TargetEnvAttr targetAttr,
+                                               Location targetAttrLoc);
 
   void addProfile(Profile p) { enabledProfiles.insert(p); }
   void addExtension(Extension e) { enabledExtensions.insert(e); }
 
-  // TODO implement the following utilities.
-  // Version getSpecVersion() const;
+  TosaSpecificationVersion getSpecVersion() const {
+    return specificationVersion;
+  }
 
   TosaLevel getLevel() const {
     if (level == Level::eightK)
@@ -105,6 +146,17 @@ public:
   }
 
 private:
+  // Require target information is verified before constructing, via the use of
+  // `createTargetEnvFromAttr`.
+  explicit TargetEnv(SpecificationVersion specificationVersion, Level level,
+                     const ArrayRef<Profile> &profiles,
+                     const ArrayRef<Extension> &extensions)
+      : specificationVersion(specificationVersion), level(level) {
+    enabledProfiles.insert_range(profiles);
+    enabledExtensions.insert_range(extensions);
+  }
+
+  TosaSpecificationVersion specificationVersion;
   Level level;
   llvm::SmallSet<Profile, 3> enabledProfiles;
   llvm::SmallSet<Extension, 13> enabledExtensions;

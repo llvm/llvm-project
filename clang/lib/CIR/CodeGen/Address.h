@@ -16,9 +16,11 @@
 
 #include "mlir/IR/Value.h"
 #include "clang/AST/CharUnits.h"
+#include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/Support/Casting.h"
 
 namespace clang::CIRGen {
 
@@ -43,8 +45,12 @@ protected:
 public:
   Address(mlir::Value pointer, mlir::Type elementType,
           clang::CharUnits alignment)
-      : pointerAndKnownNonNull(pointer, false), elementType(elementType),
-        alignment(alignment) {
+      : Address(pointer, elementType, alignment, false) {}
+
+  Address(mlir::Value pointer, mlir::Type elementType,
+          clang::CharUnits alignment, bool isKnownNonNull)
+      : pointerAndKnownNonNull(pointer, isKnownNonNull),
+        elementType(elementType), alignment(alignment) {
     assert(pointer && "Pointer cannot be null");
     assert(elementType && "Element type cannot be null");
     assert(!alignment.isZero() && "Alignment cannot be zero");
@@ -73,6 +79,13 @@ public:
   /// alignment.
   Address withPointer(mlir::Value newPtr) const {
     return Address(newPtr, getElementType(), getAlignment());
+  }
+
+  /// Return address with different alignment, but same pointer and element
+  /// type.
+  Address withAlignment(clang::CharUnits newAlignment) const {
+    return Address(getPointer(), getElementType(), newAlignment,
+                   isKnownNonNull());
   }
 
   /// Return address with different element type, a bitcast pointer, and
@@ -114,6 +127,11 @@ public:
     return elementType;
   }
 
+  cir::TargetAddressSpaceAttr getAddressSpace() const {
+    auto ptrTy = mlir::dyn_cast<cir::PointerType>(getType());
+    return ptrTy.getAddrSpace();
+  }
+
   clang::CharUnits getAlignment() const { return alignment; }
 
   /// Get the operation which defines this address.
@@ -125,6 +143,19 @@ public:
 
   template <typename OpTy> OpTy getDefiningOp() const {
     return mlir::dyn_cast_or_null<OpTy>(getDefiningOp());
+  }
+
+  /// Whether the pointer is known not to be null.
+  bool isKnownNonNull() const {
+    assert(isValid() && "Invalid address");
+    return static_cast<bool>(pointerAndKnownNonNull.getInt());
+  }
+
+  /// Set the non-null bit.
+  Address setKnownNonNull() {
+    assert(isValid() && "Invalid address");
+    pointerAndKnownNonNull.setInt(true);
+    return *this;
   }
 };
 

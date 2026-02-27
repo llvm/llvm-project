@@ -1327,9 +1327,9 @@ TEST_F(PatternMatchTest, OverflowingBinOps) {
 TEST_F(PatternMatchTest, LoadStoreOps) {
   // Create this load/store sequence:
   //
-  //  %p = alloca i32*
-  //  %0 = load i32*, i32** %p
-  //  store i32 42, i32* %0
+  //  %p = alloca ptr
+  //  %0 = load ptr, ptr %p
+  //  store i32 42, ptr %0
 
   Value *Alloca = IRB.CreateAlloca(IRB.getInt32Ty());
   Value *LoadInst = IRB.CreateLoad(IRB.getInt32Ty(), Alloca);
@@ -2606,8 +2606,7 @@ TEST_F(PatternMatchTest, PtrAdd) {
   Constant *Offset = ConstantInt::get(IdxTy, 42);
   Value *PtrAdd = IRB.CreatePtrAdd(Null, Offset);
   Value *OtherGEP = IRB.CreateGEP(IdxTy, Null, Offset);
-  Value *PtrAddConst =
-      ConstantExpr::getGetElementPtr(Type::getInt8Ty(Ctx), Null, Offset);
+  Value *PtrAddConst = ConstantExpr::getPtrAdd(Null, Offset);
 
   Value *A, *B;
   EXPECT_TRUE(match(PtrAdd, m_PtrAdd(m_Value(A), m_Value(B))));
@@ -2655,6 +2654,33 @@ TEST_F(PatternMatchTest, ShiftOrSelf) {
   EXPECT_TRUE(match(Add, m_AShrOrSelf(m_Value(A), ShAmtC)));
   EXPECT_EQ(A, Add);
   EXPECT_EQ(ShAmtC, 0U);
+}
+
+TEST_F(PatternMatchTest, CommutativeDeferredIntrinsicMatch) {
+  Value *X = ConstantFP::get(IRB.getDoubleTy(), 1.0);
+  Value *Y = ConstantFP::get(IRB.getDoubleTy(), 2.0);
+
+  auto CheckMatch = [X, Y](Value *Pattern) {
+    Value *tX = nullptr, *tY = nullptr;
+    EXPECT_TRUE(
+        match(Pattern, m_c_Intrinsic<Intrinsic::minimum>(
+                           m_Value(tX), m_c_Intrinsic<Intrinsic::minimum>(
+                                            m_Deferred(tX), m_Value(tY)))));
+    EXPECT_EQ(tX, X);
+    EXPECT_EQ(tY, Y);
+  };
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, X,
+      IRB.CreateBinaryIntrinsic(Intrinsic::minimum, X, Y)));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, X,
+      IRB.CreateBinaryIntrinsic(Intrinsic::minimum, Y, X)));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, IRB.CreateBinaryIntrinsic(Intrinsic::minimum, X, Y),
+      X));
+  CheckMatch(IRB.CreateBinaryIntrinsic(
+      Intrinsic::minimum, IRB.CreateBinaryIntrinsic(Intrinsic::minimum, Y, X),
+      X));
 }
 
 } // anonymous namespace.

@@ -60,11 +60,18 @@ public:
   LLVM_ABI StaticDataHotness getConstantHotnessUsingProfileCount(
       const Constant *C, const ProfileSummaryInfo *PSI, uint64_t Count) const;
 
+  /// Return the hotness based on section prefix \p SectionPrefix.
+  LLVM_ABI StaticDataHotness getSectionHotnessUsingDataAccessProfile(
+      std::optional<StringRef> SectionPrefix) const;
+
   /// Return the string representation of the hotness enum \p Hotness.
   LLVM_ABI StringRef hotnessToStr(StaticDataHotness Hotness) const;
 
+  bool EnableDataAccessProf = false;
+
 public:
-  StaticDataProfileInfo() = default;
+  StaticDataProfileInfo(bool EnableDataAccessProf)
+      : EnableDataAccessProf(EnableDataAccessProf) {}
 
   /// If \p Count is not nullopt, add it to the profile count of the constant \p
   /// C in a saturating way, and clamp the count to \p getInstrMaxCountValue if
@@ -73,14 +80,10 @@ public:
   LLVM_ABI void addConstantProfileCount(const Constant *C,
                                         std::optional<uint64_t> Count);
 
-  /// Return a section prefix for the constant \p C based on its profile count.
-  /// - If a constant doesn't have a counter, return an empty string.
-  /// - Otherwise,
-  ///   - If it has a hot count, return "hot".
-  ///   - If it is seen by unprofiled function, return an empty string.
-  ///   - If it has a cold count, return "unlikely".
-  ///   - Otherwise (e.g. it's used by lukewarm functions), return an empty
-  ///     string.
+  /// Given a constant \p C, returns a section prefix.
+  /// If \p C is a global variable, the section prefix is the bigger one
+  /// between its existing section prefix and its use profile count. Otherwise,
+  /// the section prefix is based on its use profile count.
   LLVM_ABI StringRef getConstantSectionPrefix(
       const Constant *C, const ProfileSummaryInfo *PSI) const;
 };

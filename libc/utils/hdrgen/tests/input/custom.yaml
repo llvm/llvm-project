@@ -1,0 +1,13 @@
+merge_yaml_files:
+  - custom-common.yaml
+
+header: custom.h
+standards:
+  - acme
+
+functions:
+  - name: runner
+    return_type: road
+    arguments:
+      - type: meep
+      - type: meep

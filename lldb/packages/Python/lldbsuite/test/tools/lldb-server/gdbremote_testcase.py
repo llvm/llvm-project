@@ -931,6 +931,7 @@ class GdbRemoteTestCaseBase(Base, metaclass=GdbRemoteTestCaseFactory):
         "QNonStop",
         "SupportedWatchpointTypes",
         "SupportedCompressions",
+        "MultiMemRead",
     ]
 
     def parse_qSupported_response(self, context):

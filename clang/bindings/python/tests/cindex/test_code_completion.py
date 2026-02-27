@@ -1,12 +1,15 @@
-import os
-
-from clang.cindex import Config, TranslationUnit
-
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
+from clang.cindex import (
+    AvailabilityKind,
+    CompletionChunk,
+    CompletionChunkKind,
+    CompletionString,
+    SPELLING_CACHE,
+    TranslationUnit,
+)
 
 import unittest
 from pathlib import Path
+import warnings
 
 
 class TestCodeCompletion(unittest.TestCase):
@@ -14,10 +17,23 @@ class TestCodeCompletion(unittest.TestCase):
         self.assertIsNotNone(cr)
         self.assertEqual(len(cr.diagnostics), 0)
 
-        completions = [str(c) for c in cr.results]
+        with warnings.catch_warnings(record=True) as log:
+            completions = [str(c) for c in cr]
+            self.assertEqual(len(log), 2)
+            for warning in log:
+                self.assertIsInstance(warning.message, DeprecationWarning)
 
         for c in expected:
             self.assertIn(c, completions)
+
+        with warnings.catch_warnings(record=True) as log:
+            completions_deprecated = [str(c) for c in cr.results]
+            self.assertEqual(len(log), 3)
+            for warning in log:
+                self.assertIsInstance(warning.message, DeprecationWarning)
+
+        for c in expected:
+            self.assertIn(c, completions_deprecated)
 
     def test_code_complete(self):
         files = [
@@ -141,3 +157,109 @@ void f(P x, Q y) {
             "{'void', ResultType} | {'~P', TypedText} | {'(', LeftParen} | {')', RightParen} || Priority: 79 || Availability: Available || Brief comment: ",
         ]
         self.check_completion_results(cr, expected)
+
+    def test_availability_kind_compat(self):
+        numKinds = len(CompletionString.AvailabilityKindCompat)
+
+        # Compare with regular kind
+        for compatKind in CompletionString.AvailabilityKindCompat:
+            commonKind = AvailabilityKind.from_id(compatKind.value)
+            nextKindId = (compatKind.value + 1) % numKinds
+            commonKindUnequal = AvailabilityKind.from_id(nextKindId)
+            self.assertEqual(commonKind, compatKind)
+            self.assertEqual(compatKind, commonKind)
+            self.assertNotEqual(commonKindUnequal, compatKind)
+            self.assertNotEqual(compatKind, commonKindUnequal)
+
+        # Compare two compat kinds
+        for compatKind in CompletionString.AvailabilityKindCompat:
+            compatKind2 = CompletionString.AvailabilityKindCompat.from_id(
+                compatKind.value
+            )
+            nextKindId = (compatKind.value + 1) % numKinds
+            compatKind2Unequal = CompletionString.AvailabilityKindCompat.from_id(
+                nextKindId
+            )
+            self.assertEqual(compatKind, compatKind2)
+            self.assertEqual(compatKind2, compatKind)
+            self.assertNotEqual(compatKind2Unequal, compatKind)
+            self.assertNotEqual(compatKind, compatKind2Unequal)
+
+    def test_compat_str(self):
+        kindStringMap = {
+            0: "Available",
+            1: "Deprecated",
+            2: "NotAvailable",
+            3: "NotAccessible",
+        }
+        for id, string in kindStringMap.items():
+            kind = CompletionString.AvailabilityKindCompat.from_id(id)
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(str(kind), string)
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
+
+    def test_completion_chunk_kind_compatibility(self):
+        value_to_old_str = {
+            0: "Optional",
+            1: "TypedText",
+            2: "Text",
+            3: "Placeholder",
+            4: "Informative",
+            5: "CurrentParameter",
+            6: "LeftParen",
+            7: "RightParen",
+            8: "LeftBracket",
+            9: "RightBracket",
+            10: "LeftBrace",
+            11: "RightBrace",
+            12: "LeftAngle",
+            13: "RightAngle",
+            14: "Comma",
+            15: "ResultType",
+            16: "Colon",
+            17: "SemiColon",
+            18: "Equal",
+            19: "HorizontalSpace",
+            20: "VerticalSpace",
+        }
+
+        # Check that all new kinds correspond to an old kind
+        for new_kind in CompletionChunkKind:
+            old_str = value_to_old_str[new_kind.value]
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(old_str, str(new_kind))
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
+
+        # Check that all old kinds correspond to a new kind
+        for value, old_str in value_to_old_str.items():
+            new_kind = CompletionChunkKind.from_id(value)
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(old_str, str(new_kind))
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
+
+    def test_spelling_cache_missing_attribute(self):
+        # Test that accessing missing attributes on SpellingCacheAlias raises
+        # during the transitionary period
+        with self.assertRaises(AttributeError, msg=SPELLING_CACHE.deprecation_message):
+            SPELLING_CACHE.keys()
+
+    def test_spelling_cache_alias(self):
+        kind_keys = list(CompletionChunk.SPELLING_CACHE)
+        self.assertEqual(len(kind_keys), 13)
+        for kind_key in kind_keys:
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(
+                    SPELLING_CACHE[kind_key.value],
+                    CompletionChunk.SPELLING_CACHE[kind_key],
+                )
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
+
+    def test_spelling_cache_missing_attribute(self):
+        # Test that accessing missing attributes on SpellingCacheAlias raises
+        # during the transitionary period
+        with self.assertRaises(AttributeError, msg=SPELLING_CACHE.deprecation_message):
+            SPELLING_CACHE.keys()

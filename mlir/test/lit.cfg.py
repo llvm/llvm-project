@@ -44,7 +44,7 @@ config.suffixes = [
     ".test",
     ".pdll",
     ".c",
-    ".spv",
+    ".spvasm",
 ]
 
 # test_source_root: The root path where tests are located.
@@ -187,6 +187,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
+    "llvm-strings",
     "mlir-tblgen",
     "mlir-translate",
     "mlir-lsp-server",
@@ -213,6 +214,11 @@ tools = [
     "mlir-pdll",
     "not",
 ]
+
+if "Linux" in config.host_os or "Darwin" in config.host_os:
+    # TODO: Run only on Linux and Mac until we figure out how to build
+    # mlir_apfloat_wrappers in a platform-independent way.
+    tools.extend([add_runtime("mlir_apfloat_wrappers")])
 
 if config.enable_vulkan_runner:
     tools.extend([add_runtime("mlir_vulkan_runtime")])

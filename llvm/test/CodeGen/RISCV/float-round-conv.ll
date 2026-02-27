@@ -1753,8 +1753,3 @@ define float @test_roundeven_float(float %x) {
   ret float %a
 }
 
-declare float @llvm.floor.f32(float)
-declare float @llvm.ceil.f32(float)
-declare float @llvm.trunc.f32(float)
-declare float @llvm.round.f32(float)
-declare float @llvm.roundeven.f32(float)

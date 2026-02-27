@@ -100,16 +100,14 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-NEXT:    pshufb %xmm3, %xmm4
 ; SSE-NEXT:    pshufb %xmm8, %xmm1
 ; SSE-NEXT:    por %xmm4, %xmm1
-; SSE-NEXT:    pmovzxbw {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; SSE-NEXT:    movdqa %xmm1, %xmm3
-; SSE-NEXT:    pand %xmm2, %xmm3
-; SSE-NEXT:    movdqa %xmm0, %xmm4
-; SSE-NEXT:    pmaddubsw %xmm3, %xmm4
-; SSE-NEXT:    pand %xmm2, %xmm4
-; SSE-NEXT:    pandn %xmm1, %xmm2
-; SSE-NEXT:    pmaddubsw %xmm2, %xmm0
+; SSE-NEXT:    movdqa %xmm0, %xmm2
+; SSE-NEXT:    pmullw %xmm1, %xmm2
+; SSE-NEXT:    pmovzxbw {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    pand %xmm3, %xmm2
+; SSE-NEXT:    pandn %xmm1, %xmm3
+; SSE-NEXT:    pmaddubsw %xmm3, %xmm0
 ; SSE-NEXT:    psllw $8, %xmm0
-; SSE-NEXT:    por %xmm4, %xmm0
+; SSE-NEXT:    por %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: PR50049:
@@ -129,21 +127,20 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm2, %xmm2
 ; AVX1-NEXT:    vpor %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [5,6,7,8,9,10,128,128,128,128,128,0,1,2,3,4]
-; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
+; AVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
 ; AVX1-NEXT:    vmovdqa {{.*#+}} xmm4 = [128,128,128,128,128,128,2,5,8,11,14,128,128,128,128,128]
+; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm5
+; AVX1-NEXT:    vpor %xmm5, %xmm2, %xmm2
+; AVX1-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufb %xmm4, %xmm1, %xmm1
 ; AVX1-NEXT:    vpor %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpshufb %xmm3, %xmm2, %xmm1
-; AVX1-NEXT:    vpshufb %xmm4, %xmm5, %xmm2
-; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
-; AVX1-NEXT:    vpand %xmm2, %xmm1, %xmm3
-; AVX1-NEXT:    vpmaddubsw %xmm3, %xmm0, %xmm3
-; AVX1-NEXT:    vpand %xmm2, %xmm3, %xmm3
-; AVX1-NEXT:    vpandn %xmm1, %xmm2, %xmm1
-; AVX1-NEXT:    vpmaddubsw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpmullw %xmm2, %xmm0, %xmm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [255,255,255,255,255,255,255,255]
+; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
+; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpmaddubsw %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpsllw $8, %xmm0, %xmm0
-; AVX1-NEXT:    vpor %xmm0, %xmm3, %xmm0
+; AVX1-NEXT:    vpor %xmm0, %xmm1, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: PR50049:
@@ -216,4 +213,40 @@ define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
   %s2 = shufflevector <48 x i8> %x2, <48 x i8> poison, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45>
   %r = mul <16 x i8> %s1, %s2
   ret <16 x i8> %r
+}
+
+define <4 x float> @PR178538(<4 x float> %a0) {
+; SSE-LABEL: PR178538:
+; SSE:       # %bb.0:
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,1],mem[2,3]
+; SSE-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; SSE-NEXT:    blendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2],xmm1[3]
+; SSE-NEXT:    retq
+;
+; AVX1-LABEL: PR178538:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX1-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],xmm1[1,2,3]
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: PR178538:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX2-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],xmm1[1,2,3]
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: PR178538:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
+; AVX512-NEXT:    vpmovsxbd {{.*#+}} xmm2 = [17,1,2,0]
+; AVX512-NEXT:    vpermt2ps %zmm0, %zmm2, %zmm1
+; AVX512-NEXT:    vmovaps %xmm1, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %shuffle = shufflevector <4 x float> <float poison, float poison, float 1.000000e+00, float poison>, <4 x float> %a0, <4 x i32> <i32 5, i32 poison, i32 2, i32 poison>
+  %insert1 = insertelement <4 x float> %shuffle, float 1.000000e+00, i64 1
+  %insert3 = insertelement <4 x float> %insert1, float 1.000000e+00, i64 3
+  ret <4 x float> %insert3
 }

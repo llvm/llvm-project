@@ -664,21 +664,21 @@ func.func @zero_non_llvm_type() {
 // -----
 
 func.func @nvvm_invalid_shfl_pred_1(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected return type to be a two-element struct}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> i32
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_2(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected return type to be a two-element struct}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32)>
 }
 
 // -----
 
 func.func @nvvm_invalid_shfl_pred_3(%arg0 : i32, %arg1 : i32, %arg2 : i32, %arg3 : i32) {
-  // expected-error@+1 {{expected return type to be a two-element struct with i1 as the second element}}
+  // expected-error@+1 {{expected second element in the returned struct to be of type 'i1' but got 'i32' instead}}
   %0 = nvvm.shfl.sync bfly %arg0, %arg3, %arg1, %arg2 {return_value_and_is_valid} : i32 -> !llvm.struct<(i32, i32)>
 }
 
@@ -2064,4 +2064,11 @@ llvm.func @invalid_sincos_non_struct_return_type(%f: f32) -> () {
 llvm.func @invalid_sincos_gt_2_element_struct_return_type(%f: f32) -> () {
   // expected-error@+1 {{op expected result type to be an homogeneous struct with two elements matching the operand type}}
   llvm.intr.sincos(%f) : (f32) -> !llvm.struct<(f32, f32, f32)>
+}
+
+// -----
+
+module {
+  // expected-error@+1 {{'llvm.blockaddress' op expects an existing block label target in the referenced function}}
+  %0 = llvm.blockaddress <function = @missing_func, tag = <id = 1>> : !llvm.ptr
 }

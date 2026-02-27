@@ -8,6 +8,7 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/LiveOrigins.h"
 #include "Dataflow.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace clang::lifetimes::internal {
@@ -53,6 +54,18 @@ struct Lattice {
   }
 };
 
+static SourceLocation GetFactLoc(CausingFactType F) {
+  if (const auto *UF = F.dyn_cast<const UseFact *>())
+    return UF->getUseExpr()->getExprLoc();
+  if (const auto *OEF = F.dyn_cast<const OriginEscapesFact *>()) {
+    if (auto *ReturnEsc = dyn_cast<ReturnEscapeFact>(OEF))
+      return ReturnEsc->getReturnExpr()->getExprLoc();
+    if (auto *FieldEsc = dyn_cast<FieldEscapeFact>(OEF))
+      return FieldEsc->getFieldDecl()->getLocation();
+  }
+  llvm_unreachable("unhandled causing fact in PointerUnion");
+}
+
 /// The analysis that tracks which origins are live, with granular information
 /// about the causing use fact and confidence level. This is a backward
 /// analysis.
@@ -74,11 +87,14 @@ public:
   /// one.
   Lattice join(Lattice L1, Lattice L2) const {
     LivenessMap Merged = L1.LiveOrigins;
-    // Take the earliest UseFact to make the join hermetic and commutative.
-    auto CombineUseFact = [](const UseFact &A,
-                             const UseFact &B) -> const UseFact * {
-      return A.getUseExpr()->getExprLoc() < B.getUseExpr()->getExprLoc() ? &A
-                                                                         : &B;
+    // Take the earliest Fact to make the join hermetic and commutative.
+    auto CombineCausingFact = [](CausingFactType A,
+                                 CausingFactType B) -> CausingFactType {
+      if (!A)
+        return B;
+      if (!B)
+        return A;
+      return GetFactLoc(A) < GetFactLoc(B) ? A : B;
     };
     auto CombineLivenessKind = [](LivenessKind K1,
                                   LivenessKind K2) -> LivenessKind {
@@ -93,12 +109,11 @@ public:
                                    const LivenessInfo *L2) -> LivenessInfo {
       assert((L1 || L2) && "unexpectedly merging 2 empty sets");
       if (!L1)
-        return LivenessInfo(L2->CausingUseFact, LivenessKind::Maybe);
+        return LivenessInfo(L2->CausingFact, LivenessKind::Maybe);
       if (!L2)
-        return LivenessInfo(L1->CausingUseFact, LivenessKind::Maybe);
-      return LivenessInfo(
-          CombineUseFact(*L1->CausingUseFact, *L2->CausingUseFact),
-          CombineLivenessKind(L1->Kind, L2->Kind));
+        return LivenessInfo(L1->CausingFact, LivenessKind::Maybe);
+      return LivenessInfo(CombineCausingFact(L1->CausingFact, L2->CausingFact),
+                          CombineLivenessKind(L1->Kind, L2->Kind));
     };
     return Lattice(utils::join(
         L1.LiveOrigins, L2.LiveOrigins, Factory, CombineLivenessInfo,
@@ -111,13 +126,29 @@ public:
   /// dominates this program point. A write operation kills the liveness of
   /// the origin since it overwrites the value.
   Lattice transfer(Lattice In, const UseFact &UF) {
-    OriginID OID = UF.getUsedOrigin(FactMgr.getOriginMgr());
-    // Write kills liveness.
-    if (UF.isWritten())
-      return Lattice(Factory.remove(In.LiveOrigins, OID));
-    // Read makes origin live with definite confidence (dominates this point).
+    Lattice Out = In;
+    for (const OriginList *Cur = UF.getUsedOrigins(); Cur;
+         Cur = Cur->peelOuterOrigin()) {
+      OriginID OID = Cur->getOuterOriginID();
+      // Write kills liveness.
+      if (UF.isWritten()) {
+        Out = Lattice(Factory.remove(Out.LiveOrigins, OID));
+      } else {
+        // Read makes origin live with definite confidence (dominates this
+        // point).
+        Out = Lattice(Factory.add(Out.LiveOrigins, OID,
+                                  LivenessInfo(&UF, LivenessKind::Must)));
+      }
+    }
+    return Out;
+  }
+
+  /// An escaping origin (e.g., via return) makes the origin live with definite
+  /// confidence, as it dominates this program point.
+  Lattice transfer(Lattice In, const OriginEscapesFact &OEF) {
+    OriginID OID = OEF.getEscapedOriginID();
     return Lattice(Factory.add(In.LiveOrigins, OID,
-                               LivenessInfo(&UF, LivenessKind::Must)));
+                               LivenessInfo(&OEF, LivenessKind::Must)));
   }
 
   /// Issuing a new loan to an origin kills its liveness.
@@ -139,7 +170,7 @@ public:
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,
-            llvm::StringMap<ProgramPoint> TestPoints) const {
+            const llvm::StringMap<ProgramPoint> &TestPoints) const {
     llvm::dbgs() << "==========================================\n";
     llvm::dbgs() << getAnalysisName() << " results:\n";
     llvm::dbgs() << "==========================================\n";
@@ -173,8 +204,9 @@ LivenessMap LiveOriginsAnalysis::getLiveOriginsAt(ProgramPoint P) const {
   return PImpl->getLiveOriginsAt(P);
 }
 
-void LiveOriginsAnalysis::dump(llvm::raw_ostream &OS,
-                               llvm::StringMap<ProgramPoint> TestPoints) const {
+void LiveOriginsAnalysis::dump(
+    llvm::raw_ostream &OS,
+    const llvm::StringMap<ProgramPoint> &TestPoints) const {
   PImpl->dump(OS, TestPoints);
 }
 } // namespace clang::lifetimes::internal

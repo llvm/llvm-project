@@ -27,8 +27,6 @@
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/Alignment.h"
 
-#include <string>
-
 #define GET_SUBTARGETINFO_HEADER
 #include "M68kGenSubtargetInfo.inc"
 

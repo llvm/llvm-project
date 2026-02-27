@@ -1,10 +1,10 @@
-# .callgraph Section Layout
+# .llvm.callgraph Section Layout
 
-The `.callgraph` section is used to store call graph information for each function. The section contains a series of records, with each record corresponding to a single function.
+The `.llvm.callgraph` section is used to store call graph information for each function. The section contains a series of records, with each record corresponding to a single function.
 
 ## Per Function Record Layout
 
-Each record in the `.callgraph` section has the following binary layout:
+Each record in the `.llvm.callgraph` section has the following binary layout:
 
 | Field                                  | Type          | Size (bits) | Description                                                                                             |
 | -------------------------------------- | ------------- | ----------- | ------------------------------------------------------------------------------------------------------- |

@@ -33,6 +33,7 @@ set(supported_sources
   edit-input.cpp
   edit-output.cpp
   environment.cpp
+  exceptions.cpp
   external-unit.cpp
   extrema.cpp
   file.cpp
@@ -89,6 +90,9 @@ set(host_sources
   time-intrinsic.cpp
   unit-map.cpp
 )
+if (TARGET llvm-libc-common-utilities)
+  list(APPEND host_sources io-api-server.cpp)
+endif()
 
 # Sources that can be compiled directly for the GPU.
 set(gpu_sources
@@ -112,7 +116,6 @@ set(gpu_sources
   format.cpp
   inquiry.cpp
   internal-unit.cpp
-  io-error.cpp
   iostat.cpp
   matmul-transpose.cpp
   matmul.cpp
@@ -137,6 +140,7 @@ set(gpu_sources
   reduce.cpp
   reduction.cpp
   temporary-stack.cpp
+  io-api-gpu.cpp
 )
 
 file(GLOB_RECURSE public_headers

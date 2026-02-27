@@ -184,7 +184,7 @@ ReshardingRquirementKind getReshardingRquirementKind(
 
   for (auto [result, sharding] :
        llvm::zip_equal(op->getResults(), resultShardings)) {
-    for (auto user : result.getUsers()) {
+    for (auto *user : result.getUsers()) {
       ShardOp shardOp = llvm::dyn_cast<ShardOp>(user);
       if (!shardOp) {
         continue;
@@ -378,6 +378,10 @@ struct ShardingPropagation
           if (auto shardingOp = llvm::dyn_cast<ShardingInterface>(&op))
             shardingOp.printLoopTypesAndIndexingMaps(llvm::dbgs());
         });
+
+    // Nothing to propagate if there is no sharding annotation in the block.
+    if (block.getOps<shard::ShardOp>().empty())
+      return;
 
     auto traverse = [&](auto &&range, OpBuilder &builder,
                         const char *order) -> bool {

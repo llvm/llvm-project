@@ -48,6 +48,11 @@ void ignore_const_alias() {
   p_local0 = &a[1];
 }
 
+void *return_non_const() {
+  void *const a = nullptr;
+  return a;
+}
+
 void function_pointer_basic() {
   void (*const fp)() = nullptr;
   fp();
@@ -67,4 +72,46 @@ void ignoreNonConstRefOps() {
   // cast
   int* p2 {nullptr};
   int*& r2 = (int*&)p2;
+}
+
+void pointer_to_pointer_param(int**);
+void pass_address_to_pointer_to_pointer() {
+  int i = 0;
+  int* ip = &i;
+  // CHECK-NOT: warning
+  pointer_to_pointer_param(&ip);
+}
+
+void void_pointer_to_pointer_param(void**);
+void pass_address_to_void_pointer_to_pointer() {
+  void* ptr = nullptr;
+  // CHECK-NOT: warning
+  void_pointer_to_pointer_param(&ptr);
+}
+
+void already_const_pointee() {
+  const char* foo[] = {"a", "b"};
+  // CHECK-NOT: warning
+  foo[0] = "c";
+}
+
+void array_of_const_pointers() {
+  const int i = 0;
+  const int* const bar[] = {&i};
+  // CHECK-NOT: warning
+}
+
+using ConstChar = const char;
+void alias_to_const_pointer() {
+  ConstChar * foo[] = {"a", "b"};
+  // CHECK-NOT: warning
+  foo[0] = "c";
+}
+
+void multi_level_pointer() {
+  const char * s = "a";
+  const char ** foo[] = {&s};
+  // CHECK-MESSAGES: [[@LINE-1]]:3: warning: pointee of variable 'foo' of type 'const char **[1]' can be declared 'const'
+  // CHECK-FIXES: const char * const* foo[] = {&s};
+  const char * p = *foo[0];
 }

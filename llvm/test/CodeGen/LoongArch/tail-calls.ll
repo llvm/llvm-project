@@ -80,20 +80,15 @@ entry:
   ret void
 }
 
-;; Do not tail call optimize if stack is used to pass parameters.
+;; Perform tail call optimization if callee arg stack usage ≤ caller
 declare i32 @callee_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i)
 define i32 @caller_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i) nounwind {
 ; CHECK-LABEL: caller_args:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    addi.d $sp, $sp, -16
-; CHECK-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; CHECK-NEXT:    ld.d $t0, $sp, 16
+; CHECK-NEXT:    ld.d $t0, $sp, 0
 ; CHECK-NEXT:    st.d $t0, $sp, 0
-; CHECK-NEXT:    pcaddu18i $ra, %call36(callee_args)
-; CHECK-NEXT:    jirl $ra, $ra, 0
-; CHECK-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; CHECK-NEXT:    addi.d $sp, $sp, 16
-; CHECK-NEXT:    ret
+; CHECK-NEXT:    pcaddu18i $t8, %call36(callee_args)
+; CHECK-NEXT:    jr $t8
 entry:
   %r = tail call i32 @callee_args(i32 %a, i32 %b, i32 %c, i32 %dd, i32 %e, i32 %ff, i32 %g, i32 %h, i32 %i)
   ret i32 %r

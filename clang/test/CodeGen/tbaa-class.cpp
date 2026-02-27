@@ -242,16 +242,16 @@ uint32_t g14(StructM2 *M, StructS *S) {
   return S->f16;
 }
 
+// CHECK: [[TAG_i32]] = !{[[TYPE_i32:!.*]], [[TYPE_i32]], i64 0}
+// CHECK: [[TYPE_i32]] = !{!"int", [[TYPE_char:!.*]],
 // CHECK: [[TYPE_char:!.*]] = !{!"omnipotent char", [[TAG_cxx_tbaa:!.*]],
 // CHECK: [[TAG_cxx_tbaa]] = !{!"Simple C++ TBAA"}
-// CHECK: [[TAG_i32]] = !{[[TYPE_i32:!.*]], [[TYPE_i32]], i64 0}
-// CHECK: [[TYPE_i32]] = !{!"int", [[TYPE_char]],
 // CHECK: [[TAG_i16]] = !{[[TYPE_i16:!.*]], [[TYPE_i16]], i64 0}
 // CHECK: [[TYPE_i16]] = !{!"short", [[TYPE_char]],
 
-// OLD-PATH: [[TYPE_CHAR:!.*]] = !{!"omnipotent char", !
 // OLD-PATH: [[TAG_i32]] = !{[[TYPE_INT:!.*]], [[TYPE_INT]], i64 0}
-// OLD-PATH: [[TYPE_INT]] = !{!"int", [[TYPE_CHAR]]
+// OLD-PATH: [[TYPE_INT]] = !{!"int", [[TYPE_CHAR:!.*]]
+// OLD-PATH: [[TYPE_CHAR:!.*]] = !{!"omnipotent char", !
 // OLD-PATH: [[TAG_A_f32]] = !{[[TYPE_A:!.*]], [[TYPE_INT]], i64 4}
 // OLD-PATH: [[TYPE_A]] = !{!"_ZTS7StructA", [[TYPE_SHORT:!.*]], i64 0, [[TYPE_INT]], i64 4, [[TYPE_SHORT]], i64 8, [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TYPE_SHORT:!.*]] = !{!"short", [[TYPE_CHAR]]
@@ -277,9 +277,9 @@ uint32_t g14(StructM2 *M, StructS *S) {
 // OLD-PATH: [[TYPE_M2]] = !{!"_ZTS8StructM2", [[TYPE_DYN:!.*]], i64 0, [[TYPE_S]], i64 12, [[TYPE_SHORT]], i64 20}
 // OLD_PATH: [[TYPE_DYN]] = !{!"_ZTS9StructDyn", [[TYPE_INT]], i64 8}
 
+// NEW-PATH: [[TAG_i32]] = !{[[TYPE_INT:!.*]], [[TYPE_INT:!.*]], i64 0, i64 4}
+// NEW-PATH: [[TYPE_INT]] = !{[[TYPE_CHAR:!.*]], i64 4, !"int"}
 // NEW-PATH: [[TYPE_CHAR:!.*]] = !{!{{.*}}, i64 1, !"omnipotent char"}
-// NEW-PATH: [[TAG_i32]] = !{[[TYPE_INT:!.*]], [[TYPE_INT]], i64 0, i64 4}
-// NEW-PATH: [[TYPE_INT]] = !{[[TYPE_CHAR]], i64 4, !"int"}
 // NEW-PATH: [[TAG_A_f32]] = !{[[TYPE_A:!.*]], [[TYPE_INT]], i64 4, i64 4}
 // NEW-PATH: [[TYPE_A]] = !{[[TYPE_CHAR]], i64 16, !"_ZTS7StructA", [[TYPE_SHORT:!.*]], i64 0, i64 2, [[TYPE_INT]], i64 4, i64 4, [[TYPE_SHORT]], i64 8, i64 2, [[TYPE_INT]], i64 12, i64 4}
 // NEW-PATH: [[TYPE_SHORT:!.*]] = !{[[TYPE_CHAR]], i64 2, !"short"}

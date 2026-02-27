@@ -252,7 +252,7 @@ func.func @_QPomp_target_data() {
   %c0_6 = arith.constant 0 : index
   %10 = arith.subi %c1024_1, %c1_5 : index
   %11 = omp.map.bounds   lower_bound(%c0_6 : index) upper_bound(%10 : index) extent(%c1024_1 : index) stride(%c1_5 : index) start_idx(%c1_5 : index)
-  %12 = omp.map.info var_ptr(%2 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(always, exit_release_or_enter_alloc) capture(ByRef) bounds(%11) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
+  %12 = omp.map.info var_ptr(%2 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(always, storage) capture(ByRef) bounds(%11) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
   omp.target_enter_data   map_entries(%6, %9, %12 : !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>, !fir.ref<!fir.array<1024xi32>>)
   %c1_7 = arith.constant 1 : index
   %c0_8 = arith.constant 0 : index
@@ -268,7 +268,7 @@ func.func @_QPomp_target_data() {
   %c0_12 = arith.constant 0 : index
   %19 = arith.subi %c1024_1, %c1_11 : index
   %20 = omp.map.bounds   lower_bound(%c0_12 : index) upper_bound(%19 : index) extent(%c1024_1 : index) stride(%c1_11 : index) start_idx(%c1_11 : index)
-  %21 = omp.map.info var_ptr(%2 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%20) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
+  %21 = omp.map.info var_ptr(%2 : !fir.ref<!fir.array<1024xi32>>, !fir.array<1024xi32>)   map_clauses(storage) capture(ByRef) bounds(%20) -> !fir.ref<!fir.array<1024xi32>> {name = "c"}
   %c1_13 = arith.constant 1 : index
   %c0_14 = arith.constant 0 : index
   %22 = arith.subi %c1024_2, %c1_13 : index
@@ -305,7 +305,7 @@ func.func @_QPomp_target_data() {
 // CHECK:           %[[VAL_23:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:           %[[VAL_24:.*]] = llvm.mlir.constant(1023 : index) : i64
 // CHECK:           %[[VAL_25:.*]] = omp.map.bounds lower_bound(%[[VAL_23]] : i64) upper_bound(%[[VAL_24]] : i64) extent(%[[VAL_10]] : i64) stride(%[[VAL_22]] : i64) start_idx(%[[VAL_22]] : i64)
-// CHECK:           %[[VAL_26:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(always, exit_release_or_enter_alloc) capture(ByRef) bounds(%[[VAL_25]]) -> !llvm.ptr {name = "c"}
+// CHECK:           %[[VAL_26:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(always, storage) capture(ByRef) bounds(%[[VAL_25]]) -> !llvm.ptr {name = "c"}
 // CHECK:           omp.target_enter_data map_entries(%[[VAL_16]], %[[VAL_21]], %[[VAL_26]] : !llvm.ptr, !llvm.ptr, !llvm.ptr)
 // CHECK:           %[[VAL_27:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           %[[VAL_28:.*]] = llvm.mlir.constant(0 : index) : i64
@@ -321,7 +321,7 @@ func.func @_QPomp_target_data() {
 // CHECK:           %[[VAL_38:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:           %[[VAL_39:.*]] = llvm.mlir.constant(1023 : index) : i64
 // CHECK:           %[[VAL_40:.*]] = omp.map.bounds lower_bound(%[[VAL_38]] : i64) upper_bound(%[[VAL_39]] : i64) extent(%[[VAL_10]] : i64) stride(%[[VAL_37]] : i64) start_idx(%[[VAL_37]] : i64)
-// CHECK:           %[[VAL_41:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(exit_release_or_enter_alloc) capture(ByRef) bounds(%[[VAL_40]]) -> !llvm.ptr {name = "c"}
+// CHECK:           %[[VAL_41:.*]] = omp.map.info var_ptr(%[[VAL_4]] : !llvm.ptr, !llvm.array<1024 x i32>) map_clauses(storage) capture(ByRef) bounds(%[[VAL_40]]) -> !llvm.ptr {name = "c"}
 // CHECK:           %[[VAL_42:.*]] = llvm.mlir.constant(1 : index) : i64
 // CHECK:           %[[VAL_43:.*]] = llvm.mlir.constant(0 : index) : i64
 // CHECK:           %[[VAL_44:.*]] = llvm.mlir.constant(1023 : index) : i64

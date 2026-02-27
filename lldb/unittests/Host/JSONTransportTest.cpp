@@ -6,6 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// Failing on Windows, see https://github.com/llvm/llvm-project/issues/153446.
+#ifndef _WIN32
+
 #include "lldb/Host/JSONTransport.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/Host/PipeTestUtilities.h"
@@ -244,19 +247,22 @@ template <typename T> class JSONTransportTest : public PipePairTest {
 protected:
   SubsystemRAII<FileSystem> subsystems;
 
+  MainLoop loop;
   test_protocol::MessageHandler message_handler;
   std::unique_ptr<T> transport;
-  MainLoop loop;
 
   void SetUp() override {
     PipePairTest::SetUp();
     transport = std::make_unique<T>(
-        std::make_shared<NativeFile>(input.GetReadFileDescriptor(),
+        loop,
+        std::make_shared<NativeFile>(input.ReleaseReadFileDescriptor(),
                                      File::eOpenOptionReadOnly,
-                                     NativeFile::Unowned),
-        std::make_shared<NativeFile>(output.GetWriteFileDescriptor(),
+                                     NativeFile::Owned),
+        std::make_shared<NativeFile>(output.ReleaseWriteFileDescriptor(),
                                      File::eOpenOptionWriteOnly,
-                                     NativeFile::Unowned));
+                                     NativeFile::Owned));
+    EXPECT_THAT_ERROR(transport->RegisterMessageHandler(message_handler),
+                      Succeeded());
   }
 
   /// Run the transport MainLoop and return any messages received.
@@ -269,16 +275,13 @@ protected:
         loop.RequestTermination();
       });
     }
-    loop.AddCallback(
+    bool registered_timeout = loop.AddCallback(
         [](MainLoopBase &loop) {
           loop.RequestTermination();
           FAIL() << "timeout";
         },
         timeout);
-    auto handle = transport->RegisterMessageHandler(loop, message_handler);
-    if (!handle)
-      return handle.takeError();
-
+    EXPECT_TRUE(registered_timeout);
     return loop.Run().takeError();
   }
 
@@ -356,26 +359,25 @@ protected:
   MainLoop loop;
 
   void SetUp() override {
-    std::tie(to_remote, from_remote) = test_protocol::Transport::createPair();
+    std::tie(to_remote, from_remote) =
+        test_protocol::Transport::createPair(loop);
     binder = std::make_unique<test_protocol::Binder>(*to_remote);
 
-    auto binder_handle = to_remote->RegisterMessageHandler(loop, remote);
-    EXPECT_THAT_EXPECTED(binder_handle, Succeeded());
-
-    auto remote_handle = from_remote->RegisterMessageHandler(loop, *binder);
-    EXPECT_THAT_EXPECTED(remote_handle, Succeeded());
+    EXPECT_THAT_ERROR(to_remote->RegisterMessageHandler(remote), Succeeded());
+    EXPECT_THAT_ERROR(from_remote->RegisterMessageHandler(*binder),
+                      Succeeded());
   }
 
   void Run() {
-    loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
+    bool addition_succeeded =
+        loop.AddPendingCallback([](auto &loop) { loop.RequestTermination(); });
+    EXPECT_TRUE(addition_succeeded);
     EXPECT_THAT_ERROR(loop.Run().takeError(), Succeeded());
   }
 };
 
 } // namespace
 
-// Failing on Windows, see https://github.com/llvm/llvm-project/issues/153446.
-#ifndef _WIN32
 using namespace test_protocol;
 
 TEST_F(HTTPDelimitedJSONTransportTest, MalformedRequests) {
@@ -435,8 +437,9 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadPartialMessage) {
   EXPECT_CALL(message_handler, Received(Request{5, "foo", std::nullopt}));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_stdin=*/false), Succeeded());
   ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());
   input.CloseWriteFileDescriptor();
@@ -454,15 +457,17 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReadWithZeroByteWrites) {
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
 
   // Run the main loop once for the initial read.
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_stdin=*/false), Succeeded());
 
   // zero-byte write.
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), 0),
                        Succeeded()); // zero-byte write.
-  loop.AddPendingCallback(
+  addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_stdin=*/false), Succeeded());
 
   // Write the remaining part of the message.
@@ -495,8 +500,8 @@ TEST_F(HTTPDelimitedJSONTransportTest, ReaderWithUnhandledData) {
 
 TEST_F(HTTPDelimitedJSONTransportTest, InvalidTransport) {
   transport =
-      std::make_unique<TestHTTPDelimitedJSONTransport>(nullptr, nullptr);
-  ASSERT_THAT_ERROR(Run(/*close_input=*/false),
+      std::make_unique<TestHTTPDelimitedJSONTransport>(loop, nullptr, nullptr);
+  ASSERT_THAT_ERROR(transport->RegisterMessageHandler(message_handler),
                     FailedWithMessage("IO object is not valid."));
 }
 
@@ -569,8 +574,9 @@ TEST_F(JSONRPCTransportTest, ReadPartialMessage) {
   EXPECT_CALL(message_handler, Received(Request{42, "foo", std::nullopt}));
 
   ASSERT_THAT_EXPECTED(input.Write(part1.data(), part1.size()), Succeeded());
-  loop.AddPendingCallback(
+  bool addition_succeeded = loop.AddPendingCallback(
       [](MainLoopBase &loop) { loop.RequestTermination(); });
+  EXPECT_TRUE(addition_succeeded);
   ASSERT_THAT_ERROR(Run(/*close_input=*/false), Succeeded());
 
   ASSERT_THAT_EXPECTED(input.Write(part2.data(), part2.size()), Succeeded());
@@ -616,8 +622,8 @@ TEST_F(JSONRPCTransportTest, Write) {
 }
 
 TEST_F(JSONRPCTransportTest, InvalidTransport) {
-  transport = std::make_unique<TestJSONRPCTransport>(nullptr, nullptr);
-  ASSERT_THAT_ERROR(Run(/*close_input=*/false),
+  transport = std::make_unique<TestJSONRPCTransport>(loop, nullptr, nullptr);
+  ASSERT_THAT_ERROR(transport->RegisterMessageHandler(message_handler),
                     FailedWithMessage("IO object is not valid."));
 }
 
@@ -806,4 +812,4 @@ TEST_F(TransportBinderTest, InBoundEventsVoidParams) {
   EXPECT_TRUE(called);
 }
 
-#endif
+#endif // ifndef _WIN32

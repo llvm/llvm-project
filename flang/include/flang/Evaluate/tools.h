@@ -1089,6 +1089,10 @@ extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SomeInteger> &);
 extern template semantics::UnorderedSymbolSet CollectSymbols(
     const Expr<SubscriptInteger> &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const ProcedureDesignator &);
+extern template semantics::UnorderedSymbolSet CollectSymbols(
+    const Assignment &);
 
 // Collects Symbols of interest for the CUDA data transfer in an expression
 template <typename A>
@@ -1109,6 +1113,9 @@ bool IsArraySection(const Expr<SomeType> &expr);
 
 // Predicate: does an expression contain constant?
 bool HasConstant(const Expr<SomeType> &);
+
+// Predicate: Does an expression contain a component
+bool HasStructureComponent(const Expr<SomeType> &expr);
 
 // Utilities for attaching the location of the declaration of a symbol
 // of interest to a message.  Handles the case of USE association gracefully.
@@ -1289,16 +1296,7 @@ bool CheckForCoindexedObject(parser::ContextualMessages &,
     const std::optional<ActualArgument> &, const std::string &procName,
     const std::string &argName);
 
-inline bool IsCUDADeviceSymbol(const Symbol &sym) {
-  if (const auto *details =
-          sym.GetUltimate().detailsIf<semantics::ObjectEntityDetails>()) {
-    if (details->cudaDataAttr() &&
-        *details->cudaDataAttr() != common::CUDADataAttr::Pinned) {
-      return true;
-    }
-  }
-  return false;
-}
+bool IsCUDADeviceSymbol(const Symbol &sym);
 
 inline bool IsCUDAManagedOrUnifiedSymbol(const Symbol &sym) {
   if (const auto *details =
@@ -1347,14 +1345,20 @@ template <typename A> inline bool HasCUDADeviceAttrs(const A &expr) {
 // device attribute.
 template <typename A, typename B>
 inline bool IsCUDADataTransfer(const A &lhs, const B &rhs) {
-  int lhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
-  int rhsNbManagedSymbols = {GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
+  int lhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(lhs)};
+  int rhsNbManagedSymbols{GetNbOfCUDAManagedOrUnifiedSymbols(rhs)};
   int rhsNbSymbols{GetNbOfCUDADeviceSymbols(rhs)};
 
-  // Special case where only managed or unifed symbols are involved. This is
-  // performed on the host.
-  if (lhsNbManagedSymbols == 1 && rhsNbManagedSymbols == 1 &&
-      rhsNbSymbols == 1) {
+  if (lhsNbManagedSymbols >= 1 && lhs.Rank() > 0 && rhsNbSymbols == 0 &&
+      rhsNbManagedSymbols == 0 && (IsVariable(rhs) || IsConstantExpr(rhs))) {
+    return true; // Managed arrays initialization is performed on the device.
+  }
+
+  // Special cases performed on the host:
+  // - Only managed or unifed symbols are involved on RHS and LHS.
+  // - LHS is managed or unified and the RHS is host only.
+  if ((lhsNbManagedSymbols >= 1 && rhsNbManagedSymbols == rhsNbSymbols) ||
+      (lhsNbManagedSymbols >= 1 && rhsNbSymbols == 0)) {
     return false;
   }
   return HasCUDADeviceAttrs(lhs) || rhsNbSymbols > 0;
@@ -1638,6 +1642,9 @@ common::IgnoreTKRSet GetIgnoreTKR(const Symbol &);
 std::optional<int> GetDummyArgumentNumber(const Symbol *);
 
 const Symbol *FindAncestorModuleProcedure(const Symbol *symInSubmodule);
+
+// Given a Cray pointee symbol, returns the related Cray pointer symbol.
+const Symbol &GetCrayPointer(const Symbol &crayPointee);
 
 } // namespace Fortran::semantics
 

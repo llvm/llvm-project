@@ -27,8 +27,8 @@ func.func @main() {
   %A_dyn = tensor.cast %A : tensor<8x2xf32> to tensor<?x?xf32>
   %B_dyn = tensor.cast %B : tensor<2x4xf32> to tensor<?x?xf32>
 
-  %c0_i32 = arith.constant  0 : i32
-  %C_init = linalg.fill ins(%c0_i32 : i32) outs(%C_dyn : tensor<?x?xf32>) -> tensor<?x?xf32>
+  %c0_f32 = arith.constant 0.0 : f32
+  %C_init = linalg.fill ins(%c0_f32 : f32) outs(%C_dyn : tensor<?x?xf32>) -> tensor<?x?xf32>
 
   %res = linalg.matmul ins(%A_dyn, %B_dyn: tensor<?x?xf32>, tensor<?x?xf32>)
             outs(%C_init: tensor<?x?xf32>) -> tensor<?x?xf32>
@@ -53,7 +53,9 @@ module attributes {transform.with_named_sequence} {
     %func_op = transform.get_parent_op %0 : (!transform.any_op) -> !transform.op<"func.func">
     transform.structured.vectorize %0 vector_sizes [4, 4, 2] : !transform.any_op
     transform.apply_patterns to %func_op {
-      transform.apply_patterns.vector.lower_multi_reduction lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.reorder_and_expand_multi_reduction_dims lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_flattening lowering_strategy = "innerreduction"
+      transform.apply_patterns.vector.multi_reduction_unrolling lowering_strategy = "innerreduction"
     } : !transform.op<"func.func">
     transform.yield
   }

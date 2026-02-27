@@ -1921,12 +1921,12 @@ template <typename T> struct StdMapStringCustomMappingTraitsImpl {
   using map_type = std::map<std::string, T>;
 
   static void inputOne(IO &io, StringRef key, map_type &v) {
-    io.mapRequired(key.str().c_str(), v[std::string(key)]);
+    io.mapRequired(key, v[std::string(key)]);
   }
 
   static void output(IO &io, map_type &v) {
     for (auto &p : v)
-      io.mapRequired(p.first.c_str(), p.second);
+      io.mapRequired(p.first, p.second);
   }
 };
 

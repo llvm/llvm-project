@@ -62,7 +62,9 @@ libc_test(
     srcs = ["sprintf_test.cpp"],
     deps = [
         "//libc:__support_fputil_fp_bits",
+        "//libc:hdr_wchar_macros",
         "//libc:sprintf",
+        "//libc:types_wint_t",
         "//libc/test/UnitTest:fp_test_helpers",
     ],
 )
@@ -87,6 +89,8 @@ libc_test(
     name = "fprintf_test",
     srcs = ["fprintf_test.cpp"],
     deps = [
+        "//libc:__support_cpp_limits",
+        "//libc:__support_macros_properties_architectures",
         "//libc:fprintf",
     ],
 )

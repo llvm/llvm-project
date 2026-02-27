@@ -526,11 +526,15 @@ SlotIndex SplitEditor::buildSingleSubRegCopy(
     MachineBasicBlock::iterator InsertBefore, unsigned SubIdx,
     LiveInterval &DestLI, bool Late, SlotIndex Def, const MCInstrDesc &Desc) {
   bool FirstCopy = !Def.isValid();
-  MachineInstr *CopyMI = BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
-      .addReg(ToReg, RegState::Define | getUndefRegState(FirstCopy)
-              | getInternalReadRegState(!FirstCopy), SubIdx)
-      .addReg(FromReg, 0, SubIdx);
+  MachineInstr *CopyMI =
+      BuildMI(MBB, InsertBefore, DebugLoc(), Desc)
+          .addReg(ToReg,
+                  RegState::Define | getUndefRegState(FirstCopy) |
+                      getInternalReadRegState(!FirstCopy),
+                  SubIdx)
+          .addReg(FromReg, {}, SubIdx);
 
+  CopyMI->setFlag(MachineInstr::LRSplit);
   SlotIndexes &Indexes = *LIS.getSlotIndexes();
   if (FirstCopy) {
     Def = Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
@@ -550,6 +554,7 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
     // The full vreg is copied.
     MachineInstr *CopyMI =
         BuildMI(MBB, InsertBefore, DebugLoc(), Desc, ToReg).addReg(FromReg);
+    CopyMI->setFlag(MachineInstr::LRSplit);
     return Indexes.insertMachineInstrInMaps(*CopyMI, Late).getRegSlot();
   }
 
@@ -1509,10 +1514,9 @@ void SplitEditor::forceRecomputeVNI(const VNInfo &ParentVNI) {
   }
 
   // Trace value through phis.
-  SmallPtrSet<const VNInfo *, 8> Visited; ///< whether VNI was/is in worklist.
-  SmallVector<const VNInfo *, 4> WorkList;
-  Visited.insert(&ParentVNI);
-  WorkList.push_back(&ParentVNI);
+  ///< whether VNI was/is in worklist.
+  SmallPtrSet<const VNInfo *, 8> Visited = {&ParentVNI};
+  SmallVector<const VNInfo *, 4> WorkList = {&ParentVNI};
 
   const LiveInterval &ParentLI = Edit->getParent();
   const SlotIndexes &Indexes = *LIS.getSlotIndexes();

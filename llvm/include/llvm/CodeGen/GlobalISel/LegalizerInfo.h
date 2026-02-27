@@ -314,6 +314,16 @@ LLVM_ABI LegalityPredicate scalarWiderThan(unsigned TypeIdx, unsigned Size);
 LLVM_ABI LegalityPredicate scalarOrEltNarrowerThan(unsigned TypeIdx,
                                                    unsigned Size);
 
+/// True iff the specified type index is a vector with a number of elements
+/// that's greater than the given size.
+LLVM_ABI LegalityPredicate vectorElementCountIsGreaterThan(unsigned TypeIdx,
+                                                           unsigned Size);
+
+/// True iff the specified type index is a vector with a number of elements
+/// that's less than or equal to the given size.
+LLVM_ABI LegalityPredicate
+vectorElementCountIsLessThanOrEqualTo(unsigned TypeIdx, unsigned Size);
+
 /// True iff the specified type index is a scalar or a vector with an element
 /// type that's wider than the given size.
 LLVM_ABI LegalityPredicate scalarOrEltWiderThan(unsigned TypeIdx,
@@ -383,7 +393,8 @@ LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
 
 /// Keep the same scalar or element type as \p TypeIdx, but take the number of
 /// elements from \p Ty.
-LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx, LLT Ty);
+LLVM_ABI LegalizeMutation changeElementCountTo(unsigned TypeIdx,
+                                               ElementCount EC);
 
 /// Change the scalar size or element size to have the same scalar size as type
 /// index \p FromIndex. Unlike changeElementTo, this discards pointer types and
@@ -743,6 +754,14 @@ public:
   /// The instruction is lowered when type indexes 0 and 1 is any type pair in
   /// the given list. Keep type index 0 as the same type.
   LegalizeRuleSet &lowerFor(std::initializer_list<std::pair<LLT, LLT>> Types) {
+    return actionFor(LegalizeAction::Lower, Types);
+  }
+  /// The instruction is lowered when type indexes 0 and 1 is any type pair in
+  /// the given list, provided Predicate pred is true.
+  LegalizeRuleSet &lowerFor(bool Pred,
+                            std::initializer_list<std::pair<LLT, LLT>> Types) {
+    if (!Pred)
+      return *this;
     return actionFor(LegalizeAction::Lower, Types);
   }
   /// The instruction is lowered when type indexes 0 and 1 is any type pair in

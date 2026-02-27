@@ -23,6 +23,8 @@
 #include <cstdint>
 #include <vector>
 
+#include "HexagonRegisterInfo.h"
+
 #define GET_INSTRINFO_HEADER
 #include "HexagonGenInstrInfo.inc"
 
@@ -36,6 +38,7 @@ class MachineOperand;
 class TargetRegisterInfo;
 
 class HexagonInstrInfo : public HexagonGenInstrInfo {
+  const HexagonRegisterInfo RegInfo;
   const HexagonSubtarget &Subtarget;
 
   enum BundleAttribute {
@@ -46,6 +49,8 @@ class HexagonInstrInfo : public HexagonGenInstrInfo {
 
 public:
   explicit HexagonInstrInfo(const HexagonSubtarget &ST);
+
+  const HexagonRegisterInfo &getRegisterInfo() const { return RegInfo; }
 
   /// TargetInstrInfo overrides.
 
@@ -183,8 +188,7 @@ public:
   /// is true, the register operand is the last use and must be marked kill.
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
-      bool isKill, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// Load the specified register of the given register class from the specified
@@ -193,7 +197,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIndex, const TargetRegisterClass *RC,
-      const TargetRegisterInfo *TRI, Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   /// This function is called for all pseudo instructions
@@ -467,7 +471,7 @@ public:
   int getMinValue(const MachineInstr &MI) const;
   short getNonExtOpcode(const MachineInstr &MI) const;
   bool getPredReg(ArrayRef<MachineOperand> Cond, Register &PredReg,
-                  unsigned &PredRegPos, unsigned &PredRegFlags) const;
+                  unsigned &PredRegPos, RegState &PredRegFlags) const;
   short getPseudoInstrPair(const MachineInstr &MI) const;
   short getRegForm(const MachineInstr &MI) const;
   unsigned getSize(const MachineInstr &MI) const;
@@ -501,6 +505,9 @@ public:
                              bool ToBigInstrs = true) const;
   void translateInstrsForDup(MachineBasicBlock::instr_iterator MII,
                              bool ToBigInstrs) const;
+  bool useMachineCombiner() const override { return true; }
+  bool isAssociativeAndCommutative(const MachineInstr &Inst,
+                                   bool Invert) const override;
 
   // Addressing mode relations.
   short changeAddrMode_abs_io(short Opc) const;
@@ -532,6 +539,7 @@ public:
   }
 
   MCInst getNop() const override;
+  bool isQFPMul(const MachineInstr *MF) const;
 };
 
 /// \brief Create RegSubRegPair from a register MachineOperand

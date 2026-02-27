@@ -35,10 +35,10 @@ define void @fn(i32 noundef %n, ptr %in, ptr %out) #0 {
 ; CHECK-NEXT:    [[VECTOR_GEP4:%.*]] = getelementptr i8, ptr [[POINTER_PHI2]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 [[INDEX]], i32 [[N]])
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, <4 x ptr> [[VECTOR_GEP4]], i32 1
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> [[VECTOR_GEP4]], i32 1, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison), !alias.scope [[META0:![0-9]+]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[VECTOR_GEP4]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison), !alias.scope [[META0:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds nuw i8, <4 x ptr> [[VECTOR_GEP4]], i32 2
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> [[TMP1]], i32 1, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison), !alias.scope [[META0]]
-; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> [[TMP2]], i32 1, <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison), !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER5:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP1]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison), !alias.scope [[META0]]
+; CHECK-NEXT:    [[WIDE_MASKED_GATHER6:%.*]] = call <4 x i8> @llvm.masked.gather.v4i8.v4p0(<4 x ptr> align 1 [[TMP2]], <4 x i1> [[ACTIVE_LANE_MASK]], <4 x i8> poison), !alias.scope [[META0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i8> [[WIDE_MASKED_GATHER]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP4:%.*]] = mul nuw nsw <4 x i32> [[TMP3]], splat (i32 19595)
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <4 x i8> [[WIDE_MASKED_GATHER5]] to <4 x i32>
@@ -67,10 +67,10 @@ define void @fn(i32 noundef %n, ptr %in, ptr %out) #0 {
 ; CHECK-NEXT:    [[TMP28:%.*]] = lshr <4 x i32> [[TMP27]], splat (i32 16)
 ; CHECK-NEXT:    [[TMP29:%.*]] = trunc <4 x i32> [[TMP28]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP30:%.*]] = getelementptr inbounds nuw i8, <4 x ptr> [[VECTOR_GEP]], i32 1
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP13]], <4 x ptr> [[VECTOR_GEP]], i32 1, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP13]], <4 x ptr> align 1 [[VECTOR_GEP]], <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3:![0-9]+]], !noalias [[META0]]
 ; CHECK-NEXT:    [[TMP31:%.*]] = getelementptr inbounds nuw i8, <4 x ptr> [[VECTOR_GEP]], i32 2
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP21]], <4 x ptr> [[TMP30]], i32 1, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3]], !noalias [[META0]]
-; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP29]], <4 x ptr> [[TMP31]], i32 1, <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP21]], <4 x ptr> align 1 [[TMP30]], <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3]], !noalias [[META0]]
+; CHECK-NEXT:    call void @llvm.masked.scatter.v4i8.v4p0(<4 x i8> [[TMP29]], <4 x ptr> align 1 [[TMP31]], <4 x i1> [[ACTIVE_LANE_MASK]]), !alias.scope [[META3]], !noalias [[META0]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[PTR_IND3]] = getelementptr i8, ptr [[POINTER_PHI2]], i32 12
 ; CHECK-NEXT:    [[PTR_IND6]] = getelementptr i8, ptr [[POINTER_PHI]], i32 12

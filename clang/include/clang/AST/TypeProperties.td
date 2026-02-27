@@ -486,9 +486,12 @@ let Class = PackIndexingType in {
   def : Property<"isFullySubstituted", Bool> {
     let Read = [{ node->isFullySubstituted() }];
   }
+  def : Property<"expansions", Array<QualType>> {
+    let Read = [{ node->getExpansions() }];
+  }
 
   def : Creator<[{
-    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted);
+    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted, expansions);
   }]>;
 }
 
@@ -575,7 +578,7 @@ let Class = TagType in {
     let Conditional = [{ !IsCanonical }];
     let Read = [{ node->getQualifier() }];
   }
-  def : Property<"TD", TagDeclRef> { let Read = [{ node->getOriginalDecl() }]; }
+  def : Property<"TD", TagDeclRef> { let Read = [{ node->getDecl() }]; }
 }
 
 let Class = EnumType in {
@@ -652,9 +655,25 @@ let Class = BTFTagAttributedType in {
   }]>;
 }
 
+let Class = OverflowBehaviorType in {
+  def : Property<"behaviorKind", OverflowBehaviorKind> {
+    let Read = [{ node->getBehaviorKind() }];
+  }
+  def : Property<"underlyingType", QualType> {
+    let Read = [{ node->getUnderlyingType() }];
+  }
+
+  def : Creator<[{
+    return ctx.getOverflowBehaviorType(behaviorKind, underlyingType);
+  }]>;
+}
+
 let Class = HLSLAttributedResourceType in {
   def : Property<"resClass", UInt32> {
     let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceClass) }];
+  }
+  def : Property<"resDimension", UInt32> {
+    let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceDimension) }];
   }
   def : Property<"isROV", Bool> {
     let Read = [{ node->getAttrs().IsROV }];
@@ -672,7 +691,10 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer, isCounter);
+    HLSLAttributedResourceType::Attributes attrs(
+        static_cast<llvm::dxil::ResourceClass>(resClass),
+        static_cast<llvm::dxil::ResourceDimension>(resDimension), isROV,
+        rawBuffer, isCounter);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }

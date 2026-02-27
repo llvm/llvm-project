@@ -658,33 +658,80 @@ module attributes {transform.with_named_sequence} {
   }
 }
 
-// CHECK:           func.func private @tile_one_consumer_using_tile_and_fuse(%[[VAL_0:.*]]: tensor<16x128x48x96xf32>, %[[VAL_1:.*]]: tensor<16x96x48x128xf32>) -> tensor<16x96x48x128xf32> {
-// CHECK:             %[[VAL_2:.*]] = arith.constant 0 : index
-// CHECK:             %[[VAL_3:.*]] = arith.constant 16 : index
-// CHECK:             %[[VAL_4:.*]] = arith.constant 128 : index
-// CHECK:             %[[VAL_5:.*]] = arith.constant 48 : index
-// CHECK:             %[[VAL_6:.*]] = arith.constant 96 : index
-// CHECK:             %[[VAL_7:.*]] = arith.constant 1 : index
-// CHECK:             %[[VAL_8:.*]] = scf.for %[[VAL_9:.*]] = %[[VAL_2]] to %[[VAL_3]] step %[[VAL_7]] iter_args(%[[VAL_10:.*]] = %[[VAL_1]]) -> (tensor<16x96x48x128xf32>) {
-// CHECK:               %[[VAL_11:.*]] = scf.for %[[VAL_12:.*]] = %[[VAL_2]] to %[[VAL_4]] step %[[VAL_3]] iter_args(%[[VAL_13:.*]] = %[[VAL_10]]) -> (tensor<16x96x48x128xf32>) {
-// CHECK:                 %[[VAL_14:.*]] = scf.for %[[VAL_15:.*]] = %[[VAL_2]] to %[[VAL_5]] step %[[VAL_3]] iter_args(%[[VAL_16:.*]] = %[[VAL_13]]) -> (tensor<16x96x48x128xf32>) {
-// CHECK:                   %[[VAL_17:.*]] = scf.for %[[VAL_18:.*]] = %[[VAL_2]] to %[[VAL_6]] step %[[VAL_3]] iter_args(%[[VAL_19:.*]] = %[[VAL_16]]) -> (tensor<16x96x48x128xf32>) {
-// CHECK:                     %[[VAL_20:.*]] = tensor.extract_slice %[[VAL_0]]{{\[}}%[[VAL_9]], %[[VAL_12]], %[[VAL_15]], %[[VAL_18]]] [1, 16, 16, 16] [1, 1, 1, 1] : tensor<16x128x48x96xf32> to tensor<1x16x16x16xf32>
-// CHECK:                     %[[VAL_21:.*]] = tensor.extract_slice %[[VAL_19]]{{\[}}%[[VAL_9]], %[[VAL_18]], %[[VAL_15]], %[[VAL_12]]] [1, 16, 16, 16] [1, 1, 1, 1] : tensor<16x96x48x128xf32> to tensor<1x16x16x16xf32>
-// CHECK:                     %[[VAL_22:.*]] = linalg.generic {indexing_maps = [#map, #map1], iterator_types = ["parallel", "parallel", "parallel", "parallel"]} ins(%[[VAL_20]] : tensor<1x16x16x16xf32>) outs(%[[VAL_21]] : tensor<1x16x16x16xf32>) {
-// CHECK:                     ^bb0(%[[VAL_23:.*]]: f32, %[[VAL_24:.*]]: f32):
-// CHECK:                       linalg.yield %[[VAL_23]] : f32
-// CHECK:                     } -> tensor<1x16x16x16xf32>
-// CHECK:                     %[[VAL_25:.*]] = tensor.insert_slice %[[VAL_26:.*]] into %[[VAL_19]]{{\[}}%[[VAL_9]], %[[VAL_18]], %[[VAL_15]], %[[VAL_12]]] [1, 16, 16, 16] [1, 1, 1, 1] : tensor<1x16x16x16xf32> into tensor<16x96x48x128xf32>
-// CHECK:                     scf.yield %[[VAL_25]] : tensor<16x96x48x128xf32>
-// CHECK:                   }
-// CHECK:                   scf.yield %[[VAL_27:.*]] : tensor<16x96x48x128xf32>
-// CHECK:                 }
-// CHECK:                 scf.yield %[[VAL_28:.*]] : tensor<16x96x48x128xf32>
-// CHECK:               }
-// CHECK:               scf.yield %[[VAL_29:.*]] : tensor<16x96x48x128xf32>
-// CHECK:             }
-// CHECK:             return %[[VAL_30:.*]] : tensor<16x96x48x128xf32>
-// CHECK:           }
-// CHECK:         }
+// CHECK-LABEL: func private @tile_one_consumer_using_tile_and_fuse
+//  CHECK-SAME:   %[[ARG0:.*]]: tensor<16x128x48x96xf32>
+//  CHECK-SAME:   %[[ARG1:.*]]: tensor<16x96x48x128xf32>
+//       CHECK:   scf.for %[[IV0:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:     iter_args(%[[ITERARG0:.+]] = %[[ARG1]])
+//       CHECK:     scf.for %[[IV1:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:       iter_args(%[[ITERARG1:.+]] = %[[ITERARG0]])
+//       CHECK:       scf.for %[[IV2:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:         iter_args(%[[ITERARG2:.+]] = %[[ITERARG1]])
+//       CHECK:         scf.for %[[IV3:[a-zA-Z0-9]+]] =
+//  CHECK-SAME:           iter_args(%[[ITERARG3:.+]] = %[[ITERARG2]])
+//       CHECK:           %[[TILEDARG0:.*]] = tensor.extract_slice %[[ARG0]]{{\[}}%[[IV0]], %[[IV1]], %[[IV2]], %[[IV3]]]
+//       CHECK:           %[[TILEDARG1:.*]] = tensor.extract_slice %[[ITERARG3]]{{\[}}%[[IV0]], %[[IV3]], %[[IV2]], %[[IV1]]]
+//       CHECK:           %[[RES:.*]] = linalg.generic
+//  CHECK-SAME:           ins(%[[TILEDARG0]]
+//  CHECK-SAME:           outs(%[[TILEDARG1]]
+//       CHECK:           tensor.insert_slice %[[RES:.*]]
 
+// -----
+
+// Tests that rank-reducing slices created during fusion are tracked in
+// generatedSlices (via SwapExtractSliceWithProducerPatterns.cpp).
+// This enables cleanup patterns to transform them during tile-and-fuse.
+//
+// Affected cleanup patterns:
+// - SwapExtractSliceWithFillPatterns: swaps extract_slice(fill) -> fill(extract_slice).
+
+#map2d = affine_map<(d0, d1) -> (d0, d1)>
+
+func.func @fuse_fill_through_rank_reducing_slice(%arg0: tensor<4x96xf32>) -> tensor<4x96xf32> {
+  %cst = arith.constant 1.0 : f32
+
+  %empty_3d = tensor.empty() : tensor<4x1x96xf32>
+  %fill_3d = linalg.fill ins(%cst : f32) outs(%empty_3d : tensor<4x1x96xf32>) -> tensor<4x1x96xf32>
+
+  %slice_2d = tensor.extract_slice %fill_3d[0, 0, 0] [4, 1, 96] [1, 1, 1]
+      : tensor<4x1x96xf32> to tensor<4x96xf32>
+
+  %result = linalg.generic {
+      indexing_maps = [#map2d, #map2d],
+      iterator_types = ["parallel", "parallel"]}
+      ins(%slice_2d : tensor<4x96xf32>)
+      outs(%arg0 : tensor<4x96xf32>) {
+    ^bb0(%in: f32, %out: f32):
+      %sum = arith.addf %in, %out : f32
+      linalg.yield %sum : f32
+  } -> tensor<4x96xf32>
+
+  return %result : tensor<4x96xf32>
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op {transform.readonly}) {
+    %consumer = transform.structured.match ops{["linalg.generic"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %tiled, %loop = transform.structured.fuse %consumer tile_sizes [0, 32] {apply_cleanup}
+        : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">)
+    transform.yield
+  }
+}
+
+// CHECK-LABEL: func.func @fuse_fill_through_rank_reducing_slice
+// CHECK-SAME:      %[[ARG0:[a-zA-Z0-9_]+]]: tensor<4x96xf32>
+// CHECK-DAG: %[[EMPTY_3D:.+]] = tensor.empty() : tensor<4x1x96xf32>
+// CHECK: scf.for %[[IV:[a-zA-Z0-9_]+]] = {{.*}} iter_args(%[[ITERARG:.+]] = %[[ARG0]])
+
+// CHECK: %[[TILE_3D:.+]] = tensor.extract_slice %[[EMPTY_3D]][0, 0, %[[IV]]] [4, 1, 32] [1, 1, 1]
+// CHECK-SAME: tensor<4x1x96xf32> to tensor<4x1x32xf32>
+// CHECK: %[[FILL:.+]] = linalg.fill
+// CHECK-SAME: outs(%[[TILE_3D]] : tensor<4x1x32xf32>)
+// CHECK: %[[RANK_REDUCED:.+]] = tensor.extract_slice %[[FILL]][0, 0, 0] [4, 1, 32] [1, 1, 1]
+// CHECK-SAME: tensor<4x1x32xf32> to tensor<4x32xf32>
+
+// CHECK: %[[CONSUMER_OUT:.+]] = tensor.extract_slice %[[ITERARG]][0, %[[IV]]] [4, 32]
+// CHECK: linalg.generic
+// CHECK-SAME: ins(%[[RANK_REDUCED]] : tensor<4x32xf32>)
+// CHECK-SAME: outs(%[[CONSUMER_OUT]] : tensor<4x32xf32>)

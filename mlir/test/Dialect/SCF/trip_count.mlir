@@ -700,3 +700,122 @@ func.func @trip_count_arith_add_nuw_loop_unsigned_invalid(%lb : i32, %other : i3
   }
   return %1 : i32
 }
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_full_range(
+func.func @trip_count_i8_unsigned_full_range(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i8
+  %c255 = arith.constant 255 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Unsigned i8 from 0 to 255: trip count is 255
+  // Trip counts are returned in their natural bitwidth and printed as signed.
+  // 255 in i8 is represented as -1 when printed in signed format.
+  // CHECK: "test.trip-count" = -1 : i8
+  %r = scf.for unsigned %i = %c0 to %c255 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_partial_range(
+func.func @trip_count_i8_unsigned_partial_range(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i8
+  %c200 = arith.constant 200 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Unsigned i8 from 0 to 200: trip count is 200
+  // 200 in i8 is represented as -56 when printed in signed format.
+  // CHECK: "test.trip-count" = -56 : i8
+  %r = scf.for unsigned %i = %c0 to %c200 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_high_range(
+func.func @trip_count_i8_unsigned_high_range(%a : i32, %b : i32) -> i32 {
+  %c200 = arith.constant 200 : i8
+  %c255 = arith.constant 255 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Unsigned i8 from 200 to 255: trip count is 55
+  // CHECK: "test.trip-count" = 55 : i8
+  %r = scf.for unsigned %i = %c200 to %c255 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_signed_crossing_zero(
+func.func @trip_count_i8_signed_crossing_zero(%a : i32, %b : i32) -> i32 {
+  %c-128 = arith.constant -128 : i32
+  %c127 = arith.constant 127 : i32
+  %c1 = arith.constant 1 : i32
+
+  // Signed i32 from -128 to 127, crossing zero
+  // CHECK: "test.trip-count" = 255
+  %r = scf.for %i = %c-128 to %c127 step %c1 iter_args(%0 = %a) -> i32 : i32 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_signed_overflow_fix(
+func.func @trip_count_i8_signed_overflow_fix(%a : i32, %b : i32) -> i32 {
+  %c-128 = arith.constant -128 : i8
+  %c127 = arith.constant 127 : i8
+  %c1 = arith.constant 1 : i8
+
+  // Signed i8 from -128 to 127: tests overflow fix
+  // Without the fix, computing (127 - (-128)) would overflow in i8.
+  // The trip count should be 255, but will be printed as -1 in i8 signed format.
+  // CHECK: "test.trip-count" = -1 : i8
+  %r = scf.for %i = %c-128 to %c127 step %c1 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i16_unsigned_full_range(
+func.func @trip_count_i16_unsigned_full_range(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i16
+  %c65535 = arith.constant 65535 : i16
+  %c1 = arith.constant 1 : i16
+
+  // Unsigned i16 from 0 to 65535: trip count is 65535
+  // 65535 in i16 is represented as -1 when printed in signed format.
+  // CHECK: "test.trip-count" = -1 : i16
+  %r = scf.for unsigned %i = %c0 to %c65535 step %c1 iter_args(%0 = %a) -> i32 : i16 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}
+
+// -----
+
+// CHECK-LABEL:func.func @trip_count_i8_unsigned_step_2(
+func.func @trip_count_i8_unsigned_step_2(%a : i32, %b : i32) -> i32 {
+  %c0 = arith.constant 0 : i8
+  %c255 = arith.constant 255 : i8
+  %c2 = arith.constant 2 : i8
+
+  // Unsigned i8 from 0 to 255 step 2: trip count is 128 (255/2 rounded up)
+  // 128 in i8 is represented as -128 when printed in signed format.
+  // CHECK: "test.trip-count" = -128 : i8
+  %r = scf.for unsigned %i = %c0 to %c255 step %c2 iter_args(%0 = %a) -> i32 : i8 {
+    scf.yield %b : i32
+  }
+  return %r : i32
+}

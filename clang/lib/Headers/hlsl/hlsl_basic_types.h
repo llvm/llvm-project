@@ -150,6 +150,23 @@ typedef matrix<uint16_t, 4, 3> uint16_t4x3;
 typedef matrix<uint16_t, 4, 4> uint16_t4x4;
 #endif
 
+typedef matrix<bool, 1, 1> bool1x1;
+typedef matrix<bool, 1, 2> bool1x2;
+typedef matrix<bool, 1, 3> bool1x3;
+typedef matrix<bool, 1, 4> bool1x4;
+typedef matrix<bool, 2, 1> bool2x1;
+typedef matrix<bool, 2, 2> bool2x2;
+typedef matrix<bool, 2, 3> bool2x3;
+typedef matrix<bool, 2, 4> bool2x4;
+typedef matrix<bool, 3, 1> bool3x1;
+typedef matrix<bool, 3, 2> bool3x2;
+typedef matrix<bool, 3, 3> bool3x3;
+typedef matrix<bool, 3, 4> bool3x4;
+typedef matrix<bool, 4, 1> bool4x1;
+typedef matrix<bool, 4, 2> bool4x2;
+typedef matrix<bool, 4, 3> bool4x3;
+typedef matrix<bool, 4, 4> bool4x4;
+
 typedef matrix<int, 1, 1> int1x1;
 typedef matrix<int, 1, 2> int1x2;
 typedef matrix<int, 1, 3> int1x3;
