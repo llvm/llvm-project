@@ -1318,6 +1318,15 @@ void VectorLegalizer::Expand(SDNode *Node, SmallVectorImpl<SDValue> &Results) {
     // scalarizing.
     break;
   }
+  case ISD::FPOW: {
+    RTLIB::Libcall LC = RTLIB::getPOW(Node->getValueType(0));
+    if (tryExpandVecMathCall(Node, LC, Results))
+      return;
+
+    // TODO: Try to see if there's a narrower call available to use before
+    // scalarizing.
+    break;
+  }
   case ISD::FMODF: {
     EVT VT = Node->getValueType(0);
     RTLIB::Libcall LC = RTLIB::getMODF(VT);

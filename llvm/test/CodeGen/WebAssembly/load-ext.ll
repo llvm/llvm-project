@@ -26,8 +26,7 @@ define i32 @sext_i8_i32(ptr %p) {
 ; WASM32-FAST-LABEL: sext_i8_i32:
 ; WASM32-FAST:         .functype sext_i8_i32 (i32) -> (i32)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.load8_u $push1=, 0($0)
-; WASM32-FAST-NEXT:    i32.extend8_s $push0=, $pop1
+; WASM32-FAST-NEXT:    i32.load8_s $push0=, 0($0)
 ; WASM32-FAST-NEXT:    return $pop0
 ;
 ; WASM32-FAST-MVP-LABEL: sext_i8_i32:
@@ -55,8 +54,7 @@ define i32 @sext_i8_i32(ptr %p) {
 ; WASM64-FAST-LABEL: sext_i8_i32:
 ; WASM64-FAST:         .functype sext_i8_i32 (i64) -> (i32)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i32.load8_u $push1=, 0($0)
-; WASM64-FAST-NEXT:    i32.extend8_s $push0=, $pop1
+; WASM64-FAST-NEXT:    i32.load8_s $push0=, 0($0)
 ; WASM64-FAST-NEXT:    return $pop0
 ;
 ; WASM64-FAST-MVP-LABEL: sext_i8_i32:
@@ -150,8 +148,7 @@ define i32 @sext_i16_i32(ptr %p) {
 ; WASM32-FAST-LABEL: sext_i16_i32:
 ; WASM32-FAST:         .functype sext_i16_i32 (i32) -> (i32)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.load16_u $push1=, 0($0)
-; WASM32-FAST-NEXT:    i32.extend16_s $push0=, $pop1
+; WASM32-FAST-NEXT:    i32.load16_s $push0=, 0($0)
 ; WASM32-FAST-NEXT:    return $pop0
 ;
 ; WASM32-FAST-MVP-LABEL: sext_i16_i32:
@@ -179,8 +176,7 @@ define i32 @sext_i16_i32(ptr %p) {
 ; WASM64-FAST-LABEL: sext_i16_i32:
 ; WASM64-FAST:         .functype sext_i16_i32 (i64) -> (i32)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i32.load16_u $push1=, 0($0)
-; WASM64-FAST-NEXT:    i32.extend16_s $push0=, $pop1
+; WASM64-FAST-NEXT:    i32.load16_s $push0=, 0($0)
 ; WASM64-FAST-NEXT:    return $pop0
 ;
 ; WASM64-FAST-MVP-LABEL: sext_i16_i32:
@@ -538,8 +534,7 @@ define i64 @sext_i32_i64(ptr %p) {
 ; WASM32-FAST-LABEL: sext_i32_i64:
 ; WASM32-FAST:         .functype sext_i32_i64 (i32) -> (i64)
 ; WASM32-FAST-NEXT:  # %bb.0:
-; WASM32-FAST-NEXT:    i32.load $push1=, 0($0)
-; WASM32-FAST-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM32-FAST-NEXT:    i64.load32_s $push0=, 0($0)
 ; WASM32-FAST-NEXT:    return $pop0
 ;
 ; WASM32-FAST-MVP-LABEL: sext_i32_i64:
@@ -564,8 +559,7 @@ define i64 @sext_i32_i64(ptr %p) {
 ; WASM64-FAST-LABEL: sext_i32_i64:
 ; WASM64-FAST:         .functype sext_i32_i64 (i64) -> (i64)
 ; WASM64-FAST-NEXT:  # %bb.0:
-; WASM64-FAST-NEXT:    i32.load $push1=, 0($0)
-; WASM64-FAST-NEXT:    i64.extend_i32_s $push0=, $pop1
+; WASM64-FAST-NEXT:    i64.load32_s $push0=, 0($0)
 ; WASM64-FAST-NEXT:    return $pop0
 ;
 ; WASM64-FAST-MVP-LABEL: sext_i32_i64:

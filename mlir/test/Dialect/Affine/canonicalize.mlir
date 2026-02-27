@@ -2401,3 +2401,17 @@ func.func @for_empty_body_folder_iv_yield() -> index {
   }
   return %10 : index
 }
+
+// -----
+
+// Regression test: ensure canonicalization doesn't crash when the basis of
+// affine.linearize_index is ub.poison
+// (https://github.com/llvm/llvm-project/issues/179265).
+// CHECK-LABEL: @linearize_dont_fold_poison_basis
+// CHECK-NOT: affine.linearize_index
+// CHECK: return %arg0 : index
+func.func @linearize_dont_fold_poison_basis(%arg0: index) -> index {
+  %poison = ub.poison : index
+  %ret = affine.linearize_index [%arg0] by (%poison) : index
+  return %ret : index
+}
