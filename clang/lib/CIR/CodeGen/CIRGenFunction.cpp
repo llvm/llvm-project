@@ -842,7 +842,9 @@ void CIRGenFunction::emitDestructorBody(FunctionArgList &args) {
   // in fact emit references to them from other compilations, so emit them
   // as functions containing a trap instruction.
   if (dtorType != Dtor_Base && dtor->getParent()->isAbstract()) {
-    cgm.errorNYI(dtor->getSourceRange(), "abstract base class destructors");
+    SourceLocation loc =
+        dtor->hasBody() ? dtor->getBody()->getBeginLoc() : dtor->getLocation();
+    emitTrap(getLoc(loc), true);
     return;
   }
 
@@ -1172,9 +1174,10 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   // TODO(cir): create guard to restore fast math configurations.
   assert(!cir::MissingFeatures::fastMathGuard());
 
-  llvm::RoundingMode newRoundingBehavior = fpFeatures.getRoundingMode();
+  [[maybe_unused]] llvm::RoundingMode newRoundingBehavior =
+      fpFeatures.getRoundingMode();
   // TODO(cir): override rounding behaviour once FM configs are guarded.
-  llvm::fp::ExceptionBehavior newExceptionBehavior =
+  [[maybe_unused]] llvm::fp::ExceptionBehavior newExceptionBehavior =
       toConstrainedExceptMd(static_cast<LangOptions::FPExceptionModeKind>(
           fpFeatures.getExceptionMode()));
   // TODO(cir): override exception behaviour once FM configs are guarded.
