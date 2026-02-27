@@ -57,7 +57,7 @@ func.func @dpas_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: me
 
 // -----
 gpu.module @test_kernel {
-  func.func @elementwise_with_inst_data_only(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
+  gpu.func @elementwise_with_inst_data_only(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
     %c0 = arith.constant 0 : index
     %c32 = arith.constant 32 : index
     %c1024 = arith.constant 1024 : index
@@ -90,13 +90,13 @@ gpu.module @test_kernel {
       scf.yield %a_next_tdesc, %b_next_tdesc, %c_next_tdesc
         : !xegpu.tensor_desc<16x32xf16>, !xegpu.tensor_desc<16x32xf16>, !xegpu.tensor_desc<16x32xf16>
     }
-    return
+    gpu.return
   }
 }
 
 // -----
 gpu.module @test_kernel {
-  func.func @elementwise_with_inst_data_12(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
+  gpu.func @elementwise_with_inst_data_12(%A: memref<1024x1024xf16>, %B: memref<1024x1024xf16>, %C: memref<1024x1024xf16>) {
     %c0 = arith.constant 0 : index
     %c32 = arith.constant 32 : index
     %c1024 = arith.constant 1024 : index
@@ -129,7 +129,7 @@ gpu.module @test_kernel {
       scf.yield %a_next_tdesc, %b_next_tdesc, %c_next_tdesc
         : !xegpu.tensor_desc<12x32xf16>, !xegpu.tensor_desc<12x32xf16>, !xegpu.tensor_desc<12x32xf16>
     }
-    return
+    gpu.return
   }
 }
 
