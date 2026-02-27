@@ -180,6 +180,32 @@ struct __declspec(dllexport) AllDefChild : AllDefBase {
 // GNU-DAG: call {{.*}} @_ZN10AllDefBaseC2Eii(ptr {{.*}}, i32 %{{.*}}, i32 %
 
 //===----------------------------------------------------------------------===//
+// Callee-cleanup parameter: struct with non-trivial destructor passed by value.
+// canEmitDelegateCallArgs returns false for this case, so the inherited
+// constructor must NOT be exported to avoid ABI incompatibility with MSVC.
+//===----------------------------------------------------------------------===//
+
+struct NontrivialDtor {
+  int x;
+  ~NontrivialDtor();
+};
+
+struct CalleeCleanupBase {
+  CalleeCleanupBase(NontrivialDtor);
+};
+
+struct __declspec(dllexport) CalleeCleanupChild : CalleeCleanupBase {
+  using CalleeCleanupBase::CalleeCleanupBase;
+};
+
+// The inherited constructor should NOT be exported on MSVC targets because the
+// parameter requires callee-cleanup, making the thunk ABI-incompatible.
+// On GNU targets the callee-cleanup issue does not apply, so export is fine.
+// MSVC-NOT: dllexport{{.*}}CalleeCleanupChild{{.*}}NontrivialDtor
+// M32-NOT: dllexport{{.*}}CalleeCleanupChild{{.*}}NontrivialDtor
+// GNU-DAG: define {{.*}}dso_local dllexport {{.*}}CalleeCleanupChild{{.*}}NontrivialDtor
+
+//===----------------------------------------------------------------------===//
 // -fno-dllexport-inlines should still export inherited constructors.
 // Inherited constructors are marked inline internally but must be exported.
 //===----------------------------------------------------------------------===//

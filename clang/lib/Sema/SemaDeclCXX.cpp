@@ -6617,6 +6617,31 @@ void Sema::checkClassLevelDLLAttribute(CXXRecordDecl *Class) {
       if (MD->isDeleted())
         continue;
 
+      // Don't export inherited constructors whose parameters prevent ABI-
+      // compatible forwarding thunk. When canEmitDelegateCallArgs (in
+      // CodeGen) returns false, Clang inlines the constructor body instead
+      // of emitting a forwarding thunk, producing code that is not ABI-
+      // compatible with MSVC. Suppress the export so the user gets a linker
+      // error rather than a silent runtime mismatch.
+      if (ClassExported) {
+        if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
+          if (CD->getInheritedConstructor()) {
+            if (CD->isVariadic())
+              continue;
+            if (Context.getTargetInfo()
+                    .getCXXABI()
+                    .areArgsDestroyedLeftToRightInCallee()) {
+              bool HasCalleeCleanupParam = false;
+              for (const auto *P : CD->parameters())
+                if (P->needsDestruction(Context))
+                  HasCalleeCleanupParam = true;
+              if (HasCalleeCleanupParam)
+                continue;
+            }
+          }
+        }
+      }
+
       if (MD->isInlined()) {
         // MinGW does not import or export inline methods. But do it for
         // template instantiations and inherited constructors (which are
