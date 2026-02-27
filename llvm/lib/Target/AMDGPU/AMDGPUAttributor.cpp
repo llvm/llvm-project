@@ -401,13 +401,14 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
   }
 
   ChangeStatus manifest(Attributor &A) override {
-    SmallVector<Attribute, 8> AttrList;
-    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    if (!getAssumed())
+      return ChangeStatus::UNCHANGED;
 
-    AttrList.push_back(Attribute::get(Ctx, "uniform-work-group-size",
-                                      getAssumed() ? "true" : "false"));
-    return A.manifestAttrs(getIRPosition(), AttrList,
-                           /* ForceReplace */ true);
+    LLVMContext &Ctx = getAssociatedFunction()->getContext();
+    return A.manifestAttrs(
+        getIRPosition(),
+        {Attribute::get(Ctx, "uniform-work-group-size", "true")},
+        /*ForceReplace=*/true);
   }
 
   bool isValidState() const override {

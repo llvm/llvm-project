@@ -4944,11 +4944,14 @@ template <class MatchContextClass> SDValue DAGCombiner::visitMUL(SDNode *N) {
         Matcher.getNode(ISD::MUL, SDLoc(N1), VT, N0.getOperand(1), N1));
 
   // Fold (mul (vscale * C0), C1) to (vscale * (C0 * C1)).
+  // avoid if ISD::MUL handling is poor and ISD::SHL isn't an option.
   ConstantSDNode *NC1 = isConstOrConstSplat(N1);
   if (!UseVP && N0.getOpcode() == ISD::VSCALE && NC1) {
     const APInt &C0 = N0.getConstantOperandAPInt(0);
     const APInt &C1 = NC1->getAPIntValue();
-    return DAG.getVScale(DL, VT, C0 * C1);
+    if (!C0.isPowerOf2() || C1.isPowerOf2() ||
+        hasOperation(ISD::MUL, NC1->getValueType(0)))
+      return DAG.getVScale(DL, VT, C0 * C1);
   }
 
   // Fold (mul step_vector(C0), C1) to (step_vector(C0 * C1)).
@@ -5468,18 +5471,17 @@ SDValue DAGCombiner::visitREM(SDNode *N) {
     if (DAG.SignBitIsZero(N1) && DAG.SignBitIsZero(N0))
       return DAG.getNode(ISD::UREM, DL, VT, N0, N1);
   } else {
-    if (DAG.isKnownToBeAPowerOfTwo(N1)) {
+    if (DAG.isKnownToBeAPowerOfTwo(N1, /*OrZero=*/true)) {
       // fold (urem x, pow2) -> (and x, pow2-1)
       SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
       AddToWorklist(Add.getNode());
       return DAG.getNode(ISD::AND, DL, VT, N0, Add);
     }
-    // fold (urem x, (shl pow2, y)) -> (and x, (add (shl pow2, y), -1))
     // fold (urem x, (lshr pow2, y)) -> (and x, (add (lshr pow2, y), -1))
     // TODO: We should sink the following into isKnownToBePowerOfTwo
     // using a OrZero parameter analogous to our handling in ValueTracking.
-    if ((N1.getOpcode() == ISD::SHL || N1.getOpcode() == ISD::SRL) &&
+    if (N1.getOpcode() == ISD::SRL &&
         DAG.isKnownToBeAPowerOfTwo(N1.getOperand(0))) {
       SDValue NegOne = DAG.getAllOnesConstant(DL, VT);
       SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N1, NegOne);
@@ -7972,13 +7974,6 @@ SDValue DAGCombiner::visitAND(SDNode *N) {
         X.getOperand(0).getScalarValueSizeInBits() == 1)
       return DAG.getNode(ISD::ZERO_EXTEND, DL, VT, X.getOperand(0));
   }
-
-  // (X +/- Y) & Y --> ~X & Y when Y is a power of 2 (or zero).
-  if (sd_match(N, m_And(m_Value(Y),
-                        m_OneUse(m_AnyOf(m_Add(m_Value(X), m_Deferred(Y)),
-                                         m_Sub(m_Value(X), m_Deferred(Y)))))) &&
-      DAG.isKnownToBeAPowerOfTwo(Y, /*OrZero=*/true))
-    return DAG.getNode(ISD::AND, DL, VT, DAG.getNOT(DL, X, VT), Y);
 
   // fold (and (sign_extend_inreg x, i16 to i32), 1) -> (and x, 1)
   // fold (and (sra)) -> (and (srl)) when possible.
