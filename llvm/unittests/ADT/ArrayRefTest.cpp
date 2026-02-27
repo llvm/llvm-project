@@ -468,6 +468,11 @@ TEST(ArrayRefTest, MutableArrayRefDeductionGuides) {
   }
 }
 
+
+static_assert(
+    !std::is_constructible_v<MutableArrayRef<int>, const SmallVector<int>>,
+    "cannot construct MutableArrayRef from const std::SmallVector<int>");
+
 #ifdef __cpp_lib_span
 static_assert(std::is_constructible_v<ArrayRef<int>, std::span<const int>>,
               "should be able to construct ArrayRef from const std::span");
@@ -485,7 +490,7 @@ static_assert(
     std::is_constructible_v<std::span<const int>, MutableArrayRef<int>>,
     "should be able to construct const std::span from MutableArrayRef");
 static_assert(
-    std::is_constructible_v<MutableArrayRef<int>, std::span<int>>,
+    std::is_constructible_v<MutableArrayRef<int>, std::span<int>&>,
     "should be able to construct MutableArrayRef from mutable std::span");
 static_assert(
     std::is_constructible_v<MutableArrayRef<int>, const std::span<int>>,
