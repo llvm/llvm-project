@@ -24,6 +24,7 @@
 #include "ProvenanceAnalysis.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 using namespace llvm;
 using namespace llvm::objcarc;
@@ -67,7 +68,15 @@ bool llvm::objcarc::CanDecrementRefCount(const Instruction *Inst,
                                          const Value *Ptr,
                                          ProvenanceAnalysis &PA,
                                          ARCInstKind Class) {
-  // First perform a quick check if Class can not touch ref counts.
+  // Atomic RMW and CmpXchg instructions with release or stronger ordering
+  // publish memory to other threads, which may then read the stored pointer and
+  // release it. Treat these as potentially decrementing refcounts.
+  if (const auto *RMW = dyn_cast<AtomicRMWInst>(Inst))
+    return isReleaseOrStronger(RMW->getOrdering());
+  if (const auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(Inst))
+    return isReleaseOrStronger(CmpXchg->getSuccessOrdering());
+
+  // Perform a quick check if Class can not touch ref counts.
   if (!CanDecrementRefCount(Class))
     return false;
 
