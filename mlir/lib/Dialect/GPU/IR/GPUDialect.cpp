@@ -286,7 +286,8 @@ void GPUDialect::initialize() {
   declarePromisedInterfaces<
       ValueBoundsOpInterface, ClusterDimOp, ClusterDimBlocksOp, ClusterIdOp,
       ClusterBlockIdOp, BlockDimOp, BlockIdOp, GridDimOp, ThreadIdOp, LaneIdOp,
-      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp>();
+      SubgroupIdOp, GlobalIdOp, NumSubgroupsOp, SubgroupSizeOp, LaunchOp,
+      SubgroupBroadcastOp>();
 }
 
 static std::string getSparseHandleKeyword(SparseHandleKind kind) {
