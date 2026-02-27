@@ -26,7 +26,9 @@ def testStableABILocations():
 
         # Basic op creation produces a callsite location with function names.
         op = Operation.create("custom.op1")
-        # CHECK: loc(callsite("testStableABILocations"({{.*}}auto_location_stable_abi.py":{{[0-9]+}}:0)
+        # CHECK: loc(callsite("testStableABILocations"({{.*}}auto_location_stable_abi.py":28:0)
+        # CHECK-SAME: at callsite("run"({{.*}}auto_location_stable_abi.py":16:0)
+        # CHECK-SAME: at "<module>"({{.*}}auto_location_stable_abi.py":22:0))))
         print(op.location)
 
         # Nested function calls produce nested callsite locations.
@@ -34,7 +36,11 @@ def testStableABILocations():
             return arith.constant(IndexType.get(), 1)
 
         val = inner()
-        # CHECK: loc(callsite({{.*}} at callsite("testStableABILocations.<locals>.inner"({{.*}}auto_location_stable_abi.py":{{[0-9]+}}:0)
+        # CHECK: loc(callsite(
+        # CHECK-SAME: "testStableABILocations.<locals>.inner"({{.*}}auto_location_stable_abi.py":36:0)
+        # CHECK-SAME: at callsite("testStableABILocations"({{.*}}auto_location_stable_abi.py":38:0)
+        # CHECK-SAME: at callsite("run"({{.*}}auto_location_stable_abi.py":16:0)
+        # CHECK-SAME: at "<module>"({{.*}}auto_location_stable_abi.py":22:0)))))))
         print(val.location)
 
         # Frame limit of 0 produces unknown location.
