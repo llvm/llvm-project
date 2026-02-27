@@ -592,7 +592,7 @@ class TrivialFunctionAnalysisVisitor
           },
           Paths, /*LookupInDependent =*/true);
     })();
-    
+
     FieldDtorCache[Cls] = Result;
 
     return Result;
