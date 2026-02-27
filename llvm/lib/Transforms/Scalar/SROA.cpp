@@ -5252,18 +5252,16 @@ selectPartitionType(Partition &P, const DataLayout &DL, AllocaInst &AI,
         isIntegerWideningViable(P, LargestIntTy, DL))
       return {LargestIntTy, true, nullptr};
 
-    // Try homogeneous struct to vector canonicalization, but only when:
-    // 1. The partition type matches the alloca type (not a synthetic
-    //    sub-struct from getTypePartition for a sub-partition), AND
-    // 2. The conversion would actually benefit from vectorization: either
-    //    the alloca is involved in phi/select patterns (enabling
-    //    speculation), or the partition has non-splittable typed uses.
+    // Try homogeneous struct to vector canonicalization, but only when
+    // the conversion would actually benefit from vectorization: either
+    // the partition has non-splittable typed uses, or the alloca is
+    // involved in phi/select patterns (enabling speculation).
     //
     // When all uses are splittable (memcpy/lifetime only) and there's no
     // phi/select involvement, converting to vector just changes memcpy
     // split types without enabling promotion, propagating vector types to
     // other allocas and causing insertelement/extractelement overhead.
-    if (TypePartitionTy == AI.getAllocatedType()) {
+    {
       bool HasNonSplittable =
           any_of(P, [](const Slice &S) { return !S.isSplittable(); });
       bool ShouldConvert = HasNonSplittable;
