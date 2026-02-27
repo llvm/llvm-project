@@ -38,7 +38,8 @@ static bool shouldIgnoreRef(const DeclRefExpr *DRE, const Decl *ParentD) {
     if (Parents.size() > 1)
       return true;
     if (const Expr *E = Parents[0].get<Expr>()) {
-      if (!E->isValueDependent() && E->isIntegerConstantExpr(ACtx))
+      if (!E->getType().isNull() && !E->isValueDependent() &&
+          E->isIntegerConstantExpr(ACtx))
         return true;
       if (const auto *ParentBO = dyn_cast<BinaryOperator>(E)) {
         if (ParentBO->isAssignmentOp() &&
