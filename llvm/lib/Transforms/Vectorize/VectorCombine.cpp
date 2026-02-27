@@ -2863,7 +2863,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   // Try to replace a castop with a shuffle if the shuffle is not costly.
   InstructionCost CostC0 =
       TTI.getCastInstrCost(C0->getOpcode(), CastDstTy, CastSrcTy,
-                           TTI::CastContextHint::None, CostKind);
+                           TTI::CastContextHint::None, CostKind, C0);
 
   TargetTransformInfo::ShuffleKind ShuffleKind;
   if (IsBinaryShuffle)
@@ -2884,7 +2884,7 @@ bool VectorCombine::foldShuffleOfCastops(Instruction &I) {
   if (IsBinaryShuffle) {
     InstructionCost CostC1 =
         TTI.getCastInstrCost(C1->getOpcode(), CastDstTy, CastSrcTy,
-                             TTI::CastContextHint::None, CostKind);
+                             TTI::CastContextHint::None, CostKind, C1);
     OldCost += CostC1;
     if (!C1->hasOneUse())
       NewCost += CostC1;
