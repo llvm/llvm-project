@@ -30,11 +30,14 @@
 extern "C" {
 
 [[maybe_unused]] static void DescribeIEEESignaledExceptions() {
-#if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
+#if defined(RT_DEVICE_COMPILATION) || RT_GPU_TARGET
+  unsigned excepts{}; // No fenv support on the device.
+#else
 #ifdef fetestexcept // a macro in some environments; omit std::
   auto excepts{fetestexcept(FE_ALL_EXCEPT)};
 #else
   auto excepts{std::fetestexcept(FE_ALL_EXCEPT)};
+#endif
 #endif
   if (excepts) {
     std::fputs("IEEE arithmetic exceptions signaled:", stderr);
@@ -65,12 +68,13 @@ extern "C" {
 #endif
     std::fputc('\n', stderr);
   }
-#endif
 }
 
 static void CloseAllExternalUnits(const char *why) {
+#if !RT_GPU_TARGET
   Fortran::runtime::io::IoErrorHandler handler{why};
   Fortran::runtime::io::ExternalFileUnit::CloseAll(handler);
+#endif
 }
 
 #if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
@@ -150,6 +154,7 @@ static void CloseAllExternalUnits(const char *why) {
 }
 #endif
 
+#if !RT_GPU_TARGET
 static bool StartPause() {
   if (Fortran::runtime::io::IsATerminal(0)) {
     Fortran::runtime::io::IoErrorHandler handler{"PAUSE statement"};
@@ -189,6 +194,7 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
     EndPause();
   }
 }
+#endif
 
 [[noreturn]] void RTNAME(FailImageStatement)() {
   CloseAllExternalUnits("FAIL IMAGE statement");

@@ -27,6 +27,12 @@ public:
   llvm::Error writeTUSummary(const TUSummary &Summary,
                              llvm::StringRef Path) override;
 
+  llvm::Expected<TUSummaryEncoding>
+  readTUSummaryEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
+                                     llvm::StringRef Path) override;
+
   struct SpecialFileRepresentation {
     std::string MockRepresentation;
   };

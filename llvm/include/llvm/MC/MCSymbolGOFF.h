@@ -23,6 +23,9 @@
 namespace llvm {
 
 class MCSymbolGOFF : public MCSymbol {
+
+  StringRef ExternalName; // Alternate external name.
+
   // Associated data area of the section. Needs to be emitted first.
   MCSectionGOFF *ADA = nullptr;
 
@@ -47,6 +50,12 @@ public:
 
   bool isExternal() const { return IsExternal; }
   void setExternal(bool Value) const { IsExternal = Value; }
+
+  bool hasExternalName() const { return !ExternalName.empty(); }
+  void setExternalName(StringRef Name) { ExternalName = Name; }
+  StringRef getExternalName() const {
+    return hasExternalName() ? ExternalName : getName();
+  }
 
   void setHidden(bool Value = true) {
     modifyFlags(Value ? SF_Hidden : 0, SF_Hidden);

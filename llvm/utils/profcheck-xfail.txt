@@ -137,7 +137,6 @@ Transforms/InstCombine/wcslen-1.ll
 Transforms/InstCombine/wcslen-3.ll
 Transforms/InstCombine/xor-and-or.ll
 Transforms/InstCombine/zext-bool-add-sub.ll
-Transforms/LoopDeletion/invalidate-scev-after-hoisting.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
 Transforms/LowerAtomic/atomic-load.ll

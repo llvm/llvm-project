@@ -656,3 +656,33 @@ func.func @drop_unreachable_branch_2(%c: i1) {
 ^bb2:
   ub.unreachable
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/126213:
+// simplifyBrToBlockWithSinglePred must not merge a block into its sole
+// predecessor when a branch operand is itself a block argument of the
+// destination — replaceAllUsesWith would be a no-op for that argument,
+// leaving the block argument live after the block is erased and crashing.
+//
+// ^guard is merged into the entry block (single predecessor), replacing %cond
+// with %true and folding the cond_br. This kills the external entry to
+// ^header, leaving ^body as its only predecessor. Without the fix,
+// simplifyBrToBlockWithSinglePred would attempt to merge ^header into ^body
+// despite %keep being a block argument of ^header, triggering the crash.
+
+// CHECK-LABEL: @no_merge_self_arg_loop
+//  CHECK-NEXT:   %[[TRUE:.*]] = arith.constant true
+//  CHECK-NEXT:   return %[[TRUE]]
+func.func @no_merge_self_arg_loop(%step: i1) -> i1 {
+  %true = arith.constant true
+  cf.br ^guard(%true : i1)
+^guard(%cond: i1):
+  cf.cond_br %cond, ^exit(%true : i1), ^header(%step, %true : i1, i1)
+^header(%iter: i1, %keep: i1):
+  cf.cond_br %iter, ^body, ^exit(%keep : i1)
+^body:
+  cf.br ^header(%step, %keep : i1, i1)
+^exit(%result: i1):
+  return %result : i1
+}

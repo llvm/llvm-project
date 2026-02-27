@@ -16,6 +16,7 @@
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/Support/CommandLine.h"
+#include <set>
 #include <string>
 
 namespace llvm {
@@ -23,29 +24,33 @@ class StringRef;
 class Triple;
 
 /// Command line parser for toggling SPIR-V extensions.
-struct SPIRVExtensionsParser : public cl::parser<ExtensionSet> {
+struct SPIRVExtensionsParser
+    : public cl::parser<std::set<SPIRV::Extension::Extension>> {
 public:
-  SPIRVExtensionsParser(cl::Option &O) : cl::parser<ExtensionSet>(O) {}
+  SPIRVExtensionsParser(cl::Option &O)
+      : cl::parser<std::set<SPIRV::Extension::Extension>>(O) {}
 
   /// Parses SPIR-V extension name from CLI arguments.
   ///
   /// \return Returns true on error.
   bool parse(cl::Option &O, StringRef ArgName, StringRef ArgValue,
-             ExtensionSet &Vals);
+             std::set<SPIRV::Extension::Extension> &Vals);
 
   /// Validates and converts extension names into internal enum values.
   ///
   /// \return Returns a reference to the unknown SPIR-V extension name from the
   /// list if present, or an empty StringRef on success.
-  static StringRef checkExtensions(const std::vector<std::string> &ExtNames,
-                                   ExtensionSet &AllowedExtensions);
+  static StringRef
+  checkExtensions(const std::vector<std::string> &ExtNames,
+                  std::set<SPIRV::Extension::Extension> &AllowedExtensions);
 
   /// Returns the list of extensions that are valid for a particular
   /// target environment (i.e., OpenCL or Vulkan).
-  static ExtensionSet getValidExtensions(const Triple &TT);
+  static std::set<SPIRV::Extension::Extension>
+  getValidExtensions(const Triple &TT);
 
 private:
-  static ExtensionSet DisabledExtensions;
+  static std::set<SPIRV::Extension::Extension> DisabledExtensions;
 };
 
 } // namespace llvm

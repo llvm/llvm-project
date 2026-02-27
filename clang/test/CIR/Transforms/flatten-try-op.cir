@@ -1,0 +1,737 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+!s32i = !cir.int<s, 32>
+!u8i = !cir.int<u, 8>
+!void = !cir.void
+!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+!rec_exception = !cir.record<struct "std::exception" {!s32i}>
+
+// Test a simple try with no handlers and no throwing calls.
+cir.func @test_try_no_handlers() {
+  %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
+  cir.scope {
+    cir.try {
+      %1 = cir.const #cir.int<1> : !s32i
+      cir.store %1, %0 : !s32i, !cir.ptr<!s32i>
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_no_handlers()
+// CHECK:         %[[ALLOCA:.*]] = cir.alloca !s32i
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         %[[C1:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:         cir.store %[[C1]], %[[ALLOCA]]
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^[[SCOPE_EXIT:bb[0-9]+]]
+// CHECK:       ^[[SCOPE_EXIT]]:
+// CHECK:         cir.return
+
+// Test try-catch with catch all, throwing call in try body.
+// The throwing call becomes try_call, and we get an unwind block,
+// catch dispatch, and a catch-all handler.
+cir.func @test_try_catch_all() {
+  cir.scope {
+    cir.try {
+      cir.call @mayThrow() : () -> ()
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_catch_all()
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+//
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]], %[[EXN:.*]] = cir.begin_catch %[[ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^[[SCOPE_EXIT:bb[0-9]+]]
+// CHECK:       ^[[SCOPE_EXIT]]:
+// CHECK:         cir.return
+
+// Test try-catch with typed handler and unwind.
+// If the exception type doesn't match, control goes to the unwind handler
+// which resumes unwinding.
+cir.func @test_try_catch_typed_with_unwind() {
+  %0 = cir.alloca !cir.ptr<!rec_exception>, !cir.ptr<!cir.ptr<!rec_exception>>, ["e"] {alignment = 8 : i64}
+  cir.scope {
+    cir.try {
+      cir.call @mayThrow() : () -> ()
+      cir.yield
+    } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_exception>>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    } unwind (%eh_token : !cir.eh_token) {
+      cir.resume %eh_token : !cir.eh_token
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_catch_typed_with_unwind()
+// CHECK:         %[[E_ALLOCA:.*]] = cir.alloca !cir.ptr<!rec_std3A3Aexception>
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+//
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^[[CATCH_TYPED:bb[0-9]+]],
+// CHECK:           unwind : ^[[UNWIND_HANDLER:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH_TYPED]](%[[CT_ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]], %[[EXN:.*]] = cir.begin_catch %[[CT_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>)
+// CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[UNWIND_HANDLER]](%[[UW_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.resume %[[UW_ET]] : !cir.eh_token
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^{{.*}}
+// CHECK:         cir.return
+
+// Test try-catch with cleanup inside the try body.
+// The cleanup scope is flattened first. The inner EH cleanup resume ops
+// are chained to the catch dispatch block of the enclosing try.
+cir.func @test_try_catch_with_cleanup() {
+  cir.scope {
+    %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+    cir.try {
+      cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.cleanup.scope {
+        cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.yield
+      } cleanup all {
+        cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.yield
+      }
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_catch_with_cleanup()
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @ctor(%[[C]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[OUTER_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[AFTER_CTOR]]:
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[AFTER_DO:bb[0-9]+]], ^[[INNER_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[AFTER_DO]]:
+// CHECK:         cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+//
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.br ^[[TRY_EXIT:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_UNWIND]]:
+// CHECK:         %[[INNER_EH:.*]] = cir.eh.initiate cleanup : !cir.eh_token
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[INNER_EH]] : !cir.eh_token)
+//
+// CHECK:       ^[[EH_CLEANUP]](%[[EH_CT:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[EH_CT]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH_CT]] : !cir.eh_token)
+//
+// CHECK:       ^[[TRY_EXIT]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[OUTER_UNWIND]]:
+// CHECK:         %[[CTOR_EH:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH]](%[[CTOR_EH]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH_ALL]](%[[CA_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[CA_ET]]
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^{{.*}}
+// CHECK:         cir.return
+
+// Test try-catch within a cleanup scope.
+// The try is nested inside a cleanup scope. If an exception is not caught
+// by the try's handlers, the resume from the unwind handler should chain
+// to the outer cleanup's EH handler.
+cir.func @test_try_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  %1 = cir.alloca !cir.ptr<!rec_exception>, !cir.ptr<!cir.ptr<!rec_exception>>, ["e"] {alignment = 8 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.scope {
+      cir.try {
+        cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.yield
+      } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+        %catch_token, %2 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_exception>>)
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      } unwind (%eh_token : !cir.eh_token) {
+        cir.resume %eh_token : !cir.eh_token
+      }
+    }
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_in_cleanup()
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         %[[E:.*]] = cir.alloca !cir.ptr<!rec_std3A3Aexception>
+// CHECK:         cir.call @ctor(%[[C]])
+// CHECK:         cir.br ^[[OUTER_CLEANUP_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[OUTER_CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[SCOPE_ENTER:bb[0-9]+]]
+//
+// CHECK:       ^[[SCOPE_ENTER]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[NORMAL:bb[0-9]+]], ^[[TRY_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[TRY_CONT:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_UNWIND]]:
+// CHECK:         %[[TRY_EH:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[TRY_EH]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^[[CATCH:bb[0-9]+]],
+// CHECK:           unwind : ^[[UNWIND_HANDLER:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH]](%[[CATCH_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[CATCH_ET]]
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[TRY_CONT]]
+//
+// CHECK:       ^[[UNWIND_HANDLER]](%[[UW_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.br ^[[OUTER_EH_CLEANUP:bb[0-9]+]](%[[UW_ET]] : !cir.eh_token)
+//
+// CHECK:       ^[[TRY_CONT]]:
+// CHECK:         cir.br ^[[SCOPE_EXIT:bb[0-9]+]]
+//
+// CHECK:       ^[[SCOPE_EXIT]]:
+// CHECK:         cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+//
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+//
+// CHECK:       ^[[OUTER_EH_CLEANUP]](%[[OEH_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}} = cir.begin_cleanup %[[OEH_ET]]
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.end_cleanup
+// CHECK:         cir.resume %[[OEH_ET]] : !cir.eh_token
+//
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test try with catch all and no throwing calls.
+// The try body doesn't have throwing calls, so no try_call/unwind blocks are
+// needed. The handlers are still built but won't be reachable.
+cir.func @test_try_catch_all_no_throwing_calls() {
+  cir.scope {
+    cir.try {
+      %0 = cir.const #cir.int<42> : !s32i
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %exn_ptr = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %catch_token : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_catch_all_no_throwing_calls()
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         %{{.*}} = cir.const #cir.int<42> : !s32i
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Catch dispatch (unreachable since there are no throwing calls).
+// CHECK:       ^[[DISPATCH:bb[0-9]+]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// Catch-all handler (unreachable).
+// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]], %{{.*}} = cir.begin_catch %[[ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch %[[CT]] : !cir.catch_token
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^[[SCOPE_EXIT:bb[0-9]+]]
+// CHECK:       ^[[SCOPE_EXIT]]:
+// CHECK:         cir.return
+
+// Test try-catch with multiple typed handlers and catch-all.
+cir.func @test_try_multiple_handlers() {
+  cir.scope {
+    cir.try {
+      cir.call @mayThrow() : () -> ()
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %ct1, %exn1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      cir.end_catch %ct1 : !cir.catch_token
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %ct2, %exn2 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %ct2 : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_multiple_handlers()
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[CATCH_INT:bb[0-9]+]],
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH_INT]](%[[INT_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[INT_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CATCH_ALL]](%[[ALL_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[ALL_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^{{.*}}
+// CHECK:         cir.return
+
+// Test nested try ops.
+// The inner try is flattened first. Its unwind handler's resume is then
+// chained to the outer try's catch dispatch when the outer try is flattened.
+cir.func @test_nested_try() {
+  cir.scope {
+    cir.try {
+      cir.try {
+        cir.call @mayThrow() : () -> ()
+        cir.yield
+      } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+        %ct, %exn = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+        cir.end_catch %ct : !cir.catch_token
+        cir.yield
+      } unwind (%eh_token : !cir.eh_token) {
+        cir.resume %eh_token : !cir.eh_token
+      }
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %ct, %exn = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %ct : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_nested_try()
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[OUTER_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[OUTER_BODY]]:
+// CHECK:         cir.br ^[[INNER_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_BODY]]:
+// CHECK:         cir.try_call @mayThrow() ^[[INNER_NORMAL:bb[0-9]+]], ^[[INNER_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_NORMAL]]:
+// CHECK:         cir.br ^[[INNER_CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_UNWIND]]:
+// CHECK:         %[[IEH:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]](%[[IEH]] : !cir.eh_token)
+//
+// CHECK:       ^[[INNER_DISPATCH]](%[[ID_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[ID_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[INNER_CATCH:bb[0-9]+]],
+// CHECK:           unwind : ^[[INNER_UW_HANDLER:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[INNER_CATCH]](%[[IC_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[IC_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[INNER_CONTINUE]]
+//
+// CHECK:       ^[[INNER_UW_HANDLER]](%[[IUW_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]](%[[IUW_ET]] : !cir.eh_token)
+//
+// CHECK:       ^[[INNER_CONTINUE]]:
+// CHECK:         cir.br ^[[OUTER_CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[OUTER_DISPATCH]](%[[OD_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[OD_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[OUTER_CATCH:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[OUTER_CATCH]](%[[OC_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[OC_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[OUTER_CONTINUE]]
+//
+// CHECK:       ^[[OUTER_CONTINUE]]:
+// CHECK:         cir.br ^{{.*}}
+// CHECK:         cir.return
+
+// Test a try op with handlers nested inside a cleanup scope and a cleanup
+// scope inside a catch handler. This is the form of the catch handler that will
+// actually be generated. The representations above are all simplifications.
+cir.func @test_try_with_handlers_in_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  cir.cleanup.scope {
+    cir.try {
+      cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %catch_token, %1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+      cir.cleanup.scope {
+        cir.yield
+      } cleanup all {
+        cir.end_catch %catch_token : !cir.catch_token
+        cir.yield
+      }
+      cir.yield
+    }
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_with_handlers_in_cleanup()
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.call @ctor(%[[C]])
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[TRY_CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH_ALL]](%[[ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CATCH_TOK:.*]], %{{.*}} = cir.begin_catch %[[ET]]
+// CHECK:         cir.br ^[[INNER_CLEANUP_BODY:bb[0-9]+]]
+// CHECK:       ^[[INNER_CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.end_catch %[[CATCH_TOK]]
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.br ^[[CATCH_EXIT:bb[0-9]+]]
+// CHECK:       ^[[CATCH_EXIT]]:
+// CHECK:         cir.br ^[[TRY_CONTINUE]]
+//
+// CHECK:       ^[[TRY_CONTINUE]]:
+// CHECK:         cir.br ^{{.*}}
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+//
+// CHECK:         cir.return
+
+// Test nested try ops with a cleanup scope in the outer try body.
+// The inner try's unwind handler must execute the cleanup (dtor) before
+// the exception reaches the outer try's catch dispatch.
+cir.func @test_nested_try_with_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.scope {
+    cir.try {
+      cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.cleanup.scope {
+        cir.try {
+          cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+          cir.yield
+        } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+          %ct, %exn = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+          cir.end_catch %ct : !cir.catch_token
+          cir.yield
+        } unwind (%eh_token : !cir.eh_token) {
+          cir.resume %eh_token : !cir.eh_token
+        }
+        cir.yield
+      } cleanup all {
+        cir.call @dtor(%0) nothrow : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.yield
+      }
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %ct, %exn = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %ct : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_nested_try_with_cleanup()
+// CHECK:         %[[C:.*]] = cir.alloca !rec_SomeClass
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+//
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @ctor(%[[C]]) ^[[AFTER_CTOR:bb[0-9]+]], ^[[CTOR_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[AFTER_CTOR]]:
+// CHECK:         cir.br ^[[CLEANUP_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[CLEANUP_BODY]]:
+// CHECK:         cir.br ^[[INNER_TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_TRY_BODY]]:
+// CHECK:         cir.try_call @doSomething(%[[C]]) ^[[INNER_NORMAL:bb[0-9]+]], ^[[INNER_UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_NORMAL]]:
+// CHECK:         cir.br ^[[INNER_CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[INNER_UNWIND]]:
+// CHECK:         %[[IEH:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[INNER_DISPATCH:bb[0-9]+]](%[[IEH]] : !cir.eh_token)
+//
+// CHECK:       ^[[INNER_DISPATCH]](%[[ID_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[ID_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[INNER_CATCH:bb[0-9]+]],
+// CHECK:           unwind : ^[[INNER_UW_HANDLER:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[INNER_CATCH]](%[[IC_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[IC_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[INNER_CONTINUE]]
+//
+// The inner unwind handler goes through the EH cleanup (dtor) before
+// reaching the outer try's catch dispatch.
+// CHECK:       ^[[INNER_UW_HANDLER]](%[[IUW_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.br ^[[EH_CLEANUP:bb[0-9]+]](%[[IUW_ET]] : !cir.eh_token)
+//
+// The continuation path after the inner try catches an exception branches to
+// the normal outer cleanup.
+// CHECK:       ^[[INNER_CONTINUE]]:
+// CHECK:         cir.br ^[[NORMAL_CLEANUP:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL_CLEANUP]]:
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.br ^[[CLEANUP_EXIT:bb[0-9]+]]
+//
+// CHECK:       ^[[CLEANUP_EXIT]]:
+// CHECK:         cir.br ^[[TRY_EXIT:bb[0-9]+]]
+//
+// EH cleanup: the cleanup (dtor) runs before unwinding to the outer dispatch.
+// CHECK:       ^[[EH_CLEANUP]](%[[EH_ET:.*]]: !cir.eh_token):
+// CHECK:         %[[CT:.*]] = cir.begin_cleanup %[[EH_ET]] : !cir.eh_token -> !cir.cleanup_token
+// CHECK:         cir.call @dtor(%[[C]]) nothrow
+// CHECK:         cir.end_cleanup %[[CT]] : !cir.cleanup_token
+// CHECK:         cir.br ^[[OUTER_DISPATCH:bb[0-9]+]](%[[EH_ET]] : !cir.eh_token)
+//
+// CHECK:       ^[[TRY_EXIT]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// Ctor's unwind goes directly to outer dispatch (cleanup scope not yet entered).
+// CHECK:       ^[[CTOR_UNWIND]]:
+// CHECK:         %[[CTOR_EH:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[OUTER_DISPATCH]](%[[CTOR_EH]] : !cir.eh_token)
+//
+// CHECK:       ^[[OUTER_DISPATCH]](%[[OD_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[OD_ET]] : !cir.eh_token [
+// CHECK:           catch_all : ^[[OUTER_CATCH:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[OUTER_CATCH]](%[[OC_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[OC_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+// Test try-catch with multiple typed handlers and a catch-all.
+cir.func @test_try_multiple_typed_and_catch_all() {
+  cir.scope {
+    cir.try {
+      cir.call @mayThrow() : () -> ()
+      cir.yield
+    } catch [type #cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %ct1, %exn1 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_exception>>)
+      cir.end_catch %ct1 : !cir.catch_token
+      cir.yield
+    } catch [type #cir.global_view<@_ZTIi> : !cir.ptr<!u8i>] (%eh_token : !cir.eh_token) {
+      %ct2, %exn2 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+      cir.end_catch %ct2 : !cir.catch_token
+      cir.yield
+    } catch all (%eh_token : !cir.eh_token) {
+      %ct3, %exn3 = cir.begin_catch %eh_token : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.void>)
+      cir.end_catch %ct3 : !cir.catch_token
+      cir.yield
+    }
+  }
+  cir.return
+}
+
+// CHECK-LABEL: cir.func @test_try_multiple_typed_and_catch_all()
+// CHECK:         cir.br ^[[SCOPE:bb[0-9]+]]
+//
+// CHECK:       ^[[SCOPE]]:
+// CHECK:         cir.br ^[[TRY_BODY:bb[0-9]+]]
+//
+// CHECK:       ^[[TRY_BODY]]:
+// CHECK:         cir.try_call @mayThrow() ^[[NORMAL:bb[0-9]+]], ^[[UNWIND:bb[0-9]+]]
+//
+// CHECK:       ^[[NORMAL]]:
+// CHECK:         cir.br ^[[CONTINUE:bb[0-9]+]]
+//
+// CHECK:       ^[[UNWIND]]:
+// CHECK:         %[[EH_TOK:.*]] = cir.eh.initiate : !cir.eh_token
+// CHECK:         cir.br ^[[DISPATCH:bb[0-9]+]](%[[EH_TOK]] : !cir.eh_token)
+//
+// CHECK:       ^[[DISPATCH]](%[[DISP_ET:.*]]: !cir.eh_token):
+// CHECK:         cir.eh.dispatch %[[DISP_ET]] : !cir.eh_token [
+// CHECK:           catch(#cir.global_view<@_ZTISt9exception> : !cir.ptr<!u8i>) : ^[[CATCH_EXN:bb[0-9]+]],
+// CHECK:           catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^[[CATCH_INT:bb[0-9]+]],
+// CHECK:           catch_all : ^[[CATCH_ALL:bb[0-9]+]]
+// CHECK:         ]
+//
+// CHECK:       ^[[CATCH_EXN]](%[[EXN_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[EXN_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!cir.ptr<!rec_std3A3Aexception>>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CATCH_INT]](%[[INT_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[INT_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!s32i>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CATCH_ALL]](%[[ALL_ET:.*]]: !cir.eh_token):
+// CHECK:         %{{.*}}, %{{.*}} = cir.begin_catch %[[ALL_ET]] : !cir.eh_token -> (!cir.catch_token, !cir.ptr<!void>)
+// CHECK:         cir.end_catch
+// CHECK:         cir.br ^[[CONTINUE]]
+//
+// CHECK:       ^[[CONTINUE]]:
+// CHECK:         cir.br ^[[RETURN:bb[0-9]+]]
+// CHECK:       ^[[RETURN]]:
+// CHECK:         cir.return
+
+cir.func private @mayThrow()
+cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>) attributes {nothrow}
+cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
+cir.global "private" constant external @_ZTISt9exception : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
