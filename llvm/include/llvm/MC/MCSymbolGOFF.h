@@ -30,8 +30,9 @@ class MCSymbolGOFF : public MCSymbol {
   GOFF::ESDLinkageType Linkage = GOFF::ESDLinkageType::ESD_LT_XPLink;
 
   enum SymbolFlags : uint16_t {
-    SF_Hidden = 0x01, // Symbol is hidden, aka not exported.
-    SF_Weak = 0x02,   // Symbol is weak.
+    SF_Hidden = 0x01,  // Symbol is hidden, aka not exported.
+    SF_Weak = 0x02,    // Symbol is weak.
+    SF_Indirect = 0x4, // Symbol referenced indirectly.
   };
 
 public:
@@ -52,6 +53,11 @@ public:
   }
   bool isHidden() const { return getFlags() & SF_Hidden; }
   bool isExported() const { return !isHidden(); }
+
+  void setIndirect(bool Value = true) {
+    modifyFlags(Value ? SF_Indirect : 0, SF_Indirect);
+  }
+  bool isIndirect() const { return getFlags() & SF_Indirect; }
 
   void setWeak(bool Value = true) { modifyFlags(Value ? SF_Weak : 0, SF_Weak); }
   bool isWeak() const { return getFlags() & SF_Weak; }

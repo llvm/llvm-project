@@ -780,11 +780,14 @@ static ParseResult parseVarPtrType(mlir::OpAsmParser &parser,
       return failure();
   } else {
     // Set `varType` from the element type of the type of `varPtr`.
-    if (mlir::isa<mlir::acc::PointerLikeType>(varPtrType))
-      varTypeAttr = mlir::TypeAttr::get(
-          mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType());
-    else
+    if (auto ptrTy = dyn_cast<acc::PointerLikeType>(varPtrType)) {
+      Type elementType = ptrTy.getElementType();
+      // Opaque pointers (e.g. !llvm.ptr) have no element type; fall back to
+      // using varPtrType itself so that the attribute is always valid.
+      varTypeAttr = mlir::TypeAttr::get(elementType ? elementType : varPtrType);
+    } else {
       varTypeAttr = mlir::TypeAttr::get(varPtrType);
+    }
   }
 
   return success();
@@ -802,6 +805,10 @@ static void printVarPtrType(mlir::OpAsmPrinter &p, mlir::Operation *op,
       mlir::isa<mlir::acc::PointerLikeType>(varPtrType)
           ? mlir::cast<mlir::acc::PointerLikeType>(varPtrType).getElementType()
           : varPtrType;
+  // Opaque pointers (e.g. !llvm.ptr) have no element type; use varPtrType as
+  // the baseline so that the inferred varType is not redundantly printed.
+  if (!typeToCheckAgainst)
+    typeToCheckAgainst = varPtrType;
   if (typeToCheckAgainst != varType) {
     p << " varType(";
     p.printType(varType);
