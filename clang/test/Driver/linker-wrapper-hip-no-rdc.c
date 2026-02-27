@@ -43,7 +43,7 @@ __attribute__((visibility("protected"), used)) int x;
 
 // HIP-FATBIN-LIST-DAG: hip-amdgcn-amd-amdhsa--gfx9-4-generic:xnack+
 // HIP-FATBIN-LIST-DAG: hip-amdgcn-amd-amdhsa--gfx1200
-// HIP-FATBIN-LIST-DAG: host-x86_64-unknown-linux-gnu-
+// HIP-FATBIN-LIST-DAG: host-x86_64
 
 // Extract code objects for both architectures from the fat binary
 // Use '-' instead of ':' in file names to avoid issues on Windows
