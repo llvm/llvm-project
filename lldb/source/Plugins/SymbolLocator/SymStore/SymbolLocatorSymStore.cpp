@@ -131,14 +131,6 @@ std::optional<FileSpec> SymbolLocatorSymStore::LocateExecutableSymbolFile(
     return {};
   }
 
-  // FIXME: We need this for the test executable, because it is loaded as DWARF
-  if (!llvm::StringRef(pdb_name).ends_with(".pdb")) {
-    auto last_dot = pdb_name.find_last_of('.');
-    if (last_dot != llvm::StringRef::npos) 
-      pdb_name = pdb_name.substr(0, last_dot);
-    pdb_name += ".pdb";
-  }
-
   std::string key = formatSymStoreKey(uuid);
   Args sym_store_urls = GetGlobalPluginProperties().GetURLs();
   for (const Args::ArgEntry &url : sym_store_urls) {

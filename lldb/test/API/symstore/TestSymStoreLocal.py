@@ -1,0 +1,113 @@
+import glob
+import os
+import shutil
+import tempfile
+
+import lldb
+from lldbsuite.test.decorators import *
+from lldbsuite.test.lldbtest import *
+
+"""
+Test debug symbol acquisition from a local SymStore repository.
+"""
+
+
+class MockedSymStore:
+    """
+    Populate a file structure equivalent to SymStore.exe in a temporary directory.
+    This can work cross-platform and for arbitrary debug info formats. Right now,
+    we support only PDB.
+    """
+
+    def __init__(self, test, exe, pdb):
+        self._test = test
+        self._exe = exe
+        self._pdb = pdb
+        self._tmp = None
+
+    def get_key_pdb(self, exe):
+        """
+        Module UUID: 12345678-1234-5678-9ABC-DEF012345678-00000001
+        To SymStore key: 12345678123456789ABCDEF0123456781
+        """
+        try:
+            spec = lldb.SBModuleSpec()
+            spec.SetFileSpec(lldb.SBFileSpec(self._test.getBuildArtifact(exe)))
+            module = lldb.SBModule(spec)
+            raw = module.GetUUIDString().replace("-", "").upper()
+            if len(raw) != 40:
+                return None
+            guid_hex = raw[:32]
+            age = int(raw[32:], 16)
+            return guid_hex + str(age)
+        except Exception:
+            return None
+
+    def __enter__(self):
+        """
+        Mock local symstore directory tree, move PDB there and report path.
+        """
+        key = None
+        if self._test.getDebugInfo() == "pdb":
+            key = self.get_key_pdb(self._exe)
+        self._test.assertIsNotNone(key)
+        self._tmp = tempfile.mkdtemp()
+        pdb_dir = os.path.join(self._tmp, self._pdb, key)
+        os.makedirs(pdb_dir)
+        shutil.move(
+            self._test.getBuildArtifact(self._pdb),
+            os.path.join(pdb_dir, self._pdb),
+        )
+        return self._tmp.replace("\\", "/")
+
+    def __exit__(self, *exc_info):
+        """
+        Clean up and delete original exe so next make won't skip link command.
+        """
+        shutil.rmtree(self._tmp)
+        self._test.runCmd("settings clear plugin.symbol-locator.symstore")
+        os.remove(self._test.getBuildArtifact(self._exe))
+        return False  # do not suppress exceptions
+
+
+class SymStoreLocalTests(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
+    def build_inferior(self):
+        self.build()
+        exe_file = "a.out"
+        if self.getDebugInfo() == "pdb":
+            sym_file = "a.pdb"
+        else:
+            self.skipTest("Non-PDB debug info variants not yet supported")
+        self.assertTrue(os.path.isfile(self.getBuildArtifact(exe_file)))
+        self.assertTrue(os.path.isfile(self.getBuildArtifact(sym_file)))
+        return exe_file, sym_file
+
+    def try_breakpoint(self, exe, should_have_loc):
+        self.runCmd("settings set symbols.enable-external-lookup true")
+        target = self.dbg.CreateTarget(self.getBuildArtifact(exe))
+        self.assertTrue(target and target.IsValid(), "Target is valid")
+        bp = target.BreakpointCreateByName("func")
+        self.assertTrue(bp and bp.IsValid(), "Breakpoint is valid")
+        self.assertEqual(bp.GetNumLocations(), 1 if should_have_loc else 0)
+        self.dbg.DeleteTarget(target)
+
+    def test_no_symstore(self):
+        """
+        Check that breakpoint doesn't hit without SymStore.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym):
+            self.try_breakpoint(exe, should_have_loc=False)
+
+    def test_basic(self):
+        """
+        Check that breakpoint hits with local SymStore.
+        """
+        exe, sym = self.build_inferior()
+        with MockedSymStore(self, exe, sym) as symstore_dir:
+            self.runCmd(
+                "settings set plugin.symbol-locator.symstore.urls %s" % symstore_dir
+            )
+            self.try_breakpoint(exe, should_have_loc=True)
