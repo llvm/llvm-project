@@ -67,6 +67,30 @@ static void writeSourceFileRef(const ClangDocContext &CDCtx, const Location &L,
   OS << "\n\n";
 }
 
+static std::string genRawText(const std::vector<CommentInfo> &Comments) {
+  std::string Result;
+  llvm::raw_string_ostream OS(Result);
+  std::queue<const CommentInfo *> Q;
+  for (const auto &CI : Comments)
+    Q.push(&CI);
+  const CommentInfo *Comment;
+  bool First = true;
+  while (Q.size()) {
+    Comment = Q.front();
+    Q.pop();
+    if (!Comment->Text.empty())
+    {
+      if (!First)
+        OS << "<br>";
+      OS << Comment->Text;
+      First = false;
+    }
+    for (const auto &CI : Comment->Children)
+      Q.push(CI.get());
+  }
+  return Result;
+}
+
 static void maybeWriteSourceFileRef(llvm::raw_ostream &OS,
                                     const ClangDocContext &CDCtx,
                                     const std::optional<Location> &DefLoc) {
@@ -157,16 +181,41 @@ static void writeNameLink(const StringRef &CurrentPath, const Reference &R,
 static void genMarkdown(const ClangDocContext &CDCtx, const EnumInfo &I,
                         llvm::raw_ostream &OS) {
   if (I.Scoped)
-    writeLine("| enum class " + I.Name + " |", OS);
-  else
-    writeLine("| enum " + I.Name + " |", OS);
-  writeLine("--", OS);
+    OS << "class ";
+  OS << (I.Name.empty() ? "(unnamed)" : StringRef(I.Name)) << " ";
+  if (I.BaseType && !I.BaseType->Type.QualName.empty()) {
+    OS << ": " << I.BaseType->Type.QualName << " ";
+  }
+  OS << "|\n\n";
 
   std::string Buffer;
   llvm::raw_string_ostream Members(Buffer);
-  if (!I.Members.empty())
-    for (const auto &N : I.Members)
-      Members << "| " << N.Name << " |\n";
+  Members << "| Name | Value |";
+  if (!I.Members.empty()) {
+    bool HasComments = false;
+    for (const auto &Member : I.Members) {
+      if (!Member.Description.empty()) {
+        HasComments = true;
+        Members << " Comments |";
+        break;
+      }
+    }
+    Members << "\n";
+    Members << "|:-:|:-:|";
+    if (HasComments)
+      Members << ":-:|";
+    Members << "\n";
+    for (const auto &N : I.Members) {
+      Members << "| " << N.Name << " ";
+      if (!N.Value.empty())
+        Members << "| " << N.Value << " ";
+      if (HasComments) {
+        std::string RawComment = StringRef(genRawText(N.Description)).trim().str();
+        Members << "| " << (RawComment.empty() ? "--" : RawComment) << " ";
+      }
+      Members << "|\n";
+    }
+  }
   writeLine(Members.str(), OS);
 
   maybeWriteSourceFileRef(OS, CDCtx, I.DefLoc);
