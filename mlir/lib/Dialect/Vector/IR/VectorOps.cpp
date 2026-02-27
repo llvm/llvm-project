@@ -6674,6 +6674,13 @@ public:
 ///    %2 = vector.shape_cast %1 : vector<3xf32> to vector<1x3xf32>
 /// AFTER:
 ///    %2 = vector.from_elements %c1, %c2, %c3 : vector<1x3xf32>
+///
+/// Note: this transformation is implemented as an OpRewritePattern, not as a
+/// fold, because we have to create new op FromElementsOp with updated result
+/// type. This cannot be done with a fold, because fold cannot create new ops
+/// and the existing FromElementsOp result type differs from the ShapeCastOp
+/// result type. Mutating the FromElementsOp (not root op) would violate the
+/// fold contract and break other users.
 class FoldShapeCastOfFromElements final : public OpRewritePattern<ShapeCastOp> {
 public:
   using Base::Base;
