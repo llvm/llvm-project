@@ -3069,10 +3069,6 @@ LogicalResult NVVM::AddFOp::verify() {
                               ? cast<VectorType>(opType).getElementType()
                               : opType;
 
-  if (satMode == NVVM::SaturationMode::SATFINITE)
-    return emitOpError("SATFINITE saturation mode is not supported for "
-                       "floating point addition operation");
-
   if (opBaseType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
     return emitOpError("FTZ and saturation are not supported for additions "
                        "involving f64 type");
@@ -3189,13 +3185,11 @@ struct ConvertFsubToFnegFadd : public OpRewritePattern<SubFOp> {
   LogicalResult matchAndRewrite(SubFOp op,
                                 PatternRewriter &rewriter) const override {
     Location loc = op.getLoc();
-
     Value negRhs =
         LLVM::FNegOp::create(rewriter, loc, op.getRhs().getType(), op.getRhs());
 
     rewriter.replaceOpWithNewOp<AddFOp>(op, op.getType(), op.getLhs(), negRhs,
                                         op.getRnd(), op.getSat(), op.getFtz());
-
     return success();
   }
 };

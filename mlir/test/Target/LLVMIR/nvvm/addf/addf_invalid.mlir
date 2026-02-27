@@ -3,7 +3,7 @@
 // -----
 
 llvm.func @addf_invalid_sat_mode(%a : f16, %b : f16) -> f16 {
-  // expected-error@+1 {{SATFINITE saturation mode is not supported for floating point addition operation}}
+  // expected-error@+1 {{ attribute 'sat' failed to satisfy constraint: Describes the saturation mode whose value is one of {none, sat}}}
   %f1 = nvvm.addf %a, %b {sat = #nvvm.sat_mode<satfinite>} : f16
   llvm.return %f1 : f16
 }

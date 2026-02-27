@@ -6278,13 +6278,18 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
   }];
 }
 
-def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
+def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64,
+                      VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
+
+def SaturationModeSatOrNone : 
+  ConfinedAttr<SaturationModeAttr, [EnumAttrIsOneOf<SaturationModeAttr, 
+                [SaturationModeNone, SaturationModeSat]>]>;
 
 class NVVM_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
     NVVM_Op<mnemonic, traits # [Pure, SameOperandsAndResultType]>,
     Arguments<(ins SIMTFloatType:$lhs, SIMTFloatType:$rhs,
       DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
-      DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+      DefaultValuedAttr<SaturationModeSatOrNone, "SaturationMode::NONE">:$sat,
       DefaultValuedAttr<BoolAttr, "false">:$ftz)>,
     Results<(outs SIMTFloatType:$res)> {
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($res)";
@@ -6292,7 +6297,7 @@ class NVVM_FloatBinaryOp<string mnemonic, list<Trait> traits = []> :
 
 def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
   let summary = [{
-    Performs floating point addition operation
+    Performs floating point addition of the given arguments `lhs` and `rhs`
   }];
   let description = [{
     The `nvvm.addf` operation performs floating point addition of two floating 
@@ -6318,8 +6323,7 @@ def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
 
 def NVVM_SubFOp : NVVM_FloatBinaryOp<"subf"> {
   let summary = [{
-    Performs floating point subtraction operation with support for mixed 
-    precision operands
+    Performs floating point subtraction of the given arguments `lhs` and `rhs`
   }];
   let description = [{
     The `nvvm.subf` operation performs floating point subtraction of two 

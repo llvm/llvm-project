@@ -458,6 +458,8 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   llvm::Value *argRHS = mt.lookupValue(thisOp.getRhs());
 
   mlir::Type opType = thisOp.getLhs().getType();
+  llvm::Type *opTypeLLVM = mt.convertType(opType);
+  bool isVectorAdd = opTypeLLVM->isVectorTy();
 
   // FIXME: Add intrinsics for add.rn.ftz.f16x2 and add.rn.ftz.f16 here when
   // they are available.
@@ -496,22 +498,39 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
       llvm::Intrinsic::nvvm_add_rn_d, llvm::Intrinsic::nvvm_add_rm_d,
       llvm::Intrinsic::nvvm_add_rp_d, llvm::Intrinsic::nvvm_add_rz_d};
 
-  auto addIntrinsic = [&](llvm::Intrinsic::ID IID, llvm::Value *LHS = nullptr,
-                          llvm::Value *RHS = nullptr) -> llvm::CallInst * {
-    llvm::SmallVector<llvm::Value *, 2> callArgs;
-    callArgs.push_back(LHS ? LHS : argLHS);
-    callArgs.push_back(RHS ? RHS : argRHS);
-    return createIntrinsicCall(builder, IID, callArgs);
+  auto addIntrinsic = [&](llvm::Intrinsic::ID IID) -> llvm::Value * {
+    auto createAddIntrinsicCall = [&](llvm::Intrinsic::ID IID, llvm::Value *LHS,
+                                      llvm::Value *RHS) -> llvm::CallInst * {
+      llvm::SmallVector<llvm::Value *, 2> callArgs;
+      callArgs.push_back(LHS);
+      callArgs.push_back(RHS);
+      return createIntrinsicCall(builder, IID, callArgs);
+    };
+
+    if (isVectorAdd && (opTypeLLVM->getScalarType()->isFloatTy() ||
+                        opTypeLLVM->getScalarType()->isDoubleTy())) {
+      llvm::Value *result = llvm::PoisonValue::get(
+          llvm::FixedVectorType::get(opTypeLLVM->getScalarType(), 2));
+      for (int64_t i = 0; i < 2; ++i) {
+        llvm::Value *lhsElemi =
+            builder.CreateExtractElement(argLHS, builder.getInt32(i));
+        llvm::Value *rhsElemi =
+            builder.CreateExtractElement(argRHS, builder.getInt32(i));
+        llvm::Value *sum = createAddIntrinsicCall(IID, lhsElemi, rhsElemi);
+        result = builder.CreateInsertElement(result, sum, builder.getInt32(i));
+      };
+      return result;
+    }
+
+    return createAddIntrinsicCall(IID, argLHS, argRHS);
   };
 
   // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
   // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
   // intrinsics are available.
-  bool isVectorF16Add = isa<VectorType>(opType) &&
-                        cast<VectorType>(opType).getElementType().isF16();
-  if (opType.isF16() || isVectorF16Add) {
+  if (opTypeLLVM->getScalarType()->isHalfTy()) {
     if (isSat) {
-      unsigned index = (isVectorF16Add << 1) | isFTZ;
+      unsigned index = (isVectorAdd << 1) | isFTZ;
       mt.mapValue(thisOp.getRes(), addIntrinsic(f16IDs[index]));
       return;
     } else {
@@ -521,58 +540,23 @@ void NVVM::AddFOp::lowerAddFToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
   }
 
   // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
-  bool isVectorBF16Add = isa<VectorType>(opType) &&
-                         cast<VectorType>(opType).getElementType().isBF16();
-  if (opType.isBF16() || isVectorBF16Add) {
+  if (opTypeLLVM->getScalarType()->isBFloatTy()) {
     mt.mapValue(thisOp.getRes(), builder.CreateFAdd(argLHS, argRHS));
     return;
   }
 
-  // Helper function for adding vectors
-  auto addVector = [&](llvm::Type *targetType, llvm::Intrinsic::ID intrinsicID,
-                       llvm::Value *result) -> llvm::Value * {
-    for (int64_t i = 0; i < 2; ++i) {
-      llvm::Value *lhsElemi =
-          builder.CreateExtractElement(argLHS, builder.getInt32(i));
-      llvm::Value *rhsElemi =
-          builder.CreateExtractElement(argRHS, builder.getInt32(i));
-      llvm::Value *sum = addIntrinsic(intrinsicID, lhsElemi, rhsElemi);
-      result = builder.CreateInsertElement(result, sum, builder.getInt32(i));
-    };
-    return result;
-  };
-
   // f64 + f64 -> f64 / vector<2xf64> + vector<2xf64> -> vector<2xf64>
-  bool isVectorF64Add = isa<VectorType>(opType) &&
-                        cast<VectorType>(opType).getElementType().isF64();
-  if (opType.isF64()) {
+  if (opTypeLLVM->getScalarType()->isDoubleTy()) {
     unsigned index = static_cast<unsigned>(rndMode);
-    mt.mapValue(thisOp.getRes(), addIntrinsic(f64IDs[index], argLHS, argRHS));
-    return;
-  } else if (isVectorF64Add) {
-    llvm::Value *result = llvm::PoisonValue::get(
-        llvm::FixedVectorType::get(builder.getDoubleTy(), 2));
-    unsigned index = static_cast<unsigned>(rndMode);
-    result = addVector(builder.getDoubleTy(), f64IDs[index], result);
-    mt.mapValue(thisOp.getRes(), result);
+    mt.mapValue(thisOp.getRes(), addIntrinsic(f64IDs[index]));
     return;
   }
 
   // f32 + f32 -> f32 / vector<2xf32> + vector<2xf32> -> vector<2xf32>
-  bool isVectorF32Add = isa<VectorType>(opType) &&
-                        cast<VectorType>(opType).getElementType().isF32();
-  if (opType.isF32()) {
+  if (opTypeLLVM->getScalarType()->isFloatTy()) {
     unsigned index =
         ((isFTZ << 1) | isSat) * 5 + static_cast<unsigned>(rndMode);
-    mt.mapValue(thisOp.getRes(), addIntrinsic(f32IDs[index], argLHS, argRHS));
-    return;
-  } else if (isVectorF32Add) {
-    llvm::Value *result = llvm::PoisonValue::get(
-        llvm::FixedVectorType::get(builder.getFloatTy(), 2));
-    unsigned index =
-        ((isFTZ << 1) | isSat) * 5 + static_cast<unsigned>(rndMode);
-    result = addVector(builder.getFloatTy(), f32IDs[index], result);
-    mt.mapValue(thisOp.getRes(), result);
+    mt.mapValue(thisOp.getRes(), addIntrinsic(f32IDs[index]));
     return;
   }
 }
