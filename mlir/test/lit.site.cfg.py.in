@@ -44,6 +44,7 @@ config.enable_levelzero_runner = @MLIR_ENABLE_LEVELZERO_RUNNER@
 config.enable_spirv_cpu_runner = @MLIR_ENABLE_SPIRV_CPU_RUNNER@
 config.enable_vulkan_runner = @MLIR_ENABLE_VULKAN_RUNNER@
 config.enable_bindings_python = @MLIR_ENABLE_BINDINGS_PYTHON@
+config.enable_python_stable_abi = @MLIR_ENABLE_PYTHON_STABLE_ABI@
 config.intel_sde_executable = "@INTEL_SDE_EXECUTABLE@"
 config.mlir_run_amx_tests = @MLIR_RUN_AMX_TESTS@
 config.mlir_run_arm_sve_tests = @MLIR_RUN_ARM_SVE_TESTS@

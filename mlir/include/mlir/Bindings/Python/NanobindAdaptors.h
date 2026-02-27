@@ -186,10 +186,11 @@ struct type_caster<MlirContext> {
     // If there is no context, including thread-bound, emit a warning (since
     // this function is not allowed to throw) and fail to cast.
     if (src.is_none()) {
-      PyErr_Warn(
+      PyErr_WarnEx(
           PyExc_RuntimeWarning,
           "Passing None as MLIR Context is only allowed inside "
-          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.");
+          "the " MAKE_MLIR_PYTHON_QUALNAME("ir.Context") " context manager.",
+          /*stacklevel=*/1);
       return false;
     }
     if (std::optional<nanobind::object> capsule = mlirApiObjectToCapsule(src)) {
@@ -495,8 +496,8 @@ public:
         std::forward<Func>(f),
         nanobind::name(name), // nanobind::scope(thisClass),
         extra...);
-    thisClass.attr(name) =
-        nanobind::borrow<nanobind::object>(PyClassMethod_New(cf.ptr()));
+    nanobind::object builtins = nanobind::module_::import_("builtins");
+    thisClass.attr(name) = builtins.attr("classmethod")(cf);
     return *this;
   }
 

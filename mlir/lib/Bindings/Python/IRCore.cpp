@@ -803,7 +803,7 @@ nb::tuple PyDiagnostic::getNotes() {
   for (intptr_t i = 0; i < numNotes; ++i) {
     MlirDiagnostic noteDiag = mlirDiagnosticGetNote(diagnostic, i);
     nb::object diagnostic = nb::cast(PyDiagnostic(noteDiag));
-    PyTuple_SET_ITEM(notes.ptr(), i, diagnostic.release().ptr());
+    PyTuple_SetItem(notes.ptr(), i, diagnostic.release().ptr());
   }
   materializedNotes = std::move(notes);
 
@@ -2672,47 +2672,6 @@ void PyDynamicOpTraits::NoTerminator::bind(nb::module_ &m) {
 } // namespace mlir
 
 namespace {
-// see
-// https://raw.githubusercontent.com/python/pythoncapi_compat/master/pythoncapi_compat.h
-
-#ifndef _Py_CAST
-#define _Py_CAST(type, expr) ((type)(expr))
-#endif
-
-// Static inline functions should use _Py_NULL rather than using directly NULL
-// to prevent C++ compiler warnings. On C23 and newer and on C++11 and newer,
-// _Py_NULL is defined as nullptr.
-#ifndef _Py_NULL
-#if (defined(__STDC_VERSION__) && __STDC_VERSION__ > 201710L) ||               \
-    (defined(__cplusplus) && __cplusplus >= 201103)
-#define _Py_NULL nullptr
-#else
-#define _Py_NULL NULL
-#endif
-#endif
-
-// Python 3.10.0a3
-#if PY_VERSION_HEX < 0x030A00A3
-
-// bpo-42262 added Py_XNewRef()
-#if !defined(Py_XNewRef)
-[[maybe_unused]] PyObject *_Py_XNewRef(PyObject *obj) {
-  Py_XINCREF(obj);
-  return obj;
-}
-#define Py_XNewRef(obj) _Py_XNewRef(_PyObject_CAST(obj))
-#endif
-
-// bpo-42262 added Py_NewRef()
-#if !defined(Py_NewRef)
-[[maybe_unused]] PyObject *_Py_NewRef(PyObject *obj) {
-  Py_INCREF(obj);
-  return obj;
-}
-#define Py_NewRef(obj) _Py_NewRef(_PyObject_CAST(obj))
-#endif
-
-#endif // Python 3.10.0a3
 
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
@@ -2725,6 +2684,43 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   size_t count = 0;
 
   nb::gil_scoped_acquire acquire;
+
+#if defined(Py_LIMITED_API)
+  // Under the limited API (targeting Python 3.12+), most frame introspection
+  // C APIs (PyCode_Addr2Location, PyFrame_GetLasti, etc.) are not available.
+  // Use Python-level sys._getframe() and attribute access instead. Note:
+  // co_qualname (used below) requires Python 3.11+.
+  nb::object sys_mod = nb::module_::import_("sys");
+  nb::object frameObj;
+  try {
+    // _getframe(0) from C++ returns the topmost Python frame, equivalent
+    // to PyThreadState_GetFrame() in the non-limited-API path.
+    frameObj = sys_mod.attr("_getframe")(0);
+  } catch (nb::python_error &) {
+    return mlirLocationUnknownGet(ctx);
+  }
+
+  while (!frameObj.is_none() && frameObj.ptr() != nullptr &&
+         count < framesLimit) {
+    nb::object codeObj = frameObj.attr("f_code");
+    auto fileNameStr = nb::cast<std::string>(codeObj.attr("co_filename"));
+    std::string_view fileName(fileNameStr);
+    if (PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName)) {
+      std::string name = nb::cast<std::string>(codeObj.attr("co_qualname"));
+      std::string_view funcName(name);
+      int startLine = nb::cast<int>(frameObj.attr("f_lineno"));
+      MlirLocation loc = mlirLocationFileLineColGet(
+          ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
+          0);
+      frames[count] = mlirLocationNameGet(
+          ctx, mlirStringRefCreate(funcName.data(), funcName.size()), loc);
+      ++count;
+    }
+    frameObj = frameObj.attr("f_back");
+    if (frameObj.is_none())
+      break;
+  }
+#else
   PyThreadState *tstate = PyThreadState_GET();
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
@@ -2736,24 +2732,30 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   for (; pyFrame != nullptr && count < framesLimit;
        next = PyFrame_GetBack(pyFrame), Py_XDECREF(pyFrame), pyFrame = next) {
     PyCodeObject *code = PyFrame_GetCode(pyFrame);
-    auto fileNameStr =
-        nb::cast<std::string>(nb::borrow<nb::str>(code->co_filename));
+    // Use attribute access instead of direct struct member access for
+    // forward compatibility with the limited (stable) API where
+    // PyCodeObject is opaque.
+    nb::object fileNameObj =
+        nb::steal(PyObject_GetAttrString(reinterpret_cast<PyObject *>(code), "co_filename"));
+    auto fileNameStr = nb::cast<std::string>(fileNameObj);
     std::string_view fileName(fileNameStr);
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
 
     // co_qualname and PyCode_Addr2Location added in py3.11
 #if PY_VERSION_HEX < 0x030B00F0
-    std::string name =
-        nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
+    nb::object nameObj =
+        nb::steal(PyObject_GetAttrString(reinterpret_cast<PyObject *>(code), "co_name"));
+    std::string name = nb::cast<std::string>(nameObj);
     std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
     MlirLocation loc = mlirLocationFileLineColGet(
         ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
         0);
 #else
-    std::string name =
-        nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
+    nb::object nameObj =
+        nb::steal(PyObject_GetAttrString(reinterpret_cast<PyObject *>(code), "co_qualname"));
+    std::string name = nb::cast<std::string>(nameObj);
     std::string_view funcName(name);
     int startLine, startCol, endLine, endCol;
     int lasti = PyFrame_GetLasti(pyFrame);
@@ -2773,6 +2775,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   // When the loop breaks (after the last iter), current frame (if non-null)
   // is leaked without this.
   Py_XDECREF(pyFrame);
+#endif
 
   if (count == 0)
     return mlirLocationUnknownGet(ctx);

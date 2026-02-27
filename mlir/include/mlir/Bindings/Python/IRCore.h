@@ -4,7 +4,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_IRCORE_H
@@ -1877,7 +1876,8 @@ MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
 template <class Func, typename... Args>
 inline nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
-  return nanobind::borrow<nanobind::object>((PyClassMethod_New(cf.ptr())));
+  nanobind::object builtins = nanobind::module_::import_("builtins");
+  return builtins.attr("classmethod")(cf);
 }
 
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
