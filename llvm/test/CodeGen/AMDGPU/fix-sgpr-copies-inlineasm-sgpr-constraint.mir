@@ -1,0 +1,91 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s
+
+# Verify behavior of VGPR-to-SGPR copies feeding inline asm operands with
+# SGPR constraints.
+
+# FIXME: The V2S copy heuristic converts these copies to VALU because INLINEASM
+# is not recognized as SALU, leaving SChain empty. The SGPR_128 operand ends up
+# in a VGPR (vreg_128_align2) and the SGPR_64 operand in a VGPR
+# (vreg_64_align2), producing invalid assembly. The correct behavior is to
+# insert V_READFIRSTLANE_B32 for each 32-bit sub-register.
+
+# Direct case: 128-bit V2S copy feeds SGPR_128 inline asm operand.
+# The copy is incorrectly converted to VALU, passing vreg_128_align2 directly.
+
+# CHECK-LABEL: name: inlineasm_sgpr128_direct
+# CHECK-NOT: V_READFIRSTLANE_B32
+# CHECK: %[[RSRC:[0-9]+]]:vreg_128_align2 = REG_SEQUENCE
+# CHECK: INLINEASM &"buffer_store_dwordx2 $0, $1, $2, 0 offen offset:$3"
+# CHECK-SAME: reguse:SGPR_128
+# CHECK-SAME: %[[RSRC]]
+---
+name:            inlineasm_sgpr128_direct
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+  - { id: 3, class: vgpr_32 }
+  - { id: 4, class: vgpr_32 }
+  - { id: 5, class: vgpr_32 }
+  - { id: 6, class: vgpr_32 }
+  - { id: 7, class: vreg_128_align2 }
+  - { id: 8, class: vreg_64_align2 }
+  - { id: 9, class: vreg_64_align2 }
+  - { id: 10, class: vgpr_32 }
+  - { id: 11, class: sgpr_128 }
+  - { id: 12, class: vgpr_32 }
+machineFunctionInfo:
+  isEntryFunction: false
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = COPY $vgpr2
+    %3:vgpr_32 = COPY $vgpr3
+    %4:vgpr_32 = COPY $vgpr4
+    %5:vgpr_32 = COPY $vgpr5
+    %6:vgpr_32 = COPY $vgpr6
+    %7:vreg_128_align2 = REG_SEQUENCE %3, %subreg.sub0, %4, %subreg.sub1, %5, %subreg.sub2, %6, %subreg.sub3
+    %8:vreg_64_align2 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    %9:vreg_64_align2 = COPY %8
+    %10:vgpr_32 = COPY %2
+    %11:sgpr_128 = COPY %7
+    %12:vgpr_32 = V_MOV_B32_e32 1, implicit $exec
+    INLINEASM &"buffer_store_dwordx2 $0, $1, $2, 0 offen offset:$3", 57 /* sideeffect mayload maystore isconvergent attdialect */, 3080201 /* reguse:VReg_64_Align2 */, %9, 1245193 /* reguse:VGPR_32 */, %10, 9764873 /* reguse:SGPR_128 */, %11, 1245193 /* reguse:VGPR_32 */, %12
+    SI_RETURN
+...
+
+# Indirect case: 32-bit VGPR copies -> REG_SEQUENCE sreg_64 -> COPY sgpr_64 ->
+# inline asm SGPR_64 operand. The copies are incorrectly converted to VALU,
+# leaving a vreg_64_align2 for the SGPR_64 operand.
+
+# CHECK-LABEL: name: inlineasm_sgpr64_indirect
+# CHECK-NOT: V_READFIRSTLANE_B32
+# CHECK: %[[RS:[0-9]+]]:vreg_64_align2 = REG_SEQUENCE
+# CHECK: INLINEASM &"s_mov_b64 exec, $0"
+# CHECK-SAME: reguse:SGPR_64
+# CHECK-SAME: %[[RS]]
+---
+name:            inlineasm_sgpr64_indirect
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: sreg_64 }
+  - { id: 3, class: sgpr_64 }
+machineFunctionInfo:
+  isEntryFunction: false
+body:             |
+  bb.0.entry:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:sreg_64 = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    %3:sgpr_64 = COPY %2
+    INLINEASM &"s_mov_b64 exec, $0", 1 /* sideeffect attdialect */, 4653065 /* reguse:SGPR_64 */, %3
+    SI_RETURN
+...
