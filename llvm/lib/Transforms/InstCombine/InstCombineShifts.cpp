@@ -548,9 +548,9 @@ static bool canEvaluateShiftedShift(unsigned OuterShAmt,
   // shl (shl X, C1), C2 -->  shl X, C1 + C2
   // lshr (lshr X, C1), C2 --> lshr X, C1 + C2
   bool IsInnerShl = InnerShift->getOpcode() == Instruction::Shl;
-  if (OuterOpc == Instruction::AShr && IsInnerShl &&
-      !cast<BinaryOperator>(InnerShift)->hasNoSignedWrap())
-    return false;
+  if (OuterOpc == Instruction::AShr)
+    return IsInnerShl && cast<BinaryOperator>(InnerShift)->hasNoSignedWrap() &&
+           *InnerShiftConst == OuterShAmt;
   if (IsInnerShl == IsOuterShl)
     return true;
 
@@ -643,7 +643,7 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
   case Instruction::Mul: {
     const APInt *MulConst;
     // We can fold (shr (mul X, -(1 << C)), C) -> (and (neg X), C`)
-    return ShiftOp != Instruction::Shl &&
+    return ShiftOp == Instruction::LShr &&
            match(I->getOperand(1), m_APInt(MulConst)) &&
            MulConst->isNegatedPowerOf2() && MulConst->countr_zero() == NumBits;
   }
@@ -706,6 +706,9 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
         ((OuterOpc == Instruction::AShr && InnerShift->hasNoSignedWrap()) ||
          (OuterOpc == Instruction::LShr && InnerShift->hasNoUnsignedWrap())))
       return InnerShift->getOperand(0);
+
+    if (OuterOpc == Instruction::AShr)
+      return nullptr;
     APInt Mask = IsInnerShl
                      ? APInt::getLowBitsSet(TypeWidth, TypeWidth - OuterShAmt)
                      : APInt::getHighBitsSet(TypeWidth, TypeWidth - OuterShAmt);
