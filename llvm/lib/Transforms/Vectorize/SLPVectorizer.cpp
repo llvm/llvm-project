@@ -2606,6 +2606,8 @@ public:
         Value *Cond;
         // ZExt i1 to something must be considered same opcode for select i1
         // cmp, x, y
+        // Required to better match the transformation after
+        // BoUpSLP::matchesInversedZExtSelect analysis.
         if ((match(I1, m_ZExt(m_Value(V))) &&
              match(I2, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
              V->getType() == Cond->getType()) ||
@@ -11516,7 +11518,7 @@ class InstructionsCompatibilityAnalysis {
   /// Check if the specified \p VL list of values is better to represent as
   /// uniform with copyables, as modeled via \p CopyableS, or as alternate (or
   /// uniform with compatible ops), modeled via \p S.
-  /// Performs the analsyis of the operands, choosing the prefered main
+  /// Performs the analysis of the operands, choosing the preferred main
   /// instruction and checking the matching of the operands for the main
   /// instruction and copyable elements.
   bool isCopyablePreferable(ArrayRef<Value *> VL, const BoUpSLP &R,
@@ -11549,6 +11551,7 @@ class InstructionsCompatibilityAnalysis {
         return I && I->getOpcode() == SMainOpI->getOpcode();
       });
     };
+    SmallPtrSet<Value *, 8> Operands;
     for (Value *V : VL) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I || I == SMain)
@@ -11558,6 +11561,7 @@ class InstructionsCompatibilityAnalysis {
         continue;
       SmallVector<BoUpSLP::ValueList> VOps;
       buildOriginalOperands(S, I, VOps);
+      Operands.insert(I->op_begin(), I->op_end());
       if (any_of(enumerate(VOps), [&](const auto &P) {
             return CheckOperands(P.value()[0], Ops[P.index()][0]);
           })) {
@@ -11639,6 +11643,14 @@ class InstructionsCompatibilityAnalysis {
       const bool IsCommutativeInst =
           (MatchingOp == SMain ? IsCommutative : IsAltCommutative) ||
           ::isCommutative(I, MatchingOp);
+      if (S.isAltShuffle() && MatchingOp == SAlt &&
+          any_of(VOps, [&](const BoUpSLP::ValueList &Ops) {
+            auto *I = dyn_cast<BinaryOperator>(Ops[0]);
+            return I && Operands.contains(I);
+          }))
+        return false;
+      if (S.isAltShuffle() && MatchingOp == SMain)
+        Operands.insert(I->op_begin(), I->op_end());
       BuildFirstOperandCandidates(Candidates, Ops, VOps[0][0], VOps[1][0],
                                   IsCommutativeInst);
       bool IsBestConst;
