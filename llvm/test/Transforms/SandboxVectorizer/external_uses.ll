@@ -7,10 +7,9 @@ define void @external_users(ptr %ptr) {
 ; CHECK-LABEL: define void @external_users(
 ; CHECK-SAME: ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[PTR0:%.*]] = getelementptr float, ptr [[PTR]], i32 0
-; CHECK-NEXT:    [[LD0:%.*]] = load float, ptr [[PTR0]], align 4
 ; CHECK-NEXT:    [[VECL:%.*]] = load <2 x float>, ptr [[PTR0]], align 4, !sandboxvec [[META0:![0-9]+]]
-; CHECK-NEXT:    [[SUB0:%.*]] = fsub float [[LD0]], 0.000000e+00
 ; CHECK-NEXT:    [[VEC:%.*]] = fsub <2 x float> [[VECL]], zeroinitializer, !sandboxvec [[META0]]
+; CHECK-NEXT:    [[SUB0:%.*]] = extractelement <2 x float> [[VEC]], i32 0, !sandboxvec [[META0]]
 ; CHECK-NEXT:    store <2 x float> [[VEC]], ptr [[PTR0]], align 4, !sandboxvec [[META0]]
 ; CHECK-NEXT:    [[USER:%.*]] = fneg float [[SUB0]]
 ; CHECK-NEXT:    ret void
