@@ -87,10 +87,12 @@ set(LIBSYCL_SOURCES
     "device.cpp"
     "device_selector.cpp"
     "platform.cpp"
+    "queue.cpp"
     "detail/context_impl.cpp"
     "detail/device_impl.cpp"
     "detail/global_objects.cpp"
     "detail/platform_impl.cpp"
+    "detail/queue_impl.cpp"
     "detail/offload/offload_utils.cpp"
     "detail/offload/offload_topology.cpp"
 )
