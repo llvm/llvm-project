@@ -432,7 +432,8 @@ VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
   assert(hasRequiredFlagsForOpcode(getOpcode()) &&
          "Opcode requires specific flags to be set");
   assert((getNumOperandsForOpcode() == -1u ||
-          getNumOperandsForOpcode() == getNumOperands()) &&
+          getNumOperandsForOpcode() == getNumOperands() ||
+          (isMasked() && getNumOperandsForOpcode() + 1 == getNumOperands())) &&
          "number of operands does not match opcode");
 }
 
