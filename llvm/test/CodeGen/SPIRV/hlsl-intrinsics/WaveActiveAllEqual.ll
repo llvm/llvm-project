@@ -5,6 +5,8 @@
 
 ; CHECK-DAG:   %[[#f16:]] = OpTypeFloat 16
 ; CHECK-DAG:   %[[#f32:]] = OpTypeFloat 32
+; CHECK-DAG:   %[[#bool:]] = OpTypeBool
+; CHECK-DAG:   %[[#bool4:]] = OpTypeVector %[[#bool]] 4
 ; CHECK-DAG:   %[[#uint:]] = OpTypeInt 32 0
 ; CHECK-DAG:   %[[#v4_half:]] = OpTypeVector %[[#f16]] 4
 ; CHECK-DAG:   %[[#scope:]] = OpConstant %[[#uint]] 3
@@ -13,8 +15,8 @@
 ; CHECK:   %[[#fexpr:]] = OpFunctionParameter %[[#f32]]
 define i1 @test_float(float %fexpr) {
 entry:
-; CHECK:   %[[#fret:]] = OpGroupNonUniformAllEqual %[[#f32]] %[[#scope]] Reduce %[[#fexpr]]
-  %0 = call i1 @llvm.spv.wave.all.equal.f32(float %fexpr)
+; CHECK:   %[[#fret:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#fexpr]]
+  %0 = call i1 @llvm.spv.subgroup.all.equal.f32(float %fexpr)
   ret i1 %0
 }
 
@@ -22,20 +24,20 @@ entry:
 ; CHECK:   %[[#iexpr:]] = OpFunctionParameter %[[#uint]]
 define i1 @test_int(i32 %iexpr) {
 entry:
-; CHECK:   %[[#iret:]] = OpGroupNonUniformAllEqual %[[#uint]] %[[#scope]] Reduce %[[#iexpr]]
-  %0 = call i1 @llvm.spv.wave.all.equal.i32(i32 %iexpr)
+; CHECK:   %[[#iret:]] = OpGroupNonUniformAllEqual %[[#bool]] %[[#scope]] %[[#iexpr]]
+  %0 = call i1 @llvm.spv.subgroup.all.equal.i32(i32 %iexpr)
   ret i1 %0
 }
 
 ; CHECK-LABEL: Begin function test_vhalf
 ; CHECK:   %[[#vbexpr:]] = OpFunctionParameter %[[#v4_half]]
-define i1 @test_vhalf(<4 x half> %vbexpr) {
+define <4 x i1> @test_vhalf(<4 x half> %vbexpr) {
 entry:
-; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformAllEqual %[[#v4_half]] %[[#scope]] Reduce %[[#vbexpr]]
-  %0 = call i1 @llvm.spv.wave.all.equal.v4half(<4 x half> %vbexpr)
-  ret i1 %0
+; CHECK:   %[[#vhalfret:]] = OpGroupNonUniformAllEqual %[[#bool4]] %[[#scope]] %[[#vbexpr]]
+  %0 = call <4 x i1> @llvm.spv.subgroup.all.equal.v4half(<4 x half> %vbexpr)
+  ret <4 x i1> %0
 }
 
-declare i1 @llvm.spv.wave.all.equal.f32(float)
-declare i1 @llvm.spv.wave.all.equal.i32(i32)
-declare i1 @llvm.spv.wave.all.equal.v4half(<4 x half>)
+declare i1 @llvm.spv.subgroup.all.equal.f32(float)
+declare i1 @llvm.spv.subgroup.all.equal.i32(i32)
+declare <4 x i1> @llvm.spv.subgroup.all.equal.v4half(<4 x half>)

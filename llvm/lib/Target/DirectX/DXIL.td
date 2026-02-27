@@ -217,7 +217,6 @@ defset list<DXILOpClass> OpClasses = {
   def waveActiveOp : DXILOpClass;
   def waveAllOp : DXILOpClass;
   def waveAllTrue : DXILOpClass;
-  def waveAllEqual : DXILOpClass;
   def waveAnyTrue : DXILOpClass;
   def waveActiveBallot : DXILOpClass;
   def waveGetLaneCount : DXILOpClass;
@@ -1063,9 +1062,9 @@ def WaveActiveAllTrue : DXILOp<114, waveAllTrue> {
   let stages = [Stages<DXIL1_0, [all_stages]>];
 }
 
-def WaveActiveAllEqual : DXILOp<115, waveAllEqual> {
-  let Doc = "returns true if the expression is equal in all of the active lanes "
-            "in the current wave";
+def WaveActiveAllEqual : DXILOp<115, waveActiveAllEqual> {
+  let Doc = "returns true for each scalar element of the expression if the "
+            "expression is equal in all of the active lanes in the current wave";
   let intrinsics = [IntrinSelect<int_dx_wave_all_equal>];
   let arguments = [OverloadTy];
   let result = Int1Ty;

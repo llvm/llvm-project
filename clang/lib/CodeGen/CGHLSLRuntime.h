@@ -46,7 +46,15 @@
 #define GENERATE_HLSL_INTRINSIC_FUNCTION2(FunctionName, IntrinsicPostfix)      \
   llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
     llvm::Triple::ArchType Arch = getArch();                                   \
-    switch (Arch) {}                                                           \
+    switch (Arch) {                                                            \
+    case llvm::Triple::dxil:                                                   \
+      return llvm::Intrinsic::dx_##IntrinsicPostfix;                           \
+    case llvm::Triple::spirv:                                                  \
+      return llvm::Intrinsic::spv_##IntrinsicPostfix;                          \
+    default:                                                                   \
+      llvm_unreachable("Intrinsic " #IntrinsicPostfix                          \
+                       " not supported by target architecture");               \
+    }                                                                          \
   }
 
 // 3-arg form: explicit SPIR-V postfix override (perfect for wave->subgroup)
