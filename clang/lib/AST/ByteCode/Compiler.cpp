@@ -7208,14 +7208,15 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // pointing to a reference, we need to get its value directly (i.e. the
   // pointer to the actual value) instead of a pointer to the pointer to the
   // value.
-  bool IsReference = D->getType()->isReferenceType();
+  QualType DeclType = D->getType();
+  bool IsReference = DeclType->isReferenceType();
 
   // Function parameters.
   // Note that it's important to check them first since we might have a local
   // variable created for a ParmVarDecl as well.
   if (const auto *PVD = dyn_cast<ParmVarDecl>(D)) {
     if (Ctx.getLangOpts().CPlusPlus && !Ctx.getLangOpts().CPlusPlus11 &&
-        !D->getType()->isIntegralOrEnumerationType()) {
+        !DeclType->isIntegralOrEnumerationType()) {
       return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
                                       /*InitializerFailed=*/false, E);
     }
@@ -7290,20 +7291,19 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
   // Try to lazily visit (or emit dummy pointers for) declarations
   // we haven't seen yet.
+  const auto *VD = dyn_cast<VarDecl>(D);
+  if (!VD)
+    return this->emitDummyPtr(D, E);
+
   // For C.
   if (!Ctx.getLangOpts().CPlusPlus) {
-    if (const auto *VD = dyn_cast<VarDecl>(D);
-        VD && VD->getAnyInitializer() &&
-        VD->getType().isConstant(Ctx.getASTContext()) && !VD->isWeak())
+    if (VD->getAnyInitializer() && DeclType.isConstant(Ctx.getASTContext()) &&
+        !VD->isWeak())
       return revisit(VD);
     return this->emitDummyPtr(D, E);
   }
 
   // ... and C++.
-  const auto *VD = dyn_cast<VarDecl>(D);
-  if (!VD)
-    return this->emitDummyPtr(D, E);
-
   const auto typeShouldBeVisited = [&](QualType T) -> bool {
     if (T.isConstant(Ctx.getASTContext()))
       return true;
@@ -7311,7 +7311,7 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   };
 
   if ((VD->hasGlobalStorage() || VD->isStaticDataMember()) &&
-      typeShouldBeVisited(VD->getType())) {
+      typeShouldBeVisited(DeclType)) {
     if (const Expr *Init = VD->getAnyInitializer();
         Init && !Init->isValueDependent()) {
       // Whether or not the evaluation is successul doesn't really matter
@@ -7330,8 +7330,8 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
   // it will ultimately call into Context::evaluateAsInitializer(). In
   // other words, we're evaluating the initializer, just to know if we can
   // evaluate the initializer.
-  if (VD->isLocalVarDecl() && typeShouldBeVisited(VD->getType()) &&
-      VD->getInit() && !VD->getInit()->isValueDependent()) {
+  if (VD->isLocalVarDecl() && typeShouldBeVisited(DeclType) && VD->getInit() &&
+      !VD->getInit()->isValueDependent()) {
     if (VD->evaluateValue()) {
       // Revisit the variable declaration, but make sure it's associated with a
       // different evaluation, so e.g. mutable reads don't work on it.
@@ -7339,11 +7339,9 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
       return revisit(VD);
     }
 
-    if (!IsReference)
-      return this->emitDummyPtr(D, E);
-
-    return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
-                                    /*InitializerFailed=*/true, E);
+    if (IsReference)
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/true, E);
   }
 
   return this->emitDummyPtr(D, E);
