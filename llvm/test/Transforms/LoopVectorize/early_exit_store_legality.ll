@@ -634,6 +634,36 @@ loop.end:
   ret void
 }
 
+;; Vectorizeable, need to handle reductions.
+define i16 @uncountable_exit_with_reduction(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_with_reduction'
+; CHECK:       LV: Not vectorizing: Found an unidentified PHI %rdx = phi i16 [ 0, %entry ], [ %rdx.next, %for.inc ]
+entry:
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %rdx = phi i16 [ 0, %entry ], [ %rdx.next, %for.inc ]
+  %st.addr = getelementptr inbounds nuw i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds nuw i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %rdx.next = add i16 %rdx, %data
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, 20
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  %res = phi i16 [ %rdx, %for.body ], [ %rdx.next, %for.inc ]
+  ret i16 %res
+}
+
 ;; Avoid vectorization; similar to another invariant test above, we would either
 ;; exit immediately on the first lane or never take the early exit. Should be
 ;; versioned before reaching LV.
