@@ -210,6 +210,8 @@ private:
   Value *optimizeFMod(CallInst *CI, IRBuilderBase &B);
   Value *mergeSqrtToExp(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSinCosPi(CallInst *CI, bool IsSin, IRBuilderBase &B);
+  Value *optimizeSinCos(CallInst *CI, bool IsSin, IRBuilderBase &B,
+                        bool IsPi = false);
   Value *optimizeTrigInversionPairs(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
   Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
@@ -247,7 +249,8 @@ private:
   void classifyArgUse(Value *Val, Function *F, bool IsFloat,
                       SmallVectorImpl<CallInst *> &SinCalls,
                       SmallVectorImpl<CallInst *> &CosCalls,
-                      SmallVectorImpl<CallInst *> &SinCosCalls);
+                      SmallVectorImpl<CallInst *> &SinCosCalls,
+                      bool IsPi);
   Value *optimizePrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSPrintFString(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSnPrintFString(CallInst *CI, IRBuilderBase &B);
