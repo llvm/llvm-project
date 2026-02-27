@@ -412,8 +412,7 @@ public:
          })},
         // mp_subscript is used for both slices and integer lookups.
         {Py_mp_subscript,
-         (void *)(+[](PyObject *rawSelf,
-                       PyObject *rawSubscript) -> PyObject * {
+         (void *)(+[](PyObject *rawSelf, PyObject *rawSubscript) -> PyObject * {
            auto self = nanobind::cast<Derived *>(nanobind::handle(rawSelf));
            Py_ssize_t index =
                PyNumber_AsSsize_t(rawSubscript, PyExc_IndexError);

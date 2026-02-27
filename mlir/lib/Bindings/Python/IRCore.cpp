@@ -2735,8 +2735,8 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     // Use attribute access instead of direct struct member access for
     // forward compatibility with the limited (stable) API where
     // PyCodeObject is opaque.
-    nb::object fileNameObj =
-        nb::steal(PyObject_GetAttrString(reinterpret_cast<PyObject *>(code), "co_filename"));
+    nb::object fileNameObj = nb::steal(PyObject_GetAttrString(
+        reinterpret_cast<PyObject *>(code), "co_filename"));
     auto fileNameStr = nb::cast<std::string>(fileNameObj);
     std::string_view fileName(fileNameStr);
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
@@ -2744,8 +2744,8 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 
     // co_qualname and PyCode_Addr2Location added in py3.11
 #if PY_VERSION_HEX < 0x030B00F0
-    nb::object nameObj =
-        nb::steal(PyObject_GetAttrString(reinterpret_cast<PyObject *>(code), "co_name"));
+    nb::object nameObj = nb::steal(
+        PyObject_GetAttrString(reinterpret_cast<PyObject *>(code), "co_name"));
     std::string name = nb::cast<std::string>(nameObj);
     std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
@@ -2753,8 +2753,8 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
         ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
         0);
 #else
-    nb::object nameObj =
-        nb::steal(PyObject_GetAttrString(reinterpret_cast<PyObject *>(code), "co_qualname"));
+    nb::object nameObj = nb::steal(PyObject_GetAttrString(
+        reinterpret_cast<PyObject *>(code), "co_qualname"));
     std::string name = nb::cast<std::string>(nameObj);
     std::string_view funcName(name);
     int startLine, startCol, endLine, endCol;
