@@ -531,18 +531,28 @@ void Flang::AddNVPTXTargetArgs(const ArgList &Args,
   const Driver &D = TC.getDriver();
   const llvm::Triple &Triple = TC.getEffectiveTriple();
 
+  if (!Args.hasFlag(options::OPT_offloadlib, options::OPT_no_offloadlib, true))
+    return;
+
   // Detect CUDA installation and link libdevice
   CudaInstallationDetector CudaInstallation(D, Triple, Args);
-  if (CudaInstallation.isValid()) {
-    StringRef GpuArch = Args.getLastArgValue(options::OPT_march_EQ);
-    if (!GpuArch.empty()) {
-      std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
-      if (!LibDeviceFile.empty()) {
-        CmdArgs.push_back("-mlink-builtin-bitcode");
-        CmdArgs.push_back(Args.MakeArgString(LibDeviceFile));
-      }
-    }
+  if (!CudaInstallation.isValid())
+    return;
+
+  StringRef GpuArch = Args.getLastArgValue(options::OPT_march_EQ);
+  if (GpuArch.empty()) {
+    D.Diag(diag::err_drv_offload_missing_gpu_arch) << "NVPTX" << "flang";
+    return;
   }
+
+  std::string LibDeviceFile = CudaInstallation.getLibDeviceFile(GpuArch);
+  if (LibDeviceFile.empty()) {
+    D.Diag(diag::err_drv_no_cuda_libdevice) << GpuArch;
+    return;
+  }
+
+  CmdArgs.push_back("-mlink-builtin-bitcode");
+  CmdArgs.push_back(Args.MakeArgString(LibDeviceFile));
 }
 
 void Flang::addTargetOptions(const ArgList &Args,
