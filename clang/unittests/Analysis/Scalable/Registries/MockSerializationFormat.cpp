@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Registries/MockSerializationFormat.h"
+#include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
 #include "clang/Analysis/Scalable/Model/SummaryName.h"
@@ -154,3 +155,15 @@ llvm::Error MockSerializationFormat::writeTUSummary(const TUSummary &Summary,
 static SerializationFormatRegistry::Add<MockSerializationFormat>
     RegisterFormat("MockSerializationFormat",
                    "A serialization format for testing");
+
+llvm::Expected<TUSummaryEncoding>
+MockSerializationFormat::readTUSummaryEncoding(llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support TUSummaryEncoding");
+}
+
+llvm::Error MockSerializationFormat::writeTUSummaryEncoding(
+    const TUSummaryEncoding &SummaryEncoding, llvm::StringRef Path) {
+  llvm_unreachable(
+      "MockSerializationFormat does not support TUSummaryEncoding");
+}
