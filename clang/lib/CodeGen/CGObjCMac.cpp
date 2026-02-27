@@ -3971,7 +3971,7 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
       I->second.Thunk = NewThunk;
     }
   } else {
-    bool removePrefixByte = CGM.usePreconditionThunk(OMD);
+    bool removePrefixByte = CGM.isPreconditionThunkOptEnabled();
     // Generate symbol without \01 prefix when optimization enabled
     auto Name = getSymbolNameForMethod(OMD, /*include category*/ false,
                                        /*includePrefixByte*/ !removePrefixByte);
@@ -4115,16 +4115,13 @@ CGObjCCommonMac::GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
   Call->setAttributes(Attrs);
   Call->setCallingConv(static_cast<llvm::CallingConv::ID>(CallingConv));
 
-  // Immediately return the call result (musttail requirement)
-  if (FI.getReturnInfo().isIndirect()) {
-    // SRet case: return void
+  // Immediately return the call result (musttail requirement).
+  // For sret returns, the Apple ABI produces void-returning LLVM functions,
+  // so checking the LLVM return type is suffice.
+  if (ThunkTy->getReturnType()->isVoidTy())
     CGF.Builder.CreateRetVoid();
-  } else {
-    if (ThunkTy->getReturnType()->isVoidTy())
-      CGF.Builder.CreateRetVoid();
-    else
-      CGF.Builder.CreateRet(Call);
-  }
+  else
+    CGF.Builder.CreateRet(Call);
 
   // Finish the ObjC direct thunk (creates dummy block and calls FinishFunction)
   CGF.FinishObjCDirectThunk();
@@ -4138,14 +4135,10 @@ llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
   // Get from cache or populate the function declaration lazily
   DirectMethodInfo &Info = GenerateDirectMethod(OMD, CD);
 
-  // If optimization not enabled, always use implementation (which includes the
-  // nil check)
-  if (!CGM.usePreconditionThunk(OMD)) {
-    return Info.Implementation;
-  }
-
-  // Varidic methods doesn't have thunk, the caller need to inline the nil check
-  if (CGM.shouldHavePreconditionInline(OMD)) {
+  // If thunk optimization not enabled (or variadic method which can't use
+  // thunks), use implementation directly. Variadic methods and methods without
+  // the optimization enabled include precondition checks in the implementation.
+  if (!CGM.shouldHavePreconditionThunk(OMD)) {
     return Info.Implementation;
   }
 
@@ -4165,14 +4158,14 @@ llvm::Function *CGObjCCommonMac::GetDirectMethodCallee(
     // implementation
     return ReceiverCanBeNull ? getOrCreateThunk() : Info.Implementation;
   }
-  if (OMD->isClassMethod()) {
-    // For class methods, it need to be non-null and realized before we dispatch
-    // to true implementation
-    return (ReceiverCanBeNull || ClassObjectCanBeUnrealized)
-               ? getOrCreateThunk()
-               : Info.Implementation;
-  }
-  llvm_unreachable("OMD should either be a class method or instance method");
+  assert(OMD->isClassMethod() &&
+         "OMD should either be a class method or instance method");
+
+  // For class methods, it need to be non-null and realized before we dispatch
+  // to true implementation
+  return (ReceiverCanBeNull || ClassObjectCanBeUnrealized)
+             ? getOrCreateThunk()
+             : Info.Implementation;
 }
 
 llvm::Value *
@@ -4269,7 +4262,7 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     CodeGenFunction &CGF, llvm::Function *Fn, const ObjCMethodDecl *OMD,
     const ObjCContainerDecl *CD) {
   // Generate precondition checks (class realization + nil check) if needed
-  if (!CGM.usePreconditionThunk(OMD))
+  if (!CGM.isPreconditionThunkOptEnabled())
     GenerateDirectMethodsPreconditionCheck(CGF, Fn, OMD, CD);
 
   auto &Builder = CGF.Builder;

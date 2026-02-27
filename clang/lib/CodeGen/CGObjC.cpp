@@ -763,7 +763,7 @@ void CodeGenFunction::StartObjCMethod(const ObjCMethodDecl *OMD,
   if (OMD->isDirectMethod()) {
     // Default hidden visibility
     Fn->setVisibility(llvm::Function::HiddenVisibility);
-    if (CGM.usePreconditionThunk(OMD)) {
+    if (CGM.isPreconditionThunkOptEnabled()) {
       // However, if we expose the symbol, and the decl (property or method)
       // have visibility attribute set
       const NamedDecl *Decl = OMD;

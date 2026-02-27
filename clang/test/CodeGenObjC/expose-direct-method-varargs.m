@@ -1,4 +1,5 @@
-// Test variadic direct methods - should get exposed symbols but not use thunks
+// Test variadic direct methods - use inline preconditions instead of thunks
+// to avoid musttail complexity across different architectures.
 // RUN: %clang_cc1 -emit-llvm -fobjc-arc -triple arm64-apple-darwin10 \
 // RUN:   -fobjc-direct-precondition-thunk %s -o - | FileCheck %s
 
@@ -17,8 +18,8 @@ __attribute__((objc_root_class, weak_import))
 
 @implementation Root
 
-// Variadic methods get exposed symbols WITHOUT nil checks in implementation
-// The caller will emit inline nil checks instead of using thunks
+// Variadic methods use inline preconditions instead of thunks
+// to avoid musttail complexity across different architectures.
 // CHECK-LABEL: define hidden i32 @"-[Root varMethod:]"(
 // CHECK-NOT: @"\01-[Root varMethod:]"
 // CHECK-NOT: @"-[Root varMethod:]_thunk"

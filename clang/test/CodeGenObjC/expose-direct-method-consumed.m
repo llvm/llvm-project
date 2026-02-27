@@ -2,8 +2,7 @@
 
 // RUN: mkdir -p %t
 
-// RUN: %clang -Xclang -fobjc-direct-precondition-thunk   \
-// RUN:   -target arm64-apple-darwin -fobjc-arc \
+// RUN: %clang -Xclang -fobjc-direct-precondition-thunk -fobjc-arc \
 // RUN:   -O2 -framework Foundation %s -o %t/shape
 
 // RUN: %t/shape 1 2 3 4 | FileCheck %s --check-prefix=EXE
