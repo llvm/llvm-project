@@ -3986,6 +3986,18 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  acospif
+  SRCS
+    acospif.cpp
+  HDRS
+    ../acospif.h
+  DEPENDS
+    libc.src.__support.math.acospif
+)
+
+
+
+add_entrypoint_object(
   asinhf
   SRCS
     asinhf.cpp
