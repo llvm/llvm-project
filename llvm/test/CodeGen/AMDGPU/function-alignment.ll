@@ -33,6 +33,10 @@
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -align-all-functions=1 < %s | FileCheck -check-prefix=ALIGN-ALL %s
 
+; --- prefalign attribute: overrides target preferred alignment ---
+
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=PREFALIGN %s
+
 ; --- Entry function: 256B alignment unchanged ---
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx900 < %s | FileCheck -check-prefix=ENTRY %s
@@ -95,6 +99,23 @@ define void @low_align_func() align 32 {
 define void @align_all_optsize_func() optsize {
 ; ALIGN-ALL:        .globl align_all_optsize_func
 ; ALIGN-ALL-NEXT:   .p2align 2{{$}}
+  ret void
+}
+
+; prefalign(16) on GFX9: overrides target preferred (64) with 16.
+; getPreferredAlignment uses prefalign directly instead of getPrefFunctionAlignment.
+; Result: max(16, 4) = 16 → .p2align 4.
+define void @prefalign_low_func() prefalign(16) {
+; PREFALIGN:        .globl prefalign_low_func
+; PREFALIGN-NEXT:   .p2align 4{{$}}
+  ret void
+}
+
+; prefalign(256) on GFX9: higher than target preferred (64).
+; Result: max(256, 4) = 256 → .p2align 8.
+define void @prefalign_high_func() prefalign(256) {
+; PREFALIGN:        .globl prefalign_high_func
+; PREFALIGN-NEXT:   .p2align 8{{$}}
   ret void
 }
 
