@@ -75,12 +75,11 @@ void CastToStructCheck::check(const MatchFinder::MatchResult &Result) {
   auto CheckNameIgnore = [this](const std::string &FromName,
                                 const std::string &ToName) {
     bool FromMatch = false;
-    for (auto [Idx, Regex] : llvm::enumerate(IgnoredCastsRegex)) {
+    for (auto [Idx, Regex] : llvm::enumerate(IgnoredCastsRegex))
       if (Idx % 2 == 0)
         FromMatch = Regex.match(FromName);
       else if (FromMatch && Regex.match(ToName))
         return true;
-    }
     return false;
   };
 
