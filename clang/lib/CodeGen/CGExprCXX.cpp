@@ -2100,8 +2100,8 @@ void CodeGenFunction::EmitCXXDeleteExpr(const CXXDeleteExpr *E) {
         // Emit normal loop over the array elements if we can easily
         // devirtualize destructor call.
         if (auto *DevirtualizedDtor = dyn_cast_or_null<const CXXDestructorDecl>(
-                Dtor->getDevirtualizedMethod(
-                    DBase, CGM.getLangOpts().AppleKext))) {
+                Dtor->getDevirtualizedMethod(DBase,
+                                             CGM.getLangOpts().AppleKext))) {
           const CXXRecordDecl *DevirtualizedClass =
               DevirtualizedDtor->getParent();
           if (declaresSameEntity(getCXXRecord(DBase), DevirtualizedClass))
