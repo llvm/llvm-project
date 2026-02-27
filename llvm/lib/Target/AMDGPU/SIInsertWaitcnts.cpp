@@ -3164,10 +3164,9 @@ public:
     // generateWaitcntInstBefore() because it tracks all the necessary waitcnt
     // state, and can either skip emitting a waitcnt if there is already one in
     // the IR, or emit an "optimized" combined waitcnt.
-    if (VCCZCorruptionBug && TII.isSMRD(MI)) {
-      // This smem read could complete and clobber vccz at any time.
-      MustRecomputeVCCZ = true;
-    }
+    // If this is an smem read, it could complete and clobber vccz at any time.
+    MustRecomputeVCCZ |= VCCZCorruptionBug && TII.isSMRD(MI);
+
     // If the target partial vcc writes don't update vccz, and MI is such an
     // instruction then we must recompute vccz.
     // Note: We are using PartiallyWritesToVCCOpt optional to avoid calling
@@ -3179,10 +3178,9 @@ public:
     };
     if (VCCZNotUpdatedByPartialWrites) {
       PartiallyWritesToVCCOpt = PartiallyWritesToVCC(MI);
-      if (*PartiallyWritesToVCCOpt) {
-        // This is a partial VCC write but won't update vccz.
-        MustRecomputeVCCZ = true;
-      }
+      // If this is a partial VCC write but won't update vccz, then we must
+      // recompute vccz.
+      MustRecomputeVCCZ |= *PartiallyWritesToVCCOpt;
     }
 
     // If MI is a vcc write with no pending smem, or there is a pending smem
@@ -3204,19 +3202,16 @@ public:
 
     // If MI is a branch that reads VCCZ then emit a waitcnt and a vccz
     // restore instruction if either is needed.
-    if (SIInstrInfo::isCBranchVCCZRead(MI)) {
-      // Restore vccz if it's not known to be correct already.
-      if (MustRecomputeVCCZ) {
-        // Recompute the vccz bit. Any time a value is written to vcc, the vccz
-        // bit is updated, so we can restore the bit by reading the value of vcc
-        // and then writing it back to the register.
-        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                TII.get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
-                TRI.getVCC())
-            .addReg(TRI.getVCC());
-        MustRecomputeVCCZ = false;
-        return true;
-      }
+    if (SIInstrInfo::isCBranchVCCZRead(MI) && MustRecomputeVCCZ) {
+      // Recompute the vccz bit. Any time a value is written to vcc, the vccz
+      // bit is updated, so we can restore the bit by reading the value of vcc
+      // and then writing it back to the register.
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+              TII.get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
+              TRI.getVCC())
+          .addReg(TRI.getVCC());
+      MustRecomputeVCCZ = false;
+      return true;
     }
     return false;
   }
