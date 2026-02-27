@@ -49,8 +49,8 @@ void MissingEndComparisonCheck::storeOptions(
                 utils::options::serializeStringList(ExtraAlgorithms));
 }
 
-static std::optional<std::string>
-getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
+static std::optional<std::string> getRangesEndText(const ASTContext &Context,
+                                                   const CallExpr *Call) {
   const FunctionDecl *Callee = Call->getDirectCallee();
   assert(Callee && Callee->getNumParams() > 0 &&
          "Matcher should ensure Callee has parameters");
@@ -64,7 +64,7 @@ getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
       return std::nullopt;
     // find(CPO, Iter, Sent, Val...) -> Sent is Arg 2.
     const Expr *EndArg = Call->getArg(2);
-    return tooling::fixit::getText(*EndArg, *Result.Context).str();
+    return tooling::fixit::getText(*EndArg, Context).str();
   }
 
   if (Call->getNumArgs() < 2)
@@ -74,17 +74,15 @@ getRangesEndText(const MatchFinder::MatchResult &Result, const CallExpr *Call) {
   // Avoid potential side-effects
   const Expr *InnerRange = RangeArg->IgnoreParenImpCasts();
   if (isa<DeclRefExpr, MemberExpr>(InnerRange)) {
-    const StringRef RangeText =
-        tooling::fixit::getText(*RangeArg, *Result.Context);
+    const StringRef RangeText = tooling::fixit::getText(*RangeArg, Context);
     if (!RangeText.empty())
       return ("std::ranges::end(" + RangeText + ")").str();
   }
   return "";
 }
 
-static std::optional<std::string>
-getStandardEndText(const MatchFinder::MatchResult &Result,
-                   const CallExpr *Call) {
+static std::optional<std::string> getStandardEndText(ASTContext &Context,
+                                                     const CallExpr *Call) {
   if (Call->getNumArgs() < 2)
     return std::nullopt;
 
@@ -96,10 +94,8 @@ getStandardEndText(const MatchFinder::MatchResult &Result,
     const QualType T0 = Arg0->getType().getCanonicalType();
     const QualType T1 = Arg1->getType().getCanonicalType();
 
-    if (T0.getNonReferenceType() != T1.getNonReferenceType() &&
-        T0.getNonReferenceType()->isRecordType()) {
-      const StringRef ContainerText =
-          tooling::fixit::getText(*Arg0, *Result.Context);
+    if (T0 != T1 && T0.getNonReferenceType()->isRecordType()) {
+      const StringRef ContainerText = tooling::fixit::getText(*Arg0, Context);
       if (!ContainerText.empty())
         return ("std::end(" + ContainerText + ")").str();
     }
@@ -109,7 +105,7 @@ getStandardEndText(const MatchFinder::MatchResult &Result,
   const Expr *FirstArg = Call->getArg(0);
   if (const auto *Record =
           FirstArg->getType().getNonReferenceType()->getAsCXXRecordDecl()) {
-    if (Record->getName().ends_with("_policy"))
+    if (Record->getIdentifier() && Record->getName().ends_with("_policy"))
       EndIdx = 2;
   }
 
@@ -119,10 +115,10 @@ getStandardEndText(const MatchFinder::MatchResult &Result,
   const Expr *EndArg = Call->getArg(EndIdx);
   // Filters nullptr, we assume the intent might be a valid check against null
   if (EndArg->IgnoreParenCasts()->isNullPointerConstant(
-          *Result.Context, Expr::NPC_ValueDependentIsNull))
+          Context, Expr::NPC_ValueDependentIsNull))
     return std::nullopt;
 
-  return tooling::fixit::getText(*EndArg, *Result.Context).str();
+  return tooling::fixit::getText(*EndArg, Context).str();
 }
 
 static const UnaryOperator *getParentLogicalNot(const Expr *E,
@@ -206,9 +202,9 @@ void MissingEndComparisonCheck::check(const MatchFinder::MatchResult &Result) {
 
   if (Result.Nodes.getNodeAs<VarDecl>("cpo")) {
     const auto *Call = Result.Nodes.getNodeAs<CallExpr>("algoCall");
-    EndExprText = getRangesEndText(Result, Call);
+    EndExprText = getRangesEndText(*Result.Context, Call);
   } else if (const auto *Call = Result.Nodes.getNodeAs<CallExpr>("algoCall")) {
-    EndExprText = getStandardEndText(Result, Call);
+    EndExprText = getStandardEndText(*Result.Context, Call);
   } else {
     llvm_unreachable("Matcher should bind 'algoCall' or 'cpo'");
   }
