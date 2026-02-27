@@ -59,28 +59,29 @@ define void @test_half_ceil(half %a0, ptr %p0) nounwind {
 define void @test_half_copysign(half %a0, half %a1, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_copysign:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; F16C-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; F16C-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; F16C-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; F16C-NEXT:    vpandn %xmm0, %xmm2, %xmm0
 ; F16C-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_copysign:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
-; FP16-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
-; FP16-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; FP16-NEXT:    vpternlogd {{.*#+}} zmm0 = zmm1 ^ (zmm2 & (zmm0 ^ zmm1))
+; FP16-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; FP16-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; FP16-NEXT:    vpandn %xmm0, %xmm2, %xmm0
+; FP16-NEXT:    vpor %xmm1, %xmm0, %xmm0
 ; FP16-NEXT:    vmovsh %xmm0, (%rdi)
-; FP16-NEXT:    vzeroupper
 ; FP16-NEXT:    retq
 ;
 ; X64-LABEL: test_half_copysign:
 ; X64:       # %bb.0:
-; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    por %xmm1, %xmm0
-; X64-NEXT:    pextrw $0, %xmm0, %eax
+; X64-NEXT:    movdqa {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    pand %xmm2, %xmm1
+; X64-NEXT:    pandn %xmm0, %xmm2
+; X64-NEXT:    por %xmm1, %xmm2
+; X64-NEXT:    pextrw $0, %xmm2, %eax
 ; X64-NEXT:    movw %ax, (%rdi)
 ; X64-NEXT:    retq
 ;
@@ -89,10 +90,11 @@ define void @test_half_copysign(half %a0, half %a1, ptr %p0) nounwind {
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    por %xmm1, %xmm0
-; X86-NEXT:    pextrw $0, %xmm0, %ecx
+; X86-NEXT:    movdqa {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-NEXT:    pand %xmm2, %xmm1
+; X86-NEXT:    pandn %xmm0, %xmm2
+; X86-NEXT:    por %xmm1, %xmm2
+; X86-NEXT:    pextrw $0, %xmm2, %ecx
 ; X86-NEXT:    movw %cx, (%eax)
 ; X86-NEXT:    retl
   %res = call half @llvm.copysign.half(half %a0, half %a1)
@@ -341,8 +343,7 @@ define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 ;
 ; FP16-LABEL: test_half_fabs:
 ; FP16:       # %bb.0:
-; FP16-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; FP16-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; FP16-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; FP16-NEXT:    vmovsh %xmm0, (%rdi)
 ; FP16-NEXT:    retq
 ;

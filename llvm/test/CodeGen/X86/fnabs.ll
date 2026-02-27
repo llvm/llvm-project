@@ -25,16 +25,18 @@ define float @scalar_no_abs(float %a) {
 define float @scalar_uses_abs(float %a) {
 ; AVX-LABEL: scalar_uses_abs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vandnps %xmm0, %xmm1, %xmm2
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: scalar_uses_abs:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
-; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vmulss %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX512-NEXT:    vandnps %xmm0, %xmm1, %xmm2
+; AVX512-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vmulss %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %fabs = tail call float @llvm.fabs.f32(float %a) #1
   %fsub = fsub float -0.0, %fabs
@@ -60,16 +62,18 @@ define <4 x float> @vector128_no_abs(<4 x float> %a) {
 define <4 x float> @vector128_uses_abs(<4 x float> %a) {
 ; AVX-LABEL: vector128_uses_abs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVX-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vandnps %xmm0, %xmm1, %xmm2
+; AVX-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vmulps %xmm2, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: vector128_uses_abs:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
-; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
-; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX512-NEXT:    vandnps %xmm0, %xmm1, %xmm2
+; AVX512-NEXT:    vorps %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vmulps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
   %fabs = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> %a) #1
   %fsub = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %fabs
@@ -95,16 +99,18 @@ define <8 x float> @vector256_no_abs(<8 x float> %a) {
 define <8 x float> @vector256_uses_abs(<8 x float> %a) {
 ; AVX-LABEL: vector256_uses_abs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
-; AVX-NEXT:    vorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX-NEXT:    vandnps %ymm0, %ymm1, %ymm2
+; AVX-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: vector256_uses_abs:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm1
-; AVX512-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
-; AVX512-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; AVX512-NEXT:    vandnps %ymm0, %ymm1, %ymm2
+; AVX512-NEXT:    vorps %ymm1, %ymm0, %ymm0
+; AVX512-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %fabs = tail call <8 x float> @llvm.fabs.v8f32(<8 x float> %a) #1
   %fsub = fsub <8 x float> <float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0, float -0.0>, %fabs

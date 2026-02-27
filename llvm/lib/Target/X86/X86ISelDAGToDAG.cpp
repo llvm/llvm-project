@@ -1316,18 +1316,22 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       // Widen scalar fp logic ops to vector to reduce isel patterns.
       // FIXME: Can we do this during lowering/combine.
       MVT VT = N->getSimpleValueType(0);
-      if (VT.isVector() || VT == MVT::f128)
+      if (VT.isVector())
         break;
 
-      MVT VecVT = VT == MVT::f64   ? MVT::v2f64
-                  : VT == MVT::f32 ? MVT::v4f32
-                                   : MVT::v8f16;
-
       SDLoc dl(N);
-      SDValue Op0 = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT,
-                                    N->getOperand(0));
-      SDValue Op1 = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT,
-                                    N->getOperand(1));
+      MVT VecVT = VT == MVT::f64                      ? MVT::v2f64
+                  : VT == MVT::f32 || VT == MVT::f128 ? MVT::v4f32
+                                                      : MVT::v8f16;
+
+      SDValue Op0 = N->getOperand(0), Op1 = N->getOperand(1);
+      if (VT == MVT::f128) {
+        Op0 = CurDAG->getBitcast(VecVT, Op0);
+        Op1 = CurDAG->getBitcast(VecVT, Op1);
+      } else {
+        Op0 = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT, Op0);
+        Op1 = CurDAG->getNode(ISD::SCALAR_TO_VECTOR, dl, VecVT, Op1);
+      }
 
       SDValue Res;
       if (Subtarget->hasSSE2()) {
@@ -1347,8 +1351,12 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
       } else {
         Res = CurDAG->getNode(N->getOpcode(), dl, VecVT, Op0, Op1);
       }
-      Res = CurDAG->getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, Res,
-                            CurDAG->getIntPtrConstant(0, dl));
+
+      if (VT == MVT::f128)
+        Res = CurDAG->getBitcast(VT, Res);
+      else
+        Res = CurDAG->getExtractVectorElt(dl, VT, Res, 0);
+
       --I;
       CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
       ++I;

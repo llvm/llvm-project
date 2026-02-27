@@ -776,7 +776,7 @@ define void @bcast_unfold_fabs_v16f32(ptr %arg) {
 ; CHECK-LABEL: bcast_unfold_fabs_v16f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vpbroadcastd {{.*#+}} zmm0 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB24_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -811,7 +811,7 @@ define void @bcast_unfold_fabs_v8f32(ptr %arg) {
 ; CHECK-LABEL: bcast_unfold_fabs_v8f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} ymm0 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB25_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -846,7 +846,7 @@ define void @bcast_unfold_fabs_v4f32(ptr %arg) {
 ; CHECK-LABEL: bcast_unfold_fabs_v4f32:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-4096, %rax # imm = 0xF000
-; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483647,2147483647,2147483647,2147483647]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB26_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -880,7 +880,7 @@ define void @bcast_unfold_fabs_v8f64(ptr %arg) {
 ; CHECK-LABEL: bcast_unfold_fabs_v8f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vpbroadcastq {{.*#+}} zmm0 = [9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB27_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -915,7 +915,7 @@ define void @bcast_unfold_fabs_v4f64(ptr %arg) {
 ; CHECK-LABEL: bcast_unfold_fabs_v4f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; CHECK-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB28_1: # %bb1
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -950,7 +950,7 @@ define void @bcast_unfold_fabs_v2f64(ptr %arg) {
 ; CHECK-LABEL: bcast_unfold_fabs_v2f64:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    movq $-8192, %rax # imm = 0xE000
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [NaN,NaN]
+; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = [9223372036854775807,9223372036854775807]
 ; CHECK-NEXT:    # xmm0 = mem[0,0]
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB29_1: # %bb1

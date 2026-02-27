@@ -84,7 +84,7 @@ define <4 x float> @fabs_v4f32(<4 x float> %p) nounwind {
 ;
 ; X86-AVX2-LABEL: fabs_v4f32:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; X86-AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X86-AVX2-NEXT:    retl
 ;
@@ -115,7 +115,7 @@ define <4 x float> @fabs_v4f32(<4 x float> %p) nounwind {
 ;
 ; X64-AVX2-LABEL: fabs_v4f32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; X64-AVX2-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -146,26 +146,33 @@ define <8 x half> @fabs_v8f16(ptr %p) nounwind {
 ; X86-SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX1-LABEL: fabs_v8f16:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX1-NEXT:    vmovaps (%eax), %xmm0
-; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
-; X86-AVX1-NEXT:    retl
+; X86-AVX1OR2-LABEL: fabs_v8f16:
+; X86-AVX1OR2:       # %bb.0:
+; X86-AVX1OR2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX1OR2-NEXT:    vmovaps (%eax), %xmm0
+; X86-AVX1OR2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm0
+; X86-AVX1OR2-NEXT:    retl
 ;
-; X86-AVX2-LABEL: fabs_v8f16:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX2-NEXT:    vpand (%eax), %xmm0, %xmm0
-; X86-AVX2-NEXT:    retl
+; X86-AVX512VL-LABEL: fabs_v8f16:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VL-NEXT:    vmovaps (%eax), %xmm0
+; X86-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
+; X86-AVX512VL-NEXT:    retl
 ;
-; X86-AVX512-LABEL: fabs_v8f16:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX512-NEXT:    vpand (%eax), %xmm0, %xmm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX512FP16-LABEL: fabs_v8f16:
+; X86-AVX512FP16:       # %bb.0:
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512FP16-NEXT:    vmovaps (%eax), %xmm0
+; X86-AVX512FP16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
+; X86-AVX512FP16-NEXT:    retl
+;
+; X86-AVX512VLDQ-LABEL: fabs_v8f16:
+; X86-AVX512VLDQ:       # %bb.0:
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VLDQ-NEXT:    vmovaps (%eax), %xmm0
+; X86-AVX512VLDQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
+; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fabs_v8f16:
 ; X64-SSE:       # %bb.0:
@@ -173,23 +180,29 @@ define <8 x half> @fabs_v8f16(ptr %p) nounwind {
 ; X64-SSE-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX1-LABEL: fabs_v8f16:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX1-NEXT:    retq
+; X64-AVX1OR2-LABEL: fabs_v8f16:
+; X64-AVX1OR2:       # %bb.0:
+; X64-AVX1OR2-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX1OR2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX1OR2-NEXT:    retq
 ;
-; X64-AVX2-LABEL: fabs_v8f16:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX2-NEXT:    vpand (%rdi), %xmm0, %xmm0
-; X64-AVX2-NEXT:    retq
+; X64-AVX512VL-LABEL: fabs_v8f16:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; X64-AVX512VL-NEXT:    retq
 ;
-; X64-AVX512-LABEL: fabs_v8f16:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpbroadcastw {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX512-NEXT:    vpand (%rdi), %xmm0, %xmm0
-; X64-AVX512-NEXT:    retq
+; X64-AVX512FP16-LABEL: fabs_v8f16:
+; X64-AVX512FP16:       # %bb.0:
+; X64-AVX512FP16-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX512FP16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX512VLDQ-LABEL: fabs_v8f16:
+; X64-AVX512VLDQ:       # %bb.0:
+; X64-AVX512VLDQ-NEXT:    vmovaps (%rdi), %xmm0
+; X64-AVX512VLDQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
+; X64-AVX512VLDQ-NEXT:    retq
   %v = load <8 x half>, ptr %p, align 16
   %nnv = call <8 x half> @llvm.fabs.v8f16(<8 x half> %v)
   ret <8 x half> %nnv
@@ -203,21 +216,18 @@ declare <8 x half> @llvm.fabs.v8f16(<8 x half> %p)
 define <4 x double> @fabs_v4f64(<4 x double> %p) nounwind {
 ; X86-SSE-LABEL: fabs_v4f64:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN]
-; X86-SSE-NEXT:    andps %xmm2, %xmm0
-; X86-SSE-NEXT:    andps %xmm2, %xmm1
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; X86-SSE-NEXT:    movaps %xmm2, %xmm3
+; X86-SSE-NEXT:    andnps %xmm0, %xmm3
+; X86-SSE-NEXT:    andnps %xmm1, %xmm2
+; X86-SSE-NEXT:    movaps %xmm3, %xmm0
+; X86-SSE-NEXT:    movaps %xmm2, %xmm1
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX1-LABEL: fabs_v4f64:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-AVX1-NEXT:    retl
-;
-; X86-AVX2-LABEL: fabs_v4f64:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
-; X86-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X86-AVX2-NEXT:    retl
+; X86-AVX1OR2-LABEL: fabs_v4f64:
+; X86-AVX1OR2:       # %bb.0:
+; X86-AVX1OR2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-AVX1OR2-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fabs_v4f64:
 ; X86-AVX512VL:       # %bb.0:
@@ -236,9 +246,12 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) nounwind {
 ;
 ; X64-SSE-LABEL: fabs_v4f64:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN]
-; X64-SSE-NEXT:    andps %xmm2, %xmm0
-; X64-SSE-NEXT:    andps %xmm2, %xmm1
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; X64-SSE-NEXT:    movaps %xmm2, %xmm3
+; X64-SSE-NEXT:    andnps %xmm0, %xmm3
+; X64-SSE-NEXT:    andnps %xmm1, %xmm2
+; X64-SSE-NEXT:    movaps %xmm3, %xmm0
+; X64-SSE-NEXT:    movaps %xmm2, %xmm1
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: fabs_v4f64:
@@ -248,7 +261,7 @@ define <4 x double> @fabs_v4f64(<4 x double> %p) nounwind {
 ;
 ; X64-AVX2-LABEL: fabs_v4f64:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807]
 ; X64-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -274,9 +287,12 @@ declare <4 x double> @llvm.fabs.v4f64(<4 x double> %p)
 define <8 x float> @fabs_v8f32(<8 x float> %p) nounwind {
 ; X86-SSE-LABEL: fabs_v8f32:
 ; X86-SSE:       # %bb.0:
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
-; X86-SSE-NEXT:    andps %xmm2, %xmm0
-; X86-SSE-NEXT:    andps %xmm2, %xmm1
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-SSE-NEXT:    movaps %xmm2, %xmm3
+; X86-SSE-NEXT:    andnps %xmm0, %xmm3
+; X86-SSE-NEXT:    andnps %xmm1, %xmm2
+; X86-SSE-NEXT:    movaps %xmm3, %xmm0
+; X86-SSE-NEXT:    movaps %xmm2, %xmm1
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: fabs_v8f32:
@@ -286,7 +302,7 @@ define <8 x float> @fabs_v8f32(<8 x float> %p) nounwind {
 ;
 ; X86-AVX2-LABEL: fabs_v8f32:
 ; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X86-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; X86-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X86-AVX2-NEXT:    retl
 ;
@@ -307,9 +323,12 @@ define <8 x float> @fabs_v8f32(<8 x float> %p) nounwind {
 ;
 ; X64-SSE-LABEL: fabs_v8f32:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
-; X64-SSE-NEXT:    andps %xmm2, %xmm0
-; X64-SSE-NEXT:    andps %xmm2, %xmm1
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-SSE-NEXT:    movaps %xmm2, %xmm3
+; X64-SSE-NEXT:    andnps %xmm0, %xmm3
+; X64-SSE-NEXT:    andnps %xmm1, %xmm2
+; X64-SSE-NEXT:    movaps %xmm3, %xmm0
+; X64-SSE-NEXT:    movaps %xmm2, %xmm1
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: fabs_v8f32:
@@ -319,7 +338,7 @@ define <8 x float> @fabs_v8f32(<8 x float> %p) nounwind {
 ;
 ; X64-AVX2-LABEL: fabs_v8f32:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} ymm1 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; X64-AVX2-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; X64-AVX2-NEXT:    retq
 ;
@@ -346,58 +365,71 @@ define <16 x half> @fabs_v16f16(ptr %p) nounwind {
 ; X86-SSE-LABEL: fabs_v16f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-SSE-NEXT:    movaps (%eax), %xmm0
-; X86-SSE-NEXT:    andps %xmm1, %xmm0
-; X86-SSE-NEXT:    andps 16(%eax), %xmm1
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-SSE-NEXT:    movaps %xmm1, %xmm0
+; X86-SSE-NEXT:    andnps (%eax), %xmm0
+; X86-SSE-NEXT:    andnps 16(%eax), %xmm1
 ; X86-SSE-NEXT:    retl
 ;
-; X86-AVX1-LABEL: fabs_v16f16:
-; X86-AVX1:       # %bb.0:
-; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX1-NEXT:    vmovaps (%eax), %ymm0
-; X86-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
-; X86-AVX1-NEXT:    retl
+; X86-AVX1OR2-LABEL: fabs_v16f16:
+; X86-AVX1OR2:       # %bb.0:
+; X86-AVX1OR2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX1OR2-NEXT:    vmovaps (%eax), %ymm0
+; X86-AVX1OR2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}, %ymm0, %ymm0
+; X86-AVX1OR2-NEXT:    retl
 ;
-; X86-AVX2-LABEL: fabs_v16f16:
-; X86-AVX2:       # %bb.0:
-; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX2-NEXT:    vpand (%eax), %ymm0, %ymm0
-; X86-AVX2-NEXT:    retl
+; X86-AVX512VL-LABEL: fabs_v16f16:
+; X86-AVX512VL:       # %bb.0:
+; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VL-NEXT:    vmovaps (%eax), %ymm0
+; X86-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-AVX512VL-NEXT:    retl
 ;
-; X86-AVX512-LABEL: fabs_v16f16:
-; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX512-NEXT:    vpand (%eax), %ymm0, %ymm0
-; X86-AVX512-NEXT:    retl
+; X86-AVX512FP16-LABEL: fabs_v16f16:
+; X86-AVX512FP16:       # %bb.0:
+; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512FP16-NEXT:    vmovaps (%eax), %ymm0
+; X86-AVX512FP16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-AVX512FP16-NEXT:    retl
+;
+; X86-AVX512VLDQ-LABEL: fabs_v16f16:
+; X86-AVX512VLDQ:       # %bb.0:
+; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-AVX512VLDQ-NEXT:    vmovaps (%eax), %ymm0
+; X86-AVX512VLDQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}{1to8}, %ymm0, %ymm0
+; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fabs_v16f16:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-SSE-NEXT:    movaps (%rdi), %xmm0
-; X64-SSE-NEXT:    andps %xmm1, %xmm0
-; X64-SSE-NEXT:    andps 16(%rdi), %xmm1
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-SSE-NEXT:    movaps %xmm1, %xmm0
+; X64-SSE-NEXT:    andnps (%rdi), %xmm0
+; X64-SSE-NEXT:    andnps 16(%rdi), %xmm1
 ; X64-SSE-NEXT:    retq
 ;
-; X64-AVX1-LABEL: fabs_v16f16:
-; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vmovaps (%rdi), %ymm0
-; X64-AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; X64-AVX1-NEXT:    retq
+; X64-AVX1OR2-LABEL: fabs_v16f16:
+; X64-AVX1OR2:       # %bb.0:
+; X64-AVX1OR2-NEXT:    vmovaps (%rdi), %ymm0
+; X64-AVX1OR2-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; X64-AVX1OR2-NEXT:    retq
 ;
-; X64-AVX2-LABEL: fabs_v16f16:
-; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX2-NEXT:    vpand (%rdi), %ymm0, %ymm0
-; X64-AVX2-NEXT:    retq
+; X64-AVX512VL-LABEL: fabs_v16f16:
+; X64-AVX512VL:       # %bb.0:
+; X64-AVX512VL-NEXT:    vmovaps (%rdi), %ymm0
+; X64-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    retq
 ;
-; X64-AVX512-LABEL: fabs_v16f16:
-; X64-AVX512:       # %bb.0:
-; X64-AVX512-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX512-NEXT:    vpand (%rdi), %ymm0, %ymm0
-; X64-AVX512-NEXT:    retq
+; X64-AVX512FP16-LABEL: fabs_v16f16:
+; X64-AVX512FP16:       # %bb.0:
+; X64-AVX512FP16-NEXT:    vmovaps (%rdi), %ymm0
+; X64-AVX512FP16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512FP16-NEXT:    retq
+;
+; X64-AVX512VLDQ-LABEL: fabs_v16f16:
+; X64-AVX512VLDQ:       # %bb.0:
+; X64-AVX512VLDQ-NEXT:    vmovaps (%rdi), %ymm0
+; X64-AVX512VLDQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to8}, %ymm0, %ymm0
+; X64-AVX512VLDQ-NEXT:    retq
   %v = load <16 x half>, ptr %p, align 32
   %nnv = call <16 x half> @llvm.fabs.v16f16(<16 x half> %v)
   ret <16 x half> %nnv
@@ -415,20 +447,26 @@ define <8 x double> @fabs_v8f64(<8 x double> %p) nounwind {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm3 = [NaN,NaN]
-; X86-SSE-NEXT:    andps %xmm3, %xmm0
-; X86-SSE-NEXT:    andps %xmm3, %xmm1
-; X86-SSE-NEXT:    andps %xmm3, %xmm2
-; X86-SSE-NEXT:    andps 8(%ebp), %xmm3
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0]
+; X86-SSE-NEXT:    movaps %xmm3, %xmm4
+; X86-SSE-NEXT:    andnps %xmm0, %xmm4
+; X86-SSE-NEXT:    movaps %xmm3, %xmm5
+; X86-SSE-NEXT:    andnps %xmm1, %xmm5
+; X86-SSE-NEXT:    movaps %xmm3, %xmm6
+; X86-SSE-NEXT:    andnps %xmm2, %xmm6
+; X86-SSE-NEXT:    andnps 8(%ebp), %xmm3
+; X86-SSE-NEXT:    movaps %xmm4, %xmm0
+; X86-SSE-NEXT:    movaps %xmm5, %xmm1
+; X86-SSE-NEXT:    movaps %xmm6, %xmm2
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX1OR2-LABEL: fabs_v8f64:
 ; X86-AVX1OR2:       # %bb.0:
-; X86-AVX1OR2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
-; X86-AVX1OR2-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; X86-AVX1OR2-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X86-AVX1OR2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX1OR2-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; X86-AVX1OR2-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; X86-AVX1OR2-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fabs_v8f64:
@@ -448,18 +486,25 @@ define <8 x double> @fabs_v8f64(<8 x double> %p) nounwind {
 ;
 ; X64-SSE-LABEL: fabs_v8f64:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm4 = [NaN,NaN]
-; X64-SSE-NEXT:    andps %xmm4, %xmm0
-; X64-SSE-NEXT:    andps %xmm4, %xmm1
-; X64-SSE-NEXT:    andps %xmm4, %xmm2
-; X64-SSE-NEXT:    andps %xmm4, %xmm3
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm4 = [-0.0E+0,-0.0E+0]
+; X64-SSE-NEXT:    movaps %xmm4, %xmm5
+; X64-SSE-NEXT:    andnps %xmm0, %xmm5
+; X64-SSE-NEXT:    movaps %xmm4, %xmm6
+; X64-SSE-NEXT:    andnps %xmm1, %xmm6
+; X64-SSE-NEXT:    movaps %xmm4, %xmm7
+; X64-SSE-NEXT:    andnps %xmm2, %xmm7
+; X64-SSE-NEXT:    andnps %xmm3, %xmm4
+; X64-SSE-NEXT:    movaps %xmm5, %xmm0
+; X64-SSE-NEXT:    movaps %xmm6, %xmm1
+; X64-SSE-NEXT:    movaps %xmm7, %xmm2
+; X64-SSE-NEXT:    movaps %xmm4, %xmm3
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1OR2-LABEL: fabs_v8f64:
 ; X64-AVX1OR2:       # %bb.0:
-; X64-AVX1OR2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN]
-; X64-AVX1OR2-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; X64-AVX1OR2-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X64-AVX1OR2-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX1OR2-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; X64-AVX1OR2-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; X64-AVX1OR2-NEXT:    retq
 ;
 ; X64-AVX512VL-LABEL: fabs_v8f64:
@@ -488,20 +533,26 @@ define <16 x float> @fabs_v16f32(<16 x float> %p) nounwind {
 ; X86-SSE-NEXT:    movl %esp, %ebp
 ; X86-SSE-NEXT:    andl $-16, %esp
 ; X86-SSE-NEXT:    subl $16, %esp
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
-; X86-SSE-NEXT:    andps %xmm3, %xmm0
-; X86-SSE-NEXT:    andps %xmm3, %xmm1
-; X86-SSE-NEXT:    andps %xmm3, %xmm2
-; X86-SSE-NEXT:    andps 8(%ebp), %xmm3
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-SSE-NEXT:    movaps %xmm3, %xmm4
+; X86-SSE-NEXT:    andnps %xmm0, %xmm4
+; X86-SSE-NEXT:    movaps %xmm3, %xmm5
+; X86-SSE-NEXT:    andnps %xmm1, %xmm5
+; X86-SSE-NEXT:    movaps %xmm3, %xmm6
+; X86-SSE-NEXT:    andnps %xmm2, %xmm6
+; X86-SSE-NEXT:    andnps 8(%ebp), %xmm3
+; X86-SSE-NEXT:    movaps %xmm4, %xmm0
+; X86-SSE-NEXT:    movaps %xmm5, %xmm1
+; X86-SSE-NEXT:    movaps %xmm6, %xmm2
 ; X86-SSE-NEXT:    movl %ebp, %esp
 ; X86-SSE-NEXT:    popl %ebp
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX1OR2-LABEL: fabs_v16f32:
 ; X86-AVX1OR2:       # %bb.0:
-; X86-AVX1OR2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX1OR2-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; X86-AVX1OR2-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X86-AVX1OR2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX1OR2-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; X86-AVX1OR2-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; X86-AVX1OR2-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fabs_v16f32:
@@ -521,18 +572,25 @@ define <16 x float> @fabs_v16f32(<16 x float> %p) nounwind {
 ;
 ; X64-SSE-LABEL: fabs_v16f32:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN]
-; X64-SSE-NEXT:    andps %xmm4, %xmm0
-; X64-SSE-NEXT:    andps %xmm4, %xmm1
-; X64-SSE-NEXT:    andps %xmm4, %xmm2
-; X64-SSE-NEXT:    andps %xmm4, %xmm3
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm4 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-SSE-NEXT:    movaps %xmm4, %xmm5
+; X64-SSE-NEXT:    andnps %xmm0, %xmm5
+; X64-SSE-NEXT:    movaps %xmm4, %xmm6
+; X64-SSE-NEXT:    andnps %xmm1, %xmm6
+; X64-SSE-NEXT:    movaps %xmm4, %xmm7
+; X64-SSE-NEXT:    andnps %xmm2, %xmm7
+; X64-SSE-NEXT:    andnps %xmm3, %xmm4
+; X64-SSE-NEXT:    movaps %xmm5, %xmm0
+; X64-SSE-NEXT:    movaps %xmm6, %xmm1
+; X64-SSE-NEXT:    movaps %xmm7, %xmm2
+; X64-SSE-NEXT:    movaps %xmm4, %xmm3
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1OR2-LABEL: fabs_v16f32:
 ; X64-AVX1OR2:       # %bb.0:
-; X64-AVX1OR2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX1OR2-NEXT:    vandps %ymm2, %ymm0, %ymm0
-; X64-AVX1OR2-NEXT:    vandps %ymm2, %ymm1, %ymm1
+; X64-AVX1OR2-NEXT:    vbroadcastss {{.*#+}} ymm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX1OR2-NEXT:    vandnps %ymm0, %ymm2, %ymm0
+; X64-AVX1OR2-NEXT:    vandnps %ymm1, %ymm2, %ymm1
 ; X64-AVX1OR2-NEXT:    retq
 ;
 ; X64-AVX512VL-LABEL: fabs_v16f32:
@@ -558,99 +616,95 @@ define <32 x half> @fabs_v32f16(ptr %p) nounwind {
 ; X86-SSE-LABEL: fabs_v32f16:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-SSE-NEXT:    movaps (%eax), %xmm0
-; X86-SSE-NEXT:    andps %xmm3, %xmm0
-; X86-SSE-NEXT:    movaps 16(%eax), %xmm1
-; X86-SSE-NEXT:    andps %xmm3, %xmm1
-; X86-SSE-NEXT:    movaps 32(%eax), %xmm2
-; X86-SSE-NEXT:    andps %xmm3, %xmm2
-; X86-SSE-NEXT:    andps 48(%eax), %xmm3
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-SSE-NEXT:    movaps %xmm3, %xmm0
+; X86-SSE-NEXT:    andnps (%eax), %xmm0
+; X86-SSE-NEXT:    movaps %xmm3, %xmm1
+; X86-SSE-NEXT:    andnps 16(%eax), %xmm1
+; X86-SSE-NEXT:    movaps %xmm3, %xmm2
+; X86-SSE-NEXT:    andnps 32(%eax), %xmm2
+; X86-SSE-NEXT:    andnps 48(%eax), %xmm3
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX1-LABEL: fabs_v32f16:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX1-NEXT:    vandps (%eax), %ymm1, %ymm0
-; X86-AVX1-NEXT:    vandps 32(%eax), %ymm1, %ymm1
+; X86-AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX1-NEXT:    vandnps (%eax), %ymm1, %ymm0
+; X86-AVX1-NEXT:    vandnps 32(%eax), %ymm1, %ymm1
 ; X86-AVX1-NEXT:    retl
 ;
 ; X86-AVX2-LABEL: fabs_v32f16:
 ; X86-AVX2:       # %bb.0:
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX2-NEXT:    vpand (%eax), %ymm1, %ymm0
-; X86-AVX2-NEXT:    vpand 32(%eax), %ymm1, %ymm1
+; X86-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-AVX2-NEXT:    vpandn (%eax), %ymm1, %ymm0
+; X86-AVX2-NEXT:    vpandn 32(%eax), %ymm1, %ymm1
 ; X86-AVX2-NEXT:    retl
 ;
 ; X86-AVX512VL-LABEL: fabs_v32f16:
 ; X86-AVX512VL:       # %bb.0:
 ; X86-AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512VL-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
-; X86-AVX512VL-NEXT:    vpandq (%eax), %zmm0, %zmm0
+; X86-AVX512VL-NEXT:    vmovdqa64 (%eax), %zmm0
+; X86-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-AVX512VL-NEXT:    retl
 ;
 ; X86-AVX512FP16-LABEL: fabs_v32f16:
 ; X86-AVX512FP16:       # %bb.0:
 ; X86-AVX512FP16-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} zmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX512FP16-NEXT:    vpandq (%eax), %zmm0, %zmm0
+; X86-AVX512FP16-NEXT:    vmovdqa64 (%eax), %zmm0
+; X86-AVX512FP16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-AVX512FP16-NEXT:    retl
 ;
 ; X86-AVX512VLDQ-LABEL: fabs_v32f16:
 ; X86-AVX512VLDQ:       # %bb.0:
 ; X86-AVX512VLDQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-AVX512VLDQ-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X86-AVX512VLDQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
-; X86-AVX512VLDQ-NEXT:    vpandq (%eax), %zmm0, %zmm0
+; X86-AVX512VLDQ-NEXT:    vmovaps (%eax), %zmm0
+; X86-AVX512VLDQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}{1to16}, %zmm0, %zmm0
 ; X86-AVX512VLDQ-NEXT:    retl
 ;
 ; X64-SSE-LABEL: fabs_v32f16:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-SSE-NEXT:    movaps (%rdi), %xmm0
-; X64-SSE-NEXT:    andps %xmm3, %xmm0
-; X64-SSE-NEXT:    movaps 16(%rdi), %xmm1
-; X64-SSE-NEXT:    andps %xmm3, %xmm1
-; X64-SSE-NEXT:    movaps 32(%rdi), %xmm2
-; X64-SSE-NEXT:    andps %xmm3, %xmm2
-; X64-SSE-NEXT:    andps 48(%rdi), %xmm3
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-SSE-NEXT:    movaps %xmm3, %xmm0
+; X64-SSE-NEXT:    andnps (%rdi), %xmm0
+; X64-SSE-NEXT:    movaps %xmm3, %xmm1
+; X64-SSE-NEXT:    andnps 16(%rdi), %xmm1
+; X64-SSE-NEXT:    movaps %xmm3, %xmm2
+; X64-SSE-NEXT:    andnps 32(%rdi), %xmm2
+; X64-SSE-NEXT:    andnps 48(%rdi), %xmm3
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX1-LABEL: fabs_v32f16:
 ; X64-AVX1:       # %bb.0:
-; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX1-NEXT:    vandps (%rdi), %ymm1, %ymm0
-; X64-AVX1-NEXT:    vandps 32(%rdi), %ymm1, %ymm1
+; X64-AVX1-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX1-NEXT:    vandnps (%rdi), %ymm1, %ymm0
+; X64-AVX1-NEXT:    vandnps 32(%rdi), %ymm1, %ymm1
 ; X64-AVX1-NEXT:    retq
 ;
 ; X64-AVX2-LABEL: fabs_v32f16:
 ; X64-AVX2:       # %bb.0:
-; X64-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX2-NEXT:    vpand (%rdi), %ymm1, %ymm0
-; X64-AVX2-NEXT:    vpand 32(%rdi), %ymm1, %ymm1
+; X64-AVX2-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-AVX2-NEXT:    vpandn (%rdi), %ymm1, %ymm0
+; X64-AVX2-NEXT:    vpandn 32(%rdi), %ymm1, %ymm1
 ; X64-AVX2-NEXT:    retq
 ;
 ; X64-AVX512VL-LABEL: fabs_v32f16:
 ; X64-AVX512VL:       # %bb.0:
-; X64-AVX512VL-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
-; X64-AVX512VL-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %zmm0
+; X64-AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512FP16-LABEL: fabs_v32f16:
 ; X64-AVX512FP16:       # %bb.0:
-; X64-AVX512FP16-NEXT:    vpbroadcastw {{.*#+}} zmm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX512FP16-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; X64-AVX512FP16-NEXT:    vmovdqa64 (%rdi), %zmm0
+; X64-AVX512FP16-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; X64-AVX512FP16-NEXT:    retq
 ;
 ; X64-AVX512VLDQ-LABEL: fabs_v32f16:
 ; X64-AVX512VLDQ:       # %bb.0:
-; X64-AVX512VLDQ-NEXT:    vpbroadcastw {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; X64-AVX512VLDQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
-; X64-AVX512VLDQ-NEXT:    vpandq (%rdi), %zmm0, %zmm0
+; X64-AVX512VLDQ-NEXT:    vmovaps (%rdi), %zmm0
+; X64-AVX512VLDQ-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm0, %zmm0
 ; X64-AVX512VLDQ-NEXT:    retq
   %v = load <32 x half>, ptr %p, align 64
   %nnv = call <32 x half> @llvm.fabs.v32f16(<32 x half> %v)
@@ -717,18 +771,19 @@ define void @PR70947(ptr %src, ptr %dst) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movups (%ecx), %xmm0
 ; X86-SSE-NEXT:    movups 32(%ecx), %xmm1
-; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN]
-; X86-SSE-NEXT:    andps %xmm2, %xmm0
-; X86-SSE-NEXT:    andps %xmm2, %xmm1
-; X86-SSE-NEXT:    movups %xmm0, (%eax)
-; X86-SSE-NEXT:    movups %xmm1, 16(%eax)
+; X86-SSE-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; X86-SSE-NEXT:    movaps %xmm2, %xmm3
+; X86-SSE-NEXT:    andnps %xmm0, %xmm3
+; X86-SSE-NEXT:    andnps %xmm1, %xmm2
+; X86-SSE-NEXT:    movups %xmm3, (%eax)
+; X86-SSE-NEXT:    movups %xmm2, 16(%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: PR70947:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X86-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [4294967295,2147483647,4294967295,2147483647,4294967295,2147483647,4294967295,2147483647]
 ; X86-AVX-NEXT:    vandps (%ecx), %ymm0, %ymm1
 ; X86-AVX-NEXT:    vandps 32(%ecx), %xmm0, %xmm0
 ; X86-AVX-NEXT:    vmovups %ymm1, (%eax)
@@ -740,16 +795,17 @@ define void @PR70947(ptr %src, ptr %dst) nounwind {
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movups (%rdi), %xmm0
 ; X64-SSE-NEXT:    movups 32(%rdi), %xmm1
-; X64-SSE-NEXT:    movaps {{.*#+}} xmm2 = [NaN,NaN]
-; X64-SSE-NEXT:    andps %xmm2, %xmm0
-; X64-SSE-NEXT:    andps %xmm2, %xmm1
-; X64-SSE-NEXT:    movups %xmm0, (%rsi)
-; X64-SSE-NEXT:    movups %xmm1, 16(%rsi)
+; X64-SSE-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
+; X64-SSE-NEXT:    movaps %xmm2, %xmm3
+; X64-SSE-NEXT:    andnps %xmm0, %xmm3
+; X64-SSE-NEXT:    andnps %xmm1, %xmm2
+; X64-SSE-NEXT:    movups %xmm3, (%rsi)
+; X64-SSE-NEXT:    movups %xmm2, 16(%rsi)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: PR70947:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [NaN,NaN,NaN,NaN]
+; X64-AVX-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807]
 ; X64-AVX-NEXT:    vandps (%rdi), %ymm0, %ymm1
 ; X64-AVX-NEXT:    vandps 32(%rdi), %xmm0, %xmm0
 ; X64-AVX-NEXT:    vmovups %ymm1, (%rsi)
@@ -766,3 +822,6 @@ define void @PR70947(ptr %src, ptr %dst) nounwind {
   store <2 x double> %fabs4, ptr %dst4, align 4
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; X64-AVX512: {{.*}}
+; X86-AVX512: {{.*}}

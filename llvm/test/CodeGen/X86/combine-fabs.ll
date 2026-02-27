@@ -45,7 +45,7 @@ define float @combine_fabs_fabs(float %a) {
 ;
 ; AVX-LABEL: combine_fabs_fabs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call float @llvm.fabs.f32(float %a)
@@ -61,7 +61,7 @@ define <4 x float> @combine_vec_fabs_fabs(<4 x float> %a) {
 ;
 ; AVX-LABEL: combine_vec_fabs_fabs:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %a)
@@ -78,7 +78,7 @@ define float @combine_fabs_fneg(float %a) {
 ;
 ; AVX-LABEL: combine_fabs_fneg:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub float -0.0, %a
@@ -94,7 +94,7 @@ define <4 x float> @combine_vec_fabs_fneg(<4 x float> %a) {
 ;
 ; AVX-LABEL: combine_vec_fabs_fneg:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = fsub <4 x float> <float -0.0, float -0.0, float -0.0, float -0.0>, %a
@@ -111,7 +111,7 @@ define float @combine_fabs_fcopysign(float %a, float %b) {
 ;
 ; AVX-LABEL: combine_fabs_fcopysign:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call float @llvm.copysign.f32(float %a, float %b)
@@ -127,7 +127,7 @@ define <4 x float> @combine_vec_fabs_fcopysign(<4 x float> %a, <4 x float> %b) {
 ;
 ; AVX-LABEL: combine_vec_fabs_fcopysign:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
 ; AVX-NEXT:    vandps %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
   %1 = call <4 x float> @llvm.copysign.v4f32(<4 x float> %a, <4 x float> %b)
@@ -219,7 +219,7 @@ define void @combine_fabs_vec_int_v4f32(ptr %src, ptr %dst) {
 ;
 ; AVX-LABEL: combine_fabs_vec_int_v4f32:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [NaN,NaN,NaN,NaN]
+; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [2147483647,2147483647,2147483647,2147483647]
 ; AVX-NEXT:    vandps (%rdi), %xmm0, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, (%rsi)
 ; AVX-NEXT:    retq
