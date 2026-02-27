@@ -3023,10 +3023,7 @@ add_entrypoint_object(
   HDRS
     ../hypotbf16.h
   DEPENDS
-    libc.src.__support.FPUtil.hypot
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.common
-    libc.src.__support.macros.config
+    libc.src.__support.math.hypotbf16
 )
 
 add_entrypoint_object(
