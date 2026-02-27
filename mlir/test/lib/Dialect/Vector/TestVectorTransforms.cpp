@@ -202,6 +202,10 @@ struct TestVectorUnrollingPatterns
                       resultShape[1] == 32) {
                     return SmallVector<int64_t>{1, 16};
                   }
+                  if (resultShape.size() == 2 && resultShape[0] == 2 &&
+                      resultShape[1] == 1) {
+                    return SmallVector<int64_t>{1, 1};
+                  }
                   // Default case: [2,4] for all tests.
                   return SmallVector<int64_t>{2, 4};
                 })
