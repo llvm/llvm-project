@@ -1,13 +1,10 @@
 .. title:: clang-tidy - bugprone-exception-baseclass
 
 bugprone-exception-baseclass
-=========================
+============================
 
 Ensure that every value that in a ``throw`` expression is an instance of
 ``std::exception``.
-
-This enforces `rule 15.1 <https://www.perforce.com/resources/qac/high-integrity-cpp-coding-rules>`_
-of the High Integrity C++ Coding Standard.
 
 .. code-block:: c++
 
