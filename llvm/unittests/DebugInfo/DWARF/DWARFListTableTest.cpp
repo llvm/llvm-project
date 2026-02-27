@@ -119,7 +119,7 @@ TEST_P(ListTableVersionFixture, VersionTest) {
   llvm::raw_string_ostream OS(SecData);
   OS.write("\x10\x00\x00\x00", 4); // Length
   llvm::support::endian::write<uint16_t>(OS, Version, llvm::endianness::little);
-  OS.write("\x08",1 );             // Address size
+  OS.write("\x08", 1);             // Address size
   OS.write("\x00", 1);             // Segment selector size
   OS.write("\x01\x00\x00\x00", 4); // Offset entry count
   OS.write("\x04\x00\x00\x00", 4); // offset[0]
