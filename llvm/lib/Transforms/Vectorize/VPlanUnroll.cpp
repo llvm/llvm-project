@@ -220,6 +220,8 @@ void UnrollState::unrollWidenInductionByUF(
   } else {
     AddOpc = Instruction::Add;
     AddFlags = VPIRFlags::getDefaultFlags(AddOpc);
+    if (cast<VPWidenIntOrFpInductionRecipe>(IV)->isCanonical())
+      AddFlags = VPIRFlags::WrapFlagsTy(/*NUW=*/true, /*NSW=*/false);
   }
   for (unsigned Part = 1; Part != UF; ++Part) {
     std::string Name =
