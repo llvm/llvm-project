@@ -484,6 +484,7 @@ add_header_library(
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16subf
   HDRS
@@ -493,6 +494,7 @@ add_header_library(
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.macros.config
 )
+
 add_header_library(
   bf16subf128
   HDRS
