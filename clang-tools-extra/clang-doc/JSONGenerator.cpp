@@ -1,5 +1,6 @@
 #include "Generators.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 
 using namespace llvm;
@@ -624,7 +625,7 @@ void JSONGenerator::serializeInfo(const EnumValueInfo &I, Object &Obj) {
   Object TempObj;
   for (const auto &Child : I.Description) {
     for (const auto &CI : Child.Children)
-      if(Object ChildJson = serializeComment(*CI, TempObj); !ChildJson.empty())
+      if (Object ChildJson = serializeComment(*CI, TempObj); !ChildJson.empty())
         CommentsArrayRef.push_back(std::move(ChildJson));
   }
   if (!CommentsArrayRef.empty())
