@@ -743,6 +743,7 @@ llvm.func @simd_simple(%lb : i64, %ub : i64, %step : i64, %arg0: !llvm.ptr) {
 llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 
 // CHECK-LABEL: @simd_linear
+// CHECK-SAME: (i32 %[[LB:.*]], i32 %{{.*}}, i32 %[[STEP:.*]], ptr %[[X:.*]])
 
 // CHECK: %[[LINEAR_VAR:.*]] = alloca i32, align 4
 // CHECK: %[[LINEAR_RESULT:.*]] = alloca i32, align 4
@@ -758,8 +759,16 @@ llvm.func @simd_linear(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
 // CHECK: %[[MUL:.*]] = mul i32 %omp_loop.iv, {{.*}}
 // CHECK: %[[ADD:.*]] = add i32 %[[LOAD]], %[[MUL]]
 // CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4, !llvm.access.group !1
+
+// CHECK: omp.region.cont:
+// CHECK: %[[MUL:.*]] = mul i32 %omp_loop.iv, %[[STEP]]
+// CHECK: %[[ADD:.*]] = add i32 %[[LB]], %[[MUL]]
+// CHECK: store i32 %[[ADD]], ptr %[[LINEAR_RESULT]], align 4
+// CHECK: %[[LOAD:.*]] = load i32, ptr %[[LINEAR_RESULT]], align 4
+// CHECK: store i32 %[[LOAD]], ptr %[[X]], align 4
   omp.simd linear(%x : !llvm.ptr = %step : i32) {
     omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+      llvm.store %iv, %x : i32, !llvm.ptr
       omp.yield
     }
   } {linear_var_types = [i32]}
@@ -784,8 +793,8 @@ llvm.func @simd_linear_i64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 
 // CHECK: omp_loop.body:
 // Verify type conversions: iv (i32) is extended to i64 before multiplication
-// CHECK: %[[IV_I64:.*]] = sext i32 %omp_loop.iv to i64
 // CHECK: %[[LOAD:.*]] = load i64, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// CHECK: %[[IV_I64:.*]] = sext i32 %omp_loop.iv to i64
 // Verify multiplication and addition use consistent i64 types
 // CHECK: %[[MUL:.*]] = mul i64 %[[IV_I64]], {{.*}}
 // CHECK: %[[ADD:.*]] = add i64 %[[LOAD]], %[[MUL]]
@@ -817,8 +826,8 @@ llvm.func @simd_linear_f64_var_i32_step(%lb : i32, %ub : i32, %x : !llvm.ptr) {
 // CHECK: omp_loop.body:
 // Verify integer multiplication, load, and conversion to float
 // CHECK: mul i32 %omp_loop.iv
-// CHECK: %[[MUL_INT:.*]] = mul i32 %omp_loop.iv, {{.*}}
-// CHECK-NEXT: %[[LOAD:.*]] = load double, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// CHECK: %[[LOAD:.*]] = load double, ptr %[[LINEAR_VAR]], {{.*}}!llvm.access.group
+// CHECK-NEXT: %[[MUL_INT:.*]] = mul i32 %omp_loop.iv, {{.*}}
 // CHECK-NEXT: %[[MUL_FP:.*]] = sitofp i32 %[[MUL_INT]] to double
 // CHECK-NEXT: %[[ADD:.*]] = fadd double %[[LOAD]], %[[MUL_FP]]
 // CHECK-NEXT: store double %[[ADD]], ptr %[[LINEAR_RESULT]], {{.*}}!llvm.access.group
