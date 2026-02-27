@@ -212,6 +212,34 @@ dialects of the language. Below, we describe some of the differences.
 This section is painful; hopefully you can skip this section and live your life
 blissfully unaware.
 
+### `extern __shared__` Variables
+
+Clang accepts `extern __shared__` declarations of scalars, structs, and
+fixed-size arrays for compatibility with nvcc. In non-RDC mode
+(`-fno-gpu-rdc`), nonzero-sized objects use fixed shared storage sized according
+to their declared types. Unsized arrays use dynamic shared memory,
+whose size is specified at kernel launch. AMDGPU also treats zero-sized
+shared objects as dynamic LDS. A nonzero-sized complete struct declared
+`extern __shared__` does not overlay dynamic shared memory.
+
+```cuda
+struct SharedData { int x; float y; };
+
+__global__ void kernel() {
+  extern __shared__ int scalar;        // Fixed shared storage: one int.
+  extern __shared__ SharedData data;   // Fixed shared storage: one SharedData.
+  extern __shared__ int fixed[16];     // Fixed shared storage: 16 ints.
+  extern __shared__ int dynamic[];     // Dynamic shared memory.
+}
+```
+
+`-Wcuda-extern-shared` enables a warning for non-RDC `extern __shared__`
+declarations whose types are not incomplete arrays. This warning is disabled
+by default. In RDC mode (`-fgpu-rdc`), these declarations are accepted without
+this warning and follow the usual rules for external device variables.
+
+These rules also apply to HIP. See [HIP Support](https://clang.llvm.org/docs/HIPSupport.html).
+
 ### Compilation Models
 
 Most of the differences between clang and nvcc stem from the different
