@@ -14,13 +14,11 @@
 #ifndef CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONFORMATIMPL_H
 #define CLANG_LIB_ANALYSIS_SCALABLE_SERIALIZATION_JSONFORMAT_JSONFORMATIMPL_H
 
-#include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
-
 #include "../../ModelStringConversions.h"
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
+#include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
 #include "clang/Analysis/Scalable/Support/FormatProviders.h"
-
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -41,7 +39,7 @@ using Value = llvm::json::Value;
 // File Format Constant
 //----------------------------------------------------------------------------
 
-constexpr const char *JSONFormatFileExtension = ".json";
+inline constexpr const char *JSONFormatFileExtension = ".json";
 
 //----------------------------------------------------------------------------
 // Error Message Constants
@@ -49,58 +47,64 @@ constexpr const char *JSONFormatFileExtension = ".json";
 
 namespace ErrorMessages {
 
-constexpr const char *FailedToReadFile = "failed to read file '{0}': {1}";
-constexpr const char *FailedToWriteFile = "failed to write file '{0}': {1}";
-constexpr const char *FileNotFound = "file does not exist";
-constexpr const char *FileIsDirectory = "path is a directory, not a file";
-constexpr const char *FileIsNotJSON = "file does not end with '{0}' extension";
-constexpr const char *FileExists = "file already exists";
-constexpr const char *ParentDirectoryNotFound =
+inline constexpr const char *FailedToReadFile =
+    "failed to read file '{0}': {1}";
+inline constexpr const char *FailedToWriteFile =
+    "failed to write file '{0}': {1}";
+inline constexpr const char *FileNotFound = "file does not exist";
+inline constexpr const char *FileIsDirectory =
+    "path is a directory, not a file";
+inline constexpr const char *FileIsNotJSON =
+    "file does not end with '{0}' extension";
+inline constexpr const char *FileExists = "file already exists";
+inline constexpr const char *ParentDirectoryNotFound =
     "parent directory does not exist";
 
-constexpr const char *ReadingFromField = "reading {0} from field '{1}'";
-constexpr const char *WritingToField = "writing {0} to field '{1}'";
-constexpr const char *ReadingFromIndex = "reading {0} from index '{1}'";
-constexpr const char *WritingToIndex = "writing {0} to index '{1}'";
-constexpr const char *ReadingFromFile = "reading {0} from file '{1}'";
-constexpr const char *WritingToFile = "writing {0} to file '{1}'";
+inline constexpr const char *ReadingFromField = "reading {0} from field '{1}'";
+inline constexpr const char *WritingToField = "writing {0} to field '{1}'";
+inline constexpr const char *ReadingFromIndex = "reading {0} from index '{1}'";
+inline constexpr const char *WritingToIndex = "writing {0} to index '{1}'";
+inline constexpr const char *ReadingFromFile = "reading {0} from file '{1}'";
+inline constexpr const char *WritingToFile = "writing {0} to file '{1}'";
 
-constexpr const char *FailedInsertionOnDuplication =
+inline constexpr const char *FailedInsertionOnDuplication =
     "failed to insert {0} at index '{1}': encountered duplicate '{2}'";
 
-constexpr const char *FailedToReadObject =
+inline constexpr const char *FailedToReadObject =
     "failed to read {0}: expected JSON {1}";
-constexpr const char *FailedToReadObjectAtField =
+inline constexpr const char *FailedToReadObjectAtField =
     "failed to read {0} from field '{1}': expected JSON {2}";
-constexpr const char *FailedToReadObjectAtIndex =
+inline constexpr const char *FailedToReadObjectAtIndex =
     "failed to read {0} from index '{1}': expected JSON {2}";
 
-constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
+inline constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
     "failed to deserialize EntitySummary: no FormatInfo registered for '{0}'";
-constexpr const char *FailedToSerializeEntitySummaryNoFormatInfo =
+inline constexpr const char *FailedToSerializeEntitySummaryNoFormatInfo =
     "failed to serialize EntitySummary: no FormatInfo registered for '{0}'";
 
-constexpr const char *FailedToDeserializeEntitySummaryMissingData =
+inline constexpr const char *FailedToDeserializeEntitySummaryMissingData =
     "failed to deserialize EntitySummary: null EntitySummary data for '{0}'";
-constexpr const char *FailedToSerializeEntitySummaryMissingData =
+inline constexpr const char *FailedToSerializeEntitySummaryMissingData =
     "JSONFormat - null EntitySummary data for '{0}'";
 
-constexpr const char *FailedToDeserializeEntitySummaryMismatchedSummaryName =
-    "failed to deserialize EntitySummary: EntitySummary data for '{0}' reports "
-    "mismatched '{1}'";
-constexpr const char *FailedToSerializeEntitySummaryMismatchedSummaryName =
-    "JSONFormat - EntitySummary data for '{0}' reports mismatched '{1}'";
+inline constexpr const char
+    *FailedToDeserializeEntitySummaryMismatchedSummaryName =
+        "failed to deserialize EntitySummary: EntitySummary data for '{0}' "
+        "reports mismatched '{1}'";
+inline constexpr const char
+    *FailedToSerializeEntitySummaryMismatchedSummaryName =
+        "JSONFormat - EntitySummary data for '{0}' reports mismatched '{1}'";
 
-constexpr const char *InvalidBuildNamespaceKind =
+inline constexpr const char *InvalidBuildNamespaceKind =
     "invalid 'kind' BuildNamespaceKind value '{0}'";
 
-constexpr const char *InvalidEntityLinkageType =
+inline constexpr const char *InvalidEntityLinkageType =
     "invalid 'type' EntityLinkageType value '{0}'";
 
-constexpr const char *FailedToDeserializeLinkageTableExtraId =
+inline constexpr const char *FailedToDeserializeLinkageTableExtraId =
     "failed to deserialize LinkageTable: extra '{0}' not present in IdTable";
 
-constexpr const char *FailedToDeserializeLinkageTableMissingId =
+inline constexpr const char *FailedToDeserializeLinkageTableMissingId =
     "failed to deserialize LinkageTable: missing '{0}' present in IdTable";
 
 } // namespace ErrorMessages

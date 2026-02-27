@@ -11,13 +11,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "JSONFormatTest.h"
+
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
+#include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/Support/Registry.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
+
 #include <memory>
 #include <vector>
 

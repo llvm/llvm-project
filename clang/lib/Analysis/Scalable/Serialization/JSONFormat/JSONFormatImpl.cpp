@@ -9,7 +9,6 @@
 #include "JSONFormatImpl.h"
 
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
-
 #include "llvm/Support/Registry.h"
 
 LLVM_INSTANTIATE_REGISTRY(llvm::Registry<clang::ssaf::JSONFormat::FormatInfo>)
