@@ -78,6 +78,7 @@ struct LoweringPreparePass
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
   void lowerTrivialCopyCall(cir::CallOp op);
+  void lowerStoreOfConstAggregate(cir::StoreOp op);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -1461,6 +1462,81 @@ void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
   }
 }
 
+void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
+  // Check if the value operand is a cir.const with aggregate type.
+  auto constOp = op.getValue().getDefiningOp<cir::ConstantOp>();
+  if (!constOp)
+    return;
+
+  mlir::Type ty = constOp.getType();
+  if (!mlir::isa<cir::ArrayType, cir::RecordType>(ty))
+    return;
+
+  // Only transform stores to local variables (backed by cir.alloca).
+  // Stores to other addresses (e.g. base_class_addr) should not be
+  // transformed as they may be partial initializations.
+  auto alloca = op.getAddr().getDefiningOp<cir::AllocaOp>();
+  if (!alloca)
+    return;
+
+  mlir::TypedAttr constant = constOp.getValue();
+
+  // OG implements several optimization tiers for constant aggregate
+  // initialization. For now we always create a global constant + memcpy
+  // (shouldCreateMemCpyFromGlobal). Future work can add the intermediate
+  // tiers.
+  assert(!cir::MissingFeatures::shouldUseBZeroPlusStoresToInitialize());
+  assert(!cir::MissingFeatures::shouldUseMemSetToInitialize());
+  assert(!cir::MissingFeatures::shouldSplitConstantStore());
+
+  // Get function name from parent cir.func.
+  auto func = op->getParentOfType<cir::FuncOp>();
+  if (!func)
+    return;
+  llvm::StringRef funcName = func.getSymName();
+
+  // Get variable name from the alloca.
+  llvm::StringRef varName = alloca.getName();
+
+  // Build name: __const.<func>.<var>
+  std::string name = ("__const." + funcName + "." + varName).str();
+
+  // Create the global constant.
+  CIRBaseBuilderTy builder(getContext());
+
+  // Use InsertionGuard to create the global at module level.
+  builder.setInsertionPointToStart(mlirModule.getBody());
+
+  // If a global with this name already exists (e.g. CIRGen materializes
+  // constexpr locals as globals when their address is taken), reuse it.
+  if (!mlir::SymbolTable::lookupSymbolIn(
+          mlirModule, mlir::StringAttr::get(&getContext(), name))) {
+    auto gv = cir::GlobalOp::create(builder, op.getLoc(), name, ty,
+                                    /*isConstant=*/true,
+                                    cir::GlobalLinkageKind::PrivateLinkage);
+    mlir::SymbolTable::setSymbolVisibility(
+        gv, mlir::SymbolTable::Visibility::Private);
+    gv.setInitialValueAttr(constant);
+  }
+
+  // Now replace the store with get_global + copy.
+  builder.setInsertionPoint(op);
+
+  auto ptrTy = cir::PointerType::get(ty);
+  mlir::Value globalPtr =
+      cir::GetGlobalOp::create(builder, op.getLoc(), ptrTy, name);
+
+  // Replace store with copy.
+  builder.createCopy(op.getAddr(), globalPtr);
+
+  // Erase the original store.
+  op.erase();
+
+  // Erase the cir.const if it has no remaining users.
+  if (constOp.use_empty())
+    constOp.erase();
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -1495,6 +1571,8 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerUnaryOp(unary);
   } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
     lowerTrivialCopyCall(callOp);
+  } else if (auto storeOp = dyn_cast<cir::StoreOp>(op)) {
+    lowerStoreOfConstAggregate(storeOp);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorPriority())
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
@@ -1514,7 +1592,7 @@ void LoweringPreparePass::runOnOperation() {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
                   cir::FuncOp, cir::CallOp, cir::GetGlobalOp, cir::GlobalOp,
-                  cir::UnaryOp>(op))
+                  cir::StoreOp, cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 

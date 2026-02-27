@@ -9,7 +9,16 @@
 #ifndef LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYLINKAGE_H
 #define LLVM_CLANG_ANALYSIS_SCALABLE_MODEL_ENTITYLINKAGE_H
 
+#include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
+
 namespace clang::ssaf {
+
+enum class EntityLinkageType {
+  None,     ///< local variables, function parameters
+  Internal, ///< static functions/variables, anonymous namespace
+  External  ///< globally visible across translation units
+};
 
 /// Represents the linkage properties of an entity in the program model.
 ///
@@ -18,21 +27,25 @@ namespace clang::ssaf {
 /// across translation units.
 class EntityLinkage {
   friend class SerializationFormat;
+  friend class TestFixture;
 
 public:
-  enum class LinkageType {
-    None,     ///< local variables, function parameters
-    Internal, ///< static functions/variables, anonymous namespace
-    External  ///< globally visible across translation units
-  };
+  constexpr explicit EntityLinkage(EntityLinkageType L) : Linkage(L) {}
 
-  explicit EntityLinkage(LinkageType L) : Linkage(L) {}
+  EntityLinkageType getLinkage() const { return Linkage; }
 
-  LinkageType getLinkage() const { return Linkage; }
+  bool operator==(const EntityLinkage &Other) const;
+  bool operator!=(const EntityLinkage &Other) const;
 
 private:
-  LinkageType Linkage;
+  EntityLinkageType Linkage;
 };
+
+/// Writes a string representation of the linkage type to the stream.
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, EntityLinkageType Linkage);
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                              const EntityLinkage &Linkage);
 
 } // namespace clang::ssaf
 

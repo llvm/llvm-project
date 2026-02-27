@@ -1,7 +1,15 @@
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
+
+#include "../ModelStringConversions.h"
+
+#include "clang/Analysis/Scalable/Model/EntityLinkage.h"
+#include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
+#include "clang/Analysis/Scalable/Support/FormatProviders.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/JSON.h"
@@ -15,101 +23,7 @@ using Array = llvm::json::Array;
 using Object = llvm::json::Object;
 using Value = llvm::json::Value;
 
-//----------------------------------------------------------------------------
-// ErrorBuilder - Fluent API for constructing contextual errors.
-//----------------------------------------------------------------------------
-
-namespace {
-
-class ErrorBuilder {
-private:
-  std::error_code Code;
-  std::vector<std::string> ContextStack;
-
-  // Private constructor - only accessible via static factories.
-  explicit ErrorBuilder(std::error_code EC) : Code(EC) {}
-
-  // Helper: Format message and add to context stack.
-  template <typename... Args>
-  void addFormattedContext(const char *Fmt, Args &&...ArgVals) {
-    std::string Message =
-        llvm::formatv(Fmt, std::forward<Args>(ArgVals)...).str();
-    ContextStack.push_back(std::move(Message));
-  }
-
-public:
-  // Static factory: Create new error from error code and formatted message.
-  template <typename... Args>
-  static ErrorBuilder create(std::error_code EC, const char *Fmt,
-                             Args &&...ArgVals) {
-    ErrorBuilder Builder(EC);
-    Builder.addFormattedContext(Fmt, std::forward<Args>(ArgVals)...);
-    return Builder;
-  }
-
-  // Convenience overload for std::errc.
-  template <typename... Args>
-  static ErrorBuilder create(std::errc EC, const char *Fmt, Args &&...ArgVals) {
-    return create(std::make_error_code(EC), Fmt,
-                  std::forward<Args>(ArgVals)...);
-  }
-
-  // Static factory: Wrap existing error and optionally add context.
-  static ErrorBuilder wrap(llvm::Error E) {
-    if (!E) {
-      llvm::consumeError(std::move(E));
-      // Return builder with generic error code for success case.
-      return ErrorBuilder(std::make_error_code(std::errc::invalid_argument));
-    }
-
-    std::error_code EC;
-    bool FirstError = true;
-    ErrorBuilder Builder(std::make_error_code(std::errc::invalid_argument));
-
-    llvm::handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EI) {
-      // Capture error code from the first error only.
-      if (FirstError) {
-        EC = EI.convertToErrorCode();
-        Builder.Code = EC;
-        FirstError = false;
-      }
-
-      // Collect messages from all errors.
-      std::string ErrorMsg = EI.message();
-      if (!ErrorMsg.empty()) {
-        Builder.ContextStack.push_back(std::move(ErrorMsg));
-      }
-    });
-
-    return Builder;
-  }
-
-  // Add context (plain string).
-  ErrorBuilder &context(const char *Msg) {
-    ContextStack.push_back(Msg);
-    return *this;
-  }
-
-  // Add context (formatted string).
-  template <typename... Args>
-  ErrorBuilder &context(const char *Fmt, Args &&...ArgVals) {
-    addFormattedContext(Fmt, std::forward<Args>(ArgVals)...);
-    return *this;
-  }
-
-  // Build the final error.
-  llvm::Error build() {
-    if (ContextStack.empty())
-      return llvm::Error::success();
-
-    // Reverse the context stack so that the most recent context appears first
-    // and the wrapped error (if any) appears last.
-    return llvm::createStringError(
-        llvm::join(llvm::reverse(ContextStack), "\n"), Code);
-  }
-};
-
-} // namespace
+LLVM_INSTANTIATE_REGISTRY(llvm::Registry<JSONFormat::FormatInfo>)
 
 //----------------------------------------------------------------------------
 // File Format Constant
@@ -146,7 +60,7 @@ constexpr const char *ReadingFromFile = "reading {0} from file '{1}'";
 constexpr const char *WritingToFile = "writing {0} to file '{1}'";
 
 constexpr const char *FailedInsertionOnDuplication =
-    "failed to insert {0} at index '{1}': encountered duplicate {2} '{3}'";
+    "failed to insert {0} at index '{1}': encountered duplicate '{2}'";
 
 constexpr const char *FailedToReadObject =
     "failed to read {0}: expected JSON {1}";
@@ -155,15 +69,33 @@ constexpr const char *FailedToReadObjectAtField =
 constexpr const char *FailedToReadObjectAtIndex =
     "failed to read {0} from index '{1}': expected JSON {2}";
 
-constexpr const char *FailedToDeserializeEntitySummary =
-    "failed to deserialize EntitySummary: no FormatInfo registered for summary "
-    "'{0}'";
-constexpr const char *FailedToSerializeEntitySummary =
-    "failed to serialize EntitySummary: no FormatInfo registered for summary "
-    "'{0}'";
+constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
+    "failed to deserialize EntitySummary: no FormatInfo registered for '{0}'";
+constexpr const char *FailedToSerializeEntitySummaryNoFormatInfo =
+    "failed to serialize EntitySummary: no FormatInfo registered for '{0}'";
+
+constexpr const char *FailedToDeserializeEntitySummaryMissingData =
+    "failed to deserialize EntitySummary: null EntitySummary data for '{0}'";
+constexpr const char *FailedToSerializeEntitySummaryMissingData =
+    "JSONFormat - null EntitySummary data for '{0}'";
+
+constexpr const char *FailedToDeserializeEntitySummaryMismatchedSummaryName =
+    "failed to deserialize EntitySummary: EntitySummary data for '{0}' reports "
+    "mismatched '{1}'";
+constexpr const char *FailedToSerializeEntitySummaryMismatchedSummaryName =
+    "JSONFormat - EntitySummary data for '{0}' reports mismatched '{1}'";
 
 constexpr const char *InvalidBuildNamespaceKind =
     "invalid 'kind' BuildNamespaceKind value '{0}'";
+
+constexpr const char *InvalidEntityLinkageType =
+    "invalid 'type' EntityLinkageType value '{0}'";
+
+constexpr const char *FailedToDeserializeLinkageTableExtraId =
+    "failed to deserialize LinkageTable: extra '{0}' not present in IdTable";
+
+constexpr const char *FailedToDeserializeLinkageTableMissingId =
+    "failed to deserialize LinkageTable: missing '{0}' present in IdTable";
 
 } // namespace ErrorMessages
 
@@ -305,29 +237,30 @@ uint64_t JSONFormat::entityIdToJSON(EntityId EI) const {
 // BuildNamespaceKind
 //----------------------------------------------------------------------------
 
-llvm::Expected<BuildNamespaceKind> JSONFormat::buildNamespaceKindFromJSON(
-    llvm::StringRef BuildNamespaceKindStr) const {
-  auto OptBuildNamespaceKind = parseBuildNamespaceKind(BuildNamespaceKindStr);
+namespace {
+
+llvm::Expected<BuildNamespaceKind>
+buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
+  auto OptBuildNamespaceKind =
+      buildNamespaceKindFromString(BuildNamespaceKindStr);
   if (!OptBuildNamespaceKind) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::InvalidBuildNamespaceKind,
                                 BuildNamespaceKindStr)
         .build();
   }
-
   return *OptBuildNamespaceKind;
 }
 
-namespace {
-
+// Provided for consistency with respect to rest of the codebase.
 llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
-  return toString(BNK);
+  return buildNamespaceKindToString(BNK);
 }
 
 } // namespace
 
 //----------------------------------------------------------------------------
-// BuildNamespace
+// NestedBuildNamespace
 //----------------------------------------------------------------------------
 
 llvm::Expected<BuildNamespace>
@@ -341,10 +274,11 @@ JSONFormat::buildNamespaceFromJSON(const Object &BuildNamespaceObject) const {
   }
 
   auto ExpectedKind = buildNamespaceKindFromJSON(*OptBuildNamespaceKindStr);
-  if (!ExpectedKind)
+  if (!ExpectedKind) {
     return ErrorBuilder::wrap(ExpectedKind.takeError())
         .context(ErrorMessages::ReadingFromField, "BuildNamespaceKind", "kind")
         .build();
+  }
 
   auto OptNameStr = BuildNamespaceObject.getString("name");
   if (!OptNameStr) {
@@ -462,6 +396,61 @@ Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
 }
 
 //----------------------------------------------------------------------------
+// EntityLinkageType
+//----------------------------------------------------------------------------
+
+namespace {
+
+llvm::Expected<EntityLinkageType>
+entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
+  auto OptEntityLinkageType = entityLinkageTypeFromString(EntityLinkageTypeStr);
+  if (!OptEntityLinkageType) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::InvalidEntityLinkageType,
+                                EntityLinkageTypeStr)
+        .build();
+  }
+  return *OptEntityLinkageType;
+}
+
+// Provided for consistency with respect to rest of the codebase.
+llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
+  return entityLinkageTypeToString(LT);
+}
+
+} // namespace
+
+//----------------------------------------------------------------------------
+// EntityLinkage
+//----------------------------------------------------------------------------
+
+llvm::Expected<EntityLinkage>
+JSONFormat::entityLinkageFromJSON(const Object &EntityLinkageObject) const {
+  auto OptLinkageStr = EntityLinkageObject.getString("type");
+  if (!OptLinkageStr) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "EntityLinkageType", "type", "string")
+        .build();
+  }
+
+  auto ExpectedLinkageType = entityLinkageTypeFromJSON(*OptLinkageStr);
+  if (!ExpectedLinkageType) {
+    return ErrorBuilder::wrap(ExpectedLinkageType.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityLinkageType", "type")
+        .build();
+  }
+
+  return EntityLinkage(*ExpectedLinkageType);
+}
+
+Object JSONFormat::entityLinkageToJSON(const EntityLinkage &EL) const {
+  Object Result;
+  Result["type"] = entityLinkageTypeToJSON(getLinkage(EL));
+  return Result;
+}
+
+//----------------------------------------------------------------------------
 // EntityIdTableEntry
 //----------------------------------------------------------------------------
 
@@ -551,8 +540,8 @@ JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
     if (!EntityInserted) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
-                                  "EntityIdTable entry", Index, "EntityId",
-                                  getIndex(EntityIt->second))
+                                  "EntityIdTable entry", Index,
+                                  EntityIt->second)
           .build();
     }
   }
@@ -574,6 +563,136 @@ Array JSONFormat::entityIdTableToJSON(const EntityIdTable &IdTable) const {
 }
 
 //----------------------------------------------------------------------------
+// LinkageTableEntry
+//----------------------------------------------------------------------------
+
+llvm::Expected<std::pair<EntityId, EntityLinkage>>
+JSONFormat::linkageTableEntryFromJSON(
+    const Object &LinkageTableEntryObject) const {
+  const Value *EntityIdIntValue = LinkageTableEntryObject.get("id");
+  if (!EntityIdIntValue) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "EntityId", "id",
+                                "number (unsigned 64-bit integer)")
+        .build();
+  }
+
+  const std::optional<uint64_t> OptEntityIdInt =
+      EntityIdIntValue->getAsUINT64();
+  if (!OptEntityIdInt) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "EntityId", "id",
+                                "number (unsigned 64-bit integer)")
+        .build();
+  }
+
+  EntityId EI = entityIdFromJSON(*OptEntityIdInt);
+
+  const Object *OptEntityLinkageObject =
+      LinkageTableEntryObject.getObject("linkage");
+  if (!OptEntityLinkageObject) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::FailedToReadObjectAtField,
+                                "EntityLinkage", "linkage", "object")
+        .build();
+  }
+
+  auto ExpectedEntityLinkage = entityLinkageFromJSON(*OptEntityLinkageObject);
+  if (!ExpectedEntityLinkage) {
+    return ErrorBuilder::wrap(ExpectedEntityLinkage.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityLinkage", "linkage")
+        .build();
+  }
+
+  return std::make_pair(std::move(EI), std::move(*ExpectedEntityLinkage));
+}
+
+Object JSONFormat::linkageTableEntryToJSON(EntityId EI,
+                                           const EntityLinkage &EL) const {
+  Object Entry;
+  Entry["id"] = entityIdToJSON(EI);
+  Entry["linkage"] = entityLinkageToJSON(EL);
+  return Entry;
+}
+
+//----------------------------------------------------------------------------
+// LinkageTable
+//----------------------------------------------------------------------------
+
+// ExpectedIds is the set of EntityIds from the IdTable that must appear in the
+// linkage table—no more, no fewer. It is taken by value because it is consumed
+// during parsing: each successfully matched id is erased from the set, and any
+// ids remaining at the end are reported as missing.
+llvm::Expected<std::map<EntityId, EntityLinkage>>
+JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
+                                 std::set<EntityId> ExpectedIds) const {
+  std::map<EntityId, EntityLinkage> LinkageTable;
+
+  for (const auto &[Index, LinkageTableEntryValue] :
+       llvm::enumerate(LinkageTableArray)) {
+    const Object *OptLinkageTableEntryObject =
+        LinkageTableEntryValue.getAsObject();
+    if (!OptLinkageTableEntryObject) {
+      return ErrorBuilder::create(std::errc::invalid_argument,
+                                  ErrorMessages::FailedToReadObjectAtIndex,
+                                  "LinkageTable entry", Index, "object")
+          .build();
+    }
+
+    auto ExpectedLinkageTableEntry =
+        linkageTableEntryFromJSON(*OptLinkageTableEntryObject);
+    if (!ExpectedLinkageTableEntry) {
+      return ErrorBuilder::wrap(ExpectedLinkageTableEntry.takeError())
+          .context(ErrorMessages::ReadingFromIndex, "LinkageTable entry", Index)
+          .build();
+    }
+
+    const EntityId EI = ExpectedLinkageTableEntry->first;
+
+    auto [It, Inserted] =
+        LinkageTable.insert(std::move(*ExpectedLinkageTableEntry));
+    if (!Inserted) {
+      return ErrorBuilder::create(std::errc::invalid_argument,
+                                  ErrorMessages::FailedInsertionOnDuplication,
+                                  "LinkageTable entry", Index, It->first)
+          .build();
+    }
+
+    if (ExpectedIds.erase(EI) == 0) {
+      return ErrorBuilder::create(
+                 std::errc::invalid_argument,
+                 ErrorMessages::FailedToDeserializeLinkageTableExtraId, EI)
+          .context(ErrorMessages::ReadingFromIndex, "LinkageTable entry", Index)
+          .build();
+    }
+  }
+
+  if (!ExpectedIds.empty()) {
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeLinkageTableMissingId,
+               *ExpectedIds.begin())
+        .build();
+  }
+
+  return LinkageTable;
+}
+
+Array JSONFormat::linkageTableToJSON(
+    const std::map<EntityId, EntityLinkage> &LinkageTable) const {
+  Array Result;
+  Result.reserve(LinkageTable.size());
+
+  for (const auto &[EI, EL] : LinkageTable) {
+    Result.push_back(linkageTableEntryToJSON(EI, EL));
+  }
+
+  return Result;
+}
+
+//----------------------------------------------------------------------------
 // EntitySummary
 //----------------------------------------------------------------------------
 
@@ -583,9 +702,9 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
                                   EntityIdTable &IdTable) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToDeserializeEntitySummary,
-                                SN.str())
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeEntitySummaryNoFormatInfo, SN)
         .build();
   }
 
@@ -601,9 +720,9 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
                                 const EntitySummary &ES) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToSerializeEntitySummary,
-                                SN.str())
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToSerializeEntitySummaryNoFormatInfo, SN)
         .build();
   }
 
@@ -637,7 +756,8 @@ JSONFormat::entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
   if (!OptEntityIdInt) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "EntityId", "entity_id", "integer")
+                                "EntityId", "entity_id",
+                                "number (unsigned 64-bit integer)")
         .build();
   }
 
@@ -661,7 +781,56 @@ JSONFormat::entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
         .build();
   }
 
+  if (*ExpectedEntitySummary == nullptr) {
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeEntitySummaryMissingData, SN)
+        .build();
+  }
+
+  auto ActualSN = (*ExpectedEntitySummary)->getSummaryName();
+  if (SN != ActualSN) {
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::
+                   FailedToDeserializeEntitySummaryMismatchedSummaryName,
+               SN, ActualSN)
+        .build();
+  }
+
   return std::make_pair(std::move(EI), std::move(*ExpectedEntitySummary));
+}
+
+llvm::Expected<Object> JSONFormat::entityDataMapEntryToJSON(
+    const EntityId EI, const std::unique_ptr<EntitySummary> &EntitySummary,
+    const SummaryName &SN) const {
+  Object Entry;
+
+  Entry["entity_id"] = entityIdToJSON(EI);
+
+  if (!EntitySummary) {
+    ErrorBuilder::fatal(
+        ErrorMessages::FailedToSerializeEntitySummaryMissingData, SN);
+  }
+
+  const auto ActualSN = EntitySummary->getSummaryName();
+  if (SN != ActualSN) {
+    ErrorBuilder::fatal(
+        ErrorMessages::FailedToSerializeEntitySummaryMismatchedSummaryName, SN,
+        ActualSN);
+  }
+
+  auto ExpectedEntitySummaryObject = entitySummaryToJSON(SN, *EntitySummary);
+  if (!ExpectedEntitySummaryObject) {
+    return ErrorBuilder::wrap(ExpectedEntitySummaryObject.takeError())
+        .context(ErrorMessages::WritingToField, "EntitySummary",
+                 "entity_summary")
+        .build();
+  }
+
+  Entry["entity_summary"] = std::move(*ExpectedEntitySummaryObject);
+
+  return Entry;
 }
 
 //----------------------------------------------------------------------------
@@ -688,24 +857,24 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
 
     auto ExpectedEntityDataMapEntry =
         entityDataMapEntryFromJSON(*OptEntityDataMapEntryObject, SN, IdTable);
-    if (!ExpectedEntityDataMapEntry)
+    if (!ExpectedEntityDataMapEntry) {
       return ErrorBuilder::wrap(ExpectedEntityDataMapEntry.takeError())
           .context(ErrorMessages::ReadingFromIndex, "EntitySummary entry",
                    Index)
           .build();
+    }
 
     auto [DataIt, DataInserted] =
         EntityDataMap.insert(std::move(*ExpectedEntityDataMapEntry));
     if (!DataInserted) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
-                                  "EntitySummary entry", Index, "EntityId",
-                                  getIndex(DataIt->first))
+                                  "EntitySummary entry", Index, DataIt->first)
           .build();
     }
   }
 
-  return EntityDataMap;
+  return std::move(EntityDataMap);
 }
 
 llvm::Expected<Array> JSONFormat::entityDataMapToJSON(
@@ -719,20 +888,16 @@ llvm::Expected<Array> JSONFormat::entityDataMapToJSON(
        llvm::enumerate(EntityDataMap)) {
     const auto &[EntityId, EntitySummary] = EntityDataMapEntry;
 
-    Object Entry;
+    auto ExpectedEntityDataMapEntryObject =
+        entityDataMapEntryToJSON(EntityId, EntitySummary, SN);
 
-    Entry["entity_id"] = entityIdToJSON(EntityId);
-
-    auto ExpectedEntitySummaryObject = entitySummaryToJSON(SN, *EntitySummary);
-    if (!ExpectedEntitySummaryObject) {
-      return ErrorBuilder::wrap(ExpectedEntitySummaryObject.takeError())
+    if (!ExpectedEntityDataMapEntryObject) {
+      return ErrorBuilder::wrap(ExpectedEntityDataMapEntryObject.takeError())
           .context(ErrorMessages::WritingToIndex, "EntitySummary entry", Index)
           .build();
     }
 
-    Entry["entity_summary"] = std::move(*ExpectedEntitySummaryObject);
-
-    Result.push_back(std::move(Entry));
+    Result.push_back(std::move(*ExpectedEntityDataMapEntryObject));
   }
 
   return Result;
@@ -835,13 +1000,12 @@ JSONFormat::summaryDataMapFromJSON(const Array &SummaryDataArray,
     if (!SummaryInserted) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
-                                  "SummaryData entry", Index, "SummaryName",
-                                  SummaryIt->first.str())
+                                  "SummaryData entry", Index, SummaryIt->first)
           .build();
     }
   }
 
-  return SummaryDataMap;
+  return std::move(SummaryDataMap);
 }
 
 llvm::Expected<Array> JSONFormat::summaryDataMapToJSON(
@@ -866,7 +1030,7 @@ llvm::Expected<Array> JSONFormat::summaryDataMapToJSON(
     Result.push_back(std::move(*ExpectedSummaryDataMapObject));
   }
 
-  return Result;
+  return std::move(Result);
 }
 
 //----------------------------------------------------------------------------
@@ -934,6 +1098,36 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
   }
 
   {
+    const Array *LinkageTableArray = RootObject.getArray("linkage_table");
+    if (!LinkageTableArray) {
+      return ErrorBuilder::create(std::errc::invalid_argument,
+                                  ErrorMessages::FailedToReadObjectAtField,
+                                  "LinkageTable", "linkage_table", "array")
+          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .build();
+    }
+
+    auto ExpectedIdRange =
+        llvm::make_second_range(getEntities(getIdTable(Summary)));
+    std::set<EntityId> ExpectedIds(ExpectedIdRange.begin(),
+                                   ExpectedIdRange.end());
+
+    // Move ExpectedIds in since linkageTableFromJSON consumes it to verify
+    // that the linkage table contains exactly the ids present in the IdTable.
+    auto ExpectedLinkageTable =
+        linkageTableFromJSON(*LinkageTableArray, std::move(ExpectedIds));
+    if (!ExpectedLinkageTable) {
+      return ErrorBuilder::wrap(ExpectedLinkageTable.takeError())
+          .context(ErrorMessages::ReadingFromField, "LinkageTable",
+                   "linkage_table")
+          .context(ErrorMessages::ReadingFromFile, "TUSummary", Path)
+          .build();
+    }
+
+    getLinkageTable(Summary) = std::move(*ExpectedLinkageTable);
+  }
+
+  {
     const Array *SummaryDataArray = RootObject.getArray("data");
     if (!SummaryDataArray) {
       return ErrorBuilder::create(std::errc::invalid_argument,
@@ -956,7 +1150,7 @@ llvm::Expected<TUSummary> JSONFormat::readTUSummary(llvm::StringRef Path) {
     getData(Summary) = std::move(*ExpectedSummaryDataMap);
   }
 
-  return Summary;
+  return std::move(Summary);
 }
 
 llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
@@ -966,6 +1160,8 @@ llvm::Error JSONFormat::writeTUSummary(const TUSummary &S,
   RootObject["tu_namespace"] = buildNamespaceToJSON(getTUNamespace(S));
 
   RootObject["id_table"] = entityIdTableToJSON(getIdTable(S));
+
+  RootObject["linkage_table"] = linkageTableToJSON(getLinkageTable(S));
 
   auto ExpectedDataObject = summaryDataMapToJSON(getData(S));
   if (!ExpectedDataObject) {

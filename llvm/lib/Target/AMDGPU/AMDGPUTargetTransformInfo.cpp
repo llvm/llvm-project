@@ -217,13 +217,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
         // a variable, most likely we will be unable to combine it.
         // Do not unroll too deep inner loops for local memory to give a chance
         // to unroll an outer loop for a more important reason.
-        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2)
+        if (LocalGEPsSeen > 1 || L->getLoopDepth() > 2 ||
+            (!isa<GlobalVariable>(GEP->getPointerOperand()) &&
+             !isa<Argument>(GEP->getPointerOperand())))
           continue;
-
-        const Value *V = getUnderlyingObject(GEP->getPointerOperand());
-        if (!isa<GlobalVariable>(V) && !isa<Argument>(V))
-          continue;
-
         LLVM_DEBUG(dbgs() << "Allow unroll runtime for loop:\n"
                           << *L << " due to LDS use.\n");
         UP.Runtime = UnrollRuntimeLocal;
@@ -286,8 +283,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
     AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
-    AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
-    AMDGPU::FeatureUnalignedAccessMode,
+    AMDGPU::FeatureUnalignedScratchAccess, AMDGPU::FeatureUnalignedAccessMode,
 
     AMDGPU::FeatureAutoWaitcntBeforeBarrier,
 
@@ -735,18 +731,42 @@ GCNTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     break;
   }
 
+  Type *RetTy = ICA.getReturnType();
+
+  Intrinsic::ID IID = ICA.getID();
+  switch (IID) {
+  case Intrinsic::exp:
+  case Intrinsic::exp2:
+  case Intrinsic::exp10: {
+    // Legalize the type.
+    std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
+    MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+
+    if (SLT == MVT::f64) {
+      int NumOps = 20;
+      if (IID == Intrinsic::exp)
+        ++NumOps;
+      else if (IID == Intrinsic::exp10)
+        NumOps += 3;
+
+      unsigned NElts =
+          LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
+
+      return LT.first * NElts * NumOps * get64BitInstrCost(CostKind);
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
   if (!intrinsicHasPackedVectorBenefit(ICA.getID()))
     return BaseT::getIntrinsicInstrCost(ICA, CostKind);
 
-  Type *RetTy = ICA.getReturnType();
-
-  // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(RetTy);
-
-  unsigned NElts = LT.second.isVector() ?
-    LT.second.getVectorNumElements() : 1;
-
   MVT::SimpleValueType SLT = LT.second.getScalarType().SimpleTy;
+  unsigned NElts = LT.second.isVector() ? LT.second.getVectorNumElements() : 1;
 
   if ((ST->hasVOP3PInsts() &&
        (SLT == MVT::f16 || SLT == MVT::i16 ||
