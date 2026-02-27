@@ -57,12 +57,10 @@
 
 namespace llvm {
 
-/// Interface for keeping UniformValues in sync when IR values are deleted or
-/// RAUW'd. IR specialization installs a concrete implementation that uses
-/// CallbackVH to remove values from the set.
+/// Interface for keeping UniformValues in sync when IR values are deleted.
+/// IR specialization installs a concrete CallbackVH-based implementation.
 struct UniformValueCallbackManager {
   virtual ~UniformValueCallbackManager() = default;
-  virtual void registerValue(const void *V) = 0;
 };
 
 // Forward decl from llvm/CodeGen/MachineInstr.h
@@ -441,7 +439,7 @@ protected:
   // Used by isDivergent() to conservatively treat unknown values as divergent.
   DenseSet<ConstValueRefT> UniformValues;
 
-  // For IR: callbacks to remove from UniformValues on value deletion/RAUW,
+  // For IR: callbacks to remove from UniformValues on value deletion,
   // avoiding stale pointers when addresses are reused.
   std::unique_ptr<UniformValueCallbackManager> UniformValueCallbacks;
 
