@@ -69,9 +69,6 @@ private:
   EntityId entityIdFromJSON(const uint64_t EntityIdIndex) const;
   uint64_t entityIdToJSON(EntityId EI) const;
 
-  llvm::Expected<BuildNamespaceKind>
-  buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) const;
-
   llvm::Expected<BuildNamespace>
   buildNamespaceFromJSON(const Object &BuildNamespaceObject) const;
   Object buildNamespaceToJSON(const BuildNamespace &BN) const;
@@ -116,6 +113,10 @@ private:
   entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
                              const SummaryName &SN,
                              EntityIdTable &IdTable) const;
+  llvm::Expected<Object>
+  entityDataMapEntryToJSON(const EntityId EI,
+                           const std::unique_ptr<EntitySummary> &EntitySummary,
+                           const SummaryName &SN) const;
   llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummary>>>
   entityDataMapFromJSON(const SummaryName &SN, const Array &EntityDataArray,
                         EntityIdTable &IdTable) const;

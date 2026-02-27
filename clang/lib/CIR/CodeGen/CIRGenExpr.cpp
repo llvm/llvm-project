@@ -305,8 +305,8 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
   Address addr(v, realVarTy, alignment);
   LValue lv;
   if (vd->getType()->isReferenceType())
-    cgf.cgm.errorNYI(e->getSourceRange(),
-                     "emitGlobalVarDeclLValue: reference type");
+    lv = cgf.emitLoadOfReferenceLValue(addr, cgf.getLoc(e->getSourceRange()),
+                                       vd->getType(), AlignmentSource::Decl);
   else
     lv = cgf.makeAddrLValue(addr, t, AlignmentSource::Decl);
   assert(!cir::MissingFeatures::setObjCGCLValueClass());
@@ -1980,7 +1980,12 @@ CIRGenCallee CIRGenFunction::emitDirectCallee(const GlobalDecl &gd) {
 
   cir::FuncOp callee = emitFunctionDeclPointer(cgm, gd);
 
-  assert(!cir::MissingFeatures::hip());
+  if ((cgm.getLangOpts().CUDA || cgm.getLangOpts().HIP) &&
+      !cgm.getLangOpts().CUDAIsDevice && fd->hasAttr<CUDAGlobalAttr>()) {
+    mlir::Operation *handle = cgm.getCUDARuntime().getKernelHandle(callee, gd);
+    callee =
+        mlir::cast<cir::FuncOp>(*cgm.getCUDARuntime().getKernelStub(handle));
+  }
 
   return CIRGenCallee::forDirect(callee, gd);
 }
@@ -2131,10 +2136,8 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
     return emitCXXMemberCallExpr(ce, returnValue);
 
-  if (isa<CUDAKernelCallExpr>(e)) {
-    cgm.errorNYI(e->getSourceRange(), "call to CUDA kernel");
-    return RValue::get(nullptr);
-  }
+  if (const auto *cudaKernelCallExpr = dyn_cast<CUDAKernelCallExpr>(e))
+    return emitCUDAKernelCallExpr(cudaKernelCallExpr, returnValue);
 
   if (const auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(e)) {
     // If the callee decl is a CXXMethodDecl, we need to emit this as a C++

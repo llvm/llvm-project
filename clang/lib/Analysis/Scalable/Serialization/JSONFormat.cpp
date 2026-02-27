@@ -1,6 +1,10 @@
 #include "clang/Analysis/Scalable/Serialization/JSONFormat.h"
+
+#include "../ModelStringConversions.h"
+
 #include "clang/Analysis/Scalable/Model/EntityLinkage.h"
 #include "clang/Analysis/Scalable/Support/ErrorBuilder.h"
+#include "clang/Analysis/Scalable/Support/FormatProviders.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 
 #include "llvm/ADT/STLExtras.h"
@@ -56,7 +60,7 @@ constexpr const char *ReadingFromFile = "reading {0} from file '{1}'";
 constexpr const char *WritingToFile = "writing {0} to file '{1}'";
 
 constexpr const char *FailedInsertionOnDuplication =
-    "failed to insert {0} at index '{1}': encountered duplicate {2} '{3}'";
+    "failed to insert {0} at index '{1}': encountered duplicate '{2}'";
 
 constexpr const char *FailedToReadObject =
     "failed to read {0}: expected JSON {1}";
@@ -65,12 +69,21 @@ constexpr const char *FailedToReadObjectAtField =
 constexpr const char *FailedToReadObjectAtIndex =
     "failed to read {0} from index '{1}': expected JSON {2}";
 
-constexpr const char *FailedToDeserializeEntitySummary =
-    "failed to deserialize EntitySummary: no FormatInfo registered for summary "
-    "'{0}'";
-constexpr const char *FailedToSerializeEntitySummary =
-    "failed to serialize EntitySummary: no FormatInfo registered for summary "
-    "'{0}'";
+constexpr const char *FailedToDeserializeEntitySummaryNoFormatInfo =
+    "failed to deserialize EntitySummary: no FormatInfo registered for '{0}'";
+constexpr const char *FailedToSerializeEntitySummaryNoFormatInfo =
+    "failed to serialize EntitySummary: no FormatInfo registered for '{0}'";
+
+constexpr const char *FailedToDeserializeEntitySummaryMissingData =
+    "failed to deserialize EntitySummary: null EntitySummary data for '{0}'";
+constexpr const char *FailedToSerializeEntitySummaryMissingData =
+    "JSONFormat - null EntitySummary data for '{0}'";
+
+constexpr const char *FailedToDeserializeEntitySummaryMismatchedSummaryName =
+    "failed to deserialize EntitySummary: EntitySummary data for '{0}' reports "
+    "mismatched '{1}'";
+constexpr const char *FailedToSerializeEntitySummaryMismatchedSummaryName =
+    "JSONFormat - EntitySummary data for '{0}' reports mismatched '{1}'";
 
 constexpr const char *InvalidBuildNamespaceKind =
     "invalid 'kind' BuildNamespaceKind value '{0}'";
@@ -79,12 +92,10 @@ constexpr const char *InvalidEntityLinkageType =
     "invalid 'type' EntityLinkageType value '{0}'";
 
 constexpr const char *FailedToDeserializeLinkageTableExtraId =
-    "failed to deserialize LinkageTable: extra EntityId '{0}' not present in "
-    "IdTable";
+    "failed to deserialize LinkageTable: extra '{0}' not present in IdTable";
 
 constexpr const char *FailedToDeserializeLinkageTableMissingId =
-    "failed to deserialize LinkageTable: missing EntityId '{0}' present in "
-    "IdTable";
+    "failed to deserialize LinkageTable: missing '{0}' present in IdTable";
 
 } // namespace ErrorMessages
 
@@ -226,23 +237,24 @@ uint64_t JSONFormat::entityIdToJSON(EntityId EI) const {
 // BuildNamespaceKind
 //----------------------------------------------------------------------------
 
-llvm::Expected<BuildNamespaceKind> JSONFormat::buildNamespaceKindFromJSON(
-    llvm::StringRef BuildNamespaceKindStr) const {
-  auto OptBuildNamespaceKind = parseBuildNamespaceKind(BuildNamespaceKindStr);
+namespace {
+
+llvm::Expected<BuildNamespaceKind>
+buildNamespaceKindFromJSON(llvm::StringRef BuildNamespaceKindStr) {
+  auto OptBuildNamespaceKind =
+      buildNamespaceKindFromString(BuildNamespaceKindStr);
   if (!OptBuildNamespaceKind) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::InvalidBuildNamespaceKind,
                                 BuildNamespaceKindStr)
         .build();
   }
-
   return *OptBuildNamespaceKind;
 }
 
-namespace {
-
+// Provided for consistency with respect to rest of the codebase.
 llvm::StringRef buildNamespaceKindToJSON(BuildNamespaceKind BNK) {
-  return toString(BNK);
+  return buildNamespaceKindToString(BNK);
 }
 
 } // namespace
@@ -262,10 +274,11 @@ JSONFormat::buildNamespaceFromJSON(const Object &BuildNamespaceObject) const {
   }
 
   auto ExpectedKind = buildNamespaceKindFromJSON(*OptBuildNamespaceKindStr);
-  if (!ExpectedKind)
+  if (!ExpectedKind) {
     return ErrorBuilder::wrap(ExpectedKind.takeError())
         .context(ErrorMessages::ReadingFromField, "BuildNamespaceKind", "kind")
         .build();
+  }
 
   auto OptNameStr = BuildNamespaceObject.getString("name");
   if (!OptNameStr) {
@@ -388,27 +401,21 @@ Object JSONFormat::entityNameToJSON(const EntityName &EN) const {
 
 namespace {
 
-std::optional<EntityLinkage::LinkageType>
-parseEntityLinkageType(llvm::StringRef S) {
-  if (S == "none")
-    return EntityLinkage::LinkageType::None;
-  if (S == "internal")
-    return EntityLinkage::LinkageType::Internal;
-  if (S == "external")
-    return EntityLinkage::LinkageType::External;
-  return std::nullopt;
+llvm::Expected<EntityLinkageType>
+entityLinkageTypeFromJSON(llvm::StringRef EntityLinkageTypeStr) {
+  auto OptEntityLinkageType = entityLinkageTypeFromString(EntityLinkageTypeStr);
+  if (!OptEntityLinkageType) {
+    return ErrorBuilder::create(std::errc::invalid_argument,
+                                ErrorMessages::InvalidEntityLinkageType,
+                                EntityLinkageTypeStr)
+        .build();
+  }
+  return *OptEntityLinkageType;
 }
 
-llvm::StringRef entityLinkageTypeToJSON(EntityLinkage::LinkageType LT) {
-  switch (LT) {
-  case EntityLinkage::LinkageType::None:
-    return "none";
-  case EntityLinkage::LinkageType::Internal:
-    return "internal";
-  case EntityLinkage::LinkageType::External:
-    return "external";
-  }
-  llvm_unreachable("Unhandled EntityLinkage::LinkageType variant");
+// Provided for consistency with respect to rest of the codebase.
+llvm::StringRef entityLinkageTypeToJSON(EntityLinkageType LT) {
+  return entityLinkageTypeToString(LT);
 }
 
 } // namespace
@@ -427,15 +434,14 @@ JSONFormat::entityLinkageFromJSON(const Object &EntityLinkageObject) const {
         .build();
   }
 
-  auto OptLinkageType = parseEntityLinkageType(*OptLinkageStr);
-  if (!OptLinkageType) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::InvalidEntityLinkageType,
-                                *OptLinkageStr)
+  auto ExpectedLinkageType = entityLinkageTypeFromJSON(*OptLinkageStr);
+  if (!ExpectedLinkageType) {
+    return ErrorBuilder::wrap(ExpectedLinkageType.takeError())
+        .context(ErrorMessages::ReadingFromField, "EntityLinkageType", "type")
         .build();
   }
 
-  return EntityLinkage(*OptLinkageType);
+  return EntityLinkage(*ExpectedLinkageType);
 }
 
 Object JSONFormat::entityLinkageToJSON(const EntityLinkage &EL) const {
@@ -534,8 +540,8 @@ JSONFormat::entityIdTableFromJSON(const Array &EntityIdTableArray) const {
     if (!EntityInserted) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
-                                  "EntityIdTable entry", Index, "EntityId",
-                                  getIndex(EntityIt->second))
+                                  "EntityIdTable entry", Index,
+                                  EntityIt->second)
           .build();
     }
   }
@@ -650,16 +656,14 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
     if (!Inserted) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
-                                  "LinkageTable entry", Index, "EntityId",
-                                  getIndex(It->first))
+                                  "LinkageTable entry", Index, It->first)
           .build();
     }
 
     if (ExpectedIds.erase(EI) == 0) {
       return ErrorBuilder::create(
                  std::errc::invalid_argument,
-                 ErrorMessages::FailedToDeserializeLinkageTableExtraId,
-                 getIndex(EI))
+                 ErrorMessages::FailedToDeserializeLinkageTableExtraId, EI)
           .context(ErrorMessages::ReadingFromIndex, "LinkageTable entry", Index)
           .build();
     }
@@ -669,7 +673,7 @@ JSONFormat::linkageTableFromJSON(const Array &LinkageTableArray,
     return ErrorBuilder::create(
                std::errc::invalid_argument,
                ErrorMessages::FailedToDeserializeLinkageTableMissingId,
-               getIndex(*ExpectedIds.begin()))
+               *ExpectedIds.begin())
         .build();
   }
 
@@ -698,9 +702,9 @@ JSONFormat::entitySummaryFromJSON(const SummaryName &SN,
                                   EntityIdTable &IdTable) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToDeserializeEntitySummary,
-                                SN.str())
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeEntitySummaryNoFormatInfo, SN)
         .build();
   }
 
@@ -716,9 +720,9 @@ JSONFormat::entitySummaryToJSON(const SummaryName &SN,
                                 const EntitySummary &ES) const {
   auto InfoIt = FormatInfos.find(SN);
   if (InfoIt == FormatInfos.end()) {
-    return ErrorBuilder::create(std::errc::invalid_argument,
-                                ErrorMessages::FailedToSerializeEntitySummary,
-                                SN.str())
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToSerializeEntitySummaryNoFormatInfo, SN)
         .build();
   }
 
@@ -752,7 +756,8 @@ JSONFormat::entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
   if (!OptEntityIdInt) {
     return ErrorBuilder::create(std::errc::invalid_argument,
                                 ErrorMessages::FailedToReadObjectAtField,
-                                "EntityId", "entity_id", "integer")
+                                "EntityId", "entity_id",
+                                "number (unsigned 64-bit integer)")
         .build();
   }
 
@@ -776,7 +781,56 @@ JSONFormat::entityDataMapEntryFromJSON(const Object &EntityDataMapEntryObject,
         .build();
   }
 
+  if (*ExpectedEntitySummary == nullptr) {
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::FailedToDeserializeEntitySummaryMissingData, SN)
+        .build();
+  }
+
+  auto ActualSN = (*ExpectedEntitySummary)->getSummaryName();
+  if (SN != ActualSN) {
+    return ErrorBuilder::create(
+               std::errc::invalid_argument,
+               ErrorMessages::
+                   FailedToDeserializeEntitySummaryMismatchedSummaryName,
+               SN, ActualSN)
+        .build();
+  }
+
   return std::make_pair(std::move(EI), std::move(*ExpectedEntitySummary));
+}
+
+llvm::Expected<Object> JSONFormat::entityDataMapEntryToJSON(
+    const EntityId EI, const std::unique_ptr<EntitySummary> &EntitySummary,
+    const SummaryName &SN) const {
+  Object Entry;
+
+  Entry["entity_id"] = entityIdToJSON(EI);
+
+  if (!EntitySummary) {
+    ErrorBuilder::fatal(
+        ErrorMessages::FailedToSerializeEntitySummaryMissingData, SN);
+  }
+
+  const auto ActualSN = EntitySummary->getSummaryName();
+  if (SN != ActualSN) {
+    ErrorBuilder::fatal(
+        ErrorMessages::FailedToSerializeEntitySummaryMismatchedSummaryName, SN,
+        ActualSN);
+  }
+
+  auto ExpectedEntitySummaryObject = entitySummaryToJSON(SN, *EntitySummary);
+  if (!ExpectedEntitySummaryObject) {
+    return ErrorBuilder::wrap(ExpectedEntitySummaryObject.takeError())
+        .context(ErrorMessages::WritingToField, "EntitySummary",
+                 "entity_summary")
+        .build();
+  }
+
+  Entry["entity_summary"] = std::move(*ExpectedEntitySummaryObject);
+
+  return Entry;
 }
 
 //----------------------------------------------------------------------------
@@ -803,19 +857,19 @@ JSONFormat::entityDataMapFromJSON(const SummaryName &SN,
 
     auto ExpectedEntityDataMapEntry =
         entityDataMapEntryFromJSON(*OptEntityDataMapEntryObject, SN, IdTable);
-    if (!ExpectedEntityDataMapEntry)
+    if (!ExpectedEntityDataMapEntry) {
       return ErrorBuilder::wrap(ExpectedEntityDataMapEntry.takeError())
           .context(ErrorMessages::ReadingFromIndex, "EntitySummary entry",
                    Index)
           .build();
+    }
 
     auto [DataIt, DataInserted] =
         EntityDataMap.insert(std::move(*ExpectedEntityDataMapEntry));
     if (!DataInserted) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
-                                  "EntitySummary entry", Index, "EntityId",
-                                  getIndex(DataIt->first))
+                                  "EntitySummary entry", Index, DataIt->first)
           .build();
     }
   }
@@ -834,20 +888,16 @@ llvm::Expected<Array> JSONFormat::entityDataMapToJSON(
        llvm::enumerate(EntityDataMap)) {
     const auto &[EntityId, EntitySummary] = EntityDataMapEntry;
 
-    Object Entry;
+    auto ExpectedEntityDataMapEntryObject =
+        entityDataMapEntryToJSON(EntityId, EntitySummary, SN);
 
-    Entry["entity_id"] = entityIdToJSON(EntityId);
-
-    auto ExpectedEntitySummaryObject = entitySummaryToJSON(SN, *EntitySummary);
-    if (!ExpectedEntitySummaryObject) {
-      return ErrorBuilder::wrap(ExpectedEntitySummaryObject.takeError())
+    if (!ExpectedEntityDataMapEntryObject) {
+      return ErrorBuilder::wrap(ExpectedEntityDataMapEntryObject.takeError())
           .context(ErrorMessages::WritingToIndex, "EntitySummary entry", Index)
           .build();
     }
 
-    Entry["entity_summary"] = std::move(*ExpectedEntitySummaryObject);
-
-    Result.push_back(std::move(Entry));
+    Result.push_back(std::move(*ExpectedEntityDataMapEntryObject));
   }
 
   return Result;
@@ -950,8 +1000,7 @@ JSONFormat::summaryDataMapFromJSON(const Array &SummaryDataArray,
     if (!SummaryInserted) {
       return ErrorBuilder::create(std::errc::invalid_argument,
                                   ErrorMessages::FailedInsertionOnDuplication,
-                                  "SummaryData entry", Index, "SummaryName",
-                                  SummaryIt->first.str())
+                                  "SummaryData entry", Index, SummaryIt->first)
           .build();
     }
   }
