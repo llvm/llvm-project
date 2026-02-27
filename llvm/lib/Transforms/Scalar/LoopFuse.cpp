@@ -1135,8 +1135,7 @@ private:
       const Loop *ExprL = Expr->getLoop();
       SmallVector<SCEVUse, 2> Operands;
       if (ExprL == &OldL) {
-        for (SCEVUse Op : Expr->operands())
-          Operands.push_back(Op);
+        append_range(Operands, Expr->operands());
         return SE.getAddRecExpr(Operands, &NewL, Expr->getNoWrapFlags());
       }
 

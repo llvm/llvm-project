@@ -966,17 +966,13 @@ static GlobalValue *ExtractSymbol(SCEVUse &S, ScalarEvolution &SE) {
     }
   } else if (const SCEVAddExpr *Add = dyn_cast<SCEVAddExpr>(S)) {
     SmallVector<SCEVUse, 8> NewOps(Add->operands());
-    SCEVUse Back = NewOps.back();
-    GlobalValue *Result = ExtractSymbol(Back, SE);
-    NewOps.back() = Back;
+    GlobalValue *Result = ExtractSymbol(NewOps.back(), SE);
     if (Result)
       S = SE.getAddExpr(NewOps);
     return Result;
   } else if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(S)) {
     SmallVector<SCEVUse, 8> NewOps(AR->operands());
-    SCEVUse Front = NewOps.front();
-    GlobalValue *Result = ExtractSymbol(Front, SE);
-    NewOps.front() = Front;
+    GlobalValue *Result = ExtractSymbol(NewOps.front(), SE);
     if (Result)
       S = SE.getAddRecExpr(NewOps, AR->getLoop(),
                            // FIXME: AR->getNoWrapFlags(SCEV::FlagNW)

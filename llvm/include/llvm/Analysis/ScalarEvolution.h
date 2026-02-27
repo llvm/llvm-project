@@ -121,14 +121,16 @@ template <> struct DenseMapInfo<SCEVUse> {
     return PointerLikeTypeTraits<SCEVUse>::getFromVoidPointer((void *)Val);
   }
 
-  static unsigned getHashValue(SCEVUse U) { return hash_value(U.getRawPointer()); }
+  static unsigned getHashValue(SCEVUse U) {
+    return hash_value(U.getRawPointer());
+  }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
     return LHS.getRawPointer() == RHS.getRawPointer();
   }
 };
 
-template<> struct simplify_type<SCEVUse> {
+template <> struct simplify_type<SCEVUse> {
   using SimpleType = const SCEV *;
 
   static SimpleType getSimplifiedValue(SCEVUse &Val) {

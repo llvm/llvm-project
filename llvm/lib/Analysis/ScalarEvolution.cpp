@@ -577,8 +577,7 @@ SCEVSignExtendExpr::SCEVSignExtendExpr(const FoldingSetNodeIDRef ID, SCEVUse op,
 
 void SCEVUnknown::deleted() {
   // Clear this SCEVUnknown from various maps.
-  SCEVUse U(this);
-  SE->forgetMemoizedResults(U);
+  SE->forgetMemoizedResults({this});
 
   // Remove this SCEVUnknown from the uniquing map.
   SE->UniqueSCEVs.RemoveNode(this);
@@ -589,8 +588,7 @@ void SCEVUnknown::deleted() {
 
 void SCEVUnknown::allUsesReplacedWith(Value *New) {
   // Clear this SCEVUnknown from various maps.
-  SCEVUse U(this);
-  SE->forgetMemoizedResults(U);
+  SE->forgetMemoizedResults({this});
 
   // Remove this SCEVUnknown from the uniquing map.
   SE->UniqueSCEVs.RemoveNode(this);
@@ -2193,7 +2191,7 @@ const SCEV *ScalarEvolution::getSignExtendExprImpl(const SCEV *Op, Type *Ty,
   SCEV *S = new (SCEVAllocator) SCEVSignExtendExpr(ID.Intern(SCEVAllocator),
                                                    Op, Ty);
   UniqueSCEVs.InsertNode(S, IP);
-  registerUser(S, ArrayRef<SCEVUse>(SCEVUse(Op)));
+  registerUser(S, Op);
   return S;
 }
 
@@ -2850,8 +2848,8 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
             append_range(MulOps, Mul->operands().drop_front(MulOp + 1));
             InnerMul = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
           }
-          SmallVector<SCEVUse, 2> TwoOps = {getOne(Ty), InnerMul};
-          const SCEV *AddOne = getAddExpr(TwoOps, SCEV::FlagAnyWrap, Depth + 1);
+          const SCEV *AddOne =
+              getAddExpr(getOne(Ty), InnerMul, SCEV::FlagAnyWrap, Depth + 1);
           const SCEV *OuterMul = getMulExpr(AddOne, MulOpSCEV,
                                             SCEV::FlagAnyWrap, Depth + 1);
           if (Ops.size() == 2) return OuterMul;
@@ -2890,9 +2888,8 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
               append_range(MulOps, OtherMul->operands().drop_front(OMulOp+1));
               InnerMul2 = getMulExpr(MulOps, SCEV::FlagAnyWrap, Depth + 1);
             }
-            SmallVector<SCEVUse, 2> TwoOps = {InnerMul1, InnerMul2};
             const SCEV *InnerMulSum =
-                getAddExpr(TwoOps, SCEV::FlagAnyWrap, Depth + 1);
+                getAddExpr(InnerMul1, InnerMul2, SCEV::FlagAnyWrap, Depth + 1);
             const SCEV *OuterMul = getMulExpr(MulOpSCEV, InnerMulSum,
                                               SCEV::FlagAnyWrap, Depth + 1);
             if (Ops.size() == 2) return OuterMul;
@@ -2951,8 +2948,7 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
       // in the outer scope.
       SCEV::NoWrapFlags AddFlags = Flags;
       if (AddFlags != SCEV::FlagAnyWrap) {
-        SmallVector<SCEVUse, 8> LIOpPtrs(LIOps.begin(), LIOps.end());
-        auto *DefI = getDefiningScopeBound(LIOpPtrs);
+        auto *DefI = getDefiningScopeBound(LIOps);
         auto *ReachI = &*AddRecLoop->getHeader()->begin();
         if (!isGuaranteedToTransferExecutionTo(DefI, ReachI))
           AddFlags = SCEV::FlagAnyWrap;
@@ -3002,9 +2998,9 @@ const SCEV *ScalarEvolution::getAddExpr(SmallVectorImpl<SCEVUse> &Ops,
                 append_range(AddRecOps, OtherAddRec->operands().drop_front(i));
                 break;
               }
-              SmallVector<SCEVUse, 2> TwoOps = {AddRecOps[i],
-                                                OtherAddRec->getOperand(i)};
-              AddRecOps[i] = getAddExpr(TwoOps, SCEV::FlagAnyWrap, Depth + 1);
+              AddRecOps[i] =
+                  getAddExpr(AddRecOps[i], OtherAddRec->getOperand(i),
+                             SCEV::FlagAnyWrap, Depth + 1);
             }
             Ops.erase(Ops.begin() + OtherIdx); --OtherIdx;
           }
@@ -3316,10 +3312,8 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
   for (; Idx < Ops.size() && isa<SCEVAddRecExpr>(Ops[Idx]); ++Idx) {
     // Scan all of the other operands to this mul and add them to the vector
     // if they are loop invariant w.r.t. the recurrence.
-    const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(Ops[Idx]);
-    if (!AddRec)
-      break;
     SmallVector<SCEVUse, 8> LIOps;
+    const SCEVAddRecExpr *AddRec = cast<SCEVAddRecExpr>(Ops[Idx]);
     for (unsigned i = 0, e = Ops.size(); i != e; ++i)
       if (isAvailableAtLoopEntry(Ops[i], AddRec->getLoop())) {
         LIOps.push_back(Ops[i]);
@@ -3342,7 +3336,7 @@ const SCEV *ScalarEvolution::getMulExpr(SmallVectorImpl<SCEVUse> &Ops,
           AddRec->getNoWrapFlags(ComputeFlags({Scale, AddRec}));
 
       for (unsigned i = 0, e = AddRec->getNumOperands(); i != e; ++i) {
-        NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i).getPointer(),
+        NewOps.push_back(getMulExpr(Scale, AddRec->getOperand(i),
                                     SCEV::FlagAnyWrap, Depth + 1));
 
         if (hasFlags(Flags, SCEV::FlagNSW) && !hasFlags(Flags, SCEV::FlagNUW)) {
@@ -3653,7 +3647,7 @@ const SCEV *ScalarEvolution::getUDivExpr(SCEVUse LHS, SCEVUse RHS) {
   SCEV *S = new (SCEVAllocator) SCEVUDivExpr(ID.Intern(SCEVAllocator),
                                              LHS, RHS);
   UniqueSCEVs.InsertNode(S, IP);
-  registerUser(S, ArrayRef<SCEVUse>({SCEVUse(LHS), SCEVUse(RHS)}));
+  registerUser(S, ArrayRef<SCEVUse>({LHS, RHS}));
   return S;
 }
 
@@ -4085,11 +4079,8 @@ class SCEVSequentialMinMaxDeduplicatingVisitor final
       return S;
 
     auto *NAry = cast<SCEVNAryExpr>(S);
-    SmallVector<SCEVUse, 8> Operands;
-    for (SCEVUse U : NAry->operands())
-      Operands.push_back(U.getPointer());
     SmallVector<SCEVUse> NewOps;
-    bool Changed = visit(Kind, Operands, NewOps);
+    bool Changed = visit(Kind, NAry->operands(), NewOps);
 
     if (!Changed)
       return S;
@@ -4480,7 +4471,7 @@ const SCEV *ScalarEvolution::getSMinExpr(SmallVectorImpl<SCEVUse> &Ops) {
 const SCEV *ScalarEvolution::getUMinExpr(SCEVUse LHS, SCEVUse RHS,
                                          bool Sequential) {
   SmallVector<SCEVUse, 2> Ops = {LHS, RHS};
-  return getMinMaxExpr(scUMinExpr, Ops);
+  return getUMinExpr(Ops, Sequential);
 }
 
 const SCEV *ScalarEvolution::getUMinExpr(SmallVectorImpl<SCEVUse> &Ops,
@@ -5984,7 +5975,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // Okay, for the entire analysis of this edge we assumed the PHI
         // to be symbolic.  We now need to go back and purge all of the
         // entries for the scalars that use the symbolic expression.
-        forgetMemoizedResults(SCEVUse(SymbolicName));
+        forgetMemoizedResults({SymbolicName});
         insertValueToMap(PN, PHISCEV);
 
         if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV)) {
@@ -6024,7 +6015,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         // Okay, for the entire analysis of this edge we assumed the PHI
         // to be symbolic.  We now need to go back and purge all of the
         // entries for the scalars that use the symbolic expression.
-        forgetMemoizedResults(SCEVUse(SymbolicName));
+        forgetMemoizedResults({SymbolicName});
         insertValueToMap(PN, Shifted);
         return Shifted;
       }
@@ -10188,8 +10179,7 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
         // foldable.  Build a new instance of the folded commutative expression.
         SmallVector<SCEVUse, 8> NewOps;
         NewOps.reserve(Ops.size());
-        for (unsigned j = 0; j < i; ++j)
-          NewOps.push_back(Ops[j].getPointer());
+        append_range(NewOps, Ops.take_front(i));
         NewOps.push_back(OpAtScope);
 
         for (++i; i != e; ++i) {
@@ -12805,7 +12795,7 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
 
   auto GetOpFromSExt = [&](const SCEV *S) -> const SCEV * {
     if (auto *Ext = dyn_cast<SCEVSignExtendExpr>(S))
-      return Ext->getOperand().getPointer();
+      return Ext->getOperand();
     // TODO: If S is a SCEVConstant then you can cheaply "strip" the sext off
     // the constant in some cases.
     return S;
@@ -15131,8 +15121,7 @@ const SCEVAddRecExpr *ScalarEvolution::convertSCEVToAddRecWithPredicates(
       continue;
 
     ExitCount = getTruncateOrSignExtend(ExitCount, Step->getType());
-    const SCEV *Add =
-        getAddExpr(AddRecToCheck->getStart().getPointer(), ExitCount);
+    const SCEV *Add = getAddExpr(AddRecToCheck->getStart(), ExitCount);
     if (isKnownPredicate(CmpInst::ICMP_SLT, Add, AddRecToCheck->getStart()))
       return nullptr;
   }
@@ -16151,10 +16140,10 @@ const SCEV *ScalarEvolution::LoopGuards::rewrite(const SCEV *Expr) const {
             SE.getAddExpr(Expr->getOperand(1), Expr->getOperand(2));
         if (const SCEV *Rewritten = RewriteSubtraction(Add))
           return SE.getAddExpr(
-              Expr->getOperand(0).getPointer(), Rewritten,
+              Expr->getOperand(0), Rewritten,
               ScalarEvolution::maskFlags(Expr->getNoWrapFlags(), FlagMask));
         if (const SCEV *S = Map.lookup(Add))
-          return SE.getAddExpr(Expr->getOperand(0).getPointer(), S);
+          return SE.getAddExpr(Expr->getOperand(0), S);
       }
       SmallVector<SCEVUse, 2> Operands;
       bool Changed = false;
