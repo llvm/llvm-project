@@ -7019,7 +7019,10 @@ static SDValue widdenIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   return DAG.getExtractSubvector(SDLoc(N), ResultVT, WiddenSelect, 0);
 }
 
-// Try to convert vXiY into vZi32 with X * Y = Z * 32
+// Try to convert vXiY into vPiQ with:
+// 1. vXiY is not legal type
+// 2. vPiQ is legal type
+// 3. X * Y = P * Q
 // This prevent promotion of integer vectors like v32i4 to v32i16
 // which can create extra operations on type casting.
 static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
