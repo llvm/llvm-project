@@ -11,6 +11,10 @@ __attribute__((noinline)) void fn2(groupshared uint Sh) {
 }
 
 template<typename T>
-void fn3(T A, T B) {
+void fn3(groupshared T A, groupshared T B) {
   A = B;
 }
+
+export template void fn3<uint>(groupshared uint A, groupshared uint B);
+template __attribute__((noinline)) void fn3<float>(groupshared float A, groupshared float B);
+// expected-error@-1{{'noinline' attribute is not compatible with 'groupshared' parameter attribute}}

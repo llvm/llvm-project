@@ -20,3 +20,9 @@ template void fnT<groupshared int>(groupshared int A, groupshared int B);
 void fn2() {
   fn1(SharedData);
 }
+
+template<typename T>
+T fn3(groupshared T A) {
+// expected-warning@-1{{support for groupshared parameter annotation not added until HLSL 202x}}
+  return A;
+}

@@ -61,6 +61,22 @@ void fn13(in T A, in T B) {
   A = B;
 }
 
+template<typename T>
+T fn14(inout groupshared T A) {
+// expected-error@-1{{'inout' attribute is not compatible with 'groupshared' attribute}}
+  return A;
+}
+template<typename T>
+T fn15(in groupshared T A) {
+// expected-error@-1{{'in' attribute is not compatible with 'groupshared' attribute}}
+  return A;
+}
+template<typename T>
+T fn16(out groupshared T A) {
+// expected-error@-1{{'out' attribute is not compatible with 'groupshared' attribute}}
+  return A;
+}
+
 void fn0() {
   fn1(SharedData);
 // expected-warning@-1{{passing groupshared variable to a parameter annotated with inout. See 'groupshared' parameter annotation added in 202x}}

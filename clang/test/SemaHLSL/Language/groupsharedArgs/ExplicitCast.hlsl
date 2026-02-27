@@ -13,10 +13,19 @@ void fnT(T A, T B) {
   A = B;
 }
 
+template<typename T>
+void fnT2(groupshared T A, groupshared T B) {
+// expected-note@-1{{candidate function template not viable: cannot bind reference in generic address space to object in address space 'groupshared' in 1st argument}}
+  A = B;
+}
+
 void fn2() {
   fn1((half)SharedData);
   // expected-error@-1{{no matching function for call to 'fn1'}}
   // not sure why someone would do this but want to make sure templates do something sane
   fnT<groupshared half>((half)SharedData, (half)SharedData);
   // expected-error@-1{{no matching function for call to 'fnT'}}
+
+  fnT2<half>((half)SharedData, (half)SharedData);
+  // expected-error@-1{{no matching function for call to 'fnT2'}}
 }

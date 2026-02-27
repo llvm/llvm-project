@@ -5,9 +5,17 @@ void fn1(groupshared half Sh) {
   Sh = 5;
 }
 
+template<typename T>
+T fn2(groupshared T Sh) {
+// expected-note@-1{{candidate template ignored: cannot deduce a type for 'T' that would make 'groupshared T' equal 'half'}}
+  return Sh;
+}
+
 [numthreads(4, 1, 1)]
 void main(uint3 TID : SV_GroupThreadID) {
   half tmp = 1.0;
   fn1(tmp);
   // expected-error@-1{{no matching function for call to 'fn1'}}
+  fn2(tmp);
+  // expected-error@-1{{no matching function for call to 'fn2'}}
 }
