@@ -163,6 +163,9 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       FinallyInfo.enter(CGF, Finally->getFinallyBody(), beginCatchFn,
                         endCatchFn, exceptionRethrowFn);
     } else if (IsWasm) {
+      // dispatchBlock is finally.catchall
+      // emitWasmCatchPadBlock()
+      // CurrentFuncletPad = ...
       llvm_unreachable("@finally not implemented for WASM");
     }
   }
@@ -234,8 +237,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   // } @catch(id a) {
   // } @catch(id b) {
   // [...]
-  // 
-  // With funclet-based exception handling, the dispatch block is created in 
+  //
+  // With funclet-based exception handling, the dispatch block is created in
   // getEHDispatchBlock() <- getInvokeDestImpl() <- EmitCall().
   // The following IR is emitted in this case:
   // On aarch64-linux-gnu (landing-pad based)
@@ -248,13 +251,13 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   // Leave the try.
   llvm::BasicBlock *DispatchBlock = nullptr;
   if (S.getNumCatchStmts()) {
-     // The dispatch block that was created during the emission of the try block
-     // was cached. We retrieve it when popping the current catch scope. 
-     DispatchBlock = CGF.popCatchScope();
+    // The dispatch block that was created during the emission of the try block
+    // was cached. We retrieve it when popping the current catch scope.
+    DispatchBlock = CGF.popCatchScope();
   }
 
   // On Windows and WASM, the new exception handling instructions are used.
-  // 
+  //
   // Continuing with the previous example, on Windows, we emit one catchpad for
   // every catch handler. This is not the case for WASM where all catch handlers
   // merged into one big catchpad:
@@ -276,8 +279,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     WasmCatchStartBlock = CatchSwitch->hasUnwindDest()
                               ? CatchSwitch->getSuccessor(1)
                               : CatchSwitch->getSuccessor(0);
-    CPI =
-        cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
+    CPI = cast<llvm::CatchPadInst>(WasmCatchStartBlock->getFirstNonPHIIt());
     CGF.CurrentFuncletPad = CPI;
   }
 

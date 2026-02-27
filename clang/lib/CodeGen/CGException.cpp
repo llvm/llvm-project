@@ -1219,8 +1219,8 @@ llvm::BasicBlock *CodeGenFunction::popCatchScope() {
   return dispatchBlock;
 }
 
-
-void CodeGenFunction::WasmEmitFallthroughRethrow(llvm::BasicBlock *WasmCatchStartBlock) {
+void CodeGenFunction::WasmEmitFallthroughRethrow(
+    llvm::BasicBlock *WasmCatchStartBlock) {
   assert(WasmCatchStartBlock);
   // Navigate for the "rethrow" block. For CXX exceptions this was created in
   // emitWasmCatchPadBlock(). Wasm uses landingpad-style conditional branches
