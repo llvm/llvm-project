@@ -826,3 +826,24 @@ func.func @replace_dead_operation_results_with_poison(%0: vector<1xindex>) -> ve
   }
   return %2 : vector<1xindex>
 }
+
+// -----
+
+// Verify that a referenced by a non-call op (spirv.EntryPoint),
+// while still having another usual call site is preserved as-is
+// since the pass cannot analyse non-call users.
+// CHECK-LABEL: module @func_with_non_call_users
+// CHECK-CANONICALIZE-LABEL: module @func_with_non_call_users
+module @func_with_non_call_users {
+// CHECK: func.func private @callee(%arg0: i32, %arg1: i32)
+// CHECK-CANONICALIZE: func.func private @callee(%arg0: i32, %arg1: i32)
+  func.func private @callee(%arg1 : i32, %arg2 : i32) {
+    func.return
+  }
+  func.func @main_func() {
+    %cst = llvm.mlir.constant(1 : i32) : i32
+    func.call @callee(%cst, %cst) : (i32, i32) -> ()
+    func.return
+  }
+  spirv.EntryPoint "GLCompute" @callee
+}
