@@ -1117,10 +1117,11 @@ std::optional<FileSpec> ObjectFilePECOFF::GetPDBPath() {
     return std::nullopt;
   }
   if (pdb_file.empty()) {
-    // No DebugInfo section
+    // No DebugInfo section present.
     return std::nullopt;
   }
-  return FileSpec(pdb_file);
+  return FileSpec(pdb_file, FileSpec::GuessPathStyle(pdb_file).value_or(
+                                FileSpec::Style::native));
 }
 
 uint32_t ObjectFilePECOFF::ParseDependentModules() {
