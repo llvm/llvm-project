@@ -15,7 +15,7 @@ define <4 x i32> @speculative_load_v4i32(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %load = call <4 x i32> @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr)
+  %load = call <4 x i32> @llvm.speculative.load.v4i32.p0(ptr align 16 %ptr, i64 0)
   ret <4 x i32> %load
 }
 
@@ -30,7 +30,7 @@ define <8 x i32> @speculative_load_v8i32(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %ymm0
 ; AVX-NEXT:    retq
-  %load = call <8 x i32> @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr)
+  %load = call <8 x i32> @llvm.speculative.load.v8i32.p0(ptr align 32 %ptr, i64 0)
   ret <8 x i32> %load
 }
 
@@ -44,7 +44,7 @@ define <2 x i64> @speculative_load_v2i64(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %load = call <2 x i64> @llvm.speculative.load.v2i64.p0(ptr %ptr)
+  %load = call <2 x i64> @llvm.speculative.load.v2i64.p0(ptr %ptr, i64 0)
   ret <2 x i64> %load
 }
 
@@ -58,7 +58,7 @@ define <4 x float> @speculative_load_v4f32(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovups (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %load = call <4 x float> @llvm.speculative.load.v4f32.p0(ptr align 8 %ptr)
+  %load = call <4 x float> @llvm.speculative.load.v4f32.p0(ptr align 8 %ptr, i64 0)
   ret <4 x float> %load
 }
 
@@ -72,15 +72,15 @@ define <2 x double> @speculative_load_v2f64(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    retq
-  %load = call <2 x double> @llvm.speculative.load.v2f64.p0(ptr align 16 %ptr)
+  %load = call <2 x double> @llvm.speculative.load.v2f64.p0(ptr align 16 %ptr, i64 0)
   ret <2 x double> %load
 }
 
-declare <4 x i32> @llvm.speculative.load.v4i32.p0(ptr)
-declare <8 x i32> @llvm.speculative.load.v8i32.p0(ptr)
-declare <2 x i64> @llvm.speculative.load.v2i64.p0(ptr)
-declare <4 x float> @llvm.speculative.load.v4f32.p0(ptr)
-declare <2 x double> @llvm.speculative.load.v2f64.p0(ptr)
+declare <4 x i32> @llvm.speculative.load.v4i32.p0(ptr, i64)
+declare <8 x i32> @llvm.speculative.load.v8i32.p0(ptr, i64)
+declare <2 x i64> @llvm.speculative.load.v2i64.p0(ptr, i64)
+declare <4 x float> @llvm.speculative.load.v4f32.p0(ptr, i64)
+declare <2 x double> @llvm.speculative.load.v2f64.p0(ptr, i64)
 
 ; Scalar type tests
 
@@ -94,7 +94,7 @@ define i32 @speculative_load_i32(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movl (%rdi), %eax
 ; AVX-NEXT:    retq
-  %load = call i32 @llvm.speculative.load.i32.p0(ptr %ptr)
+  %load = call i32 @llvm.speculative.load.i32.p0(ptr %ptr, i64 0)
   ret i32 %load
 }
 
@@ -108,7 +108,7 @@ define i64 @speculative_load_i64(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    movq (%rdi), %rax
 ; AVX-NEXT:    retq
-  %load = call i64 @llvm.speculative.load.i64.p0(ptr align 8 %ptr)
+  %load = call i64 @llvm.speculative.load.i64.p0(ptr align 8 %ptr, i64 0)
   ret i64 %load
 }
 
@@ -122,7 +122,7 @@ define float @speculative_load_f32(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    retq
-  %load = call float @llvm.speculative.load.f32.p0(ptr align 4 %ptr)
+  %load = call float @llvm.speculative.load.f32.p0(ptr align 4 %ptr, i64 0)
   ret float %load
 }
 
@@ -136,11 +136,11 @@ define double @speculative_load_f64(ptr %ptr) {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    retq
-  %load = call double @llvm.speculative.load.f64.p0(ptr %ptr)
+  %load = call double @llvm.speculative.load.f64.p0(ptr %ptr, i64 0)
   ret double %load
 }
 
-declare i32 @llvm.speculative.load.i32.p0(ptr)
-declare i64 @llvm.speculative.load.i64.p0(ptr)
-declare float @llvm.speculative.load.f32.p0(ptr)
-declare double @llvm.speculative.load.f64.p0(ptr)
+declare i32 @llvm.speculative.load.i32.p0(ptr, i64)
+declare i64 @llvm.speculative.load.i64.p0(ptr, i64)
+declare float @llvm.speculative.load.f32.p0(ptr, i64)
+declare double @llvm.speculative.load.f64.p0(ptr, i64)

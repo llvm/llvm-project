@@ -24062,9 +24062,9 @@ provided the access is guaranteed to not trap by target-specific checks.
 This is an overloaded intrinsic.
 
 ```
-declare <4 x float>  @llvm.speculative.load.v4f32.p0(ptr <ptr>)
-declare <8 x i32>    @llvm.speculative.load.v8i32.p0(ptr <ptr>)
-declare i64          @llvm.speculative.load.i64.p0(ptr <ptr>)
+declare <4 x float>  @llvm.speculative.load.v4f32.p0(ptr <ptr>, i64 <num_read_bytes>)
+declare <8 x i32>    @llvm.speculative.load.v8i32.p0(ptr <ptr>, i64 <num_read_bytes>)
+declare i64          @llvm.speculative.load.i64.p0(ptr <ptr>, i64 <num_read_bytes>)
 ```
 
 ##### Overview:
@@ -24077,31 +24077,28 @@ access cannot fault.
 
 ##### Arguments:
 
-The argument is a pointer to the memory location to load from. The return type
-must have a power-of-2 size in bytes.
+The first argument is a pointer to the memory location to load from. The second
+argument is an `i64` specifying the number of bytes starting from `ptr`
+that the intrinsic will read. The return type must have a power-of-2 size in
+bytes.
 
 ##### Semantics:
 
 The '`llvm.speculative.load`' intrinsic performs a load that may access
-memory beyond what is accessible through the pointer. It must be used in
+memory beyond what is readable through the pointer. It must be used in
 combination with {ref}`llvm.can.load.speculatively <int_can_load_speculatively>`
 to ensure the access can be performed speculatively.
 
-A byte at `ptr + i` is *accessible through* `ptr` if both of the following
-hold:
+The intrinsic reads `num_read_bytes` bytes starting from `ptr` and returns
+the stored values for those bytes. The read bytes must lie within the bounds
+of an allocated object that `ptr` is {ref}`based <pointeraliasing>` on.
 
-1. The byte lies within the bounds of an allocated object that `ptr` is
-   {ref}`based <pointeraliasing>` on.
-2. Accessing the byte through `ptr` does not violate any `noalias`
-   constraints.
-
-For each byte of the result, if the corresponding byte is accessible through
-`ptr`, the result contains the value stored in memory at that byte. Otherwise,
-the corresponding byte of the result is `freeze poison` and the byte is not
-considered accessed for the purpose of data races or `noalias` constraints.
+Bytes at offsets `>= num_read_bytes` (up to the size of the return type)
+are `poison` and are not considered accessed for the purpose of data races
+or `noalias` constraints.
 
 The behavior is undefined if this intrinsic is used to load from a pointer
-for which `llvm.can.load.speculatively` would return false.
+for which `llvm.can.load.speculatively` returns false.
 
 (int_can_load_speculatively)=
 
@@ -24148,7 +24145,7 @@ br i1 %can_load, label %speculative_path, label %safe_path
 
 speculative_path:
   ; Safe to speculatively load from %ptr
-  %vec = call <4 x i32> @llvm.speculative.load.v4i32.p0(ptr %ptr)
+  %vec = call <4 x i32> @llvm.speculative.load.v4i32.p0(ptr %ptr, i64 16)
   ...
 
 safe_path:

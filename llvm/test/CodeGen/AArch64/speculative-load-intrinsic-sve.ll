@@ -9,7 +9,7 @@ define <vscale x 4 x i32> @speculative_load_nxv4i32(ptr %ptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x i32> @llvm.speculative.load.nxv4i32.p0(ptr align 16 %ptr)
+  %load = call <vscale x 4 x i32> @llvm.speculative.load.nxv4i32.p0(ptr align 16 %ptr, i64 0)
   ret <vscale x 4 x i32> %load
 }
 
@@ -18,7 +18,7 @@ define <vscale x 2 x i64> @speculative_load_nxv2i64(ptr %ptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x i64> @llvm.speculative.load.nxv2i64.p0(ptr %ptr)
+  %load = call <vscale x 2 x i64> @llvm.speculative.load.nxv2i64.p0(ptr %ptr, i64 0)
   ret <vscale x 2 x i64> %load
 }
 
@@ -27,7 +27,7 @@ define <vscale x 8 x i16> @speculative_load_nxv8i16(ptr %ptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 8 x i16> @llvm.speculative.load.nxv8i16.p0(ptr align 8 %ptr)
+  %load = call <vscale x 8 x i16> @llvm.speculative.load.nxv8i16.p0(ptr align 8 %ptr, i64 0)
   ret <vscale x 8 x i16> %load
 }
 
@@ -36,7 +36,7 @@ define <vscale x 16 x i8> @speculative_load_nxv16i8(ptr %ptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 16 x i8> @llvm.speculative.load.nxv16i8.p0(ptr %ptr)
+  %load = call <vscale x 16 x i8> @llvm.speculative.load.nxv16i8.p0(ptr %ptr, i64 0)
   ret <vscale x 16 x i8> %load
 }
 
@@ -45,7 +45,7 @@ define <vscale x 4 x float> @speculative_load_nxv4f32(ptr %ptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 4 x float> @llvm.speculative.load.nxv4f32.p0(ptr align 4 %ptr)
+  %load = call <vscale x 4 x float> @llvm.speculative.load.nxv4f32.p0(ptr align 4 %ptr, i64 0)
   ret <vscale x 4 x float> %load
 }
 
@@ -54,13 +54,13 @@ define <vscale x 2 x double> @speculative_load_nxv2f64(ptr %ptr) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ldr z0, [x0]
 ; CHECK-NEXT:    ret
-  %load = call <vscale x 2 x double> @llvm.speculative.load.nxv2f64.p0(ptr align 16 %ptr)
+  %load = call <vscale x 2 x double> @llvm.speculative.load.nxv2f64.p0(ptr align 16 %ptr, i64 0)
   ret <vscale x 2 x double> %load
 }
 
-declare <vscale x 4 x i32> @llvm.speculative.load.nxv4i32.p0(ptr)
-declare <vscale x 2 x i64> @llvm.speculative.load.nxv2i64.p0(ptr)
-declare <vscale x 8 x i16> @llvm.speculative.load.nxv8i16.p0(ptr)
-declare <vscale x 16 x i8> @llvm.speculative.load.nxv16i8.p0(ptr)
-declare <vscale x 4 x float> @llvm.speculative.load.nxv4f32.p0(ptr)
-declare <vscale x 2 x double> @llvm.speculative.load.nxv2f64.p0(ptr)
+declare <vscale x 4 x i32> @llvm.speculative.load.nxv4i32.p0(ptr, i64)
+declare <vscale x 2 x i64> @llvm.speculative.load.nxv2i64.p0(ptr, i64)
+declare <vscale x 8 x i16> @llvm.speculative.load.nxv8i16.p0(ptr, i64)
+declare <vscale x 16 x i8> @llvm.speculative.load.nxv16i8.p0(ptr, i64)
+declare <vscale x 4 x float> @llvm.speculative.load.nxv4f32.p0(ptr, i64)
+declare <vscale x 2 x double> @llvm.speculative.load.nxv2f64.p0(ptr, i64)
