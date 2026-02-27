@@ -37,6 +37,7 @@ bool isAnyPtr(LLT Ty, unsigned Width);
 // to apply (see Fast Rules), IDs are useful when two or more operands need to
 // be checked.
 enum UniformityLLTOpPredicateID {
+  // Represents non-register and physical register operands.
   _,
   // scalars
   S1,
@@ -168,6 +169,7 @@ enum RegBankLLTMappingApplyID {
   SgprB128,
   SgprB256,
   SgprB512,
+  SgprBRC,
 
   // vgpr scalars, pointers, vectors and B-types
   Vgpr16,
@@ -193,6 +195,7 @@ enum RegBankLLTMappingApplyID {
   VgprB160,
   VgprB256,
   VgprB512,
+  VgprBRC,
   VgprV4S32,
   VgprV2S64,
 
@@ -218,6 +221,10 @@ enum RegBankLLTMappingApplyID {
   // Src only modifiers: execute in waterfall loop if divergent
   Sgpr32_WF,
   SgprV4S32_WF,
+
+  // Src only modifiers: execute in waterfall loop for calls
+  SgprP0Call_WF,
+  SgprP4Call_WF,
 
   // Src only modifiers: extends
   Sgpr32AExt,
@@ -259,7 +266,8 @@ enum LoweringMethodID {
   UnpackAExt,
   VerifyAllSgpr,
   ApplyAllVgpr,
-  UnmergeToShiftTrunc
+  UnmergeToShiftTrunc,
+  ApplyINTRIN_IMAGE
 };
 
 enum FastRulesTypes {

@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=s390x-ibm-zos -emit-gnuas-syntax-on-zos=0 | FileCheck %s
+; RUN: llc < %s -mtriple=s390x-ibm-zos | FileCheck %s
 
 @fortytwo = hidden global i32 42, align 4, !dbg !0
 

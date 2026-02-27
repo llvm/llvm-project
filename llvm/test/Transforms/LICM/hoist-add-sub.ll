@@ -996,6 +996,120 @@ failed:
   ret i32 -2
 }
 
+; iv | x < 100 ==> iv < 100 - x (signed)
+define void @or_disjoint_signed(ptr %x_p) {
+; CHECK-LABEL: define void @or_disjoint_signed
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nsw i32 100, [[X]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p, !range !0
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = or disjoint i32 %iv, %x
+  %x_check = icmp slt i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; iv | x < 100 ==> iv < 100 - x (unsigned)
+define void @or_disjoint_unsigned(ptr %x_p) {
+; CHECK-LABEL: define void @or_disjoint_unsigned
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG3]]
+; CHECK-NEXT:    [[INVARIANT_OP:%.*]] = sub nuw i32 100, [[X]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp ult i32 [[IV]], [[INVARIANT_OP]]
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp ult i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p, !range !3
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = or disjoint i32 %iv, %x
+  %x_check = icmp ult i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp ult i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; Negative test: plain or (without disjoint) should NOT be hoisted.
+define void @or_no_disjoint_neg(ptr %x_p) {
+; CHECK-LABEL: define void @or_no_disjoint_neg
+; CHECK-SAME: (ptr [[X_P:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[X_P]], align 4, !range [[RNG0]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[BACKEDGE:%.*]] ]
+; CHECK-NEXT:    [[ARITH:%.*]] = or i32 [[IV]], [[X]]
+; CHECK-NEXT:    [[X_CHECK:%.*]] = icmp slt i32 [[ARITH]], 100
+; CHECK-NEXT:    br i1 [[X_CHECK]], label [[OUT_OF_BOUNDS:%.*]], label [[BACKEDGE]]
+; CHECK:       backedge:
+; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 4
+; CHECK-NEXT:    [[LOOP_COND:%.*]] = icmp slt i32 [[IV_NEXT]], 1000
+; CHECK-NEXT:    br i1 [[LOOP_COND]], label [[LOOP]], label [[EXIT:%.*]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x = load i32, ptr %x_p, !range !0
+  br label %loop
+
+loop:
+  %iv = phi i32 [0, %entry], [%iv.next, %backedge]
+  %arith = or i32 %iv, %x
+  %x_check = icmp slt i32 %arith, 100
+  br i1 %x_check, label %exit, label %backedge
+
+backedge:
+  %iv.next = add nuw nsw i32 %iv, 4
+  %loop_cond = icmp slt i32 %iv.next, 1000
+  br i1 %loop_cond, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 !0 = !{i32 0, i32 2147483648}
 !1 = !{i32 0, i32 2147483640}
 !2 = !{i32 256, i32 32768}
