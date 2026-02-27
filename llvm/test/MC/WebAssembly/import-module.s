@@ -23,19 +23,19 @@ test:
   .import_name utf8_import, "[café-Straßburg]"
 
   .import_module mid$dollar, another$mid$dollar
-  .import_name mid$dollar, mid$dollar
+  .import_name mid$dollar, mid$dollar$name
 
   .import_module mid?question, another?mid?question
-  .import_name mid?question, mid?question
+  .import_name mid?question, mid?question?name
 
 # CHECK-ASM: .import_module  foo, "bar"
 # CHECK-ASM: .import_name  foo, "qux"
 # CHECK-ASM: .import_module utf8_import, "$café-Straßburg"
 # CHECK-ASM: .import_name utf8_import, "[café-Straßburg]"
 # CHECK-ASM: .import_module mid$dollar, "another$mid$dollar"
-# CHECK-ASM: .import_name mid$dollar, "mid$dollar"
+# CHECK-ASM: .import_name mid$dollar, "mid$dollar$name"
 # CHECK-ASM: .import_module mid?question, "another?mid?question"
-# CHECK-ASM: .import_name mid?question, "mid?question"
+# CHECK-ASM: .import_name mid?question, "mid?question?name"
 
 # CHECK:        - Type:            IMPORT
 # CHECK-NEXT:     Imports:
@@ -52,11 +52,11 @@ test:
 # CHECK-NEXT:         Kind:            FUNCTION
 
 # CHECK:            - Module:          'another$mid$dollar'
-# CHECK-NEXT:         Field:           'mid$dollar'
+# CHECK-NEXT:         Field:           'mid$dollar$name'
 # CHECK-NEXT:         Kind:            FUNCTION
 
 # CHECK:            - Module:          'another?mid?question'
-# CHECK-NEXT:         Field:           'mid?question'
+# CHECK-NEXT:         Field:           'mid?question?name'
 # CHECK-NEXT:         Kind:            FUNCTION
 
 # CHECK:        - Type:            CUSTOM
