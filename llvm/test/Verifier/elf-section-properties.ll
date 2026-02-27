@@ -1,4 +1,4 @@
-; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output < %s 2>&1 | FileCheck %s
 
 ; CHECK: elf_section_properties metadata must have two operands
 @g1 = global i32 0, !elf_section_properties !{i32 0}

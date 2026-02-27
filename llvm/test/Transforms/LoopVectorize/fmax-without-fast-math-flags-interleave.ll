@@ -227,7 +227,7 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP51:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
 ; CHECK-NEXT:    [[VEC_PHI1:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_PH]] ], [ [[TMP52:%.*]], %[[PRED_LOAD_CONTINUE15]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP1]], i32 0
@@ -325,7 +325,7 @@ define float @fmaxnum_tailfold(ptr %src, i64 %n) #0 {
 ; CHECK-NEXT:    [[TMP54:%.*]] = select <4 x i1> [[TMP2]], <4 x float> [[TMP52]], <4 x float> [[VEC_PHI1]]
 ; CHECK-NEXT:    [[TMP60:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI]], <4 x float> [[TMP53]]
 ; CHECK-NEXT:    [[TMP61:%.*]] = select i1 [[TMP57]], <4 x float> [[VEC_PHI1]], <4 x float> [[TMP54]]
-; CHECK-NEXT:    [[TMP62:%.*]] = select i1 [[TMP57]], i64 [[INDEX]], i64 [[N_VEC]]
+; CHECK-NEXT:    [[TMP62:%.*]] = select i1 [[TMP57]], i64 [[INDEX]], i64 [[TMP0]]
 ; CHECK-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x float> @llvm.maxnum.v4f32(<4 x float> [[TMP60]], <4 x float> [[TMP61]])
 ; CHECK-NEXT:    [[TMP63:%.*]] = call float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[RDX_MINMAX]])
 ; CHECK-NEXT:    [[TMP64:%.*]] = xor i1 [[TMP57]], true

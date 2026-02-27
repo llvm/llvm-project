@@ -3262,8 +3262,6 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           if (!IsSALU)
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::COPY), ResultReg)
                 .addReg(TmpResultReg, RegState::Kill);
-          else
-            ResultReg = TmpResultReg;
           // If there were truly no free SGPRs, we need to undo everything.
           if (!TmpScaledReg.isValid()) {
             BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_ADD_I32), ScaledReg)
@@ -4071,7 +4069,7 @@ SIRegisterInfo::getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
 unsigned SIRegisterInfo::getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
                                             const TargetRegisterClass &RC,
                                             bool IncludeCalls) const {
-  unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
+  unsigned NumArchVGPRs = ST.getAddressableNumArchVGPRs();
   ArrayRef<MCPhysReg> Registers =
       (RC.getID() == AMDGPU::VGPR_32RegClassID)
           ? RC.getRegisters().take_front(NumArchVGPRs)
