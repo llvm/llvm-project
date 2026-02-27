@@ -18,10 +18,6 @@ class PtrType(BfDialect.Type, name="ptr"):
     pass
 
 
-class Ptr2Type(BfDialect.Type, name="ptr2"):
-    pass
-
-
 class NextOp(BfDialect.Operation, name="next"):
     in_: Operand[PtrType]
     out: Result[PtrType[()]]
@@ -185,10 +181,7 @@ def convert_bf_to_llvm(op, pass_):
     target = ConversionTarget()
     target.add_illegal_dialect(BfDialect)
 
-    config = ConversionConfig()
-    config.build_materializations = False
-
-    apply_partial_conversion(op, target, patterns.freeze(), config)
+    apply_partial_conversion(op, target, patterns.freeze())
 
     with InsertionPoint(op.opview.body):
         func.FuncOp("putchar", FunctionType.get([i32], [i32]), visibility="private")
