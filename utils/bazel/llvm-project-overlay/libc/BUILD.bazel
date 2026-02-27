@@ -3150,6 +3150,37 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_bf16sub",
+    hdrs = ["src/__support/math/bf16sub.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_bf16subf",
+    hdrs = ["src/__support/math/bf16subf.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_bf16subf128",
+    hdrs = ["src/__support/math/bf16subf128.h"],
+    deps = [
+        ":__support_fputil_basic_operations",
+        ":__support_fputil_bfloat16",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_canonicalize",
     hdrs = ["src/__support/math/canonicalize.h"],
     deps = [
@@ -4104,6 +4135,63 @@ libc_support_library(
     deps = [
         ":__support_common",
         ":__support_fputil_manipulation_functions",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafter",
+    hdrs = ["src/__support/math/nextafter.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterbf16",
+    hdrs = ["src/__support/math/nextafterbf16.h"],
+    deps = [
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf",
+    hdrs = ["src/__support/math/nextafterf.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf128",
+    hdrs = ["src/__support/math/nextafterf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterf16",
+    hdrs = ["src/__support/math/nextafterf16.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_nextafterl",
+    hdrs = ["src/__support/math/nextafterl.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
     ],
 )
 
@@ -5848,6 +5936,21 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "bf16sub",
+    additional_deps = [":__support_math_bf16sub"],
+)
+
+libc_math_function(
+    name = "bf16subf",
+    additional_deps = [":__support_math_bf16subf"],
+)
+
+libc_math_function(
+    name = "bf16subf128",
+    additional_deps = [":__support_math_bf16subf128"],
+)
+
+libc_math_function(
     name = "bf16fmaf",
     additional_deps = [":__support_math_bf16fmaf"],
 )
@@ -7196,18 +7299,46 @@ libc_math_function(
     name = "nearbyintf16",
 )
 
-libc_math_function(name = "nextafter")
+libc_math_function(
+    name = "nextafter",
+    additional_deps = [
+        ":__support_math_nextafter",
+    ],
+)
 
-libc_math_function(name = "nextafterf")
+libc_math_function(
+    name = "nextafterbf16",
+    additional_deps = [
+        ":__support_math_nextafterbf16",
+    ],
+)
 
-libc_math_function(name = "nextafterl")
+libc_math_function(
+    name = "nextafterf",
+    additional_deps = [
+        ":__support_math_nextafterf",
+    ],
+)
+
+libc_math_function(
+    name = "nextafterl",
+    additional_deps = [
+        ":__support_math_nextafterl",
+    ],
+)
 
 libc_math_function(
     name = "nextafterf128",
+    additional_deps = [
+        ":__support_math_nextafterf128",
+    ],
 )
 
 libc_math_function(
     name = "nextafterf16",
+    additional_deps = [
+        ":__support_math_nextafterf16",
+    ],
 )
 
 libc_math_function(

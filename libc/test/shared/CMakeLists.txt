@@ -42,6 +42,9 @@ add_fp_unittest(
     libc.src.__support.math.bf16mulf
     libc.src.__support.math.bf16mulf128
     libc.src.__support.math.bf16mull
+    libc.src.__support.math.bf16sub
+    libc.src.__support.math.bf16subf
+    libc.src.__support.math.bf16subf128
     libc.src.__support.math.canonicalize
     libc.src.__support.math.canonicalizebf16
     libc.src.__support.math.canonicalizef
@@ -185,6 +188,12 @@ add_fp_unittest(
     libc.src.__support.math.nexttowardf
     libc.src.__support.math.nexttowardf16
     libc.src.__support.math.nexttowardl
+    libc.src.__support.math.nextafter
+    libc.src.__support.math.nextafterbf16
+    libc.src.__support.math.nextafterf
+    libc.src.__support.math.nextafterf16
+    libc.src.__support.math.nextafterl
+    libc.src.__support.math.nextafterf128
     libc.src.__support.math.pow
     libc.src.__support.math.powf
     libc.src.__support.math.rsqrtf

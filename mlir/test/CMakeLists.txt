@@ -101,6 +101,7 @@ configure_lit_site_cfg(
   )
 
 set(MLIR_TEST_DEPENDS
+  llvm-strings
   mlir-capi-ir-test
   mlir-capi-irdl-test
   mlir-capi-llvm-test
