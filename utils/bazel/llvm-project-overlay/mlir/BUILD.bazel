@@ -2001,7 +2001,10 @@ gentbl_cc_library(
         ],
         "include/mlir/Dialect/ArmNeon/ArmNeon.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/ArmNeon/ArmNeon.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/ArmNeon/ArmNeon.md": ["-gen-op-doc"],
+        "g3doc/Dialects/ArmNeon/ArmNeon.md": [
+            "-gen-op-doc",
+            "-dialect=arm_neon",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/ArmNeon/ArmNeon.td",
@@ -2489,7 +2492,10 @@ gentbl_cc_library(
         ],
         "include/mlir/Dialect/AMX/AMX.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/AMX/AMX.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/AMX/AMX.md": ["-gen-op-doc"],
+        "g3doc/Dialects/AMX/AMX.md": [
+            "-gen-op-doc",
+            "-dialect=amx",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/AMX/AMX.td",
@@ -2541,14 +2547,14 @@ cc_library(
 )
 
 ##---------------------------------------------------------------------------##
-# X86Vector dialect.
+# X86 dialect.
 ##---------------------------------------------------------------------------##
 
 td_library(
-    name = "X86VectorTdFiles",
+    name = "X86TdFiles",
     srcs = [
-        "include/mlir/Dialect/X86Vector/X86Vector.td",
-        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.td",
+        "include/mlir/Dialect/X86/X86.td",
+        "include/mlir/Dialect/X86/X86Interfaces.td",
     ],
     includes = ["include"],
     deps = [
@@ -2559,40 +2565,43 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "X86VectorIncGen",
+    name = "X86IncGen",
     tbl_outs = {
-        "include/mlir/Dialect/X86Vector/X86VectorDialect.h.inc": [
+        "include/mlir/Dialect/X86/X86Dialect.h.inc": [
             "-gen-dialect-decls",
-            "-dialect=x86vector",
+            "-dialect=x86",
         ],
-        "include/mlir/Dialect/X86Vector/X86VectorDialect.cpp.inc": [
+        "include/mlir/Dialect/X86/X86Dialect.cpp.inc": [
             "-gen-dialect-defs",
-            "-dialect=x86vector",
+            "-dialect=x86",
         ],
-        "include/mlir/Dialect/X86Vector/X86Vector.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/X86Vector/X86Vector.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/X86Vector/X86Vector.md": ["-gen-op-doc"],
+        "include/mlir/Dialect/X86/X86.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/X86/X86.cpp.inc": ["-gen-op-defs"],
+        "g3doc/Dialects/X86/X86.md": [
+            "-gen-op-doc",
+            "-dialect=x86",
+        ],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/X86Vector/X86Vector.td",
-    deps = [":X86VectorTdFiles"],
+    td_file = "include/mlir/Dialect/X86/X86.td",
+    deps = [":X86TdFiles"],
 )
 
 gentbl_cc_library(
-    name = "X86VectorInterfacesIncGen",
+    name = "X86InterfacesIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Dialect/X86Vector/X86VectorInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+        "include/mlir/Dialect/X86/X86Interfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/X86/X86Interfaces.cpp.inc": ["-gen-op-interface-defs"],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/X86Vector/X86VectorInterfaces.td",
-    deps = [":X86VectorTdFiles"],
+    td_file = "include/mlir/Dialect/X86/X86Interfaces.td",
+    deps = [":X86TdFiles"],
 )
 
 cc_library(
-    name = "X86VectorDialect",
-    srcs = ["lib/Dialect/X86Vector/IR/X86VectorDialect.cpp"],
-    hdrs = ["include/mlir/Dialect/X86Vector/X86VectorDialect.h"],
+    name = "X86Dialect",
+    srcs = ["lib/Dialect/X86/IR/X86Dialect.cpp"],
+    hdrs = ["include/mlir/Dialect/X86/X86Dialect.h"],
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
@@ -2601,14 +2610,14 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":SideEffectInterfaces",
-        ":X86VectorIncGen",
-        ":X86VectorInterfacesIncGen",
+        ":X86IncGen",
+        ":X86InterfacesIncGen",
     ],
 )
 
 td_library(
-    name = "X86VectorTransformOpsTdFiles",
-    srcs = ["include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td"],
+    name = "X86TransformOpsTdFiles",
+    srcs = ["include/mlir/Dialect/X86/TransformOps/X86TransformOps.td"],
     includes = ["include"],
     deps = [
         ":OpBaseTdFiles",
@@ -2618,22 +2627,22 @@ td_library(
 )
 
 gentbl_cc_library(
-    name = "X86VectorTransformOpsIncGen",
+    name = "X86TransformOpsIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.h.inc": ["-gen-op-decls"],
-        "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.cpp.inc": ["-gen-op-defs"],
+        "include/mlir/Dialect/X86/TransformOps/X86TransformOps.h.inc": ["-gen-op-decls"],
+        "include/mlir/Dialect/X86/TransformOps/X86TransformOps.cpp.inc": ["-gen-op-defs"],
     },
     tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Dialect/X86Vector/TransformOps/X86VectorTransformOps.td",
+    td_file = "include/mlir/Dialect/X86/TransformOps/X86TransformOps.td",
     deps = [
-        ":X86VectorTransformOpsTdFiles",
+        ":X86TransformOpsTdFiles",
     ],
 )
 
 cc_library(
-    name = "X86VectorTransformOps",
-    srcs = glob(["lib/Dialect/X86Vector/TransformOps/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/X86Vector/TransformOps/*.h"]),
+    name = "X86TransformOps",
+    srcs = glob(["lib/Dialect/X86/TransformOps/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86/TransformOps/*.h"]),
     includes = ["include"],
     deps = [
         ":IR",
@@ -2642,16 +2651,16 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":VectorDialect",
-        ":X86VectorDialect",
-        ":X86VectorTransformOpsIncGen",
-        ":X86VectorTransforms",
+        ":X86Dialect",
+        ":X86TransformOpsIncGen",
+        ":X86Transforms",
     ],
 )
 
 cc_library(
-    name = "X86VectorUtils",
-    srcs = glob(["lib/Dialect/X86Vector/Utils/*.cpp"]),
-    hdrs = glob(["include/mlir/Dialect/X86Vector/Utils/*.h"]),
+    name = "X86Utils",
+    srcs = glob(["lib/Dialect/X86/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/X86/Utils/*.h"]),
     includes = ["include"],
     deps = [
         ":IR",
@@ -2660,15 +2669,15 @@ cc_library(
         ":SCFDialect",
         ":Support",
         ":VectorDialect",
-        ":X86VectorDialect",
+        ":X86Dialect",
         "//llvm:Support",
     ],
 )
 
 cc_library(
-    name = "X86VectorTransforms",
-    srcs = glob(["lib/Dialect/X86Vector/Transforms/*.cpp"]),
-    hdrs = ["include/mlir/Dialect/X86Vector/Transforms.h"],
+    name = "X86Transforms",
+    srcs = glob(["lib/Dialect/X86/Transforms/*.cpp"]),
+    hdrs = ["include/mlir/Dialect/X86/Transforms.h"],
     includes = ["include"],
     deps = [
         ":ArithDialect",
@@ -2684,8 +2693,8 @@ cc_library(
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
-        ":X86VectorDialect",
-        ":X86VectorUtils",
+        ":X86Dialect",
+        ":X86Utils",
         "//llvm:Support",
     ],
 )
@@ -3026,7 +3035,10 @@ gentbl_cc_library(
         ],
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/SparseTensor/SparseTensor.md": ["-gen-op-doc"],
+        "g3doc/Dialects/SparseTensor/SparseTensor.md": [
+            "-gen-op-doc",
+            "-dialect=sparse_tensor",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/SparseTensor/IR/SparseTensorOps.td",
@@ -3502,7 +3514,10 @@ gentbl_cc_library(
         ],
         "include/mlir/Dialect/NVGPU/IR/NVGPUOps.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/NVGPU/IR/NVGPUOps.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/NVGPU/NVGPU.md": ["-gen-op-doc"],
+        "g3doc/Dialects/NVGPU/NVGPU.md": [
+            "-gen-op-doc",
+            "-dialect=nvgpu",
+        ],
         "include/mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.h.inc": ["-gen-typedef-decls"],
         "include/mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc": ["-gen-typedef-defs"],
         "include/mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc": ["-gen-enum-decls"],
@@ -3706,7 +3721,10 @@ gentbl_cc_library(
     tbl_outs = {
         "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/WasmSSA/WasmSSA.md": ["-gen-op-doc"],
+        "g3doc/Dialects/WasmSSA/WasmSSA.md": [
+            "-gen-op-doc",
+            "-dialect=wasmssa",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/WasmSSA/IR/WasmSSAOps.td",
@@ -3779,7 +3797,10 @@ gentbl_cc_library(
         ],
         "include/mlir/Dialect/XeGPU/IR/XeGPU.h.inc": ["-gen-op-decls"],
         "include/mlir/Dialect/XeGPU/IR/XeGPU.cpp.inc": ["-gen-op-defs"],
-        "g3doc/Dialects/XeGPU/XeGPU.md": ["-gen-op-doc"],
+        "g3doc/Dialects/XeGPU/XeGPU.md": [
+            "-gen-op-doc",
+            "-dialect=xegpu",
+        ],
         "include/mlir/Dialect/XeGPU/IR/XeGPUTypes.h.inc": [
             "-gen-typedef-decls",
             "-typedefs-dialect=xegpu",
@@ -4387,6 +4408,7 @@ cc_library(
         ":MathToFuncs",
         ":MathToLLVM",
         ":MathToLibm",
+        ":MathToNVVM",
         ":MathToROCDL",
         ":MathToSPIRV",
         ":MathToXeVM",
@@ -5083,7 +5105,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorTransformOpsIncGen",
         ":VectorTransforms",
-        ":X86VectorTransforms",
+        ":X86Transforms",
     ],
 )
 
@@ -5424,8 +5446,8 @@ cc_library(
             "lib/Dialect/LLVMIR/IR/ROCDL*.h",
             "lib/Dialect/LLVMIR/IR/VCIX*.cpp",
             "lib/Dialect/LLVMIR/IR/VCIX*.h",
-            "lib/Dialect/LLVMIR/IR/*X86Vector*.cpp",
-            "lib/Dialect/LLVMIR/IR/*X86Vector*.h",
+            "lib/Dialect/LLVMIR/IR/*X86*.cpp",
+            "lib/Dialect/LLVMIR/IR/*X86*.h",
             "lib/Dialect/LLVMIR/IR/XeVM*.cpp",
             "lib/Dialect/LLVMIR/IR/XeVM*.h",
         ],
@@ -5439,7 +5461,7 @@ cc_library(
             "include/mlir/Dialect/LLVMIR/BasicPtxBuilderInterface.h",
             "include/mlir/Dialect/LLVMIR/ROCDL*.h",
             "include/mlir/Dialect/LLVMIR/VCIX*.h",
-            "include/mlir/Dialect/LLVMIR/*X86Vector*.h",
+            "include/mlir/Dialect/LLVMIR/*X86*.h",
             "include/mlir/Dialect/LLVMIR/XeVM*.h",
         ],
     ),
@@ -6002,6 +6024,7 @@ cc_library(
         ":LLVMCommonConversion",
         ":LLVMDialect",
         ":MathDialect",
+        ":MathToNVVM",
         ":MemRefDialect",
         ":NVGPUDialect",
         ":NVGPUToNVVM",
@@ -6926,7 +6949,10 @@ gentbl_cc_library(
             "-gen-dialect-defs",
             "-dialect=smt",
         ],
-        "g3doc/Dialects/SMT/SMT.md": ["-gen-op-doc"],
+        "g3doc/Dialects/SMT/SMT.md": [
+            "-gen-op-doc",
+            "-dialect=smt",
+        ],
         "include/mlir/Dialect/SMT/IR/SMTTypes.h.inc": ["-gen-typedef-decls"],
         "include/mlir/Dialect/SMT/IR/SMTTypes.cpp.inc": ["-gen-typedef-defs"],
         "include/mlir/Dialect/SMT/IR/SMTAttributes.h.inc": ["-gen-attrdef-decls"],
@@ -8650,6 +8676,31 @@ cc_library(
 )
 
 cc_library(
+    name = "MathToNVVM",
+    srcs = glob(["lib/Conversion/MathToNVVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/MathToNVVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ConversionPassIncGen",
+        ":DialectUtils",
+        ":FuncDialect",
+        ":GPUCommonTransforms",
+        ":GPUToGPURuntimeTransforms",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":MathDialect",
+        ":NVVMDialect",
+        ":Pass",
+        ":TransformUtils",
+        ":VectorDialect",
+        ":VectorUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "MathToEmitC",
     srcs = glob([
         "lib/Conversion/MathToEmitC/*.cpp",
@@ -9592,7 +9643,7 @@ cc_library(
         ":VectorDialect",
         ":VectorTransforms",
         ":WasmSSADialect",
-        ":X86VectorDialect",
+        ":X86Dialect",
         ":XeGPUDialect",
         ":XeVMDialect",
         ":XeVMTarget",
@@ -9694,7 +9745,7 @@ cc_library(
         ":UBToLLVM",
         ":VectorToLLVM",
         ":VectorTransformOps",
-        ":X86VectorTransformOps",
+        ":X86TransformOps",
         ":XeGPUTransformOps",
         ":XeVMToLLVM",
         ":XeVMToLLVMIRTranslation",
@@ -10269,6 +10320,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/OpenACC/AccCommon.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
+        "include/mlir/Dialect/OpenACC/OpenACCCGAttributes.td",
         "include/mlir/Dialect/OpenACC/OpenACCCGOps.td",
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
@@ -10331,7 +10383,10 @@ gentbl_cc_library(
             "-gen-attrdef-defs",
             "-attrdefs-dialect=acc",
         ],
-        "g3doc/Dialects/OpenACC/OpenACCOps.md": ["-gen-op-doc"],
+        "g3doc/Dialects/OpenACC/OpenACCOps.md": [
+            "-gen-op-doc",
+            "-dialect=acc",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/OpenACC/OpenACCOps.td",
@@ -10564,7 +10619,10 @@ gentbl_cc_library(
             "-gen-attrdef-defs",
             "-attrdefs-dialect=omp",
         ],
-        "g3doc/Dialects/OpenMP/OpenMPOps.md": ["-gen-op-doc"],
+        "g3doc/Dialects/OpenMP/OpenMPOps.md": [
+            "-gen-op-doc",
+            "-dialect=omp",
+        ],
         "include/mlir/Dialect/OpenMP/OpenMPClauseOps.h.inc": ["-gen-openmp-clause-ops"],
     },
     tblgen = ":mlir-tblgen",
@@ -11457,7 +11515,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorTransforms",
         ":VectorUtils",
-        ":X86VectorTransforms",
+        ":X86Transforms",
         "//llvm:Support",
     ],
 )
@@ -11611,7 +11669,10 @@ gentbl_cc_library(
             "-gen-dialect-defs",
             "-dialect=vector",
         ],
-        "g3doc/Dialects/Vector/Vector.md": ["-gen-op-doc"],
+        "g3doc/Dialects/Vector/Vector.md": [
+            "-gen-op-doc",
+            "-dialect=vector",
+        ],
     },
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/Vector/IR/Vector.td",
@@ -11720,8 +11781,8 @@ cc_library(
         ":TransformUtils",
         ":VectorDialect",
         ":VectorTransforms",
-        ":X86VectorDialect",
-        ":X86VectorTransforms",
+        ":X86Dialect",
+        ":X86Transforms",
         "//llvm:Core",
         "//llvm:Support",
     ],
@@ -13058,7 +13119,7 @@ cc_library(
         ":TransformUtils",
         ":VectorDialect",
         ":VectorUtils",
-        ":X86VectorDialect",
+        ":X86Dialect",
         "//llvm:Support",
     ],
 )
