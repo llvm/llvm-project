@@ -1188,6 +1188,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setTargetDAGCombine(ISD::VECREDUCE_AND);
   setTargetDAGCombine(ISD::VECREDUCE_OR);
   setTargetDAGCombine(ISD::VECREDUCE_XOR);
+  setTargetDAGCombine(ISD::VECREDUCE_FADD);
+  setTargetDAGCombine(ISD::VECREDUCE_SEQ_FADD);
 
   setTargetDAGCombine(ISD::SCALAR_TO_VECTOR);
 
@@ -23733,6 +23735,126 @@ static SDValue combineSVEBitSel(unsigned IID, SDNode *N, SelectionDAG &DAG) {
   }
 }
 
+/// Optimize patterns where we insert zeros into vector lanes before a
+/// floating-point add reduction. This handles both the aarch64.neon.faddv
+/// intrinsic and ISD::VECREDUCE_FADD/VECREDUCE_SEQ_FADD.
+/// When Start is set, the reduction is sequential (left-to-right), otherwise
+/// it is pairwise (tree).
+static SDValue
+tryCombineFADDReductionWithZero(SDNode *N, SelectionDAG &DAG,
+                                const AArch64Subtarget *Subtarget, SDValue Vec,
+                                SDValue Start = SDValue()) {
+  EVT VT = Vec.getValueType();
+  if (!VT.isFixedLengthVector())
+    return SDValue();
+  EVT EltVT = VT.getVectorElementType();
+  if (EltVT != MVT::f32 && EltVT != MVT::f64 &&
+      !(EltVT == MVT::f16 && Subtarget->hasFullFP16()))
+    return SDValue();
+
+  SDLoc DL(N);
+  unsigned NumElts = VT.getVectorNumElements();
+  // Pairwise reduction requires power-of-2 number of elements.
+  if (!isPowerOf2_32(NumElts))
+    return SDValue();
+
+  // Check if we can output a signed zero.
+  // This avoids the scenario where all the added values are -0.0 except the
+  // +0.0 element we chose to ignore.
+  SDNodeFlags Flags = N->getFlags();
+  bool IsSignedZeroSafe =
+      Flags.hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0));
+
+  // Determine which elements are known to be zero. When signed zeros can be
+  // ignored, an element is "zero" if all bits except the sign bit are known
+  // zero (i.e., the element is +0.0 or -0.0).
+  unsigned EltBitWidth = EltVT.getSizeInBits();
+  APInt ZeroMask = IsSignedZeroSafe ? APInt::getSignedMaxValue(EltBitWidth)
+                                    : APInt::getAllOnes(EltBitWidth);
+  APInt KnownZeroElts = APInt::getZero(NumElts);
+  for (unsigned I = 0; I < NumElts; ++I) {
+    APInt DemandedElt = APInt::getOneBitSet(NumElts, I);
+    KnownBits KB = DAG.computeKnownBits(Vec, DemandedElt);
+    if (ZeroMask.isSubsetOf(KB.Zero))
+      KnownZeroElts.setBit(I);
+  }
+  unsigned NumZeroElts = KnownZeroElts.popcount();
+  // All elements are zero.
+  if (NumZeroElts == NumElts) {
+    if (!Start)
+      return DAG.getConstantFP(0.0, DL, EltVT);
+    if (IsSignedZeroSafe)
+      return Start;
+    return DAG.getNode(ISD::FADD, DL, EltVT, Start,
+                       DAG.getConstantFP(0.0, DL, EltVT));
+  }
+
+  // Decomposing the reduction into scalar FADDs is only profitable when
+  // enough elements are zero.
+  unsigned MinZeroElts;
+  switch (NumElts) {
+  case 2:
+  case 4:
+    MinZeroElts = 1;
+    break;
+  case 8:
+    MinZeroElts = 3;
+    break;
+  default:
+    MinZeroElts = NumElts / 2;
+    break;
+  }
+  if (NumZeroElts < MinZeroElts)
+    return SDValue();
+
+  if (!IsSignedZeroSafe)
+    return SDValue();
+
+  // Sequential reduction- add every element in-order, skipping zeros.
+  if (Start) {
+    SDValue Acc = Start;
+    for (unsigned I = 0; I < NumElts; I++) {
+      if (KnownZeroElts[I])
+        continue;
+      SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                                DAG.getConstant(I, DL, MVT::i64));
+
+      Acc = DAG.getNode(ISD::FADD, DL, EltVT, Acc, Elt, Flags);
+    }
+    return Acc;
+  }
+
+  // Pairwise reduction- extract all elements, then reduce pairwise.
+  SmallVector<SDValue, 4> Elts;
+  for (unsigned I = 0; I < NumElts; I++) {
+    Elts.push_back(DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Vec,
+                               DAG.getConstant(I, DL, MVT::i64)));
+  }
+  while (Elts.size() > 1) {
+    SmallVector<SDValue, 4> NewElts;
+    APInt NewKnownZeroElts = APInt::getZero(Elts.size() / 2);
+    for (unsigned I = 0; I < Elts.size(); I += 2) {
+      bool ZeroI = KnownZeroElts[I];
+      bool ZeroI1 = KnownZeroElts[I + 1];
+      if (ZeroI && ZeroI1) {
+        // Both elements are zero, result is zero.
+        NewElts.push_back(Elts[I]);
+        NewKnownZeroElts.setBit(I / 2);
+      } else if (ZeroI) {
+        NewElts.push_back(Elts[I + 1]);
+      } else if (ZeroI1) {
+        NewElts.push_back(Elts[I]);
+      } else {
+        NewElts.push_back(
+            DAG.getNode(ISD::FADD, DL, EltVT, Elts[I], Elts[I + 1], Flags));
+      }
+    }
+    Elts = std::move(NewElts);
+    KnownZeroElts = NewKnownZeroElts;
+  }
+  return Elts[0];
+}
+
 static SDValue performIntrinsicCombine(SDNode *N,
                                        TargetLowering::DAGCombinerInfo &DCI,
                                        const AArch64Subtarget *Subtarget) {
@@ -23756,6 +23878,8 @@ static SDValue performIntrinsicCombine(SDNode *N,
     return combineAcrossLanesIntrinsic(AArch64ISD::SMAXV, N, DAG);
   case Intrinsic::aarch64_neon_umaxv:
     return combineAcrossLanesIntrinsic(AArch64ISD::UMAXV, N, DAG);
+  case Intrinsic::aarch64_neon_faddv:
+    return tryCombineFADDReductionWithZero(N, DAG, Subtarget, N->getOperand(1));
   case Intrinsic::aarch64_neon_fmax:
     return DAG.getNode(ISD::FMAXIMUM, SDLoc(N), N->getValueType(0),
                        N->getOperand(1), N->getOperand(2));
@@ -29148,6 +29272,12 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performExtractVectorEltCombine(N, DCI, Subtarget);
   case ISD::VECREDUCE_ADD:
     return performVecReduceAddCombine(N, DCI.DAG, Subtarget);
+  case ISD::VECREDUCE_FADD:
+    return tryCombineFADDReductionWithZero(N, DCI.DAG, Subtarget,
+                                           N->getOperand(0));
+  case ISD::VECREDUCE_SEQ_FADD:
+    return tryCombineFADDReductionWithZero(N, DCI.DAG, Subtarget,
+                                           N->getOperand(1), N->getOperand(0));
   case ISD::GET_ACTIVE_LANE_MASK:
     return performActiveLaneMaskCombine(N, DCI, Subtarget);
   case AArch64ISD::UADDV:
