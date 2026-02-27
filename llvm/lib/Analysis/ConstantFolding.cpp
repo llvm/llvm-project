@@ -3805,10 +3805,9 @@ static Constant *ConstantFoldIntrinsicCall2(Intrinsic::ID IntrinsicID, Type *Ty,
       Constant *Elt = Operands[0]->getAggregateElement(I);
       if (!Elt)
         return nullptr;
-      if (isa<UndefValue>(Elt))
+      if (isa<UndefValue>(Elt) || Elt->isNullValue())
         continue;
-      if (!Elt->isNullValue())
-        return ConstantInt::get(Ty, I);
+      return ConstantInt::get(Ty, I);
     }
     if (Op2->isOne())
       return PoisonValue::get(Ty);
