@@ -1,5 +1,6 @@
 Key: Ret:  [ 0.50  1.00 ]
-Key: Br:  [ 1.50  2.00 ]
+Key: UncondBr:  [ 1.50  2.00 ]
+Key: CondBr:  [ 1.50  2.00 ]
 Key: Switch:  [ 2.50  3.00 ]
 Key: IndirectBr:  [ 3.50  4.00 ]
 Key: Invoke:  [ 4.50  5.00 ]

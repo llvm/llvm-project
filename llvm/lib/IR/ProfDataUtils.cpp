@@ -217,8 +217,7 @@ bool llvm::extractBranchWeights(const Instruction &I,
 
 bool llvm::extractBranchWeights(const Instruction &I, uint64_t &TrueVal,
                                 uint64_t &FalseVal) {
-  assert((I.getOpcode() == Instruction::Br ||
-          I.getOpcode() == Instruction::Select) &&
+  assert((isa<BranchInst, SelectInst>(I)) &&
          "Looking for branch weights on something besides branch, select, or "
          "switch");
 

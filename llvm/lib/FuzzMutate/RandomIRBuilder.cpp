@@ -314,7 +314,7 @@ static bool isCompatibleReplacement(const Instruction *I, const Use &Operand,
   // Modify other operands, like switch case may accidently change case from
   // ConstantInt to a register, which is illegal.
   case Instruction::Switch:
-  case Instruction::Br:
+  case Instruction::CondBr:
     if (OperandNo >= 1)
       return false;
     break;

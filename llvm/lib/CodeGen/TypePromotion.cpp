@@ -732,7 +732,8 @@ bool TypePromotionImpl::isSupportedValue(Value *V) {
              !GenerateSignBits(I);
     case Instruction::GetElementPtr:
     case Instruction::Store:
-    case Instruction::Br:
+    case Instruction::UncondBr:
+    case Instruction::CondBr:
     case Instruction::Switch:
       return true;
     case Instruction::PHI:

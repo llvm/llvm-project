@@ -2565,8 +2565,8 @@ static InstructionCost findCostForOutputBlocks(Module &M,
       OutputCost += StoreCost * NumOutputBranches;
     }
 
-    InstructionCost BranchCost =
-        TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
+    InstructionCost BranchCost = TTI.getCFInstrCost(
+        Instruction::UncondBr, TargetTransformInfo::TCK_CodeSize);
     LLVM_DEBUG(dbgs() << "Adding " << BranchCost << " to the current cost for"
                       << " a branch instruction\n");
     OutputCost += BranchCost * NumOutputBranches;
@@ -2579,8 +2579,8 @@ static InstructionCost findCostForOutputBlocks(Module &M,
         Instruction::ICmp, Type::getInt32Ty(M.getContext()),
         Type::getInt32Ty(M.getContext()), CmpInst::BAD_ICMP_PREDICATE,
         TargetTransformInfo::TCK_CodeSize);
-    InstructionCost BranchCost =
-        TTI.getCFInstrCost(Instruction::Br, TargetTransformInfo::TCK_CodeSize);
+    InstructionCost BranchCost = TTI.getCFInstrCost(
+        Instruction::CondBr, TargetTransformInfo::TCK_CodeSize);
 
     unsigned DifferentBlocks = CurrentGroup.OutputGVNCombinations.size();
     InstructionCost TotalCost = ComparisonCost * BranchCost * DifferentBlocks;

@@ -560,14 +560,13 @@ struct FunCloner {
           Dst = LLVMBuildRet(Builder, CloneValue(LLVMGetOperand(Src, 0)));
         break;
       }
-      case LLVMBr: {
-        if (!LLVMIsConditional(Src)) {
-          LLVMValueRef SrcOp = LLVMGetOperand(Src, 0);
-          LLVMBasicBlockRef SrcBB = LLVMValueAsBasicBlock(SrcOp);
-          Dst = LLVMBuildBr(Builder, DeclareBB(SrcBB));
-          break;
-        }
-
+      case LLVMUncondBr: {
+        LLVMValueRef SrcOp = LLVMGetOperand(Src, 0);
+        LLVMBasicBlockRef SrcBB = LLVMValueAsBasicBlock(SrcOp);
+        Dst = LLVMBuildBr(Builder, DeclareBB(SrcBB));
+        break;
+      }
+      case LLVMCondBr: {
         LLVMValueRef Cond = LLVMGetCondition(Src);
         LLVMValueRef Else = LLVMGetOperand(Src, 1);
         LLVMBasicBlockRef ElseBB = DeclareBB(LLVMValueAsBasicBlock(Else));

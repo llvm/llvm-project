@@ -522,7 +522,8 @@ public:
 private:
   // Terminator instructions.
   void visitRet(const ReturnInst &I);
-  void visitBr(const BranchInst &I);
+  void visitUncondBr(const UncondBrInst &I);
+  void visitCondBr(const CondBrInst &I);
   void visitSwitch(const SwitchInst &I);
   void visitIndirectBr(const IndirectBrInst &I);
   void visitUnreachable(const UnreachableInst &I);

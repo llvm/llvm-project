@@ -295,7 +295,6 @@ class SimplifyCFGOpt {
   bool simplifySwitch(SwitchInst *SI, IRBuilder<> &Builder);
   bool simplifyDuplicateSwitchArms(SwitchInst *SI, DomTreeUpdater *DTU);
   bool simplifyIndirectBr(IndirectBrInst *IBI);
-  bool simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder);
   bool simplifyUncondBranch(BranchInst *BI, IRBuilder<> &Builder);
   bool simplifyCondBranch(BranchInst *BI, IRBuilder<> &Builder);
   bool foldCondBranchOnValueKnownInPredecessor(BranchInst *BI);
@@ -8370,11 +8369,6 @@ static bool tryToMergeLandingPad(LandingPadInst *LPad, BranchInst *BI,
   return false;
 }
 
-bool SimplifyCFGOpt::simplifyBranch(BranchInst *Branch, IRBuilder<> &Builder) {
-  return Branch->isUnconditional() ? simplifyUncondBranch(Branch, Builder)
-                                   : simplifyCondBranch(Branch, Builder);
-}
-
 bool SimplifyCFGOpt::simplifyUncondBranch(BranchInst *BI,
                                           IRBuilder<> &Builder) {
   BasicBlock *BB = BI->getParent();
@@ -8933,8 +8927,11 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
   Instruction *Terminator = BB->getTerminator();
   Builder.SetInsertPoint(Terminator);
   switch (Terminator->getOpcode()) {
-  case Instruction::Br:
-    Changed |= simplifyBranch(cast<BranchInst>(Terminator), Builder);
+  case Instruction::UncondBr:
+    Changed |= simplifyUncondBranch(cast<UncondBrInst>(Terminator), Builder);
+    break;
+  case Instruction::CondBr:
+    Changed |= simplifyCondBranch(cast<CondBrInst>(Terminator), Builder);
     break;
   case Instruction::Resume:
     Changed |= simplifyResume(cast<ResumeInst>(Terminator), Builder);

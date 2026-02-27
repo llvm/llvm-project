@@ -363,8 +363,8 @@ TEST_F(IR2VecTestFixture, GetInstVec_Symbolic) {
   EXPECT_EQ(AddEmb.size(), 2u);
   EXPECT_EQ(RetEmb.size(), 2u);
 
-  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 25.5)));
-  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 15.5)));
+  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 25.9)));
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 15.7)));
 }
 
 TEST_F(IR2VecTestFixture, GetInstVec_FlowAware) {
@@ -376,8 +376,8 @@ TEST_F(IR2VecTestFixture, GetInstVec_FlowAware) {
   EXPECT_EQ(AddEmb.size(), 2u);
   EXPECT_EQ(RetEmb.size(), 2u);
 
-  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 25.5)));
-  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 32.6)));
+  EXPECT_TRUE(AddEmb.approximatelyEquals(Embedding(2, 25.9)));
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 33.1)));
 }
 
 TEST_F(IR2VecTestFixture, GetBBVector_Symbolic) {
@@ -387,9 +387,9 @@ TEST_F(IR2VecTestFixture, GetBBVector_Symbolic) {
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
-  // BB vector should be sum of add and ret: {25.5, 25.5} + {15.5, 15.5} =
-  // {41.0, 41.0}
-  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 41.0)));
+  // BB vector should be sum of add and ret: {25.9, 25.9} + {15.7, 15.7} =
+  // {41.6, 41.6}
+  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 41.6)));
 }
 
 TEST_F(IR2VecTestFixture, GetBBVector_FlowAware) {
@@ -399,9 +399,9 @@ TEST_F(IR2VecTestFixture, GetBBVector_FlowAware) {
   const auto &BBVec = Emb->getBBVector(*BB);
 
   EXPECT_EQ(BBVec.size(), 2u);
-  // BB vector should be sum of add and ret: {25.5, 25.5} + {32.6, 32.6} =
-  // {58.1, 58.1}
-  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 58.1)));
+  // BB vector should be sum of add and ret: {25.9, 25.9} + {33.1, 33.1} =
+  // {59.0, 59.0}
+  EXPECT_TRUE(BBVec.approximatelyEquals(Embedding(2, 59.0)));
 }
 
 TEST_F(IR2VecTestFixture, GetFunctionVector_Symbolic) {
@@ -412,8 +412,8 @@ TEST_F(IR2VecTestFixture, GetFunctionVector_Symbolic) {
 
   EXPECT_EQ(FuncVec.size(), 2u);
 
-  // Function vector should match BB vector (only one BB): {41.0, 41.0}
-  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 41.0)));
+  // Function vector should match BB vector (only one BB): {41.6, 41.6}
+  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 41.6)));
 }
 
 TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
@@ -423,8 +423,8 @@ TEST_F(IR2VecTestFixture, GetFunctionVector_FlowAware) {
   const auto &FuncVec = Emb->getFunctionVector();
 
   EXPECT_EQ(FuncVec.size(), 2u);
-  // Function vector should match BB vector (only one BB): {58.1, 58.1}
-  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 58.1)));
+  // Function vector should match BB vector (only one BB): {59.0, 59.0}
+  EXPECT_TRUE(FuncVec.approximatelyEquals(Embedding(2, 59.0)));
 }
 
 TEST_F(IR2VecTestFixture, MultipleComputeEmbeddingsConsistency_Symbolic) {
@@ -611,7 +611,7 @@ TEST(IR2VecVocabularyTest, NumericIDMapInvalidInputs) {
 
 TEST(IR2VecVocabularyTest, StringKeyGeneration) {
   EXPECT_EQ(Vocabulary::getStringKey(0), "Ret");
-  EXPECT_EQ(Vocabulary::getStringKey(12), "Add");
+  EXPECT_EQ(Vocabulary::getStringKey(13), "Add");
 
 #define EXPECT_OPCODE(NUM, OPCODE, CLASS)                                      \
   EXPECT_EQ(Vocabulary::getStringKey(Vocabulary::getIndex(NUM)),               \
@@ -1041,7 +1041,8 @@ protected:
 
     // Add all required opcodes
     const char *Opcodes[] = {"Ret",
-                             "Br",
+                             "UncondBr",
+                             "CondBr",
                              "Switch",
                              "IndirectBr",
                              "Invoke",
