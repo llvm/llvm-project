@@ -1150,6 +1150,18 @@ add_header_library(
 )
 
 add_header_library(
+  f16sqrtf128
+  HDRS
+    f16sqrtf128.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.common
+    libc.src.__support.macros.config
+    libc.include.llvm-libc-types.float128
+    libc.include.llvm-libc-macros.float16_macros
+)
+
+add_header_library(
   f16sqrtl
   HDRS
     f16sqrtl.h
@@ -1833,6 +1845,63 @@ add_header_library(
   DEPENDS
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafter
+  HDRS
+    nextafter.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterbf16
+  HDRS
+    nextafterbf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterf
+  HDRS
+    nextafterf.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterf128
+  HDRS
+    nextafterf128.h
+  DEPENDS
+    libc.include.llvm-libc-types.float128
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterf16
+  HDRS
+    nextafterf16.h
+  DEPENDS
+    libc.include.llvm-libc-macros.float16_macros
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.src.__support.macros.config
+)
+
+add_header_library(
+  nextafterl
+  HDRS
+    nextafterl.h
+  DEPENDS
+    libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
 )
 

@@ -298,13 +298,17 @@ public:
   /// Erase the class containing \p V, i.e. erase all members of the class from
   /// the set.
   void eraseClass(const ElemTy &V) {
-    if (TheMapping.find(V) == TheMapping.end())
+    if (!TheMapping.contains(V))
       return;
     iterator_range<member_iterator> LeaderI = members(V);
     for (member_iterator MI = LeaderI.begin(), ME = LeaderI.end(); MI != ME;) {
       const ElemTy &ToErase = *MI;
       ++MI;
+      const ECValue *Cur = TheMapping[ToErase];
       TheMapping.erase(ToErase);
+      auto I = find(Members, Cur);
+      assert(I != Members.end() && "Can't find input in members!");
+      Members.erase(I);
     }
   }
 
