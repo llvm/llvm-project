@@ -133,8 +133,8 @@ private:
   const ol_platform_handle_t MOffloadPlatform{};
   const size_t MOffloadPlatformIndex{};
 
-  ol_platform_backend_t MOffloadBackend;
-  backend MBackend;
+  ol_platform_backend_t MOffloadBackend{OL_PLATFORM_BACKEND_UNKNOWN};
+  backend MBackend{};
 
   std::vector<DeviceImplUPtr> MRootDevices;
 

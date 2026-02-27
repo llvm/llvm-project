@@ -22,14 +22,13 @@ namespace detail {
 class PlatformImpl;
 class DeviceImpl;
 
-/// Context dummy (w/o liboffload handle) that represents all devices
-/// in platform.
-///
-/// Presence of context object is essential for many APIs. This dummy is a way
-/// to support them in case of absence of context support in liboffload. For
-/// backends where context exists and participates in operations liboffload
-/// plugins create and use default context that represents all devices in that
-/// platform. Duplicating this logic here.
+// TODO: Presence of context object is essential for many APIs. Current
+// implementation of this class is a way to support them in case of absence of
+// context support in liboffload. For backends where context exists and
+// participates in operations, liboffload plugins create and use default context
+// that represents all devices in that platform. Duplicating this logic here.
+/// Context represents the runtime data structures and state required by a SYCL
+/// backend API to interact with a group of devices associated with a platform.
 class ContextImpl : public std::enable_shared_from_this<ContextImpl> {
   struct Private {
     explicit Private() = default;
