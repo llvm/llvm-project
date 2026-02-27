@@ -560,7 +560,7 @@ class TrivialFunctionAnalysisVisitor
     return false; // Otherwise it's likely not trivial.
   }
 
-  bool HasFieldWithNonTrivialDtor(const CXXRecordDecl *R) {
+  bool HasFieldWithNonTrivialDtor(const CXXRecordDecl *Cls) {
 
     auto HasNonTrivialField = [&](const CXXRecordDecl *R) {
       for (const FieldDecl *F : R->fields()) {
@@ -570,18 +570,23 @@ class TrivialFunctionAnalysisVisitor
       return false;
     };
 
-    if (HasNonTrivialField(R))
+    if (HasNonTrivialField(Cls))
       return true;
 
+    if (!Cls->hasDefinition())
+      return false;
+
     CXXBasePaths Paths;
-    Paths.setOrigin(const_cast<CXXRecordDecl *>(R));
-    return R->lookupInBases([&](const CXXBaseSpecifier *B, CXXBasePath &) {
-      auto *T = B->getType().getTypePtrOrNull();
-      if (!T)
-        return false;
-      auto *R = T->getAsCXXRecordDecl();
-      return R && HasNonTrivialField(R);
-    }, Paths, /*LookupInDependent =*/true);
+    Paths.setOrigin(const_cast<CXXRecordDecl *>(Cls));
+    return Cls->lookupInBases(
+        [&](const CXXBaseSpecifier *B, CXXBasePath &) {
+          auto *T = B->getType().getTypePtrOrNull();
+          if (!T)
+            return false;
+          auto *R = T->getAsCXXRecordDecl();
+          return R && HasNonTrivialField(R);
+        },
+        Paths, /*LookupInDependent =*/true);
   }
 
 public:
@@ -792,7 +797,8 @@ public:
     if (!Callee)
       return false;
 
-    if (isa<CXXDestructorDecl>(Callee) && !CanTriviallyDestruct(MCE->getObjectType()))
+    if (isa<CXXDestructorDecl>(Callee) &&
+        !CanTriviallyDestruct(MCE->getObjectType()))
       return false;
 
     auto Name = safeGetName(Callee);
