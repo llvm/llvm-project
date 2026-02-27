@@ -107,6 +107,8 @@ public:
 
   // Do a linker relaxation pass and return true if we changed something.
   virtual bool relaxOnce(int pass) const { return false; }
+  // Relax CFI jump tables if implemented by target.
+  virtual void relaxCFIJumpTables() const {}
   virtual bool synthesizeAlign(uint64_t &dot, InputSection *sec) {
     return false;
   }

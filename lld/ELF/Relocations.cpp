@@ -1288,7 +1288,7 @@ void TargetInfo::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
   // R_RISCV_PCREL_HI20, ALIGN relocations and the branch-to-branch
   // optimization.
   if (is_contained({EM_RISCV, EM_LOONGARCH}, ctx.arg.emachine) ||
-      ctx.arg.branchToBranch)
+      ctx.arg.branchToBranch || sec.type == SHT_LLVM_CFI_JUMP_TABLE)
     llvm::stable_sort(sec.relocs(),
                       [](const Relocation &lhs, const Relocation &rhs) {
                         return lhs.offset < rhs.offset;
