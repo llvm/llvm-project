@@ -38,14 +38,12 @@ define i129 @v_sdiv_i129_v_pow2k(i129 %lhs) nounwind {
 ; X64-O0-NEXT:    addq %rcx, %rax
 ; X64-O0-NEXT:    adcq $0, %rsi
 ; X64-O0-NEXT:    adcq $0, %rdx
-; X64-O0-NEXT:    shrdq $33, %rsi, %rax
 ; X64-O0-NEXT:    movl %edx, %ecx
 ; X64-O0-NEXT:    andl $1, %ecx
 ; X64-O0-NEXT:    # kill: def $rcx killed $ecx
 ; X64-O0-NEXT:    movq %rcx, %rdx
 ; X64-O0-NEXT:    negq %rdx
-; X64-O0-NEXT:    movq %rsi, %rax
-; X64-O0-NEXT:    shldq $31, %rdi, %rax
+; X64-O0-NEXT:    shrdq $33, %rsi, %rax
 ; X64-O0-NEXT:    shldq $31, %rsi, %rdx
 ; X64-O0-NEXT:    retq
 ;
@@ -152,25 +150,8 @@ define i129 @v_sdiv_exact_i129_v_pow2k(i129 %lhs) nounwind {
 ;
 ; X64-O0-LABEL: v_sdiv_exact_i129_v_pow2k:
 ; X64-O0:       # %bb.0:
-<<<<<<< HEAD
 ; X64-O0-NEXT:    movq %rdi, %rax
-; X64-O0-NEXT:    movl %edx, %ecx
-; X64-O0-NEXT:    andl $1, %ecx
-; X64-O0-NEXT:    movl %ecx, %edi
-; X64-O0-NEXT:    negq %rdi
-; X64-O0-NEXT:    movl %edi, %r8d
-; X64-O0-NEXT:    andl $1, %r8d
-; X64-O0-NEXT:    # implicit-def: $rcx
-; X64-O0-NEXT:    movl %r8d, %ecx
-; X64-O0-NEXT:    shldq $32, %rdi, %rcx
-; X64-O0-NEXT:    addq %rcx, %rax
-; X64-O0-NEXT:    adcq $0, %rsi
-; X64-O0-NEXT:    adcq $0, %rdx
 ; X64-O0-NEXT:    shrdq $33, %rsi, %rax
-=======
-; X64-O0-NEXT:    movq %rsi, %rax
-; X64-O0-NEXT:    shldq $31, %rdi, %rax
->>>>>>> origin/main
 ; X64-O0-NEXT:    movl %edx, %ecx
 ; X64-O0-NEXT:    andl $1, %ecx
 ; X64-O0-NEXT:    # kill: def $rcx killed $ecx
