@@ -68,7 +68,7 @@ define i32 @find_last_trunc_iv(ptr %src, i64 %n) {
 ; CHECK-NEXT:    [[TMP30:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP29]])
 ; CHECK-NEXT:    [[TMP31]] = select i1 [[TMP30]], <4 x i1> [[TMP28]], <4 x i1> [[TMP1]]
 ; CHECK-NEXT:    [[TMP32]] = select i1 [[TMP30]], <4 x i32> [[VEC_IND1]], <4 x i32> [[VEC_PHI]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 4
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
 ; CHECK-NEXT:    [[VEC_IND_NEXT8]] = add <4 x i32> [[VEC_IND1]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP34:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
