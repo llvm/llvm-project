@@ -98,6 +98,10 @@ static std::atomic<SignalHandlerFunctionType> OneShotPipeSignalFunction =
     nullptr;
 
 namespace {
+/// Sentinel stored in a node after the signal handler has removed the file;
+/// not a valid path, never freed.
+static char InvalidPathSentinel[] = "\01\02\03\04";
+
 /// Signal-safe removal of files.
 /// Inserting and erasing from the list isn't signal-safe, but removal of files
 /// themselves is signal-safe. Memory is freed when the head is freed, deletion
@@ -116,7 +120,8 @@ public:
     if (FileToRemoveList *N = Next.exchange(nullptr))
       delete N;
     if (char *F = Filename.exchange(nullptr))
-      free(F);
+      if (F != InvalidPathSentinel)
+        free(F);
   }
 
   // Not signal-safe.
@@ -199,14 +204,12 @@ public:
 
     for (FileToRemoveList *currentFile = OldHead; currentFile;
          currentFile = currentFile->Next.load()) {
-      // Take exclusive ownership of the filename while we're removing it to
-      // avoid racing cleanup threads from freeing the data from under us.
-      if (char *path = currentFile->Filename.exchange(nullptr)) {
+      // Take exclusive ownership by swapping in the sentinel (signal-safe: no
+      // allocation or free). Then put the path back so we don't leak.
+      if (char *path = currentFile->Filename.exchange(InvalidPathSentinel)) {
         removeFile(path);
-
-        // We're done removing the file. Add it back to the list to create a
-        // global root referencing the heap allocation, which will pacify leak
-        // checkers that run at program exit.
+        // Add the path back to the list to create a global root referencing the
+        // heap allocation, which will pacify leak checkers that run at exit.
         currentFile->Filename.exchange(path);
       }
     }
