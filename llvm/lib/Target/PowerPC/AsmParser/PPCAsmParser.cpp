@@ -799,6 +799,24 @@ void PPCOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   }
 }
 
+// Adds the negation of \p Op as an operand to \p Inst.
+//
+// This helper is used to lower pseudo-subtraction mnemonics (e.g. SUBI,
+// SUBIS, SUBIC, SUBIC_rec, PSUBI) into their real ADD-family equivalents by
+// negating the immediate or expression operand before appending it.
+//
+// The negation is performed as follows:
+// - If \p Op is an immediate, the negated integer value is added directly.
+// - If \p Op is a unary-minus expression (i.e. \c -E), the inner
+//   sub-expression \c E is added, effectively cancelling the double negation.
+// - If \p Op is a binary-subtraction expression (i.e. \c LHS-RHS), the
+//   operands are swapped to produce \c RHS-LHS.
+// - Otherwise, a new unary-minus expression wrapping \p Op's expression is
+//   created and added.
+//
+// \param Inst  The instruction being built; the negated operand is appended.
+// \param Op    The source operand whose value is to be negated.
+// \param Ctx   The MC context used to allocate new expression nodes.
 static void
 addNegOperand(MCInst &Inst, MCOperand &Op, MCContext &Ctx) {
   if (Op.isImm()) {
