@@ -13421,7 +13421,8 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
     const unsigned VF = RhsTE->getVectorFactor();
     Order.assign(VF, VF);
     // Track which logical positions we've seen; reject duplicate shift amounts.
-    SmallBitVector SeenPositions(VF);
+    SmallVector<unsigned, 4> SeenPositions;
+    SeenPositions.assign(VF, VF);
     // Check if need to reorder Rhs to make it in form (0, Stride, 2 * Stride,
     // ..., Sz-Stride).
     if (VF * Stride != Sz)
@@ -13436,9 +13437,9 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       if (Val.isNegative() || Val.uge(Sz) || Val.getZExtValue() % Stride != 0)
         return false;
       unsigned Pos = Val.getZExtValue() / Stride;
-      if (SeenPositions.test(Pos))
+      if (SeenPositions[Pos] != VF)
         return false;
-      SeenPositions.set(Pos);
+      SeenPositions[Pos] = Pos;
       // TODO: Support Pos >= VF, in this case need to shift the final value.
       if (Order[Idx] != VF || Pos >= VF)
         return false;
