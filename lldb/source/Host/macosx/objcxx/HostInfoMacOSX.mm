@@ -818,7 +818,8 @@ static DataExtractorSP map_shared_cache_binary_segments(void *image) {
             g_dyld_image_segment_data_4HWTrace(image_copy, segmentName);
         (void)dispatch_data_create_map(data_from_libdyld, &seg.data, &seg.size);
 
-        segments.push_back(seg);
+        if (seg.size > 0 && seg.data != 0)
+          segments.push_back(seg);
       });
 
   if (!segments.size())

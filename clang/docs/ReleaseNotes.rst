@@ -140,6 +140,7 @@ C2y Feature Support
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now allows C23 ``constexpr`` struct member access through the dot operator in constant expressions. (#GH178349)
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
