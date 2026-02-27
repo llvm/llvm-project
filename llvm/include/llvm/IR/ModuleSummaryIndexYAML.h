@@ -140,8 +140,9 @@ template <> struct MappingTraits<TypeIdSummary> {
 struct GlobalValueSummaryYaml {
   // Commonly used fields
   unsigned Linkage, Visibility;
-  bool NotEligibleToImport, Live, IsLocal, CanAutoHide, NoRenameOnPromotion;
+  bool NotEligibleToImport, Live, IsLocal, CanAutoHide;
   unsigned ImportType;
+  bool NoRenameOnPromotion;
   // Fields for AliasSummary
   std::optional<uint64_t> Aliasee;
   // Fields for FunctionSummary
