@@ -487,7 +487,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr void append_range(_Range&& __range) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __len = ranges::distance(__range);
-      if (__len < __cap_ - __end_) {
+      if (__len <= __cap_ - __end_) {
         __construct_at_end(ranges::begin(__range), ranges::end(__range), __len);
       } else {
         __split_buffer<value_type, allocator_type> __buffer(__recommend(size() + __len), size(), __alloc_);
