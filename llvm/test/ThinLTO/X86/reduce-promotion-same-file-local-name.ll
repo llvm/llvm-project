@@ -1,12 +1,14 @@
-; Test a simgple cross module promotion where two same-name same-file static functions
+; Two same-name same-file static functions, meaning that they have the same GUID,
 ; are in both modules respectively.
+; This is to test the support for avoiding always renaming, and ensure that
+; one copy is still renamed despite the GUID conflict.
 
 ; RUN: opt -thinlto-bc %s -o %t1.bc
 ; RUN: opt -thinlto-bc %p/Inputs/reduce-promotion-same-file-local-name.ll -o %t2.bc
 ;
 ; RUN: llvm-lto2 run %t1.bc %t2.bc \
 ; RUN:  --whole-program-visibility-enabled-in-lto=true \
-; RUN:  -disable-always-rename-promoted-locals \
+; RUN:  -always-rename-promoted-locals=false \
 ; RUN:  -save-temps -o %t3 \
 ; RUN:  -r %t1.bc,m1,px \
 ; RUN:  -r %t2.bc,m2,p \

@@ -110,7 +110,7 @@ static cl::opt<bool>
 namespace llvm {
 extern cl::opt<bool> CodeGenDataThinLTOTwoRounds;
 extern cl::opt<bool> ForceImportAll;
-extern cl::opt<bool> DisableAlwaysRenamePromotedLocals;
+extern cl::opt<bool> AlwaysRenamePromotedLocals;
 } // end namespace llvm
 
 namespace llvm {
@@ -2065,8 +2065,13 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // performing IR-based WPD in hybrid regular/thin LTO mode).
   std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
   DenseSet<StringRef> ExternallyVisibleSymbolNames;
+
+  // Used by the promotion-time renaming logic. When non-null, this set
+  // identifies symbols that should not be renamed during promotion.
+  // It is non-null only when whole-program visibility is enabled and
+  // renaming is not forced. Otherwise, the default renaming behavior applies.
   DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr =
-      (WholeProgramVisibilityEnabledInLTO && DisableAlwaysRenamePromotedLocals)
+      (WholeProgramVisibilityEnabledInLTO && !AlwaysRenamePromotedLocals)
           ? &ExternallyVisibleSymbolNames
           : nullptr;
   runWholeProgramDevirtOnIndex(ThinLTO.CombinedIndex, ExportedGUIDs,
