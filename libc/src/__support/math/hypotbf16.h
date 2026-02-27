@@ -1,4 +1,4 @@
-//===-- Implementation header for fmabf16 -----------------------*- C++ -*-===//
+//===-- Implementation header for hypotbf16 ---------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_FMABF16_H
-#define LLVM_LIBC_SRC___SUPPORT_MATH_FMABF16_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTBF16_H
+#define LLVM_LIBC_SRC___SUPPORT_MATH_HYPOTBF16_H
 
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/__support/FPUtil/bfloat16.h"
