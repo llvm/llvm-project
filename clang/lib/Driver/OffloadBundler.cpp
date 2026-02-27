@@ -228,8 +228,12 @@ public:
   /// List bundle IDs in \a Input.
   virtual Error listBundleIDs(MemoryBuffer &Input) {
     size_t NextbundleStart = 0;
+    size_t Offset = 0;
     StringRef BufferString = Input.getBuffer();
-    while ((NextbundleStart != StringRef::npos)) {
+    while ((NextbundleStart != StringRef::npos) &&
+           (Offset < BufferString.size())) {
+
+      // Drop the data that has already been processed/read.
       BufferString = BufferString.drop_front(NextbundleStart);
 
       // Read the header.
@@ -251,6 +255,9 @@ public:
       // Find the beginning of the next Bundle, if it exists.
       NextbundleStart = BufferString.find(StringRef(OFFLOAD_BUNDLER_MAGIC_STR),
                                           sizeof(OFFLOAD_BUNDLER_MAGIC_STR));
+
+      if (NextbundleStart != StringRef::npos)
+      Offset += NextbundleStart;
     }
     return Error::success();
   }
@@ -1358,25 +1365,39 @@ Error OffloadBundler::ListBundleIDsInFile(
 
   size_t Offset = 0;
   size_t NextbundleStart = 0;
+  StringRef Magic; // = OFFLOAD_BUNDLER_MAGIC_STR;
   std::unique_ptr<MemoryBuffer> Buffer;
 
   // Open Input file.
-  ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+  // ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+  ErrorOr<std::unique_ptr<MemoryBuffer>> Contents =
       MemoryBuffer::getFileOrSTDIN(InputFileName, /*IsText=*/true);
-  if (std::error_code EC = CodeOrErr.getError())
+  if (std::error_code EC = Contents.getError())
     return createFileError(InputFileName, EC);
 
-  StringRef Buf = (**CodeOrErr).getBuffer();
+  StringRef Buf = (**Contents).getBuffer();
 
   // There may be multiple bundles.
-  while ((NextbundleStart != StringRef::npos) && (Offset < Buf.size())) {
-    Buf = Buf.drop_front(Offset);
+  while ((NextbundleStart != StringRef::npos) &&
+         (Offset < (**Contents).getBufferSize())) {
+    Buffer = MemoryBuffer::getMemBuffer(
+        (**Contents).getBuffer().drop_front(Offset), "",
+        /*RequiresNullTerminator=*/false);
 
-    if (identify_magic(Buf) == file_magic::offload_bundle_compressed)
-      // Decompress this bundle first.
-      NextbundleStart = Buf.find("CCOB", sizeof("CCOB"));
-    if (NextbundleStart == StringRef::npos)
-      NextbundleStart = Buf.size();
+    if (identify_magic((*Buffer).getBuffer()) ==
+        file_magic::offload_bundle_compressed) {
+      Magic = "CCOB";
+      NextbundleStart = (*Buffer).getBuffer().find(Magic, Magic.size());
+    } else
+      NextbundleStart = StringRef::npos;
+
+    ErrorOr<std::unique_ptr<MemoryBuffer>> CodeOrErr =
+        MemoryBuffer::getMemBuffer(
+            (*Buffer).getBuffer().take_front(NextbundleStart),
+            InputFileName, // FileName,
+            false);
+    if (std::error_code EC = CodeOrErr.getError())
+      return createFileError(InputFileName, EC);
 
     // Decompress the input if necessary.
     Expected<std::unique_ptr<MemoryBuffer>> DecompressedBufferOrErr =
@@ -1394,7 +1415,6 @@ Error OffloadBundler::ListBundleIDsInFile(
         CreateFileHandler(DecompressedInput, BundlerConfig);
     if (!FileHandlerOrErr)
       return FileHandlerOrErr.takeError();
-
     std::unique_ptr<FileHandler> &FH = *FileHandlerOrErr;
     assert(FH);
     Error E = FH->listBundleIDs(DecompressedInput);
