@@ -424,3 +424,35 @@ define <4 x i16> @unary_shuffle_sext_v8i8_v4i16_multiuse(<8 x i8> %a0, ptr %a1) 
   store <8 x i16> %x1, ptr %a1, align 16
   ret <4 x i16> %vec.shuffle
 }
+
+; PR165813 - icmp
+
+define <8 x i32> @unary_shuffle_sext_icmp_comparison(<8 x i32> %a0, <8 x i32> %a1) {
+; CHECK-LABEL: define <8 x i32> @unary_shuffle_sext_icmp_comparison(
+; CHECK-SAME: <8 x i32> [[A0:%.*]], <8 x i32> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <8 x i32> [[A0]], [[A1]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <8 x i32> [[SEXT]], <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
+; CHECK-NEXT:    ret <8 x i32> [[SHUFFLE]]
+;
+  %cmp = icmp eq <8 x i32> %a0, %a1
+  %sext = sext <8 x i1> %cmp to <8 x i32>
+  %shuffle = shufflevector <8 x i32> %sext, <8 x i32> poison, <8 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7>
+  ret <8 x i32> %shuffle
+}
+
+; PR165813 - fcmp
+
+define <16 x i32> @unary_shuffle_sext_fcmp_comparison(<16 x float> %a0, <16 x float> %a1) {
+; CHECK-LABEL: define <16 x i32> @unary_shuffle_sext_fcmp_comparison(
+; CHECK-SAME: <16 x float> [[A0:%.*]], <16 x float> [[A1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <16 x float> [[A0]], [[A1]]
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <16 x i1> [[CMP]] to <16 x i32>
+; CHECK-NEXT:    [[SHUFFLE:%.*]] = shufflevector <16 x i32> [[SEXT]], <16 x i32> poison, <16 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+; CHECK-NEXT:    ret <16 x i32> [[SHUFFLE]]
+;
+  %cmp = fcmp oeq <16 x float> %a0, %a1
+  %sext = sext <16 x i1> %cmp to <16 x i32>
+  %shuffle = shufflevector <16 x i32> %sext, <16 x i32> poison, <16 x i32> <i32 3, i32 3, i32 2, i32 3, i32 7, i32 7, i32 6, i32 7, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>
+  ret <16 x i32> %shuffle
+}

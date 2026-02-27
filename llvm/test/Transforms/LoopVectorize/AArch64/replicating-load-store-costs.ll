@@ -554,9 +554,8 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi double [ 3.000000e+00, %[[VECTOR_PH]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[IV:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr [[T:%.*]], ptr [[SRC_0]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_0:%.*]] = getelementptr [[T:%.*]], ptr [[SRC_0]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <6 x double>, ptr [[GEP_0]], align 8
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 0, i32 3>
 ; CHECK-NEXT:    [[STRIDED_VEC1:%.*]] = shufflevector <6 x double> [[WIDE_VEC]], <6 x double> poison, <2 x i32> <i32 1, i32 4>
@@ -566,10 +565,10 @@ define double @test_scalarization_cost_for_load_of_address(ptr %src.0, ptr %src.
 ; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[STRIDED_VEC2]], splat (double 3.000000e+00)
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd <2 x double> [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr double, ptr [[SRC_1]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[GEP_SRC]], align 8
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> [[TMP7]], [[WIDE_LOAD]]
-; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_SRC_2:%.*]] = getelementptr [[T_2:%.*]], ptr [[SRC_2]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr [[T_2]], ptr [[SRC_2]], i64 [[TMP1]]
 ; CHECK-NEXT:    [[GEP_72:%.*]] = getelementptr i8, ptr [[GEP_SRC_2]], i64 72
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP11]], i64 72

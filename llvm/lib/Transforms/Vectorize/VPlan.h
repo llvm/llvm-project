@@ -1473,6 +1473,7 @@ public:
     case VPInstruction::WideIVStep:
     case VPInstruction::StepVector:
     case VPInstruction::VScale:
+    case Instruction::Load:
       return true;
     default:
       return false;
