@@ -1197,16 +1197,20 @@ public:
       ensureLocals(Out);
       // Fix unknown p2align operands.
       const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
-      for (unsigned i = 0; i < Inst.getNumOperands(); ++i) {
-        if (i < Desc.getNumOperands() &&
-            Desc.operands()[i].OperandType == WebAssembly::OPERAND_P2ALIGN) {
-          auto &Op = Inst.getOperand(i);
-          if (Op.isImm() && Op.getImm() == -1) {
-            auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
-            if (Align != -1U)
+      auto Align = WebAssembly::GetDefaultP2AlignAny(Inst.getOpcode());
+      if (Align != -1U) {
+        unsigned I = 0;
+        // It's operand 0 for regular memory ops and 1 for atomics.
+        for (unsigned E = Desc.getNumOperands(); I < E; ++I) {
+          if (Desc.operands()[I].OperandType == WebAssembly::OPERAND_P2ALIGN) {
+            auto &Op = Inst.getOperand(I);
+            if (Op.getImm() == -1) {
               Op.setImm(Align);
+            }
+            break;
           }
         }
+        assert(I < 2 && "Default p2align set but operand not found");
       }
       if (Is64) {
         // Upgrade 32-bit loads/stores to 64-bit. These mostly differ by having
