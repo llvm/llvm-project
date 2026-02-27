@@ -1523,7 +1523,7 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       return;
     }
     if (auto *Phi = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(Def)) {
-      if (Phi->getOperand(0) == Phi->getOperand(1))
+      if (all_equal(Phi->incoming_values()))
         Phi->replaceAllUsesWith(Phi->getOperand(0));
     }
     return;

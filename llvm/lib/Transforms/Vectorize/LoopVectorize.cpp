@@ -7378,7 +7378,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
 
   // Look through Broadcast or ReductionStartVector to get the underlying
   // start value.
-  auto GetStartValue = [&](VPValue *V) -> Value * {
+  auto GetStartValue = [](VPValue *V) -> Value * {
     VPValue *Start;
     if (match(V, m_VPInstruction<VPInstruction::ReductionStartVector>(
                      m_VPValue(Start), m_VPValue(), m_VPValue())) ||
@@ -7394,17 +7394,15 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     // The epilogue vector loop was dissolved (single-iteration). The
     // reduction header phi was replaced by its start value. Look for a
     // Broadcast or ReductionStartVector in BackedgeVal or its operands.
-    MainResumeValue = GetStartValue(BackedgeVal);
-    if (MainResumeValue == BackedgeVal->getUnderlyingValue() &&
-        BackedgeVal->getDefiningRecipe()) {
-      for (VPValue *Op : BackedgeVal->getDefiningRecipe()->operands()) {
-        Value *V = GetStartValue(Op);
-        if (V != Op->getUnderlyingValue()) {
-          MainResumeValue = V;
-          break;
-        }
-      }
+    Value *FromOperand = nullptr;
+    if (auto *BackedgeR = BackedgeVal->getDefiningRecipe()) {
+      auto *It = find_if(BackedgeR->operands(), [&](VPValue *Op) {
+        return GetStartValue(Op) != Op->getUnderlyingValue();
+      });
+      if (It != BackedgeR->op_end())
+        FromOperand = GetStartValue(*It);
     }
+    MainResumeValue = FromOperand ? FromOperand : GetStartValue(BackedgeVal);
   }
   if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
     [[maybe_unused]] Value *StartV =
