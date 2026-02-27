@@ -15,13 +15,19 @@
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(key_t, ftok, (const char *path, int id)) {
-  ::statx_buf xbuf;
+  struct statx xbuf;
+
   int err = statx_for_ftok(path, xbuf);
+
   if (err != 0) {
     libc_errno = err;
     return -1;
   }
 
+  // key layout based on user input and file stats metadata
+  // 31            24              16             0
+  // +-------------+---------------+--------------+
+  // user input id + minor dev num + file inode num
   return static_cast<key_t>(
       ((id & 0xff) << 24) |
       ((static_cast<int>(xbuf.stx_dev_minor) & 0xff) << 16) |

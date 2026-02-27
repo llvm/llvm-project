@@ -4,10 +4,8 @@ add_header_library(
     kernel_statx.h
   DEPENDS
     libc.hdr.fcntl_macros
-    libc.hdr.stdint_proxy
     libc.include.sys_syscall
     libc.src.__support.OSUtil.osutil
-    libc.src.__support.common
 )
 
 add_entrypoint_object(
