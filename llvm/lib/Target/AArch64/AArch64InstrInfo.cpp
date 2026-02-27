@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
-#include "AArch64ExpandImm.h"
+#include "AArch64ExpandPseudo.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64PointerAuth.h"
 #include "AArch64Subtarget.h"
@@ -1223,8 +1223,8 @@ static bool isCheapImmediate(const MachineInstr &MI, unsigned BitSize) {
 
   assert(BitSize == 64 && "Only bit sizes of 32 or 64 allowed");
   uint64_t Imm = static_cast<uint64_t>(MI.getOperand(1).getImm());
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Is;
-  AArch64_IMM::expandMOVImm(Imm, BitSize, Is);
+  SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Is;
+  AArch64_ExpandPseudo::expandMOVImm(Imm, BitSize, Is);
 
   return Is.size() <= 2;
 }
@@ -8815,8 +8815,8 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
                  Pattern == AArch64MachineCombinerPattern::MULSUBXI_OP1;
     uint64_t UImm = SignExtend64(IsSub ? -Imm : Imm, BitSize);
     // Check that the immediate can be composed via a single instruction.
-    SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-    AArch64_IMM::expandMOVImm(UImm, BitSize, Insn);
+    SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insn;
+    AArch64_ExpandPseudo::expandMOVImm(UImm, BitSize, Insn);
     if (Insn.size() != 1)
       return;
     MachineInstrBuilder MIB1 =

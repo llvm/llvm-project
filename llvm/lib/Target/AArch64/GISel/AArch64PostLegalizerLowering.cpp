@@ -19,7 +19,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "AArch64ExpandImm.h"
+#include "AArch64ExpandPseudo.h"
 #include "AArch64GlobalISelUtils.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64Subtarget.h"
@@ -682,8 +682,8 @@ tryAdjustICmpImmAndPred(Register RHS, CmpInst::Predicate P,
     return {{C, P}};
 
   auto NumberOfInstrToLoadImm = [=](uint64_t Imm) {
-    SmallVector<AArch64_IMM::ImmInsnModel> Insn;
-    AArch64_IMM::expandMOVImm(Imm, 32, Insn);
+    SmallVector<AArch64_ExpandPseudo::ImmInsnModel> Insn;
+    AArch64_ExpandPseudo::expandMOVImm(Imm, 32, Insn);
     return Insn.size();
   };
 

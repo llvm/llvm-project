@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64TargetTransformInfo.h"
-#include "AArch64ExpandImm.h"
+#include "AArch64ExpandPseudo.h"
 #include "AArch64PerfectShuffle.h"
 #include "AArch64SMEAttributes.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -407,8 +407,8 @@ InstructionCost AArch64TTIImpl::getIntImmCost(int64_t Val) const {
     Val = ~Val;
 
   // Calculate how many moves we will need to materialize this constant.
-  SmallVector<AArch64_IMM::ImmInsnModel, 4> Insn;
-  AArch64_IMM::expandMOVImm(Val, 64, Insn);
+  SmallVector<AArch64_ExpandPseudo::ImmInsnModel, 4> Insn;
+  AArch64_ExpandPseudo::expandMOVImm(Val, 64, Insn);
   return Insn.size();
 }
 
