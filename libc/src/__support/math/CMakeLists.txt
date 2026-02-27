@@ -94,7 +94,6 @@ add_header_library(
     libc.src.__support.macros.optimization
 )
 
-
 add_header_library(
   acospif
   HDRS
@@ -109,8 +108,6 @@ add_header_library(
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
 )
-
-
 
 add_header_library(
   acospif16
