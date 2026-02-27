@@ -15,6 +15,7 @@
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/IR/GlobalValue.h"
@@ -432,6 +433,7 @@ public:
                            const SDValue &OldBase, const SDValue &OldOffset,
                            unsigned Scale);
 
+  bool tryBicOrnDup(SDNode *N);
   bool tryBitfieldExtractOp(SDNode *N);
   bool tryBitfieldExtractOpFromSExt(SDNode *N);
   bool tryBitfieldInsertOp(SDNode *N);
@@ -2815,6 +2817,23 @@ static bool isBitfieldExtractOpFromShr(SDNode *N, unsigned &Opc, SDValue &Opd0,
   return true;
 }
 
+bool AArch64DAGToDAGISel::tryBicOrnDup(SDNode *N) {
+  unsigned Opc = N->getOpcode();
+  assert(Opc == ISD::AND || Opc == ISD::OR);
+  using namespace SDPatternMatch;
+  SDValue X, Y;
+  if (!sd_match(N, m_c_BinOp(Opc, m_Node(AArch64ISD::DUP, m_Not(m_Value(X))),
+                             m_Value(Y))))
+    return false;
+
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+  SDValue Dup = CurDAG->getNode(AArch64ISD::DUP, DL, VT, X);
+  SDValue Ops[] = {CurDAG->getNOT(DL, Dup, VT), Y};
+  CurDAG->SelectNodeTo(N, Opc, VT, Ops);
+  return true;
+}
+
 bool AArch64DAGToDAGISel::tryBitfieldExtractOpFromSExt(SDNode *N) {
   assert(N->getOpcode() == ISD::SIGN_EXTEND);
 
@@ -4870,8 +4889,11 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
   }
 
-  case ISD::SRL:
   case ISD::AND:
+    if (tryBicOrnDup(Node))
+      return;
+    [[fallthrough]];
+  case ISD::SRL:
   case ISD::SRA:
   case ISD::SIGN_EXTEND_INREG:
     if (tryBitfieldExtractOp(Node))
@@ -4891,6 +4913,8 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
     break;
 
   case ISD::OR:
+    if (tryBicOrnDup(Node))
+      return;
     if (tryBitfieldInsertOp(Node))
       return;
     if (trySelectXAR(Node))
