@@ -1715,6 +1715,10 @@ public:
   /// This can only be called for declarations where hasInit() is true.
   CharUnits getFlexibleArrayInitChars(const ASTContext &Ctx) const;
 
+  /// Apply a deduced address space, if one isn't already set.
+  void assignAddressSpace(const ASTContext &Ctxt, LangAS AS);
+  void deduceParmAddressSpace(const ASTContext &Ctxt);
+
   // Implement isa/cast/dyncast/etc.
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
   static bool classofKind(Kind K) { return K >= firstVar && K <= lastVar; }
@@ -1749,16 +1753,7 @@ enum class ImplicitParamKind {
 class ImplicitParamDecl : public VarDecl {
   void anchor() override;
 
-public:
-  /// Create implicit parameter.
-  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
-                                   SourceLocation IdLoc, IdentifierInfo *Id,
-                                   QualType T, ImplicitParamKind ParamKind);
-  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
-                                   ImplicitParamKind ParamKind);
-
-  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
-
+protected:
   ImplicitParamDecl(ASTContext &C, DeclContext *DC, SourceLocation IdLoc,
                     const IdentifierInfo *Id, QualType Type,
                     ImplicitParamKind ParamKind)
@@ -1776,6 +1771,16 @@ public:
     setImplicit();
   }
 
+public:
+  /// Create implicit parameter.
+  static ImplicitParamDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation IdLoc,
+                                   const IdentifierInfo *Id, QualType T,
+                                   ImplicitParamKind ParamKind);
+  static ImplicitParamDecl *Create(ASTContext &C, QualType T,
+                                   ImplicitParamKind ParamKind);
+
+  static ImplicitParamDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID);
   /// Returns the implicit parameter kind.
   ImplicitParamKind getParameterKind() const {
     return static_cast<ImplicitParamKind>(NonParmVarDeclBits.ImplicitParamKind);
