@@ -591,9 +591,6 @@ define amdgpu_kernel void @call_i64(ptr addrspace(8) %tmp14, i64 %arg) {
 ; GFX9-O0-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s[2:3]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v9, v7
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v10, v6
-; GFX9-O0-NEXT:    s_mov_b32 s2, 32
-; GFX9-O0-NEXT:    v_lshrrev_b64 v[11:12], s2, v[9:10]
-; GFX9-O0-NEXT:    v_mov_b32_e32 v6, v11
 ; GFX9-O0-NEXT:    s_mov_b64 s[8:9], 60
 ; GFX9-O0-NEXT:    s_mov_b32 s2, s0
 ; GFX9-O0-NEXT:    s_mov_b32 s0, s1
@@ -1421,9 +1418,6 @@ define amdgpu_kernel void @strict_wwm_call_i64(ptr addrspace(8) %tmp14, i64 %arg
 ; GFX9-O0-NEXT:    v_cndmask_b32_e64 v7, v7, v0, s[2:3]
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v9, v7
 ; GFX9-O0-NEXT:    v_mov_b32_e32 v10, v6
-; GFX9-O0-NEXT:    s_mov_b32 s2, 32
-; GFX9-O0-NEXT:    v_lshrrev_b64 v[11:12], s2, v[9:10]
-; GFX9-O0-NEXT:    v_mov_b32_e32 v6, v11
 ; GFX9-O0-NEXT:    s_mov_b64 s[8:9], 60
 ; GFX9-O0-NEXT:    s_mov_b32 s2, s0
 ; GFX9-O0-NEXT:    s_mov_b32 s0, s1
