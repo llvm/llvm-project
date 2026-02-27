@@ -258,6 +258,8 @@ void SystemZHLASMAsmStreamer::emitLabel(MCSymbol *Symbol, SMLoc Loc) {
     emitXATTR(OS, Sym->getName(), Sym->isIndirect(), Sym->getLinkage(),
               Sym->getCodeData(), Sym->getBindingScope());
     EmitEOL();
+    if (Sym->hasExternalName())
+      OS << Sym->getName() << " ALIAS C'" << Sym->getExternalName() << "'\n";
   }
 
   if (EmitLabelAndEntry) {
@@ -368,6 +370,8 @@ void SystemZHLASMAsmStreamer::finishImpl() {
     emitXATTR(OS, Sym.getName(), Sym.isIndirect(), Sym.getLinkage(),
               Sym.getCodeData(), Sym.getBindingScope());
     EmitEOL();
+    if (Sym.hasExternalName())
+      OS << Sym.getName() << " ALIAS C'" << Sym.getExternalName() << "'\n";
   }
 
   // Finish the assembly output.
