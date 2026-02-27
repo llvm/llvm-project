@@ -156,6 +156,9 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   CodeGenFunction::FinallyInfo FinallyInfo;
   if (!useFunclets)
     if (const ObjCAtFinallyStmt *Finally = S.getFinallyStmt())
+      // The finally statement is executed as a cleanup for the normal and
+      // exceptional control flow out of a try-catch block. This is all
+      // implemented in FinallyInfo. Here we enter a new EHCatchScope.
       FinallyInfo.enter(CGF, Finally->getFinallyBody(),
                         beginCatchFn, endCatchFn, exceptionRethrowFn);
 
@@ -186,6 +189,7 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       Handler.TypeInfo = GetEHType(CatchDecl->getType());
     }
 
+    // Create a new catch scope
     EHCatchScope *Catch = CGF.EHStack.pushCatch(Handlers.size());
     for (unsigned I = 0, E = Handlers.size(); I != E; ++I)
       Catch->setHandler(I, { Handlers[I].TypeInfo, Handlers[I].Flags }, Handlers[I].Block);
@@ -216,16 +220,48 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   // Emit the try body.
   CGF.EmitStmt(S.getTryBody());
 
+  // lpad or catch.dispatch (the dispatch block) has now been emitted
+  //
+  // Here an example:
+  // void may_throw();
+  // @try {
+  //    may_throw();
+  // } @catch(id a) {
+  // } @catch(id b) {
+  // [...]
+  // 
+  // With funclet-based exception handling, the dispatch block is created in 
+  // getEHDispatchBlock() <- getInvokeDestImpl() <- EmitCall().
+  // The following IR is emitted in this case:
+  // On aarch64-linux-gnu (landing-pad based)
+  //   %call = invoke i32 @may_throw()
+  //      to label %invoke.cont unwind label %lpad, !dbg !19
+  // On aarch64-pc-windows-msvc (funclet based)
+  // %call = invoke i32 @may_throw()
+  //      to label %invoke.cont unwind label %catch.dispatch, !dbg !17
+
   // Leave the try.
   llvm::BasicBlock *DispatchBlock = nullptr;
   if (S.getNumCatchStmts()) {
+     // The dispatch block that was created during the emission of the try block
+     // was cached. We retrieve it when popping the current catch scope. 
      DispatchBlock = CGF.popCatchScope();
   }
 
-  // TODO(hugo): Better documentation
-  // Wasm uses Windows-style EH instructions, but merges all catch clauses into
-  // one big catchpad. So we save the old funclet pad here before we traverse
-  // each catch handler.
+  // On Windows and WASM, the new exception handling instructions are used.
+  // 
+  // Continuing with the previous example, on Windows, we emit one catchpad for
+  // every catch handler. This is not the case for WASM where all catch handlers
+  // merged into one big catchpad:
+  //
+  // catch.dispatch:
+  // %0 = catchswitch within none [label %catch.start] unwind to caller
+  // catch.start:
+  //   %1 = catchpad within %0 [ptr @__objc_id_type_info, ptr null]
+  //   [...]
+  //   br i1 %matches, label %catch, label %catch2
+  //
+  // We save the old funclet pad here before we traverse each catch handler.
   SaveAndRestore RestoreCurrentFuncletPad(CGF.CurrentFuncletPad);
   llvm::BasicBlock *WasmCatchStartBlock = nullptr;
   llvm::CatchPadInst *CPI = nullptr;
@@ -243,8 +279,9 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
   // Remember where we were.
   CGBuilderTy::InsertPoint SavedIP = CGF.Builder.saveAndClearIP();
 
-  // Emit the handlers.
-  // TODO(hugo): Document
+  // Emit the handlers. If there is no catch-all handler, we need to emit a
+  // fallthrough block in WASM. We therefore need to know if we have a
+  // catch-all handler in this catch scope.
   bool HasCatchAll = false;
   for (CatchHandler &Handler : Handlers) {
     HasCatchAll |= Handler.TypeInfo == nullptr;
@@ -265,6 +302,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
     }
 
     if (!!CPI) {
+      // A catchpad requires a matching catchret instruction. We emit this in
+      // form of a cleanup.
       CGF.EHStack.pushCleanup<CatchRetScope>(NormalCleanup, CPI);
     }
 
@@ -293,6 +332,8 @@ void CGObjCRuntime::EmitTryCatchStmt(CodeGenFunction &CGF,
       EmitInitOfCatchParam(CGF, CastExn, CatchParam);
     }
 
+    // The body of the handler might have more try-catch blocks, so we need to
+    // save the current exception before emitting the body.
     CGF.ObjCEHValueStack.push_back(Exn);
     CGF.EmitStmt(Handler.Body);
     CGF.ObjCEHValueStack.pop_back();
