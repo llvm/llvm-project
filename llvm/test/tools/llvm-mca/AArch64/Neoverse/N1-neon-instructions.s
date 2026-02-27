@@ -613,7 +613,7 @@
 # CHECK-NEXT:  1      2     0.50                        mla	v0.8b, v0.8b, v0.8b
 # CHECK-NEXT:  1      2     0.50                        mla	v15.8h, v22.8h, v4.h[3]
 # CHECK-NEXT:  1      2     0.50                        mla	v28.2s, v10.2s, v2.s[0]
-# CHECK-NEXT:  1      5     1.00                        mls	v0.4h, v0.4h, v0.4h
+# CHECK-NEXT:  1      4     1.00                        mls	v0.4h, v0.4h, v0.4h
 # CHECK-NEXT:  1      2     0.50                        mls	v25.8h, v29.8h, v0.h[4]
 # CHECK-NEXT:  1      2     0.50                        mls	v22.2s, v29.2s, v0.s[3]
 # CHECK-NEXT:  1      5     2.00                        mls	v26.4s, v5.4s, v28.4s

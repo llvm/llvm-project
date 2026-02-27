@@ -274,9 +274,12 @@ def N1Rd_FMA : SchedReadAdvance<2, [WriteFMul, N1Wr_FMA]>;
 def N1Wr_VA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
 def N1Rd_VA : SchedReadAdvance<3, [N1Wr_VA]>;
 
-def N1Wr_VMA  : SchedWriteRes<[N1UnitV0]> { let Latency = 5; }
+def N1Wr_VMA  : SchedWriteRes<[N1UnitV0]> { let Latency = 4; }
 def N1Wr_VMAQ : SchedWriteRes<[N1UnitV0, N1UnitV0]> { let Latency = 5; }
 def N1Rd_VMA  : SchedReadAdvance<3, [N1Wr_VMA, N1Wr_VMAQ]>;
+
+def N1Wr_VMAL : SchedWriteRes<[N1UnitV0]> { let Latency = 4; }
+def N1Rd_VMAL : SchedReadAdvance<3, [N1Wr_VMAL]>;
 
 def N1Wr_VPA : SchedWriteRes<[N1UnitV1]> { let Latency = 4; }
 def N1Rd_VPA : SchedReadAdvance<3, [N1Wr_VPA]>;
@@ -365,7 +368,7 @@ def : SchedAlias<WriteID64, N1Write_20c5_1M>;
 
 // Multiply accumulate, W-form
 // Multiply accumulate, X-form
-// Multiply accumulate, long
+// Multiply accumulate long
 def : SchedAlias<WriteIM32, N1Write_2c_1M>;
 def : SchedAlias<WriteIM64, N1Write_4c3_1M>;
 
@@ -654,8 +657,10 @@ def : InstRW<[N1Write_6c_2V1], (instregex "[SU](MAX|MIN)Vv16i8v$")>;
 
 // ASIMD multiply, D-form
 def : InstRW<[N1Write_4c_1V0], (instregex "^MUL(v[14]i16|v[12]i32)$",
-                                          "^SQ(R)?DMULH(v[14]i16|v[12]i32)$",
-                                          "^([SU]|SQD)MULLv")>;
+                                          "^SQ(R)?DMULH(v[14]i16|v[12]i32)$")>;
+
+// ASIMD multiply long
+def : InstRW<[N1Write_4c_1V0], (instregex "^([SU]|SQD)MULLv")>;
 
 // ASIMD multiply accumulate, D-form
 def : InstRW<[N1Wr_VMA, N1Rd_VMA], (instregex "^ML[AS](v[14]i16|v[12]i32)$")>;
@@ -663,11 +668,11 @@ def : InstRW<[N1Wr_VMA, N1Rd_VMA], (instregex "^ML[AS](v[14]i16|v[12]i32)$")>;
 // ASIMD multiply accumulate high, D-form
 def : InstRW<[N1Write_4c_1V0], (instregex "^SQRDML[AS]H(v[14]i16|v[12]i32)$")>;
 
-// ASIMD multiply accumulate saturating long
-// ASIMD multiply long
 // ASIMD multiply accumulate long
-def : InstRW<[N1Write_4c_1V0], (instregex "^[SU]ML[AS]Lv",
-                                                 "^SQDML[AS]Lv")>;
+def : InstRW<[N1Wr_VMAL, N1Rd_VMAL], (instregex "^[SU]ML[AS]Lv")>;
+
+// ASIMD multiply accumulate saturating long
+def : InstRW<[N1Write_4c_1V0], (instregex "^SQDML[AS]Lv")>;
 
 // ASIMD multiply, Q-form
 def : InstRW<[N1Write_5c_2V0], (instregex "^MUL(v8i16|v4i32)$",
