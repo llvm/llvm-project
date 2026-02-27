@@ -1023,7 +1023,7 @@ __device__ void Test_Func_ParamRegLimitUnexpandedStruct(int64_t, int64_t, int64_
 //
 __global__ void Test_Kern_ParamRegLimitUnexpandedStruct(int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, StructMultipleElements) {}
 //.
-// CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+// CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_HIP, file: [[META1:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: [[META2:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
 // CHECK: [[META1]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK: [[META2]] = !{[[META3:![0-9]+]], [[META7:![0-9]+]], [[META9:![0-9]+]], [[META11:![0-9]+]], [[META13:![0-9]+]], [[META15:![0-9]+]], [[META17:![0-9]+]], [[META19:![0-9]+]]}
 // CHECK: [[META3]] = !DICompositeType(tag: DW_TAG_enumeration_type, name: "EnumInt8T", file: [[META4:![0-9]+]], line: 65, baseType: [[META5:![0-9]+]], size: 8, elements: [[META6:![0-9]+]], identifier: "_ZTS9EnumInt8T")

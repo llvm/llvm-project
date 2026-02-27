@@ -104,6 +104,7 @@
 #include "math/f16mull.h"
 #include "math/f16sqrt.h"
 #include "math/f16sqrtf.h"
+#include "math/f16sqrtf128.h"
 #include "math/f16sqrtl.h"
 #include "math/f16sub.h"
 #include "math/f16subf.h"
@@ -221,5 +222,6 @@
 #include "math/tanhf.h"
 #include "math/tanhf16.h"
 #include "math/tanpif.h"
+#include "math/tanpif16.h"
 
 #endif // LLVM_LIBC_SHARED_MATH_H

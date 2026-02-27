@@ -34,7 +34,7 @@ __device__ void kernel1(int Arg) {
 //.
 // CHECK: [[META0:![0-9]+]] = !DIGlobalVariableExpression(var: [[META1:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(1)), DIOpDeref(i32)))
 // CHECK: [[META1]] = distinct !DIGlobalVariable(name: "FileVarDevice", scope: [[META2:![0-9]+]], file: [[META7:![0-9]+]], line: 9, type: [[META8:![0-9]+]], isLocal: false, isDefinition: true, memorySpace: DW_MSPACE_LLVM_global)
-// CHECK: [[META2]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus_14, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
+// CHECK: [[META2]] = distinct !DICompileUnit(language: DW_LANG_HIP, file: [[META3:![0-9]+]], producer: "{{.*}}clang version {{.*}}", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, globals: [[META4:![0-9]+]], splitDebugInlining: false, nameTableKind: None)
 // CHECK: [[META3]] = !DIFile(filename: "{{.*}}<stdin>", directory: {{.*}})
 // CHECK: [[META4]] = !{[[META0]], [[META5:![0-9]+]], [[META9:![0-9]+]], [[META11:![0-9]+]]}
 // CHECK: [[META5]] = !DIGlobalVariableExpression(var: [[META6:![0-9]+]], expr: !DIExpression(DIOpArg(0, ptr addrspace(3)), DIOpDeref(i32)))
