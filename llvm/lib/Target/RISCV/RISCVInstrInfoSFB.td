@@ -36,16 +36,16 @@ let Predicates = [HasShortForwardBranchIALU], isSelect = 1,
 // This instruction moves $truev to $dst when the condition is true. It will
 // be expanded to control flow in RISCVExpandPseudoInsts.
 def PseudoCCMOVGPR : Pseudo<(outs GPR:$dst),
-                            (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$bcc,
-                             GPR:$falsev, GPR:$truev),
+                            (ins GPR:$falsev, GPR:$truev, bcc_opcode:$bcc,
+                             GPR:$lhs, sfb_rhs:$rhs),
                             []>,
-                     Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp,
-                            ReadSFBALU, ReadSFBALU]>;
+                     Sched<[WriteSFB, ReadSFBALU, ReadSFBALU,
+                            ReadSFBJmp, ReadSFBJmp]>;
 }
 
 let Predicates = [HasShortForwardBranchIALU] in
 def : Pat<(riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs, cond:$cc, (XLenVT GPR:$truev), GPR:$falsev),
-           (PseudoCCMOVGPR GPR:$lhs, GPR:$rhs, (CCtoRISCVBCC $cc), GPR:$falsev, GPR:$truev)>;
+           (PseudoCCMOVGPR GPR:$falsev, GPR:$truev, (CCtoRISCVBCC $cc), GPR:$lhs, GPR:$rhs)>;
 
 // This should always expand to a branch+c.mv so the size is 6 or 4 if the
 // branch is compressible.
@@ -55,22 +55,22 @@ let Predicates = [HasConditionalMoveFusion, NoShortForwardBranch],
 // be expanded to control flow in RISCVExpandPseudoInsts.
 // We use GPRNoX0 because c.mv cannot encode X0.
 def PseudoCCMOVGPRNoX0 : Pseudo<(outs GPRNoX0:$dst),
-                                (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$bcc,
-                                 GPRNoX0:$falsev, GPRNoX0:$truev),
+                                (ins GPRNoX0:$falsev, GPRNoX0:$truev, bcc_opcode:$bcc,
+                                 GPR:$lhs, sfb_rhs:$rhs),
                                 []>,
                          Sched<[]>;
 }
 
 let Predicates = [HasConditionalMoveFusion, NoShortForwardBranch] in
 def :Pat<(riscv_selectcc (XLenVT GPR:$lhs), GPR:$rhs, cond:$cc, (XLenVT GPRNoX0:$truev), GPRNoX0:$falsev),
-         (PseudoCCMOVGPRNoX0 GPR:$lhs, GPR:$rhs, (CCtoRISCVBCC $cc), GPRNoX0:$falsev, GPRNoX0:$truev)>;
+         (PseudoCCMOVGPRNoX0 GPRNoX0:$falsev, GPRNoX0:$truev, (CCtoRISCVBCC $cc), GPR:$lhs, GPR:$rhs )>;
 
 class SFBALU_rr
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
-                  GPR:$rs2), []>,
-      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU,
-             ReadSFBALU]> {
+             (ins GPR:$falsev, GPR:$rs1, GPR:$rs2, bcc_opcode:$bcc,
+                  GPR:$lhs, sfb_rhs:$rhs), []>,
+      Sched<[WriteSFB, ReadSFBALU, ReadSFBALU,
+             ReadSFBALU, ReadSFBJmp, ReadSFBJmp]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -79,9 +79,9 @@ class SFBALU_rr
 
 class SFBALU_ri
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
-                  simm12_lo:$imm), []>,
-      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+             (ins GPR:$falsev, GPR:$rs1, simm12_lo:$imm, bcc_opcode:$bcc,
+                  GPR:$lhs, sfb_rhs:$rhs), []>,
+      Sched<[WriteSFB, ReadSFBALU, ReadSFBALU, ReadSFBJmp, ReadSFBJmp]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -90,8 +90,8 @@ class SFBALU_ri
 
 class SFBLUI
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev,
-                  uimm20_lui:$imm), []> {
+             (ins GPR:$falsev, uimm20_lui:$imm, bcc_opcode:$bcc,
+                  GPR:$lhs, sfb_rhs:$rhs), []> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -100,8 +100,8 @@ class SFBLUI
 
 class SFBLoad
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
-                  simm12_lo:$imm), []> {
+             (ins GPR:$falsev, GPR:$rs1, simm12_lo:$imm, bcc_opcode:$bcc,
+                  GPR:$lhs, sfb_rhs:$rhs), []> {
   let hasSideEffects = 0;
   let mayLoad = 1;
   let mayStore = 0;
@@ -110,9 +110,9 @@ class SFBLoad
 
 class SFBShift_ri
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
-                  uimmlog2xlen:$imm), []>,
-      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+             (ins GPR:$falsev, GPR:$rs1, uimmlog2xlen:$imm, bcc_opcode:$bcc,
+                  GPR:$lhs, sfb_rhs:$rhs), []>,
+      Sched<[WriteSFB, ReadSFBALU, ReadSFBALU, ReadSFBJmp, ReadSFBJmp]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -121,9 +121,9 @@ class SFBShift_ri
 
 class SFBShiftW_ri
     : Pseudo<(outs GPR:$dst),
-             (ins GPR:$lhs, sfb_rhs:$rhs, bcc_opcode:$cc, GPR:$falsev, GPR:$rs1,
-                  uimm5:$imm), []>,
-      Sched<[WriteSFB, ReadSFBJmp, ReadSFBJmp, ReadSFBALU, ReadSFBALU]> {
+             (ins GPR:$falsev, GPR:$rs1, uimm5:$imm, bcc_opcode:$bcc,
+                  GPR:$lhs, sfb_rhs:$rhs), []>,
+      Sched<[WriteSFB, ReadSFBALU, ReadSFBALU, ReadSFBJmp, ReadSFBJmp]> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -185,12 +185,12 @@ def RISCVCCtoRISCVBCC : SDNodeXForm<imm, [{
 
 let Predicates = [HasShortForwardBranchIALU] in
 def : Pat<(XLenVT (abs GPR:$rs1)),
-          (PseudoCCSUB (XLenVT GPR:$rs1), (XLenVT X0), (RISCVCCtoRISCVBCC (i32 /* COND_LT */ 2)),
-           (XLenVT GPR:$rs1), (XLenVT X0), (XLenVT GPR:$rs1))>;
+          (PseudoCCSUB (XLenVT GPR:$rs1), (XLenVT X0), (XLenVT GPR:$rs1),
+          (RISCVCCtoRISCVBCC (i32 /* COND_LT */ 2)),(XLenVT GPR:$rs1), (XLenVT X0))>;
 let Predicates = [HasShortForwardBranchIALU, IsRV64] in
 def : Pat<(sext_inreg (abs 33signbits_node:$rs1), i32),
-          (PseudoCCSUBW (i64 GPR:$rs1), (i64 X0), (RISCVCCtoRISCVBCC (i32 /* COND_LT */ 2)),
-           (i64 GPR:$rs1), (i64 X0), (i64 GPR:$rs1))>;
+          (PseudoCCSUBW (i64 GPR:$rs1), (i64 X0), (i64 GPR:$rs1), (RISCVCCtoRISCVBCC (i32 /* COND_LT */ 2)),
+           (i64 GPR:$rs1), (i64 X0))>;
 
 let Predicates = [HasShortForwardBranchIMinMax] in {
 def PseudoCCMAX : SFBALU_rr;

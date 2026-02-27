@@ -216,22 +216,22 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
 
   // We want to copy the "true" value only when the branch is executed.
   // The SDNodeXform is responsible for the inversion.
-  unsigned BranchOpCode = MI.getOperand(3).getImm();
+  unsigned BranchOpCode = MI.getOperand(MI.getNumOperands() - 3).getImm();
 
   // Insert branch instruction.
   BuildMI(MBB, MBBI, DL, TII->get(BranchOpCode))
-      .add(MI.getOperand(1))
-      .add(MI.getOperand(2))
+      .add(MI.getOperand(MI.getNumOperands() - 2))
+      .add(MI.getOperand(MI.getNumOperands() - 1))
       .addMBB(MergeBB);
 
   Register DestReg = MI.getOperand(0).getReg();
-  assert(MI.getOperand(4).getReg() == DestReg);
+  assert(MI.getOperand(1).getReg() == DestReg);
 
   if (MI.getOpcode() == RISCV::PseudoCCMOVGPR ||
       MI.getOpcode() == RISCV::PseudoCCMOVGPRNoX0) {
     // Add MV.
     BuildMI(TrueBB, DL, TII->get(RISCV::ADDI), DestReg)
-        .add(MI.getOperand(5))
+        .add(MI.getOperand(2))
         .addImm(0);
   } else {
     unsigned NewOpc;
@@ -293,16 +293,16 @@ bool RISCVExpandPseudo::expandCCOp(MachineBasicBlock &MBB,
 
     if (NewOpc == RISCV::NDS_BFOZ || NewOpc == RISCV::NDS_BFOS) {
       BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
-          .add(MI.getOperand(5))
-          .add(MI.getOperand(6))
-          .add(MI.getOperand(7));
+          .add(MI.getOperand(2))
+          .add(MI.getOperand(3))
+          .add(MI.getOperand(4));
     } else if (NewOpc == RISCV::LUI || NewOpc == RISCV::QC_LI ||
                NewOpc == RISCV::QC_E_LI) {
-      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg).add(MI.getOperand(5));
+      BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg).add(MI.getOperand(2));
     } else {
       BuildMI(TrueBB, DL, TII->get(NewOpc), DestReg)
-          .add(MI.getOperand(5))
-          .add(MI.getOperand(6));
+          .add(MI.getOperand(2))
+          .add(MI.getOperand(3));
     }
   }
 
@@ -338,13 +338,13 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     return false;
 
   // FIXME: Would be wonderful to support LHS=X0, but not very easy.
-  if (MI.getOperand(1).getReg() == RISCV::X0 ||
-      MI.getOperand(4).getReg() == RISCV::X0 ||
-      MI.getOperand(5).getReg() == RISCV::X0)
+  if (MI.getOperand(MI.getNumOperands() - 2).getReg() == RISCV::X0 ||
+      MI.getOperand(1).getReg() == RISCV::X0 ||
+      MI.getOperand(2).getReg() == RISCV::X0)
     return false;
 
   // Use branch opcode to select appropriate Xqcicm instruction
-  auto BCC = MI.getOperand(3).getImm();
+  auto BCC = MI.getOperand(MI.getNumOperands() - 3).getImm();
   unsigned CMovOpcode, CMovIOpcode;
   switch (BCC) {
   default:
@@ -375,17 +375,17 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
     break;
   }
 
-  if (MI.getOperand(2).getReg() == RISCV::X0) {
+  if (MI.getOperand(MI.getNumOperands() - 1).getReg() == RISCV::X0) {
     // $dst = PseudoCCMOVGPR $lhs, X0, $cc, $falsev (=$dst), $truev
     // $dst = PseudoCCMOVGPRNoX0 $lhs, X0, $cc, $falsev (=$dst), $truev
     // =>
     // $dst = QC_MVccI $falsev (=$dst), $lhs, 0, $truev
     BuildMI(MBB, MBBI, DL, TII->get(CMovIOpcode))
         .addDef(MI.getOperand(0).getReg())
-        .addReg(MI.getOperand(4).getReg())
         .addReg(MI.getOperand(1).getReg())
+        .addReg(MI.getOperand(MI.getNumOperands() - 2).getReg())
         .addImm(0)
-        .addReg(MI.getOperand(5).getReg());
+        .addReg(MI.getOperand(2).getReg());
 
     MI.eraseFromParent();
     return true;
@@ -397,10 +397,10 @@ bool RISCVExpandPseudo::expandCCOpToCMov(MachineBasicBlock &MBB,
   // $dst = QC_MVcc $falsev (=$dst), $lhs, $rhs, $truev
   BuildMI(MBB, MBBI, DL, TII->get(CMovOpcode))
       .addDef(MI.getOperand(0).getReg())
-      .addReg(MI.getOperand(4).getReg())
       .addReg(MI.getOperand(1).getReg())
-      .addReg(MI.getOperand(2).getReg())
-      .addReg(MI.getOperand(5).getReg());
+      .addReg(MI.getOperand(MI.getNumOperands() - 2).getReg())
+      .addReg(MI.getOperand(MI.getNumOperands() - 1).getReg())
+      .addReg(MI.getOperand(2).getReg());
   MI.eraseFromParent();
   return true;
 }

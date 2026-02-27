@@ -963,11 +963,11 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
     return nullptr;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (Ops.size() != 1 || (Ops[0] != 4 && Ops[0] != 5))
+  if (Ops.size() != 1 || (Ops[0] != 1 && Ops[0] != 2))
     return nullptr;
 
-  bool Invert = Ops[0] == 5;
-  const MachineOperand &FalseReg = MI.getOperand(!Invert ? 5 : 4);
+  bool Invert = Ops[0] == 2;
+  const MachineOperand &FalseReg = MI.getOperand(!Invert ? 2 : 1);
   Register DestReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
   if (!MRI.constrainRegClass(DestReg, PreviousClass))
@@ -975,14 +975,7 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
 
   // Create a new predicated version of DefMI.
   MachineInstrBuilder NewMI = BuildMI(*MI.getParent(), InsertPt,
-                                      MI.getDebugLoc(), get(PredOpc), DestReg)
-                                  .add({MI.getOperand(1), MI.getOperand(2)});
-
-  // Add branch opcode, inverting if necessary.
-  auto BCC = MI.getOperand(3).getImm();
-  if (!Invert)
-    BCC = RISCVCC::getInverseBranchOpcode(BCC);
-  NewMI.addImm(BCC);
+                                      MI.getDebugLoc(), get(PredOpc), DestReg);
 
   // Copy the false register.
   NewMI.add(FalseReg);
@@ -992,6 +985,15 @@ MachineInstr *RISCVInstrInfo::foldMemoryOperandImpl(
   for (unsigned i = 1, e = DefDesc.getNumOperands(); i != e; ++i)
     NewMI.add(LoadMI.getOperand(i));
 
+  // Add branch opcode, inverting if necessary.
+  auto BCC = MI.getOperand(MI.getNumOperands() - 3).getImm();
+  if (!Invert)
+    BCC = RISCVCC::getInverseBranchOpcode(BCC);
+  NewMI.addImm(BCC);
+
+  // Copy condition portion
+  NewMI.add({MI.getOperand(MI.getNumOperands() - 2),
+             MI.getOperand(MI.getNumOperands() - 1)});
   NewMI.cloneMemRefs(LoadMI);
   return NewMI;
 }
@@ -1970,15 +1972,15 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
 
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   MachineInstr *DefMI =
-      canFoldAsPredicatedOp(MI.getOperand(5).getReg(), MRI, this, STI);
+      canFoldAsPredicatedOp(MI.getOperand(2).getReg(), MRI, this, STI);
   bool Invert = !DefMI;
   if (!DefMI)
-    DefMI = canFoldAsPredicatedOp(MI.getOperand(4).getReg(), MRI, this, STI);
+    DefMI = canFoldAsPredicatedOp(MI.getOperand(1).getReg(), MRI, this, STI);
   if (!DefMI)
     return nullptr;
 
   // Find new register class to use.
-  MachineOperand FalseReg = MI.getOperand(Invert ? 5 : 4);
+  MachineOperand FalseReg = MI.getOperand(Invert ? 2 : 1);
   Register DestReg = MI.getOperand(0).getReg();
   const TargetRegisterClass *PreviousClass = MRI.getRegClass(FalseReg.getReg());
   if (!MRI.constrainRegClass(DestReg, PreviousClass))
@@ -1991,16 +1993,6 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   MachineInstrBuilder NewMI =
       BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(PredOpc), DestReg);
 
-  // Copy the condition portion.
-  NewMI.add(MI.getOperand(1));
-  NewMI.add(MI.getOperand(2));
-
-  // Add branch opcode, inverting if necessary.
-  unsigned BCCOpcode = MI.getOperand(3).getImm();
-  if (Invert)
-    BCCOpcode = RISCVCC::getInverseBranchOpcode(BCCOpcode);
-  NewMI.addImm(BCCOpcode);
-
   // Copy the false register.
   NewMI.add(FalseReg);
 
@@ -2008,6 +2000,16 @@ RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
   const MCInstrDesc &DefDesc = DefMI->getDesc();
   for (unsigned i = 1, e = DefDesc.getNumOperands(); i != e; ++i)
     NewMI.add(DefMI->getOperand(i));
+
+  // Add branch opcode, inverting if necessary.
+  unsigned BCCOpcode = MI.getOperand(MI.getNumOperands() - 3).getImm();
+  if (Invert)
+    BCCOpcode = RISCVCC::getInverseBranchOpcode(BCCOpcode);
+  NewMI.addImm(BCCOpcode);
+
+  // Copy the condition portion.
+  NewMI.add(MI.getOperand(MI.getNumOperands() - 2));
+  NewMI.add(MI.getOperand(MI.getNumOperands() - 1));
 
   // Update SeenMIs set: register newly created MI and erase removed DefMI.
   SeenMIs.insert(NewMI);
@@ -2065,7 +2067,7 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
     return STI.hasStdExtZca() ? 2 : 4;
   // Below cases are for short forward branch pseudos
   case RISCV::PseudoCCMOVGPRNoX0:
-    return get(MI.getOperand(3).getImm()).getSize() + 2;
+    return get(MI.getOperand(MI.getNumOperands() - 3).getImm()).getSize() + 2;
   case RISCV::PseudoCCMOVGPR:
   case RISCV::PseudoCCADD:
   case RISCV::PseudoCCSUB:
@@ -2108,14 +2110,14 @@ unsigned RISCVInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   case RISCV::PseudoCCLWU:
   case RISCV::PseudoCCLD:
   case RISCV::PseudoCCQC_LI:
-    return get(MI.getOperand(3).getImm()).getSize() + 4;
+    return get(MI.getOperand(MI.getNumOperands() - 3).getImm()).getSize() + 4;
   case RISCV::PseudoCCQC_E_LI:
   case RISCV::PseudoCCQC_E_LB:
   case RISCV::PseudoCCQC_E_LH:
   case RISCV::PseudoCCQC_E_LW:
   case RISCV::PseudoCCQC_E_LHU:
   case RISCV::PseudoCCQC_E_LBU:
-    return get(MI.getOperand(3).getImm()).getSize() + 6;
+    return get(MI.getOperand(MI.getNumOperands() - 3).getImm()).getSize() + 6;
   case TargetOpcode::STACKMAP:
     // The upper bound for a stackmap intrinsic is the full length of its shadow
     return StackMapOpers(&MI).getNumPatchBytes();
@@ -4146,8 +4148,8 @@ bool RISCVInstrInfo::findCommutedOpIndices(const MachineInstr &MI,
     return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 2, 3);
   case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR:
-    // Operands 4 and 5 are commutable.
-    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 4, 5);
+    // Operands 1 and 2 are commutable.
+    return fixCommutedOpIndices(SrcOpIdx1, SrcOpIdx2, 1, 2);
   case CASE_RVV_OPCODE(VADD_VV):
   case CASE_RVV_OPCODE(VAND_VV):
   case CASE_RVV_OPCODE(VOR_VV):
@@ -4375,10 +4377,10 @@ MachineInstr *RISCVInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   case RISCV::PseudoCCMOVGPRNoX0:
   case RISCV::PseudoCCMOVGPR: {
     // CCMOV can be commuted by inverting the condition.
-    auto BCC = MI.getOperand(3).getImm();
+    auto BCC = MI.getOperand(MI.getNumOperands() - 3).getImm();
     BCC = RISCVCC::getInverseBranchOpcode(BCC);
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.getOperand(3).setImm(BCC);
+    WorkingMI.getOperand(MI.getNumOperands() - 3).setImm(BCC);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI*/ false,
                                                    OpIdx1, OpIdx2);
   }
