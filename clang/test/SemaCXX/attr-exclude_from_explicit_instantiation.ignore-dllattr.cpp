@@ -65,11 +65,11 @@ struct E {
     __declspec(dllimport) void fn_imported();
   };
 
-  struct __declspec(dllexport) nested_exported_1 { // expected-warning{{'dllexport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-    EXCLUDE_ATTR void fn_excluded();
+  struct __declspec(dllexport) nested_exported_1 { // expected-note{{attribute is here}}
+    EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute takes precedence over 'dllexport' attribute on the enclosing class}}
   };
-  struct __declspec(dllimport) nested_imported_1 { // expected-warning{{'dllimport' attribute ignored; 'exclude_from_explicit_instantiation' takes precedence}}
-    EXCLUDE_ATTR void fn_excluded();
+  struct __declspec(dllimport) nested_imported_1 { // expected-note{{attribute is here}}
+    EXCLUDE_ATTR void fn_excluded(); // expected-warning{{'exclude_from_explicit_instantiation' attribute takes precedence over 'dllimport' attribute on the enclosing class}}
   };
 
   // Make sure that any warning isn't emitted if the nested type has no excluded members.

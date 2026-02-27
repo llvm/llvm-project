@@ -3787,6 +3787,9 @@ def warn_redeclaration_without_import_attribute : Warning<
 def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
   "%0 attribute ignored; %1 takes precedence">,
   InGroup<IgnoredAttributes>;
+def warn_exclusion_takes_precedence_over_dllattr : Warning<
+  "%0 attribute takes precedence over %1 attribute on the enclosing class">,
+  InGroup<IgnoredAttributes>;
 def warn_dllimport_dropped_from_inline_function : Warning<
   "%q0 redeclared inline; %1 attribute ignored">,
   InGroup<IgnoredAttributes>;
