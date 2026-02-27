@@ -961,9 +961,8 @@ public:
 
   /// Takes the old cleanup stack size and emits the cleanup blocks
   /// that have been added.
-  void
-  popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
-                   std::initializer_list<mlir::Value *> valuesToReload = {});
+  void popCleanupBlocks(EHScopeStack::stable_iterator oldCleanupStackDepth,
+                        ArrayRef<mlir::Value *> valuesToReload = {});
   void popCleanupBlock();
 
   /// Push a cleanup to be run at the end of the current full-expression.  Safe
@@ -1014,8 +1013,7 @@ public:
 
     /// Force the emission of cleanups now, instead of waiting
     /// until this object is destroyed.
-    void
-    forceCleanup(std::initializer_list<mlir::Value *> valuesToReload = {}) {
+    void forceCleanup(ArrayRef<mlir::Value *> valuesToReload = {}) {
       assert(performCleanup && "Already forced cleanup");
       cgf.didCallStackSave = oldDidCallStackSave;
       cgf.popCleanupBlocks(cleanupStackDepth, valuesToReload);

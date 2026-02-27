@@ -390,7 +390,7 @@ void CIRGenFunction::popCleanupBlock() {
 /// Pops cleanup blocks until the given savepoint is reached.
 void CIRGenFunction::popCleanupBlocks(
     EHScopeStack::stable_iterator oldCleanupStackDepth,
-    std::initializer_list<mlir::Value *> valuesToReload) {
+    ArrayRef<mlir::Value *> valuesToReload) {
   // If the current stack depth is the same as the cleanup stack depth,
   // we won't be exiting any cleanup scopes, so we don't need to reload
   // any values.
