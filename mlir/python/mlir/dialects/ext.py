@@ -41,7 +41,17 @@ Result = ir.OpResult
 Region = ir.Region
 
 register_dialect = _cext.register_dialect
-register_operation = _cext.register_operation
+
+
+def register_operation(dialect_cls: type) -> Callable[[type], type]:
+    register = _cext.register_operation(dialect_cls)
+
+    def decorator(op_cls: type) -> type:
+        register(op_cls)
+        _cext.register_op_adaptor(op_cls)(op_cls.Adaptor)
+        return op_cls
+
+    return decorator
 
 
 def construct_instance(origin, args):
@@ -307,6 +317,13 @@ class Operation(ir.OpView):
         cls._generate_result_properties(results)
         cls._generate_region_properties(regions)
 
+        cls.Adaptor = type(
+            "Adaptor",
+            (OperationAdator,),
+            dict(),
+            operation=cls,
+        )
+
         dialect_obj.operations.append(cls)
 
     @staticmethod
@@ -505,6 +522,37 @@ class Operation(ir.OpView):
                     [irdl.region([]) for _ in regions],
                     [i.name for i in regions],
                 )
+
+
+class OperationAdator(ir.OpAdaptor):
+    @classmethod
+    def __init_subclass__(cls, *, operation: type):
+        cls.OPERATION_NAME = operation.OPERATION_NAME
+        cls._operation_cls = operation
+
+        operands, attrs, results, regions = partition_fields(operation._fields)
+
+        for attr in attrs:
+            setattr(
+                cls,
+                attr.name,
+                property(lambda self, name=attr.name: self.attributes[name]),
+            )
+
+        for i, operand in enumerate(operands):
+            if operation._ODS_OPERAND_SEGMENTS:
+
+                def getter(self, i=i, operand=operand):
+                    operand_range = segmented_accessor(
+                        self.operands,
+                        self.attributes["operandSegmentSizes"],
+                        i,
+                    )
+                    return normalize_value_range(operand_range, operand.variadicity)
+
+                setattr(cls, operand.name, property(getter))
+            else:
+                setattr(cls, operand.name, property(lambda self, i=i: self.operands[i]))
 
 
 @dataclass
