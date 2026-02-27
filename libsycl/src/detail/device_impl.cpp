@@ -25,6 +25,13 @@ bool DeviceImpl::has(aspect Aspect) const {
   case (aspect::emulated):
   case (aspect::host_debuggable):
     return false;
+  case (aspect::usm_device_allocations):
+  case (aspect::usm_host_allocations):
+  case (aspect::usm_shared_allocations):
+    // liboffload works with USM only and has no query to check support. We
+    // assume that USM is always supported otherwise lifoffload won't be able to
+    // work with device at all.
+    return true;
   default:
     // Other aspects are not implemented yet
     return false;
