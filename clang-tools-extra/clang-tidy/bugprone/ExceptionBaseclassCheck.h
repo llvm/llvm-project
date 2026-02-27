@@ -17,7 +17,7 @@ namespace clang::tidy::bugprone {
 /// std::exception.
 ///
 /// For the user-facing documentation see:
-/// https://clang.llvm.org/extra/clang-tidy/checks/hicpp/exception-baseclass.html
+/// https://clang.llvm.org/extra/clang-tidy/checks/bugprone/exception-baseclass.html
 class ExceptionBaseclassCheck : public ClangTidyCheck {
 public:
   ExceptionBaseclassCheck(StringRef Name, ClangTidyContext *Context)

@@ -55,6 +55,8 @@ public:
         "hicpp-braces-around-statements");
     CheckFactories.registerCheck<modernize::DeprecatedHeadersCheck>(
         "hicpp-deprecated-headers");
+    CheckFactories.registerCheck<bugprone::ExceptionBaseclassCheck>(
+        "hicpp-exception-baseclass");
     CheckFactories.registerCheck<IgnoredRemoveResultCheck>(
         "hicpp-ignored-remove-result");
     CheckFactories.registerCheck<MultiwayPathsCoveredCheck>(
