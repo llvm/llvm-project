@@ -3,7 +3,7 @@
 
 .functype foo () -> ()
 .functype plain () -> ()
-.functype __wasm_component_model_builtin_context_get_0 () -> (i32)
+.functype utf8_import() -> ()
 .functype mid$dollar () -> ()
 .functype mid?question () -> ()
 
@@ -11,17 +11,16 @@ test:
   .functype test () -> ()
   call      foo
   call      plain
-  call     __wasm_component_model_builtin_context_get_0
-  drop
-  call     mid$dollar
-  call     mid?question
+  call      utf8_import
+  call      mid$dollar
+  call      mid?question
   end_function
 
   .import_module  foo, bar
   .import_name  foo, qux
 
-  .import_module __wasm_component_model_builtin_context_get_0, "$root"
-  .import_name __wasm_component_model_builtin_context_get_0, "[context-get-0]"
+  .import_module utf8_import, "$café-Straßburg"
+  .import_name utf8_import, "[café-Straßburg]"
 
   .import_module mid$dollar, another$mid$dollar
   .import_name mid$dollar, mid$dollar
@@ -29,14 +28,14 @@ test:
   .import_module mid?question, another?mid?question
   .import_name mid?question, mid?question
 
-# CHECK-ASM: .import_module  foo, bar
-# CHECK-ASM: .import_name  foo, qux
-# CHECK-ASM: .import_module __wasm_component_model_builtin_context_get_0, "$root"
-# CHECK-ASM: .import_name __wasm_component_model_builtin_context_get_0, "[context-get-0]"
-# CHECK-ASM: .import_module mid$dollar, another$mid$dollar
-# CHECK-ASM: .import_name mid$dollar, mid$dollar
-# CHECK-ASM: .import_module mid?question, another?mid?question
-# CHECK-ASM: .import_name mid?question, mid?question
+# CHECK-ASM: .import_module  foo, "bar"
+# CHECK-ASM: .import_name  foo, "qux"
+# CHECK-ASM: .import_module utf8_import, "$café-Straßburg"
+# CHECK-ASM: .import_name utf8_import, "[café-Straßburg]"
+# CHECK-ASM: .import_module mid$dollar, "another$mid$dollar"
+# CHECK-ASM: .import_name mid$dollar, "mid$dollar"
+# CHECK-ASM: .import_module mid?question, "another?mid?question"
+# CHECK-ASM: .import_name mid?question, "mid?question"
 
 # CHECK:        - Type:            IMPORT
 # CHECK-NEXT:     Imports:
@@ -48,8 +47,8 @@ test:
 # CHECK-NEXT:         Field:           plain
 # CHECK-NEXT:         Kind:            FUNCTION
 
-# CHECK:            - Module:          '$root'
-# CHECK-NEXT:         Field:           '[context-get-0]'
+# CHECK:            - Module:          "$café-Straßburg"
+# CHECK-NEXT:         Field:           "[café-Straßburg]"
 # CHECK-NEXT:         Kind:            FUNCTION
 
 # CHECK:            - Module:          'another$mid$dollar'
@@ -67,7 +66,7 @@ test:
 # CHECK:              Name:            plain
 # CHECK-NEXT:         Flags:           [ UNDEFINED ]
 
-# CHECK:              Name:            __wasm_component_model_builtin_context_get_0
+# CHECK:              Name:            utf8_import
 # CHECK-NEXT:         Flags:           [ UNDEFINED, EXPLICIT_NAME ]
 
 # CHECK:              Name:            'mid$dollar'
