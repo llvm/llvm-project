@@ -9,14 +9,15 @@ define void @test(i32 %arg) {
 ; CHECK:       [[BB1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, i32 [[ARG]], i32 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub <4 x i32> <i32 7, i32 7, i32 0, i32 7>, [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> <i32 0, i32 0, i32 poison, i32 0>, <4 x i32> <i32 4, i32 5, i32 2, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> <i32 7, i32 0, i32 0, i32 0>, [[TMP4]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i32> [[TMP1]], i32 0
 ; CHECK-NEXT:    [[ICMP:%.*]] = icmp ult i32 [[TMP2]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> <i32 poison, i32 0, i32 poison, i32 0>, <4 x i32> <i32 0, i32 5, i32 2, i32 7>
 ; CHECK-NEXT:    br i1 false, label %[[BB2:.*]], label %[[BB3:.*]]
 ; CHECK:       [[BB2]]:
 ; CHECK-NEXT:    br label %[[BB3]]
 ; CHECK:       [[BB3]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <4 x i32> [ [[TMP1]], %[[BB2]] ], [ [[TMP3]], %[[BB1]] ]
+; CHECK-NEXT:    [[TMP5:%.*]] = phi <4 x i32> [ [[TMP1]], %[[BB2]] ], [ [[TMP3]], %[[BB1]] ]
 ; CHECK-NEXT:    ret void
 ;
 bb:

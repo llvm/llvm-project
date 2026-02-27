@@ -11621,17 +11621,11 @@ public:
     // Check profitability if number of copyables > VL.size() / 2.
     // 1. Reorder operands for better matching.
     if (isCommutative(MainOp)) {
-      for (auto &Ops : Operands) {
-        // Make instructions the first operands.
-        if (!isa<Instruction>(Ops.front()) && isa<Instruction>(Ops.back())) {
-          std::swap(Ops.front(), Ops.back());
-          continue;
-        }
-        // Make constants the second operands.
-        if (isa<Constant>(Ops.front())) {
-          std::swap(Ops.front(), Ops.back());
-          continue;
-        }
+      for (auto [OpA, OpB] : zip(Operands.front(), Operands.back())) {
+        // Make instructions the first operand and constants the second.
+        if ((!isa<Instruction>(OpA) && isa<Instruction>(OpB)) ||
+            isa<Constant>(OpA))
+          std::swap(OpA, OpB);
       }
     }
     // 2. Check, if operands can be vectorized.
