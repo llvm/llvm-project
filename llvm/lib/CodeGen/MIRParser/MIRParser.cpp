@@ -325,11 +325,8 @@ static Function *
 getNextUnusedUnnamedFunction(const Module &M,
                              Module::iterator &FirstUnvisitedFunction) {
   for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
-    if (!FirstUnvisitedFunction->hasName()) {
-      auto *F = &*FirstUnvisitedFunction;
-      ++FirstUnvisitedFunction;
-      return F;
-    }
+    if (!FirstUnvisitedFunction->hasName())
+      return &*FirstUnvisitedFunction++;
 
   return nullptr;
 }
