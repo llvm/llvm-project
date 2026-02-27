@@ -14,7 +14,7 @@
 #include "SPIRVInstrInfo.h"
 
 namespace llvm {
-static bool definesATypeRegister(const MachineInstr &MI) {
+[[maybe_unused]] static bool definesATypeRegister(const MachineInstr &MI) {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   return MRI.getRegClass(MI.getOperand(0).getReg()) == &SPIRV::TYPERegClass;
 }

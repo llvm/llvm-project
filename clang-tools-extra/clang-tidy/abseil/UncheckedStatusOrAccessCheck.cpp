@@ -29,10 +29,8 @@ void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
   auto HasStatusOrCallDescendant =
       hasDescendant(callExpr(callee(cxxMethodDecl(ofClass(hasAnyName(
           "absl::StatusOr", "absl::internal_statusor::OperatorBase"))))));
-  Finder->addMatcher(functionDecl(unless(isExpansionInSystemHeader()),
-                                  hasBody(HasStatusOrCallDescendant))
-                         .bind(FuncID),
-                     this);
+  Finder->addMatcher(
+      functionDecl(hasBody(HasStatusOrCallDescendant)).bind(FuncID), this);
   Finder->addMatcher(
       cxxConstructorDecl(hasAnyConstructorInitializer(
                              withInitializer(HasStatusOrCallDescendant)))
