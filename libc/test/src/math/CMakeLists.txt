@@ -400,6 +400,21 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  ceilf128_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    ceilf128_test.cpp
+  HDRS
+    CeilTest.h
+  DEPENDS
+    libc.src.math.ceilf128
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   ceilf_test
   NEED_MPFR
   SUITE
@@ -2459,6 +2474,17 @@ add_fp_unittest(
     asinf16_test.cpp
   DEPENDS
     libc.src.math.asinf16  
+)
+
+add_fp_unittest(
+  asinpif_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinpif_test.cpp
+  DEPENDS
+    libc.src.math.asinpif
 )
 
 add_fp_unittest(
