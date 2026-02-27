@@ -200,6 +200,13 @@ Attribute Changes in Clang
   type-level control over overflow behavior. There is also an accompanying type
   specifier for each behavior kind via `__ob_wrap` and `__ob_trap`.
 
+- Added C++11/C23 style spellings for Swift import attributes. The
+  ``swift_async_name``, ``swift_attr``, ``swift_name``, ``swift_newtype``,
+  ``swift_wrapper``, and ``swift_private`` attributes now support the
+  ``[[clang::...]]`` syntax in addition to the GNU ``__attribute__`` style,
+  bringing them in line with other Clang attributes and improving compatibility
+  with C++11/C23 codebases.
+
 Improvements to Clang's diagnostics
 -----------------------------------
 - Added ``-Wlifetime-safety`` to enable lifetime safety analysis,
