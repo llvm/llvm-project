@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "Registries/MockSerializationFormat.h"
-
 #include "clang/Analysis/Scalable/EntityLinker/TUSummaryEncoding.h"
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
 #include "clang/Analysis/Scalable/Model/EntityName.h"
@@ -21,7 +20,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
-
 #include <cassert>
 #include <functional>
 #include <memory>

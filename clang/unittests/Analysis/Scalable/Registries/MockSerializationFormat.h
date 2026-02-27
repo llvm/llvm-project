@@ -14,7 +14,6 @@
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Support/Registry.h"
-
 #include <string>
 
 namespace clang::ssaf {
