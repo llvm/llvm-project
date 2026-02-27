@@ -1269,7 +1269,6 @@ public:
   }
 
   void getDefaultLiveOut(BitVector &Regs) const override {
-    getCalleeSavedRegs(Regs);
     Regs |= getAliases(AArch64::X0);
     Regs |= getAliases(AArch64::X1);
     Regs |= getAliases(AArch64::X2);
