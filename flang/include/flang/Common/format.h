@@ -114,7 +114,8 @@ struct FormatMessage {
 // This declaration is logically private to class FormatValidator.
 // It is placed here to work around a clang compilation problem.
 ENUM_CLASS(TokenKind, None, A, B, BN, BZ, D, DC, DP, DT, E, EN, ES, EX, F, G, I,
-    L, LZ, LZP, LZS, O, P, RC, RD, RN, RP, RU, RZ, S, SP, SS, T, TL, TR, X, Z, Colon, Slash,
+    L, LZ, LZP, LZS, O, P, RC, RD, RN, RP, RU, RZ, S, SP, SS, T, TL, TR, X, Z,
+    Colon, Slash,
     Backslash, // nonstandard: inhibit newline on output
     Dollar, // nonstandard: inhibit newline on output on terminals
     Star, LParen, RParen, Comma, Point, Sign,

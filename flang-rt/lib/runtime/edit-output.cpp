@@ -561,8 +561,7 @@ RT_API_ATTRS bool RealOutputEditing<KIND>::EditFOutput(const DataEdit &edit) {
             digitsAfterPoint + trailingZeroes ==
         0) {
       zeroesBeforePoint = 1; // "."--> "0." (bare decimal point)
-    } else if (digitsBeforePoint == 0 && zeroesBeforePoint == 0 &&
-        expo <= 0) {
+    } else if (digitsBeforePoint == 0 && zeroesBeforePoint == 0 && expo <= 0) {
       // Optional leading zero position (F202X leading zero control).
       // Value magnitude < 1: "0.xxx" vs ".xxx"
       switch (edit.modes.leadingZero) {
