@@ -15,8 +15,8 @@
 ; Since null is neither an alloca pointer nor poison, this transformation
 ; produced invalid IR.
 
-define noundef i32 @foo() {
-; CHECK-LABEL: define noundef i32 @foo() {
+define i32 @foo() {
+; CHECK-LABEL: define i32 @foo() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    store i32 0, ptr poison, align 4
 ; CHECK-NEXT:    ret i32 0
@@ -27,6 +27,3 @@ entry:
   store i32 0, ptr %i_, align 4
   ret i32 0
 }
-
-declare void @llvm.lifetime.start(ptr)
-
