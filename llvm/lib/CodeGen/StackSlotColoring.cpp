@@ -14,7 +14,6 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
@@ -33,6 +32,7 @@
 #include "llvm/CodeGen/PseudoSourceValue.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SlotIndexes.h"
+#include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/InitializePasses.h"
@@ -584,8 +584,9 @@ bool StackSlotColoring::run(MachineFunction &MF) {
   if (MF.exposesReturnsTwice())
     return false;
 
-  SizeWeightScale =
-      MF.getSubtarget().getFrameLowering()->getStackSlotColoringSizeWeightScale();
+  SizeWeightScale = MF.getSubtarget()
+                        .getFrameLowering()
+                        ->getStackSlotColoringSizeWeightScale();
 
   // Gather spill slot references
   ScanForSpillSlotRefs(MF);
