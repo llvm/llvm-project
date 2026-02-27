@@ -5298,10 +5298,14 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
   if (getMultiIndex().size() == 1)
     return getMultiIndex().front();
 
-  if (llvm::is_contained(adaptor.getMultiIndex(), nullptr))
+  if (!adaptor.getDynamicBasis().empty())
     return nullptr;
 
-  if (!adaptor.getDynamicBasis().empty())
+  // Fold only when all multi-index operands folded to integer constants.
+  // Non-null but non-integer attributes (e.g. ub.poison) must not be cast.
+  if (llvm::any_of(adaptor.getMultiIndex(), [](Attribute attr) {
+        return !attr || !isa<IntegerAttr>(attr);
+      }))
     return nullptr;
 
   int64_t result = 0;

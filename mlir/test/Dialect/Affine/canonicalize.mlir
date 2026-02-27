@@ -2415,3 +2415,19 @@ func.func @linearize_dont_fold_poison_basis(%arg0: index) -> index {
   %ret = affine.linearize_index [%arg0] by (%poison) : index
   return %ret : index
 }
+
+// -----
+
+// Ensure affine.linearize_index fold doesn't crash with ub.poison operands.
+// ub.poison folds to a PoisonAttr (not IntegerAttr), so the fold must not
+// attempt to cast it to IntegerAttr.
+// CHECK-LABEL: func @linearize_index_with_poison
+func.func @linearize_index_with_poison() -> index {
+  // CHECK: %[[POISON:.*]] = ub.poison : index
+  // CHECK-NOT: affine.linearize_index
+  // CHECK: return %[[POISON]]
+  %0 = ub.poison : index
+  %c0 = arith.constant 0 : index
+  %1 = affine.linearize_index [%0, %c0] by (1) : index
+  return %1 : index
+}
