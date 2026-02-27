@@ -1,4 +1,5 @@
-//===-- unittests/Runtime/LeadingZeroTest.cpp --------------------*- C++ -*-===//
+//===-- unittests/Runtime/LeadingZeroTest.cpp --------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,7 +69,8 @@ TEST(LeadingZeroTests, LZP_F_editing) {
   double values[]{0.2, 0.2, 0.5, 0.1};
   for (int i = 0; i < 4; ++i) {
     std::string got;
-    ASSERT_TRUE(CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
+    ASSERT_TRUE(
+        CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
         << "Failed: format=" << cases[i].first << " value=" << values[i]
         << ", expected '" << cases[i].second << "', got '" << got << "'";
   }
@@ -85,7 +87,8 @@ TEST(LeadingZeroTests, LZS_F_editing) {
   double values[]{0.2, 0.2, 0.5, 0.1};
   for (int i = 0; i < 4; ++i) {
     std::string got;
-    ASSERT_TRUE(CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
+    ASSERT_TRUE(
+        CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
         << "Failed: format=" << cases[i].first << " value=" << values[i]
         << ", expected '" << cases[i].second << "', got '" << got << "'";
   }
@@ -100,7 +103,8 @@ TEST(LeadingZeroTests, LZ_F_editing) {
   double values[]{0.2, 0.2};
   for (int i = 0; i < 2; ++i) {
     std::string got;
-    ASSERT_TRUE(CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
+    ASSERT_TRUE(
+        CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
         << "Failed: format=" << cases[i].first << " value=" << values[i]
         << ", expected '" << cases[i].second << "', got '" << got << "'";
   }
@@ -115,7 +119,8 @@ TEST(LeadingZeroTests, LZP_E_editing) {
   double values[]{0.2, 0.2};
   for (int i = 0; i < 2; ++i) {
     std::string got;
-    ASSERT_TRUE(CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
+    ASSERT_TRUE(
+        CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
         << "Failed: format=" << cases[i].first << " value=" << values[i]
         << ", expected '" << cases[i].second << "', got '" << got << "'";
   }
@@ -130,7 +135,8 @@ TEST(LeadingZeroTests, LZS_E_editing) {
   double values[]{0.2, 0.2};
   for (int i = 0; i < 2; ++i) {
     std::string got;
-    ASSERT_TRUE(CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
+    ASSERT_TRUE(
+        CompareFormatReal(cases[i].first, values[i], cases[i].second, got))
         << "Failed: format=" << cases[i].first << " value=" << values[i]
         << ", expected '" << cases[i].second << "', got '" << got << "'";
   }
