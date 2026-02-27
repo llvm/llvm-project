@@ -165,7 +165,7 @@ TEST_P(LivenessAnalysisTester, AArch64_scavengeRegAfter) {
   ASSERT_FALSE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X8));
   ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegAfter(&*II), AArch64::X8);
 
-  // Test that callee saved registers and return registers are LiveOut.
+  // Test that return registers are LiveOut.
   BitVector DefaultLiveOutRegs;
   BC->MIB->getDefaultLiveOut(DefaultLiveOutRegs);
   ASSERT_TRUE(
