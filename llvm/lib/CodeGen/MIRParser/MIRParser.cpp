@@ -195,10 +195,6 @@ private:
 
   bool parseMachineInst(MachineFunction &MF, yaml::MachineInstrLoc MILoc,
                         MachineInstr const *&MI);
-
-  static Function *
-  getNextUnusedUnnamedFunction(const Module &M,
-                               Module::iterator &FirstUnvisitedFunction);
 };
 
 } // end namespace llvm
@@ -325,8 +321,9 @@ Function *MIRParserImpl::createDummyFunction(StringRef Name, Module &M) {
   return F;
 }
 
-Function *MIRParserImpl::getNextUnusedUnnamedFunction(
-    const Module &M, Module::iterator &FirstUnvisitedFunction) {
+static Function *
+getNextUnusedUnnamedFunction(const Module &M,
+                             Module::iterator &FirstUnvisitedFunction) {
   for (; FirstUnvisitedFunction != M.end(); ++FirstUnvisitedFunction)
     if (!FirstUnvisitedFunction->hasName()) {
       auto *F = &*FirstUnvisitedFunction;
