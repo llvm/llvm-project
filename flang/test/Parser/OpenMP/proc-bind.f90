@@ -3,7 +3,7 @@
 
 ! CHECK: !$OMP PARALLEL  PROC_BIND(PRIMARY)
 
-! PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OpenMPBlockConstruct
+! PARSE-TREE: ExecutionPartConstruct -> ExecutableConstruct -> OpenMPConstruct -> OmpBlockConstruct
 ! PARSE-TREE:  OmpBeginDirective
 ! PARSE-TREE:   OmpDirectiveName -> llvm::omp::Directive = parallel
 ! PARSE-TREE:   OmpClauseList -> OmpClause -> ProcBind -> OmpProcBindClause -> AffinityPolicy = Primary

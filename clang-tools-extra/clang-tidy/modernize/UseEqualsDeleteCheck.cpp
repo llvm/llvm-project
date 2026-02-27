@@ -1,4 +1,4 @@
-//===--- UseEqualsDeleteCheck.cpp - clang-tidy-----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,15 +39,30 @@ AST_MATCHER(CXXMethodDecl, isSpecialFunction) {
   return isa<CXXDestructorDecl>(Node) || Node.isCopyAssignmentOperator() ||
          Node.isMoveAssignmentOperator();
 }
+
+AST_MATCHER(CXXMethodDecl, hasPublicOverload) {
+  const DeclContext::lookup_result LookupResult =
+      Node.getParent()->lookup(Node.getNameInfo().getName());
+
+  if (LookupResult.isSingleResult())
+    return false; // No overloads
+
+  static constexpr auto IsPublicOverload = [](const Decl *Overload) {
+    return isa<CXXMethodDecl, FunctionTemplateDecl>(Overload) &&
+           Overload->getAccess() == AS_public;
+  };
+
+  return llvm::any_of(LookupResult, IsPublicOverload);
+}
 } // namespace
 
-static const char SpecialFunction[] = "SpecialFunction";
-static const char DeletedNotPublic[] = "DeletedNotPublic";
+static constexpr char SpecialFunction[] = "SpecialFunction";
+static constexpr char DeletedNotPublic[] = "DeletedNotPublic";
 
 UseEqualsDeleteCheck::UseEqualsDeleteCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      IgnoreMacros(Options.getLocalOrGlobal("IgnoreMacros", true)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", true)) {}
 
 void UseEqualsDeleteCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
@@ -66,15 +81,19 @@ void UseEqualsDeleteCheck::registerMatchers(MatchFinder *Finder) {
           .bind(SpecialFunction),
       this);
 
+  // Add a matcher for deleted private member functions, with a public overload,
+  // to recommend moving them to the public section.
   Finder->addMatcher(
-      cxxMethodDecl(isDeleted(), unless(isPublic())).bind(DeletedNotPublic),
+      cxxMethodDecl(isDeleted(), unless(isPublic()),
+                    anyOf(hasPublicOverload(), isSpecialFunction()))
+          .bind(DeletedNotPublic),
       this);
 }
 
 void UseEqualsDeleteCheck::check(const MatchFinder::MatchResult &Result) {
   if (const auto *Func =
           Result.Nodes.getNodeAs<CXXMethodDecl>(SpecialFunction)) {
-    SourceLocation EndLoc = Lexer::getLocForEndOfToken(
+    const SourceLocation EndLoc = Lexer::getLocForEndOfToken(
         Func->getEndLoc(), 0, *Result.SourceManager, getLangOpts());
 
     if (IgnoreMacros && Func->getLocation().isMacroID())

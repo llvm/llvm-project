@@ -211,7 +211,7 @@ public:
   void dumpAccessSpecifier(AccessSpecifier AS);
   void dumpCleanupObject(const ExprWithCleanups::CleanupObject &C);
   void dumpTemplateSpecializationKind(TemplateSpecializationKind TSK);
-  void dumpNestedNameSpecifier(const NestedNameSpecifier *NNS);
+  void dumpNestedNameSpecifier(NestedNameSpecifier NNS);
   void dumpConceptReference(const ConceptReference *R);
   void dumpTemplateArgument(const TemplateArgument &TA);
   void dumpBareTemplateName(TemplateName TN);
@@ -255,6 +255,7 @@ public:
   void VisitExpressionTemplateArgument(const TemplateArgument &TA);
   void VisitPackTemplateArgument(const TemplateArgument &TA);
 
+  void VisitLoopControlStmt(const LoopControlStmt *L);
   void VisitIfStmt(const IfStmt *Node);
   void VisitSwitchStmt(const SwitchStmt *Node);
   void VisitWhileStmt(const WhileStmt *Node);
@@ -285,6 +286,7 @@ public:
   void VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *Node);
   void VisitMemberExpr(const MemberExpr *Node);
   void VisitExtVectorElementExpr(const ExtVectorElementExpr *Node);
+  void VisitMatrixElementExpr(const MatrixElementExpr *Node);
   void VisitBinaryOperator(const BinaryOperator *Node);
   void VisitCompoundAssignOperator(const CompoundAssignOperator *Node);
   void VisitAddrLabelExpr(const AddrLabelExpr *Node);

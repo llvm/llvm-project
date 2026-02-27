@@ -363,7 +363,7 @@ void TailDuplicator::processPHI(
   Register SrcReg = MI->getOperand(SrcOpIdx).getReg();
   unsigned SrcSubReg = MI->getOperand(SrcOpIdx).getSubReg();
   const TargetRegisterClass *RC = MRI->getRegClass(DefReg);
-  LocalVRMap.insert(std::make_pair(DefReg, RegSubRegPair(SrcReg, SrcSubReg)));
+  LocalVRMap.try_emplace(DefReg, SrcReg, SrcSubReg);
 
   // Insert a copy from source to the end of the block. The def register is the
   // available value liveout of the block.
@@ -375,9 +375,8 @@ void TailDuplicator::processPHI(
   if (!Remove)
     return;
 
-  // Remove PredBB from the PHI node.
-  MI->removeOperand(SrcOpIdx + 1);
-  MI->removeOperand(SrcOpIdx);
+  MI->removePHIIncomingValueFor(*PredBB);
+
   if (MI->getNumOperands() == 1 && !TailBB->hasAddressTaken())
     MI->eraseFromParent();
   else if (MI->getNumOperands() == 1)
@@ -412,7 +411,7 @@ void TailDuplicator::duplicateInstruction(
       const TargetRegisterClass *RC = MRI->getRegClass(Reg);
       Register NewReg = MRI->createVirtualRegister(RC);
       MO.setReg(NewReg);
-      LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
       if (isDefLiveOut(Reg, TailBB, MRI) || UsedByPhi.count(Reg))
         addSSAUpdateEntry(Reg, NewReg, PredBB);
       continue;
@@ -462,9 +461,9 @@ void TailDuplicator::duplicateInstruction(
       Register NewReg = MRI->createVirtualRegister(OrigRC);
       BuildMI(*PredBB, NewMI, NewMI.getDebugLoc(), TII->get(TargetOpcode::COPY),
               NewReg)
-          .addReg(VI->second.Reg, 0, VI->second.SubReg);
+          .addReg(VI->second.Reg, {}, VI->second.SubReg);
       LocalVRMap.erase(VI);
-      LocalVRMap.insert(std::make_pair(Reg, RegSubRegPair(NewReg, 0)));
+      LocalVRMap.try_emplace(Reg, NewReg, 0);
       MO.setReg(NewReg);
       // The composed VI.Reg:VI.SubReg is replaced with NewReg, which
       // is equivalent to the whole register Reg. Hence, Reg:subreg
@@ -1073,7 +1072,7 @@ void TailDuplicator::appendCopies(MachineBasicBlock *MBB,
   const MCInstrDesc &CopyD = TII->get(TargetOpcode::COPY);
   for (auto &CI : CopyInfos) {
     auto C = BuildMI(*MBB, Loc, DebugLoc(), CopyD, CI.first)
-                .addReg(CI.second.Reg, 0, CI.second.SubReg);
+                 .addReg(CI.second.Reg, {}, CI.second.SubReg);
     Copies.push_back(C);
   }
 }

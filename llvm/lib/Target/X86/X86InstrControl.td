@@ -88,6 +88,10 @@ let isBranch = 1, isTerminator = 1, Uses = [EFLAGS], SchedRW = [WriteJump],
   }
 }
 
+let hasSideEffects = 1, Uses = [EFLAGS], SchedRW = [WriteJump] in
+def JCC_SELF : PseudoI<(outs), (ins ccode:$cond),
+                       [(X86brcond_self timm:$cond, EFLAGS)]>;
+
 // jcx/jecx/jrcx instructions.
 let isBranch = 1, isTerminator = 1, hasSideEffects = 0, SchedRW = [WriteJump] in {
   // These are the 32-bit versions of this instruction for the asmparser.  In
@@ -280,8 +284,12 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
     isCodeGenOnly = 1, Uses = [ESP, SSP] in {
   def TCRETURNdi : PseudoI<(outs), (ins i32imm_brtarget:$dst, i32imm:$offset),
                            []>, Sched<[WriteJump]>;
-  def TCRETURNri : PseudoI<(outs), (ins ptr_rc_tailcall:$dst, i32imm:$offset),
+  def TCRETURNri : PseudoI<(outs), (ins GR32_TC:$dst, i32imm:$offset),
                            []>, Sched<[WriteJump]>;
+
+  def TCRETURN_HIPE32ri : PseudoI<(outs), (ins GR32:$dst, i32imm:$offset),
+                                  []>, Sched<[WriteJump]>;
+
   let mayLoad = 1 in
   def TCRETURNmi : PseudoI<(outs), (ins i32mem_TC:$dst, i32imm:$offset),
                            []>, Sched<[WriteJumpLd]>;
@@ -355,8 +363,11 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
                                (ins i64i32imm_brtarget:$dst, i32imm:$offset),
                                []>, Sched<[WriteJump]>;
   def TCRETURNri64   : PseudoI<(outs),
-                               (ins ptr_rc_tailcall:$dst, i32imm:$offset),
+                               (ins GR64_TC:$dst, i32imm:$offset),
                                []>, Sched<[WriteJump]>;
+  def TCRETURN_WIN64ri : PseudoI<(outs), (ins GR64_TCW64:$dst, i32imm:$offset),
+                                []>, Sched<[WriteJump]>;
+
   def TCRETURNri64_ImpCall   : PseudoI<(outs),
                                (ins GR64_A:$dst, i32imm:$offset),
                                []>, Sched<[WriteJump]>;
@@ -364,6 +375,10 @@ let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1,
   let mayLoad = 1 in
   def TCRETURNmi64   : PseudoI<(outs),
                                (ins i64mem_TC:$dst, i32imm:$offset),
+                               []>, Sched<[WriteJumpLd]>;
+  let mayLoad = 1 in
+  def TCRETURN_WINmi64   : PseudoI<(outs),
+                               (ins i64mem_w64TC:$dst, i32imm:$offset),
                                []>, Sched<[WriteJumpLd]>;
 
   def TAILJMPd64 : PseudoI<(outs), (ins i64i32imm_brtarget:$dst),

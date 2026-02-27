@@ -17,6 +17,7 @@
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/Attr.h"
 #include "clang/Sema/Sema.h"
 
@@ -227,7 +228,8 @@ bool SemaWasm::BuiltinWasmTableCopy(CallExpr *TheCall) {
   return false;
 }
 
-bool SemaWasm::BuiltinWasmTestFunctionPointerSignature(CallExpr *TheCall) {
+bool SemaWasm::BuiltinWasmTestFunctionPointerSignature(const TargetInfo &TI,
+                                                       CallExpr *TheCall) {
   if (SemaRef.checkArgCount(TheCall, 1))
     return true;
 
@@ -250,27 +252,31 @@ bool SemaWasm::BuiltinWasmTestFunctionPointerSignature(CallExpr *TheCall) {
            << ArgType << FuncPtrArg->getSourceRange();
   }
 
-  // Check that the function pointer doesn't use reference types
-  if (FuncTy->getReturnType().isWebAssemblyReferenceType()) {
-    return Diag(
-               FuncPtrArg->getBeginLoc(),
-               diag::err_wasm_builtin_test_fp_sig_cannot_include_reference_type)
-           << 0 << FuncTy->getReturnType() << FuncPtrArg->getSourceRange();
-  }
-  auto NParams = FuncTy->getNumParams();
-  for (unsigned I = 0; I < NParams; I++) {
-    if (FuncTy->getParamType(I).isWebAssemblyReferenceType()) {
+  if (TI.getABI() == "experimental-mv") {
+    auto isStructOrUnion = [](QualType T) {
+      return T->isUnionType() || T->isStructureType();
+    };
+    if (isStructOrUnion(FuncTy->getReturnType())) {
       return Diag(
                  FuncPtrArg->getBeginLoc(),
                  diag::
-                     err_wasm_builtin_test_fp_sig_cannot_include_reference_type)
-             << 1 << FuncPtrArg->getSourceRange();
+                     err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union)
+             << 0 << FuncTy->getReturnType() << FuncPtrArg->getSourceRange();
+    }
+    auto NParams = FuncTy->getNumParams();
+    for (unsigned I = 0; I < NParams; I++) {
+      if (isStructOrUnion(FuncTy->getParamType(I))) {
+        return Diag(
+                   FuncPtrArg->getBeginLoc(),
+                   diag::
+                       err_wasm_builtin_test_fp_sig_cannot_include_struct_or_union)
+               << 1 << FuncPtrArg->getSourceRange();
+      }
     }
   }
 
   // Set return type to int (the result of the test)
   TheCall->setType(getASTContext().IntTy);
-
   return false;
 }
 
@@ -297,7 +303,7 @@ bool SemaWasm::CheckWebAssemblyBuiltinFunctionCall(const TargetInfo &TI,
   case WebAssembly::BI__builtin_wasm_table_copy:
     return BuiltinWasmTableCopy(TheCall);
   case WebAssembly::BI__builtin_wasm_test_function_pointer_signature:
-    return BuiltinWasmTestFunctionPointerSignature(TheCall);
+    return BuiltinWasmTestFunctionPointerSignature(TI, TheCall);
   }
 
   return false;

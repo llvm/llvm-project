@@ -662,9 +662,9 @@ void VcallThunkIdentifierNode::output(OutputBuffer &OB,
 void SpecialTableSymbolNode::output(OutputBuffer &OB, OutputFlags Flags) const {
   outputQualifiers(OB, Quals, false, true);
   Name->output(OB, Flags);
-  if (TargetName) {
+  if (TargetNames) {
     OB << "{for `";
-    TargetName->output(OB, Flags);
+    TargetNames->output(OB, Flags, "'s `");
     OB << "'}";
   }
 }

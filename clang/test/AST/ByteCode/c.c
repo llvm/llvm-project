@@ -173,6 +173,10 @@ _Static_assert(CTB3, ""); // pedantic-ref-warning {{GNU extension}} \
                           // pedantic-expected-warning {{GNU extension}}
 
 
+void nonComplexToComplexCast(void) {
+  _Complex double z = *(_Complex double *)&(struct { double r, i; }){0.0, 1.0};
+}
+
 int t1 = sizeof(int);
 void test4(void) {
   t1 = sizeof(int);
@@ -328,4 +332,110 @@ void foo3 (void)
 {
  void* x = 0;
  void* y = &*x;
+}
+
+static void *FooTable[1] = {
+    [0] = (void *[1]) { // 1
+        [0] = (void *[1]) { // 2
+            [0] = (void *[1]) {} // pedantic-warning {{use of an empty initializer}}
+        },
+    }
+};
+
+int strcmp(const char *, const char *); // all-note {{passing argument to parameter here}}
+#define S "\x01\x02\x03\x04\x05\x06\x07\x08"
+const char _str[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const unsigned char _str2[] = {S[0], S[1], S[2], S[3], S[4], S[5], S[6], S[7]};
+const int compared = strcmp(_str, (const char *)_str2); // all-error {{initializer element is not a compile-time constant}}
+
+
+const int compared2 = strcmp(strcmp, _str); // all-error {{incompatible pointer types}} \
+                                            // all-error {{initializer element is not a compile-time constant}}
+
+int foo(x) // all-warning {{a function definition without a prototype is deprecated in all versions of C}}
+int x;
+{
+  return x;
+}
+
+void bar() { // pedantic-warning {{a function declaration without a prototype}}
+  int x;
+  x = foo(); // all-warning {{too few arguments}}
+}
+
+int *_b = &a;
+void discardedCmp(void)
+{
+    (*_b) = ((&a == &a) , a); // all-warning {{left operand of comma operator has no effect}}
+}
+
+/// ArraySubscriptExpr that's not an lvalue
+typedef unsigned char U __attribute__((vector_size(1)));
+void nonLValueASE(U f) { f[0] = f[((U)(U){0})[0]]; }
+
+static char foo_(a) // all-warning {{definition without a prototype}}
+  char a;
+{
+  return 'a';
+}
+static void bar_(void) {
+  foo_(foo_(1));
+}
+
+void foo2(void*);
+void bar2(void) {
+  int a[2][3][4][5]; // all-note {{array 'a' declared here}}
+  foo2(&a[0][4]); // all-warning {{array index 4 is past the end of the array}}
+}
+
+void plainComplex(void) {
+  _Complex cd; // all-warning {{_Complex double}}
+  cd = *(_Complex *)&(struct { double r, i; }){0.0, 0.0}; // all-warning {{_Complex double}}
+}
+
+/// This test results in an ImplicitValueInitExpr with DiscardResult set.
+struct M{
+  char c;
+};
+typedef struct S64 {
+  struct M m;
+  char a[64];
+} I64;
+
+_Static_assert((((I64){}, 1)), ""); // all-warning {{left operand of comma operator has no effect}} \
+                                    // pedantic-warning {{use of an empty initializer is a C23 extension}} \
+                                    // pedantic-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
+
+#define V(N) __attribute__((vector_size(N)))
+#define C2 (VC2){0, 1}
+char func_(void);
+typedef V(2) char VC2;
+void CopyArrayToFnPtr(void) { *(VC2 *)func_ = C2; }
+
+_Complex double returnsComplex(); // pedantic-warning {{a function declaration without a prototype is deprecated in all versions of C}}
+void callReturnsComplex(void) {
+  _Complex double c;
+  c = returnsComplex(0.); // all-warning {{passing arguments to 'returnsComplex' without a prototype is deprecated in all versions of C and is not supported in C23}}
+}
+
+int complexMul[2 * (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
+
+int complexDiv[2 / (22222222222wb + 2i) == 2]; // all-warning {{'_BitInt' suffix for literals is a C23 extension}} \
+                                               // pedantic-warning {{imaginary constants are a C2y extension}} \
+                                               // all-warning {{variable length array folded to constant array as an extension}}
+
+
+
+int i = 0;
+void intPtrCmp1(void) { &i + 1 == 2; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}
+void intPtrCmp2(void) { 2 == &i + 1; } // all-warning {{comparison between pointer and integer}} \
+                                       // all-warning {{equality comparison result unused}}
+
+/// evaluateStrlen on a non-block pointer.
+char *strcpy(char *restrict s1, const char *restrict s2);
+void strcpy_fn(char *x) {
+  strcpy(x, (char*)&strcpy_fn);
 }

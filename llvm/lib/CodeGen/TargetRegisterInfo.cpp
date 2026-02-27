@@ -51,11 +51,13 @@ static cl::opt<unsigned>
 
 TargetRegisterInfo::TargetRegisterInfo(
     const TargetRegisterInfoDesc *ID, regclass_iterator RCB,
-    regclass_iterator RCE, const char *const *SRINames,
-    const SubRegCoveredBits *SubIdxRanges, const LaneBitmask *SRILaneMasks,
-    LaneBitmask SRICoveringLanes, const RegClassInfo *const RCIs,
-    const MVT::SimpleValueType *const RCVTLists, unsigned Mode)
-    : InfoDesc(ID), SubRegIndexNames(SRINames), SubRegIdxRanges(SubIdxRanges),
+    regclass_iterator RCE, const char *SRIStrings,
+    ArrayRef<uint32_t> SRINameOffsets, const SubRegCoveredBits *SubIdxRanges,
+    const LaneBitmask *SRILaneMasks, LaneBitmask SRICoveringLanes,
+    const RegClassInfo *const RCIs, const MVT::SimpleValueType *const RCVTLists,
+    unsigned Mode)
+    : InfoDesc(ID), SubRegIndexStrings(SRIStrings),
+      SubRegIndexNameOffsets(SRINameOffsets), SubRegIdxRanges(SubIdxRanges),
       SubRegIndexLaneMasks(SRILaneMasks), RegClassBegin(RCB), RegClassEnd(RCE),
       CoveringLanes(SRICoveringLanes), RCInfos(RCIs), RCVTLists(RCVTLists),
       HwMode(Mode) {}
@@ -102,10 +104,8 @@ bool TargetRegisterInfo::checkAllSuperRegsMarked(const BitVector &RegisterSet,
   return true;
 }
 
-namespace llvm {
-
-Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
-                   unsigned SubIdx, const MachineRegisterInfo *MRI) {
+Printable llvm::printReg(Register Reg, const TargetRegisterInfo *TRI,
+                         unsigned SubIdx, const MachineRegisterInfo *MRI) {
   return Printable([Reg, TRI, SubIdx, MRI](raw_ostream &OS) {
     if (!Reg)
       OS << "$noreg";
@@ -135,17 +135,17 @@ Printable printReg(Register Reg, const TargetRegisterInfo *TRI,
   });
 }
 
-Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
+Printable llvm::printRegUnit(MCRegUnit Unit, const TargetRegisterInfo *TRI) {
   return Printable([Unit, TRI](raw_ostream &OS) {
     // Generic printout when TRI is missing.
     if (!TRI) {
-      OS << "Unit~" << Unit;
+      OS << "Unit~" << static_cast<unsigned>(Unit);
       return;
     }
 
     // Check for invalid register units.
-    if (Unit >= TRI->getNumRegUnits()) {
-      OS << "BadUnit~" << Unit;
+    if (static_cast<unsigned>(Unit) >= TRI->getNumRegUnits()) {
+      OS << "BadUnit~" << static_cast<unsigned>(Unit);
       return;
     }
 
@@ -158,18 +158,20 @@ Printable printRegUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
   });
 }
 
-Printable printVRegOrUnit(unsigned Unit, const TargetRegisterInfo *TRI) {
-  return Printable([Unit, TRI](raw_ostream &OS) {
-    if (Register::isVirtualRegister(Unit)) {
-      OS << '%' << Register(Unit).virtRegIndex();
+Printable llvm::printVRegOrUnit(VirtRegOrUnit VRegOrUnit,
+                                const TargetRegisterInfo *TRI) {
+  return Printable([VRegOrUnit, TRI](raw_ostream &OS) {
+    if (VRegOrUnit.isVirtualReg()) {
+      OS << '%' << VRegOrUnit.asVirtualReg().virtRegIndex();
     } else {
-      OS << printRegUnit(Unit, TRI);
+      OS << printRegUnit(VRegOrUnit.asMCRegUnit(), TRI);
     }
   });
 }
 
-Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
-                              const TargetRegisterInfo *TRI) {
+Printable llvm::printRegClassOrBank(Register Reg,
+                                    const MachineRegisterInfo &RegInfo,
+                                    const TargetRegisterInfo *TRI) {
   return Printable([Reg, &RegInfo, TRI](raw_ostream &OS) {
     if (RegInfo.getRegClassOrNull(Reg))
       OS << StringRef(TRI->getRegClassName(RegInfo.getRegClass(Reg))).lower();
@@ -182,8 +184,6 @@ Printable printRegClassOrBank(Register Reg, const MachineRegisterInfo &RegInfo,
     }
   });
 }
-
-} // end namespace llvm
 
 /// getAllocatableClass - Return the maximal subclass of the given register
 /// class that is alloctable, or NULL.
@@ -412,25 +412,21 @@ getCommonSuperRegClass(const TargetRegisterClass *RCA, unsigned SubA,
   return BestRC;
 }
 
-/// Check if the registers defined by the pair (RegisterClass, SubReg)
-/// share the same register file.
-static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
-                                  const TargetRegisterClass *DefRC,
-                                  unsigned DefSubReg,
-                                  const TargetRegisterClass *SrcRC,
-                                  unsigned SrcSubReg) {
+const TargetRegisterClass *TargetRegisterInfo::findCommonRegClass(
+    const TargetRegisterClass *DefRC, unsigned DefSubReg,
+    const TargetRegisterClass *SrcRC, unsigned SrcSubReg) const {
   // Same register class.
   //
   // When processing uncoalescable copies / bitcasts, it is possible we reach
   // here with the same register class, but mismatched subregister indices.
   if (DefRC == SrcRC && DefSubReg == SrcSubReg)
-    return true;
+    return DefRC;
 
   // Both operands are sub registers. Check if they share a register class.
   unsigned SrcIdx, DefIdx;
   if (SrcSubReg && DefSubReg) {
-    return TRI.getCommonSuperRegClass(SrcRC, SrcSubReg, DefRC, DefSubReg,
-                                      SrcIdx, DefIdx) != nullptr;
+    return getCommonSuperRegClass(SrcRC, SrcSubReg, DefRC, DefSubReg, SrcIdx,
+                                  DefIdx);
   }
 
   // At most one of the register is a sub register, make it Src to avoid
@@ -442,18 +438,10 @@ static bool shareSameRegisterFile(const TargetRegisterInfo &TRI,
 
   // One of the register is a sub register, check if we can get a superclass.
   if (SrcSubReg)
-    return TRI.getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg) != nullptr;
+    return getMatchingSuperRegClass(SrcRC, DefRC, SrcSubReg);
 
   // Plain copy.
-  return TRI.getCommonSubClass(DefRC, SrcRC) != nullptr;
-}
-
-bool TargetRegisterInfo::shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                                              unsigned DefSubReg,
-                                              const TargetRegisterClass *SrcRC,
-                                              unsigned SrcSubReg) const {
-  // If this source does not incur a cross register bank copy, use it.
-  return shareSameRegisterFile(*this, DefRC, DefSubReg, SrcRC, SrcSubReg);
+  return getCommonSubClass(DefRC, SrcRC);
 }
 
 float TargetRegisterInfo::getSpillWeightScaleFactor(
@@ -569,7 +557,7 @@ bool TargetRegisterInfo::getCoveringSubRegIndexes(
 
   for (unsigned Idx = 1, E = getNumSubRegIndices(); Idx < E; ++Idx) {
     // Is this index even compatible with the given class?
-    if (getSubClassWithSubReg(RC, Idx) != RC)
+    if (!isSubRegValidForRegClass(RC, Idx))
       continue;
     LaneBitmask SubRegMask = getSubRegIndexLaneMask(Idx);
     // Early exit if we found a perfect match.
@@ -660,7 +648,7 @@ TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     if (!CopySrcReg.isVirtual())
@@ -683,7 +671,7 @@ Register TargetRegisterInfo::lookThruSingleUseCopyChain(
       CopySrcReg = MI->getOperand(1).getReg();
     else {
       assert(MI->isSubregToReg() && "Bad opcode for lookThruCopyLike");
-      CopySrcReg = MI->getOperand(2).getReg();
+      CopySrcReg = MI->getOperand(1).getReg();
     }
 
     // Continue only if the next definition in the chain is for a virtual

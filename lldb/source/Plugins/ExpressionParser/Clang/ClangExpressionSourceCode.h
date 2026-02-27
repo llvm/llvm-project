@@ -63,8 +63,8 @@ public:
   ///
   /// \return true iff the source code was successfully generated.
   bool GetText(std::string &text, ExecutionContext &exe_ctx, bool add_locals,
-               bool force_add_all_locals,
-               llvm::ArrayRef<std::string> modules) const;
+               bool force_add_all_locals, llvm::ArrayRef<std::string> modules,
+               bool ignore_context_qualifiers) const;
 
   // Given a string returned by GetText, find the beginning and end of the body
   // passed to CreateWrapped. Return true if the bounds could be found.  This

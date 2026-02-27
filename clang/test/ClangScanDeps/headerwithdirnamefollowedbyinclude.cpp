@@ -12,12 +12,13 @@
 // RUN: cp %S/Inputs/foodir %t.dir/Inputs/foodir
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/headerwithdirnamefollowedbyinclude.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s %if system-darwin && target={{.*}}-{{darwin|macos}}{{.*}} %{ --check-prefixes=CHECK,CHECK-DARWIN %}
 
 #include <foodir>
 #include "foodir/foodirheader.h"
 
 // CHECK: headerwithdirname_input{{\.o|.*\.s}}
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: headerwithdirname_input.cpp
 // CHECK-NEXT: Inputs{{/|\\}}foodir
 

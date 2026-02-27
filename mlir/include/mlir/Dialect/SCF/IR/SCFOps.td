@@ -77,7 +77,8 @@ def ConditionOp : SCF_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 def ExecuteRegionOp : SCF_Op<"execute_region", [
-    DeclareOpInterfaceMethods<RegionBranchOpInterface>]> {
+    DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+    RecursiveMemoryEffects]> {
   let summary = "operation that executes its region exactly once";
   let description = [{
     The `scf.execute_region` operation is used to allow multiple blocks within SCF
@@ -152,13 +153,14 @@ def ForOp : SCF_Op<"for",
       [AutomaticAllocationScope, DeclareOpInterfaceMethods<LoopLikeOpInterface,
        ["getInitsMutable", "getLoopResults", "getRegionIterArgs",
         "getLoopInductionVars", "getLoopLowerBounds", "getLoopSteps",
-        "getLoopUpperBounds", "getYieldedValuesMutable",
+        "getLoopUpperBounds", "getStaticTripCount", "getYieldedValuesMutable",
         "promoteIfSingleIteration", "replaceWithAdditionalYields",
-        "yieldTiledValuesAndReplace"]>,
+        "yieldTiledValuesAndReplace", "isValidInductionVarType",
+        "setLoopLowerBounds", "setLoopUpperBounds", "setLoopSteps"]>,
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands"]>,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "for operation";
@@ -169,9 +171,13 @@ def ForOp : SCF_Op<"for",
     region capturing the loop body. The induction variable is represented as an
     argument of this region. This SSA value is a signless integer or index.
     The step is a value of same type but required to be positive, the lower and
-    upper bounds can be also negative or zero. The lower and upper bounds specify
-    a half-open range: the iteration is executed iff the signed comparison of induction
-    variable value is less than the upper bound and bigger or equal to the lower bound.
+    upper bounds can be also negative or zero. The lower and upper bounds
+    specify a half-open range: the iteration is executed iff the comparison of
+    induction variable value is less than the upper bound and bigger or equal
+    to the lower bound.
+
+    By default, the integer comparison is signed. If the `unsignedCmp` unit
+    attribute is specified, the integer comparison is unsigned.
 
     The body region must contain exactly one block that terminates with
     `scf.yield`. Calling ForOp::build will create such a region and insert
@@ -184,8 +190,8 @@ def ForOp : SCF_Op<"for",
       ... // body
     }
     ...
-    // Integer case.
-    scf.for %iv_32 = %lb_32 to %ub_32 step %step_32 : i32 {
+    // Unsigned integer case.
+    scf.for unsigned %iv_32 = %lb_32 to %ub_32 step %step_32 : i32 {
       ... // body
     }
     ```
@@ -258,7 +264,8 @@ def ForOp : SCF_Op<"for",
   let arguments = (ins AnySignlessIntegerOrIndex:$lowerBound,
                        AnySignlessIntegerOrIndex:$upperBound,
                        AnySignlessIntegerOrIndex:$step,
-                       Variadic<AnyType>:$initArgs);
+                       Variadic<AnyType>:$initArgs,
+                       UnitAttr:$unsignedCmp);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
@@ -266,7 +273,8 @@ def ForOp : SCF_Op<"for",
   let builders = [OpBuilder<(ins "Value":$lowerBound, "Value":$upperBound,
       "Value":$step, CArg<"ValueRange", "{}">:$initArgs,
       CArg<"function_ref<void(OpBuilder &, Location, Value, ValueRange)>",
-           "nullptr">)>];
+           "nullptr">,
+      CArg<"bool", "false">:$unsignedCmp)>];
 
   let extraClassDeclaration = [{
     using BodyBuilderFn =
@@ -607,6 +615,11 @@ def ForallOp : SCF_Op<"forall", [
                                     getNumDynamicControlOperands() + getRank());
     }
 
+    BlockArgument getTiedBlockArgument(OpResult opResult) {
+      assert(opResult.getDefiningOp() == getOperation()  && "invalid OpResult");
+      return getBody()->getArgument(getRank() + opResult.getResultNumber());
+    }
+
     ::mlir::Value getInductionVar(int64_t idx) {
       return getInductionVars()[idx];
     }
@@ -648,7 +661,8 @@ def ForallOp : SCF_Op<"forall", [
 def InParallelOp : SCF_Op<"forall.in_parallel", [
        Pure,
        Terminator,
-       DeclareOpInterfaceMethods<ParallelCombiningOpInterface>,
+       DeclareOpInterfaceMethods<InParallelOpInterface>,
+       ReturnLike,
        HasParent<"ForallOp">,
       ] # GraphRegionNoTerminator.traits> {
   let summary = "terminates a `forall` block";
@@ -673,8 +687,6 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
     OpBuilder<(ins)>,
   ];
 
-  // TODO: Add a `InParallelOpInterface` interface for ops that can
-  // appear inside in_parallel.
   let extraClassDeclaration = [{
     ::llvm::SmallVector<::mlir::BlockArgument> getDests();
     ::llvm::iterator_range<::mlir::Block::iterator> getYieldingOps();
@@ -688,7 +700,7 @@ def InParallelOp : SCF_Op<"forall.in_parallel", [
 
 def IfOp : SCF_Op<"if", [DeclareOpInterfaceMethods<RegionBranchOpInterface, [
     "getNumRegionInvocations", "getRegionInvocationBounds",
-    "getEntrySuccessorRegions"]>,
+    "getEntrySuccessorRegions", "getSuccessorInputs"]>,
     InferTypeOpAdaptor, SingleBlockImplicitTerminator<"scf::YieldOp">,
     RecursiveMemoryEffects, RecursivelySpeculatable, NoRegionArguments]> {
   let summary = "if-then-else operation";
@@ -971,7 +983,7 @@ def ReduceReturnOp :
 
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands"]>,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getRegionIterArgs", "getYieldedValuesMutable"]>,
      RecursiveMemoryEffects, SingleBlock]> {
@@ -1125,7 +1137,8 @@ def IndexSwitchOp : SCF_Op<"index_switch", [RecursiveMemoryEffects,
     SingleBlockImplicitTerminator<"scf::YieldOp">,
     DeclareOpInterfaceMethods<RegionBranchOpInterface,
                               ["getRegionInvocationBounds",
-                               "getEntrySuccessorRegions"]>]> {
+                               "getEntrySuccessorRegions",
+                               "getSuccessorInputs"]>]> {
   let summary = "switch-case operation on an index argument";
   let description = [{
     The `scf.index_switch` is a control-flow operation that branches to one of

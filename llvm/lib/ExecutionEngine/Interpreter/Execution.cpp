@@ -860,7 +860,7 @@ void Interpreter::popStackAndReturnValueToCaller(Type *RetTy,
 
   if (ECStack.empty()) {  // Finished main.  Put result into exit code...
     if (RetTy && !RetTy->isVoidTy()) {          // Nonvoid return type?
-      ExitValue = Result;   // Capture the exit value of the program
+      ExitValue = std::move(Result); // Capture the exit value of the program
     } else {
       memset(&ExitValue.Untyped, 0, sizeof(ExitValue.Untyped));
     }

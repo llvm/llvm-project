@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy --match-partial-fixes %s misc-definitions-in-headers %t -- --fix-notes
+// RUN: %check_clang_tidy %s misc-definitions-in-headers %t -- --fix-notes
 
 int f() {
 // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f' defined in a header file; function definitions in header files can lead to ODR violations [misc-definitions-in-headers]
@@ -25,7 +25,7 @@ class CA {
 
 void CA::f2() { }
 // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: function 'f2' defined in a header file;
-// CHECK-FIXES: inline void CA::f2() {
+// CHECK-FIXES: inline void CA::f2() { }
 
 template <>
 int CA::f3() {

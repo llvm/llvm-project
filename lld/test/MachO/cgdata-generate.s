@@ -5,11 +5,15 @@
 
 # Synthesize raw cgdata without the header (32 byte) from the indexed cgdata.
 # RUN: llvm-cgdata --convert --format binary %t/raw-1.cgtext -o %t/raw-1.cgdata
-# RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ][ ]*/ /g; s/^[ ]*//; s/[ ]*$//; s/[ ]/,0x/g; s/^/0x/' > %t/raw-1-bytes.txt
-# RUN: sed "s/<RAW_BYTES>/$(cat %t/raw-1-bytes.txt)/g" %t/merge-template.s > %t/merge-1.s
+# RUN: echo -n "s/<RAW_BYTES>/" > %t/raw-1-sed.txt
+# RUN: od -t x1 -j 32 -An %t/raw-1.cgdata | tr -d '\n\r\t' | sed 's/[ ][ ]*/ /g; s/^[ ]*//; s/[ ]*$//; s/[ ]/,0x/g; s/^/0x/' >> %t/raw-1-sed.txt
+# RUN: echo "/g" >> %t/raw-1-sed.txt
+# RUN: sed -f %t/raw-1-sed.txt %t/merge-template.s > %t/merge-1.s
 # RUN: llvm-cgdata --convert --format binary %t/raw-2.cgtext -o %t/raw-2.cgdata
-# RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ][ ]*/ /g; s/^[ ]*//; s/[ ]*$//; s/[ ]/,0x/g; s/^/0x/' > %t/raw-2-bytes.txt
-# RUN: sed "s/<RAW_BYTES>/$(cat %t/raw-2-bytes.txt)/g" %t/merge-template.s > %t/merge-2.s
+# RUN: echo -n "s/<RAW_BYTES>/" > %t/raw-2-sed.txt
+# RUN: od -t x1 -j 32 -An %t/raw-2.cgdata | tr -d '\n\r\t' | sed 's/[ ][ ]*/ /g; s/^[ ]*//; s/[ ]*$//; s/[ ]/,0x/g; s/^/0x/' >> %t/raw-2-sed.txt
+# RUN: echo "/g" >> %t/raw-2-sed.txt
+# RUN: sed -f %t/raw-2-sed.txt %t/merge-template.s > %t/merge-2.s
 
 # RUN: llvm-mc -filetype obj -triple arm64-apple-darwin %t/merge-1.s -o %t/merge-1.o
 # RUN: llvm-mc -filetype obj -triple arm64-apple-darwin %t/merge-2.s -o %t/merge-2.o

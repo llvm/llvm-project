@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -show-encoding %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=gfx1200 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX12-ERR --implicit-check-not=error: --strict-whitespace %s
 
 flat_atomic_add_f32 v1, v[0:1], v2 offset:-8000000 th:TH_ATOMIC_RETURN
 // GFX1250: flat_atomic_add_f32 v1, v[0:1], v2 offset:-8000000 th:TH_ATOMIC_RETURN ; encoding: [0x7c,0x80,0x15,0xec,0x01,0x00,0x10,0x01,0x00,0x00,0xee,0x85]
@@ -3096,6 +3096,86 @@ flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset
 // GFX1250: flat_load_monitor_b64 v[2:3], v2, s[4:5] offset:64 scale_offset ; encoding: [0x04,0x40,0x1c,0xec,0x02,0x00,0x01,0x00,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+cluster_load_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x19,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v[2:3], off offset:64
+// GFX1250: cluster_load_b32 v1, v[2:3], off offset:64 ; encoding: [0x7c,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v[2:3], off offset:-64
+// GFX1250: cluster_load_b32 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b32 v1, v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x00,0xc0,0x19,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[0:1] offset:64
+// GFX1250: cluster_load_b32 v1, v2, s[0:1] offset:64 ; encoding: [0x00,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[0:1] offset:-64
+// GFX1250: cluster_load_b32 v1, v2, s[0:1] offset:-64 ; encoding: [0x00,0xc0,0x19,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b32 v1, v2, s[4:5] offset:64 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b32 v1, v2, s[4:5] offset:64 scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0xc0,0x19,0xee,0x01,0x00,0x3d,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b64 v[0:1], v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x00,0x1a,0xee,0x00,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v[2:3], off offset:64
+// GFX1250: cluster_load_b64 v[0:1], v[2:3], off offset:64 ; encoding: [0x7c,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v[2:3], off offset:-64
+// GFX1250: cluster_load_b64 v[0:1], v[2:3], off offset:-64 ; encoding: [0x7c,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b64 v[0:1], v2, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x00,0x00,0x1a,0xee,0x00,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v2, s[0:1] offset:64
+// GFX1250: cluster_load_b64 v[0:1], v2, s[0:1] offset:64 ; encoding: [0x00,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[0:1], v2, s[0:1] offset:-64
+// GFX1250: cluster_load_b64 v[0:1], v2, s[0:1] offset:-64 ; encoding: [0x00,0x00,0x1a,0xee,0x00,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b64 v[2:3], v2, s[4:5] offset:64 scale_offset th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b64 v[2:3], v2, s[4:5] offset:64 scale_offset th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x04,0x00,0x1a,0xee,0x02,0x00,0x69,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v[4:5], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_b128 v[0:3], v[4:5], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x1a,0xee,0x00,0x00,0x3c,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v[4:5], off offset:64
+// GFX1250: cluster_load_b128 v[0:3], v[4:5], off offset:64 ; encoding: [0x7c,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v[4:5], off offset:-64
+// GFX1250: cluster_load_b128 v[0:3], v[4:5], off offset:-64 ; encoding: [0x7c,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v4, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_b128 v[0:3], v4, s[0:1] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x00,0x40,0x1a,0xee,0x00,0x00,0x68,0x00,0x04,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v4, s[0:1] offset:64
+// GFX1250: cluster_load_b128 v[0:3], v4, s[0:1] offset:64 ; encoding: [0x00,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_b128 v[0:3], v4, s[0:1] offset:-64
+// GFX1250: cluster_load_b128 v[0:3], v4, s[0:1] offset:-64 ; encoding: [0x00,0x40,0x1a,0xee,0x00,0x00,0x00,0x00,0x04,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 flat_atomic_add_f64 v[0:1], v[2:3] offset:4095
 // GFX1250: flat_atomic_add_f64 v[0:1], v[2:3] offset:4095 ; encoding: [0x7c,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x00,0xff,0x0f,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -3410,6 +3490,110 @@ global_store_async_from_lds_b64 v2, v1, s[4:5] scale_offset th:TH_STORE_BYPASS s
 // GFX1250: global_store_async_from_lds_b64 v2, v1, s[4:5] scale_offset th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0x40,0x19,0xee,0x00,0x00,0xbd,0x00,0x02,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+cluster_load_async_to_lds_b8 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_async_to_lds_b8 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x80,0x1a,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b8 v1, v[2:3], off offset:64
+// GFX1250: cluster_load_async_to_lds_b8 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x80,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b8 v1, v[2:3], off offset:-64
+// GFX1250: cluster_load_async_to_lds_b8 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x80,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b8 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_async_to_lds_b8 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x80,0x1a,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b8 v1, v2, s[2:3] offset:64
+// GFX1250: cluster_load_async_to_lds_b8 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x80,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b8 v1, v2, s[2:3] offset:-64
+// GFX1250: cluster_load_async_to_lds_b8 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x80,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_async_to_lds_b32 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x1a,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b32 v1, v[2:3], off offset:64
+// GFX1250: cluster_load_async_to_lds_b32 v1, v[2:3], off offset:64 ; encoding: [0x7c,0xc0,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b32 v1, v[2:3], off offset:-64
+// GFX1250: cluster_load_async_to_lds_b32 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0xc0,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b32 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_async_to_lds_b32 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0xc0,0x1a,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b32 v1, v2, s[2:3] offset:64
+// GFX1250: cluster_load_async_to_lds_b32 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b32 v1, v2, s[2:3] offset:-64
+// GFX1250: cluster_load_async_to_lds_b32 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0xc0,0x1a,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b64 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_async_to_lds_b64 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x00,0x1b,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b64 v1, v[2:3], off offset:64
+// GFX1250: cluster_load_async_to_lds_b64 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x00,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b64 v1, v[2:3], off offset:-64
+// GFX1250: cluster_load_async_to_lds_b64 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x00,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b64 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_async_to_lds_b64 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x00,0x1b,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b64 v1, v2, s[2:3] offset:64
+// GFX1250: cluster_load_async_to_lds_b64 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x00,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b64 v1, v2, s[2:3] offset:-64
+// GFX1250: cluster_load_async_to_lds_b64 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x00,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b128 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_async_to_lds_b128 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0x40,0x1b,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b128 v1, v[2:3], off offset:64
+// GFX1250: cluster_load_async_to_lds_b128 v1, v[2:3], off offset:64 ; encoding: [0x7c,0x40,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b128 v1, v[2:3], off offset:-64
+// GFX1250: cluster_load_async_to_lds_b128 v1, v[2:3], off offset:-64 ; encoding: [0x7c,0x40,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b128 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV
+// GFX1250: cluster_load_async_to_lds_b128 v1, v2, s[2:3] th:TH_LOAD_NT_HT scope:SCOPE_DEV ; encoding: [0x02,0x40,0x1b,0xee,0x01,0x00,0x68,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b128 v1, v2, s[2:3] offset:64
+// GFX1250: cluster_load_async_to_lds_b128 v1, v2, s[2:3] offset:64 ; encoding: [0x02,0x40,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b128 v1, v2, s[2:3] offset:-64
+// GFX1250: cluster_load_async_to_lds_b128 v1, v2, s[2:3] offset:-64 ; encoding: [0x02,0x40,0x1b,0xee,0x01,0x00,0x00,0x00,0x02,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b32 v1, v2, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_async_to_lds_b32 v1, v2, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0xc0,0x1a,0xee,0x01,0x00,0x3d,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
+cluster_load_async_to_lds_b64 v1, v2, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS
+// GFX1250: cluster_load_async_to_lds_b64 v1, v2, s[4:5] scale_offset th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x04,0x00,0x1b,0xee,0x01,0x00,0x3d,0x00,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
+
 global_load_async_to_lds_b8 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS
 // GFX1250: global_load_async_to_lds_b8 v1, v[2:3], off th:TH_LOAD_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x17,0xee,0x01,0x00,0x3c,0x00,0x02,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
@@ -3534,9 +3718,9 @@ tensor_stop th:TH_STORE_BYPASS scope:SCOPE_SYS
 // GFX1250: tensor_stop th:TH_STORE_BYPASS scope:SCOPE_SYS ; encoding: [0x7c,0xc0,0x1b,0xee,0x00,0x00,0x3c,0x00,0x00,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-flat_atomic_add_f32 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_add_f32 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x15,0xec,0x00,0x00,0x11,0x01,0x01,0x00,0x12,0x7a]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_add_f32 v0, v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_add_f32 v0, v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x15,0xec,0x00,0x00,0x11,0x01,0x01,0x00,0x12,0x7a]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_add_f32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_add_f32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x15,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3550,9 +3734,9 @@ flat_atomic_add_f64 v3, v[2:3], s[2:3]
 // GFX1250: flat_atomic_add_f64 v3, v[2:3], s[2:3]  ; encoding: [0x02,0x40,0x15,0xec,0x00,0x00,0x00,0x01,0x03,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
-flat_atomic_add_u32 v1, v2, s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_add_u32 v1, v2, s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0d,0xec,0x00,0x00,0x11,0x01,0x01,0xc0,0xff,0xff]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_add_u32 v0, v1, v2, s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_add_u32 v0, v1, v2, s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0d,0xec,0x00,0x00,0x11,0x01,0x01,0xc0,0xff,0xff]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_add_u32 v2, v3, s[2:3] offset:-64
 // GFX1250: flat_atomic_add_u32 v2, v3, s[2:3] offset:-64 ; encoding: [0x02,0x40,0x0d,0xec,0x00,0x00,0x80,0x01,0x02,0xc0,0xff,0xff]
@@ -3566,9 +3750,9 @@ flat_atomic_add_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATO
 // GFX1250: flat_atomic_add_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x10,0xec,0x00,0x00,0x11,0x01,0x02,0xc0,0xff,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_and_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_and_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_and_b32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_and_b32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_and_b32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_and_b32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3598,17 +3782,17 @@ flat_atomic_cmpswap_b64 v2, v[2:5], s[2:3]
 // GFX1250: flat_atomic_cmpswap_b64 v2, v[2:5], s[2:3] ; encoding: [0x02,0x80,0x10,0xec,0x00,0x00,0x00,0x01,0x02,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
-flat_atomic_cond_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_cond_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x14,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_cond_sub_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_cond_sub_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x14,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_cond_sub_u32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_cond_sub_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x14,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
-flat_atomic_dec_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_dec_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x10,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_dec_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_dec_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x10,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_dec_u32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_dec_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x10,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3622,9 +3806,9 @@ flat_atomic_dec_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATO
 // GFX1250: flat_atomic_dec_u64 v[0:1], v2, v[2:3], s[2:3] offset:-64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x13,0xec,0x00,0x00,0x11,0x01,0x02,0xc0,0xff,0xff]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_inc_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_inc_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_inc_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_inc_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_inc_u32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_inc_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3638,17 +3822,17 @@ flat_atomic_inc_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOM
 // GFX1250: flat_atomic_inc_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x13,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_max_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_max_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x14,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_max_num_f32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_max_num_f32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x14,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_max_num_f32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_max_num_f32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x14,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
-flat_atomic_max_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_max_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_max_i32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_max_i32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_max_i32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_max_i32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3662,9 +3846,9 @@ flat_atomic_max_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOM
 // GFX1250: flat_atomic_max_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x11,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_max_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_max_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_max_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_max_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_max_u32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_max_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3678,17 +3862,17 @@ flat_atomic_max_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOM
 // GFX1250: flat_atomic_max_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x12,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_min_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_min_num_f32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x14,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_min_num_f32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_min_num_f32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x14,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_min_num_f32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_min_num_f32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x14,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
-flat_atomic_min_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_min_i32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_min_i32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_min_i32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_min_i32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_min_i32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x00,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3702,9 +3886,9 @@ flat_atomic_min_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOM
 // GFX1250: flat_atomic_min_i64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x11,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_min_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_min_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_min_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_min_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0e,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_min_u32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_min_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x0e,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3718,9 +3902,9 @@ flat_atomic_min_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOM
 // GFX1250: flat_atomic_min_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x11,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_or_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_or_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_or_b32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_or_b32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_or_b32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_or_b32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3734,17 +3918,17 @@ flat_atomic_or_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMI
 // GFX1250: flat_atomic_or_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x12,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_sub_clamp_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_sub_clamp_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0d,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_sub_clamp_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_sub_clamp_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0d,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_sub_clamp_u32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_sub_clamp_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0xc0,0x0d,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
-flat_atomic_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_sub_u32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0d,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_sub_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_sub_u32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0d,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_sub_u32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_sub_u32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x0d,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3758,8 +3942,8 @@ flat_atomic_sub_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOM
 // GFX1250: flat_atomic_sub_u64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x00,0x11,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_swap_b32 v0, v2, s[2:3] scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_swap_b32 v0, v2, s[2:3] scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0c,0xec,0x00,0x00,0x11,0x01,0x00,0x00,0x00,0x00]
+flat_atomic_swap_b32 v0, v0, v2, s[2:3] scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_swap_b32 v0, v0, v2, s[2:3] scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x0c,0xec,0x00,0x00,0x11,0x01,0x00,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
 flat_atomic_swap_b32 v2, v3, s[2:3] offset:64
@@ -3774,9 +3958,9 @@ flat_atomic_swap_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATO
 // GFX1250: flat_atomic_swap_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x10,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_xor_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_xor_b32 v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_xor_b32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_xor_b32 v0, v1, v2, s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x0f,0xec,0x00,0x00,0x11,0x01,0x01,0x40,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_xor_b32 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_xor_b32 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x0f,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
@@ -3790,17 +3974,17 @@ flat_atomic_xor_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOM
 // GFX1250: flat_atomic_xor_b64 v[0:1], v2, v[2:3], s[2:3] offset:64 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0xc0,0x12,0xec,0x00,0x00,0x11,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand.
 
-flat_atomic_pk_add_f16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_pk_add_f16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x16,0xec,0x00,0x00,0x11,0x01,0x01,0x00,0x12,0x7a]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_pk_add_f16 v0, v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_pk_add_f16 v0, v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x40,0x16,0xec,0x00,0x00,0x11,0x01,0x01,0x00,0x12,0x7a]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_pk_add_f16 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_pk_add_f16 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x40,0x16,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
 
-flat_atomic_pk_add_bf16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
-// GFX1250: flat_atomic_pk_add_bf16 v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x16,0xec,0x00,0x00,0x11,0x01,0x01,0x00,0x12,0x7a]
-// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: operands are not valid for this GPU or mode
+flat_atomic_pk_add_bf16 v0, v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN
+// GFX1250: flat_atomic_pk_add_bf16 v0, v1, v2, s[2:3] offset:8000000 scale_offset th:TH_ATOMIC_RETURN ; encoding: [0x02,0x80,0x16,0xec,0x00,0x00,0x11,0x01,0x01,0x00,0x12,0x7a]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: not a valid operand
 
 flat_atomic_pk_add_bf16 v2, v3, s[2:3] offset:64
 // GFX1250: flat_atomic_pk_add_bf16 v2, v3, s[2:3] offset:64 ; encoding: [0x02,0x80,0x16,0xec,0x00,0x00,0x80,0x01,0x02,0x40,0x00,0x00]

@@ -11,11 +11,11 @@
 
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Utility/DataBuffer.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FileUtilities.h"
+#include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 #include <string>
 
 #define ASSERT_NO_ERROR(x)                                                     \
@@ -30,6 +30,10 @@
   }
 
 namespace lldb_private {
+
+/// Returns a pretty printed json string of a `llvm::json::Value`.
+std::string PrettyPrint(const llvm::json::Value &E);
+
 std::string GetInputFilePath(const llvm::Twine &name);
 
 class TestUtilities {
@@ -43,7 +47,8 @@ public:
   static llvm::Expected<TestFile> fromYamlFile(const llvm::Twine &Name);
 
   ModuleSpec moduleSpec() {
-    return ModuleSpec(FileSpec(), UUID(), dataBuffer());
+    return ModuleSpec(FileSpec(), UUID(),
+                      std::make_shared<DataExtractor>(dataBuffer()));
   }
 
   llvm::Expected<llvm::sys::fs::TempFile> writeToTemporaryFile();
@@ -61,12 +66,10 @@ private:
 };
 
 template <typename T> static llvm::Expected<T> roundtripJSON(const T &input) {
-  llvm::json::Value value = toJSON(input);
-  llvm::json::Path::Root root;
-  T output;
-  if (!fromJSON(value, output, root))
-    return root.getError();
-  return output;
+  std::string encoded;
+  llvm::raw_string_ostream OS(encoded);
+  OS << toJSON(input);
+  return llvm::json::parse<T>(encoded);
 }
 } // namespace lldb_private
 

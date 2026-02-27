@@ -102,7 +102,7 @@ struct WebAssemblyOperand : public MCParsedAsmOperand {
   WebAssemblyOperand(SMLoc Start, SMLoc End, CaLOp C)
       : Kind(CatchList), StartLoc(Start), EndLoc(End), CaL(C) {}
 
-  ~WebAssemblyOperand() {
+  ~WebAssemblyOperand() override {
     if (isBrList())
       BrL.~BrLOp();
     if (isCatchList())
@@ -220,7 +220,6 @@ static MCSymbolWasm *getOrCreateFunctionTableSymbol(MCContext &Ctx,
     Sym = static_cast<MCSymbolWasm *>(Ctx.getOrCreateSymbol(Name));
     Sym->setFunctionTable(Is64);
     // The default function table is synthesized by the linker.
-    Sym->setUndefined();
   }
   return Sym;
 }

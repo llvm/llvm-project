@@ -89,6 +89,7 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         %[[VAL_20:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_14:.*]] = alloca [1 x ptr], align 8
+// CHECK:         %[[VAL_19:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         br label %[[VAL_15:.*]]
 
 // CHECK:       [[VAL_15]]:
@@ -97,7 +98,6 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_15]]
 // CHECK:         br label %[[VAL_18:.*]]
 // CHECK:       omp.par.region1:                                  ; preds = %[[PAR_REG]]
-// CHECK:         %[[VAL_19:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         br label %[[VAL_22:.*]]
 
 // CHECK:       omp.reduction.init:                               ; preds = %[[VAL_16:.*]]
@@ -127,8 +127,6 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_36]])
 // CHECK:         br label %[[VAL_37:.*]]
 // CHECK:       omp_section_loop.after:                           ; preds = %[[VAL_35]]
-// CHECK:         br label %[[VAL_38:.*]]
-// CHECK:       omp_section_loop.aftersections.fini:              ; preds = %[[VAL_37]]
 // CHECK:         %[[VAL_39:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_14]], i64 0, i64 0
 // CHECK:         store ptr %[[VAL_21]], ptr %[[VAL_39]], align 8
 // CHECK:         %[[VAL_40:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
@@ -137,27 +135,27 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:           i32 1, label %[[VAL_43:.*]]
 // CHECK:           i32 2, label %[[VAL_44:.*]]
 // CHECK:         ]
-// CHECK:       reduce.switch.atomic:                             ; preds = %[[VAL_38]]
+// CHECK:       reduce.switch.atomic:                             ; preds = %[[VAL_37]]
 // CHECK:         unreachable
-// CHECK:       reduce.switch.nonatomic:                          ; preds = %[[VAL_38]]
+// CHECK:       reduce.switch.nonatomic:                          ; preds = %[[VAL_37]]
 // CHECK:         %[[VAL_45:.*]] = load ptr, ptr %[[VAL_21]], align 8
 // CHECK:         br label %[[VAL_46:.*]]
 // CHECK:       omp.reduction.nonatomic.body:                     ; preds = %[[VAL_43]]
 // CHECK:         br label %[[VAL_47:.*]]
-// CHECK:       omp.reduction.nonatomic.body16:                   ; preds = %[[VAL_48:.*]], %[[VAL_46]]
+// CHECK:       omp.reduction.nonatomic.body15:                   ; preds = %[[VAL_48:.*]], %[[VAL_46]]
 // CHECK:         %[[VAL_49:.*]] = phi i64 [ %[[VAL_50:.*]], %[[VAL_48]] ], [ 0, %[[VAL_46]] ]
 // CHECK:         %[[VAL_51:.*]] = icmp sgt i64 %[[VAL_49]], 0
 // CHECK:         br i1 %[[VAL_51]], label %[[VAL_48]], label %[[VAL_52:.*]]
-// CHECK:       omp.reduction.nonatomic.body18:                   ; preds = %[[VAL_47]]
+// CHECK:       omp.reduction.nonatomic.body17:                   ; preds = %[[VAL_47]]
 // CHECK:         br label %[[VAL_53:.*]]
-// CHECK:       omp.region.cont15:                                ; preds = %[[VAL_52]]
+// CHECK:       omp.region.cont14:                                ; preds = %[[VAL_52]]
 // CHECK:         %[[VAL_54:.*]] = phi ptr [ %[[VAL_19]], %[[VAL_52]] ]
 // CHECK:         call void @__kmpc_end_reduce(ptr @1, i32 %[[VAL_40]], ptr @.gomp_critical_user_.reduction.var)
 // CHECK:         br label %[[VAL_42]]
-// CHECK:       omp.reduction.nonatomic.body17:                   ; preds = %[[VAL_47]]
+// CHECK:       omp.reduction.nonatomic.body16:                   ; preds = %[[VAL_47]]
 // CHECK:         %[[VAL_50]] = sub i64 %[[VAL_49]], 1
 // CHECK:         br label %[[VAL_47]]
-// CHECK:       reduce.finalize:                                  ; preds = %[[VAL_53]], %[[VAL_38]]
+// CHECK:       reduce.finalize:                                  ; preds = %[[VAL_53]], %[[VAL_37]]
 // CHECK:         %[[VAL_55:.*]] = call i32 @__kmpc_global_thread_num(ptr @1)
 // CHECK:         call void @__kmpc_barrier(ptr @2, i32 %[[VAL_55]])
 // CHECK:         %[[VAL_56:.*]] = load ptr, ptr %[[VAL_21]], align 8
@@ -166,15 +164,17 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         %[[VAL_58:.*]] = ptrtoint ptr %[[VAL_56]] to i64
 // CHECK:         %[[VAL_59:.*]] = icmp ne i64 %[[VAL_58]], 0
 // CHECK:         br i1 %[[VAL_59]], label %[[VAL_60:.*]], label %[[VAL_61:.*]]
-// CHECK:       omp.reduction.cleanup22:                          ; preds = %[[VAL_60]], %[[VAL_57]]
+// CHECK:       omp.reduction.cleanup21:                          ; preds = %[[VAL_60]], %[[VAL_57]]
 // CHECK:         br label %[[VAL_62:.*]]
-// CHECK:       omp.region.cont20:                                ; preds = %[[VAL_61]]
+// CHECK:       omp.region.cont19:                                ; preds = %[[VAL_61]]
 // CHECK:         br label %[[VAL_63:.*]]
 // CHECK:       omp.region.cont:                                  ; preds = %[[VAL_62]]
 // CHECK:         br label %[[VAL_64:.*]]
 // CHECK:       omp.par.pre_finalize:                             ; preds = %[[VAL_63]]
-// CHECK:         br label %[[VAL_65:.*]]
-// CHECK:       omp.reduction.cleanup21:                          ; preds = %[[VAL_57]]
+// CHECK:         br label %[[FINI:.fini.*]]
+// CHECK:       [[FINI]]:
+// CHECK:         br label %[[EXIT:.*]]
+// CHECK:       omp.reduction.cleanup20:                          ; preds = %[[VAL_57]]
 // CHECK:         br label %[[VAL_61]]
 // CHECK:       omp_section_loop.body:                            ; preds = %[[VAL_32]]
 // CHECK:         %[[VAL_66:.*]] = add i32 %[[VAL_30]], %[[VAL_24]]
@@ -219,5 +219,5 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       omp_section_loop.inc:                             ; preds = %[[VAL_69]]
 // CHECK:         %[[VAL_31]] = add nuw i32 %[[VAL_30]], 1
 // CHECK:         br label %[[VAL_28]]
-// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[VAL_64]]
+// CHECK:       omp.par.exit.exitStub:                            ; preds = %[[FINI]]
 // CHECK:         ret void

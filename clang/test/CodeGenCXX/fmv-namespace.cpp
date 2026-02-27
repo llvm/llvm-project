@@ -72,7 +72,8 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK-NEXT:    ret i32 1
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN4Name3fooEv.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_ZN4Name3fooEv.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER:[0-9]+]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -86,7 +87,8 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK-NEXT:    ret ptr @_ZN4Name3fooEv.default
 //
 //
-// CHECK-LABEL: define weak_odr ptr @_ZN3Foo3barEv.resolver() comdat {
+// CHECK-LABEL: define weak_odr ptr @_ZN3Foo3barEv.resolver(
+// CHECK-SAME: ) #[[ATTR_RESOLVER]] comdat {
 // CHECK-NEXT:  [[RESOLVER_ENTRY:.*:]]
 // CHECK-NEXT:    call void @__init_cpu_features_resolver()
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr @__aarch64_cpu_features, align 8
@@ -99,6 +101,7 @@ __attribute((target_version("mops"))) int bar() { return 1; }
 // CHECK:       [[RESOLVER_ELSE]]:
 // CHECK-NEXT:    ret ptr @_ZN3Foo3barEv.default
 //
+// CHECK: attributes #[[ATTR_RESOLVER]] = { disable_sanitizer_instrumentation }
 //.
 // CHECK: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // CHECK: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

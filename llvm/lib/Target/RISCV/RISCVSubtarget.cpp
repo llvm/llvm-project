@@ -17,6 +17,7 @@
 #include "RISCVFrameLowering.h"
 #include "RISCVSelectionDAGInfo.h"
 #include "RISCVTargetMachine.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -65,9 +66,15 @@ static cl::opt<bool> UseMIPSLoadStorePairsOpt(
     cl::desc("Enable the load/store pair optimization pass"), cl::init(false),
     cl::Hidden);
 
-static cl::opt<bool> UseCCMovInsn("use-riscv-ccmov",
-                                  cl::desc("Use 'mips.ccmov' instruction"),
-                                  cl::init(true), cl::Hidden);
+static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
+                                      cl::desc("Use 'mips.ccmov' instruction"),
+                                      cl::init(true), cl::Hidden);
+
+static cl::opt<bool> EnablePExtSIMDCodeGen(
+    "riscv-enable-p-ext-simd-codegen",
+    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
+             "where only partial codegen is currently supported)"),
+    cl::init(false), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
 
@@ -82,6 +89,8 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   if (TuneCPU.empty())
     TuneCPU = CPU;
+  if (TuneCPU == "generic")
+    TuneCPU = Is64Bit ? "generic-rv64" : "generic-rv32";
 
   TuneInfo = RISCVTuneInfoTable::getRISCVTuneInfo(TuneCPU);
   // If there is no TuneInfo for this CPU, we fail back to generic.
@@ -90,6 +99,15 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
+
+  RISCV::updateCZceFeatureImplications(*this);
+
+  // Re-sync the flags.
+  HasStdExtZcd = hasFeature(RISCV::FeatureStdExtZcd);
+  HasStdExtZcf = hasFeature(RISCV::FeatureStdExtZcf);
+  HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
+  HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
+
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
@@ -101,10 +119,11 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                unsigned RVVVectorBitsMax,
                                const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
+      IsLittleEndian(TT.isLittleEndian()), RVVVectorBitsMin(RVVVectorBitsMin),
+      RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
-      InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
+      InstrInfo(*this), TLInfo(TM, *this) {
   TSInfo = std::make_unique<RISCVSelectionDAGInfo>();
 }
 
@@ -143,6 +162,20 @@ const RISCVRegisterBankInfo *RISCVSubtarget::getRegBankInfo() const {
 
 bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
+}
+
+bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
+  return HasStdExtP && EnablePExtSIMDCodeGen;
+}
+
+// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
+  if (!enablePExtSIMDCodeGen())
+    return false;
+
+  if (is64Bit())
+    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+  return VT == MVT::v4i8 || VT == MVT::v2i16;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
@@ -205,6 +238,16 @@ bool RISCVSubtarget::enableMachinePipeliner() const {
   return getSchedModel().hasInstrSchedModel();
 }
 
+void RISCVSubtarget::mirFileLoaded(MachineFunction &MF) const {
+  // We usually compute max call frame size after ISel. Do the computation now
+  // if the .mir file didn't specify it. Note that this will probably give you
+  // bogus values after PEI has eliminated the callframe setup/destroy pseudo
+  // instructions, specify explicitly if you need it to be correct.
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (!MFI.isMaxCallFrameSizeComputed())
+    MFI.computeMaxCallFrameSize(MF);
+}
+
   /// Enable use of alias analysis during code generation (during MI
   /// scheduling, DAGCombine, etc.).
 bool RISCVSubtarget::useAA() const { return UseAA; }
@@ -246,10 +289,10 @@ void RISCVSubtarget::overridePostRASchedPolicy(
   }
 }
 
-bool RISCVSubtarget::useLoadStorePairs() const {
+bool RISCVSubtarget::useMIPSLoadStorePairs() const {
   return UseMIPSLoadStorePairsOpt && HasVendorXMIPSLSP;
 }
 
-bool RISCVSubtarget::useCCMovInsn() const {
-  return UseCCMovInsn && HasVendorXMIPSCMov;
+bool RISCVSubtarget::useMIPSCCMovInsn() const {
+  return UseMIPSCCMovInsn && HasVendorXMIPSCMov;
 }
