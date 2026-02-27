@@ -68,11 +68,13 @@ dtcxzyw2333@gmail.com (email), [dtcxzyw](https://github.com/dtcxzyw) (GitHub)
 
 Justin Bogner \
 mail@justinbogner.com (email), [bogner](https://github.com/bogner) (GitHub)
+.
 
 #### SampleProfile and related parts of ProfileData
 
 Diego Novillo \
 dnovillo@google.com (email), [dnovillo](https://github.com/dnovillo) (GitHub)
+.
 
 #### New pass manager, CGSCC, LazyCallGraph
 
