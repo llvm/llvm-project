@@ -381,7 +381,8 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (!UseNewCC1Process) {
     TheDriver.CC1Main = ExecuteCC1WithContext;
     // Ensure the CC1Command actually catches cc1 crashes
-    llvm::CrashRecoveryContext::Enable(true);
+    llvm::CrashRecoveryContext::Enable(
+        /*NeedsPOSIXUtilitySignalHandling=*/true);
   }
 
   std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(Args));
@@ -484,6 +485,13 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   if (CommandRes > 128 && CommandRes != 255) {
     llvm::sys::unregisterHandlers();
     raise(CommandRes - 128);
+  }
+  // When cc1 runs out-of-process (CLANG_SPAWN_CC1), ExecuteAndWait returns -2
+  // if the child was killed by a signal. The signal number is not preserved,
+  // so resignal with SIGABRT to ensure the driver exits via signal.
+  if (CommandRes == -2) {
+    llvm::sys::unregisterHandlers();
+    raise(SIGABRT);
   }
 #endif
 
