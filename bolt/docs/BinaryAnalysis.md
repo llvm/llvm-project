@@ -92,7 +92,7 @@ control flow by overwriting a return address with a different value.
 The approach to validation of Pointer Authentication hardening implemented in
 `llvm-bolt-binary-analysis` is tracking register safety using dataflow analysis.
 At each program point it is computed whether the particular register can be
-controlled and whether it can be inspected by an attacker under
+controlled and whether it can be inspected by an attacker under the
 [Pointer Authentication threat model](https://clang.llvm.org/docs/PointerAuthentication.html#theory-of-operation).
 Then, for a number of sensitive instruction kinds (such as function calls and
 pointer signing instructions), the properties of input or output operands are
@@ -105,8 +105,8 @@ llvm-bolt-binary-analysis --scanners=<list> [options] <binary>
 ```
 
 The `--scanners=` option accepts a comma-separated list of analyses to run on
-the provided binary. The binary to be analyzed can be either ELF executable or
-shared object. Similar to other BOLT tools, `llvm-bolt-binary-analysis` expects
+the provided binary. The binary to be analyzed can be either an ELF executable or
+a shared object. Similar to other BOLT tools, `llvm-bolt-binary-analysis` expects
 `binary` to be unstripped and preferably linked with `--emit-relocs` linker option.
 
 In addition to options printed by `llvm-bolt-binary-analysis --help-hidden`,
@@ -119,7 +119,7 @@ Authentication hardening applied to the binary.
 The specific set of gadget kinds which are searched for depends on command line
 options. Each gadget found by PtrAuth gadget scanner results in a plain text
 report printed at the end of the analysis.
-Furthermore, an attempt is made to provide an extra information on the
+Furthermore, an attempt is made to provide additional information on the
 instructions that made the register unsafe.
 Please note that this extra information is provided on a best-effort basis and
 is not expected to be as accurate as the reports themselves.
@@ -183,7 +183,7 @@ program point:
     to result in an access to an unmapped memory ("segmentation fault").
     This makes it possible for authentication instructions to return an invalid
     address on failure as long as it is known to crash the program on accessing
-    memory, but may requires extra care to be taken when implementing operations
+    memory, but may require extra care to be taken when implementing operations
     like re-signing a pointer with a different signing schema without accessing
     that address in-between. If any failed authentication instruction is
     guaranteed to terminate the program abnormally, then "safe-to-dereference"
