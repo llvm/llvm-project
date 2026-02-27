@@ -780,8 +780,9 @@ AArch64TargetInfo::getTargetBuiltins() const {
       {&SVE::BuiltinStrings, SVE::BuiltinInfos, "__builtin_sve_"},
       {&BuiltinSVENeonBridgeStrings, BuiltinSVENeonBridgeInfos},
       {&SME::BuiltinStrings, SME::BuiltinInfos, "__builtin_sme_"},
+      {&AArch64::BuiltinStrings, AArch64::BuiltinInfos},
       {&AArch64::BuiltinStrings, AArch64::PrefixedBuiltinInfos,
-      "__builtin_arm_"},
+       "__builtin_arm_"},
   };
 }
 
