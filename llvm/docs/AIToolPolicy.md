@@ -145,20 +145,15 @@ just like any other offending contribution.
 
 ## Exceptions
 
-We have made exceptions to this policy for tools that do not demand maintainer
-attention, are useful, and generally don't interfere with other activities.
-
-* Bazel-fixer bot: The project council approved [this RFC][bazel-rfc] proposing
-  to use a combination of [dwyu][dwyu] and LLMs to maintain the Bazel build files.
-
-We've only made one formally approved policy exception, but perhaps this list
-will grow. We're aware of the [@llvmgnsyncbot][llvmgnsyncbot] tool, but the
-project has not made a decision to approve this tool, therefore it doesn't
-appear in the list above.
+We have one exception to this policy for the Bazel-fixer bot. The project
+council approved [this RFC][bazel-rfc] proposing to use a combination of
+[dwyu][dwyu] and LLMs to maintain the Bazel build files.
 
 [bazel-rfc]: https://discourse.llvm.org/t/rfc-ai-assisted-bazel-fixer-bot/89178/93
 [dwyu]: https://github.com/hzeller/bant?tab=readme-ov-file#dwyu--depend-on-what-you-use
-[llvmgnsyncbot]: https://github.com/llvm/llvm-project/commits?author=llvmgnsyncbot
+
+Any future exception will be considered individually on its own merits as to
+whether it is useful to the project or extracts work from maintainers.
 
 ## Examples
 
