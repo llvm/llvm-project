@@ -168,7 +168,7 @@ exit:
 ; Function Attrs: mustprogress norecurse nosync nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
 define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Cannot vectorize potentially faulting early exit loop.
 entry:
   %n_bytes = mul nuw nsw i32 %n, 2
   call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i32 %n_bytes) ]
@@ -195,10 +195,9 @@ exit:
   ret void
 }
 
-; CHECK-LABEL: LV: Checking a loop in 'test_assumed_bounds_type_mismatch'
-; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
-
 define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly %pred, i32 %n) nosync nofree {
+; CHECK-LABEL: LV: Checking a loop in 'test_assumed_bounds_type_mismatch'
+; CHECK:       LV: Not vectorizing: Cannot vectorize potentially faulting early exit loop.
 entry:
   %n_bytes = mul nuw nsw i32 %n, 2
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %pred, i32 %n_bytes) ]
