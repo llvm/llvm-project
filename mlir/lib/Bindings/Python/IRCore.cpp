@@ -2676,6 +2676,11 @@ namespace {
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {
+#if defined(Py_LIMITED_API)
+  // Frame introspection C APIs are not available under the limited API.
+  // Traceback-based auto-location is not supported; return unknown.
+  return mlirLocationUnknownGet(ctx);
+#else
   size_t framesLimit =
       PyGlobals::get().getTracebackLoc().locTracebackFramesLimit();
   // Use a thread_local here to avoid requiring a large amount of space.
@@ -2685,42 +2690,6 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
 
   nb::gil_scoped_acquire acquire;
 
-#if defined(Py_LIMITED_API)
-  // Under the limited API (targeting Python 3.12+), most frame introspection
-  // C APIs (PyCode_Addr2Location, PyFrame_GetLasti, etc.) are not available.
-  // Use Python-level sys._getframe() and attribute access instead. Note:
-  // co_qualname (used below) requires Python 3.11+.
-  nb::object sys_mod = nb::module_::import_("sys");
-  nb::object frameObj;
-  try {
-    // _getframe(0) from C++ returns the topmost Python frame, equivalent
-    // to PyThreadState_GetFrame() in the non-limited-API path.
-    frameObj = sys_mod.attr("_getframe")(0);
-  } catch (nb::python_error &) {
-    return mlirLocationUnknownGet(ctx);
-  }
-
-  while (!frameObj.is_none() && frameObj.ptr() != nullptr &&
-         count < framesLimit) {
-    nb::object codeObj = frameObj.attr("f_code");
-    auto fileNameStr = nb::cast<std::string>(codeObj.attr("co_filename"));
-    std::string_view fileName(fileNameStr);
-    if (PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName)) {
-      std::string name = nb::cast<std::string>(codeObj.attr("co_qualname"));
-      std::string_view funcName(name);
-      int startLine = nb::cast<int>(frameObj.attr("f_lineno"));
-      MlirLocation loc = mlirLocationFileLineColGet(
-          ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
-          0);
-      frames[count] = mlirLocationNameGet(
-          ctx, mlirStringRefCreate(funcName.data(), funcName.size()), loc);
-      ++count;
-    }
-    frameObj = frameObj.attr("f_back");
-    if (frameObj.is_none())
-      break;
-  }
-#else
   PyThreadState *tstate = PyThreadState_GET();
   PyFrameObject *next;
   PyFrameObject *pyFrame = PyThreadState_GetFrame(tstate);
@@ -2770,7 +2739,6 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   // When the loop breaks (after the last iter), current frame (if non-null)
   // is leaked without this.
   Py_XDECREF(pyFrame);
-#endif
 
   if (count == 0)
     return mlirLocationUnknownGet(ctx);
@@ -2786,6 +2754,7 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
     caller = mlirLocationCallSiteGet(frames[i], caller);
 
   return mlirLocationCallSiteGet(callee, caller);
+#endif
 }
 
 PyLocation
