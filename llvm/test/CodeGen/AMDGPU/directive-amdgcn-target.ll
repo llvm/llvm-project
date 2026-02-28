@@ -120,6 +120,7 @@
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx10-3-generic < %s | FileCheck --check-prefixes=GFX10_3_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx11-generic < %s | FileCheck --check-prefixes=GFX11_GENERIC %s
 ; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-generic < %s | FileCheck --check-prefixes=GFX12_GENERIC %s
+; RUN: llc --amdhsa-code-object-version=6 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx12-5-generic < %s | FileCheck --check-prefixes=GFX12_5_GENERIC %s
 
 ; GFX600: .amdgcn_target "amdgcn-amd-amdhsa--gfx600"
 ; GFX601: .amdgcn_target "amdgcn-amd-amdhsa--gfx601"
@@ -221,6 +222,7 @@
 ; GFX10_3_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa--gfx10-3-generic"
 ; GFX11_GENERIC:            .amdgcn_target "amdgcn-amd-amdhsa--gfx11-generic"
 ; GFX12_GENERIC:            .amdgcn_target "amdgcn-amd-amdhsa--gfx12-generic"
+; GFX12_5_GENERIC:          .amdgcn_target "amdgcn-amd-amdhsa--gfx12-5-generic"
 
 define amdgpu_kernel void @directive_amdgcn_target() {
   ret void

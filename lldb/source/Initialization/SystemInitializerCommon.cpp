@@ -35,9 +35,7 @@
 
 using namespace lldb_private;
 
-SystemInitializerCommon::SystemInitializerCommon(
-    HostInfo::SharedLibraryDirectoryHelper *helper)
-    : m_shlib_dir_helper(helper) {}
+SystemInitializerCommon::SystemInitializerCommon() = default;
 
 SystemInitializerCommon::~SystemInitializerCommon() = default;
 
@@ -68,7 +66,7 @@ llvm::Error SystemInitializerCommon::Initialize() {
 
   Diagnostics::Initialize();
   FileSystem::Initialize();
-  HostInfo::Initialize(m_shlib_dir_helper);
+  HostInfo::Initialize();
 
   llvm::Error error = Socket::Initialize();
   if (error)

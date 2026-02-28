@@ -79,13 +79,15 @@ protected:
 TEST_F(X86SelectionDAGTest, computeKnownBits_FAND) {
   SDLoc Loc;
 
-  auto SrcF32 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::f32);
+  auto SrcF32 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                    Register::index2VirtReg(1), MVT::f32);
   auto ZeroF32 = DAG->getConstantFP(+0.0, Loc, MVT::f32);
   auto OpF32 = DAG->getNode(X86ISD::FAND, Loc, MVT::f32, ZeroF32, SrcF32);
   KnownBits KnownF32 = DAG->computeKnownBits(OpF32);
   EXPECT_TRUE(KnownF32.isZero());
 
-  auto Src2xF64 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::v2f64);
+  auto Src2xF64 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                      Register::index2VirtReg(2), MVT::v2f64);
   auto ZeroF64 = DAG->getConstantFP(+0.0, Loc, MVT::f64);
   auto SignBitF64 = DAG->getConstantFP(-0.0, Loc, MVT::f64);
   auto LoZeroHiSign2xF64 =
@@ -103,13 +105,15 @@ TEST_F(X86SelectionDAGTest, computeKnownBits_FAND) {
 TEST_F(X86SelectionDAGTest, computeKnownBits_FANDN) {
   SDLoc Loc;
 
-  auto SrcF32 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::f32);
+  auto SrcF32 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                    Register::index2VirtReg(1), MVT::f32);
   auto SignBitF32 = DAG->getConstantFP(-0.0f, Loc, MVT::f32);
   auto OpF32 = DAG->getNode(X86ISD::FANDN, Loc, MVT::f32, SignBitF32, SrcF32);
   KnownBits KnownF32 = DAG->computeKnownBits(OpF32);
   EXPECT_TRUE(KnownF32.isNonNegative());
 
-  auto Src2xF64 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc, 1, MVT::v2f64);
+  auto Src2xF64 = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
+                                      Register::index2VirtReg(2), MVT::v2f64);
   auto ZeroF64 = DAG->getConstantFP(+0.0f, Loc, MVT::f64);
   auto SignBitF64 = DAG->getConstantFP(-0.0f, Loc, MVT::f64);
   auto HiSign2xF64 =
