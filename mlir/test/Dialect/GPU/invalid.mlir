@@ -207,6 +207,22 @@ module attributes {gpu.container_module} {
 // -----
 
 module attributes {gpu.container_module} {
+  module @kernels {
+    // expected-error@+1 {{'gpu.func' op expects parent op 'gpu.module'}}
+    gpu.func @kernel_1(%arg1 : !llvm.ptr) kernel {
+      gpu.return
+    }
+  }
+
+  func.func @launch_func_missing_kernel_attr(%sz : index, %arg : !llvm.ptr) {
+    gpu.launch_func @kernels::@kernel_1 blocks in (%sz, %sz, %sz) threads in (%sz, %sz, %sz) args(%arg : !llvm.ptr)
+    return
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
   gpu.module @kernels {
     gpu.func @kernel_1(%arg1 : !llvm.ptr) {
       gpu.return
