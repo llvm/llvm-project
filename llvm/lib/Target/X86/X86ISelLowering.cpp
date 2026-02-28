@@ -58917,11 +58917,6 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
       return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
                          RHS, LHS.getOperand(2));
     }
-
-    // Case: ADC(Y, X, CF) + 0 -> ADC(Y, X, CF)
-    if (C2 && C2->isZero()) {
-      return LHS;
-    }
   }
 
   // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
