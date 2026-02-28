@@ -1056,14 +1056,13 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
     inputLayout = inputLayout.dropInstData();
     targetLayout = targetLayout.dropInstData();
 
-    SmallVector<Type> convertedValTypes =
-        getUnrolledTypes(valueTy, *targetShape);
-    SmallVector<Value> convertedValues =
-        pack(op.getOperand(), convertedValTypes, *targetShape, loc, rewriter);
-
     Value newSource = op.getSource();
     SmallVector<Value> newOps;
     if (inputLayout && targetLayout) {
+      SmallVector<Type> convertedValTypes =
+          getUnrolledTypes(valueTy, *targetShape);
+      SmallVector<Value> convertedValues =
+          pack(op.getOperand(), convertedValTypes, *targetShape, loc, rewriter);
       for (auto [v, t] : llvm::zip(convertedValues, convertedValTypes)) {
         auto newOp = xegpu::ConvertLayoutOp::create(rewriter, op.getLoc(), t, v,
                                                     inputLayout, targetLayout);
@@ -1071,6 +1070,7 @@ struct UnrollConvertLayoutOp : public UnrollPattern<xegpu::ConvertLayoutOp> {
       }
       newSource = unpack(newOps, op.getType(), *targetShape, loc, rewriter);
     }
+
     rewriter.replaceOp(op, newSource);
     return success();
   }

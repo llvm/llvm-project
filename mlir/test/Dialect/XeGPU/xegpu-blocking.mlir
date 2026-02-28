@@ -615,6 +615,17 @@ gpu.module @test_kernel {
 
 // -----
 
+gpu.module @test_kernel {
+  // CHECK-LABEL: gpu.func @convert_layout_drop_slice_inst_data_to_null
+  // CHECK-NOT: xegpu.convert_layout
+  gpu.func @convert_layout_drop_slice_inst_data_to_null(%arg0: vector<1xf32>) -> vector<1xf32> {
+    %0 = xegpu.convert_layout %arg0 <{input_layout = #xegpu.layout<inst_data = [1]>, target_layout = #xegpu.slice<#xegpu.layout<inst_data = [1, 1, 16]>, dims = [1, 2]>}> : vector<1xf32>
+    gpu.return %0 : vector<1xf32>
+  }
+}
+
+// -----
+
 #lb = #xegpu.layout<inst_data = [4, 32, 2], lane_layout = [1, 16, 1], lane_data = [4, 1, 2]>
 #b = #xegpu.layout<inst_data = [4, 16, 2], lane_layout = [1, 16, 1], lane_data = [4, 1, 1]>
 
