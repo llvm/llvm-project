@@ -1342,6 +1342,8 @@ static uint64_t getEncodedGVSummaryFlags(GlobalValueSummary::GVFlags Flags,
   unsigned ImportType = Flags.ImportType | ImportAsDecl;
   RawFlags |= (ImportType << 10); // 1 bit
 
+  RawFlags |= (Flags.NoRenameOnPromotion << 11); // 1 bit
+
   return RawFlags;
 }
 
