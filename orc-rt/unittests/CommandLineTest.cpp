@@ -14,7 +14,6 @@ protected:
   CommandLineParser Parser;
 
   void SetUp() override {
-    // Host: -h, Help: -?, Port: -p, Verbose: -v
     Parser.addValue("host", "Hostname", std::string("localhost"), Host, CommandLineParser::OptionKind::Value, 'h');
     Parser.addFlag("help", "Display this help message", false, Help, '?');
     Parser.addValue("port", "Port number", 8080, Port, CommandLineParser::OptionKind::Value, 'p');
@@ -68,7 +67,6 @@ TEST_F(CommandLineParserTest, ParseFullConfiguration) {
 }
 
 TEST_F(CommandLineParserTest, ShortFlagClustering) {
-  // Tests combining -v and -?
   const char *Argv[] = {"appname", "-v?"};
   cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
   EXPECT_TRUE(Verbose);
@@ -76,7 +74,6 @@ TEST_F(CommandLineParserTest, ShortFlagClustering) {
 }
 
 TEST_F(CommandLineParserTest, ShortFlagWithValue) {
-  // Tests -p 1234 (separate) and -hlocalhost (joined)
   const char *Argv[] = {"appname", "-p", "1234", "-hlocalhost"};
   cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
   EXPECT_EQ(Port, 1234);
@@ -84,7 +81,6 @@ TEST_F(CommandLineParserTest, ShortFlagWithValue) {
 }
 
 TEST_F(CommandLineParserTest, ClusterWithValueAtEnd) {
-  // Tests flags followed immediately by a value: -vp9999
   const char *Argv[] = {"appname", "-vp9999"};
   cantFail(Parser.parse(std::begin(Argv), std::end(Argv)));
   EXPECT_TRUE(Verbose);
@@ -103,7 +99,6 @@ TEST_F(CommandLineParserTest, DoubleDashTerminatesOptionParsing) {
 }
 
 TEST_F(CommandLineParserTest, PrintHelpAlignmentWithShortFlags) {
-  // Add a long-only flag to test alignment padding
   std::string LogFile;
   Parser.addValue("log-file", "Path to log", std::string("out.log"), LogFile);
 
@@ -126,13 +121,11 @@ TEST_F(CommandLineParserTest, PrintHelpAlignmentWithShortFlags) {
   EXPECT_EQ(PortDescCol, LogDescCol) << "Descriptions should align even if short flag is missing";
   EXPECT_EQ(LogDescCol, VerbDescCol);
 
-  // Ensure the long-only flag is indented to match the "-x, --long" format
   size_t LogFlagPos = Result.find("--log-file");
   size_t PortFlagPos = Result.find("--port");
 
   size_t LogFlagCol = (LogFlagPos - Result.rfind('\n', LogFlagPos) - 1);
   size_t PortFlagCol = (PortFlagPos - Result.rfind('\n', PortFlagPos) - 1);
 
-  // --port is preceded by "-p, " (4 chars). --log-file should be preceded by 4 spaces.
   EXPECT_EQ(LogFlagCol, PortFlagCol);
 }
