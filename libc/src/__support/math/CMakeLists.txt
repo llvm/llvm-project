@@ -95,6 +95,21 @@ add_header_library(
 )
 
 add_header_library(
+  acospif
+  HDRS
+    acospif.h
+  DEPENDS
+    .inv_trigf_utils
+    libc.src.__support.FPUtil.fenv_implt
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.FPUtil.polyeval
+    libc.src.__support.FPUtil.cast
+    libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.macros.optimization
+)
+
+add_header_library(
   acospif16
   HDRS
     acospif16.h
@@ -177,12 +192,11 @@ add_header_library(
   HDRS
     asinpif.h
   DEPENDS
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.cast
+    .inv_trigf_utils
     libc.src.__support.FPUtil.except_value_utils
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
+    libc.src.__support.FPUtil.polyeval
     libc.src.__support.FPUtil.sqrt
     libc.src.__support.macros.optimization
 )
