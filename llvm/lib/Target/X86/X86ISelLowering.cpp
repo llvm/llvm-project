@@ -58898,7 +58898,6 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
 
   // Fold ADD(ADC(Y, C1, CF), C2) -> ADC(Y, C1 + C2, CF) and
   //      ADD(ADC(Y, 0, CF), X) -> ADC(Y, X, CF) and
-  //      ADD(ADC(Y, X, CF), 0) -> ADC(Y, X, CF)
   if (!IsSub && LHS.getOpcode() == X86ISD::ADC && LHS.hasOneUse() &&
       !needCarryOrOverflowFlag(SDValue(N, 1))) {
 
