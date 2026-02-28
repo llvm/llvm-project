@@ -1113,23 +1113,6 @@ LogicalResult ConvertLayoutOp::verify() {
   return mlir::success();
 }
 
-struct FoldConvertLayoutOp : public OpRewritePattern<xegpu::ConvertLayoutOp> {
-  using OpRewritePattern<xegpu::ConvertLayoutOp>::OpRewritePattern;
-  LogicalResult matchAndRewrite(xegpu::ConvertLayoutOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.getInputLayout() == op.getTargetLayout()) {
-      rewriter.replaceOp(op, op.getSource());
-      return success();
-    }
-    return failure();
-  }
-};
-
-void ConvertLayoutOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
-                                                  MLIRContext *context) {
-  patterns.add<FoldConvertLayoutOp>(context);
-}
-
 //===----------------------------------------------------------------------===//
 // XeGPU_LoadMatrixOp
 //===----------------------------------------------------------------------===//
