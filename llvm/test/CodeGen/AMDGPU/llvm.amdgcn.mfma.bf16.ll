@@ -455,17 +455,17 @@ define amdgpu_kernel void @test_mfma_f32_4x4x2bf16(ptr addrspace(1) %arg) #0 {
 ; GFX90A-VGPR:       ; %bb.0: ; %bb
 ; GFX90A-VGPR-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v4, 1
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, 2
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, 0
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, 2
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GFX90A-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
-; GFX90A-VGPR-NEXT:    v_mfma_f32_4x4x2bf16 v[0:3], v4, v6, v[0:3] cbsz:1 abid:2 blgp:3
+; GFX90A-VGPR-NEXT:    v_mfma_f32_4x4x2bf16 v[4:7], v4, v5, v[0:3] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-NEXT:    s_nop 4
-; GFX90A-VGPR-NEXT:    global_store_dwordx4 v5, v[0:3], s[6:7]
+; GFX90A-VGPR-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
 ; GFX90A-VGPR-NEXT:    s_endpgm
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
@@ -666,17 +666,17 @@ define amdgpu_kernel void @test_mfma_f32_16x16x8bf16(ptr addrspace(1) %arg) #0 {
 ; GFX90A-VGPR:       ; %bb.0: ; %bb
 ; GFX90A-VGPR-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x24
 ; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v4, 1
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v6, 2
-; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, 0
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v5, 2
+; GFX90A-VGPR-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX90A-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-NEXT:    s_load_dwordx4 s[0:3], s[6:7], 0x0
 ; GFX90A-VGPR-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[0:1], s[0:1], s[0:1] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    v_pk_mov_b32 v[2:3], s[2:3], s[2:3] op_sel:[0,1]
 ; GFX90A-VGPR-NEXT:    s_nop 1
-; GFX90A-VGPR-NEXT:    v_mfma_f32_16x16x8bf16 v[0:3], v4, v6, v[0:3] cbsz:1 abid:2 blgp:3
+; GFX90A-VGPR-NEXT:    v_mfma_f32_16x16x8bf16 v[4:7], v4, v5, v[0:3] cbsz:1 abid:2 blgp:3
 ; GFX90A-VGPR-NEXT:    s_nop 10
-; GFX90A-VGPR-NEXT:    global_store_dwordx4 v5, v[0:3], s[6:7]
+; GFX90A-VGPR-NEXT:    global_store_dwordx4 v8, v[4:7], s[6:7]
 ; GFX90A-VGPR-NEXT:    s_endpgm
 bb:
   %in.1 = load <4 x float>, ptr addrspace(1) %arg
