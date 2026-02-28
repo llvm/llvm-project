@@ -6,8 +6,7 @@ define <16 x i4> @avir_v2i4_v16i4(<2 x i4> %arg) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
-; CHECK-NEXT:    str d0, [sp, #8]
-; CHECK-NEXT:    ldr x8, [sp, #8]
+; CHECK-NEXT:    fmov x8, d0
 ; CHECK-NEXT:    and w10, w8, #0xf
 ; CHECK-NEXT:    ubfx w9, w8, #4, #4
 ; CHECK-NEXT:    fmov s0, w10

@@ -423,7 +423,8 @@ public:
       : Context(C), Out(Out_), NormalizeIntegers(NormalizeIntegers_),
         NullOut(false), Structor(nullptr), AbiTagsRoot(AbiTags) {}
   CXXNameMangler(CXXNameMangler &Outer, raw_ostream &Out_)
-      : Context(Outer.Context), Out(Out_), Structor(Outer.Structor),
+      : Context(Outer.Context), Out(Out_),
+        NormalizeIntegers(Outer.NormalizeIntegers), Structor(Outer.Structor),
         StructorType(Outer.StructorType), SeqID(Outer.SeqID),
         FunctionTypeDepth(Outer.FunctionTypeDepth), AbiTagsRoot(AbiTags),
         Substitutions(Outer.Substitutions),
@@ -633,6 +634,19 @@ NamespaceDecl *ItaniumMangleContextImpl::getStdNamespace() {
   return StdNamespace;
 }
 
+/// Retrieve the lambda associated with an init-capture variable.
+static const CXXRecordDecl *getLambdaForInitCapture(const VarDecl *VD) {
+  if (!VD || !VD->isInitCapture())
+    return nullptr;
+
+  const auto *Method = cast<CXXMethodDecl>(VD->getDeclContext());
+  const auto *Lambda = dyn_cast<CXXRecordDecl>(Method->getParent());
+  if (!Lambda || !Lambda->isLambda())
+    return nullptr;
+
+  return Lambda;
+}
+
 /// Retrieve the declaration context that should be used when mangling the given
 /// declaration.
 const DeclContext *
@@ -674,9 +688,18 @@ ItaniumMangleContextImpl::getEffectiveDeclContext(const Decl *D) {
     return getEffectiveDeclContext(cast<Decl>(DC));
   }
 
-  if (const auto *VD = dyn_cast<VarDecl>(D))
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (const CXXRecordDecl *Lambda = getLambdaForInitCapture(VD)) {
+      const DeclContext *ParentDC = getEffectiveParentContext(Lambda);
+      // Init-captures in local lambdas are mangled relative to the enclosing
+      // local context rather than operator() to avoid recursive local-name
+      // encoding through the call operator type.
+      if (isLocalContainerContext(ParentDC))
+        return ParentDC;
+    }
     if (VD->isExternC())
       return getASTContext().getTranslationUnitDecl();
+  }
 
   if (const auto *FD = getASTContext().getLangOpts().getClangABICompat() >
                                LangOptions::ClangABI::Ver19
@@ -1873,12 +1896,13 @@ void CXXNameMangler::mangleLocalName(GlobalDecl GD,
   {
     AbiTagState LocalAbiTags(AbiTags);
 
-    if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(DC))
+    if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(DC)) {
       mangleObjCMethodName(MD);
-    else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC))
+    } else if (const BlockDecl *BD = dyn_cast<BlockDecl>(DC)) {
       mangleBlockForPrefix(BD);
-    else
+    } else {
       mangleFunctionEncoding(getParentOfLocalEntity(DC));
+    }
 
     // Implicit ABI tags (from namespace) are not available in the following
     // entity; reset to actually emitted tags, which are available.
@@ -2277,6 +2301,9 @@ const NamedDecl *CXXNameMangler::getClosurePrefix(const Decl *ND) {
   const NamedDecl *Context = nullptr;
   if (auto *Block = dyn_cast<BlockDecl>(ND)) {
     Context = dyn_cast_or_null<NamedDecl>(Block->getBlockManglingContextDecl());
+  } else if (auto *VD = dyn_cast<VarDecl>(ND)) {
+    if (const CXXRecordDecl *Lambda = getLambdaForInitCapture(VD))
+      Context = dyn_cast_or_null<NamedDecl>(Lambda->getLambdaContextDecl());
   } else if (auto *RD = dyn_cast<CXXRecordDecl>(ND)) {
     if (RD->isLambda())
       Context = dyn_cast_or_null<NamedDecl>(RD->getLambdaContextDecl());
@@ -2284,8 +2311,8 @@ const NamedDecl *CXXNameMangler::getClosurePrefix(const Decl *ND) {
   if (!Context)
     return nullptr;
 
-  // Only lambdas within the initializer of a non-local variable or non-static
-  // data member get a <closure-prefix>.
+  // Only entities associated with lambdas within the initializer of a
+  // non-local variable or non-static data member get a <closure-prefix>.
   if ((isa<VarDecl>(Context) && cast<VarDecl>(Context)->hasGlobalStorage()) ||
       isa<FieldDecl>(Context))
     return Context;
@@ -2411,6 +2438,7 @@ bool CXXNameMangler::mangleUnresolvedTypeOrSimpleId(QualType Ty,
   case Type::Paren:
   case Type::Attributed:
   case Type::BTFTagAttributed:
+  case Type::OverflowBehavior:
   case Type::HLSLAttributedResource:
   case Type::HLSLInlineSpirv:
   case Type::Auto:
@@ -4586,6 +4614,17 @@ void CXXNameMangler::mangleType(const PipeType *T) {
   Out << "8ocl_pipe";
 }
 
+void CXXNameMangler::mangleType(const OverflowBehaviorType *T) {
+  // Vender-extended type mangling for OverflowBehaviorType
+  // <type> ::= U <behavior> <underlying_type>
+  if (T->isWrapKind()) {
+    Out << "U8ObtWrap_";
+  } else {
+    Out << "U8ObtTrap_";
+  }
+  mangleType(T->getUnderlyingType());
+}
+
 void CXXNameMangler::mangleType(const BitIntType *T) {
   // 5.1.5.2 Builtin types
   // <type> ::= DB <number | instantiation-dependent expression> _
@@ -4951,11 +4990,18 @@ recurse:
     E = cast<ConstantExpr>(E)->getSubExpr();
     goto recurse;
 
+  case Expr::CXXReflectExprClass: {
+    // TODO(Reflection): implement this after introducing std::meta::info
+    assert(false && "unimplemented");
+    break;
+  }
+
   // FIXME: invent manglings for all these.
   case Expr::BlockExprClass:
   case Expr::ChooseExprClass:
   case Expr::CompoundLiteralExprClass:
   case Expr::ExtVectorElementExprClass:
+  case Expr::MatrixElementExprClass:
   case Expr::GenericSelectionExprClass:
   case Expr::ObjCEncodeExprClass:
   case Expr::ObjCIsaExprClass:

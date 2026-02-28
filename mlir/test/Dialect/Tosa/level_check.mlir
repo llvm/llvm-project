@@ -1004,7 +1004,7 @@ func.func @test_tensor_size_valid(%arg0: tensor<1x536870911xf32>) {
 
 func.func @test_slice_tensor_size_invalid(%arg0: tensor<1x536870912xf32>) {
   %0 = tosa.const_shape {values = dense<0> : tensor<2xindex>} : () -> !tosa.shape<2>
-  %1 = tosa.const_shape {values = dense<536870912> : tensor<2xindex>} : () -> !tosa.shape<2>
+  %1 = tosa.const_shape {values = dense<[1, 1]> : tensor<2xindex>} : () -> !tosa.shape<2>
   // expected-error@+1 {{'tosa.slice' op failed level check: operand tensor size (in bytes) <= (1 << MAX_LOG2_SIZE - 1)}}
   %2= tosa.slice %arg0, %0, %1 : (tensor<1x536870912xf32>, !tosa.shape<2>, !tosa.shape<2>) -> tensor<1x1xf32>
   return
@@ -1689,34 +1689,6 @@ func.func @test_dim(%arg0: tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1> {
   // expected-error@+1 {{'tosa.dim' op failed level check: operand rank(shape) <= MAX_RANK}}
   %0 = tosa.dim %arg0 {axis = 2 : i32} : (tensor<1x2x3x4x5x6x7x8xi32>) -> !tosa.shape<1>
   return %0 : !tosa.shape<1>
-}
-
-// -----
-
-func.func @test_concat_shape_invalid_list_size() {
-  %0 = tosa.const_shape {values = dense<[]> : tensor<0xindex>} : () -> !tosa.shape<0>
-  // expected-error@+1 {{'tosa.concat_shape' op failed level check: length(tensor_list_shape(input)) <= MAX_TENSOR_LIST_SIZE (64), got 65}}
-  %1 = tosa.concat_shape %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0, %0, %0, %0, %0, %0, %0, %0,
-                         %0 :
-                         (
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>, !tosa.shape<0>,
-                          !tosa.shape<0>
-                         ) -> !tosa.shape<0>
-  return
 }
 
 // -----

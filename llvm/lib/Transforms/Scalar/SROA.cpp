@@ -2051,99 +2051,6 @@ static bool canConvertValue(const DataLayout &DL, Type *OldTy, Type *NewTy,
   return true;
 }
 
-/// Generic routine to convert an SSA value to a value of a different
-/// type.
-///
-/// This will try various different casting techniques, such as bitcasts,
-/// inttoptr, and ptrtoint casts. Use the \c canConvertValue predicate to test
-/// two types for viability with this routine.
-static Value *convertValue(const DataLayout &DL, IRBuilderTy &IRB, Value *V,
-                           Type *NewTy) {
-  Type *OldTy = V->getType();
-
-#ifndef NDEBUG
-  BasicBlock *BB = IRB.GetInsertBlock();
-  assert(BB && BB->getParent() && "VScale unknown!");
-  unsigned VScale = BB->getParent()->getVScaleValue();
-  assert(canConvertValue(DL, OldTy, NewTy, VScale) &&
-         "Value not convertable to type");
-#endif
-
-  if (OldTy == NewTy)
-    return V;
-
-  assert(!(isa<IntegerType>(OldTy) && isa<IntegerType>(NewTy)) &&
-         "Integer types must be the exact same to convert.");
-
-  // A variant of bitcast that supports a mixture of fixed and scalable types
-  // that are know to have the same size.
-  auto CreateBitCastLike = [&IRB](Value *In, Type *Ty) -> Value * {
-    Type *InTy = In->getType();
-    if (InTy == Ty)
-      return In;
-
-    if (isa<FixedVectorType>(InTy) && isa<ScalableVectorType>(Ty)) {
-      // For vscale_range(2) expand <4 x i32> to <vscale x 4 x i16> -->
-      //   <4 x i32> to <vscale x 2 x i32> to <vscale x 4 x i16>
-      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(Ty), InTy);
-      return IRB.CreateBitCast(IRB.CreateInsertVector(VTy,
-                                                      PoisonValue::get(VTy), In,
-                                                      IRB.getInt64(0)),
-                               Ty);
-    }
-
-    if (isa<ScalableVectorType>(InTy) && isa<FixedVectorType>(Ty)) {
-      // For vscale_range(2) expand <vscale x 4 x i16> to <4 x i32> -->
-      //   <vscale x 4 x i16> to <vscale x 2 x i32> to <4 x i32>
-      auto *VTy = VectorType::getWithSizeAndScalar(cast<VectorType>(InTy), Ty);
-      return IRB.CreateExtractVector(Ty, IRB.CreateBitCast(In, VTy),
-                                     IRB.getInt64(0));
-    }
-
-    return IRB.CreateBitCast(In, Ty);
-  };
-
-  // See if we need inttoptr for this type pair. May require additional bitcast.
-  if (OldTy->isIntOrIntVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
-    // Expand <2 x i32> to i8* --> <2 x i32> to i64 to i8*
-    // Expand i128 to <2 x i8*> --> i128 to <2 x i64> to <2 x i8*>
-    // Expand <4 x i32> to <2 x i8*> --> <4 x i32> to <2 x i64> to <2 x i8*>
-    // Directly handle i64 to i8*
-    return IRB.CreateIntToPtr(CreateBitCastLike(V, DL.getIntPtrType(NewTy)),
-                              NewTy);
-  }
-
-  // See if we need ptrtoint for this type pair. May require additional bitcast.
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isIntOrIntVectorTy()) {
-    // Expand <2 x i8*> to i128 --> <2 x i8*> to <2 x i64> to i128
-    // Expand i8* to <2 x i32> --> i8* to i64 to <2 x i32>
-    // Expand <2 x i8*> to <4 x i32> --> <2 x i8*> to <2 x i64> to <4 x i32>
-    // Expand i8* to i64 --> i8* to i64 to i64
-    return CreateBitCastLike(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
-                             NewTy);
-  }
-
-  if (OldTy->isPtrOrPtrVectorTy() && NewTy->isPtrOrPtrVectorTy()) {
-    unsigned OldAS = OldTy->getPointerAddressSpace();
-    unsigned NewAS = NewTy->getPointerAddressSpace();
-    // To convert pointers with different address spaces (they are already
-    // checked convertible, i.e. they have the same pointer size), so far we
-    // cannot use `bitcast` (which has restrict on the same address space) or
-    // `addrspacecast` (which is not always no-op casting). Instead, use a pair
-    // of no-op `ptrtoint`/`inttoptr` casts through an integer with the same bit
-    // size.
-    if (OldAS != NewAS) {
-      assert(DL.getPointerSize(OldAS) == DL.getPointerSize(NewAS));
-      return IRB.CreateIntToPtr(
-          CreateBitCastLike(IRB.CreatePtrToInt(V, DL.getIntPtrType(OldTy)),
-                            DL.getIntPtrType(NewTy)),
-          NewTy);
-    }
-  }
-
-  return CreateBitCastLike(V, NewTy);
-}
-
 /// Test whether the given slice use can be promoted to a vector.
 ///
 /// This function is called to test each entry in a partition which is slated
@@ -3243,7 +3150,7 @@ private:
     assert(!LI.isVolatile());
     Value *V =
         IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
-    V = convertValue(DL, IRB, V, IntTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, IntTy);
     assert(NewBeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
     if (Offset > 0 || NewEndOffset < NewAllocaEndOffset) {
@@ -3336,7 +3243,7 @@ private:
       V = NewLI;
       IsPtrAdjusted = true;
     }
-    V = convertValue(DL, IRB, V, TargetTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, TargetTy);
 
     if (IsSplit) {
       assert(!LI.isVolatile());
@@ -3391,7 +3298,7 @@ private:
                           ? ElementTy
                           : FixedVectorType::get(ElementTy, NumElements);
       if (V->getType() != SliceTy)
-        V = convertValue(DL, IRB, V, SliceTy);
+        V = IRB.CreateBitPreservingCastChain(DL, V, SliceTy);
 
       // Mix in the existing elements.
       Value *Old =
@@ -3420,12 +3327,12 @@ private:
         IntTy->getBitWidth()) {
       Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
                                          "oldload");
-      Old = convertValue(DL, IRB, Old, IntTy);
+      Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
       assert(BeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
       uint64_t Offset = BeginOffset - NewAllocaBeginOffset;
       V = insertInteger(DL, IRB, Old, SI.getValueOperand(), Offset, "insert");
     }
-    V = convertValue(DL, IRB, V, NewAllocaTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
     Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
@@ -3477,7 +3384,7 @@ private:
     if (NewBeginOffset == NewAllocaBeginOffset &&
         NewEndOffset == NewAllocaEndOffset &&
         canConvertValue(DL, V->getType(), NewAllocaTy)) {
-      V = convertValue(DL, IRB, V, NewAllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
       Value *NewPtr =
           getPtrToNewAI(SI.getPointerAddressSpace(), SI.isVolatile());
 
@@ -3628,7 +3535,7 @@ private:
 
       Value *Splat = getIntegerSplat(
           II.getValue(), DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8);
-      Splat = convertValue(DL, IRB, Splat, ElementTy);
+      Splat = IRB.CreateBitPreservingCastChain(DL, Splat, ElementTy);
       if (NumElements > 1)
         Splat = getVectorSplat(Splat, NumElements);
 
@@ -3643,18 +3550,18 @@ private:
       uint64_t Size = NewEndOffset - NewBeginOffset;
       V = getIntegerSplat(II.getValue(), Size);
 
-      if (IntTy && (BeginOffset != NewAllocaBeginOffset ||
-                    EndOffset != NewAllocaBeginOffset)) {
+      if (IntTy && (NewBeginOffset != NewAllocaBeginOffset ||
+                    NewEndOffset != NewAllocaEndOffset)) {
         Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI,
                                            NewAI.getAlign(), "oldload");
-        Old = convertValue(DL, IRB, Old, IntTy);
+        Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
         uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
         V = insertInteger(DL, IRB, Old, V, Offset, "insert");
       } else {
         assert(V->getType() == IntTy &&
                "Wrong type for an alloca wide integer!");
       }
-      V = convertValue(DL, IRB, V, NewAllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     } else {
       // Established these invariants above.
       assert(NewBeginOffset == NewAllocaBeginOffset);
@@ -3666,7 +3573,7 @@ private:
         V = getVectorSplat(
             V, cast<FixedVectorType>(AllocaVecTy)->getNumElements());
 
-      V = convertValue(DL, IRB, V, NewAllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     }
 
     Value *NewPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
@@ -3868,7 +3775,7 @@ private:
     } else if (IntTy && !IsWholeAlloca && !IsDest) {
       Src =
           IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
-      Src = convertValue(DL, IRB, Src, IntTy);
+      Src = IRB.CreateBitPreservingCastChain(DL, Src, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
     } else {
@@ -3889,10 +3796,10 @@ private:
     } else if (IntTy && !IsWholeAlloca && IsDest) {
       Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
                                          "oldload");
-      Old = convertValue(DL, IRB, Old, IntTy);
+      Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = insertInteger(DL, IRB, Old, Src, Offset, "insert");
-      Src = convertValue(DL, IRB, Src, NewAllocaTy);
+      Src = IRB.CreateBitPreservingCastChain(DL, Src, NewAllocaTy);
     }
 
     StoreInst *Store = cast<StoreInst>(
