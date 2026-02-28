@@ -12,7 +12,8 @@ from __future__ import annotations
 import os, sys
 
 path = os.path.abspath(os.path.dirname(__file__))
-sys.path.remove(path)
+if path in sys.path:
+    sys.path.remove(path)
 
 import re
 import io
