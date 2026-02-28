@@ -2126,6 +2126,10 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
       return failure();
     if (!attr || !attr.isSplat())
       return failure();
+    // DenseElementsAttr requires a static shape; skip folding for dynamic
+    // result types.
+    if (!reshapeOp.getResultType().hasStaticShape())
+      return failure();
     DenseElementsAttr newAttr = DenseElementsAttr::getFromRawBuffer(
         reshapeOp.getResultType(), attr.getRawData());
     rewriter.replaceOpWithNewOp<arith::ConstantOp>(reshapeOp, newAttr);
