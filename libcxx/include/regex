@@ -5107,8 +5107,19 @@ bool basic_regex<_CharT, _Traits>::__search(
     const _CharT* __last,
     match_results<const _CharT*, _Allocator>& __m,
     regex_constants::match_flag_type __flags) const {
-  if (__flags & regex_constants::match_prev_avail)
-    __flags &= ~(regex_constants::match_not_bol | regex_constants::match_not_bow);
+  if (__flags & regex_constants::match_prev_avail){
+    if (flags() & std::regex_constants::multiline){
+      if (*__first != '\n'  && *__first != '\r'){
+        __flags |= std::regex_constants::match_not_bol;
+      }
+    }
+    else{
+      __flags |= std::regex_constants::match_not_bol;
+    }
+    if (isalnum(*__first)) {
+      __flags |= std::regex_constants::match_not_bow;
+    }
+  }
 
   __m.__init(1 + mark_count(), __first, __last, __flags & regex_constants::__no_update_pos);
   if (__match_at_start(__first, __last, __m, __flags, !(__flags & regex_constants::__no_update_pos))) {
