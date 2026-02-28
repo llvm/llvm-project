@@ -119,6 +119,9 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
            inferScalarType(R->getOperand(1))->isIntegerTy(1) &&
            "LogicalAnd/Or operands should be bool");
     return IntegerType::get(Ctx, 1);
+  case VPInstruction::MaskedCond:
+    assert(inferScalarType(R->getOperand(0))->isIntegerTy(1));
+    return IntegerType::get(Ctx, 1);
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
@@ -279,7 +282,7 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
           .Case<VPActiveLaneMaskPHIRecipe, VPFirstOrderRecurrencePHIRecipe,
                 VPReductionPHIRecipe, VPWidenPointerInductionRecipe,
-                VPEVLBasedIVPHIRecipe>([this](const auto *R) {
+                VPCurrentIterationPHIRecipe>([this](const auto *R) {
             // Handle header phi recipes, except VPWidenIntOrFpInduction
             // which needs special handling due it being possibly truncated.
             // TODO: consider inferring/caching type of siblings, e.g.,
@@ -553,7 +556,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
 
         if (VFs[J].isScalar() ||
             isa<VPRegionValue, VPReplicateRecipe, VPDerivedIVRecipe,
-                VPEVLBasedIVPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
+                VPCurrentIterationPHIRecipe, VPScalarIVStepsRecipe>(VPV) ||
             (isa<VPInstruction>(VPV) && vputils::onlyScalarValuesUsed(VPV)) ||
             (isa<VPReductionPHIRecipe>(VPV) &&
              (cast<VPReductionPHIRecipe>(VPV))->isInLoop())) {

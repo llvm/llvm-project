@@ -97,13 +97,15 @@ void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::codegenoptions::DebugInfoKind debugLevel,
                       llvm::OptimizationLevel optLevel,
                       llvm::StringRef inputFilename, int32_t dwarfVersion,
-                      llvm::StringRef splitDwarfFile) {
+                      llvm::StringRef splitDwarfFile,
+                      llvm::StringRef dwarfDebugFlags) {
   fir::AddDebugInfoOptions options;
   options.debugLevel = getEmissionKind(debugLevel);
   options.isOptimized = optLevel != llvm::OptimizationLevel::O0;
   options.inputFilename = inputFilename;
   options.dwarfVersion = dwarfVersion;
   options.splitDwarfFile = splitDwarfFile;
+  options.dwarfDebugFlags = dwarfDebugFlags;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
@@ -347,7 +349,11 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
   pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
-  pm.addPass(flangomp::createMarkDeclareTargetPass());
+  pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+
+  // Delete unreachable target operations before FunctionFilteringPass
+  // extracts them.
+  pm.addPass(flangomp::createDeleteUnreachableTargetsPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
   if (opts.isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
@@ -357,10 +363,11 @@ void createDebugPasses(mlir::PassManager &pm,
                        llvm::codegenoptions::DebugInfoKind debugLevel,
                        llvm::OptimizationLevel OptLevel,
                        llvm::StringRef inputFilename, int32_t dwarfVersion,
-                       llvm::StringRef splitDwarfFile) {
+                       llvm::StringRef splitDwarfFile,
+                       llvm::StringRef dwarfDebugFlags) {
   if (debugLevel != llvm::codegenoptions::NoDebugInfo)
     addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename, dwarfVersion,
-                     splitDwarfFile);
+                     splitDwarfFile, dwarfDebugFlags);
 }
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
@@ -379,7 +386,8 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
   fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename,
-                         config.DwarfVersion, config.SplitDwarfFile);
+                         config.DwarfVersion, config.SplitDwarfFile,
+                         config.DwarfDebugFlags);
   fir::addTargetRewritePass(pm);
   fir::addCompilerGeneratedNamesConversionPass(pm);
 

@@ -1752,7 +1752,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
 TEST_F(VPRecipeTest, CastToVPSingleDefRecipe) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Start = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
-  VPEVLBasedIVPHIRecipe R(Start, {});
+  VPCurrentIterationPHIRecipe R(Start, {});
   VPRecipeBase *B = &R;
   EXPECT_TRUE(isa<VPSingleDefRecipe>(B));
   // TODO: check other VPSingleDefRecipes.
