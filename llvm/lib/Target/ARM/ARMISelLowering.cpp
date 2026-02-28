@@ -1370,18 +1370,13 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
       setOperationAction(ISD::FMINIMUM, MVT::v8f16, Legal);
       setOperationAction(ISD::FMAXIMUM, MVT::v8f16, Legal);
 
-      setOperationAction(ISD::FFLOOR, MVT::v4f16, Legal);
-      setOperationAction(ISD::FFLOOR, MVT::v8f16, Legal);
-      setOperationAction(ISD::FROUND, MVT::v4f16, Legal);
-      setOperationAction(ISD::FROUND, MVT::v8f16, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v4f16, Legal);
-      setOperationAction(ISD::FROUNDEVEN, MVT::v8f16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v4f16, Legal);
-      setOperationAction(ISD::FCEIL, MVT::v8f16, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v4f16, Legal);
-      setOperationAction(ISD::FTRUNC, MVT::v8f16, Legal);
-      setOperationAction(ISD::FRINT, MVT::v4f16, Legal);
-      setOperationAction(ISD::FRINT, MVT::v8f16, Legal);
+      for (auto Op : {ISD::FROUND, ISD::STRICT_FROUND, ISD::FROUNDEVEN,
+                      ISD::STRICT_FROUNDEVEN, ISD::FTRUNC, ISD::STRICT_FTRUNC,
+                      ISD::FRINT, ISD::STRICT_FRINT, ISD::FFLOOR,
+                      ISD::STRICT_FFLOOR, ISD::FCEIL, ISD::STRICT_FCEIL}) {
+        setOperationAction(Op, MVT::v4f16, Legal);
+        setOperationAction(Op, MVT::v8f16, Legal);
+      }
     }
   }
 
