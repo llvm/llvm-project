@@ -31,14 +31,13 @@ struct Atan2f16Checker : public virtual LIBC_NAMESPACE::testing::Test {
       do {
         float16 y = FPBits(ybits).get_val();
         mpfr::BinaryInput<float16> input{y, x}; // atan2(y, x)
-        // Allow 1 ULP: atan2f16 is implemented with ~1 ULP accuracy.
         bool correct = TEST_MPFR_MATCH_ROUNDING_SILENTLY(
-            mpfr::Operation::Atan2, input, LIBC_NAMESPACE::atan2f16(y, x), 1.5,
+            mpfr::Operation::Atan2, input, LIBC_NAMESPACE::atan2f16(y, x), 0.5,
             rounding);
         failed += (!correct);
         if (!correct) {
           EXPECT_MPFR_MATCH_ROUNDING(mpfr::Operation::Atan2, input,
-                                     LIBC_NAMESPACE::atan2f16(y, x), 1.5,
+                                     LIBC_NAMESPACE::atan2f16(y, x), 0.5,
                                      rounding);
         }
       } while (ybits++ < y_stop);
