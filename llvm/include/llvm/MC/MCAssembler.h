@@ -112,6 +112,7 @@ private:
   void relaxInstruction(MCFragment &F);
   void relaxLEB(MCFragment &F);
   void relaxBoundaryAlign(MCBoundaryAlignFragment &BF);
+  void relaxPrefAlign(MCFragment &F);
   void relaxDwarfLineAddr(MCFragment &F);
   void relaxDwarfCallFrameFragment(MCFragment &F);
   void relaxSFrameFragment(MCFragment &DF);

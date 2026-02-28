@@ -219,6 +219,9 @@ uint64_t MCAssembler::computeFragmentSize(const MCFragment &F) const {
     return Size;
   }
 
+  case MCFragment::FT_PrefAlign:
+    return F.getSize();
+
   case MCFragment::FT_Nops:
     return cast<MCNopsFragment>(F).getNumBytes();
 
@@ -451,6 +454,23 @@ static void writeFragment(raw_ostream &OS, const MCAssembler &Asm,
     }
   } break;
 
+  case MCFragment::FT_PrefAlign: {
+    OS << StringRef(F.getContents().data(), F.getContents().size());
+    uint64_t PadSize = FragmentSize - F.getContents().size();
+    if (F.getPrefAlignEmitNops()) {
+      if (!Asm.getBackend().writeNopData(OS, PadSize, F.getSubtargetInfo()))
+        reportFatalInternalError("unable to write nop sequence of " +
+                                 Twine(PadSize) + " bytes");
+    } else if (F.getPrefAlignFill() == 0) {
+      OS.write_zeros(PadSize);
+    } else {
+      char B = char(F.getPrefAlignFill());
+      for (uint64_t I = 0; I < PadSize; ++I)
+        OS << B;
+    }
+    break;
+  }
+
   case MCFragment::FT_Fill: {
     ++stats::EmittedFillFragments;
     const MCFillFragment &FF = cast<MCFillFragment>(F);
@@ -583,6 +603,10 @@ void MCAssembler::writeSectionData(raw_ostream &OS,
         // Disallowed for API usage. AsmParser changes non-zero fill values to
         // 0.
         assert(F.getAlignFill() == 0 && "Invalid align in virtual section!");
+        break;
+      case MCFragment::FT_PrefAlign:
+        assert(!F.getPrefAlignEmitNops() && F.getPrefAlignFill() == 0 &&
+               "Invalid align in BSS");
         break;
       case MCFragment::FT_Fill:
         HasNonZero = cast<MCFillFragment>(F).getValue() != 0;
@@ -884,6 +908,39 @@ void MCAssembler::relaxBoundaryAlign(MCBoundaryAlignFragment &BF) {
   BF.setSize(NewSize);
 }
 
+void MCAssembler::relaxPrefAlign(MCFragment &F) {
+  const MCSymbol &End = F.getPrefAlignEnd();
+  if (!End.getFragment() || End.getFragment()->getParent() != F.getParent()) {
+    recordError(SMLoc(), "end symbol '" + End.getName() +
+                             "' must be a symbol in the current section");
+    return;
+  }
+  uint64_t EndOffset;
+  if (!getSymbolOffset(End, EndOffset))
+    return;
+  // RawStart is the start of the (variable) padding region; StartOffset is
+  // the start of the body (RawStart plus current padding). BodySize is
+  // measured from StartOffset, not RawStart, so that padding is not counted
+  // as part of the body.
+  uint64_t RawStart = F.Offset + F.getFixedSize();
+  uint64_t StartOffset = RawStart + F.getVarSize();
+  Align NewAlign;
+  if (StartOffset < EndOffset) {
+    uint64_t BodySize = EndOffset - StartOffset;
+    if (BodySize < F.getPrefAlignPreferred().value())
+      NewAlign = Align(NextPowerOf2(BodySize - 1));
+    else
+      NewAlign = F.getPrefAlignPreferred();
+  }
+  F.setPrefAlignComputed(NewAlign);
+  // Compute padding to align the body start to NewAlign.
+  uint64_t NewPadSize = offsetToAlignment(RawStart, NewAlign);
+  F.VarContentStart = F.getFixedSize();
+  F.VarContentEnd = F.VarContentStart + NewPadSize;
+  if (F.VarContentEnd > F.getParent()->ContentStorage.size())
+    F.getParent()->ContentStorage.resize(F.VarContentEnd);
+}
+
 void MCAssembler::relaxDwarfLineAddr(MCFragment &F) {
   if (getBackend().relaxDwarfLineAddr(F))
     return;
@@ -962,6 +1019,9 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
   case MCFragment::FT_BoundaryAlign:
     relaxBoundaryAlign(static_cast<MCBoundaryAlignFragment &>(F));
     break;
+  case MCFragment::FT_PrefAlign:
+    relaxPrefAlign(F);
+    break;
   case MCFragment::FT_CVInlineLines:
     getContext().getCVContext().encodeInlineLineTable(
         *this, static_cast<MCCVInlineLineTableFragment &>(F));
@@ -979,6 +1039,9 @@ bool MCAssembler::relaxFragment(MCFragment &F) {
 
 void MCAssembler::layoutSection(MCSection &Sec) {
   uint64_t Offset = 0;
+  // Note: fragments are not relaxed here. Some fragments depend on
+  // downstream symbols whose offsets have not been set in this pass yet.
+  // They are instead relaxed by relaxFragment.
   for (MCFragment &F : Sec) {
     F.Offset = Offset;
     if (F.getKind() == MCFragment::FT_Align) {
