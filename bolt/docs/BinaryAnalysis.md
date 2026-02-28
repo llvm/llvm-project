@@ -89,14 +89,49 @@ attacks by making sure that return addresses are only ever stored to memory
 in a signed form. This makes it substantially harder for attackers to divert
 control flow by overwriting a return address with a different value.
 
+It is possible to link object files with different pac-ret hardening modes together,
+as each particular function is responsible for signing the LR value in the prologue
+and authenticating it in the epilogue. Other hardening variants exist that break
+ABI compatibility, see the description of
+[PAuth ABI Extensions](https://github.com/ARM-software/abi-aa/blob/main/pauthabielf64/pauthabielf64.rst)
+for details. While pac-ret hardens (signs and authenticates) return addresses,
+PAuth ABI may harden most other code pointers as well, such as function pointers
+and labels used as the destination of computed goto.
+
 The approach to validation of Pointer Authentication hardening implemented in
-`llvm-bolt-binary-analysis` is tracking register safety using dataflow analysis.
+`llvm-bolt-binary-analysis` is tracking register properties using dataflow analysis.
 At each program point it is computed whether the particular register can be
 controlled and whether it can be inspected by an attacker under the
 [Pointer Authentication threat model](https://clang.llvm.org/docs/PointerAuthentication.html#theory-of-operation).
 Then, for a number of sensitive instruction kinds (such as function calls and
 pointer signing instructions), the properties of input or output operands are
 inspected to check if the particular instruction is emitted in a safe manner.
+For example, for a return instruction this usually means that either the link
+register (x30) was never clobbered in the function or that it was authenticated
+at some point and never written to since then:
+
+```
+foo:
+    ; x30 is assumed to be trusted on function entry
+  cbnz    x0, .L1
+    ; For every possible execution path leading to this point, x30 was never
+    ; clobbered and is thus safe to be used by `ret`.
+  ret
+.L1:
+  paciasp
+  stp     x29, x30, [sp, #-16]!
+  mov     x29, sp
+
+  bl      bar
+
+  ldp     x29, x30, [sp], #16
+  autiasp
+    ; At this point, x30 was never written to since `autiasp`.
+  ret
+```
+
+The real rules being used by `llvm-bolt-binary-analysis` are somewhat more
+complex, see the below sections for the detailed explanation.
 
 ## Usage
 
@@ -114,8 +149,8 @@ other relevant BOLT options can generally be passed, see `llvm-bolt --help-hidde
 Incomplete help message is a known issue and is tracked in
 [#176969](https://github.com/llvm/llvm-project/issues/176969).
 
-The only analysis which is currently implemented is validation of Pointer
-Authentication hardening applied to the binary.
+The only analysis which is currently implemented is validation of a number of
+Pointer Authentication-based hardening schemes such as pac-ret and PAuth ABI.
 The specific set of gadget kinds which are searched for depends on command line
 options. Each gadget found by PtrAuth gadget scanner results in a plain text
 report printed at the end of the analysis.
@@ -166,7 +201,7 @@ First, the register properties are computed by analyzing the function as a whole
 Then, the instructions are considered in isolation. For each kind of gadget,
 the set of susceptible instructions is computed. The properties of input or
 output registers of each such instruction are analyzed and reports are produced
-for unsafe instruction usage.
+for each detected gadget.
 
 Each gadget kind that is searched for can be characterized by the combination of
 * the set of instructions to analyze
