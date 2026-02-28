@@ -120,7 +120,10 @@ function(llvm_update_pch name)
   foreach(lib ${libs})
     if(TARGET ${lib})
       get_target_property(lib_pch_priority ${lib} LLVM_PCH_PRIORITY)
-      if(${lib_pch_priority} GREATER ${pch_priority})
+      # Recent CMake versions warn if PCH is disabled but REUSE_FROM is set.
+      # Ensure that the PCH actually exists before considering reuse.
+      get_target_property(lib_disable_pch ${lib} DISABLE_PRECOMPILE_HEADERS)
+      if(${lib_pch_priority} GREATER ${pch_priority} AND NOT ${lib_disable_pch})
         set(pch_priority ${lib_pch_priority})
         set(pch_reuse ${lib})
       endif()
@@ -633,7 +636,12 @@ function(llvm_add_library name)
     # Do add_dependencies(obj) later due to CMake issue 14747.
     list(APPEND objlibs ${obj_name})
 
-    # Bring in the target include directories from our original target.
+    # Bring in the target include directories and link info from our original
+    # target. target_link_libraries propagates transitive dependencies with
+    # proper SYSTEM include handling from IMPORTED targets.
+    # target_include_directories propagates include directories set directly on
+    # the target.
+    target_link_libraries(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},LINK_LIBRARIES>)
     target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
 
     set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
@@ -751,9 +759,12 @@ function(llvm_add_library name)
     llvm_update_compile_flags(${name})
     llvm_update_pch(${name})
   else()
-    target_precompile_headers(${name} REUSE_FROM ${obj_name})
-    get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
-    set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
+    if(NOT ${lib_disable_pch})
+      target_precompile_headers(${name} REUSE_FROM ${obj_name})
+      get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
+      set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    endif()
   endif()
   add_link_opts( ${name} )
   if(ARG_OUTPUT_NAME)
@@ -1085,6 +1096,8 @@ macro(generate_llvm_objects name)
 
     set(INITLLVM_ARGS "")
 
+    # When Clang is invoked as an OS utility (e.g., c17), it needs to follow the POSIX specification
+    # for how utilities respond to signals.
     if(${name} STREQUAL "clang")
       set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
     endif()
@@ -1169,9 +1182,12 @@ macro(add_llvm_executable name)
     llvm_update_compile_flags(${name})
     llvm_update_pch(${name})
   elseif(NOT ARG_DISABLE_PCH_REUSE)
-    target_precompile_headers(${name} REUSE_FROM ${obj_name})
-    get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
-    set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    get_target_property(lib_disable_pch ${obj_name} DISABLE_PRECOMPILE_HEADERS)
+    if(NOT ${lib_disable_pch})
+      target_precompile_headers(${name} REUSE_FROM ${obj_name})
+      get_target_property(pch_priority ${obj_name} LLVM_PCH_PRIORITY)
+      set_target_properties(${name} PROPERTIES LLVM_PCH_PRIORITY ${pch_priority})
+    endif()
   endif()
 
   if (ARG_SUPPORT_PLUGINS AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")

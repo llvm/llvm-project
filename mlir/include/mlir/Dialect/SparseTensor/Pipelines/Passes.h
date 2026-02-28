@@ -118,9 +118,9 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
       desc("Enables the use of ArmSVE dialect while lowering the vector "
            "dialect"),
       init(false)};
-  PassOptions::Option<bool> x86Vector{
-      *this, "enable-x86vector",
-      desc("Enables the use of X86Vector dialect while lowering the vector "
+  PassOptions::Option<bool> x86{
+      *this, "enable-x86",
+      desc("Enables the use of X86 dialect while lowering the vector "
            "dialect"),
       init(false)};
 
@@ -169,7 +169,7 @@ struct SparsifierOptions : public PassPipelineOptions<SparsifierOptions> {
     opts.armNeon = armNeon;
     opts.armSVE = armSVE;
     opts.amx = amx;
-    opts.x86Vector = x86Vector;
+    opts.x86 = x86;
     return opts;
   }
 };

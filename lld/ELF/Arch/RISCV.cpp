@@ -753,64 +753,63 @@ void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
     uint8_t *loc = buf + rel.offset;
     uint64_t val = sec.getRelocTargetVA(ctx, rel, secAddr + rel.offset);
 
-    switch (rel.expr) {
-    case R_RELAX_HINT:
+    switch (rel.type) {
+    case R_RISCV_ALIGN:
+    case R_RISCV_RELAX:
+    case R_RISCV_TPREL_ADD:
       continue;
-    case R_TLSDESC_PC:
-      // For R_RISCV_TLSDESC_HI20, store &got(sym)-PC to be used by the
-      // following two instructions L[DW] and ADDI.
-      if (rel.type == R_RISCV_TLSDESC_HI20)
+    case R_RISCV_TLSDESC_HI20:
+      if (rel.expr == R_TLSDESC_PC) {
+        // Shared object: store &got(sym)-PC for the following L[DW]/ADDI.
         tlsdescVal = val;
-      else
-        val = tlsdescVal;
-      break;
-    case R_GOT_PC:
-    case R_TPREL:
-      // TLSDESC->IE/LE: R_GOT_PC is TLSDESC->IE, R_TPREL is TLSDESC->LE.
-      if (rel.type == R_RISCV_TLSDESC_HI20) {
-        isToLe = rel.expr == R_TPREL;
-        if (isToLe) {
-          tlsdescVal = val;
-        } else {
-          // tlsdescVal will be finalized after we see R_RISCV_TLSDESC_ADD_LO12.
-          // The net effect is that tlsdescVal will be smaller than `val` to
-          // take into account of NOP instructions (in the absence of
-          // R_RISCV_RELAX) before AUIPC.
-          tlsdescVal = val + rel.offset;
-        }
-        tlsdescRelax = relaxable(relocs, i);
-        if (!tlsdescRelax) {
-          if (isToLe)
-            tlsdescToLe(loc, rel, val);
-          else
-            tlsdescToIe(ctx, loc, rel, val);
-        }
-        continue;
+        break;
       }
-      if (rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
-          rel.type == R_RISCV_TLSDESC_ADD_LO12 ||
-          rel.type == R_RISCV_TLSDESC_CALL) {
-        if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
-          tlsdescVal -= rel.offset;
-        val = tlsdescVal;
-        // When NOP conversion is eligible and relaxation applies, don't write a
-        // NOP in case an unrelated instruction follows the current instruction.
-        if (tlsdescRelax &&
-            (rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
-             (rel.type == R_RISCV_TLSDESC_ADD_LO12 && isToLe && !hi20(val))))
-          continue;
+      // Executable: TLSDESC->LE (R_TPREL) or TLSDESC->IE (R_GOT_PC).
+      isToLe = rel.expr == R_TPREL;
+      if (isToLe) {
+        tlsdescVal = val;
+      } else {
+        // tlsdescVal will be finalized after we see R_RISCV_TLSDESC_ADD_LO12.
+        // The net effect is that tlsdescVal will be smaller than `val` to
+        // take into account of NOP instructions (in the absence of
+        // R_RISCV_RELAX) before AUIPC.
+        tlsdescVal = val + rel.offset;
+      }
+      tlsdescRelax = relaxable(relocs, i);
+      if (!tlsdescRelax) {
         if (isToLe)
           tlsdescToLe(loc, rel, val);
         else
           tlsdescToIe(ctx, loc, rel, val);
-        continue;
       }
-      break;
-    case RE_RISCV_LEB128:
+      continue;
+    case R_RISCV_TLSDESC_LOAD_LO12:
+    case R_RISCV_TLSDESC_ADD_LO12:
+    case R_RISCV_TLSDESC_CALL:
+      if (rel.expr == R_TLSDESC_PC) {
+        // Shared object: propagate the stored GOT value.
+        val = tlsdescVal;
+        break;
+      }
+      // Executable: IE or LE instruction rewrite.
+      if (!isToLe && rel.type == R_RISCV_TLSDESC_ADD_LO12)
+        tlsdescVal -= rel.offset;
+      val = tlsdescVal;
+      // When NOP conversion is eligible and relaxation applies, don't write a
+      // NOP in case an unrelated instruction follows the current instruction.
+      if (tlsdescRelax &&
+          (rel.type == R_RISCV_TLSDESC_LOAD_LO12 ||
+           (rel.type == R_RISCV_TLSDESC_ADD_LO12 && isToLe && !hi20(val))))
+        continue;
+      if (isToLe)
+        tlsdescToLe(loc, rel, val);
+      else
+        tlsdescToIe(ctx, loc, rel, val);
+      continue;
+    case R_RISCV_SET_ULEB128:
       if (i + 1 < size) {
         const Relocation &rel1 = relocs[i + 1];
-        if (rel.type == R_RISCV_SET_ULEB128 &&
-            rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
+        if (rel1.type == R_RISCV_SUB_ULEB128 && rel.offset == rel1.offset) {
           auto val = rel.sym->getVA(ctx, rel.addend) -
                      rel1.sym->getVA(ctx, rel1.addend);
           if (overwriteULEB128(loc, val) >= 0x80)
@@ -822,7 +821,7 @@ void RISCV::relocateAlloc(InputSection &sec, uint8_t *buf) const {
         }
       }
       Err(ctx) << sec.getLocation(rel.offset)
-               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_SET128";
+               << ": R_RISCV_SET_ULEB128 not paired with R_RISCV_SUB_ULEB128";
       return;
     default:
       break;
