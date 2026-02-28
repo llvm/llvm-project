@@ -33,3 +33,28 @@ void test(void *p) {
 // OGCG-NEXT:   %[[P1:.*]] = load ptr, ptr %[[P]], align 8
 // OGCG-NEXT:   store i32 0, ptr %[[P1]], align 4
 // OGCG-NEXT:   ret void
+
+void test_complex(void *p) { new (p) int _Complex(); }
+
+// CIR: cir.func{{.*}} @_Z12test_complexPv
+// CIR:   %[[P_ADDR:.*]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["p", init]
+// CIR:   cir.store %[[ARG_0:.*]], %[[P_ADDR:.*]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CIR:   %[[TMP_P:.*]] = cir.load {{.*}} %[[P_ADDR]] : !cir.ptr<!cir.ptr<!void>>, !cir.ptr<!void>
+// CIR:   %[[P_COMPLEX:.*]] = cir.cast bitcast %[[TMP_P:.*]] : !cir.ptr<!void> -> !cir.ptr<!cir.complex<!s32i>>
+// CIR:   %[[CONST_0:.*]] = cir.const #cir.zero : !cir.complex<!s32i>
+// CIR:   cir.store {{.*}} %[[CONST_0]], %[[P_COMPLEX]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
+
+// LLVM: define{{.*}} void @_Z12test_complexPv(ptr{{.*}} %[[ARG_0:.*]])
+// LLVM:   %[[P_ADDR:.*]] = alloca ptr
+// LLVM:   store ptr %[[ARG_0]], ptr %[[P_ADDR]], align 8
+// LLVM:   %[[TMP_P:.*]] = load ptr, ptr %[[P_ADDR]], align 8
+// LLVM:   store { i32, i32 } zeroinitializer, ptr %[[TMP_P]], align 4
+
+// OGCG: define{{.*}} void @_Z12test_complexPv(ptr{{.*}} %[[ARG_0:.*]])
+// OGCG:   %[[P_ADDR:.*]] = alloca ptr, align 8
+// OGCG:   store ptr %[[ARG_0]], ptr %[[P_ADDR]], align 8
+// OGCG:   %[[TMP_P:.*]] = load ptr, ptr %[[P_ADDR]], align 8
+// OGCG:   %[[P_REAL_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[TMP_P]], i32 0, i32 0
+// OGCG:   %[[P_IMAG_PTR:.*]] = getelementptr inbounds nuw { i32, i32 }, ptr %[[TMP_P]], i32 0, i32 1
+// OGCG:   store i32 0, ptr %[[P_REAL_PTR]], align 4
+// OGCG:   store i32 0, ptr %[[P_IMAG_PTR]], align 4

@@ -538,9 +538,7 @@ public:
 
   // Shift amount of a 64 bit shift cannot be a highest allocated register
   // if also at the end of the allocation block.
-  bool hasShift64HighRegBug() const {
-    return HasGFX90AInsts && !HasGFX940Insts;
-  }
+  bool hasShift64HighRegBug() const { return HasGFX90AInsts; }
 
   // Has one cycle hazard on transcendental instruction feeding a
   // non transcendental VALU.
