@@ -13,6 +13,7 @@
 #include <__config>
 #include <__functional/function.h>
 #include <__memory/unique_ptr.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,6 +43,13 @@ class _LIBCPP_EXPORTED_FROM_ABI rcu_domain {
 
   static rcu_domain& __rcu_default_domain() noexcept;
 
+  template <class _Tp, class _Dp = default_delete<_Tp>>
+  _LIBCPP_HIDE_FROM_ABI void __rcu_retire_hidden_friend(_Tp* __tp, _Dp __deleter, rcu_domain& __dom) {
+    auto* __node        = new __rcu_node();
+    __node->__callback_ = [__tp, __deleter = std::move(__deleter)]() mutable { __deleter(__tp); };
+    __dom.__retire(__node);
+  }
+
   rcu_domain();
 
   void __retire(__rcu_node*) noexcept;
@@ -55,7 +63,7 @@ public:
 
   void lock() noexcept;
 
-  bool try_lock() noexcept {
+  _LIBCPP_HIDE_FROM_ABI bool try_lock() noexcept {
     lock();
     return true;
   }
@@ -69,8 +77,10 @@ _LIBCPP_EXPORTED_FROM_ABI void rcu_synchronize(rcu_domain& __dom = rcu_default_d
 
 _LIBCPP_EXPORTED_FROM_ABI void rcu_barrier(rcu_domain& __dom = rcu_default_domain()) noexcept;
 
-template <class T, class D = default_delete<T>>
-void rcu_retire(T* p, D d = D(), rcu_domain& dom = rcu_default_domain());
+template <class _Tp, class _Dp = default_delete<_Tp>>
+_LIBCPP_HIDE_FROM_ABI void rcu_retire(_Tp* __tp, _Dp __deleter = _Dp(), rcu_domain& __dom = rcu_default_domain()) {
+  __rcu_retire_hidden_friend(__tp, std::move(__deleter), __dom);
+}
 
 #endif // _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 

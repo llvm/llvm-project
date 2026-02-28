@@ -13,7 +13,6 @@
 #include <rcu>
 #include <vector>
 
-#include "__rcu/rcu_domain.h"
 #include "include/rcu/rcu_list.h"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
@@ -101,9 +100,8 @@ struct reader_states {
     return (grace_period_phase & grace_period_phase_mask) | (reader_nest_level & reader_nest_level_mask);
   }
 };
-} // namespace
 
-class rcu_domain::__impl {
+class rcu_domain_impl {
   using per_thread_states = thread_local_container<reader_states::state_type>;
 
   // only the highest bit is used for the phase.
@@ -172,10 +170,6 @@ class rcu_domain::__impl {
 
   void __barrier() noexcept { asm volatile("" : : : "memory"); }
 
-  void printAllReaderStatesInHex() {
-    per_thread_states::for_each([](auto __state_ref) { std::printf("Reader state: 0x%04x\n", __state_ref.load()); });
-  }
-
 public:
   void lock() noexcept {
     auto current_thread_state_ref = per_thread_states::get_current_thread_instance();
@@ -213,7 +207,6 @@ public:
     __cxx_atomic_thread_fence(memory_order_seq_cst);
     std::unique_lock lk(grace_period_mutex_);
 
-    // std::printf("rcu_domain::__synchronize() going through phase 1\n");
     auto ready_callbacks = update_phase_and_wait();
 
     // Invoke the ready callbacks outside of the grace period mutex
@@ -222,7 +215,6 @@ public:
     lk.lock();
 
     __barrier();
-    // std::printf("rcu_domain::__synchronize() going through phase 2\n");
     ready_callbacks = update_phase_and_wait();
 
     // Invoke the ready callbacks outside of the grace period mutex
@@ -230,7 +222,14 @@ public:
     ready_callbacks.__for_each([](auto* node) { node->__callback_(); });
     __cxx_atomic_thread_fence(memory_order_seq_cst);
   }
+
+  void printAllReaderStatesInHex() {
+    per_thread_states::for_each([](auto __state_ref) { std::printf("Reader state: 0x%04x\n", __state_ref.load()); });
+  }
 };
+} // namespace
+
+class rcu_domain::__impl : public rcu_domain_impl {};
 
 rcu_domain& rcu_domain::__rcu_default_domain() noexcept {
   static rcu_domain default_domain;

@@ -26,7 +26,7 @@ void log(auto start, std::string_view msg) {
   std::println(std::cout, "[{:%H:%M:%S}] {}", now - start, msg);
 }
 
-int loop_num = 1;
+int loop_num = 10;
 
 int main(int, char**) {
   auto start = std::chrono::system_clock::now();
@@ -101,6 +101,8 @@ int main(int, char**) {
   std::this_thread::sleep_for(std::chrono::milliseconds(10));
   for (int i = 0; i < loop_num+5; ++i) {
 
+  log(start, "t0: printing all reader states before synchronize");
+  std::rcu_default_domain().printAllReaderStatesInHex();
   log(start, "t0: calling rcu_synchronize" + std::to_string(i));
   std::rcu_synchronize();
   log(start, "t0: rcu_synchronize returned" + std::to_string(i));
