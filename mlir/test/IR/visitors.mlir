@@ -385,7 +385,7 @@ func.func @unordered_cfg_with_loop() {
 
 // -----
 
-// The following test should not crash while visiting the intra-op blocks (inside the top level 
+// The following test should not crash while visiting the intra-op blocks (inside the top level
 // function in this case). We are testing that the intra-block ops are erased after dropping their
 // uses from ops with same parent region.
 // CHECK-LABEL: func.func @test_no_skip_block_erasure
@@ -398,4 +398,17 @@ func.func @test_no_skip_block_erasure() {
   cf.br ^bb4
 ^bb4:
   return
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/182996:
+// Block erasure must also drop uses of block arguments (e.g. function args)
+// from sibling blocks in the same region before destroying the block.
+// CHECK-LABEL: func.func @test_no_skip_block_erasure_block_args
+func.func @test_no_skip_block_erasure_block_args(%arg0: i32, %arg1: i32) -> i32 {
+  cf.br ^bb1
+^bb1:
+  %0 = arith.addi %arg0, %arg1 : i32
+  return %0 : i32
 }
