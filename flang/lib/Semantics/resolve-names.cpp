@@ -7228,6 +7228,13 @@ void DeclarationVisitor::FinishNamelists() {
             } else if (!ConvertToObjectEntity(symbol->GetUltimate())) {
               SayWithDecl(name, *symbol, "'%s' is not a variable"_err_en_US);
               context().SetError(*groupSymbol);
+            } else if (IsAssumedRank(*symbol)) {
+              evaluate::AttachDeclaration(
+                  context().Warn(common::LanguageFeature::AssumedRankIoItem,
+                      name.source,
+                      "Assumed-rank object '%s' should not be a namelist group item"_port_en_US,
+                      symbol->name()),
+                  *symbol);
             }
             symbol->GetUltimate().set(Symbol::Flag::InNamelist);
             details->add_object(*symbol);

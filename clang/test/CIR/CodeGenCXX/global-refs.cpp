@@ -30,7 +30,6 @@ const int &constGlobalIntRef = 5;
 // CIR: cir.global constant external @constGlobalIntRef = #cir.global_view<@_ZGR17constGlobalIntRef_> : !cir.ptr<!s32i> {alignment = 8 : i64}
 // LLVM: @_ZGR17constGlobalIntRef_ = {{.*}}global i32 5, align 4
 // LLVM: @constGlobalIntRef = constant ptr @_ZGR17constGlobalIntRef_, align 8
-// CIR-BEFORE-LLP: FAIL
 
 DefCtor defCtor{};
 // CIR: cir.global external @defCtor = #cir.undef : !rec_DefCtor {alignment = 1 : i64}
@@ -49,7 +48,7 @@ const DefCtor &constDefCtorRef{};
 WithCtor withCtor{};
 // CIR-BEFORE:  cir.global external @withCtor = ctor : !rec_WithCtor {
 // CIR-BEFORE-NEXT:    %[[GET_GLOB:.*]] = cir.get_global @withCtor : !cir.ptr<!rec_WithCtor>
-// CIR-BEFORE-NEXT:    cir.call @_ZN8WithCtorC1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtor>) -> ()
+// CIR-BEFORE-NEXT:    cir.call @_ZN8WithCtorC1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtor>{{.*}}) -> ()
 // CIR-BEFORE-NEXT:  } {alignment = 1 : i64, ast = #cir.var.decl.ast}
 // CIR-AFTER: cir.global external @withCtor = #cir.zero : !rec_WithCtor {alignment = 1 : i64, ast = #cir.var.decl.ast}
 // CIR-AFTER-NEXT: cir.func internal private @__cxx_global_var_init{{.*}}() {
@@ -67,7 +66,7 @@ const WithCtor &constWithCtorRef{};
 // CIR-BEFORE: cir.global external @constWithCtorRef = ctor : !cir.ptr<!rec_WithCtor> {
 // CIR-BEFORE-NEXT:   %[[GET_GLOB:.*]] = cir.get_global @constWithCtorRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
 // CIR-BEFORE-NEXT:   %[[GET_GLOB_OBJ:.*]] = cir.get_global @_ZGR16constWithCtorRef_ : !cir.ptr<!rec_WithCtor>
-// CIR-BEFORE-NEXT:   cir.call @_ZN8WithCtorC1Ev(%[[GET_GLOB_OBJ]]) : (!cir.ptr<!rec_WithCtor>) -> ()
+// CIR-BEFORE-NEXT:   cir.call @_ZN8WithCtorC1Ev(%[[GET_GLOB_OBJ]]) : (!cir.ptr<!rec_WithCtor>{{.*}}) -> ()
 // CIR-BEFORE-NEXT:   cir.store align(8) %[[GET_GLOB_OBJ]], %[[GET_GLOB]] : !cir.ptr<!rec_WithCtor>, !cir.ptr<!cir.ptr<!rec_WithCtor>>
 // CIR-BEFORE-NEXT: } {alignment = 8 : i64, ast = #cir.var.decl.ast}
 // CIR-AFTER: cir.global external @constWithCtorRef = #cir.ptr<null> : !cir.ptr<!rec_WithCtor> {alignment = 8 : i64, ast = #cir.var.decl.ast}
@@ -85,7 +84,7 @@ const WithCtor &constWithCtorRef2{5};
 // CIR-BEFORE-NEXT:   %[[GET_GLOB:.*]] = cir.get_global @constWithCtorRef2 : !cir.ptr<!cir.ptr<!rec_WithCtor>>
 // CIR-BEFORE-NEXT:   %[[GET_GLOB_OBJ:.*]] = cir.get_global @_ZGR17constWithCtorRef2_ : !cir.ptr<!rec_WithCtor>
 // CIR-BEFORE-NEXT:   %[[FIVE:.*]] = cir.const #cir.int<5> : !s32i
-// CIR-BEFORE-NEXT:   cir.call @_ZN8WithCtorC1Ei(%[[GET_GLOB_OBJ]], %[[FIVE]]) : (!cir.ptr<!rec_WithCtor>, !s32i) -> ()
+// CIR-BEFORE-NEXT:   cir.call @_ZN8WithCtorC1Ei(%[[GET_GLOB_OBJ]], %[[FIVE]]) : (!cir.ptr<!rec_WithCtor>{{.*}}, !s32i{{.*}}) -> ()
 // CIR-BEFORE-NEXT:   cir.store align(8) %[[GET_GLOB_OBJ]], %[[GET_GLOB]] : !cir.ptr<!rec_WithCtor>, !cir.ptr<!cir.ptr<!rec_WithCtor>>
 // CIR-BEFORE-NEXT: } {alignment = 8 : i64, ast = #cir.var.decl.ast}
 // CIR-AFTER: cir.global external @constWithCtorRef2 = #cir.ptr<null> : !cir.ptr<!rec_WithCtor> {alignment = 8 : i64, ast = #cir.var.decl.ast}
@@ -102,10 +101,10 @@ const WithCtor &constWithCtorRef2{5};
 WithCtorDtor withCtorDtor{};
 // CIR-BEFORE: cir.global external @withCtorDtor = ctor : !rec_WithCtorDtor {
 // CIR-BEFORE-NEXT:   %[[GET_GLOB:.*]] = cir.get_global @withCtorDtor : !cir.ptr<!rec_WithCtorDtor>
-// CIR-BEFORE-NEXT:   cir.call @_ZN12WithCtorDtorC1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtorDtor>) -> ()
+// CIR-BEFORE-NEXT:   cir.call @_ZN12WithCtorDtorC1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtorDtor>{{.*}}) -> ()
 // CIR-BEFORE-NEXT: } dtor {
 // CIR-BEFORE-NEXT:   %[[GET_GLOB:.*]] = cir.get_global @withCtorDtor : !cir.ptr<!rec_WithCtorDtor>
-// CIR-BEFORE-NEXT:   cir.call @_ZN12WithCtorDtorD1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtorDtor>) -> ()
+// CIR-BEFORE-NEXT:   cir.call @_ZN12WithCtorDtorD1Ev(%[[GET_GLOB]]) : (!cir.ptr<!rec_WithCtorDtor>{{.*}}) -> ()
 // CIR-BEFORE-NEXT: } {alignment = 1 : i64, ast = #cir.var.decl.ast}
 // CIR-AFTER: cir.global external @withCtorDtor = #cir.zero : !rec_WithCtorDtor {alignment = 1 : i64, ast = #cir.var.decl.ast}
 // CIR-AFTER: cir.func internal private @__cxx_global_var_init{{.*}}() {
@@ -121,9 +120,24 @@ WithCtorDtor withCtorDtor{};
 // CIR-AFTER-NEXT: }
 // LLVM: @withCtorDtor = global %struct.WithCtorDtor zeroinitializer, align 1
 
+
 WithCtorDtor &withCtorDtorRef = withCtorDtor;
 // CIR: cir.global constant external @withCtorDtorRef = #cir.global_view<@withCtorDtor> : !cir.ptr<!rec_WithCtorDtor> {alignment = 8 : i64}
 // LLVM: @withCtorDtorRef = constant ptr @withCtorDtor, align 8
+
+extern WithCtor &ExternRef;
+// CIR: cir.global "private" constant external @ExternRef : !cir.ptr<!rec_WithCtor>
+// LLVM: @ExternRef = external constant ptr
+
+void use() {
+  // CIR-LABEL: cir.func{{.*}}use
+
+  WithCtor &local = ExternRef;
+  // CIR-NEXT: %[[LOCAL:.*]] = cir.alloca !cir.ptr<!rec_WithCtor>, !cir.ptr<!cir.ptr<!rec_WithCtor>>, ["local", init, const]
+  // CIR-NEXT: %[[EXT_REF:.*]] = cir.get_global @ExternRef : !cir.ptr<!cir.ptr<!rec_WithCtor>>
+  // CIR-NEXT: %[[EXT_REF_LOAD:.*]] = cir.load %[[EXT_REF]] : !cir.ptr<!cir.ptr<!rec_WithCtor>>, !cir.ptr<!rec_WithCtor>
+  // CIR-NEXT: cir.store{{.*}}%[[EXT_REF_LOAD]], %[[LOCAL]]
+}
 
 // LLVM: define internal void @__cxx_global_var_init{{.*}}()
 // LLVM:   call void @_ZN8WithCtorC1Ev(ptr {{.*}}@withCtor)
@@ -143,6 +157,11 @@ WithCtorDtor &withCtorDtorRef = withCtorDtor;
 // LLVM:   call void @_ZN12WithCtorDtorC1Ev(ptr {{.*}}@withCtorDtor)
 // LLVM-NEXT:   call {{.*}}@__cxa_atexit(ptr {{.*}}@_ZN12WithCtorDtorD1Ev, ptr {{.*}}@withCtorDtor, ptr {{.*}}@__dso_handle)
 // LLVM-NEXT:   ret void
+
+// LLVM-LABEL: define{{.*}}use
+// LLVM: %[[LOCAL:.*]] = alloca ptr
+// LLVM-NEXT: %[[EXT_REF:.*]] = load ptr, ptr @ExternRef
+// LLVM-NEXT: store ptr %[[EXT_REF]], ptr %[[LOCAL]]
 
 // TODO(cir): Once we get destructors for temporaries done, we should test them
 // here, same as the 'const-WithCtor' examples, except with the 'withCtorDtor'
