@@ -292,8 +292,15 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
         TII->commuteInstruction(MI)) {
       ModeTy NewModeCommuted;
       computeMode(NewModeCommuted, MI, Ops.first, Ops.second);
-      if (CurrentMode.isCompatible(NewModeCommuted))
-        return false;
+      if (CurrentMode.isCompatible(NewModeCommuted)) {
+        // Update CurrentMode with mode bits the commuted instruction relies on.
+        // This prevents later instructions from piggybacking and corrupting
+        // those bits (e.g., a nullopt src treated as 0 could be overwritten).
+        bool Unused = false;
+        CurrentMode.update(NewModeCommuted, Unused);
+        // MI was modified by the commute above.
+        return true;
+      }
       // Commute back.
       if (!TII->commuteInstruction(MI))
         llvm_unreachable("Failed to restore commuted instruction.");
