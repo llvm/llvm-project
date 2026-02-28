@@ -9,6 +9,9 @@ void test_builtin_allow_sanitize_check() {
   // Test with unsupported sanitizer name.
   (void)__builtin_allow_sanitize_check("unsupported"); // expected-error {{invalid argument 'unsupported' to __builtin_allow_sanitize_check}}
 
+  // Test with invalid number of arguments
+  (void)__builtin_allow_sanitize_check(); // expected-error {{too few arguments to function call}}
+
   // Test with supported sanitizer names.
   (void)__builtin_allow_sanitize_check("address");
   (void)__builtin_allow_sanitize_check("thread");
