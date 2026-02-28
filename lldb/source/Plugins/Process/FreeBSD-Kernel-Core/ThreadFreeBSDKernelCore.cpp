@@ -84,6 +84,7 @@ ThreadFreeBSDKernelCore::CreateRegisterContextForFrame(StackFrame *frame) {
           std::make_shared<RegisterContextFreeBSDKernelCore_riscv64>(
               *this, std::make_unique<RegisterInfoPOSIX_riscv64>(arch, 0),
               m_pcb_addr);
+      break;
     case llvm::Triple::x86:
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_i386>(
