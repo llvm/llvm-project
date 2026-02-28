@@ -190,10 +190,15 @@ Address AtomicInfo::convertToAtomicIntPointer(Address addr) const {
 }
 
 Address AtomicInfo::createTempAlloca() const {
-  Address tempAlloca = cgf.createMemTemp(
-      (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits) ? valueTy
-                                                                  : atomicTy,
-      getAtomicAlignment(), loc, "atomic-temp");
+  QualType tmpTy;
+  // Remove addrspace info from the atomic pointer element when making the
+  // alloca pointer element.
+  if (lvalue.isBitField() && valueSizeInBits > atomicSizeInBits)
+    tmpTy = valueTy;
+  else
+    tmpTy = atomicTy.getUnqualifiedType();
+  Address tempAlloca =
+      cgf.createMemTemp(tmpTy, getAtomicAlignment(), loc, "atomic-temp");
 
   // Cast to pointer to value type for bitfields.
   if (lvalue.isBitField()) {

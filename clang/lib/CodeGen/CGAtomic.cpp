@@ -298,11 +298,15 @@ namespace {
 }
 
 Address AtomicInfo::CreateTempAlloca() const {
-  Address TempAlloca = CGF.CreateMemTemp(
-      (LVal.isBitField() && ValueSizeInBits > AtomicSizeInBits) ? ValueTy
-                                                                : AtomicTy,
-      getAtomicAlignment(),
-      "atomic-temp");
+  QualType TmpTy;
+  // Remove addrspace info from the atomic pointer element when making the
+  // alloca pointer element.
+  if (LVal.isBitField() && ValueSizeInBits > AtomicSizeInBits)
+    TmpTy = ValueTy;
+  else
+    TmpTy = AtomicTy.getUnqualifiedType();
+  Address TempAlloca =
+      CGF.CreateMemTemp(TmpTy, getAtomicAlignment(), "atomic-temp");
   // Cast to pointer to value type for bitfields.
   if (LVal.isBitField())
     return CGF.Builder.CreatePointerBitCastOrAddrSpaceCast(
