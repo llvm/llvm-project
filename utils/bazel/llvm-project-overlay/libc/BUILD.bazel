@@ -5428,9 +5428,9 @@ libc_support_library(
     name = "__support_math_hypotbf16",
     hdrs = ["src/__support/math/hypotbf16.h"],
     deps = [
-        ":__support_fputil_hypot",
-        ":__support_fputil_bfloat16",
         ":__support_common",
+        ":__support_fputil_bfloat16",
+        ":__support_fputil_hypot",
         ":__support_macros_config",
     ],
 )
