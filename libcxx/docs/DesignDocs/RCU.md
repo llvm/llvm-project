@@ -169,8 +169,10 @@ There are few places we can run the deleters:
 Folly currently takes the inline approach and runs the deleters at all three places mentioned above.
 
 In libc++'s design, we would like to start with the inline approach and only run the deleters inside `run_synchronize` and
-`run_barrier` for simplicity. We can consider running the deleters inside `run_retire` in the future if we find it is necessary
-to reduce the latency of reclaiming the retired objects.
+`run_barrier` for simplicity. Whether or not running the deleters inside `run_retire` is debatable. On the one hand, running
+them will make `run_retire`  take more time to return. But not running them will make the retired objects stay in the queue
+for a longer time. In an extreme case, if the user never calls `run_synchronize` or `run_barrier` after calling `run_retire`,
+the retired objects will never be reclaimed (without a background thread to drain the queue).
 
 Almost all APIs are `noexcept` . Is it designed to avoid memory allocation and avoid using `mutex` ?
 -----------------------------------------------------------------------------------------------------
@@ -309,4 +311,9 @@ There are 4 flavors of `rcu` implementations in liburcu (see doc `here <https://
 libstdc++
 ---------
 
+According to Thomas Rodgers (libstdc++'s RCU implementer), their plan is to embed the subset of `liburcu` that implements the `memb`` and `mb` RCU flavors, with `memb` being the preferred choice, 
+based on the presence of `SYS_membarrier` . Because `liburcu` is license compatible with libstdc++ they can directly embed the relevant source from `liburcu`
 
+
+libc++ Design
+=============
