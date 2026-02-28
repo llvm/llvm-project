@@ -62,6 +62,7 @@ public:
   virtual void markLive(uint64_t off) = 0;
   virtual InputSection *canonical() { return this; }
   virtual const InputSection *canonical() const { return this; }
+  bool isCold() const;
 
 protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,

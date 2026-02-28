@@ -419,9 +419,17 @@ void ICF::run() {
         // When using safe_thunks, ensure that we first sort by icfEqClass and
         // then by keepUnique (descending). This guarantees that within an
         // equivalence class, the keepUnique inputs are always first.
-        if (config->icfLevel == ICFLevel::safe_thunks)
-          if (a->icfEqClass[0] == b->icfEqClass[0])
+        if (a->icfEqClass[0] == b->icfEqClass[0]) {
+          if (config->icfLevel == ICFLevel::safe_thunks &&
+              a->keepUnique != b->keepUnique)
             return a->keepUnique > b->keepUnique;
+          // Prefer non-cold sections as the master section to preserve locality
+          // for the non-cold paths.
+          bool aCold = a->isCold();
+          bool bCold = b->isCold();
+          if (aCold != bCold)
+            return !aCold;
+        }
         return a->icfEqClass[0] < b->icfEqClass[0];
       });
   forEachClass([&](size_t begin, size_t end) {

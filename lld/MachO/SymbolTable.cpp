@@ -104,7 +104,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
                                  uint64_t size, bool isWeakDef,
                                  bool isPrivateExtern,
                                  bool isReferencedDynamically, bool noDeadStrip,
-                                 bool isWeakDefCanBeHidden) {
+                                 bool isWeakDefCanBeHidden, bool isCold) {
   bool overridesWeakDef = false;
   auto [s, wasInserted] = insert(name, file);
 
@@ -119,6 +119,7 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
           defined->weakDefCanBeHidden &= isWeakDefCanBeHidden;
           defined->referencedDynamically |= isReferencedDynamically;
           defined->noDeadStrip |= noDeadStrip;
+          defined->cold |= isCold;
         }
         if (auto concatIsec = dyn_cast_or_null<ConcatInputSection>(isec)) {
           concatIsec->wasCoalesced = true;
@@ -211,7 +212,8 @@ Defined *SymbolTable::addDefined(StringRef name, InputFile *file,
   Defined *defined = replaceSymbol<Defined>(
       s, name, file, isec, value, size, isWeakDef, /*isExternal=*/true,
       isPrivateExtern, /*includeInSymtab=*/true, isReferencedDynamically,
-      noDeadStrip, overridesWeakDef, isWeakDefCanBeHidden, interposable);
+      noDeadStrip, overridesWeakDef, isWeakDefCanBeHidden, interposable,
+      isCold);
   return defined;
 }
 
@@ -221,7 +223,7 @@ Defined *SymbolTable::aliasDefined(Defined *src, StringRef target,
   return addDefined(target, newFile, src->isec(), src->value, src->size,
                     src->isWeakDef(), isPrivateExtern,
                     src->referencedDynamically, src->noDeadStrip,
-                    src->weakDefCanBeHidden);
+                    src->weakDefCanBeHidden, src->cold);
 }
 
 Symbol *SymbolTable::addUndefined(StringRef name, InputFile *file,
