@@ -107,8 +107,8 @@ The check only triggers when:
 
 .. note::
 
-   This transformation is not applied when ``ValuesOnly`` is set to `true`,
-   or in dependent (template) contexts.
+   This transformation is not applied when :option:`ValuesOnly` is set to
+   `true`, or in dependent (template) contexts.
 
 Limitations
 -----------
