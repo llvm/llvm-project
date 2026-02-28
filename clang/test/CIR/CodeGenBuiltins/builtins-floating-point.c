@@ -2210,3 +2210,10 @@ double my_roundeven(double x) {
   // OGCG: define{{.*}}@my_roundeven(
   // OGCG: call double @llvm.roundeven.f64(
 }
+
+int fpclassify(float f) {
+  return __builtin_fpclassify(0, 1, 2, 3, 4, f);
+  // CIR: %{{.*}} = cir.is_fp_class %{{.*}}, fcNan : (!cir.float) -> !cir.bool
+  // LLVM: %{{.*}} = call i1 @llvm.is.fpclass.f32(float %{{.*}}, i32 {{.*}})
+  // OGCG: %{{.*}} = fcmp uno float %{{.*}}, %{{.*}}
+}
