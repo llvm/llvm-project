@@ -2896,6 +2896,27 @@ TEST_P(UncheckedOptionalAccessTest, DiagnosticsHaveRanges) {
   )cc");
 }
 
+TEST_P(UncheckedOptionalAccessTest, ConstructorOtherStructField) {
+  // Repro for a crash: https://github.com/llvm/llvm-project/issues/128068
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct NonTrivDtor {
+      NonTrivDtor(int n);
+      ~NonTrivDtor() {}
+    };
+    struct Other {
+      $ns::$optional<int> x;
+      NonTrivDtor b = NonTrivDtor(x.value());
+    };
+    struct target {
+      target(int f) : f_(f), o_(Other{f_}) {}
+      int f_;
+      Other o_;
+    };
+  )cc");
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)
