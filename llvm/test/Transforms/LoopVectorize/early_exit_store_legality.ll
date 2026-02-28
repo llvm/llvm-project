@@ -197,7 +197,7 @@ exit:
 
 define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly %pred, i32 %n) nosync nofree {
 ; CHECK-LABEL: LV: Checking a loop in 'test_assumed_bounds_type_mismatch'
-; CHECK:       LV: Not vectorizing: Cannot vectorize potentially faulting early exit loop.
+; CHECK:       LV: Not vectorizing: Loop may fault.
 entry:
   %n_bytes = mul nuw nsw i32 %n, 2
   call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %pred, i32 %n_bytes) ]
