@@ -3479,6 +3479,10 @@ ItaniumCXXABI::getOrCreateVirtualFunctionPointerThunk(const CXXMethodDecl *MD) {
 
   CGF.StartFunction(GlobalDecl(), FnInfo.getReturnType(), ThunkFn, FnInfo,
                     FunctionArgs, MD->getLocation(), SourceLocation());
+
+  // Emit an artificial location for this function.
+  auto AL = ApplyDebugLocation::CreateArtificial(CGF);
+
   llvm::Value *ThisVal = loadIncomingCXXThis(CGF);
   setCXXABIThisValue(CGF, ThisVal);
 
