@@ -22,18 +22,13 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #if _LIBCPP_STD_VER >= 26 && _LIBCPP_HAS_THREADS && _LIBCPP_HAS_EXPERIMENTAL_RCU
 
-struct __rcu_node {
-  function<void()> __callback_{};
-  __rcu_node* __next_ = nullptr;
-};
-
-class __rcu_singly_list_view {
+class rcu_singly_list_view {
 private:
   __rcu_node* __head_ = nullptr;
   __rcu_node* __tail_ = nullptr;
 
 public:
-  void __splice_back(__rcu_singly_list_view& __other) noexcept {
+  void __splice_back(rcu_singly_list_view& __other) noexcept {
     if (__other.__head_ == nullptr) {
       return;
     }
