@@ -236,7 +236,7 @@ void ReachabilityGraph::calculate() {
   }
 
   // Make sure all nodes have been processed
-  for (auto &Node : Nodes) {
+  for ([[maybe_unused]] auto &Node : Nodes) {
     assert(Node.SCCId != std::numeric_limits<unsigned>::max());
   }
 }
