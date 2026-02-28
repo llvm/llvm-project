@@ -5300,7 +5300,7 @@ OpFoldResult AffineLinearizeIndexOp::fold(FoldAdaptor adaptor) {
 
   // Return nullptr if any multi-index attribute has not been folded to a
   // concrete integer (e.g. it is still a runtime value or has folded to a
-  // non-integer such as ub.PoisonAttr).
+  // non-integer attribute such as #ub.poison).
   if (llvm::any_of(adaptor.getMultiIndex(), [](Attribute a) {
         return !isa_and_nonnull<IntegerAttr>(a);
       }))
