@@ -1095,7 +1095,7 @@ define i256 @and_i256(i256 %a, i256 %b) nounwind {
   ret i256 %r
 }
 
-; i256 bitwise xor (key for Hamming distance)
+; i256 bitwise xor
 define i256 @xor_i256(i256 %a, i256 %b) nounwind {
 ; RV32-LABEL: xor_i256:
 ; RV32:       # %bb.0:
@@ -1162,8 +1162,7 @@ define i256 @xor_i256(i256 %a, i256 %b) nounwind {
   ret i256 %r
 }
 
-; i256 popcount (Hamming weight)
-declare i256 @llvm.ctpop.i256(i256)
+; i256 popcount
 define i256 @ctpop_i256(i256 %a) nounwind {
 ; RV32-LABEL: ctpop_i256:
 ; RV32:       # %bb.0:
