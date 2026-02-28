@@ -357,11 +357,13 @@ void AMDGPUTargetInfo::setAuxTarget(const TargetInfo *Aux) {
   // not supported by AMDGPU. 128-bit floating point format is also not
   // supported by AMDGPU. Therefore keep its own format for these two types.
   auto SaveLongDoubleFormat = LongDoubleFormat;
+  auto SaveBFloat16Format = BFloat16Format;
   auto SaveFloat128Format = Float128Format;
   auto SaveLongDoubleWidth = LongDoubleWidth;
   auto SaveLongDoubleAlign = LongDoubleAlign;
   copyAuxTarget(Aux);
   LongDoubleFormat = SaveLongDoubleFormat;
+  BFloat16Format = SaveBFloat16Format;
   Float128Format = SaveFloat128Format;
   LongDoubleWidth = SaveLongDoubleWidth;
   LongDoubleAlign = SaveLongDoubleAlign;
