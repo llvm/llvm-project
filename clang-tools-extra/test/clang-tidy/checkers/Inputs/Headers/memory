@@ -1,5 +1,5 @@
-#ifndef _ALLOCATOR_
-#define _ALLOCATOR_
+#ifndef _MEMORY_
+#define _MEMORY_
 
 namespace std {
 
@@ -8,4 +8,4 @@ class allocator {};
 
 } // namespace std
 
-#endif // _ALLOCATOR_
+#endif // _MEMORY_
