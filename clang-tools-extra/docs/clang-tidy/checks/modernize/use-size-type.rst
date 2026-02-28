@@ -3,10 +3,10 @@
 modernize-use-size-type
 =======================
 
-Finds local variables declared as signed integer types that are
-initialized from an unsigned/``size_t`` source (e.g.
-``container.size()``) and only used in contexts expecting unsigned
-types, and suggests changing the type to ``size_t``.
+Finds local variables declared as signed integer types that are initialized
+from an unsigned/``size_t`` source (e.g. ``container.size()``) and only used in
+contexts expecting unsigned types, and suggests changing the type to
+``size_t``.
 
 Storing a ``size_t`` value in a signed ``int`` can cause implicit
 narrowing conversions and sign-comparison warnings. Using ``size_t``
