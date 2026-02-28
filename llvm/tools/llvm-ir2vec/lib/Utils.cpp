@@ -153,7 +153,7 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
 }
 
 Expected<std::unique_ptr<Embedder>>
-IR2VecTool::getIR2VecEmbedder(const Function &F, IR2VecKind Kind) const {
+IR2VecTool::createIR2VecEmbedder(const Function &F, IR2VecKind Kind) const {
   if (!Vocab || !Vocab->isValid())
     return createStringError(
         errc::invalid_argument,
@@ -174,7 +174,7 @@ IR2VecTool::getIR2VecEmbedder(const Function &F, IR2VecKind Kind) const {
 
 Expected<Embedding> IR2VecTool::getFunctionEmbedding(const Function &F,
                                                      IR2VecKind Kind) const {
-  auto Emb = getIR2VecEmbedder(F, Kind);
+  auto Emb = createIR2VecEmbedder(F, Kind);
   if (!Emb)
     return Emb.takeError();
 
@@ -197,7 +197,7 @@ IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
 
 Expected<BBEmbeddingsMap>
 IR2VecTool::getBBEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
-  auto Emb = getIR2VecEmbedder(F, Kind);
+  auto Emb = createIR2VecEmbedder(F, Kind);
   if (!Emb)
     return Emb.takeError();
 
@@ -211,7 +211,7 @@ IR2VecTool::getBBEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
 
 Expected<InstEmbeddingsMap>
 IR2VecTool::getInstEmbeddingsMap(const Function &F, IR2VecKind Kind) const {
-  auto Emb = getIR2VecEmbedder(F, Kind);
+  auto Emb = createIR2VecEmbedder(F, Kind);
   if (!Emb)
     return Emb.takeError();
 
@@ -231,7 +231,7 @@ void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
 
 void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  auto IR2VecEmbedderObj = getIR2VecEmbedder(F, IR2VecEmbeddingKind);
+  auto IR2VecEmbedderObj = createIR2VecEmbedder(F, IR2VecEmbeddingKind);
   if (!IR2VecEmbedderObj) {
     WithColor::error(errs(), ToolName)
         << toString(IR2VecEmbedderObj.takeError()) << "\n";
