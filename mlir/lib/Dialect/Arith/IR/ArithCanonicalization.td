@@ -288,31 +288,38 @@ def SelectI1ToNot :
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-// index_cast(index_cast(x)) -> x, if dstType == srcType.
+// index_cast(index_cast(x, exact)) -> x, if dstType == srcType.
+// The inner exact guarantees the iN -> index conversion is lossless,
+// so the roundtrip through index preserves the value.
 def IndexCastOfIndexCast :
-    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x)),
+    Pat<(Arith_IndexCastOp:$res (Arith_IndexCastOp $x, $exact1), $exact2),
         (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
+         (Constraint<CPred<"(bool)$0">> $exact1)]>;
 
 // index_cast(extsi(x)) -> index_cast(x)
 def IndexCastOfExtSI :
-    Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x)), (Arith_IndexCastOp $x)>;
+    Pat<(Arith_IndexCastOp (Arith_ExtSIOp $x), $exact),
+        (Arith_IndexCastOp $x, $exact)>;
 
 //===----------------------------------------------------------------------===//
 // IndexCastUIOp
 //===----------------------------------------------------------------------===//
 
-// index_castui(index_castui(x)) -> x, if dstType == srcType.
+// index_castui(index_castui(x, exact)) -> x, if dstType == srcType.
+// The inner exact guarantees the iN -> index conversion is lossless,
+// so the roundtrip through index preserves the value.
 def IndexCastUIOfIndexCastUI :
-    Pat<(Arith_IndexCastUIOp:$res (Arith_IndexCastUIOp $x, $nneg1), $nneg2),
+    Pat<(Arith_IndexCastUIOp:$res
+          (Arith_IndexCastUIOp $x, $nneg1, $exact1), $nneg2, $exact2),
         (replaceWithValue $x),
-        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x)]>;
+        [(Constraint<CPred<"$0.getType() == $1.getType()">> $res, $x),
+         (Constraint<CPred<"static_cast<bool>($0)">> $exact1)]>;
 
 // index_castui(extui(x)) -> index_castui(x)
 def IndexCastUIOfExtUI :
-    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2),
-        (Arith_IndexCastUIOp $x, $nneg1)>;
-
+    Pat<(Arith_IndexCastUIOp (Arith_ExtUIOp $x, $nneg1), $nneg2, $exact),
+        (Arith_IndexCastUIOp $x, $nneg1, $exact)>;
 
 //===----------------------------------------------------------------------===//
 // BitcastOp

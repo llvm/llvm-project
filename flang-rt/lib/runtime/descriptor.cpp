@@ -9,11 +9,11 @@
 #include "flang-rt/runtime/descriptor.h"
 #include "ISO_Fortran_util.h"
 #if (not defined(__AMDGPU__) && not defined(__NVPTX__)) || not defined(EMBED_FLANG_RT_GPU_LLVM_IR)
-#include "memory.h"
 #endif
 #include "flang-rt/runtime/allocator-registry.h"
 #include "flang-rt/runtime/derived.h"
 #include "flang-rt/runtime/environment.h"
+#include "flang-rt/runtime/memory.h"
 #include "flang-rt/runtime/stat.h"
 #include "flang-rt/runtime/terminator.h"
 #include "flang-rt/runtime/type-info.h"

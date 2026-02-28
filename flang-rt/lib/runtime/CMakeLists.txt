@@ -111,9 +111,11 @@ set(gpu_sources
   copy.cpp
   derived-api.cpp
   derived.cpp
+  descriptor.cpp
   dot-product.cpp
   edit-output.cpp
   extrema.cpp
+  environment.cpp
   findloc.cpp
   format.cpp
   inquiry.cpp
@@ -129,6 +131,7 @@ set(gpu_sources
   product.cpp
   ragged.cpp
   stat.cpp
+  stop.cpp
   sum.cpp
   support.cpp
   terminator.cpp

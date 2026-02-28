@@ -4082,3 +4082,36 @@ func.func @extract_strided_slice_outer_shorter(%arg0: vector<4x8x16xf32>) -> vec
   %1 = vector.extract_strided_slice %0 {offsets = [0], sizes = [2], strides = [1]} : vector<3x4x16xf32> to vector<2x4x16xf32>
   return %1 : vector<2x4x16xf32>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// CanonializeEmptyMaskOp must not create arith.select with a vector condition
+// and scalar value types (incompatible with arith.select semantics). The
+// vector.mask op should remain unchanged.
+//
+// CHECK-LABEL: func @no_fold_empty_mask_scalar_result_with_passthru
+//  CHECK-SAME:     %[[MASK:.*]]: vector<1xi1>, %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask %[[MASK]], %[[PASSTHRU]] { vector.yield %[[VAL]] : i32 } : vector<1xi1> -> i32
+//   CHECK-NOT:   arith.select
+func.func @no_fold_empty_mask_scalar_result_with_passthru(
+    %mask : vector<1xi1>, %passthru : i32, %val : i32) -> i32 {
+  %result = vector.mask %mask, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
+}
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/177833:
+// MaskOp::fold must not crash with a null pointer dereference when the mask
+// is all-true and the mask body has no maskable op (only a yield).
+//
+// CHECK-LABEL: func @no_fold_alltrue_mask_empty_body_scalar_result
+//  CHECK-SAME:     %[[PASSTHRU:.*]]: i32, %[[VAL:.*]]: i32
+//       CHECK:   vector.mask
+func.func @no_fold_alltrue_mask_empty_body_scalar_result(
+    %passthru : i32, %val : i32) -> i32 {
+  %all_true = vector.constant_mask [1] : vector<1xi1>
+  %result = vector.mask %all_true, %passthru { vector.yield %val : i32 } : vector<1xi1> -> i32
+  return %result : i32
+}
