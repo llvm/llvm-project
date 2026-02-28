@@ -76,7 +76,6 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
   case AArch64::S_PREL_G1_NC:          return ":prel_g1_nc:";
   case AArch64::S_PREL_G0:             return ":prel_g0:";
   case AArch64::S_PREL_G0_NC:          return ":prel_g0_nc:";
-  case AArch64::S_DTPREL:              return ":dtprel:";
   case AArch64::S_DTPREL_G2:           return ":dtprel_g2:";
   case AArch64::S_DTPREL_G1:           return ":dtprel_g1:";
   case AArch64::S_DTPREL_G1_NC:        return ":dtprel_g1_nc:";
@@ -118,6 +117,7 @@ StringRef AArch64::getSpecifierName(AArch64::Specifier S) {
 
   case AArch64::S_GOTPCREL:            return "%gotpcrel";
   case AArch64::S_PLT:                 return "%pltpcrel";
+  case AArch64::S_DTPREL:              return "%dtprel";
   case AArch64::S_FUNCINIT:            return "%funcinit";
   default:
     llvm_unreachable("Invalid relocation specifier");
@@ -129,6 +129,7 @@ AArch64::Specifier AArch64::parsePercentSpecifierName(StringRef name) {
   return StringSwitch<AArch64::Specifier>(name)
       .Case("pltpcrel", AArch64::S_PLT)
       .Case("gotpcrel", AArch64::S_GOTPCREL)
+      .Case("dtprel", AArch64::S_DTPREL)
       .Case("funcinit", AArch64::S_FUNCINIT)
       .Default(0);
 }

@@ -188,5 +188,5 @@ MCSection *AArch64_ELFTargetObjectFile::SelectSectionForGlobal(
 
 const MCExpr *AArch64_ELFTargetObjectFile::getDebugThreadLocalSymbol(
     const MCSymbol *Sym) const {
-  return MCSymbolRefExpr::create(Sym, AArch64::S_DTPREL, getContext());
+  return MCSpecifierExpr::create(Sym, AArch64::S_DTPREL, getContext());
 }
