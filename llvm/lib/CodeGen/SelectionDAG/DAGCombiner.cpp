@@ -7029,8 +7029,10 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
                                    const TargetLowering &TLI, SDValue Cond,
                                    SDValue TrueVal, SDValue FalseVal) {
   EVT ResultVT = N->getValueType(0);
-  if (!ResultVT.isVector() || TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
-                                  TargetLowering::TypeLegal)
+  if (!ResultVT.isVector() ||
+      TLI.getTypeAction(*DAG.getContext(), ResultVT) ==
+          TargetLowering::TypeLegal ||
+      !TLI.shouldCastIntVectorSelect(ResultVT))
     return SDValue();
 
   EVT EltVT = ResultVT.getVectorElementType();
