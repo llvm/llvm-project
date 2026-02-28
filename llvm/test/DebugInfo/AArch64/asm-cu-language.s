@@ -1,10 +1,10 @@
-// RUN: llvm-mc -dwarf-version=2 -g -triple i386-apple-darwin10 %s -filetype=obj -o - \
+// RUN: llvm-mc -dwarf-version=2 -g -triple aarch64-apple-darwin10 %s -filetype=obj -o - \
 // RUN:     | llvm-dwarfdump --debug-abbrev --debug-info - | FileCheck %s --check-prefix=DWARF2
 
-// RUN: llvm-mc -dwarf-version=4 -g -triple i386-apple-darwin10 %s -filetype=obj -o - \
+// RUN: llvm-mc -dwarf-version=4 -g -triple aarch64-apple-darwin10 %s -filetype=obj -o - \
 // RUN:     | llvm-dwarfdump --debug-abbrev --debug-info - | FileCheck %s --check-prefix=DWARF4
 
-// RUN: llvm-mc -dwarf-version=6 -g -triple i386-apple-darwin10 %s -filetype=obj -o - \
+// RUN: llvm-mc -dwarf-version=6 -g -triple aarch64-apple-darwin10 %s -filetype=obj -o - \
 // RUN:     | llvm-dwarfdump --debug-abbrev --debug-info - | FileCheck %s --check-prefix=DWARF6
 
 _main:
