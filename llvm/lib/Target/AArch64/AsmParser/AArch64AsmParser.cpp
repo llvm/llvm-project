@@ -8462,6 +8462,7 @@ bool AArch64AsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
   auto Spec = AArch64::parsePercentSpecifierName(Identifier);
   if (!Spec)
     return TokError("invalid relocation specifier");
+
   getParser().Lex(); // Eat the identifier
   if (parseToken(AsmToken::LParen, "expected '('"))
     return true;
