@@ -76,7 +76,7 @@ LIBC_INLINE double exp2_range_reduced(double x) {
   return result;
 }
 
-LIBC_INLINE constexpr bool is_odd_integer(float16 x) {
+LIBC_INLINE bool is_odd_integer(float16 x) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
   uint16_t x_u = xbits.uintval();
@@ -103,7 +103,7 @@ LIBC_INLINE constexpr bool is_integer(float16 x) {
 } // namespace powf16_impl
 
 // TODO : optimize by using float whenever possible
-LIBC_INLINE constexpr float16 powf16(float16 x, float16 y) {
+LIBC_INLINE float16 powf16(float16 x, float16 y) {
   using namespace powf16_impl;
   using namespace common_constants_internal;
   using FPBits = fputil::FPBits<float16>;
