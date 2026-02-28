@@ -195,9 +195,9 @@ bool AMDGPUCoExecSchedStrategy::tryCandidate(SchedCandidate &Cand,
         tryLatency(TryCand, Cand, *Zone))
       return TryCand.Reason != NoCand;
 
-    // Prioritize instructions that read unbuffered resources by stall cycles.
-    if (tryLess(Zone->getLatencyStallCycles(TryCand.SU),
-                Zone->getLatencyStallCycles(Cand.SU), TryCand, Cand, Stall))
+    // Otherwise compare candidates by the stall they would introduce if
+    // scheduled in the current cycle.
+    if (tryEffectiveStall(Cand, TryCand, *Zone))
       return TryCand.Reason != NoCand;
   }
 
@@ -257,6 +257,29 @@ bool AMDGPUCoExecSchedStrategy::tryCandidate(SchedCandidate &Cand,
   }
 
   return false;
+}
+
+bool AMDGPUCoExecSchedStrategy::tryEffectiveStall(SchedCandidate &Cand,
+                                                  SchedCandidate &TryCand,
+                                                  SchedBoundary &Zone) const {
+  // Treat structural and latency stalls as a single scheduling cost for the
+  // current cycle.
+  unsigned TryStructStall = getStructuralStallCycles(Zone, TryCand.SU);
+  unsigned TryLatencyStall = Zone.getLatencyStallCycles(TryCand.SU);
+  unsigned TryEffectiveStall = std::max(TryStructStall, TryLatencyStall);
+
+  unsigned CandStructStall = getStructuralStallCycles(Zone, Cand.SU);
+  unsigned CandLatencyStall = Zone.getLatencyStallCycles(Cand.SU);
+  unsigned CandEffectiveStall = std::max(CandStructStall, CandLatencyStall);
+
+  LLVM_DEBUG(if (TryEffectiveStall || CandEffectiveStall) {
+    dbgs() << "Effective stalls: try=" << TryEffectiveStall
+           << " (struct=" << TryStructStall << ", lat=" << TryLatencyStall
+           << ") cand=" << CandEffectiveStall << " (struct=" << CandStructStall
+           << ", lat=" << CandLatencyStall << ")\n";
+  });
+
+  return tryLess(TryEffectiveStall, CandEffectiveStall, TryCand, Cand, Stall);
 }
 
 ScheduleDAGInstrs *
