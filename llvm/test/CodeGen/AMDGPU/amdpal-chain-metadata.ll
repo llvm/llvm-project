@@ -9,7 +9,8 @@
 ; CHECK-NEXT:      amdgpu_cs_chain_func:
 ; CHECK:             .backend_stack_size: 0x10{{$}}
 ; CHECK:             .stack_frame_size_in_bytes: 0x10{{$}}
-; CHECK-NOT:       amdgpu_cs_chain_preserve_func:
+; CHECK-NEXT:            .vgpr_count:
+; CHECK-NEXT:    .shaders:
 ; CHECK:amdpal.version:
 ; CHECK-NEXT:  - 0x3
 ; CHECK-NEXT:  - 0
