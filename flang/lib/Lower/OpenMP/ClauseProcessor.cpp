@@ -286,8 +286,13 @@ static mlir::Value buildIteratorOp(Fortran::lower::AbstractConverter &converter,
 
   Fortran::lower::SymMap &symMap = converter.getSymbolMap();
   Fortran::lower::SymMapScope scope(symMap);
-  for (size_t i = 0; i < ranges.size(); ++i)
-    symMap.addSymbol(*ranges[i].ivSym, ivs[i], /*force=*/true);
+  for (size_t i = 0; i < ranges.size(); ++i) {
+    mlir::Value ivVal = ivs[i];
+    mlir::Type ivTy = converter.genType(*ranges[i].ivSym);
+    if (ivVal.getType() != ivTy)
+      ivVal = fir::ConvertOp::create(builder, loc, ivTy, ivVal);
+    symMap.addSymbol(*ranges[i].ivSym, ivVal, /*force=*/true);
+  }
 
   mlir::omp::YieldOp::create(builder, loc, buildBody(builder, loc, ivs));
 
@@ -897,7 +902,29 @@ bool ClauseProcessor::processAffinity(
             mlir::Value iterHandle = buildIteratorOp(
                 converter, clauseLocation, iterTy, iteratorRanges,
                 [&](fir::FirOpBuilder &builder, mlir::Location loc,
-                    llvm::ArrayRef<mlir::Value> ivs) -> mlir::Value {
+                    llvm::ArrayRef<mlir::Value> /*ivs*/) -> mlir::Value {
+                  lower::StatementContext iterStmtCtx;
+                  if (std::optional<llvm::SmallVector<mlir::Value>>
+                          loweredIndices = getIteratorElementIndices(
+                              converter, object, iterStmtCtx, loc)) {
+                    const Fortran::semantics::Symbol *sym = object.sym();
+                    assert(sym && "expected symbol for iterator object");
+                    fir::factory::AddrAndBoundsInfo info =
+                        Fortran::lower::getDataOperandBaseAddr(
+                            converter, builder, *sym, loc,
+                            /*unwrapFirBox=*/false);
+                    hlfir::Entity entity{info.addr};
+                    mlir::Value iteratedAddr = genIteratorCoordinate(
+                        converter, entity, *loweredIndices, loc);
+                    mlir::Value len = builder.createIntegerConstant(
+                        loc, builder.getIntegerType(64),
+                        getElementBytesOrZero(entity, builder.getDataLayout()));
+                    return makeAffinityEntry(builder, loc, entryTy,
+                                             iteratedAddr, len);
+                  }
+
+                  mlir::Value addr =
+                      genAffinityAddr(converter, object, iterStmtCtx, loc);
                   const Fortran::semantics::Symbol *sym = object.sym();
                   assert(sym && "expected symbol for iterator object");
                   fir::factory::AddrAndBoundsInfo info =
@@ -905,8 +932,6 @@ bool ClauseProcessor::processAffinity(
                           converter, builder, *sym, loc,
                           /*unwrapFirBox=*/false);
                   hlfir::Entity entity{info.addr};
-                  mlir::Value addr =
-                      genIteratorCoordinate(converter, entity, ivs, loc);
                   mlir::Value len = builder.createIntegerConstant(
                       loc, builder.getIntegerType(64),
                       getElementBytesOrZero(entity, builder.getDataLayout()));

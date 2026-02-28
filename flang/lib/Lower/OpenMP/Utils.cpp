@@ -15,6 +15,7 @@
 #include "ClauseFinder.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/tools.h"
+#include "flang/Lower/ConvertExpr.h"
 #include <flang/Lower/AbstractConverter.h>
 #include <flang/Lower/ConvertType.h>
 #include <flang/Lower/DirectivesCommon.h>
@@ -1066,6 +1067,75 @@ bool hasIVReference(
       return true;
   }
   return false;
+}
+
+std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc) {
+  // Lower the indices used to compute the base element address for an affinity
+  // object inside an omp.iterator body.
+  // Example:
+  //   !$omp task affinity(iterator(i = 1:n, j = 1:m) : a(i:i+1, j+2))
+  // lowers to the coordinate of the first element of the section, a(i, j+2).
+  const std::optional<ExprTy> &ref = object.ref();
+  if (!ref)
+    return std::nullopt;
+
+  std::optional<Fortran::evaluate::DataRef> dataRef =
+      Fortran::evaluate::ExtractDataRef(*ref);
+  if (!dataRef)
+    return std::nullopt;
+
+  const auto *arrayRef = std::get_if<Fortran::evaluate::ArrayRef>(&dataRef->u);
+  if (!arrayRef || arrayRef->subscript().empty())
+    return std::nullopt;
+
+  auto &builder = converter.getFirOpBuilder();
+  const Fortran::semantics::Symbol *sym = object.sym();
+  if (!sym)
+    return std::nullopt;
+  fir::ExtendedValue dataExv = converter.getSymbolExtendedValue(*sym);
+  mlir::Value one =
+      builder.createIntegerConstant(loc, builder.getIndexType(), 1);
+  llvm::SmallVector<mlir::Value> indices;
+  indices.reserve(arrayRef->subscript().size());
+
+  for (const auto &[dim, subscript] : llvm::enumerate(arrayRef->subscript())) {
+    mlir::Value idx;
+    if (const auto *triplet =
+            std::get_if<Fortran::evaluate::Triplet>(&subscript.u)) {
+      // For an array section, affinity uses the base address of the section.
+      // Use the lower bound to compute that coordinate.
+      std::optional<
+          Fortran::evaluate::Expr<Fortran::evaluate::SubscriptInteger>>
+          lower = triplet->lower();
+      if (!lower) {
+        idx = fir::factory::readLowerBound(builder, loc, dataExv, dim, one);
+      } else {
+        idx = fir::getBase(
+            createSomeExtendedExpression(loc, converter, toEvExpr(*lower),
+                                         converter.getSymbolMap(), stmtCtx));
+      }
+    } else {
+      if (subscript.Rank() > 0)
+        return std::nullopt;
+
+      const auto *indirect =
+          std::get_if<Fortran::evaluate::IndirectSubscriptIntegerExpr>(
+              &subscript.u);
+      if (!indirect)
+        return std::nullopt;
+
+      idx = fir::getBase(createSomeExtendedExpression(
+          loc, converter, toEvExpr(indirect->value()), converter.getSymbolMap(),
+          stmtCtx));
+    }
+    if (!idx.getType().isIndex())
+      idx = fir::ConvertOp::create(builder, loc, builder.getIndexType(), idx);
+    indices.push_back(idx);
+  }
+
+  return indices;
 }
 
 mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,

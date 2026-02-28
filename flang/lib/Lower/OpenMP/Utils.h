@@ -16,6 +16,7 @@
 #include "mlir/IR/Value.h"
 #include "llvm/Support/CommandLine.h"
 #include <cstdint>
+#include <optional>
 
 extern llvm::cl::opt<bool> treatIndexAsSection;
 
@@ -216,6 +217,10 @@ mlir::Value genIteratorCoordinate(Fortran::lower::AbstractConverter &converter,
                                   hlfir::Entity entity,
                                   llvm::ArrayRef<mlir::Value> ivs,
                                   mlir::Location loc);
+
+std::optional<llvm::SmallVector<mlir::Value>> getIteratorElementIndices(
+    Fortran::lower::AbstractConverter &converter, const omp::Object &object,
+    Fortran::lower::StatementContext &stmtCtx, mlir::Location loc);
 
 } // namespace omp
 } // namespace lower
