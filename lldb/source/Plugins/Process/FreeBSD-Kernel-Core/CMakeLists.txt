@@ -1,3 +1,11 @@
+lldb_tablegen(ProcessFreeBSDKernelCoreProperties.inc -gen-lldb-property-defs
+  SOURCE ProcessFreeBSDKernelCoreProperties.td
+  TARGET LLDBPluginProcessFreeBSDKernelCorePropertiesGen)
+
+lldb_tablegen(ProcessFreeBSDKernelCorePropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE ProcessFreeBSDKernelCoreProperties.td
+  TARGET LLDBPluginProcessFreeBSDKernelCorePropertiesEnumGen)
+
 add_lldb_library(lldbPluginProcessFreeBSDKernelCore PLUGIN
   ProcessFreeBSDKernelCore.cpp
   RegisterContextFreeBSDKernelCore_arm.cpp
@@ -13,3 +21,7 @@ add_lldb_library(lldbPluginProcessFreeBSDKernelCore PLUGIN
     lldbTarget
     kvm
   )
+
+add_dependencies(lldbPluginProcessFreeBSDKernelCore
+  LLDBPluginProcessFreeBSDKernelCorePropertiesGen
+  LLDBPluginProcessFreeBSDKernelCorePropertiesEnumGen)
