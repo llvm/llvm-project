@@ -1013,6 +1013,21 @@ private:
   size_t size;
 };
 
+// Merges and deduplicates .BTF (BPF Type Format) sections from multiple input
+// object files into a single output .BTF section. Uses the BTFBuilder/BTFDedup
+// library to parse, merge, and deduplicate BTF type information.
+template <class ELFT>
+class BtfSection final : public SyntheticSection {
+public:
+  BtfSection(Ctx &);
+  void writeTo(uint8_t *buf) override;
+  size_t getSize() const override { return outputData.size(); }
+  bool isNeeded() const override { return !outputData.empty(); }
+
+private:
+  SmallVector<uint8_t, 0> outputData;
+};
+
 // For more information about .gnu.version and .gnu.version_r see:
 // https://www.akkadia.org/drepper/symbol-versioning
 

@@ -63,6 +63,10 @@ defm branch_to_branch: BB<"branch-to-branch",
     "Enable branch-to-branch optimization (default at -O2)",
     "Disable branch-to-branch optimization (default at -O0 and -O1)">;
 
+defm btf_merge: BB<"btf-merge",
+    "Merge and deduplicate .BTF sections",
+    "Do not merge .BTF sections (default)">;
+
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
     "Do not check section addresses for overlaps">;

@@ -98,6 +98,13 @@ Enable the branch-to-branch optimizations: a branch whose target is
 another branch instruction is rewritten to point to the latter branch
 target (AArch64 and X86_64 only). Enabled by default at
 .Fl O2 Ns .
+.It Fl -btf-merge
+Merge and deduplicate
+.Li .BTF
+sections from input object files into a single output section.
+Disabled by default.
+Ignored for relocatable links
+.Fl ( r Ns ).
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value
