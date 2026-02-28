@@ -96,6 +96,12 @@ public:
   /// control-flow paths where an SSA-value is undefined.
   virtual Value getUndefValue(Location loc, OpBuilder &builder, Type type) = 0;
 
+  /// Returns true if this operation (which has >1 successors) can be
+  /// converted to structured control flow by `createStructuredBranchRegionOp`.
+  /// Called during precondition checking, before any IR modifications.
+  /// Default implementation accepts all ops.
+  virtual bool canConvertBranchOp(Operation *op) { return true; }
+
   /// Creates a return-like terminator indicating unreachable.
   /// This is required when the transformation encounters a statically known
   /// infinite loop. Since structured control flow ops are not terminators,

@@ -27,6 +27,10 @@ namespace mlir {
 
 using namespace mlir;
 
+bool ControlFlowToSCFTransformation::canConvertBranchOp(Operation *op) {
+  return isa<cf::CondBranchOp, cf::SwitchOp>(op);
+}
+
 FailureOr<Operation *>
 ControlFlowToSCFTransformation::createStructuredBranchRegionOp(
     OpBuilder &builder, Operation *controlFlowCondOp, TypeRange resultTypes,
