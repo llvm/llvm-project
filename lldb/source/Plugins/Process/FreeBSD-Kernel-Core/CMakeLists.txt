@@ -11,6 +11,7 @@ add_lldb_library(lldbPluginProcessFreeBSDKernelCore PLUGIN
   RegisterContextFreeBSDKernelCore_arm.cpp
   RegisterContextFreeBSDKernelCore_arm64.cpp
   RegisterContextFreeBSDKernelCore_i386.cpp
+  RegisterContextFreeBSDKernelCore_ppc64le.cpp
   RegisterContextFreeBSDKernelCore_x86_64.cpp
   ThreadFreeBSDKernelCore.cpp
 
