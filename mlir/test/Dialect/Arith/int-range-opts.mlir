@@ -148,3 +148,41 @@ func.func @analysis_crash(%arg0: i32, %arg1: tensor<128xi1>) -> tensor<128xi64> 
   %2 = arith.extsi %1 : tensor<128xi32> to tensor<128xi64>
   return %2 : tensor<128xi64>
 }
+
+// -----
+
+// Regression test for https://github.com/llvm/llvm-project/issues/74234
+// Verifies no crash when interprocedural range propagation encounters a callee
+// whose return operand type differs from the function's declared return type,
+// causing a bit-width mismatch in the inferred ranges.
+
+// CHECK-LABEL: @issue74234_callee
+func.func private @issue74234_callee() -> index {
+  %c30 = arith.constant 30 : index
+  %2 = builtin.unrealized_conversion_cast %c30 : index to i32
+  llvm.return %2 : i32
+}
+// CHECK-LABEL: @issue74234_caller
+func.func @issue74234_caller() {
+  %c0 = arith.constant 0 : index
+  %0 = func.call @issue74234_callee() : () -> index
+  %1 = index.maxu %c0, %0
+  return
+}
+
+// Exercises rangeUnion with mismatched bit widths: the block argument %arg
+// receives a 32-bit range (from the malformed callee via ^bb1) and a 64-bit
+// range (from the arith.constant via ^bb2). The analysis joins them at ^merge,
+// triggering the bit-width guard in ConstantIntRanges::rangeUnion.
+// CHECK-LABEL: @issue74234_rangeunion
+func.func @issue74234_rangeunion(%cond: i1) -> index {
+  cf.cond_br %cond, ^bb1, ^bb2
+^bb1:
+  %a = func.call @issue74234_callee() : () -> index
+  cf.br ^merge(%a : index)
+^bb2:
+  %b = arith.constant 5 : index
+  cf.br ^merge(%b : index)
+^merge(%arg: index):
+  return %arg : index
+}

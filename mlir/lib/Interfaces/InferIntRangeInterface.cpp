@@ -90,6 +90,12 @@ ConstantIntRanges::rangeUnion(const ConstantIntRanges &other) const {
   if (other.umin().getBitWidth() == 0)
     return other;
 
+  // If bit widths differ (e.g., due to type mismatches in the input IR when
+  // ranges are propagated across call boundaries), conservatively return the
+  // maximum range for this value's bit width.
+  if (umin().getBitWidth() != other.umin().getBitWidth())
+    return maxRange(umin().getBitWidth());
+
   const APInt &uminUnion = umin().ult(other.umin()) ? umin() : other.umin();
   const APInt &umaxUnion = umax().ugt(other.umax()) ? umax() : other.umax();
   const APInt &sminUnion = smin().slt(other.smin()) ? smin() : other.smin();
@@ -175,6 +181,21 @@ void mlir::intrange::detail::defaultInferResultRanges(
     if (range.isUninitialized())
       return;
     unpacked.push_back(range.getValue());
+  }
+
+  // Guard against bit-width mismatches between an argument range and its
+  // operand's type. This can occur when interprocedural analysis propagates a
+  // range from a value of one type (e.g. i32) into a lattice anchored to a
+  // value of a different type (e.g. index), which happens with malformed IR
+  // that has type mismatches at call boundaries. All inference functions assume
+  // ranges match their operand types, so skip inference and leave the result
+  // ranges uninitialized (conservative).
+  Operation *op = interface.getOperation();
+  for (auto [operand, range] : llvm::zip(op->getOperands(), unpacked)) {
+    unsigned expectedWidth =
+        ConstantIntRanges::getStorageBitwidth(operand.getType());
+    if (range.umin().getBitWidth() != expectedWidth)
+      return;
   }
 
   interface.inferResultRanges(
