@@ -1571,9 +1571,9 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     builder.setInsertionPointToEnd(EntryBlock);
     mlir::Value IsNan = builder.createIsFPClass(Loc, V, cir::FPClassTest::Nan);
     cir::BrCondOp::create(builder, Loc, IsNan, EndBlock,
-                          InfinityBlock, // destTrue, destFalse
+                          InfinityBlock,
                           mlir::ValueRange{NanLiteral},
-                          mlir::ValueRange{}); // operandsTrue, operandsFalse
+                          mlir::ValueRange{});
 
     // ^InfinityBlock
     builder.setInsertionPointToEnd(InfinityBlock);
