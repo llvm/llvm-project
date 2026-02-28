@@ -58896,19 +58896,32 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
     }
   }
 
-  // Fold ADD(ADC(Y, A, CF), B) -> ADC(Y, ADD(A, B), CF)
+  // Fold ADD(ADC(Y, C1, CF), C2) -> ADC(Y, C1 + C2, CF) and
+  //      ADD(ADC(Y, 0, CF), X) -> ADC(Y, X, CF) and
+  //      ADD(ADC(Y, X, CF), 0) -> ADC(Y, X, CF)
   if (!IsSub && LHS.getOpcode() == X86ISD::ADC && LHS.hasOneUse() &&
       !needCarryOrOverflowFlag(SDValue(N, 1))) {
-    SDValue A = LHS.getOperand(1);
-    SDValue B = RHS;
-    EVT VT = A.getValueType();
 
-    if (B.getValueType() != VT)
-      return SDValue();
+    auto *C1 = dyn_cast<ConstantSDNode>(LHS.getOperand(1));
+    auto *C2 = dyn_cast<ConstantSDNode>(RHS);
 
-    SDValue NewAdd = DAG.getNode(ISD::ADD, DL, VT, A, B);
-    return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
-                       NewAdd, LHS.getOperand(2));
+    // Both are constants: fold C1 + C2
+    if (C1 && C2) {
+      APInt Sum = C1->getAPIntValue() + C2->getAPIntValue();
+      return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
+                         DAG.getConstant(Sum, DL, VT), LHS.getOperand(2));
+    }
+
+    // Case: ADC(Y, 0, CF) + X -> ADC(Y, X, CF)
+    if (C1 && C1->isZero()) {
+      return DAG.getNode(X86ISD::ADC, DL, N->getVTList(), LHS.getOperand(0),
+                         RHS, LHS.getOperand(2));
+    }
+
+    // Case: ADC(Y, X, CF) + 0 -> ADC(Y, X, CF)
+    if (C2 && C2->isZero()) {
+      return LHS;
+    }
   }
 
   // TODO: Can we drop the ZeroSecondOpOnly limit? This is to guarantee that the
