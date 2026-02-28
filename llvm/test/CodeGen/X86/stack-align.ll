@@ -16,13 +16,14 @@ define void @test(ptr byval({ double, double })  %z, ptr %P) nounwind {
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movl 20(%esp), %eax
 ; CHECK-NEXT:    movsd _G, %xmm0 ## xmm0 = mem[0],zero
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [NaN,NaN]
-; CHECK-NEXT:    andpd %xmm1, %xmm0
-; CHECK-NEXT:    movlpd %xmm0, (%eax)
-; CHECK-NEXT:    movsd 4(%esp), %xmm2 ## xmm2 = mem[0],zero
-; CHECK-NEXT:    andpd %xmm1, %xmm2
-; CHECK-NEXT:    addsd %xmm0, %xmm2
-; CHECK-NEXT:    movsd %xmm2, (%eax)
+; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movapd %xmm1, %xmm2
+; CHECK-NEXT:    andnpd %xmm0, %xmm2
+; CHECK-NEXT:    movlpd %xmm2, (%eax)
+; CHECK-NEXT:    movsd 4(%esp), %xmm0 ## xmm0 = mem[0],zero
+; CHECK-NEXT:    andnpd %xmm0, %xmm1
+; CHECK-NEXT:    addsd %xmm2, %xmm1
+; CHECK-NEXT:    movsd %xmm1, (%eax)
 ; CHECK-NEXT:    retl
 entry:
   %tmp3 = load double, ptr @G, align 16		; <double> [#uses=1]

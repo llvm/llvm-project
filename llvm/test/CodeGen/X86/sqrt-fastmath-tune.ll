@@ -80,7 +80,7 @@ define <4 x float> @v4f32_no_daz(<4 x float> %f) #0 {
 ; BDW-NEXT:    vbroadcastss {{.*#+}} xmm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; BDW-NEXT:    vmulps %xmm1, %xmm2, %xmm1
 ; BDW-NEXT:    vmulps %xmm3, %xmm1, %xmm1
-; BDW-NEXT:    vbroadcastss {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN]
+; BDW-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2147483647,2147483647,2147483647,2147483647]
 ; BDW-NEXT:    vandps %xmm2, %xmm0, %xmm0
 ; BDW-NEXT:    vbroadcastss {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; BDW-NEXT:    vcmpleps %xmm0, %xmm2, %xmm0
@@ -116,33 +116,31 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; NHM-LABEL: v8f32_no_daz:
 ; NHM:       # %bb.0:
 ; NHM-NEXT:    rsqrtps %xmm0, %xmm2
-; NHM-NEXT:    movaps %xmm0, %xmm4
-; NHM-NEXT:    mulps %xmm2, %xmm4
-; NHM-NEXT:    movaps {{.*#+}} xmm5 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; NHM-NEXT:    movaps %xmm4, %xmm3
-; NHM-NEXT:    mulps %xmm5, %xmm3
-; NHM-NEXT:    mulps %xmm2, %xmm4
-; NHM-NEXT:    movaps {{.*#+}} xmm6 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; NHM-NEXT:    addps %xmm6, %xmm4
-; NHM-NEXT:    mulps %xmm3, %xmm4
-; NHM-NEXT:    movaps {{.*#+}} xmm7 = [NaN,NaN,NaN,NaN]
-; NHM-NEXT:    andps %xmm7, %xmm0
-; NHM-NEXT:    movaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
-; NHM-NEXT:    movaps %xmm2, %xmm3
-; NHM-NEXT:    cmpleps %xmm0, %xmm3
-; NHM-NEXT:    andps %xmm4, %xmm3
-; NHM-NEXT:    rsqrtps %xmm1, %xmm0
-; NHM-NEXT:    movaps %xmm1, %xmm4
-; NHM-NEXT:    mulps %xmm0, %xmm4
-; NHM-NEXT:    mulps %xmm4, %xmm5
-; NHM-NEXT:    mulps %xmm0, %xmm4
-; NHM-NEXT:    addps %xmm6, %xmm4
-; NHM-NEXT:    mulps %xmm5, %xmm4
+; NHM-NEXT:    movaps {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; NHM-NEXT:    movaps %xmm3, %xmm4
+; NHM-NEXT:    andnps %xmm0, %xmm4
+; NHM-NEXT:    movaps %xmm0, %xmm5
+; NHM-NEXT:    mulps %xmm2, %xmm5
+; NHM-NEXT:    movaps {{.*#+}} xmm6 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; NHM-NEXT:    movaps %xmm5, %xmm0
+; NHM-NEXT:    mulps %xmm6, %xmm0
+; NHM-NEXT:    mulps %xmm2, %xmm5
+; NHM-NEXT:    movaps {{.*#+}} xmm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; NHM-NEXT:    addps %xmm2, %xmm5
+; NHM-NEXT:    mulps %xmm0, %xmm5
+; NHM-NEXT:    movaps {{.*#+}} xmm7 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; NHM-NEXT:    movaps %xmm7, %xmm0
+; NHM-NEXT:    cmpleps %xmm4, %xmm0
+; NHM-NEXT:    andps %xmm5, %xmm0
+; NHM-NEXT:    rsqrtps %xmm1, %xmm4
+; NHM-NEXT:    andnps %xmm1, %xmm3
+; NHM-NEXT:    mulps %xmm4, %xmm1
+; NHM-NEXT:    mulps %xmm1, %xmm6
+; NHM-NEXT:    mulps %xmm4, %xmm1
+; NHM-NEXT:    addps %xmm2, %xmm1
+; NHM-NEXT:    mulps %xmm6, %xmm1
+; NHM-NEXT:    cmpleps %xmm3, %xmm7
 ; NHM-NEXT:    andps %xmm7, %xmm1
-; NHM-NEXT:    cmpleps %xmm1, %xmm2
-; NHM-NEXT:    andps %xmm4, %xmm2
-; NHM-NEXT:    movaps %xmm3, %xmm0
-; NHM-NEXT:    movaps %xmm2, %xmm1
 ; NHM-NEXT:    retq
 ;
 ; SNB-LABEL: v8f32_no_daz:
@@ -168,7 +166,7 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; BDW-NEXT:    vbroadcastss {{.*#+}} ymm1 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
 ; BDW-NEXT:    vmulps %ymm1, %ymm2, %ymm1
 ; BDW-NEXT:    vmulps %ymm3, %ymm1, %ymm1
-; BDW-NEXT:    vbroadcastss {{.*#+}} ymm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
+; BDW-NEXT:    vbroadcastss {{.*#+}} ymm2 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
 ; BDW-NEXT:    vandps %ymm2, %ymm0, %ymm0
 ; BDW-NEXT:    vbroadcastss {{.*#+}} ymm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
 ; BDW-NEXT:    vcmpleps %ymm0, %ymm2, %ymm0
@@ -183,33 +181,31 @@ define <8 x float> @v8f32_no_daz(<8 x float> %f) #0 {
 ; X86-64-LABEL: v8f32_no_daz:
 ; X86-64:       # %bb.0:
 ; X86-64-NEXT:    rsqrtps %xmm0, %xmm2
-; X86-64-NEXT:    movaps %xmm0, %xmm4
-; X86-64-NEXT:    mulps %xmm2, %xmm4
-; X86-64-NEXT:    movaps {{.*#+}} xmm5 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; X86-64-NEXT:    movaps %xmm4, %xmm3
-; X86-64-NEXT:    mulps %xmm5, %xmm3
-; X86-64-NEXT:    mulps %xmm2, %xmm4
-; X86-64-NEXT:    movaps {{.*#+}} xmm6 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; X86-64-NEXT:    addps %xmm6, %xmm4
-; X86-64-NEXT:    mulps %xmm3, %xmm4
-; X86-64-NEXT:    movaps {{.*#+}} xmm7 = [NaN,NaN,NaN,NaN]
-; X86-64-NEXT:    andps %xmm7, %xmm0
-; X86-64-NEXT:    movaps {{.*#+}} xmm2 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
-; X86-64-NEXT:    movaps %xmm2, %xmm3
-; X86-64-NEXT:    cmpleps %xmm0, %xmm3
-; X86-64-NEXT:    andps %xmm4, %xmm3
-; X86-64-NEXT:    rsqrtps %xmm1, %xmm0
-; X86-64-NEXT:    movaps %xmm1, %xmm4
-; X86-64-NEXT:    mulps %xmm0, %xmm4
-; X86-64-NEXT:    mulps %xmm4, %xmm5
-; X86-64-NEXT:    mulps %xmm0, %xmm4
-; X86-64-NEXT:    addps %xmm6, %xmm4
-; X86-64-NEXT:    mulps %xmm5, %xmm4
+; X86-64-NEXT:    movaps {{.*#+}} xmm3 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X86-64-NEXT:    movaps %xmm3, %xmm4
+; X86-64-NEXT:    andnps %xmm0, %xmm4
+; X86-64-NEXT:    movaps %xmm0, %xmm5
+; X86-64-NEXT:    mulps %xmm2, %xmm5
+; X86-64-NEXT:    movaps {{.*#+}} xmm6 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; X86-64-NEXT:    movaps %xmm5, %xmm0
+; X86-64-NEXT:    mulps %xmm6, %xmm0
+; X86-64-NEXT:    mulps %xmm2, %xmm5
+; X86-64-NEXT:    movaps {{.*#+}} xmm2 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; X86-64-NEXT:    addps %xmm2, %xmm5
+; X86-64-NEXT:    mulps %xmm0, %xmm5
+; X86-64-NEXT:    movaps {{.*#+}} xmm7 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; X86-64-NEXT:    movaps %xmm7, %xmm0
+; X86-64-NEXT:    cmpleps %xmm4, %xmm0
+; X86-64-NEXT:    andps %xmm5, %xmm0
+; X86-64-NEXT:    rsqrtps %xmm1, %xmm4
+; X86-64-NEXT:    andnps %xmm1, %xmm3
+; X86-64-NEXT:    mulps %xmm4, %xmm1
+; X86-64-NEXT:    mulps %xmm1, %xmm6
+; X86-64-NEXT:    mulps %xmm4, %xmm1
+; X86-64-NEXT:    addps %xmm2, %xmm1
+; X86-64-NEXT:    mulps %xmm6, %xmm1
+; X86-64-NEXT:    cmpleps %xmm3, %xmm7
 ; X86-64-NEXT:    andps %xmm7, %xmm1
-; X86-64-NEXT:    cmpleps %xmm1, %xmm2
-; X86-64-NEXT:    andps %xmm4, %xmm2
-; X86-64-NEXT:    movaps %xmm3, %xmm0
-; X86-64-NEXT:    movaps %xmm2, %xmm1
 ; X86-64-NEXT:    retq
   %call = tail call fast <8 x float> @llvm.sqrt.v8f32(<8 x float> %f) #2
   ret <8 x float> %call

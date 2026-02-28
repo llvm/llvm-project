@@ -43,32 +43,31 @@ define <4 x float> @pow_v4f32_one_fourth_fmf(<4 x float> %x) nounwind {
 ; CHECK-LABEL: pow_v4f32_one_fourth_fmf:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rsqrtps %xmm0, %xmm1
-; CHECK-NEXT:    movaps %xmm0, %xmm2
-; CHECK-NEXT:    mulps %xmm1, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm3 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; CHECK-NEXT:    movaps %xmm2, %xmm4
-; CHECK-NEXT:    mulps %xmm3, %xmm4
-; CHECK-NEXT:    mulps %xmm1, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm5 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; CHECK-NEXT:    addps %xmm5, %xmm2
-; CHECK-NEXT:    mulps %xmm4, %xmm2
-; CHECK-NEXT:    movaps {{.*#+}} xmm4 = [NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    andps %xmm4, %xmm0
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
-; CHECK-NEXT:    movaps %xmm1, %xmm6
-; CHECK-NEXT:    cmpleps %xmm0, %xmm6
-; CHECK-NEXT:    andps %xmm2, %xmm6
-; CHECK-NEXT:    rsqrtps %xmm6, %xmm0
-; CHECK-NEXT:    movaps %xmm6, %xmm2
-; CHECK-NEXT:    mulps %xmm0, %xmm2
-; CHECK-NEXT:    mulps %xmm2, %xmm3
-; CHECK-NEXT:    mulps %xmm0, %xmm2
-; CHECK-NEXT:    addps %xmm5, %xmm2
-; CHECK-NEXT:    mulps %xmm3, %xmm2
+; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    movaps %xmm2, %xmm3
+; CHECK-NEXT:    andnps %xmm0, %xmm3
+; CHECK-NEXT:    movaps %xmm0, %xmm4
+; CHECK-NEXT:    mulps %xmm1, %xmm4
+; CHECK-NEXT:    movaps {{.*#+}} xmm5 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; CHECK-NEXT:    movaps %xmm4, %xmm0
+; CHECK-NEXT:    mulps %xmm5, %xmm0
+; CHECK-NEXT:    mulps %xmm1, %xmm4
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; CHECK-NEXT:    addps %xmm1, %xmm4
+; CHECK-NEXT:    mulps %xmm0, %xmm4
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.17549435E-38,1.17549435E-38,1.17549435E-38,1.17549435E-38]
+; CHECK-NEXT:    movaps %xmm0, %xmm6
+; CHECK-NEXT:    cmpleps %xmm3, %xmm6
 ; CHECK-NEXT:    andps %xmm4, %xmm6
-; CHECK-NEXT:    cmpleps %xmm6, %xmm1
-; CHECK-NEXT:    andps %xmm2, %xmm1
-; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    rsqrtps %xmm6, %xmm3
+; CHECK-NEXT:    andnps %xmm6, %xmm2
+; CHECK-NEXT:    mulps %xmm3, %xmm6
+; CHECK-NEXT:    mulps %xmm6, %xmm5
+; CHECK-NEXT:    mulps %xmm3, %xmm6
+; CHECK-NEXT:    addps %xmm1, %xmm6
+; CHECK-NEXT:    mulps %xmm5, %xmm6
+; CHECK-NEXT:    cmpleps %xmm2, %xmm0
+; CHECK-NEXT:    andps %xmm6, %xmm0
 ; CHECK-NEXT:    retq
   %r = call fast <4 x float> @llvm.pow.v4f32(<4 x float> %x, <4 x float> <float 2.5e-1, float 2.5e-1, float 2.5e-01, float 2.5e-01>)
   ret <4 x float> %r

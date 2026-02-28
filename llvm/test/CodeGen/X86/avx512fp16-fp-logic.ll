@@ -211,8 +211,7 @@ define half @movmsk(half %x) {
 define half @bitcast_fabs(half %x) {
 ; CHECK-LABEL: bitcast_fabs:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast half %x to i16
   %and = and i16 %bc1, 32767
@@ -235,8 +234,7 @@ define half @bitcast_fneg(half %x) {
 define <8 x half> @bitcast_fabs_vec(<8 x half> %x) {
 ; CHECK-LABEL: bitcast_fabs_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %bc1 = bitcast <8 x half> %x to <8 x i16>
   %and = and <8 x i16> %bc1, <i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767, i16 32767>

@@ -1190,25 +1190,29 @@ entry:
 define half @fcopysign(half %x, half %y) {
 ; CHECK-LIBCALL-LABEL: fcopysign:
 ; CHECK-LIBCALL:       # %bb.0:
-; CHECK-LIBCALL-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; CHECK-LIBCALL-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; CHECK-LIBCALL-NEXT:    orps %xmm1, %xmm0
+; CHECK-LIBCALL-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-LIBCALL-NEXT:    andps %xmm2, %xmm1
+; CHECK-LIBCALL-NEXT:    andnps %xmm0, %xmm2
+; CHECK-LIBCALL-NEXT:    orps %xmm1, %xmm2
+; CHECK-LIBCALL-NEXT:    movaps %xmm2, %xmm0
 ; CHECK-LIBCALL-NEXT:    retq
 ;
 ; BWON-F16C-LABEL: fcopysign:
 ; BWON-F16C:       # %bb.0:
-; BWON-F16C-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
-; BWON-F16C-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; BWON-F16C-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; BWON-F16C-NEXT:    vandps %xmm2, %xmm1, %xmm1
+; BWON-F16C-NEXT:    vandnps %xmm0, %xmm2, %xmm0
 ; BWON-F16C-NEXT:    vorps %xmm1, %xmm0, %xmm0
 ; BWON-F16C-NEXT:    retq
 ;
 ; CHECK-I686-LABEL: fcopysign:
 ; CHECK-I686:       # %bb.0:
-; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
 ; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm1
-; CHECK-I686-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; CHECK-I686-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; CHECK-I686-NEXT:    por %xmm1, %xmm0
+; CHECK-I686-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm2
+; CHECK-I686-NEXT:    movdqa {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-I686-NEXT:    pand %xmm0, %xmm2
+; CHECK-I686-NEXT:    pandn %xmm1, %xmm0
+; CHECK-I686-NEXT:    por %xmm2, %xmm0
 ; CHECK-I686-NEXT:    retl
   %a = call half @llvm.copysign.f16(half %x, half %y)
   ret half %a

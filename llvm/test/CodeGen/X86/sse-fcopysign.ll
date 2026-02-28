@@ -91,21 +91,23 @@ define float @int1(float %a, float %b) nounwind {
 ; X86-LABEL: int1:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pushl %eax
-; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movaps {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
-; X86-NEXT:    orps %xmm0, %xmm1
-; X86-NEXT:    movss %xmm1, (%esp)
+; X86-NEXT:    andps %xmm0, %xmm1
+; X86-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X86-NEXT:    andnps %xmm2, %xmm0
+; X86-NEXT:    orps %xmm1, %xmm0
+; X86-NEXT:    movss %xmm0, (%esp)
 ; X86-NEXT:    flds (%esp)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: int1:
 ; X64:       # %bb.0:
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    orps %xmm1, %xmm0
+; X64-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; X64-NEXT:    andps %xmm2, %xmm0
+; X64-NEXT:    andnps %xmm1, %xmm2
+; X64-NEXT:    orps %xmm2, %xmm0
 ; X64-NEXT:    retq
   %tmp = tail call float @llvm.copysign.f32( float %b, float %a )
   ret float %tmp
@@ -121,11 +123,12 @@ define double @int2(double %a, float %b, float %c) nounwind {
 ; X86-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-NEXT:    addss 20(%ebp), %xmm0
 ; X86-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
-; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
 ; X86-NEXT:    cvtss2sd %xmm0, %xmm0
-; X86-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    orps %xmm1, %xmm0
-; X86-NEXT:    movlps %xmm0, (%esp)
+; X86-NEXT:    andps %xmm2, %xmm0
+; X86-NEXT:    andnps %xmm1, %xmm2
+; X86-NEXT:    orps %xmm0, %xmm2
+; X86-NEXT:    movlps %xmm2, (%esp)
 ; X86-NEXT:    fldl (%esp)
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
@@ -134,10 +137,12 @@ define double @int2(double %a, float %b, float %c) nounwind {
 ; X64-LABEL: int2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    addss %xmm2, %xmm1
+; X64-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0]
 ; X64-NEXT:    cvtss2sd %xmm1, %xmm1
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; X64-NEXT:    andps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    orps %xmm1, %xmm0
+; X64-NEXT:    andps %xmm2, %xmm1
+; X64-NEXT:    andnps %xmm0, %xmm2
+; X64-NEXT:    orps %xmm1, %xmm2
+; X64-NEXT:    movaps %xmm2, %xmm0
 ; X64-NEXT:    retq
   %tmp1 = fadd float %b, %c
   %tmp2 = fpext float %tmp1 to double

@@ -23246,26 +23246,25 @@ static SDValue LowerFABSorFNEG(SDValue Op, SelectionDAG &DAG) {
                                  : MVT::v8f16;
 
   unsigned EltBits = VT.getScalarSizeInBits();
-  // For FABS, mask is 0x7f...; for FNEG, mask is 0x80...
-  APInt MaskElt = IsFABS ? APInt::getSignedMaxValue(EltBits) :
-                           APInt::getSignMask(EltBits);
+  // For FABS, mask is ~0x80...; for FNEG, mask is 0x80...
+  APInt MaskElt = APInt::getSignMask(EltBits);
   const fltSemantics &Sem = VT.getFltSemantics();
   SDValue Mask = DAG.getConstantFP(APFloat(Sem, MaskElt), dl, LogicVT);
 
   SDValue Op0 = Op.getOperand(0);
   bool IsFNABS = !IsFABS && (Op0.getOpcode() == ISD::FABS);
-  unsigned LogicOp = IsFABS  ? X86ISD::FAND :
+  unsigned LogicOp = IsFABS  ? X86ISD::FANDN :
                      IsFNABS ? X86ISD::FOR  :
                                X86ISD::FXOR;
   SDValue Operand = IsFNABS ? Op0.getOperand(0) : Op0;
 
   if (VT.isVector() || IsF128)
-    return DAG.getNode(LogicOp, dl, LogicVT, Operand, Mask);
+    return DAG.getNode(LogicOp, dl, LogicVT, Mask, Operand);
 
   // For the scalar case extend to a 128-bit vector, perform the logic op,
   // and extract the scalar result back out.
   Operand = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Operand);
-  SDValue LogicNode = DAG.getNode(LogicOp, dl, LogicVT, Operand, Mask);
+  SDValue LogicNode = DAG.getNode(LogicOp, dl, LogicVT, Mask, Operand);
   return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, VT, LogicNode,
                      DAG.getVectorIdxConstant(0, dl));
 }
@@ -23310,13 +23309,11 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
   unsigned EltSizeInBits = VT.getScalarSizeInBits();
   SDValue SignMask = DAG.getConstantFP(
       APFloat(Sem, APInt::getSignMask(EltSizeInBits)), dl, LogicVT);
-  SDValue MagMask = DAG.getConstantFP(
-      APFloat(Sem, APInt::getSignedMaxValue(EltSizeInBits)), dl, LogicVT);
 
   // First, clear all bits but the sign bit from the second operand (sign).
   if (IsFakeVector)
     Sign = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Sign);
-  SDValue SignBit = DAG.getNode(X86ISD::FAND, dl, LogicVT, Sign, SignMask);
+  SDValue SignBit = DAG.getNode(X86ISD::FAND, dl, LogicVT, SignMask, Sign);
 
   // Next, clear the sign bit from the first operand (magnitude).
   // TODO: If we had general constant folding for FP logic ops, this check
@@ -23330,7 +23327,7 @@ static SDValue LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) {
     // If the magnitude operand wasn't a constant, we need to AND out the sign.
     if (IsFakeVector)
       Mag = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, LogicVT, Mag);
-    MagBits = DAG.getNode(X86ISD::FAND, dl, LogicVT, Mag, MagMask);
+    MagBits = DAG.getNode(X86ISD::FANDN, dl, LogicVT, SignMask, Mag);
   }
 
   // OR the magnitude value with the sign bit.
@@ -56447,13 +56444,20 @@ static SDValue combineFAnd(SDNode *N, SelectionDAG &DAG,
 /// Do target-specific dag combines on X86ISD::FANDN nodes.
 static SDValue combineFAndn(SDNode *N, SelectionDAG &DAG,
                             const X86Subtarget &Subtarget) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
   // FANDN(0.0, x) -> x
-  if (isNullFPScalarOrVectorConst(N->getOperand(0)))
+  if (isNullFPScalarOrVectorConst(N0))
     return N->getOperand(1);
 
   // FANDN(x, 0.0) -> 0.0
-  if (SDValue V = getNullFPConstForNullVal(N->getOperand(1), DAG, Subtarget))
+  if (SDValue V = getNullFPConstForNullVal(N1, DAG, Subtarget))
     return V;
+
+  // FANDN(x, FANDN(x, y)) -> FANDN(x, y)
+  if (N1.getOpcode() == X86ISD::FANDN && N0 == N1.getOperand(0))
+    return N1;
 
   return combineX86FPLogicOp(N, DAG, Subtarget);
 }
@@ -56672,6 +56676,10 @@ static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
   // ANDNP(x, -1) -> NOT(x) -> XOR(x, -1)
   if (ISD::isBuildVectorAllOnes(N1.getNode()))
     return DAG.getNOT(DL, N0, VT);
+
+  // ANDNP(x, ANDNP(x, y)) -> ANDNP(x, y)
+  if (N1.getOpcode() == X86ISD::ANDNP && N0 == N1.getOperand(0))
+    return N1;
 
   // Turn ANDNP back to AND if input is inverted.
   if (SDValue Not = IsNOT(N0, DAG))
