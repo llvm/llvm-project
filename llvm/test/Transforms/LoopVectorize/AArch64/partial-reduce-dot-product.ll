@@ -1296,9 +1296,6 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1:       vector.ph:
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
-; CHECK-INTERLEAVE1-NEXT:    [[TMP7:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-INTERLEAVE1-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; CHECK-INTERLEAVE1-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
 ; CHECK-INTERLEAVE1-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVE1:       vector.body:
@@ -1315,7 +1312,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP12:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[TMP15]], <vscale x 16 x i32> zeroinitializer
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP19]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP12]])
 ; CHECK-INTERLEAVE1-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
-; CHECK-INTERLEAVE1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
+; CHECK-INTERLEAVE1-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-INTERLEAVE1-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP20]], true
 ; CHECK-INTERLEAVE1-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -1332,9 +1329,6 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED:       vector.ph:
 ; CHECK-INTERLEAVED-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-INTERLEAVED-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
-; CHECK-INTERLEAVED-NEXT:    [[TMP7:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-INTERLEAVED-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; CHECK-INTERLEAVED-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
 ; CHECK-INTERLEAVED-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-INTERLEAVED:       vector.body:
@@ -1351,7 +1345,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-INTERLEAVED-NEXT:    [[TMP12:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[TMP15]], <vscale x 16 x i32> zeroinitializer
 ; CHECK-INTERLEAVED-NEXT:    [[TMP19]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP12]])
 ; CHECK-INTERLEAVED-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
-; CHECK-INTERLEAVED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
+; CHECK-INTERLEAVED-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-INTERLEAVED-NEXT:    [[TMP20:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-INTERLEAVED-NEXT:    [[TMP21:%.*]] = xor i1 [[TMP20]], true
 ; CHECK-INTERLEAVED-NEXT:    br i1 [[TMP21]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]
@@ -1368,9 +1362,6 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW:       vector.ph:
 ; CHECK-MAXBW-NEXT:    [[TMP5:%.*]] = call i64 @llvm.vscale.i64()
 ; CHECK-MAXBW-NEXT:    [[TMP6:%.*]] = shl nuw i64 [[TMP5]], 4
-; CHECK-MAXBW-NEXT:    [[TMP7:%.*]] = sub i64 [[N]], [[TMP6]]
-; CHECK-MAXBW-NEXT:    [[TMP8:%.*]] = icmp ugt i64 [[N]], [[TMP6]]
-; CHECK-MAXBW-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 [[TMP7]], i64 0
 ; CHECK-MAXBW-NEXT:    [[ACTIVE_LANE_MASK_ENTRY:%.*]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 [[N]])
 ; CHECK-MAXBW-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK-MAXBW:       vector.body:
@@ -1387,7 +1378,7 @@ define i32 @dotp_predicated(i64 %N, ptr %a, ptr %b) #0 {
 ; CHECK-MAXBW-NEXT:    [[TMP18:%.*]] = select <vscale x 16 x i1> [[ACTIVE_LANE_MASK]], <vscale x 16 x i32> [[TMP17]], <vscale x 16 x i32> zeroinitializer
 ; CHECK-MAXBW-NEXT:    [[PARTIAL_REDUCE]] = call <vscale x 4 x i32> @llvm.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP18]])
 ; CHECK-MAXBW-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], [[TMP6]]
-; CHECK-MAXBW-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX]], i64 [[TMP9]])
+; CHECK-MAXBW-NEXT:    [[ACTIVE_LANE_MASK_NEXT]] = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 [[INDEX_NEXT]], i64 [[N]])
 ; CHECK-MAXBW-NEXT:    [[TMP19:%.*]] = extractelement <vscale x 16 x i1> [[ACTIVE_LANE_MASK_NEXT]], i32 0
 ; CHECK-MAXBW-NEXT:    [[TMP20:%.*]] = xor i1 [[TMP19]], true
 ; CHECK-MAXBW-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP12:![0-9]+]]

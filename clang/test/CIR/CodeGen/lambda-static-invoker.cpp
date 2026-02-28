@@ -115,64 +115,42 @@ int g3() {
 // CIR: cir.func{{.*}} @_Z2g3v() -> (!s32i{{.*}}){{.*}} {
 // CIR:   %[[RETVAL:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["__retval"]
 // CIR:   %[[FN_ADDR:.*]] = cir.alloca !cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>, !cir.ptr<!cir.ptr<!cir.func<(!cir.ptr<!s32i>) -> !s32i>>>, ["fn", init]
+// CIR:   %[[LAM_ALLOCA:.*]] = cir.alloca ![[REC_LAM_G3]], !cir.ptr<![[REC_LAM_G3]]>, ["ref.tmp0"]
 // CIR:   %[[TASK:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["task", init]
+// CIR:   %[[REF_TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init]
 
 // 1. Use `operator int (*)(int const&)()` to retrieve the fnptr to `__invoke()`.
-// CIR:     %[[SCOPE_RET:.*]] = cir.scope {
-// CIR:       %[[LAM_ALLOCA:.*]] = cir.alloca ![[REC_LAM_G3]], !cir.ptr<![[REC_LAM_G3]]>, ["ref.tmp0"]
-// CIR:       %[[OPERATOR_RESULT:.*]] = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[LAM_ALLOCA]]){{.*}}
-// CIR:       %[[PLUS:.*]] = cir.unary(plus, %[[OPERATOR_RESULT]])
-// CIR:       cir.yield %[[PLUS]]
-// CIR:     }
+// CIR:   %[[OPERATOR_RESULT:.*]] = cir.call @_ZZ2g3vENK3$_0cvPFiRKiEEv(%[[LAM_ALLOCA]]){{.*}}
+// CIR:   %[[PLUS:.*]] = cir.unary(plus, %[[OPERATOR_RESULT]])
 
 // 2. Load ptr to `__invoke()`.
-// CIR:     cir.store{{.*}} %[[SCOPE_RET]], %[[FN_ADDR]]
-// CIR:     %[[SCOPE_RET2:.*]] = cir.scope {
-// CIR:       %[[REF_TMP1:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, ["ref.tmp1", init]
-// CIR:       %[[FN:.*]] = cir.load{{.*}} %[[FN_ADDR]]
-// CIR:       %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
-// CIR:       cir.store{{.*}} %[[THREE]], %[[REF_TMP1]]
+// CIR:   cir.store{{.*}} %[[PLUS]], %[[FN_ADDR]]
+// CIR:   %[[FN:.*]] = cir.load{{.*}} %[[FN_ADDR]]
+// CIR:   %[[THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CIR:   cir.store{{.*}} %[[THREE]], %[[REF_TMP1]]
 
 // 3. Call `__invoke()`, which effectively executes `operator()`.
-// CIR:       %[[RESULT:.*]] = cir.call %[[FN]](%[[REF_TMP1]])
-// CIR:       cir.yield %[[RESULT]]
-// CIR:     }
-
-// CIR:     cir.store{{.*}} %[[SCOPE_RET2]], %[[TASK]]
-// CIR:     %[[TASK_RET:.*]] = cir.load{{.*}} %[[TASK]]
-// CIR:     cir.store{{.*}} %[[TASK_RET]], %[[RETVAL]]
-// CIR:     %[[RET:.*]] = cir.load{{.*}} %[[RETVAL]]
-// CIR:     cir.return %[[RET]]
-// CIR:   }
+// CIR:   %[[RESULT:.*]] = cir.call %[[FN]](%[[REF_TMP1]])
+// CIR:   cir.store{{.*}} %[[RESULT]], %[[TASK]]
+// CIR:   %[[TASK_RET:.*]] = cir.load{{.*}} %[[TASK]]
+// CIR:   cir.store{{.*}} %[[TASK_RET]], %[[RETVAL]]
+// CIR:   %[[RET:.*]] = cir.load{{.*}} %[[RETVAL]]
+// CIR:   cir.return %[[RET]]
 
 // LLVM: define dso_local {{.*}}i32 @_Z2g3v(){{.*}} {
-// LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_G3]]
-// LLVM:   %[[REF_TMP1:.*]] = alloca i32
 // LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[FN_PTR:.*]] = alloca ptr
+// LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_G3]]
 // LLVM:   %[[TASK:.*]] = alloca i32
-// LLVM:   br label %[[SCOPE_BB0:.*]]
-
-// LLVM: [[SCOPE_BB0]]:
+// LLVM:   %[[REF_TMP1:.*]] = alloca i32
 // LLVM:   %[[OPERATOR_RESULT:.*]] = call {{.*}}ptr @"_ZZ2g3vENK3$_0cvPFiRKiEEv"(ptr {{.*}} %[[LAM_ALLOCA]])
-// LLVM:   br label %[[SCOPE_BB1:.*]]
-
-// LLVM: [[SCOPE_BB1]]:
-// LLVM:   %[[TMP0:.*]] = phi ptr [ %[[OPERATOR_RESULT]], %[[SCOPE_BB0]] ]
-// LLVM:   store ptr %[[TMP0]], ptr %[[FN_PTR]]
-// LLVM:   br label %[[SCOPE_BB2:.*]]
-
-// LLVM: [[SCOPE_BB2]]:
+// LLVM:   store ptr %[[OPERATOR_RESULT]], ptr %[[FN_PTR]]
 // LLVM:   %[[FN:.*]] = load ptr, ptr %[[FN_PTR]]
 // LLVM:   store i32 3, ptr %[[REF_TMP1]]
 // LLVM:   %[[RESULT:.*]] = call {{.*}}i32 %[[FN]](ptr {{.*}} %[[REF_TMP1]])
-// LLVM:   br label %[[RET_BB:.*]]
-
-// LLVM: [[RET_BB]]:
-// LLVM:   %[[TMP1:.*]] = phi i32 [ %[[RESULT]], %[[SCOPE_BB2]] ]
-// LLVM:   store i32 %[[TMP1]], ptr %[[TASK]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TASK]]
-// LLVM:   store i32 %[[TMP2]], ptr %[[RETVAL]]
+// LLVM:   store i32 %[[RESULT]], ptr %[[TASK]]
+// LLVM:   %[[TMP:.*]] = load i32, ptr %[[TASK]]
+// LLVM:   store i32 %[[TMP]], ptr %[[RETVAL]]
 // LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
 // LLVM:   ret i32 %[[RET]]
 

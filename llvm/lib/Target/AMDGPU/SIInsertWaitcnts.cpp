@@ -3116,6 +3116,109 @@ void SIInsertWaitcnts::setSchedulingMode(MachineBasicBlock &MBB,
       .addImm(EncodedReg);
 }
 
+namespace {
+// TODO: Remove this work-around after fixing the scheduler.
+// There are two reasons why vccz might be incorrect; see ST->hasReadVCCZBug()
+// and ST->partialVCCWritesUpdateVCCZ().
+// i. VCCZBug: There is a hardware bug on CI/SI where SMRD instruction may
+//    corrupt vccz bit, so when we detect that an instruction may read from
+//    a corrupt vccz bit, we need to:
+//   1. Insert s_waitcnt lgkm(0) to wait for all outstanding SMRD
+//      operations to complete.
+//   2. Recompute the correct value of vccz by writing the current value
+//      of vcc back to vcc.
+// ii. Partial writes to vcc don't update vccz, so we need to recompute the
+//     correct value of vccz by reading vcc and writing it back to vcc.
+//     No waitcnt is needed in this case.
+class VCCZWorkaround {
+  const WaitcntBrackets &ScoreBrackets;
+  const GCNSubtarget &ST;
+  const SIInstrInfo &TII;
+  const SIRegisterInfo &TRI;
+  bool VCCZCorruptionBug = false;
+  bool VCCZNotUpdatedByPartialWrites = false;
+  /// vccz could be incorrect at a basic block boundary if a predecessor wrote
+  /// to vcc and then issued an smem load, so initialize to true.
+  bool MustRecomputeVCCZ = true;
+
+public:
+  VCCZWorkaround(const WaitcntBrackets &ScoreBrackets, const GCNSubtarget &ST,
+                 const SIInstrInfo &TII, const SIRegisterInfo &TRI)
+      : ScoreBrackets(ScoreBrackets), ST(ST), TII(TII), TRI(TRI) {
+    VCCZCorruptionBug = ST.hasReadVCCZBug();
+    VCCZNotUpdatedByPartialWrites = !ST.partialVCCWritesUpdateVCCZ();
+  }
+  /// If \p MI reads vccz and we must recompute it based on MustRecomputeVCCZ,
+  /// then emit a vccz recompute instruction before \p MI. This needs to be
+  /// called on every instruction in the basic block because it also tracks the
+  /// state and updates MustRecomputeVCCZ accordingly. Returns true if it
+  /// modified the IR.
+  bool tryRecomputeVCCZ(MachineInstr &MI) {
+    // No need to run this if neither bug is present.
+    if (!VCCZCorruptionBug && !VCCZNotUpdatedByPartialWrites)
+      return false;
+
+    // If MI is an SMEM and it can corrupt vccz on this target, then we need
+    // both to emit a waitcnt and to recompute vccz.
+    // But we don't actually emit a waitcnt here. This is done in
+    // generateWaitcntInstBefore() because it tracks all the necessary waitcnt
+    // state, and can either skip emitting a waitcnt if there is already one in
+    // the IR, or emit an "optimized" combined waitcnt.
+    // If this is an smem read, it could complete and clobber vccz at any time.
+    MustRecomputeVCCZ |= VCCZCorruptionBug && TII.isSMRD(MI);
+
+    // If the target partial vcc writes don't update vccz, and MI is such an
+    // instruction then we must recompute vccz.
+    // Note: We are using PartiallyWritesToVCCOpt optional to avoid calling
+    // `definesRegister()` more than needed, because it's not very cheap.
+    std::optional<bool> PartiallyWritesToVCCOpt;
+    auto PartiallyWritesToVCC = [](MachineInstr &MI) {
+      return MI.definesRegister(AMDGPU::VCC_LO, /*TRI=*/nullptr) ||
+             MI.definesRegister(AMDGPU::VCC_HI, /*TRI=*/nullptr);
+    };
+    if (VCCZNotUpdatedByPartialWrites) {
+      PartiallyWritesToVCCOpt = PartiallyWritesToVCC(MI);
+      // If this is a partial VCC write but won't update vccz, then we must
+      // recompute vccz.
+      MustRecomputeVCCZ |= *PartiallyWritesToVCCOpt;
+    }
+
+    // If MI is a vcc write with no pending smem, or there is a pending smem
+    // but the target does not suffer from the vccz corruption bug, then we
+    // don't need to recompute vccz as this write will recompute it anyway.
+    if (!ScoreBrackets.hasPendingEvent(SMEM_ACCESS) || !VCCZCorruptionBug) {
+      // Compute PartiallyWritesToVCCOpt if we haven't done so already.
+      if (!PartiallyWritesToVCCOpt)
+        PartiallyWritesToVCCOpt = PartiallyWritesToVCC(MI);
+      bool FullyWritesToVCC = !*PartiallyWritesToVCCOpt &&
+                              MI.definesRegister(AMDGPU::VCC, /*TRI=*/nullptr);
+      // If we write to the full vcc or we write partially and the target
+      // updates vccz on partial writes, then vccz will be updated correctly.
+      bool UpdatesVCCZ = FullyWritesToVCC || (!VCCZNotUpdatedByPartialWrites &&
+                                              *PartiallyWritesToVCCOpt);
+      if (UpdatesVCCZ)
+        MustRecomputeVCCZ = false;
+    }
+
+    // If MI is a branch that reads VCCZ then emit a waitcnt and a vccz
+    // restore instruction if either is needed.
+    if (SIInstrInfo::isCBranchVCCZRead(MI) && MustRecomputeVCCZ) {
+      // Recompute the vccz bit. Any time a value is written to vcc, the vccz
+      // bit is updated, so we can restore the bit by reading the value of vcc
+      // and then writing it back to the register.
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+              TII.get(ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
+              TRI.getVCC())
+          .addReg(TRI.getVCC());
+      MustRecomputeVCCZ = false;
+      return true;
+    }
+    return false;
+  }
+};
+
+} // namespace
+
 // Generate s_waitcnt instructions where needed.
 bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                             MachineBasicBlock &Block,
@@ -3127,20 +3230,7 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
     Block.printName(dbgs());
     ScoreBrackets.dump();
   });
-
-  // Track the correctness of vccz through this basic block. There are two
-  // reasons why it might be incorrect; see ST->hasReadVCCZBug() and
-  // ST->partialVCCWritesUpdateVCCZ().
-  bool VCCZCorrect = true;
-  if (ST->hasReadVCCZBug()) {
-    // vccz could be incorrect at a basic block boundary if a predecessor wrote
-    // to vcc and then issued an smem load.
-    VCCZCorrect = false;
-  } else if (!ST->partialVCCWritesUpdateVCCZ()) {
-    // vccz could be incorrect at a basic block boundary if a predecessor wrote
-    // to vcc_lo or vcc_hi.
-    VCCZCorrect = false;
-  }
+  VCCZWorkaround VCCZW(ScoreBrackets, *ST, *TII, *TRI);
 
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
@@ -3177,36 +3267,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
                                           FlushFlags);
     OldWaitcntInstr = nullptr;
 
-    // Restore vccz if it's not known to be correct already.
-    bool RestoreVCCZ = !VCCZCorrect && SIInstrInfo::isCBranchVCCZRead(Inst);
-
-    // Don't examine operands unless we need to track vccz correctness.
-    if (ST->hasReadVCCZBug() || !ST->partialVCCWritesUpdateVCCZ()) {
-      if (Inst.definesRegister(AMDGPU::VCC_LO, /*TRI=*/nullptr) ||
-          Inst.definesRegister(AMDGPU::VCC_HI, /*TRI=*/nullptr)) {
-        // Up to gfx9, writes to vcc_lo and vcc_hi don't update vccz.
-        if (!ST->partialVCCWritesUpdateVCCZ())
-          VCCZCorrect = false;
-      } else if (Inst.definesRegister(AMDGPU::VCC, /*TRI=*/nullptr)) {
-        // There is a hardware bug on CI/SI where SMRD instruction may corrupt
-        // vccz bit, so when we detect that an instruction may read from a
-        // corrupt vccz bit, we need to:
-        // 1. Insert s_waitcnt lgkm(0) to wait for all outstanding SMRD
-        //    operations to complete.
-        // 2. Restore the correct value of vccz by writing the current value
-        //    of vcc back to vcc.
-        if (ST->hasReadVCCZBug() &&
-            ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {
-          // Writes to vcc while there's an outstanding smem read may get
-          // clobbered as soon as any read completes.
-          VCCZCorrect = false;
-        } else {
-          // Writes to vcc will fix any incorrect value in vccz.
-          VCCZCorrect = true;
-        }
-      }
-    }
-
     if (TII->isSMRD(Inst)) {
       for (const MachineMemOperand *Memop : Inst.memoperands()) {
         // No need to handle invariant loads when avoiding WAR conflicts, as
@@ -3215,10 +3275,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
           const Value *Ptr = Memop->getValue();
           SLoadAddresses.insert(std::pair(Ptr, Inst.getParent()));
         }
-      }
-      if (ST->hasReadVCCZBug()) {
-        // This smem read could complete and clobber vccz at any time.
-        VCCZCorrect = false;
       }
     }
 
@@ -3233,19 +3289,9 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       ScoreBrackets.dump();
     });
 
-    // TODO: Remove this work-around after fixing the scheduler and enable the
-    // assert above.
-    if (RestoreVCCZ) {
-      // Restore the vccz bit.  Any time a value is written to vcc, the vcc
-      // bit is updated, so we can restore the bit by reading the value of
-      // vcc and then writing it back to the register.
-      BuildMI(Block, Inst, Inst.getDebugLoc(),
-              TII->get(ST->isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64),
-              TRI->getVCC())
-          .addReg(TRI->getVCC());
-      VCCZCorrect = true;
-      Modified = true;
-    }
+    // If the target suffers from the vccz bugs, this may emit the necessary
+    // vccz recompute instruction before \p Inst if needed.
+    Modified |= VCCZW.tryRecomputeVCCZ(Inst);
   }
 
   // Flush counters at the end of the block if needed (for preheaders with no
