@@ -298,7 +298,8 @@ bool AMDGPULowerVGPREncoding::runOnMachineInstr(MachineInstr &MI) {
         // those bits (e.g., a nullopt src treated as 0 could be overwritten).
         bool Unused = false;
         CurrentMode.update(NewModeCommuted, Unused);
-        return false;
+        // MI was modified by the commute above.
+        return true;
       }
       // Commute back.
       if (!TII->commuteInstruction(MI))

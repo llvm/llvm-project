@@ -76,6 +76,10 @@ body:             |
     ; GCN-NEXT: v_add3_u32_e64_dpp v0, v1 /*v257*/, v0, v2 /*v258*/ quad_perm:[1,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
     $vgpr0 = V_ADD3_U32_e64_dpp $vgpr0, $vgpr257, $vgpr0, undef $vgpr258, 1, 15, 15, 1, implicit $exec
 
+    ; Commute VOP2 ADD operands, ignore unused src2
+    ; GCN-NEXT: v_add_nc_u32_e32 v0, v3 /*v259*/, v1
+    $vgpr0 = V_ADD_U32_e32 undef $vgpr1, $vgpr259, implicit $exec
+
     ; DS (addr, data0, and data1 operands)
 
     ; GCN-NEXT: s_set_vgpr_msb 0x1114
@@ -464,10 +468,20 @@ body:             |
     ; GCN-NEXT: v_subrev_nc_u32_e32 v0, v1, v0 /*v256*/
     $vgpr0 = V_SUBREV_U32_e32 undef $vgpr1, undef $vgpr256, implicit $exec
 
-    ; GCN-NEXT: s_set_vgpr_msb 0x400
+    ; GCN-NEXT: s_set_vgpr_msb 0x406
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=2 src1=1 src2=0
+    ; GCN-NEXT: v_subrev_nc_u32_e32 v0, v0 /*v512*/, v0 /*v256*/
+    $vgpr0 = V_SUBREV_U32_e32 undef $vgpr512, undef $vgpr256, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x601
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=0
+    ; GCN-NEXT: v_subrev_nc_u32_e32 v0, v0 /*v256*/, v2
+    $vgpr0 = V_SUBREV_U32_e32 undef $vgpr256, undef $vgpr2, implicit $exec
+
+    ; GCN-NEXT: s_set_vgpr_msb 0x100
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=0 src1=0 src2=0
 
-    ; ASM: NumVgprs: 257
+    ; ASM: NumVgprs: 513
 ...
 
 # ASM-LABEL: {{^}}minimal_mode_change:
