@@ -91,7 +91,7 @@ bool RegisterContextFreeBSDKernelCore_riscv64::ReadRegister(
   case gpr_s9_riscv:
   case gpr_s10_riscv:
   case gpr_s11_riscv:
-    value = pcb.s[reg - gpr_s2_riscv];
+    value = pcb.s[reg - gpr_s2_riscv + 2];
     break;
   default:
     return false;
