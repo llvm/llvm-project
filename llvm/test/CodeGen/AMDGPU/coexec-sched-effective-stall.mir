@@ -3,8 +3,6 @@
 # RUN: llc -mtriple=amdgcn -mcpu=gfx1250 -run-pass=machine-scheduler -amdgpu-sched-strategy=coexec -verify-misched %s -o - | FileCheck -check-prefix=COEXEC %s
 
 --- |
-  ; Pre-commit test for stall heuristic
-
   define void @test-sched-effective-stall() #0 { ret void }
   define void @test-sched-pending-structural-stall() #0 { ret void }
 
