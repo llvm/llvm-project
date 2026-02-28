@@ -43,6 +43,187 @@ static CharSourceRange rangeFromAnnotations(const llvm::Annotations &A,
 
 namespace {
 
+TEST(LexerUtilsTest, GetSourceText) {
+  llvm::Annotations Code(R"cpp(
+int main() {
+  [[int value = 42;]]
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  ASTContext &Context = AST->getASTContext();
+  SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID());
+
+  EXPECT_EQ("int value = 42;",
+            utils::lexer::getSourceText(Range, SM, LangOpts));
+}
+
+TEST(LexerUtilsTest, GetSourceTextInvalidRange) {
+  std::unique_ptr<ASTUnit> AST = buildAST("int value = 0;");
+  ASSERT_TRUE(AST);
+  ASTContext &Context = AST->getASTContext();
+  SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  EXPECT_TRUE(
+      utils::lexer::getSourceText(CharSourceRange(), SM, LangOpts).empty());
+}
+
+TEST(LexerUtilsTest, GetSourceTextCrossFileRange) {
+  const char *Code = R"cpp(
+#include "header.h"
+int main() { return value; }
+)cpp";
+  FileContentMappings Mappings = {{"header.h", "int value;\n"}};
+  std::unique_ptr<ASTUnit> AST = buildAST(Code, Mappings);
+  ASSERT_TRUE(AST);
+
+  ASTContext &Context = AST->getASTContext();
+  SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const SourceLocation MainBegin = SM.getLocForStartOfFile(SM.getMainFileID());
+  llvm::Expected<FileEntryRef> HeaderRef =
+      SM.getFileManager().getFileRef("header.h");
+  ASSERT_TRUE(static_cast<bool>(HeaderRef));
+  const FileID HeaderID = SM.getOrCreateFileID(*HeaderRef, SrcMgr::C_User);
+  const SourceLocation HeaderBegin = SM.getLocForStartOfFile(HeaderID);
+  ASSERT_TRUE(HeaderBegin.isValid());
+
+  const CharSourceRange CrossRange =
+      CharSourceRange::getCharRange(MainBegin, HeaderBegin);
+  EXPECT_TRUE(utils::lexer::getSourceText(CrossRange, SM, LangOpts).empty());
+}
+
+TEST(LexerUtilsTest, AnalyzeTokenRangeInvalidRange) {
+  std::unique_ptr<ASTUnit> AST = buildAST("int value = 0;");
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const utils::lexer::TokenRangeInfo Info =
+      utils::lexer::analyzeTokenRange(CharSourceRange(), SM, LangOpts);
+  EXPECT_FALSE(Info.HasComment);
+  EXPECT_FALSE(Info.HasIdentifier);
+  EXPECT_FALSE(Info.HasPointerOrRef);
+}
+
+TEST(LexerUtilsTest, AnalyzeTokenRangeCommentOnly) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  [[/*comment*/]]
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID());
+  const utils::lexer::TokenRangeInfo Info =
+      utils::lexer::analyzeTokenRange(Range, SM, LangOpts);
+  EXPECT_TRUE(Info.HasComment);
+  EXPECT_FALSE(Info.HasIdentifier);
+  EXPECT_FALSE(Info.HasPointerOrRef);
+}
+
+TEST(LexerUtilsTest, AnalyzeTokenRangePointerAndReference) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  int $ptr[[*]]Ptr;
+  int $ref[[&]]Ref = *Ptr;
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange PtrRange =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "ptr");
+  const utils::lexer::TokenRangeInfo PtrInfo =
+      utils::lexer::analyzeTokenRange(PtrRange, SM, LangOpts);
+  EXPECT_TRUE(PtrInfo.HasPointerOrRef);
+  EXPECT_FALSE(PtrInfo.HasIdentifier);
+  EXPECT_FALSE(PtrInfo.HasComment);
+
+  const CharSourceRange RefRange =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "ref");
+  const utils::lexer::TokenRangeInfo RefInfo =
+      utils::lexer::analyzeTokenRange(RefRange, SM, LangOpts);
+  EXPECT_TRUE(RefInfo.HasPointerOrRef);
+  EXPECT_FALSE(RefInfo.HasIdentifier);
+  EXPECT_FALSE(RefInfo.HasComment);
+}
+
+TEST(LexerUtilsTest, AnalyzeTokenRangeIdentifier) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  int $id[[Name]] = 0;
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "id");
+  const utils::lexer::TokenRangeInfo Info =
+      utils::lexer::analyzeTokenRange(Range, SM, LangOpts);
+  EXPECT_FALSE(Info.HasComment);
+  EXPECT_TRUE(Info.HasIdentifier);
+  EXPECT_FALSE(Info.HasPointerOrRef);
+}
+
+TEST(LexerUtilsTest, AnalyzeTokenRangeIdentifierKeyword) {
+  llvm::Annotations Code(R"cpp(
+$kw[[struct]] S {};
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "kw");
+  const utils::lexer::TokenRangeInfo Info =
+      utils::lexer::analyzeTokenRange(Range, SM, LangOpts);
+  EXPECT_FALSE(Info.HasComment);
+  EXPECT_TRUE(Info.HasIdentifier);
+  EXPECT_FALSE(Info.HasPointerOrRef);
+}
+
+TEST(LexerUtilsTest, AnalyzeTokenRangeLogicalAnd) {
+  llvm::Annotations Code(R"cpp(
+void f(bool a, bool b) {
+  bool c = a $and[[&&]] b;
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "and");
+  const utils::lexer::TokenRangeInfo Info =
+      utils::lexer::analyzeTokenRange(Range, SM, LangOpts);
+  EXPECT_FALSE(Info.HasComment);
+  EXPECT_FALSE(Info.HasIdentifier);
+  EXPECT_FALSE(Info.HasPointerOrRef);
+}
+
 TEST(LexerUtilsTest, GetTrailingCommentsInRangeAdjacentComments) {
   llvm::Annotations Code(R"cpp(
 void f() {
