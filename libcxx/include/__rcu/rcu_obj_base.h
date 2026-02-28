@@ -28,7 +28,11 @@ template <class _Tp, class _Dp = default_delete<_Tp>>
 class rcu_obj_base : private __rcu_node {
 public:
   _LIBCPP_HIDE_FROM_ABI void retire(_Dp __deleter = _Dp(), rcu_domain& __dom = rcu_default_domain()) noexcept {
-    auto __ptr  = static_cast<_Tp*>(this);
+    auto __ptr = static_cast<_Tp*>(this);
+
+    // todo: std::function can throw on the assignment. Perhaps we can store
+    //       the deleter in the class and either use virtual function or use
+    //       function_ref here.
     __callback_ = [__ptr, __deleter = std::move(__deleter)]() mutable { __deleter(__ptr); };
     __dom.__retire(this);
   }
