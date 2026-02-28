@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMAsmPrinter
   AsmPrinter.cpp
   AsmPrinterDwarf.cpp
   AsmPrinterInlineAsm.cpp
+  BTFDebug.cpp
   DbgEntityHistoryCalculator.cpp
   DebugHandlerBase.cpp
   DebugLocStream.cpp
@@ -36,6 +37,7 @@ add_llvm_component_library(LLVMAsmPrinter
   CodeGen
   CodeGenTypes
   Core
+  DebugInfoBTF
   DebugInfoCodeView
   DebugInfoDWARF
   DebugInfoDWARFLowLevel

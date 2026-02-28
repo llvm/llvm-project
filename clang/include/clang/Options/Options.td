@@ -4978,6 +4978,10 @@ def gcodeview : Flag<["-"], "gcodeview">, Group<g_Group>,
   HelpText<"Generate CodeView debug information">,
   Visibility<[ClangOption, CC1Option, CC1AsOption, CLOption, DXCOption]>,
   MarshallingInfoFlag<CodeGenOpts<"EmitCodeView">>;
+def gbtf : Flag<["-"], "gbtf">, Group<g_Group>,
+  HelpText<"Generate BTF debug information">,
+  Visibility<[ClangOption, CC1Option, CC1AsOption]>,
+  MarshallingInfoFlag<CodeGenOpts<"EmitBTF">>;
 defm codeview_ghash : BoolOption<"g", "codeview-ghash",
   CodeGenOpts<"CodeViewGHash">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
