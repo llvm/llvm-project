@@ -1876,8 +1876,11 @@ MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);
 template <class Func, typename... Args>
 inline nanobind::object classmethod(Func f, Args... args) {
   nanobind::object cf = nanobind::cpp_function(f, args...);
-  nanobind::object builtins = nanobind::module_::import_("builtins");
-  return builtins.attr("classmethod")(cf);
+  static SafeInit<nanobind::object> classmethodFn([]() {
+    return std::make_unique<nanobind::object>(
+        nanobind::module_::import_("builtins").attr("classmethod"));
+  });
+  return classmethodFn.get()(cf);
 }
 
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
