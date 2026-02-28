@@ -167,6 +167,11 @@ setupDpasLayout(LayoutKind layoutKind, VectorType aTy, VectorType bTy,
                 VectorType cdTy, DistributeLayoutAttr consumerLayout,
                 const uArch::uArch *uArch, int numSg);
 
+/// Gets the expected layout for a given consumer operand. This will check if
+/// the owning operation of the consumer operand is one of the special layout
+/// users and determine the expected layout accordingly.
+xegpu::DistributeLayoutAttr getConsumerLayoutAt(OpOperand &operand);
+
 } // namespace xegpu
 
 } // namespace mlir

@@ -1,7 +1,7 @@
 // Multiple inheritance case:
 // For CBaseOne, CBaseTwo and CDerived we check:
 // - Generation of their vtables (including attributes).
-// - Generation of their '_vtable$' data members:
+// - Generation of their '__clang_vtable' data members:
 //   * Correct scope and attributes
 
 namespace NSP_1 {
@@ -50,24 +50,24 @@ int main() {
 // CHECK: @_ZTV8CDerived = linkonce_odr {{.*}}unnamed_addr constant {{.*}}, comdat, align 8, !dbg [[DERIVED_VTABLE_VAR:![0-9]*]]
 
 // CHECK: [[BASE_ONE_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_ONE_VTABLE:![0-9]*]], expr: !DIExpression())
-// CHECK-NEXT: [[BASE_ONE_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTVN5NSP_18CBaseOneE"
+// CHECK-NEXT: [[BASE_ONE_VTABLE]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTVN5NSP_18CBaseOneE"
 
 // CHECK: [[BASE_TWO_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[BASE_TWO_VTABLE:![0-9]*]], expr: !DIExpression())
-// CHECK-NEXT: [[BASE_TWO_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTVN5NSP_28CBaseTwoE"
+// CHECK-NEXT: [[BASE_TWO_VTABLE]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTVN5NSP_28CBaseTwoE"
 
 // CHECK: [[TYPE:![0-9]*]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
-// CHECK: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[BASE_TWO:![0-9]*]], file: {{.*}}, baseType: [[TYPE]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// CHECK: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[BASE_TWO:![0-9]*]], file: {{.*}}, baseType: [[TYPE]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 
 // check: [[BASE_TWO]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CBaseTwo"
 
 // CHECK: [[DERIVED_VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[DERIVED_VTABLE:![0-9]*]], expr: !DIExpression())
-// CHECK: [[DERIVED_VTABLE]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV8CDerived"
+// CHECK: [[DERIVED_VTABLE]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV8CDerived"
 
-// CHECK: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[DERIVED:![0-9]*]], file: {{.*}}, baseType: [[TYPE]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// CHECK: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[DERIVED:![0-9]*]], file: {{.*}}, baseType: [[TYPE]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 
 // CHECK: [[DERIVED]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CDerived"
 
 // CHECK: [[BASE_ONE:![0-9]*]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CBaseOne"
 
-// CHECK: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[BASE_ONE]], file: {{.*}}, baseType: [[TYPE]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// CHECK: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[BASE_ONE]], file: {{.*}}, baseType: [[TYPE]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
