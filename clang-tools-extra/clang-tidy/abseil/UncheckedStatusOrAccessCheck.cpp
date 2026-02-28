@@ -21,7 +21,7 @@ using ast_matchers::MatchFinder;
 using dataflow::statusor_model::UncheckedStatusOrAccessDiagnoser;
 using dataflow::statusor_model::UncheckedStatusOrAccessModel;
 
-static constexpr llvm::StringLiteral FuncID("fun");
+static constexpr StringRef FuncID = "fun";
 
 void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
   using namespace ast_matchers;
@@ -29,10 +29,8 @@ void UncheckedStatusOrAccessCheck::registerMatchers(MatchFinder *Finder) {
   auto HasStatusOrCallDescendant =
       hasDescendant(callExpr(callee(cxxMethodDecl(ofClass(hasAnyName(
           "absl::StatusOr", "absl::internal_statusor::OperatorBase"))))));
-  Finder->addMatcher(functionDecl(unless(isExpansionInSystemHeader()),
-                                  hasBody(HasStatusOrCallDescendant))
-                         .bind(FuncID),
-                     this);
+  Finder->addMatcher(
+      functionDecl(hasBody(HasStatusOrCallDescendant)).bind(FuncID), this);
   Finder->addMatcher(
       cxxConstructorDecl(hasAnyConstructorInitializer(
                              withInitializer(HasStatusOrCallDescendant)))

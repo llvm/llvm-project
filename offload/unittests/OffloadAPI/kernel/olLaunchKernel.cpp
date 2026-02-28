@@ -136,7 +136,7 @@ TEST_P(olLaunchKernelNoArgsTest, Success) {
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }
 
-TEST_P(olLaunchKernelMultiTest, Success) {
+TEST_P(olLaunchKernelMultiArgsTest, Success) {
   struct {
     char A;
     int *B;
@@ -144,7 +144,7 @@ TEST_P(olLaunchKernelMultiTest, Success) {
   } Args{0, nullptr, 0};
 
   ASSERT_SUCCESS(
-      olLaunchKernel(Queue, Device, Kernel, Args, sizeof(Args), &LaunchArgs));
+      olLaunchKernel(Queue, Device, Kernel, &Args, sizeof(Args), &LaunchArgs));
 
   ASSERT_SUCCESS(olSyncQueue(Queue));
 }

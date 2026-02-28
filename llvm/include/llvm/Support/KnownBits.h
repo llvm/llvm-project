@@ -115,6 +115,9 @@ public:
     return Zero.isSignBitSet() && !One.isZero();
   }
 
+  /// Returns true if this value is known to be non-positive.
+  bool isNonPositive() const { return getSignedMaxValue().isNonPositive(); }
+
   /// Make this value negative.
   void makeNegative() {
     One.setSignBit();
@@ -156,6 +159,9 @@ public:
       Max.clearSignBit();
     return Max;
   }
+
+  /// Return if the value is known even (the low bit is 0).
+  bool isEven() const { return Zero[0]; }
 
   /// Return known bits for a truncation of the value we're tracking.
   KnownBits trunc(unsigned BitWidth) const {
@@ -210,6 +216,16 @@ public:
       return trunc(BitWidth);
     return *this;
   }
+
+  /// Truncate with signed saturation (signed input -> signed output)
+  LLVM_ABI KnownBits truncSSat(unsigned BitWidth) const;
+
+  /// Truncate with signed saturation to unsigned (signed input -> unsigned
+  /// output)
+  LLVM_ABI KnownBits truncSSatU(unsigned BitWidth) const;
+
+  /// Truncate with unsigned saturation (unsigned input -> unsigned output)
+  LLVM_ABI KnownBits truncUSat(unsigned BitWidth) const;
 
   /// Return known bits for a in-register sign extension of the value we're
   /// tracking.
@@ -445,6 +461,9 @@ public:
   LLVM_ABI static KnownBits ashr(const KnownBits &LHS, const KnownBits &RHS,
                                  bool ShAmtNonZero = false, bool Exact = false);
 
+  /// Compute known bits for clmul(LHS, RHS).
+  LLVM_ABI static KnownBits clmul(const KnownBits &LHS, const KnownBits &RHS);
+
   /// Determine if these known bits always give the same ICMP_EQ result.
   LLVM_ABI static std::optional<bool> eq(const KnownBits &LHS,
                                          const KnownBits &RHS);
@@ -510,6 +529,11 @@ public:
 
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
+
+  /// Compute known bits for horizontal add for a vector with NumElts
+  /// elements, where each element has the known bits represented by this
+  /// object.
+  LLVM_ABI KnownBits reduceAdd(unsigned NumElts) const;
 
   KnownBits byteSwap() const {
     return KnownBits(Zero.byteSwap(), One.byteSwap());

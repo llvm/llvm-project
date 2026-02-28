@@ -63,6 +63,7 @@
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 
@@ -200,23 +201,6 @@ private:
   Register AgnosticZABufferPtr = AArch64::NoRegister;
 };
 
-/// Checks if \p State is a legal edge bundle state. For a state to be a legal
-/// bundle state, it must be possible to transition from it to any other bundle
-/// state without losing any ZA state. This is the case for ACTIVE/LOCAL_SAVED,
-/// as you can transition between those states by saving/restoring ZA. The OFF
-/// state would not be legal, as transitioning to it drops the content of ZA.
-static bool isLegalEdgeBundleZAState(ZAState State) {
-  switch (State) {
-  case ZAState::ACTIVE:           // ZA state within the accumulator/ZT0.
-  case ZAState::ACTIVE_ZT0_SAVED: // ZT0 is saved (ZA is active).
-  case ZAState::LOCAL_SAVED:      // ZA state may be saved on the stack.
-  case ZAState::LOCAL_COMMITTED:  // ZA state is saved on the stack.
-    return true;
-  default:
-    return false;
-  }
-}
-
 StringRef getZAStateString(ZAState State) {
 #define MAKE_CASE(V)                                                           \
   case V:                                                                      \
@@ -303,6 +287,8 @@ struct MachineSMEABI : public MachineFunctionPass {
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
     AU.addRequired<EdgeBundlesWrapperLegacy>();
+    AU.addRequired<MachineOptimizationRemarkEmitterPass>();
+    AU.addRequired<LibcallLoweringInfoWrapper>();
     AU.addPreservedID(MachineLoopInfoID);
     AU.addPreservedID(MachineDominatorsID);
     MachineFunctionPass::getAnalysisUsage(AU);
@@ -312,8 +298,8 @@ struct MachineSMEABI : public MachineFunctionPass {
   /// within the machine function.
   FunctionInfo collectNeededZAStates(SMEAttrs SMEFnAttrs);
 
-  /// Assigns each edge bundle a ZA state based on the needed states of blocks
-  /// that have incoming or outgoing edges in that bundle.
+  /// Assigns each edge bundle a ZA state based on the desired states of
+  /// incoming and outgoing blocks in the bundle.
   SmallVector<ZAState> assignBundleZAStates(const EdgeBundles &Bundles,
                                             const FunctionInfo &FnInfo);
 
@@ -323,10 +309,8 @@ struct MachineSMEABI : public MachineFunctionPass {
                           const EdgeBundles &Bundles,
                           ArrayRef<ZAState> BundleStates);
 
-  /// Propagates desired states forwards (from predecessors -> successors) if
-  /// \p Forwards, otherwise, propagates backwards (from successors ->
-  /// predecessors).
-  void propagateDesiredStates(FunctionInfo &FnInfo, bool Forwards = true);
+  void addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
+                     CallingConv::ID ExpectedCC);
 
   void emitZT0SaveRestore(EmitContext &, MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI, bool IsSave);
@@ -391,6 +375,24 @@ struct MachineSMEABI : public MachineFunctionPass {
     return emitAllocateLazySaveBuffer(Context, MBB, MBBI);
   }
 
+  /// Collects the reachable calls from \p MBBI marked with \p Marker. This is
+  /// intended to be used to emit lazy save remarks. Note: This stops at the
+  /// first marked call along any path.
+  void collectReachableMarkedCalls(const MachineBasicBlock &MBB,
+                                   MachineBasicBlock::const_iterator MBBI,
+                                   SmallVectorImpl<const MachineInstr *> &Calls,
+                                   unsigned Marker) const;
+
+  void emitCallSaveRemarks(const MachineBasicBlock &MBB,
+                           MachineBasicBlock::const_iterator MBBI, DebugLoc DL,
+                           unsigned Marker, StringRef RemarkName,
+                           StringRef SaveName) const;
+
+  void emitError(const Twine &Message) {
+    LLVMContext &Context = MF->getFunction().getContext();
+    Context.emitError(MF->getName() + ": " + Message);
+  }
+
   /// Save live physical registers to virtual registers.
   PhysRegSave createPhysRegSave(LiveRegs PhysLiveRegs, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator MBBI, DebugLoc DL);
@@ -405,7 +407,10 @@ private:
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64RegisterInfo *TRI = nullptr;
   const AArch64FunctionInfo *AFI = nullptr;
-  const TargetInstrInfo *TII = nullptr;
+  const AArch64InstrInfo *TII = nullptr;
+  const LibcallLoweringInfo *LLI = nullptr;
+
+  MachineOptimizationRemarkEmitter *ORE = nullptr;
   MachineRegisterInfo *MRI = nullptr;
   MachineLoopInfo *MLI = nullptr;
 };
@@ -509,110 +514,36 @@ FunctionInfo MachineSMEABI::collectNeededZAStates(SMEAttrs SMEFnAttrs) {
                       PhysLiveRegsAfterSMEPrologue};
 }
 
-void MachineSMEABI::propagateDesiredStates(FunctionInfo &FnInfo,
-                                           bool Forwards) {
-  // If `Forwards`, this propagates desired states from predecessors to
-  // successors, otherwise, this propagates states from successors to
-  // predecessors.
-  auto GetBlockState = [](BlockInfo &Block, bool Incoming) -> ZAState & {
-    return Incoming ? Block.DesiredIncomingState : Block.DesiredOutgoingState;
-  };
-
-  SmallVector<MachineBasicBlock *> Worklist;
-  for (auto [BlockID, BlockInfo] : enumerate(FnInfo.Blocks)) {
-    if (!isLegalEdgeBundleZAState(GetBlockState(BlockInfo, Forwards)))
-      Worklist.push_back(MF->getBlockNumbered(BlockID));
-  }
-
-  while (!Worklist.empty()) {
-    MachineBasicBlock *MBB = Worklist.pop_back_val();
-    BlockInfo &Block = FnInfo.Blocks[MBB->getNumber()];
-
-    // Pick a legal edge bundle state that matches the majority of
-    // predecessors/successors.
-    int StateCounts[ZAState::NUM_ZA_STATE] = {0};
-    for (MachineBasicBlock *PredOrSucc :
-         Forwards ? predecessors(MBB) : successors(MBB)) {
-      BlockInfo &PredOrSuccBlock = FnInfo.Blocks[PredOrSucc->getNumber()];
-      ZAState ZAState = GetBlockState(PredOrSuccBlock, !Forwards);
-      if (isLegalEdgeBundleZAState(ZAState))
-        StateCounts[ZAState]++;
-    }
-
-    ZAState PropagatedState = ZAState(max_element(StateCounts) - StateCounts);
-    ZAState &CurrentState = GetBlockState(Block, Forwards);
-    if (PropagatedState != CurrentState) {
-      CurrentState = PropagatedState;
-      ZAState &OtherState = GetBlockState(Block, !Forwards);
-      // Propagate to the incoming/outgoing state if that is also "ANY".
-      if (OtherState == ZAState::ANY)
-        OtherState = PropagatedState;
-      // Push any successors/predecessors that may need updating to the
-      // worklist.
-      for (MachineBasicBlock *SuccOrPred :
-           Forwards ? successors(MBB) : predecessors(MBB)) {
-        BlockInfo &SuccOrPredBlock = FnInfo.Blocks[SuccOrPred->getNumber()];
-        if (!isLegalEdgeBundleZAState(GetBlockState(SuccOrPredBlock, Forwards)))
-          Worklist.push_back(SuccOrPred);
-      }
-    }
-  }
-}
-
-/// Assigns each edge bundle a ZA state based on the needed states of blocks
-/// that have incoming or outgoing edges in that bundle.
+/// Assigns each edge bundle a ZA state based on the desired states of incoming
+/// and outgoing blocks in the bundle.
 SmallVector<ZAState>
 MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
                                     const FunctionInfo &FnInfo) {
   SmallVector<ZAState> BundleStates(Bundles.getNumBundles());
   for (unsigned I = 0, E = Bundles.getNumBundles(); I != E; ++I) {
-    LLVM_DEBUG(dbgs() << "Assigning ZA state for edge bundle: " << I << '\n');
-
-    // Attempt to assign a ZA state for this bundle that minimizes state
-    // transitions. Edges within loops are given a higher weight as we assume
-    // they will be executed more than once.
-    int EdgeStateCounts[ZAState::NUM_ZA_STATE] = {0};
+    std::optional<ZAState> BundleState;
     for (unsigned BlockID : Bundles.getBlocks(I)) {
-      LLVM_DEBUG(dbgs() << "- bb." << BlockID);
-
       const BlockInfo &Block = FnInfo.Blocks[BlockID];
-      bool InEdge = Bundles.getBundle(BlockID, /*Out=*/false) == I;
-      bool OutEdge = Bundles.getBundle(BlockID, /*Out=*/true) == I;
+      // Check if the block is an incoming block in the bundle. Note: We skip
+      // Block.FixedEntryState != ANY to ignore EH pads (which are only
+      // reachable via exceptions).
+      if (Block.FixedEntryState != ZAState::ANY ||
+          Bundles.getBundle(BlockID, /*Out=*/false) != I)
+        continue;
 
-      bool LegalInEdge =
-          InEdge && isLegalEdgeBundleZAState(Block.DesiredIncomingState);
-      bool LegalOutEgde =
-          OutEdge && isLegalEdgeBundleZAState(Block.DesiredOutgoingState);
-      if (LegalInEdge) {
-        LLVM_DEBUG(dbgs() << " DesiredIncomingState: "
-                          << getZAStateString(Block.DesiredIncomingState));
-        EdgeStateCounts[Block.DesiredIncomingState]++;
-      }
-      if (LegalOutEgde) {
-        LLVM_DEBUG(dbgs() << " DesiredOutgoingState: "
-                          << getZAStateString(Block.DesiredOutgoingState));
-        EdgeStateCounts[Block.DesiredOutgoingState]++;
-      }
-      if (!LegalInEdge && !LegalOutEgde)
-        LLVM_DEBUG(dbgs() << " (no state preference)");
-      LLVM_DEBUG(dbgs() << '\n');
+      // Pick a state that matches all incoming blocks. Fall back to "ACTIVE" if
+      // any incoming state doesn't match. This will hoist the state from
+      // incoming blocks to outgoing blocks.
+      if (!BundleState)
+        BundleState = Block.DesiredIncomingState;
+      else if (BundleState != Block.DesiredIncomingState)
+        BundleState = ZAState::ACTIVE;
     }
 
-    ZAState BundleState =
-        ZAState(max_element(EdgeStateCounts) - EdgeStateCounts);
-
-    if (BundleState == ZAState::ANY)
+    if (!BundleState || BundleState == ZAState::ANY)
       BundleState = ZAState::ACTIVE;
 
-    LLVM_DEBUG({
-      dbgs() << "Chosen ZA state: " << getZAStateString(BundleState) << '\n'
-             << "Edge counts:";
-      for (auto [State, Count] : enumerate(EdgeStateCounts))
-        dbgs() << " " << getZAStateString(ZAState(State)) << ": " << Count;
-      dbgs() << "\n\n";
-    });
-
-    BundleStates[I] = BundleState;
+    BundleStates[I] = *BundleState;
   }
 
   return BundleStates;
@@ -706,15 +637,104 @@ void MachineSMEABI::insertStateChanges(EmitContext &Context,
 
 static DebugLoc getDebugLoc(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MBBI) {
-  if (MBBI != MBB.end())
-    return MBBI->getDebugLoc();
-  return DebugLoc();
+  if (MBB.empty())
+    return DebugLoc();
+  return MBBI != MBB.end() ? MBBI->getDebugLoc() : MBB.back().getDebugLoc();
+}
+
+/// Finds the first call (as determined by MachineInstr::isCall()) starting from
+/// \p MBBI in \p MBB marked with \p Marker (which is a marker opcode such as
+/// RequiresZASavePseudo). If a marked call is found, it is pushed to \p Calls
+/// and the function returns true.
+static bool findMarkedCall(const MachineBasicBlock &MBB,
+                           MachineBasicBlock::const_iterator MBBI,
+                           SmallVectorImpl<const MachineInstr *> &Calls,
+                           unsigned Marker, unsigned CallDestroyOpcode) {
+  auto IsMarker = [&](auto &MI) { return MI.getOpcode() == Marker; };
+  auto MarkerInst = std::find_if(MBBI, MBB.end(), IsMarker);
+  if (MarkerInst == MBB.end())
+    return false;
+  MachineBasicBlock::const_iterator I = MarkerInst;
+  while (++I != MBB.end()) {
+    if (I->isCall() || I->getOpcode() == CallDestroyOpcode)
+      break;
+  }
+  if (I != MBB.end() && I->isCall())
+    Calls.push_back(&*I);
+  // Note: This function always returns true if a "Marker" was found.
+  return true;
+}
+
+void MachineSMEABI::collectReachableMarkedCalls(
+    const MachineBasicBlock &StartMBB,
+    MachineBasicBlock::const_iterator StartInst,
+    SmallVectorImpl<const MachineInstr *> &Calls, unsigned Marker) const {
+  assert(Marker == AArch64::InOutZAUsePseudo ||
+         Marker == AArch64::RequiresZASavePseudo ||
+         Marker == AArch64::RequiresZT0SavePseudo);
+  unsigned CallDestroyOpcode = TII->getCallFrameDestroyOpcode();
+  if (findMarkedCall(StartMBB, StartInst, Calls, Marker, CallDestroyOpcode))
+    return;
+
+  SmallPtrSet<const MachineBasicBlock *, 4> Visited;
+  SmallVector<const MachineBasicBlock *> Worklist(StartMBB.succ_rbegin(),
+                                                  StartMBB.succ_rend());
+  while (!Worklist.empty()) {
+    const MachineBasicBlock *MBB = Worklist.pop_back_val();
+    auto [_, Inserted] = Visited.insert(MBB);
+    if (!Inserted)
+      continue;
+
+    if (!findMarkedCall(*MBB, MBB->begin(), Calls, Marker, CallDestroyOpcode))
+      Worklist.append(MBB->succ_rbegin(), MBB->succ_rend());
+  }
+}
+
+static StringRef getCalleeName(const MachineInstr &CallInst) {
+  assert(CallInst.isCall() && "expected a call");
+  for (const MachineOperand &MO : CallInst.operands()) {
+    if (MO.isSymbol())
+      return MO.getSymbolName();
+    if (MO.isGlobal())
+      return MO.getGlobal()->getName();
+  }
+  return {};
+}
+
+void MachineSMEABI::emitCallSaveRemarks(const MachineBasicBlock &MBB,
+                                        MachineBasicBlock::const_iterator MBBI,
+                                        DebugLoc DL, unsigned Marker,
+                                        StringRef RemarkName,
+                                        StringRef SaveName) const {
+  auto SaveRemark = [&](DebugLoc DL, const MachineBasicBlock &MBB) {
+    return MachineOptimizationRemarkAnalysis("sme", RemarkName, DL, &MBB);
+  };
+  StringRef StateName = Marker == AArch64::RequiresZT0SavePseudo ? "ZT0" : "ZA";
+  ORE->emit([&] {
+    return SaveRemark(DL, MBB) << SaveName << " of " << StateName
+                               << " emitted in '" << MF->getName() << "'";
+  });
+  if (!ORE->allowExtraAnalysis("sme"))
+    return;
+  SmallVector<const MachineInstr *> CallsRequiringSaves;
+  collectReachableMarkedCalls(MBB, MBBI, CallsRequiringSaves, Marker);
+  for (const MachineInstr *CallInst : CallsRequiringSaves) {
+    auto R = SaveRemark(CallInst->getDebugLoc(), *CallInst->getParent());
+    R << "call";
+    if (StringRef CalleeName = getCalleeName(*CallInst); !CalleeName.empty())
+      R << " to '" << CalleeName << "'";
+    R << " requires " << StateName << " save";
+    ORE->emit(R);
+  }
 }
 
 void MachineSMEABI::emitSetupLazySave(EmitContext &Context,
                                       MachineBasicBlock &MBB,
                                       MachineBasicBlock::iterator MBBI) {
   DebugLoc DL = getDebugLoc(MBB, MBBI);
+
+  emitCallSaveRemarks(MBB, MBBI, DL, AArch64::RequiresZASavePseudo,
+                      "SMELazySaveZA", "lazy save");
 
   // Get pointer to TPIDR2 block.
   Register TPIDR2 = MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
@@ -770,11 +790,24 @@ void MachineSMEABI::restorePhyRegSave(const PhysRegSave &RegSave,
         .addReg(RegSave.X0Save);
 }
 
+void MachineSMEABI::addSMELibCall(MachineInstrBuilder &MIB, RTLIB::Libcall LC,
+                                  CallingConv::ID ExpectedCC) {
+  RTLIB::LibcallImpl LCImpl = LLI->getLibcallImpl(LC);
+  if (LCImpl == RTLIB::Unsupported)
+    emitError("cannot lower SME ABI (SME routines unsupported)");
+  CallingConv::ID CC = LLI->getLibcallImplCallingConv(LCImpl);
+  StringRef ImplName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+  if (CC != ExpectedCC)
+    emitError("invalid calling convention for SME routine: '" + ImplName + "'");
+  // FIXME: This assumes the ImplName StringRef is null-terminated.
+  MIB.addExternalSymbol(ImplName.data());
+  MIB.addRegMask(TRI->getCallPreservedMask(*MF, CC));
+}
+
 void MachineSMEABI::emitRestoreLazySave(EmitContext &Context,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         LiveRegs PhysLiveRegs) {
-  auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
   Register TPIDR2EL0 = MRI->createVirtualRegister(&AArch64::GPR64RegClass);
   Register TPIDR2 = AArch64::X0;
@@ -795,11 +828,12 @@ void MachineSMEABI::emitRestoreLazySave(EmitContext &Context,
       .addImm(0)
       .addImm(0);
   // (Conditionally) restore ZA state.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::RestoreZAPseudo))
-      .addReg(TPIDR2EL0)
-      .addReg(TPIDR2)
-      .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_RESTORE))
-      .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
+  auto RestoreZA = BuildMI(MBB, MBBI, DL, TII->get(AArch64::RestoreZAPseudo))
+                       .addReg(TPIDR2EL0)
+                       .addReg(TPIDR2);
+  addSMELibCall(
+      RestoreZA, RTLIB::SMEABI_TPIDR2_RESTORE,
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
   // Zero TPIDR2_EL0.
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::MSR))
       .addImm(AArch64SysReg::TPIDR2_EL0)
@@ -883,7 +917,6 @@ static constexpr unsigned ZERO_ALL_ZA_MASK = 0b11111111;
 
 void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
                                     MachineBasicBlock::iterator MBBI) {
-  auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
 
   bool ZeroZA = AFI->getSMEFnAttrs().isNewZA();
@@ -900,9 +933,10 @@ void MachineSMEABI::emitSMEPrologue(MachineBasicBlock &MBB,
         BuildMI(MBB, MBBI, DL, TII->get(AArch64::CommitZASavePseudo))
             .addReg(TPIDR2EL0)
             .addImm(ZeroZA)
-            .addImm(ZeroZT0)
-            .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_TPIDR2_SAVE))
-            .addRegMask(TRI->SMEABISupportRoutinesCallPreservedMaskFromX0());
+            .addImm(ZeroZT0);
+    addSMELibCall(
+        CommitZASave, RTLIB::SMEABI_TPIDR2_SAVE,
+        CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X0);
     if (ZeroZA)
       CommitZASave.addDef(AArch64::ZAB0, RegState::ImplicitDefine);
     if (ZeroZT0)
@@ -925,24 +959,26 @@ void MachineSMEABI::emitFullZASaveRestore(EmitContext &Context,
                                           MachineBasicBlock &MBB,
                                           MachineBasicBlock::iterator MBBI,
                                           LiveRegs PhysLiveRegs, bool IsSave) {
-  auto *TLI = Subtarget->getTargetLowering();
   DebugLoc DL = getDebugLoc(MBB, MBBI);
-  Register BufferPtr = AArch64::X0;
+
+  if (IsSave)
+    emitCallSaveRemarks(MBB, MBBI, DL, AArch64::RequiresZASavePseudo,
+                        "SMEFullZASave", "full save");
 
   PhysRegSave RegSave = createPhysRegSave(PhysLiveRegs, MBB, MBBI, DL);
 
   // Copy the buffer pointer into X0.
+  Register BufferPtr = AArch64::X0;
   BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), BufferPtr)
       .addReg(Context.getAgnosticZABufferPtr(*MF));
 
   // Call __arm_sme_save/__arm_sme_restore.
-  BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-      .addReg(BufferPtr, RegState::Implicit)
-      .addExternalSymbol(TLI->getLibcallName(
-          IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE))
-      .addRegMask(TRI->getCallPreservedMask(
-          *MF,
-          CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
+  auto SaveRestoreZA = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
+                           .addReg(BufferPtr, RegState::Implicit);
+  addSMELibCall(
+      SaveRestoreZA,
+      IsSave ? RTLIB::SMEABI_SME_SAVE : RTLIB::SMEABI_SME_RESTORE,
+      CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
 
   restorePhyRegSave(RegSave, MBB, MBBI, DL);
 }
@@ -952,6 +988,14 @@ void MachineSMEABI::emitZT0SaveRestore(EmitContext &Context,
                                        MachineBasicBlock::iterator MBBI,
                                        bool IsSave) {
   DebugLoc DL = getDebugLoc(MBB, MBBI);
+
+  // Note: This will report calls that _only_ need ZT0 saved. Call that save
+  // both ZA and ZT0 will be under the SMELazySaveZA remark. This prevents
+  // reporting the same calls twice.
+  if (IsSave)
+    emitCallSaveRemarks(MBB, MBBI, DL, AArch64::RequiresZT0SavePseudo,
+                        "SMEZT0Save", "spill");
+
   Register ZT0Save = MRI->createVirtualRegister(&AArch64::GPR64spRegClass);
 
   BuildMI(MBB, MBBI, DL, TII->get(AArch64::ADDXri), ZT0Save)
@@ -984,14 +1028,11 @@ void MachineSMEABI::emitAllocateFullZASaveBuffer(
 
   // Calculate the SME state size.
   {
-    auto *TLI = Subtarget->getTargetLowering();
-    const AArch64RegisterInfo *TRI = Subtarget->getRegisterInfo();
-    BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
-        .addExternalSymbol(TLI->getLibcallName(RTLIB::SMEABI_SME_STATE_SIZE))
-        .addReg(AArch64::X0, RegState::ImplicitDefine)
-        .addRegMask(TRI->getCallPreservedMask(
-            *MF, CallingConv::
-                     AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1));
+    auto SMEStateSize = BuildMI(MBB, MBBI, DL, TII->get(AArch64::BL))
+                            .addReg(AArch64::X0, RegState::ImplicitDefine);
+    addSMELibCall(
+        SMEStateSize, RTLIB::SMEABI_SME_STATE_SIZE,
+        CallingConv::AArch64_SME_ABI_Support_Routines_PreserveMost_From_X1);
     BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::COPY), BufferSize)
         .addReg(AArch64::X0);
   }
@@ -1095,6 +1136,7 @@ void MachineSMEABI::emitStateChange(EmitContext &Context,
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE):
   case transitionFrom(ZAState::LOCAL_COMMITTED).to(ZAState::ACTIVE_ZT0_SAVED):
   case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE):
+  case transitionFrom(ZAState::LOCAL_SAVED).to(ZAState::ACTIVE_ZT0_SAVED):
     if (HasZAState)
       emitZARestore(Context, MBB, InsertPt, PhysLiveRegs);
     else
@@ -1126,7 +1168,8 @@ INITIALIZE_PASS(MachineSMEABI, "aarch64-machine-sme-abi", "Machine SME ABI",
                 false, false)
 
 bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
-  if (!MF.getSubtarget<AArch64Subtarget>().hasSME())
+  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+  if (!Subtarget->hasSME())
     return false;
 
   AFI = MF.getInfo<AArch64FunctionInfo>();
@@ -1138,7 +1181,9 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
   assert(MF.getRegInfo().isSSA() && "Expected to be run on SSA form!");
 
   this->MF = &MF;
-  Subtarget = &MF.getSubtarget<AArch64Subtarget>();
+  ORE = &getAnalysis<MachineOptimizationRemarkEmitterPass>().getORE();
+  LLI = &getAnalysis<LibcallLoweringInfoWrapper>().getLibcallLowering(
+      *MF.getFunction().getParent(), *Subtarget);
   TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   MRI = &MF.getRegInfo();
@@ -1147,42 +1192,6 @@ bool MachineSMEABI::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<EdgeBundlesWrapperLegacy>().getEdgeBundles();
 
   FunctionInfo FnInfo = collectNeededZAStates(SMEFnAttrs);
-
-  if (OptLevel != CodeGenOptLevel::None) {
-    // Propagate desired states forward, then backwards. Most of the propagation
-    // should be done in the forward step, and backwards propagation is then
-    // used to fill in the gaps. Note: Doing both in one step can give poor
-    // results. For example, consider this subgraph:
-    //
-    //    ┌─────┐
-    //  ┌─┤ BB0 ◄───┐
-    //  │ └─┬───┘   │
-    //  │ ┌─▼───◄──┐│
-    //  │ │ BB1 │  ││
-    //  │ └─┬┬──┘  ││
-    //  │   │└─────┘│
-    //  │ ┌─▼───┐   │
-    //  │ │ BB2 ├───┘
-    //  │ └─┬───┘
-    //  │ ┌─▼───┐
-    //  └─► BB3 │
-    //    └─────┘
-    //
-    // If:
-    // - "BB0" and "BB2" (outer loop) has no state preference
-    // - "BB1" (inner loop) desires the ACTIVE state on entry/exit
-    // - "BB3" desires the LOCAL_SAVED state on entry
-    //
-    // If we propagate forwards first, ACTIVE is propagated from BB1 to BB2,
-    // then from BB2 to BB0. Which results in the inner and outer loops having
-    // the "ACTIVE" state. This avoids any state changes in the loops.
-    //
-    // If we propagate backwards first, we _could_ propagate LOCAL_SAVED from
-    // BB3 to BB0, which would result in a transition from ACTIVE -> LOCAL_SAVED
-    // in the outer loop.
-    for (bool Forwards : {true, false})
-      propagateDesiredStates(FnInfo, Forwards);
-  }
 
   SmallVector<ZAState> BundleStates = assignBundleZAStates(Bundles, FnInfo);
 

@@ -7,7 +7,7 @@ subroutine test_masked()
   c = c + 1
   !$omp end masked
   !ERROR: NOWAIT clause is not allowed on the MASKED directive
-  !$omp masked nowait 
+  !$omp masked nowait
   c = c + 2
   !$omp end masked
 end subroutine

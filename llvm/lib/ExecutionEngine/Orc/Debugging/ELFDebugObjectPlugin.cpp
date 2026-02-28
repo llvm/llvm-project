@@ -54,15 +54,12 @@ public:
         MemMgr(Ctx.getMemoryManager()), ES(ES) {}
 
   ~DebugObject() {
+    assert(!FinalizeFuture.valid());
     if (Alloc) {
       std::vector<FinalizedAlloc> Allocs;
       Allocs.push_back(std::move(Alloc));
       if (Error Err = MemMgr.deallocate(std::move(Allocs)))
         ES.reportError(std::move(Err));
-    } else if (!FinalizeFuture.valid()) {
-      // WorkingMem was not finalized
-      WorkingMem.abandon(
-          [ES = &this->ES](Error Err) { ES->reportError(std::move(Err)); });
     }
   }
 
@@ -71,14 +68,21 @@ public:
     return SegInfo.WorkingMem;
   }
 
-  SimpleSegmentAlloc takeTargetAlloc() {
+  SimpleSegmentAlloc collectTargetAlloc() {
     FinalizeFuture = FinalizePromise.get_future();
     return std::move(WorkingMem);
   }
 
   void trackFinalizedAlloc(FinalizedAlloc FA) { Alloc = std::move(FA); }
 
-  Expected<ExecutorAddrRange> awaitTargetMem() { return FinalizeFuture.get(); }
+  bool hasPendingTargetMem() const { return FinalizeFuture.valid(); }
+
+  Expected<ExecutorAddrRange> awaitTargetMem() {
+    assert(FinalizeFuture.valid() &&
+           "FinalizeFuture is not valid. Perhaps there is no pending target "
+           "memory transaction?");
+    return FinalizeFuture.get();
+  }
 
   void reportTargetMem(ExecutorAddrRange TargetMem) {
     FinalizePromise.set_value(TargetMem);
@@ -86,6 +90,19 @@ public:
 
   void failMaterialization(Error Err) {
     FinalizePromise.set_value(std::move(Err));
+  }
+
+  void releasePendingResources() {
+    if (FinalizeFuture.valid()) {
+      // Error before step 4: Finalization error was not reported
+      Expected<ExecutorAddrRange> TargetMem = FinalizeFuture.get();
+      if (!TargetMem)
+        ES.reportError(TargetMem.takeError());
+    } else {
+      // Error before step 3: WorkingMem was not collected
+      WorkingMem.abandon(
+          [ES = &this->ES](Error Err) { ES->reportError(std::move(Err)); });
+    }
   }
 
   using GetLoadAddressFn = llvm::unique_function<ExecutorAddr(StringRef)>;
@@ -127,8 +144,9 @@ Error DebugObject::visitSectionLoadAddresses(GetLoadAddressFn Callback) {
     if (Name->empty())
       continue;
     ExecutorAddr LoadAddress = Callback(*Name);
-    const_cast<SectionHeader &>(Header).sh_addr =
-        static_cast<typename ELFT::uint>(LoadAddress.getValue());
+    if (LoadAddress)
+      const_cast<SectionHeader &>(Header).sh_addr =
+          static_cast<typename ELFT::uint>(LoadAddress.getValue());
   }
 
   LLVM_DEBUG({
@@ -267,11 +285,16 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // section headers in our debug object allocation
     Error Err = DebugObj->visitSections(
         [&G, &SectionsPatched, &HasDebugSections](StringRef Name) {
+          Section *S = G.findSectionByName(Name);
+          if (!S) {
+            // The section may have been merged into a different one during
+            // linking, ignore it.
+            return ExecutorAddr();
+          }
+
           SectionsPatched += 1;
           if (isDwarfSection(Name))
             HasDebugSections = true;
-          Section *S = G.findSectionByName(Name);
-          assert(S && "No graph section for object section");
           return SectionRange(*S).getStart();
         });
 
@@ -290,7 +313,7 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     }
 
     // Step 3: We start copying the debug object into target memory
-    SimpleSegmentAlloc Alloc = DebugObj->takeTargetAlloc();
+    SimpleSegmentAlloc Alloc = DebugObj->collectTargetAlloc();
 
     // FIXME: FA->getAddress() below is supposed to be the address of the memory
     // range on the target, but InProcessMemoryManager returns the address of a
@@ -298,7 +321,16 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     auto ROSeg = Alloc.getSegInfo(MemProt::Read);
     ExecutorAddrRange R(ROSeg.Addr, ROSeg.WorkingMem.size());
     Alloc.finalize([this, R, &MR](Expected<DebugObject::FinalizedAlloc> FA) {
-      DebugObject *DebugObj = getPendingDebugObj(MR);
+      // Bail out if materialization failed in the meantime
+      std::lock_guard<std::mutex> Lock(PendingObjsLock);
+      auto It = PendingObjs.find(&MR);
+      if (It == PendingObjs.end()) {
+        if (!FA)
+          ES.reportError(FA.takeError());
+        return;
+      }
+
+      DebugObject *DebugObj = It->second.get();
       if (!FA)
         DebugObj->failMaterialization(FA.takeError());
 
@@ -317,6 +349,12 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // register the memory range with the GDB JIT Interface in an allocation
     // action of the LinkGraph's own allocation
     DebugObject *DebugObj = getPendingDebugObj(MR);
+    assert(DebugObj && "Don't inject passes if we have no debug object");
+    // Post-allocation phases would bail out if there is no debug section,
+    // in which case we wouldn't collect target memory and therefore shouldn't
+    // wait for the transaction to finish.
+    if (!DebugObj->hasPendingTargetMem())
+      return Error::success();
     Expected<ExecutorAddrRange> R = DebugObj->awaitTargetMem();
     if (!R)
       return R.takeError();
@@ -349,7 +387,9 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
 
 Error ELFDebugObjectPlugin::notifyFailed(MaterializationResponsibility &MR) {
   std::lock_guard<std::mutex> Lock(PendingObjsLock);
-  PendingObjs.erase(&MR);
+  auto It = PendingObjs.find(&MR);
+  It->second->releasePendingResources();
+  PendingObjs.erase(It);
   return Error::success();
 }
 

@@ -135,4 +135,8 @@ TEST(AArch64SVESchedPseudoTestv3ae, IsCorrect) {
   runSVEPseudoTestForCPU("neoverse-v3ae");
 }
 
+TEST(AArch64SVESchedPseudoTestOlympus, IsCorrect) {
+  runSVEPseudoTestForCPU("olympus");
+}
+
 } // namespace

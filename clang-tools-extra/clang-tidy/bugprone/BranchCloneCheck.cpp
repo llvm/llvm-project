@@ -74,10 +74,9 @@ static bool isFallthroughSwitchBranch(const SwitchBranch &Branch) {
     }
   } Visitor;
 
-  for (const Stmt *Elem : Branch) {
+  for (const Stmt *Elem : Branch)
     if (!Visitor.TraverseStmt(const_cast<Stmt *>(Elem)))
       return true;
-  }
   return false;
 }
 
@@ -352,9 +351,8 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
           const SourceLocation End =
               Lexer::getLocForEndOfToken(Branches[I]->getEndLoc(), 0,
                                          *Result.SourceManager, getLangOpts());
-          if (End.isValid()) {
+          if (End.isValid())
             diag(End, "end of the original", DiagnosticIDs::Note);
-          }
         }
 
         diag(Branches[J]->getBeginLoc(), "clone %0 starts here",
@@ -441,9 +439,8 @@ void BranchCloneCheck::check(const MatchFinder::MatchResult &Result) {
         EndLoc = Context.getSourceManager().getExpansionLoc(EndLoc);
       EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, *Result.SourceManager,
                                           getLangOpts());
-      if (EndLoc.isValid()) {
+      if (EndLoc.isValid())
         diag(EndLoc, "last of these clones ends here", DiagnosticIDs::Note);
-      }
       BeginCurrent = EndCurrent;
     }
     return;

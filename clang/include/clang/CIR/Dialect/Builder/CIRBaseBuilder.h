@@ -16,11 +16,13 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/ADT/STLForwardCompat.h"
+#include "llvm/IR/FPEnv.h"
 #include "llvm/Support/ErrorHandling.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Types.h"
 
 namespace cir {
@@ -97,6 +99,10 @@ public:
     return getConstPtrAttr(t, 0);
   }
 
+  mlir::TypedAttr getNullDataMemberAttr(cir::DataMemberType ty) {
+    return cir::DataMemberAttr::get(ty);
+  }
+
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {
     if (mlir::isa<cir::IntType>(ty))
       return cir::IntAttr::get(ty, 0);
@@ -112,6 +118,8 @@ public:
       return getConstNullPtrAttr(ptrTy);
     if (auto recordTy = mlir::dyn_cast<cir::RecordType>(ty))
       return cir::ZeroAttr::get(recordTy);
+    if (auto dataMemberTy = mlir::dyn_cast<cir::DataMemberType>(ty))
+      return getNullDataMemberAttr(dataMemberTy);
     if (mlir::isa<cir::BoolType>(ty)) {
       return getFalseAttr();
     }
@@ -147,30 +155,35 @@ public:
     return cir::PointerType::get(ty);
   }
 
-  cir::PointerType getPointerTo(mlir::Type ty, cir::TargetAddressSpaceAttr as) {
+  cir::PointerType getPointerTo(mlir::Type ty,
+                                mlir::ptr::MemorySpaceAttrInterface as) {
     return cir::PointerType::get(ty, as);
   }
 
   cir::PointerType getPointerTo(mlir::Type ty, clang::LangAS langAS) {
-    if (langAS == clang::LangAS::Default) // Default address space.
+    if (langAS == clang::LangAS::Default)
       return getPointerTo(ty);
 
-    if (clang::isTargetAddressSpace(langAS)) {
-      unsigned addrSpace = clang::toTargetAddressSpace(langAS);
-      auto asAttr = cir::TargetAddressSpaceAttr::get(
-          getContext(), getUI32IntegerAttr(addrSpace));
-      return getPointerTo(ty, asAttr);
-    }
-
-    llvm_unreachable("language-specific address spaces NYI");
+    mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr =
+        cir::toCIRAddressSpaceAttr(*getContext(), langAS);
+    return getPointerTo(ty, addrSpaceAttr);
   }
 
   cir::PointerType getVoidPtrTy(clang::LangAS langAS = clang::LangAS::Default) {
     return getPointerTo(cir::VoidType::get(getContext()), langAS);
   }
 
-  cir::PointerType getVoidPtrTy(cir::TargetAddressSpaceAttr as) {
+  cir::PointerType getVoidPtrTy(mlir::ptr::MemorySpaceAttrInterface as) {
     return getPointerTo(cir::VoidType::get(getContext()), as);
+  }
+
+  cir::MethodAttr getMethodAttr(cir::MethodType ty, cir::FuncOp methodFuncOp) {
+    auto methodFuncSymbolRef = mlir::FlatSymbolRefAttr::get(methodFuncOp);
+    return cir::MethodAttr::get(ty, methodFuncSymbolRef);
+  }
+
+  cir::MethodAttr getNullMethodAttr(cir::MethodType ty) {
+    return cir::MethodAttr::get(ty);
   }
 
   cir::BoolAttr getCIRBoolAttr(bool state) {
@@ -385,34 +398,62 @@ public:
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
                            mlir::Type returnType, mlir::ValueRange operands,
-                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                           llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
     auto op = cir::CallOp::create(*this, loc, callee, returnType, operands);
     op->setAttrs(attrs);
+
+    if (!argAttrs.empty()) {
+      llvm::SmallVector<mlir::Attribute> argDictAttrs;
+      argDictAttrs.reserve(argAttrs.size());
+
+      llvm::transform(
+          argAttrs, std::back_inserter(argDictAttrs),
+          [this](llvm::ArrayRef<mlir::NamedAttribute> singleArgAttrs) {
+            return mlir::DictionaryAttr::get(getContext(), singleArgAttrs);
+          });
+
+      op.setArgAttrsAttr(mlir::ArrayAttr::get(getContext(), argDictAttrs));
+    }
+
+    if (!resAttrs.empty()) {
+      auto resultDictAttr = mlir::DictionaryAttr::get(getContext(), resAttrs);
+      op.setResAttrsAttr(mlir::ArrayAttr::get(getContext(), resultDictAttr));
+    }
     return op;
   }
 
   cir::CallOp createCallOp(mlir::Location loc, cir::FuncOp callee,
                            mlir::ValueRange operands,
-                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                           llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
     return createCallOp(loc, mlir::SymbolRefAttr::get(callee),
                         callee.getFunctionType().getReturnType(), operands,
-                        attrs);
+                        attrs, argAttrs, resAttrs);
   }
 
   cir::CallOp
   createIndirectCallOp(mlir::Location loc, mlir::Value indirectTarget,
                        cir::FuncType funcType, mlir::ValueRange operands,
-                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
+                       llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                       llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                       llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
     llvm::SmallVector<mlir::Value> resOperands{indirectTarget};
     resOperands.append(operands.begin(), operands.end());
+
     return createCallOp(loc, mlir::SymbolRefAttr(), funcType.getReturnType(),
-                        resOperands, attrs);
+                        resOperands, attrs, argAttrs, resAttrs);
   }
 
   cir::CallOp createCallOp(mlir::Location loc, mlir::SymbolRefAttr callee,
                            mlir::ValueRange operands = mlir::ValueRange(),
-                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {}) {
-    return createCallOp(loc, callee, cir::VoidType(), operands, attrs);
+                           llvm::ArrayRef<mlir::NamedAttribute> attrs = {},
+                           llvm::ArrayRef<mlir::NamedAttrList> argAttrs = {},
+                           llvm::ArrayRef<mlir::NamedAttribute> resAttrs = {}) {
+    return createCallOp(loc, callee, cir::VoidType(), operands, attrs, argAttrs,
+                        resAttrs);
   }
 
   //===--------------------------------------------------------------------===//
@@ -482,6 +523,24 @@ public:
   }
 
   //===--------------------------------------------------------------------===//
+  // Other Instructions
+  //===--------------------------------------------------------------------===//
+
+  mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
+                                   uint64_t idx) {
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    return cir::VecExtractOp::create(*this, loc, vec, idxVal);
+  }
+
+  mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
+                                  mlir::Value newElt, uint64_t idx) {
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    return cir::VecInsertOp::create(*this, loc, vec, newElt, idxVal);
+  }
+
+  //===--------------------------------------------------------------------===//
   // Binary Operators
   //===--------------------------------------------------------------------===//
 
@@ -543,7 +602,7 @@ public:
   }
 
   mlir::Value createSub(mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                        OverflowBehavior ob = OverflowBehavior::Saturated) {
+                        OverflowBehavior ob = OverflowBehavior::None) {
     auto op = cir::BinOp::create(*this, loc, lhs.getType(), cir::BinOpKind::Sub,
                                  lhs, rhs);
     op.setNoUnsignedWrap(
@@ -597,7 +656,7 @@ public:
     IntType integralTy =
         getSIntNTy(getCIRIntOrFloatBitWidth(vecCast.getElementType()));
     VectorType integralVecTy =
-        VectorType::get(context, integralTy, vecCast.getSize());
+        cir::VectorType::get(integralTy, vecCast.getSize());
     return cir::VecCmpOp::create(*this, loc, integralVecTy, kind, lhs, rhs);
   }
 
@@ -698,6 +757,36 @@ public:
   /// Create a yield operation.
   cir::YieldOp createYield(mlir::Location loc, mlir::ValueRange value = {}) {
     return cir::YieldOp::create(*this, loc, value);
+  }
+
+  struct GetMethodResults {
+    mlir::Value callee;
+    mlir::Value adjustedThis;
+  };
+
+  GetMethodResults createGetMethod(mlir::Location loc, mlir::Value method,
+                                   mlir::Value objectPtr) {
+    // Build the callee function type.
+    auto methodFuncTy =
+        mlir::cast<cir::MethodType>(method.getType()).getMemberFuncTy();
+    auto methodFuncInputTypes = methodFuncTy.getInputs();
+
+    auto objectPtrTy = mlir::cast<cir::PointerType>(objectPtr.getType());
+    mlir::Type adjustedThisTy = getVoidPtrTy(objectPtrTy.getAddrSpace());
+
+    llvm::SmallVector<mlir::Type> calleeFuncInputTypes{adjustedThisTy};
+    calleeFuncInputTypes.insert(calleeFuncInputTypes.end(),
+                                methodFuncInputTypes.begin(),
+                                methodFuncInputTypes.end());
+    cir::FuncType calleeFuncTy =
+        methodFuncTy.clone(calleeFuncInputTypes, methodFuncTy.getReturnType());
+    // TODO(cir): consider the address space of the callee.
+    assert(!cir::MissingFeatures::addressSpace());
+    cir::PointerType calleeTy = getPointerTo(calleeFuncTy);
+
+    auto op = cir::GetMethodOp::create(*this, loc, calleeTy, adjustedThisTy,
+                                       method, objectPtr);
+    return {op.getCallee(), op.getAdjustedThis()};
   }
 };
 

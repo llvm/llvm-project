@@ -944,12 +944,16 @@ __m128i test_mm_movm_epi32(__mmask8 __A) {
   return _mm_movm_epi32(__A); 
 }
 
+TEST_CONSTEXPR(match_v4si(_mm_movm_epi32(0x05), -1, 0, -1, 0));
+
 __m256i test_mm256_movm_epi32(__mmask8 __A) {
   // CHECK-LABEL: test_mm256_movm_epi32
   // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
   // CHECK: %vpmovm2.i = sext <8 x i1> %{{.*}} to <8 x i32>
   return _mm256_movm_epi32(__A); 
 }
+
+TEST_CONSTEXPR(match_v8si(_mm256_movm_epi32(0x85), -1, 0, -1, 0, 0, 0, 0, -1));
 
 __m128i test_mm_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: test_mm_movm_epi64
@@ -959,6 +963,9 @@ __m128i test_mm_movm_epi64(__mmask8 __A) {
   return _mm_movm_epi64(__A); 
 }
 
+TEST_CONSTEXPR(match_v2di(_mm_movm_epi64(0x03), -1, -1));
+
+
 __m256i test_mm256_movm_epi64(__mmask8 __A) {
   // CHECK-LABEL: test_mm256_movm_epi64
   // CHECK: %{{.*}} = bitcast i8 %{{.*}} to <8 x i1>
@@ -966,6 +973,9 @@ __m256i test_mm256_movm_epi64(__mmask8 __A) {
   // CHECK: %vpmovm2.i = sext <4 x i1> %extract.i to <4 x i64>
   return _mm256_movm_epi64(__A); 
 }
+
+TEST_CONSTEXPR(match_v4di(_mm256_movm_epi64(0x05), -1, 0, -1, 0));
+
 
 __mmask8 test_mm_movepi64_mask(__m128i __A) {
   // CHECK-LABEL: test_mm_movepi64_mask

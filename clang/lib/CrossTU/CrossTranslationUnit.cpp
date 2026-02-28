@@ -24,6 +24,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLParser.h"
@@ -201,10 +202,10 @@ parseCrossTUIndex(StringRef IndexPath) {
     SmallString<32> FilePath(FilePathInIndex);
     llvm::sys::path::native(FilePath, llvm::sys::path::Style::posix);
 
-    bool InsertionOccured;
-    std::tie(std::ignore, InsertionOccured) =
+    bool InsertionOccurred;
+    std::tie(std::ignore, InsertionOccurred) =
         Result.try_emplace(LookupName, FilePath.begin(), FilePath.end());
-    if (!InsertionOccured)
+    if (!InsertionOccurred)
       return llvm::make_error<IndexError>(
           index_error_code::multiple_definitions, IndexPath.str(), LineNo);
 
@@ -620,6 +621,8 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   auto Diags = llvm::makeIntrusiveRefCnt<DiagnosticsEngine>(DiagID, *DiagOpts,
                                                             DiagClient);
 
+  // This runs the driver which isn't expected to be free of sandbox violations.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   return CreateASTUnitFromCommandLine(
       CommandLineArgs.begin(), (CommandLineArgs.end()),
       CI.getPCHContainerOperations(), DiagOpts, Diags,
@@ -710,7 +713,7 @@ llvm::Error CrossTranslationUnitContext::ASTLoader::lazyInitInvocationList() {
     return llvm::make_error<IndexError>(PreviousParsingResult);
 
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> FileContent =
-      llvm::MemoryBuffer::getFile(InvocationListFilePath);
+      CI.getVirtualFileSystem().getBufferForFile(InvocationListFilePath);
   if (!FileContent) {
     PreviousParsingResult = index_error_code::invocation_list_file_not_found;
     return llvm::make_error<IndexError>(PreviousParsingResult);

@@ -1257,7 +1257,6 @@ emitDebugSectionImpl(const DWARFYAML::Data &DI, StringRef Sec,
 
   if (Error Err = EmitFunc(DebugInfoStream, DI))
     return Err;
-  DebugInfoStream.flush();
   if (!Data.empty())
     OutputBuffers[Sec] = MemoryBuffer::getMemBufferCopy(Data);
 

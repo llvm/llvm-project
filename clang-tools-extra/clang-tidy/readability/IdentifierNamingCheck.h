@@ -116,7 +116,7 @@ public:
         StringRef TypeName, const NamedDecl *ND,
         const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
 
-    std::string getClassPrefix(
+    llvm::StringRef getClassPrefix(
         const CXXRecordDecl *CRD,
         const IdentifierNamingCheck::HungarianNotationOption &HNOption) const;
 
@@ -219,6 +219,9 @@ private:
   StyleKind
   findStyleKindForVar(const VarDecl *Var, QualType Type,
                       ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
+
+  StyleKind
+  undefinedStyle(ArrayRef<std::optional<NamingStyle>> NamingStyles) const;
 
   /// Stores the style options as a vector, indexed by the specified \ref
   /// StyleKind, for a given directory.

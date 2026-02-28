@@ -19,11 +19,11 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static CWrapperFunctionResult voidWrapper(const char *ArgData, size_t ArgSize) {
+static CWrapperFunctionBuffer voidWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void()>::handle(ArgData, ArgSize, []() {}).release();
 }
 
-static CWrapperFunctionResult mainWrapper(const char *ArgData, size_t ArgSize) {
+static CWrapperFunctionBuffer mainWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(SPSSequence<SPSString>)>::handle(
              ArgData, ArgSize,
              [](std::vector<std::string> Args) -> int32_t {

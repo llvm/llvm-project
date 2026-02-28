@@ -24,6 +24,7 @@ set(core_files
   stdcountof.h
   stdckdint.h
   stddef.h
+  stddefer.h
   __stddef_header_macro.h
   __stddef_max_align_t.h
   __stddef_null.h
@@ -296,6 +297,7 @@ set(gpu_files
   gpuintrin.h
   nvptxintrin.h
   amdgpuintrin.h
+  spirvintrin.h
   )
 
 set(windows_only_files
@@ -514,8 +516,8 @@ foreach( f ${generated_files} )
   endif()
 endforeach( f )
 
-function(add_header_target target_name file_list)
-  add_library(${target_name} INTERFACE ${file_list})
+function(add_header_target target_name)
+  add_library(${target_name} INTERFACE ${ARGN})
   set_target_properties(${target_name} PROPERTIES
     FOLDER "Clang/Resources"
     RUNTIME_OUTPUT_DIRECTORY "${output_dir}")

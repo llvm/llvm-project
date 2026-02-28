@@ -28,6 +28,7 @@
 namespace llvm {
 
 class CodeGenRegBank;
+class CodeGenRegister;
 class CodeGenRegisterClass;
 class Record;
 class raw_ostream;
@@ -168,7 +169,9 @@ struct ValueTypeByHwMode : public InfoByHwMode<MVT> {
 
   bool isValid() const { return !Map.empty(); }
   MVT getType(unsigned Mode) const { return get(Mode); }
-  MVT &getOrCreateTypeForMode(unsigned Mode, MVT Type);
+  void insertTypeForMode(unsigned Mode, MVT Type) {
+    Map.try_emplace(Mode, Type);
+  }
 
   static StringRef getMVTName(MVT T);
   void writeToStream(raw_ostream &OS) const;
@@ -252,9 +255,18 @@ struct EncodingInfoByHwMode : public InfoByHwMode<const Record *> {
 
 struct RegClassByHwMode : public InfoByHwMode<const CodeGenRegisterClass *> {
 public:
-  RegClassByHwMode(const Record *R, const CodeGenHwModes &CGH,
-                   const CodeGenRegBank &RegBank);
+  RegClassByHwMode(const Record *R, const CodeGenRegBank &RegBank);
   RegClassByHwMode() = default;
+};
+
+struct RegisterByHwMode : public InfoByHwMode<const CodeGenRegister *> {
+  RegisterByHwMode(const Record *R, CodeGenRegBank &RegBank);
+  RegisterByHwMode() = default;
+  /// Resolve the register by calling <target>::RegByHwMode::get<name>(HwMode).
+  void emitResolverCall(raw_ostream &OS, const Twine &HwMode) const;
+
+private:
+  StringRef Namespace;
 };
 
 } // namespace llvm

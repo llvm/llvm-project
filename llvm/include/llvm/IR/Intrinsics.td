@@ -754,6 +754,19 @@ class MSBuiltin<string name> {
   string MSBuiltinName = name;
 }
 
+/// Utility class for intrinsics that
+/// 1. Don't touch memory or any hidden state
+/// 2. Can be freely speculated, and
+/// 3. Will not create undef or poison on defined inputs.
+class PureIntrinsic<list<LLVMType> ret_types,
+                list<LLVMType> param_types = [],
+                list<IntrinsicProperty> intr_properties = [],
+                string name = "",
+                list<SDNodeProperty> sd_properties = []>
+                : DefaultAttrsIntrinsic<ret_types, param_types,
+                            intr_properties # [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison],
+                            name, sd_properties>;
+
 #ifndef TEST_INTRINSICS_SUPPRESS_DEFS
 
 //===--------------- Variable Argument Handling Intrinsics ----------------===//
@@ -878,6 +891,7 @@ def int_addressofreturnaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [In
 def int_frameaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [llvm_i32_ty],
                                  [IntrNoMem, ImmArg<ArgIndex<0>>]>;
 def int_sponentry  : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
+def int_stackaddress : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [], []>;
 def int_read_register  : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],
@@ -1015,6 +1029,11 @@ def int_call_preallocated_teardown : DefaultAttrsIntrinsic<[], [llvm_token_ty]>;
 def int_callbr_landingpad : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                                       [IntrNoMerge]>;
 
+def int_structured_gep
+    : DefaultAttrsIntrinsic<[llvm_anyptr_ty],
+                            [LLVMMatchType<0>, llvm_vararg_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
+
 //===------------------- Standard C Library Intrinsics --------------------===//
 //
 
@@ -1118,6 +1137,22 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
   // Truncate a floating point number with a specific rounding mode
   def int_fptrunc_round : DefaultAttrsIntrinsic<[ llvm_anyfloat_ty ],
                                                 [ llvm_anyfloat_ty, llvm_metadata_ty ]>;
+
+  // Convert from native LLVM floating-point to arbitrary FP format
+  // Returns an integer containing the arbitrary FP bits
+  def int_convert_to_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyint_ty ],
+            [ llvm_anyfloat_ty, llvm_metadata_ty, llvm_metadata_ty, llvm_i1_ty ],
+            [ IntrNoMem, IntrSpeculatable, ImmArg<ArgIndex<3>> ]>;
+
+  // Convert from arbitrary FP format to native LLVM floating-point
+  // Takes an integer containing the arbitrary FP bits
+  def int_convert_from_arbitrary_fp
+      : DefaultAttrsIntrinsic<
+            [ llvm_anyfloat_ty ],
+            [ llvm_anyint_ty, llvm_metadata_ty ],
+            [ IntrNoMem, IntrSpeculatable ]>;
 
   def int_canonicalize : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>],
                                    [IntrNoMem]>;
@@ -1465,6 +1500,8 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in
       [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
   def int_fshr : DefaultAttrsIntrinsic<[llvm_anyint_ty],
       [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>]>;
+  def int_clmul : DefaultAttrsIntrinsic<[llvm_anyint_ty],
+      [LLVMMatchType<0>, LLVMMatchType<0>]>;
 }
 
 let IntrProperties = [IntrNoMem, IntrSpeculatable,
@@ -1874,6 +1911,8 @@ def int_debugtrap : Intrinsic<[]>,
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
                               [IntrNoReturn, IntrCold, ImmArg<ArgIndex<0>>,
                                IntrInaccessibleMemOnly, IntrWriteMem]>;
+def int_looptrap : Intrinsic<[], [], [IntrNoReturn, IntrCold,
+                                      IntrInaccessibleMemOnly, IntrWriteMem]>;
 
 // Return true if ubsan check is allowed.
 def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],
@@ -1883,6 +1922,20 @@ def int_allow_ubsan_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_i8_ty],
 def int_allow_runtime_check : DefaultAttrsIntrinsic<[llvm_i1_ty], [llvm_metadata_ty],
     [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>,
     ClangBuiltin<"__builtin_allow_runtime_check">;
+
+// Return true if the specific sanitizer is enabled for the function.
+def int_allow_sanitize_address
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_thread
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_memory
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
+def int_allow_sanitize_hwaddress
+    : DefaultAttrsIntrinsic<[llvm_i1_ty], [],
+                            [IntrInaccessibleMemOnly, NoUndef<RetIndex>]>;
 
 // Support for dynamic deoptimization (or de-specialization)
 def int_experimental_deoptimize : Intrinsic<[llvm_any_ty], [llvm_vararg_ty],
@@ -1912,12 +1965,6 @@ def int_sideeffect : DefaultAttrsIntrinsic<[], [], [IntrInaccessibleMemOnly]>;
 def int_pseudoprobe : DefaultAttrsIntrinsic<[], [llvm_i64_ty, llvm_i64_ty, llvm_i32_ty, llvm_i64_ty],
                                     [IntrInaccessibleMemOnly]>;
 
-// Intrinsics to support half precision floating point format
-let IntrProperties = [IntrNoMem] in {
-def int_convert_to_fp16   : DefaultAttrsIntrinsic<[llvm_i16_ty], [llvm_anyfloat_ty]>;
-def int_convert_from_fp16 : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [llvm_i16_ty]>;
-}
-
 // Saturating floating point to integer intrinsics
 let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison] in {
 def int_fptoui_sat : DefaultAttrsIntrinsic<[llvm_anyint_ty], [llvm_anyfloat_ty]>;
@@ -1940,8 +1987,7 @@ def int_fake_use : DefaultAttrsIntrinsic<[], [llvm_vararg_ty],
 // Intrinsic to mask out bits of a pointer.
 // First argument must be pointer or vector of pointer. This is checked by the
 // verifier.
-def int_ptrmask: DefaultAttrsIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty],
-                           [IntrNoMem, IntrSpeculatable, IntrNoCreateUndefOrPoison]>;
+def int_ptrmask: PureIntrinsic<[llvm_any_ty], [LLVMMatchType<0>, llvm_anyint_ty]>;
 
 // Intrinsic to wrap a thread local variable.
 def int_threadlocal_address : DefaultAttrsIntrinsic<[llvm_anyptr_ty], [LLVMMatchType<0>],
@@ -2587,6 +2633,10 @@ def int_load_relative: DefaultAttrsIntrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_a
 def int_asan_check_memaccess :
   Intrinsic<[],[llvm_ptr_ty, llvm_i32_ty], [ImmArg<ArgIndex<1>>]>;
 
+// Spin in an infinite loop (using instructions specified by the target) iff the
+// argument is true. Used to implement efficient conditional traps.
+def int_cond_loop : Intrinsic<[], [llvm_i1_ty], [IntrNoMem, IntrHasSideEffects]>;
+
 // HWASan intrinsics to test whether a pointer is addressable.
 //===----------------------------------------------------------------------===//
 //
@@ -2801,13 +2851,15 @@ def int_vector_reverse : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                                                [IntrNoMem,
                                                 IntrSpeculatable]>;
 
-def int_vector_splice : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
-                                              [LLVMMatchType<0>,
-                                               LLVMMatchType<0>,
-                                               llvm_i32_ty],
-                                              [IntrNoMem,
-                                               IntrSpeculatable,
-                                               ImmArg<ArgIndex<2>>]>;
+def int_vector_splice_left
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
+
+def int_vector_splice_right
+    : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                            [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
+                            [IntrNoMem, IntrSpeculatable]>;
 
 //===---------- Intrinsics to query properties of scalable vectors --------===//
 def int_vscale : DefaultAttrsIntrinsic<[llvm_anyint_ty],
@@ -2877,6 +2929,19 @@ def int_ptrauth_resign : Intrinsic<[llvm_i64_ty],
                                     llvm_i32_ty, llvm_i64_ty],
                                    [IntrNoMem, ImmArg<ArgIndex<1>>,
                                     ImmArg<ArgIndex<3>>]>;
+
+// Authenticate a signed pointer, load 32bit value at offset from pointer, add
+// both, and sign it. The second (key) and third (discriminator) arguments
+// specify the signing schema used for authenticating. The fourth and fifth
+// arguments specify the schema used for signing. The sixth argument is addend
+// added to pointer to load the relative offset. The signature must be valid.
+// This is a combined form of int_ptrauth_resign for relative pointers
+def int_ptrauth_resign_load_relative
+    : Intrinsic<[llvm_i64_ty],
+                [llvm_i64_ty, llvm_i32_ty, llvm_i64_ty, llvm_i32_ty,
+                 llvm_i64_ty, llvm_i64_ty],
+                [IntrReadMem, ImmArg<ArgIndex<1>>, ImmArg<ArgIndex<3>>,
+                 ImmArg<ArgIndex<5>>]>;
 
 // Strip the embedded signature out of a signed pointer.
 // The second argument specifies the key.

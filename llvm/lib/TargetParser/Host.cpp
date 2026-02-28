@@ -389,6 +389,7 @@ getHostCPUNameForARMFromComponents(StringRef Implementer, StringRef Hardware,
         .Case("0xac3", "ampere1")
         .Case("0xac4", "ampere1a")
         .Case("0xac5", "ampere1b")
+        .Case("0xac7", "ampere1c")
         .Default("generic");
   }
 
@@ -1339,6 +1340,12 @@ static const char *getAMDProcessorTypeAndSubtype(unsigned Family,
       *Subtype = X86::AMDFAM1AH_ZNVER5;
       break; //  "znver5"
     }
+    if ((Model >= 0x50 && Model <= 0x5f) || (Model >= 0x80 && Model <= 0xcf) ||
+        (Model >= 0xd8 && Model <= 0xe7)) {
+      CPU = "znver6";
+      *Subtype = X86::AMDFAM1AH_ZNVER6;
+      break; //  "znver6"
+    }
     break;
 
   default:
@@ -2040,6 +2047,8 @@ StringMap<bool> sys::getHostCPUFeatures() {
   // AMX requires additional context to be saved by the OS.
   const unsigned AMXBits = (1 << 17) | (1 << 18);
   bool HasAMXSave = HasXSave && ((EAX & AMXBits) == AMXBits);
+  // APX requires additional context to be saved by the OS.
+  bool HasAPXSave = HasXSave && ((EAX >> 19) & 1);
 
   Features["avx"]   = HasAVXSave;
   Features["fma"]   = ((ECX >> 12) & 1) && HasAVXSave;
@@ -2162,10 +2171,14 @@ StringMap<bool> sys::getHostCPUFeatures() {
   Features["prefetchi"] |= HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
   Features["usermsr"]  = HasLeaf7Subleaf1 && ((EDX >> 15) & 1);
   bool HasAVX10 = HasLeaf7Subleaf1 && ((EDX >> 19) & 1);
-  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1);
+  bool HasAPXF = HasLeaf7Subleaf1 && ((EDX >> 21) & 1) && HasAPXSave;
   Features["egpr"] = HasAPXF;
+#ifndef _WIN32
+  // TODO: We may need to check OS or MSVC version once unwinder opcodes
+  // support PUSH2/POP2/PPX.
   Features["push2pop2"] = HasAPXF;
   Features["ppx"] = HasAPXF;
+#endif
   Features["ndd"] = HasAPXF;
   Features["ccmp"] = HasAPXF;
   Features["nf"] = HasAPXF;
@@ -2238,6 +2251,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
                                    .Case("fp", "fp-armv8")
                                    .Case("crc32", "crc")
                                    .Case("atomics", "lse")
+                                   .Case("rng", "rand")
                                    .Case("sha3", "sha3")
                                    .Case("sm4", "sm4")
                                    .Case("sve", "sve")
@@ -2287,6 +2301,10 @@ StringMap<bool> sys::getHostCPUFeatures() {
   // detect support at runtime.
   if (!Features.contains("sve"))
     Features["sve"] = false;
+
+  // Also disable RNG if we can't detect support at runtime.
+  if (!Features.contains("rand"))
+    Features["rand"] = false;
 #endif
 
   return Features;
@@ -2385,7 +2403,7 @@ StringMap<bool> sys::getHostCPUFeatures() {
       IsProcessorFeaturePresent(PF_ARM_SVE_F64MM_INSTRUCTIONS_AVAILABLE);
   Features["i8mm"] =
       IsProcessorFeaturePresent(PF_ARM_V82_I8MM_INSTRUCTIONS_AVAILABLE);
-  Features["fp16"] =
+  Features["fullfp16"] =
       IsProcessorFeaturePresent(PF_ARM_V82_FP16_INSTRUCTIONS_AVAILABLE);
   Features["bf16"] =
       IsProcessorFeaturePresent(PF_ARM_V86_BF16_INSTRUCTIONS_AVAILABLE);
