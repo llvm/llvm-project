@@ -1120,7 +1120,7 @@ private:
     // different from the overall warp size, e.g. if the cast is applied to
     // a result of a gather).
     if (srcRank == 1)
-      return VectorType::get({distributedType.getNumElements()},
+      return VectorType::get(distributedType.getNumElements(),
                              srcType.getElementType());
     // Try to strip leading unit dimensions to match the ranks. We bail out
     // for more complex tile sizes, because those would require us to
