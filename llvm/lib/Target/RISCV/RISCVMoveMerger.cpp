@@ -165,7 +165,8 @@ RISCVMoveMerge::mergeGPRPairInsns(MachineBasicBlock::iterator I,
       PairedSource.setIsKill(false);
 
   Register SrcReg1, SrcReg2, DestReg;
-  auto GPRPairIdx = RegPairIsEven ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
+  unsigned GPRPairIdx =
+      RegPairIsEven ? RISCV::sub_gpr_even : RISCV::sub_gpr_odd;
   SrcReg1 = TRI->getMatchingSuperReg(FirstPair.Source->getReg(), GPRPairIdx,
                                      &RISCV::GPRPairRegClass);
   SrcReg2 = ST->hasStdExtZdinx() ? SrcReg1 : Register(RISCV::X0_Pair);
