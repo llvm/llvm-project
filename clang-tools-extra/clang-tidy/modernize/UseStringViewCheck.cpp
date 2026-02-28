@@ -21,6 +21,29 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
+AST_MATCHER(FunctionDecl, isOverloaded) {
+  const DeclarationName Name = Node.getDeclName();
+  // Skip lambda-like functions
+  if (Name.isEmpty())
+    return false;
+  const DeclContext *DC = Node.getDeclContext();
+  auto LookupResult = DC->lookup(Name);
+  size_t UniqueSignatures = 0;
+  llvm::SmallPtrSet<const FunctionDecl *, 2> SeenFunctions;
+  for (NamedDecl *ND : LookupResult) {
+    if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+      if (SeenFunctions.insert(FD->getCanonicalDecl()).second) {
+        UniqueSignatures++;
+        if (UniqueSignatures > 1)
+          return true;
+      }
+    }
+  }
+  return false;
+}
+} // namespace
+
 static constexpr StringRef StringViewClassKey = "string";
 static constexpr StringRef WStringViewClassKey = "wstring";
 static constexpr StringRef U8StringViewClassKey = "u8string";
@@ -81,6 +104,7 @@ void UseStringViewCheck::registerMatchers(MatchFinder *Finder) {
       functionDecl(
           isDefinition(),
           unless(anyOf(VirtualOrOperator, IgnoredFunctionsMatcher,
+                       isOverloaded(),
                        ast_matchers::isExplicitTemplateSpecialization())),
           returns(IsStdString), hasDescendant(returnStmt()),
           unless(hasDescendant(returnStmt(hasReturnValue(unless(

@@ -365,6 +365,13 @@ std::string lambda() {
   }();
 }
 
+namespace overloads {
+std::string dbl2str(double f);
+std::string overload(int) { return "int"; }
+std::string overload(double f) { return "f=" + dbl2str(f); }
+std::string overload(std::string) { return "string"; }
+}
+
 struct TemplateString {
   static constexpr char* val = "TEMPLATE";
   template<typename T>
