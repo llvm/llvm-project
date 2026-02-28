@@ -1,4 +1,4 @@
-//===-- Implementation of floorf16 function -------------------------------===//
+//===-- Shared floorf16 function --------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/floorf16.h"
+#ifndef LLVM_LIBC_SHARED_MATH_FLOORF16_H
+#define LLVM_LIBC_SHARED_MATH_FLOORF16_H
+
+#include "include/llvm-libc-macros/float16-macros.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT16
+
 #include "src/__support/math/floorf16.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float16, floorf16, (float16 x)) { return math::floorf16(x); }
+using math::floorf16;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LIBC_TYPES_HAS_FLOAT16
+
+#endif // LLVM_LIBC_SHARED_MATH_FLOORF16_H
