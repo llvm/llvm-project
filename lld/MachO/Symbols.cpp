@@ -57,13 +57,13 @@ Defined::Defined(StringRef name, InputFile *file, InputSection *isec,
                  bool isPrivateExtern, bool includeInSymtab,
                  bool isReferencedDynamically, bool noDeadStrip,
                  bool canOverrideWeakDef, bool isWeakDefCanBeHidden,
-                 bool interposable)
+                 bool interposable, bool cold)
     : Symbol(DefinedKind, name, file), overridesWeakDef(canOverrideWeakDef),
       privateExtern(isPrivateExtern), includeInSymtab(includeInSymtab),
       identicalCodeFoldingKind(ICFFoldKind::None),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
       interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
-      weakDef(isWeakDef), external(isExternal), originalIsec(isec),
+      cold(cold), weakDef(isWeakDef), external(isExternal), originalIsec(isec),
       value(value), size(size) {
   if (isec) {
     isec->symbols.push_back(this);

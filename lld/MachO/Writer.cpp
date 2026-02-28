@@ -1007,13 +1007,23 @@ static void sortSegmentsAndSections() {
         osec->align = tlvAlign;
       }
 
-      if (!isecPriorities.empty()) {
-        if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
-          llvm::stable_sort(
-              merged->inputs, [&](InputSection *a, InputSection *b) {
-                return isecPriorities.lookup(a) < isecPriorities.lookup(b);
-              });
-        }
+      if (auto *merged = dyn_cast<ConcatOutputSection>(osec)) {
+        llvm::stable_sort(merged->inputs,
+                          [&](InputSection *a, InputSection *b) {
+                            auto aIt = isecPriorities.find(a);
+                            auto bIt = isecPriorities.find(b);
+                            bool aHasPriority = aIt != isecPriorities.end();
+                            bool bHasPriority = bIt != isecPriorities.end();
+                            if (aHasPriority != bHasPriority)
+                              return aHasPriority;
+                            if (aHasPriority)
+                              return aIt->second < bIt->second;
+                            bool aCold = a->isCold();
+                            bool bCold = b->isCold();
+                            if (aCold != bCold)
+                              return !aCold;
+                            return false;
+                          });
       }
     }
   }
