@@ -389,10 +389,49 @@ void CIRGenFunction::popCleanupBlock() {
 
 /// Pops cleanup blocks until the given savepoint is reached.
 void CIRGenFunction::popCleanupBlocks(
-    EHScopeStack::stable_iterator oldCleanupStackDepth) {
+    EHScopeStack::stable_iterator oldCleanupStackDepth,
+    ArrayRef<mlir::Value *> valuesToReload) {
+  // If the current stack depth is the same as the cleanup stack depth,
+  // we won't be exiting any cleanup scopes, so we don't need to reload
+  // any values.
+  bool requiresCleanup = false;
+  for (auto it = ehStack.begin(), ie = ehStack.find(oldCleanupStackDepth);
+       it != ie; ++it) {
+    if (isa<EHCleanupScope>(&*it)) {
+      requiresCleanup = true;
+      break;
+    }
+  }
+
+  // If there are values that we need to keep live, spill them now before
+  // we pop the cleanup blocks. These are passed as pointers to mlir::Value
+  // because we're going to replace them with the reloaded value.
+  SmallVector<Address> tempAllocas;
+  if (requiresCleanup) {
+    for (mlir::Value *valPtr : valuesToReload) {
+      mlir::Value val = *valPtr;
+      if (!val)
+        continue;
+
+      // TODO(cir): Check for static allocas.
+
+      Address temp = createDefaultAlignTempAlloca(val.getType(), val.getLoc(),
+                                                  "tmp.exprcleanup");
+      tempAllocas.push_back(temp);
+      builder.createStore(val.getLoc(), val, temp);
+    }
+  }
+
   // Pop cleanup blocks until we reach the base stack depth for the
   // current scope.
-  while (ehStack.stable_begin() != oldCleanupStackDepth) {
+  while (ehStack.stable_begin() != oldCleanupStackDepth)
     popCleanupBlock();
+
+  // Reload the values that we spilled, if necessary.
+  if (requiresCleanup) {
+    for (auto [addr, valPtr] : llvm::zip(tempAllocas, valuesToReload)) {
+      mlir::Location loc = valPtr->getLoc();
+      *valPtr = builder.createLoad(loc, addr);
+    }
   }
 }

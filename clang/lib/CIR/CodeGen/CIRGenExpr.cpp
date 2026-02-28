@@ -2548,6 +2548,18 @@ cir::AllocaOp CIRGenFunction::createTempAlloca(mlir::Type ty,
           .getDefiningOp());
 }
 
+/// CreateDefaultAlignTempAlloca - This creates an alloca with the
+/// default alignment of the corresponding LLVM type, which is *not*
+/// guaranteed to be related in any way to the expected alignment of
+/// an AST type that might have been lowered to Ty.
+Address CIRGenFunction::createDefaultAlignTempAlloca(mlir::Type ty,
+                                                     mlir::Location loc,
+                                                     const Twine &name) {
+  CharUnits align =
+      CharUnits::fromQuantity(cgm.getDataLayout().getABITypeAlign(ty));
+  return createTempAlloca(ty, align, loc, name);
+}
+
 /// Try to emit a reference to the given value without producing it as
 /// an l-value.  For many cases, this is just an optimization, but it avoids
 /// us needing to emit global copies of variables if they're named without
