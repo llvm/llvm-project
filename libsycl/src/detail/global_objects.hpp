@@ -36,6 +36,10 @@ std::vector<detail::OffloadTopology> &getOffloadTopologies();
 /// \returns std::vector of implementation objects for all platforms.
 std::vector<std::unique_ptr<PlatformImpl>> &getPlatformCache();
 
+// This initializes a function-local variable whose destructor is invoked as
+// the SYCL shared library is first being unloaded.
+void registerStaticVarShutdownHandler();
+
 } // namespace detail
 _LIBSYCL_END_NAMESPACE_SYCL
 

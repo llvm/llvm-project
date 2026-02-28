@@ -1664,6 +1664,18 @@ def ReduceAdd : Builtin {
   let Prototype = "void(...)";
 }
 
+def ReduceInOrderFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_in_order_fadd"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def ReduceAssocFAdd : Builtin {
+  let Spellings = ["__builtin_reduce_assoc_fadd"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ReduceMul : Builtin {
   let Spellings = ["__builtin_reduce_mul"];
   let Attributes = [NoThrow, Const, CustomTypeChecking, Constexpr];
@@ -5206,6 +5218,12 @@ def HLSLWaveGetLaneCount : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLWavePrefixSum : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_prefix_sum"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
+def HLSLWavePrefixProduct : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_prefix_product"];
   let Attributes = [NoThrow, Const];
   let Prototype = "void(...)";
 }

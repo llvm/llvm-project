@@ -6,7 +6,7 @@ overall flow is two-stage:
 1.  **conversion** of the IR to a set of dialects translatable to LLVM IR, for
     example [LLVM Dialect](Dialects/LLVM.md) or one of the hardware-specific
     dialects derived from LLVM IR intrinsics such as [AMX](Dialects/AMX.md),
-    [X86Vector](Dialects/X86Vector.md) or [ArmNeon](Dialects/ArmNeon.md);
+    [X86](Dialects/X86.md) or [ArmNeon](Dialects/ArmNeon.md);
 2.  **translation** of MLIR dialects to LLVM IR.
 
 This flow allows the non-trivial transformation to be performed within MLIR
