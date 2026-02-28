@@ -13,6 +13,11 @@
 #include "lldb/Utility/RegisterValue.h"
 #include "llvm/Support/Endian.h"
 
+#ifdef FreeBSD_i386
+#include <cstddef>
+#include <machine/pcb.h>
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -49,6 +54,15 @@ bool RegisterContextFreeBSDKernelCore_i386::ReadRegister(
     llvm::support::ulittle32_t ebx;
     llvm::support::ulittle32_t eip;
   } pcb;
+
+#ifdef FreeBSD_i386
+  static_assert(offsetof(struct pcb, pcb_edi) == offsetof(decltype(pcb), edi));
+  static_assert(offsetof(struct pcb, pcb_esi) == offsetof(decltype(pcb), esi));
+  static_assert(offsetof(struct pcb, pcb_ebp) == offsetof(decltype(pcb), ebp));
+  static_assert(offsetof(struct pcb, pcb_esp) == offsetof(decltype(pcb), esp));
+  static_assert(offsetof(struct pcb, pcb_ebx) == offsetof(decltype(pcb), ebx));
+  static_assert(offsetof(struct pcb, pcb_eip) == offsetof(decltype(pcb), eip));
+#endif
 
   Status error;
   size_t rd =

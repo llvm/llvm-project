@@ -1,3 +1,11 @@
+# Used for pcb assertion
+# List of architectures:
+# https://man.freebsd.org/cgi/man.cgi?query=arch&apropos=0&sektion=0&manpath=FreeBSD+16.0-CURRENT&format=html
+if(CMAKE_HOST_SYSTEM_NAME STREQUAL "FreeBSD")
+    set(HOST_ARCH ${CMAKE_HOST_SYSTEM_PROCESSOR})
+    add_definitions(-DFreeBSD_${HOST_ARCH})
+endif()
+
 lldb_tablegen(ProcessFreeBSDKernelCoreProperties.inc -gen-lldb-property-defs
   SOURCE ProcessFreeBSDKernelCoreProperties.td
   TARGET LLDBPluginProcessFreeBSDKernelCorePropertiesGen)
