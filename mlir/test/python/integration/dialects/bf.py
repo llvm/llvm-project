@@ -264,7 +264,7 @@ with Context(), Location.unknown():
         # CHECK:     %3 = llvm.icmp "ne" %1, %2 : i8
         # CHECK:     scf.condition(%3) %arg1 : !llvm.ptr
         # CHECK:   } do {
-        # CHECK:     ^bb0(%arg1: !llvm.ptr):
+        # CHECK:   ^bb0(%arg1: !llvm.ptr):
         # CHECK:     %1 = llvm.load %arg1 : !llvm.ptr -> i8
         # CHECK:     %2 = llvm.mlir.constant(-1 : i8) : i8
         # CHECK:     %3 = llvm.add %1, %2 : i8
