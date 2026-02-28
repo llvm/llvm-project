@@ -3958,6 +3958,12 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   case Intrinsic::arm_mve_asrl:
     return DAG.getNode(ARMISD::ASRL, SDLoc(Op), Op->getVTList(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_vsli:
+    return DAG.getNode(ARMISD::VSLIIMM, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::arm_mve_vsri:
+    return DAG.getNode(ARMISD::VSRIIMM, SDLoc(Op), Op->getVTList(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
 }
 
@@ -14692,8 +14698,10 @@ static SDValue PerformORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   // (or (and X, C1), (srl Y, C2)) -> VSRI X, Y, #C2
   // (or (and X, C1), (shl Y, C2)) -> VSLI X, Y, #C2
-  if (Subtarget->hasNEON() && VT.isVector() &&
-      DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+  if (VT.isVector() &&
+      ((Subtarget->hasNEON() && DAG.getTargetLoweringInfo().isTypeLegal(VT)) ||
+       (Subtarget->hasMVEIntegerOps() &&
+        (VT == MVT::v16i8 || VT == MVT::v8i16 || VT == MVT::v4i32)))) {
     if (SDValue ShiftInsert =
             PerformORCombineToShiftInsert(DAG, N0, N1, VT, dl))
       return ShiftInsert;
