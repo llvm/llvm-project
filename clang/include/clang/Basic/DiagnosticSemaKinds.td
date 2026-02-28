@@ -4574,6 +4574,9 @@ def ext_ms_impcast_fn_obj : ExtWarn<
   "implicit conversion between pointer-to-function and pointer-to-object is a "
   "Microsoft extension">, InGroup<MicrosoftCast>;
 
+def warn_imp_constructor_pointer_to_bool : Warning<
+    "implicit conversion from %0 to %1 calls %q2; did you intend to dereference ?">,
+    InGroup<PointerBoolConversion>;
 def warn_impcast_pointer_to_bool : Warning<
     "address of %select{'%1'|function '%1'|array '%1'|lambda function pointer "
     "conversion operator}0 will always evaluate to 'true'">,
