@@ -5341,6 +5341,8 @@ bool SPIRVInstructionSelector::selectGlobalValue(
         GR.add(ConstVal, MIB2);
         // mapping the function pointer to the used Function
         GR.recordFunctionPointer(&MIB2.getInstr()->getOperand(2), GVFun);
+        GR.assignSPIRVTypeToVReg(ResType, FuncVReg, *GR.CurMF);
+        GR.assignSPIRVTypeToVReg(ResType, NewReg, *GR.CurMF);
         MIB1.constrainAllUses(TII, TRI, RBI);
         MIB2.constrainAllUses(TII, TRI, RBI);
         return true;
