@@ -125,9 +125,7 @@ define i32 @extractelt_nonzero_vec(<4 x i32> %a0, ptr %p1, i32 %a2) {
 ; X86-NEXT:    por %xmm0, %xmm1
 ; X86-NEXT:    movdqa %xmm1, (%eax)
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    bsfl %eax, %ecx
-; X86-NEXT:    movl $32, %eax
-; X86-NEXT:    cmovnel %ecx, %eax
+; X86-NEXT:    rep bsfl %eax, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: extractelt_nonzero_vec:
@@ -135,9 +133,8 @@ define i32 @extractelt_nonzero_vec(<4 x i32> %a0, ptr %p1, i32 %a2) {
 ; X64-NEXT:    vmovaps {{.*#+}} xmm1 = [8,4294967295,4294967295,4294967295]
 ; X64-NEXT:    vblendvps %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; X64-NEXT:    vmovaps %xmm0, (%rdi)
-; X64-NEXT:    vmovd %xmm0, %ecx
-; X64-NEXT:    movl $32, %eax
-; X64-NEXT:    rep bsfl %ecx, %eax
+; X64-NEXT:    vmovd %xmm0, %eax
+; X64-NEXT:    rep bsfl %eax, %eax
 ; X64-NEXT:    retq
   %cmp = icmp sgt <4 x i32> zeroinitializer, %a0
   %sel = select <4 x i1> %cmp, <4 x i32> <i32 4, i32 0, i32 0, i32 0>, <4 x i32> <i32 8, i32 -1, i32 -1, i32 -1>
