@@ -2550,18 +2550,6 @@ Stmt *BlockExpr::getBody() {
 // Generic Expression Routines
 //===----------------------------------------------------------------------===//
 
-/// Helper to determine wether \c E is a CXXConstructExpr constructing
-/// a DecompositionDecl. Used to skip Clang-generated calls to std::get
-/// for structured bindings.
-static bool IsDecompositionDeclRefExpr(const Expr *E) {
-  const auto *Unwrapped = E->IgnoreUnlessSpelledInSource();
-  const auto *Ref = dyn_cast<DeclRefExpr>(Unwrapped);
-  if (!Ref)
-    return false;
-
-  return isa_and_nonnull<DecompositionDecl>(Ref->getDecl());
-}
-
 bool Expr::isReadIfDiscardedInCPlusPlus11() const {
   // In C++11, discarded-value expressions of a certain form are special,
   // according to [expr]p10:
@@ -3178,10 +3166,11 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
   };
 
   // Used when Clang generates calls to std::get for decomposing
-  // structured bindings.
+  // structured bindings or for implicit calls to member functions
+  // with explicit object parameters.
   auto IgnoreImplicitCallSingleStep = [](Expr *E) {
     auto *C = dyn_cast<CallExpr>(E);
-    if (!C)
+    if (!C || isa<UserDefinedLiteral>(C))
       return E;
 
     // Looking for calls to a std::get, which usually just takes
@@ -3197,12 +3186,7 @@ Expr *Expr::IgnoreUnlessSpelledInSource() {
     if (A->getSourceRange() != E->getSourceRange())
       return E;
 
-    // If the argument refers to a DecompositionDecl construction,
-    // ignore it.
-    if (IsDecompositionDeclRefExpr(A))
-      return A;
-
-    return E;
+    return A;
   };
 
   return IgnoreExprNodes(
