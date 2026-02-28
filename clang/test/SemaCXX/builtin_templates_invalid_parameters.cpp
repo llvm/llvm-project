@@ -1,15 +1,15 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
 // expected-error@* 2 {{template argument for non-type template parameter must be an expression}}
+// expected-note@* 2 {{template template argument has different template parameters than its corresponding template template parameter}}
 
 using SizeT = decltype(sizeof(int));
 
 // Dependent cases that previously crashed but now return QualType() gracefully.
 template <SizeT... Seq> // expected-note {{template parameter is declared here}}
-using gh180307 = __type_pack_element<Seq...>;
+using gh180307 = __type_pack_element<Seq...>; // expected-error {{pack expansion used as argument for non-pack parameter of builtin template}}
 
 template <typename T>
 using gh180307_bis = __make_integer_seq<gh180307, T>;
-// expected-note@-1 {{template template argument has different template parameters than its corresponding template template parameter}}
 
 // Eager expansion checks: Built-in templates should expand even if the
 // destination template OR the type argument is dependent, provided the size is known.
@@ -27,8 +27,7 @@ using check_type_eager = MySeq<int, 0, 1>;
 
 // Too many arguments tests
 template <int N> struct S; // expected-note {{template parameter is declared here}}
-using too_many_args = __make_integer_seq<S, int, 10, int>; 
-// expected-note@-1 {{template template argument has different template parameters than its corresponding template template parameter}}
+using too_many_args = __make_integer_seq<S, int, 10, int>;
 
 // Too few arguments tests
 template <SizeT Index>

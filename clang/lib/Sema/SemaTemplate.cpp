@@ -3406,18 +3406,10 @@ static QualType checkBuiltinTemplateIdType(
     Sema &SemaRef, ElaboratedTypeKeyword Keyword, BuiltinTemplateDecl *BTD,
     ArrayRef<TemplateArgument> Converted, SourceLocation TemplateLoc,
     TemplateArgumentListInfo &TemplateArgs) {
-  TemplateParameterList *Params = BTD->getTemplateParameters();
-  unsigned RequiredArgs = Params->size();
-
-  if (Converted.size() != RequiredArgs) {
-    // If we have a different number of arguments than parameters, it's either
-    // an error or we have a dependent pack expansion that hasn't been expanded
-    // and partitioned yet. In either case, we can't proceed with instantiation,
-    // so we return an empty QualType (staying dependent or signaling an error).
-    return QualType();
-  }
-
   ASTContext &Context = SemaRef.getASTContext();
+
+  assert(Converted.size() == BTD->getTemplateParameters()->size() &&
+         "Builtin template arguments do not match its parameters");
 
   switch (BTD->getBuiltinTemplateKind()) {
   case BTK__make_integer_seq: {
@@ -3436,7 +3428,6 @@ static QualType checkBuiltinTemplateIdType(
     TemplateArgument NumArgsArg = Converted[2];
     if (NumArgsArg.isDependent())
       return QualType();
-
 
     TemplateArgumentListInfo SyntheticTemplateArgs;
     // The type argument, wrapped in substitution sugar, gets reused as the
@@ -3471,6 +3462,12 @@ static QualType checkBuiltinTemplateIdType(
   }
 
   case BTK__type_pack_element: {
+    // Specializations of
+    //    __type_pack_element<Index, T_1, ..., T_N>
+    // are treated like T_Index.
+    assert(Converted.size() == 2 &&
+           "__type_pack_element should be given an index and a parameter pack");
+
     TemplateArgument IndexArg = Converted[0], Ts = Converted[1];
     if (IndexArg.isDependent() || Ts.isDependent())
       return QualType();
@@ -3491,6 +3488,7 @@ static QualType checkBuiltinTemplateIdType(
   }
 
   case BTK__builtin_common_type: {
+    assert(Converted.size() == 4);
     if (llvm::any_of(Converted, [](auto &C) { return C.isDependent(); }))
       return QualType();
 
@@ -3513,6 +3511,8 @@ static QualType checkBuiltinTemplateIdType(
   }
 
   case BTK__hlsl_spirv_type: {
+    assert(Converted.size() == 4);
+
     if (!Context.getTargetInfo().getTriple().isSPIRV()) {
       SemaRef.Diag(TemplateLoc, diag::err_hlsl_spirv_only) << BTD;
     }
@@ -3540,7 +3540,12 @@ static QualType checkBuiltinTemplateIdType(
     return Context.getHLSLInlineSpirvType(Opcode, Size, Alignment, Operands);
   }
   case BTK__builtin_dedup_pack: {
+    assert(Converted.size() == 1 && "__builtin_dedup_pack should be given "
+                                    "a parameter pack");
     TemplateArgument Ts = Converted[0];
+    // Delay the computation until we can compute the final result. We choose
+    // not to remove the duplicates upfront before substitution to keep the code
+    // simple.
     if (Ts.isDependent())
       return QualType();
     assert(Ts.getKind() == clang::TemplateArgument::Pack);
@@ -5979,8 +5984,8 @@ bool Sema::CheckTemplateArgumentList(
                                                 Params->getDepth()));
         if (ArgIsExpansion && NonPackParameter) {
           // CWG1430/CWG2686: we have a pack expansion as an argument to an
-          // alias template or concept, and it's not part of a parameter pack.
-          // This can't be canonicalized, so reject it now.
+          // alias template, builtin template, or concept, and it's not part of
+          // a parameter pack. This can't be canonicalized, so reject it now.
           if (isa<TypeAliasTemplateDecl, ConceptDecl, BuiltinTemplateDecl>(
                   Template)) {
             unsigned DiagSelect = isa<ConceptDecl>(Template)           ? 1
