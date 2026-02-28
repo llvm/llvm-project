@@ -617,7 +617,7 @@ public:
     assert(Col < getMatrixNumColumns() && "Column index out of range");
     // Matrix elements are stored in row-major order.
     unsigned I = Row * getMatrixNumColumns() + Col;
-    return ((Mat *)(char *)&Data)->Elts[I];
+    return getMatrixElt(I);
   }
   const APValue &getMatrixElt(unsigned Row, unsigned Col) const {
     return const_cast<APValue *>(this)->getMatrixElt(Row, Col);
