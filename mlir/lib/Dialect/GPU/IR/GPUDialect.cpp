@@ -2535,7 +2535,9 @@ LogicalResult WarpExecuteOnLane0Op::verify() {
   if (getArgs().size() != getWarpRegion().getNumArguments())
     return emitOpError(
         "expected same number op arguments and block arguments.");
-  gpu::YieldOp yield = getTerminator();
+  auto yield = dyn_cast<gpu::YieldOp>(getBody()->getTerminator());
+  if (!yield)
+    return emitOpError("expected body to be terminated with 'gpu.yield'");
   if (yield.getNumOperands() != getNumResults())
     return emitOpError(
         "expected same number of yield operands and return values.");
