@@ -19,7 +19,6 @@
 
 #include "TestTraits.h"
 #include "mlir/Dialect/Bufferization/IR/BufferizationTypeInterfaces.h"
-#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectImplementation.h"

@@ -223,9 +223,9 @@ public:
     return builder.getNullValue(complexTy, loc);
   }
   mlir::Value VisitImplicitValueInitExpr(ImplicitValueInitExpr *e) {
-    cgf.cgm.errorNYI(e->getExprLoc(),
-                     "ComplexExprEmitter VisitImplicitValueInitExpr");
-    return {};
+    mlir::Location loc = cgf.getLoc(e->getExprLoc());
+    mlir::Type complexTy = cgf.convertType(e->getType());
+    return builder.getNullValue(complexTy, loc);
   }
 
   struct BinOpInfo {
