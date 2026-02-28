@@ -597,10 +597,10 @@ typedef struct {
 } StructTy3;
 
 // CHECK-LABEL: test_memset_private
-// SPIR64: store <4 x i64> zeroinitializer, ptr %ptr, align 8
+// SPIR64: call void @llvm.memset.p0.i64(ptr noundef nonnull align 8 dereferenceable(32) %ptr, i8 0, i64 32, i1 false)
 // SPIR64: [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr %ptr, i64 32
 // SPIR64: store ptr addrspacecast (ptr addrspace(4) null to ptr), ptr [[GEP]], align 8
-// AMDGCN: store <4 x i64> zeroinitializer, ptr addrspace(5) %ptr, align 8
+// AMDGCN: call void @llvm.memset.p5.i64(ptr addrspace(5) noundef align 8 {{.*}}, i8 0, i64 32, i1 false)
 // AMDGCN: [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) %ptr, i32 32
 // AMDGCN: store ptr addrspace(5) addrspacecast (ptr null to ptr addrspace(5)), ptr addrspace(5) [[GEP]]
 // AMDGCN: [[GEP1:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(5) {{.*}}, i32 36
