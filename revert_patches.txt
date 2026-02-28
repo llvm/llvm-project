@@ -8,13 +8,7 @@ Revert "Revert "Revert "Reland "Revert "[clang][CGRecordLayout] Remove dependenc
 breaks build of aqlprofiler
 [AMDGPU][AsmParser] Forbid Fake16 instructions in Real16 mode (#176934)
 ---
-breaks clang-358841
-[SimplifyLibCalls] Avoid simplifying pow(x, 2.0) -> x * x with math-errno. (#183099)
----
 breaks windows build libelf
 [CMake][IR] Add PCH (#183303)
 [CMake][CodeGen] Add PCH (#183346)
----
-breaks 50 openmp tests
-[OpenMP] Remove NVPTX local addrspace on parameters
 ---
