@@ -1097,9 +1097,10 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
     MCOS->emitBytes(StringRef("llvm-mc (based on LLVM " PACKAGE_VERSION ")"));
   MCOS->emitInt8(0); // NULL byte to terminate the string.
 
-  if (context.getDwarfVersion() >= 6)
+  if (context.getDwarfVersion() >= 6) {
+    // AT_language_name, a 4 byte value.
     MCOS->emitInt16(dwarf::DW_LNAME_Assembly);
-  else {
+  } else {
     // AT_language, a 4 byte value.  We use DW_LANG_Mips_Assembler as the dwarf2
     // draft has no standard code for assembler.
     // FIXME: dwarf4 has DW_LANG_Assembly which we could use instead.
