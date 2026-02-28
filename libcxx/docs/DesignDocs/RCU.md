@@ -232,8 +232,8 @@ In libc++'s design, we would like to follow Folly's approach to run these delete
 When should we run the deleters
 -------------------------------
 
-If we were to use the background thread approach, the deleters can be evaluated at any time after `run_synchronize`
-has marked the objects are safe to reclaim. e.g. Drain the queue periodically. However, if we were to run the deleters
+If we were to use the background thread approach, the deleters can be evaluated at any time after the readers have exited
+their critical sections and objects are safe to reclaim. e.g. Drain the queue periodically. However, if we were to run the deleters
 inline, we have to decide when to run them.
 
 There are few places we can run the deleters:
