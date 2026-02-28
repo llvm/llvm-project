@@ -135,7 +135,7 @@ exit:
 
 define void @loop_contains_store_unsafe_dependency(ptr dereferenceable(40) noalias %array, ptr align 2 dereferenceable(80) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_unsafe_dependency'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
 entry:
   %unknown.offset = call i64 @get_an_unknown_offset()
   %unknown.cmp = icmp ult i64 %unknown.offset, 20
@@ -165,9 +165,10 @@ exit:
   ret void
 }
 
+; Function Attrs: mustprogress norecurse nosync nounwind ssp memory(read, inaccessiblemem: write, target_mem0: none, target_mem1: none) uwtable(sync)
 define void @loop_contains_store_assumed_bounds(ptr noalias %array, ptr readonly %pred, i32 %n) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_assumed_bounds'
-; CHECK:       LV: Not vectorizing: Loop may fault.
+; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
 entry:
   %n_bytes = mul nuw nsw i32 %n, 2
   call void @llvm.assume(i1 true) [ "align"(ptr %pred, i64 2), "dereferenceable"(ptr %pred, i32 %n_bytes) ]
@@ -193,6 +194,37 @@ for.inc:
 exit:
   ret void
 }
+
+; CHECK-LABEL: LV: Checking a loop in 'test_assumed_bounds_type_mismatch'
+; CHECK:       LV: Not vectorizing: Cannot vectorize uncountable loop.
+
+define void @test_assumed_bounds_type_mismatch(ptr noalias %array, ptr readonly %pred, i32 %n) nosync nofree {
+entry:
+  %n_bytes = mul nuw nsw i32 %n, 2
+  call void @llvm.assume(i1 true) [ "dereferenceable"(ptr %pred, i32 %n_bytes) ]
+  %tc = sext i32 %n to i64
+  br label %for.body
+
+for.body:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.inc ]
+  %st.addr = getelementptr inbounds i16, ptr %array, i64 %iv
+  %data = load i16, ptr %st.addr, align 2
+  %inc = add nsw i16 %data, 1
+  store i16 %inc, ptr %st.addr, align 2
+  %ee.addr = getelementptr inbounds i16, ptr %pred, i64 %iv
+  %ee.val = load i16, ptr %ee.addr, align 2
+  %ee.cond = icmp sgt i16 %ee.val, 500
+  br i1 %ee.cond, label %exit, label %for.inc
+
+for.inc:
+  %iv.next = add nuw nsw i64 %iv, 1
+  %counted.cond = icmp eq i64 %iv.next, %tc
+  br i1 %counted.cond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
 
 define void @loop_contains_store_to_pointer_with_no_deref_info(ptr align 2 dereferenceable(40) readonly %load.array, ptr align 2 noalias %array, ptr align 2 dereferenceable(40) readonly %pred) {
 ; CHECK-LABEL: LV: Checking a loop in 'loop_contains_store_to_pointer_with_no_deref_info'
