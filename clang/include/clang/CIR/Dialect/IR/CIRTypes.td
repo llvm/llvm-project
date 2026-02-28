@@ -261,14 +261,14 @@ def CIR_PointerType : CIR_Type<"Pointer", "ptr", [
       "mlir::Type":$pointee,
        CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
         // Drop default address space and replace with empty attribute.
-        addrSpace = cir::skipDefaultAddressSpace(addrSpace);
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get(pointee.getContext(), pointee, addrSpace);
     }]>,
     TypeBuilder<(ins
       "mlir::Type":$pointee,
       CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace), [{
         // Drop default address space and replace with empty attribute.
-        addrSpace = cir::skipDefaultAddressSpace(addrSpace);
+        addrSpace = cir::normalizeDefaultAddressSpace(addrSpace);
         return $_get($_ctxt, pointee, addrSpace);
     }]>
   ];

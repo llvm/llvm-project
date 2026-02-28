@@ -58,7 +58,7 @@ toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS);
 
 /// Normalize LangAddressSpace::Default to null (empty attribute).
 mlir::ptr::MemorySpaceAttrInterface
-skipDefaultAddressSpace(mlir::ptr::MemorySpaceAttrInterface addrSpace);
+normalizeDefaultAddressSpace(mlir::ptr::MemorySpaceAttrInterface addrSpace);
 
 bool isSupportedCIRMemorySpaceAttr(
     mlir::ptr::MemorySpaceAttrInterface memorySpace);
