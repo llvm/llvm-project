@@ -185,7 +185,6 @@ private:
   bool parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E);
   bool parseDataExpr(const MCExpr *&Res) override;
   bool parseAuthExpr(const MCExpr *&Res, SMLoc &EndLoc);
-  bool parsePercentRelocExpr(const MCExpr *&Res, SMLoc &EndLoc);
 
   bool parseDirectiveArch(SMLoc L);
   bool parseDirectiveArchExtension(SMLoc L);
@@ -8463,7 +8462,6 @@ bool AArch64AsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
   auto Spec = AArch64::parsePercentSpecifierName(Identifier);
   if (!Spec)
     return TokError("invalid relocation specifier");
-
   getParser().Lex(); // Eat the identifier
   if (parseToken(AsmToken::LParen, "expected '('"))
     return true;
@@ -8477,28 +8475,13 @@ bool AArch64AsmParser::parseExprWithSpecifier(const MCExpr *&Res, SMLoc &E) {
 }
 
 bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
-  MCAsmParser &Parser = getParser();
-  SMLoc StartLoc = getLoc();
   SMLoc EndLoc;
   if (parseOptionalToken(AsmToken::Percent))
     return parseExprWithSpecifier(Res, EndLoc);
 
-  if (getLexer().is(AsmToken::Percent)) {
-    Lex(); // eat %
-
-    if (getLexer().getKind() != AsmToken::Identifier)
-      return Error(StartLoc, "expected identifier after '%'");
-
-    StringRef Identifier = getLexer().getTok().getIdentifier();
-    Lex(); // eat identifier
-
-    if (Identifier == "dtprel")
-      return parsePercentRelocExpr(Res, EndLoc);
-    return false;
-  }
-
   if (getParser().parseExpression(Res))
     return true;
+  MCAsmParser &Parser = getParser();
   if (!parseOptionalToken(AsmToken::At))
     return false;
   if (getLexer().getKind() != AsmToken::Identifier)
@@ -8536,29 +8519,6 @@ bool AArch64AsmParser::parseDataExpr(const MCExpr *&Res) {
       return true;
     Res = MCBinaryExpr::create(*Opcode, Res, Term, getContext(), Res->getLoc());
   }
-  return false;
-}
-
-bool AArch64AsmParser::parsePercentRelocExpr(const MCExpr *&Res,
-                                             SMLoc &EndLoc) {
-  SMLoc StartLoc = getLoc();
-  if (parseToken(AsmToken::LParen, "expected '('"))
-    return true;
-
-  const MCExpr *Inner;
-  if (getParser().parseExpression(Inner))
-    return true;
-
-  EndLoc = getParser().getTok().getEndLoc();
-
-  if (parseToken(AsmToken::RParen, "expected ')'"))
-    return true;
-
-  auto *SymRef = dyn_cast<MCSymbolRefExpr>(Inner);
-  if (!SymRef)
-    return Error(StartLoc, "expected symbol inside %operator()");
-
-  Res = MCSpecifierExpr::create(Inner, AArch64::S_DTPREL, getContext());
   return false;
 }
 

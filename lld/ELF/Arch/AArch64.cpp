@@ -236,10 +236,6 @@ void AArch64::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = RE_AARCH64_AUTH;
       break;
 
-    case R_AARCH64_TLS_DTPREL64:
-      expr = R_DTPREL;
-      break;
-
     case R_AARCH64_PATCHINST:
       if (!isAbsolute(sym))
         Err(ctx) << getErrorLoc(ctx, sec.content().data() + offset)
@@ -652,10 +648,6 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     // encode the schema.
     checkInt(ctx, loc, val, 32, rel);
     write32(ctx, loc, val);
-    break;
-  case R_AARCH64_TLS_DTPREL64:
-    checkInt(ctx, loc, val, 64, rel);
-    write64(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
   case R_AARCH64_AUTH_GOT_ADD_LO12_NC:
