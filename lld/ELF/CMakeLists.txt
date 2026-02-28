@@ -66,6 +66,7 @@ add_lld_library(lldELF
   BinaryFormat
   BitWriter
   Core
+  DebugInfoBTF
   DebugInfoDWARF
   Demangle
   DTLTO
