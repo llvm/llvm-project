@@ -4480,6 +4480,18 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
   if (const Arg *A = Args.getLastArg(options::OPT_gcodeview))
     EmitCodeView = checkDebugInfoOption(A, Args, D, TC);
 
+  bool EmitBTF = false;
+  if (const Arg *A = Args.getLastArg(options::OPT_gbtf))
+    EmitBTF = checkDebugInfoOption(A, Args, D, TC);
+
+  // BTF reads IR debug metadata, which requires DWARF generation.
+  if (EmitBTF) {
+    if (DebugInfoKind == llvm::codegenoptions::NoDebugInfo)
+      DebugInfoKind = llvm::codegenoptions::LimitedDebugInfo;
+    if (!EmitDwarf)
+      EmitDwarf = true;
+  }
+
   // If the user asked for debug info but did not explicitly specify -gcodeview
   // or -gdwarf, ask the toolchain for the default format.
   if (!EmitCodeView && !EmitDwarf &&
@@ -4623,6 +4635,9 @@ renderDebugOptions(const ToolChain &TC, const Driver &D, const llvm::Triple &T,
     Args.addOptOutFlag(CmdArgs, options::OPT_gcodeview_command_line,
                        options::OPT_gno_codeview_command_line);
   }
+
+  if (EmitBTF)
+    CmdArgs.push_back("-gbtf");
 
   Args.addOptOutFlag(CmdArgs, options::OPT_ginline_line_tables,
                      options::OPT_gno_inline_line_tables);

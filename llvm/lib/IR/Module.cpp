@@ -611,6 +611,13 @@ unsigned Module::getCodeViewFlag() const {
   return cast<ConstantInt>(Val->getValue())->getZExtValue();
 }
 
+bool Module::getBTFFlag() const {
+  auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("BTF"));
+  if (!Val)
+    return false;
+  return cast<ConstantInt>(Val->getValue())->getZExtValue() != 0;
+}
+
 unsigned Module::getInstructionCount() const {
   unsigned NumInstrs = 0;
   for (const Function &F : FunctionList)

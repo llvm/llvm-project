@@ -15,7 +15,7 @@
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFMCInstLower.h"
-#include "BTFDebug.h"
+#include "BPFBTFDebug.h"
 #include "MCTargetDesc/BPFInstPrinter.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -45,8 +45,8 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
 
   // Only emit BTF when debuginfo available.
   if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
-    BTF = new BTFDebug(this);
-    Handlers.push_back(std::unique_ptr<BTFDebug>(BTF));
+    BTF = new BPFBTFDebug(this);
+    Handlers.push_back(std::unique_ptr<BPFBTFDebug>(BTF));
   }
 
   return false;
