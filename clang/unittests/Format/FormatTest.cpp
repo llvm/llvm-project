@@ -27334,7 +27334,7 @@ TEST_F(FormatTest, IndentAccessModifiers) {
                "      private:\n"
                "        int j;\n"
                "      };\n"
-               "  };\n",
+               "  };",
                Style);
 
   Style.BreakBeforeBraces = FormatStyle::BS_Attach;
