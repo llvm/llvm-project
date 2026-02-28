@@ -51,7 +51,7 @@ define nofpclass(all) float @ret_nofpclass_all_undef() {
 ; Use + callsite implies no values, should fold undef to poison.
 define nofpclass(nan) float @undef_folds_to_poison_arg() {
 ; CHECK-LABEL: define nofpclass(nan) float @undef_folds_to_poison_arg() {
-; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) poison)
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) undef)
 ; CHECK-NEXT:    ret float [[FENCE]]
 ;
   %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf sub norm zero) undef)
@@ -1867,7 +1867,8 @@ define nofpclass(inf) float @ret_nofpclass_inf__arithmetic_fence_select_pinf_rhs
 define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs(i1 %cond, float %x) {
 ; CHECK-LABEL: define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
-; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[X]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float 0x7FF0000000000000
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[SELECT]])
 ; CHECK-NEXT:    ret float [[FENCE]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
@@ -2690,3 +2691,21 @@ define nofpclass(nan zero) float @ret_no_nan_no_zero__copysign__src_known_positi
   store float %copysign, ptr %ptr
   ret float %copysign
 }
+
+define double @eigen_nofpclass_regression(ptr %ptr, double %arg) {
+; CHECK-LABEL: define double @eigen_nofpclass_regression
+; CHECK-SAME: (ptr [[PTR:%.*]], double [[ARG:%.*]]) {
+; CHECK-NEXT:    [[CALL2:%.*]] = call double @func(double 0.000000e+00, double 5.000000e+00, double -7.000000e+00)
+; CHECK-NEXT:    [[CALL4:%.*]] = call double @func(double 0.000000e+00, double 3.000000e+00, double -8.000000e+00)
+; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[CALL2]], [[CALL4]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul double [[SUB]], [[ARG]]
+; CHECK-NEXT:    ret double [[MUL]]
+;
+  %call2 = call double @func(double 0.000000e+00, double 5.000000e+00, double -7.000000e+00) #6
+  %call4 = call double @func(double 0.000000e+00, double 3.000000e+00, double -8.000000e+00) #6
+  %sub = fsub double %call2, %call4
+  %mul = fmul double %sub, %arg
+  ret double %mul
+}
+
+declare double @func(double nofpclass(nan inf nzero sub norm) %x, double nofpclass(nan inf zero sub nnorm) %v, double nofpclass(nan inf zero sub pnorm) %a)
