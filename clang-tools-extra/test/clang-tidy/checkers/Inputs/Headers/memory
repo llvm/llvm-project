@@ -1,0 +1,11 @@
+#ifndef _ALLOCATOR_
+#define _ALLOCATOR_
+
+namespace std {
+
+template <typename T>
+class allocator {};
+
+} // namespace std
+
+#endif // _ALLOCATOR_
