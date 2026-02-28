@@ -23,6 +23,12 @@ list(INSERT CMAKE_MODULE_PATH 0
 
 set(CMAKE_FOLDER "libc++")
 
+# Unset the C++ Standard: other projects sometimes override this global property, which
+# is incompatible with libc++ (since we set our own standard via other means).
+# TODO: Figure out which other part of the build is setting this and resolve the issue
+#       at the root.
+unset(CMAKE_CXX_STANDARD)
+
 set(LIBCXX_SOURCE_DIR  ${CMAKE_CURRENT_SOURCE_DIR})
 set(LIBCXX_BINARY_DIR  ${CMAKE_CURRENT_BINARY_DIR})
 
