@@ -2738,6 +2738,13 @@ bool Sema::DiagnoseEmptyLookup(Scope *S, CXXScopeSpec &SS, LookupResult &R,
                          << DroppedSpecifier << NameRange,
                      PDiag(NoteID), AcceptableWithRecovery);
 
+      if (Corrected.WillReplaceSpecifier()) {
+        NestedNameSpecifier NNS = Corrected.getCorrectionSpecifier();
+        // In order to be valid, a non-empty CXXScopeSpec needs a source range.
+        SS.MakeTrivial(Context, NNS,
+                       NNS ? NameRange.getBegin() : SourceRange());
+      }
+
       // Tell the callee whether to try to recover.
       return !AcceptableWithRecovery;
     }
