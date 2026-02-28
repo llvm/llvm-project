@@ -3,7 +3,7 @@ set_target_properties(OrcRTUnitTests PROPERTIES FOLDER "orc-rt/Tests")
 
 if (NOT TARGET llvm_gtest)
   message(WARNING "orc-rt unittests disabled due to GTest being unavailable; "
-          "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
+                  "Try LLVM_INSTALL_GTEST=ON for the LLVM build")
   return ()
 endif ()
 
