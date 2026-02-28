@@ -233,12 +233,51 @@ def run(f):
     f()
 
 
-# CHECK: TEST: test_bf
-@run
-def test_bf():
-    with Context(), Location.unknown():
-        BfDialect.load()
+with Context(), Location.unknown():
+    BfDialect.load()
 
+    # CHECK: TEST: test_convert_bf_to_llvm
+    @run
+    def test_convert_bf_to_llvm():
+        module = parse("[-]")
+        assert module.operation.verify()
+
+        # CHECK: "bf.main"() ({
+        # CHECK: ^bb0(%arg0: !bf.ptr):
+        # CHECK:   %0 = "bf.while"(%arg0) ({
+        # CHECK:   ^bb0(%arg1: !bf.ptr):
+        # CHECK:     "bf.dec"(%arg1) : (!bf.ptr) -> ()
+        # CHECK:     "bf.yield"(%arg1) : (!bf.ptr) -> ()
+        # CHECK:   }) : (!bf.ptr) -> !bf.ptr
+        # CHECK:   "bf.yield"(%0) : (!bf.ptr) -> ()
+        # CHECK: }) : () -> ()
+        print(module)
+
+        pm = PassManager()
+        pm.add(convert_bf_to_llvm)
+        pm.run(module.operation)
+
+        # CHECK: func.func @bf_main(%arg0: !llvm.ptr) -> !llvm.ptr {
+        # CHECK:   %0 = scf.while (%arg1 = %arg0) : (!llvm.ptr) -> !llvm.ptr {
+        # CHECK:     %1 = llvm.load %arg1 : !llvm.ptr -> i8
+        # CHECK:     %2 = llvm.mlir.constant(0 : i8) : i8
+        # CHECK:     %3 = llvm.icmp "ne" %1, %2 : i8
+        # CHECK:     scf.condition(%3) %arg1 : !llvm.ptr
+        # CHECK:   } do {
+        # CHECK:     ^bb0(%arg1: !llvm.ptr):
+        # CHECK:     %1 = llvm.load %arg1 : !llvm.ptr -> i8
+        # CHECK:     %2 = llvm.mlir.constant(-1 : i8) : i8
+        # CHECK:     %3 = llvm.add %1, %2 : i8
+        # CHECK:     llvm.store %3, %arg1 : i8, !llvm.ptr
+        # CHECK:     scf.yield %arg1 : !llvm.ptr
+        # CHECK:   }
+        # CHECK:   return %0 : !llvm.ptr
+        # CHECK: }
+        print(module)
+
+    # CHECK: TEST: test_bf_e2e
+    @run
+    def test_bf_e2e():
         # CHECK: Hello World!
         execute(
             "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++."
