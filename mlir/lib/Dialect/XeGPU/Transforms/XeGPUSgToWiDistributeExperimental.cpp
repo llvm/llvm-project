@@ -522,7 +522,7 @@ struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
 
     // Get the subgroup size from the layout.
     int64_t sgSize = layout.getEffectiveLaneLayoutAsInt()[0];
-    const auto *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
+    const uArch *uArch = getUArch(xegpu::getChipStr(op).value_or(""));
     if (!uArch)
       return rewriter.notifyMatchFailure(
           op, "xegpu::ReductionOp require target attribute attached to "
