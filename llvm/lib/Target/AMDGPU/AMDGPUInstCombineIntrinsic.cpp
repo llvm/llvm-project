@@ -554,8 +554,8 @@ static CallInst *rewriteCall(IRBuilderBase &B, CallInst &Old,
 }
 
 // Return true for sequences of instructions that effectively assign
-// each lane to its thread ID
-static bool isThreadID(const GCNSubtarget &ST, Value *V) {
+// each lane to its lane ID
+static bool isLaneID(const GCNSubtarget &ST, Value *V) {
   // Case 1:
   //   wave32: mbcnt_lo(-1, 0)
   //   wave64: mbcnt_hi(-1, mbcnt_lo(-1, 0))
@@ -572,65 +572,179 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   return false;
 }
 
-// Attempt to capture situations where the index argument matches
-// a DPP pattern, and convert to a DPP-based mov
 static std::optional<Instruction *>
-tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
+createWaveShuffleUpdateDpp(InstCombiner &IC, IntrinsicInst &II,
+                           uint64_t DppMode) {
   Value *Val = II.getArgOperand(0);
-  Value *Idx = II.getArgOperand(1);
   auto &B = IC.Builder;
 
-  // DPP16 Row Share requires known wave size, architecture support
-  if (!ST.isWaveSizeKnown() || !ST.hasDPPRowShare())
-    return std::nullopt;
+  CallInst *UpdateDPP = B.CreateIntrinsic(
+      Intrinsic::amdgcn_update_dpp, Val->getType(),
+      {PoisonValue::get(Val->getType()), Val, B.getInt32(DppMode),
+       B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
+  UpdateDPP->takeName(&II);
+  UpdateDPP->copyMetadata(II);
+  return IC.replaceInstUsesWith(II, UpdateDPP);
+}
 
-  Value *Tid;
+static std::optional<Instruction *>
+tryWaveShuffleRowShare(const GCNSubtarget &ST, InstCombiner &IC,
+                       IntrinsicInst &II) {
+  Value *Idx = II.getArgOperand(1);
   uint64_t Mask;
   uint64_t RowIdx;
-  bool CanDPP16RowShare = false;
+  Value *Lid;
 
   // wave32 requires Mask & 0x1F == 0x10
   // wave64 requires Mask & 0x3F == 0x30
   uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
   uint64_t MaskTarget = MaskCheck & 0xF0;
 
-  // DPP16 Row Share 0: Idx = Tid & Mask
-  auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
+  // DPP16 Row Share 0: Idx = Lid & Mask
+  auto RowShare0Pred = m_c_And(m_Value(Lid), m_ConstantInt(Mask));
 
-  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
+  // DPP16 Row Share (0 < Row < 15): Idx = (Lid & Mask) | RowIdx
   auto RowSharePred =
-      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
+      m_c_Or(m_c_And(m_Value(Lid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
 
-  // DPP16 Row Share 15: Idx = Tid | 0xF
-  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt<0xF>());
+  // DPP16 Row Share 15: Idx = Lid | 0xF
+  auto RowShare15Pred = m_c_Or(m_Value(Lid), m_ConstantInt<0xF>());
 
-  if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
-    if ((Mask & MaskCheck) != MaskTarget)
-      return std::nullopt;
-
-    RowIdx = 0;
-    CanDPP16RowShare = true;
-  } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
-             RowIdx > 0) {
-    if ((Mask & MaskCheck) != MaskTarget)
-      return std::nullopt;
-
-    CanDPP16RowShare = true;
-  } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid)) {
-    RowIdx = 15;
-    CanDPP16RowShare = true;
+  if (match(Idx, RowShare0Pred) && isLaneID(ST, Lid) &&
+      (Mask & MaskCheck) == MaskTarget) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_SHARE_FIRST);
+  } else if (match(Idx, RowSharePred) && isLaneID(ST, Lid) && RowIdx < 15 &&
+             RowIdx > 0 && (Mask & MaskCheck) == MaskTarget) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_SHARE0 | RowIdx);
+  } else if (match(Idx, RowShare15Pred) && isLaneID(ST, Lid)) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_SHARE_LAST);
   }
 
-  if (CanDPP16RowShare) {
-    CallInst *UpdateDPP =
-        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
-                          {PoisonValue::get(Val->getType()), Val,
-                           B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
-                           B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
-    UpdateDPP->takeName(&II);
-    UpdateDPP->copyMetadata(II);
-    return IC.replaceInstUsesWith(II, UpdateDPP);
+  // Not a valid Row Share
+  return std::nullopt;
+}
+
+static std::optional<Instruction *>
+tryWaveShuffleRowXMask(const GCNSubtarget &ST, InstCombiner &IC,
+                       IntrinsicInst &II) {
+  Value *Idx = II.getArgOperand(1);
+  uint64_t Mask;
+  uint64_t XorIdx;
+  Value *Lid;
+
+  // wave32 requires Mask & 0x1F == 0x1F
+  // wave64 requires Mask & 0x3F == 0x3F
+  uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
+  uint64_t MaskTarget = MaskCheck;
+
+  // It's fine to have a mask, but also unnecessary
+  auto RowXMaskPred = m_c_Xor(m_c_And(m_Value(Lid), m_ConstantInt(Mask)),
+                              m_ConstantInt(XorIdx));
+
+  auto RowXMaskPredNoMask = m_c_Xor(m_Value(Lid), m_ConstantInt(XorIdx));
+
+  if (match(Idx, RowXMaskPred) && isLaneID(ST, Lid) &&
+      (Mask & MaskCheck) == MaskTarget && XorIdx <= 15 && XorIdx >= 0) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_XMASK0 | XorIdx);
+  } else if (match(Idx, RowXMaskPredNoMask) && isLaneID(ST, Lid) &&
+             XorIdx <= 15 && XorIdx >= 0) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_XMASK0 | XorIdx);
   }
+
+  // Not a valid Row XMask
+  return std::nullopt;
+}
+
+static std::optional<Instruction *>
+tryWaveShuffleRowMirrors(const GCNSubtarget &ST, InstCombiner &IC,
+                         IntrinsicInst &II) {
+  Value *Idx = II.getArgOperand(1);
+  uint64_t Mask = 0xFFFF;
+  Value *Lid;
+
+  // First try Row Mirror
+  // wave32 requires Mask & 0x1F == 0x10
+  // wave64 requires Mask & 0x3F == 0x30
+  uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
+  uint64_t MaskTarget = MaskCheck & 0xF0;
+  uint64_t XorMaskTarget = MaskCheck;
+
+  // The actual "mirror" part can be accomplished with a SUB or an XOR,
+  // they're equivalent because the minuend is all ones
+  auto RowMirrorPred = m_c_Or(
+      m_c_And(m_Value(Lid), m_ConstantInt(Mask)),
+      m_CombineOr(m_Sub(m_ConstantInt<0xF>(),
+                        m_c_And(m_Deferred(Lid), m_ConstantInt<0xF>())),
+                  m_c_Xor(m_ConstantInt<0xF>(),
+                          m_c_And(m_Deferred(Lid), m_ConstantInt<0xF>()))));
+
+  // More optimized case, can just directly XOR
+  auto RowMirrorXorPred = m_c_Xor(
+      m_ConstantInt<0xF>(),
+      m_CombineOr(m_c_And(m_Value(Lid), m_ConstantInt(Mask)), m_Value(Lid)));
+
+  if (match(Idx, RowMirrorPred) && isLaneID(ST, Lid) &&
+      (Mask & MaskCheck) == MaskTarget) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_MIRROR);
+  } else if (match(Idx, RowMirrorXorPred) && isLaneID(ST, Lid) &&
+             (Mask & MaskCheck) == XorMaskTarget) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_MIRROR);
+  }
+
+  // If that fails, try Row Half Mirror
+  Mask = 0xFFFF;
+
+  // wave32 requires Mask & 0x1F == 0x18
+  // wave64 requires Mask & 0x3F == 0x38
+  MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
+  MaskTarget = MaskCheck & 0xF8;
+  XorMaskTarget = MaskCheck;
+
+  // The actual "mirror" part can be accomplished with a SUB or an XOR,
+  // they're equivalent because the minuend is all ones
+  auto RowHalfMirrorPred = m_c_Or(
+      m_c_And(m_Value(Lid), m_ConstantInt(Mask)),
+      m_CombineOr(m_Sub(m_ConstantInt<0x7>(),
+                        m_c_And(m_Deferred(Lid), m_ConstantInt<0x7>())),
+                  m_c_Xor(m_ConstantInt<0x7>(),
+                          m_c_And(m_Deferred(Lid), m_ConstantInt<0x7>()))));
+
+  // More optimized case, can just directly XOR
+  auto RowHalfMirrorXorPred = m_c_Xor(
+      m_ConstantInt<0x7>(),
+      m_CombineOr(m_c_And(m_Value(Lid), m_ConstantInt(Mask)), m_Value(Lid)));
+
+  if (match(Idx, RowHalfMirrorPred) && isLaneID(ST, Lid) &&
+      (Mask & MaskCheck) == MaskTarget) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_HALF_MIRROR);
+  } else if (match(Idx, RowHalfMirrorXorPred) && isLaneID(ST, Lid) &&
+             (Mask & MaskCheck) == XorMaskTarget) {
+    return createWaveShuffleUpdateDpp(IC, II, AMDGPU::DPP::ROW_HALF_MIRROR);
+  }
+
+  // Not a valid Row Mirror or Row Half Mirror
+  return std::nullopt;
+}
+
+// Attempt to capture situations where the index argument matches
+// a DPP pattern, and convert to an amdgcn_update_dpp call
+static std::optional<Instruction *>
+tryWaveShuffleDpp(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
+  std::optional<Instruction *> res;
+
+  // Currently, all implemented DPP optimizations require known wave size
+  if (!ST.isWaveSizeKnown())
+    return std::nullopt;
+
+  if ((ST.hasGFX90AInsts() || ST.hasDPPRowShare()) &&
+      (res = tryWaveShuffleRowShare(ST, IC, II)))
+    return res;
+
+  if (ST.hasDPPRowXMask() && (res = tryWaveShuffleRowXMask(ST, IC, II)))
+    return res;
+
+  if (ST.hasDPPRowMirrors() && (res = tryWaveShuffleRowMirrors(ST, IC, II)))
+    return res;
 
   // No valid DPP detected
   return std::nullopt;
@@ -1827,10 +1941,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     return IC.replaceInstUsesWith(II, NewII);
   }
   case Intrinsic::amdgcn_wave_shuffle: {
-    if (!ST->hasDPP())
-      return std::nullopt;
+    // If the index is just the lane ID, then it's a no-op
+    if (isLaneID(*ST, II.getArgOperand(1)))
+      return IC.replaceInstUsesWith(II, II.getArgOperand(0));
 
-    return tryWaveShuffleDPP(*ST, IC, II);
+    return tryWaveShuffleDpp(*ST, IC, II);
   }
   }
   if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =

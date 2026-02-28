@@ -647,6 +647,18 @@ defm DPPBroadcasts : AMDGPUSubtargetFeature<"dpp-row-bcast",
   "Support DPP row_bcast15/row_bcast31"
 >;
 
+defm DPPRowShare: AMDGPUSubtargetFeature<"dpp-row-share",
+  "Support DPP row_share"
+>;
+
+defm DPPRowXMask: AMDGPUSubtargetFeature<"dpp-row-xmask",
+  "Support DPP row_xmask"
+>;
+
+defm DPPRowMirrors: AMDGPUSubtargetFeature<"dpp-row-mirror",
+  "Support DPP row_mirror/row_half_mirror"
+>;
+
 defm PackedFP32Ops : AMDGPUSubtargetFeature<"packed-fp32-ops",
   "Support packed fp32 instructions"
 >;
@@ -1355,7 +1367,7 @@ def FeatureVolcanicIslands : GCNSubtargetFeatureGeneration<"VOLCANIC_ISLANDS",
    FeatureSMemRealTime, FeatureVGPRIndexMode, FeatureMovrel,
    FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureSDWA, FeatureSDWAOutModsVOPC, FeatureSDWAMac, FeatureDPP,
-   FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
+   FeatureDPPWavefrontShifts, FeatureDPPBroadcasts, FeatureDPPRowMirrors,
    FeatureIntClamp, FeatureTrigReducedRange, FeatureGFX8Insts,
    FeatureGFX7GFX8GFX9Insts, FeatureSMemTimeInst, FeatureMadMacF32Insts,
    FeatureDsSrc2Insts, FeatureExtendedImageInsts, FeatureFastDenormalF32,
@@ -1373,7 +1385,7 @@ def FeatureGFX9 : GCNSubtargetFeatureGeneration<"GFX9",
    FeatureGCN3Encoding, FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureScalarStores, FeatureInv2PiInlineImm,
    FeatureApertureRegs, FeatureGFX9Insts, FeatureVOP3PInsts, FeatureVGPRIndexMode,
-   FeatureFastFMAF32, FeatureDPP, FeatureDPPWavefrontShifts, FeatureDPPBroadcasts,
+   FeatureFastFMAF32, FeatureDPP, FeatureDPPWavefrontShifts, FeatureDPPBroadcasts, FeatureDPPRowMirrors,
    FeatureIntClamp, FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureGFX8Insts, FeatureGFX7GFX8GFX9Insts,
@@ -1395,7 +1407,8 @@ def FeatureGFX10 : GCNSubtargetFeatureGeneration<"GFX10",
    FeatureCIInsts, Feature16BitInsts,
    FeatureSMemRealTime, FeatureInv2PiInlineImm,
    FeatureApertureRegs, FeatureGFX9Insts, FeatureGFX10Insts, FeatureVOP3PInsts,
-   FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureMovrel, FeatureFastFMAF32, FeatureIntClamp,
+   FeatureDPP, FeatureDPPRowMirrors, FeatureDPPRowXMask, FeatureDPPRowShare,
    FeatureSDWA, FeatureSDWAOmod, FeatureSDWAScalar, FeatureSDWASdst,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts, FeatureGFX8Insts,
@@ -1423,7 +1436,8 @@ def FeatureGFX11 : GCNSubtargetFeatureGeneration<"GFX11",
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureVOP3PInsts, FeatureVOPDInsts, FeatureTrue16BitInsts,
-   FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureMovrel, FeatureFastFMAF32, FeatureIntClamp,
+   FeatureDPP, FeatureDPPRowMirrors, FeatureDPPRowXMask, FeatureDPPRowShare,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
@@ -1448,7 +1462,8 @@ def FeatureGFX12 : GCNSubtargetFeatureGeneration<"GFX12",
    FeatureCIInsts, FeatureGFX8Insts, FeatureGFX9Insts, FeatureGFX10Insts,
    FeatureGFX10_AEncoding, FeatureGFX10_BEncoding, FeatureGFX10_3Insts,
    FeatureGFX11Insts, FeatureGFX12Insts, FeatureVOP3PInsts, FeatureVOPDInsts,
-   FeatureMovrel, FeatureFastFMAF32, FeatureDPP, FeatureIntClamp,
+   FeatureMovrel, FeatureFastFMAF32, FeatureIntClamp,
+   FeatureDPP, FeatureDPPRowMirrors, FeatureDPPRowXMask, FeatureDPPRowShare,
    FeatureFlatInstOffsets, FeatureFlatGlobalInsts, FeatureFlatScratchInsts,
    FeatureAddNoCarryInsts, FeatureFmaMixInsts,
    FeatureNoSdstCMPX, FeatureVscnt,
