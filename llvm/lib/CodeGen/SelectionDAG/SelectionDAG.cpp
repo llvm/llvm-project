@@ -4695,6 +4695,27 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
         return true;
     break;
 
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue InVec = Val.getOperand(0);
+    SDValue EltNo = Val.getOperand(1);
+    EVT VecVT = InVec.getValueType();
+
+    // Skip scalable vectors or implicit extensions.
+    if (VecVT.isScalableVector() ||
+        OpVT.getScalarSizeInBits() != VecVT.getScalarSizeInBits())
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
+    return isKnownToBeAPowerOfTwo(InVec, DemandedSrcElts, OrZero, Depth + 1);
+  }
+
   case ISD::AND: {
     // Looking for `x & -x` pattern:
     // If x == 0:
