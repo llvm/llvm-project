@@ -59,8 +59,8 @@ static bool shouldUseBarePtrCallConv(Operation *op,
          typeConverter->getOptions().useBarePtrCallConv;
 }
 
-/// Only retain those attributes that are not constructed by
-/// `LLVMFuncOp::build`.
+/// Filter out ODS-named attributes to prevent duplicates when
+/// LLVMFuncOp::build constructs the attribute dictionary.
 static void filterFuncAttributes(FunctionOpInterface func,
                                  SmallVectorImpl<NamedAttribute> &result) {
   llvm::SmallDenseSet<StringRef> odsAttrNames(
@@ -334,6 +334,7 @@ FailureOr<LLVM::LLVMFuncOp> mlir::convertFuncOpToLLVMFuncOp(
           funcOp, "Contains linkage attribute not of type LLVM::LinkageAttr");
     }
     linkage = attr.getLinkage();
+    funcOp->removeAttr(linkageAttrName);
   }
 
   // Check for invalid attributes.

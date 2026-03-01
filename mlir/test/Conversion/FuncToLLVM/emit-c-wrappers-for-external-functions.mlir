@@ -57,3 +57,9 @@ func.func private @one_arg_attr_one_res_attr_with_value_return(%arg0: memref<f32
 // CHECK-SAME: f32
 // CHECK-SAME: i32 {test.argTwo = 2 : i64})
 func.func private @multiple_arg_attr_multiple_res_attr(%arg0: memref<f32> {test.argZero = 0}, %arg1: f32, %arg2: i32 {test.argTwo = 2}) -> (f32, memref<i32> {test.returnOne = 1}, i32 {test.returnTwo = 2})
+
+// CHECK: llvm.func private @drop_linkage_attr() -> (!llvm.struct{{.*}} {test.returnOne})
+// CHECK-LABEL: llvm.func @_mlir_ciface_drop_linkage_attr
+// CHECK-SAME: !llvm.ptr
+// CHECK-NOT: llvm.linkage
+func.func private @drop_linkage_attr() -> (memref<f32> {test.returnOne}) attributes { llvm.linkage = #llvm.linkage<weak> }

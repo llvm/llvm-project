@@ -242,7 +242,7 @@ static CoroMachinery setupCoroMachinery(func::FuncOp func) {
 
   // The switch-resumed API based coroutine should be marked with
   // presplitcoroutine attribute to mark the function as a coroutine.
-  func->setAttr("passthrough", builder.getArrayAttr(
+  func->setAttr("llvm.passthrough", builder.getArrayAttr(
                                    StringAttr::get(ctx, "presplitcoroutine")));
 
   CoroMachinery machinery;
