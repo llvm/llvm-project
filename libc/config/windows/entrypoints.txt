@@ -141,7 +141,6 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.atan2
     libc.src.math.atan2f
     libc.src.math.atan
-    libc.src.math.atanbf16
     libc.src.math.atanf
     libc.src.math.atanhf
     libc.src.math.cbrt
@@ -309,6 +308,7 @@ set(TARGET_LIBM_ENTRYPOINTS
 
 list(APPEND TARGET_LIBM_ENTRYPOINTS
   # bfloat16 entrypoints
+  libc.src.math.atanbf16
   libc.src.math.bf16add
   libc.src.math.bf16addf
   libc.src.math.bf16addl
