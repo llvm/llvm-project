@@ -23,11 +23,26 @@ define double @test2() {
 define double @test3(i1 %B) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testb $1, {{[0-9]+}}(%esp)
-; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %eax
-; CHECK-NEXT:    movl ${{\.?LCPI[0-9]+_[0-9]+}}, %ecx
-; CHECK-NEXT:    cmovnel %eax, %ecx
-; CHECK-NEXT:    fldl (%ecx)
+; CHECK-NEXT:    pushl %ebp
+; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    .cfi_offset %ebp, -8
+; CHECK-NEXT:    movl %esp, %ebp
+; CHECK-NEXT:    .cfi_def_cfa_register %ebp
+; CHECK-NEXT:    andl $-8, %esp
+; CHECK-NEXT:    subl $8, %esp
+; CHECK-NEXT:    testb $1, 8(%ebp)
+; CHECK-NEXT:    jne .LBB2_1
+; CHECK-NEXT:  # %bb.2:
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [5.2301123123000002E+2,0.0E+0]
+; CHECK-NEXT:    jmp .LBB2_3
+; CHECK-NEXT:  .LBB2_1:
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.2341200000000001E+2,0.0E+0]
+; CHECK-NEXT:  .LBB2_3:
+; CHECK-NEXT:    movsd %xmm0, (%esp)
+; CHECK-NEXT:    fldl (%esp)
+; CHECK-NEXT:    movl %ebp, %esp
+; CHECK-NEXT:    popl %ebp
+; CHECK-NEXT:    .cfi_def_cfa %esp, 4
 ; CHECK-NEXT:    retl
 	%C = select i1 %B, double 123.412, double 523.01123123
 	ret double %C

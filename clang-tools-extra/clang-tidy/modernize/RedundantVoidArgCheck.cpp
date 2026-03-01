@@ -15,10 +15,15 @@ using namespace clang::ast_matchers;
 namespace clang::tidy::modernize {
 
 void RedundantVoidArgCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      functionTypeLoc(unless(hasParent(functionDecl(isExternC())))).bind("fn"),
-      this);
-  Finder->addMatcher(lambdaExpr().bind("fn"), this);
+  if (getLangOpts().CPlusPlus) {
+    Finder->addMatcher(
+        functionTypeLoc(unless(hasParent(functionDecl(isExternC()))))
+            .bind("fn"),
+        this);
+    Finder->addMatcher(lambdaExpr().bind("fn"), this);
+  } else {
+    Finder->addMatcher(functionTypeLoc().bind("fn"), this);
+  }
 }
 
 void RedundantVoidArgCheck::check(const MatchFinder::MatchResult &Result) {

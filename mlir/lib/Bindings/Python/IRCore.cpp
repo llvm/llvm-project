@@ -2714,30 +2714,6 @@ namespace {
 
 #endif // Python 3.10.0a3
 
-// Python 3.9.0b1
-#if PY_VERSION_HEX < 0x030900B1 && !defined(PYPY_VERSION)
-
-// bpo-40429 added PyThreadState_GetFrame()
-PyFrameObject *PyThreadState_GetFrame(PyThreadState *tstate) {
-  assert(tstate != _Py_NULL && "expected tstate != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(tstate->frame));
-}
-
-// bpo-40421 added PyFrame_GetBack()
-PyFrameObject *PyFrame_GetBack(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  return _Py_CAST(PyFrameObject *, Py_XNewRef(frame->f_back));
-}
-
-// bpo-40421 added PyFrame_GetCode()
-PyCodeObject *PyFrame_GetCode(PyFrameObject *frame) {
-  assert(frame != _Py_NULL && "expected frame != _Py_NULL");
-  assert(frame->f_code != _Py_NULL && "expected frame->f_code != _Py_NULL");
-  return _Py_CAST(PyCodeObject *, Py_NewRef(frame->f_code));
-}
-
-#endif // Python 3.9.0b1
-
 using namespace mlir::python::MLIR_BINDINGS_PYTHON_DOMAIN;
 
 MlirLocation tracebackToLocation(MlirContext ctx) {

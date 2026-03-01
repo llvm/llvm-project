@@ -111,8 +111,8 @@ if(LLVM_PARALLEL_TABLEGEN_JOBS)
 endif()
 
 if( LLVM_ENABLE_ASSERTIONS )
-  # MSVC doesn't like _DEBUG on release builds. See PR 4379.
-  if( NOT MSVC )
+  # MS STL doesn't like _DEBUG on release builds. See PR 4379.
+  if(NOT WIN32 OR MINGW)
     add_compile_definitions(_DEBUG)
   endif()
   # On non-Debug builds cmake automatically defines NDEBUG, so we
@@ -745,34 +745,25 @@ if (MSVC)
   if (NOT CLANG_CL)
     set(msvc_warning_flags
       # Disabled warnings.
-      -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)
       -wd4146 # Suppress 'unary minus operator applied to unsigned type, result still unsigned'
       -wd4244 # Suppress ''argument' : conversion from 'type1' to 'type2', possible loss of data'
       -wd4267 # Suppress ''var' : conversion from 'size_t' to 'type', possible loss of data'
-      -wd4291 # Suppress ''declaration' : no matching operator delete found; memory will not be freed if initialization throws an exception'
       -wd4456 # Suppress 'declaration of 'var' hides local variable'
       -wd4457 # Suppress 'declaration of 'var' hides function parameter'
       -wd4458 # Suppress 'declaration of 'var' hides class member'
       -wd4459 # Suppress 'declaration of 'var' hides global declaration'
       -wd4624 # Suppress ''derived class' : destructor could not be generated because a base class destructor is inaccessible'
-      -wd4722 # Suppress 'function' : destructor never returns, potential memory leak
       -wd4100 # Suppress 'unreferenced formal parameter'
       -wd4127 # Suppress 'conditional expression is constant'
-      -wd4512 # Suppress 'assignment operator could not be generated'
       -wd4505 # Suppress 'unreferenced local function has been removed'
-      -wd4510 # Suppress 'default constructor could not be generated'
       -wd4702 # Suppress 'unreachable code'
       -wd4245 # Suppress ''conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch'
-      -wd4706 # Suppress 'assignment within conditional expression'
       -wd4310 # Suppress 'cast truncates constant value'
       -wd4701 # Suppress 'potentially uninitialized local variable'
       -wd4703 # Suppress 'potentially uninitialized local pointer variable'
       -wd4389 # Suppress 'signed/unsigned mismatch'
       -wd4805 # Suppress 'unsafe mix of type <type> and type <type> in operation'
       -wd4577 # Suppress 'noexcept used with no exception handling mode specified; termination on exception is not guaranteed'
-          # C4592 is disabled because of false positives in Visual Studio 2015
-          # Update 1. Re-evaluate the usefulness of this diagnostic with Update 2.
-      -wd4592 # Suppress ''var': symbol will be dynamically initialized (implementation limitation)
       -wd4319 # Suppress ''operator' : zero extending 'type' to 'type' of greater size'
 
       # Ideally, we'd like this warning to be enabled, but even MSVC 2019 doesn't
@@ -896,6 +887,13 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     # since GCC 11.
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
       append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
+    endif()
+
+    # Disable -Wdangling-pointer on GCC 12+; this warning produces false
+    # positives for the RAII listener pattern (storing `this` in a constructor
+    # that is cleaned up in the destructor).
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
+      append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
     endif()
   endif()
 
@@ -1308,6 +1306,22 @@ if (LLVM_BUILD_INSTRUMENTED AND LLVM_BUILD_INSTRUMENTED_COVERAGE)
 endif()
 
 if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
+  if(LLVM_ENABLE_MODULES)
+    # PCH with modules is difficult to get right and modules should make PCH
+    # obsolete from a compile-time perspective anyway (at least, in principle).
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
+  if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
+    # PCH is working in principle on AIX, but due to transitive includes,
+    # sys/mode.h ends up in the LLVMSupport PCH, which happens to define macros
+    # named S_RESERVED{1,2,3,4}, which cause collisions in CodeViewSymbols.def.
+    # AIX systems are not easily accessible, which makes identifying and
+    # debugging such cases rather difficult. Therefore, disable PCH on AIX by
+    # default.
+    message(NOTICE "Precompiled headers are disabled by default on AIX. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  endif()
   if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Pre-compiled headers with GCC (tested versions 14+15) provide very little
     # compile-time improvements, but substantially increase the build dir size.
@@ -1333,6 +1347,14 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
     # See: https://github.com/mozilla/sccache/issues/615
     # See: https://github.com/mozilla/sccache/issues/2562
     message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "clang-cache")
+    # clang-cache does compilation caching through the LLVMCAS. When using PCH,
+    # there are extra build dependencies for PCH that live in the CAS which
+    # build system is not aware of. Re-using PCH might cause incremental build
+    # to fail due to missing dependencies.
+    message(NOTICE "Precompiled headers are disabled by default with clang-cache. "
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
