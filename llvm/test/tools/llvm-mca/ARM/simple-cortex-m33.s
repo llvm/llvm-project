@@ -12,7 +12,7 @@ sub sp, #4
 # CHECK-NEXT: [6]: HasSideEffects (U)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
-# CHECK-NEXT:  1      1     1.00                  U     sub	sp, #4
+# CHECK-NEXT:  1      1     1.00                        sub	sp, #4
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - M4Unit
