@@ -284,7 +284,8 @@ OPTIONS
   any analysis with a special representation (i.e. BlockFrequency,
   BranchProbability, etc) are printed as raw hex values.
 
-  Only supported for AArch64, BPF, PowerPC, RISC-V, and X86.
+  Only supported for AArch64, BPF, PowerPC, RISC-V, and X86. Enabled by default
+  for BPF; use ``--no-symbolize-operands`` to disable.
 
   Example:
     A non-symbolized branch instruction with a local target and pc-relative memory access like
