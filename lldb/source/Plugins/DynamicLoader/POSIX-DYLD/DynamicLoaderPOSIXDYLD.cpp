@@ -865,7 +865,16 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp,
   }
 
   // Lookup the DTV structure for this thread.
-  addr_t dtv_ptr = tp + metadata.dtv_offset;
+  // On Linux AArch64, TPIDR_EL0 already points directly to struct pthread
+  // and the DTV pointer is stored at offset 0 while for X86 DTV pointer is
+  // located at an offset inside struct pthread.
+  const ArchSpec &arch = m_process->GetTarget().GetArchitecture();
+  const llvm::Triple &triple = arch.GetTriple();
+  addr_t dtv_ptr =
+      (triple.isOSLinux() && triple.getArch() == llvm::Triple::aarch64)
+          ? tp
+          : tp + metadata.dtv_offset;
+
   addr_t dtv = ReadPointer(dtv_ptr);
   if (dtv == LLDB_INVALID_ADDRESS) {
     LLDB_LOGF(log, "GetThreadLocalData error: fail to read dtv");
