@@ -652,7 +652,6 @@ void AArch64::relocate(uint8_t *loc, const Relocation &rel,
     write32(ctx, loc, val);
     break;
   case R_AARCH64_TLS_DTPREL64:
-    checkInt(ctx, loc, val, 64, rel);
     write64(ctx, loc, val);
     break;
   case R_AARCH64_ADD_ABS_LO12_NC:
