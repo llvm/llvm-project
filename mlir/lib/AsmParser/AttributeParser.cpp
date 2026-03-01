@@ -16,6 +16,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinDialect.h"
+#include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
 #include "mlir/IR/IntegerSet.h"
@@ -953,6 +954,119 @@ Attribute Parser::parseDenseArrayAttr(Type attrType) {
   return eltParser.getAttr();
 }
 
+/// Try to parse a dense elements attribute with the type-first syntax.
+/// Syntax: dense<TYPE : [ATTR, ATTR, ...]>
+/// This syntax is used for types other than int, float, index and complex.
+///
+/// Returns:
+///   - "null" attribute if this is not the type-first syntax.
+///   - "failure" in case of a parse error.
+///   - A valid Attribute otherwise.
+static FailureOr<Attribute> parseDenseElementsAttrTyped(Parser &p, SMLoc loc) {
+  // Skip l_paren because "parseType" would try to parse it as a tuple/function
+  // type, but '(' starts a complex literal like in the literal-first syntax.
+  if (p.getToken().is(Token::l_paren))
+    return Attribute();
+
+  // Parse type and valdiate that it's a shaped type.
+  auto typeLoc = p.getToken().getLoc();
+  Type type;
+  OptionalParseResult typeResult = p.parseOptionalType(type);
+  if (!typeResult.has_value())
+    return Attribute(); // Not type-first syntax.
+  if (failed(*typeResult))
+    return failure(); // Type parse error.
+
+  auto shapedType = dyn_cast<ShapedType>(type);
+  if (!shapedType) {
+    p.emitError(typeLoc, "expected a shaped type for dense elements");
+    return failure();
+  }
+  if (!shapedType.hasStaticShape()) {
+    p.emitError(typeLoc, "dense elements type must have static shape");
+    return failure();
+  }
+
+  // Check that the element type implements DenseElementTypeInterface.
+  auto denseEltType = dyn_cast<DenseElementType>(shapedType.getElementType());
+  if (!denseEltType) {
+    p.emitError(typeLoc,
+                "element type must implement DenseElementTypeInterface "
+                "for type-first dense syntax");
+    return failure();
+  }
+
+  // Parse colon.
+  if (p.parseToken(Token::colon, "expected ':' after type in dense attribute"))
+    return failure();
+
+  // Parse the element attributes and convert to raw bytes.
+  SmallVector<char> rawData;
+
+  // Helper to parse a single element.
+  auto parseSingleElement = [&]() -> ParseResult {
+    Attribute elemAttr = p.parseAttribute();
+    if (!elemAttr)
+      return failure();
+    if (failed(denseEltType.convertFromAttribute(elemAttr, rawData))) {
+      p.emitError("incompatible attribute for element type");
+      return failure();
+    }
+    return success();
+  };
+
+  // Recursively parse elements matching the expected shape.
+  std::function<ParseResult(ArrayRef<int64_t>)> parseElements;
+  parseElements = [&](ArrayRef<int64_t> remainingShape) -> ParseResult {
+    // Leaf: parse a single element.
+    if (remainingShape.empty())
+      return parseSingleElement();
+
+    // Non-leaf: expect a list with the correct number of elements.
+    int64_t expectedCount = remainingShape.front();
+    ArrayRef<int64_t> innerShape = remainingShape.drop_front();
+    int64_t actualCount = 0;
+
+    auto parseOne = [&]() -> ParseResult {
+      if (parseElements(innerShape))
+        return failure();
+      ++actualCount;
+      return success();
+    };
+
+    if (p.parseCommaSeparatedList(Parser::Delimiter::Square, parseOne))
+      return failure();
+
+    if (actualCount != expectedCount) {
+      p.emitError() << "expected " << expectedCount
+                    << " elements in dimension, got " << actualCount;
+      return failure();
+    }
+    return success();
+  };
+
+  // Parse elements.
+  if (!p.getToken().is(Token::l_square)) {
+    // Single element - parse as splat.
+    if (parseSingleElement())
+      return failure();
+  } else if (shapedType.getShape().empty()) {
+    // Scalar type shouldn't have a list.
+    p.emitError(loc, "expected single element for scalar type, got list");
+    return failure();
+  } else {
+    // Parse structured literal matching the shape.
+    if (parseElements(shapedType.getShape()))
+      return failure();
+  }
+
+  if (p.parseToken(Token::greater, "expected '>' to close dense attribute"))
+    return failure();
+
+  // Create the attribute from raw buffer.
+  return DenseElementsAttr::getFromRawBuffer(shapedType, rawData);
+}
+
 /// Parse a dense elements attribute.
 Attribute Parser::parseDenseElementsAttr(Type attrType) {
   auto attribLoc = getToken().getLoc();
@@ -960,7 +1074,16 @@ Attribute Parser::parseDenseElementsAttr(Type attrType) {
   if (parseToken(Token::less, "expected '<' after 'dense'"))
     return nullptr;
 
-  // Parse the literal data if necessary.
+  // Try to parse the type-first syntax: dense<TYPE : [ATTR, ...]>
+  FailureOr<Attribute> typedResult =
+      parseDenseElementsAttrTyped(*this, attribLoc);
+  if (failed(typedResult))
+    return nullptr;
+  if (*typedResult)
+    return *typedResult;
+
+  // Try to parse the literal-first syntax, which is the default format for
+  // int, float, index and complex element types.
   TensorLiteralParser literalParser(*this);
   if (!consumeIf(Token::greater)) {
     if (literalParser.parse(/*allowHex=*/true) ||

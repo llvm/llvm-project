@@ -348,6 +348,16 @@ void ForOp::build(OpBuilder &builder, OperationState &result, Value lb,
 }
 
 LogicalResult ForOp::verify() {
+  // Check that the body block has at least the induction variable argument.
+  // This must be checked before verifyRegions() and before any region trait
+  // verifiers (e.g. LoopLikeOpInterface) that call getRegionIterArgs(), to
+  // avoid crashing with an out-of-bounds drop_front on an empty arg list.
+  if (getBody()->getNumArguments() < getNumInductionVars())
+    return emitOpError("expected body to have at least ")
+           << getNumInductionVars()
+           << " argument(s) for the induction variable, but got "
+           << getBody()->getNumArguments();
+
   // Check that the number of init args and op results is the same.
   if (getInitArgs().size() != getNumResults())
     return emitOpError(
@@ -357,6 +367,12 @@ LogicalResult ForOp::verify() {
 }
 
 LogicalResult ForOp::verifyRegions() {
+  // Check that the body block has at least the induction variable argument.
+  if (getBody()->getNumArguments() < getNumInductionVars())
+    return emitOpError("expected body to have at least ")
+           << getNumInductionVars() << " argument(s) for the induction "
+           << "variable, but got " << getBody()->getNumArguments();
+
   // Check that the body defines as single block argument for the induction
   // variable.
   if (getInductionVar().getType() != getLowerBound().getType())
@@ -556,15 +572,27 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
   else if (parser.parseType(type))
     return failure();
 
-  // Resolve input operands.
+  // Set block argument types, so that they are known when parsing the region.
   regionArgs.front().type = type;
+  for (auto [iterArg, type] :
+       llvm::zip_equal(llvm::drop_begin(regionArgs), result.types))
+    iterArg.type = type;
+
+  // Parse the body region.
+  Region *body = result.addRegion();
+  if (parser.parseRegion(*body, regionArgs))
+    return failure();
+  ForOp::ensureTerminator(*body, builder, result.location);
+
+  // Resolve input operands. This should be done after parsing the region to
+  // catch invalid IR where operands were defined inside of the region.
   if (parser.resolveOperand(lb, type, result.operands) ||
       parser.resolveOperand(ub, type, result.operands) ||
       parser.resolveOperand(step, type, result.operands))
     return failure();
   if (hasIterArgs) {
-    for (auto argOperandType :
-         llvm::zip(llvm::drop_begin(regionArgs), operands, result.types)) {
+    for (auto argOperandType : llvm::zip_equal(llvm::drop_begin(regionArgs),
+                                               operands, result.types)) {
       Type type = std::get<2>(argOperandType);
       std::get<0>(argOperandType).type = type;
       if (parser.resolveOperand(std::get<1>(argOperandType), type,
@@ -572,13 +600,6 @@ ParseResult ForOp::parse(OpAsmParser &parser, OperationState &result) {
         return failure();
     }
   }
-
-  // Parse the body region.
-  Region *body = result.addRegion();
-  if (parser.parseRegion(*body, regionArgs))
-    return failure();
-
-  ForOp::ensureTerminator(*body, builder, result.location);
 
   // Parse the optional attribute list.
   if (parser.parseOptionalAttrDict(result.attributes))
