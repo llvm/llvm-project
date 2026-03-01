@@ -4132,7 +4132,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  atanf
+  atanbf16
   SRCS
     atanbf16.cpp
   HDRS
