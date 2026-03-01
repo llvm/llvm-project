@@ -167,7 +167,10 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // LLDB but we can construct a process without threads to provide minimal
     // memory reading support.
     switch (GetTarget().GetArchitecture().GetMachine()) {
+    case llvm::Triple::arm:
     case llvm::Triple::aarch64:
+    case llvm::Triple::ppc64le:
+    case llvm::Triple::riscv64:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
       break;
@@ -217,6 +220,13 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
         ReadSignedIntegerFromMemory(FindSymbol("pcb_size"), 4, -1, error);
     lldb::addr_t stoppcbs = FindSymbol("stoppcbs");
 
+    // Read stopped_cpus bitmask and mp_maxid for CPU validation
+    lldb::addr_t stopped_cpus = FindSymbol("stopped_cpus");
+    int32_t mp_maxid =
+        ReadSignedIntegerFromMemory(FindSymbol("mp_maxid"), 4, 0, error);
+    uint32_t long_size = GetAddressByteSize(); // approximation of sizeof(long)
+    uint32_t long_bits = long_size * 8;
+
     // from FreeBSD sys/param.h
     constexpr size_t fbsd_maxcomlen = 19;
 
@@ -225,11 +235,23 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
     // the end of the list, so we have to walk it backwards. First collect all
     // the processes in the list order.
     std::vector<lldb::addr_t> process_addrs;
-    for (lldb::addr_t proc =
-             ReadPointerFromMemory(FindSymbol("allproc"), error);
-         proc != 0 && proc != LLDB_INVALID_ADDRESS;
-         proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
-      process_addrs.push_back(proc);
+
+    lldb::addr_t zombproc_addr = FindSymbol("zombproc");
+    if (zombproc_addr != LLDB_INVALID_ADDRESS) {
+      for (lldb::addr_t proc = ReadPointerFromMemory(zombproc_addr, error);
+           proc != 0 && proc != LLDB_INVALID_ADDRESS;
+           proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
+        process_addrs.push_back(proc);
+      }
+    }
+
+    lldb::addr_t allproc_addr = FindSymbol("allproc");
+    if (allproc_addr != LLDB_INVALID_ADDRESS) {
+      for (lldb::addr_t proc = ReadPointerFromMemory(allproc_addr, error);
+           proc != 0 && proc != LLDB_INVALID_ADDRESS;
+           proc = ReadPointerFromMemory(proc + offset_p_list, error)) {
+        process_addrs.push_back(proc);
+      }
     }
 
     // Processes are in the linked list in descending PID order, so we must walk
@@ -280,12 +302,27 @@ bool ProcessFreeBSDKernelCore::DoUpdateThreadList(ThreadList &old_thread_list,
           pcb_addr = dumppcb;
           thread_desc += " (crashed)";
         } else if (oncpu != -1) {
-          // If we managed to read stoppcbs and pcb_size, use them to find
-          // the correct PCB.
-          if (stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0)
+          // Verify the CPU is actually in the stopped set before using
+          // its stoppcbs entry.
+          bool is_stopped = false;
+          if (stopped_cpus != LLDB_INVALID_ADDRESS && oncpu >= 0 &&
+              oncpu <= mp_maxid) {
+            uint32_t bit = oncpu % long_bits;
+            uint32_t word = oncpu / long_bits;
+            lldb::addr_t mask_addr = stopped_cpus + word * long_size;
+            uint64_t mask =
+                ReadUnsignedIntegerFromMemory(mask_addr, long_size, 0, error);
+            if (error.Success())
+              is_stopped = (mask & (1ULL << bit)) != 0;
+          }
+
+          // If we managed to read stoppcbs and pcb_size and the cpu is marked
+          // as stopped, use them to find the correct PCB.
+          if (is_stopped && stoppcbs != LLDB_INVALID_ADDRESS && pcbsize > 0) {
             pcb_addr = stoppcbs + oncpu * pcbsize;
-          else
+          } else {
             pcb_addr = LLDB_INVALID_ADDRESS;
+          }
           thread_desc += llvm::formatv(" (on CPU {0})", oncpu);
         }
 
