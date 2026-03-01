@@ -17,6 +17,7 @@ if path in sys.path:
 
 import re
 import io
+from dataclasses import dataclass
 from typing import BinaryIO, TextIO, Tuple, Union
 
 BINARY_VERSION = 1
@@ -191,35 +192,52 @@ def _segment_by_signature(input: list[str]) -> list[Tuple[str, list[str]]]:
     return segments
 
 
-def compile_file(type_name: str, input: TextIO, output: BinaryIO) -> None:
+@dataclass
+class BytecodeSection:
+    """Abstraction of the data serialized to __lldbformatters sections."""
+
+    type_name: str
+    flags: int
+    signatures: list[Tuple[str, bytes]]
+
+    def validate(self):
+        seen = set()
+        for sig, _ in self.signatures:
+            if sig in seen:
+                raise ValueError(f"duplicate signature: {sig}")
+            seen.add(sig)
+
+    def write_binary(self, output: BinaryIO) -> None:
+        self.validate()
+
+        bin = bytearray()
+        bin.extend(_to_uleb(len(self.type_name)))
+        bin.extend(bytes(self.type_name, encoding="utf-8"))
+        bin.extend(_to_byte(self.flags))
+        for sig, bc in self.signatures:
+            bin.extend(_to_byte(SIGNATURES[sig]))
+            bin.extend(_to_uleb(len(bc)))
+            bin.extend(bc)
+
+        output.write(_to_byte(BINARY_VERSION))
+        output.write(_to_uleb(len(bin)))
+        output.write(bin)
+
+
+def compile_file(type_name: str, input: TextIO) -> BytecodeSection:
     input_tokens = _tokenize(input.read())
-
-    signatures = {}
+    signatures = []
     for sig, tokens in _segment_by_signature(input_tokens):
-        if sig in signatures:
-            raise ValueError(f"duplicate signature: {sig}")
-        signatures[sig] = compile_tokens(tokens)
+        signatures.append((sig, compile_tokens(tokens)))
 
-    bin = bytearray()
-    bin.extend(_to_uleb(len(type_name)))
-    bin.extend(bytes(type_name, encoding="utf-8"))
-    flags = 0
-    bin.extend(_to_byte(flags))
-    for sig, bc in signatures.items():
-        bin.extend(_to_byte(SIGNATURES[sig]))
-        bin.extend(_to_uleb(len(bc)))
-        bin.extend(bc)
-
-    output.write(_to_byte(BINARY_VERSION))
-    output.write(_to_uleb(len(bin)))
-    output.write(bin)
+    return BytecodeSection(type_name, flags=0, signatures=signatures)
 
 
-def compile(assembler: str) -> bytearray:
+def compile(assembler: str) -> bytes:
     return compile_tokens(_tokenize(assembler))
 
 
-def compile_tokens(tokens: list[str]) -> bytearray:
+def compile_tokens(tokens: list[str]) -> bytes:
     """Compile assembler into bytecode"""
     # This is a stack of all in-flight/unterminated blocks.
     bytecode = [bytearray()]
@@ -258,7 +276,7 @@ def compile_tokens(tokens: list[str]) -> bytearray:
         else:
             emit(opcode[tok])
     assert len(bytecode) == 1  # unterminated {
-    return bytecode[0]
+    return bytes(bytecode[0])
 
 
 ################################################################################
@@ -291,7 +309,7 @@ def disassemble_file(input: BinaryIO, output: TextIO) -> None:
         print(f"@{sig_name}: {asm}", file=output)
 
 
-def disassemble(bytecode: Union[bytes, bytearray]) -> Tuple[str, list[int]]:
+def disassemble(bytecode: bytes) -> Tuple[str, list[int]]:
     """Disassemble bytecode into (assembler, token starts)"""
     asm = ""
     all_bytes = list(bytecode)
@@ -365,7 +383,7 @@ def count_fmt_params(fmt: str) -> int:
     return n
 
 
-def interpret(bytecode: bytearray, control: list, data: list, tracing: bool = False):
+def interpret(bytecode: bytes, control: list, data: list, tracing: bool = False):
     """Interpret bytecode"""
     frame = []
     frame.append((0, len(bytecode)))
@@ -657,7 +675,8 @@ def _main():
             open(args.input) as input,
             open(args.output, "wb") as output,
         ):
-            compile_file(args.type_name, input, output)
+            section = compile_file(args.type_name, input)
+            section.write_binary(output)
     elif args.disassemble:
         if args.output:
             with (
@@ -709,7 +728,8 @@ if __name__ == "__main__":
         def test_compile_file(self):
             def run_compile(type_name, asm):
                 out = io.BytesIO()
-                compile_file(type_name, io.StringIO(asm), out)
+                section = compile_file(type_name, io.StringIO(asm))
+                section.write_binary(out)
                 out.seek(0)
                 return out
 
