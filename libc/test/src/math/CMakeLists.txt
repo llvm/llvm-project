@@ -2574,7 +2574,7 @@ add_fp_unittest(
   SUITE
     libc-math-unittests
   SRCS
-    hypotbf16_test.cpp
+    atanbf16_test.cpp
   DEPENDS
     libc.src.math.atanbf16
     libc.src.__support.FPUtil.fp_bits
