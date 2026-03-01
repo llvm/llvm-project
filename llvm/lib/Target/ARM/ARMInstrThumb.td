@@ -397,6 +397,7 @@ def tPICADD : TIt<(outs GPR:$dst), (ins GPR:$lhs, pclabel:$cp), IIC_iALUr, "",
 }
 
 // ADD <Rd>, sp, #<imm8>
+let isReMaterializable = 1 in
 def tADDrSPi : T1pI<(outs tGPR:$dst), (ins GPRsp:$sp, t_imm0_1020s4:$imm),
                     IIC_iALUi, "add", "\t$dst, $sp, $imm", []>,
                T1Encoding<{1,0,1,0,1,?}>, Sched<[WriteALU]> {
