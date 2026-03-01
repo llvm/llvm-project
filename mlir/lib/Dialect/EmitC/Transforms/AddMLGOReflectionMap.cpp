@@ -1,4 +1,4 @@
-//===- AddReflectionMap.cpp - Add a reflection map to a class -------------===//
+//===- AddMLGOReflectionMap.cpp - Add a reflection map to a class -------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,7 +20,7 @@ using namespace emitc;
 
 namespace mlir {
 namespace emitc {
-#define GEN_PASS_DEF_ADDREFLECTIONMAPPASS
+#define GEN_PASS_DEF_ADDMLGOREFLECTIONMAPPASS
 #include "mlir/Dialect/EmitC/Transforms/Passes.h.inc"
 
 namespace {
@@ -34,14 +34,14 @@ IncludeOp addHeader(OpBuilder &builder, ModuleOp module, StringRef headerName) {
       /*is_standard_include=*/builder.getUnitAttr());
 }
 
-class AddReflectionMapPass
-    : public impl::AddReflectionMapPassBase<AddReflectionMapPass> {
-  using AddReflectionMapPassBase::AddReflectionMapPassBase;
+class AddMLGOReflectionMapPass
+    : public impl::AddMLGOReflectionMapPassBase<AddMLGOReflectionMapPass> {
+  using AddMLGOReflectionMapPassBase::AddMLGOReflectionMapPassBase;
   void runOnOperation() override {
     mlir::ModuleOp module = getOperation();
 
     RewritePatternSet patterns(&getContext());
-    populateAddReflectionMapPatterns(patterns, namedAttribute);
+    populateAddMLGOReflectionMapPatterns(patterns, namedAttribute);
 
     walkAndApplyPatterns(module, std::move(patterns));
     bool hasMapHdr = false;
@@ -73,9 +73,9 @@ class AddReflectionMapPass
 } // namespace emitc
 } // namespace mlir
 
-class AddReflectionMapClass : public OpRewritePattern<emitc::ClassOp> {
+class AddMLGOReflectionMapClass : public OpRewritePattern<emitc::ClassOp> {
 public:
-  AddReflectionMapClass(MLIRContext *context, StringRef attrName)
+  AddMLGOReflectionMapClass(MLIRContext *context, StringRef attrName)
       : OpRewritePattern<emitc::ClassOp>(context), attributeName(attrName) {}
 
   LogicalResult matchAndRewrite(mlir::emitc::ClassOp classOp,
@@ -130,7 +130,7 @@ private:
   StringRef attributeName;
 };
 
-void mlir::emitc::populateAddReflectionMapPatterns(RewritePatternSet &patterns,
+void mlir::emitc::populateAddMLGOReflectionMapPatterns(RewritePatternSet &patterns,
                                                    StringRef namedAttribute) {
-  patterns.add<AddReflectionMapClass>(patterns.getContext(), namedAttribute);
+  patterns.add<AddMLGOReflectionMapClass>(patterns.getContext(), namedAttribute);
 }

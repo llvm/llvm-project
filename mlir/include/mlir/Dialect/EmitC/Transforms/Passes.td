@@ -60,9 +60,9 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
   ];
 }
 
-def AddReflectionMapPass : Pass<"add-reflection-map", "ModuleOp"> {
+def AddMLGOReflectionMapPass : Pass<"add-MLGO-reflection-map", "ModuleOp"> {
   let summary =
-      "Add a reflection map function to EmitC classes for runtime field lookup";
+      "Add a reflection map function to EmitC classes for runtime field lookup. This is MLGO Specific.";
   let description = [{
         This pass adds a `getBufferForName` function to EmitC classes that enables 
         runtime lookup of field buffers by their string names. 
