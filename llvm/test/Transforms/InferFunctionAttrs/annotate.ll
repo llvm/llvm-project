@@ -718,33 +718,33 @@ declare ptr @vec_malloc(i64)
 ; CHECK-LINUX: declare noalias noundef ptr @memalign(i64 allocalign, i64) [[INACCESSIBLEMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare ptr @memalign(i64, i64)
 
-; CHECK: declare ptr @memccpy(ptr noalias writeonly, ptr noalias readonly captures(none), i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @memccpy(ptr noalias writeonly captures(ret: address, provenance), ptr noalias readonly captures(none), i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @memccpy(ptr, ptr, i32, i64)
 
-; CHECK-LINUX:   declare ptr @memchr(ptr, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
-; CHECK-DARWIN:  declare ptr @memchr(ptr, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
-; CHECK-UNKNOWN: declare ptr @memchr(ptr, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
+; CHECK-LINUX:   declare ptr @memchr(ptr captures(ret: address, provenance), i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+; CHECK-DARWIN:  declare ptr @memchr(ptr captures(ret: address, provenance), i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
+; CHECK-UNKNOWN: declare ptr @memchr(ptr captures(ret: address, provenance), i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY:#[0-9]+]]
 declare ptr @memchr(ptr, i32, i64)
 
 ; CHECK: declare i32 @memcmp(ptr captures(none), ptr captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare i32 @memcmp(ptr, ptr, i64)
 
-; CHECK: declare ptr @memcpy(ptr noalias returned writeonly, ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @memcpy(ptr noalias returned writeonly captures(ret: address, provenance), ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @memcpy(ptr, ptr, i64)
 
-; CHECK: declare ptr @__memcpy_chk(ptr noalias writeonly, ptr noalias readonly captures(none), i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
+; CHECK: declare ptr @__memcpy_chk(ptr noalias writeonly captures(ret: address, provenance), ptr noalias readonly captures(none), i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND:#[0-9]+]]
 declare ptr @__memcpy_chk(ptr, ptr, i64, i64)
 
-; CHECK: declare ptr @mempcpy(ptr noalias writeonly, ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @mempcpy(ptr noalias writeonly captures(ret: address, provenance), ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @mempcpy(ptr, ptr, i64)
 
-; CHECK: declare ptr @memmove(ptr returned writeonly, ptr readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @memmove(ptr returned writeonly captures(ret: address, provenance), ptr readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @memmove(ptr, ptr, i64)
 
-; CHECK: declare ptr @memset(ptr writeonly, i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
+; CHECK: declare ptr @memset(ptr writeonly captures(ret: address, provenance), i32, i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
 declare ptr @memset(ptr, i32, i64)
 
-; CHECK: declare ptr @__memset_chk(ptr writeonly, i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND]]
+; CHECK: declare ptr @__memset_chk(ptr writeonly captures(ret: address, provenance), i32, i64, i64) [[ARGMEMONLY_NOFREE_NOUNWIND]]
 declare ptr @__memset_chk(ptr, i32, i64, i64)
 
 ; CHECK: declare noundef i32 @mkdir(ptr noundef readonly captures(none), i16 noundef zeroext) [[NOFREE_NOUNWIND]]
@@ -1023,19 +1023,19 @@ declare i32 @statvfs(ptr, ptr)
 ; CHECK-LINUX: declare noundef i32 @statvfs64(ptr noundef readonly captures(none), ptr noundef captures(none)) [[NOFREE_NOUNWIND]]
 declare i32 @statvfs64(ptr, ptr)
 
-; CHECK: declare ptr @stpcpy(ptr noalias writeonly, ptr noalias readonly captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @stpcpy(ptr noalias writeonly captures(ret: address, provenance), ptr noalias readonly captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @stpcpy(ptr, ptr)
 
-; CHECK: declare ptr @stpncpy(ptr noalias writeonly, ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @stpncpy(ptr noalias writeonly captures(ret: address, provenance), ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @stpncpy(ptr, ptr, i64)
 
 ; CHECK: declare i32 @strcasecmp(ptr captures(none), ptr captures(none)) [[NOFREE_NOUNWIND_READONLY_WILLRETURN:#[0-9]+]]
 declare i32 @strcasecmp(ptr, ptr)
 
-; CHECK: declare ptr @strcat(ptr noalias returned, ptr noalias readonly captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @strcat(ptr noalias returned captures(ret: address, provenance), ptr noalias readonly captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @strcat(ptr, ptr)
 
-; CHECK: declare ptr @strchr(ptr, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+; CHECK: declare ptr @strchr(ptr captures(ret: address, provenance), i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare ptr @strchr(ptr, i32)
 
 ; CHECK: declare i32 @strcmp(ptr captures(none), ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
@@ -1044,7 +1044,7 @@ declare i32 @strcmp(ptr, ptr)
 ; CHECK: declare i32 @strcoll(ptr captures(none), ptr captures(none)) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare i32 @strcoll(ptr, ptr)
 
-; CHECK: declare ptr @strcpy(ptr noalias returned writeonly, ptr noalias readonly captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @strcpy(ptr noalias returned writeonly captures(ret: address, provenance), ptr noalias readonly captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @strcpy(ptr, ptr)
 
 ; CHECK: declare i64 @strcspn(ptr captures(none), ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
@@ -1059,13 +1059,13 @@ declare i64 @strlen(ptr)
 ; CHECK: declare i32 @strncasecmp(ptr captures(none), ptr captures(none), i64) [[NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare i32 @strncasecmp(ptr, ptr, i64)
 
-; CHECK: declare ptr @strncat(ptr noalias returned, ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @strncat(ptr noalias returned captures(ret: address, provenance), ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @strncat(ptr, ptr, i64)
 
 ; CHECK: declare i32 @strncmp(ptr captures(none), ptr captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare i32 @strncmp(ptr, ptr, i64)
 
-; CHECK: declare ptr @strncpy(ptr noalias returned writeonly, ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
+; CHECK: declare ptr @strncpy(ptr noalias returned writeonly captures(ret: address, provenance), ptr noalias readonly captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_WILLRETURN]]
 declare ptr @strncpy(ptr, ptr, i64)
 
 ; CHECK: declare noalias ptr @strndup(ptr readonly captures(none), i64 noundef) [[INACCESSIBLEMEMORARGONLY_NOFREE_NOUNWIND_WILLRETURN_FAMILY_MALLOC]]
@@ -1074,16 +1074,16 @@ declare ptr @strndup(ptr, i64)
 ; CHECK: declare i64 @strnlen(ptr captures(none), i64) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare i64 @strnlen(ptr, i64)
 
-; CHECK: declare ptr @strpbrk(ptr, ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+; CHECK: declare ptr @strpbrk(ptr captures(ret: address, provenance), ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare ptr @strpbrk(ptr, ptr)
 
-; CHECK: declare ptr @strrchr(ptr, i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
+; CHECK: declare ptr @strrchr(ptr captures(ret: address, provenance), i32) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare ptr @strrchr(ptr, i32)
 
 ; CHECK: declare i64 @strspn(ptr captures(none), ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY]]
 declare i64 @strspn(ptr, ptr)
 
-; CHECK: declare ptr @strstr(ptr, ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
+; CHECK: declare ptr @strstr(ptr captures(ret: address, provenance), ptr captures(none)) [[ARGMEMONLY_NOFREE_NOUNWIND_READONLY_WILLRETURN]]
 declare ptr @strstr(ptr, ptr)
 
 ; CHECK: declare double @strtod(ptr readonly, ptr captures(none)) [[NOCALLBACK_NOFREE_NOUNWIND_WILLRETURN:#[0-9]+]]
