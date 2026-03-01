@@ -702,13 +702,15 @@ static Value *foldShiftedShift(BinaryOperator *InnerShift, unsigned OuterShAmt,
   // lshr (shl X, C), C --> and X, C'
   // shl (lshr X, C), C --> and X, C'
   if (InnerShAmt == OuterShAmt) {
-    if (IsInnerShl &&
-        ((OuterOpc == Instruction::AShr && InnerShift->hasNoSignedWrap()) ||
-         (OuterOpc == Instruction::LShr && InnerShift->hasNoUnsignedWrap())))
+    if (OuterOpc == Instruction::AShr) {
+      assert(IsInnerShl && InnerShift->hasNoSignedWrap() &&
+             "AShr should have nsw and inner shl per canEvaluateShiftedShift");
+      return InnerShift->getOperand(0);
+    }
+    if (IsInnerShl && OuterOpc == Instruction::LShr &&
+        InnerShift->hasNoUnsignedWrap())
       return InnerShift->getOperand(0);
 
-    if (OuterOpc == Instruction::AShr)
-      return nullptr;
     APInt Mask = IsInnerShl
                      ? APInt::getLowBitsSet(TypeWidth, TypeWidth - OuterShAmt)
                      : APInt::getHighBitsSet(TypeWidth, TypeWidth - OuterShAmt);
