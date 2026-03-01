@@ -21650,8 +21650,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *Op = vectorizeOperand(ZExt, 0);
       auto *SrcType = IntegerType::get(
           Op->getContext(),
-          DL->getTypeSizeInBits(
-              cast<CastInst>(ZExt->getMainOp())->getSrcTy()) *
+          DL->getTypeSizeInBits(cast<CastInst>(ZExt->getMainOp())->getSrcTy()) *
               E->getVectorFactor());
       auto *OrigScalarTy = ScalarTy;
       // Set the scalar type properly to avoid casting to the extending type.
