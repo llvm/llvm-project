@@ -18,8 +18,16 @@ namespace clang::tidy::misc {
 
 void ForbidNonVirtualBaseDtorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      cxxRecordDecl(isDefinition(),
-                    hasAnyBase(cxxBaseSpecifier().bind("BaseSpecifier")))
+      cxxRecordDecl(
+          isDefinition(), has(fieldDecl()),
+          hasAnyBase(
+              cxxBaseSpecifier(isPublic(),
+                               hasType(cxxRecordDecl(
+                                   isDefinition(),
+                                   unless(has(cxxDestructorDecl(isVirtual()))),
+                                   unless(has(cxxDestructorDecl(
+                                       isProtected(), unless(isVirtual())))))))
+                  .bind("base")))
           .bind("derived"),
       this);
 }
@@ -27,21 +35,12 @@ void ForbidNonVirtualBaseDtorCheck::registerMatchers(MatchFinder *Finder) {
 void ForbidNonVirtualBaseDtorCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Derived = Result.Nodes.getNodeAs<CXXRecordDecl>("derived");
-  const auto *BaseSpecifier =
-      Result.Nodes.getNodeAs<CXXBaseSpecifier>("BaseSpecifier");
-  if (!Derived || !BaseSpecifier)
+  const auto *Base = Result.Nodes.getNodeAs<CXXBaseSpecifier>("base");
+  if (!Derived || !Base)
     return;
-  if (BaseSpecifier->getAccessSpecifier() != AS_public)
-    return;
-  const auto *BaseType = BaseSpecifier->getType()->getAsCXXRecordDecl();
-  if (!BaseType || !BaseType->hasDefinition())
-    return;
-  const auto *Dtor = BaseType->getDestructor();
-  if (Dtor && Dtor->isVirtual())
-    return;
-  if (Dtor && Dtor->getAccess() == AS_protected && !Dtor->isVirtual())
-    return;
-  if (Derived->isEmpty())
+
+  const auto *BaseType = Base->getType()->getAsCXXRecordDecl();
+  if (!BaseType)
     return;
 
   diag(Derived->getLocation(),

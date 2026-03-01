@@ -23,7 +23,7 @@ The following code will trigger a warning:
   };
 
   Base *b = new Derived();
-  delete b;  // leaks Derived::data —> Base::~Base() is called, not ~Derived()
+  delete b;  // leaks Derived::data -> Base::~Base() is called, not ~Derived()
 
 The following patterns are safe and will **not** trigger a warning:
 
@@ -42,7 +42,7 @@ The following patterns are safe and will **not** trigger a warning:
   class Derived2 : public Base2 { int data; };
 
   class Base3 {};
-  class Derived3 : public Base3 {};  // OK
+  class Derived3 : public Base3 {};
 
   class Base4 {};
   class Derived4 : private Base4 { int data; };
