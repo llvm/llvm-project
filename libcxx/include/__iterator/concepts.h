@@ -138,7 +138,9 @@ concept input_or_output_iterator = requires(_Ip __i) {
 
 // [iterator.concept.sentinel]
 template <class _Sp, class _Ip>
-concept sentinel_for = semiregular<_Sp> && input_or_output_iterator<_Ip> && __weakly_equality_comparable_with<_Sp, _Ip>;
+concept sentinel_for =
+    semiregular<_Sp> && !__integer_like<_Sp> && input_or_output_iterator<_Ip> &&
+    __weakly_equality_comparable_with<_Sp, _Ip>;
 
 template <class, class>
 inline constexpr bool disable_sized_sentinel_for = false;
