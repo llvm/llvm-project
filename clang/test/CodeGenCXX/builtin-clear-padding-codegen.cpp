@@ -458,21 +458,20 @@ struct S7 : VirtualBase, NonVirtualBase {
   bool z;
 };
 
-// CHECK-LABEL: define dso_local void @_Z10testVtableP2S7(
+// CHECK-LABEL: define dso_local void @_Z10testVtable2S7(
 // CHECK-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 14
+// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
-// CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // CHECK-NEXT:    ret void
 //
-void testVtable(S7 *s) {
+void testVtable(S7 s) {
   // "vtable ptr" [0-7], "x" [8-11], "y" [12], "z" [13], PAD [14-15]
-  __builtin_clear_padding(s);
+  __builtin_clear_padding(&s);
 }
 
 struct VirtualBase1 {
@@ -501,39 +500,38 @@ struct S8 : VirtualBase1, VirtualBase2, NonVirtualBase1, VirtualBase3 {
   bool z;
 };
 
-// CHECK-LABEL: define dso_local void @_Z23testMultipleBasesVtableP2S8(
+// CHECK-LABEL: define dso_local void @_Z23testMultipleBasesVtable2S8(
 // CHECK-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 12
+// CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 12
+// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 13
 // CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 14
 // CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // CHECK-NEXT:    store i8 0, ptr [[TMP3]], align 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 29
 // CHECK-NEXT:    store i8 0, ptr [[TMP4]], align 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 29
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 30
 // CHECK-NEXT:    store i8 0, ptr [[TMP5]], align 1
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 30
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // CHECK-NEXT:    store i8 0, ptr [[TMP6]], align 1
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 31
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 45
 // CHECK-NEXT:    store i8 0, ptr [[TMP7]], align 1
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 45
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 46
 // CHECK-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 46
+// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[S]], i32 47
 // CHECK-NEXT:    store i8 0, ptr [[TMP9]], align 1
-// CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[TMP0]], i32 47
-// CHECK-NEXT:    store i8 0, ptr [[TMP10]], align 1
 // CHECK-NEXT:    ret void
 //
-void testMultipleBasesVtable(S8 *s) {
+void testMultipleBasesVtable(S8 s) {
   // "vtable ptr" [0-7], "x1" [8-11], PAD "[12-15]",
   // "vtable ptr" [16-23], "x2" [24-27], "y" [28], PAD "[29-31]",
   // "vtable_ptr" [32-39], "x3" [40-43], "z" [44], PAD [45-47]
-  __builtin_clear_padding(s);
+  __builtin_clear_padding(&s);
 }
 
 struct VirtualChain1 {
@@ -562,24 +560,23 @@ struct S9 : NonVirtualBase2, VirtualChain3 {
   bool z;
 };
 
-// CHECK-LABEL: define dso_local void @_Z16testVirtualChainP2S9(
+// CHECK-LABEL: define dso_local void @_Z16testVirtualChain2S9(
 // CHECK-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 22
+// CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 22
+// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 23
 // CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 23
-// CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
 // CHECK-NEXT:    ret void
 //
-void testVirtualChain(S9 *s) {
+void testVirtualChain(S9 s) {
   // This should clear the padding after the bool z.
   // base reordered
   // "vtable ptr" [0-7],  "x1" [8-11], x2 [12-15], x3 [16-19],
   // y [20], z [21], PAD [22-23]
-  __builtin_clear_padding(s);
+  __builtin_clear_padding(&s);
 }
 
 
@@ -600,38 +597,37 @@ struct S10 : D1, D2 {
   bool s;
 };
 
-// CHECK-LABEL: define dso_local void @_Z22testVirtualInheritanceP3S10(
-// CHECK-SAME: ptr noundef [[S:%.*]]) #[[ATTR0]] {
+// CHECK-LABEL: define dso_local void @_Z22testVirtualInheritance3S10(
+// CHECK-SAME: ptr noundef dead_on_return [[S:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[S_ADDR:%.*]] = alloca ptr, align 8
-// CHECK-NEXT:    store ptr [[S]], ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S_ADDR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 13
+// CHECK-NEXT:    [[S_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[S]], ptr [[S_INDIRECT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 13
+// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 14
 // CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 14
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[S]], i32 15
 // CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
-// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 15
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[S]], i32 30
 // CHECK-NEXT:    store i8 0, ptr [[TMP3]], align 1
-// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[TMP0]], i32 30
+// CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[S]], i32 31
 // CHECK-NEXT:    store i8 0, ptr [[TMP4]], align 1
-// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[TMP0]], i32 31
+// CHECK-NEXT:    [[TMP5:%.*]] = getelementptr i8, ptr [[S]], i32 36
 // CHECK-NEXT:    store i8 0, ptr [[TMP5]], align 1
-// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP0]], i32 36
+// CHECK-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[S]], i32 37
 // CHECK-NEXT:    store i8 0, ptr [[TMP6]], align 1
-// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[TMP0]], i32 37
+// CHECK-NEXT:    [[TMP7:%.*]] = getelementptr i8, ptr [[S]], i32 38
 // CHECK-NEXT:    store i8 0, ptr [[TMP7]], align 1
-// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[TMP0]], i32 38
+// CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[S]], i32 39
 // CHECK-NEXT:    store i8 0, ptr [[TMP8]], align 1
-// CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP0]], i32 39
-// CHECK-NEXT:    store i8 0, ptr [[TMP9]], align 1
 // CHECK-NEXT:    ret void
 //
-void testVirtualInheritance(S10 *s) {
+void testVirtualInheritance(S10 s) {
   // note derived member placed before the virtual base
   // "vtable ptr" [0-7],  "d1" [8-11], "b1" [12], PAD [13-15],
   // "vtable ptr" [16-23],  "d2" [24-27], "b2" [28], s [29],  PAD [30-31],
   // "x" [32-35], PAD [36-39]
-  __builtin_clear_padding(s);
+  __builtin_clear_padding(&s);
 }
 
 struct S11 {
@@ -715,7 +711,7 @@ void testArrayLongDouble(long double (&arr)[2]) {
 // CHECK-LABEL: define dso_local void @_Z17testArrayOfStructv(
 // CHECK-SAME: ) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
-// CHECK-NEXT:    [[S:%.*]] = alloca [2 x %struct.S.0], align 16
+// CHECK-NEXT:    [[S:%.*]] = alloca [2 x [[STRUCT_S_0:%.*]]], align 16
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[S]], i32 5
 // CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[S]], i32 6
@@ -785,4 +781,73 @@ struct ArrOfStructsWithPadding {
 //
 void testArrOfStructsWithPadding(ArrOfStructsWithPadding *arr) {
   __builtin_clear_padding(arr);
+}
+
+template <class T>
+struct S12 {
+  T t;
+  char c;
+};
+
+// CHECK-LABEL: define dso_local void @_Z18testTemplateStructP3S12IiE(
+// CHECK-SAME: ptr noundef [[S12:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[S12_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[S12]], ptr [[S12_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S12_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// CHECK-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// CHECK-NEXT:    ret void
+//
+void testTemplateStruct(S12<int>* s12) {
+  __builtin_clear_padding(s12);
+}
+
+// CHECK-LABEL: define dso_local void @_Z10testAtomicPU7_Atomic3S12IiE(
+// CHECK-SAME: ptr noundef [[AS12:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[AS12_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[AS12]], ptr [[AS12_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[AS12_ADDR]], align 8
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[TMP0]], i32 5
+// CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[TMP0]], i32 6
+// CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP0]], i32 7
+// CHECK-NEXT:    store i8 0, ptr [[TMP3]], align 1
+// CHECK-NEXT:    ret void
+//
+void testAtomic(_Atomic(S12<int>)* as12) {
+  __builtin_clear_padding(as12);
+}
+
+
+struct NonTriviallyCopyable {
+  int i;
+  char c;
+
+  NonTriviallyCopyable(){}
+  NonTriviallyCopyable(const NonTriviallyCopyable&) {}
+  ~NonTriviallyCopyable() {}
+};
+
+// CHECK-LABEL: define dso_local void @_Z24testNonTriviallyCopyable20NonTriviallyCopyable(
+// CHECK-SAME: ptr noundef [[NTC:%.*]]) #[[ATTR0]] {
+// CHECK-NEXT:  [[ENTRY:.*:]]
+// CHECK-NEXT:    [[NTC_INDIRECT_ADDR:%.*]] = alloca ptr, align 8
+// CHECK-NEXT:    store ptr [[NTC]], ptr [[NTC_INDIRECT_ADDR]], align 8
+// CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[NTC]], i32 5
+// CHECK-NEXT:    store i8 0, ptr [[TMP0]], align 1
+// CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NTC]], i32 6
+// CHECK-NEXT:    store i8 0, ptr [[TMP1]], align 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NTC]], i32 7
+// CHECK-NEXT:    store i8 0, ptr [[TMP2]], align 1
+// CHECK-NEXT:    ret void
+//
+void testNonTriviallyCopyable(NonTriviallyCopyable ntc) {
+  __builtin_clear_padding(&ntc);
 }
