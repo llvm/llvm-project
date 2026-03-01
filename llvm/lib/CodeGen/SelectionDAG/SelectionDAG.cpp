@@ -4702,22 +4702,21 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     // If x != 0:
     //    x & -x -> non-zero pow2
     // so if we find the pattern return whether we know `x` is non-zero.
-    // TODO OrZero handling
     SDValue X;
     if (sd_match(Val, m_And(m_Value(X), m_Neg(m_Deferred(X)))))
-      return isKnownNeverZero(X, Depth);
+      return OrZero || isKnownNeverZero(X, DemandedElts, Depth);
     break;
   }
 
   case ISD::SHL: {
     // A left-shift of a constant one will have exactly one bit set because
     // shifting the bit off the end is undefined.
-    auto *C = isConstOrConstSplat(Val.getOperand(0));
+    auto *C = isConstOrConstSplat(Val.getOperand(0), DemandedElts);
     if (C && C->getAPIntValue() == 1)
       return true;
-    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
-                                  Depth + 1) &&
-           isKnownNeverZero(Val, Depth);
+    return (OrZero || isKnownNeverZero(Val, DemandedElts, Depth)) &&
+           isKnownToBeAPowerOfTwo(Val.getOperand(0), DemandedElts, OrZero,
+                                  Depth + 1);
   }
 
   case ISD::SRL: {
@@ -4757,11 +4756,9 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
                                   Depth + 1);
 
   case ISD::VSCALE:
-    // vscale(power-of-two) is a power-of-two for some targets
-    if (getTargetLoweringInfo().isVScaleKnownToBeAPowerOfTwo() &&
-        isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false, Depth + 1))
-      return true;
-    break;
+    // vscale(power-of-two) is a power-of-two
+    return isKnownToBeAPowerOfTwo(Val.getOperand(0), /*OrZero=*/false,
+                                  Depth + 1);
   }
 
   // More could be done here, though the above checks are enough
@@ -6200,6 +6197,28 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
       if (IsNeverZero(C))
         return true;
     break;
+
+  case ISD::EXTRACT_VECTOR_ELT: {
+    SDValue InVec = Op.getOperand(0);
+    SDValue EltNo = Op.getOperand(1);
+    EVT VecVT = InVec.getValueType();
+
+    // Skip scalable vectors or implicit extensions.
+    if (VecVT.isScalableVector() ||
+        OpVT.getScalarSizeInBits() != VecVT.getScalarSizeInBits())
+      break;
+
+    // If we know the element index, just demand that vector element, else for
+    // an unknown element index, ignore DemandedElts and demand them all.
+    const unsigned NumSrcElts = VecVT.getVectorNumElements();
+    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
+    auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
+    if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
+      DemandedSrcElts =
+          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
+
+    return isKnownNeverZero(InVec, DemandedSrcElts, Depth + 1);
+  }
 
   case ISD::OR:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
@@ -9388,6 +9407,22 @@ std::pair<SDValue, SDValue> SelectionDAG::getStrstr(SDValue Chain,
   TargetLowering::ArgListTy Args = {{S1, PT}, {S2, PT}};
   return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
                                      RTLIB::STRSTR, this, TLI);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::getMemccpy(SDValue Chain,
+                                                     const SDLoc &dl,
+                                                     SDValue Dst, SDValue Src,
+                                                     SDValue C, SDValue Size,
+                                                     const CallInst *CI) {
+  PointerType *PT = PointerType::getUnqual(*getContext());
+
+  TargetLowering::ArgListTy Args = {
+      {Dst, PT},
+      {Src, PT},
+      {C, Type::getInt32Ty(*getContext())},
+      {Size, getDataLayout().getIntPtrType(*getContext())}};
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::MEMCCPY, this, TLI);
 }
 
 std::pair<SDValue, SDValue>
