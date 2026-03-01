@@ -2647,7 +2647,7 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
 namespace {
 
 // PaddingClearer is a utility class that clears padding bits in a
-// c++ type. It traverses the type recursively, collecting occupied
+// c/c++ type. It traverses the type recursively, collecting occupied
 // bit intervals, and then compute the padding intervals.
 // In the end, it clears the padding bits by writing zeros
 // to the padding intervals bytes-by-bytes. If a byte only contains
@@ -2659,12 +2659,12 @@ struct PaddingClearer {
 
   void run(Value *Ptr, QualType Ty) {
     OccuppiedIntervals.clear();
-    Queue.clear();
+    Stack.clear();
 
-    Queue.push_back(Data{0, Ty, true});
-    while (!Queue.empty()) {
-      auto Current = Queue.back();
-      Queue.pop_back();
+    Stack.push_back(Data{0, Ty, true});
+    while (!Stack.empty()) {
+      auto Current = Stack.back();
+      Stack.pop_back();
       Visit(Current);
     }
 
@@ -2689,7 +2689,7 @@ private:
     bool VisitVirtualBase;
   };
 
-  void Visit(Data const &D) {
+  void Visit(const Data &D) {
     if (auto *AT = dyn_cast<ConstantArrayType>(D.Ty)) {
       VisitArray(AT, D.StartBitOffset);
       return;
@@ -2703,7 +2703,7 @@ private:
     if (D.Ty->isAtomicType()) {
       auto Unwrapped = D;
       Unwrapped.Ty = D.Ty.getAtomicUnqualifiedType();
-      Queue.push_back(Unwrapped);
+      Stack.push_back(Unwrapped);
       return;
     }
 
@@ -2730,7 +2730,7 @@ private:
       auto ElementAlign = CGF.getContext().getTypeAlignInChars(ElementQualType);
       auto Offset = ElementSize.alignTo(ElementAlign);
 
-      Queue.push_back(
+      Stack.push_back(
           Data{StartBitOffset + ArrIndex * Offset.getQuantity() * CharWidth,
                ElementQualType, /*VisitVirtualBase*/ true});
     }
@@ -2755,7 +2755,7 @@ private:
       auto BaseOffset =
           std::invoke(GetOffset, ASTLayout, BaseRecord).getQuantity();
 
-      Queue.push_back(Data{StartBitOffset + BaseOffset * CharWidth,
+      Stack.push_back(Data{StartBitOffset + BaseOffset * CharWidth,
                            Base.getType(), /*VisitVirtualBase*/ false});
     };
 
@@ -2778,7 +2778,7 @@ private:
             StartBitOffset + FieldOffset,
             StartBitOffset + FieldOffset + Field->getBitWidthValue()});
       } else {
-        Queue.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
+        Stack.push_back(Data{StartBitOffset + FieldOffset, Field->getType(),
                              /*VisitVirtualBase*/ true});
       }
     }
@@ -2790,9 +2790,9 @@ private:
     auto ElementAlign = CGF.getContext().getTypeAlignInChars(ElementQualType);
     auto ImgOffset = ElementSize.alignTo(ElementAlign);
 
-    Queue.push_back(
+    Stack.push_back(
         Data{StartBitOffset, ElementQualType, /*VisitVirtualBase*/ true});
-    Queue.push_back(Data{StartBitOffset + ImgOffset.getQuantity() * CharWidth,
+    Stack.push_back(Data{StartBitOffset + ImgOffset.getQuantity() * CharWidth,
                          ElementQualType, /*VisitVirtualBase*/ true});
   }
 
@@ -2803,7 +2803,7 @@ private:
                        std::tie(rhs.First, rhs.Last);
               });
 
-    std::vector<BitInterval> Merged;
+    llvm::SmallVector<BitInterval> Merged;
     Merged.reserve(OccuppiedIntervals.size());
 
     for (const BitInterval &NextInterval : OccuppiedIntervals) {
@@ -2823,8 +2823,8 @@ private:
     OccuppiedIntervals = Merged;
   }
 
-  std::vector<BitInterval> GetPaddingIntervals(uint64_t SizeInBits) const {
-    std::vector<BitInterval> Results;
+  llvm::SmallVector<BitInterval> GetPaddingIntervals(uint64_t SizeInBits) const {
+    llvm::SmallVector<BitInterval> Results;
     if (OccuppiedIntervals.size() == 1 &&
         OccuppiedIntervals.front().First == 0 &&
         OccuppiedIntervals.end()->Last == SizeInBits) {
@@ -2863,8 +2863,10 @@ private:
       auto *Value = CGF.Builder.CreateLoad(ElementAddr);
 
       // Create mask to clear bits within the byte
-      uint8_t mask = ((1 << EndBit) - 1) & ~((1 << StartBit) - 1);
-      auto *MaskValue = ConstantInt::get(CGF.Int8Ty, mask);
+      // We want to clear bits from StartBit to EndBit-1
+      uint8_t bitsToClear = ((1 << EndBit) - 1) & ~((1 << StartBit) - 1);
+      uint8_t bitsToKeep = ~bitsToClear;
+      auto *MaskValue = ConstantInt::get(CGF.Int8Ty, bitsToKeep);
       auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
 
       CGF.Builder.CreateStore(NewValue, ElementAddr);
@@ -2877,8 +2879,9 @@ private:
 
         auto *Value = CGF.Builder.CreateLoad(ElementAddr);
 
-        uint8_t startMask = ((1 << (CharWidth - StartBit)) - 1) << StartBit;
-        auto *MaskValue = ConstantInt::get(CGF.Int8Ty, ~startMask);
+        uint8_t bitsToClear = ((1 << (CharWidth - StartBit)) - 1) << StartBit;
+        uint8_t bitsToKeep = ~bitsToClear;
+        auto *MaskValue = ConstantInt::get(CGF.Int8Ty, bitsToKeep);
         auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
 
         CGF.Builder.CreateStore(NewValue, ElementAddr);
@@ -2902,8 +2905,9 @@ private:
 
         auto *Value = CGF.Builder.CreateLoad(ElementAddr);
 
-        uint8_t endMask = (1 << EndBit) - 1;
-        auto *MaskValue = ConstantInt::get(CGF.Int8Ty, endMask);
+        uint8_t bitsToClear = (1 << EndBit) - 1;
+        uint8_t bitsToKeep = ~bitsToClear;
+        auto *MaskValue = ConstantInt::get(CGF.Int8Ty, bitsToKeep);
         auto *NewValue = CGF.Builder.CreateAnd(Value, MaskValue);
 
         CGF.Builder.CreateStore(NewValue, ElementAddr);
@@ -2913,8 +2917,8 @@ private:
 
   CodeGenFunction &CGF;
   const uint64_t CharWidth;
-  std::deque<Data> Queue;
-  std::vector<BitInterval> OccuppiedIntervals;
+  llvm::SmallVector<Data> Stack;
+  llvm::SmallVector<BitInterval> OccuppiedIntervals;
 };
 
 } // namespace

@@ -1000,7 +1000,7 @@ def IsWithinLifetime : LangBuiltin<"CXX_LANG"> {
   let Prototype = "bool(void*)";
 }
 
-def ClearPadding : LangBuiltin<"CXX_LANG"> {
+def ClearPadding : Builtin {
   let Spellings = ["__builtin_clear_padding"];
   let Attributes = [NoThrow, CustomTypeChecking];
   let Prototype = "void(void*)";

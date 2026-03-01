@@ -454,21 +454,27 @@ void structTests() {
     memset(buff1, 0, sizeof(S));
     memset(buff2, 42, sizeof(S));
 
-    S* s1 = new (&buff1) S;
-    S* s2 = new (&buff2) S;
+    S* s1_data = new (&buff1) S;
+    S* s2_data = new (&buff2) S;
 
-    s1->x = 0xFFFFFFFF;
-    s2->x = 0xFFFFFFFF;
-    s1->y = 'a';
-    s2->y = 'a';
-    s1->z = true;
-    s2->z = true;
-    __builtin_clear_padding(s2);
-    assert(s2->x == 0xFFFFFFFF);
-    assert(s2->y == 'a');
-    assert(s2->z == true);
-    assert(s2->call() == 5);
-    assert(memcmp(s1, s2, sizeof(S)) == 0);
+    S s1;
+    S s2;
+
+    std::memcpy(&s1, s1_data, sizeof(S));
+    std::memcpy(&s2, s2_data, sizeof(S));
+
+    s1.x = 0xFFFFFFFF;
+    s2.x = 0xFFFFFFFF;
+    s1.y = 'a';
+    s2.y = 'a';
+    s1.z = true;
+    s2.z = true;
+    __builtin_clear_padding(&s2);
+    assert(s2.x == 0xFFFFFFFF);
+    assert(s2.y == 'a');
+    assert(s2.z == true);
+    assert(s2.call() == 5);
+    assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
   // multiple bases with vtable
@@ -505,27 +511,33 @@ void structTests() {
     memset(buff1, 0, sizeof(S));
     memset(buff2, 42, sizeof(S));
 
-    S* s1 = new (&buff1) S;
-    S* s2 = new (&buff2) S;
+    S* s1_data = new (&buff1) S;
+    S* s2_data = new (&buff2) S;
 
-    s1->x1 = 0xFFFFFFFF;
-    s2->x1 = 0xFFFFFFFF;
-    s1->x2 = 0xFAFAFAFA;
-    s2->x2 = 0xFAFAFAFA;
-    s1->x3 = 0xAAAAAAAA;
-    s2->x3 = 0xAAAAAAAA;
-    s1->y  = 'a';
-    s2->y  = 'a';
-    s1->z  = true;
-    s2->z  = true;
-    __builtin_clear_padding(s2);
-    assert(s2->x1 == 0xFFFFFFFF);
-    assert(s2->x2 == 0xFAFAFAFA);
-    assert(s2->x3 == 0xAAAAAAAA);
-    assert(s2->y == 'a');
-    assert(s2->z == true);
-    assert(s2->call1() == 5);
-    assert(memcmp(s1, s2, sizeof(S)) == 0);
+    S s1;
+    S s2;
+
+    std::memcpy(&s1, s1_data, sizeof(S));
+    std::memcpy(&s2, s2_data, sizeof(S));
+
+    s1.x1 = 0xFFFFFFFF;
+    s2.x1 = 0xFFFFFFFF;
+    s1.x2 = 0xFAFAFAFA;
+    s2.x2 = 0xFAFAFAFA;
+    s1.x3 = 0xAAAAAAAA;
+    s2.x3 = 0xAAAAAAAA;
+    s1.y  = 'a';
+    s2.y  = 'a';
+    s1.z  = true;
+    s2.z  = true;
+    __builtin_clear_padding(&s2);
+    assert(s2.x1 == 0xFFFFFFFF);
+    assert(s2.x2 == 0xFAFAFAFA);
+    assert(s2.x3 == 0xAAAAAAAA);
+    assert(s2.y == 'a');
+    assert(s2.z == true);
+    assert(s2.call1() == 5);
+    assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
   // chain of bases with virtual functions
@@ -561,21 +573,27 @@ void structTests() {
     char buff2[sizeof(S)];
     memset(buff1, 0, sizeof(S));
     memset(buff2, 42, sizeof(S));
-    S* s1 = new (&buff1) S;
-    S* s2 = new (&buff2) S;
+    S* s1_data = new (&buff1) S;
+    S* s2_data = new (&buff2) S;
 
-    s1->x1 = 0xFFFFFFFF;
-    s2->x1 = 0xFFFFFFFF;
-    s1->x2 = 0xFAFAFAFA;
-    s2->x2 = 0xFAFAFAFA;
-    s1->x3 = 0xAAAAAAAA;
-    s2->x3 = 0xAAAAAAAA;
-    s1->y  = 'a';
-    s2->y  = 'a';
-    s1->z  = true;
-    s2->z  = true;
-    __builtin_clear_padding(s2);
-    assert(memcmp(s1, s2, sizeof(S)) == 0);
+    S s1;
+    S s2;
+
+    std::memcpy(&s1, s1_data, sizeof(S));
+    std::memcpy(&s2, s2_data, sizeof(S));
+
+    s1.x1 = 0xFFFFFFFF;
+    s2.x1 = 0xFFFFFFFF;
+    s1.x2 = 0xFAFAFAFA;
+    s2.x2 = 0xFAFAFAFA;
+    s1.x3 = 0xAAAAAAAA;
+    s2.x3 = 0xAAAAAAAA;
+    s1.y  = 'a';
+    s2.y  = 'a';
+    s1.z  = true;
+    s2.z  = true;
+    __builtin_clear_padding(&s2);
+    assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
   // virtual inheritance
@@ -600,23 +618,29 @@ void structTests() {
     char buff2[sizeof(S)];
     memset(buff1, 0, sizeof(S));
     memset(buff2, 42, sizeof(S));
-    S* s1 = new (&buff1) S;
-    S* s2 = new (&buff2) S;
+    S* s1_data = new (&buff1) S;
+    S* s2_data = new (&buff2) S;
 
-    s1->x  = 0xFFFFFFFF;
-    s2->x  = 0xFFFFFFFF;
-    s1->d1 = 0xFAFAFAFA;
-    s2->d1 = 0xFAFAFAFA;
-    s1->d2 = 0xAAAAAAAA;
-    s2->d2 = 0xAAAAAAAA;
-    s1->b1 = true;
-    s2->b1 = true;
-    s1->b2 = true;
-    s2->b2 = true;
-    s1->s  = true;
-    s2->s  = true;
-    __builtin_clear_padding(s2);
-    assert(memcmp(s1, s2, sizeof(S)) == 0);
+    S s1;
+    S s2;
+
+    std::memcpy(&s1, s1_data, sizeof(S));
+    std::memcpy(&s2, s2_data, sizeof(S));
+
+    s1.x  = 0xFFFFFFFF;
+    s2.x  = 0xFFFFFFFF;
+    s1.d1 = 0xFAFAFAFA;
+    s2.d1 = 0xFAFAFAFA;
+    s1.d2 = 0xAAAAAAAA;
+    s2.d2 = 0xAAAAAAAA;
+    s1.b1 = true;
+    s2.b1 = true;
+    s1.b2 = true;
+    s2.b2 = true;
+    s1.s  = true;
+    s2.s  = true;
+    __builtin_clear_padding(&s2);
+    assert(memcmp(&s1, &s2, sizeof(S)) == 0);
   }
 
   // bit fields
