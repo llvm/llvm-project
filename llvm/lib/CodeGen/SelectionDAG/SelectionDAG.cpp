@@ -4683,7 +4683,8 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
   };
 
   // Is the constant a known power of 2 or zero?
-  if (ISD::matchUnaryPredicate(Val, DemandedElts, IsPowerOfTwoOrZero))
+  if (ISD::matchUnaryPredicate(Val, DemandedElts, IsPowerOfTwoOrZero,
+                               /*AllowUndefs=*/false, /*AllowTruncation=*/true))
     return true;
 
   switch (Val.getOpcode()) {
@@ -6168,7 +6169,8 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, const APInt &DemandedElts,
     return !V.isZero();
   };
 
-  if (ISD::matchUnaryPredicate(Op, DemandedElts, IsNeverZero))
+  if (ISD::matchUnaryPredicate(Op, DemandedElts, IsNeverZero,
+                               /*AllowUndefs=*/false, /*AllowTruncation=*/true))
     return true;
 
   // TODO: Recognize more cases here. Most of the cases are also incomplete to
