@@ -527,6 +527,13 @@ MlirPatternRewriter mlirConversionPatternRewriterAsPatternRewriter(
   return wrap(static_cast<mlir::PatternRewriter *>(unwrap(rewriter)));
 }
 
+MlirLogicalResult mlirConversionPatternRewriterConvertRegionTypes(
+    MlirConversionPatternRewriter rewriter, MlirRegion region,
+    MlirTypeConverter typeConverter) {
+  return wrap(unwrap(rewriter)->convertRegionTypes(unwrap(region),
+                                                   *unwrap(typeConverter)));
+}
+
 //===----------------------------------------------------------------------===//
 /// ConversionTarget API
 //===----------------------------------------------------------------------===//
