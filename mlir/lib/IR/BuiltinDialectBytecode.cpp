@@ -148,9 +148,9 @@ static void writeFileLineColRangeLocs(DialectBytecodeWriter &writer,
   writer.writeVarInt(range.getEndColumn());
 }
 
-static LogicalResult
-readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
-                             SmallVectorImpl<char> &rawData) {
+static LogicalResult readDenseElementsAttr(DialectBytecodeReader &reader,
+                                           ShapedType type,
+                                           SmallVectorImpl<char> &rawData) {
   ArrayRef<char> blob;
   if (failed(reader.readBlob(blob)))
     return failure();
@@ -180,8 +180,8 @@ readDenseIntOrFPElementsAttr(DialectBytecodeReader &reader, ShapedType type,
   return success();
 }
 
-static void writeDenseIntOrFPElementsAttr(DialectBytecodeWriter &writer,
-                                          DenseIntOrFPElementsAttr attr) {
+static void writeDenseElementsAttr(DialectBytecodeWriter &writer,
+                                   DenseElementsAttr attr) {
   // Check to see if this is an i1 dense attribute.
   if (attr.getElementType().isInteger(1)) {
     // Pack the data.
