@@ -2,6 +2,7 @@
 # RUN: llvm-mca -mtriple=thumbv7 --mcpu=cortex-m33 -instruction-tables -o - %s | FileCheck %s
 
 sub sp, #4
+add r2, sp, #4
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -13,14 +14,16 @@ sub sp, #4
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                        sub	sp, #4
+# CHECK-NEXT:  1      1     1.00                        add	r2, sp, #4
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - M4Unit
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]
-# CHECK-NEXT: 1.00
+# CHECK-NEXT: 2.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    Instructions:
 # CHECK-NEXT: 1.00   sub	sp, #4
+# CHECK-NEXT: 1.00   add	r2, sp, #4
