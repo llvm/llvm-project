@@ -4,38 +4,24 @@
 define i128 @div_by_7(i128 %x) {
 ; CHECK-LABEL: div_by_7:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shldq $4, %rdi, %rax
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    shrq $30, %rcx
-; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    andl $1073741823, %edx # imm = 0x3FFFFFFF
-; CHECK-NEXT:    movl %edi, %r8d
-; CHECK-NEXT:    andl $1073741823, %r8d # imm = 0x3FFFFFFF
-; CHECK-NEXT:    cmpl %r8d, %edx
-; CHECK-NEXT:    movl %ecx, %r8d
-; CHECK-NEXT:    adcl %eax, %r8d
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    andl $1073741823, %ecx # imm = 0x3FFFFFFF
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shrq $26, %rax
-; CHECK-NEXT:    cmpl %edx, %ecx
-; CHECK-NEXT:    movl %r8d, %edx
-; CHECK-NEXT:    adcl %eax, %edx
-; CHECK-NEXT:    movl %r8d, %r9d
-; CHECK-NEXT:    andl $1073741823, %r9d # imm = 0x3FFFFFFF
-; CHECK-NEXT:    addl %eax, %r8d
-; CHECK-NEXT:    andl $1073741823, %r8d # imm = 0x3FFFFFFF
+; CHECK-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    andq %rax, %rdx
+; CHECK-NEXT:    movq %rsi, %r8
+; CHECK-NEXT:    shldq $1, %rdi, %r8
+; CHECK-NEXT:    addq %rdi, %r8
+; CHECK-NEXT:    movq %r8, %r9
+; CHECK-NEXT:    andq %rax, %r9
 ; CHECK-NEXT:    movq %rsi, %rcx
-; CHECK-NEXT:    shrq $56, %rcx
-; CHECK-NEXT:    cmpl %r9d, %r8d
-; CHECK-NEXT:    adcl %edx, %ecx
-; CHECK-NEXT:    andl $1073741823, %ecx # imm = 0x3FFFFFFF
-; CHECK-NEXT:    movabsq $2635249153387078803, %rdx # imm = 0x2492492492492493
+; CHECK-NEXT:    shrq $62, %rcx
+; CHECK-NEXT:    cmpq %rdx, %r9
+; CHECK-NEXT:    adcq %r8, %rcx
+; CHECK-NEXT:    andq %rax, %rcx
+; CHECK-NEXT:    movabsq $5270498306774157605, %rdx # imm = 0x4924924924924925
 ; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    mulq %rdx
-; CHECK-NEXT:    leal (,%rdx,8), %eax
+; CHECK-NEXT:    shrq %rdx
+; CHECK-NEXT:    leaq (,%rdx,8), %rax
 ; CHECK-NEXT:    subq %rax, %rdx
 ; CHECK-NEXT:    addq %rcx, %rdx
 ; CHECK-NEXT:    subq %rdx, %rdi
@@ -57,34 +43,19 @@ entry:
 define i128 @div_by_9(i128 %x) {
 ; CHECK-LABEL: div_by_9:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shldq $4, %rdi, %rax
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    shrq $30, %rcx
-; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    andl $1073741823, %edx # imm = 0x3FFFFFFF
-; CHECK-NEXT:    movl %edi, %r8d
-; CHECK-NEXT:    andl $1073741823, %r8d # imm = 0x3FFFFFFF
-; CHECK-NEXT:    cmpl %r8d, %edx
-; CHECK-NEXT:    movl %ecx, %r8d
-; CHECK-NEXT:    adcl %eax, %r8d
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    andl $1073741823, %ecx # imm = 0x3FFFFFFF
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shrq $26, %rax
-; CHECK-NEXT:    cmpl %edx, %ecx
-; CHECK-NEXT:    movl %r8d, %edx
-; CHECK-NEXT:    adcl %eax, %edx
-; CHECK-NEXT:    movl %r8d, %r9d
-; CHECK-NEXT:    andl $1073741823, %r9d # imm = 0x3FFFFFFF
-; CHECK-NEXT:    addl %eax, %r8d
-; CHECK-NEXT:    andl $1073741823, %r8d # imm = 0x3FFFFFFF
+; CHECK-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    andq %rax, %rdx
+; CHECK-NEXT:    movq %rsi, %r8
+; CHECK-NEXT:    shldq $4, %rdi, %r8
+; CHECK-NEXT:    addq %rdi, %r8
+; CHECK-NEXT:    movq %r8, %r9
+; CHECK-NEXT:    andq %rax, %r9
 ; CHECK-NEXT:    movq %rsi, %rcx
 ; CHECK-NEXT:    shrq $56, %rcx
-; CHECK-NEXT:    cmpl %r9d, %r8d
-; CHECK-NEXT:    adcl %edx, %ecx
-; CHECK-NEXT:    andl $1073741823, %ecx # imm = 0x3FFFFFFF
+; CHECK-NEXT:    cmpq %rdx, %r9
+; CHECK-NEXT:    adcq %r8, %rcx
+; CHECK-NEXT:    andq %rax, %rcx
 ; CHECK-NEXT:    movabsq $2049638230412172402, %rdx # imm = 0x1C71C71C71C71C72
 ; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    mulq %rdx
@@ -109,52 +80,19 @@ entry:
 define i128 @div_by_25(i128 %x) {
 ; CHECK-LABEL: div_by_25:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shldq $24, %rdi, %rax
-; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    shrq $20, %rcx
-; CHECK-NEXT:    addl %edi, %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    andl $1048575, %edx # imm = 0xFFFFF
-; CHECK-NEXT:    movl %edi, %r8d
-; CHECK-NEXT:    andl $1048575, %r8d # imm = 0xFFFFF
-; CHECK-NEXT:    cmpl %r8d, %edx
-; CHECK-NEXT:    movl %ecx, %r8d
-; CHECK-NEXT:    adcl %eax, %r8d
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    andl $1048575, %ecx # imm = 0xFFFFF
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shldq $4, %rdi, %rax
-; CHECK-NEXT:    cmpl %edx, %ecx
-; CHECK-NEXT:    movl %r8d, %ecx
-; CHECK-NEXT:    adcl %eax, %ecx
-; CHECK-NEXT:    movl %r8d, %edx
-; CHECK-NEXT:    andl $1048575, %edx # imm = 0xFFFFF
-; CHECK-NEXT:    addl %eax, %r8d
-; CHECK-NEXT:    andl $1048575, %r8d # imm = 0xFFFFF
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shrq $16, %rax
-; CHECK-NEXT:    cmpl %edx, %r8d
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    adcl %eax, %edx
-; CHECK-NEXT:    movl %ecx, %r8d
-; CHECK-NEXT:    andl $1048575, %r8d # imm = 0xFFFFF
-; CHECK-NEXT:    addl %eax, %ecx
-; CHECK-NEXT:    andl $1048575, %ecx # imm = 0xFFFFF
-; CHECK-NEXT:    movq %rsi, %rax
-; CHECK-NEXT:    shrq $36, %rax
-; CHECK-NEXT:    cmpl %r8d, %ecx
-; CHECK-NEXT:    movl %edx, %r8d
-; CHECK-NEXT:    adcl %eax, %r8d
-; CHECK-NEXT:    movl %edx, %r9d
-; CHECK-NEXT:    andl $1048575, %r9d # imm = 0xFFFFF
-; CHECK-NEXT:    addl %eax, %edx
-; CHECK-NEXT:    andl $1048575, %edx # imm = 0xFFFFF
+; CHECK-NEXT:    movabsq $1152921504606846975, %rax # imm = 0xFFFFFFFFFFFFFFF
+; CHECK-NEXT:    movq %rdi, %rdx
+; CHECK-NEXT:    andq %rax, %rdx
+; CHECK-NEXT:    movq %rsi, %r8
+; CHECK-NEXT:    shldq $4, %rdi, %r8
+; CHECK-NEXT:    addq %rdi, %r8
+; CHECK-NEXT:    movq %r8, %r9
+; CHECK-NEXT:    andq %rax, %r9
 ; CHECK-NEXT:    movq %rsi, %rcx
 ; CHECK-NEXT:    shrq $56, %rcx
-; CHECK-NEXT:    cmpl %r9d, %edx
-; CHECK-NEXT:    adcl %r8d, %ecx
-; CHECK-NEXT:    andl $1048575, %ecx # imm = 0xFFFFF
+; CHECK-NEXT:    cmpq %rdx, %r9
+; CHECK-NEXT:    adcq %r8, %rcx
+; CHECK-NEXT:    andq %rax, %rcx
 ; CHECK-NEXT:    movabsq $737869762948382065, %rdx # imm = 0xA3D70A3D70A3D71
 ; CHECK-NEXT:    movq %rcx, %rax
 ; CHECK-NEXT:    mulq %rdx
