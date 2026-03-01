@@ -32,8 +32,7 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atanbf16(neg_zero));
     EXPECT_MATH_ERRNO(0);
 
-    bfloat16 VALUES[] = {inf, neg_inf, bfloat16(1.0f),
-                                   bfloat16(-1.0)};
+    bfloat16 VALUES[] = {inf, neg_inf, bfloat16(1.0f), bfloat16(-1.0)};
     for (size_t i = 0; i < 4; ++i) {
       bfloat16 x = VALUES[i];
 
