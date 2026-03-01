@@ -200,6 +200,14 @@ set(MLIR_PYTHON_PACKAGE_PREFIX "mlir"
   embedded in a relocatable way).")
 set(MLIR_ENABLE_BINDINGS_PYTHON 0 CACHE BOOL
        "Enables building of Python bindings.")
+set(MLIR_ENABLE_PYTHON_STABLE_ABI 0 CACHE BOOL
+       "Build Python bindings against the stable ABI (abi3, PEP 384) for \
+       cross-version compatibility. Requires Python 3.12+.")
+if(MLIR_ENABLE_PYTHON_STABLE_ABI AND CMAKE_VERSION VERSION_LESS "3.26.0")
+  message(FATAL_ERROR
+    "MLIR_ENABLE_PYTHON_STABLE_ABI requires CMake >= 3.26 "
+    "(Python::SABIModule not available in ${CMAKE_VERSION}).")
+endif()
 set(MLIR_BINDINGS_PYTHON_INSTALL_PREFIX "python_packages/mlir_core/mlir" CACHE STRING
        "Prefix under install directory to place python bindings")
 set(MLIR_DETECT_PYTHON_ENV_PRIME_SEARCH 1 CACHE BOOL

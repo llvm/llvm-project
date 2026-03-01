@@ -20,11 +20,6 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
-#include "mlir/CAPI/Support.h"
-
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Regex.h"
 
 namespace mlir {
 namespace python {
@@ -127,7 +122,7 @@ public:
   /// name. Note that this may trigger a load of the dialect, which can
   /// arbitrarily re-enter.
   std::optional<nanobind::object>
-  lookupOpAdaptorClass(llvm::StringRef operationName);
+  lookupOpAdaptorClass(std::string_view operationName);
 
   class MLIR_PYTHON_API_EXPORTED TracebackLoc {
   public:
