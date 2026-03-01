@@ -1535,11 +1535,12 @@ ExpectedType ASTNodeImporter::VisitDependentSizedExtVectorType(
   Error Err = Error::success();
   QualType ToElementType = importChecked(Err, T->getElementType());
   Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
+  Expr *ToScalableExpr = importChecked(Err, T->getScalableExpr());
   SourceLocation ToAttrLoc = importChecked(Err, T->getAttributeLoc());
   if (Err)
     return std::move(Err);
   return Importer.getToContext().getDependentSizedExtVectorType(
-      ToElementType, ToSizeExpr, ToAttrLoc);
+      ToElementType, ToSizeExpr, ToScalableExpr, ToAttrLoc);
 }
 
 ExpectedType ASTNodeImporter::VisitVectorType(const VectorType *T) {

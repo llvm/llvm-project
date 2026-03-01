@@ -15160,7 +15160,7 @@ public:
   /// Build an ext-vector type.
   ///
   /// Run the required checks for the extended vector type.
-  QualType BuildExtVectorType(QualType T, Expr *ArraySize,
+  QualType BuildExtVectorType(QualType T, Expr *ArraySize, Expr *Scalable,
                               SourceLocation AttrLoc);
   QualType BuildMatrixType(QualType T, Expr *NumRows, Expr *NumColumns,
                            SourceLocation AttrLoc);

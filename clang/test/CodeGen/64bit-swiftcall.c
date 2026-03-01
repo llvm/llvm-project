@@ -1063,7 +1063,7 @@ TEST(vector_union)
 
 #if defined(__ARM_FEATURE_SVE)
 
-#define SCALABLE_SIZE(N) (-1 * ((signed)(N)))
+#define SCALABLE_SIZE(N) (N), 1
 
 typedef float svfloat1 __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
 typedef float svfloat4 __attribute__((ext_vector_type(SCALABLE_SIZE(4))));

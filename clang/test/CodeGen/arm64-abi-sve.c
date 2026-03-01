@@ -3,7 +3,7 @@
 
 #include <stdarg.h>
 
-#define SCALABLE_SIZE(N) (-1 * ((signed)(N)))
+#define SCALABLE_SIZE(N) (N), 1
 
 typedef __attribute__(( ext_vector_type(SCALABLE_SIZE(1)) ))  char __char1s;
 typedef __attribute__(( ext_vector_type(SCALABLE_SIZE(2)) ))  char __char2s;

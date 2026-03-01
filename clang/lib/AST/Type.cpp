@@ -323,18 +323,20 @@ void DependentVectorType::Profile(llvm::FoldingSetNodeID &ID,
 DependentSizedExtVectorType::DependentSizedExtVectorType(QualType ElementType,
                                                          QualType can,
                                                          Expr *SizeExpr,
+                                                         Expr *ScalableExpr,
                                                          SourceLocation loc)
     : Type(DependentSizedExtVector, can,
            TypeDependence::DependentInstantiation |
                ElementType->getDependence() |
                (SizeExpr ? toTypeDependence(SizeExpr->getDependence())
                          : TypeDependence::None)),
-      SizeExpr(SizeExpr), ElementType(ElementType), loc(loc) {}
+      SizeExpr(SizeExpr), ScalableExpr(ScalableExpr), ElementType(ElementType),
+      loc(loc) {}
 
 void DependentSizedExtVectorType::Profile(llvm::FoldingSetNodeID &ID,
                                           const ASTContext &Context,
-                                          QualType ElementType,
-                                          Expr *SizeExpr) {
+                                          QualType ElementType, Expr *SizeExpr,
+                                          Expr *ScalableExpr) {
   ID.AddPointer(ElementType.getAsOpaquePtr());
   SizeExpr->Profile(ID, Context, true);
 }

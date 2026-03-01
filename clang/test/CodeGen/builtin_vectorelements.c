@@ -14,7 +14,7 @@ typedef int int16 __attribute__((vector_size(64)));
 typedef float float2 __attribute__((vector_size(8)));
 typedef long extLong4 __attribute__((ext_vector_type(4)));
 #if defined(__ARM_FEATURE_SVE)
-#define SCALABLE_SIZE(N) (-1 * ((signed)(N)))
+#define SCALABLE_SIZE(N) (N), 1
 typedef long extLong1s __attribute__((ext_vector_type(SCALABLE_SIZE(1))));
 #endif
 

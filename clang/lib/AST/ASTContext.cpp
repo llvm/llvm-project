@@ -4666,12 +4666,12 @@ QualType ASTContext::getExtVectorType(QualType vecType,
 }
 
 QualType
-ASTContext::getDependentSizedExtVectorType(QualType vecType,
-                                           Expr *SizeExpr,
+ASTContext::getDependentSizedExtVectorType(QualType vecType, Expr *SizeExpr,
+                                           Expr *ScalableExpr,
                                            SourceLocation AttrLoc) const {
   llvm::FoldingSetNodeID ID;
   DependentSizedExtVectorType::Profile(ID, *this, getCanonicalType(vecType),
-                                       SizeExpr);
+                                       SizeExpr, ScalableExpr);
 
   void *InsertPos = nullptr;
   DependentSizedExtVectorType *Canon
@@ -4682,12 +4682,13 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
     // the canonical type for a newly-built type.
     New = new (*this, alignof(DependentSizedExtVectorType))
         DependentSizedExtVectorType(vecType, QualType(Canon, 0), SizeExpr,
-                                    AttrLoc);
+                                    ScalableExpr, AttrLoc);
   } else {
     QualType CanonVecTy = getCanonicalType(vecType);
     if (CanonVecTy == vecType) {
       New = new (*this, alignof(DependentSizedExtVectorType))
-          DependentSizedExtVectorType(vecType, QualType(), SizeExpr, AttrLoc);
+          DependentSizedExtVectorType(vecType, QualType(), SizeExpr,
+                                      ScalableExpr, AttrLoc);
 
       DependentSizedExtVectorType *CanonCheck
         = DependentSizedExtVectorTypes.FindNodeOrInsertPos(ID, InsertPos);
@@ -4695,10 +4696,11 @@ ASTContext::getDependentSizedExtVectorType(QualType vecType,
       (void)CanonCheck;
       DependentSizedExtVectorTypes.InsertNode(New, InsertPos);
     } else {
-      QualType CanonExtTy = getDependentSizedExtVectorType(CanonVecTy, SizeExpr,
-                                                           SourceLocation());
+      QualType CanonExtTy = getDependentSizedExtVectorType(
+          CanonVecTy, SizeExpr, ScalableExpr, SourceLocation());
       New = new (*this, alignof(DependentSizedExtVectorType))
-          DependentSizedExtVectorType(vecType, CanonExtTy, SizeExpr, AttrLoc);
+          DependentSizedExtVectorType(vecType, CanonExtTy, SizeExpr,
+                                      ScalableExpr, AttrLoc);
     }
   }
 
@@ -13932,6 +13934,12 @@ static auto *getCommonSizeExpr(const ASTContext &Ctx, T *X, T *Y) {
   return X->getSizeExpr();
 }
 
+template <class T>
+static auto *getCommonScalableExpr(const ASTContext &Ctx, T *X, T *Y) {
+  assert(Ctx.hasSameExpr(X->getScalableExpr(), Y->getScalableExpr()));
+  return X->getScalableExpr();
+}
+
 static auto getCommonSizeModifier(const ArrayType *X, const ArrayType *Y) {
   assert(X->getSizeModifier() == Y->getSizeModifier());
   return X->getSizeModifier();
@@ -14262,9 +14270,9 @@ static QualType getCommonNonSugarTypeNode(const ASTContext &Ctx, const Type *X,
   case Type::DependentSizedExtVector: {
     const auto *VX = cast<DependentSizedExtVectorType>(X),
                *VY = cast<DependentSizedExtVectorType>(Y);
-    return Ctx.getDependentSizedExtVectorType(getCommonElementType(Ctx, VX, VY),
-                                              getCommonSizeExpr(Ctx, VX, VY),
-                                              getCommonAttrLoc(VX, VY));
+    return Ctx.getDependentSizedExtVectorType(
+        getCommonElementType(Ctx, VX, VY), getCommonSizeExpr(Ctx, VX, VY),
+        getCommonScalableExpr(Ctx, VX, VY), getCommonAttrLoc(VX, VY));
   }
   case Type::DependentVector: {
     const auto *VX = cast<DependentVectorType>(X),
