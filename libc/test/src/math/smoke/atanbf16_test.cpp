@@ -19,8 +19,9 @@ public:
   void test_special_numbers() {
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanbf16(aNaN));
     EXPECT_MATH_ERRNO(0);
-    
-    EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(aNaN, LIBC_NAMESPACE::atanbf16(sNaN), FE_INVALID);
+
+    EXPECT_FP_EQ_WITH_EXCEPTION_ALL_ROUNDING(
+        aNaN, LIBC_NAMESPACE::atanbf16(sNaN), FE_INVALID);
     EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(zero, LIBC_NAMESPACE::atanbf16(zero));
@@ -29,17 +30,21 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atanbf16(neg_zero));
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0x1.92p-1f), LIBC_NAMESPACE::atanbf16(bfloat16(1.0)));
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0x1.92p-1f),
+                              LIBC_NAMESPACE::atanbf16(bfloat16(1.0)));
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0x1.92p-1f), LIBC_NAMESPACE::atanbf16(bfloat16(-1.0)));
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0x1.92p-1f),
+                              LIBC_NAMESPACE::atanbf16(bfloat16(-1.0)));
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0x1.92p0f), LIBC_NAMESPACE::atanbf16(inf));
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0x1.92p0f),
+                              LIBC_NAMESPACE::atanbf16(inf));
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0x1.92p0f), LIBC_NAMESPACE::atanbf16(neg_inf));
+    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0x1.92p0f),
+                              LIBC_NAMESPACE::atanbf16(neg_inf));
     EXPECT_MATH_ERRNO(0);
-    }
+  }
 };
 TEST_F(LlvmLibcAtanBf16Test, SpecialNumbers) { test_special_numbers(); }

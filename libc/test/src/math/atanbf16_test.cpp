@@ -1,4 +1,5 @@
-//===-- Exhaustive test for atanbf16 ---------------------------------------===//
+//===-- Exhaustive test for atanbf16
+//---------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -27,21 +28,19 @@ static constexpr uint16_t NEG_STOP = 0xff80U;
 TEST_F(LlvmLibcAtanBf16Test, NormalPositiveRange) {
   for (uint16_t v1 = POS_START; v1 <= POS_STOP; v1++) {
 
-      bfloat16 x = FPBits(v1).get_val();
-      
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
-                                     LIBC_NAMESPACE::atanbf16(x), 0.5);
-    }
+    bfloat16 x = FPBits(v1).get_val();
 
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
+                                   LIBC_NAMESPACE::atanbf16(x), 0.5);
+  }
 }
 
 TEST_F(LlvmLibcAtanBf16Test, NormalNegativeRange) {
   for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; v1++) {
 
-      bfloat16 x = FPBits(v1).get_val();
+    bfloat16 x = FPBits(v1).get_val();
 
-      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
-                                     LIBC_NAMESPACE::atanbf16(x), 0.5);
-    }
-  
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
+                                   LIBC_NAMESPACE::atanbf16(x), 0.5);
+  }
 }
