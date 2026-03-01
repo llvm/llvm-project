@@ -61,6 +61,6 @@ semantics:
 References
 ----------
 
-This check corresponds to the CERT C++ Core Guidelines rule
+This check corresponds to the C++ Core Guidelines rule
 `C++ Core Guidelines ES.23
 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#es23-prefer-the--initializer-syntax>`_.
