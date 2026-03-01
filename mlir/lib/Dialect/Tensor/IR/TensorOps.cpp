@@ -1456,6 +1456,13 @@ void FromElementsOp::build(OpBuilder &builder, OperationState &result,
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
+  // DenseElementsAttr::get requires StringAttr for element types that are not
+  // integer, index, float, or complex (e.g. vector types), but folded constants
+  // won't be StringAttr instances. Only fold for element types directly
+  // supported by DenseElementsAttr.
+  Type eltType = getType().getElementType();
+  if (!eltType.isIntOrIndexOrFloat() && !isa<ComplexType>(eltType))
+    return {};
   if (!llvm::is_contained(adaptor.getElements(), nullptr))
     return DenseElementsAttr::get(getType(), adaptor.getElements());
   return {};
@@ -2118,6 +2125,10 @@ struct FoldReshapeWithConstant : OpRewritePattern<TensorReshapeOp> {
     if (!matchPattern(reshapeOp.getSrc(), m_Constant(&attr)))
       return failure();
     if (!attr || !attr.isSplat())
+      return failure();
+    // DenseElementsAttr requires a static shape; skip folding for dynamic
+    // result types.
+    if (!reshapeOp.getResultType().hasStaticShape())
       return failure();
     DenseElementsAttr newAttr = DenseElementsAttr::getFromRawBuffer(
         reshapeOp.getResultType(), attr.getRawData());

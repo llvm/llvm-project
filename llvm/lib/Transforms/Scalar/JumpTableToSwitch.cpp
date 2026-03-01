@@ -10,6 +10,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/CtxProfAnalysis.h"
 #include "llvm/Analysis/DomTreeUpdater.h"
@@ -47,6 +48,11 @@ extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 
 #define DEBUG_TYPE "jump-table-to-switch"
 
+STATISTIC(NumEligibleJumpTables, "The number of jump tables seen by the pass "
+                                 "that can be converted if deemed profitable.");
+STATISTIC(NumJumpTablesConverted,
+          "The number of jump tables converted into switches.");
+
 namespace {
 struct JumpTableTy {
   Value *Index;
@@ -81,6 +87,7 @@ static std::optional<JumpTableTy> parseJumpTable(GetElementPtrInst *GEP,
   const uint64_t JumpTableSizeBytes = GV->getGlobalSize(DL);
   if (JumpTableSizeBytes % StrideBytes.getZExtValue() != 0)
     return std::nullopt;
+  ++NumEligibleJumpTables;
   const uint64_t N = JumpTableSizeBytes / StrideBytes.getZExtValue();
   if (N > JumpTableSizeThreshold)
     return std::nullopt;
@@ -107,6 +114,7 @@ expandToSwitch(CallBase *CB, const JumpTableTy &JT, DomTreeUpdater &DTU,
                OptimizationRemarkEmitter &ORE,
                llvm::function_ref<GlobalValue::GUID(const Function &)>
                    GetGuidForFunction) {
+  ++NumJumpTablesConverted;
   const bool IsVoid = CB->getType() == Type::getVoidTy(CB->getContext());
 
   SmallVector<DominatorTree::UpdateType, 8> DTUpdates;

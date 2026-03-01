@@ -364,7 +364,7 @@ cl::opt<bool>
                           cl::init(false),
 #endif
                           cl::Hidden,
-                          cl::desc("Verfiy VPlans after VPlan transforms."));
+                          cl::desc("Verify VPlans after VPlan transforms."));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 cl::opt<bool> llvm::VPlanPrintAfterAll(
@@ -1431,11 +1431,18 @@ public:
 
   /// Returns true if the predicated reduction select should be used to set the
   /// incoming value for the reduction phi.
-  bool usePredicatedReductionSelect() const {
+  bool usePredicatedReductionSelect(RecurKind RecurrenceKind) const {
     // Force to use predicated reduction select since the EVL of the
     // second-to-last iteration might not be VF*UF.
     if (foldTailWithEVL())
       return true;
+
+    // Note: For FindLast recurrences we prefer a predicated select to simplify
+    // matching in handleFindLastReductions(), rather than handle multiple
+    // cases.
+    if (RecurrenceDescriptor::isFindLastRecurrenceKind(RecurrenceKind))
+      return true;
+
     return PreferPredicatedReductionSelect ||
            TTI.preferPredicatedReductionSelect();
   }
@@ -2383,21 +2390,8 @@ Value *EpilogueVectorizerMainLoop::createIterationCountCheck(
       // check is known to be true, or known to be false.
       CheckMinIters = Builder.CreateICmp(P, Count, Step, "min.iters.check");
     } // else step known to be < trip count, use CheckMinIters preset to false.
-  } else if (VF.isScalable() && !TTI->isVScaleKnownToBeAPowerOfTwo() &&
-             !isIndvarOverflowCheckKnownFalse(Cost, VF, UF) &&
-             Style != TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck) {
-    // vscale is not necessarily a power-of-2, which means we cannot guarantee
-    // an overflow to zero when updating induction variables and so an
-    // additional overflow check is required before entering the vector loop.
-
-    // Get the maximum unsigned value for the type.
-    Value *MaxUIntTripCount =
-        ConstantInt::get(CountTy, cast<IntegerType>(CountTy)->getMask());
-    Value *LHS = Builder.CreateSub(MaxUIntTripCount, Count);
-
-    // Don't execute the vector loop if (UMax - n) < (VF * UF).
-    CheckMinIters = Builder.CreateICmp(ICmpInst::ICMP_ULT, LHS, CreateStep());
   }
+
   return CheckMinIters;
 }
 
@@ -3663,7 +3657,7 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
       MaxFactors.FixedVF.getFixedValue();
   if (MaxFactors.ScalableVF) {
     std::optional<unsigned> MaxVScale = getMaxVScale(*TheFunction, TTI);
-    if (MaxVScale && TTI.isVScaleKnownToBeAPowerOfTwo()) {
+    if (MaxVScale) {
       MaxPowerOf2RuntimeVF = std::max<unsigned>(
           *MaxPowerOf2RuntimeVF,
           *MaxVScale * MaxFactors.ScalableVF.getKnownMinValue());
@@ -8340,7 +8334,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // failures.
   VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
+  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues,
+                                          CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8457,7 +8452,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   // TODO: We can't call runPass on the transform yet, due to verifier
   // failures.
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
+  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues,
+                                          /*FoldTail=*/false);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8481,6 +8477,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     if (!PhiR || isa<VPIRValue>(PhiR->getOperand(1)))
       continue;
 
+    RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     const RecurrenceDescriptor &RdxDesc = Legal->getRecurrenceDescriptor(
         cast<PHINode>(PhiR->getUnderlyingInstr()));
     Type *PhiTy = TypeInfo.inferScalarType(PhiR);
@@ -8505,7 +8502,8 @@ void LoopVectorizationPlanner::addReductionResultComputation(
                     m_VPInstruction<VPInstruction::ComputeAnyOfResult>(),
                     m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       });
-      if (CM.usePredicatedReductionSelect())
+
+      if (CM.usePredicatedReductionSelect(RecurrenceKind))
         PhiR->setOperand(1, NewExitingVPV);
     }
 
@@ -8525,7 +8523,6 @@ void LoopVectorizationPlanner::addReductionResultComputation(
     VPInstruction *FinalReductionResult;
     VPBuilder::InsertPointGuard Guard(Builder);
     Builder.setInsertPoint(MiddleVPBB, IP);
-    RecurKind RecurrenceKind = PhiR->getRecurrenceKind();
     // For AnyOf reductions, find the select among PhiR's users. This is used
     // both to find NewVal for ComputeAnyOfResult and to adjust the reduction.
     VPRecipeBase *AnyOfSelect = nullptr;
@@ -8692,22 +8689,14 @@ void LoopVectorizationPlanner::attachRuntimeChecks(
 void LoopVectorizationPlanner::addMinimumIterationCheck(
     VPlan &Plan, ElementCount VF, unsigned UF,
     ElementCount MinProfitableTripCount) const {
-  // vscale is not necessarily a power-of-2, which means we cannot guarantee
-  // an overflow to zero when updating induction variables and so an
-  // additional overflow check is required before entering the vector loop.
-  bool IsIndvarOverflowCheckNeededForVF =
-      VF.isScalable() && !TTI.isVScaleKnownToBeAPowerOfTwo() &&
-      !isIndvarOverflowCheckKnownFalse(&CM, VF, UF) &&
-      CM.getTailFoldingStyle() !=
-          TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-  const uint32_t *BranchWeigths =
+  const uint32_t *BranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator())
           ? &MinItersBypassWeights[0]
           : nullptr;
   VPlanTransforms::addMinimumIterationCheck(
       Plan, VF, UF, MinProfitableTripCount,
       CM.requiresScalarEpilogue(VF.isVector()), CM.foldTailByMasking(),
-      IsIndvarOverflowCheckNeededForVF, OrigLoop, BranchWeigths,
+      OrigLoop, BranchWeights,
       OrigLoop->getLoopPredecessor()->getTerminator()->getDebugLoc(), PSE);
 }
 
