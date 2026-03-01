@@ -2797,9 +2797,81 @@ static SDValue unrollVectorShift(SDValue Op, SelectionDAG &DAG) {
   return DAG.getBuildVector(Op.getValueType(), DL, UnrolledOps);
 }
 
+/// Convert a vector shift of an extended value into a multiplication of
+/// extended values. By converting the shift amount to a multiplier (1 << C)
+/// and wrapping it in a matching extend node, we enable the instruction
+/// selector to match the pattern to WebAssembly extended multiplication
+/// instructions (e.g., i32x4.extmul_low_i16x8_s). Inactive lanes in the
+/// multiplier vector are populated with undefs.
+///
+/// Example transformation:
+/// Before:
+///   t1: v8i16 = ...
+///   t2: v4i32 = WebAssemblyISD::EXTEND_LOW_S t1
+///   t3: v4i32 = BUILD_VECTOR Constant:i32<12>, Constant:i32<0>, ...
+///   t4: v4i32 = shl t2, t3
+///
+/// After:
+///   t1: v8i16 = ...
+///   t2: v4i32 = WebAssemblyISD::EXTEND_LOW_S t1
+///   t3: v8i16 = BUILD_VECTOR Constant:i16<4096>, Constant:i16<1>, undef, ...
+///   t4: v4i32 = WebAssemblyISD::EXTEND_LOW_S t3 t5: v4i32 = mul t2, t4
+static SDValue foldShiftByConstantToExtMul(SDValue Op, SelectionDAG &DAG) {
+  if (Op.getOpcode() != ISD::SHL || !Op.getValueType().isVector())
+    return SDValue();
+
+  SDValue RHS = Op.getOperand(1);
+  if (RHS.getOpcode() != ISD::BUILD_VECTOR)
+    return SDValue();
+
+  for (SDValue LaneOp : RHS->ops()) {
+    if (!isa<ConstantSDNode>(LaneOp))
+      return SDValue();
+  }
+
+  SDLoc DL(Op);
+  SDValue LHS = Op.getOperand(0);
+  unsigned ExtOpc = LHS.getOpcode();
+  bool IsLow = false;
+  if (ExtOpc == WebAssemblyISD::EXTEND_LOW_S ||
+      ExtOpc == WebAssemblyISD::EXTEND_HIGH_S) {
+    IsLow = (ExtOpc == WebAssemblyISD::EXTEND_LOW_S);
+  } else if (ExtOpc == WebAssemblyISD::EXTEND_LOW_U ||
+             ExtOpc == WebAssemblyISD::EXTEND_HIGH_U) {
+    IsLow = (ExtOpc == WebAssemblyISD::EXTEND_LOW_U);
+  } else {
+    return SDValue();
+  }
+
+  SDValue SrcVec = LHS.getOperand(0);
+  EVT SrcVecTy = SrcVec.getValueType();
+  unsigned SrcVecEltNum = SrcVecTy.getVectorNumElements();
+  unsigned ConstVecEltNum = SrcVecEltNum / 2;
+  SmallVector<SDValue, 16> MulConsts(SrcVecEltNum,
+                                     DAG.getUNDEF(SrcVecTy.getScalarType()));
+  unsigned StartIdx = IsLow ? 0 : ConstVecEltNum;
+  for (unsigned I = 0; I < ConstVecEltNum; ++I) {
+    auto *C = cast<ConstantSDNode>(RHS.getOperand(I));
+    uint64_t ShiftAmt = C->getZExtValue();
+    if (ShiftAmt >= SrcVecTy.getScalarSizeInBits())
+      return SDValue();
+
+    uint64_t MulAmt = 1ULL << ShiftAmt;
+    MulConsts[StartIdx + I] =
+        DAG.getConstant(MulAmt, DL, SrcVecTy.getScalarType());
+  }
+
+  SDValue ConstVec = DAG.getBuildVector(SrcVecTy, DL, MulConsts);
+  SDValue ExtConstVec = DAG.getNode(ExtOpc, DL, Op.getValueType(), ConstVec);
+
+  return DAG.getNode(ISD::MUL, DL, Op.getValueType(), LHS, ExtConstVec);
+}
+
 SDValue WebAssemblyTargetLowering::LowerShift(SDValue Op,
                                               SelectionDAG &DAG) const {
   SDLoc DL(Op);
+  if (SDValue FoldedExtMul = foldShiftByConstantToExtMul(Op, DAG))
+    return FoldedExtMul;
 
   // Only manually lower vector shifts
   assert(Op.getSimpleValueType().isVector());
