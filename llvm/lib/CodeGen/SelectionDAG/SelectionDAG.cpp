@@ -4708,12 +4708,11 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val,
     // If we know the element index, just demand that vector element, else for
     // an unknown element index, ignore DemandedElts and demand them all.
     const unsigned NumSrcElts = VecVT.getVectorNumElements();
-    APInt DemandedSrcElts = APInt::getAllOnes(NumSrcElts);
     auto *ConstEltNo = dyn_cast<ConstantSDNode>(EltNo);
-    if (ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts))
-      DemandedSrcElts =
-          APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue());
-
+    APInt DemandedSrcElts =
+        ConstEltNo && ConstEltNo->getAPIntValue().ult(NumSrcElts)
+            ? APInt::getOneBitSet(NumSrcElts, ConstEltNo->getZExtValue())
+            : APInt::getAllOnes(NumSrcElts);
     return isKnownToBeAPowerOfTwo(InVec, DemandedSrcElts, OrZero, Depth + 1);
   }
 
