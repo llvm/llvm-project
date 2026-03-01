@@ -428,7 +428,7 @@ public:
   // will terminate the program. There is nothing in this implementation
   // that should throw in a non-terminal way, so we forgo further
   // exception marshalling.
-  // See: https://github.com/pybind/nanobind/issues/2842
+  // See: https://github.com/pybind/pybind11/issues/2842
   //
   /// Binds the indexing and length methods in the Python class.
   static void bind(nanobind::module_ &m) {

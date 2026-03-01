@@ -2701,26 +2701,25 @@ MlirLocation tracebackToLocation(MlirContext ctx) {
   for (; pyFrame != nullptr && count < framesLimit;
        next = PyFrame_GetBack(pyFrame), Py_XDECREF(pyFrame), pyFrame = next) {
     PyCodeObject *code = PyFrame_GetCode(pyFrame);
-    Py_ssize_t fileNameLen;
-    const char *fileNamePtr =
-        PyUnicode_AsUTF8AndSize(code->co_filename, &fileNameLen);
-    std::string_view fileName(fileNamePtr, fileNameLen);
+    auto fileNameStr =
+        nb::cast<std::string>(nb::borrow<nb::str>(code->co_filename));
+    std::string_view fileName(fileNameStr);
     if (!PyGlobals::get().getTracebackLoc().isUserTracebackFilename(fileName))
       continue;
 
     // co_qualname and PyCode_Addr2Location added in py3.11
 #if PY_VERSION_HEX < 0x030B00F0
-    Py_ssize_t nameLen;
-    const char *namePtr = PyUnicode_AsUTF8AndSize(code->co_name, &nameLen);
-    std::string_view funcName(namePtr, nameLen);
+    std::string name =
+        nb::cast<std::string>(nb::borrow<nb::str>(code->co_name));
+    std::string_view funcName(name);
     int startLine = PyFrame_GetLineNumber(pyFrame);
     MlirLocation loc = mlirLocationFileLineColGet(
         ctx, mlirStringRefCreate(fileName.data(), fileName.size()), startLine,
         0);
 #else
-    Py_ssize_t nameLen;
-    const char *namePtr = PyUnicode_AsUTF8AndSize(code->co_qualname, &nameLen);
-    std::string_view funcName(namePtr, nameLen);
+    std::string name =
+        nb::cast<std::string>(nb::borrow<nb::str>(code->co_qualname));
+    std::string_view funcName(name);
     int startLine, startCol, endLine, endCol;
     int lasti = PyFrame_GetLasti(pyFrame);
     if (!PyCode_Addr2Location(code, lasti, &startLine, &startCol, &endLine,
