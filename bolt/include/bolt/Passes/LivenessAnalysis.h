@@ -36,20 +36,18 @@ public:
         NumRegs(BF.getBinaryContext().MRI->getNumRegs()) {}
   virtual ~LivenessAnalysis();
 
-  // Liveness analysis is a backwards dataflow analysis, therefore
-  // getStateAt ProgramPoint actually means "before" in control
-  // flow terms.
-  BitVector getLiveIn(ProgramPoint P) const { return *this->getStateAt(P); }
+  // Return the state before the execution of an Instruction.
+  BitVector getLiveIn(const MCInst &Inst) const {
+    return *this->getStateAt(Inst);
+  }
 
-  // Liveness analysis is a backwards dataflow analysis, therefore
-  // getStateBefore ProgramPoint actually means "after" in control
-  // flow terms.
-  BitVector getLiveOut(ProgramPoint P) const {
-    return *this->getStateBefore(P);
+  // Return the state after the execution of an Instruction.
+  BitVector getLiveOut(const MCInst &Inst) const {
+    return *this->getStateBefore(Inst);
   }
 
   bool isAlive(ProgramPoint PP, MCPhysReg Reg) const {
-    const BitVector &BV = getLiveIn(PP);
+    const BitVector &BV = *this->getStateAt(PP);
     const BitVector &RegAliases = BC.MIB->getAliases(Reg);
     return BV.anyCommon(RegAliases);
   }
@@ -58,16 +56,22 @@ public:
 
   // Return a usable general-purpose reg after point P. Return 0 if no reg is
   // available.
-  MCPhysReg scavengeRegAfter(ProgramPoint P) {
-    BitVector BV = getLiveOut(P);
-    BV.flip();
+  MCPhysReg scavengeRegAfter(ProgramPoint P) const {
+    BitVector BV = *this->getStateAt(P);
+    return scavengeRegFromState(BV);
+  }
+
+  // Return a usable general-purpose reg given a liveness state. Return 0 if
+  // no reg is available.
+  MCPhysReg scavengeRegFromState(BitVector &LiveRegs) const {
     BitVector GPRegs(NumRegs, false);
     this->BC.MIB->getGPRegs(GPRegs, /*IncludeAlias=*/false);
-    BV &= GPRegs;
+    LiveRegs.flip();
+    LiveRegs &= GPRegs;
     // Ignore target-specific special registers even if they are dead
     // (they may be used by CFI which is not represented in our dataflow).
-    BC.MIB->removeNonScavengeableRegs(BV);
-    int Reg = BV.find_first();
+    BC.MIB->removeNonScavengeableRegs(LiveRegs);
+    int Reg = LiveRegs.find_first();
     return Reg != -1 ? Reg : 0;
   }
 

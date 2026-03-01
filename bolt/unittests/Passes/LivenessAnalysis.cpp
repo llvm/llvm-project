@@ -87,7 +87,7 @@ protected:
 INSTANTIATE_TEST_SUITE_P(AArch64, LivenessAnalysisTester,
                          ::testing::Values(Triple::aarch64));
 
-TEST_P(LivenessAnalysisTester, AArch64_scavengeRegAfter) {
+TEST_P(LivenessAnalysisTester, AArch64_scavengeRegFromState) {
   if (GetParam() != Triple::aarch64)
     GTEST_SKIP();
 
@@ -135,41 +135,54 @@ TEST_P(LivenessAnalysisTester, AArch64_scavengeRegAfter) {
 
   // Test that parameter registers are LiveIn.
   BitVector ParamRegs = BC->MIB->getRegsUsedAsParams();
-  ASSERT_TRUE(ParamRegs.subsetOf(Info.getLivenessAnalysis().getLiveIn(&*II)));
+  ASSERT_TRUE(ParamRegs.subsetOf(Info.getLivenessAnalysis().getLiveIn(*II)));
 
+  BitVector LiveIn, LiveOut;
   // mov x8, #1 -> LiveIn = {x0}, LiveOut = {x0, x8}
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X0));
-  ASSERT_FALSE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X8));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X0));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X8));
-  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegAfter(&*II), AArch64::X9);
+  LiveIn = Info.getLivenessAnalysis().getLiveIn(*II);
+  LiveOut = Info.getLivenessAnalysis().getLiveOut(*II);
+  ASSERT_TRUE(LiveIn.test(AArch64::X0));
+  ASSERT_FALSE(LiveIn.test(AArch64::X8));
+  ASSERT_TRUE(LiveOut.test(AArch64::X0));
+  ASSERT_TRUE(LiveOut.test(AArch64::X8));
+  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegFromState(LiveOut),
+            AArch64::X9);
   II++;
   // cbgt x0, #0, target -> LiveIn = {x0, x8}, LiveOut = {x0, x8}
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X0));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X8));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X0));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X8));
-  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegAfter(&*II), AArch64::X9);
+  LiveIn = Info.getLivenessAnalysis().getLiveIn(*II);
+  LiveOut = Info.getLivenessAnalysis().getLiveOut(*II);
+  ASSERT_TRUE(LiveIn.test(AArch64::X0));
+  ASSERT_TRUE(LiveIn.test(AArch64::X8));
+  ASSERT_TRUE(LiveOut.test(AArch64::X0));
+  ASSERT_TRUE(LiveOut.test(AArch64::X8));
+  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegFromState(LiveOut),
+            AArch64::X9);
   II = FallThroughBB->begin();
   // add x0, x8, #1 -> LiveIn = {x8}, LiveOut = {x0}
-  ASSERT_FALSE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X0));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X8));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X0));
-  ASSERT_FALSE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X8));
-  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegAfter(&*II), AArch64::X8);
+  LiveIn = Info.getLivenessAnalysis().getLiveIn(*II);
+  LiveOut = Info.getLivenessAnalysis().getLiveOut(*II);
+  ASSERT_FALSE(LiveIn.test(AArch64::X0));
+  ASSERT_TRUE(LiveIn.test(AArch64::X8));
+  ASSERT_TRUE(LiveOut.test(AArch64::X0));
+  ASSERT_FALSE(LiveOut.test(AArch64::X8));
+  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegFromState(LiveOut),
+            AArch64::X8);
   II = TargetBB->begin();
   // ret -> LiveIn = {x0}, LiveOut = {x0}
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X0));
-  ASSERT_FALSE(Info.getLivenessAnalysis().getLiveIn(&*II).test(AArch64::X8));
-  ASSERT_TRUE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X0));
-  ASSERT_FALSE(Info.getLivenessAnalysis().getLiveOut(&*II).test(AArch64::X8));
-  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegAfter(&*II), AArch64::X8);
+  LiveIn = Info.getLivenessAnalysis().getLiveIn(*II);
+  LiveOut = Info.getLivenessAnalysis().getLiveOut(*II);
+  ASSERT_TRUE(LiveIn.test(AArch64::X0));
+  ASSERT_FALSE(LiveIn.test(AArch64::X8));
+  ASSERT_TRUE(LiveOut.test(AArch64::X0));
+  ASSERT_FALSE(LiveOut.test(AArch64::X8));
+  ASSERT_EQ(Info.getLivenessAnalysis().scavengeRegFromState(LiveOut),
+            AArch64::X8);
 
   // Test that return registers are LiveOut.
   BitVector DefaultLiveOutRegs;
   BC->MIB->getDefaultLiveOut(DefaultLiveOutRegs);
   ASSERT_TRUE(
-      DefaultLiveOutRegs.subsetOf(Info.getLivenessAnalysis().getLiveOut(&*II)));
+      DefaultLiveOutRegs.subsetOf(Info.getLivenessAnalysis().getLiveOut(*II)));
 }
 
 #endif // AARCH64_AVAILABLE
