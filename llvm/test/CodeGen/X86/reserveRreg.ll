@@ -91,3 +91,24 @@ define preserve_mostcc void @t15() "target-features"="+reserve-r15" {
   ret void
 }
 
+define preserve_mostcc void @t16() "target-features"="+egpr,+reserve-r16" {
+; CHECK-LABEL: t16:
+; CHECK: # %bb.0:
+; CHECK-NEXT:        movl   $256, %r16d
+; CHECK-NEXT:        #APP
+; CHECK-NEXT:        #NO_APP
+; CHECK-NEXT:        ret
+  call i64 asm sideeffect "", "={r16},{r16}"(i64 256)
+  ret void
+}
+
+define preserve_mostcc void @t31() "target-features"="+egpr,+reserve-r31" {
+; CHECK-LABEL: t31:
+; CHECK: # %bb.0:
+; CHECK-NEXT:        movl   $256, %r31d
+; CHECK-NEXT:        #APP
+; CHECK-NEXT:        #NO_APP
+; CHECK-NEXT:        ret
+  call i64 asm sideeffect "", "={r31},{r31}"(i64 256)
+  ret void
+}

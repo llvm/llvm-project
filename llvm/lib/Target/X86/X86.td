@@ -35,6 +35,9 @@ def IsX32 : SubtargetFeature<"x32", "IsX32", "true",
 foreach i = {8-15} in
     def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
                                              "Reserve R"#i#", making it unavailable as a GPR">;
+foreach i = {16-31} in
+    def FeatureReserveR#i : SubtargetFeature<"reserve-r"#i, "ReservedRReg[X86::R"#i#"]", "true",
+                                             "Reserve R"#i#", making it unavailable as a GPR">;
 
 def FeatureX87     : SubtargetFeature<"x87","HasX87", "true",
                                       "Enable X87 float instructions">;
