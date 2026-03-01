@@ -427,6 +427,7 @@ def tADDspi : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, t_imm0_508s4:$imm),
   bits<7> imm;
   let Inst{6-0} = imm;
   let DecoderMethod = "DecodeThumbAddSPImm";
+  let hasSideEffects = 0;
 }
 
 // SUB sp, sp, #<imm7>
@@ -438,6 +439,7 @@ def tSUBspi : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, t_imm0_508s4:$imm),
   bits<7> imm;
   let Inst{6-0} = imm;
   let DecoderMethod = "DecodeThumbAddSPImm";
+  let hasSideEffects = 0;
 }
 
 def : tInstSubst<"add${p} sp, $imm",
@@ -461,6 +463,7 @@ def tADDrSP : T1pI<(outs GPR:$Rdn), (ins GPRsp:$sp, GPR:$Rn), IIC_iALUr,
   let Inst{6-3} = 0b1101;
   let Inst{2-0} = Rdn{2-0};
   let DecoderMethod = "DecodeThumbAddSPReg";
+  let hasSideEffects = 0;
 }
 
 // ADD sp, <Rm>
@@ -473,6 +476,7 @@ def tADDspr : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, GPR:$Rm), IIC_iALUr,
   let Inst{6-3} = Rm;
   let Inst{2-0} = 0b101;
   let DecoderMethod = "DecodeThumbAddSPReg";
+  let hasSideEffects = 0;
 }
 
 //===----------------------------------------------------------------------===//
@@ -480,7 +484,7 @@ def tADDspr : T1pIt<(outs GPRsp:$Rdn), (ins GPRsp:$Rn, GPR:$Rm), IIC_iALUr,
 //
 
 // Indirect branches
-let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1, hasSideEffects = 0 in {
   def tBX : TI<(outs), (ins GPR:$Rm, pred:$p), IIC_Br, "bx${p}\t$Rm", []>,
             T1Special<{1,1,0,?}>, Sched<[WriteBr]> {
     // A6.2.3 & A8.6.25
@@ -633,7 +637,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 
 // FIXME: should be able to write a pattern for ARMBrcond, but can't use
 // a two-value operand where a dag node expects two operands. :(
-let isBranch = 1, isTerminator = 1 in
+let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in
   def tBcc : T1I<(outs), (ins thumb_bcc_target:$target, pred:$p), IIC_Br,
                  "b${p}\t$target",
                  [/*(ARMbrcond bb:$target, imm:$cc)*/]>,
@@ -973,7 +977,7 @@ class T1sItGenEncodeImm<bits<5> opA, dag oops, dag iops, InstrItinClass itin,
   let Inst{7-0}  = imm8;
 }
 
-let isAdd = 1 in {
+let isAdd = 1, hasSideEffects = 0 in {
   // Add with carry register
   let isCommutable = 1, Uses = [CPSR] in
   def tADC :                      // A8.6.2
@@ -1130,7 +1134,7 @@ def tCMNz :                     // A8.6.33
 } // isCompare = 1, Defs = [CPSR]
 
 // CMP immediate
-let isCompare = 1, Defs = [CPSR] in {
+let isCompare = 1, Defs = [CPSR], hasSideEffects = 0 in {
 def tCMPi8 : T1pI<(outs), (ins tGPR:$Rn, imm0_255:$imm8), IIC_iCMPi,
                   "cmp", "\t$Rn, $imm8",
                   [(set CPSR, (ARMcmp tGPR:$Rn, imm0_255:$imm8))]>,
@@ -1319,7 +1323,7 @@ def tRSB :                      // A8.6.141
                [(set tGPR:$Rd, (ineg tGPR:$Rn))]>, Sched<[WriteALU]>;
 
 // Subtract with carry register
-let Uses = [CPSR] in
+let Uses = [CPSR], hasSideEffects = 0 in
 def tSBC :                      // A8.6.151
   T1sItDPEncode<0b0110, (outs tGPR:$Rdn), (ins tGPR:$Rn, tGPR:$Rm),
                 IIC_iALUr,
@@ -1495,6 +1499,7 @@ def tADR : T1I<(outs tGPR:$Rd), (ins t_adrlabel:$addr, pred:$p),
   let Inst{10-8} = Rd;
   let Inst{7-0} = addr;
   let DecoderMethod = "DecodeThumbAddSpecialReg";
+  let hasSideEffects = 0;
 }
 
 let hasSideEffects = 0, isReMaterializable = 1 in
@@ -1679,7 +1684,7 @@ def : T1Pat<(extloadi16 t_addrmode_rr:$addr),  (tLDRHr t_addrmode_rr:$addr)>;
 // post-inc LDR -> LDM r0!, {r1}. The way operands are layed out in LDMs is
 // different to how ISel expects them for a post-inc load, so use a pseudo
 // and expand it just after ISel.
-let usesCustomInserter = 1, mayLoad =1,
+let usesCustomInserter = 1, mayLoad = 1, hasSideEffects = 0,
     Constraints = "$Rn = $Rn_wb,@earlyclobber $Rn_wb" in
  def tLDR_postidx: tPseudoInst<(outs tGPR:$Rt, tGPR:$Rn_wb),
                                (ins tGPR:$Rn, pred:$p),
@@ -1798,6 +1803,7 @@ def : tInstAlias<"asr${s}${p} $Rdm, $imm",
              (tASRri tGPR:$Rdm, cc_out:$s, tGPR:$Rdm, imm_sr:$imm, pred:$p)>;
 
 // Pseudo instruction ldr Rt, =immediate
+let hasSideEffects = 0 in
 def tLDRConstPool
   : tAsmPseudo<"ldr${p} $Rt, $immediate",
                (ins tGPR:$Rt, const_pool_asm_imm:$immediate, pred:$p)>;
