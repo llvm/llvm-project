@@ -18,6 +18,7 @@
 #include "lf_interface.h"
 #include "lf_config.h"
 #include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_common/sanitizer_mutex.h"
 
 using namespace __sanitizer;
 
@@ -42,6 +43,11 @@ struct FreeBlock {
   FreeBlock *next;
 };
 static FreeBlock *free_lists[kNumSizeClasses];
+
+// Per-size-class spin mutexes protecting region_next_alloc and free_lists.
+// Using one lock per size class allows concurrent allocation across different
+// size classes, which is the common case in multi-threaded programs.
+static StaticSpinMutex region_locks[kNumSizeClasses];
 
 static void InitRegionTable() {
   for (uptr i = 0; i < kNumSizeClasses; i++) {
@@ -79,20 +85,20 @@ static bool InitMemoryRegions() {
 }
 
 // Allocate from a LowFat region
-// First checks the free list, then falls back to bump allocation
+// First checks the free list, then falls back to bump allocation.
+// Thread-safe: protected by per-size-class spin mutex.
 void *Allocate(uptr size) {
-  // Printf("LowFat: allocating %zu bytes\n", size);
   if (size == 0)
     size = 1;
-  
+
   uptr class_index = SizeClassIndex(size);
-  if (class_index >= kNumSizeClasses) {
-    // Printf("LowFat: allocation size %zu exceeds max size class\n", size);
+  if (class_index >= kNumSizeClasses)
     return nullptr;
-  }
-  
+
   uptr alloc_size = SizeClassToSize(class_index);
-  
+
+  SpinMutexLock lock(&region_locks[class_index]);
+
   // 1. Try free list first
   FreeBlock *block = free_lists[class_index];
   if (block) {
@@ -101,42 +107,38 @@ void *Allocate(uptr size) {
     internal_memset(block, 0, alloc_size);
     return (void *)block;
   }
-  
+
   // 2. Fall back to bump allocation
   uptr region_end = GetRegionStart(class_index) + kRegionSize;
   uptr addr = region_next_alloc[class_index];
-  
+
   // Ensure alignment (should already be aligned)
   addr = (addr + alloc_size - 1) & ~(alloc_size - 1);
-  
-  if (addr + alloc_size > region_end) {
-    // Printf("LowFat: region %zu exhausted\n", class_index);
+
+  if (addr + alloc_size > region_end)
     return nullptr;
-  }
-  
+
   region_next_alloc[class_index] = addr + alloc_size;
   return (void *)addr;
 }
 
-// Free a LowFat allocation by adding it to the free list
+// Free a LowFat allocation by pushing it onto the free list.
+// Thread-safe: protected by per-size-class spin mutex.
 void Deallocate(void *ptr) {
   if (!ptr)
     return;
-  
+
   uptr addr = (uptr)ptr;
-  // Printf("LowFat: freeing ptr 0x%zx\n", addr);
-  
+
   // Validate this is a LowFat pointer
-  if (!IsLowFatPointer(addr)) {
-    // Printf("LowFat: __lf_free called on non-LowFat pointer 0x%zx\n", addr);
+  if (!IsLowFatPointer(addr))
     return;
-  }
-  
+
   uptr region = GetRegionIndex(addr);
-  // Printf("LowFat: freed region %zu (size class %zu bytes)\n", 
-  //        region, SizeClassToSize(region));
-  
-  // Add to the head of the free list for this size class
+
+  SpinMutexLock lock(&region_locks[region]);
+
+  // Push to the head of the free list for this size class
   FreeBlock *block = (FreeBlock *)ptr;
   block->next = free_lists[region];
   free_lists[region] = block;
