@@ -2273,6 +2273,31 @@ class Cursor(Structure):
         return conf.lib.clang_Cursor_getTemplateArgumentUnsignedValue(self, num)  # type: ignore [no-any-return]
 
     @cursor_null_guard
+    def get_template_argument_integral_type(self, num: int) -> Type:
+        """Returns the type of an integral template argument at the given index."""
+        return Type.from_result(
+            conf.lib.clang_Cursor_getTemplateArgumentIntegralType(self, num), self
+        )
+
+    @cursor_null_guard
+    def get_num_template_parameters(self) -> int:
+        """Returns the number of template parameters, or -1 if not a template."""
+        return conf.lib.clang_Cursor_getNumTemplateParameters(self)  # type: ignore [no-any-return]
+
+    @cursor_null_guard
+    def get_template_parameter(self, num: int) -> Cursor:
+        """Returns the template parameter at the given index.
+
+        If the index is out of range, a null cursor is returned
+        """
+        return conf.lib.clang_Cursor_getTemplateParameter(self, num)  # type: ignore [no-any-return]
+
+    @cursor_null_guard
+    def is_template_parameter_pack(self) -> bool:
+        """Returns True if the cursor is a template parameter pack."""
+        return bool(conf.lib.clang_Cursor_isTemplateParameterPack(self))
+
+    @cursor_null_guard
     def get_children(self) -> Iterator[Cursor]:
         """Return an iterator for accessing the children of this cursor."""
 
@@ -4427,6 +4452,10 @@ FUNCTION_LIST: list[LibFunc] = [
     ("clang_Cursor_getTemplateArgumentType", [Cursor, c_uint], Type),
     ("clang_Cursor_getTemplateArgumentValue", [Cursor, c_uint], c_longlong),
     ("clang_Cursor_getTemplateArgumentUnsignedValue", [Cursor, c_uint], c_ulonglong),
+    ("clang_Cursor_getTemplateArgumentIntegralType", [Cursor, c_uint], Type),
+    ("clang_Cursor_getNumTemplateParameters", [Cursor], c_int),
+    ("clang_Cursor_getTemplateParameter", [Cursor, c_uint], Cursor),
+    ("clang_Cursor_isTemplateParameterPack", [Cursor], c_uint),
     ("clang_getCursorBinaryOperatorKind", [Cursor], c_int),
     ("clang_Cursor_getBriefCommentText", [Cursor], _CXString),
     ("clang_Cursor_getRawCommentText", [Cursor], _CXString),
