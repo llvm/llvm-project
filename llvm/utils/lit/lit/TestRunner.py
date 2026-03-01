@@ -831,16 +831,28 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
                     cmd_shenv = ShellEnvironment(shenv.cwd, shenv.env, shenv.umask)
                 args = updateEnv(cmd_shenv, args)
                 if not args:
-                    # Return the environment variables if no argument is provided.
-                    env_str = "\n".join(
-                        f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
-                    )
-                    results.append(
-                        ShellCommandResult(
-                            j, env_str, "", 0, timeoutHelper.timeoutReached(), []
+                    if len(cmd.commands) == 1:
+                        # Single command: return environment variables in-process.
+                        env_str = "\n".join(
+                            f"{key}={value}" for key, value in sorted(cmd_shenv.env.items())
                         )
-                    )
-                    return 0
+                        results.append(
+                            ShellCommandResult(
+                                j, env_str, "", 0, timeoutHelper.timeoutReached(), []
+                            )
+                        )
+                        return 0
+                    # Pipeline: replace with a subprocess that prints the
+                    # environment variables to stdout so the output can be
+                    # piped to the next command.
+                    args = [
+                        sys.executable,
+                        "-c",
+                        "import os, sys; sys.stdout.write("
+                        "'\\n'.join(k + '=' + v"
+                        " for k, v in sorted(os.environ.items())) + '\\n')",
+                    ]
+                    break
             elif args[0] == "not":
                 not_args.append(args.pop(0))
                 not_count += 1
