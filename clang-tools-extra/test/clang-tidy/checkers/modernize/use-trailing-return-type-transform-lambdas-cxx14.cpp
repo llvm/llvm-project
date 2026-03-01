@@ -1,9 +1,7 @@
-// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-trailing-return-type %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++14-or-later %s modernize-use-trailing-return-type %t -- -- -fno-delayed-template-parsing -isystem %clang_tidy_headers
+#include <vector>
 
 namespace std {
-    template <typename T>
-    class vector {};
-
     class string {};
 } // namespace std
 
