@@ -63,9 +63,12 @@ struct IncludeStyle {
     int SortPriority;
     /// If the regular expression is case sensitive.
     bool RegexIsCaseSensitive;
+    /// The number of blank lines to add *before* this category.
+    int EmptyLines;
     bool operator==(const IncludeCategory &Other) const {
       return Regex == Other.Regex && Priority == Other.Priority &&
-             RegexIsCaseSensitive == Other.RegexIsCaseSensitive;
+             RegexIsCaseSensitive == Other.RegexIsCaseSensitive &&
+             EmptyLines == Other.EmptyLines;
     }
   };
 
@@ -99,6 +102,18 @@ struct IncludeStyle {
   /// Each regular expression can be marked as case sensitive with the field
   /// ``CaseSensitive``, per default it is not.
   ///
+  /// There is a fourth and optional field ``EmptyLines`` that defines how many
+  /// empty lines are inserted *before* this category when ``IncludeBlocks`` is
+  /// ``IBS_Regroup``. The default is ``1``. ``EmptyLines: 0`` can be used to
+  /// suppress separation.
+  ///
+  /// When regrouping jumps over categories that are not present in the file,
+  /// clang-format uses the maximum ``EmptyLines`` value of all category
+  /// priorities between the previous and the next emitted category.
+  ///
+  /// ``MaxEmptyLinesToKeep`` still applies to the final number of consecutive
+  /// empty lines kept in the formatted output.
+  ///
   /// To configure this in the .clang-format file, use:
   /// \code{.yaml}
   ///   IncludeCategories:
@@ -110,6 +125,7 @@ struct IncludeStyle {
   ///       Priority:        3
   ///     - Regex:           '<[[:alnum:].]+>'
   ///       Priority:        4
+  ///       EmptyLines:      2
   ///     - Regex:           '.*'
   ///       Priority:        1
   ///       SortPriority:    0

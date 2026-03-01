@@ -19,6 +19,7 @@ void MappingTraits<IncludeStyle::IncludeCategory>::mapping(
   IO.mapOptional("Priority", Category.Priority);
   IO.mapOptional("SortPriority", Category.SortPriority);
   IO.mapOptional("CaseSensitive", Category.RegexIsCaseSensitive);
+  IO.mapOptional("EmptyLines", Category.EmptyLines, 1);
 }
 
 void ScalarEnumerationTraits<IncludeStyle::IncludeBlocksStyle>::enumeration(

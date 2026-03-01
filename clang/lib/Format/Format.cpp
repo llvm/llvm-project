@@ -1809,9 +1809,9 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.IfMacros.push_back("KJ_IF_MAYBE");
   LLVMStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Preserve;
   LLVMStyle.IncludeStyle.IncludeCategories = {
-      {"^\"(llvm|llvm-c|clang|clang-c)/", 2, 0, false},
-      {"^(<|\"(gtest|gmock|isl|json)/)", 3, 0, false},
-      {".*", 1, 0, false}};
+      {"^\"(llvm|llvm-c|clang|clang-c)/", 2, 0, false, 1},
+      {"^(<|\"(gtest|gmock|isl|json)/)", 3, 0, false, 1},
+      {".*", 1, 0, false, 1}};
   LLVMStyle.IncludeStyle.IncludeIsMainRegex = "(Test)?$";
   LLVMStyle.IncludeStyle.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
   LLVMStyle.IndentAccessModifiers = false;
@@ -1966,10 +1966,11 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.AttributeMacros.push_back("absl_nullability_unknown");
   GoogleStyle.BreakTemplateDeclarations = FormatStyle::BTDS_Yes;
   GoogleStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
-  GoogleStyle.IncludeStyle.IncludeCategories = {{"^<ext/.*\\.h>", 2, 0, false},
-                                                {"^<.*\\.h>", 1, 0, false},
-                                                {"^<.*", 2, 0, false},
-                                                {".*", 3, 0, false}};
+  GoogleStyle.IncludeStyle.IncludeCategories = {
+      {"^<ext/.*\\.h>", 2, 0, false, 1},
+      {"^<.*\\.h>", 1, 0, false, 1},
+      {"^<.*", 2, 0, false, 1},
+      {".*", 3, 0, false, 1}};
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLines.AtStartOfBlock = false;
@@ -3539,6 +3540,21 @@ static void sortCppIncludes(const FormatStyle &Style,
                              }),
                 Indices.end());
 
+  // Get the separation width between LastCategory and NewCategory
+  // including NewCategory. If no category is found, use 1 as default.
+  const auto GetEmptyLines = [&](int LastCategory, int NewCategory) -> int {
+    if (LastCategory > NewCategory)
+      std::swap(LastCategory, NewCategory);
+    int EmptyLines = -1;
+    for (const auto &IncludeCategory : Style.IncludeStyle.IncludeCategories) {
+      if (IncludeCategory.Priority > LastCategory &&
+          IncludeCategory.Priority <= NewCategory) {
+        EmptyLines = std::max(EmptyLines, IncludeCategory.EmptyLines);
+      }
+    }
+    return EmptyLines < 0 ? 1 : EmptyLines;
+  };
+
   int CurrentCategory = Includes.front().Category;
 
   // If the #includes are out of order, we generate a single replacement fixing
@@ -3555,18 +3571,21 @@ static void sortCppIncludes(const FormatStyle &Style,
   const auto OldCursor = Cursor ? *Cursor : 0;
   std::string result;
   for (unsigned Index : Indices) {
+    const auto NewCategory = Includes[Index].Category;
     if (!result.empty()) {
       result += "\n";
       if (Style.IncludeStyle.IncludeBlocks ==
               tooling::IncludeStyle::IBS_Regroup &&
-          CurrentCategory != Includes[Index].Category) {
-        result += "\n";
+          CurrentCategory != NewCategory) {
+        const int EmptyLineCount = GetEmptyLines(CurrentCategory, NewCategory);
+        for (int Count = 0; Count < EmptyLineCount; ++Count)
+          result += "\n";
       }
     }
     result += Includes[Index].Text;
     if (Cursor && CursorIndex == Index)
       *Cursor = IncludesBeginOffset + result.size() - CursorToEOLOffset;
-    CurrentCategory = Includes[Index].Category;
+    CurrentCategory = NewCategory;
   }
 
   if (Cursor && *Cursor >= IncludesEndOffset)

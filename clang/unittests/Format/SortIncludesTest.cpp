@@ -87,19 +87,19 @@ TEST_F(SortIncludesTest, TrailingComments) {
 TEST_F(SortIncludesTest, SortedIncludesUsingSortPriorityAttribute) {
   FmtStyle.IncludeStyle.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   FmtStyle.IncludeStyle.IncludeCategories = {
-      {"^<sys/param\\.h>", 1, 0, false},
-      {"^<sys/types\\.h>", 1, 1, false},
-      {"^<sys.*/", 1, 2, false},
-      {"^<uvm/", 2, 3, false},
-      {"^<machine/", 3, 4, false},
-      {"^<dev/", 4, 5, false},
-      {"^<net.*/", 5, 6, false},
-      {"^<protocols/", 5, 7, false},
-      {"^<(fs|miscfs|msdosfs|nfs|ntfs|ufs)/", 6, 8, false},
-      {"^<(x86|amd64|i386|xen)/", 7, 8, false},
-      {"<path", 9, 11, false},
-      {"^<[^/].*\\.h>", 8, 10, false},
-      {"^\".*\\.h\"", 10, 12, false}};
+      {"^<sys/param\\.h>", 1, 0, false, 1},
+      {"^<sys/types\\.h>", 1, 1, false, 1},
+      {"^<sys.*/", 1, 2, false, 1},
+      {"^<uvm/", 2, 3, false, 1},
+      {"^<machine/", 3, 4, false, 1},
+      {"^<dev/", 4, 5, false, 1},
+      {"^<net.*/", 5, 6, false, 1},
+      {"^<protocols/", 5, 7, false, 1},
+      {"^<(fs|miscfs|msdosfs|nfs|ntfs|ufs)/", 6, 8, false, 1},
+      {"^<(x86|amd64|i386|xen)/", 7, 8, false, 1},
+      {"<path", 9, 11, false, 1},
+      {"^<[^/].*\\.h>", 8, 10, false, 1},
+      {"^\".*\\.h\"", 10, 12, false, 1}};
   verifyFormat("#include <sys/param.h>\n"
                "#include <sys/types.h>\n"
                "#include <sys/ioctl.h>\n"
@@ -627,6 +627,98 @@ TEST_F(SortIncludesTest, MainHeaderIsSeparatedWhenRegroupping) {
                     "a.cc"));
 }
 
+TEST_F(SortIncludesTest, EmptyLinesUseMaxAcrossSkippedCategories) {
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  FmtStyle.MaxEmptyLinesToKeep = 2;
+  Style.IncludeCategories = {
+      {"^\"b", 1, 0, false, 2},
+      {"^\"c", 2, 0, false, 1},
+      {"^\"d", 3, 0, false, 2},
+      {"^\"e", 4, 0, false, 1},
+  };
+
+  verifyFormat("#include \"input.h\"\n"
+               "\n"
+               "\n"
+               "#include \"c.h\"\n"
+               "\n"
+               "\n"
+               "#include \"e.h\"\n",
+               sort("#include \"e.h\"\n"
+                    "#include \"c.h\"\n"
+                    "#include \"input.h\"\n",
+                    "input.cpp"),
+               FmtStyle);
+}
+
+TEST_F(SortIncludesTest, EmptyLinesCanSeparateMainHeaderByTwoBlankLines) {
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  FmtStyle.MaxEmptyLinesToKeep = 2;
+  Style.IncludeCategories = {
+      {"^\"project/.*\"", 1, 0, false, 2},
+      {".*", 2, 0, false, 1},
+  };
+
+  verifyFormat("#include \"input.h\"\n"
+               "\n"
+               "\n"
+               "#include \"project/detail.h\"\n",
+               sort("#include \"project/detail.h\"\n"
+                    "#include \"input.h\"\n",
+                    "input.cpp"),
+               FmtStyle);
+}
+
+TEST_F(SortIncludesTest,
+       EmptyLinesAreIndependentOfIncludeCategoryDefinitionOrder) {
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  FmtStyle.MaxEmptyLinesToKeep = 2;
+  StringRef UnsortedCode = "#include \"c.h\"\n"
+                           "#include \"b.h\"\n"
+                           "#include \"a.h\"\n";
+  StringRef ExpectedCode = "#include \"a.h\"\n"
+                           "\n"
+                           "\n"
+                           "#include \"b.h\"\n"
+                           "\n"
+                           "#include \"c.h\"\n";
+
+  Style.IncludeCategories = {
+      {"^\"a", 1, 0, false, 1},
+      {"^\"b", 2, 0, false, 2},
+      {"^\"c", 3, 0, false, 1},
+  };
+  const std::string Ordered = sort(UnsortedCode);
+  verifyFormat(ExpectedCode, Ordered, FmtStyle);
+
+  Style.IncludeCategories = {
+      {"^\"c", 3, 0, false, 1},
+      {"^\"b", 2, 0, false, 2},
+      {"^\"a", 1, 0, false, 1},
+  };
+  const std::string Reversed = sort(UnsortedCode);
+  verifyFormat(ExpectedCode, Reversed, FmtStyle);
+  EXPECT_EQ(Ordered, Reversed);
+}
+
+TEST_F(SortIncludesTest, EmptyLinesZeroOmitsSeparationBetweenCategories) {
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  Style.IncludeCategories = {
+      {"^\"a", 1, 0, false, 0},
+      {"^\"b", 2, 0, false, 0},
+      {".*", 3, 0, false, 0},
+  };
+
+  verifyFormat("#include \"a.h\"\n"
+               "#include \"b.h\"\n"
+               "#include \"c.h\"\n",
+               sort("#include \"c.h\"\n"
+                    "\n"
+                    "#include \"b.h\"\n"
+                    "\n"
+                    "#include \"a.h\"\n"));
+}
+
 TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveSorting) {
   FmtStyle.SortIncludes.IgnoreCase = true;
 
@@ -643,8 +735,9 @@ TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveSorting) {
                     "a.h"));
 
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
-  Style.IncludeCategories = {
-      {"^\"", 1, 0, false}, {"^<.*\\.h>$", 2, 0, false}, {"^<", 3, 0, false}};
+  Style.IncludeCategories = {{"^\"", 1, 0, false, 1},
+                             {"^<.*\\.h>$", 2, 0, false, 1},
+                             {"^<", 3, 0, false, 1}};
 
   StringRef UnsortedCode = "#include \"qt.h\"\n"
                            "#include <algorithm>\n"
@@ -693,11 +786,11 @@ TEST_F(SortIncludesTest, SupportCaseInsensitiveMatching) {
 
 TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveMachting) {
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
-  Style.IncludeCategories = {{"^\"", 1, 0, false},
-                             {"^<.*\\.h>$", 2, 0, false},
-                             {"^<Q[A-Z][^\\.]*>", 3, 0, false},
-                             {"^<Qt[^\\.]*>", 4, 0, false},
-                             {"^<", 5, 0, false}};
+  Style.IncludeCategories = {{"^\"", 1, 0, false, 1},
+                             {"^<.*\\.h>$", 2, 0, false, 1},
+                             {"^<Q[A-Z][^\\.]*>", 3, 0, false, 1},
+                             {"^<Qt[^\\.]*>", 4, 0, false, 1},
+                             {"^<", 5, 0, false, 1}};
 
   StringRef UnsortedCode = "#include <QWidget>\n"
                            "#include \"qt.h\"\n"
@@ -742,8 +835,8 @@ TEST_F(SortIncludesTest, SupportOptionalCaseSensitiveMachting) {
 }
 
 TEST_F(SortIncludesTest, NegativePriorities) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1, 0, false},
-                             {".*", 1, 0, false}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0, false, 1},
+                             {".*", 1, 0, false, 1}};
   verifyFormat("#include \"important_os_header.h\"\n"
                "#include \"c_main.h\"\n"
                "#include \"a_other.h\"",
@@ -763,8 +856,8 @@ TEST_F(SortIncludesTest, NegativePriorities) {
 }
 
 TEST_F(SortIncludesTest, PriorityGroupsAreSeparatedWhenRegroupping) {
-  Style.IncludeCategories = {{".*important_os_header.*", -1, 0, false},
-                             {".*", 1, 0, false}};
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0, false, 1},
+                             {".*", 1, 0, false, 1}};
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
 
   verifyFormat("#include \"important_os_header.h\"\n"
@@ -789,6 +882,42 @@ TEST_F(SortIncludesTest, PriorityGroupsAreSeparatedWhenRegroupping) {
                     "\n"
                     "#include \"a_other.h\"",
                     "c_main.cc", 0));
+}
+
+TEST_F(SortIncludesTest,
+       TwoEmptyLinesAfterMainHeaderWithNegativeAndPositivePriorities) {
+  Style.IncludeCategories = {{".*important_os_header.*", -1, 0, false, 1},
+                             {".*", 1, 0, false, 2}};
+  Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
+  FmtStyle.MaxEmptyLinesToKeep = 2;
+
+  verifyFormat("#include \"important_os_header.h\"\n"
+               "\n"
+               "#include \"c_main.h\"\n"
+               "\n"
+               "\n"
+               "#include \"a_other.h\"",
+               sort("#include \"a_other.h\"\n"
+                    "#include \"c_main.h\"\n"
+                    "#include \"important_os_header.h\"",
+                    "c_main.cc"),
+               FmtStyle);
+
+  // check stable when re-run
+  verifyFormat("#include \"important_os_header.h\"\n"
+               "\n"
+               "#include \"c_main.h\"\n"
+               "\n"
+               "\n"
+               "#include \"a_other.h\"",
+               sort("#include \"important_os_header.h\"\n"
+                    "\n"
+                    "#include \"c_main.h\"\n"
+                    "\n"
+                    "\n"
+                    "#include \"a_other.h\"",
+                    "c_main.cc", 0),
+               FmtStyle);
 }
 
 TEST_F(SortIncludesTest, CalculatesCorrectCursorPosition) {
@@ -823,8 +952,9 @@ TEST_F(SortIncludesTest,
        CalculatesCorrectCursorPositionWhenNoReplacementsWithRegroupingAndCRLF) {
   Style.IncludeBlocks = Style.IBS_Regroup;
   FmtStyle.LineEnding = FormatStyle::LE_CRLF;
-  Style.IncludeCategories = {
-      {"^\"a\"", 0, 0, false}, {"^\"b\"", 1, 1, false}, {".*", 2, 2, false}};
+  Style.IncludeCategories = {{"^\"a\"", 0, 0, false, 1},
+                             {"^\"b\"", 1, 1, false, 1},
+                             {".*", 2, 2, false, 1}};
   StringRef Code = "#include \"a\"\r\n" // Start of line: 0
                    "\r\n"               // Start of line: 14
                    "#include \"b\"\r\n" // Start of line: 16
@@ -847,7 +977,7 @@ TEST_F(
     CalculatesCorrectCursorPositionWhenRemoveLinesReplacementsWithRegroupingAndCRLF) {
   Style.IncludeBlocks = Style.IBS_Regroup;
   FmtStyle.LineEnding = FormatStyle::LE_CRLF;
-  Style.IncludeCategories = {{".*", 0, 0, false}};
+  Style.IncludeCategories = {{".*", 0, 0, false, 1}};
   StringRef Code = "#include \"a\"\r\n"     // Start of line: 0
                    "\r\n"                   // Start of line: 14
                    "#include \"b\"\r\n"     // Start of line: 16
@@ -882,7 +1012,7 @@ TEST_F(
   Style.IncludeBlocks = Style.IBS_Regroup;
   FmtStyle.LineEnding = FormatStyle::LE_CRLF;
   Style.IncludeCategories = {
-      {"^\"a\"", 0, 0, false}, {"^\"b\"", 1, 1, false}, {".*", 2, 2, false}};
+      {"^\"a\"", 0, 0, false, 1}, {"^\"b\"", 1, 1, false, 1}, {".*", 2, 2, false, 1}};
   StringRef Code = "#include \"a\"\r\n"     // Start of line: 0
                    "#include \"b\"\r\n"     // Start of line: 14
                    "#include \"c\"\r\n"     // Start of line: 28
@@ -909,7 +1039,7 @@ TEST_F(
   Style.IncludeBlocks = Style.IBS_Regroup;
   FmtStyle.LineEnding = FormatStyle::LE_CRLF;
   Style.IncludeCategories = {
-      {"^\"a\"", 0, 0, false}, {"^\"b\"", 1, 1, false}, {".*", 2, 2, false}};
+      {"^\"a\"", 0, 0, false, 1}, {"^\"b\"", 1, 1, false, 1}, {".*", 2, 2, false, 1}};
   StringRef Code = "#include \"a\"\r\n"     // Start of line: 0
                    "\r\n"                   // Start of line: 14
                    "#include \"c\"\r\n"     // Start of line: 16
@@ -1156,8 +1286,9 @@ TEST_F(SortIncludesTest, MainIncludeCharAnyPickAngleBracket) {
 }
 
 TEST_F(SortIncludesTest, MainIncludeCharQuoteAndRegroup) {
-  Style.IncludeCategories = {
-      {"lib-a", 1, 0, false}, {"lib-b", 2, 0, false}, {"lib-c", 3, 0, false}};
+  Style.IncludeCategories = {{"lib-a", 1, 0, false, 1},
+                             {"lib-b", 2, 0, false, 1},
+                             {"lib-c", 3, 0, false, 1}};
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   Style.MainIncludeChar = tooling::IncludeStyle::MICD_Quote;
 
@@ -1186,8 +1317,9 @@ TEST_F(SortIncludesTest, MainIncludeCharQuoteAndRegroup) {
 }
 
 TEST_F(SortIncludesTest, MainIncludeCharAngleBracketAndRegroup) {
-  Style.IncludeCategories = {
-      {"lib-a", 1, 0, false}, {"lib-b", 2, 0, false}, {"lib-c", 3, 0, false}};
+  Style.IncludeCategories = {{"lib-a", 1, 0, false, 1},
+                             {"lib-b", 2, 0, false, 1},
+                             {"lib-c", 3, 0, false, 1}};
   Style.IncludeBlocks = tooling::IncludeStyle::IBS_Regroup;
   Style.MainIncludeChar = tooling::IncludeStyle::MICD_AngleBracket;
 

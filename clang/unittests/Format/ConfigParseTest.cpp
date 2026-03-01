@@ -1046,10 +1046,19 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 
   Style.IncludeStyle.IncludeCategories.clear();
   std::vector<tooling::IncludeStyle::IncludeCategory> ExpectedCategories = {
-      {"abc/.*", 2, 0, false}, {".*", 1, 0, true}};
+      {"abc/.*", 2, 0, false, 1}, {".*", 1, 0, true, 1}};
   CHECK_PARSE("IncludeCategories:\n"
               "  - Regex: abc/.*\n"
               "    Priority: 2\n"
+              "  - Regex: .*\n"
+              "    Priority: 1\n"
+              "    CaseSensitive: true",
+              IncludeStyle.IncludeCategories, ExpectedCategories);
+  ExpectedCategories = {{"abc/.*", 2, 0, false, 2}, {".*", 1, 0, true, 1}};
+  CHECK_PARSE("IncludeCategories:\n"
+              "  - Regex: abc/.*\n"
+              "    Priority: 2\n"
+              "    EmptyLines: 2\n"
               "  - Regex: .*\n"
               "    Priority: 1\n"
               "    CaseSensitive: true",
