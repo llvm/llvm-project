@@ -16,24 +16,24 @@
 #if SANITIZER_LINUX &&                                                   \
     (defined(__x86_64__) || defined(__mips__) || defined(__aarch64__) || \
      defined(__powerpc64__) || defined(__s390__) || defined(__i386__) || \
-     defined(__arm__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64)
+     defined(__arm__) || defined(__hexagon__) || SANITIZER_RISCV64 ||    \
+     SANITIZER_LOONGARCH64)
 
-#include "sanitizer_stoptheworld.h"
+#  include <elf.h>  // for NT_PRSTATUS
+#  include <errno.h>
+#  include <sched.h>  // for CLONE_* definitions
+#  include <stddef.h>
+#  include <sys/prctl.h>   // for PR_* definitions
+#  include <sys/ptrace.h>  // for PTRACE_* definitions
+#  include <sys/types.h>   // for pid_t
+#  include <sys/uio.h>     // for iovec
 
-#include "sanitizer_platform_limits_posix.h"
-#include "sanitizer_atomic.h"
-
-#include <errno.h>
-#include <sched.h> // for CLONE_* definitions
-#include <stddef.h>
-#include <sys/prctl.h> // for PR_* definitions
-#include <sys/ptrace.h> // for PTRACE_* definitions
-#include <sys/types.h> // for pid_t
-#include <sys/uio.h> // for iovec
-#include <elf.h> // for NT_PRSTATUS
-#if (defined(__aarch64__) || defined(__powerpc64__) || \
-     SANITIZER_RISCV64 || SANITIZER_LOONGARCH64) &&    \
-     !SANITIZER_ANDROID
+#  include "sanitizer_atomic.h"
+#  include "sanitizer_platform_limits_posix.h"
+#  include "sanitizer_stoptheworld.h"
+#  if (defined(__aarch64__) || defined(__powerpc64__) ||                      \
+       defined(__hexagon__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64) && \
+      !SANITIZER_ANDROID
 // GLIBC 2.20+ sys/user does not include asm/ptrace.h
 # include <asm/ptrace.h>
 #endif
@@ -613,9 +613,16 @@ typedef _user_regs_struct regs_struct;
 static constexpr uptr kExtraRegs[] = {0};
 #define ARCH_IOVEC_FOR_GETREGSET
 
-#else
-#error "Unsupported architecture"
-#endif // SANITIZER_ANDROID && defined(__arm__)
+#  elif defined(__hexagon__)
+#    include <asm/user.h>
+typedef struct user_regs_struct regs_struct;
+#    define REG_SP r29
+static constexpr uptr kExtraRegs[] = {0};
+#    define ARCH_IOVEC_FOR_GETREGSET
+
+#  else
+#    error "Unsupported architecture"
+#  endif  // SANITIZER_ANDROID && defined(__arm__)
 
 ThreadID SuspendedThreadsListLinux::GetThreadID(uptr index) const {
   CHECK_LT(index, thread_ids_.size());

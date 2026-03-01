@@ -90,9 +90,14 @@
 extern "C" SANITIZER_WEAK_ATTRIBUTE const char *strerrorname_np(int);
 #  endif
 
-#  if SANITIZER_LINUX && defined(__loongarch__)
+#  if SANITIZER_LINUX && (defined(__loongarch__) || defined(__hexagon__))
 #    include <sys/sysmacros.h>
 #  endif
+
+// Hexagon uses statx() instead of stat64(). The statx types and
+// STATX_BASIC_STATS are provided by <sys/stat.h> (already included above)
+// for both musl and glibc.  Do NOT include <linux/stat.h> here as it
+// conflicts with musl's definitions.
 
 #  if SANITIZER_LINUX && defined(__powerpc64__)
 #    include <asm/ptrace.h>
@@ -344,7 +349,8 @@ uptr internal_ftruncate(fd_t fd, uptr size) {
   return res;
 }
 
-#    if !SANITIZER_LINUX_USES_64BIT_SYSCALLS && SANITIZER_LINUX
+#    if !SANITIZER_LINUX_USES_64BIT_SYSCALLS && SANITIZER_LINUX && \
+        !defined(__hexagon__)
 static void stat64_to_stat(struct stat64 *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = in->st_dev;
@@ -363,7 +369,7 @@ static void stat64_to_stat(struct stat64 *in, struct stat *out) {
 }
 #    endif
 
-#    if SANITIZER_LINUX && defined(__loongarch__)
+#    if SANITIZER_LINUX && (defined(__loongarch__) || defined(__hexagon__))
 static void statx_to_stat(struct statx *in, struct stat *out) {
   internal_memset(out, 0, sizeof(*out));
   out->st_dev = makedev(in->stx_dev_major, in->stx_dev_minor);
@@ -443,7 +449,7 @@ uptr internal_stat(const char *path, void *buf) {
 #    if SANITIZER_FREEBSD
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf, 0);
 #    elif SANITIZER_LINUX
-#      if defined(__loongarch__)
+#      if defined(__loongarch__) || defined(__hexagon__)
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
                              AT_NO_AUTOMOUNT, STATX_BASIC_STATS, (uptr)&bufx);
@@ -481,7 +487,7 @@ uptr internal_lstat(const char *path, void *buf) {
   return internal_syscall(SYSCALL(fstatat), AT_FDCWD, (uptr)path, (uptr)buf,
                           AT_SYMLINK_NOFOLLOW);
 #    elif SANITIZER_LINUX
-#      if defined(__loongarch__)
+#      if defined(__loongarch__) || defined(__hexagon__)
   struct statx bufx;
   int res = internal_syscall(SYSCALL(statx), AT_FDCWD, (uptr)path,
                              AT_SYMLINK_NOFOLLOW | AT_NO_AUTOMOUNT,
@@ -516,7 +522,13 @@ uptr internal_lstat(const char *path, void *buf) {
 }
 
 uptr internal_fstat(fd_t fd, void *buf) {
-#    if SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
+#    if SANITIZER_LINUX && (defined(__loongarch__) || defined(__hexagon__))
+  struct statx bufx;
+  int res = internal_syscall(SYSCALL(statx), fd, "", AT_EMPTY_PATH,
+                             STATX_BASIC_STATS, (uptr)&bufx);
+  statx_to_stat(&bufx, (struct stat*)buf);
+  return res;
+#    elif SANITIZER_FREEBSD || SANITIZER_LINUX_USES_64BIT_SYSCALLS
 #      if SANITIZER_MIPS64
   // For mips64, fstat syscall fills buffer in the format of kernel_stat
   kstat_t kbuf;
@@ -528,12 +540,6 @@ uptr internal_fstat(fd_t fd, void *buf) {
   kstat_t kbuf;
   int res = internal_syscall(SYSCALL(fstat64), fd, &kbuf);
   kernel_stat_to_stat(&kbuf, (struct stat *)buf);
-  return res;
-#      elif SANITIZER_LINUX && defined(__loongarch__)
-  struct statx bufx;
-  int res = internal_syscall(SYSCALL(statx), fd, "", AT_EMPTY_PATH,
-                             STATX_BASIC_STATS, (uptr)&bufx);
-  statx_to_stat(&bufx, (struct stat *)buf);
   return res;
 #      else
   return internal_syscall(SYSCALL(fstat), fd, (uptr)buf);
@@ -1891,6 +1897,39 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
       : "r"(r0), "r"(r1), "r"(r2), "r"(r3), "r"(r4), "r"(r7), "i"(__NR_exit)
       : "memory");
   return res;
+}
+#    elif defined(__hexagon__)
+uptr internal_clone(int (*fn)(void*), void* child_stack, int flags, void* arg,
+                    int* parent_tidptr, void* newtls, int* child_tidptr) {
+  if (!fn || !child_stack)
+    return -EINVAL;
+  child_stack = (char*)child_stack - 2 * sizeof(unsigned int);
+  ((unsigned int*)child_stack)[0] = (uptr)fn;
+  ((unsigned int*)child_stack)[1] = (uptr)arg;
+
+  // Hexagon clone syscall uses the generic argument order (no
+  // CONFIG_CLONE_BACKWARDS): flags, stack, ptid, ctid, tls.
+  register int r0 __asm__("r0") = flags;
+  register void* r1 __asm__("r1") = child_stack;
+  register int* r2 __asm__("r2") = parent_tidptr;
+  register int* r3 __asm__("r3") = child_tidptr;
+  register void* r4 __asm__("r4") = newtls;
+  register int r6 __asm__("r6") = __NR_clone;
+
+  __asm__ __volatile__(
+      "trap0(#1)\n"             /* syscall */
+      "{ p0 = cmp.eq(r0, #0)\n" /* child? */
+      "  if (!p0.new) jump:nt 1f }\n"
+      "r1 = memw(r29 + #0)\n" /* r1 = fn */
+      "r0 = memw(r29 + #4)\n" /* r0 = arg */
+      "callr r1\n"            /* fn(arg) */
+      "r6 = #%7\n"            /* __NR_exit */
+      "trap0(#1)\n"
+      "1:\n"
+      : "=r"(r0)
+      : "0"(r0), "r"(r1), "r"(r2), "r"(r3), "r"(r4), "r"(r6), "i"(__NR_exit)
+      : "memory", "p0", "r1", "lr");
+  return (uptr)r0;
 }
 #    endif
 #  endif  // SANITIZER_LINUX
