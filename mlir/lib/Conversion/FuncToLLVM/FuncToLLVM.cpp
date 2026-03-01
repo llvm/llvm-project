@@ -60,7 +60,7 @@ static bool shouldUseBarePtrCallConv(Operation *op,
 }
 
 /// Filter out ODS-named attributes to prevent duplicates when
-/// LLVMFuncOp::build constructs the attribute dictionary.
+/// `LLVMFuncOp::build` constructs the attribute dictionary.
 static void filterFuncAttributes(FunctionOpInterface func,
                                  SmallVectorImpl<NamedAttribute> &result) {
   llvm::SmallDenseSet<StringRef> odsAttrNames(
