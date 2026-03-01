@@ -1,5 +1,4 @@
-//===-- Exhaustive test for atanbf16
-//---------------------------------------===//
+//===-- Unittests for atanbf16 -----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -39,6 +38,17 @@ TEST_F(LlvmLibcAtanBf16Test, NormalNegativeRange) {
   for (uint16_t v1 = NEG_START; v1 <= NEG_STOP; v1++) {
 
     bfloat16 x = FPBits(v1).get_val();
+
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
+                                   LIBC_NAMESPACE::atanbf16(x), 0.5);
+  }
+}
+
+TEST_F(LlvmLibcAtanBf16Test, SpecialNumbers) {
+  constexpr bfloat16 VALUES[] = {zero,    neg_zero,   inf,
+                                 neg_inf, min_normal, max_normal};
+  for (size_t i = 0; i < 6; ++i) {
+    bfloat16 x = VALUES[i];
 
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
                                    LIBC_NAMESPACE::atanbf16(x), 0.5);

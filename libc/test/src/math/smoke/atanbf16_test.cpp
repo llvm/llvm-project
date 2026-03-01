@@ -13,6 +13,8 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
+namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
+
 class LlvmLibcAtanBf16Test : public LIBC_NAMESPACE::testing::FEnvSafeTest {
   DECLARE_SPECIAL_CONSTANTS(bfloat16)
 public:
@@ -30,21 +32,14 @@ public:
     EXPECT_FP_EQ_ALL_ROUNDING(neg_zero, LIBC_NAMESPACE::atanbf16(neg_zero));
     EXPECT_MATH_ERRNO(0);
 
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0x1.92p-1f),
-                              LIBC_NAMESPACE::atanbf16(bfloat16(1.0)));
-    EXPECT_MATH_ERRNO(0);
+    bfloat16 VALUES[] = {inf, neg_inf, bfloat16(1.0f),
+                                   bfloat16(-1.0)};
+    for (size_t i = 0; i < 4; ++i) {
+      bfloat16 x = VALUES[i];
 
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0x1.92p-1f),
-                              LIBC_NAMESPACE::atanbf16(bfloat16(-1.0)));
-    EXPECT_MATH_ERRNO(0);
-
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(0x1.92p0f),
-                              LIBC_NAMESPACE::atanbf16(inf));
-    EXPECT_MATH_ERRNO(0);
-
-    EXPECT_FP_EQ_ALL_ROUNDING(bfloat16(-0x1.92p0f),
-                              LIBC_NAMESPACE::atanbf16(neg_inf));
-    EXPECT_MATH_ERRNO(0);
+      EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Atan, x,
+                                     LIBC_NAMESPACE::atanbf16(x), 0.5);
+    }
   }
 };
 TEST_F(LlvmLibcAtanBf16Test, SpecialNumbers) { test_special_numbers(); }
