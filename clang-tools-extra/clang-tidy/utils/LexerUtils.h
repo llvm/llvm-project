@@ -120,6 +120,11 @@ struct CommentToken {
   StringRef Text;
 };
 
+/// Returns all comment tokens found in the given range.
+std::vector<CommentToken> getCommentsInRange(CharSourceRange Range,
+                                             const SourceManager &SM,
+                                             const LangOptions &LangOpts);
+
 /// Returns comment tokens found in the given range. If a non-comment token is
 /// encountered, clears previously collected comments and continues.
 std::vector<CommentToken>
