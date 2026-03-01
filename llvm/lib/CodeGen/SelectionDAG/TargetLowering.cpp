@@ -8246,39 +8246,39 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       In = N->getOperand(0);
     }
 
-      SmallVector<SDValue, 8> Parts;
-      // Split into fixed-size chunks
-      for (unsigned i = 0; i < BitWidth; i += BestChunkWidth) {
-        SDValue Shift = DAG.getShiftAmountConstant(i, VT, dl);
-        SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
-        Chunk = DAG.getNode(ISD::TRUNCATE, dl, ChunkVT, Chunk);
-        Parts.push_back(Chunk);
-      }
-      if (Parts.empty())
-        return false;
-      Sum = Parts[0];
+    SmallVector<SDValue, 8> Parts;
+    // Split into fixed-size chunks
+    for (unsigned i = 0; i < BitWidth; i += BestChunkWidth) {
+      SDValue Shift = DAG.getShiftAmountConstant(i, VT, dl);
+      SDValue Chunk = DAG.getNode(ISD::SRL, dl, VT, In, Shift);
+      Chunk = DAG.getNode(ISD::TRUNCATE, dl, ChunkVT, Chunk);
+      Parts.push_back(Chunk);
+    }
+    if (Parts.empty())
+      return false;
+    Sum = Parts[0];
 
-      // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
-      // same logic as used in above if condition.
-      SDValue Carry = DAG.getConstant(0, dl, ChunkVT);
-      EVT SetCCType =
-          getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ChunkVT);
-      for (unsigned i = 1; i < Parts.size(); ++i) {
-        if (isOperationLegalOrCustom(ISD::UADDO_CARRY, ChunkVT)) {
-          SDVTList VTList = DAG.getVTList(ChunkVT, SetCCType);
-          SDValue UAdd = DAG.getNode(ISD::UADDO, dl, VTList, Sum, Parts[i]);
-          Sum = DAG.getNode(ISD::UADDO_CARRY, dl, VTList, UAdd, Carry,
-                            UAdd.getValue(1));
-        } else {
-          SDValue Add = DAG.getNode(ISD::ADD, dl, ChunkVT, Sum, Parts[i]);
-          SDValue NewCarry = DAG.getSetCC(dl, SetCCType, Add, Sum, ISD::SETULT);
-          NewCarry = DAG.getZExtOrTrunc(NewCarry, dl, ChunkVT);
-          Sum = DAG.getNode(ISD::ADD, dl, ChunkVT, Add, Carry);
-          Carry = NewCarry;
-        }
+    // Use uaddo_carry if we can, otherwise use a compare to detect overflow.
+    // same logic as used in above if condition.
+    SDValue Carry = DAG.getConstant(0, dl, ChunkVT);
+    EVT SetCCType =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), ChunkVT);
+    for (unsigned i = 1; i < Parts.size(); ++i) {
+      if (isOperationLegalOrCustom(ISD::UADDO_CARRY, ChunkVT)) {
+        SDVTList VTList = DAG.getVTList(ChunkVT, SetCCType);
+        SDValue UAdd = DAG.getNode(ISD::UADDO, dl, VTList, Sum, Parts[i]);
+        Sum = DAG.getNode(ISD::UADDO_CARRY, dl, VTList, UAdd, Carry,
+                          UAdd.getValue(1));
+      } else {
+        SDValue Add = DAG.getNode(ISD::ADD, dl, ChunkVT, Sum, Parts[i]);
+        SDValue NewCarry = DAG.getSetCC(dl, SetCCType, Add, Sum, ISD::SETULT);
+        NewCarry = DAG.getZExtOrTrunc(NewCarry, dl, ChunkVT);
+        Sum = DAG.getNode(ISD::ADD, dl, ChunkVT, Add, Carry);
+        Carry = NewCarry;
       }
+    }
 
-      Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, Sum);
+    Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, Sum);
   }
 
   // If we didn't find a sum, we can't do the expansion.
