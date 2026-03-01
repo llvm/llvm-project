@@ -1,0 +1,41 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @target_address_space_ptr(%p: !cir.ptr<!s32i, target_address_space(1)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_local(%p: !cir.ptr<!s32i, lang_address_space(offload_local)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_global(%p: !cir.ptr<!s32i, lang_address_space(offload_global)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_constant(%p: !cir.ptr<!s32i, lang_address_space(offload_constant)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_private(%p: !cir.ptr<!s32i, lang_address_space(offload_private)>) {
+    cir.return
+  }
+
+  cir.func @lang_address_space_offload_generic(%p: !cir.ptr<!s32i, lang_address_space(offload_generic)>) {
+    cir.return
+  }
+
+  cir.func @default_address_space(%p: !cir.ptr<!s32i>) {
+    cir.return
+  }
+}
+
+// CHECK: cir.func @target_address_space_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>)
+// CHECK: cir.func @lang_address_space_offload_local(%arg0: !cir.ptr<!s32i, lang_address_space(offload_local)>)
+// CHECK: cir.func @lang_address_space_offload_global(%arg0: !cir.ptr<!s32i, lang_address_space(offload_global)>)
+// CHECK: cir.func @lang_address_space_offload_constant(%arg0: !cir.ptr<!s32i, lang_address_space(offload_constant)>)
+// CHECK: cir.func @lang_address_space_offload_private(%arg0: !cir.ptr<!s32i, lang_address_space(offload_private)>)
+// CHECK: cir.func @lang_address_space_offload_generic(%arg0: !cir.ptr<!s32i, lang_address_space(offload_generic)>)
+// CHECK: cir.func @default_address_space(%arg0: !cir.ptr<!s32i>)

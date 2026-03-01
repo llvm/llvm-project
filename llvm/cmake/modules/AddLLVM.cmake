@@ -636,7 +636,12 @@ function(llvm_add_library name)
     # Do add_dependencies(obj) later due to CMake issue 14747.
     list(APPEND objlibs ${obj_name})
 
-    # Bring in the target include directories from our original target.
+    # Bring in the target include directories and link info from our original
+    # target. target_link_libraries propagates transitive dependencies with
+    # proper SYSTEM include handling from IMPORTED targets.
+    # target_include_directories propagates include directories set directly on
+    # the target.
+    target_link_libraries(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},LINK_LIBRARIES>)
     target_include_directories(${obj_name} PRIVATE $<TARGET_PROPERTY:${name},INCLUDE_DIRECTORIES>)
 
     set_target_properties(${obj_name} PROPERTIES FOLDER "${subproject_title}/Object Libraries")
@@ -1091,6 +1096,8 @@ macro(generate_llvm_objects name)
 
     set(INITLLVM_ARGS "")
 
+    # When Clang is invoked as an OS utility (e.g., c17), it needs to follow the POSIX specification
+    # for how utilities respond to signals.
     if(${name} STREQUAL "clang")
       set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
     endif()
