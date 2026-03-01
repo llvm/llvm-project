@@ -1745,37 +1745,6 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
     return false;
   }
 
-  // Sort exiting blocks by dominance order to establish a clear chain.
-  DT->updateDFSNumbers();
-  llvm::sort(UncountableExitingBlocks, [this](BasicBlock *A, BasicBlock *B) {
-    return DT->getNode(A)->getDFSNumIn() < DT->getNode(B)->getDFSNumIn();
-  });
-
-  // Verify that exits form a strict dominance chain: each block must
-  // dominate the next. This ensures each exit is only dominated by its
-  // predecessors in the chain.
-  for (unsigned I = 0; I + 1 < UncountableExitingBlocks.size(); ++I) {
-    if (!DT->properlyDominates(UncountableExitingBlocks[I],
-                               UncountableExitingBlocks[I + 1])) {
-      reportVectorizationFailure(
-          "Uncountable early exits do not form a dominance chain",
-          "Cannot vectorize early exit loop with non-dominating exits",
-          "NonDominatingEarlyExits", ORE, TheLoop);
-      return false;
-    }
-  }
-
-  // For predicated early exits, we only support a single early exit for now.
-  BasicBlock *LatchPredBB = LatchBB->getUniquePredecessor();
-  if (UncountableExitingBlocks.size() != 1 &&
-      LatchPredBB != UncountableExitingBlocks.back()) {
-    reportVectorizationFailure(
-        "Last early exiting block in the chain is not the latch predecessor",
-        "Cannot vectorize early exit loop", "EarlyExitNotLatchPredecessor", ORE,
-        TheLoop);
-    return false;
-  }
-
   // The latch block must have a countable exit.
   if (isa<SCEVCouldNotCompute>(
           PSE.getSE()->getPredicatedExitCount(TheLoop, LatchBB, &Predicates))) {
