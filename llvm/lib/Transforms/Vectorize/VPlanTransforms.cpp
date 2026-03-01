@@ -4127,9 +4127,10 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   // another, the dominating exit comes first. This is guaranteed by RPO
   // (topological order) and is required for the dispatch chain correctness.
   for (unsigned I = 0; I + 1 < Exits.size(); ++I)
-    assert(!VPDT.properlyDominates(Exits[I + 1].EarlyExitingVPBB,
-                                   Exits[I].EarlyExitingVPBB) &&
-           "RPO sort must place dominating exits before dominated ones");
+    for (unsigned J = I + 1; J < Exits.size(); ++J)
+      assert(!VPDT.properlyDominates(Exits[J].EarlyExitingVPBB,
+                                     Exits[I].EarlyExitingVPBB) &&
+             "RPO sort must place dominating exits before dominated ones");
 #endif
 
   // Build the AnyOf condition for the latch terminator using logical OR
