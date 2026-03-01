@@ -2,10 +2,10 @@
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 
 void test(int a) {
-// CIR: cir.func {{.*}} @{{.+}}test
-
   // Should generate LValue parenthesis expression.
   (a) = 1;
-  // CIR: %[[CONST:.*]] = cir.const #cir.int<1> : !s32i
-  // CIR: cir.store{{.*}} %[[CONST]], %{{.+}} : !s32i, !cir.ptr<!s32i>
 }
+
+// CIR: cir.func {{.*}} @{{.+}}test
+// CIR: %[[CONST:.*]] = cir.const #cir.int<1> : !s32i
+// CIR: cir.store{{.*}} %[[CONST]], %{{.+}} : !s32i, !cir.ptr<!s32i>

@@ -3,8 +3,9 @@
 
 // Implicit int return type.
 test = 0;
-// CIR: cir.global external @test = #cir.int<0> : !s32i
 func (void) {
-// CIR: cir.func {{.*}} @func() -> !s32i
   return 0;
 }
+
+// CIR: cir.global external @test = #cir.int<0> : !s32i
+// CIR: cir.func {{.*}} @func() -> !s32i
