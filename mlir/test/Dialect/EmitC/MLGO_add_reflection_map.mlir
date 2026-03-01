@@ -1,4 +1,4 @@
-// RUN: mlir-opt --add-MLGO-reflection-map="named-attribute=emitc.field_ref" %s | FileCheck %s
+// RUN: mlir-opt --MLGO-add-reflection-map="named-attribute=emitc.field_ref" %s | FileCheck %s
 
 emitc.class @mainClass {
   emitc.field @fieldName0 : !emitc.array<1xf32>  {emitc.field_ref = ["another_feature"]}

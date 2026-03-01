@@ -60,7 +60,7 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
   ];
 }
 
-def AddMLGOReflectionMapPass : Pass<"add-MLGO-reflection-map", "ModuleOp"> {
+def MLGOAddReflectionMapPass : Pass<"MLGO-add-reflection-map", "ModuleOp"> {
   let summary =
       "Add a reflection map function to EmitC classes for runtime field lookup. This is MLGO Specific.";
   let description = [{
