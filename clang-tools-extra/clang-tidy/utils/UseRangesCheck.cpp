@@ -199,10 +199,9 @@ void UseRangesCheck::check(const MatchFinder::MatchResult &Result) {
     if (!NodeStr.consume_front(FuncDecl))
       continue;
     Function = Value.get<FunctionDecl>();
-    size_t Index;
-    if (NodeStr.getAsInteger(10, Index)) {
+    size_t Index = 0;
+    if (NodeStr.getAsInteger(10, Index))
       llvm_unreachable("Unable to extract replacer index");
-    }
     assert(Index < Replacers.size());
     Replacer = Replacers[Index].get();
     break;

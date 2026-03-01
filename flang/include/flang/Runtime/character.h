@@ -93,6 +93,9 @@ void RTDECL(Repeat)(Descriptor &result, const Descriptor &string,
 void RTDECL(Trim)(Descriptor &result, const Descriptor &string,
     const char *sourceFile = nullptr, int sourceLine = 0);
 
+void RTDECL(FCString)(Descriptor &result, const Descriptor &string,
+    bool asis = false, const char *sourceFile = nullptr, int sourceLine = 0);
+
 void RTDECL(CharacterMax)(Descriptor &accumulator, const Descriptor &x,
     const char *sourceFile = nullptr, int sourceLine = 0);
 void RTDECL(CharacterMin)(Descriptor &accumulator, const Descriptor &x,
@@ -126,6 +129,13 @@ std::size_t RTDECL(Verify4)(const char32_t *, std::size_t, const char32_t *set,
     std::size_t, bool back = false);
 void RTDECL(Verify)(Descriptor &result, const Descriptor &string,
     const Descriptor &set, const Descriptor *back /*can be null*/, int kind,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+
+void RTDECL(Tokenize)(Descriptor &tokens, Descriptor *separator,
+    const Descriptor &string, const Descriptor &set,
+    const char *sourceFile = nullptr, int sourceLine = 0);
+void RTDECL(TokenizePositions)(Descriptor &first, Descriptor &last,
+    const Descriptor &string, const Descriptor &set,
     const char *sourceFile = nullptr, int sourceLine = 0);
 }
 } // namespace Fortran::runtime

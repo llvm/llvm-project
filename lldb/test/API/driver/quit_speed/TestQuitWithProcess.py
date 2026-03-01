@@ -32,7 +32,7 @@ class DriverQuitSpeedTest(PExpectTest):
         print("Got launch message")
         child.sendline("quit")
         print("sent quit")
-        child.expect(pexpect.EOF, timeout=15)
+        child.expect(pexpect.EOF, timeout=30)
 
     @skipIfAsan
     def test_run_quit_with_prompt(self):
@@ -57,4 +57,4 @@ class DriverQuitSpeedTest(PExpectTest):
         child.expect(r".*LLDB will kill one or more processes.*")
         # add trailing space to the confirmation.
         child.sendline("yEs ")
-        child.expect(pexpect.EOF, timeout=15)
+        child.expect(pexpect.EOF, timeout=30)

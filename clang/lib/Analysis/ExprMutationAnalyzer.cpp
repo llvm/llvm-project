@@ -135,6 +135,11 @@ class ExprPointeeResolve {
     if (const auto *PE = dyn_cast<ParenExpr>(E))
       return resolveExpr(PE->getSubExpr());
 
+    if (const auto *UO = dyn_cast<UnaryOperator>(E)) {
+      if (UO->getOpcode() == UO_AddrOf)
+        return resolveExpr(UO->getSubExpr());
+    }
+
     if (const auto *ICE = dyn_cast<ImplicitCastExpr>(E)) {
       // only implicit cast needs to be treated as resolvable.
       // explicit cast will be checked in `findPointeeToNonConst`

@@ -34,13 +34,17 @@ public:
 private:
   void registerScope(const Stmt *LocalScope, ASTContext *Context);
 
+  bool isMutated(const VarDecl *Variable, const Stmt *Scope,
+                 const FunctionDecl *Func, ASTContext *Context);
   using MutationAnalyzer = std::unique_ptr<ExprMutationAnalyzer>;
   llvm::DenseMap<const Stmt *, MutationAnalyzer> ScopesCache;
   llvm::DenseSet<SourceLocation> TemplateDiagnosticsCache;
+  ExprMutationAnalyzer::Memoized ParamMutationAnalyzerMemoized;
 
   const bool AnalyzePointers;
   const bool AnalyzeReferences;
   const bool AnalyzeValues;
+  const bool AnalyzeParameters;
 
   const bool WarnPointersAsPointers;
   const bool WarnPointersAsValues;

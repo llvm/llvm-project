@@ -71,6 +71,92 @@ entry:
   ret <4 x i32> %s2
 }
 
+define arm_aapcs_vfpcc <8 x i32> @vmulhs_v8i32(<8 x i32> %s0, <8 x i32> %s1) {
+; CHECK-LABEL: vmulhs_v8i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.s32 q0, q0, q2
+; CHECK-NEXT:    vmulh.s32 q1, q1, q3
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <8 x i32> %s0 to <8 x i64>
+  %s1s = sext <8 x i32> %s1 to <8 x i64>
+  %m = mul <8 x i64> %s0s, %s1s
+  %s = ashr <8 x i64> %m, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <8 x i64> %s to <8 x i32>
+  ret <8 x i32> %s2
+}
+
+define arm_aapcs_vfpcc <8 x i32> @vmulhu_v8i32(<8 x i32> %s0, <8 x i32> %s1) {
+; CHECK-LABEL: vmulhu_v8i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.u32 q0, q0, q2
+; CHECK-NEXT:    vmulh.u32 q1, q1, q3
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <8 x i32> %s0 to <8 x i64>
+  %s1s = zext <8 x i32> %s1 to <8 x i64>
+  %m = mul <8 x i64> %s0s, %s1s
+  %s = lshr <8 x i64> %m, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <8 x i64> %s to <8 x i32>
+  ret <8 x i32> %s2
+}
+
+define arm_aapcs_vfpcc <16 x i32> @vmulhs_v16i32(<16 x i32> %s0, <16 x i32> %s1) {
+; CHECK-LABEL: vmulhs_v16i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    vmulh.s32 q0, q0, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vmulh.s32 q1, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vmulh.s32 q2, q2, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmulh.s32 q3, q3, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <16 x i32> %s0 to <16 x i64>
+  %s1s = sext <16 x i32> %s1 to <16 x i64>
+  %m = mul <16 x i64> %s0s, %s1s
+  %s = ashr <16 x i64> %m, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <16 x i64> %s to <16 x i32>
+  ret <16 x i32> %s2
+}
+
+define arm_aapcs_vfpcc <16 x i32> @vmulhu_v16i32(<16 x i32> %s0, <16 x i32> %s1) {
+; CHECK-LABEL: vmulhu_v16i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    vmulh.u32 q0, q0, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vmulh.u32 q1, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vmulh.u32 q2, q2, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmulh.u32 q3, q3, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <16 x i32> %s0 to <16 x i64>
+  %s1s = zext <16 x i32> %s1 to <16 x i64>
+  %m = mul <16 x i64> %s0s, %s1s
+  %s = lshr <16 x i64> %m, <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+  %s2 = trunc <16 x i64> %s to <16 x i32>
+  ret <16 x i32> %s2
+}
+
 define arm_aapcs_vfpcc <4 x i16> @vmulhs_v4i16(<4 x i16> %s0, <4 x i16> %s1) {
 ; CHECK-LABEL: vmulhs_v4i16:
 ; CHECK:       @ %bb.0: @ %entry
@@ -127,6 +213,92 @@ entry:
   %s = lshr <8 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
   %s2 = trunc <8 x i32> %s to <8 x i16>
   ret <8 x i16> %s2
+}
+
+define arm_aapcs_vfpcc <16 x i16> @vmulhs_v16i16(<16 x i16> %s0, <16 x i16> %s1) {
+; CHECK-LABEL: vmulhs_v16i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.s16 q0, q0, q2
+; CHECK-NEXT:    vmulh.s16 q1, q1, q3
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <16 x i16> %s0 to <16 x i32>
+  %s1s = sext <16 x i16> %s1 to <16 x i32>
+  %m = mul <16 x i32> %s0s, %s1s
+  %s = ashr <16 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <16 x i32> %s to <16 x i16>
+  ret <16 x i16> %s2
+}
+
+define arm_aapcs_vfpcc <16 x i16> @vmulhu_v16i16(<16 x i16> %s0, <16 x i16> %s1) {
+; CHECK-LABEL: vmulhu_v16i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.u16 q0, q0, q2
+; CHECK-NEXT:    vmulh.u16 q1, q1, q3
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <16 x i16> %s0 to <16 x i32>
+  %s1s = zext <16 x i16> %s1 to <16 x i32>
+  %m = mul <16 x i32> %s0s, %s1s
+  %s = lshr <16 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <16 x i32> %s to <16 x i16>
+  ret <16 x i16> %s2
+}
+
+define arm_aapcs_vfpcc <32 x i16> @vmulhs_v32i16(<32 x i16> %s0, <32 x i16> %s1) {
+; CHECK-LABEL: vmulhs_v32i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    vmulh.s16 q0, q0, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vmulh.s16 q1, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vmulh.s16 q2, q2, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmulh.s16 q3, q3, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <32 x i16> %s0 to <32 x i32>
+  %s1s = sext <32 x i16> %s1 to <32 x i32>
+  %m = mul <32 x i32> %s0s, %s1s
+  %s = ashr <32 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <32 x i32> %s to <32 x i16>
+  ret <32 x i16> %s2
+}
+
+define arm_aapcs_vfpcc <32 x i16> @vmulhu_v32i16(<32 x i16> %s0, <32 x i16> %s1) {
+; CHECK-LABEL: vmulhu_v32i16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    vmulh.u16 q0, q0, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vmulh.u16 q1, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vmulh.u16 q2, q2, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmulh.u16 q3, q3, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <32 x i16> %s0 to <32 x i32>
+  %s1s = zext <32 x i16> %s1 to <32 x i32>
+  %m = mul <32 x i32> %s0s, %s1s
+  %s = lshr <32 x i32> %m, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %s2 = trunc <32 x i32> %s to <32 x i16>
+  ret <32 x i16> %s2
 }
 
 define arm_aapcs_vfpcc <4 x i8> @vmulhs_v4i8(<4 x i8> %s0, <4 x i8> %s1) {
@@ -224,19 +396,105 @@ entry:
   ret <16 x i8> %s2
 }
 
+define arm_aapcs_vfpcc <32 x i8> @vmulhs_v32i8(<32 x i8> %s0, <32 x i8> %s1) {
+; CHECK-LABEL: vmulhs_v32i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.s8 q0, q0, q2
+; CHECK-NEXT:    vmulh.s8 q1, q1, q3
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <32 x i8> %s0 to <32 x i16>
+  %s1s = sext <32 x i8> %s1 to <32 x i16>
+  %m = mul <32 x i16> %s0s, %s1s
+  %s = ashr <32 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %s2 = trunc <32 x i16> %s to <32 x i8>
+  ret <32 x i8> %s2
+}
+
+define arm_aapcs_vfpcc <32 x i8> @vmulhu_v32i8(<32 x i8> %s0, <32 x i8> %s1) {
+; CHECK-LABEL: vmulhu_v32i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.u8 q0, q0, q2
+; CHECK-NEXT:    vmulh.u8 q1, q1, q3
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <32 x i8> %s0 to <32 x i16>
+  %s1s = zext <32 x i8> %s1 to <32 x i16>
+  %m = mul <32 x i16> %s0s, %s1s
+  %s = lshr <32 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %s2 = trunc <32 x i16> %s to <32 x i8>
+  ret <32 x i8> %s2
+}
+
+define arm_aapcs_vfpcc <64 x i8> @vmulhs_v64i8(<64 x i8> %s0, <64 x i8> %s1) {
+; CHECK-LABEL: vmulhs_v64i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    vmulh.s8 q0, q0, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vmulh.s8 q1, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vmulh.s8 q2, q2, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmulh.s8 q3, q3, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <64 x i8> %s0 to <64 x i16>
+  %s1s = sext <64 x i8> %s1 to <64 x i16>
+  %m = mul <64 x i16> %s0s, %s1s
+  %s = ashr <64 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %s2 = trunc <64 x i16> %s to <64 x i8>
+  ret <64 x i8> %s2
+}
+
+define arm_aapcs_vfpcc <64 x i8> @vmulhu_v64i8(<64 x i8> %s0, <64 x i8> %s1) {
+; CHECK-LABEL: vmulhu_v64i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    add r0, sp, #16
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #32
+; CHECK-NEXT:    vmulh.u8 q0, q0, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #48
+; CHECK-NEXT:    vmulh.u8 q1, q1, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    add r0, sp, #64
+; CHECK-NEXT:    vmulh.u8 q2, q2, q4
+; CHECK-NEXT:    vldrw.u32 q4, [r0]
+; CHECK-NEXT:    vmulh.u8 q3, q3, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <64 x i8> %s0 to <64 x i16>
+  %s1s = zext <64 x i8> %s1 to <64 x i16>
+  %m = mul <64 x i16> %s0s, %s1s
+  %s = lshr <64 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %s2 = trunc <64 x i16> %s to <64 x i8>
+  ret <64 x i8> %s2
+}
+
 define void @vmulh_s8(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vmulh_s8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:  .LBB14_1: @ %vector.body
+; CHECK-NEXT:  .LBB26_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r0], #16
 ; CHECK-NEXT:    vldrb.u8 q1, [r1], #16
 ; CHECK-NEXT:    vmulh.s8 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB14_1
+; CHECK-NEXT:    le lr, .LBB26_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -269,13 +527,13 @@ define void @vmulh_s16(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #128
-; CHECK-NEXT:  .LBB15_1: @ %vector.body
+; CHECK-NEXT:  .LBB27_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
 ; CHECK-NEXT:    vmulh.s16 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB15_1
+; CHECK-NEXT:    le lr, .LBB27_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -308,13 +566,13 @@ define void @vmulh_s32(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #256
-; CHECK-NEXT:  .LBB16_1: @ %vector.body
+; CHECK-NEXT:  .LBB28_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vmulh.s32 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB16_1
+; CHECK-NEXT:    le lr, .LBB28_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -347,13 +605,13 @@ define void @vmulh_u8(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr 
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #64
-; CHECK-NEXT:  .LBB17_1: @ %vector.body
+; CHECK-NEXT:  .LBB29_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r0], #16
 ; CHECK-NEXT:    vldrb.u8 q1, [r1], #16
 ; CHECK-NEXT:    vmulh.u8 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB17_1
+; CHECK-NEXT:    le lr, .LBB29_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -386,13 +644,13 @@ define void @vmulh_u16(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #128
-; CHECK-NEXT:  .LBB18_1: @ %vector.body
+; CHECK-NEXT:  .LBB30_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r0], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r1], #16
 ; CHECK-NEXT:    vmulh.u16 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB18_1
+; CHECK-NEXT:    le lr, .LBB30_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -425,13 +683,13 @@ define void @vmulh_u32(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr
 ; CHECK-NEXT:    .save {r7, lr}
 ; CHECK-NEXT:    push {r7, lr}
 ; CHECK-NEXT:    mov.w lr, #256
-; CHECK-NEXT:  .LBB19_1: @ %vector.body
+; CHECK-NEXT:  .LBB31_1: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r0], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r1], #16
 ; CHECK-NEXT:    vmulh.u32 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r2], #16
-; CHECK-NEXT:    le lr, .LBB19_1
+; CHECK-NEXT:    le lr, .LBB31_1
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -467,15 +725,15 @@ define void @vmulh_s32_pred(ptr noalias nocapture %d, ptr noalias nocapture read
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB20_1: @ %vector.ph
+; CHECK-NEXT:  .LBB32_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB20_2: @ %vector.body
+; CHECK-NEXT:  .LBB32_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r2], #16
 ; CHECK-NEXT:    vmulh.s32 q0, q1, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB20_2
+; CHECK-NEXT:    letp lr, .LBB32_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -517,15 +775,15 @@ define void @vmulh_u32_pred(ptr noalias nocapture %d, ptr noalias nocapture read
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB21_1: @ %vector.ph
+; CHECK-NEXT:  .LBB33_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.32 lr, r3
-; CHECK-NEXT:  .LBB21_2: @ %vector.body
+; CHECK-NEXT:  .LBB33_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrw.u32 q0, [r1], #16
 ; CHECK-NEXT:    vldrw.u32 q1, [r2], #16
 ; CHECK-NEXT:    vmulh.u32 q0, q1, q0
 ; CHECK-NEXT:    vstrw.32 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB21_2
+; CHECK-NEXT:    letp lr, .LBB33_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -567,15 +825,15 @@ define void @vmulh_s16_pred(ptr noalias nocapture %d, ptr noalias nocapture read
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB22_1: @ %vector.ph
+; CHECK-NEXT:  .LBB34_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.16 lr, r3
-; CHECK-NEXT:  .LBB22_2: @ %vector.body
+; CHECK-NEXT:  .LBB34_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r2], #16
 ; CHECK-NEXT:    vmulh.s16 q0, q1, q0
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB22_2
+; CHECK-NEXT:    letp lr, .LBB34_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -617,15 +875,15 @@ define void @vmulh_u16_pred(ptr noalias nocapture %d, ptr noalias nocapture read
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB23_1: @ %vector.ph
+; CHECK-NEXT:  .LBB35_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.16 lr, r3
-; CHECK-NEXT:  .LBB23_2: @ %vector.body
+; CHECK-NEXT:  .LBB35_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrh.u16 q0, [r1], #16
 ; CHECK-NEXT:    vldrh.u16 q1, [r2], #16
 ; CHECK-NEXT:    vmulh.u16 q0, q1, q0
 ; CHECK-NEXT:    vstrh.16 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB23_2
+; CHECK-NEXT:    letp lr, .LBB35_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -667,15 +925,15 @@ define void @vmulh_s8_pred(ptr noalias nocapture %d, ptr noalias nocapture reado
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB24_1: @ %vector.ph
+; CHECK-NEXT:  .LBB36_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.8 lr, r3
-; CHECK-NEXT:  .LBB24_2: @ %vector.body
+; CHECK-NEXT:  .LBB36_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r1], #16
 ; CHECK-NEXT:    vldrb.u8 q1, [r2], #16
 ; CHECK-NEXT:    vmulh.s8 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB24_2
+; CHECK-NEXT:    letp lr, .LBB36_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:
@@ -717,15 +975,15 @@ define void @vmulh_u8_pred(ptr noalias nocapture %d, ptr noalias nocapture reado
 ; CHECK-NEXT:    cmp r3, #1
 ; CHECK-NEXT:    it lt
 ; CHECK-NEXT:    poplt {r7, pc}
-; CHECK-NEXT:  .LBB25_1: @ %vector.ph
+; CHECK-NEXT:  .LBB37_1: @ %vector.ph
 ; CHECK-NEXT:    dlstp.8 lr, r3
-; CHECK-NEXT:  .LBB25_2: @ %vector.body
+; CHECK-NEXT:  .LBB37_2: @ %vector.body
 ; CHECK-NEXT:    @ =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vldrb.u8 q0, [r1], #16
 ; CHECK-NEXT:    vldrb.u8 q1, [r2], #16
 ; CHECK-NEXT:    vmulh.u8 q0, q1, q0
 ; CHECK-NEXT:    vstrb.8 q0, [r0], #16
-; CHECK-NEXT:    letp lr, .LBB25_2
+; CHECK-NEXT:    letp lr, .LBB37_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond.cleanup
 ; CHECK-NEXT:    pop {r7, pc}
 entry:

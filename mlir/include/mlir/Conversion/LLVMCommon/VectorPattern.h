@@ -92,20 +92,12 @@ template <typename SourceOp, typename TargetOp,
           template <typename, typename> typename AttrConvert =
               AttrConvertPassThrough,
           bool FailOnUnsupportedFP = false>
-class VectorConvertToLLVMPattern : public ConvertOpToLLVMPattern<SourceOp> {
+class VectorConvertToLLVMPattern
+    : public ConvertOpToLLVMPattern<SourceOp, FailOnUnsupportedFP> {
 public:
-  using ConvertOpToLLVMPattern<SourceOp>::ConvertOpToLLVMPattern;
+  using ConvertOpToLLVMPattern<SourceOp,
+                               FailOnUnsupportedFP>::ConvertOpToLLVMPattern;
   using Super = VectorConvertToLLVMPattern<SourceOp, TargetOp>;
-
-  /// Return the given type if it's a floating point type. If the given type is
-  /// a vector type, return its element type if it's a floating point type.
-  static FloatType getFloatingPointType(Type type) {
-    if (auto floatType = dyn_cast<FloatType>(type))
-      return floatType;
-    if (auto vecType = dyn_cast<VectorType>(type))
-      return dyn_cast<FloatType>(vecType.getElementType());
-    return nullptr;
-  }
 
   LogicalResult
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
@@ -114,26 +106,11 @@ public:
         std::is_base_of<OpTrait::OneResult<SourceOp>, SourceOp>::value,
         "expected single result op");
 
-    // The pattern should not apply if a floating-point operand is converted to
-    // a non-floating-point type. This indicates that the floating point type
-    // is not supported by the LLVM lowering. (Such types are converted to
-    // integers.)
-    auto checkType = [&](Value v) -> LogicalResult {
-      FloatType floatType = getFloatingPointType(v.getType());
-      if (!floatType)
-        return success();
-      Type convertedType = this->getTypeConverter()->convertType(floatType);
-      if (!isa_and_nonnull<FloatType>(convertedType))
-        return rewriter.notifyMatchFailure(op,
-                                           "unsupported floating point type");
-      return success();
-    };
-    if (FailOnUnsupportedFP) {
-      for (Value operand : op->getOperands())
-        if (failed(checkType(operand)))
-          return failure();
-      if (failed(checkType(op->getResult(0))))
-        return failure();
+    // Bail on unsupported floating point types. (These are type-converted to
+    // integer types.)
+    if (FailOnUnsupportedFP && LLVM::detail::opHasUnsupportedFloatingPointTypes(
+                                   op, *this->typeConverter)) {
+      return rewriter.notifyMatchFailure(op, "unsupported floating point type");
     }
 
     // Determine attributes for the target op

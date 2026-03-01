@@ -15,8 +15,8 @@ class VOP2e <bits<6> op, VOPProfile P> : Enc32 {
   bits<9> src0;
   bits<8> src1;
 
-  let Inst{8-0}   = !if(P.HasSrc0, src0, 0);
-  let Inst{16-9}  = !if(P.HasSrc1, src1, 0);
+  let Inst{8-0}   = !if(P.HasSrc0, src0, ?);
+  let Inst{16-9}  = !if(P.HasSrc1, src1, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; //encoding
@@ -28,8 +28,8 @@ class VOP2_MADKe <bits<6> op, VOPProfile P> : Enc64 {
   bits<8>  src1;
   bits<32> imm;
 
-  let Inst{8-0}   = !if(P.HasSrc0, src0, 0);
-  let Inst{16-9}  = !if(P.HasSrc1, src1, 0);
+  let Inst{8-0}   = !if(P.HasSrc0, src0, ?);
+  let Inst{16-9}  = !if(P.HasSrc1, src1, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
@@ -42,8 +42,8 @@ class VOP2_MADK64e <bits<6> op, VOPProfile P> : Enc96 {
   bits<8>  src1;
   bits<64> imm;
 
-  let Inst{8-0}   = !if(P.HasSrc0, src0, 0);
-  let Inst{16-9}  = !if(P.HasSrc1, src1, 0);
+  let Inst{8-0}   = !if(P.HasSrc0, src0, ?);
+  let Inst{16-9}  = !if(P.HasSrc1, src1, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
@@ -55,7 +55,7 @@ class VOP2_SDWAe <bits<6> op, VOPProfile P> : VOP_SDWAe <P> {
   bits<8> src1;
 
   let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
@@ -66,11 +66,11 @@ class VOP2_SDWA9Ae <bits<6> op, VOPProfile P> : VOP_SDWA9Ae <P> {
   bits<9> src1;
 
   let Inst{8-0}   = 0xf9; // sdwa
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; // encoding
-  let Inst{63}    = !if(P.HasSrc1, src1{8}, 0); // src1_sgpr
+  let Inst{63}    = !if(P.HasSrc1, src1{8}, ?); // src1_sgpr
 }
 
 class VOP2_Pseudo <string opName, VOPProfile P, list<dag> pattern=[], string suffix = "_e32"> :
@@ -1266,14 +1266,14 @@ let Constraints = "$vdst = $src2",
 defm V_FMAC_F32 : VOP2Inst_VOPD <"v_fmac_f32", VOP_MAC_F32, 0x0, "v_fmac_f32">;
 } // End SubtargetPredicate = HasDLInsts
 
-let SubtargetPredicate = HasFmaLegacy32 in {
+let SubtargetPredicate = HasFmacLegacy32 in {
 
 let Constraints = "$vdst = $src2",
     isConvertibleToThreeAddress = 1,
     isCommutable = 1 in
 defm V_FMAC_LEGACY_F32 : VOP2Inst <"v_fmac_legacy_f32", VOP_MAC_LEGACY_F32>;
 
-} // End SubtargetPredicate = HasFmaLegacy32
+} // End SubtargetPredicate = HasFmacLegacy32
 
 let SubtargetPredicate = HasFmacF64Inst,
     Constraints = "$vdst = $src2",
@@ -1348,10 +1348,15 @@ let isCommutable = 1 in
 def V_FMAAK_F64 : VOP2_Pseudo<"v_fmaak_f64", VOP_MADAK_F64, [], "">;
 } // End SubtargetPredicate = HasFmaakFmamkF64Insts, isReMaterializable = 1, FixedSize = 1, Size = 12, SchedRW = [Write64Bit]
 
+// A dedicated profile for V_PK_FMAC_F16.
+def VOP_V2F16_V2F16_V2F16_SPLAT : VOPProfile <[v2f16, v2f16, v2f16, untyped]> {
+  let Src0RC32 = VSrc_v2f16_splat;
+}
+
 let SubtargetPredicate = HasPkFmacF16Inst in {
 // FIXME: V_PK_FMAC_F16 is currently not used in instruction selection.
 // If this changes, ensure the DPP variant is not used for GFX11+.
-defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
+defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16_SPLAT>;
 } // End SubtargetPredicate = HasPkFmacF16Inst
 
 // Note: 16-bit instructions produce a 0 result in the high 16-bits
@@ -1481,7 +1486,7 @@ let SubtargetPredicate = isGFX12Plus, isReMaterializable = 1 in {
 } // End SubtargetPredicate = isGFX12Plus, isReMaterializable = 1
 
 let SubtargetPredicate = HasIEEEMinimumMaximumInsts, isReMaterializable = 1,
-    SchedRW = [WriteDoubleAdd], isCommutable = 1 in {
+    SchedRW = [WriteDoubleAdd], isCommutable = 1, IsDPMACCInstruction = 1 in {
   defm V_MIN_NUM_F64 : VOP2Inst_VOPD <"v_min_num_f64", VOP_F64_F64_F64, 0x24, "v_min_num_f64", fminnum_like>;
   defm V_MAX_NUM_F64 : VOP2Inst_VOPD <"v_max_num_f64", VOP_F64_F64_F64, 0x23, "v_max_num_f64", fmaxnum_like>;
 }
@@ -1502,7 +1507,7 @@ class VOP2_DPP<bits<6> op, VOP2_DPP_Pseudo ps,
   bits<8> vdst;
   bits<8> src1;
   let Inst{8-0}   = 0xfa;
-  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(p.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0;
@@ -1544,7 +1549,7 @@ class VOP2_DPP8<bits<6> op, VOP2_Pseudo ps,
   bits<8> src1;
 
   let Inst{8-0}   = fi;
-  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(p.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(p.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0;
@@ -1563,7 +1568,7 @@ class VOP2_DPP8_Gen<bits<6> op, VOP2_Pseudo ps, GFXGen Gen,
 }
 
 //===----------------------------------------------------------------------===//
-// GFX11, GFX12
+// GFX11, GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
 //===------------------------------- VOP2 -------------------------------===//
@@ -1580,6 +1585,10 @@ multiclass VOP2Only_Real_MADK64<GFXGen Gen, bits<6> op> {
       let DecoderNamespace = Gen.DecoderNamespace;
   }
 }
+
+multiclass VOP2Only_Real_MADK64_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
+  VOP2Only_Real_MADK64<GFX1250Gen, gfx1250Op>,
+  VOP2Only_Real_MADK64<GFX13Gen, op>;
 
 multiclass VOP2Only_Real_MADK_with_name<GFXGen Gen, bits<6> op, string asmName,
                                         string opName = NAME> {
@@ -1756,6 +1765,10 @@ multiclass VOP2_Real_FULL<GFXGen Gen, bits<6> op> :
   VOP2_Real_dpp<Gen, op>,
   VOP2_Real_dpp8<Gen, op>;
 
+multiclass VOP2_Real_FULL_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
+  VOP2_Real_FULL<GFX1250Gen, gfx1250Op>,
+  VOP2_Real_FULL<GFX13Gen, op>;
+
 multiclass VOP2_Real_NO_VOP3_with_name<GFXGen Gen, bits<6> op, string opName,
                                        string asmName, bit isSingle = 0> {
   defm NAME : VOP2_Real_e32_with_name<Gen, op, opName, asmName, isSingle>,
@@ -1775,6 +1788,10 @@ multiclass VOP2_Real_FULL_with_name<GFXGen Gen, bits<6> op, string opName,
 multiclass VOP2_Real_NO_DPP<GFXGen Gen, bits<6> op> :
   VOP2_Real_e32<Gen, op>, VOP2_Real_e64<Gen, op>;
 
+multiclass VOP2_Real_NO_DPP_gfx1250_gfx13<bits<6> gfx1250Op, bits<6> op> :
+  VOP2_Real_NO_DPP<GFX1250Gen, gfx1250Op>,
+  VOP2_Real_NO_DPP<GFX13Gen, op>;
+
 multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
                                       string asmName> {
   defm NAME : VOP2_Real_e32_with_name<Gen, op, opName, asmName>,
@@ -1785,93 +1802,108 @@ multiclass VOP2_Real_NO_DPP_with_name<GFXGen Gen, bits<6> op, string opName,
   }
 }
 
-multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias> {
+multiclass VOP2_Real_with_NO_DPP_with_alias<GFXGen Gen, bits<6> op, string alias> {
   defm NAME : VOP2_Real_e32<Gen, op>,
-              VOP2_Real_dpp<Gen, op>,
-              VOP2_Real_e64<Gen, op>,
-              VOP3_Real_dpp_Base<Gen, {0, 1, 0, 0, op{5-0}}>;
+              VOP2_Real_e64<Gen, op>;
   def Gen.Suffix#"_alias" : AMDGPUMnemonicAlias<alias, NAME> {
     let AssemblerPredicate = Gen.AssemblerPredicate;
   }
 }
 
+multiclass VOP2_Real_with_DPP16_with_alias<GFXGen Gen, bits<6> op, string alias> :
+  VOP2_Real_with_NO_DPP_with_alias<Gen, op, alias>,
+  VOP2_Real_dpp<Gen, op>,
+  VOP3_Real_dpp_Base<Gen, {0, 1, 0, 0, op{5-0}}>;
+
 //===----------------------------------------------------------------------===//
-// GFX12.
+// GFX12, GFX13
 //===----------------------------------------------------------------------===//
 
-multiclass VOP2be_Real_gfx12<bits<6> op, string opName, string asmName> :
-  VOP2be_Real<GFX12Gen, op, opName, asmName>;
+multiclass VOP2be_Real_gfx12_gfx13<
+    bits<6> gfx12Op, bits<6> op, string opName, string asmName> :
+  VOP2be_Real<GFX12Gen, gfx12Op, opName, asmName>,
+  VOP2be_Real<GFX13Gen, op, opName, asmName>;
 
 // Only for CNDMASK
-multiclass VOP2e_Real_gfx12<bits<6> op, string opName, string asmName> :
-  VOP2e_Real<GFX12Gen, op, opName, asmName>;
+multiclass VOP2e_Real_gfx12_gfx13<bits<6> op, string opName, string asmName> :
+  VOP2e_Real<GFX12Gen, op, opName, asmName>,
+  VOP2e_Real<GFX13Gen, op, opName, asmName>;
 
-multiclass VOP2_Real_FULL_with_name_gfx12<bits<6> op, string opName,
-                                          string asmName> :
-  VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
+multiclass VOP2_Real_FULL_gfx12_gfx13<bits<6> gfx12Op, bits<6> op> :
+  VOP2_Real_FULL<GFX12Gen, gfx12Op>,
+  VOP2_Real_FULL<GFX13Gen, op>;
 
-multiclass VOP2_Real_FULL_t16_gfx12<bits<6> op, string opName,
-                                    string asmName, string alias> {
-  defm NAME : VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
+multiclass VOP2_Real_FULL_with_name_gfx12_gfx13<
+    bits<6> gfx12Op, bits<6> op, string opName, string asmName> :
+  VOP2_Real_FULL_with_name<GFX12Gen, gfx12Op, opName, asmName>,
+  VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
+
+multiclass VOP2_Real_FULL_t16_gfx12_gfx13<
+    bits<6> gfx12Op, bits<6> op, string opName, string asmName, string alias> {
+  defm NAME : VOP2_Real_FULL_with_name<GFX12Gen, gfx12Op, opName, asmName>;
+  defm NAME : VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
   def _gfx12_2nd_alias : AMDGPUMnemonicAlias<alias, asmName> {
-    let AssemblerPredicate = isGFX12Only;
+    let AssemblerPredicate = isGFX12Plus;
   }
 }
 
-multiclass VOP2_Real_with_DPP16_with_alias_gfx12<bits<6> op, string alias> :
-  VOP2_Real_with_DPP16_with_alias<GFX12Gen, op, alias>;
+multiclass VOP2_Real_with_NO_DPP_gfx13_DPP16_with_alias_gfx12<bits<6> op, string alias> :
+  VOP2_Real_with_DPP16_with_alias<GFX12Gen, op, alias>,
+  VOP2_Real_with_NO_DPP_with_alias<GFX13Gen, op, alias>;
 
-multiclass VOP2_Real_FULL_t16_and_fake16_gfx12<bits<6> op, string opName,
-                                               string asmName, string alias> {
-  defm _t16: VOP2_Real_FULL_t16_gfx12<op, opName#"_t16", asmName, alias>;
-  defm _fake16: VOP2_Real_FULL_t16_gfx12<op, opName#"_fake16", asmName, alias>;
+multiclass VOP2_Real_FULL_t16_and_fake16_gfx12_gfx13<bits<6> gfx12Op, bits<6> op, string opName,
+                                                     string asmName, string alias> {
+  defm _t16: VOP2_Real_FULL_t16_gfx12_gfx13<gfx12Op, op, opName#"_t16", asmName, alias>;
+  defm _fake16: VOP2_Real_FULL_t16_gfx12_gfx13<gfx12Op, op, opName#"_fake16", asmName, alias>;
 }
 
 multiclass VOP2_Real_NO_DPP_with_name_gfx12<bits<6> op, string opName,
                                             string asmName> :
   VOP2_Real_NO_DPP_with_name<GFX12Gen, op, opName, asmName>;
 
-defm V_ADD_F64     : VOP2_Real_FULL_with_name_gfx12<0x002, "V_ADD_F64_pseudo", "v_add_f64">;
-defm V_MUL_F64     : VOP2_Real_FULL_with_name_gfx12<0x006, "V_MUL_F64_pseudo", "v_mul_f64">;
-defm V_LSHLREV_B64 : VOP2_Real_FULL_with_name_gfx12<0x01f, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
-defm V_MIN_NUM_F64 : VOP2_Real_with_DPP16_with_alias_gfx12<0x00d, "v_min_f64">;
-defm V_MAX_NUM_F64 : VOP2_Real_with_DPP16_with_alias_gfx12<0x00e, "v_max_f64">;
+defm V_ADD_F64     : VOP2_Real_FULL_with_name_gfx12_gfx13<0x02, 0x02, "V_ADD_F64_pseudo", "v_add_f64">;
+defm V_MUL_F64     : VOP2_Real_FULL_with_name_gfx12_gfx13<0x06, 0x06, "V_MUL_F64_pseudo", "v_mul_f64">;
+defm V_LSHLREV_B64 : VOP2_Real_FULL_with_name_gfx12_gfx13<0x1f, 0x22, "V_LSHLREV_B64_pseudo", "v_lshlrev_b64">;
+defm V_MIN_NUM_F64 : VOP2_Real_with_NO_DPP_gfx13_DPP16_with_alias_gfx12<0x00d, "v_min_f64">;
+defm V_MAX_NUM_F64 : VOP2_Real_with_NO_DPP_gfx13_DPP16_with_alias_gfx12<0x00e, "v_max_f64">;
 
-defm V_CNDMASK_B32 : VOP2e_Real_gfx12<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
+defm V_CNDMASK_B32 : VOP2e_Real_gfx12_gfx13<0x001, "V_CNDMASK_B32", "v_cndmask_b32">;
 defm V_ADD_CO_CI_U32 :
-  VOP2be_Real_gfx12<0x020, "V_ADDC_U32", "v_add_co_ci_u32">;
+  VOP2be_Real_gfx12_gfx13<0x20, 0x28, "V_ADDC_U32", "v_add_co_ci_u32">;
 defm V_SUB_CO_CI_U32 :
-  VOP2be_Real_gfx12<0x021, "V_SUBB_U32", "v_sub_co_ci_u32">;
+  VOP2be_Real_gfx12_gfx13<0x21, 0x29, "V_SUBB_U32", "v_sub_co_ci_u32">;
 defm V_SUBREV_CO_CI_U32 :
-  VOP2be_Real_gfx12<0x022, "V_SUBBREV_U32", "v_subrev_co_ci_u32">;
+  VOP2be_Real_gfx12_gfx13<0x22, 0x2a, "V_SUBBREV_U32", "v_subrev_co_ci_u32">;
 
-defm V_MIN_NUM_F32 : VOP2_Real_FULL_with_name_gfx12<0x015, "V_MIN_F32", "v_min_num_f32">;
-defm V_MAX_NUM_F32 : VOP2_Real_FULL_with_name_gfx12<0x016, "V_MAX_F32", "v_max_num_f32">;
-defm V_MIN_NUM_F16 : VOP2_Real_FULL_t16_and_fake16_gfx12<0x030, "V_MIN_F16", "v_min_num_f16", "v_min_f16">;
-defm V_MAX_NUM_F16 : VOP2_Real_FULL_t16_and_fake16_gfx12<0x031, "V_MAX_F16", "v_max_num_f16", "v_max_f16">;
+defm V_MIN_NUM_F32 : VOP2_Real_FULL_with_name_gfx12_gfx13<0x015, 0x0f, "V_MIN_F32", "v_min_num_f32">;
+defm V_MAX_NUM_F32 : VOP2_Real_FULL_with_name_gfx12_gfx13<0x016, 0x10, "V_MAX_F32", "v_max_num_f32">;
+defm V_MIN_NUM_F16 : VOP2_Real_FULL_t16_and_fake16_gfx12_gfx13<0x030, 0x3a, "V_MIN_F16", "v_min_num_f16", "v_min_f16">;
+defm V_MAX_NUM_F16 : VOP2_Real_FULL_t16_and_fake16_gfx12_gfx13<0x031, 0x39, "V_MAX_F16", "v_max_num_f16", "v_max_f16">;
 
-let SubtargetPredicate = isGFX12Plus in {
-  defm : VOP2eInstAliases<V_CNDMASK_B32_e32, V_CNDMASK_B32_e32_gfx12>;
+foreach Gen = [GFX12Gen, GFX13Gen] in
+let SubtargetPredicate = Gen.AssemblerPredicate in {
+  defm : VOP2eInstAliases<
+    V_CNDMASK_B32_e32, !cast<VOP2_Real>("V_CNDMASK_B32_e32"#Gen.Suffix)>;
 
   defm : VOP2bInstAliases<
-    V_ADDC_U32_e32, V_ADD_CO_CI_U32_e32_gfx12, "v_add_co_ci_u32">;
+    V_ADDC_U32_e32, !cast<VOP2_Real>("V_ADD_CO_CI_U32_e32"#Gen.Suffix), "v_add_co_ci_u32">;
   defm : VOP2bInstAliases<
-    V_SUBB_U32_e32, V_SUB_CO_CI_U32_e32_gfx12, "v_sub_co_ci_u32">;
+    V_SUBB_U32_e32, !cast<VOP2_Real>("V_SUB_CO_CI_U32_e32"#Gen.Suffix), "v_sub_co_ci_u32">;
   defm : VOP2bInstAliases<
-    V_SUBBREV_U32_e32, V_SUBREV_CO_CI_U32_e32_gfx12, "v_subrev_co_ci_u32">;
-} // End SubtargetPredicate = isGFX12Plus
+    V_SUBBREV_U32_e32, !cast<VOP2_Real>("V_SUBREV_CO_CI_U32_e32"#Gen.Suffix), "v_subrev_co_ci_u32">;
+} // End SubtargetPredicate = Gen.AssemblerPredicate
 
 let SubtargetPredicate = HasFmacF64Inst in
-defm V_FMAC_F64 : VOP2_Real_FULL<GFX12Gen, 0x17>;
+defm V_FMAC_F64 : VOP2_Real_FULL_gfx12_gfx13<0x17, 0x1f>;
 
-defm V_FMAMK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x23>;
-defm V_FMAAK_F64 : VOP2Only_Real_MADK64<GFX1250Gen, 0x24>;
-defm V_ADD_U64 : VOP2_Real_FULL<GFX1250Gen, 0x28>;
-defm V_SUB_U64 : VOP2_Real_FULL<GFX1250Gen, 0x29>;
+defm V_FMAMK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x23, 0x20>;
+defm V_FMAAK_F64 : VOP2Only_Real_MADK64_gfx1250_gfx13<0x24, 0x21>;
+defm V_ADD_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x28, 0x23>;
+defm V_SUB_U64 : VOP2_Real_FULL_gfx1250_gfx13<0x29, 0x24>;
 defm V_MUL_U64 : VOP2_Real_NO_DPP<GFX1250Gen, 0x2a>;
 
 //===----------------------------------------------------------------------===//
-// GFX11.
+// GFX11, GFX12, GFX13.
 //===----------------------------------------------------------------------===//
 
 multiclass VOP2be_Real_gfx11<bits<6> op, string opName, string asmName> :
@@ -1904,13 +1936,19 @@ multiclass VOP2_Real_NO_DPP_with_name_gfx11<bits<6> op, string opName,
                                            string asmName> :
   VOP2_Real_NO_DPP_with_name<GFX11Gen, op, opName, asmName>;
 
-multiclass VOP2_Real_FULL_gfx11_gfx12<bits<6> op> :
-  VOP2_Real_FULL<GFX11Gen, op>, VOP2_Real_FULL<GFX12Gen, op>;
+multiclass VOP2_Real_FULL_gfx11_gfx12_gfx13<bits<6> preGFX13Op, bits<6> op> :
+  VOP2_Real_FULL<GFX11Gen, preGFX13Op>, VOP2_Real_FULL<GFX12Gen, preGFX13Op>,
+  VOP2_Real_FULL<GFX13Gen, op>;
 
-multiclass VOP2_Real_FULL_with_name_gfx11_gfx12<bits<6> op, string opName,
-                                                string asmName> :
+multiclass VOP2_Real_FULL_with_name_gfx11_gfx12_gfx13<
+    bits<6> op, string opName, string asmName> :
   VOP2_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
-  VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
+  VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>,
+  VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
+
+multiclass VOP2_Real_e32_gfx11_gfx12_gfx13<bits<6> op> :
+  VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>,
+  VOP2Only_Real_e32<GFX13Gen, op>;
 
 multiclass VOP2_Real_e32_gfx11_gfx12<bits<6> op> :
   VOP2Only_Real_e32<GFX11Gen, op>, VOP2Only_Real_e32<GFX12Gen, op>;
@@ -1930,26 +1968,28 @@ multiclass VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<bits<10> op, string as
 multiclass VOP3beOnly_Realtriple_gfx11_gfx12<bits<10> op> :
   VOP3beOnly_Realtriple<GFX11Gen, op>, VOP3beOnly_Realtriple<GFX12Gen, op>;
 
-multiclass VOP2Only_Real_MADK_t16_gfx11_gfx12<bits<6> op, string asmName,
-                                              string opName = NAME> :
+multiclass VOP2Only_Real_MADK_t16_gfx11_gfx12_gfx13<
+    bits<6> op, string asmName, string opName = NAME> :
   VOP2Only_Real_MADK_with_name<GFX11Gen, op, asmName, opName>,
-  VOP2Only_Real_MADK_with_name<GFX12Gen, op, asmName, opName>;
+  VOP2Only_Real_MADK_with_name<GFX12Gen, op, asmName, opName>,
+  VOP2Only_Real_MADK_with_name<GFX13Gen, op, asmName, opName>;
 
-multiclass VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12<bits<6> op, string asmName,
-                                                         string opName = NAME> {
-  defm _t16: VOP2Only_Real_MADK_t16_gfx11_gfx12<op, asmName, opName#"_t16">;
-  defm _fake16: VOP2Only_Real_MADK_t16_gfx11_gfx12<op, asmName, opName#"_fake16">;
+multiclass VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12_gfx13<bits<6> op, string asmName,
+                                                               string opName = NAME> {
+  defm _t16: VOP2Only_Real_MADK_t16_gfx11_gfx12_gfx13<op, asmName, opName#"_t16">;
+  defm _fake16: VOP2Only_Real_MADK_t16_gfx11_gfx12_gfx13<op, asmName, opName#"_fake16">;
 }
 
-multiclass VOP2_Real_FULL_t16_gfx11_gfx12<bits<6> op, string asmName,
-                                          string opName = NAME> :
+multiclass VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<
+    bits<6> op, string asmName, string opName = NAME> :
   VOP2_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
-  VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
+  VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>,
+  VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
 
-multiclass VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<bits<6> op, string asmName,
-                                          string opName = NAME> {
-  defm _t16:    VOP2_Real_FULL_t16_gfx11_gfx12<op, asmName, opName#"_t16">;
-  defm _fake16: VOP2_Real_FULL_t16_gfx11_gfx12<op, asmName, opName#"_fake16">;
+multiclass VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<bits<6> op, string asmName,
+                                                           string opName = NAME> {
+  defm _t16:    VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<op, asmName, opName#"_t16">;
+  defm _fake16: VOP2_Real_FULL_t16_gfx11_gfx12_gfx13<op, asmName, opName#"_fake16">;
 }
 
 multiclass VOP2_Real_FULL_gfx11<bits<6> op> :
@@ -1961,32 +2001,32 @@ defm V_DOT2ACC_F32_F16 : VOP2_Real_NO_VOP3_with_name_gfx11<0x002,
   "V_DOT2C_F32_F16", "v_dot2acc_f32_f16", 1>;
 defm V_FMAC_DX9_ZERO_F32 : VOP2_Real_NO_DPP_with_name_gfx11<0x006,
   "V_FMAC_LEGACY_F32", "v_fmac_dx9_zero_f32">;
-defm V_MUL_DX9_ZERO_F32 : VOP2_Real_FULL_with_name_gfx11_gfx12<0x007,
+defm V_MUL_DX9_ZERO_F32 : VOP2_Real_FULL_with_name_gfx11_gfx12_gfx13<0x007,
   "V_MUL_LEGACY_F32", "v_mul_dx9_zero_f32">;
-defm V_LSHLREV_B32        : VOP2_Real_FULL_gfx11_gfx12<0x018>;
-defm V_LSHRREV_B32        : VOP2_Real_FULL_gfx11_gfx12<0x019>;
-defm V_ASHRREV_I32        : VOP2_Real_FULL_gfx11_gfx12<0x01a>;
+defm V_LSHLREV_B32        : VOP2_Real_FULL_gfx11_gfx12_gfx13<0x018, 0x1a>;
+defm V_LSHRREV_B32        : VOP2_Real_FULL_gfx11_gfx12_gfx13<0x019, 0x16>;
+defm V_ASHRREV_I32        : VOP2_Real_FULL_gfx11_gfx12_gfx13<0x01a, 0x18>;
 defm V_ADD_CO_CI_U32 :
-  VOP2be_Real_gfx11<0x020, "V_ADDC_U32", "v_add_co_ci_u32">;
+  VOP2be_Real_gfx11<0x20, "V_ADDC_U32", "v_add_co_ci_u32">;
 defm V_SUB_CO_CI_U32 :
-  VOP2be_Real_gfx11<0x021, "V_SUBB_U32", "v_sub_co_ci_u32">;
+  VOP2be_Real_gfx11<0x21, "V_SUBB_U32", "v_sub_co_ci_u32">;
 defm V_SUBREV_CO_CI_U32 :
-  VOP2be_Real_gfx11<0x022, "V_SUBBREV_U32", "v_subrev_co_ci_u32">;
+  VOP2be_Real_gfx11<0x22, "V_SUBBREV_U32", "v_subrev_co_ci_u32">;
 
-defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11_gfx12<0x02f,
+defm V_CVT_PK_RTZ_F16_F32  : VOP2_Real_FULL_with_name_gfx11_gfx12_gfx13<0x02f,
   "V_CVT_PKRTZ_F16_F32", "v_cvt_pk_rtz_f16_f32">;
-defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx11_gfx12<0x03c>;
+defm V_PK_FMAC_F16     : VOP2_Real_e32_gfx11_gfx12_gfx13<0x03c>;
 
-defm V_ADD_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x032, "v_add_f16">;
-defm V_SUB_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x033, "v_sub_f16">;
-defm V_SUBREV_F16          : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x034, "v_subrev_f16">;
-defm V_MUL_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x035, "v_mul_f16">;
-defm V_FMAC_F16            : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x036, "v_fmac_f16">;
-defm V_LDEXP_F16           : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12<0x03b, "v_ldexp_f16">;
+defm V_ADD_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x032, "v_add_f16">;
+defm V_SUB_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x033, "v_sub_f16">;
+defm V_SUBREV_F16          : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x034, "v_subrev_f16">;
+defm V_MUL_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x035, "v_mul_f16">;
+defm V_FMAC_F16            : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x036, "v_fmac_f16">;
+defm V_LDEXP_F16           : VOP2_Real_FULL_t16_and_fake16_gfx11_gfx12_gfx13<0x03b, "v_ldexp_f16">;
 defm V_MAX_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11<0x039, "v_max_f16">;
 defm V_MIN_F16             : VOP2_Real_FULL_t16_and_fake16_gfx11<0x03a, "v_min_f16">;
-defm V_FMAMK_F16           : VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12<0x037, "v_fmamk_f16">;
-defm V_FMAAK_F16           : VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12<0x038, "v_fmaak_f16">;
+defm V_FMAMK_F16           : VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12_gfx13<0x037, "v_fmamk_f16">;
+defm V_FMAAK_F16           : VOP2Only_Real_MADK_t16_and_fake16_gfx11_gfx12_gfx13<0x038, "v_fmaak_f16">;
 
 // VOP3 only.
 defm V_CNDMASK_B16         : VOP3Only_Realtriple_t16_and_fake16_gfx11_gfx12<0x25d, "v_cndmask_b16">;
@@ -2230,8 +2270,9 @@ let AssemblerPredicate = isGFX10Only, DecoderNamespace = "GFX10" in {
 multiclass VOP2Only_Real_MADK_gfx10_gfx11<bits<6> op> :
   VOP2Only_Real_MADK_gfx10<op>, VOP2Only_Real_MADK<GFX11Gen, op>;
 
-multiclass VOP2Only_Real_MADK_gfx10_gfx11_gfx12<bits<6> op> :
-  VOP2Only_Real_MADK_gfx10_gfx11<op>, VOP2Only_Real_MADK<GFX12Gen, op>;
+multiclass VOP2Only_Real_MADK_gfx10_gfx11_gfx12_gfx13<bits<6> op> :
+  VOP2Only_Real_MADK_gfx10_gfx11<op>, VOP2Only_Real_MADK<GFX12Gen, op>,
+  VOP2Only_Real_MADK<GFX13Gen, op>;
 
 multiclass VOP2be_Real_gfx10<bits<6> op, string opName, string asmName> :
   VOP2be_Real_e32_gfx10<op, opName, asmName>,
@@ -2254,8 +2295,9 @@ multiclass VOP2_Real_gfx10<bits<6> op> :
 multiclass VOP2_Real_gfx10_gfx11<bits<6> op> :
   VOP2_Real_gfx10<op>, VOP2_Real_FULL<GFX11Gen, op>;
 
-multiclass VOP2_Real_gfx10_gfx11_gfx12<bits<6> op> :
-  VOP2_Real_gfx10_gfx11<op>, VOP2_Real_FULL<GFX12Gen, op>;
+multiclass VOP2_Real_gfx10_gfx11_gfx12_gfx13<bits<6> op> :
+  VOP2_Real_gfx10_gfx11<op>, VOP2_Real_FULL<GFX12Gen, op>,
+  VOP2_Real_FULL<GFX13Gen, op>;
 
 multiclass VOP2_Real_with_name_gfx10<bits<6> op, string opName,
                                      string asmName> :
@@ -2265,20 +2307,21 @@ multiclass VOP2_Real_with_name_gfx10<bits<6> op, string opName,
   VOP2_Real_dpp_gfx10_with_name<op, opName, asmName>,
   VOP2_Real_dpp8_gfx10_with_name<op, opName, asmName>;
 
-multiclass VOP2_Real_with_name_gfx10_gfx11_gfx12<bits<6> op, string opName,
-                                                 string asmName> :
+multiclass VOP2_Real_with_name_gfx10_gfx11_gfx12_gfx13<
+    bits<6> op, string opName, string asmName> :
   VOP2_Real_with_name_gfx10<op, opName, asmName>,
   VOP2_Real_FULL_with_name<GFX11Gen, op, opName, asmName>,
-  VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>;
+  VOP2_Real_FULL_with_name<GFX12Gen, op, opName, asmName>,
+  VOP2_Real_FULL_with_name<GFX13Gen, op, opName, asmName>;
 
 // NB: Same opcode as v_mac_legacy_f32
 let DecoderNamespace = "GFX10_B" in
 defm V_FMAC_LEGACY_F32 : VOP2_Real_gfx10<0x006>;
 
-defm V_XNOR_B32        : VOP2_Real_gfx10_gfx11_gfx12<0x01e>;
-defm V_FMAC_F32        : VOP2_Real_gfx10_gfx11_gfx12<0x02b>;
-defm V_FMAMK_F32       : VOP2Only_Real_MADK_gfx10_gfx11_gfx12<0x02c>;
-defm V_FMAAK_F32       : VOP2Only_Real_MADK_gfx10_gfx11_gfx12<0x02d>;
+defm V_XNOR_B32        : VOP2_Real_gfx10_gfx11_gfx12_gfx13<0x01e>;
+defm V_FMAC_F32        : VOP2_Real_gfx10_gfx11_gfx12_gfx13<0x02b>;
+defm V_FMAMK_F32       : VOP2Only_Real_MADK_gfx10_gfx11_gfx12_gfx13<0x02c>;
+defm V_FMAAK_F32       : VOP2Only_Real_MADK_gfx10_gfx11_gfx12_gfx13<0x02d>;
 defm V_ADD_F16         : VOP2_Real_gfx10<0x032>;
 defm V_SUB_F16         : VOP2_Real_gfx10<0x033>;
 defm V_SUBREV_F16      : VOP2_Real_gfx10<0x034>;
@@ -2293,11 +2336,11 @@ defm V_PK_FMAC_F16     : VOP2_Real_e32_dpp_dpp8_gfx10<0x03c>;
 
 // VOP2 no carry-in, carry-out.
 defm V_ADD_NC_U32 :
-  VOP2_Real_with_name_gfx10_gfx11_gfx12<0x025, "V_ADD_U32", "v_add_nc_u32">;
+  VOP2_Real_with_name_gfx10_gfx11_gfx12_gfx13<0x025, "V_ADD_U32", "v_add_nc_u32">;
 defm V_SUB_NC_U32 :
-  VOP2_Real_with_name_gfx10_gfx11_gfx12<0x026, "V_SUB_U32", "v_sub_nc_u32">;
+  VOP2_Real_with_name_gfx10_gfx11_gfx12_gfx13<0x026, "V_SUB_U32", "v_sub_nc_u32">;
 defm V_SUBREV_NC_U32 :
-  VOP2_Real_with_name_gfx10_gfx11_gfx12<0x027, "V_SUBREV_U32", "v_subrev_nc_u32">;
+  VOP2_Real_with_name_gfx10_gfx11_gfx12_gfx13<0x027, "V_SUBREV_U32", "v_subrev_nc_u32">;
 
 // VOP2 carry-in, carry-out.
 defm V_ADD_CO_CI_U32 :
@@ -2346,7 +2389,7 @@ class VOP2_DPPe <bits<6> op, VOP2_DPP_Pseudo ps, VOPProfile P = ps.Pfl> :
   bits<8> vdst;
   bits<8> src1;
   let Inst{8-0}   = 0xfa; //dpp
-  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, 0);
+  let Inst{16-9}  = !if(P.HasSrc1, src1{7-0}, ?);
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
   let Inst{30-25} = op;
   let Inst{31}    = 0x0; //encoding
@@ -2392,8 +2435,9 @@ multiclass VOP2_Real_gfx6_gfx7_gfx10<bits<6> op> :
 multiclass VOP2_Real_gfx6_gfx7_gfx10_gfx11<bits<6> op> :
   VOP2_Real_gfx6_gfx7_gfx10<op>, VOP2_Real_FULL<GFX11Gen, op>;
 
-multiclass VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<bits<6> op> :
-  VOP2_Real_gfx6_gfx7_gfx10_gfx11<op>, VOP2_Real_FULL<GFX12Gen, op>;
+multiclass VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<6> op> :
+  VOP2_Real_gfx6_gfx7_gfx10_gfx11<op>, VOP2_Real_FULL<GFX12Gen, op>,
+  VOP2_Real_FULL<GFX13Gen, op>;
 
 multiclass VOP2be_Real_gfx6_gfx7<bits<6> op> :
   VOP2_Real_e32_gfx6_gfx7<op>, VOP2be_Real_e64_gfx6_gfx7<op>;
@@ -2455,28 +2499,28 @@ let SubtargetPredicate = isGFX6GFX7 in {
   def : VOP2e64InstAlias<V_SUBREV_CO_U32_e64, V_SUBREV_I32_e64_gfx6_gfx7>;
 } // End SubtargetPredicate = isGFX6GFX7
 
-defm V_ADD_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x003>;
-defm V_SUB_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x004>;
-defm V_SUBREV_F32         : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x005>;
+defm V_ADD_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x003>;
+defm V_SUB_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x004>;
+defm V_SUBREV_F32         : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x005>;
 defm V_MAC_LEGACY_F32     : VOP2_Real_gfx6_gfx7_gfx10<0x006>;
 defm V_MUL_LEGACY_F32     : VOP2_Real_gfx6_gfx7_gfx10<0x007>;
-defm V_MUL_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x008>;
-defm V_MUL_I32_I24        : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x009>;
-defm V_MUL_HI_I32_I24     : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00a>;
-defm V_MUL_U32_U24        : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00b>;
-defm V_MUL_HI_U32_U24     : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x00c>;
+defm V_MUL_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x008>;
+defm V_MUL_I32_I24        : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x009>;
+defm V_MUL_HI_I32_I24     : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00a>;
+defm V_MUL_U32_U24        : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00b>;
+defm V_MUL_HI_U32_U24     : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x00c>;
 defm V_MIN_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11<0x00f>;
 defm V_MAX_F32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11<0x010>;
-defm V_MIN_I32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x011>;
-defm V_MAX_I32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x012>;
-defm V_MIN_U32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x013>;
-defm V_MAX_U32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x014>;
+defm V_MIN_I32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x011>;
+defm V_MAX_I32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x012>;
+defm V_MIN_U32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x013>;
+defm V_MAX_U32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x014>;
 defm V_LSHRREV_B32        : VOP2_Real_gfx6_gfx7_gfx10<0x016>;
 defm V_ASHRREV_I32        : VOP2_Real_gfx6_gfx7_gfx10<0x018>;
 defm V_LSHLREV_B32        : VOP2_Real_gfx6_gfx7_gfx10<0x01a>;
-defm V_AND_B32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x01b>;
-defm V_OR_B32             : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x01c>;
-defm V_XOR_B32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12<0x01d>;
+defm V_AND_B32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x01b>;
+defm V_OR_B32             : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x01c>;
+defm V_XOR_B32            : VOP2_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<0x01d>;
 defm V_MAC_F32            : VOP2_Real_gfx6_gfx7_gfx10<0x01f>;
 defm V_CVT_PKRTZ_F16_F32  : VOP2_Real_gfx6_gfx7_gfx10<0x02f>;
 defm V_MADMK_F32          : VOP2Only_Real_MADK_gfx6_gfx7_gfx10<0x020>;

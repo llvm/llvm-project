@@ -65,9 +65,28 @@ void SPIRV::constructAssembleCommand(Compilation &C, const Tool &T,
   if (!llvm::sys::fs::can_execute(ExeCand))
     ExeCand = T.getToolChain().GetProgramPath("spirv-as");
 
+  if (!llvm::sys::fs::can_execute(ExeCand) &&
+      !C.getArgs().hasArg(clang::options::OPT__HASH_HASH_HASH)) {
+    C.getDriver().Diag(clang::diag::err_drv_no_spv_tools) << "spirv-as";
+    return;
+  }
   const char *Exec = C.getArgs().MakeArgString(ExeCand);
   C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
                                          Exec, CmdArgs, Input, Output));
+}
+
+void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfo &Output,
+                                     const InputInfoList &Inputs,
+                                     const llvm::opt::ArgList &Args) {
+
+  ArgStringList LlvmLinkArgs;
+
+  for (auto Input : Inputs)
+    LlvmLinkArgs.push_back(Input.getFilename());
+
+  tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
 }
 
 void SPIRV::Translator::ConstructJob(Compilation &C, const JobAction &JA,
@@ -121,18 +140,41 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
+  if (JA.getType() == types::TY_LLVM_BC) {
+    constructLLVMLinkCommand(C, *this, JA, Output, Inputs, Args);
+    return;
+  }
   const ToolChain &ToolChain = getToolChain();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
-  AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
+  AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  // Use of --sycl-link will call the clang-sycl-linker instead of
-  // the default linker (spirv-link).
-  if (Args.hasArg(options::OPT_sycl_link))
+  // TODO: Consider moving SPIR-V linking to a separate tool.
+  if (C.getDriver().isUsingLTO()) {
+    // Implement limited LTO support through llvm-lto.
+    if (Args.hasArg(options::OPT_sycl_link)) {
+      // For unsupported cases, throw the same error as when LTO isn't supported
+      // at all.
+      C.getDriver().Diag(clang::diag::err_drv_no_linker_llvm_support)
+          << ToolChain.getTriple().getTriple();
+      return;
+    }
+    Linker = ToolChain.GetProgramPath("llvm-lto");
+    // Disable internalization, otherwise GlobalDCE will optimize everything
+    // out.
+    CmdArgs.push_back("-enable-lto-internalization=false");
+  } else if (Args.hasArg(options::OPT_sycl_link)) {
+    // Use of --sycl-link will call the clang-sycl-linker instead of
+    // the default linker (spirv-link).
     Linker = ToolChain.GetProgramPath("clang-sycl-linker");
+  } else if (!llvm::sys::fs::can_execute(Linker) &&
+             !C.getArgs().hasArg(clang::options::OPT__HASH_HASH_HASH)) {
+    C.getDriver().Diag(clang::diag::err_drv_no_spv_tools) << getShortName();
+    return;
+  }
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
                                          Args.MakeArgString(Linker), CmdArgs,
                                          Inputs, Output));
@@ -143,7 +185,10 @@ SPIRVToolChain::SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
     : ToolChain(D, Triple, Args) {
   // TODO: Revisit need/use of --sycl-link option once SYCL toolchain is
   // available and SYCL linking support is moved there.
-  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link);
+  NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link) || D.isUsingLTO();
+
+  // Lookup binaries into the driver directory.
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 bool SPIRVToolChain::HasNativeLLVMSupport() const { return NativeLLVMSupport; }

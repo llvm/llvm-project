@@ -7,7 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: linux
+// UNSUPPORTED: target={{.*-apple.*}}
+// UNSUPPORTED: target={{.*-aix.*}}
+// UNSUPPORTED: target={{.*-windows.*}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan

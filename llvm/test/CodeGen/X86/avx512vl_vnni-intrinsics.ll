@@ -178,18 +178,18 @@ define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpbusds_128(<4 x i32
   ret { <4 x i32>, <4 x i32> } %res2
 }
 
-declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32>, <16 x i16>, <16 x i16>)
 
-define <8 x i32>@test_int_x86_avx512_vpdpwssd_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+define <8 x i32>@test_int_x86_avx512_vpdpwssd_256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpwssd_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpwssd %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf2,0x75,0x28,0x52,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2)
   ret <8 x i32> %1
 }
 
-define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssd_256(<8 x i32> %x0, <8 x i32> %x1, ptr %x2p, <8 x i32> %x4, i8 %x3) {
+define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssd_256(<8 x i32> %x0, <16 x i16> %x1, ptr %x2p, <16 x i16> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpwssd_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
@@ -209,11 +209,11 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssd_256(<8 x i32>
 ; X64-NEXT:    vpdpwssd %ymm2, %ymm1, %ymm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xa9,0x52,0xda]
 ; X64-NEXT:    vmovdqa %ymm3, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <8 x i32>, ptr %x2p
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %x2 = load <16 x i16>, ptr %x2p
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i32> %1, <8 x i32> %x0
-  %4 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x4)
+  %4 = call <8 x i32> @llvm.x86.avx512.vpdpwssd.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %6 = select <8 x i1> %5, <8 x i32> %4, <8 x i32> zeroinitializer
   %res1 = insertvalue { <8 x i32>, <8 x i32> } poison, <8 x i32> %3, 0
@@ -221,18 +221,18 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssd_256(<8 x i32>
   ret { <8 x i32>, <8 x i32> } %res2
 }
 
-declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32>, <8 x i16>, <8 x i16>)
 
-define <4 x i32>@test_int_x86_avx512_vpdpwssd_128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2) {
+define <4 x i32>@test_int_x86_avx512_vpdpwssd_128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpwssd_128:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpwssd %xmm2, %xmm1, %xmm0 # encoding: [0x62,0xf2,0x75,0x08,0x52,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2)
   ret <4 x i32> %1
 }
 
-define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpwssd_128(<4 x i32> %x0, <4 x i32> %x1, ptr %x2p, <4 x i32> %x4, i8 %x3) {
+define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpwssd_128(<4 x i32> %x0, <8 x i16> %x1, ptr %x2p, <8 x i16> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpwssd_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
@@ -252,12 +252,12 @@ define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpwssd_128(<4 x i32>
 ; X64-NEXT:    vpdpwssd %xmm2, %xmm1, %xmm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0x89,0x52,0xda]
 ; X64-NEXT:    vmovdqa %xmm3, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <4 x i32>, ptr %x2p
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %x2 = load <8 x i16>, ptr %x2p
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = select <4 x i1> %extract, <4 x i32> %1, <4 x i32> %x0
-  %4 = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x4)
+  %4 = call <4 x i32> @llvm.x86.avx512.vpdpwssd.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %extract1 = shufflevector <8 x i1> %5, <8 x i1> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %6 = select <4 x i1> %extract1, <4 x i32> %4, <4 x i32> zeroinitializer
@@ -266,18 +266,18 @@ define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpwssd_128(<4 x i32>
   ret { <4 x i32>, <4 x i32> } %res2
 }
 
-declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <8 x i32>, <8 x i32>)
+declare <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32>, <16 x i16>, <16 x i16>)
 
-define <8 x i32>@test_int_x86_avx512_vpdpwssds_256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2) {
+define <8 x i32>@test_int_x86_avx512_vpdpwssds_256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_vpdpwssds_256:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpdpwssds %ymm2, %ymm1, %ymm0 # encoding: [0x62,0xf2,0x75,0x28,0x53,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2)
   ret <8 x i32> %1
 }
 
-define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssds_256(<8 x i32> %x0, <8 x i32> %x1, ptr %x2p, <8 x i32> %x4, i8 %x3) {
+define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssds_256(<8 x i32> %x0, <16 x i16> %x1, ptr %x2p, <16 x i16> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpwssds_256:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %ymm0, %ymm3 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xd8]
@@ -297,11 +297,11 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssds_256(<8 x i32
 ; X64-NEXT:    vpdpwssds %ymm2, %ymm1, %ymm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0xa9,0x53,0xda]
 ; X64-NEXT:    vmovdqa %ymm3, %ymm1 # EVEX TO VEX Compression encoding: [0xc5,0xfd,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <8 x i32>, ptr %x2p
-  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x2)
+  %x2 = load <16 x i16>, ptr %x2p
+  %1 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %3 = select <8 x i1> %2, <8 x i32> %1, <8 x i32> %x0
-  %4 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <8 x i32> %x1, <8 x i32> %x4)
+  %4 = call <8 x i32> @llvm.x86.avx512.vpdpwssds.256(<8 x i32> %x0, <16 x i16> %x1, <16 x i16> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %6 = select <8 x i1> %5, <8 x i32> %4, <8 x i32> zeroinitializer
   %res1 = insertvalue { <8 x i32>, <8 x i32> } poison, <8 x i32> %3, 0
@@ -309,9 +309,9 @@ define { <8 x i32>, <8 x i32> } @test_int_x86_avx512_mask_vpdpwssds_256(<8 x i32
   ret { <8 x i32>, <8 x i32> } %res2
 }
 
-declare <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <4 x i32>, <4 x i32>)
+declare <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32>, <8 x i16>, <8 x i16>)
 
-define <4 x i32>@test_int_x86_avx512_vpdpwssds_128(<4 x i32> %x0, <4 x i32> %x1, ptr %x2p) {
+define <4 x i32>@test_int_x86_avx512_vpdpwssds_128(<4 x i32> %x0, <8 x i16> %x1, ptr %x2p) {
 ; X86-LABEL: test_int_x86_avx512_vpdpwssds_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -322,12 +322,12 @@ define <4 x i32>@test_int_x86_avx512_vpdpwssds_128(<4 x i32> %x0, <4 x i32> %x1,
 ; X64:       # %bb.0:
 ; X64-NEXT:    vpdpwssds (%rdi), %xmm1, %xmm0 # encoding: [0x62,0xf2,0x75,0x08,0x53,0x07]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <4 x i32>, ptr %x2p
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %x2 = load <8 x i16>, ptr %x2p
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2)
   ret <4 x i32> %1
 }
 
-define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpwssds_128(<4 x i32> %x0, <4 x i32> %x1, ptr %x2p, <4 x i32> %x4, i8 %x3) {
+define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpwssds_128(<4 x i32> %x0, <8 x i16> %x1, ptr %x2p, <8 x i16> %x4, i8 %x3) {
 ; X86-LABEL: test_int_x86_avx512_mask_vpdpwssds_128:
 ; X86:       # %bb.0:
 ; X86-NEXT:    vmovdqa %xmm0, %xmm3 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xd8]
@@ -347,12 +347,12 @@ define { <4 x i32>, <4 x i32> } @test_int_x86_avx512_mask_vpdpwssds_128(<4 x i32
 ; X64-NEXT:    vpdpwssds %xmm2, %xmm1, %xmm3 {%k1} {z} # encoding: [0x62,0xf2,0x75,0x89,0x53,0xda]
 ; X64-NEXT:    vmovdqa %xmm3, %xmm1 # EVEX TO VEX Compression encoding: [0xc5,0xf9,0x6f,0xcb]
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x2 = load <4 x i32>, ptr %x2p
-  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x2)
+  %x2 = load <8 x i16>, ptr %x2p
+  %1 = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x2)
   %2 = bitcast i8 %x3 to <8 x i1>
   %extract = shufflevector <8 x i1> %2, <8 x i1> %2, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %3 = select <4 x i1> %extract, <4 x i32> %1, <4 x i32> %x0
-  %4 = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <4 x i32> %x1, <4 x i32> %x4)
+  %4 = call <4 x i32> @llvm.x86.avx512.vpdpwssds.128(<4 x i32> %x0, <8 x i16> %x1, <8 x i16> %x4)
   %5 = bitcast i8 %x3 to <8 x i1>
   %extract1 = shufflevector <8 x i1> %5, <8 x i1> %5, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %6 = select <4 x i1> %extract1, <4 x i32> %4, <4 x i32> zeroinitializer

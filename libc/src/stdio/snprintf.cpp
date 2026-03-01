@@ -31,9 +31,7 @@ LLVM_LIBC_FUNCTION(int, snprintf,
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  printf_core::WriteBuffer<printf_core::Mode<
-      printf_core::WriteMode::FILL_BUFF_AND_DROP_OVERFLOW>::value>
-      wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
+  printf_core::DropOverflowBuffer wb(buffer, (buffsz > 0 ? buffsz - 1 : 0));
   printf_core::Writer writer(wb);
 
   auto ret_val = printf_core::printf_main(&writer, format, args);

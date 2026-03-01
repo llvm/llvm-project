@@ -130,7 +130,7 @@ define i32 @bar(i32 %a, i32 %b, i32 %c, i32 %d, ptr %input) {
 ; WAYAGGRESSIVE-NEXT:    [[TMP0:%.*]] = load i32, ptr [[INPUT]], align 4
 ; WAYAGGRESSIVE-NEXT:    br label %[[COND_END]]
 ; WAYAGGRESSIVE:       [[COND_END]]:
-; WAYAGGRESSIVE-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP0]], %[[COND_FALSE]] ], [ 0, %[[PRED_A]] ], [ 0, %[[PRED_B]] ]
+; WAYAGGRESSIVE-NEXT:    [[COND:%.*]] = phi i32 [ [[TMP0]], %[[COND_FALSE]] ], [ 0, %[[PRED_B]] ], [ 0, %[[PRED_A]] ]
 ; WAYAGGRESSIVE-NEXT:    ret i32 [[COND]]
 ;
 entry:

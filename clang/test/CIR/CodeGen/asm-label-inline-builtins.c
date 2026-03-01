@@ -31,7 +31,7 @@ void test(const char *fmt, __builtin_va_list ap) {
   vprintf(fmt, ap);
 }
 
-// CIR: cir.func internal private @__vprintfieee128.inline({{.*}}) -> !s32i inline(always)
+// CIR: cir.func always_inline internal private @__vprintfieee128.inline({{.*}}) -> !s32i
 // CIR:   cir.call @__vfprintf_chkieee128(%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}})
 //
 // CIR: cir.func {{.*}} @test({{.*}})
@@ -39,10 +39,10 @@ void test(const char *fmt, __builtin_va_list ap) {
 
 
 // LLVM: define internal i32 @__vprintfieee128.inline({{.*}}) #[[ALWAYS_INLINE_ATTR:.*]] {
-// LLVM:   call i32 @__vfprintf_chkieee128(ptr %{{.*}}, i32 1, ptr %{{.*}}, ptr %{{.*}})
+// LLVM:   call i32 @__vfprintf_chkieee128(ptr {{.*}} %{{.*}}, i32 {{.*}} 1, ptr {{.*}} %{{.*}}, ptr {{.*}} %{{.*}})
 //
 // LLVM: define {{.*}} void @test{{.*}}
-// LLVM:   call i32 @__vprintfieee128.inline(ptr %{{.*}}, ptr %{{.*}})
+// LLVM:   call i32 @__vprintfieee128.inline(ptr {{.*}} %{{.*}}, ptr {{.*}} %{{.*}})
 //
 // LLVM: attributes #[[ALWAYS_INLINE_ATTR]] = { alwaysinline }
 

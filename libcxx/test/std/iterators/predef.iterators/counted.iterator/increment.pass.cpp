@@ -13,6 +13,7 @@
 // constexpr counted_iterator operator++(int)
 //   requires forward_iterator<I>;
 
+#include <cassert>
 #include <iterator>
 
 #include "test_macros.h"

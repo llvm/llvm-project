@@ -15,6 +15,7 @@
 #define LLVM_CLANG_FORMAT_FORMAT_H
 
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/TokenKinds.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/IncludeStyle.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -2450,9 +2451,84 @@ struct FormatStyle {
     BBO_RespectPrecedence
   };
 
+  /// A rule that specifies how to break a specific set of binary operators.
+  /// \version 23
+  struct BinaryOperationBreakRule {
+    /// The list of operators this rule applies to, e.g. ``&&``, ``||``, ``|``.
+    /// Alternative spellings (e.g. ``and`` for ``&&``) are accepted.
+    std::vector<tok::TokenKind> Operators;
+    /// The break style for these operators (defaults to ``OnePerLine``).
+    BreakBinaryOperationsStyle Style;
+    /// Minimum number of operands in a chain before the rule triggers.
+    /// For example, ``a && b && c`` is a chain of length 3.
+    /// ``0`` means always break (when the line is too long).
+    unsigned MinChainLength;
+    bool operator==(const BinaryOperationBreakRule &R) const {
+      return Operators == R.Operators && Style == R.Style &&
+             MinChainLength == R.MinChainLength;
+    }
+    bool operator!=(const BinaryOperationBreakRule &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Options for ``BreakBinaryOperations``.
+  ///
+  /// If specified as a simple string (e.g. ``OnePerLine``), it behaves like
+  /// the original enum and applies to all binary operators.
+  ///
+  /// If specified as a struct, allows per-operator configuration:
+  /// \code{.yaml}
+  ///   BreakBinaryOperations:
+  ///     Default: Never
+  ///     PerOperator:
+  ///       - Operators: ['&&', '||']
+  ///         Style: OnePerLine
+  ///         MinChainLength: 3
+  /// \endcode
+  /// \version 23
+  struct BreakBinaryOperationsOptions {
+    /// The default break style for operators not covered by ``PerOperator``.
+    BreakBinaryOperationsStyle Default;
+    /// Per-operator override rules.
+    std::vector<BinaryOperationBreakRule> PerOperator;
+    const BinaryOperationBreakRule *
+    findRuleForOperator(tok::TokenKind Kind) const {
+      for (const auto &Rule : PerOperator) {
+        if (llvm::find(Rule.Operators, Kind) != Rule.Operators.end())
+          return &Rule;
+        // clang-format splits ">>" into two ">" tokens for template parsing.
+        // Match ">" against ">>" rules so that per-operator rules for ">>"
+        // (stream extraction / right shift) work correctly.
+        if (Kind == tok::greater &&
+            llvm::find(Rule.Operators, tok::greatergreater) !=
+                Rule.Operators.end()) {
+          return &Rule;
+        }
+      }
+      return nullptr;
+    }
+    BreakBinaryOperationsStyle getStyleForOperator(tok::TokenKind Kind) const {
+      if (const auto *Rule = findRuleForOperator(Kind))
+        return Rule->Style;
+      return Default;
+    }
+    unsigned getMinChainLengthForOperator(tok::TokenKind Kind) const {
+      if (const auto *Rule = findRuleForOperator(Kind))
+        return Rule->MinChainLength;
+      return 0;
+    }
+    bool operator==(const BreakBinaryOperationsOptions &R) const {
+      return Default == R.Default && PerOperator == R.PerOperator;
+    }
+    bool operator!=(const BreakBinaryOperationsOptions &R) const {
+      return !(*this == R);
+    }
+  };
+
   /// The break binary operations style to use.
   /// \version 20
-  BreakBinaryOperationsStyle BreakBinaryOperations;
+  BreakBinaryOperationsOptions BreakBinaryOperations;
 
   /// Different ways to break initializers.
   enum BreakConstructorInitializersStyle : int8_t {
@@ -2477,7 +2553,13 @@ struct FormatStyle {
     ///        initializer1(),
     ///        initializer2()
     /// \endcode
-    BCIS_AfterColon
+    BCIS_AfterColon,
+    /// Break constructor initializers only after the commas.
+    /// \code
+    ///    Constructor() : initializer1(),
+    ///                    initializer2()
+    /// \endcode
+    BCIS_AfterComma
   };
 
   /// The break constructor initializers style to use.
@@ -3275,9 +3357,20 @@ struct FormatStyle {
   ///     Hex: -1
   /// \endcode
   ///
-  /// You can also specify a minimum number of digits (``BinaryMinDigits``,
-  /// ``DecimalMinDigits``, and ``HexMinDigits``) the integer literal must
-  /// have in order for the separators to be inserted.
+  /// You can also specify a minimum number of digits
+  /// (``BinaryMinDigitsInsert``, ``DecimalMinDigitsInsert``, and
+  /// ``HexMinDigitsInsert``) the integer literal must have in order for the
+  /// separators to be inserted, and a maximum number of digits
+  /// (``BinaryMaxDigitsRemove``, ``DecimalMaxDigitsRemove``, and
+  /// ``HexMaxDigitsRemove``) until the separators are removed. This divides the
+  /// literals in 3 regions, always without separator (up until including
+  /// ``xxxMaxDigitsRemove``), maybe with, or without separators (up until
+  /// excluding ``xxxMinDigitsInsert``), and finally always with separators.
+  /// \note
+  ///  ``BinaryMinDigits``, ``DecimalMinDigits``, and ``HexMinDigits`` are
+  ///  deprecated and renamed to ``BinaryMinDigitsInsert``,
+  ///  ``DecimalMinDigitsInsert``, and ``HexMinDigitsInsert``, respectively.
+  /// \endnote
   struct IntegerLiteralSeparatorStyle {
     /// Format separators in binary literals.
     /// \code{.text}
@@ -3290,11 +3383,23 @@ struct FormatStyle {
     /// Format separators in binary literals with a minimum number of digits.
     /// \code{.text}
     ///   // Binary: 3
-    ///   // BinaryMinDigits: 7
+    ///   // BinaryMinDigitsInsert: 7
     ///   b1 = 0b101101;
     ///   b2 = 0b1'101'101;
     /// \endcode
-    int8_t BinaryMinDigits;
+    int8_t BinaryMinDigitsInsert;
+    /// Remove separators in binary literals with a maximum number of digits.
+    /// \code{.text}
+    ///   // Binary: 3
+    ///   // BinaryMinDigitsInsert: 7
+    ///   // BinaryMaxDigitsRemove: 4
+    ///   b0 = 0b1011; // Always removed.
+    ///   b1 = 0b101101; // Not added.
+    ///   b2 = 0b1'01'101; // Not removed, not corrected.
+    ///   b3 = 0b1'101'101; // Always added.
+    ///   b4 = 0b10'1101; // Corrected to 0b101'101.
+    /// \endcode
+    int8_t BinaryMaxDigitsRemove;
     /// Format separators in decimal literals.
     /// \code{.text}
     ///   /* -1: */ d = 18446744073709550592ull;
@@ -3305,11 +3410,23 @@ struct FormatStyle {
     /// Format separators in decimal literals with a minimum number of digits.
     /// \code{.text}
     ///   // Decimal: 3
-    ///   // DecimalMinDigits: 5
+    ///   // DecimalMinDigitsInsert: 5
     ///   d1 = 2023;
     ///   d2 = 10'000;
     /// \endcode
-    int8_t DecimalMinDigits;
+    int8_t DecimalMinDigitsInsert;
+    /// Remove separators in decimal literals with a maximum number of digits.
+    /// \code{.text}
+    ///   // Decimal: 3
+    ///   // DecimalMinDigitsInsert: 7
+    ///   // DecimalMaxDigitsRemove: 4
+    ///   d0 = 2023; // Always removed.
+    ///   d1 = 123456; // Not added.
+    ///   d2 = 1'23'456; // Not removed, not corrected.
+    ///   d3 = 5'000'000; // Always added.
+    ///   d4 = 1'23'45; // Corrected to 12'345.
+    /// \endcode
+    int8_t DecimalMaxDigitsRemove;
     /// Format separators in hexadecimal literals.
     /// \code{.text}
     ///   /* -1: */ h = 0xDEADBEEFDEADBEEFuz;
@@ -3321,19 +3438,40 @@ struct FormatStyle {
     /// digits.
     /// \code{.text}
     ///   // Hex: 2
-    ///   // HexMinDigits: 6
+    ///   // HexMinDigitsInsert: 6
     ///   h1 = 0xABCDE;
     ///   h2 = 0xAB'CD'EF;
     /// \endcode
-    int8_t HexMinDigits;
+    int8_t HexMinDigitsInsert;
+    /// Remove separators in hexadecimal literals with a maximum number of
+    /// digits.
+    /// \code{.text}
+    ///   // Hex: 2
+    ///   // HexMinDigitsInsert: 6
+    ///   // HexMaxDigitsRemove: 4
+    ///   h0 = 0xAFFE; // Always removed.
+    ///   h1 = 0xABCDE; // Not added.
+    ///   h2 = 0xABC'DE; // Not removed, not corrected.
+    ///   h3 = 0xAB'CD'EF; // Always added.
+    ///   h4 = 0xABCD'E; // Corrected to 0xA'BC'DE.
+    /// \endcode
+    int8_t HexMaxDigitsRemove;
     bool operator==(const IntegerLiteralSeparatorStyle &R) const {
-      return Binary == R.Binary && BinaryMinDigits == R.BinaryMinDigits &&
-             Decimal == R.Decimal && DecimalMinDigits == R.DecimalMinDigits &&
-             Hex == R.Hex && HexMinDigits == R.HexMinDigits;
+      return Binary == R.Binary &&
+             BinaryMinDigitsInsert == R.BinaryMinDigitsInsert &&
+             BinaryMaxDigitsRemove == R.BinaryMaxDigitsRemove &&
+             Decimal == R.Decimal &&
+             DecimalMinDigitsInsert == R.DecimalMinDigitsInsert &&
+             DecimalMaxDigitsRemove == R.DecimalMaxDigitsRemove &&
+             Hex == R.Hex && HexMinDigitsInsert == R.HexMinDigitsInsert &&
+             HexMaxDigitsRemove == R.HexMaxDigitsRemove;
+    }
+    bool operator!=(const IntegerLiteralSeparatorStyle &R) const {
+      return !operator==(R);
     }
   };
 
-  /// Format integer literal separators (``'`` for C++ and ``_`` for C#, Java,
+  /// Format integer literal separators (``'`` for C/C++ and ``_`` for C#, Java,
   /// and JavaScript).
   /// \version 16
   IntegerLiteralSeparatorStyle IntegerLiteralSeparator;
@@ -3464,7 +3602,8 @@ struct FormatStyle {
   /// Keep the form feed character if it's immediately preceded and followed by
   /// a newline. Multiple form feeds and newlines within a whitespace range are
   /// replaced with a single newline and form feed followed by the remaining
-  /// newlines.
+  /// newlines. (See
+  /// www.gnu.org/prep/standards/html_node/Formatting.html#:~:text=formfeed.)
   /// \version 20
   bool KeepFormFeed;
 
@@ -3874,6 +4013,16 @@ struct FormatStyle {
   /// \endcode
   /// \version 18
   std::vector<std::string> ObjCPropertyAttributeOrder;
+
+  /// Add or remove a space between the '-'/'+' and the return type in
+  /// Objective-C method declarations. i.e
+  /// \code{.objc}
+  ///    false:                      true:
+  ///
+  ///    -(void)method      vs.      - (void)method
+  /// \endcode
+  /// \version 23
+  bool ObjCSpaceAfterMethodDeclarationPrefix;
 
   /// Add a space after ``@property`` in Objective-C, i.e. use
   /// ``@property (readonly)`` instead of ``@property(readonly)``.
@@ -5715,6 +5864,8 @@ struct FormatStyle {
            ObjCBreakBeforeNestedBlockParam ==
                R.ObjCBreakBeforeNestedBlockParam &&
            ObjCPropertyAttributeOrder == R.ObjCPropertyAttributeOrder &&
+           ObjCSpaceAfterMethodDeclarationPrefix ==
+               R.ObjCSpaceAfterMethodDeclarationPrefix &&
            ObjCSpaceAfterProperty == R.ObjCSpaceAfterProperty &&
            ObjCSpaceBeforeProtocolList == R.ObjCSpaceBeforeProtocolList &&
            OneLineFormatOffRegex == R.OneLineFormatOffRegex &&

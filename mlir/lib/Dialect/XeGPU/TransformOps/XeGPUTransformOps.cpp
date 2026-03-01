@@ -12,6 +12,7 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
 
@@ -167,7 +168,8 @@ getLayoutAttrFromOperands(MLIRContext *ctx, transform::TransformState &state,
 /// Replace xegpu.create_nd_desc op with a new one with the given layout.
 static xegpu::CreateNdDescOp
 setDescLayout(transform::TransformRewriter &rewriter,
-              xegpu::CreateNdDescOp descOp, xegpu::LayoutAttr layout) {
+              xegpu::CreateNdDescOp descOp,
+              xegpu::DistributeLayoutAttr layout) {
   assert(descOp.getMixedOffsets().size() == 0 &&
          "create desc op with offsets is not supported");
   auto oldTensorDesc = descOp.getType();
@@ -212,7 +214,8 @@ void transform::SetDescLayoutOp::build(OpBuilder &builder,
                                        OperationState &result, Value target,
                                        ArrayRef<OpFoldResult> mixedSgLayout,
                                        ArrayRef<OpFoldResult> mixedSgData,
-                                       ArrayRef<OpFoldResult> mixedInstData) {
+                                       ArrayRef<OpFoldResult> mixedInstData,
+                                       ArrayRef<int64_t> sliceDims) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -225,7 +228,8 @@ void transform::SetDescLayoutOp::build(OpBuilder &builder,
         /*inst_data=*/dynamicInstData,
         /*static_sg_layout=*/staticSgLayout,
         /*static_sg_data=*/staticSgData,
-        /*static_inst_data=*/staticInstData);
+        /*static_inst_data=*/staticInstData,
+        /*slice_dims=*/sliceDims);
 }
 
 DiagnosedSilenceableFailure
@@ -246,6 +250,14 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   if (!status.succeeded())
     return status;
 
+  xegpu::DistributeLayoutAttr layout = layoutAttr;
+  auto sliceDims = getSliceDims();
+  if (sliceDims.size() > 0) {
+    // Wrap layoutAttr in a slice attribute.
+    layout = xegpu::SliceAttr::get(
+        getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
+  }
+
   // For now only create_nd_desc op is supported.
   auto descOp = dyn_cast<xegpu::CreateNdDescOp>(target);
   if (!descOp) {
@@ -257,7 +269,7 @@ transform::SetDescLayoutOp::apply(transform::TransformRewriter &rewriter,
   }
 
   // Set layout attr in desc op's return type. Replaces old desc op.
-  auto newdescOp = setDescLayout(rewriter, descOp, layoutAttr);
+  auto newdescOp = setDescLayout(rewriter, descOp, layout);
 
   // Map result handles.
   results.set(cast<OpResult>(getTransformed()), {newdescOp.getOperation()});
@@ -278,7 +290,8 @@ void transform::SetDescLayoutOp::getEffects(
 void transform::SetOpLayoutAttrOp::build(
     OpBuilder &builder, OperationState &ostate, Value target, int64_t index,
     ArrayRef<OpFoldResult> mixedSgLayout, ArrayRef<OpFoldResult> mixedSgData,
-    ArrayRef<OpFoldResult> mixedInstData, bool result) {
+    ArrayRef<OpFoldResult> mixedInstData, ArrayRef<int64_t> sliceDims,
+    bool result, bool operand) {
   SmallVector<int64_t> staticSgLayout, staticSgData, staticInstData;
   SmallVector<Value> dynamicSgLayout, dynamicSgData, dynamicInstData;
   dispatchIndexOpFoldResults(mixedSgLayout, dynamicSgLayout, staticSgLayout);
@@ -293,7 +306,9 @@ void transform::SetOpLayoutAttrOp::build(
         /*static_sg_layout=*/staticSgLayout,
         /*static_sg_data=*/staticSgData,
         /*static_inst_data=*/staticInstData,
-        /*result=*/result);
+        /*slice_dims=*/sliceDims,
+        /*result=*/result,
+        /*operand=*/operand);
 }
 
 DiagnosedSilenceableFailure
@@ -308,13 +323,14 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   Operation *target = *targetOps.begin();
 
   bool resultTarget = getResult();
+  bool operandTarget = getOperand();
 
   int64_t index = getIndex();
   if (resultTarget && index >= target->getNumResults()) {
     return emitSilenceableFailure(getLoc())
            << "Index exceeds the number of op results";
   }
-  if (!resultTarget && index >= target->getNumOperands()) {
+  if (operandTarget && index >= target->getNumOperands()) {
     return emitSilenceableFailure(getLoc())
            << "Index exceeds the number of op operands";
   }
@@ -326,11 +342,46 @@ transform::SetOpLayoutAttrOp::apply(transform::TransformRewriter &rewriter,
   if (!status.succeeded())
     return status;
 
-  // Set layout attribute for the op result or operand
-  if (resultTarget)
-    xegpu::setDistributeLayoutAttr(target->getResult(index), layoutAttr);
-  else
-    xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layoutAttr);
+  xegpu::DistributeLayoutAttr layout = layoutAttr;
+  auto sliceDims = getSliceDims();
+  if (sliceDims.size() > 0) {
+    // Wrap layoutAttr in a slice attribute.
+    layout = xegpu::SliceAttr::get(
+        getContext(), layout, DenseI64ArrayAttr::get(getContext(), sliceDims));
+  }
+
+  // Set layout attribute
+  if (resultTarget) {
+    // op result
+    xegpu::setDistributeLayoutAttr(target->getResult(index), layout);
+  } else if (operandTarget) {
+    // op operand
+    xegpu::setDistributeLayoutAttr(target->getOpOperand(index), layout);
+  } else if (auto dpasOp = dyn_cast<xegpu::DpasOp>(target)) {
+    // dpas op is a special case where layout needs to be set for A, B, and C
+    if (index == 0)
+      dpasOp.getProperties().layout_a = layout;
+    else if (index == 1)
+      dpasOp.getProperties().layout_b = layout;
+    else if (index == 2)
+      dpasOp.getProperties().layout_cd = layout;
+    else {
+      auto diag = emitSilenceableFailure(getLoc())
+                  << "Invalid index for setting dpas op layout: " << index;
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+  } else {
+    // op's anchor layout.
+    auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(target);
+    if (!anchorOp) {
+      auto diag = emitSilenceableFailure(getLoc())
+                  << "Cannot set anchor layout to op: " << target->getName();
+      diag.attachNote(target->getLoc()) << "target op";
+      return diag;
+    }
+    anchorOp.setAnchorLayout(layout);
+  }
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -341,6 +392,13 @@ void transform::SetOpLayoutAttrOp::getEffects(
   onlyReadsHandle(getSgDataMutable(), effects);
   onlyReadsHandle(getInstDataMutable(), effects);
   modifiesPayload(effects);
+}
+
+LogicalResult transform::SetOpLayoutAttrOp::verify() {
+  if (getResult() && getOperand()) {
+    return emitOpError("Cannot set both result and operand simultaneously.");
+  }
+  return success();
 }
 
 void transform::SetGPULaunchThreadsOp::build(
@@ -494,9 +552,9 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     IRMapping mapping;
     mapping.map(forOp.getInductionVar(), replacementVal);
     SmallVector<Value> dynamicOffsets =
-        llvm::to_vector(llvm::map_range(loadOp.getOffsets(), [&](Value v) {
+        llvm::map_to_vector(loadOp.getOffsets(), [&](Value v) {
           return mapping.lookupOrDefault(v);
-        }));
+        });
     auto constOffsets = loadOp.getConstOffsets().value();
     return getMixedValues(constOffsets, dynamicOffsets, ctx);
   };
@@ -507,7 +565,8 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
                               newDescOp.getResult(),
                               getPrefetchOffsets(initForOp.getInductionVar()),
-                              readCacheHint, readCacheHint, readCacheHint);
+                              readCacheHint, readCacheHint, readCacheHint,
+                              /*layout=*/nullptr);
 
   // Insert prefetch op in main loop.
   // Calculate prefetch offset after the init prefetches have been issued.
@@ -518,7 +577,7 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   xegpu::PrefetchNdOp::create(rewriter, newDescOp.getLoc(),
                               newDescOp.getResult(),
                               getPrefetchOffsets(prefetchOffset), readCacheHint,
-                              readCacheHint, readCacheHint);
+                              readCacheHint, readCacheHint, /*layout=*/nullptr);
 
   // Unroll the init loop.
   if (failed(loopUnrollFull(initForOp)))

@@ -62,6 +62,7 @@ class SetDescLayoutOp(SetDescLayoutOp):
         sg_data: MixedValues,
         *,
         inst_data: Optional[MixedValues] = None,
+        slice_dims: Optional[MixedInt] = None,
         loc=None,
         ip=None,
     ):
@@ -92,6 +93,7 @@ class SetDescLayoutOp(SetDescLayoutOp):
             static_sg_layout=static_sg_layout,
             static_sg_data=static_sg_data,
             static_inst_data=static_inst_data,
+            slice_dims=slice_dims,
             loc=loc,
             ip=ip,
         )
@@ -103,6 +105,7 @@ def set_desc_layout(
     sg_data: MixedValues,
     *,
     inst_data: Optional[MixedValues] = None,
+    slice_dims: Optional[MixedInt] = None,
     loc=None,
     ip=None,
 ) -> OpResult:
@@ -111,6 +114,7 @@ def set_desc_layout(
         sg_layout,
         sg_data,
         inst_data=inst_data,
+        slice_dims=slice_dims,
         loc=loc,
         ip=ip,
     ).result
@@ -127,8 +131,10 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
         sg_data: MixedValues,
         *,
         inst_data: Optional[MixedValues] = None,
+        slice_dims: Optional[MixedInt] = None,
         index: Optional[Union[int, Attribute]] = None,
         result: Optional[Union[bool, Attribute]] = None,
+        operand: Optional[Union[bool, Attribute]] = None,
         loc=None,
         ip=None,
     ):
@@ -156,8 +162,10 @@ class SetOpLayoutAttrOp(SetOpLayoutAttrOp):
             static_sg_layout=static_sg_layout,
             static_sg_data=static_sg_data,
             static_inst_data=static_inst_data,
+            slice_dims=slice_dims,
             index=index,
             result=result,
+            operand=operand,
             loc=loc,
             ip=ip,
         )
@@ -169,8 +177,10 @@ def set_op_layout_attr(
     sg_data: MixedValues,
     *,
     inst_data: Optional[MixedValues] = None,
+    slice_dims: Optional[MixedInt] = None,
     index: Optional[Union[int, Attribute]] = None,
     result: Optional[Union[bool, Attribute]] = None,
+    operand: Optional[Union[bool, Attribute]] = None,
     loc=None,
     ip=None,
 ) -> SetOpLayoutAttrOp:
@@ -179,8 +189,10 @@ def set_op_layout_attr(
         sg_layout,
         sg_data,
         inst_data=inst_data,
+        slice_dims=slice_dims,
         index=index,
         result=result,
+        operand=operand,
         loc=loc,
         ip=ip,
     )

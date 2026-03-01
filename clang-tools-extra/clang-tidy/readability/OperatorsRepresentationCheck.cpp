@@ -136,11 +136,9 @@ getRepresentation(const std::vector<llvm::StringRef> &Config,
 template <typename T>
 static bool isAnyOperatorEnabled(const std::vector<llvm::StringRef> &Config,
                                  const T &Operators) {
-  for (const auto &[traditional, alternative] : Operators) {
-    if (!getRepresentation(Config, traditional, alternative).empty())
-      return true;
-  }
-  return false;
+  return llvm::any_of(Operators, [&](const auto &Op) {
+    return !getRepresentation(Config, Op.first, Op.second).empty();
+  });
 }
 
 OperatorsRepresentationCheck::OperatorsRepresentationCheck(
@@ -179,7 +177,6 @@ void OperatorsRepresentationCheck::registerBinaryOperatorMatcher(
 
   Finder->addMatcher(
       binaryOperator(
-          unless(isExpansionInSystemHeader()),
           anyOf(hasInvalidBinaryOperatorRepresentation(
                     BO_LAnd, getRepresentation(BinaryOperators, "&&", "and")),
                 hasInvalidBinaryOperatorRepresentation(
@@ -212,7 +209,6 @@ void OperatorsRepresentationCheck::registerUnaryOperatorMatcher(
 
   Finder->addMatcher(
       unaryOperator(
-          unless(isExpansionInSystemHeader()),
           anyOf(hasInvalidUnaryOperatorRepresentation(
                     UO_LNot, getRepresentation(BinaryOperators, "!", "not")),
                 hasInvalidUnaryOperatorRepresentation(
@@ -229,7 +225,6 @@ void OperatorsRepresentationCheck::registerOverloadedOperatorMatcher(
 
   Finder->addMatcher(
       cxxOperatorCallExpr(
-          unless(isExpansionInSystemHeader()),
           anyOf(
               hasInvalidOverloadedOperatorRepresentation(
                   OO_AmpAmp,
@@ -275,7 +270,6 @@ void OperatorsRepresentationCheck::registerMatchers(MatchFinder *Finder) {
 
 void OperatorsRepresentationCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   SourceLocation Loc;
 
   if (const auto *Op = Result.Nodes.getNodeAs<BinaryOperator>("binary_op"))

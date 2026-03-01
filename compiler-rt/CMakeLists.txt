@@ -290,6 +290,9 @@ option(SANITIZER_USE_STATIC_TEST_CXX
   "Use static libc++ for tests." ${DEFAULT_SANITIZER_USE_STATIC_TEST_CXX})
 pythonize_bool(SANITIZER_USE_STATIC_TEST_CXX)
 
+option(SANITIZER_AARCH64_39BIT_VA
+  "Configure sanitizers for 39-bit VA kernel." OFF)
+
 set(COMPILER_RT_SUPPORTED_CXX_LIBRARIES none default libcxx)
 set(COMPILER_RT_CXX_LIBRARY "default" CACHE STRING "Specify C++ library to use. Supported values are ${COMPILER_RT_SUPPORTED_CXX_LIBRARIES}.")
 if (NOT "${COMPILER_RT_CXX_LIBRARY}" IN_LIST COMPILER_RT_SUPPORTED_CXX_LIBRARIES)
@@ -308,6 +311,8 @@ option(COMPILER_RT_USE_BUILTINS_LIBRARY
   "Use compiler-rt builtins instead of libgcc" ${DEFAULT_COMPILER_RT_USE_BUILTINS_LIBRARY})
 
 option(COMPILER_RT_USE_ATOMIC_LIBRARY "Use compiler-rt atomic instead of libatomic" OFF)
+
+option(COMPILER_RT_PROFILE_BAREMETAL "Build minimal baremetal profile library" OFF)
 
 include(config-ix)
 
@@ -555,6 +560,10 @@ append_list_if(COMPILER_RT_HAS_Z_TEXT -Wl,-z,text SANITIZER_COMMON_LINK_FLAGS)
 # natively, but supports --as-needed/--no-as-needed for GNU ld compatibility.
 if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "sparc")
   list(APPEND SANITIZER_COMMON_LINK_LIBS -Wl,--as-needed atomic -Wl,--no-as-needed)
+endif()
+
+if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "mips")
+  list(APPEND SANITIZER_COMMON_LINK_LIBS atomic)
 endif()
 
 if (COMPILER_RT_USE_BUILTINS_LIBRARY)
@@ -845,6 +854,10 @@ mark_as_advanced(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
 
 if (SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
   add_compile_definitions(SANITIZER_DISABLE_SYMBOLIZER_PATH_SEARCH)
+endif()
+
+if (SANITIZER_AARCH64_39BIT_VA)
+  add_compile_definitions(SANITIZER_AARCH64_39BIT_VA)
 endif()
 
 add_subdirectory(lib)

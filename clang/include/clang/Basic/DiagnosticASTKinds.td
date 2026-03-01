@@ -186,9 +186,6 @@ def access_kind_subobject : TextSubstitution<
 def access_kind_volatile : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
-def note_constexpr_lifetime_ended : Note<
-  "%sub{access_kind}0 %select{temporary|variable}1 whose "
-  "%plural{8:storage duration|:lifetime}0 has ended">;
 def note_constexpr_access_uninit : Note<
   "%sub{access_kind_subobject}0 "
   "%select{object outside its lifetime|uninitialized object}1 "
@@ -407,10 +404,8 @@ def note_constexpr_infer_alloc_token_type_inference_failed : Note<
   "could not infer allocation type for __builtin_infer_alloc_token">;
 def note_constexpr_infer_alloc_token_no_metadata : Note<
   "could not get token metadata for inferred type">;
-def note_constexpr_infer_alloc_token_stateful_mode : Note<
-  "stateful alloc token mode not supported in constexpr">;
-def err_experimental_clang_interp_failed : Error<
-  "the experimental clang interpreter failed to evaluate an expression">;
+def note_constexpr_infer_alloc_token_stateful_mode
+    : Note<"stateful alloc token mode not supported in constexpr">;
 
 def warn_attribute_needs_aggregate : Warning<
   "%0 attribute is ignored in non-aggregate type %1">,
@@ -431,12 +426,6 @@ def warn_fixedpoint_constant_overflow : Warning<
 def note_constexpr_unscoped_enum_out_of_range : Note<
   "integer value %0 is outside the valid range of values [%1, %2] for the "
   "enumeration type %3">;
-
-// This is a temporary diagnostic, and shall be removed once our
-// implementation is complete, and like the preceding constexpr notes belongs
-// in Sema.
-def note_unimplemented_constexpr_lambda_feature_ast : Note<
-    "unimplemented constexpr lambda feature: %0 (coming soon!)">;
 
 def warn_is_constant_evaluated_always_true_constexpr : Warning<
   "'%0' will always evaluate to 'true' in a manifestly constant-evaluated expression">,
@@ -1039,6 +1028,9 @@ def warn_npot_ms_struct : Warning<
   "ms_struct may not produce Microsoft-compatible layouts with fundamental "
   "data types with sizes that aren't a power of two">,
   DefaultError, InGroup<IncompatibleMSStruct>;
+
+def err_itanium_layout_unimplemented : Error<
+  "Itanium-compatible layout for the Microsoft C++ ABI is not yet supported">;
 
 // -Wpadded-bitfield
 def warn_padded_struct_bitfield : Warning<

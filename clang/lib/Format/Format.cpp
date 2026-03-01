@@ -31,6 +31,8 @@
 using clang::format::FormatStyle;
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::RawStringFormat)
+LLVM_YAML_IS_SEQUENCE_VECTOR(FormatStyle::BinaryOperationBreakRule)
+LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tok::TokenKind)
 
 enum BracketAlignmentStyle : int8_t {
   BAS_Align,
@@ -275,6 +277,62 @@ struct ScalarEnumerationTraits<FormatStyle::BreakBinaryOperationsStyle> {
   }
 };
 
+template <> struct ScalarTraits<clang::tok::TokenKind> {
+  static void output(const clang::tok::TokenKind &Value, void *,
+                     llvm::raw_ostream &Out) {
+    if (const char *Spelling = clang::tok::getPunctuatorSpelling(Value))
+      Out << Spelling;
+    else
+      Out << clang::tok::getTokenName(Value);
+  }
+
+  static StringRef input(StringRef Scalar, void *,
+                         clang::tok::TokenKind &Value) {
+    // Map operator spelling strings to tok::TokenKind.
+#define PUNCTUATOR(Name, Spelling)                                             \
+  if (Scalar == Spelling) {                                                    \
+    Value = clang::tok::Name;                                                  \
+    return {};                                                                 \
+  }
+#include "clang/Basic/TokenKinds.def"
+    return "unknown operator";
+  }
+
+  static QuotingType mustQuote(StringRef) { return QuotingType::None; }
+};
+
+template <> struct MappingTraits<FormatStyle::BinaryOperationBreakRule> {
+  static void mapping(IO &IO, FormatStyle::BinaryOperationBreakRule &Value) {
+    IO.mapOptional("Operators", Value.Operators);
+    // Default to OnePerLine since a per-operator rule with Never is a no-op.
+    if (!IO.outputting())
+      Value.Style = FormatStyle::BBO_OnePerLine;
+    IO.mapOptional("Style", Value.Style);
+    IO.mapOptional("MinChainLength", Value.MinChainLength);
+  }
+};
+
+template <> struct MappingTraits<FormatStyle::BreakBinaryOperationsOptions> {
+  static void enumInput(IO &IO,
+                        FormatStyle::BreakBinaryOperationsOptions &Value) {
+    IO.enumCase(Value, "Never",
+                FormatStyle::BreakBinaryOperationsOptions(
+                    {FormatStyle::BBO_Never, {}}));
+    IO.enumCase(Value, "OnePerLine",
+                FormatStyle::BreakBinaryOperationsOptions(
+                    {FormatStyle::BBO_OnePerLine, {}}));
+    IO.enumCase(Value, "RespectPrecedence",
+                FormatStyle::BreakBinaryOperationsOptions(
+                    {FormatStyle::BBO_RespectPrecedence, {}}));
+  }
+
+  static void mapping(IO &IO,
+                      FormatStyle::BreakBinaryOperationsOptions &Value) {
+    IO.mapOptional("Default", Value.Default);
+    IO.mapOptional("PerOperator", Value.PerOperator);
+  }
+};
+
 template <>
 struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
   static void
@@ -282,6 +340,7 @@ struct ScalarEnumerationTraits<FormatStyle::BreakConstructorInitializersStyle> {
     IO.enumCase(Value, "BeforeColon", FormatStyle::BCIS_BeforeColon);
     IO.enumCase(Value, "BeforeComma", FormatStyle::BCIS_BeforeComma);
     IO.enumCase(Value, "AfterColon", FormatStyle::BCIS_AfterColon);
+    IO.enumCase(Value, "AfterComma", FormatStyle::BCIS_AfterComma);
   }
 };
 
@@ -405,11 +464,19 @@ struct ScalarEnumerationTraits<FormatStyle::IndentExternBlockStyle> {
 template <> struct MappingTraits<FormatStyle::IntegerLiteralSeparatorStyle> {
   static void mapping(IO &IO, FormatStyle::IntegerLiteralSeparatorStyle &Base) {
     IO.mapOptional("Binary", Base.Binary);
-    IO.mapOptional("BinaryMinDigits", Base.BinaryMinDigits);
+    IO.mapOptional("BinaryMinDigitsInsert", Base.BinaryMinDigitsInsert);
+    IO.mapOptional("BinaryMaxDigitsRemove", Base.BinaryMaxDigitsRemove);
     IO.mapOptional("Decimal", Base.Decimal);
-    IO.mapOptional("DecimalMinDigits", Base.DecimalMinDigits);
+    IO.mapOptional("DecimalMinDigitsInsert", Base.DecimalMinDigitsInsert);
+    IO.mapOptional("DecimalMaxDigitsRemove", Base.DecimalMaxDigitsRemove);
     IO.mapOptional("Hex", Base.Hex);
-    IO.mapOptional("HexMinDigits", Base.HexMinDigits);
+    IO.mapOptional("HexMinDigitsInsert", Base.HexMinDigitsInsert);
+    IO.mapOptional("HexMaxDigitsRemove", Base.HexMaxDigitsRemove);
+
+    // For backward compatibility.
+    IO.mapOptional("BinaryMinDigits", Base.BinaryMinDigitsInsert);
+    IO.mapOptional("DecimalMinDigits", Base.DecimalMinDigitsInsert);
+    IO.mapOptional("HexMinDigits", Base.HexMinDigitsInsert);
   }
 };
 
@@ -1237,6 +1304,8 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.ObjCBreakBeforeNestedBlockParam);
     IO.mapOptional("ObjCPropertyAttributeOrder",
                    Style.ObjCPropertyAttributeOrder);
+    IO.mapOptional("ObjCSpaceAfterMethodDeclarationPrefix",
+                   Style.ObjCSpaceAfterMethodDeclarationPrefix);
     IO.mapOptional("ObjCSpaceAfterProperty", Style.ObjCSpaceAfterProperty);
     IO.mapOptional("ObjCSpaceBeforeProtocolList",
                    Style.ObjCSpaceBeforeProtocolList);
@@ -1714,7 +1783,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.BreakBeforeInlineASMColon = FormatStyle::BBIAS_OnlyMultiline;
   LLVMStyle.BreakBeforeTemplateCloser = false;
   LLVMStyle.BreakBeforeTernaryOperators = true;
-  LLVMStyle.BreakBinaryOperations = FormatStyle::BBO_Never;
+  LLVMStyle.BreakBinaryOperations = {FormatStyle::BBO_Never, {}};
   LLVMStyle.BreakConstructorInitializers = FormatStyle::BCIS_BeforeColon;
   LLVMStyle.BreakFunctionDefinitionParameters = false;
   LLVMStyle.BreakInheritanceList = FormatStyle::BILS_BeforeColon;
@@ -1758,10 +1827,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.InsertBraces = false;
   LLVMStyle.InsertNewlineAtEOF = false;
   LLVMStyle.InsertTrailingCommas = FormatStyle::TCS_None;
-  LLVMStyle.IntegerLiteralSeparator = {
-      /*Binary=*/0,  /*BinaryMinDigits=*/0,
-      /*Decimal=*/0, /*DecimalMinDigits=*/0,
-      /*Hex=*/0,     /*HexMinDigits=*/0};
+  LLVMStyle.IntegerLiteralSeparator = {};
   LLVMStyle.JavaScriptQuotes = FormatStyle::JSQS_Leave;
   LLVMStyle.JavaScriptWrapImports = true;
   LLVMStyle.KeepEmptyLines = {
@@ -1782,6 +1848,7 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Auto;
   LLVMStyle.ObjCBlockIndentWidth = 2;
   LLVMStyle.ObjCBreakBeforeNestedBlockParam = true;
+  LLVMStyle.ObjCSpaceAfterMethodDeclarationPrefix = true;
   LLVMStyle.ObjCSpaceAfterProperty = false;
   LLVMStyle.ObjCSpaceBeforeProtocolList = true;
   LLVMStyle.PackConstructorInitializers = FormatStyle::PCIS_BinPack;
@@ -1906,6 +1973,11 @@ FormatStyle getGoogleStyle(FormatStyle::LanguageKind Language) {
   GoogleStyle.IncludeStyle.IncludeIsMainRegex = "([-_](test|unittest))?$";
   GoogleStyle.IndentCaseLabels = true;
   GoogleStyle.KeepEmptyLines.AtStartOfBlock = false;
+
+  GoogleStyle.Macros.push_back("ASSIGN_OR_RETURN(a, b)=a = (b)");
+  GoogleStyle.Macros.push_back(
+      "ASSIGN_OR_RETURN(a, b, c)=a = (b); if (x) return c");
+
   GoogleStyle.ObjCBinPackProtocolList = FormatStyle::BPS_Never;
   GoogleStyle.ObjCSpaceAfterProperty = false;
   GoogleStyle.ObjCSpaceBeforeProtocolList = true;
@@ -2183,7 +2255,7 @@ FormatStyle getClangFormatStyle() {
   Style.InsertBraces = true;
   Style.InsertNewlineAtEOF = true;
   Style.IntegerLiteralSeparator.Decimal = 3;
-  Style.IntegerLiteralSeparator.DecimalMinDigits = 5;
+  Style.IntegerLiteralSeparator.DecimalMinDigitsInsert = 5;
   Style.LineEnding = FormatStyle::LE_LF;
   Style.RemoveBracesLLVM = true;
   Style.RemoveEmptyLinesInUnwrappedLines = true;

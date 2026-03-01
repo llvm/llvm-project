@@ -2,17 +2,17 @@
 // - Implicitly instantiated whole class by up-casting (`NOCAST` not defined)
 //   or implicitly instantiated member functions only (`NOCAST` defined):
 //   * The vtable is generated with a COMDAT specifier
-//   * Its '_vtable$' is generated
+//   * Its '__clang_vtable' is generated
 // - Define explicitly instantiation (`EXPLICIT` defined):
 //   * The vtable is generated with a COMDAT specifier
-//   * Its '_vtable$' is generated
+//   * Its '__clang_vtable' is generated
 // - Declare explicitly instantiation as `extern` (`EXTERN` defined):
 //  # when non-optimized:
 //   * The vtable is declared
-//   * Its '_vtable$' is NOT generated
+//   * Its '__clang_vtable' is NOT generated
 //  # when optimized even if no LLVM passes
 //   * The vtable is declared as `available_externally` (which is potentially turned into `external` by LLVM passes)
-//   * Its '_vtable$' is generated only if the compiler is targeting the non-COFF platforms
+//   * Its '__clang_vtable' is generated only if the compiler is targeting the non-COFF platforms
 
 struct CBase {
   virtual void f() noexcept {}
@@ -68,18 +68,18 @@ int main() {
 
 // IMPLICIT: $_ZTV9CTemplateIvE = comdat any
 // IMPLICIT: @_ZTV9CTemplateIvE = linkonce_odr {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
-// IMPLICIT-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
+// IMPLICIT-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CTemplateIvE"
 // IMPLICIT-DAG: !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
 // IMPLICIT-DAG: [[TYPE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
-// IMPLICIT-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// IMPLICIT-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 // IMPLICIT-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
 // EXPLICIT: $_ZTV9CTemplateIvE = comdat any
 // EXPLICIT: @_ZTV9CTemplateIvE = weak_odr {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, comdat, align 8, !dbg [[VTABLE_VAR:![0-9]*]]
-// EXPLICIT-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
+// EXPLICIT-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CTemplateIvE"
 // EXPLICIT-DAG: [[VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
 // EXPLICIT-DAG: [[TYPE:![0-9]+]] = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
-// EXPLICIT-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// EXPLICIT-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 // EXPLICIT-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 
 // EXTERN-NOT: $_ZTV9CTemplateIvE
@@ -88,10 +88,10 @@ int main() {
 // EXTERN-O1-NODBG: @_ZTV9CTemplateIvE = available_externally {{.*}}unnamed_addr constant {{{ \[[^]]*\] } { \[[^]]*\] \[[^]]*\] }}}, align 8{{$}}
 // EXTERN-NODBG-DAG: [[TYPE:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
 // EXTERN-NODBG-DAG: !DICompileUnit
-// EXTERN-NODBG-NOT: !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
-// EXTERN-NODBG-NOT: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
-// EXTERN-DBG-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "_vtable$", linkageName: "_ZTV9CTemplateIvE"
+// EXTERN-NODBG-NOT: !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CTemplateIvE"
+// EXTERN-NODBG-NOT: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// EXTERN-DBG-DAG: [[VTABLE:![0-9]+]] = distinct !DIGlobalVariable(name: "__clang_vtable", linkageName: "_ZTV9CTemplateIvE"
 // EXTERN-DBG-DAG: [[VTABLE_VAR]] = !DIGlobalVariableExpression(var: [[VTABLE]], expr: !DIExpression())
 // EXTERN-DBG-DAG: [[TYPE:![0-9]+]] = !DICompositeType(tag: DW_TAG_structure_type, name: "CTemplate<void>"
-// EXTERN-DBG-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "_vtable$", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
+// EXTERN-DBG-DAG: !DIDerivedType(tag: DW_TAG_variable, name: "__clang_vtable", scope: [[TYPE]], file: {{.*}}, baseType: [[PVOID:![0-9]+]], flags: DIFlagPrivate | DIFlagArtificial | DIFlagStaticMember)
 // EXTERN-DBG-DAG: [[PVOID]] = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)

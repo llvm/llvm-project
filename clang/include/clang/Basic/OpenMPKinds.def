@@ -107,6 +107,15 @@
 #ifndef OPENMP_THREADSET_KIND
 #define OPENMP_THREADSET_KIND(Name)
 #endif
+#ifndef OPENMP_TRANSPARENT_KIND
+#define OPENMP_TRANSPARENT_KIND(Name)
+#endif
+#ifndef OPENMP_NEED_DEVICE_PTR_KIND
+#define OPENMP_NEED_DEVICE_PTR_KIND(Name)
+#endif
+#ifndef OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER
+#define OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(Name)
+#endif
 
 // Static attributes for 'schedule' clause.
 OPENMP_SCHEDULE_KIND(static)
@@ -204,6 +213,7 @@ OPENMP_MAP_MODIFIER_KIND(ompx_hold)
 
 // Modifiers for 'to' or 'from' clause.
 OPENMP_MOTION_MODIFIER_KIND(mapper)
+OPENMP_MOTION_MODIFIER_KIND(iterator)
 OPENMP_MOTION_MODIFIER_KIND(present)
 
 // Static attributes for 'dist_schedule' clause.
@@ -274,6 +284,14 @@ OPENMP_DOACROSS_MODIFIER(source_omp_cur_iteration)
 OPENMP_THREADSET_KIND(omp_pool)
 OPENMP_THREADSET_KIND(omp_team)
 
+// OpenMP 6.1 modifiers for 'adjust_args' clause.
+OPENMP_NEED_DEVICE_PTR_KIND(fb_nullify)
+OPENMP_NEED_DEVICE_PTR_KIND(fb_preserve)
+
+// OpenMP 6.1 modifiers for 'use_device_ptr' clause.
+OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(fb_nullify)
+OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER(fb_preserve)
+
 #undef OPENMP_NUMTASKS_MODIFIER
 #undef OPENMP_NUMTHREADS_MODIFIER
 #undef OPENMP_DYN_GROUPPRIVATE_MODIFIER
@@ -306,3 +324,6 @@ OPENMP_THREADSET_KIND(omp_team)
 #undef OPENMP_DOACROSS_MODIFIER
 #undef OPENMP_ALLOCATE_MODIFIER
 #undef OPENMP_THREADSET_KIND
+#undef OPENMP_TRANSPARENT_KIND
+#undef OPENMP_NEED_DEVICE_PTR_KIND
+#undef OPENMP_USE_DEVICE_PTR_FALLBACK_MODIFIER

@@ -26,29 +26,6 @@ extern "C" void __sanitizer_set_death_callback(void (*callback)(void));
 void do_exit() { exit(0); }
 
 int main(int, char**) {
-#if TEST_STD_VER >= 11
-  {
-    typedef int T;
-    typedef cpp17_input_iterator<T*> MyInputIter;
-    std::vector<T, min_allocator<T>> v;
-    v.reserve(1);
-    int i[] = {42};
-    v.insert(v.begin(), MyInputIter(i), MyInputIter(i + 1));
-    assert(v[0] == 42);
-    assert(is_contiguous_container_asan_correct(v));
-  }
-  {
-    typedef char T;
-    typedef cpp17_input_iterator<T*> MyInputIter;
-    std::vector<T, unaligned_allocator<T>> v;
-    v.reserve(1);
-    char i[] = {'a', 'b'};
-    v.insert(v.begin(), MyInputIter(i), MyInputIter(i + 2));
-    assert(v[0] == 'a');
-    assert(v[1] == 'b');
-    assert(is_contiguous_container_asan_correct(v));
-  }
-#endif // TEST_STD_VER >= 11
   {
     typedef cpp17_input_iterator<int*> MyInputIter;
     // Sould not trigger ASan.

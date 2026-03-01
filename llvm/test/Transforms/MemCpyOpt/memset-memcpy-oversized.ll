@@ -152,13 +152,14 @@ define void @test_negative_offset_memset(ptr %result) {
 ; CHECK-LABEL: @test_negative_offset_memset(
 ; CHECK-NEXT:    [[A1:%.*]] = alloca [16 x i8], align 8
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[A1]], i32 4
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A1]], i64 12, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 0, i64 12, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[RESULT:%.*]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [ 16 x i8 ], align 8
   %b = getelementptr i8, ptr %a, i32 4
-  call void @llvm.memset.p0.i64(ptr align 8 %b, i8 0, i64 12, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 4 %b, i8 0, i64 12, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 8 %a, i64 12, i1 false)
   ret void
 }
@@ -174,7 +175,7 @@ define void @test_offset_memsetcpy(ptr %result) {
   %a = alloca [ 16 x i8 ], align 8
   %b = getelementptr i8, ptr %a, i32 4
   call void @llvm.memset.p0.i64(ptr align 8 %a, i8 0, i64 12, i1 false)
-  call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 8 %b, i64 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 4 %b, i64 12, i1 false)
   ret void
 }
 
@@ -183,15 +184,122 @@ define void @test_two_memset(ptr %result) {
 ; CHECK-NEXT:    [[A:%.*]] = alloca [16 x i8], align 8
 ; CHECK-NEXT:    [[B:%.*]] = getelementptr i8, ptr [[A]], i32 12
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[B]], i8 1, i64 4, i1 false)
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[B]], i8 1, i64 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [ 16 x i8 ], align 8
   %b = getelementptr i8, ptr %a, i32 12
   call void @llvm.memset.p0.i64(ptr align 8 %a, i8 0, i64 12, i1 false)
-  call void @llvm.memset.p0.i64(ptr align 8 %b, i8 1, i64 4, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 4 %b, i8 1, i64 4, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr %result, ptr align 8 %a, i64 16, i1 false)
+  ret void
+}
+
+; Allocate 26 bytes, memset 24 bytes starting from offset 2, memcpy out the whole area.
+define void @test_negative_offset_memset_2(ptr %out) {
+; CHECK-LABEL: @test_negative_offset_memset_2(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <{ [2 x i8], i64, i64, i64 }>, align 8
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <{ [2 x i8], i64, i64, i64 }>
+  %offset = getelementptr i8, ptr %alloca, i64 2
+  call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 24, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %alloca, i64 26, i1 false)
+  ret void
+}
+
+; Allocate 20 bytes, memset the last 10 bytes, memcpy out the first 15 bytes,
+; meaning that only the last 5 bytes of the source are zeroed out.
+define void @test_negative_offset_memset_3(ptr %out) {
+; CHECK-LABEL: @test_negative_offset_memset_3(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i8], align 1
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 10
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 10
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 5, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [20 x i8]
+  %offset = getelementptr i8, ptr %alloca, i64 10
+  call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 10, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %alloca, i64 15, i1 false)
+  ret void
+}
+
+; Source/dest buffers have different alignment. Recompute it.
+define void @test_negative_offset_memset_different_alignment(ptr %out) {
+; CHECK-LABEL: @test_negative_offset_memset_different_alignment(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i8], align 1
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[OFFSET]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP1]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [20 x i8], align 1
+  %offset = getelementptr i8, ptr %alloca, i64 4
+  call void @llvm.memset.p0.i64(ptr align 1 %offset, i8 0, i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %out, ptr align 1 %alloca, i64 20, i1 false)
+  ret void
+}
+
+; Allocate 20 bytes, memset the last 10 bytes, memcpy out the first 15 bytes
+; to %out - 10, meaning that only the first 5 bytes of %out will be zeroed out.
+define void @test_negative_offset_memset_and_negative_offset_memcpy_dest(ptr %out) {
+; CHECK-LABEL: @test_negative_offset_memset_and_negative_offset_memcpy_dest(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i8], align 1
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 10
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 10, i1 false)
+; CHECK-NEXT:    [[OFFSET_OUT:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 -10
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OFFSET_OUT]], i64 10
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 5, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca [20 x i8]
+  %offset = getelementptr i8, ptr %alloca, i64 10
+  call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 10, i1 false)
+  %offset_out = getelementptr i8, ptr %out, i64 -10
+  call void @llvm.memcpy.p0.p0.i64(ptr %offset_out, ptr %alloca, i64 15, i1 false)
+  ret void
+}
+
+; Negative tests.
+define void @test_negative_offset_memset_store_between(ptr %out) {
+; CHECK-LABEL: @test_negative_offset_memset_store_between(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <{ [2 x i8], i64, i64, i64 }>, align 8
+; CHECK-NEXT:    [[IDX_1:%.*]] = getelementptr inbounds nuw i8, ptr [[ALLOCA]], i64 1
+; CHECK-NEXT:    store i8 1, ptr [[IDX_1]], align 1
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 24, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[ALLOCA]], i64 26, i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <{ [2 x i8], i64, i64, i64 }>
+  %idx_1 = getelementptr inbounds nuw i8, ptr %alloca, i64 1
+  store i8 1, ptr %idx_1
+  %offset = getelementptr i8, ptr %alloca, i64 2
+  call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 24, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %alloca, i64 26, i1 false)
+  ret void
+}
+
+define void @test_negative_offset_memset_variable_sized(ptr %out, i64 %sz1, i64 %sz2) {
+; CHECK-LABEL: @test_negative_offset_memset_variable_sized(
+; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <{ [2 x i8], i64, i64, i64 }>, align 8
+; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 [[SZ1:%.*]], i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[ALLOCA]], i64 [[SZ2:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  %alloca = alloca <{ [2 x i8], i64, i64, i64 }>
+  %offset = getelementptr i8, ptr %alloca, i64 2
+  call void @llvm.memset.p0.i64(ptr %offset, i8 0, i64 %sz1, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %out, ptr %alloca, i64 %sz2, i1 false)
   ret void
 }
 

@@ -5,7 +5,7 @@
 ; Test SIMD v128.load{8,16,32,64}_lane instructions.
 
 ; TODO: Use the offset field by supporting more patterns. Right now only the
-; equivalents of LoadPatNoOffset/StorePatNoOffset are supported.
+; equivalents of StorePatNoOffset are supported.
 
 ;===----------------------------------------------------------------------------
 ; v128.load8_lane / v128.store8_lane
@@ -37,10 +37,8 @@ define <16 x i8> @load_lane_i8_with_folded_offset(ptr %p, <16 x i8> %v) {
 ; CHECK:         .functype load_lane_i8_with_folded_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load8_lane 0, 0
+; CHECK-NEXT:    v128.load8_lane 24, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i8_with_folded_offset:
@@ -67,20 +65,16 @@ define <16 x i8> @load_lane_i8_with_folded_gep_offset(ptr %p, <16 x i8> %v) {
 ; CHECK:         .functype load_lane_i8_with_folded_gep_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 6
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load8_lane 0, 0
+; CHECK-NEXT:    v128.load8_lane 6, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i8_with_folded_gep_offset:
 ; MEM64:         .functype load_lane_i8_with_folded_gep_offset (i64, v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    i64.const 6
-; MEM64-NEXT:    i64.add
 ; MEM64-NEXT:    local.get 1
-; MEM64-NEXT:    v128.load8_lane 0, 0
+; MEM64-NEXT:    v128.load8_lane 6, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = getelementptr inbounds i8, ptr %p, i32 6
   %x = load i8, ptr %s
@@ -174,17 +168,17 @@ define <16 x i8> @load_lane_i8_from_numeric_address(<16 x i8> %v) {
 ; CHECK-LABEL: load_lane_i8_from_numeric_address:
 ; CHECK:         .functype load_lane_i8_from_numeric_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 42
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load8_lane 0, 0
+; CHECK-NEXT:    v128.load8_lane 42, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i8_from_numeric_address:
 ; MEM64:         .functype load_lane_i8_from_numeric_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const 42
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load8_lane 0, 0
+; MEM64-NEXT:    v128.load8_lane 42, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = inttoptr i32 42 to ptr
   %x = load i8, ptr %s
@@ -197,17 +191,17 @@ define <16 x i8> @load_lane_i8_from_global_address(<16 x i8> %v) {
 ; CHECK-LABEL: load_lane_i8_from_global_address:
 ; CHECK:         .functype load_lane_i8_from_global_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_i8
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load8_lane 0, 0
+; CHECK-NEXT:    v128.load8_lane gv_i8, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i8_from_global_address:
 ; MEM64:         .functype load_lane_i8_from_global_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const gv_i8
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load8_lane 0, 0
+; MEM64-NEXT:    v128.load8_lane gv_i8, 0
 ; MEM64-NEXT:    # fallthrough-return
   %x = load i8, ptr @gv_i8
   %t = insertelement <16 x i8> %v, i8 %x, i32 0
@@ -440,10 +434,8 @@ define <8 x i16> @load_lane_i16_with_folded_offset(ptr %p, <8 x i16> %v) {
 ; CHECK:         .functype load_lane_i16_with_folded_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load16_lane 0, 0
+; CHECK-NEXT:    v128.load16_lane 24, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i16_with_folded_offset:
@@ -470,20 +462,16 @@ define <8 x i16> @load_lane_i16_with_folded_gep_offset(ptr %p, <8 x i16> %v) {
 ; CHECK:         .functype load_lane_i16_with_folded_gep_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 12
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load16_lane 0, 0
+; CHECK-NEXT:    v128.load16_lane 12, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i16_with_folded_gep_offset:
 ; MEM64:         .functype load_lane_i16_with_folded_gep_offset (i64, v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    i64.const 12
-; MEM64-NEXT:    i64.add
 ; MEM64-NEXT:    local.get 1
-; MEM64-NEXT:    v128.load16_lane 0, 0
+; MEM64-NEXT:    v128.load16_lane 12, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = getelementptr inbounds i16, ptr %p, i32 6
   %x = load i16, ptr %s
@@ -577,17 +565,17 @@ define <8 x i16> @load_lane_i16_from_numeric_address(<8 x i16> %v) {
 ; CHECK-LABEL: load_lane_i16_from_numeric_address:
 ; CHECK:         .functype load_lane_i16_from_numeric_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 42
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load16_lane 0, 0
+; CHECK-NEXT:    v128.load16_lane 42, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i16_from_numeric_address:
 ; MEM64:         .functype load_lane_i16_from_numeric_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const 42
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load16_lane 0, 0
+; MEM64-NEXT:    v128.load16_lane 42, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = inttoptr i32 42 to ptr
   %x = load i16, ptr %s
@@ -600,17 +588,17 @@ define <8 x i16> @load_lane_i16_from_global_address(<8 x i16> %v) {
 ; CHECK-LABEL: load_lane_i16_from_global_address:
 ; CHECK:         .functype load_lane_i16_from_global_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_i16
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load16_lane 0, 0
+; CHECK-NEXT:    v128.load16_lane gv_i16, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i16_from_global_address:
 ; MEM64:         .functype load_lane_i16_from_global_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const gv_i16
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load16_lane 0, 0
+; MEM64-NEXT:    v128.load16_lane gv_i16, 0
 ; MEM64-NEXT:    # fallthrough-return
   %x = load i16, ptr @gv_i16
   %t = insertelement <8 x i16> %v, i16 %x, i32 0
@@ -843,10 +831,8 @@ define <4 x i32> @load_lane_i32_with_folded_offset(ptr %p, <4 x i32> %v) {
 ; CHECK:         .functype load_lane_i32_with_folded_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_lane 24, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i32_with_folded_offset:
@@ -873,20 +859,16 @@ define <4 x i32> @load_lane_i32_with_folded_gep_offset(ptr %p, <4 x i32> %v) {
 ; CHECK:         .functype load_lane_i32_with_folded_gep_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_lane 24, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i32_with_folded_gep_offset:
 ; MEM64:         .functype load_lane_i32_with_folded_gep_offset (i64, v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    i64.const 24
-; MEM64-NEXT:    i64.add
 ; MEM64-NEXT:    local.get 1
-; MEM64-NEXT:    v128.load32_lane 0, 0
+; MEM64-NEXT:    v128.load32_lane 24, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = getelementptr inbounds i32, ptr %p, i32 6
   %x = load i32, ptr %s
@@ -980,17 +962,17 @@ define <4 x i32> @load_lane_i32_from_numeric_address(<4 x i32> %v) {
 ; CHECK-LABEL: load_lane_i32_from_numeric_address:
 ; CHECK:         .functype load_lane_i32_from_numeric_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 42
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_lane 42, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i32_from_numeric_address:
 ; MEM64:         .functype load_lane_i32_from_numeric_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const 42
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load32_lane 0, 0
+; MEM64-NEXT:    v128.load32_lane 42, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = inttoptr i32 42 to ptr
   %x = load i32, ptr %s
@@ -1003,17 +985,17 @@ define <4 x i32> @load_lane_i32_from_global_address(<4 x i32> %v) {
 ; CHECK-LABEL: load_lane_i32_from_global_address:
 ; CHECK:         .functype load_lane_i32_from_global_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_i32
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load32_lane 0, 0
+; CHECK-NEXT:    v128.load32_lane gv_i32, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i32_from_global_address:
 ; MEM64:         .functype load_lane_i32_from_global_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const gv_i32
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load32_lane 0, 0
+; MEM64-NEXT:    v128.load32_lane gv_i32, 0
 ; MEM64-NEXT:    # fallthrough-return
   %x = load i32, ptr @gv_i32
   %t = insertelement <4 x i32> %v, i32 %x, i32 0
@@ -1246,10 +1228,8 @@ define <2 x i64> @load_lane_i64_with_folded_offset(ptr %p, <2 x i64> %v) {
 ; CHECK:         .functype load_lane_i64_with_folded_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 24
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_lane 24, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i64_with_folded_offset:
@@ -1276,20 +1256,16 @@ define <2 x i64> @load_lane_i64_with_folded_gep_offset(ptr %p, <2 x i64> %v) {
 ; CHECK:         .functype load_lane_i64_with_folded_gep_offset (i32, v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32.const 48
-; CHECK-NEXT:    i32.add
 ; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_lane 48, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i64_with_folded_gep_offset:
 ; MEM64:         .functype load_lane_i64_with_folded_gep_offset (i64, v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    i64.const 48
-; MEM64-NEXT:    i64.add
 ; MEM64-NEXT:    local.get 1
-; MEM64-NEXT:    v128.load64_lane 0, 0
+; MEM64-NEXT:    v128.load64_lane 48, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = getelementptr inbounds i64, ptr %p, i32 6
   %x = load i64, ptr %s
@@ -1383,17 +1359,17 @@ define <2 x i64> @load_lane_i64_from_numeric_address(<2 x i64> %v) {
 ; CHECK-LABEL: load_lane_i64_from_numeric_address:
 ; CHECK:         .functype load_lane_i64_from_numeric_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const 42
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_lane 42, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i64_from_numeric_address:
 ; MEM64:         .functype load_lane_i64_from_numeric_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const 42
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load64_lane 0, 0
+; MEM64-NEXT:    v128.load64_lane 42, 0
 ; MEM64-NEXT:    # fallthrough-return
   %s = inttoptr i32 42 to ptr
   %x = load i64, ptr %s
@@ -1406,17 +1382,17 @@ define <2 x i64> @load_lane_i64_from_global_address(<2 x i64> %v) {
 ; CHECK-LABEL: load_lane_i64_from_global_address:
 ; CHECK:         .functype load_lane_i64_from_global_address (v128) -> (v128)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.const gv_i64
+; CHECK-NEXT:    i32.const 0
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    v128.load64_lane 0, 0
+; CHECK-NEXT:    v128.load64_lane gv_i64, 0
 ; CHECK-NEXT:    # fallthrough-return
 ;
 ; MEM64-LABEL: load_lane_i64_from_global_address:
 ; MEM64:         .functype load_lane_i64_from_global_address (v128) -> (v128)
 ; MEM64-NEXT:  # %bb.0:
-; MEM64-NEXT:    i64.const gv_i64
+; MEM64-NEXT:    i64.const 0
 ; MEM64-NEXT:    local.get 0
-; MEM64-NEXT:    v128.load64_lane 0, 0
+; MEM64-NEXT:    v128.load64_lane gv_i64, 0
 ; MEM64-NEXT:    # fallthrough-return
   %x = load i64, ptr @gv_i64
   %t = insertelement <2 x i64> %v, i64 %x, i32 0

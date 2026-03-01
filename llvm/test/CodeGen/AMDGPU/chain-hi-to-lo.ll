@@ -42,7 +42,7 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, 2
 ; FLATSCR_GFX10-NEXT:    scratch_load_ushort v0, off, s0
-; FLATSCR_GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; FLATSCR_GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR_GFX10-NEXT:    scratch_load_short_d16_hi v0, off, s0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
@@ -68,9 +68,9 @@ define <2 x half> @chain_hi_to_lo_private() {
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %gep_lo = getelementptr inbounds half, ptr addrspace(5) null, i64 1
+  %gep_lo = getelementptr inbounds half, ptr addrspace(5) zeroinitializer, i64 1
   %load_lo = load half, ptr addrspace(5) %gep_lo
-  %load_hi = load half, ptr addrspace(5) null
+  %load_hi = load half, ptr addrspace(5) zeroinitializer
 
   %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
@@ -244,9 +244,9 @@ define <2 x half> @chain_hi_to_lo_group() {
 ; GFX11-FAKE16-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %gep_lo = getelementptr inbounds half, ptr addrspace(3) null, i64 1
+  %gep_lo = getelementptr inbounds half, ptr addrspace(3) zeroinitializer, i64 1
   %load_lo = load half, ptr addrspace(3) %gep_lo
-  %load_hi = load half, ptr addrspace(3) null
+  %load_hi = load half, ptr addrspace(3) zeroinitializer
 
   %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
@@ -651,7 +651,7 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s4 offset:2
 ; FLATSCR_GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; FLATSCR_GFX10-NEXT:    global_load_ushort v0, v2, s[0:1] offset:4
-; FLATSCR_GFX10-NEXT:    s_waitcnt_depctr 0xffe3
+; FLATSCR_GFX10-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; FLATSCR_GFX10-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR_GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR_GFX10-NEXT:    scratch_store_short off, v0, s0 offset:4

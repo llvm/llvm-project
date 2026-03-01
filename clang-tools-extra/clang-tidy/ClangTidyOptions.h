@@ -85,7 +85,7 @@ struct ClangTidyOptions {
   /// main files will always be displayed.
   std::optional<std::string> HeaderFilterRegex;
 
-  /// \brief Exclude warnings from headers matching this filter, even if they
+  /// Exclude warnings from headers matching this filter, even if they
   /// match \c HeaderFilterRegex.
   std::optional<std::string> ExcludeHeaderFilterRegex;
 
@@ -151,6 +151,9 @@ struct ClangTidyOptions {
   /// Add extra compilation arguments to the start of the list.
   std::optional<ArgList> ExtraArgsBefore;
 
+  /// Remove command line arguments sent to the compiler matching this.
+  std::optional<ArgList> RemovedArgs;
+
   /// Only used in the FileOptionsProvider and ConfigOptionsProvider. If true
   /// and using a FileOptionsProvider, it will take a configuration file in the
   /// parent directory (if any exists) and apply this config file on top of the
@@ -167,9 +170,11 @@ struct ClangTidyOptions {
 /// Abstract interface for retrieving various ClangTidy options.
 class ClangTidyOptionsProvider {
 public:
-  static const char OptionsSourceTypeDefaultBinary[];
-  static const char OptionsSourceTypeCheckCommandLineOption[];
-  static const char OptionsSourceTypeConfigCommandLineOption[];
+  static constexpr char OptionsSourceTypeDefaultBinary[] = "clang-tidy binary";
+  static constexpr char OptionsSourceTypeCheckCommandLineOption[] =
+      "command-line option '-checks'";
+  static constexpr char OptionsSourceTypeConfigCommandLineOption[] =
+      "command-line option '-config'";
 
   virtual ~ClangTidyOptionsProvider() = default;
 

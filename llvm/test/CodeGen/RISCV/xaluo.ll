@@ -660,11 +660,10 @@ define zeroext i1 @uaddo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32ZICOND-NEXT:    add a2, a0, a2
 ; RV32ZICOND-NEXT:    sltu a0, a2, a0
 ; RV32ZICOND-NEXT:    add a3, a3, a0
-; RV32ZICOND-NEXT:    xor a5, a3, a1
-; RV32ZICOND-NEXT:    sltu a1, a3, a1
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a5
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a5
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sltu a5, a3, a1
+; RV32ZICOND-NEXT:    xor a1, a3, a1
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    or a0, a0, a5
 ; RV32ZICOND-NEXT:    sw a2, 0(a4)
 ; RV32ZICOND-NEXT:    sw a3, 4(a4)
 ; RV32ZICOND-NEXT:    ret
@@ -1152,11 +1151,10 @@ define zeroext i1 @usubo.i64(i64 %v1, i64 %v2, ptr %res) {
 ; RV32ZICOND-NEXT:    sub a2, a0, a2
 ; RV32ZICOND-NEXT:    sub a3, a3, a5
 ; RV32ZICOND-NEXT:    sltu a0, a0, a2
-; RV32ZICOND-NEXT:    xor a5, a3, a1
-; RV32ZICOND-NEXT:    sltu a1, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a5
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a5
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sltu a5, a1, a3
+; RV32ZICOND-NEXT:    xor a1, a3, a1
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    or a0, a0, a5
 ; RV32ZICOND-NEXT:    sw a2, 0(a4)
 ; RV32ZICOND-NEXT:    sw a3, 4(a4)
 ; RV32ZICOND-NEXT:    ret
@@ -1953,7 +1951,6 @@ entry:
   ret i1 %obit
 }
 
-
 ;
 ; Check the use of the overflow bit in combination with a select instruction.
 ;
@@ -2427,11 +2424,10 @@ define i64 @uaddo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    add a5, a0, a2
 ; RV32ZICOND-NEXT:    sltu a5, a5, a0
 ; RV32ZICOND-NEXT:    add a4, a4, a5
-; RV32ZICOND-NEXT:    xor a6, a4, a1
-; RV32ZICOND-NEXT:    sltu a4, a4, a1
-; RV32ZICOND-NEXT:    czero.eqz a4, a4, a6
-; RV32ZICOND-NEXT:    czero.nez a5, a5, a6
-; RV32ZICOND-NEXT:    or a4, a5, a4
+; RV32ZICOND-NEXT:    sltu a6, a4, a1
+; RV32ZICOND-NEXT:    xor a4, a4, a1
+; RV32ZICOND-NEXT:    czero.nez a4, a5, a4
+; RV32ZICOND-NEXT:    or a4, a4, a6
 ; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
 ; RV32ZICOND-NEXT:    czero.nez a3, a3, a4
@@ -2502,11 +2498,10 @@ define i1 @uaddo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    add a2, a0, a2
 ; RV32ZICOND-NEXT:    sltu a0, a2, a0
 ; RV32ZICOND-NEXT:    add a3, a3, a0
-; RV32ZICOND-NEXT:    xor a2, a3, a1
-; RV32ZICOND-NEXT:    sltu a1, a3, a1
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sltu a2, a3, a1
+; RV32ZICOND-NEXT:    xor a1, a3, a1
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    or a0, a0, a2
 ; RV32ZICOND-NEXT:    xori a0, a0, 1
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -2984,11 +2979,10 @@ define i64 @usubo.select.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    sub a6, a0, a2
 ; RV32ZICOND-NEXT:    sub a5, a5, a4
 ; RV32ZICOND-NEXT:    sltu a4, a0, a6
-; RV32ZICOND-NEXT:    xor a6, a5, a1
-; RV32ZICOND-NEXT:    sltu a5, a1, a5
-; RV32ZICOND-NEXT:    czero.eqz a5, a5, a6
-; RV32ZICOND-NEXT:    czero.nez a4, a4, a6
-; RV32ZICOND-NEXT:    or a4, a4, a5
+; RV32ZICOND-NEXT:    sltu a6, a1, a5
+; RV32ZICOND-NEXT:    xor a5, a5, a1
+; RV32ZICOND-NEXT:    czero.nez a4, a4, a5
+; RV32ZICOND-NEXT:    or a4, a4, a6
 ; RV32ZICOND-NEXT:    czero.nez a2, a2, a4
 ; RV32ZICOND-NEXT:    czero.eqz a0, a0, a4
 ; RV32ZICOND-NEXT:    czero.nez a3, a3, a4
@@ -3065,12 +3059,11 @@ define i1 @usubo.not.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    sub a3, a1, a3
 ; RV32ZICOND-NEXT:    sub a2, a0, a2
 ; RV32ZICOND-NEXT:    sub a3, a3, a4
+; RV32ZICOND-NEXT:    sltu a4, a1, a3
+; RV32ZICOND-NEXT:    xor a1, a3, a1
 ; RV32ZICOND-NEXT:    sltu a0, a0, a2
-; RV32ZICOND-NEXT:    xor a2, a3, a1
-; RV32ZICOND-NEXT:    sltu a1, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    or a0, a0, a4
 ; RV32ZICOND-NEXT:    xori a0, a0, 1
 ; RV32ZICOND-NEXT:    ret
 ;
@@ -3809,7 +3802,6 @@ entry:
   ret i1 %ret
 }
 
-
 ;
 ; Check the use of the overflow bit in combination with a branch instruction.
 ;
@@ -4154,11 +4146,10 @@ define zeroext i1 @uaddo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    add a2, a0, a2
 ; RV32ZICOND-NEXT:    sltu a0, a2, a0
 ; RV32ZICOND-NEXT:    add a3, a3, a0
-; RV32ZICOND-NEXT:    xor a2, a3, a1
-; RV32ZICOND-NEXT:    sltu a1, a3, a1
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    sltu a2, a3, a1
+; RV32ZICOND-NEXT:    xor a1, a3, a1
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    or a0, a0, a2
 ; RV32ZICOND-NEXT:    beqz a0, .LBB55_2
 ; RV32ZICOND-NEXT:  # %bb.1: # %overflow
 ; RV32ZICOND-NEXT:    li a0, 0
@@ -4526,12 +4517,11 @@ define zeroext i1 @usubo.br.i64(i64 %v1, i64 %v2) {
 ; RV32ZICOND-NEXT:    sub a3, a1, a3
 ; RV32ZICOND-NEXT:    sub a2, a0, a2
 ; RV32ZICOND-NEXT:    sub a3, a3, a4
+; RV32ZICOND-NEXT:    sltu a4, a1, a3
+; RV32ZICOND-NEXT:    xor a1, a3, a1
 ; RV32ZICOND-NEXT:    sltu a0, a0, a2
-; RV32ZICOND-NEXT:    xor a2, a3, a1
-; RV32ZICOND-NEXT:    sltu a1, a1, a3
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    czero.nez a0, a0, a1
+; RV32ZICOND-NEXT:    or a0, a0, a4
 ; RV32ZICOND-NEXT:    beqz a0, .LBB59_2
 ; RV32ZICOND-NEXT:  # %bb.1: # %overflow
 ; RV32ZICOND-NEXT:    li a0, 0
@@ -5263,9 +5253,8 @@ define zeroext i1 @umulo2.br.i64(i64 %v1) {
 ; RV32ZICOND-NEXT:    sltu a0, a2, a0
 ; RV32ZICOND-NEXT:    add a3, a3, a0
 ; RV32ZICOND-NEXT:    xor a2, a3, a1
-; RV32ZICOND-NEXT:    sltu a1, a3, a1
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a2
 ; RV32ZICOND-NEXT:    czero.nez a0, a0, a2
+; RV32ZICOND-NEXT:    sltu a1, a3, a1
 ; RV32ZICOND-NEXT:    or a0, a0, a1
 ; RV32ZICOND-NEXT:    beqz a0, .LBB65_2
 ; RV32ZICOND-NEXT:  # %bb.1: # %overflow
@@ -5586,15 +5575,3 @@ IfNoOverflow:
   ret i64 %val
 }
 
-declare {i32, i1} @llvm.sadd.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.sadd.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.uadd.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.uadd.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.ssub.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.ssub.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.usub.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.usub.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.smul.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.smul.with.overflow.i64(i64, i64) nounwind readnone
-declare {i32, i1} @llvm.umul.with.overflow.i32(i32, i32) nounwind readnone
-declare {i64, i1} @llvm.umul.with.overflow.i64(i64, i64) nounwind readnone

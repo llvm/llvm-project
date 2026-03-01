@@ -154,13 +154,10 @@ define i32 @predicated(ptr noalias nocapture %A) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP104:%.*]], [[PRED_LOAD_CONTINUE36]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP107:%.*]], [[PRED_LOAD_CONTINUE36]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[TMP110:%.*]], [[PRED_LOAD_CONTINUE36]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[STEP_ADD_2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD_3:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 12)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 257)
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[STEP_ADD]], splat (i64 257)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[STEP_ADD_2]], splat (i64 257)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> [[STEP_ADD_3]], splat (i64 257)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 253)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 249)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult <4 x i64> [[VEC_IND]], splat (i64 245)
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i1> [[TMP0]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP4]], label [[PRED_LOAD_IF:%.*]], label [[PRED_LOAD_CONTINUE:%.*]]
 ; CHECK:       pred.load.if:
@@ -371,8 +368,8 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[N_RND_UP:%.*]] = add i64 [[N:%.*]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[N_RND_UP]], -16
 ; CHECK-NEXT:    [[TRIP_COUNT_MINUS_1:%.*]] = add i64 [[N]], -1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i32> poison, i32 [[COND:%.*]], i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i32> [[BROADCAST_SPLATINSERT7]], splat (i32 7)
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt i32 [[COND:%.*]], 7
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x i1> poison, i1 [[TMP5]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i1> [[TMP4]], <4 x i1> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i64> poison, i64 [[TRIP_COUNT_MINUS_1]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT]], <4 x i64> poison, <4 x i32> zeroinitializer
@@ -384,9 +381,9 @@ define i32 @cond_rdx_pred(i32 %cond, ptr noalias %a, i64 %N) {
 ; CHECK-NEXT:    [[VEC_PHI4:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP112:%.*]], [[PRED_LOAD_CONTINUE38]] ]
 ; CHECK-NEXT:    [[VEC_PHI5:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP115:%.*]], [[PRED_LOAD_CONTINUE38]] ]
 ; CHECK-NEXT:    [[VEC_PHI6:%.*]] = phi i32 [ 1, [[VECTOR_PH]] ], [ [[TMP118:%.*]], [[PRED_LOAD_CONTINUE38]] ]
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 4)
-; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[VEC_IND]], splat (i64 12)
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 4)
+; CHECK-NEXT:    [[STEP_ADD1:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 8)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add nuw <4 x i64> [[VEC_IND]], splat (i64 12)
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule <4 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <4 x i64> [[STEP_ADD]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule <4 x i64> [[STEP_ADD1]], [[BROADCAST_SPLAT]]
