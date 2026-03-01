@@ -913,13 +913,6 @@ struct TransferReadDecomposeUnsupportedTranspose
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
-    RewritePatternSet prepareTransferReadPatterns(&getContext());
-    prepareTransferReadPatterns.add<TransferReadDecomposeUnsupportedTranspose>(
-        prepareTransferReadPatterns.getContext());
-    if (failed(applyPatternsGreedily(getOperation(),
-                                     std::move(prepareTransferReadPatterns))))
-      return signalPassFailure();
-
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
@@ -931,8 +924,8 @@ struct ConvertVectorToXeGPUPass
 
 void mlir::populateVectorToXeGPUConversionPatterns(
     RewritePatternSet &patterns) {
-  patterns
-      .add<TransferReadLowering, TransferWriteLowering, LoadLowering,
-           ScatterLowering, GatherLowering, StoreLowering, ContractionLowering>(
-          patterns.getContext());
+  patterns.add<TransferReadLowering, TransferWriteLowering, LoadLowering,
+               ScatterLowering, GatherLowering, StoreLowering,
+               ContractionLowering, TransferReadDecomposeUnsupportedTranspose>(
+      patterns.getContext());
 }
