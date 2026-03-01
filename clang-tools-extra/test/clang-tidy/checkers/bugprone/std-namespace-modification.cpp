@@ -281,3 +281,13 @@ template<typename> struct T {};
 
 T<B> b;
 }
+
+// gh183752 begin
+template <typename T>
+struct Bar
+{};
+
+template <typename T>
+struct std::hash<Bar<T>> // Should not warn as this specialization depends on a user-defined type.
+{};
+// gh183752 end
