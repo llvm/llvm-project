@@ -982,6 +982,7 @@ class AMul2Ia<bits<7> opcod, bits<4> opc7_4, dag oops, dag iops,
   : AMul2I<opcod, opc7_4, oops, iops, itin, opc, asm, pattern> {
   bits<4> Ra;
   let Inst{15-12} = Ra;
+  let hasSideEffects = 0;
 }
 
 // SMUL<x><y> / SMULW<y> / SMLA<x><y> / SMLAW<x><y>
