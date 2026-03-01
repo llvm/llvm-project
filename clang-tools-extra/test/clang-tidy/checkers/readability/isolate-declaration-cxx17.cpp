@@ -1,4 +1,5 @@
-// RUN: %check_clang_tidy -std=c++17-or-later %s readability-isolate-declaration %t
+// RUN: %check_clang_tidy -std=c++17-or-later %s readability-isolate-declaration %t -- -- -isystem %clang_tidy_headers
+#include <vector>
 
 template <typename T1, typename T2>
 struct pair {
@@ -30,15 +31,6 @@ struct SomeClass {
 };
 
 namespace std {
-template <typename T>
-class initializer_list { const T *a, *b; };
-
-template <typename T>
-class vector {
-public:
-  vector() = default;
-  vector(initializer_list<T> init) {}
-};
 
 class string {
 public:
