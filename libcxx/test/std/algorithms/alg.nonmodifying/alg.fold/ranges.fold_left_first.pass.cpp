@@ -115,10 +115,10 @@ constexpr void check_lvalue_range(R& r, F f, std::optional<Expected> const& expe
   }
 
   {
-    auto telemetry                                              = invocable_telemetry();
-    auto f2                                                     = invocable_with_telemetry(f, telemetry);
-    std::same_as<std::optional<Expected>> decltype(auto) result = fold_left_first(r, f2);
-    assert(result == expected);
+    auto telemetry                                                       = invocable_telemetry();
+    auto f2                                                              = invocable_with_telemetry(f, telemetry);
+    is_in_value_result<R, std::optional<Expected>> decltype(auto) result = fold_left_first_with_iter(r, f2);
+    assert(result.value == expected);
     if (expected.has_value()) {
       assert(telemetry.invocations == std::ranges::distance(r) - 1);
       assert(telemetry.moves == 0);
