@@ -15821,7 +15821,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       ScalarCost += TTI.getInstructionCost(ZExt, CostKind);
       return ScalarCost;
     };
-    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost) {
+    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
       const TreeEntry *LhsTE = getOperandEntry(E, /*Idx=*/0);
       TTI::CastContextHint CastCtx =
           getCastContextHint(*getOperandEntry(LhsTE, /*Idx=*/0));
@@ -15844,7 +15844,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                    TTI::CastContextHint::None, CostKind);
         }
       }
-      return BitcastCost;
+      return BitcastCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -15867,7 +15867,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       ScalarCost += TTI.getInstructionCost(Load, CostKind);
       return ScalarCost;
     };
-    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost) {
+    auto GetVectorCost = [&, &TTI = *TTI](InstructionCost CommonCost) {
       const TreeEntry *LhsTE = getOperandEntry(E, /*Idx=*/0);
       const TreeEntry *LoadTE = getOperandEntry(LhsTE, /*Idx=*/0);
       auto *LI0 = cast<LoadInst>(LoadTE->getMainOp());
@@ -15889,7 +15889,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                                    TTI::CastContextHint::None, CostKind);
         }
       }
-      return LoadCost;
+      return LoadCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -21657,6 +21657,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       ScalarTy = cast<CastInst>(ZExt->getMainOp())->getSrcTy();
       Op = FinalShuffle(Op, E);
       auto *V = Builder.CreateBitCast(Op, SrcType);
+      ++NumVectorInstructions;
       if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap) {
         V = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, V);
         ++NumVectorInstructions;
@@ -21683,19 +21684,19 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Load->getMainOp()->getType(), Load->getVectorFactor()));
       LoadInst *LI = cast<LoadInst>(Load->getMainOp());
       Value *PO = LI->getPointerOperand();
-      auto *SrcType = IntegerType::get(
+      auto *SrcTy = IntegerType::get(
           ScalarTy->getContext(),
           DL->getTypeSizeInBits(cast<CastInst>(ZExt->getMainOp())->getSrcTy()) *
               E->getVectorFactor());
       auto *OrigScalarTy = ScalarTy;
       ScalarTy = ZExt->getMainOp()->getType();
-      Value *V = Builder.CreateAlignedLoad(OrigScalarTy, PO, LI->getAlign());
+      Value *V = Builder.CreateAlignedLoad(SrcTy, PO, LI->getAlign());
       ++NumVectorInstructions;
       if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwapLoads) {
         V = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, V);
         ++NumVectorInstructions;
       }
-      if (SrcType != OrigScalarTy) {
+      if (SrcTy != OrigScalarTy) {
         V = Builder.CreateIntCast(V, OrigScalarTy, /*isSigned=*/false);
         ++NumVectorInstructions;
       }
