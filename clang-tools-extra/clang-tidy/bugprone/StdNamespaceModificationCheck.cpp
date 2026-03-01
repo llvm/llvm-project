@@ -43,8 +43,10 @@ void StdNamespaceModificationCheck::registerMatchers(MatchFinder *Finder) {
       hasDeclContext(namespaceDecl(hasAnyName("std", "posix"),
                                    unless(hasParent(namespaceDecl())))
                          .bind("nmspc"));
-  auto UserDefinedDecl = tagDecl(hasAncestor(namespaceDecl(
-      hasAnyName("std", "posix"), unless(hasParent(namespaceDecl())))));
+  auto UserDefinedDecl =
+      namedDecl(anyOf(classTemplateDecl(), tagDecl()),
+                hasAncestor(namespaceDecl(hasAnyName("std", "posix"),
+                                          unless(hasParent(namespaceDecl())))));
   auto UserDefinedType = qualType(hasUnqualifiedDesugaredType(anyOf(
       tagType(unless(hasDeclaration(UserDefinedDecl))),
       templateSpecializationType(unless(hasDeclaration(UserDefinedDecl))))));

@@ -282,6 +282,11 @@ template<typename> struct T {};
 T<B> b;
 }
 
+template <typename T>
+struct std::hash<std::vector<T>>
+// CHECK-MESSAGES: :[[@LINE-1]]:13: warning: modification of 'std' namespace can result in undefined behavior [bugprone-std-namespace-modification]
+{};
+
 // gh183752 begin
 template <typename T>
 struct Bar
