@@ -965,6 +965,35 @@ TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_SHL) {
   EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(VecShl04, DemandHi));
 }
 
+TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_ZeroExtend) {
+  SDLoc Loc;
+  auto Cst0 = DAG->getConstant(0, Loc, MVT::i16);
+  auto Cst4 = DAG->getConstant(4, Loc, MVT::i16);
+  auto CstBig = DAG->getConstant(2 << 14, Loc, MVT::i16);
+  auto node0 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, Cst0);
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(node0)); // this gets transformed
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(node0, /*OrZero=*/true)); // so need to pass OrZero=true
+  auto node4 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, Cst4);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(node4));
+  auto nodeBig = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::i32, CstBig);
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(nodeBig));
+  auto VecVT = MVT::v2i16;
+  auto Vec04 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32, DAG->getBuildVector(VecVT, Loc, {Cst0, Cst4}));
+  auto Vec4Big = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32, DAG->getBuildVector(VecVT, Loc, {Cst4, CstBig}));
+  auto Vec0Big = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::v2i32, DAG->getBuildVector(VecVT, Loc, {Cst0, CstBig}));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Vec04));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec4Big));
+  EXPECT_FALSE(DAG->isKnownToBeAPowerOfTwo(Vec0Big));
+
+  auto SplatVT = MVT::nxv2i16;
+  auto Splat0 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32, DAG->getSplat(SplatVT, Loc, Cst0));
+  auto Splat4 = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32, DAG->getSplat(SplatVT, Loc, Cst4));
+  auto SplatBig = DAG->getNode(ISD::ZERO_EXTEND, Loc, MVT::nxv2i32, DAG->getSplat(SplatVT, Loc, CstBig));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat0));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(Splat4));
+  EXPECT_TRUE(DAG->isKnownToBeAPowerOfTwo(SplatBig));
+}
+
 TEST_F(AArch64SelectionDAGTest, KnownToBeAPowerOfTwo_Select) {
   SDLoc Loc;
   auto Cst0 = DAG->getConstant(0, Loc, MVT::i32);
