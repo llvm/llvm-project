@@ -8210,9 +8210,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
 
     // Determine the largest legal scalar integer type we can safely use
     // for chunk operations.
-    unsigned MaxChunk = 0;
-
-    // Use the largest legal integer register type for this VT.
+    unsigned MaxChunk;
     EVT LegalVT = EVT(getRegisterType(*DAG.getContext(), VT));
     if (LegalVT.isInteger())
       MaxChunk = LegalVT.getSizeInBits();
@@ -8235,16 +8233,18 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     }
 
     // If we found a good chunk width, slice the number and sum the pieces.
-    if (BestChunkWidth > 0) {
-      EVT ChunkVT = EVT::getIntegerVT(*DAG.getContext(), BestChunkWidth);
+    if (!BestChunkWidth)
+      return false;
 
-      SDValue In;
+    EVT ChunkVT = EVT::getIntegerVT(*DAG.getContext(), BestChunkWidth);
 
-      if (LL) {
-        In = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
-      } else {
-        In = N->getOperand(0);
-      }
+    SDValue In;
+
+    if (LL) {
+      In = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
+    } else {
+      In = N->getOperand(0);
+    }
 
       SmallVector<SDValue, 8> Parts;
       // Split into fixed-size chunks
@@ -8279,9 +8279,6 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
       }
 
       Sum = DAG.getNode(ISD::ZERO_EXTEND, dl, HiLoVT, Sum);
-    } else {
-      return false;
-    }
   }
 
   // If we didn't find a sum, we can't do the expansion.
