@@ -8208,10 +8208,25 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     unsigned BitWidth = VT.getScalarSizeInBits();
     unsigned BestChunkWidth = 0;
 
-    // We restrict to small chunk sizes (e.g., ≤ 32 bits) to ensure that all
-    // operations remain legal on most targets.
-    unsigned MaxChunk = 32;
-    for (int i = MaxChunk; i >= 1; --i) {
+    // Determine the largest legal scalar integer type we can safely use
+    // for chunk operations.
+    unsigned MaxChunk = 0;
+
+    // Use the largest legal integer register type for this VT.
+    EVT LegalVT = EVT(getRegisterType(*DAG.getContext(), VT));
+    if (LegalVT.isInteger())
+      MaxChunk = LegalVT.getSizeInBits();
+    else
+      return false;
+
+    // Clamp to the original bit width.
+    MaxChunk = std::min(MaxChunk, BitWidth);
+
+    // Find the largest chunk width W in (MaxChunk/2, MaxChunk] satisfying
+    //   (1 << W) % Divisor == 1.
+    // Then 2^W ≡ 1 (mod Divisor), so a value written in base 2^W can be
+    // reduced modulo Divisor by summing its W-bit chunks.
+    for (unsigned i = MaxChunk; i > MaxChunk / 2; --i) {
       APInt ChunkMaxPlus1 = APInt::getOneBitSet(BitWidth, i);
       if (ChunkMaxPlus1.urem(Divisor).isOne()) {
         BestChunkWidth = i;
@@ -8223,10 +8238,13 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
     if (BestChunkWidth > 0) {
       EVT ChunkVT = EVT::getIntegerVT(*DAG.getContext(), BestChunkWidth);
 
-      if (!LL)
-        std::tie(LL, LH) =
-            DAG.SplitScalar(N->getOperand(0), dl, HiLoVT, HiLoVT);
-      SDValue In = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
+      SDValue In;
+
+      if (LL) {
+        In = DAG.getNode(ISD::BUILD_PAIR, dl, VT, LL, LH);
+      } else {
+        In = N->getOperand(0);
+      }
 
       SmallVector<SDValue, 8> Parts;
       // Split into fixed-size chunks
@@ -8254,15 +8272,7 @@ bool TargetLowering::expandDIVREMByConstant(SDNode *N,
         } else {
           SDValue Add = DAG.getNode(ISD::ADD, dl, ChunkVT, Sum, Parts[i]);
           SDValue NewCarry = DAG.getSetCC(dl, SetCCType, Add, Sum, ISD::SETULT);
-
-          if (getBooleanContents(ChunkVT) ==
-              TargetLoweringBase::ZeroOrOneBooleanContent)
-            NewCarry = DAG.getZExtOrTrunc(NewCarry, dl, ChunkVT);
-          else
-            NewCarry = DAG.getSelect(dl, ChunkVT, NewCarry,
-                                     DAG.getConstant(1, dl, ChunkVT),
-                                     DAG.getConstant(0, dl, ChunkVT));
-
+          NewCarry = DAG.getZExtOrTrunc(NewCarry, dl, ChunkVT);
           Sum = DAG.getNode(ISD::ADD, dl, ChunkVT, Add, Carry);
           Carry = NewCarry;
         }
