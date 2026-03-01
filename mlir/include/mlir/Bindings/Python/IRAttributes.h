@@ -594,8 +594,6 @@ public:
   static constexpr IsAFunctionTy isaFunction = mlirAttributeIsADynamicAttr;
   static constexpr const char *pyClassName = "DynamicAttr";
   using PyConcreteAttribute::PyConcreteAttribute;
-  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
-      mlirDynamicAttrGetTypeID;
 
   static void bindDerived(ClassTy &c);
 };

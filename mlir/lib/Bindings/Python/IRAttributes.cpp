@@ -18,6 +18,7 @@
 
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/BuiltinTypes.h"
+#include "mlir-c/ExtensibleDialect.h"
 #include "mlir/Bindings/Python/IRAttributes.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/Nanobind.h"
@@ -774,12 +775,6 @@ std::unique_ptr<nb_buffer_info> PyDenseElementsAttribute::accessBuffer() {
 }
 
 void PyDenseElementsAttribute::bindDerived(ClassTy &c) {
-#if PY_VERSION_HEX < 0x03090000
-  PyTypeObject *tp = reinterpret_cast<PyTypeObject *>(c.ptr());
-  tp->tp_as_buffer->bf_getbuffer = PyDenseElementsAttribute::bf_getbuffer;
-  tp->tp_as_buffer->bf_releasebuffer =
-      PyDenseElementsAttribute::bf_releasebuffer;
-#endif
   c.def("__len__", &PyDenseElementsAttribute::dunderLen)
       .def_static(
           "get", PyDenseElementsAttribute::getFromBuffer, nb::arg("array"),
@@ -931,13 +926,10 @@ MlirAttribute PyDenseElementsAttribute::getAttributeFromBuffer(
 }
 
 PyType_Slot PyDenseElementsAttribute::slots[] = {
-// Python 3.8 doesn't allow setting the buffer protocol slots from a type spec.
-#if PY_VERSION_HEX >= 0x03090000
     {Py_bf_getbuffer,
      reinterpret_cast<void *>(PyDenseElementsAttribute::bf_getbuffer)},
     {Py_bf_releasebuffer,
      reinterpret_cast<void *>(PyDenseElementsAttribute::bf_releasebuffer)},
-#endif
     {0, nullptr},
 };
 
@@ -1376,41 +1368,47 @@ void PyStringAttribute::bindDerived(ClassTy &c) {
       "Returns the value of the string attribute as `bytes`");
 }
 
+static MlirDynamicAttrDefinition
+getDynamicAttrDef(const std::string &fullAttrName,
+                  DefaultingPyMlirContext context) {
+  size_t dotPos = fullAttrName.find('.');
+  if (dotPos == std::string::npos) {
+    throw nb::value_error("Expected full attribute name to be in the format "
+                          "'<dialectName>.<attributeName>'.");
+  }
+
+  std::string dialectName = fullAttrName.substr(0, dotPos);
+  std::string attrName = fullAttrName.substr(dotPos + 1);
+  PyDialects dialects(context->getRef());
+  MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
+  if (!mlirDialectIsAExtensibleDialect(dialect))
+    throw nb::value_error(
+        ("Dialect '" + dialectName + "' is not an extensible dialect.")
+            .c_str());
+
+  MlirDynamicAttrDefinition attrDef = mlirExtensibleDialectLookupAttrDefinition(
+      dialect, toMlirStringRef(attrName));
+  if (attrDef.ptr == nullptr) {
+    throw nb::value_error(("Dialect '" + dialectName +
+                           "' does not contain an attribute named '" +
+                           attrName + "'.")
+                              .c_str());
+  }
+  return attrDef;
+}
+
 void PyDynamicAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
       [](const std::string &fullAttrName, const std::vector<PyAttribute> &attrs,
          DefaultingPyMlirContext context) {
-        size_t dotPos = fullAttrName.find('.');
-        if (dotPos == std::string::npos) {
-          throw nb::value_error(
-              "Expected full attribute name to be in the format "
-              "'<dialectName>.<attributeName>'.");
-        }
-
-        std::string dialectName = fullAttrName.substr(0, dotPos);
-        std::string attrName = fullAttrName.substr(dotPos + 1);
-        PyDialects dialects(context->getRef());
-        MlirDialect dialect = dialects.getDialectForKey(dialectName, false);
-        if (!mlirDialectIsAExtensibleDialect(dialect))
-          throw nb::value_error(
-              ("Dialect '" + dialectName + "' is not an extensible dialect.")
-                  .c_str());
-
-        MlirDynamicAttrDefinition attrDef =
-            mlirExtensibleDialectLookupAttrDefinition(
-                dialect, toMlirStringRef(attrName));
-        if (attrDef.ptr == nullptr) {
-          throw nb::value_error(("Dialect '" + dialectName +
-                                 "' does not contain an attribute named '" +
-                                 attrName + "'.")
-                                    .c_str());
-        }
-
         std::vector<MlirAttribute> mlirAttrs;
         mlirAttrs.reserve(attrs.size());
         for (const auto &attr : attrs)
           mlirAttrs.push_back(attr.get());
+
+        MlirDynamicAttrDefinition attrDef =
+            getDynamicAttrDef(fullAttrName, context);
         MlirAttribute attr =
             mlirDynamicAttrGet(attrDef, mlirAttrs.data(), mlirAttrs.size());
         return PyDynamicAttribute(context->getRef(), attr);
@@ -1438,6 +1436,15 @@ void PyDynamicAttribute::bindDerived(ClassTy &c) {
     return std::string(dialectNamespace.data, dialectNamespace.length) + "." +
            std::string(name.data, name.length);
   });
+  c.def_static(
+      "lookup_typeid",
+      [](const std::string &fullAttrName, DefaultingPyMlirContext context) {
+        MlirDynamicAttrDefinition attrDef =
+            getDynamicAttrDef(fullAttrName, context);
+        return PyTypeID(mlirDynamicAttrDefinitionGetTypeID(attrDef));
+      },
+      nb::arg("full_attr_name"), nb::arg("context") = nb::none(),
+      "Look up the TypeID for the given dynamic attribute name.");
 }
 
 void populateIRAttributes(nb::module_ &m) {

@@ -144,7 +144,7 @@ def sourceBuilds(config, source, additionalFlags=[]):
     with _makeConfigTest(config) as test:
         with open(test.getSourcePath(), "w") as sourceFile:
             sourceFile.write(source)
-        _, _, exitCode, _, _ = _executeWithFakeConfig(
+        _, _, exitCode, _, _, _ = _executeWithFakeConfig(
             test, ["%{{build}} {}".format(" ".join(additionalFlags))]
         )
         return exitCode == 0
@@ -167,7 +167,7 @@ def programOutput(config, program, args=None):
     with _makeConfigTest(config) as test:
         with open(test.getSourcePath(), "w") as source:
             source.write(program)
-        _, err, exitCode, _, buildcmd = _executeWithFakeConfig(test, ["%{build}"])
+        _, err, exitCode, _, buildcmd, _ = _executeWithFakeConfig(test, ["%{build}"])
         if exitCode != 0:
             raise ConfigurationCompilationError(
                 "Failed to build program, cmd:\n{}\nstderr is:\n{}".format(
@@ -175,7 +175,7 @@ def programOutput(config, program, args=None):
                 )
             )
 
-        out, err, exitCode, _, runcmd = _executeWithFakeConfig(
+        out, err, exitCode, _, runcmd, _ = _executeWithFakeConfig(
             test, ["%{{run}} {}".format(" ".join(args))]
         )
         if exitCode != 0:
@@ -212,7 +212,7 @@ def tryCompileFlag(config, flag):
     """
     # fmt: off
     with _makeConfigTest(config) as test:
-        out, err, exitCode, timeoutInfo, _ = _executeWithFakeConfig(test, [
+        out, err, exitCode, timeoutInfo, _, _ = _executeWithFakeConfig(test, [
             "%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)
         ])
         return exitCode, out, err
@@ -239,7 +239,7 @@ def runScriptExitCode(config, script):
     could appear on the right-hand-side of a `RUN:` keyword.
     """
     with _makeConfigTest(config) as test:
-        _, _, exitCode, _, _ = _executeWithFakeConfig(test, script)
+        _, _, exitCode, _, _, _ = _executeWithFakeConfig(test, script)
         return exitCode
 
 
@@ -253,7 +253,7 @@ def commandOutput(config, command):
     could appear on the right-hand-side of a `RUN:` keyword.
     """
     with _makeConfigTest(config) as test:
-        out, err, exitCode, _, cmd = _executeWithFakeConfig(test, command)
+        out, err, exitCode, _, cmd, _ = _executeWithFakeConfig(test, command)
         if exitCode != 0:
             raise ConfigurationRuntimeError(
                 "Failed to run command: {}\nstderr is:\n{}".format(cmd, err)
@@ -330,7 +330,7 @@ def compilerMacros(config, flags=""):
       #endif
       """
             )
-        unparsedOutput, err, exitCode, _, cmd = _executeWithFakeConfig(
+        unparsedOutput, err, exitCode, _, cmd, _ = _executeWithFakeConfig(
             test, ["%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)]
         )
         if exitCode != 0:

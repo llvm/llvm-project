@@ -111,8 +111,8 @@ if(LLVM_PARALLEL_TABLEGEN_JOBS)
 endif()
 
 if( LLVM_ENABLE_ASSERTIONS )
-  # MSVC doesn't like _DEBUG on release builds. See PR 4379.
-  if( NOT MSVC )
+  # MS STL doesn't like _DEBUG on release builds. See PR 4379.
+  if(NOT WIN32 OR MINGW)
     add_compile_definitions(_DEBUG)
   endif()
   # On non-Debug builds cmake automatically defines NDEBUG, so we
@@ -888,6 +888,13 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 11.1)
       append("-Wno-stringop-overread" CMAKE_CXX_FLAGS)
     endif()
+
+    # Disable -Wdangling-pointer on GCC 12+; this warning produces false
+    # positives for the RAII listener pattern (storing `this` in a constructor
+    # that is cleaned up in the destructor).
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 12.1)
+      append("-Wno-dangling-pointer" CMAKE_CXX_FLAGS)
+    endif()
   endif()
 
   # The LLVM libraries have no stable C++ API, so -Wnoexcept-type is not useful.
@@ -1340,6 +1347,14 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
     # See: https://github.com/mozilla/sccache/issues/615
     # See: https://github.com/mozilla/sccache/issues/2562
     message(NOTICE "Precompiled headers are disabled by default with sccache. "
+      "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
+    set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
+  elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "clang-cache")
+    # clang-cache does compilation caching through the LLVMCAS. When using PCH,
+    # there are extra build dependencies for PCH that live in the CAS which
+    # build system is not aware of. Re-using PCH might cause incremental build
+    # to fail due to missing dependencies.
+    message(NOTICE "Precompiled headers are disabled by default with clang-cache. "
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   elseif(CMAKE_CXX_COMPILER_LAUNCHER MATCHES "ccache" AND NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
