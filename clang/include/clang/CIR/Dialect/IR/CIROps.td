@@ -485,6 +485,23 @@ def CIR_ConstantOp : CIR_Op<"const", [
 }
 
 //===----------------------------------------------------------------------===//
+// SignBitOp
+//===----------------------------------------------------------------------===//
+
+def SignBitOp : CIR_Op<"signbit", [Pure]> {
+  let summary = "Checks the sign of a floating-point number";
+  let description = [{
+    It returns whether the sign bit (i.e. the highest bit) of the input operand
+    is set.
+  }];
+  let arguments = (ins CIR_AnyFloatType:$input);
+  let results = (outs CIR_BoolType:$res);
+  let assemblyFormat = [{
+      $input attr-dict `:` type($input) `->` qualified(type($res))
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // C/C++ memory order definitions
 //===----------------------------------------------------------------------===//
 
