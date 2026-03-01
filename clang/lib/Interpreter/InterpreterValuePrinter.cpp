@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IncrementalParser.h"
+#include "IncrementalAction.h"
 #include "InterpreterUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/PrettyPrinter.h"
@@ -101,15 +101,11 @@ static std::string EnumToString(const Value &V) {
   llvm::raw_string_ostream SS(Str);
   ASTContext &Ctx = const_cast<ASTContext &>(V.getASTContext());
 
-  QualType DesugaredTy = V.getType().getDesugaredType(Ctx);
-  const EnumType *EnumTy = DesugaredTy.getNonReferenceType()->getAs<EnumType>();
-  assert(EnumTy && "Fail to cast to enum type");
-
-  EnumDecl *ED = EnumTy->getDecl();
   uint64_t Data = V.convertTo<uint64_t>();
   bool IsFirst = true;
-  llvm::APSInt AP = Ctx.MakeIntValue(Data, DesugaredTy);
+  llvm::APSInt AP = Ctx.MakeIntValue(Data, V.getType());
 
+  auto *ED = V.getType()->castAsEnumDecl();
   for (auto I = ED->enumerator_begin(), E = ED->enumerator_end(); I != E; ++I) {
     if (I->getInitVal() == AP) {
       if (!IsFirst)
@@ -366,7 +362,7 @@ Interpreter::CompileDtorCall(CXXRecordDecl *CXXRD) const {
       getCompilerInstance()->getSema().LookupDestructor(CXXRD);
 
   llvm::StringRef Name =
-      getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
+      Act->getCodeGen()->GetMangledName(GlobalDecl(DtorRD, Dtor_Base));
   auto AddrOrErr = getSymbolAddress(Name);
   if (!AddrOrErr)
     return AddrOrErr.takeError();
@@ -415,7 +411,8 @@ public:
   }
 
   InterfaceKind VisitReferenceType(const ReferenceType *Ty) {
-    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf,
+                                                E->IgnoreImpCasts());
     assert(!AddrOfE.isInvalid() && "Can not create unary expression");
     Args.push_back(AddrOfE.get());
     return InterfaceKind::NoAlloc;
@@ -541,7 +538,7 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
   QualType DesugaredTy = Ty.getDesugaredType(Ctx);
 
   // For lvalue struct, we treat it as a reference.
-  if (DesugaredTy->isRecordType() && E->isLValue()) {
+  if (DesugaredTy->isRecordType() && E->IgnoreImpCasts()->isLValue()) {
     DesugaredTy = Ctx.getLValueReferenceType(DesugaredTy);
     Ty = Ctx.getLValueReferenceType(Ty);
   }
@@ -559,7 +556,7 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
   InterfaceKind Kind = V.computeInterfaceKind(DesugaredTy);
   switch (Kind) {
   case InterfaceKind::WithAlloc:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case InterfaceKind::CopyArray: {
     // __clang_Interpreter_SetValueWithAlloc.
     ExprResult AllocCall =
@@ -665,8 +662,8 @@ __clang_Interpreter_SetValueNoAlloc(void *This, void *OutVal, void *OpaqueType,
   if (VRef.getKind() == Value::K_PtrOrObj) {
     VRef.setPtr(va_arg(args, void *));
   } else {
-    if (const auto *ET = QT->getAs<EnumType>())
-      QT = ET->getDecl()->getIntegerType();
+    if (const auto *ED = QT->getAsEnumDecl())
+      QT = ED->getIntegerType();
     switch (QT->castAs<BuiltinType>()->getKind()) {
     default:
       llvm_unreachable("unknown type kind!");

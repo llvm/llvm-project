@@ -116,14 +116,15 @@ def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>
 ]>;
 def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
-  SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>
+  SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 def SDTIntShiftPairOp : SDTypeProfile<2, 3, [ // shl_parts, sra_parts, srl_parts
-  SDTCisInt<0>, SDTCisSameAs<1, 0>,
-  SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>, SDTCisInt<4>
+  SDTCisInt<0>, SDTCisSameAs<1, 0>, SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>,
+  SDTCisInt<4>, SDTCisSameNumEltsAs<0, 4>
 ]>;
 def SDTIntShiftDOp: SDTypeProfile<1, 3, [   // fshl, fshr
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>,
+  SDTCisSameNumEltsAs<0, 3>
 ]>;
 def SDTIntSatNoShOp : SDTypeProfile<1, 2, [   // ssat with no shift
   SDTCisSameAs<0, 1>, SDTCisInt<2>
@@ -139,7 +140,7 @@ def SDTFPBinOp : SDTypeProfile<1, 2, [      // fadd, fmul, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisFP<0>
 ]>;
 def SDTFPSignOp : SDTypeProfile<1, 2, [     // fcopysign.
-  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisFP<2>
+  SDTCisSameAs<0, 1>, SDTCisFP<0>, SDTCisFP<2>, SDTCisSameNumEltsAs<0, 2>
 ]>;
 def SDTFPTernaryOp : SDTypeProfile<1, 3, [  // fmadd, fnmsub, etc.
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisFP<0>
@@ -148,7 +149,7 @@ def SDTIntUnaryOp : SDTypeProfile<1, 1, [ // bitreverse
   SDTCisSameAs<0, 1>, SDTCisInt<0>
 ]>;
 def SDTIntBitCountUnaryOp : SDTypeProfile<1, 1, [   // ctlz, cttz
-  SDTCisInt<0>, SDTCisInt<1>
+  SDTCisInt<0>, SDTCisInt<1>, SDTCisSameNumEltsAs<0, 1>
 ]>;
 def SDTIntExtendOp : SDTypeProfile<1, 1, [  // sext, zext, anyext
   SDTCisInt<0>, SDTCisInt<1>, SDTCisOpSmallerThanOp<1, 0>, SDTCisSameNumEltsAs<0, 1>
@@ -203,6 +204,10 @@ def SDTFreeze : SDTypeProfile<1, 1, [
 
 def SDTSetCC : SDTypeProfile<1, 3, [        // setcc
   SDTCisInt<0>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
+]>;
+
+def SDTFSetCC : SDTypeProfile<1, 3, [        // strict_fsetcc, strict_fsetccs
+  SDTCisInt<0>, SDTCisFP<1>, SDTCisSameAs<1, 2>, SDTCisVT<3, OtherVT>
 ]>;
 
 def SDTSelect : SDTypeProfile<1, 3, [       // select
@@ -296,10 +301,10 @@ def SDTVecInsert : SDTypeProfile<1, 3, [    // vector insert
   SDTCisEltOfVec<2, 1>, SDTCisSameAs<0, 1>, SDTCisPtrTy<3>
 ]>;
 def SDTVecReduce : SDTypeProfile<1, 1, [    // vector reduction
-  SDTCisInt<0>, SDTCisVec<1>
+  SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<1>
 ]>;
 def SDTFPVecReduce : SDTypeProfile<1, 1, [  // FP vector reduction
-  SDTCisFP<0>, SDTCisVec<1>
+  SDTCisFP<0>, SDTCisEltOfVec<0, 1>
 ]>;
 
 def SDTVecReverse : SDTypeProfile<1, 1, [  // vector reverse
@@ -342,6 +347,11 @@ def SDTAtomicLoad : SDTypeProfile<1, 1, [
   SDTCisPtrTy<1>
 ]>;
 
+def SDTLoopDepMask : SDTypeProfile<1, 4,
+  [/*Result=*/SDTCisVec<0>, /*PtrA=*/SDTCisInt<1>, /*PtrB=*/SDTCisInt<2>,
+   /*EltSizeInBytes=*/SDTCisInt<3>, /*LaneOffset=*/SDTCisInt<4>,
+   SDTCisSameAs<2, 1>]>;
+
 class SDCallSeqStart<list<SDTypeConstraint> constraints> :
         SDTypeProfile<0, 2, constraints>;
 class SDCallSeqEnd<list<SDTypeConstraint> constraints> :
@@ -361,11 +371,31 @@ class SDNode<string opcode, SDTypeProfile typeprof,
   bits<32> TSFlags = 0;
 }
 
-// Special TableGen-recognized dag nodes
+/// Special TableGen-recognized dag nodes
+
+// `set` is used to name outputs of a match pattern. For instance, in:
+//   `(set GPR:$out, (add GPR:$in1, GPR:$in2))`.
+//
+// `set` has to be used for patterns defined directly on Instructions, where the
+// `(outs)` have names which need to match something in the pattern.
+//
+// `set` can also be used for Nodes which create multiple values (though chain
+// and glue do not need to be handled with this, and are handled with node
+// properties). A pattern with multiple outputs might look like:
+//   `(set GPR:$RdLo, GPR:$RdHi, (smullohi GPR:$Rn, GPR:$Rm))`
 def set;
-def implicit;
+
+// `node` is used when defining pattern fragments, to represent "holes" in the
+// fragment that should be instantiated with dags when the fragment is used. For
+// instance in the `def fmul_contract` below.
 def node;
+
+// `srcvalue` is used in patterns when an argument of the pattern is not needed
+// in the result. A named value `ty:$name` could not be used in these cases
+// because all names in the pattern must appear in pattern output dag.
 def srcvalue;
+
+/// dag nodes for specific SDNodes
 
 def imm        : SDNode<"ISD::Constant"  , SDTIntLeaf , [], "ConstantSDNode">;
 def timm       : SDNode<"ISD::TargetConstant",SDTIntLeaf, [], "ConstantSDNode">;
@@ -437,6 +467,10 @@ def sra_parts  : SDNode<"ISD::SRA_PARTS" , SDTIntShiftPairOp>;
 def srl_parts  : SDNode<"ISD::SRL_PARTS" , SDTIntShiftPairOp>;
 def fshl       : SDNode<"ISD::FSHL"      , SDTIntShiftDOp>;
 def fshr       : SDNode<"ISD::FSHR"      , SDTIntShiftDOp>;
+def clmul      : SDNode<"ISD::CLMUL"     , SDTIntBinOp,
+                        [SDNPCommutative, SDNPAssociative]>;
+def clmulr     : SDNode<"ISD::CLMULR"    , SDTIntBinOp, [SDNPCommutative]>;
+def clmulh     : SDNode<"ISD::CLMULH"    , SDTIntBinOp, [SDNPCommutative]>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
                         [SDNPCommutative, SDNPAssociative]>;
 def or         : SDNode<"ISD::OR"        , SDTIntBinOp,
@@ -469,8 +503,8 @@ def saddsat    : SDNode<"ISD::SADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def uaddsat    : SDNode<"ISD::UADDSAT"   , SDTIntBinOp, [SDNPCommutative]>;
 def ssubsat    : SDNode<"ISD::SSUBSAT"   , SDTIntBinOp>;
 def usubsat    : SDNode<"ISD::USUBSAT"   , SDTIntBinOp>;
-def sshlsat    : SDNode<"ISD::SSHLSAT"   , SDTIntBinOp>;
-def ushlsat    : SDNode<"ISD::USHLSAT"   , SDTIntBinOp>;
+def sshlsat    : SDNode<"ISD::SSHLSAT"   , SDTIntShiftOp>;
+def ushlsat    : SDNode<"ISD::USHLSAT"   , SDTIntShiftOp>;
 
 def smulfix    : SDNode<"ISD::SMULFIX"   , SDTIntScaledBinOp, [SDNPCommutative]>;
 def smulfixsat : SDNode<"ISD::SMULFIXSAT", SDTIntScaledBinOp, [SDNPCommutative]>;
@@ -491,6 +525,7 @@ def bswap      : SDNode<"ISD::BSWAP"      , SDTIntUnaryOp>;
 def ctlz       : SDNode<"ISD::CTLZ"       , SDTIntBitCountUnaryOp>;
 def cttz       : SDNode<"ISD::CTTZ"       , SDTIntBitCountUnaryOp>;
 def ctpop      : SDNode<"ISD::CTPOP"      , SDTIntBitCountUnaryOp>;
+def ctls       : SDNode<"ISD::CTLS"       , SDTIntBitCountUnaryOp>;
 def ctlz_zero_undef : SDNode<"ISD::CTLZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
 def cttz_zero_undef : SDNode<"ISD::CTTZ_ZERO_UNDEF", SDTIntBitCountUnaryOp>;
 def sext       : SDNode<"ISD::SIGN_EXTEND", SDTIntExtendOp>;
@@ -523,6 +558,8 @@ def partial_reduce_smla : SDNode<"ISD::PARTIAL_REDUCE_SMLA",
                                  SDTPartialReduceMLA>;
 def partial_reduce_sumla : SDNode<"ISD::PARTIAL_REDUCE_SUMLA",
                                  SDTPartialReduceMLA>;
+def partial_reduce_fmla : SDNode<"ISD::PARTIAL_REDUCE_FMLA",
+                                 SDTPartialReduceMLA>;
 
 def fadd       : SDNode<"ISD::FADD"       , SDTFPBinOp, [SDNPCommutative]>;
 def fsub       : SDNode<"ISD::FSUB"       , SDTFPBinOp>;
@@ -531,6 +568,7 @@ def fdiv       : SDNode<"ISD::FDIV"       , SDTFPBinOp>;
 def frem       : SDNode<"ISD::FREM"       , SDTFPBinOp>;
 def fma        : SDNode<"ISD::FMA"        , SDTFPTernaryOp, [SDNPCommutative]>;
 def fmad       : SDNode<"ISD::FMAD"       , SDTFPTernaryOp, [SDNPCommutative]>;
+def fmuladd    : SDNode<"ISD::FMULADD"    , SDTFPTernaryOp, [SDNPCommutative]>;
 def fabs       : SDNode<"ISD::FABS"       , SDTFPUnaryOp>;
 def fminnum    : SDNode<"ISD::FMINNUM"    , SDTFPBinOp,
                                   [SDNPCommutative, SDNPAssociative]>;
@@ -700,8 +738,8 @@ def strict_bf16_to_fp  : SDNode<"ISD::STRICT_BF16_TO_FP",
 def strict_fp_to_bf16  : SDNode<"ISD::STRICT_FP_TO_BF16",
                                SDTFPToIntOp, [SDNPHasChain]>;
 
-def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTSetCC, [SDNPHasChain]>;
-def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTSetCC, [SDNPHasChain]>;
+def strict_fsetcc  : SDNode<"ISD::STRICT_FSETCC",  SDTFSetCC, [SDNPHasChain]>;
+def strict_fsetccs : SDNode<"ISD::STRICT_FSETCCS", SDTFSetCC, [SDNPHasChain]>;
 
 def get_fpenv      : SDNode<"ISD::GET_FPENV", SDTGetFPStateOp, [SDNPHasChain]>;
 def set_fpenv      : SDNode<"ISD::SET_FPENV", SDTSetFPStateOp, [SDNPHasChain]>;
@@ -825,13 +863,18 @@ def ist        : SDNode<"ISD::STORE"      , SDTIStore,
 
 def vector_shuffle : SDNode<"ISD::VECTOR_SHUFFLE", SDTVecShuffle, []>;
 def vector_reverse : SDNode<"ISD::VECTOR_REVERSE", SDTVecReverse>;
-def vector_splice : SDNode<"ISD::VECTOR_SPLICE", SDTVecSlice, []>;
+def vector_splice_left : SDNode<"ISD::VECTOR_SPLICE_LEFT", SDTVecSlice, []>;
+def vector_splice_right : SDNode<"ISD::VECTOR_SPLICE_RIGHT", SDTVecSlice, []>;
 def build_vector : SDNode<"ISD::BUILD_VECTOR", SDTypeProfile<1, -1, []>, []>;
 def splat_vector : SDNode<"ISD::SPLAT_VECTOR", SDTypeProfile<1, 1, []>, []>;
 def step_vector : SDNode<"ISD::STEP_VECTOR", SDTypeProfile<1, 1,
                        [SDTCisVec<0>, SDTCisInt<1>]>, []>;
 def scalar_to_vector : SDNode<"ISD::SCALAR_TO_VECTOR", SDTypeProfile<1, 1, []>,
                               []>;
+def loop_dependence_war_mask : SDNode<"ISD::LOOP_DEPENDENCE_WAR_MASK",
+                                      SDTLoopDepMask, []>;
+def loop_dependence_raw_mask : SDNode<"ISD::LOOP_DEPENDENCE_RAW_MASK",
+                                      SDTLoopDepMask, []>;
 
 // vector_extract/vector_insert are similar to extractelt/insertelt but allow
 // types that require promotion (a 16i8 extract where i8 is not a legal type so
@@ -896,6 +939,10 @@ def convergencectrl_loop   : SDNode<"ISD::CONVERGENCECTRL_LOOP",
 def convergencectrl_glue   : SDNode<"ISD::CONVERGENCECTRL_GLUE",
                                     SDTypeProfile<0, 1, [SDTCisVT<0, untyped>]>>;
 
+def sponentry : SDNode<
+  "ISD::SPONENTRY", SDTypeProfile <1, 0, [SDTCisPtrTy<0>]>
+>;
+
 //===----------------------------------------------------------------------===//
 // Selection DAG Condition Codes
 
@@ -934,10 +981,30 @@ def SETNE : CondCode<"", "ICMP_NE">;
 // values.
 //
 class SDNodeXForm<SDNode opc, code xformFunction> {
+  // The underlying node type to match and transform.
   SDNode Opcode = opc;
+
+  // This C++ snippet will transform the associated node into a new node.
+  //
+  // The following variables are in scope:
+  // - `<opc.SDClass>* N` representing the node producing the value being
+  //   transformed (already cast to the type of `opc.SDClass`, which is usually
+  //   `SDNode`).
+  // - `SelectionDAG *CurDAG` representing the current DAG (really a member of
+  //   the current DAGToDAGISel instance, documented here because this is how
+  //   new nodes are made).
+  // - `SDValue V` representing the value being transformed (usually accessed
+  //    with `N` instead).
+  // - `GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel instance.
+  //
+  // It should `return` an `SDValue` for the transformation result.
   code XFormFunction = xformFunction;
+
+  // The GlobalISel equivalent is defined using a `GICustomOperandRenderer` and
+  // a `GISDNodeXFormEquiv`.
 }
 
+// The default transform does not change the matched node.
 def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 
 //===----------------------------------------------------------------------===//
@@ -957,11 +1024,69 @@ def NOOP_SDNodeXForm : SDNodeXForm<imm, [{}]>;
 ///
 class PatFrags<dag ops, list<dag> frags, code pred = [{}],
                SDNodeXForm xform = NOOP_SDNodeXForm> : SDPatternOperator {
+
+  // Named nested patterns
   dag Operands = ops;
+
+  // The fragment matches *any* pattern in this list that matches. The patterns
+  // in this list should contain references to the named nested patterns in
+  // `ops`.
   list<dag> Fragments = frags;
+
+  // This C++ snippet will be run against a matched node to ensure that it was
+  // intended to match. Some Predicates don't use this snippet and instead use
+  // the `bit`s below to generate the right C++.
+  //
+  // The following variables are in scope:
+  // - `SDNode *N` representing the node being checked. This might actually be
+  //   of a more specific SDNode type - derived from the head nodes of the
+  //   fragments.
+  // - `ArrayRef<SDValue> Operands` representing the operands, only if
+  //   `PredicateCodeUsesOperands` (below) is true.
+  // - `SDValue Op` representing the value being checked (usually accessed with
+  //   `N` instead).
+  // - `const GET_DAGISEL_BODY *this` representing the target's DAGToDAGISel
+  //   instance.
+  //
+  // This should `return` a `bool` for whether the predicate matches or not.
   code PredicateCode = pred;
+
+  // The equivalent of `PredicateCode` for GlobalISel.
+  //
+  // The following variables are in scope:
+  // - `const MachineInstr &MI` representing the instruction being checked.
+  // - `const MachineFunction &MF` the current function.
+  // - `const MachineRegisterInfo &MRI` for the current function.
+  // - `const <target>InstructionSelector *this` representing the target's
+  //   `InstructionSelector` instance.
+  // - `const MatcherState &State`
+  // - `std::array<const MachineOperand *, _> Operands`
+  //
+  // This should `return` a `bool` for whether the predicate matches or not.
   code GISelPredicateCode = [{}];
+
+  // Specific C++ Checks for Immediate Values. This code is shared between
+  // SDISel and GlobalISel. See `ImmLeaf` below.
+  //
+  // The following variables are in scope:
+  // - `Imm` representing the value of the immediate. The type of `Imm` depends
+  //   on what kind of `ImmLeaf` is being instantiated.
+  //
+  // This should return a `bool` for whether the predicate matches or not.
   code ImmediateCode = [{}];
+
+  // When a node is matched as `frag:$name`, the matched node is bound to
+  // `$name` so it can be used in the pattern result. This implicit transform
+  // means that `$name` will store the result of transforming the matched node,
+  // instead of the original node.
+  //
+  // The syntax for binding in a pattern can be:
+  // - `(frag:$name <patterns...>)` when `frag` has nested patterns
+  // - `frag:$name` when `frag` is a `PatLeaf` (no nested patterns)
+  //
+  // PatFrags with OperandTransforms are most useful when defining a pattern
+  // directly on an instruction, where the transform cannot be written on the
+  // output of the pattern (which is implicit).
   SDNodeXForm OperandTransform = xform;
 
   // When this is set, the PredicateCode may refer to a constant Operands
@@ -1063,20 +1188,34 @@ class OutPatFrag<dag ops, dag frag>
 // PatLeaf's are pattern fragments that have no operands.  This is just a helper
 // to define immediates and other common things concisely.
 class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
- : PatFrag<(ops), frag, pred, xform> {
+  : PatFrag<(ops), frag, pred, xform> {
+
+  // The equivalent of `PredicateCode` for GlobalISel. Unlike with `PatFrag`,
+  // this is examining a `MachineOperand` rather than a `MachineInstruction`.
+  //
+  // The following variables are in scope:
+  // - `const MachineOperand &MO` representing the Operand being checked.
+  // - `const MachineFunction &MF` the current function.
+  // - `const MachineRegisterInfo &MRI` for the current function.
+  // - `const <target>InstructionSelector *this` representing the target's
+  //   `InstructionSelector` instance.
+  // - `const MatcherState &State`
+  // - `std::array<const MachineOperand *, _> Operands`
+  //
+  // This should `return` a `bool` for whether the predicate matches or not.
   code GISelLeafPredicateCode = ?;
 }
 
 
-// ImmLeaf is a pattern fragment with a constraint on the immediate.  The
-// constraint is a function that is run on the immediate (always with the value
-// sign extended out to an int64_t) as Imm.  For example:
+// ImmLeaf is a pattern fragment for immediates that match a constraint.  The
+// constraint is a C++ snippet that is run on the immediate (always with the
+// value sign extended out to an int64_t) as Imm.  For example:
 //
 //  def immSExt8 : ImmLeaf<i16, [{ return (char)Imm == Imm; }]>;
 //
 // this is a more convenient form to match 'imm' nodes in than PatLeaf and also
 // is preferred over using PatLeaf because it allows the code generator to
-// reason more about the constraint.
+// reason more about the constraint, and port the constraint to GlobalISel.
 //
 // If FastIsel should ignore all instructions that have an operand of this type,
 // the FastIselShouldIgnore flag can be set.  This is an optimization to reduce
@@ -1084,7 +1223,17 @@ class PatLeaf<dag frag, code pred = [{}], SDNodeXForm xform = NOOP_SDNodeXForm>
 class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
               SDNode ImmNode = imm>
   : PatFrag<(ops), (vt ImmNode), [{}], xform> {
+
+  // Specific C++ Check for the Immediate Values.
+  //
+  // The following variables are in scope:
+  // - `Imm` representing the value of the immediate. The type of this variable
+  //   depends on whether you are instantiating a `ImmLeaf`, a `IntImmLeaf`, or
+  //   a `FPImmLeaf`.
+  //
+  // This should return a `bool` for whether the predicate matches or not.
   let ImmediateCode = pred;
+
   bit FastIselShouldIgnore = false;
 
   // Is the data type of the immediate an APInt?
@@ -1096,11 +1245,15 @@ class ImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
 
 // Convenience wrapper for ImmLeaf to use timm/TargetConstant instead
 // of imm/Constant.
+//
+// `Imm` in the snippet is the value sign-extended to `int64_t`.
 class TImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm,
   SDNode ImmNode = timm> : ImmLeaf<vt, pred, xform, ImmNode>;
 
-// An ImmLeaf except that Imm is an APInt. This is useful when you need to
-// zero-extend the immediate instead of sign-extend it.
+// An ImmLeaf where the `Imm` in the C++ predicate is an `APInt`.
+//
+// This is useful when you need to zero-extend the immediate instead of
+// sign-extend it, or when the value does not fit into an `int64_t`.
 //
 // Note that FastISel does not currently understand IntImmLeaf and will not
 // generate code for rules that make use of it. As such, it does not make sense
@@ -1112,7 +1265,7 @@ class IntImmLeaf<ValueType vt, code pred, SDNodeXForm xform = NOOP_SDNodeXForm>
   let FastIselShouldIgnore = true;
 }
 
-// An ImmLeaf except that Imm is an APFloat.
+// An ImmLeaf where the `Imm` in the C++ predicate is an `APFloat`.
 //
 // Note that FastISel does not currently understand FPImmLeaf and will not
 // generate code for rules that make use of it.
@@ -1178,6 +1331,14 @@ def zext_nneg : PatFrag<(ops node:$src), (zext node:$src), [{
 def sext_like : PatFrags<(ops node:$src),
                          [(zext_nneg node:$src),
                           (sext node:$src)]>;
+
+def ffloor_nnan : PatFrag<(ops node:$src), (ffloor node:$src), [{
+  return N->getFlags().hasNoNaNs();
+}]> {
+  let GISelPredicateCode = [{
+    return MI.getFlag(MachineInstr::FmNoNans);
+  }];
+}
 
 // null_frag - The null pattern operator is used in multiclass instantiations
 // which accept an SDPatternOperator for use in matching patterns for internal
@@ -1960,6 +2121,12 @@ def atomic_load_nonext_64 :
   let MemoryVT = i64;
 }
 
+def atomic_load_nonext_128 :
+  PatFrag<(ops node:$ptr), (atomic_load_nonext node:$ptr)> {
+  let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
+  let MemoryVT = i128;
+}
+
 def atomic_load_zext_8 :
   PatFrag<(ops node:$ptr), (atomic_load_zext node:$ptr)> {
   let IsAtomic = true; // FIXME: Should be IsLoad and/or IsAtomic?
@@ -2191,6 +2358,13 @@ def atomic_store_64 :
   let MemoryVT = i64;
 }
 
+def atomic_store_128 :
+  PatFrag<(ops node:$val, node:$ptr),
+          (atomic_store node:$val, node:$ptr)> {
+  let IsAtomic = true;
+  let MemoryVT = i128;
+}
+
 //===----------------------------------------------------------------------===//
 // Selection DAG Pattern Support.
 //
@@ -2219,20 +2393,42 @@ class Pat<dag pattern, dag result> : Pattern<pattern, [result]>;
 //
 
 // Complex patterns, e.g. X86 addressing mode, requires pattern matching code
-// in C++. Ty is the type of return value; NumOperands is the number of operands
-// returned by the select function; SelectFunc is the name of the function used
-// to pattern match the max. pattern; RootNodes are the list of possible root nodes
-// of the sub-dags to match.
-// e.g. X86 addressing mode - def addr : ComplexPattern<iPTR, 4, "SelectAddr", [add]>;
-//
+// in C++: def addr : ComplexPattern<iPTR, 4, "SelectAddr", [add]>;
 class ComplexPattern<ValueType ty, int numops, string fn,
                      list<SDNode> roots = [], list<SDNodeProperty> props = [],
                      int complexity = -1> {
+
+  // Type of the return value of the Pattern
   ValueType Ty = ty;
+
+  // Number of operands returned by select function
   int NumOperands = numops;
+
+  // Name of the select function in C++ used to pattern match. This should be
+  // defined on your `GET_DAGISEL_BODY` class (usually the DAGToDAGISel class
+  // for your target).
+  //
+  // The arguments to this function are:
+  // - `SDValue Root` for the root of the match if `WantsRoot` is true
+  // - `SDValue *Parent` for the parent of the operand, if `WantsParent` is
+  //   true. This may be null if `N` is the root node.
+  // - `SDValue N` for the value being matched
+  // - one `SDValue &Out` for each operand returned
+  // - `SDValue &OutChain` for the output chain if `SDNPHasChain` is in `Properties`.
+  //
+  // This function should return a `bool` representing whether the pattern
+  // matched or not.
   string SelectFunc = fn;
+
+  // The list of possible root nodes of the sub-dags to match
   list<SDNode> RootNodes = roots;
+
+  // These properties are used to verify that the result instruction has similar
+  // properties to the pattern.
   list<SDNodeProperty> Properties = props;
+
+  // Complexity of this pattern relative to others. Patterns with higher
+  // complexity are matched before those with lower complexity.
   int Complexity = complexity;
 
   // Set this to true if SelectFunc wants an additional argument
@@ -2242,4 +2438,7 @@ class ComplexPattern<ValueType ty, int numops, string fn,
   // Set this to true if SelectFunc wants an additional argument
   // that is the parent of the matched node.
   bit WantsParent = false;
+
+  // The GlobalISel equivalent is defined using a `GIComplexOperandMatcher` and
+  // a `GIComplexPatternEquiv`.
 }

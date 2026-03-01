@@ -81,10 +81,17 @@ static_assert(test(std::ranges::rend, a));
 static_assert(test(std::ranges::size, a));
 static_assert(test(std::ranges::ssize, a));
 
+#if TEST_STD_VER >= 26
+// static_assert(test(std::views::reserve_hint, a));
+#endif
+
 // [range.factories]
 // views::empty<T> is not a CPO
 static_assert(test(std::views::iota, 1));
 static_assert(test(std::views::iota, 1, 10));
+#if TEST_STD_VER >= 26
+static_assert(test(std::views::indices, 10));
+#endif
 #ifndef TEST_HAS_NO_LOCALIZATION
 static_assert(test(std::views::istream<int>, stream));
 #endif
@@ -114,7 +121,7 @@ static_assert(test(std::views::values, pairs));
 
 #if TEST_STD_VER >= 23
 // static_assert(test(std::views::adjacent_transform<2>, [](int x, int y) { return x + y; }, a));
-// static_assert(test(std::views::adjacent<2>, a));
+static_assert(test(std::views::adjacent<2>, a));
 // static_assert(test(std::views::as_const, a));
 static_assert(test(std::views::as_rvalue, a));
 // static_assert(test(std::views::cartesian_product, a, a, a));
@@ -122,6 +129,7 @@ static_assert(test(std::views::chunk_by, a, [](int x, int y) { return x < y; }))
 // static_assert(test(std::views::chunk, a, 1));
 // static_assert(test(std::views::enumerate, a));
 static_assert(test(std::views::join_with, 1));
+static_assert(test(std::views::pairwise, a));
 // static_assert(test(std::views::stride, a, 1));
 static_assert(test(std::views::zip_transform, [](int x, int y) { return x + y; }, a, a));
 static_assert(test(std::views::zip, a, a));

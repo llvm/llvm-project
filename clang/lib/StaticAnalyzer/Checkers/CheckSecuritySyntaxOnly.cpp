@@ -10,16 +10,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
+#include "clang/Analysis/AnnexKDetection.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -34,6 +36,9 @@ static bool isArc4RandomAvailable(const ASTContext &Ctx) {
 }
 
 namespace {
+
+enum class ReportPolicy { All, Actionable, C11Only };
+
 struct ChecksFilter {
   bool check_bcmp = false;
   bool check_bcopy = false;
@@ -49,6 +54,8 @@ struct ChecksFilter {
   bool check_FloatLoopCounter = false;
   bool check_UncheckedReturn = false;
   bool check_decodeValueOfObjCType = false;
+
+  ReportPolicy ReportMode = ReportPolicy::C11Only;
 
   CheckerNameRef checkName_bcmp;
   CheckerNameRef checkName_bcopy;
@@ -73,14 +80,16 @@ class WalkAST : public StmtVisitor<WalkAST> {
   IdentifierInfo *II_setid[num_setids];
 
   const bool CheckRand;
+
   const ChecksFilter &filter;
+  const bool ShouldReportAnnexKRelated;
 
 public:
-  WalkAST(BugReporter &br, AnalysisDeclContext* ac,
-          const ChecksFilter &f)
-  : BR(br), AC(ac), II_setid(),
-    CheckRand(isArc4RandomAvailable(BR.getContext())),
-    filter(f) {}
+  WalkAST(BugReporter &br, AnalysisDeclContext *ac, const ChecksFilter &f,
+          bool shouldReportAnnexKRelated)
+      : BR(br), AC(ac), II_setid(),
+        CheckRand(isArc4RandomAvailable(BR.getContext())), filter(f),
+        ShouldReportAnnexKRelated(shouldReportAnnexKRelated) {}
 
   // Statement visitor methods.
   void VisitCallExpr(CallExpr *CE);
@@ -154,15 +163,15 @@ void WalkAST::VisitCallExpr(CallExpr *CE) {
           .Case("mkstemp", &WalkAST::checkCall_mkstemp)
           .Case("mkdtemp", &WalkAST::checkCall_mkstemp)
           .Case("mkstemps", &WalkAST::checkCall_mkstemp)
-          .Cases("strcpy", "__strcpy_chk", &WalkAST::checkCall_strcpy)
-          .Cases("strcat", "__strcat_chk", &WalkAST::checkCall_strcat)
-          .Cases("sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
-                 "vscanf", "vwscanf", "vfscanf", "vfwscanf",
+          .Cases({"strcpy", "__strcpy_chk"}, &WalkAST::checkCall_strcpy)
+          .Cases({"strcat", "__strcat_chk"}, &WalkAST::checkCall_strcat)
+          .Cases({"sprintf", "vsprintf", "scanf", "wscanf", "fscanf", "fwscanf",
+                  "vscanf", "vwscanf", "vfscanf", "vfwscanf"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
-          .Cases("sscanf", "swscanf", "vsscanf", "vswscanf", "swprintf",
-                 "snprintf", "vswprintf", "vsnprintf", "memcpy", "memmove",
+          .Cases({"sscanf", "swscanf", "vsscanf", "vswscanf", "swprintf",
+                  "snprintf", "vswprintf", "vsnprintf", "memcpy", "memmove"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
-          .Cases("strncpy", "strncat", "memset", "fprintf",
+          .Cases({"strncpy", "strncat", "memset", "fprintf"},
                  &WalkAST::checkDeprecatedOrUnsafeBufferHandling)
           .Case("drand48", &WalkAST::checkCall_rand)
           .Case("erand48", &WalkAST::checkCall_rand)
@@ -751,10 +760,8 @@ void WalkAST::checkCall_strcat(const CallExpr *CE, const FunctionDecl *FD) {
 
 void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
                                                     const FunctionDecl *FD) {
-  if (!filter.check_DeprecatedOrUnsafeBufferHandling)
-    return;
-
-  if (!BR.getContext().getLangOpts().C11)
+  if (!filter.check_DeprecatedOrUnsafeBufferHandling ||
+      !ShouldReportAnnexKRelated)
     return;
 
   // Issue a warning. ArgIndex == -1: Deprecated but not unsafe (has size
@@ -766,12 +773,14 @@ void WalkAST::checkDeprecatedOrUnsafeBufferHandling(const CallExpr *CE,
 
   int ArgIndex =
       llvm::StringSwitch<int>(Name)
-          .Cases("scanf", "wscanf", "vscanf", "vwscanf", 0)
-          .Cases("fscanf", "fwscanf", "vfscanf", "vfwscanf", "sscanf",
-                 "swscanf", "vsscanf", "vswscanf", 1)
-          .Cases("sprintf", "vsprintf", "fprintf", 1)
-          .Cases("swprintf", "snprintf", "vswprintf", "vsnprintf", "memcpy",
-                 "memmove", "memset", "strncpy", "strncat", DEPR_ONLY)
+          .Cases({"scanf", "wscanf", "vscanf", "vwscanf"}, 0)
+          .Cases({"fscanf", "fwscanf", "vfscanf", "vfwscanf", "sscanf",
+                  "swscanf", "vsscanf", "vswscanf"},
+                 1)
+          .Cases({"sprintf", "vsprintf", "fprintf"}, 1)
+          .Cases({"swprintf", "snprintf", "vswprintf", "vsnprintf", "memcpy",
+                  "memmove", "memset", "strncpy", "strncat"},
+                 DEPR_ONLY)
           .Default(UNKNOWN_CALL);
 
   assert(ArgIndex != UNKNOWN_CALL && "Unsupported function");
@@ -1070,13 +1079,40 @@ void WalkAST::checkUncheckedReturnValue(CallExpr *CE) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+
+// Determine whether to report Annex K related checks based on the
+// reporting policy.
+[[nodiscard]] bool shouldReportAnnexKRelated(BugReporter &BR,
+                                             const ChecksFilter &Filter) {
+  const bool IsAnnexKAvailable = analysis::isAnnexKAvailable(
+      &BR.getPreprocessor(), BR.getContext().getLangOpts());
+  const bool IsC11OrLaterStandard = BR.getContext().getLangOpts().C11;
+
+  switch (Filter.ReportMode) {
+  case ReportPolicy::All:
+    return true;
+  case ReportPolicy::Actionable:
+    return IsAnnexKAvailable;
+  case ReportPolicy::C11Only:
+    return IsC11OrLaterStandard;
+  }
+  llvm_unreachable("Unknown ReportPolicy value");
+}
+
 class SecuritySyntaxChecker : public Checker<check::ASTCodeBody> {
 public:
   ChecksFilter filter;
+  mutable std::optional<bool> CachedShouldReportAnnexKRelated;
 
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
-    WalkAST walker(BR, mgr.getAnalysisDeclContext(D), filter);
+    // Compute ShouldReportAnnexKRelated once per translation unit.
+    if (!CachedShouldReportAnnexKRelated.has_value()) {
+      CachedShouldReportAnnexKRelated = shouldReportAnnexKRelated(BR, filter);
+    }
+
+    WalkAST walker(BR, mgr.getAnalysisDeclContext(D), filter,
+                   *CachedShouldReportAnnexKRelated);
     walker.Visit(D->getBody());
   }
 };
@@ -1111,5 +1147,35 @@ REGISTER_CHECKER(rand)
 REGISTER_CHECKER(vfork)
 REGISTER_CHECKER(FloatLoopCounter)
 REGISTER_CHECKER(UncheckedReturn)
-REGISTER_CHECKER(DeprecatedOrUnsafeBufferHandling)
+
+void ento::registerDeprecatedOrUnsafeBufferHandling(CheckerManager &Mgr) {
+  SecuritySyntaxChecker *Checker = Mgr.getChecker<SecuritySyntaxChecker>();
+  Checker->filter.check_DeprecatedOrUnsafeBufferHandling = true;
+  Checker->filter.checkName_DeprecatedOrUnsafeBufferHandling =
+      Mgr.getCurrentCheckerName();
+
+  // Parse ReportMode option (defaults to C11Only for backward compatibility)
+  StringRef ReportModeStr = Mgr.getAnalyzerOptions().getCheckerStringOption(
+      Mgr.getCurrentCheckerName(), "ReportMode");
+  Checker->filter.ReportMode = ReportPolicy::C11Only;
+  auto RequestedReportPolicy =
+      llvm::StringSwitch<std::optional<ReportPolicy>>(ReportModeStr)
+          .Case("all", ReportPolicy::All)
+          .Case("actionable", ReportPolicy::Actionable)
+          .Case("c11-only", ReportPolicy::C11Only)
+          .Default({});
+  if (!RequestedReportPolicy)
+    Mgr.reportInvalidCheckerOptionValue(
+        Checker, "ReportMode",
+        "one of the following values: \"all\", \"actionable\" or \"c11-only\" "
+        "(the default)");
+  else
+    Checker->filter.ReportMode = *RequestedReportPolicy;
+}
+
+bool ento::shouldRegisterDeprecatedOrUnsafeBufferHandling(
+    const CheckerManager &) {
+  return true;
+}
+
 REGISTER_CHECKER(decodeValueOfObjCType)

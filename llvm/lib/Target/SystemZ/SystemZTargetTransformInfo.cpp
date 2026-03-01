@@ -436,20 +436,6 @@ bool SystemZTTIImpl::isLSRCostLess(
              C2.ScaleCost, C2.SetupCost);
 }
 
-bool SystemZTTIImpl::areInlineCompatible(const Function *Caller,
-                                         const Function *Callee) const {
-  const TargetMachine &TM = getTLI()->getTargetMachine();
-
-  const FeatureBitset &CallerBits =
-      TM.getSubtargetImpl(*Caller)->getFeatureBits();
-  const FeatureBitset &CalleeBits =
-      TM.getSubtargetImpl(*Callee)->getFeatureBits();
-
-  // Support only equal feature bitsets. Restriction should be relaxed in the
-  // future to allow inlining when callee's bits are subset of the caller's.
-  return CallerBits == CalleeBits;
-}
-
 unsigned SystemZTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
   bool Vector = (ClassID == 1);
   if (!Vector)
@@ -507,8 +493,8 @@ static bool isFreeEltLoad(const Value *Op) {
 
 InstructionCost SystemZTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   unsigned NumElts = cast<FixedVectorType>(Ty)->getNumElements();
   InstructionCost Cost = 0;
 
@@ -1195,11 +1181,9 @@ InstructionCost SystemZTTIImpl::getCmpSelInstrCost(
                                    Op1Info, Op2Info);
 }
 
-InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                   TTI::TargetCostKind CostKind,
-                                                   unsigned Index,
-                                                   const Value *Op0,
-                                                   const Value *Op1) const {
+InstructionCost SystemZTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   if (Opcode == Instruction::InsertElement) {
     // Vector Element Load.
     if (Op1 != nullptr && isFreeEltLoad(Op1))
@@ -1222,7 +1206,7 @@ InstructionCost SystemZTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
     return Cost;
   }
 
-  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
+  return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
 }
 
 // Check if a load may be folded as a memory operand in its user.

@@ -33,17 +33,17 @@ define dso_local i32 @test1() {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
 ; CHECK-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr, align 8
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    store i32 8, ptr [[A]], align 4
 ; CHECK-NEXT:    [[VLA:%.*]] = alloca i8, i64 68, align 1
 ; CHECK-NEXT:    call void @foo(ptr [[VLA]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %a = alloca i32, align 4
   %saved_stack = alloca ptr, align 8
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   store i32 8, ptr %a, align 4
   %0 = call ptr @llvm.stacksave()
   store ptr %0, ptr %saved_stack, align 8
@@ -51,11 +51,11 @@ entry:
   call void @foo(ptr %vla)
   %1 = load ptr, ptr %saved_stack, align 8
   call void @llvm.stackrestore(ptr %1)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret i32 0
 }
 
-declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.start.p0(ptr nocapture)
 
 declare ptr @llvm.stacksave()
 
@@ -63,7 +63,7 @@ declare dso_local void @foo(ptr)
 
 declare void @llvm.stackrestore(ptr)
 
-declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(ptr nocapture)
 
 define dso_local i32 @test2(i32 %b) {
 ; CHECK-LABEL: @test2(
@@ -73,7 +73,7 @@ define dso_local i32 @test2(i32 %b) {
 ; CHECK-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr, align 8
 ; CHECK-NEXT:    [[__VLA_EXPR0:%.*]] = alloca i64, align 8
 ; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[B_ADDR]], align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr [[A]])
 ; CHECK-NEXT:    store i32 8, ptr [[A]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B_ADDR]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 8, [[TMP1]]
@@ -81,7 +81,7 @@ define dso_local i32 @test2(i32 %b) {
 ; CHECK-NEXT:    [[VLA:%.*]] = alloca i8, i64 [[TMP2]], align 1
 ; CHECK-NEXT:    store i64 [[TMP2]], ptr [[__VLA_EXPR0]], align 8
 ; CHECK-NEXT:    call void @foo(ptr [[VLA]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr [[A]])
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
@@ -90,7 +90,7 @@ entry:
   %saved_stack = alloca ptr, align 8
   %__vla_expr0 = alloca i64, align 8
   store i32 %b, ptr %b.addr, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.start.p0(ptr %a)
   store i32 8, ptr %a, align 4
   %0 = load i32, ptr %b.addr, align 4
   %add = add nsw i32 8, %0
@@ -102,6 +102,6 @@ entry:
   call void @foo(ptr %vla)
   %3 = load ptr, ptr %saved_stack, align 8
   call void @llvm.stackrestore(ptr %3)
-  call void @llvm.lifetime.end.p0(i64 4, ptr %a)
+  call void @llvm.lifetime.end.p0(ptr %a)
   ret i32 0
 }

@@ -16,7 +16,6 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
-include(LibompCheckFortranFlag)
 include(LLVMCheckCompilerLinkerFlag)
 
 # Check for versioned symbols
@@ -96,9 +95,6 @@ if(WIN32)
       )
     endforeach()
   endforeach()
-endif()
-if(${LIBOMP_FORTRAN_MODULES})
-  libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)
 endif()
 
 # Check non-posix pthread API here before CMAKE_REQUIRED_DEFINITIONS gets messed up
@@ -321,7 +317,7 @@ else()
       (LIBOMP_ARCH STREQUAL sparcv9))
      AND # OS supported?
      ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR
-      (NOT (WIN32 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
+      (NOT (WIN32 OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX") AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
   else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)

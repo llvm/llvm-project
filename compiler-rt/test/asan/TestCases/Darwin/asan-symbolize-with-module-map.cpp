@@ -1,4 +1,4 @@
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 // RUN: %clangxx_asan -O0 -g %s -o %t.executable
 
 // Deliberately don't produce the module map and then check that offline symbolization fails

@@ -62,7 +62,7 @@ def SPIRV_UndefOp : SPIRV_Op<"Undef", [Pure]> {
   let description = [{
     Result Type is the type of object to make.
 
-    Each consumption of Result <id> yields an arbitrary, possibly different
+    Each consumption of Result `<id>` yields an arbitrary, possibly different
     bit pattern or abstract value resulting in possibly different concrete,
     abstract, or opaque values.
 

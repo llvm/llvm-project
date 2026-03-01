@@ -77,8 +77,17 @@ type lookup Outer::Inner2::S
 type lookup Outer::A
 type lookup A
 type lookup ::A
+# Test that Clang can find the namespaces as well
 expr sizeof(S)
+expr sizeof(::S)
+expr sizeof(Outer::S)
+expr sizeof(Outer::Inner1::S)
+expr sizeof(Inner1::S)
+expr sizeof(Outer::Inner1::Inner2::S)
+expr sizeof(Outer::Inner2::S)
+expr sizeof(Outer::A)
 expr sizeof(A)
+expr sizeof(::A)
 
 quit
 
@@ -131,5 +140,21 @@ quit
 # CHECK-NEXT: }
 # CHECK-NEXT: (lldb) expr sizeof(S) 
 # CHECK-NEXT: (__size_t) $0 = 1
+# CHECK-NEXT: (lldb) expr sizeof(::S)
+# CHECK-NEXT: (__size_t) $1 = 1
+# CHECK-NEXT: (lldb) expr sizeof(Outer::S)
+# CHECK-NEXT: (__size_t) $2 = 2
+# CHECK-NEXT: (lldb) expr sizeof(Outer::Inner1::S)
+# CHECK-NEXT: (__size_t) $3 = 3
+# CHECK-NEXT: (lldb) expr sizeof(Inner1::S)
+# CHECK-NEXT: (__size_t) $4 = 3
+# CHECK-NEXT: (lldb) expr sizeof(Outer::Inner1::Inner2::S)
+# CHECK-NEXT: (__size_t) $5 = 4
+# CHECK-NEXT: (lldb) expr sizeof(Outer::Inner2::S)
+# CHECK-NEXT: (__size_t) $6 = 5
+# CHECK-NEXT: (lldb) expr sizeof(Outer::A)
+# CHECK-NEXT: (__size_t) $7 = 6
 # CHECK-NEXT: (lldb) expr sizeof(A)
-# CHECK-NEXT: (__size_t) $1 = 7
+# CHECK-NEXT: (__size_t) $8 = 7
+# CHECK-NEXT: (lldb) expr sizeof(::A)
+# CHECK-NEXT: (__size_t) $9 = 7

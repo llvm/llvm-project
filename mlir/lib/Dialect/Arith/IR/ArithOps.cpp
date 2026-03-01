@@ -151,6 +151,9 @@ static Attribute getBoolAttribute(Type type, bool value) {
   ShapedType shapedType = dyn_cast_or_null<ShapedType>(type);
   if (!shapedType)
     return boolAttr;
+  // DenseElementsAttr requires a static shape.
+  if (!shapedType.hasStaticShape())
+    return {};
   return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
@@ -221,7 +224,7 @@ LogicalResult arith::ConstantOp::verify() {
   // However, this would most likely require updating the lowerings to LLVM.
   if (isa<ScalableVectorType>(type) && !isa<SplatElementsAttr>(getValue()))
     return emitOpError(
-        "intializing scalable vectors with elements attribute is not supported"
+        "initializing scalable vectors with elements attribute is not supported"
         " unless it's a vector splat");
   return success();
 }
@@ -232,9 +235,10 @@ bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
   if (!typedAttr || typedAttr.getType() != type)
     return false;
   // Integer values must be signless.
-  if (llvm::isa<IntegerType>(type) &&
-      !llvm::cast<IntegerType>(type).isSignless())
-    return false;
+  if (auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(type))) {
+    if (!intType.isSignless())
+      return false;
+  }
   // Integer, float, and element attributes are buildable.
   return llvm::isa<IntegerAttr, FloatAttr, ElementsAttr>(value);
 }
@@ -455,6 +459,12 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
   if (Attribute sumAttr = constFoldBinaryOp<IntegerAttr>(
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
+    // If any operand is poison, propagate poison to both results.
+    if (isa<ub::PoisonAttr>(sumAttr)) {
+      results.push_back(sumAttr);
+      results.push_back(sumAttr);
+      return success();
+    }
     Attribute overflowAttr = constFoldBinaryOp<IntegerAttr>(
         ArrayRef({sumAttr, adaptor.getLhs()}),
         getI1SameShape(llvm::cast<TypedAttr>(sumAttr).getType()),
@@ -1281,6 +1291,13 @@ OpFoldResult arith::MulFOp::fold(FoldAdaptor adaptor) {
   // mulf(x, 1) -> x
   if (matchPattern(adaptor.getRhs(), m_OneFloat()))
     return getLhs();
+
+  if (arith::bitEnumContainsAll(getFastmath(), arith::FastMathFlags::nnan |
+                                                   arith::FastMathFlags::nsz)) {
+    // mulf(x, 0) -> 0
+    if (matchPattern(adaptor.getRhs(), m_AnyZeroFloat()))
+      return getRhs();
+  }
 
   return constFoldBinaryOp<FloatAttr>(
       adaptor.getOperands(),
@@ -2137,7 +2154,7 @@ OpFoldResult arith::CmpFOp::fold(FoldAdaptor adaptor) {
 
 class CmpFIntToFPConst final : public OpRewritePattern<CmpFOp> {
 public:
-  using OpRewritePattern<CmpFOp>::OpRewritePattern;
+  using Base::Base;
 
   static CmpIPredicate convertToIntegerPredicate(CmpFPredicate pred,
                                                  bool isUnsigned) {
@@ -2431,7 +2448,7 @@ void arith::CmpFOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 
 //  select %arg, %c1, %c0 => extui %arg
 struct SelectToExtUI : public OpRewritePattern<arith::SelectOp> {
-  using OpRewritePattern<arith::SelectOp>::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(arith::SelectOp op,
                                 PatternRewriter &rewriter) const override {
@@ -2520,6 +2537,9 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
   // select %cst_vec, %cst0, %cst1 => %cst2
   if (auto cond =
           dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
+    // DenseElementsAttr by construction always has a static shape.
+    assert(cond.getType().hasStaticShape() &&
+           "DenseElementsAttr must have static shape");
     if (auto lhs =
             dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
       if (auto rhs =
@@ -2678,6 +2698,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   case AtomicRMWKind::addi:
   case AtomicRMWKind::maxu:
   case AtomicRMWKind::ori:
+  case AtomicRMWKind::xori:
     return builder.getZeroAttr(resultType);
   case AtomicRMWKind::andi:
     return builder.getIntegerAttr(
@@ -2722,7 +2743,7 @@ TypedAttr mlir::arith::getIdentityValueAttr(AtomicRMWKind kind, Type resultType,
   return nullptr;
 }
 
-/// Return the identity numeric value associated to the give op.
+/// Returns the identity numeric value of the given op.
 std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
   std::optional<AtomicRMWKind> maybeKind =
       llvm::TypeSwitch<Operation *, std::optional<AtomicRMWKind>>(op)
@@ -2736,14 +2757,14 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           // Integer operations.
           .Case([](arith::AddIOp op) { return AtomicRMWKind::addi; })
           .Case([](arith::OrIOp op) { return AtomicRMWKind::ori; })
-          .Case([](arith::XOrIOp op) { return AtomicRMWKind::ori; })
+          .Case([](arith::XOrIOp op) { return AtomicRMWKind::xori; })
           .Case([](arith::AndIOp op) { return AtomicRMWKind::andi; })
           .Case([](arith::MaxUIOp op) { return AtomicRMWKind::maxu; })
           .Case([](arith::MinUIOp op) { return AtomicRMWKind::minu; })
           .Case([](arith::MaxSIOp op) { return AtomicRMWKind::maxs; })
           .Case([](arith::MinSIOp op) { return AtomicRMWKind::mins; })
           .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
-          .Default([](Operation *op) { return std::nullopt; });
+          .Default(std::nullopt);
   if (!maybeKind) {
     return std::nullopt;
   }
@@ -2806,6 +2827,8 @@ Value mlir::arith::getReductionOp(AtomicRMWKind op, OpBuilder &builder,
     return arith::OrIOp::create(builder, loc, lhs, rhs);
   case AtomicRMWKind::andi:
     return arith::AndIOp::create(builder, loc, lhs, rhs);
+  case AtomicRMWKind::xori:
+    return arith::XOrIOp::create(builder, loc, lhs, rhs);
   // TODO: Add remaining reduction operations.
   default:
     (void)emitOptionalError(loc, "Reduction operation type not supported");

@@ -320,8 +320,8 @@ loc::MemRegionVal SValBuilder::getCXXThis(const CXXMethodDecl *D,
 /// Return a memory region for the 'this' object reference.
 loc::MemRegionVal SValBuilder::getCXXThis(const CXXRecordDecl *D,
                                           const StackFrameContext *SFC) {
-  const Type *T = D->getTypeForDecl();
-  QualType PT = getContext().getPointerType(QualType(T, 0));
+  CanQualType PT =
+      getContext().getPointerType(getContext().getCanonicalTagType(D));
   return loc::MemRegionVal(getRegionManager().getCXXThisRegion(PT, SFC));
 }
 

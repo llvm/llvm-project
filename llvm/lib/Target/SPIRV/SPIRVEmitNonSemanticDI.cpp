@@ -5,7 +5,7 @@
 #include "SPIRVRegisterInfo.h"
 #include "SPIRVTargetMachine.h"
 #include "SPIRVUtils.h"
-#include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -94,8 +94,8 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
   SmallVector<int64_t> LLVMSourceLanguages;
   int64_t DwarfVersion = 0;
   int64_t DebugInfoVersion = 0;
-  SmallPtrSet<DIBasicType *, 12> BasicTypes;
-  SmallPtrSet<DIDerivedType *, 12> PointerDerivedTypes;
+  SetVector<DIBasicType *> BasicTypes;
+  SetVector<DIDerivedType *> PointerDerivedTypes;
   // Searching through the Module metadata to find nescessary
   // information like DwarfVersion or SourceLanguage
   {
@@ -112,10 +112,12 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
         FilePaths.emplace_back();
         sys::path::append(FilePaths.back(), File->getDirectory(),
                           File->getFilename());
-        LLVMSourceLanguages.push_back(CompileUnit->getSourceLanguage());
+        LLVMSourceLanguages.push_back(
+            CompileUnit->getSourceLanguage().getUnversionedName());
       }
     }
     const NamedMDNode *ModuleFlags = M->getNamedMetadata("llvm.module.flags");
+    assert(ModuleFlags && "Expected llvm.module.flags metadata to be present");
     for (const auto *Op : ModuleFlags->operands()) {
       const MDOperand &MaybeStrOp = Op->getOperand(1);
       if (MaybeStrOp.equalsStr("Dwarf Version"))
@@ -182,7 +184,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
       return StrReg;
     };
 
-    const SPIRVType *VoidTy =
+    const SPIRVTypeInst VoidTy =
         GR->getOrCreateSPIRVType(Type::getVoidTy(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
 
@@ -207,7 +209,7 @@ bool SPIRVEmitNonSemanticDI::emitGlobalDI(MachineFunction &MF) {
           return InstReg;
         };
 
-    const SPIRVType *I32Ty =
+    const SPIRVTypeInst I32Ty =
         GR->getOrCreateSPIRVType(Type::getInt32Ty(*Context), MIRBuilder,
                                  SPIRV::AccessQualifier::ReadWrite, false);
 

@@ -14,14 +14,15 @@
 
 /// Force setting the no-alias attribute on fuction arguments when possible.
 static llvm::cl::opt<bool> forceNoAlias("force-no-alias", llvm::cl::Hidden,
-                                        llvm::cl::init(false));
+                                        llvm::cl::init(true));
 
 namespace fir {
 
 template <typename F>
 void addNestedPassToAllTopLevelOperations(mlir::PassManager &pm, F ctor) {
-  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareReductionOp,
-                     mlir::omp::PrivateClauseOp, fir::GlobalOp>(pm, ctor);
+  addNestedPassToOps<F, mlir::func::FuncOp, mlir::omp::DeclareMapperOp,
+                     mlir::omp::DeclareReductionOp, mlir::omp::PrivateClauseOp,
+                     fir::GlobalOp>(pm, ctor);
 }
 
 template <typename F>
@@ -95,17 +96,22 @@ getEmissionKind(llvm::codegenoptions::DebugInfoKind kind) {
 void addDebugInfoPass(mlir::PassManager &pm,
                       llvm::codegenoptions::DebugInfoKind debugLevel,
                       llvm::OptimizationLevel optLevel,
-                      llvm::StringRef inputFilename) {
+                      llvm::StringRef inputFilename, int32_t dwarfVersion,
+                      llvm::StringRef splitDwarfFile,
+                      llvm::StringRef dwarfDebugFlags) {
   fir::AddDebugInfoOptions options;
   options.debugLevel = getEmissionKind(debugLevel);
   options.isOptimized = optLevel != llvm::OptimizationLevel::O0;
   options.inputFilename = inputFilename;
+  options.dwarfVersion = dwarfVersion;
+  options.splitDwarfFile = splitDwarfFile;
+  options.dwarfDebugFlags = dwarfDebugFlags;
   addPassConditionally(pm, disableDebugInfo,
                        [&]() { return fir::createAddDebugInfoPass(options); });
 }
 
-void addFIRToLLVMPass(mlir::PassManager &pm,
-                      const MLIRToLLVMPassPipelineConfig &config) {
+fir::FIRToLLVMPassOptions
+getFIRToLLVMPassOptions(const MLIRToLLVMPassPipelineConfig &config) {
   fir::FIRToLLVMPassOptions options;
   options.ignoreMissingTypeDescriptors = ignoreMissingTypeDescriptors;
   options.skipExternalRttiDefinition = skipExternalRttiDefinition;
@@ -114,6 +120,12 @@ void addFIRToLLVMPass(mlir::PassManager &pm,
   options.typeDescriptorsRenamedForAssembly =
       !disableCompilerGeneratedNamesConversion;
   options.ComplexRange = config.ComplexRange;
+  return options;
+}
+
+void addFIRToLLVMPass(mlir::PassManager &pm,
+                      const MLIRToLLVMPassPipelineConfig &config) {
+  fir::FIRToLLVMPassOptions options = getFIRToLLVMPassOptions(config);
   addPassConditionally(pm, disableFirToLlvmIr,
                        [&]() { return fir::createFIRToLLVMPass(options); });
   // The dialect conversion framework may leave dead unrealized_conversion_cast
@@ -203,6 +215,10 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createSimplifyRegionLite());
   pm.addPass(mlir::createCSEPass());
 
+  // Run LICM after CSE, which may reduce the number of operations to hoist.
+  if (enableFirLICM && pc.OptLevel.isOptimizingForSpeed())
+    pm.addPass(fir::createLoopInvariantCodeMotion());
+
   // Polymorphic types
   pm.addPass(fir::createPolymorphicOpConversion());
   pm.addPass(fir::createAssumedRankOpConversion());
@@ -217,9 +233,6 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
   pm.addPass(fir::createSimplifyFIROperations(
       {/*preferInlineImplementation=*/pc.OptLevel.isOptimizingForSpeed()}));
 
-  if (pc.AliasAnalysis && !disableFirAliasTags && !useOldAliasTags)
-    pm.addPass(fir::createAddAliasTags());
-
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createStackReclaim);
   // convert control flow to CFG form
@@ -228,6 +241,8 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 
   pm.addPass(mlir::createCanonicalizerPass(config));
   pm.addPass(fir::createSimplifyRegionLite());
+  if (!pc.SkipConvertComplexPow)
+    pm.addPass(fir::createConvertComplexPow());
   pm.addPass(mlir::createCSEPass());
 
   if (pc.OptLevel.isOptimizingForSpeed())
@@ -242,8 +257,13 @@ void createDefaultFIROptimizerPassPipeline(mlir::PassManager &pm,
 /// \param pm - MLIR pass manager that will hold the pipeline definition
 /// \param optLevel - optimization level used for creating FIR optimization
 ///   passes pipeline
-void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
+void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
+                                  EnableOpenMP enableOpenMP,
                                   llvm::OptimizationLevel optLevel) {
+  if (optLevel.getSizeLevel() > 0 || optLevel.getSpeedupLevel() > 0) {
+    addNestedPassToAllTopLevelOperations<PassConstructor>(
+        pm, hlfir::createExpressionSimplification);
+  }
   if (optLevel.isOptimizingForSpeed()) {
     addCanonicalizerPassWithoutRegionSimplification(pm);
     addNestedPassToAllTopLevelOperations<PassConstructor>(
@@ -272,7 +292,8 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
           pm, hlfir::createInlineHLFIRCopyIn);
     }
   }
-  pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
+  pm.addPass(hlfir::createLowerHLFIROrderedAssignments(
+      {/*tryFusingAssignments=*/optLevel.isOptimizingForSpeed()}));
   pm.addPass(hlfir::createLowerHLFIRIntrinsics());
 
   hlfir::BufferizeHLFIROptions bufferizeOptions;
@@ -294,8 +315,12 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm, bool enableOpenMP,
     addNestedPassToAllTopLevelOperations<PassConstructor>(
         pm, hlfir::createInlineHLFIRAssign);
   pm.addPass(hlfir::createConvertHLFIRtoFIR());
-  if (enableOpenMP)
+  if (enableOpenMP != EnableOpenMP::None) {
     pm.addPass(flangomp::createLowerWorkshare());
+    pm.addPass(flangomp::createLowerWorkdistribute());
+  }
+  if (enableOpenMP == EnableOpenMP::Simd)
+    pm.addPass(flangomp::createSimdOnlyPass());
 }
 
 /// Create a pass pipeline for handling certain OpenMP transformations needed
@@ -316,15 +341,19 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
     pm.addPass(flangomp::createDoConcurrentConversionPass(
         opts.doConcurrentMappingKind == DoConcurrentMappingKind::DCMK_Device));
 
-  // The MapsForPrivatizedSymbols pass needs to run before
-  // MapInfoFinalizationPass because the former creates new
-  // MapInfoOp instances, typically for descriptors.
-  // MapInfoFinalizationPass adds MapInfoOp instances for the descriptors
-  // underlying data which is necessary to access the data on the offload
-  // target device.
+  // The MapsForPrivatizedSymbols and AutomapToTargetDataPass pass need to run
+  // before MapInfoFinalizationPass because they create new MapInfoOp
+  // instances, typically for descriptors. MapInfoFinalizationPass adds
+  // MapInfoOp instances for the descriptors underlying data which is necessary
+  // to access the data on the offload target device.
   pm.addPass(flangomp::createMapsForPrivatizedSymbolsPass());
+  pm.addPass(flangomp::createAutomapToTargetDataPass());
   pm.addPass(flangomp::createMapInfoFinalizationPass());
-  pm.addPass(flangomp::createMarkDeclareTargetPass());
+  pm.addPass(mlir::omp::createMarkDeclareTargetPass());
+
+  // Delete unreachable target operations before FunctionFilteringPass
+  // extracts them.
+  pm.addPass(flangomp::createDeleteUnreachableTargetsPass());
   pm.addPass(flangomp::createGenericLoopConversionPass());
   if (opts.isTargetDevice)
     pm.addPass(flangomp::createFunctionFilteringPass());
@@ -333,15 +362,22 @@ void createOpenMPFIRPassPipeline(mlir::PassManager &pm,
 void createDebugPasses(mlir::PassManager &pm,
                        llvm::codegenoptions::DebugInfoKind debugLevel,
                        llvm::OptimizationLevel OptLevel,
-                       llvm::StringRef inputFilename) {
+                       llvm::StringRef inputFilename, int32_t dwarfVersion,
+                       llvm::StringRef splitDwarfFile,
+                       llvm::StringRef dwarfDebugFlags) {
   if (debugLevel != llvm::codegenoptions::NoDebugInfo)
-    addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename);
+    addDebugInfoPass(pm, debugLevel, OptLevel, inputFilename, dwarfVersion,
+                     splitDwarfFile, dwarfDebugFlags);
 }
 
 void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
                                          MLIRToLLVMPassPipelineConfig config,
                                          llvm::StringRef inputFilename) {
+  pm.addPass(fir::createMIFOpConversion());
   fir::addBoxedProcedurePass(pm);
+  if (config.OptLevel.isOptimizingForSpeed() && config.AliasAnalysis &&
+      !disableFirAliasTags && !useOldAliasTags)
+    pm.addPass(fir::createAddAliasTags());
   addNestedPassToAllTopLevelOperations<PassConstructor>(
       pm, fir::createAbstractResultOpt);
   addPassToGPUModuleOperations<PassConstructor>(pm,
@@ -349,12 +385,14 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
   fir::addCodeGenRewritePass(
       pm, (config.DebugInfo != llvm::codegenoptions::NoDebugInfo));
   fir::addExternalNameConversionPass(pm, config.Underscoring);
-  fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename);
+  fir::createDebugPasses(pm, config.DebugInfo, config.OptLevel, inputFilename,
+                         config.DwarfVersion, config.SplitDwarfFile,
+                         config.DwarfDebugFlags);
   fir::addTargetRewritePass(pm);
   fir::addCompilerGeneratedNamesConversionPass(pm);
 
   if (config.VScaleMin != 0)
-    pm.addPass(fir::createVScaleAttr({{config.VScaleMin, config.VScaleMax}}));
+    pm.addPass(fir::createVScaleAttr({config.VScaleMin, config.VScaleMax}));
 
   // Add function attributes
   mlir::LLVM::framePointerKind::FramePointerKind framePointerKind;
@@ -365,6 +403,9 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::All;
   else if (config.FramePointerKind == llvm::FramePointerKind::Reserved)
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::Reserved;
+  else if (config.FramePointerKind == llvm::FramePointerKind::NonLeafNoReserve)
+    framePointerKind =
+        mlir::LLVM::framePointerKind::FramePointerKind::NonLeafNoReserve;
   else
     framePointerKind = mlir::LLVM::framePointerKind::FramePointerKind::None;
 
@@ -396,13 +437,24 @@ void createDefaultFIRCodeGenPassPipeline(mlir::PassManager &pm,
 void createMLIRToLLVMPassPipeline(mlir::PassManager &pm,
                                   MLIRToLLVMPassPipelineConfig &config,
                                   llvm::StringRef inputFilename) {
-  fir::createHLFIRToFIRPassPipeline(pm, config.EnableOpenMP, config.OptLevel);
+  fir::EnableOpenMP enableOpenMP = fir::EnableOpenMP::None;
+  if (config.EnableOpenMP)
+    enableOpenMP = fir::EnableOpenMP::Full;
+  if (config.EnableOpenMPSimd)
+    enableOpenMP = fir::EnableOpenMP::Simd;
+  fir::createHLFIRToFIRPassPipeline(pm, enableOpenMP, config.OptLevel);
 
   // Add default optimizer pass pipeline.
   fir::createDefaultFIROptimizerPassPipeline(pm, config);
 
   // Add codegen pass pipeline.
   fir::createDefaultFIRCodeGenPassPipeline(pm, config, inputFilename);
+
+  // Run a pass to prepare for translation of delayed privatization in the
+  // context of deferred target tasks.
+  addPassConditionally(pm, disableFirToLlvmIr, [&]() {
+    return mlir::omp::createPrepareForOMPOffloadPrivatizationPass();
+  });
 }
 
 } // namespace fir

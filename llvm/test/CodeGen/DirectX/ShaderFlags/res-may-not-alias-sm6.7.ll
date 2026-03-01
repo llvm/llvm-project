@@ -22,7 +22,7 @@ target triple = "dxil-pc-shadermodel6.7-library"
 ; CHECK: Function loadUAV : 0x200010000
 define float @loadUAV() #0 {
   %res = call target("dx.TypedBuffer", float, 1, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   %load = call {float, i1} @llvm.dx.resource.load.typedbuffer(
       target("dx.TypedBuffer", float, 1, 0, 0) %res, i32 0)
   %val = extractvalue {float, i1} %load, 0
@@ -32,7 +32,7 @@ define float @loadUAV() #0 {
 ; CHECK: Function loadSRV : 0x200010010
 define float @loadSRV() #0 {
   %res = tail call target("dx.RawBuffer", float, 0, 0)
-      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false, ptr null)
+      @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, ptr null)
   %load = call {float, i1} @llvm.dx.resource.load.rawbuffer(
       target("dx.RawBuffer", float, 0, 0) %res, i32 0, i32 0)
   %val = extractvalue { float, i1 } %load, 0

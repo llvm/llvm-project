@@ -138,7 +138,15 @@ std::optional<Value> linalg::isaFillOpInterface(GenericOp op) {
 // BroadcastOpInterface implementation
 //===----------------------------------------------------------------------===//
 std::optional<SmallVector<int64_t>>
-linalg::isaBroadcastOpInterface(GenericOp op) {
+linalg::isaBroadcastOpInterface(LinalgOp linalgOp) {
+  if (auto broadcastOp = dyn_cast<BroadcastOp>(linalgOp.getOperation()))
+    return SmallVector<int64_t>(broadcastOp.getDimensions().begin(),
+                                broadcastOp.getDimensions().end());
+
+  auto op = dyn_cast<GenericOp>(linalgOp.getOperation());
+  if (!op)
+    return std::nullopt;
+
   // Structural.
   if (!op.isAllParallelLoops() || !op.isSingleInputOutput() ||
       !op.isSingleYieldOp())
@@ -248,10 +256,8 @@ static bool isaElemwiseSingleUnaryOrBinaryOpInterface(linalg::GenericOp op,
     return false;
 
   auto yieldOp = dyn_cast<linalg::YieldOp>(body->back());
-  if (!yieldOp || yieldOp.getNumOperands() != 1 ||
-      yieldOp->getOperand(0).getDefiningOp() != oper)
-    return false;
-  return true;
+  return !(!yieldOp || yieldOp.getNumOperands() != 1 ||
+           yieldOp->getOperand(0).getDefiningOp() != oper);
 }
 
 bool linalg::isaElemwiseSingleUnaryOpInterface(linalg::GenericOp op) {
@@ -272,10 +278,8 @@ bool linalg::isaElemwiseSingleBinaryOpInterface(linalg::GenericOp op) {
   // Check both inputs are used (elementwise).
   OpOperand *inputOpOperand0 = op.getDpsInputOperand(0);
   OpOperand *inputOpOperand1 = op.getDpsInputOperand(1);
-  if (!op.payloadUsesValueFromOperand(inputOpOperand0) ||
-      !op.payloadUsesValueFromOperand(inputOpOperand1))
-    return false;
-  return true;
+  return !(!op.payloadUsesValueFromOperand(inputOpOperand0) ||
+           !op.payloadUsesValueFromOperand(inputOpOperand1));
 }
 
 //===----------------------------------------------------------------------===//
@@ -319,7 +323,8 @@ bool mlir::linalg::detail::isContractionBody(
 
   Value yielded = getSourceSkipUnary(terminator->getOperand(0));
   Operation *reductionOp = yielded.getDefiningOp();
-  if (reductionOp->getNumResults() != 1 || reductionOp->getNumOperands() != 2) {
+  if (!reductionOp || reductionOp->getNumResults() != 1 ||
+      reductionOp->getNumOperands() != 2) {
     errs << "expected reduction op to be binary";
     return false;
   }
@@ -735,11 +740,17 @@ getConstantsFromExprList(const SmallVector<AffineExpr, 2> &exprs) {
 
 /// Classifies dimensions in the `linalgOp` used by a convolution
 /// subcomputation, as captured by `inputExprWalker`. If
-/// `allowEmptyConvolvedDims` is not set this this will fail if there is not
-/// at least convolved dimension pair (output image + filter loop). Convolution
-/// dimensions are specified in sorted order, and strides match the order of
-/// the filter loop dimensions, while the dilations match the order of the
-/// output image dimensions.
+/// `allowEmptyConvolvedDims` is not set this will fail if there is not
+/// at least one convolved dimension pair (output image + filter loop).
+///
+/// The returned dimensions are ordered as follows:
+/// - `outputImage` is sorted by dimension index.
+/// - `filterLoop` is ordered to match the pairing with `outputImage`, i.e.,
+///   `outputImage[i]` and `filterLoop[i]` are paired dimensions from the
+///   convolution access pattern (e.g., `oh + kh` pairs `oh` with `kh`).
+/// - `strides[i]` corresponds to `outputImage[i]`.
+/// - `dilations[i]` corresponds to `filterLoop[i]`.
+/// - Other dimension sets (batch, outputChannel, etc.) are sorted by index.
 static FailureOr<ConvolutionDimensions>
 inferConvolutionDimsImpl(LinalgOp linalgOp,
                          ConvAccessExprWalker &inputExprWalker,
@@ -787,12 +798,13 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
   if (oi.empty() && !allowEmptyConvolvedDims)
     return failure();
 
-  // Return each set in sorted order.
+  // Return each set in sorted order, with outputImage and filterLoop
+  // ordered so that outputImage[i] pairs with filterLoop[i].
   ConvolutionDimensions dimensions{
       SmallVector<unsigned, 2>(batch.begin(), batch.end()),
       SmallVector<unsigned, 2>(oi.begin(), oi.end()),
       SmallVector<unsigned, 2>(oc.begin(), oc.end()),
-      SmallVector<unsigned, 2>(fl.begin(), fl.end()),
+      /*filterLoop=*/SmallVector<unsigned, 2>{},
       SmallVector<unsigned, 2>(ic.begin(), ic.end()),
       SmallVector<unsigned, 2>(depth.begin(), depth.end()),
       /*strides=*/SmallVector<int64_t, 2>{},
@@ -800,9 +812,14 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
   llvm::sort(dimensions.batch);
   llvm::sort(dimensions.outputImage);
   llvm::sort(dimensions.outputChannel);
-  llvm::sort(dimensions.filterLoop);
   llvm::sort(dimensions.inputChannel);
   llvm::sort(dimensions.depth);
+  // Order filterLoop to match the pairing with outputImage. Each outputImage
+  // dimension has a corresponding filterLoop dimension from the convolution
+  // access pattern (e.g., oh + kh). This ensures outputImage[i] pairs with
+  // filterLoop[i].
+  for (unsigned oiDim : dimensions.outputImage)
+    dimensions.filterLoop.push_back(inputExprWalker.convolvedDimMapping[oiDim]);
 
   // Use the op carried strides/dilations attribute if present.
   auto nativeStrides = linalgOp->getAttrOfType<DenseIntElementsAttr>("strides");
@@ -849,8 +866,12 @@ inferConvolutionDimsImpl(LinalgOp linalgOp,
 ///   7. All dimensions appear only once in any given indexing map.
 /// This allows e.g. detecting that some convolution is embedded within
 /// `linalgOp` with some orthogonal heuristic.
-/// When multiple dimension occurrences exist that match any classification
-/// indices are returned in sorted order.
+///
+/// The `outputImage` and `filterLoop` arrays are ordered such that
+/// `outputImage[i]` pairs with `filterLoop[i]` based on the convolution access
+/// pattern in the input indexing map (e.g., `d0 + d2` pairs dimension 0 with
+/// dimension 2). Other dimension sets are returned in sorted order.
+///
 /// Returns a failure if `output_image` (and implicitly `filter_loop`) is empty.
 FailureOr<ConvolutionDimensions>
 mlir::linalg::inferConvolutionDims(LinalgOp linalgOp) {
@@ -1060,12 +1081,15 @@ LogicalResult mlir::linalg::detail::verifyConvolutionInterface(Operation *op) {
 // FillOpInterface implementation
 //===----------------------------------------------------------------------===//
 
+namespace {
 enum class MatchFillResult {
   Success = 0,
   NotLinalgOp,
   WrongNumOperands,
-  NotScalarInput
+  NotScalarInput,
+  TypeMismatch
 };
+} // namespace
 
 static MatchFillResult isFillInterfaceImpl(Operation *op) {
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
@@ -1078,17 +1102,33 @@ static MatchFillResult isFillInterfaceImpl(Operation *op) {
   if (!linalgOp.isScalar(value))
     return MatchFillResult::NotScalarInput;
 
+  // Check that the scalar input type matches the output element type.
+  OpOperand *output = linalgOp.getDpsInitOperand(0);
+  Type scalarType = value->get().getType();
+  Type outputElementType = getElementTypeOrSelf(output->get().getType());
+  if (scalarType != outputElementType)
+    return MatchFillResult::TypeMismatch;
+
   return MatchFillResult::Success;
 }
 
 LogicalResult mlir::linalg::detail::verifyFillInterface(Operation *op) {
-  auto res = isFillInterfaceImpl(op);
+  MatchFillResult res = isFillInterfaceImpl(op);
   if (res == MatchFillResult::NotLinalgOp)
     return op->emitError("expected a LinalgOp");
   if (res == MatchFillResult::WrongNumOperands)
     return op->emitError("expected op with 1 input and 1 output");
   if (res == MatchFillResult::NotScalarInput)
     return op->emitError("expected op with scalar input");
+  if (res == MatchFillResult::TypeMismatch) {
+    auto linalgOp = cast<linalg::LinalgOp>(op);
+    Type scalarType = linalgOp.getDpsInputOperand(0)->get().getType();
+    Type outputElementType =
+        getElementTypeOrSelf(linalgOp.getDpsInitOperand(0)->get().getType());
+    return op->emitOpError("expected fill value type (")
+           << scalarType << ") to match output element type ("
+           << outputElementType << ")";
+  }
 
   return success();
 }

@@ -69,11 +69,13 @@ lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
     auto data_sp = FileSystem::Instance().CreateDataBuffer(
         crash_file->GetPath(), header_size, 0);
     if (data_sp && data_sp->GetByteSize() == header_size) {
-      DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
+      DataExtractorSP extractor_sp =
+          std::make_shared<DataExtractor>(data_sp, lldb::eByteOrderLittle, 4);
 
       lldb::offset_t data_offset = 0;
       llvm::MachO::mach_header mach_header;
-      if (ObjectFileMachO::ParseHeader(data, &data_offset, mach_header)) {
+      if (ObjectFileMachO::ParseHeader(extractor_sp, &data_offset,
+                                       mach_header)) {
         if (mach_header.filetype == llvm::MachO::MH_CORE)
           process_sp = std::make_shared<ProcessMachCore>(target_sp, listener_sp,
                                                          *crash_file);
@@ -95,8 +97,9 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
     // header but we should still try to use it -
     // ModuleSpecList::FindMatchingModuleSpec enforces a strict arch mach.
     ModuleSpec core_module_spec(m_core_file);
+    core_module_spec.SetTarget(target_sp);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             nullptr, nullptr, nullptr));
+                                             nullptr, nullptr));
 
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
@@ -799,6 +802,23 @@ Status ProcessMachCore::DoGetMemoryRegionInfo(addr_t load_addr,
       region_info.SetMapped(MemoryRegionInfo::eNo);
     }
     return Status();
+  } else {
+    // The corefile has no LC_SEGMENT at this virtual address,
+    // but see if there is a binary whose Section has been
+    // loaded at that address in the current Target.
+    Address addr;
+    if (GetTarget().ResolveLoadAddress(load_addr, addr)) {
+      SectionSP section_sp(addr.GetSection());
+      if (section_sp) {
+        region_info.GetRange().SetRangeBase(
+            section_sp->GetLoadBaseAddress(&GetTarget()));
+        region_info.GetRange().SetByteSize(section_sp->GetByteSize());
+        if (region_info.GetRange().Contains(load_addr)) {
+          region_info.SetLLDBPermissions(section_sp->GetPermissions());
+          return Status();
+        }
+      }
+    }
   }
 
   region_info.GetRange().SetRangeBase(load_addr);

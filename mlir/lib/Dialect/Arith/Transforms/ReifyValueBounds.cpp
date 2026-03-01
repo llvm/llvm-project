@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <utility>
+
 #include "mlir/Dialect/Arith/Transforms/Transforms.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -69,7 +71,8 @@ FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
   AffineMap boundMap;
   ValueDimList mapOperands;
   if (failed(ValueBoundsConstraintSet::computeBound(
-          boundMap, mapOperands, type, var, stopCondition, closedUB)))
+          boundMap, mapOperands, type, var, std::move(stopCondition),
+          closedUB)))
     return failure();
 
   // Materialize tensor.dim/memref.dim ops.
@@ -116,7 +119,7 @@ FailureOr<OpFoldResult> mlir::arith::reifyValueBound(
 
 FailureOr<OpFoldResult> mlir::arith::reifyShapedValueDimBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    int64_t dim, ValueBoundsConstraintSet::StopConditionFn stopCondition,
+    int64_t dim, const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
     bool closedUB) {
   auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
                              ValueBoundsConstraintSet &cstr) {
@@ -134,7 +137,8 @@ FailureOr<OpFoldResult> mlir::arith::reifyShapedValueDimBound(
 
 FailureOr<OpFoldResult> mlir::arith::reifyIndexValueBound(
     OpBuilder &b, Location loc, presburger::BoundType type, Value value,
-    ValueBoundsConstraintSet::StopConditionFn stopCondition, bool closedUB) {
+    const ValueBoundsConstraintSet::StopConditionFn &stopCondition,
+    bool closedUB) {
   auto reifyToOperands = [&](Value v, std::optional<int64_t> d,
                              ValueBoundsConstraintSet &cstr) {
     return v != value;

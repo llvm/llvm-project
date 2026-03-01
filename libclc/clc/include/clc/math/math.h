@@ -24,14 +24,7 @@
 #define PNOR 0x100
 #define PINF 0x200
 
-#if (defined __AMDGCN__ || defined __R600__) && !defined __HAS_FMAF__
-#define __CLC_HAVE_HW_FMA32() (0)
-#elif defined(CLC_SPIRV)
-bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
-#define __CLC_HAVE_HW_FMA32() __clc_runtime_has_hw_fma32()
-#else
 #define __CLC_HAVE_HW_FMA32() (1)
-#endif
 
 #define HAVE_BITALIGN() (0)
 #define HAVE_FAST_FMA32() (0)
@@ -119,7 +112,5 @@ _CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
 #define LOG_MAGIC_NUM_FP16 (1 + NUMEXPBITS_FP16 - EXPBIAS_FP16)
 
 #endif // cl_khr_fp16
-
-#define ALIGNED(x) __attribute__((aligned(x)))
 
 #endif // __CLC_MATH_MATH_H__

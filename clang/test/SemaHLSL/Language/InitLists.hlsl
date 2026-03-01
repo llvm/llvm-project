@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -verify -Wdouble-promotion -Wconversion %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -verify -Wdouble-promotion %s
 
 struct TwoFloats {
   float X, Y;
@@ -121,6 +121,5 @@ void Err2(RWBuffer<float4> B) {
 // expected-note@#ContainsResource{{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'const ContainsResource &' for 1st argument}}
 // expected-note@#ContainsResource{{candidate constructor (the implicit move constructor) not viable: no known conversion from 'vector<int, 2>' (vector of 2 'int' values) to 'ContainsResource &&' for 1st argument}}
 
-// These notes refer to the RWBuffer constructors that do not have source locations
-// expected-note@*{{candidate constructor (the implicit copy constructor) not viable}}
-// expected-note@*{{candidate constructor (the implicit move constructor) not viable}}
+// This note refers to the RWBuffer copy constructor that do not have a source locations
+// expected-note@*{{candidate constructor not viable}}

@@ -40,6 +40,7 @@ protected:
                         bool IsPCRel) const override;
   bool needsRelocateWithSymbol(const MCValue &, unsigned Type) const override;
   bool isNonILP32reloc(const MCFixup &Fixup, AArch64::Specifier RefKind) const;
+  void sortRelocs(std::vector<ELFRelocationEntry> &Relocs) override;
 
   bool IsILP32;
 };
@@ -103,6 +104,20 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
     break;
   }
 
+  switch (RefKind) {
+  case AArch64::S_GOTPCREL:
+  case AArch64::S_PLT:
+    if (Kind == FK_Data_4)
+      break;
+    // Only R_AARCH64_PLT32/R_AARCH64_GOTPCREL32 defined at present, but can
+    // be extended to other sizes if additional relocations are defined.
+    reportError(Fixup.getLoc(), AArch64::getSpecifierName(RefKind) +
+                                    " can only be used in a .word directive");
+    return ELF::R_AARCH64_NONE;
+  default:
+    break;
+  }
+
   // Extract the relocation type from the fixup kind, after applying STT_TLS as
   // needed.
   if (mc::isRelocation(Fixup.getKind()))
@@ -116,8 +131,7 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
     case FK_Data_2:
       return R_CLS(PREL16);
     case FK_Data_4: {
-      return Target.getSpecifier() == AArch64::S_PLT ? R_CLS(PLT32)
-                                                     : R_CLS(PREL32);
+      return R_CLS(PREL32);
     }
     case FK_Data_8:
       if (IsILP32) {
@@ -219,9 +233,13 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
     case FK_Data_2:
       return R_CLS(ABS16);
     case FK_Data_4:
-      return (!IsILP32 && Target.getSpecifier() == AArch64::S_GOTPCREL)
-                 ? ELF::R_AARCH64_GOTPCREL32
-                 : R_CLS(ABS32);
+      if (!IsILP32) {
+        if (Target.getSpecifier() == AArch64::S_GOTPCREL)
+          return ELF::R_AARCH64_GOTPCREL32;
+        if (Target.getSpecifier() == AArch64::S_PLT)
+          return ELF::R_AARCH64_PLT32;
+      }
+      return R_CLS(ABS32);
     case FK_Data_8: {
       if (IsILP32) {
         reportError(
@@ -231,6 +249,8 @@ unsigned AArch64ELFObjectWriter::getRelocType(const MCFixup &Fixup,
       }
       if (RefKind == AArch64::S_AUTH || RefKind == AArch64::S_AUTHADDR)
         return ELF::R_AARCH64_AUTH_ABS64;
+      if (RefKind == AArch64::S_FUNCINIT)
+        return ELF::R_AARCH64_FUNCINIT64;
       return ELF::R_AARCH64_ABS64;
     }
     case AArch64::fixup_aarch64_add_imm12:
@@ -496,6 +516,17 @@ bool AArch64ELFObjectWriter::needsRelocateWithSymbol(const MCValue &Val,
     return true;
   return is_contained({AArch64::S_GOTPCREL, AArch64::S_PLT},
                       Val.getSpecifier());
+}
+
+void AArch64ELFObjectWriter::sortRelocs(
+    std::vector<ELFRelocationEntry> &Relocs) {
+  // PATCHINST relocations should be applied last because they may overwrite the
+  // whole instruction and so should take precedence over other relocations that
+  // modify operands of the original instruction.
+  std::stable_partition(Relocs.begin(), Relocs.end(),
+                        [](const ELFRelocationEntry &R) {
+                          return R.Type != ELF::R_AARCH64_PATCHINST;
+                        });
 }
 
 std::unique_ptr<MCObjectTargetWriter>

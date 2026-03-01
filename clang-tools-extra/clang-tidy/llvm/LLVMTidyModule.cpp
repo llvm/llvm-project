@@ -1,4 +1,4 @@
-//===--- LLVMTidyModule.cpp - clang-tidy ----------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,7 +8,6 @@
 
 #include "../ClangTidy.h"
 #include "../ClangTidyModule.h"
-#include "../ClangTidyModuleRegistry.h"
 #include "../readability/ElseAfterReturnCheck.h"
 #include "../readability/NamespaceCommentCheck.h"
 #include "../readability/QualifiedAutoCheck.h"
@@ -18,10 +17,14 @@
 #include "PreferRegisterOverUnsignedCheck.h"
 #include "PreferStaticOverAnonymousNamespaceCheck.h"
 #include "TwineLocalCheck.h"
+#include "TypeSwitchCaseTypesCheck.h"
 #include "UseNewMLIROpBuilderCheck.h"
+#include "UseRangesCheck.h"
+#include "UseVectorUtilsCheck.h"
 
 namespace clang::tidy {
 namespace llvm_check {
+namespace {
 
 class LLVMModule : public ClangTidyModule {
 public:
@@ -41,8 +44,12 @@ public:
     CheckFactories.registerCheck<readability::QualifiedAutoCheck>(
         "llvm-qualified-auto");
     CheckFactories.registerCheck<TwineLocalCheck>("llvm-twine-local");
+    CheckFactories.registerCheck<TypeSwitchCaseTypesCheck>(
+        "llvm-type-switch-case-types");
     CheckFactories.registerCheck<UseNewMlirOpBuilderCheck>(
         "llvm-use-new-mlir-op-builder");
+    CheckFactories.registerCheck<UseRangesCheck>("llvm-use-ranges");
+    CheckFactories.registerCheck<UseVectorUtilsCheck>("llvm-use-vector-utils");
   }
 
   ClangTidyOptions getModuleOptions() override {
@@ -54,6 +61,8 @@ public:
     return Options;
   }
 };
+
+} // namespace
 
 // Register the LLVMTidyModule using this statically initialized variable.
 static ClangTidyModuleRegistry::Add<LLVMModule> X("llvm-module",

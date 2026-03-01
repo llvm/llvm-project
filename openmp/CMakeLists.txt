@@ -6,91 +6,100 @@ set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 # Add path for custom modules
 list(INSERT CMAKE_MODULE_PATH 0
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
+  "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   "${LLVM_COMMON_CMAKE_UTILS}/Modules"
   )
 
-# llvm/runtimes/ will set OPENMP_STANDALONE_BUILD.
 if (OPENMP_STANDALONE_BUILD OR "${CMAKE_SOURCE_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
-  set(OPENMP_STANDALONE_BUILD TRUE)
-  project(openmp C CXX ASM)
-else()
-  set(OPENMP_STANDALONE_BUILD FALSE)
+  message(FATAL_ERROR [[The legacy standalone build mode has been removed. Please change
+    cmake <llvm-project>/openmp
+to
+    cmake <llvm-project>/runtimes -DLLVM_ENABLE_RUNTIMES=openmp
+For more details on building the LLVM OpenMP libraries, see https://openmp.llvm.org/Building.html]])
 endif()
 
 # Must go below project(..)
 include(GNUInstallDirs)
 
-if (OPENMP_STANDALONE_BUILD)
-  # CMAKE_BUILD_TYPE was not set, default to Release.
-  if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-  endif()
+# Usually <llvm-project>/runtimes/CMakeLists.txt sets LLVM_TREE_AVAILABLE and
+# we assume it is not available otherwise. The exception is that we are in an
+# LLVM_ENABLE_PROJECTS=openmp build, the LLVM tree is actually available.
+# Note that this build mode has been deprecated.
+# See https://github.com/llvm/llvm-project/issues/124014
+if (NOT LLVM_RUNTIMES_BUILD AND "openmp" IN_LIST LLVM_ENABLE_PROJECTS)
+  set(LLVM_TREE_AVAILABLE True)
+endif ()
 
-  # Group common settings.
-  set(OPENMP_ENABLE_WERROR FALSE CACHE BOOL
-    "Enable -Werror flags to turn warnings into errors for supporting compilers.")
-  set(OPENMP_LIBDIR_SUFFIX "" CACHE STRING
-    "Suffix of lib installation directory, e.g. 64 => lib64")
-  # Do not use OPENMP_LIBDIR_SUFFIX directly, use OPENMP_INSTALL_LIBDIR.
-  set(OPENMP_INSTALL_LIBDIR "lib${OPENMP_LIBDIR_SUFFIX}" CACHE STRING
-      "Path where built OpenMP libraries should be installed.")
+set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
 
-  # Group test settings.
-  set(OPENMP_TEST_C_COMPILER ${CMAKE_C_COMPILER} CACHE STRING
-    "C compiler to use for testing OpenMP runtime libraries.")
-  set(OPENMP_TEST_CXX_COMPILER ${CMAKE_CXX_COMPILER} CACHE STRING
-    "C++ compiler to use for testing OpenMP runtime libraries.")
-  set(OPENMP_TEST_Fortran_COMPILER ${CMAKE_Fortran_COMPILER} CACHE STRING
-    "FORTRAN compiler to use for testing OpenMP runtime libraries.")
-  set(OPENMP_LLVM_TOOLS_DIR "" CACHE PATH "Path to LLVM tools for testing.")
-
-  set(CMAKE_CXX_STANDARD 17 CACHE STRING "C++ standard to conform to")
-  set(CMAKE_CXX_STANDARD_REQUIRED NO)
-  set(CMAKE_CXX_EXTENSIONS NO)
+# When building in tree we install the runtime according to the LLVM settings.
+if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
+  set(OPENMP_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
+      "Path where built openmp libraries should be installed.")
 else()
-  set(OPENMP_ENABLE_WERROR ${LLVM_ENABLE_WERROR})
-
-  # When building in tree we install the runtime according to the LLVM settings.
-  if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND NOT APPLE)
-    set(OPENMP_INSTALL_LIBDIR lib${LLVM_LIBDIR_SUFFIX}/${LLVM_DEFAULT_TARGET_TRIPLE} CACHE STRING
-        "Path where built openmp libraries should be installed.")
-  else()
-    set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
-        "Path where built OpenMP libraries should be installed.")
-  endif()
-
-  if (NOT MSVC)
-    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++)
-  else()
-    set(OPENMP_TEST_C_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang.exe)
-    set(OPENMP_TEST_CXX_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/clang++.exe)
-  endif()
-
-  # Check for flang
-  if (NOT MSVC)
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang)
-  else()
-    set(OPENMP_TEST_Fortran_COMPILER ${LLVM_RUNTIME_OUTPUT_INTDIR}/flang.exe)
-  endif()
-
-  # Set fortran test compiler if flang is found
-  if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
-    message("Using local flang build at ${OPENMP_TEST_Fortran_COMPILER}")
-  else()
-    unset(OPENMP_TEST_Fortran_COMPILER)
-  endif()
-
-  # If not standalone, set CMAKE_CXX_STANDARD but don't set the global cache value,
-  # only set it locally for OpenMP.
-  set(CMAKE_CXX_STANDARD 17)
-  set(CMAKE_CXX_STANDARD_REQUIRED NO)
-  set(CMAKE_CXX_EXTENSIONS NO)
+  set(OPENMP_INSTALL_LIBDIR "lib${LLVM_LIBDIR_SUFFIX}" CACHE STRING
+      "Path where built OpenMP libraries should be installed.")
 endif()
+
+set(OPENMP_TEST_C_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang${CMAKE_EXECUTABLE_SUFFIX}")
+set(OPENMP_TEST_CXX_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/clang++${CMAKE_EXECUTABLE_SUFFIX}")
+set(OPENMP_TEST_Fortran_COMPILER_default "${LLVM_TOOLS_BINARY_DIR}/flang${CMAKE_EXECUTABLE_SUFFIX}")
+if (NOT TARGET "clang")
+  set(OPENMP_TEST_C_COMPILER_default "${CMAKE_C_COMPILER}")
+  set(OPENMP_TEST_CXX_COMPILER_default "${CMAKE_CXX_COMPILER}")
+endif()
+if (NOT TARGET "flang")
+  if (CMAKE_Fortran_COMPILER)
+    set(OPENMP_TEST_Fortran_COMPILER_default "${CMAKE_Fortran_COMPILER}")
+  else()
+    unset(OPENMP_TEST_Fortran_COMPILER_default)
+  endif()
+endif()
+set(OPENMP_TEST_C_COMPILER "${OPENMP_TEST_C_COMPILER_default}" CACHE STRING
+  "C compiler to use for testing OpenMP runtime libraries.")
+set(OPENMP_TEST_CXX_COMPILER "${OPENMP_TEST_CXX_COMPILER_default}" CACHE STRING
+  "C++ compiler to use for testing OpenMP runtime libraries.")
+set(OPENMP_TEST_Fortran_COMPILER "${OPENMP_TEST_Fortran_COMPILER_default}" CACHE STRING
+  "Fortran compiler to use for testing OpenMP runtime libraries.")
+
+# Set fortran test compiler if flang is found
+if (EXISTS "${OPENMP_TEST_Fortran_COMPILER}")
+  message("Using local flang build at ${OPENMP_TEST_Fortran_COMPILER}")
+else()
+  unset(OPENMP_TEST_Fortran_COMPILER)
+endif()
+
+# If not standalone, set CMAKE_CXX_STANDARD but don't set the global cache value,
+# only set it locally for OpenMP.
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED NO)
+set(CMAKE_CXX_EXTENSIONS NO)
 
 # Check and set up common compiler flags.
 include(config-ix)
 include(HandleOpenMPOptions)
+include(LibompUtils)
+include(LibompHandleFlags)
+
+
+# Set libomp version
+set(LIBOMP_VERSION_MAJOR 5)
+set(LIBOMP_VERSION_MINOR 0)
+
+# Set the OpenMP Year and Month associated with version
+set(LIBOMP_OMP_YEAR_MONTH 201611)
+
+# Get the build number from kmp_version.cpp
+libomp_get_build_number("${CMAKE_CURRENT_SOURCE_DIR}/runtime" LIBOMP_VERSION_BUILD)
+math(EXPR LIBOMP_VERSION_BUILD_YEAR "${LIBOMP_VERSION_BUILD}/10000")
+math(EXPR LIBOMP_VERSION_BUILD_MONTH_DAY "${LIBOMP_VERSION_BUILD}%10000")
+
+# Currently don't record any timestamps
+set(LIBOMP_BUILD_DATE "No_Timestamp")
+
+
+set(LIBOMP_FORTRAN_MODULES FALSE CACHE BOOL
+  "Create Fortran module files? (requires fortran compiler)")
 
 # Set up testing infrastructure.
 include(OpenMPTesting)
@@ -106,7 +115,7 @@ set(ENABLE_LIBOMPTARGET ON)
 # there is no point in trying to compile libomptarget on other OSes.
 # 32-bit systems are not supported either.
 if (APPLE OR WIN32 OR WASM OR NOT "cxx_std_17" IN_LIST CMAKE_CXX_COMPILE_FEATURES
-    OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+    OR NOT CMAKE_SIZEOF_VOID_P EQUAL 8 OR "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   set(ENABLE_LIBOMPTARGET OFF)
 endif()
 
@@ -122,35 +131,41 @@ else()
   get_clang_resource_dir(LIBOMP_HEADERS_INSTALL_PATH SUBDIR include)
 endif()
 
-# Build host runtime library, after LIBOMPTARGET variables are set since they are needed
-# to enable time profiling support in the OpenMP runtime.
-add_subdirectory(runtime)
+# Use the current compiler target to determine the appropriate runtime to build.
+if("${LLVM_DEFAULT_TARGET_TRIPLE}" MATCHES "^amdgcn|^nvptx|^spirv64" OR
+   "${CMAKE_CXX_COMPILER_TARGET}" MATCHES "^amdgcn|^nvptx|^spirv64")
+  add_subdirectory(device)
+else()
+  add_subdirectory(module)
 
-set(ENABLE_OMPT_TOOLS ON)
-# Currently tools are not tested well on Windows or MacOS X.
-if (APPLE OR WIN32)
-  set(ENABLE_OMPT_TOOLS OFF)
-endif()
+  # Build host runtime library, after LIBOMPTARGET variables are set since they
+  # are needed to enable time profiling support in the OpenMP runtime.
+  add_subdirectory(runtime)
 
-option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
-       ${ENABLE_OMPT_TOOLS})
-if (OPENMP_ENABLE_OMPT_TOOLS)
-  add_subdirectory(tools)
-endif()
+  set(ENABLE_OMPT_TOOLS ON)
+  # Currently tools are not tested well on Windows or MacOS X.
+  if (APPLE OR WIN32)
+    set(ENABLE_OMPT_TOOLS OFF)
+  endif()
 
-# Propagate OMPT support to offload
-if(NOT ${OPENMP_STANDALONE_BUILD})
+  option(OPENMP_ENABLE_OMPT_TOOLS "Enable building ompt based tools for OpenMP."
+         ${ENABLE_OMPT_TOOLS})
+  if (OPENMP_ENABLE_OMPT_TOOLS)
+    add_subdirectory(tools)
+  endif()
+
+  # Propagate OMPT support to offload
   set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
   set(LIBOMP_OMP_TOOLS_INCLUDE_DIR ${LIBOMP_OMP_TOOLS_INCLUDE_DIR} PARENT_SCOPE)
+
+  option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
+
+  # Build libompd.so
+  add_subdirectory(libompd)
+
+  # Build documentation
+  add_subdirectory(docs)
+
+  # Now that we have seen all testsuites, create the check-openmp target.
+  construct_check_openmp_target()
 endif()
-
-option(OPENMP_MSVC_NAME_SCHEME "Build dll with MSVC naming scheme." OFF)
-
-# Build libompd.so
-add_subdirectory(libompd)
-
-# Build documentation
-add_subdirectory(docs)
-
-# Now that we have seen all testsuites, create the check-openmp target.
-construct_check_openmp_target()

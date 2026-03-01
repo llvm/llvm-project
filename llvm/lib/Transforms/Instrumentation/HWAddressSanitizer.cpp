@@ -152,6 +152,11 @@ static cl::opt<bool>
                     cl::desc("detect use after scope within function"),
                     cl::Hidden, cl::init(true));
 
+static cl::opt<bool> ClStrictUseAfterScope(
+    "hwasan-strict-use-after-scope",
+    cl::desc("for complicated lifetimes, tag both on end and return"),
+    cl::Hidden, cl::init(true));
+
 static cl::opt<bool> ClGenerateTagsWithCalls(
     "hwasan-generate-tags-with-calls",
     cl::desc("generate new tags with runtime library calls"), cl::Hidden,
@@ -211,6 +216,15 @@ static cl::opt<float>
                               "Note: instrumentation can be skipped randomly "
                               "OR because of the hot percentile cutoff, if "
                               "both are supplied."));
+
+static cl::opt<bool> ClStaticLinking(
+    "hwasan-static-linking",
+    cl::desc("Don't use .note.hwasan.globals section to instrument globals "
+             "from loadable libraries. "
+             "Note: in static binaries, the global variables section can be "
+             "accessed directly via linker-provided "
+             "__start_hwasan_globals and __stop_hwasan_globals symbols"),
+    cl::Hidden, cl::init(false));
 
 STATISTIC(NumTotalFuncs, "Number of total funcs");
 STATISTIC(NumInstrumentedFuncs, "Number of instrumented funcs");
@@ -335,6 +349,7 @@ private:
                                           FunctionAnalysisManager &FAM) const;
   void initializeModule();
   void createHwasanCtorComdat();
+  void createHwasanNote();
 
   void initializeCallbacks(Module &M);
 
@@ -533,20 +548,7 @@ void HWAddressSanitizerPass::printPipeline(
   OS << '>';
 }
 
-void HWAddressSanitizer::createHwasanCtorComdat() {
-  std::tie(HwasanCtorFunction, std::ignore) =
-      getOrCreateSanitizerCtorAndInitFunctions(
-          M, kHwasanModuleCtorName, kHwasanInitName,
-          /*InitArgTypes=*/{},
-          /*InitArgs=*/{},
-          // This callback is invoked when the functions are created the first
-          // time. Hook them into the global ctors list in that case:
-          [&](Function *Ctor, FunctionCallee) {
-            Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
-            Ctor->setComdat(CtorComdat);
-            appendToGlobalCtors(M, Ctor, 0, Ctor);
-          });
-
+void HWAddressSanitizer::createHwasanNote() {
   // Create a note that contains pointers to the list of global
   // descriptors. Adding a note to the output file will cause the linker to
   // create a PT_NOTE program header pointing to the note that we can use to
@@ -628,6 +630,29 @@ void HWAddressSanitizer::createHwasanCtorComdat() {
   Dummy->setMetadata(LLVMContext::MD_associated,
                      MDNode::get(*C, ValueAsMetadata::get(Note)));
   appendToCompilerUsed(M, Dummy);
+}
+
+void HWAddressSanitizer::createHwasanCtorComdat() {
+  std::tie(HwasanCtorFunction, std::ignore) =
+      getOrCreateSanitizerCtorAndInitFunctions(
+          M, kHwasanModuleCtorName, kHwasanInitName,
+          /*InitArgTypes=*/{},
+          /*InitArgs=*/{},
+          // This callback is invoked when the functions are created the first
+          // time. Hook them into the global ctors list in that case:
+          [&](Function *Ctor, FunctionCallee) {
+            Comdat *CtorComdat = M.getOrInsertComdat(kHwasanModuleCtorName);
+            Ctor->setComdat(CtorComdat);
+            appendToGlobalCtors(M, Ctor, 0, Ctor);
+          });
+
+  // Do not create .note.hwasan.globals for static binaries, as it is only
+  // needed for instrumenting globals from dynamic libraries. In static
+  // binaries, the global variables section can be accessed directly via the
+  // __start_hwasan_globals and __stop_hwasan_globals symbols inserted by the
+  // linker.
+  if (!ClStaticLinking)
+    createHwasanNote();
 }
 
 /// Module-level initialization.
@@ -1469,22 +1494,6 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
     size_t Size = memtag::getAllocaSizeInBytes(*AI);
     size_t AlignedSize = alignTo(Size, Mapping.getObjectAlignment());
 
-    auto HandleLifetime = [&](IntrinsicInst *II) {
-      // Set the lifetime intrinsic to cover the whole alloca. This reduces the
-      // set of assumptions we need to make about the lifetime. Without this we
-      // would need to ensure that we can track the lifetime pointer to a
-      // constant offset from the alloca, and would still need to change the
-      // size to include the extra alignment we use for the untagging to make
-      // the size consistent.
-      //
-      // The check for standard lifetime below makes sure that we have exactly
-      // one set of start / end in any execution (i.e. the ends are not
-      // reachable from each other), so this will not cause any problems.
-      II->setArgOperand(0, ConstantInt::get(Int64Ty, AlignedSize));
-    };
-    llvm::for_each(Info.LifetimeStart, HandleLifetime);
-    llvm::for_each(Info.LifetimeEnd, HandleLifetime);
-
     AI->replaceUsesWithIf(Replacement, [AILong](const Use &U) {
       auto *User = U.getUser();
       return User != AILong && !isa<LifetimeIntrinsic>(User);
@@ -1492,6 +1501,12 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
 
     memtag::annotateDebugRecords(Info, retagMask(N));
 
+    auto TagStarts = [&]() {
+      for (IntrinsicInst *Start : Info.LifetimeStart) {
+        IRB.SetInsertPoint(Start->getNextNode());
+        tagAlloca(IRB, AI, Tag, Size);
+      }
+    };
     auto TagEnd = [&](Instruction *Node) {
       IRB.SetInsertPoint(Node);
       // When untagging, use the `AlignedSize` because we need to set the tags
@@ -1500,33 +1515,35 @@ void HWAddressSanitizer::instrumentStack(memtag::StackInfo &SInfo,
       // last granule, due to how short granules are implemented.
       tagAlloca(IRB, AI, UARTag, AlignedSize);
     };
-    // Calls to functions that may return twice (e.g. setjmp) confuse the
-    // postdominator analysis, and will leave us to keep memory tagged after
-    // function return. Work around this by always untagging at every return
-    // statement if return_twice functions are called.
-    bool StandardLifetime =
-        !SInfo.CallsReturnTwice &&
-        memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, &DT,
-                                   &LI, ClMaxLifetimes);
-    if (DetectUseAfterScope && StandardLifetime) {
-      IntrinsicInst *Start = Info.LifetimeStart[0];
-      IRB.SetInsertPoint(Start->getNextNode());
-      tagAlloca(IRB, AI, Tag, Size);
-      if (!memtag::forAllReachableExits(DT, PDT, LI, Start, Info.LifetimeEnd,
-                                        SInfo.RetVec, TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
-      }
-    } else {
-      tagAlloca(IRB, AI, Tag, Size);
-      for (auto *RI : SInfo.RetVec)
-        TagEnd(RI);
-      // We inserted tagging outside of the lifetimes, so we have to remove
-      // them.
+    auto EraseLifetimes = [&]() {
       for (auto &II : Info.LifetimeStart)
         II->eraseFromParent();
       for (auto &II : Info.LifetimeEnd)
         II->eraseFromParent();
+    };
+    // Calls to functions that may return twice (e.g. setjmp) confuse the
+    // postdominator analysis, and will leave us to keep memory tagged after
+    // function return. Work around this by always untagging at every return
+    // statement if return_twice functions are called.
+    if (DetectUseAfterScope && !SInfo.CallsReturnTwice &&
+        memtag::isSupportedLifetime(Info, &DT, &LI)) {
+      TagStarts();
+      if (!memtag::forAllReachableExits(DT, PDT, LI, Info, SInfo.RetVec,
+                                        TagEnd)) {
+        for (auto *End : Info.LifetimeEnd)
+          End->eraseFromParent();
+      }
+    } else if (DetectUseAfterScope && ClStrictUseAfterScope) {
+      // SInfo.CallsReturnTwice || !isStandardLifetime
+      tagAlloca(IRB, AI, Tag, Size);
+      TagStarts();
+      for_each(Info.LifetimeEnd, TagEnd);
+      for_each(SInfo.RetVec, TagEnd);
+      EraseLifetimes();
+    } else {
+      tagAlloca(IRB, AI, Tag, Size);
+      for_each(SInfo.RetVec, TagEnd);
+      EraseLifetimes();
     }
     memtag::alignAndPadAlloca(Info, Mapping.getObjectAlignment());
   }
@@ -1588,6 +1605,9 @@ void HWAddressSanitizer::sanitizeFunction(Function &F,
     return;
 
   if (F.empty())
+    return;
+
+  if (F.isPresplitCoroutine())
     return;
 
   NumTotalFuncs++;
@@ -1894,7 +1914,7 @@ void HWAddressSanitizer::ShadowMapping::init(Triple &TargetTriple,
   if (TargetTriple.isOSFuchsia()) {
     // Fuchsia is always PIE, which means that the beginning of the address
     // space is always available.
-    SetFixed(0);
+    Kind = OffsetKind::kGlobal;
   } else if (CompileKernel || InstrumentWithCalls) {
     SetFixed(0);
     WithFrameRecord = false;

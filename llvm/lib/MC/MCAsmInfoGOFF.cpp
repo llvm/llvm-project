@@ -21,7 +21,7 @@ using namespace llvm;
 
 MCAsmInfoGOFF::MCAsmInfoGOFF() {
   Data64bitsDirective = "\t.quad\t";
-  HasDotTypeDotSizeDirective = false;
+  WeakRefDirective = "WXTRN";
   PrivateGlobalPrefix = "L#";
   PrivateLabelPrefix = "L#";
   ZeroDirective = "\t.space\t";
@@ -62,6 +62,8 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
     OS << ',';
     OS << "RMODE(";
     switch (Rmode) {
+    case GOFF::ESD_RMODE_None:
+      llvm_unreachable("");
     case GOFF::ESD_RMODE_24:
       OS << "24";
       break;
@@ -70,8 +72,6 @@ static void emitCATTR(raw_ostream &OS, StringRef Name, GOFF::ESDRmode Rmode,
       break;
     case GOFF::ESD_RMODE_64:
       OS << "64";
-      break;
-    case GOFF::ESD_RMODE_None:
       break;
     }
     OS << ')';
@@ -120,10 +120,15 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
                                          raw_ostream &OS) const {
   auto &Sec =
       const_cast<MCSectionGOFF &>(static_cast<const MCSectionGOFF &>(Section));
+  auto EmitExternalName = [&Sec, &OS]() {
+    if (Sec.hasExternalName())
+      OS << Sec.getName() << " ALIAS C'" << Sec.getExternalName() << "'\n";
+  };
   switch (Sec.SymbolType) {
   case GOFF::ESD_ST_SectionDefinition: {
     OS << Sec.getName() << " CSECT\n";
     Sec.Emitted = true;
+    EmitExternalName();
     break;
   }
   case GOFF::ESD_ST_ElementDefinition: {
@@ -134,6 +139,7 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
                 GOFF::ESD_EXE_Unspecified, Sec.EDAttributes.IsReadOnly, 0,
                 Sec.EDAttributes.FillByteValue, StringRef());
       Sec.Emitted = true;
+      EmitExternalName();
     } else
       OS << Sec.getName() << " CATTR\n";
     break;
@@ -151,6 +157,7 @@ void MCAsmInfoGOFF::printSwitchToSection(const MCSection &Section,
                 Sec.PRAttributes.Executable, Sec.PRAttributes.BindingScope);
       ED->Emitted = true;
       Sec.Emitted = true;
+      EmitExternalName();
     } else
       OS << ED->getName() << " CATTR PART(" << Sec.getName() << ")\n";
     break;

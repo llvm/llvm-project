@@ -168,10 +168,12 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::ROLW:
       case RISCV::RORW:
       case RISCV::RORIW:
+      case RISCV::CLSW:
       case RISCV::CLZW:
       case RISCV::CTZW:
       case RISCV::CPOPW:
       case RISCV::SLLI_UW:
+      case RISCV::ABSW:
       case RISCV::FMV_W_X:
       case RISCV::FCVT_H_W:
       case RISCV::FCVT_H_W_INX:
@@ -356,6 +358,14 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
           return false;
         Worklist.emplace_back(UserMI, Bits);
         break;
+      case RISCV::TH_EXT:
+      case RISCV::TH_EXTU:
+        unsigned Msb = UserMI->getOperand(2).getImm();
+        unsigned Lsb = UserMI->getOperand(3).getImm();
+        // Behavior of Msb < Lsb is not well documented.
+        if (Msb >= Lsb && Bits > Msb)
+          break;
+        return false;
       }
     }
   }
@@ -408,6 +418,16 @@ static bool isSignExtendingOpW(const MachineInstr &MI, unsigned OpNo) {
     int64_t Log2SEW = MI.getOperand(2).getImm();
     assert(Log2SEW >= 3 && Log2SEW <= 6 && "Unexpected Log2SEW");
     return Log2SEW <= 5;
+  }
+  case RISCV::TH_EXT: {
+    unsigned Msb = MI.getOperand(2).getImm();
+    unsigned Lsb = MI.getOperand(3).getImm();
+    return Msb >= Lsb && (Msb - Lsb + 1) <= 32;
+  }
+  case RISCV::TH_EXTU: {
+    unsigned Msb = MI.getOperand(2).getImm();
+    unsigned Lsb = MI.getOperand(3).getImm();
+    return Msb >= Lsb && (Msb - Lsb + 1) < 32;
   }
   }
 
@@ -519,9 +539,11 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::ANDI:
     case RISCV::ORI:
     case RISCV::XORI:
+    case RISCV::SRAI:
       // |Remainder| is always <= |Dividend|. If D is 32-bit, then so is R.
       // DIV doesn't work because of the edge case 0xf..f 8000 0000 / (long)-1
       // Logical operations use a sign extended 12-bit immediate.
+      // Arithmetic shift right can only increase the number of sign bits.
       if (!AddRegToWorkList(MI->getOperand(1).getReg()))
         return false;
 
@@ -556,13 +578,20 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
     case RISCV::PseudoCCAND:
     case RISCV::PseudoCCOR:
     case RISCV::PseudoCCXOR:
-    case RISCV::PHI: {
+    case RISCV::PseudoCCANDN:
+    case RISCV::PseudoCCORN:
+    case RISCV::PseudoCCXNOR:
+    case RISCV::PHI:
+    case RISCV::MERGE:
+    case RISCV::MVM:
+    case RISCV::MVMN: {
       // If all incoming values are sign-extended, the output of AND, OR, XOR,
-      // MIN, MAX, or PHI is also sign-extended.
+      // MIN, MAX, PHI, or bitwise merge instructions is also sign-extended.
 
       // The input registers for PHI are operand 1, 3, ...
       // The input registers for PseudoCCMOVGPR(NoX0) are 4 and 5.
       // The input registers for PseudoCCAND/OR/XOR are 4, 5, and 6.
+      // The input registers for MERGE/MVM/MVMN are 1, 2, and 3.
       // The input registers for others are operand 1 and 2.
       unsigned B = 1, E = 3, D = 1;
       switch (MI->getOpcode()) {
@@ -578,10 +607,19 @@ static bool isSignExtendedW(Register SrcReg, const RISCVSubtarget &ST,
       case RISCV::PseudoCCAND:
       case RISCV::PseudoCCOR:
       case RISCV::PseudoCCXOR:
+      case RISCV::PseudoCCANDN:
+      case RISCV::PseudoCCORN:
+      case RISCV::PseudoCCXNOR:
         B = 4;
         E = 7;
         break;
-       }
+      case RISCV::MERGE:
+      case RISCV::MVM:
+      case RISCV::MVMN:
+        B = 1;
+        E = 4;
+        break;
+      }
 
       for (unsigned I = B; I != E; I += D) {
         if (!MI->getOperand(I).isReg())
