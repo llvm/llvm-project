@@ -17,11 +17,13 @@
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_arm64.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_ppc64le.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "ProcessFreeBSDKernelCore.h"
 #include "RegisterContextFreeBSDKernelCore_arm.h"
 #include "RegisterContextFreeBSDKernelCore_arm64.h"
 #include "RegisterContextFreeBSDKernelCore_i386.h"
 #include "RegisterContextFreeBSDKernelCore_ppc64le.h"
+#include "RegisterContextFreeBSDKernelCore_riscv64.h"
 #include "RegisterContextFreeBSDKernelCore_x86_64.h"
 
 using namespace lldb;
@@ -76,6 +78,12 @@ ThreadFreeBSDKernelCore::CreateRegisterContextForFrame(StackFrame *frame) {
       m_thread_reg_ctx_sp =
           std::make_shared<RegisterContextFreeBSDKernelCore_ppc64le>(
               *this, new RegisterInfoPOSIX_ppc64le(arch), m_pcb_addr);
+      break;
+    case llvm::Triple::riscv64:
+      m_thread_reg_ctx_sp =
+          std::make_shared<RegisterContextFreeBSDKernelCore_riscv64>(
+              *this, std::make_unique<RegisterInfoPOSIX_riscv64>(arch, 0),
+              m_pcb_addr);
       break;
     case llvm::Triple::x86:
       m_thread_reg_ctx_sp =

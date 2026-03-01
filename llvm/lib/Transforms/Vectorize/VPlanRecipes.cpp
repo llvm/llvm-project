@@ -1951,7 +1951,7 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   IntrinsicCostAttributes CostAttrs(
       ID, RetTy, Arguments, ParamTys, R.getFastMathFlags(),
       dyn_cast_or_null<IntrinsicInst>(R.getUnderlyingValue()),
-      InstructionCost::getInvalid(), &Ctx.TLI);
+      InstructionCost::getInvalid());
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
 }
 

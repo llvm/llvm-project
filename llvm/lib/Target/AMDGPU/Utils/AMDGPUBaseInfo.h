@@ -1640,13 +1640,18 @@ constexpr bool isChainCC(CallingConv::ID CC) {
 // the hardware. Module entry points include all entry functions but also
 // include functions that can be called from other functions inside or outside
 // the current module. Module entry functions are allowed to allocate LDS.
+//
+// AMDGPU_CS_Chain is intended for externally callable chain functions, so it is
+// treated as a module entrypoint. AMDGPU_CS_ChainPreserve is used for internal
+// helper functions (e.g. retry helpers), so it is not a module entrypoint.
 LLVM_READNONE
 constexpr bool isModuleEntryFunctionCC(CallingConv::ID CC) {
   switch (CC) {
   case CallingConv::AMDGPU_Gfx:
+  case CallingConv::AMDGPU_CS_Chain:
     return true;
   default:
-    return isEntryFunctionCC(CC) || isChainCC(CC);
+    return isEntryFunctionCC(CC);
   }
 }
 

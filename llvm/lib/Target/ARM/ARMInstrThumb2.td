@@ -848,6 +848,7 @@ multiclass T2I_rbin_irs<bits<4> opcod, string opc, SDNode opnode> {
      let Inst{14-12} = 0b000; // imm3
      let Inst{7-6} = 0b00; // imm2
      let Inst{5-4} = 0b00; // type
+     let hasSideEffects = 0;
    }
    // shifted register
    def rs : T2sTwoRegShiftedReg<
@@ -938,6 +939,7 @@ multiclass T2I_bin_ii12rs<bits<3> op23_21, string opc, SDNode opnode,
     let Inst{15}    = 0;
 
     let DecoderMethod = "DecodeT2AddSubSPImm";
+    let hasSideEffects = 0;
    }
 
    def ri : T2sTwoRegImm<
@@ -991,6 +993,7 @@ multiclass T2I_bin_ii12rs<bits<3> op23_21, string opc, SDNode opnode,
        let Inst{11-8} = Rd;
        let Inst{7-0} = imm{7-0};
        let DecoderMethod = "DecodeT2AddSubSPImm";
+       let hasSideEffects = 0;
      }
    // register
    def rr : T2sThreeReg<(outs GPRnopc:$Rd), (ins GPRnopc:$Rn, rGPR:$Rm),
@@ -1440,6 +1443,7 @@ def t2ADR : T2PCOneRegImm<(outs rGPR:$Rd),
   let Inst{7-0}   = addr{7-0};
 
   let DecoderMethod = "DecodeT2Adr";
+  let hasSideEffects = 0;
 }
 
 let hasSideEffects = 0, isReMaterializable = 1 in
@@ -2549,7 +2553,7 @@ def t2SEL : T2ThreeReg<(outs GPR:$Rd), (ins GPR:$Rn, GPR:$Rm),
 }
 
 // A6.3.13, A6.3.14, A6.3.15 Parallel addition and subtraction (signed/unsigned)
-// And Miscellaneous operations -- for disassembly only
+// And Miscellaneous operations
 class T2I_pam<bits<3> op22_20, bits<4> op7_4, string opc,
               list<dag> pat, dag iops, string asm>
   : T2I<(outs rGPR:$Rd), iops, NoItinerary, opc, asm, pat>,
@@ -3126,6 +3130,8 @@ class T2FourRegSMMLA<bits<3> op22_20, bits<4> op7_4, string opc,
   let Inst{26-23} = 0b0110;
   let Inst{22-20} = op22_20;
   let Inst{7-4} = op7_4;
+
+  let hasSideEffects = 0;
 }
 
 def t2SMMLA :   T2FourRegSMMLA<0b101, 0b0000, "smmla",
@@ -3673,15 +3679,14 @@ def t2TSB : T2I<(outs), (ins tsb_opt:$opt), NoItinerary,
   let Inst{31-0} = 0xf3af8012;
   let DecoderMethod = "DecodeTSBInstruction";
 }
-}
 
 // Armv8.5-A speculation barrier
 def t2SB : Thumb2XI<(outs), (ins), AddrModeNone, 4, NoItinerary, "sb", "", []>,
            Requires<[IsThumb2, HasSB]>, Sched<[]> {
   let Inst{31-0} = 0xf3bf8f70;
   let Unpredictable = 0x000f2f0f;
-  let hasSideEffects = 1;
 }
+} // hasSideEffects = 1
 
 class T2I_ldrex<bits<4> opcod, dag oops, dag iops, AddrMode am, int sz,
                 InstrItinClass itin, string opc, string asm, string cstr,
@@ -4037,7 +4042,7 @@ def t2TBH : T2I<(outs), (ins (addrmode_tbh $Rn, $Rm):$addr), IIC_Br,
 
 // FIXME: should be able to write a pattern for ARMBrcond, but can't use
 // a two-value operand where a dag node expects ", "two operands. :(
-let isBranch = 1, isTerminator = 1 in
+let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in
 def t2Bcc : Thumb2XI<(outs), (ins brtarget:$target, pred:$p),
                      AddrModeNone, 4, IIC_Br,
                      "b${p}.w\t$target", "",
@@ -4107,7 +4112,7 @@ def t2BXJ : T2I<(outs), (ins GPRnopc:$func), NoItinerary, "bxj", "\t$func", []>,
 def : t2InstAlias<"bl${p}.w $func", (tBL pred:$p, thumb_bl_target:$func), 0>;
 
 // Compare and branch on zero / non-zero
-let isBranch = 1, isTerminator = 1 in {
+let isBranch = 1, isTerminator = 1, hasSideEffects = 0 in {
   def tCBZ  : T1I<(outs), (ins tGPR:$Rn, thumb_cb_target:$target), IIC_Br,
                   "cbz\t$Rn, $target", []>,
               T1Misc<{0,0,?,1,?,?,?}>,
@@ -5419,6 +5424,7 @@ def : t2InstAlias<"neg${s}${p} $Rd, $Rm",
 // these, unfortunately.
 // FIXME: LSL #0 in the shift should allow SP to be used as either the
 // source or destination (but not both).
+let hasSideEffects = 0 in {
 def t2MOVsi: t2AsmPseudo<"mov${p} $Rd, $shift",
                          (ins rGPR:$Rd, t2_so_reg:$shift, pred:$p)>;
 def t2MOVSsi: t2AsmPseudo<"movs${p} $Rd, $shift",
@@ -5428,6 +5434,7 @@ def t2MOVsr: t2AsmPseudo<"mov${p} $Rd, $shift",
                          (ins rGPR:$Rd, so_reg_reg:$shift, pred:$p)>;
 def t2MOVSsr: t2AsmPseudo<"movs${p} $Rd, $shift",
                           (ins rGPR:$Rd, so_reg_reg:$shift, pred:$p)>;
+}
 
 // Aliases for the above with the .w qualifier
 def : t2InstAlias<"mov${p}.w $Rd, $shift",

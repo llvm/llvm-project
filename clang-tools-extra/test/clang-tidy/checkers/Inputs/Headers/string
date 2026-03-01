@@ -2,14 +2,13 @@
 #define _STRING_
 
 // For size_t
-#include <string.h>
+#include "string.h"
+#include "memory"
 
 typedef unsigned __INT16_TYPE__ char16;
 typedef unsigned __INT32_TYPE__ char32;
 
 namespace std {
-template <typename T>
-class allocator {};
 
 template <typename T>
 class char_traits {};
