@@ -118,6 +118,8 @@ bool ProcessFreeBSDKernelCore::CanDebug(lldb::TargetSP target_sp,
 
 Status ProcessFreeBSDKernelCore::DoLoadCore() {
   // The core is already loaded by CreateInstance().
+  ApplyKASLR();
+
   return Status();
 }
 
@@ -322,6 +324,28 @@ lldb::addr_t ProcessFreeBSDKernelCore::FindSymbol(const char *name) {
   ModuleSP mod_sp = GetTarget().GetExecutableModule();
   const Symbol *sym = mod_sp->FindFirstSymbolWithNameAndType(ConstString(name));
   return sym ? sym->GetLoadAddress(&GetTarget()) : LLDB_INVALID_ADDRESS;
+}
+
+void ProcessFreeBSDKernelCore::ApplyKASLR() {
+  kssize_t displacement = kvm_kerndisp(m_kvm);
+
+  if (displacement == 0)
+    return;
+
+  Target &target = GetTarget();
+  lldb::ModuleSP kernel_module_sp = target.GetExecutableModule();
+  if (!kernel_module_sp)
+    return;
+
+  bool changed = false;
+  kernel_module_sp->SetLoadAddress(
+      target, static_cast<lldb::addr_t>(displacement), true, changed);
+
+  if (changed) {
+    ModuleList loaded_module_list;
+    loaded_module_list.Append(kernel_module_sp);
+    target.ModulesDidLoad(loaded_module_list);
+  }
 }
 
 void ProcessFreeBSDKernelCore::PrintUnreadMessage() {
