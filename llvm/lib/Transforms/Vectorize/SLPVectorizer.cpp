@@ -10613,6 +10613,23 @@ BoUpSLP::TreeEntry::EntryState BoUpSLP::getScalarsVectorizationState(
     return TreeEntry::Vectorize;
   }
   case Instruction::Select:
+    if (SLPReVec) {
+      SmallPtrSet<Type *, 4> CondTypes;
+      for (Value *V : VL) {
+        Value *Cond;
+        if (!match(V, m_Select(m_Value(Cond), m_Value(), m_Value())) &&
+            !match(V, m_ZExt(m_Value(Cond))))
+          continue;
+        CondTypes.insert(Cond->getType());
+      }
+      if (CondTypes.size() > 1) {
+        LLVM_DEBUG(
+            dbgs()
+            << "SLP: Gathering select with different condition types.\n");
+        return TreeEntry::NeedToGather;
+      }
+    }
+    [[fallthrough]];
   case Instruction::FNeg:
   case Instruction::Add:
   case Instruction::FAdd:
