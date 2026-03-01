@@ -83,8 +83,10 @@ define i32 @test_multi_cond_use(i32 %arg, i32 %arg1, i1 %arg4, i1 %arg5) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = shl <4 x i32> [[TMP3]], <i32 1, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ne <4 x i32> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP6]], <4 x i32> <i32 1, i32 2, i32 4, i32 8>, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP6]], i32 3
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq <4 x i32> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP15:%.*]] = shufflevector <4 x i1> [[TMP6]], <4 x i1> [[TMP14]], <4 x i32> <i32 0, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP7:%.*]] = select <4 x i1> [[TMP15]], <4 x i32> <i32 1, i32 0, i32 0, i32 0>, <4 x i32> <i32 0, i32 2, i32 4, i32 8>
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i1> [[TMP15]], i32 3
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[TMP8]] to i32
 ; CHECK-NEXT:    br i1 [[ARG4]], label %[[BB13:.*]], label %[[BB16:.*]]
 ; CHECK:       [[COMMON_RET:.*]]:
