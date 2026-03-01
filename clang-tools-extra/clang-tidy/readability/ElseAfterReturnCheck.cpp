@@ -39,6 +39,12 @@ private:
   const SourceManager &SM;
 };
 
+AST_MATCHER_P(Stmt, stripLabelLikeStatements,
+              ast_matchers::internal::Matcher<Stmt>, InnerMatcher) {
+  const Stmt *S = Node.stripLabelLikeStatements();
+  return InnerMatcher.matches(*S, Finder, Builder);
+}
+
 } // namespace
 
 static constexpr char InterruptingStr[] = "interrupting";
@@ -177,15 +183,8 @@ void ElseAfterReturnCheck::registerMatchers(MatchFinder *Finder) {
              hasElse(stmt().bind("else")))
           .bind("if");
 
-  const auto SwitchCaseWithTargetIf = switchCase(anyOf(
-      switchCase(has(IfWithInterruptingThenElse)),
-      switchCase(hasDescendant(switchCase(has(IfWithInterruptingThenElse))))));
-
-  const auto LabelWithTargetIf = labelStmt(has(IfWithInterruptingThenElse));
-
-  Finder->addMatcher(compoundStmt(forEach(stmt(anyOf(IfWithInterruptingThenElse,
-                                                     SwitchCaseWithTargetIf,
-                                                     LabelWithTargetIf))))
+  Finder->addMatcher(compoundStmt(forEach(stripLabelLikeStatements(
+                                      IfWithInterruptingThenElse)))
                          .bind("cs"),
                      this);
 }

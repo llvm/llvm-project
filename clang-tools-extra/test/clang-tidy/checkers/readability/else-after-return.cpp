@@ -391,15 +391,56 @@ void testSwitchCases(int i, bool b, bool b2) {
   default:
     break;
   }
+
+  switch (i) {
+  case 1:
+    if (b)
+      return;
+    else // comment-24
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES-NOT: {{^}}   // comment-24
+      int _ = 20;
+    break;
+  case 2:
+    break;
+  }
+
+  switch (i) {
+  case 1:
+  case 2:
+  [[clang::annotate("TestWithAttributedStmt")]]
+  case 3:
+    if (b) {
+      return;
+    } else { // comment-25
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}}      } // comment-25
+        f(0);
+    }
+  }
 }
 
 void testLabels(bool b) {
   goto LABEL;
+  goto LABEL2;
+
 LABEL:
   if (b)
     return;
-  else // comment-25
+  else // comment-26
     // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: do not use 'else' after 'return'
-    // CHECK-FIXES: {{^}} // comment-25
+    // CHECK-FIXES: {{^}} // comment-26
     return;
+
+  switch ((int)b) {
+  case 1:
+  case 2:
+  LABEL2:
+    if (0)
+      return;
+    else  // comment-27
+      // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: do not use 'else' after 'return'
+      // CHECK-FIXES: {{^}} // comment-27
+      f(0);
+  }
 }
