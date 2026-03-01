@@ -43,6 +43,125 @@ static CharSourceRange rangeFromAnnotations(const llvm::Annotations &A,
 
 namespace {
 
+TEST(LexerUtilsTest, GetCommentsInRangeAdjacentComments) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  $range[[/*first*/ /*second*/]]
+  int x = 0;
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "range");
+  const std::vector<utils::lexer::CommentToken> Comments =
+      utils::lexer::getCommentsInRange(Range, SM, LangOpts);
+  ASSERT_EQ(2u, Comments.size());
+  EXPECT_EQ("/*first*/", Comments[0].Text);
+  EXPECT_EQ("/*second*/", Comments[1].Text);
+  const StringRef CodeText = Code.code();
+  const size_t FirstOffset = CodeText.find("/*first*/");
+  ASSERT_NE(StringRef::npos, FirstOffset);
+  const size_t SecondOffset = CodeText.find("/*second*/");
+  ASSERT_NE(StringRef::npos, SecondOffset);
+  EXPECT_EQ(FirstOffset, SM.getFileOffset(Comments[0].Loc));
+  EXPECT_EQ(SecondOffset, SM.getFileOffset(Comments[1].Loc));
+}
+
+TEST(LexerUtilsTest, GetCommentsInRangeKeepsCommentsAcrossTokens) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  int x = ($range[[/*first*/ 0, /*second*/]] 1);
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "range");
+  const std::vector<utils::lexer::CommentToken> Comments =
+      utils::lexer::getCommentsInRange(Range, SM, LangOpts);
+  ASSERT_EQ(2u, Comments.size());
+  EXPECT_EQ("/*first*/", Comments[0].Text);
+  EXPECT_EQ("/*second*/", Comments[1].Text);
+  const StringRef CodeText = Code.code();
+  const size_t FirstOffset = CodeText.find("/*first*/");
+  ASSERT_NE(StringRef::npos, FirstOffset);
+  const size_t SecondOffset = CodeText.find("/*second*/");
+  ASSERT_NE(StringRef::npos, SecondOffset);
+  EXPECT_EQ(FirstOffset, SM.getFileOffset(Comments[0].Loc));
+  EXPECT_EQ(SecondOffset, SM.getFileOffset(Comments[1].Loc));
+}
+
+TEST(LexerUtilsTest, GetCommentsInRangeLineComments) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  $range[[// first
+  // second
+  ]]
+  int x = 0;
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "range");
+  const std::vector<utils::lexer::CommentToken> Comments =
+      utils::lexer::getCommentsInRange(Range, SM, LangOpts);
+  ASSERT_EQ(2u, Comments.size());
+  EXPECT_EQ("// first", Comments[0].Text);
+  EXPECT_EQ("// second", Comments[1].Text);
+  const StringRef CodeText = Code.code();
+  const size_t FirstOffset = CodeText.find("// first");
+  ASSERT_NE(StringRef::npos, FirstOffset);
+  const size_t SecondOffset = CodeText.find("// second");
+  ASSERT_NE(StringRef::npos, SecondOffset);
+  EXPECT_EQ(FirstOffset, SM.getFileOffset(Comments[0].Loc));
+  EXPECT_EQ(SecondOffset, SM.getFileOffset(Comments[1].Loc));
+}
+
+TEST(LexerUtilsTest, GetCommentsInRangeNoComments) {
+  llvm::Annotations Code(R"cpp(
+void f() {
+  int x = $range[[0 + 1]];
+}
+)cpp");
+  std::unique_ptr<ASTUnit> AST = buildAST(Code.code());
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const CharSourceRange Range =
+      rangeFromAnnotations(Code, SM, SM.getMainFileID(), "range");
+  const std::vector<utils::lexer::CommentToken> Comments =
+      utils::lexer::getCommentsInRange(Range, SM, LangOpts);
+  EXPECT_TRUE(Comments.empty());
+}
+
+TEST(LexerUtilsTest, GetCommentsInRangeInvalidRange) {
+  std::unique_ptr<ASTUnit> AST = buildAST("int value = 0;");
+  ASSERT_TRUE(AST);
+  const ASTContext &Context = AST->getASTContext();
+  const SourceManager &SM = Context.getSourceManager();
+  const LangOptions &LangOpts = Context.getLangOpts();
+
+  const std::vector<utils::lexer::CommentToken> Comments =
+      utils::lexer::getCommentsInRange(CharSourceRange(), SM, LangOpts);
+  EXPECT_TRUE(Comments.empty());
+}
+
 TEST(LexerUtilsTest, GetTrailingCommentsInRangeAdjacentComments) {
   llvm::Annotations Code(R"cpp(
 void f() {
