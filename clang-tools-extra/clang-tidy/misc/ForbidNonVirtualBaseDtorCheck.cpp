@@ -10,7 +10,6 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Basic/Specifiers.h"
 
 using namespace clang::ast_matchers;
 
