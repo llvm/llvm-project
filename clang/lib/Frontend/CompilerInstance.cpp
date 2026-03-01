@@ -1514,7 +1514,9 @@ static bool compileModuleAndReadASTBehindLock(
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Lock->waitForUnlockFor(std::chrono::seconds(90))) {
+    unsigned Timeout =
+        ImportingInstance.getFrontendOpts().ImplicitModulesLockTimeoutSeconds;
+    switch (Lock->waitForUnlockFor(std::chrono::seconds(Timeout))) {
     case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
     case llvm::WaitForUnlockResult::OwnerDied:
@@ -1522,11 +1524,11 @@ static bool compileModuleAndReadASTBehindLock(
     case llvm::WaitForUnlockResult::Timeout:
       // Since the InMemoryModuleCache takes care of correctness, we try waiting
       // for someone else to complete the build so that it does not happen
-      // twice. In case of timeout, build it ourselves.
+      // twice. In case of timeout, try to build it ourselves again.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
       // Clear the lock file so that future invocations can make progress.
-      Lock->unsafeMaybeUnlock();
+      Lock->unsafeUnlock();
       continue;
     }
 
@@ -1989,6 +1991,25 @@ CompilerInstance::loadModule(SourceLocation ImportLoc,
     //   function as the `#include` or `#import` is textual.
 
     MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
+  } else if (getPreprocessorOpts().SingleModuleParseMode) {
+    // This mimics how findOrCompileModuleAndReadAST() finds the module.
+    Module = getPreprocessor().getHeaderSearchInfo().lookupModule(
+        ModuleName, ImportLoc, true, !IsInclusionDirective);
+    if (Module) {
+      if (PPCallbacks *PPCb = getPreprocessor().getPPCallbacks())
+        PPCb->moduleLoadSkipped(Module);
+      // Mark the module and its submodules as if they were loaded from a PCM.
+      // This prevents emission of the "missing submodule" diagnostic below.
+      std::vector<clang::Module *> Worklist{Module};
+      while (!Worklist.empty()) {
+        clang::Module *M = Worklist.back();
+        Worklist.pop_back();
+        M->IsFromModuleFile = true;
+        for (auto *SubM : M->submodules())
+          Worklist.push_back(SubM);
+      }
+    }
+    MM.cacheModuleLoad(*Path[0].getIdentifierInfo(), Module);
   } else {
     SourceLocation ModuleNameEndLoc = Path.back().getLoc().getLocWithOffset(
         Path.back().getIdentifierInfo()->getLength());
@@ -2242,6 +2263,10 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
   // we need to make the global index cover all modules, so we do that here.
   if (!HaveFullGlobalModuleIndex && GlobalIndex && !buildingModule()) {
     ModuleMap &MMap = getPreprocessor().getHeaderSearchInfo().getModuleMap();
+
+    // Load modules that were parsed from module maps but not loaded yet.
+    MMap.loadAllParsedModules();
+
     bool RecreateIndex = false;
     for (ModuleMap::module_iterator I = MMap.module_begin(),
         E = MMap.module_end(); I != E; ++I) {

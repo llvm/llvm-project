@@ -2985,8 +2985,9 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
       StringRef TopLevelASTFileName(ImportStack.back()->FileName);
       Diag(diag::err_fe_ast_file_modified)
           << *Filename << moduleKindForDiagnostic(ImportStack.back()->Kind)
-          << TopLevelASTFileName << FileChange.Kind
-          << (FileChange.Old && FileChange.New)
+          << TopLevelASTFileName;
+      Diag(diag::note_fe_ast_file_modified)
+          << FileChange.Kind << (FileChange.Old && FileChange.New)
           << llvm::itostr(FileChange.Old.value_or(0))
           << llvm::itostr(FileChange.New.value_or(0));
 
@@ -2999,7 +3000,10 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
               << ImportStack[I - 1]->FileName << ImportStack[I]->FileName;
       }
 
-      Diag(diag::note_ast_file_rebuild_required) << TopLevelASTFileName;
+      if (F.InputFilesValidationStatus == InputFilesValidation::Disabled)
+        Diag(diag::note_ast_file_rebuild_required) << TopLevelASTFileName;
+      Diag(diag::note_ast_file_input_files_validation_status)
+          << F.InputFilesValidationStatus;
     }
 
     IsOutOfDate = true;
@@ -3228,10 +3232,18 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         // files.
 
         unsigned N = ValidateSystemInputs ? NumInputs : NumUserInputs;
+        F.InputFilesValidationStatus = ValidateSystemInputs
+                                           ? InputFilesValidation::AllFiles
+                                           : InputFilesValidation::UserFiles;
         if (HSOpts.ModulesValidateOncePerBuildSession &&
             F.InputFilesValidationTimestamp > HSOpts.BuildSessionTimestamp &&
-            F.Kind == MK_ImplicitModule)
+            F.Kind == MK_ImplicitModule) {
           N = ForceValidateUserInputs ? NumUserInputs : 0;
+          F.InputFilesValidationStatus =
+              ForceValidateUserInputs
+                  ? InputFilesValidation::UserFiles
+                  : InputFilesValidation::SkippedInBuildSession;
+        }
 
         if (N != 0)
           Diag(diag::remark_module_validation)
@@ -3242,6 +3254,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           if (!IF.getFile() || IF.isOutOfDate())
             return OutOfDate;
         }
+      } else {
+        F.InputFilesValidationStatus = InputFilesValidation::Disabled;
       }
 
       if (Listener)
@@ -6316,6 +6330,15 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       CurrentModule->ConfigMacrosExhaustive = ConfigMacrosExhaustive;
       CurrentModule->ModuleMapIsPrivate = ModuleMapIsPrivate;
       CurrentModule->NamedModuleHasInit = NamedModuleHasInit;
+
+      if (!ParentModule && !F.BaseDirectory.empty()) {
+        if (auto Dir = FileMgr.getOptionalDirectoryRef(F.BaseDirectory))
+          CurrentModule->Directory = *Dir;
+      } else if (ParentModule && ParentModule->Directory) {
+        // Submodules inherit the directory from their parent.
+        CurrentModule->Directory = ParentModule->Directory;
+      }
+
       if (DeserializationListener)
         DeserializationListener->ModuleRead(GlobalID, CurrentModule);
 
@@ -6341,14 +6364,12 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     }
 
     case SUBMODULE_UMBRELLA_HEADER: {
-      // FIXME: This doesn't work for framework modules as `Filename` is the
-      //        name as written in the module file and does not include
-      //        `Headers/`, so this path will never exist.
-      auto Filename = ResolveImportedPath(PathBuf, Blob, F);
-      if (auto Umbrella = PP.getFileManager().getOptionalFileRef(*Filename)) {
+      SmallString<128> RelativePathName;
+      if (auto Umbrella = ModMap.findUmbrellaHeaderForModule(
+              CurrentModule, Blob.str(), RelativePathName)) {
         if (!CurrentModule->getUmbrellaHeaderAsWritten()) {
-          // FIXME: NameAsWritten
-          ModMap.setUmbrellaHeaderAsWritten(CurrentModule, *Umbrella, Blob, "");
+          ModMap.setUmbrellaHeaderAsWritten(CurrentModule, *Umbrella, Blob,
+                                            RelativePathName);
         }
         // Note that it's too late at this point to return out of date if the
         // name from the PCM doesn't match up with the one in the module map,
@@ -6379,7 +6400,6 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
     }
 
     case SUBMODULE_UMBRELLA_DIR: {
-      // See comments in SUBMODULE_UMBRELLA_HEADER
       auto Dirname = ResolveImportedPath(PathBuf, Blob, F);
       if (auto Umbrella =
               PP.getFileManager().getOptionalDirectoryRef(*Dirname)) {
@@ -7543,6 +7563,10 @@ void TypeLocReader::VisitCountAttributedTypeLoc(CountAttributedTypeLoc TL) {
 
 void TypeLocReader::VisitBTFTagAttributedTypeLoc(BTFTagAttributedTypeLoc TL) {
   // Nothing to do.
+}
+
+void TypeLocReader::VisitOverflowBehaviorTypeLoc(OverflowBehaviorTypeLoc TL) {
+  TL.setAttrLoc(readSourceLocation());
 }
 
 void TypeLocReader::VisitHLSLAttributedResourceTypeLoc(

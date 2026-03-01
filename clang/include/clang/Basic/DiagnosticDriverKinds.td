@@ -611,6 +611,18 @@ def err_drv_reduced_module_output_overrided : Warning<
   "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
   InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
 
+def remark_performing_driver_managed_module_build : Remark<
+  "performing driver managed module build">, InGroup<ModulesDriver>;
+def remark_modules_manifest_not_found : Remark<
+  "standard modules manifest file not found; import of standard library "
+  "modules not supported">,
+  InGroup<ModulesDriver>;
+def remark_using_modules_manifest : Remark<
+  "using standard modules manifest file '%0'">,
+  InGroup<ModulesDriver>;
+def err_modules_manifest_failed_parse : Error<
+  "failure while parsing standard modules manifest: '%0'">;
+
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;
@@ -919,4 +931,7 @@ def warn_drv_gcc_install_dir_libstdcxx : Warning<
     "future releases of the clang compiler will prefer GCC installations "
     "containing libstdc++ include directories; '%0' would be chosen over '%1'">,
     InGroup<DiagGroup<"gcc-install-dir-libstdcxx">>;
+
+def err_drv_reflection_requires_cxx26 : Error<
+  "option '%0' is only supported when compiling in C++26 mode">;
 }
