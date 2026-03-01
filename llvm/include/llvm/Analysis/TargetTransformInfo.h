@@ -188,13 +188,12 @@ class IntrinsicCostAttributes {
   // If ScalarizationCost is UINT_MAX, the cost of scalarizing the
   // arguments and the return value will be computed based on types.
   InstructionCost ScalarizationCost = InstructionCost::getInvalid();
-  TargetLibraryInfo const *LibInfo = nullptr;
 
 public:
   LLVM_ABI IntrinsicCostAttributes(
       Intrinsic::ID Id, const CallBase &CI,
       InstructionCost ScalarCost = InstructionCost::getInvalid(),
-      bool TypeBasedOnly = false, TargetLibraryInfo const *LibInfo = nullptr);
+      bool TypeBasedOnly = false);
 
   LLVM_ABI IntrinsicCostAttributes(
       Intrinsic::ID Id, Type *RTy, ArrayRef<Type *> Tys,
@@ -208,8 +207,7 @@ public:
       Intrinsic::ID Id, Type *RTy, ArrayRef<const Value *> Args,
       ArrayRef<Type *> Tys, FastMathFlags Flags = FastMathFlags(),
       const IntrinsicInst *I = nullptr,
-      InstructionCost ScalarCost = InstructionCost::getInvalid(),
-      TargetLibraryInfo const *LibInfo = nullptr);
+      InstructionCost ScalarCost = InstructionCost::getInvalid());
 
   Intrinsic::ID getID() const { return IID; }
   const IntrinsicInst *getInst() const { return II; }
@@ -218,7 +216,6 @@ public:
   InstructionCost getScalarizationCost() const { return ScalarizationCost; }
   const SmallVectorImpl<const Value *> &getArgs() const { return Arguments; }
   const SmallVectorImpl<Type *> &getArgTypes() const { return ParamTys; }
-  const TargetLibraryInfo *getLibInfo() const { return LibInfo; }
 
   bool isTypeBasedOnly() const {
     return Arguments.empty();

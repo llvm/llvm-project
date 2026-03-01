@@ -2596,7 +2596,7 @@ LoopVectorizationCostModel::getVectorIntrinsicCost(CallInst *CI,
 
   IntrinsicCostAttributes CostAttrs(ID, RetTy, Arguments, ParamTys, FMF,
                                     dyn_cast<IntrinsicInst>(CI),
-                                    InstructionCost::getInvalid(), TLI);
+                                    InstructionCost::getInvalid());
   return TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
 }
 
