@@ -461,6 +461,10 @@ LLVM_23 {
   global:
     clang_ModuleCache_prune;
     clang_ModuleCache_pruneWithCallback;
+    clang_Cursor_getNumTemplateParameters;
+    clang_Cursor_getTemplateParameter;
+    clang_Cursor_getTemplateArgumentIntegralType;
+    clang_Cursor_isTemplateParameterPack;
 };
 
 # Example of how to add a new symbol version entry.  If you do add a new symbol

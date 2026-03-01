@@ -1031,6 +1031,10 @@ libclang
 - Added CXType_PredefinedSugar for __ptrdiff_t, __size_t, and
   __signed_size_t types, which are no longer exposed as
   CXType_Unexposed.
+- Added ``clang_Cursor_getNumTemplateParameters``, ``clang_Cursor_getTemplateParameter``,
+  ``clang_Cursor_isTemplateParameterPack``, and ``clang_Cursor_getTemplateArgumentIntegralType``.
+- Fixed ``clang_Cursor_getNumTemplateArguments`` and related APIs to work with
+  ``CXCursor_CXXMethod`` cursors and to correctly allow indexing into parameter pack arguments.
 
 Code Completion
 ---------------
@@ -1098,6 +1102,8 @@ Python Binding Changes
   so it can be used the same as ``CodeCompletionResults.results``.
 - Added a new helper method ``get_clang_version`` to the class ``Config`` to
   read the version string of the libclang in use.
+- Added ``Cursor.get_num_template_parameters``, ``Cursor.get_template_parameter``,
+  ``Cursor.is_template_parameter_pack``, and ``Cursor.get_template_argument_integral_type``.
 
 OpenMP Support
 --------------

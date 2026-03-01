@@ -916,6 +916,127 @@ int d_noninline;
         self.assertEqual(foos[1].get_template_argument_unsigned_value(0), 2**32 - 7)
         self.assertEqual(foos[1].get_template_argument_unsigned_value(2), True)
 
+    def test_get_template_argument_integral_type(self):
+        tu = get_tu(TEMPLATE_ARG_TEST, lang="cpp")
+        foos = get_cursors(tu, "foo")
+
+        self.assertEqual(
+            foos[1].get_template_argument_integral_type(0).kind, TypeKind.INT
+        )
+        self.assertEqual(
+            foos[1].get_template_argument_integral_type(1).kind,
+            TypeKind.INVALID,
+        )
+        self.assertEqual(
+            foos[1].get_template_argument_integral_type(2).kind, TypeKind.BOOL
+        )
+
+    def test_get_template_argument_integral_type_pack(self):
+        source = """
+            template<int... Ns> struct Foo {};
+            template class Foo<1, 2, 3>;
+        """
+        tu = get_tu(source, lang="cpp")
+        foos = get_cursors(tu, "Foo")
+        spec = foos[1]
+        self.assertEqual(spec.kind, CursorKind.STRUCT_DECL)
+        self.assertEqual(spec.get_num_template_arguments(), 3)
+        self.assertEqual(spec.get_template_argument_integral_type(0).kind, TypeKind.INT)
+        self.assertEqual(spec.get_template_argument_integral_type(1).kind, TypeKind.INT)
+        self.assertEqual(spec.get_template_argument_integral_type(2).kind, TypeKind.INT)
+
+    def test_get_num_template_parameters(self):
+        source = "template<typename T, int N> void foo(); template<typename... Ts> void bar(); void baz();"
+        tu = get_tu(source, lang="cpp")
+        foo = get_cursor(tu, "foo")
+        bar = get_cursor(tu, "bar")
+        baz = get_cursor(tu, "baz")
+        self.assertIsNotNone(foo)
+        self.assertIsNotNone(bar)
+        self.assertIsNotNone(baz)
+
+        self.assertEqual(foo.get_num_template_parameters(), 2)
+        self.assertEqual(bar.get_num_template_parameters(), 1)
+        self.assertEqual(baz.get_num_template_parameters(), -1)
+
+    def test_get_template_parameter(self):
+        source = "template<typename T, int N> void foo();"
+        tu = get_tu(source, lang="cpp")
+        foo = get_cursor(tu, "foo")
+        self.assertIsNotNone(foo)
+
+        t_param = foo.get_template_parameter(0)
+        n_param = foo.get_template_parameter(1)
+        self.assertEqual(t_param.kind, CursorKind.TEMPLATE_TYPE_PARAMETER)
+        self.assertEqual(t_param.spelling, "T")
+        self.assertEqual(n_param.kind, CursorKind.TEMPLATE_NON_TYPE_PARAMETER)
+        self.assertEqual(n_param.spelling, "N")
+        oob = foo.get_template_parameter(2)
+        self.assertTrue(oob.is_null())
+
+    def test_is_template_parameter_pack(self):
+        # Type parameter pack
+        source = "template<typename T, typename... Ts> void foo();"
+        tu = get_tu(source, lang="cpp")
+        foo = get_cursor(tu, "foo")
+        self.assertIsNotNone(foo)
+        self.assertFalse(foo.get_template_parameter(0).is_template_parameter_pack())
+        self.assertTrue(foo.get_template_parameter(1).is_template_parameter_pack())
+
+        # Non-type parameter pack
+        source = "template<int... Ns> void bar();"
+        tu = get_tu(source, lang="cpp")
+        bar = get_cursor(tu, "bar")
+        self.assertIsNotNone(bar)
+        self.assertTrue(bar.get_template_parameter(0).is_template_parameter_pack())
+
+        # Template template parameter pack
+        source = "template<template<typename> class... Ts> void baz();"
+        tu = get_tu(source, lang="cpp")
+        baz = get_cursor(tu, "baz")
+        self.assertIsNotNone(baz)
+        self.assertTrue(baz.get_template_parameter(0).is_template_parameter_pack())
+
+    def test_get_template_argument_variadic(self):
+        source = """
+            template<typename T, typename... Ts> struct Foo {};
+            Foo<int, float, double> x;
+            Foo<int> y;
+        """
+        tu = get_tu(source, lang="cpp")
+
+        x = get_cursor(tu, "x")
+        self.assertIsNotNone(x)
+        x_type = x.type.get_declaration()
+        self.assertEqual(x_type.get_num_template_arguments(), 3)
+        self.assertEqual(x_type.get_template_argument_type(0).kind, TypeKind.INT)
+        self.assertEqual(x_type.get_template_argument_type(1).kind, TypeKind.FLOAT)
+        self.assertEqual(x_type.get_template_argument_type(2).kind, TypeKind.DOUBLE)
+        self.assertEqual(x_type.get_template_argument_type(3).kind, TypeKind.INVALID)
+
+        # Empty pack: only T=int, pack contributes 0.
+        y = get_cursor(tu, "y")
+        self.assertIsNotNone(y)
+        y_type = y.type.get_declaration()
+        self.assertEqual(y_type.get_num_template_arguments(), 1)
+
+    def test_get_num_template_arguments_method(self):
+        source = """
+            struct S {
+                template<typename U> void method(U) {}
+            };
+            void use() { S().method(42); }
+        """
+        tu = get_tu(source, lang="cpp")
+        methods = get_cursors(tu, "method")
+        call_expr = methods[1]
+        self.assertEqual(call_expr.kind, CursorKind.CALL_EXPR)
+        method_spec = call_expr.referenced
+        self.assertIsNotNone(method_spec)
+        self.assertEqual(method_spec.kind, CursorKind.CXX_METHOD)
+        self.assertEqual(method_spec.get_num_template_arguments(), 1)
+        self.assertEqual(method_spec.get_template_argument_type(0).kind, TypeKind.INT)
+
     def test_referenced(self):
         tu = get_tu("void foo(); void bar() { foo(); }")
         foo = get_cursor(tu, "foo")
