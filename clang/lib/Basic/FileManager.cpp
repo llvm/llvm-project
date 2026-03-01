@@ -353,9 +353,13 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
 
   FileEntryRef ReturnedRef(*NamedFileEnt);
   if (ReusingEntry &&
-      llvm::sys::toTimeT(Status.getLastModificationTime()) == UFE->ModTime) {
-    // Already have an entry with this inode and the modtime is unchanged;
-    // return it without opening the file.
+      (!needsRereading ||
+       llvm::sys::toTimeT(Status.getLastModificationTime()) == UFE->ModTime)) {
+    // Already have an entry with this inode.  Take the early return when:
+    // - no re-read was requested (covers alias paths and virtual files whose
+    //   modtime may differ from the stat cache), or
+    // - a re-read was requested but the file's modtime is unchanged, meaning
+    //   the on-disk content is the same and re-populating would be wasteful.
     return ReturnedRef;
   }
 
