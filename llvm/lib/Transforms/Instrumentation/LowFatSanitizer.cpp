@@ -75,11 +75,12 @@ static const uint64_t NumSizeClasses = 27;
 
 FunctionCallee LowFatSanitizer::getReportOobFn() {
   if (!ReportOobFn) {
-    // void __lf_report_oob(uptr ptr, uptr base, uptr size)
+    // void __lf_report_oob(uptr ptr, uptr base, uptr size, i8 is_write)
     Type *VoidTy = Type::getVoidTy(M.getContext());
+    Type *I8Ty = Type::getInt8Ty(M.getContext());
     ReportOobFn = M.getOrInsertFunction(
         "__lf_report_oob",
-        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, IntptrTy}, false));
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, IntptrTy, I8Ty}, false));
     if (auto *F = dyn_cast<Function>(ReportOobFn.getCallee()))
       F->addFnAttr(Attribute::NoReturn);
   }
@@ -88,11 +89,12 @@ FunctionCallee LowFatSanitizer::getReportOobFn() {
 
 FunctionCallee LowFatSanitizer::getWarnOobFn() {
   if (!WarnOobFn) {
-    // void __lf_warn_oob(uptr ptr, uptr base, uptr size)
+    // void __lf_warn_oob(uptr ptr, uptr base, uptr size, i8 is_write)
     Type *VoidTy = Type::getVoidTy(M.getContext());
+    Type *I8Ty = Type::getInt8Ty(M.getContext());
     WarnOobFn = M.getOrInsertFunction(
         "__lf_warn_oob",
-        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, IntptrTy}, false));
+        FunctionType::get(VoidTy, {IntptrTy, IntptrTy, IntptrTy, I8Ty}, false));
     if (auto *F = dyn_cast<Function>(WarnOobFn.getCallee()))
       F->addFnAttr(Attribute::NoUnwind);
   }
@@ -153,12 +155,18 @@ bool LowFatSanitizer::instrumentMemoryAccess(Instruction *I, Value *Ptr,
   Instruction *OobTerm = SplitBlockAndInsertIfThen(IsOOB, ThenTerm, false);
   IRBuilder<> OobIRB(OobTerm);
   
-  // 5. Report OOB (slow path)
+  // 5. Report OOB (slow path) — pass is_write so the runtime can print
+  // "read" or "write" in the diagnostic.
   FunctionCallee OobFn = Options.Recover ? getWarnOobFn() : getReportOobFn();
-  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize});
+  Type *I8Ty = Type::getInt8Ty(M.getContext());
+  bool IsWrite = isa<StoreInst>(I) || isa<AtomicRMWInst>(I) ||
+                 isa<AtomicCmpXchgInst>(I);
+  Value *IsWriteVal = ConstantInt::get(I8Ty, IsWrite ? 1 : 0);
+  OobIRB.CreateCall(OobFn, {PtrInt, Base, AllocSize, IsWriteVal});
 
   LLVM_DEBUG(dbgs() << "[LowFat] Instrumented (inline, "
                     << (Options.Recover ? "recover" : "fatal")
+                    << ", " << (IsWrite ? "write" : "read")
                     << "): " << *I << "\n");
   return true;
 }

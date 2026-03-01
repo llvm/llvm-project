@@ -144,20 +144,30 @@ void Deallocate(void *ptr) {
   free_lists[region] = block;
 }
 
-static void PrintOobHeader(const char *level, uptr ptr, uptr base, uptr bound) {
-  Printf("%s: LowFat: out-of-bounds access detected\n", level);
-  Printf("  pointer: 0x%zx\n", ptr);
-  Printf("  base:    0x%zx\n", base);
-  Printf("  bound:   %zu bytes\n", bound);
+static void PrintOobHeader(const char *level, uptr ptr, uptr base, uptr bound,
+                           int is_write) {
+  // Compute the signed overflow: how many bytes past the end of the allocation
+  // the access reached. 0 means exactly at the boundary.
+  sptr overflow = (sptr)(ptr) - (sptr)(base + bound);
+  const char *op = is_write ? "write" : "read";
+
+  Printf("LOWFAT %s: out-of-bounds error detected!\n", level);
+  Printf("          operation = %s\n", op);
+  Printf("          pointer   = 0x%zx (heap)\n", ptr);
+  Printf("          base      = 0x%zx\n", base);
+  Printf("          size      = %zu\n", bound);
+  const char *sign = (overflow >= 0) ? "+" : "";
+  Printf("          overflow  = %s%zd\n", sign, (long)overflow);
+  Printf("\n");
 }
 
-static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound) {
-  PrintOobHeader("ERROR", ptr, base, bound);
+static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound, int is_write) {
+  PrintOobHeader("ERROR", ptr, base, bound, is_write);
   Die();
 }
 
-static void PrintWarning(uptr ptr, uptr base, uptr bound) {
-  PrintOobHeader("WARNING", ptr, base, bound);
+static void PrintWarning(uptr ptr, uptr base, uptr bound, int is_write) {
+  PrintOobHeader("WARNING", ptr, base, bound, is_write);
 }
 
 }  // namespace __lowfat
@@ -188,13 +198,13 @@ void __lf_init() {
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __lf_report_oob(uptr ptr, uptr base, uptr bound) {
-  __lowfat::PrintErrorAndDie(ptr, base, bound);
+void __lf_report_oob(uptr ptr, uptr base, uptr bound, int is_write) {
+  __lowfat::PrintErrorAndDie(ptr, base, bound, is_write);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
-void __lf_warn_oob(uptr ptr, uptr base, uptr bound) {
-  __lowfat::PrintWarning(ptr, base, bound);
+void __lf_warn_oob(uptr ptr, uptr base, uptr bound, int is_write) {
+  __lowfat::PrintWarning(ptr, base, bound, is_write);
 }
 
 SANITIZER_INTERFACE_ATTRIBUTE
