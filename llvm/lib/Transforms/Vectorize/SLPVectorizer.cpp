@@ -11537,6 +11537,9 @@ class InstructionsCompatibilityAnalysis {
     const bool IsMainCommutative = ::isCommutative(MainOp);
     SmallVector<BoUpSLP::ValueList> Ops;
     buildOriginalOperands(S, SMain, Ops);
+    // Support only binary operations for now.
+    if (Ops.size() != 2)
+      return false;
     // Try to find better candidate for S main instruction, which operands have
     // better matching.
     auto CheckOperands = [](Value *Op, Value *SMainOp) {
@@ -11562,9 +11565,12 @@ class InstructionsCompatibilityAnalysis {
       SmallVector<BoUpSLP::ValueList> VOps;
       buildOriginalOperands(S, I, VOps);
       Operands.insert(I->op_begin(), I->op_end());
-      if (any_of(enumerate(VOps), [&](const auto &P) {
-            return CheckOperands(P.value()[0], Ops[P.index()][0]);
-          })) {
+      assert(VOps.size() == 2 && Ops.size() == 2 &&
+             "Expected binary operations only.");
+      if (CheckOperands(VOps[0][0], Ops[0][0]) ||
+          CheckOperands(VOps[1][0], Ops[1][0]) ||
+          (IsCommutative && (CheckOperands(VOps[0][0], Ops[1][0]) ||
+                             CheckOperands(VOps[1][0], Ops[0][0])))) {
         SMain = I;
         Ops.swap(VOps);
         break;
@@ -23685,13 +23691,13 @@ void BoUpSLP::scheduleBlock(const BoUpSLP &R, BlockScheduling *BS) {
               doesNotNeedToBeScheduled(I)) &&
              "scheduler and vectorizer bundle mismatch");
       SD->setSchedulingPriority(Idx++);
-      if (!SD->hasValidDependencies() &&
-          (!CopyableData.empty() ||
-           any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
-             assert(TE->isGather() && "expected gather node");
-             return TE->hasState() && TE->hasCopyableElements() &&
-                    TE->isCopyableElement(I);
-           }))) {
+      if (!CopyableData.empty() ||
+          any_of(R.ValueToGatherNodes.lookup(I), [&](const TreeEntry *TE) {
+            assert(TE->isGather() && "expected gather node");
+            return TE->hasState() && TE->hasCopyableElements() &&
+                   TE->isCopyableElement(I);
+          })) {
+        SD->clearDirectDependencies();
         // Need to calculate deps for these nodes to correctly handle copyable
         // dependencies, even if they were cancelled.
         // If copyables bundle was cancelled, the deps are cleared and need to

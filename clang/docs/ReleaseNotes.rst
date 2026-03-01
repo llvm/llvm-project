@@ -155,6 +155,9 @@ Non-comprehensive list of changes in this release
   extends bit-reversal support to all standard integers type, including
   ``_BitInt``
 
+- Deprecated float types support from ``__builtin_elementwise_max`` and
+  ``__builtin_elementwise_min``.
+
 New Compiler Flags
 ------------------
 - New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
