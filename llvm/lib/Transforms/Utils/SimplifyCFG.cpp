@@ -1904,27 +1904,24 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     // so does not add any new instructions.
 
     // Check if sizes and terminators of all successors match.
+    unsigned Size0 = UniqueSuccessors[0]->size();
+    Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
     bool AllSame =
-        none_of(UniqueSuccessors, [&UniqueSuccessors](BasicBlock *Succ) {
-          Instruction *Term0 = UniqueSuccessors[0]->getTerminator();
-          Instruction *Term = Succ->getTerminator();
-          return !Term->isSameOperationAs(Term0) ||
-                 !equal(Term->operands(), Term0->operands()) ||
-                 UniqueSuccessors[0]->size() != Succ->size();
+        all_of(drop_begin(UniqueSuccessors), [Term0, Size0](BasicBlock *Succ) {
+          return Succ->getTerminator()->isIdenticalTo(Term0) &&
+                 Succ->size() == Size0;
         });
     if (!AllSame)
       return false;
-    if (AllSame) {
-      LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
-      while (LRI.isValid()) {
-        Instruction *I0 = (*LRI)[0];
-        if (any_of(*LRI, [I0](Instruction *I) {
-              return !areIdenticalUpToCommutativity(I0, I);
-            })) {
-          return false;
-        }
-        --LRI;
+    LockstepReverseIterator<true> LRI(UniqueSuccessors.getArrayRef());
+    while (LRI.isValid()) {
+      Instruction *I0 = (*LRI)[0];
+      if (any_of(*LRI, [I0](Instruction *I) {
+            return !areIdenticalUpToCommutativity(I0, I);
+          })) {
+        return false;
       }
+      --LRI;
     }
     // Now we know that all instructions in all successors can be hoisted. Let
     // the loop below handle the hoisting.
@@ -3608,6 +3605,8 @@ foldCondBranchOnValueKnownInPredecessorImpl(BranchInst *BI, DomTreeUpdater *DTU,
     // Split the predecessors we are threading into a new edge block. We'll
     // clone the instructions into this block, and then redirect it to RealDest.
     BasicBlock *EdgeBB = SplitBlockPredecessors(BB, PredBBs, ".critedge", DTU);
+    if (!EdgeBB)
+      continue;
 
     // TODO: These just exist to reduce test diff, we can drop them if we like.
     EdgeBB->setName(RealDest->getName() + ".critedge");
@@ -6320,9 +6319,12 @@ static bool validLookupTableConstant(Constant *C, const TargetTransformInfo &TTI
   if (C->isDLLImportDependent())
     return false;
 
-  if (!isa<ConstantFP>(C) && !isa<ConstantInt>(C) &&
-      !isa<ConstantPointerNull>(C) && !isa<GlobalValue>(C) &&
-      !isa<UndefValue>(C) && !isa<ConstantExpr>(C))
+  if (!isa<ConstantDataVector, ConstantExpr, ConstantFP, ConstantInt,
+           ConstantPointerNull, GlobalValue, UndefValue>(C))
+    return false;
+
+  // Globals cannot contain scalable types.
+  if (C->getType()->isScalableTy())
     return false;
 
   if (ConstantExpr *CE = dyn_cast<ConstantExpr>(C)) {
@@ -6380,8 +6382,8 @@ constantFold(Instruction *I, const DataLayout &DL,
 
 /// Try to determine the resulting constant values in phi nodes
 /// at the common destination basic block, *CommonDest, for one of the case
-/// destionations CaseDest corresponding to value CaseVal (0 for the default
-/// case), of a switch instruction SI.
+/// destinations CaseDest corresponding to value CaseVal (nullptr for the
+/// default case), of a switch instruction SI.
 static bool
 getCaseResults(SwitchInst *SI, ConstantInt *CaseVal, BasicBlock *CaseDest,
                BasicBlock **CommonDest,
@@ -7664,7 +7666,7 @@ static bool reduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
   auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
   Builder.SetInsertPoint(SI);
   Value *Sub =
-      Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+      Builder.CreateSub(SI->getCondition(), ConstantInt::getSigned(Ty, Base));
   Value *Rot = Builder.CreateIntrinsic(
       Ty, Intrinsic::fshl,
       {Sub, Sub, ConstantInt::get(Ty, Ty->getBitWidth() - Shift)});
@@ -7725,7 +7727,7 @@ static bool simplifySwitchWhenUMin(SwitchInst *SI, DomTreeUpdater *DTU) {
     BasicBlock *DeadCaseBB = I->getCaseSuccessor();
     DeadCaseBB->removePredecessor(BB);
     Updates.push_back({DominatorTree::Delete, BB, DeadCaseBB});
-    I = SIW->removeCase(I);
+    I = SIW.removeCase(I);
     E = SIW->case_end();
   }
 
@@ -7820,7 +7822,7 @@ static bool simplifySwitchOfPowersOfTwo(SwitchInst *SI, IRBuilder<> &Builder,
     auto HasWeights =
         !ProfcheckDisableMetadataFixes && extractBranchWeights(*SI, Weights);
     auto *BI = BranchInst::Create(SplitBB, DefaultCaseBB, IsPow2, It);
-    if (HasWeights && any_of(Weights, [](const auto &V) { return V != 0; })) {
+    if (HasWeights && any_of(Weights, not_equal_to(0))) {
       // IsPow2 covers a subset of the cases in which we'd go to the default
       // label. The other is those powers of 2 that don't appear in the case
       // statement. We don't know the distribution of the values coming in, so

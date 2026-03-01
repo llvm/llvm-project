@@ -239,13 +239,19 @@ static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = std::string(File);
   CurrentOptions = getOptionsForFile(CurrentFile);
-  CheckFilter = std::make_unique<CachedGlobList>(*getOptions().Checks);
-  WarningAsErrorFilter =
-      std::make_unique<CachedGlobList>(*getOptions().WarningsAsErrors);
-  if (!parseFileExtensions(*getOptions().HeaderFileExtensions,
+  CheckFilter = std::make_unique<CachedGlobList>(
+      StringRef(getOptions().Checks.value_or("")));
+  WarningAsErrorFilter = std::make_unique<CachedGlobList>(
+      StringRef(getOptions().WarningsAsErrors.value_or("")));
+  static const std::vector<std::string> EmptyFileExtensions;
+  if (!parseFileExtensions(getOptions().HeaderFileExtensions
+                               ? *getOptions().HeaderFileExtensions
+                               : EmptyFileExtensions,
                            HeaderFileExtensions))
     this->configurationDiag("Invalid header file extensions");
-  if (!parseFileExtensions(*getOptions().ImplementationFileExtensions,
+  if (!parseFileExtensions(getOptions().ImplementationFileExtensions
+                               ? *getOptions().ImplementationFileExtensions
+                               : EmptyFileExtensions,
                            ImplementationFileExtensions))
     this->configurationDiag("Invalid implementation file extensions");
 }
@@ -569,7 +575,7 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
     return;
   }
 
-  if (!*Context.getOptions().SystemHeaders &&
+  if (!Context.getOptions().SystemHeaders.value_or(false) &&
       (Sources.isInSystemHeader(Location) || Sources.isInSystemMacro(Location)))
     return;
 
@@ -600,15 +606,15 @@ void ClangTidyDiagnosticConsumer::checkFilters(SourceLocation Location,
 
 llvm::Regex *ClangTidyDiagnosticConsumer::getHeaderFilter() {
   if (!HeaderFilter)
-    HeaderFilter =
-        std::make_unique<llvm::Regex>(*Context.getOptions().HeaderFilterRegex);
+    HeaderFilter = std::make_unique<llvm::Regex>(
+        Context.getOptions().HeaderFilterRegex.value_or(""));
   return HeaderFilter.get();
 }
 
 llvm::Regex *ClangTidyDiagnosticConsumer::getExcludeHeaderFilter() {
   if (!ExcludeHeaderFilter)
     ExcludeHeaderFilter = std::make_unique<llvm::Regex>(
-        *Context.getOptions().ExcludeHeaderFilterRegex);
+        Context.getOptions().ExcludeHeaderFilterRegex.value_or(""));
   return ExcludeHeaderFilter.get();
 }
 
@@ -659,13 +665,13 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
       //   disallowing the first one.
       switch (Type) {
       case ET_Begin:
-        Priority = std::make_tuple(Begin, Type, -End, -ErrorSize, ErrorId);
+        Priority = {Begin, Type, -End, -ErrorSize, ErrorId};
         break;
       case ET_Insert:
-        Priority = std::make_tuple(Begin, Type, -End, ErrorSize, ErrorId);
+        Priority = {Begin, Type, -End, ErrorSize, ErrorId};
         break;
       case ET_End:
-        Priority = std::make_tuple(End, Type, -Begin, ErrorSize, ErrorId);
+        Priority = {End, Type, -Begin, ErrorSize, ErrorId};
         break;
       }
     }
@@ -683,24 +689,20 @@ void ClangTidyDiagnosticConsumer::removeIncompatibleErrors() {
     std::tuple<unsigned, EventType, int, int, unsigned> Priority;
   };
 
-  removeDuplicatedDiagnosticsOfAliasCheckers();
-
   // Compute error sizes.
   std::vector<int> Sizes;
   std::vector<
       std::pair<ClangTidyError *, llvm::StringMap<tooling::Replacements> *>>
       ErrorFixes;
-  for (auto &Error : Errors) {
+  for (auto &Error : Errors)
     if (const auto *Fix = getFixIt(Error, GetFixesFromNotes))
       ErrorFixes.emplace_back(
           &Error, const_cast<llvm::StringMap<tooling::Replacements> *>(Fix));
-  }
   for (const auto &ErrorAndFix : ErrorFixes) {
     int Size = 0;
-    for (const auto &FileAndReplaces : *ErrorAndFix.second) {
+    for (const auto &FileAndReplaces : *ErrorAndFix.second)
       for (const auto &Replace : FileAndReplaces.second)
         Size += Replace.getLength();
-    }
     Sizes.push_back(Size);
   }
 
@@ -762,9 +764,12 @@ struct LessClangTidyError {
     const tooling::DiagnosticMessage &M1 = LHS.Message;
     const tooling::DiagnosticMessage &M2 = RHS.Message;
 
-    return std::tie(M1.FilePath, M1.FileOffset, LHS.DiagnosticName,
-                    M1.Message) <
-           std::tie(M2.FilePath, M2.FileOffset, RHS.DiagnosticName, M2.Message);
+    // Having DiagnosticName (i.e. the check name) last means sorting
+    // using this predicate puts duplicate diagnostics into consecutive runs, a
+    // property which removeDuplicatedDiagnosticsOfAliasCheckers() relies on.
+    return std::tie(M1.FilePath, M1.FileOffset, M1.Message,
+                    LHS.DiagnosticName) <
+           std::tie(M2.FilePath, M2.FileOffset, M2.Message, RHS.DiagnosticName);
   }
 };
 struct EqualClangTidyError {
@@ -780,43 +785,38 @@ std::vector<ClangTidyError> ClangTidyDiagnosticConsumer::take() {
 
   llvm::stable_sort(Errors, LessClangTidyError());
   Errors.erase(llvm::unique(Errors, EqualClangTidyError()), Errors.end());
-  if (RemoveIncompatibleErrors)
+  if (RemoveIncompatibleErrors) {
+    removeDuplicatedDiagnosticsOfAliasCheckers();
     removeIncompatibleErrors();
+  }
   return std::move(Errors);
 }
 
-namespace {
-struct LessClangTidyErrorWithoutDiagnosticName {
-  bool operator()(const ClangTidyError *LHS, const ClangTidyError *RHS) const {
-    const tooling::DiagnosticMessage &M1 = LHS->Message;
-    const tooling::DiagnosticMessage &M2 = RHS->Message;
-
-    return std::tie(M1.FilePath, M1.FileOffset, M1.Message) <
-           std::tie(M2.FilePath, M2.FileOffset, M2.Message);
-  }
-};
-} // end anonymous namespace
-
 void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
-  using UniqueErrorSet =
-      std::set<ClangTidyError *, LessClangTidyErrorWithoutDiagnosticName>;
-  UniqueErrorSet UniqueErrors;
+  if (Errors.size() <= 1)
+    return;
 
-  auto IT = Errors.begin();
-  while (IT != Errors.end()) {
-    ClangTidyError &Error = *IT;
-    const std::pair<UniqueErrorSet::iterator, bool> Inserted =
-        UniqueErrors.insert(&Error);
+  static constexpr auto AreDuplicates = [](const ClangTidyError &E1,
+                                           const ClangTidyError &E2) {
+    const tooling::DiagnosticMessage &M1 = E1.Message;
+    const tooling::DiagnosticMessage &M2 = E2.Message;
+    return std::tie(M1.FilePath, M1.FileOffset, M1.Message) ==
+           std::tie(M2.FilePath, M2.FileOffset, M2.Message);
+  };
 
+  auto LastUniqueErrorIt = Errors.begin();
+  for (ClangTidyError &Error : llvm::drop_begin(Errors, 1)) {
+    ClangTidyError &ExistingError = *LastUniqueErrorIt;
     // Unique error, we keep it and move along.
-    if (Inserted.second) {
-      ++IT;
+    if (!AreDuplicates(Error, ExistingError)) {
+      ++LastUniqueErrorIt;
+      if (&*LastUniqueErrorIt != &Error) // Avoid self-moves.
+        *LastUniqueErrorIt = std::move(Error);
     } else {
-      ClangTidyError &ExistingError = **Inserted.first;
       const llvm::StringMap<tooling::Replacements> &CandidateFix =
           Error.Message.Fix;
       const llvm::StringMap<tooling::Replacements> &ExistingFix =
-          (*Inserted.first)->Message.Fix;
+          ExistingError.Message.Fix;
 
       if (CandidateFix != ExistingFix) {
         // In case of a conflict, don't suggest any fix-it.
@@ -835,7 +835,7 @@ void ClangTidyDiagnosticConsumer::removeDuplicatedDiagnosticsOfAliasCheckers() {
 
       // Since it is the same error, we should take it as alias and remove it.
       ExistingError.EnabledDiagnosticAliases.emplace_back(Error.DiagnosticName);
-      IT = Errors.erase(IT);
     }
   }
+  Errors.erase(std::next(LastUniqueErrorIt), Errors.end());
 }

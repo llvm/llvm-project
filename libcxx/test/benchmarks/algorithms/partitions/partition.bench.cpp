@@ -71,11 +71,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::partition(vector<int>) (dense)", std_partition);
     bm.operator()<std::deque<int>>("std::partition(deque<int>) (dense)", std_partition);
     bm.operator()<std::list<int>>("std::partition(list<int>) (dense)", std_partition);
-
-    // ranges::partition
-    bm.operator()<std::vector<int>>("rng::partition(vector<int>) (dense)", std::ranges::partition);
-    bm.operator()<std::deque<int>>("rng::partition(deque<int>) (dense)", std::ranges::partition);
-    bm.operator()<std::list<int>>("rng::partition(list<int>) (dense)", std::ranges::partition);
   }
 
   // Benchmark {std,ranges}::partition on a mostly partitioned sequence, i.e. only 10% of the elements
@@ -119,11 +114,6 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::partition(vector<int>) (sparse)", std_partition);
     bm.operator()<std::deque<int>>("std::partition(deque<int>) (sparse)", std_partition);
     bm.operator()<std::list<int>>("std::partition(list<int>) (sparse)", std_partition);
-
-    // ranges::partition
-    bm.operator()<std::vector<int>>("rng::partition(vector<int>) (sparse)", std::ranges::partition);
-    bm.operator()<std::deque<int>>("rng::partition(deque<int>) (sparse)", std::ranges::partition);
-    bm.operator()<std::list<int>>("rng::partition(list<int>) (sparse)", std::ranges::partition);
   }
 
   benchmark::Initialize(&argc, argv);

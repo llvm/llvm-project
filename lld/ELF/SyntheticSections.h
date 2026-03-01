@@ -53,7 +53,7 @@ public:
   EhFrameSection(Ctx &);
   void writeTo(uint8_t *buf) override;
   void finalizeContents() override;
-  bool isNeeded() const override { return !sections.empty(); }
+  bool isNeeded() const override { return isLive() && !sections.empty(); }
   size_t getSize() const override { return size; }
 
   static bool classof(const SectionBase *d) {
@@ -64,8 +64,8 @@ public:
   size_t numFdes = 0;
 
   struct FdeData {
-    uint32_t pcRel;
-    uint32_t fdeVARel;
+    int64_t pcRel;
+    int64_t fdeVARel;
   };
 
   ArrayRef<CieRecord *> getCieRecords() const { return cieRecords; }
@@ -86,8 +86,6 @@ private:
   CieRecord *addCie(EhSectionPiece &piece, ArrayRef<Relocation> rels);
   Defined *isFdeLive(EhSectionPiece &piece, ArrayRef<Relocation> rels);
 
-  uint64_t getFdePc(uint8_t *buf, size_t off, uint8_t enc) const;
-
   SmallVector<CieRecord *, 0> cieRecords;
 
   // CIE records are uniquified by their contents and personality functions.
@@ -101,8 +99,16 @@ class EhFrameHeader final : public SyntheticSection {
 public:
   EhFrameHeader(Ctx &);
   void writeTo(uint8_t *buf) override;
-  size_t getSize() const override;
+  size_t getSize() const override { return size; }
   bool isNeeded() const override;
+  void finalizeContents() override;
+  bool updateAllocSize(Ctx &) override;
+
+  // Cached FDE data computed by updateAllocSize, used by
+  // EhFrameSection::writeTo.
+  SmallVector<EhFrameSection::FdeData, 0> fdes;
+  bool large = false; // Whether to use sdata8 encoding.
+  size_t size = 0;
 };
 
 class GotSection final : public SyntheticSection {
@@ -113,7 +119,7 @@ public:
   bool isNeeded() const override;
   void writeTo(uint8_t *buf) override;
 
-  void addConstant(const Relocation &r);
+  void addConstant(const Relocation &r) { addReloc(r); }
   void addEntry(const Symbol &sym);
   void addAuthEntry(const Symbol &sym);
   bool addTlsDescEntry(const Symbol &sym);
@@ -204,6 +210,7 @@ public:
   // primary and optional multiple secondary GOTs.
   void build();
 
+  void addConstant(const Relocation &r);
   void addEntry(InputFile &file, Symbol &sym, int64_t addend, RelExpr expr);
   void addDynTlsEntry(InputFile &file, Symbol &sym);
   void addTlsIndex(InputFile &file);
@@ -528,16 +535,21 @@ public:
     return !relocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
-  size_t getSize() const override { return relocs.size() * this->entsize; }
+  size_t getSize() const override {
+    size_t count = relocs.size();
+    for (const auto &v : relocsVec)
+      count += v.size();
+    return count * this->entsize;
+  }
   size_t getRelativeRelocCount() const { return numRelativeRelocs; }
-  void mergeRels();
-  void partitionRels();
   void finalizeContents() override;
 
   int32_t dynamicTag, sizeDynamicTag;
   SmallVector<DynamicReloc, 0> relocs;
 
 protected:
+  void mergeRels();
+  void partitionRels();
   void computeRels();
   // Used when parallel relocation scanning adds relocations. The elements
   // will be moved into relocs by mergeRel().
@@ -585,21 +597,45 @@ struct RelativeReloc {
     return inputSec->getVA(inputSec->relocs()[relocIdx].offset);
   }
 
-  const InputSectionBase *inputSec;
+  InputSectionBase *inputSec;
   size_t relocIdx;
 };
 
 class RelrBaseSection : public SyntheticSection {
 public:
   RelrBaseSection(Ctx &, unsigned concurrency, bool isAArch64Auth = false);
-  void mergeRels();
+  /// Add a dynamic relocation without writing an addend to the output section.
+  /// This overload can be used if the addends are written directly instead of
+  /// using relocations on the input section.
+  template <bool shard = false> void addReloc(const RelativeReloc &reloc) {
+    relocs.push_back(reloc);
+  }
+  /// Add a relative dynamic relocation that uses the target address of \p sym
+  /// (i.e. InputSection::getRelocTargetVA()) + \p addend as the addend.
+  template <bool shard = false>
+  void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
+                        Symbol &sym, int64_t addend, RelType addendRelType,
+                        RelExpr expr) {
+    assert(expr != R_ADDEND && "expected non-addend relocation expression");
+    isec.addReloc({expr, addendRelType, offsetInSec, addend, &sym});
+    addReloc<shard>({&isec, isec.relocs().size() - 1});
+  }
   bool isNeeded() const override {
     return !relocs.empty() ||
            llvm::any_of(relocsVec, [](auto &v) { return !v.empty(); });
   }
+  void finalizeContents() override;
   SmallVector<RelativeReloc, 0> relocs;
+
+protected:
+  void mergeRels();
   SmallVector<SmallVector<RelativeReloc, 0>, 0> relocsVec;
 };
+
+template <>
+inline void RelrBaseSection::addReloc<true>(const RelativeReloc &reloc) {
+  relocsVec[llvm::parallel::getThreadIndex()].push_back(reloc);
+}
 
 // RelrSection is used to encode offsets for relative relocations.
 // Proposal for adding SHT_RELR sections to generic-abi is here:
@@ -1028,7 +1064,7 @@ class VersionNeedSection final : public SyntheticSection {
 
   struct Vernaux {
     uint64_t hash;
-    uint32_t verneedIndex;
+    SharedFile::VerneedInfo verneedInfo;
     uint64_t nameStrTab;
   };
 

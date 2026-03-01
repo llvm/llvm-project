@@ -228,17 +228,20 @@ void fn2x2(float2x2) {}
 void fn2x2IO(inout float2x2) {}
 void fnI2x2IO(inout int2x2) {}
 
-void matOrVec(float4 F) {}
-void matOrVec(float2x2 F) {}
+void matOrVec(float4 F) {}  // expected-note {{candidate function}}
+void matOrVec(float2x2 F) {}  // expected-note {{candidate function}}
 
 void matOrVec2(float3 F) {} // expected-note{{candidate function}}
 void matOrVec2(float2x3 F) {} // expected-note{{candidate function}}
 
+void matOrVec3(float4x4 F) {}
+
 export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
   int2x2 i22 = f23;
-  // expected-warning@-1{{implicit conversion truncates matrix: 'float2x3' (aka 'matrix<float, 2, 3>') to 'int2x2' (aka 'matrix<int, 2, 2>')}}
+  // expected-warning@-1{{implicit conversion truncates matrix: 'float2x3' (aka 'matrix<float, 2, 3>') to 'matrix<int, 2, 2>'}}
   //CHECK: VarDecl {{.*}} i22 'int2x2':'matrix<int, 2, 2>' cinit
-  //CHECK-NEXT: ImplicitCastExpr {{.*}} 'int2x2':'matrix<int, 2, 2>' <FloatingToIntegral>
+  //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<int, 2, 2>' <HLSLMatrixTruncation>
+  //CHECK-NEXT: ImplicitCastExpr {{.*}} 'matrix<int, 2, 3>' <FloatingToIntegral>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>
 #ifdef ERROR
   int3x2 i32 = f23; // expected-error{{cannot initialize a variable of type 'matrix<int, 3, 2>' with an lvalue of type 'matrix<float, 2, 3>'}}
@@ -269,8 +272,12 @@ export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float4x4':'matrix<float, 4, 4>' <LValueToRValue>
 
 #ifdef ERROR
-  matOrVec(2.0); // TODO: See #168960 this should be ambiguous once we implement ICK_HLSL_Matrix_Splat.
+  matOrVec(2.0); // expected-error {{call to 'matOrVec' is ambiguous}}
 #endif
+  matOrVec3(3.14);
+  //CHECK:  ImplicitCastExpr {{.*}} 'float4x4':'matrix<float, 4, 4>' <HLSLAggregateSplatCast>
+  //CHECK-NEXT: FloatingLiteral {{.*}} <col:13> 'float' 3.140000e+00
+
   matOrVec2(f23);
   //CHECK: DeclRefExpr {{.*}} 'void (float2x3)' lvalue Function {{.*}} 'matOrVec2' 'void (float2x3)'
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>

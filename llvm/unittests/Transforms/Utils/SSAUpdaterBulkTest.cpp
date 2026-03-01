@@ -374,9 +374,6 @@ TEST(SSAUpdaterBulk, SimplifyPHIs) {
   EXPECT_EQ(Phi, Cmp->getOperand(1));
 }
 
-bool EliminateNewDuplicatePHINodes(BasicBlock *BB,
-                                   BasicBlock::phi_iterator FirstExistingPN);
-
 // Helper to run both versions on the same input.
 static void RunEliminateNewDuplicatePHINode(
     const char *AsmText,

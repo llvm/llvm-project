@@ -24,6 +24,7 @@ add_clang_library(clangInterpreter
   CodeCompletion.cpp
   IncrementalAction.cpp
   IncrementalExecutor.cpp
+  OrcIncrementalExecutor.cpp
   IncrementalParser.cpp
   Interpreter.cpp
   InterpreterValuePrinter.cpp

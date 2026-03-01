@@ -188,6 +188,7 @@ public:
   void handleSemanticAttr(Decl *D, const ParsedAttr &AL);
 
   void handleVkExtBuiltinInputAttr(Decl *D, const ParsedAttr &AL);
+  void handleVkPushConstantAttr(Decl *D, const ParsedAttr &AL);
 
   bool CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall);
   QualType ProcessResourceTypeAttributes(QualType Wrapped);
@@ -214,6 +215,10 @@ public:
   bool transformInitList(const InitializedEntity &Entity, InitListExpr *Init);
   bool handleInitialization(VarDecl *VDecl, Expr *&Init);
   void deduceAddressSpace(VarDecl *Decl);
+  QualType checkMatrixComponent(Sema &S, QualType baseType, ExprValueKind &VK,
+                                SourceLocation OpLoc,
+                                const IdentifierInfo *CompName,
+                                SourceLocation CompLoc);
 
 private:
   // HLSL resource type attributes need to be processed all at once.
@@ -236,6 +241,8 @@ private:
   uint32_t ImplicitBindingNextOrderID = 0;
 
   IdentifierInfo *RootSigOverrideIdent = nullptr;
+
+  bool HasDeclaredAPushConstant = false;
 
   // Information about the current subtree being flattened.
   struct SemanticInfo {

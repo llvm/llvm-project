@@ -13,7 +13,9 @@
 //     iter_swap(const counted_iterator& x, const counted_iterator<I2>& y)
 //       noexcept(noexcept(ranges::iter_swap(x.current, y.current)));
 
+#include <cassert>
 #include <iterator>
+#include <utility>
 
 #include "test_macros.h"
 #include "test_iterators.h"

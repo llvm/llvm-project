@@ -423,9 +423,8 @@ Parser::ParseUnevaluatedStringInAttribute(const IdentifierInfo &AttrName) {
 
 bool Parser::ParseAttributeArgumentList(
     const IdentifierInfo &AttrName, SmallVectorImpl<Expr *> &Exprs,
-    ParsedAttributeArgumentsProperties ArgsProperties) {
+    ParsedAttributeArgumentsProperties ArgsProperties, unsigned Arg) {
   bool SawError = false;
-  unsigned Arg = 0;
   while (true) {
     ExprResult Expr;
     if (ArgsProperties.isStringLiteralArg(Arg)) {
@@ -580,7 +579,8 @@ unsigned Parser::ParseAttributeArgsCommon(
       ParsedAttributeArgumentsProperties ArgProperties =
           attributeStringLiteralListArg(getTargetInfo().getTriple(), *AttrName,
                                         Form.getSyntax(), ScopeName);
-      if (ParseAttributeArgumentList(*AttrName, ParsedExprs, ArgProperties)) {
+      if (ParseAttributeArgumentList(*AttrName, ParsedExprs, ArgProperties,
+                                     ArgExprs.size())) {
         SkipUntil(tok::r_paren, StopAtSemi);
         return 0;
       }
@@ -680,10 +680,9 @@ void Parser::ParseGNUAttributeArgs(
     PrototypeScope.emplace(this, Scope::FunctionPrototypeScope |
                                      Scope::FunctionDeclarationScope |
                                      Scope::DeclScope);
-    for (unsigned i = 0; i != FTI.NumParams; ++i) {
-      ParmVarDecl *Param = cast<ParmVarDecl>(FTI.Params[i].Param);
-      Actions.ActOnReenterCXXMethodParameter(getCurScope(), Param);
-    }
+    for (unsigned i = 0; i != FTI.NumParams; ++i)
+      Actions.ActOnReenterCXXMethodParameter(
+          getCurScope(), dyn_cast_or_null<ParmVarDecl>(FTI.Params[i].Param));
   }
 
   ParseAttributeArgsCommon(AttrName, AttrNameLoc, Attrs, EndLoc, ScopeName,
@@ -4494,6 +4493,26 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+    case tok::kw___ob_wrap:
+      if (!getLangOpts().OverflowBehaviorTypes) {
+        Diag(Loc, diag::warn_overflow_behavior_keyword_disabled)
+            << tok::getKeywordSpelling(Tok.getKind());
+        break;
+      }
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::Wrap, Loc, PrevSpec,
+          DiagID);
+      break;
+    case tok::kw___ob_trap:
+      if (!getLangOpts().OverflowBehaviorTypes) {
+        Diag(Loc, diag::warn_overflow_behavior_keyword_disabled)
+            << tok::getKeywordSpelling(Tok.getKind());
+        break;
+      }
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::Trap, Loc, PrevSpec,
+          DiagID);
+      break;
 
     // C++ typename-specifier:
     case tok::kw_typename:
@@ -4533,6 +4552,10 @@ void Parser::ParseDeclarationSpecifiers(
 
     case tok::annot_pragma_ms_pointers_to_members:
       HandlePragmaMSPointersToMembers();
+      continue;
+
+    case tok::annot_pragma_export:
+      HandlePragmaExport();
       continue;
 
 #define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
@@ -5640,6 +5663,8 @@ bool Parser::isTypeSpecifierQualifier() {
   case tok::kw_const:
   case tok::kw_volatile:
   case tok::kw_restrict:
+  case tok::kw___ob_wrap:
+  case tok::kw___ob_trap:
   case tok::kw__Sat:
 
     // Debugger support.
@@ -5853,6 +5878,8 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_const:
   case tok::kw_volatile:
   case tok::kw_restrict:
+  case tok::kw___ob_wrap:
+  case tok::kw___ob_trap:
   case tok::kw__Sat:
 
     // function-specifier
@@ -6166,6 +6193,26 @@ void Parser::ParseTypeQualifierListOpt(
       isInvalid = DS.SetTypeQual(DeclSpec::TQ_restrict, Loc, PrevSpec, DiagID,
                                  getLangOpts());
       break;
+    case tok::kw___ob_wrap:
+      if (!getLangOpts().OverflowBehaviorTypes) {
+        Diag(Loc, diag::warn_overflow_behavior_keyword_disabled)
+            << tok::getKeywordSpelling(Tok.getKind());
+        break;
+      }
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::Wrap, Loc, PrevSpec,
+          DiagID);
+      break;
+    case tok::kw___ob_trap:
+      if (!getLangOpts().OverflowBehaviorTypes) {
+        Diag(Loc, diag::warn_overflow_behavior_keyword_disabled)
+            << tok::getKeywordSpelling(Tok.getKind());
+        break;
+      }
+      isInvalid = DS.SetOverflowBehavior(
+          OverflowBehaviorType::OverflowBehaviorKind::Trap, Loc, PrevSpec,
+          DiagID);
+      break;
     case tok::kw__Atomic:
       if (!AtomicOrPtrauthAllowed)
         goto DoneWithTypeQuals;
@@ -6464,7 +6511,8 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
       D.AddTypeInfo(DeclaratorChunk::getPointer(
                         DS.getTypeQualifiers(), Loc, DS.getConstSpecLoc(),
                         DS.getVolatileSpecLoc(), DS.getRestrictSpecLoc(),
-                        DS.getAtomicSpecLoc(), DS.getUnalignedSpecLoc()),
+                        DS.getAtomicSpecLoc(), DS.getUnalignedSpecLoc(),
+                        DS.getOverflowBehaviorLoc(), DS.isWrapSpecified()),
                     std::move(DS.getAttributes()), SourceLocation());
     else
       // Remember that we parsed a Block type, and remember the type-quals.

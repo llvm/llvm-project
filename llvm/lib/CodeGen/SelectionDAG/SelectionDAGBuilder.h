@@ -627,12 +627,14 @@ private:
   void visitPHI(const PHINode &I);
   void visitCall(const CallInst &I);
   bool visitMemCmpBCmpCall(const CallInst &I);
+  bool visitMemCCpyCall(const CallInst &I);
   bool visitMemPCpyCall(const CallInst &I);
   bool visitMemChrCall(const CallInst &I);
   bool visitStrCpyCall(const CallInst &I, bool isStpcpy);
   bool visitStrCmpCall(const CallInst &I);
   bool visitStrLenCall(const CallInst &I);
   bool visitStrNLenCall(const CallInst &I);
+  bool visitStrstrCall(const CallInst &I);
   bool visitUnaryFloatCall(const CallInst &I, unsigned Opcode);
   bool visitBinaryFloatCall(const CallInst &I, unsigned Opcode);
   void visitAtomicLoad(const LoadInst &I);

@@ -156,6 +156,12 @@ llvm.func @nvvm_special_regs() -> i32 {
   %76 = nvvm.read.ptx.sreg.tid.x range <i32, 0, 0> : i32
   // CHECK: %77 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
   %77 = nvvm.read.ptx.sreg.tid.x range <i32, 4294967295, 4294967295> : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.total_smem_size()
+  %78 = nvvm.read.ptx.sreg.total.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.dynamic_smem_size()
+  %79 = nvvm.read.ptx.sreg.dynamic.smem.size : i32
+  // CHECK: call i32 @llvm.nvvm.read.ptx.sreg.aggr_smem_size()
+  %80 = nvvm.read.ptx.sreg.aggr.smem.size : i32
   llvm.return %1 : i32
 }
 
@@ -898,17 +904,6 @@ llvm.func @nvvm_dot_accumulate_2way(%a: vector<2xi16>, %b: vector<4xi8>, %c: i32
   // CHECK: %[[b_cast:.*]] = bitcast <4 x i8> %{{.*}} to i32
   // CHECK: call i32 @llvm.nvvm.idp2a.s.s(i32 %[[a_cast]], i32 %[[b_cast]], i1 true, i32 %{{.*}})
   %7 = nvvm.dot.accumulate.2way %a <signed>, %b <signed>, %c {b_hi = true}: vector<2xi16>, vector<4xi8>
-  llvm.return
-}
-
-// -----
-
-// CHECK-LABEL: @nvvm_pmevent
-llvm.func @nvvm_pmevent() {
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 15000)
-  nvvm.pmevent mask = 15000
-  // CHECK: call void @llvm.nvvm.pm.event.mask(i16 4)
-  nvvm.pmevent mask = 4
   llvm.return
 }
 

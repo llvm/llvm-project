@@ -201,8 +201,8 @@ static const SCEV *addSCEVNoOverflow(const SCEV *A, const SCEV *B,
 
 /// Returns \p A * \p B, if it is guaranteed not to unsigned wrap. Otherwise
 /// return nullptr. \p A and \p B must have the same type.
-static const SCEV *mulSCEVOverflow(const SCEV *A, const SCEV *B,
-                                   ScalarEvolution &SE) {
+static const SCEV *mulSCEVNoOverflow(const SCEV *A, const SCEV *B,
+                                     ScalarEvolution &SE) {
   if (!SE.willNotOverflow(Instruction::Mul, /*IsSigned=*/false, A, B))
     return nullptr;
   return SE.getMulExpr(A, B);
@@ -275,7 +275,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   MaxBTC = SE.applyLoopGuards(MaxBTC, *LoopGuards);
 
   const SCEV *OffsetAtLastIter =
-      mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+      mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
   if (!OffsetAtLastIter) {
     // Re-try with constant max backedge-taken count if using the symbolic one
     // failed.
@@ -285,7 +285,7 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
     MaxBTC = SE.getNoopOrZeroExtend(
         MaxBTC, WiderTy);
     OffsetAtLastIter =
-        mulSCEVOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
+        mulSCEVNoOverflow(MaxBTC, SE.getAbsExpr(Step, /*IsNSW=*/false), SE);
     if (!OffsetAtLastIter)
       return false;
   }
@@ -363,7 +363,8 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
         ScEnd = SE->getAddExpr(
             SE->getNegativeSCEV(EltSizeSCEV),
             SE->getSCEV(ConstantExpr::getIntToPtr(
-                ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
+                ConstantInt::getAllOnesValue(EltSizeSCEV->getType()),
+                AR->getType())));
       }
     }
     const SCEV *Step = AR->getStepRecurrence(*SE);
@@ -475,16 +476,12 @@ bool RuntimePointerChecking::tryToCreateDiffCheck(
   if (Step->getAPInt().abs() != AllocSize)
     return false;
 
-  IntegerType *IntTy =
-      IntegerType::get(Src->PointerValue->getContext(),
-                       DL.getPointerSizeInBits(CGI.AddressSpace));
-
   // When counting down, the dependence distance needs to be swapped.
   if (Step->getValue()->isNegative())
     std::swap(SinkStart, SrcStart);
 
-  const SCEV *SinkStartInt = SE->getPtrToIntExpr(SinkStart, IntTy);
-  const SCEV *SrcStartInt = SE->getPtrToIntExpr(SrcStart, IntTy);
+  const SCEV *SinkStartInt = SE->getPtrToAddrExpr(SinkStart);
+  const SCEV *SrcStartInt = SE->getPtrToAddrExpr(SrcStart);
   if (isa<SCEVCouldNotCompute>(SinkStartInt) ||
       isa<SCEVCouldNotCompute>(SrcStartInt))
     return false;
@@ -1041,6 +1038,8 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE, const SCEVAddRecExpr *AR,
           if (getLoadStorePointerOperand(U) != GEP)
             return false;
           BasicBlock *UserBB = cast<Instruction>(U)->getParent();
+          if (!L->contains(UserBB))
+            return false;
           return !LoopAccessInfo::blockNeedsPredication(UserBB, L, &DT);
         }))
       return true;
@@ -2976,6 +2975,8 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE, Loop *L
   if (isa<SCEVUnknown>(V))
     return V;
 
+  // Look through multiplies that scale a stride by a constant.
+  match(V, m_scev_Mul(m_SCEVConstant(), m_SCEV(V)));
   if (auto *C = dyn_cast<SCEVIntegralCastExpr>(V))
     if (isa<SCEVUnknown>(C->getOperand()))
       return V;

@@ -767,7 +767,7 @@ public:
           m_cur_value.SetLine(line_num);
         }
         break;
-      case 'c':
+      case 'u':
         uint32_t column_num;
         if (option_arg.getAsInteger(0, column_num))
           error = Status::FromError(

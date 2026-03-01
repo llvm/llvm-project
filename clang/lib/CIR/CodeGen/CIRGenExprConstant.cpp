@@ -1458,8 +1458,7 @@ ConstantLValueEmitter::VisitObjCBoxedExpr(const ObjCBoxedExpr *e) {
 
 ConstantLValue
 ConstantLValueEmitter::VisitPredefinedExpr(const PredefinedExpr *e) {
-  cgm.errorNYI(e->getSourceRange(), "ConstantLValueEmitter: predefined expr");
-  return {};
+  return cgm.getAddrOfConstantStringFromLiteral(e->getFunctionName());
 }
 
 ConstantLValue
@@ -1486,9 +1485,11 @@ ConstantLValueEmitter::VisitCXXTypeidExpr(const CXXTypeidExpr *e) {
 
 ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *e) {
-  cgm.errorNYI(e->getSourceRange(),
-               "ConstantLValueEmitter: materialize temporary expr");
-  return {};
+  assert(e->getStorageDuration() == SD_Static);
+  const Expr *inner = e->getSubExpr()->skipRValueSubobjectAdjustments();
+  mlir::Operation *global = cgm.getAddrOfGlobalTemporary(e, inner);
+  return ConstantLValue(
+      cgm.getBuilder().getGlobalViewAttr(mlir::cast<cir::GlobalOp>(global)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1498,6 +1499,14 @@ ConstantLValue ConstantLValueEmitter::VisitMaterializeTemporaryExpr(
 mlir::Attribute ConstantEmitter::tryEmitForInitializer(const VarDecl &d) {
   initializeNonAbstract();
   return markIfFailed(tryEmitPrivateForVarInit(d));
+}
+
+mlir::Attribute ConstantEmitter::emitForInitializer(const APValue &value,
+                                                    QualType destType) {
+  initializeNonAbstract();
+  auto c = tryEmitPrivateForMemory(value, destType);
+  assert(c && "couldn't emit constant value non-abstractly?");
+  return c;
 }
 
 void ConstantEmitter::finalize(cir::GlobalOp gv) {
@@ -1670,6 +1679,12 @@ mlir::Attribute ConstantEmitter::tryEmitPrivateForVarInit(const VarDecl &d) {
     return tryEmitPrivateForMemory(*value, destType);
 
   return {};
+}
+
+mlir::Attribute ConstantEmitter::tryEmitAbstract(const Expr *e,
+                                                 QualType destType) {
+  AbstractStateRAII state{*this, true};
+  return tryEmitPrivate(e, destType);
 }
 
 mlir::Attribute ConstantEmitter::tryEmitConstantExpr(const ConstantExpr *ce) {
@@ -1876,8 +1891,29 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
         mlir::ArrayAttr::get(cgm.getBuilder().getContext(), elements));
   }
   case APValue::MemberPointer: {
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
-    return {};
+    assert(!cir::MissingFeatures::cxxABI());
+
+    const ValueDecl *memberDecl = value.getMemberPointerDecl();
+    if (value.isMemberPointerToDerivedMember()) {
+      cgm.errorNYI(
+          "ConstExprEmitter::tryEmitPrivate member pointer to derived member");
+      return {};
+    }
+
+    if (auto const *cxxDecl = dyn_cast<CXXMethodDecl>(memberDecl)) {
+      auto ty = mlir::cast<cir::MethodType>(cgm.convertType(destType));
+      if (cxxDecl->isVirtual())
+        return cgm.getCXXABI().buildVirtualMethodAttr(ty, cxxDecl);
+
+      cir::FuncOp methodFuncOp =
+          cgm.getAddrOfFunction(cxxDecl, ty.getMemberFuncTy());
+      return cgm.getBuilder().getMethodAttr(ty, methodFuncOp);
+    }
+
+    auto cirTy = mlir::cast<cir::DataMemberType>(cgm.convertType(destType));
+
+    const auto *fieldDecl = cast<FieldDecl>(memberDecl);
+    return builder.getDataMemberAttr(cirTy, fieldDecl->getFieldIndex());
   }
   case APValue::LValue:
     return ConstantLValueEmitter(*this, value, destType).tryEmit();

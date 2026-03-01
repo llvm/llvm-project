@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/integer/clc_upsample.h>
-#include <clc/opencl/integer/upsample.h>
 
 #define __CLC_UPSAMPLE_IMPL(BGENTYPE, GENTYPE, UGENTYPE)                       \
   _CLC_OVERLOAD _CLC_DEF BGENTYPE upsample(GENTYPE hi, UGENTYPE lo) {          \

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/atomic/clc_atomic_compare_exchange.h>
-#include <clc/opencl/atomic/atomic_cmpxchg.h>
 
 #define __CLC_IMPL(TYPE, AS)                                                   \
   _CLC_OVERLOAD _CLC_DEF TYPE atomic_cmpxchg(volatile AS TYPE *p, TYPE cmp,    \

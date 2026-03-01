@@ -732,6 +732,40 @@ LLVM_C_ABI LLVMAttributeRef LLVMCreateConstantRangeAttribute(
     const uint64_t LowerWords[], const uint64_t UpperWords[]);
 
 /**
+ * Represent different denormal handling kinds for use with
+ * LLVMCreateDenormalFPEnvAttribute.
+ */
+typedef enum {
+  LLVMDenormalModeKindIEEE = 0,
+  LLVMDenormalModeKindPreserveSign = 1,
+  LLVMDenormalModeKindPositiveZero = 2,
+  LLVMDenormalModeKindDynamic = 3
+} LLVMDenormalModeKind;
+
+/**
+ * Create a DenormalFPEnv attribute.
+ *
+ * \p DefaultModeOutput is the assumed denormal handling for the outputs of most
+ *    floating-point types.
+ *
+ * \p DefaultModeInput is the assumed denormal handling for the inputs of most
+ *    floating-point types.
+ *
+ * \p FloatModeOutput is the assumed denormal handling for the outputs of
+ *    float. This should always be the same as as DefaultModeOutput for most
+ *    targets.
+ *
+ * \p FloatModeInput is the assumed denormal handling for the inputs of
+ *    float. This should always be the same as as DefaultModeInput for most
+ *    targets.
+ *
+ */
+LLVM_C_ABI LLVMAttributeRef LLVMCreateDenormalFPEnvAttribute(
+    LLVMContextRef C, LLVMDenormalModeKind DefaultModeOutput,
+    LLVMDenormalModeKind DefaultModeInput, LLVMDenormalModeKind FloatModeOutput,
+    LLVMDenormalModeKind FloatModeInput);
+
+/**
  * Create a string attribute.
  */
 LLVM_C_ABI LLVMAttributeRef LLVMCreateStringAttribute(LLVMContextRef C,
@@ -3997,31 +4031,33 @@ LLVMGetPreviousDbgRecord(LLVMDbgRecordRef DbgRecord);
  *
  * @see llvm::DbgRecord::getDebugLoc()
  */
-LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef LLVMDbgRecordGetDebugLoc(LLVMDbgRecordRef Rec);
 
-LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMDbgRecordKind LLVMDbgRecordGetKind(LLVMDbgRecordRef Rec);
 
 /**
  * Get the value of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getValue()
  */
-LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
-                                           unsigned OpIdx);
+LLVM_C_ABI LLVMValueRef LLVMDbgVariableRecordGetValue(LLVMDbgRecordRef Rec,
+                                                      unsigned OpIdx);
 
 /**
  * Get the debug info variable of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getVariable()
  */
-LLVMMetadataRef LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetVariable(LLVMDbgRecordRef Rec);
 
 /**
  * Get the debug info expression of the DbgVariableRecord.
  *
  * @see llvm::DbgVariableRecord::getExpression()
  */
-LLVMMetadataRef LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
+LLVM_C_ABI LLVMMetadataRef
+LLVMDbgVariableRecordGetExpression(LLVMDbgRecordRef Rec);
 
 /**
  * @defgroup LLVMCCoreValueInstructionCall Call Sites and Invocations
@@ -4293,6 +4329,30 @@ LLVM_C_ABI void LLVMSetCondition(LLVMValueRef Branch, LLVMValueRef Cond);
  * @see llvm::SwitchInst::getDefaultDest()
  */
 LLVM_C_ABI LLVMBasicBlockRef LLVMGetSwitchDefaultDest(LLVMValueRef SwitchInstr);
+
+/**
+ * Obtain the case value for a successor of a switch instruction. i corresponds
+ * to the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::getCaseValue()
+ */
+LLVM_C_ABI LLVMValueRef LLVMGetSwitchCaseValue(LLVMValueRef SwitchInstr,
+                                               unsigned i);
+
+/**
+ * Set the case value for a successor of a switch instruction. i corresponds to
+ * the successor index. The first successor is the default destination, so i
+ * must be greater than zero.
+ *
+ * This only works on llvm::SwitchInst instructions.
+ *
+ * @see llvm::SwitchInst::CaseHandle::setValue()
+ */
+LLVM_C_ABI void LLVMSetSwitchCaseValue(LLVMValueRef SwitchInstr, unsigned i,
+                                       LLVMValueRef CaseValue);
 
 /**
  * @}

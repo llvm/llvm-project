@@ -54,11 +54,12 @@ static bool CheckArrayInitialized(InterpState &S, SourceLocation Loc,
   } else {
     // Primitive arrays.
     if (S.getContext().canClassify(ElemType)) {
-      if (BasePtr.allElementsInitialized())
+      if (BasePtr.allElementsInitialized()) {
         return true;
-
-      DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
-      return false;
+      } else {
+        DiagnoseUninitializedSubobject(S, Loc, BasePtr.getField());
+        return false;
+      }
     }
 
     for (size_t I = 0; I != NumElems; ++I) {
@@ -156,6 +157,15 @@ bool EvaluationResult::checkFullyInitialized(InterpState &S,
   return true;
 }
 
+static bool isOrHasPtr(const Descriptor *D) {
+  if ((D->isPrimitive() || D->isPrimitiveArray()) && D->getPrimType() == PT_Ptr)
+    return true;
+
+  if (D->ElemRecord)
+    return D->ElemRecord->hasPtrField();
+  return false;
+}
+
 static void collectBlocks(const Pointer &Ptr,
                           llvm::SetVector<const Block *> &Blocks) {
   auto isUsefulPtr = [](const Pointer &P) -> bool {
@@ -172,26 +182,29 @@ static void collectBlocks(const Pointer &Ptr,
   if (!Desc)
     return;
 
-  if (const Record *R = Desc->ElemRecord) {
+  if (const Record *R = Desc->ElemRecord; R && R->hasPtrField()) {
+
     for (const Record::Field &F : R->fields()) {
-      const Pointer &FieldPtr = Ptr.atField(F.Offset);
+      if (!isOrHasPtr(F.Desc))
+        continue;
+      Pointer FieldPtr = Ptr.atField(F.Offset);
       assert(FieldPtr.block() == Ptr.block());
       collectBlocks(FieldPtr, Blocks);
     }
   } else if (Desc->isPrimitive() && Desc->getPrimType() == PT_Ptr) {
-    const Pointer &Pointee = Ptr.deref<Pointer>();
+    Pointer Pointee = Ptr.deref<Pointer>();
     if (isUsefulPtr(Pointee) && !Blocks.contains(Pointee.block()))
       collectBlocks(Pointee, Blocks);
 
   } else if (Desc->isPrimitiveArray() && Desc->getPrimType() == PT_Ptr) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      const Pointer &ElemPointee = Ptr.elem<Pointer>(I);
+      Pointer ElemPointee = Ptr.elem<Pointer>(I);
       if (isUsefulPtr(ElemPointee) && !Blocks.contains(ElemPointee.block()))
         collectBlocks(ElemPointee, Blocks);
     }
-  } else if (Desc->isCompositeArray()) {
+  } else if (Desc->isCompositeArray() && isOrHasPtr(Desc->ElemDesc)) {
     for (unsigned I = 0; I != Desc->getNumElems(); ++I) {
-      const Pointer &ElemPtr = Ptr.atIndex(I).narrow();
+      Pointer ElemPtr = Ptr.atIndex(I).narrow();
       collectBlocks(ElemPtr, Blocks);
     }
   }

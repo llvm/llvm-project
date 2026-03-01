@@ -9,6 +9,7 @@
 #ifndef LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNINGTOOL_H
 
+#include "clang/DependencyScanning/DependencyScannerImpl.h"
 #include "clang/DependencyScanning/DependencyScanningService.h"
 #include "clang/DependencyScanning/DependencyScanningUtils.h"
 #include "clang/DependencyScanning/DependencyScanningWorker.h"
@@ -35,19 +36,18 @@ public:
   /// Construct a dependency scanning tool.
   ///
   /// @param Service  The parent service. Must outlive the tool.
-  /// @param FS The filesystem for the tool to use. Defaults to the physical FS.
-  DependencyScanningTool(dependencies::DependencyScanningService &Service,
-                         llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-                             llvm::vfs::createPhysicalFileSystem());
+  DependencyScanningTool(dependencies::DependencyScanningService &Service)
+      : Worker(Service) {}
 
   /// Print out the dependency information into a string using the dependency
   /// file format that is specified in the options (-MD is the default) and
   /// return it.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, dependency file contents otherwise.
-  llvm::Expected<std::string>
-  getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD);
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// dependency file contents otherwise.
+  std::optional<std::string>
+  getDependencyFile(ArrayRef<std::string> CommandLine, StringRef CWD,
+                    DiagnosticConsumer &DiagConsumer);
 
   /// Collect the module dependency in P1689 format for C++20 named modules.
   ///
@@ -58,19 +58,21 @@ public:
   /// \param MakeformatOutputPath The output parameter for the path to
   /// \param MakeformatOutput.
   ///
-  /// \returns A \c StringError with the diagnostic output if clang errors
-  /// occurred, P1689 dependency format rules otherwise.
-  llvm::Expected<P1689Rule>
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// P1689 dependency format rules otherwise.
+  std::optional<P1689Rule>
   getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
                                std::string &MakeformatOutput,
-                               std::string &MakeformatOutputPath);
-  llvm::Expected<P1689Rule>
-  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD) {
+                               std::string &MakeformatOutputPath,
+                               DiagnosticConsumer &DiagConsumer);
+  std::optional<P1689Rule>
+  getP1689ModuleDependencyFile(const CompileCommand &Command, StringRef CWD,
+                               DiagnosticConsumer &DiagConsumer) {
     std::string MakeformatOutput;
     std::string MakeformatOutputPath;
 
     return getP1689ModuleDependencyFile(Command, CWD, MakeformatOutput,
-                                        MakeformatOutputPath);
+                                        MakeformatOutputPath, DiagConsumer);
   }
 
   /// Given a Clang driver command-line for a translation unit, gather the
@@ -88,11 +90,12 @@ public:
   ///                 TUBuffer is nullopt, the input should be included in the
   ///                 Commandline already.
   ///
-  /// \returns a \c StringError with the diagnostic output if clang errors
-  /// occurred, \c TranslationUnitDeps otherwise.
-  llvm::Expected<dependencies::TranslationUnitDeps>
+  /// \returns std::nullopt if errors occurred (reported to the DiagConsumer),
+  /// translation unit dependencies otherwise.
+  std::optional<dependencies::TranslationUnitDeps>
   getTranslationUnitDependencies(
       ArrayRef<std::string> CommandLine, StringRef CWD,
+      DiagnosticConsumer &DiagConsumer,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput,
       std::optional<llvm::MemoryBufferRef> TUBuffer = std::nullopt);
@@ -119,9 +122,8 @@ public:
   /// @param CWD The current working directory used during the scan.
   /// @param CommandLine The commandline used for the scan.
   /// @return Error if the initializaiton fails.
-  llvm::Error
-  initializeCompilerInstanceWithContext(StringRef CWD,
-                                        ArrayRef<std::string> CommandLine);
+  llvm::Error initializeCompilerInstanceWithContextOrError(
+      StringRef CWD, ArrayRef<std::string> CommandLine);
 
   /// @brief Computes the dependeny for the module named ModuleName.
   /// @param ModuleName The name of the module for which this method computes
@@ -138,7 +140,7 @@ public:
   /// @return An instance of \c TranslationUnitDeps if the scan is successful.
   ///         Otherwise it returns an error.
   llvm::Expected<dependencies::TranslationUnitDeps>
-  computeDependenciesByNameWithContext(
+  computeDependenciesByNameWithContextOrError(
       StringRef ModuleName,
       const llvm::DenseSet<dependencies::ModuleID> &AlreadySeen,
       dependencies::LookupModuleOutputCallback LookupModuleOutput);
@@ -147,15 +149,48 @@ public:
   ///        diagnostics and deletes the compiler instance. Call this method
   ///        once all names for a same commandline are scanned.
   /// @return Error if an error occured during finalization.
-  llvm::Error finalizeCompilerInstanceWithContext();
+  llvm::Error finalizeCompilerInstanceWithContextOrError();
 
   llvm::vfs::FileSystem &getWorkerVFS() const { return Worker.getVFS(); }
+
+  /// @brief Initialize the worker's compiler instance from the commandline.
+  ///        The compiler instance only takes a `-cc1` job, so this method
+  ///        builds the `-cc1` job from the CommandLine input.
+  /// @param Worker The dependency scanning worker whose compiler instance
+  ///        with context is initialized.
+  /// @param CWD The current working directory.
+  /// @param CommandLine This command line may be a driver command or a cc1
+  ///        command.
+  /// @param DC A diagnostics consumer to report error if the initialization
+  ///        fails.
+  static bool initializeWorkerCIWithContextFromCommandline(
+      clang::dependencies::DependencyScanningWorker &Worker, StringRef CWD,
+      ArrayRef<std::string> CommandLine, DiagnosticConsumer &DC);
 
 private:
   dependencies::DependencyScanningWorker Worker;
   std::unique_ptr<dependencies::TextDiagnosticsPrinterWithOutput>
       DiagPrinterWithOS;
 };
+
+/// Run the dependency scanning worker for the given driver or frontend
+/// command-line, and report the discovered dependencies to the provided
+/// consumer.
+///
+/// OverlayFS should be based on the Worker's dependency scanning file-system
+/// and can be used to provide any input specified on the command-line as
+/// in-memory file. If no overlay file-system is provided, the Worker's
+/// dependency scanning file-system is used instead.
+///
+/// \returns false if any errors occurred (with diagnostics reported to
+/// \c DiagConsumer), true otherwise.
+bool computeDependencies(
+    dependencies::DependencyScanningWorker &Worker, StringRef WorkingDirectory,
+    ArrayRef<std::string> CommandLine,
+    dependencies::DependencyConsumer &Consumer,
+    dependencies::DependencyActionController &Controller,
+    DiagnosticConsumer &DiagConsumer,
+    llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem> OverlayFS = nullptr);
 
 } // end namespace tooling
 } // end namespace clang

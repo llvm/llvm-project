@@ -334,12 +334,16 @@ public:
       Opts["__opencl_c_read_write_images"] = true;
       Opts["cl_khr_3d_image_writes"] = true;
       Opts["__opencl_c_program_scope_global_variables"] = true;
+      Opts["__opencl_c_atomic_order_acq_rel"] = true;
       Opts["__opencl_c_atomic_order_seq_cst"] = true;
+      Opts["__opencl_c_atomic_scope_device"] = true;
       Opts["__opencl_c_atomic_scope_all_devices"] = true;
+      Opts["__opencl_c_work_group_collective_functions"] = true;
 
       if (hasFlatSupport()) {
         Opts["__opencl_c_generic_address_space"] = true;
         Opts["__opencl_c_device_enqueue"] = true;
+        Opts["__opencl_c_pipes"] = true;
       }
     }
   }
@@ -441,11 +445,13 @@ public:
   // address space has value 0 but in private and local address space has
   // value ~0.
   uint64_t getNullPointerValue(LangAS AS) const override {
-    // FIXME: Also should handle region.
-    return (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
-            AS == LangAS::sycl_local || AS == LangAS::sycl_private)
-               ? ~0
-               : 0;
+    // Check language-specific address spaces
+    if (AS == LangAS::opencl_local || AS == LangAS::opencl_private ||
+        AS == LangAS::sycl_local || AS == LangAS::sycl_private)
+      return ~0;
+    if (isTargetAddressSpace(AS))
+      return llvm::AMDGPU::getNullPointerValue(toTargetAddressSpace(AS));
+    return 0;
   }
 
   void setAuxTarget(const TargetInfo *Aux) override;

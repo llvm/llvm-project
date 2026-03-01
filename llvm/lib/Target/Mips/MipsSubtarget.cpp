@@ -27,6 +27,16 @@
 
 using namespace llvm;
 
+cl::opt<CompactBranchPolicy> MipsCompactBranchPolicy(
+    "mips-compact-branches", cl::Optional, cl::init(CB_Optimal),
+    cl::desc("MIPS Specific: Compact branch policy."),
+    cl::values(clEnumValN(CB_Never, "never",
+                          "Do not use compact branches if possible."),
+               clEnumValN(CB_Optimal, "optimal",
+                          "Use compact branches where appropriate (default)."),
+               clEnumValN(CB_Always, "always",
+                          "Always use compact branches if possible.")));
+
 #define DEBUG_TYPE "mips-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
@@ -76,14 +86,15 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
       IsSingleFloat(false), IsFPXX(false), NoABICalls(false), Abs2008(false),
       IsFP64bit(false), UseOddSPReg(true), IsNaN2008bit(false),
       IsGP64bit(false), HasVFPU(false), HasCnMips(false), HasCnMipsP(false),
-      HasMips3_32(false), HasMips3_32r2(false), HasMips4_32(false),
-      HasMips4_32r2(false), HasMips5_32r2(false), InMips16Mode(false),
-      InMips16HardFloat(Mips16HardFloat), InMicroMipsMode(false), HasDSP(false),
-      HasDSPR2(false), HasDSPR3(false),
+      IsR5900(false), FixR5900(false), HasMips3_32(false), HasMips3_32r2(false),
+      HasMips4_32(false), HasMips4_32r2(false), HasMips5_32r2(false),
+      InMips16Mode(false), InMips16HardFloat(Mips16HardFloat),
+      InMicroMipsMode(false), HasDSP(false), HasDSPR2(false), HasDSPR3(false),
       AllowMixed16_32(Mixed16_32 || Mips_Os16), Os16(Mips_Os16), HasMSA(false),
       UseTCCInDIV(false), HasSym32(false), HasEVA(false), DisableMadd4(false),
       HasMT(false), HasCRC(false), HasVirt(false), HasGINV(false),
       UseIndirectJumpsHazard(false), StrictAlign(false),
+      UseCompactBranches(MipsCompactBranchPolicy != CB_Never),
       StackAlignOverride(StackAlignOverride), TM(TM), TargetTriple(TT),
       InstrInfo(
           MipsInstrInfo::create(initializeSubtargetDependencies(CPU, FS, TM))),

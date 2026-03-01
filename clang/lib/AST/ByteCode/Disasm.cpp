@@ -455,7 +455,7 @@ LLVM_DUMP_METHOD void Descriptor::dumpFull(unsigned Offset,
     OS.indent(Spaces) << "Elements: " << getNumElems() << '\n';
     OS.indent(Spaces) << "Element type: " << primTypeToString(getPrimType())
                       << '\n';
-    unsigned FO = Offset + sizeof(InitMap *);
+    unsigned FO = Offset + sizeof(InitMapPtr);
     for (unsigned I = 0; I != getNumElems(); ++I) {
       OS.indent(Spaces) << "Element " << I << " offset: " << FO << '\n';
       FO += getElemSize();

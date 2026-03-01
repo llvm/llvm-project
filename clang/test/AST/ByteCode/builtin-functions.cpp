@@ -21,6 +21,7 @@
 #error "huh?"
 #endif
 
+#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
 
 inline constexpr void* operator new(__SIZE_TYPE__, void* p) noexcept { return p; }
 namespace std {
@@ -229,6 +230,9 @@ constexpr const char *a = "foo\0quux";
 
   int arr[3]; // both-note {{here}}
   int wk = arr[wcslen(L"hello")]; // both-warning {{array index 5}}
+
+  const long long longArray[] = {'b'};
+  constexpr int m = __builtin_strlen(fold((char *)longArray)); // both-error {{must be initialized by a constant expression}}
 }
 
 namespace nan {
@@ -391,6 +395,10 @@ namespace floating_comparison {
   static_assert(UNORDERED(__builtin_nanf(""), __builtin_inff()));
   static_assert(UNORDERED(__builtin_nanl(""), 1.0L));
   static_assert(UNORDERED(__builtin_nanl(""), __builtin_infl()));
+
+  struct {
+  } const s;
+  static_assert(__builtin_nan((const char *)&s) == 0); // both-error {{not an integral constant expression}}
 }
 
 namespace fpclassify {
@@ -553,6 +561,36 @@ namespace bitreverse {
   char bitreverse2[__builtin_bitreverse16(0x3C48) == 0x123C ? 1 : -1];
   char bitreverse3[__builtin_bitreverse32(0x12345678) == 0x1E6A2C48 ? 1 : -1];
   char bitreverse4[__builtin_bitreverse64(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480 ? 1 : -1];
+  char bitreverse5[(char)__builtin_bitreverseg((char)0x01) == (char)0x80 ? 1 : -1];
+  char bitreverse6[(short)__builtin_bitreverseg((short)0x3C48) == (short)0x123C ? 1 : -1];
+  char bitreverse7[__builtin_bitreverseg(0x12345678) == 0x1E6A2C48 ? 1 : -1];
+  char bitreverse8[__builtin_bitreverseg(0x0123456789ABCDEFULL) == 0xF7B3D591E6A2C480 ? 1 : -1];
+#ifndef __AVR__
+  char test5[__builtin_bitreverseg((_BitInt(8))0x12) == (_BitInt(8))0x48 ? 1 : -1];
+  char test6[__builtin_bitreverseg((_BitInt(16))0x1234) == (_BitInt(16))0x2C48 ? 1 : -1];
+  char test7[__builtin_bitreverseg((_BitInt(32))0x00001234) == (_BitInt(32))0x2C480000 ? 1 : -1];
+  char test8[__builtin_bitreverseg((_BitInt(64))0x0000000000001234) == (_BitInt(64))0x2C48000000000000 ? 1 : -1];
+  char test9[__builtin_bitreverseg((_BitInt(128))0x1) == ((_BitInt(128))1 << 127) ? 1 : -1];
+#endif
+
+    constexpr const int const_expr = 0x1234;
+
+    void test_constexpr_reference_bitreverseg() {
+    const int expr = 0x1234;
+    const int& ref = expr; // #declare_bitreverseg
+
+    constexpr const int& const_ref = const_expr;
+
+    constexpr auto result2 = __builtin_bitreverseg(ref);
+    //expected-error@-1 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //expected-note@-2 {{initializer of 'ref' is not a constant expression}}
+    //expected-note@#declare_bitreverseg {{declared here}}
+    //ref-error@-4 {{constexpr variable 'result2' must be initialized by a constant expression}}
+    //ref-note@-5 {{initializer of 'ref' is not a constant expression}}
+    //ref-note@#declare_bitreverseg {{declared here}}
+
+    constexpr auto result3 = __builtin_bitreverseg(const_ref);
+    }
 }
 
 namespace expect {
@@ -841,6 +879,7 @@ namespace bswap {
   int h7 = __builtin_bswapg(0x1234) == 0x3412 ? 1 : f();
   int h8 = __builtin_bswapg(0x00001234) == 0x34120000 ? 1 : f();
   int h9 = __builtin_bswapg(0x0000000000001234) == 0x3412000000000000 ? 1 : f();
+  int h9a = __builtin_bswapg(true) == true ? 1 : f();
 #ifndef __AVR__
   int h10 = __builtin_bswapg((_BitInt(8))0x12) == (_BitInt(8))0x12 ? 1 : f();
   int h11 = __builtin_bswapg((_BitInt(16))0x1234) == (_BitInt(16))0x3412 ? 1 : f();
@@ -1152,6 +1191,37 @@ namespace shufflevector {
                                                                        // both-error {{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}}
           vector4charConst1,
           vector4charConst2, -1, -1, -1, -1);
+
+  constexpr int discarded1() {
+    int i = 0;
+    vector4char a = {0};
+    __builtin_shufflevector((++i, a), a, 0); // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded1() == 1);
+
+  constexpr int discarded2() { // both-error {{never produces a constant expression}}
+    int i = 0;
+    vector4char a = {0};
+    __builtin_shufflevector((++i, a), a, -1); // both-error 2{{index for __builtin_shufflevector not within the bounds of the input vectors; index of -1 found at position 0 is not permitted in a constexpr context}} \
+                                              // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded2() == 1); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+
+#if __cplusplus >= 202002L
+  constexpr int discarded3() {
+    int i = 0;
+    vector4char a;
+    __builtin_shufflevector((++i, a), a, 0); // both-note {{read of uninitialized object}} \
+                                             // both-warning {{expression result unused}}
+    return i;
+  }
+  static_assert(discarded3() == 1); // both-error {{not an integral constant expression}} \
+                                    // both-note {{in call to}}
+#endif
+
 }
 
 #endif
@@ -1437,7 +1507,6 @@ namespace BuiltinMemcpy {
   }
   static_assert(memmoveOverlapping());
 
-#define fold(x) (__builtin_constant_p(0) ? (x) : (x))
   static_assert(__builtin_memcpy(&global, fold((wchar_t*)123), sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
                                                                                   // both-note {{source of 'memcpy' is (void *)123}}
   static_assert(__builtin_memcpy(fold(reinterpret_cast<wchar_t*>(123)), &global, sizeof(wchar_t))); // both-error {{not an integral constant expression}} \
@@ -1514,6 +1583,10 @@ namespace Memcmp {
   static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 6) != 0);
   static_assert(__builtin_bcmp("abab\0banana", "abab\0canada", 5) == 0);
 
+  constexpr char abc[] = /* missing */; // both-error {{expected expression}} \
+                                        // both-note {{declared here}}
+  static_assert(__builtin_bcmp(abc, abc, 2) == 0); // both-error {{not an integral constant expression}} \
+                                                   // both-note {{initializer of 'abc' is unknown}}
 
   static_assert(__builtin_wmemcmp(L"abaa", L"abba", 3) == -1);
   static_assert(__builtin_wmemcmp(L"abaa", L"abba", 2) == 0);
@@ -1649,6 +1722,10 @@ namespace Memchr {
     return __builtin_char_memchr(c + 1, 'f', 1) == nullptr;
   }
   static_assert(f());
+
+
+  extern const char char_memchr_arg[0l];
+  char *memchr_result = __builtin_char_memchr(char_memchr_arg, 123, 32);
 }
 
 namespace Strchr {
@@ -1848,11 +1925,9 @@ namespace WithinLifetime {
   } xstd; // both-error {{is not a constant expression}} \
           // both-note {{in call to}}
 
-  /// FIXME: We do not have per-element lifetime information for primitive arrays.
-  /// See https://github.com/llvm/llvm-project/issues/147528
   consteval bool test_dynamic(bool read_after_deallocate) {
     std::allocator<int> a;
-    int* p = a.allocate(1); // expected-note 2{{allocation performed here was not deallocated}}
+    int* p = a.allocate(1);
     // a.allocate starts the lifetime of an array,
     // the complete object of *p has started its lifetime
     if (__builtin_is_within_lifetime(p))
@@ -1865,12 +1940,12 @@ namespace WithinLifetime {
       return false;
     a.deallocate(p, 1);
     if (read_after_deallocate)
-      __builtin_is_within_lifetime(p); // ref-note {{read of heap allocated object that has been deleted}}
+      __builtin_is_within_lifetime(p); // both-note {{read of heap allocated object that has been deleted}}
     return true;
   }
-  static_assert(test_dynamic(false)); // expected-error {{not an integral constant expression}}
+  static_assert(test_dynamic(false));
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+                                     // both-note {{in call to}}
 }
 
 #ifdef __SIZEOF_INT128__
@@ -1900,4 +1975,16 @@ namespace NonBlockPointerStore {
   int a;
   void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
   void foo2(void) { a *= __builtin_addc(1, 2, 0, 0); }
+}
+
+namespace WcslenInvalidArg {
+
+  static_assert(__builtin_wcslen("x") == 'x'); // both-error {{cannot initialize a parameter of type 'const wchar_t *' with an lvalue of type 'const char[2]'}}
+  static_assert(__builtin_wcslen((const wchar_t *)"x") == 1); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  const unsigned char u8s[] = "hi";
+  static_assert(__builtin_wcslen((const wchar_t *)u8s) == 2); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  static_assert(__builtin_wcslen(L"x") == 1);
+
 }

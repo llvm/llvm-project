@@ -2,7 +2,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Passes/PassBuilder.h"
-#include "llvm/Passes/PassPlugin.h"
+#include "llvm/Plugins/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -10,6 +10,9 @@ using namespace llvm;
 
 static cl::opt<bool> Wave("wave-goodbye", cl::init(false),
                           cl::desc("wave good bye"));
+
+static cl::opt<bool> LastWords("last-words", cl::init(false),
+                               cl::desc("say last words (suppress codegen)"));
 
 namespace {
 
@@ -35,6 +38,37 @@ struct Bye : PassInfoMixin<Bye> {
   }
 };
 
+void registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerVectorizerStartEPCallback(
+      [](llvm::FunctionPassManager &PM, OptimizationLevel Level) {
+        PM.addPass(Bye());
+      });
+  PB.registerPipelineParsingCallback(
+      [](StringRef Name, llvm::FunctionPassManager &PM,
+         ArrayRef<llvm::PassBuilder::PipelineElement>) {
+        if (Name == "goodbye") {
+          PM.addPass(Bye());
+          return true;
+        }
+        return false;
+      });
+}
+
+bool preCodeGenCallback(Module &M, TargetMachine &, CodeGenFileType CGFT,
+                        raw_pwrite_stream &OS) {
+  if (LastWords) {
+    if (CGFT != CodeGenFileType::AssemblyFile) {
+      // Test error emission.
+      M.getContext().emitError("last words unsupported for binary output");
+      return false;
+    }
+    OS << "CodeGen Bye\n";
+    return true; // Suppress remaining compilation pipeline.
+  }
+  // Do nothing.
+  return false;
+}
+
 } // namespace
 
 char LegacyBye::ID = 0;
@@ -46,21 +80,7 @@ static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "Bye", LLVM_VERSION_STRING,
-          [](PassBuilder &PB) {
-            PB.registerVectorizerStartEPCallback(
-                [](llvm::FunctionPassManager &PM, OptimizationLevel Level) {
-                  PM.addPass(Bye());
-                });
-            PB.registerPipelineParsingCallback(
-                [](StringRef Name, llvm::FunctionPassManager &PM,
-                   ArrayRef<llvm::PassBuilder::PipelineElement>) {
-                  if (Name == "goodbye") {
-                    PM.addPass(Bye());
-                    return true;
-                  }
-                  return false;
-                });
-          }};
+          registerPassBuilderCallbacks, preCodeGenCallback};
 }
 
 #ifndef LLVM_BYE_LINK_INTO_TOOLS

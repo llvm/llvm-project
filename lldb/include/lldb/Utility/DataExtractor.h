@@ -9,12 +9,14 @@
 #ifndef LLDB_UTILITY_DATAEXTRACTOR_H
 #define LLDB_UTILITY_DATAEXTRACTOR_H
 
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Endian.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/SwapByteOrder.h"
 
@@ -81,19 +83,15 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const void *data, lldb::offset_t data_length,
-                lldb::ByteOrder byte_order, uint32_t addr_size,
-                uint32_t target_byte_size = 1);
+                lldb::ByteOrder byte_order, uint32_t addr_size);
 
   /// Construct with shared data.
   ///
-  /// Copies the data shared pointer which adds a reference to the contained
-  /// in \a data_sp. The shared data reference is reference counted to ensure
-  /// the data lives as long as anyone still has a valid shared pointer to the
-  /// data in \a data_sp.
+  /// Copies the data shared pointer which adds a reference to the data
+  /// contained in \a data_sp. The shared data reference is reference counted to
+  /// ensure the data lives as long as anyone still has a valid shared pointer
+  /// to the data in \a data_sp.
   ///
   /// \param[in] data_sp
   ///     A shared pointer to data.
@@ -103,11 +101,19 @@ public:
   ///
   /// \param[in] addr_size
   ///     A new address byte size value.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const lldb::DataBufferSP &data_sp, lldb::ByteOrder byte_order,
-                uint32_t addr_size, uint32_t target_byte_size = 1);
+                uint32_t addr_size);
+
+  /// Construct with shared data, but byte-order & addr-size are unspecified.
+  ///
+  /// Copies the data shared pointer which adds a reference to the data
+  /// contained in \a data_sp. The shared data reference is reference counted to
+  /// ensure the data lives as long as anyone still has a valid shared pointer
+  /// to the data in \a data_sp.
+  ///
+  /// \param[in] data_sp
+  ///     A shared pointer to data.
+  explicit DataExtractor(const lldb::DataBufferSP &data_sp);
 
   /// Construct with a subset of \a data.
   ///
@@ -128,11 +134,8 @@ public:
   ///
   /// \param[in] length
   ///     The length in bytes of the subset of data.
-  ///
-  /// \param[in] target_byte_size
-  ///     A size of a target byte in 8-bit host bytes
   DataExtractor(const DataExtractor &data, lldb::offset_t offset,
-                lldb::offset_t length, uint32_t target_byte_size = 1);
+                lldb::offset_t length);
 
   /// Copy constructor.
   ///
@@ -166,8 +169,6 @@ public:
   /// count on the data will be decremented, and if zero, the data will be
   /// freed.
   virtual ~DataExtractor();
-
-  uint32_t getTargetByteSize() const { return m_target_byte_size; }
 
   /// Clears the object state.
   ///
@@ -267,7 +268,7 @@ public:
   ///
   /// \return
   ///     The total number of bytes of data this object refers to.
-  uint64_t GetByteSize() const { return m_end - m_start; }
+  virtual uint64_t GetByteSize() const { return m_end - m_start; }
 
   /// Extract a C string from \a *offset_ptr.
   ///
@@ -805,7 +806,48 @@ public:
   ///     The extracted unsigned integer value.
   uint64_t GetULEB128(lldb::offset_t *offset_ptr) const;
 
-  lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.
+  ///
+  /// \param[in] offset
+  ///     The starting byte offset into the shared data buffer.
+  /// \param[in] length
+  ///     The length of bytes that the new extractor can operate on.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset,
+                                                     lldb::offset_t length);
+
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.  The length will be the largest contiguous region that
+  /// can be provided starting at \a offset; it is safe to read any bytes
+  /// within the returned subset Extractor.
+  ///
+  /// \param[in] offset
+  ///     The starting byte offset into the shared data buffer.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset);
+
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.  The length will be the largest contiguous region that
+  /// can be provided starting the beginning of this extractor; it is safe
+  /// to read any bytes within the returned subset Extractor.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetContiguousDataExtractorSP() {
+    return GetSubsetExtractorSP(0);
+  }
+
+  lldb::DataBufferSP GetSharedDataBuffer() const { return m_data_sp; }
+
+  bool HasData() { return m_start && m_end && m_end - m_start > 0; }
 
   /// Peek at a C string at \a offset.
   ///
@@ -867,8 +909,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
-                         lldb::ByteOrder byte_order);
+  virtual lldb::offset_t SetData(const void *bytes, lldb::offset_t length,
+                                 lldb::ByteOrder byte_order);
 
   /// Adopt a subset of \a data.
   ///
@@ -892,8 +934,8 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const DataExtractor &data, lldb::offset_t offset,
-                         lldb::offset_t length);
+  virtual lldb::offset_t SetData(const DataExtractor &data,
+                                 lldb::offset_t offset, lldb::offset_t length);
 
   /// Adopt a subset of shared data in \a data_sp.
   ///
@@ -917,9 +959,9 @@ public:
   ///
   /// \return
   ///     The number of bytes that this object now contains.
-  lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
-                         lldb::offset_t offset = 0,
-                         lldb::offset_t length = LLDB_INVALID_OFFSET);
+  virtual lldb::offset_t SetData(const lldb::DataBufferSP &data_sp,
+                                 lldb::offset_t offset = 0,
+                                 lldb::offset_t length = LLDB_INVALID_OFFSET);
 
   /// Set the byte_order value.
   ///
@@ -973,7 +1015,7 @@ public:
 
   bool Append(void *bytes, lldb::offset_t length);
 
-  lldb::offset_t BytesLeft(lldb::offset_t offset) const {
+  virtual lldb::offset_t BytesLeft(lldb::offset_t offset) const {
     const lldb::offset_t size = GetByteSize();
     if (size > offset)
       return size - offset;
@@ -982,8 +1024,14 @@ public:
 
   void Checksum(llvm::SmallVectorImpl<uint8_t> &dest, uint64_t max_data = 0);
 
-  llvm::ArrayRef<uint8_t> GetData() const {
+  virtual llvm::ArrayRef<uint8_t> GetData() const {
     return {GetDataStart(), size_t(GetByteSize())};
+  }
+
+  llvm::DWARFDataExtractor GetAsLLVMDWARF() const {
+    return llvm::DWARFDataExtractor(GetData(),
+                                    GetByteOrder() == lldb::eByteOrderLittle,
+                                    GetAddressByteSize());
   }
 
   llvm::DataExtractor GetAsLLVM() const {
@@ -1016,8 +1064,6 @@ protected:
   uint32_t m_addr_size; ///< The address size to use when extracting addresses.
   /// The shared pointer to data that can be shared among multiple instances
   lldb::DataBufferSP m_data_sp;
-  /// Making it const would require implementation of move assignment operator.
-  uint32_t m_target_byte_size = 1;
 };
 
 } // namespace lldb_private

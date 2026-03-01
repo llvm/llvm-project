@@ -22,14 +22,15 @@ enum class KCFIHashAlgorithm { xxHash64, FNV1a };
 
 /// Parse a KCFI hash algorithm name.
 /// Returns xxHash64 if the name is not recognized.
-KCFIHashAlgorithm parseKCFIHashAlgorithm(StringRef Name);
+LLVM_ABI KCFIHashAlgorithm parseKCFIHashAlgorithm(StringRef Name);
 
 /// Convert a KCFI hash algorithm enum to its string representation.
-StringRef stringifyKCFIHashAlgorithm(KCFIHashAlgorithm Algorithm);
+LLVM_ABI StringRef stringifyKCFIHashAlgorithm(KCFIHashAlgorithm Algorithm);
 
 /// Compute KCFI type ID from mangled type name.
 /// The algorithm can be xxHash64 or FNV-1a.
-uint32_t getKCFITypeID(StringRef MangledTypeName, KCFIHashAlgorithm Algorithm);
+LLVM_ABI uint32_t getKCFITypeID(StringRef MangledTypeName,
+                                KCFIHashAlgorithm Algorithm);
 
 } // end namespace llvm
 

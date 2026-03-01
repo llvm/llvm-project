@@ -18,11 +18,18 @@ tablegen("HexagonGenDFAPacketizer") {
   td_file = "Hexagon.td"
 }
 
+tablegen("HexagonGenSDNodeInfo") {
+  visibility = [ ":LLVMHexagonCodeGen" ]
+  args = [ "-gen-sd-node-info" ]
+  td_file = "Hexagon.td"
+}
+
 static_library("LLVMHexagonCodeGen") {
   deps = [
     ":HexagonGenCallingConv",
     ":HexagonGenDAGISel",
     ":HexagonGenDFAPacketizer",
+    ":HexagonGenSDNodeInfo",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -61,8 +68,8 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonGenMemAbsolute.cpp",
     "HexagonGenMux.cpp",
     "HexagonGenPredicate.cpp",
-    "HexagonGenWideningVecFloatInstr.cpp",
-    "HexagonGenWideningVecInstr.cpp",
+    "HexagonGlobalRegion.cpp",
+    "HexagonGlobalScheduler.cpp",
     "HexagonHardwareLoops.cpp",
     "HexagonHazardRecognizer.cpp",
     "HexagonISelDAGToDAG.cpp",
@@ -70,6 +77,7 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonISelLowering.cpp",
     "HexagonISelLoweringHVX.cpp",
     "HexagonInstrInfo.cpp",
+    "HexagonLiveVariables.cpp",
     "HexagonLoadStoreWidening.cpp",
     "HexagonLoopAlign.cpp",
     "HexagonLoopIdiomRecognition.cpp",
@@ -79,7 +87,6 @@ static_library("LLVMHexagonCodeGen") {
     "HexagonMask.cpp",
     "HexagonNewValueJump.cpp",
     "HexagonOptAddrMode.cpp",
-    "HexagonOptShuffleVector.cpp",
     "HexagonOptimizeSZextends.cpp",
     "HexagonPeephole.cpp",
     "HexagonQFPOptimizer.cpp",

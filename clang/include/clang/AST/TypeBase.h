@@ -1149,6 +1149,12 @@ public:
   /// Returns true if it is a WebAssembly Funcref Type.
   bool isWebAssemblyFuncrefType() const;
 
+  /// Returns true if it is a OverflowBehaviorType of Wrap kind.
+  bool isWrapType() const;
+
+  /// Returns true if it is a OverflowBehaviorType of Trap kind.
+  bool isTrapType() const;
+
   // Don't promise in the API that anything besides 'const' can be
   // easily added.
 
@@ -2284,7 +2290,7 @@ protected:
     Last = PtrdiffT
   };
 
-  class PresefinedSugarTypeBitfields {
+  class PredefinedSugarTypeBitfields {
     friend class PredefinedSugarType;
 
     LLVM_PREFERRED_TYPE(TypeBitfields)
@@ -2332,7 +2338,7 @@ protected:
     TemplateSpecializationTypeBitfields TemplateSpecializationTypeBits;
     PackExpansionTypeBitfields PackExpansionTypeBits;
     CountAttributedTypeBitfields CountAttributedTypeBits;
-    PresefinedSugarTypeBitfields PredefinedSugarTypeBits;
+    PredefinedSugarTypeBitfields PredefinedSugarTypeBits;
   };
 
 private:
@@ -2637,12 +2643,14 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  bool isConstantMatrixBoolType() const; // Matrix type with bool element.
   // Extended vector type with bool element that is packed. HLSL doesn't pack
   // its bool vectors.
   bool isPackedVectorBoolType(const ASTContext &ctx) const;
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
+  bool isOverflowBehaviorType() const;          // Overflow behavior type.
   bool isDependentAddressSpaceType() const;     // value-dependent address space qualifier
   bool isObjCObjectPointerType() const;         // pointer to ObjC object
   bool isObjCRetainableType() const;            // ObjC object or block pointer
@@ -4352,12 +4360,26 @@ public:
 
   /// Valid elements types are the following:
   /// * an integer type (as in C23 6.2.5p22), but excluding enumerated types
-  ///   and _Bool
+  ///   and _Bool (except that in HLSL, bool is allowed)
   /// * the standard floating types float or double
   /// * a half-precision floating point type, if one is supported on the target
-  static bool isValidElementType(QualType T) {
-    return T->isDependentType() ||
-           (T->isRealType() && !T->isBooleanType() && !T->isEnumeralType());
+  static bool isValidElementType(QualType T, const LangOptions &LangOpts) {
+    // Dependent is always okay
+    if (T->isDependentType())
+      return true;
+
+    // Enums are never okay
+    if (T->isEnumeralType())
+      return false;
+
+    // In HLSL, bool is allowed as a matrix element type.
+    // Note: isRealType includes bool so don't need to check
+    if (LangOpts.HLSL)
+      return T->isRealType();
+
+    // In non-HLSL modes, follow the existing rule:
+    // real type, but not _Bool.
+    return T->isRealType() && !T->isBooleanType();
   }
 
   bool isSugared() const { return false; }
@@ -6678,11 +6700,50 @@ public:
   }
 };
 
+class OverflowBehaviorType : public Type, public llvm::FoldingSetNode {
+public:
+  enum OverflowBehaviorKind { Wrap, Trap };
+
+private:
+  friend class ASTContext; // ASTContext creates these
+
+  QualType UnderlyingType;
+  OverflowBehaviorKind BehaviorKind;
+
+  OverflowBehaviorType(QualType Canon, QualType Underlying,
+                       OverflowBehaviorKind Kind);
+
+public:
+  QualType getUnderlyingType() const { return UnderlyingType; }
+  OverflowBehaviorKind getBehaviorKind() const { return BehaviorKind; }
+
+  bool isWrapKind() const { return BehaviorKind == OverflowBehaviorKind::Wrap; }
+  bool isTrapKind() const { return BehaviorKind == OverflowBehaviorKind::Trap; }
+
+  bool isSugared() const { return false; }
+  QualType desugar() const { return getUnderlyingType(); }
+
+  void Profile(llvm::FoldingSetNodeID &ID) {
+    Profile(ID, UnderlyingType, BehaviorKind);
+  }
+
+  static void Profile(llvm::FoldingSetNodeID &ID, QualType Underlying,
+                      OverflowBehaviorKind Kind) {
+    ID.AddPointer(Underlying.getAsOpaquePtr());
+    ID.AddInteger((int)Kind);
+  }
+
+  static bool classof(const Type *T) {
+    return T->getTypeClass() == OverflowBehavior;
+  }
+};
+
 class HLSLAttributedResourceType : public Type, public llvm::FoldingSetNode {
 public:
   struct Attributes {
     // Data gathered from HLSL resource attributes
     llvm::dxil::ResourceClass ResourceClass;
+    llvm::dxil::ResourceDimension ResourceDimension;
 
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsROV : 1;
@@ -6693,18 +6754,26 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t IsCounter : 1;
 
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
-               bool RawBuffer = false, bool IsCounter = false)
-        : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer),
-          IsCounter(IsCounter) {}
+    Attributes(llvm::dxil::ResourceClass ResourceClass,
+               llvm::dxil::ResourceDimension ResourceDimension,
+               bool IsROV = false, bool RawBuffer = false,
+               bool IsCounter = false)
+        : ResourceClass(ResourceClass), ResourceDimension(ResourceDimension),
+          IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter) {}
+
+    Attributes(llvm::dxil::ResourceClass ResourceClass)
+        : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
 
     Attributes()
-        : Attributes(llvm::dxil::ResourceClass::UAV, false, false, false) {}
+        : Attributes(llvm::dxil::ResourceClass::UAV,
+                     llvm::dxil::ResourceDimension::Unknown, false, false,
+                     false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
-      return std::tie(LHS.ResourceClass, LHS.IsROV, LHS.RawBuffer,
-                      LHS.IsCounter) == std::tie(RHS.ResourceClass, RHS.IsROV,
-                                                 RHS.RawBuffer, RHS.IsCounter);
+      return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,
+                      LHS.RawBuffer, LHS.IsCounter) ==
+             std::tie(RHS.ResourceClass, RHS.ResourceDimension, RHS.IsROV,
+                      RHS.RawBuffer, RHS.IsCounter);
     }
     friend bool operator!=(const Attributes &LHS, const Attributes &RHS) {
       return !(LHS == RHS);
@@ -6730,6 +6799,8 @@ public:
   QualType getContainedType() const { return ContainedType; }
   bool hasContainedType() const { return !ContainedType.isNull(); }
   const Attributes &getAttrs() const { return Attrs; }
+  bool isRaw() const { return Attrs.RawBuffer; }
+  bool isStructured() const { return !ContainedType->isChar8Type(); }
 
   bool isSugared() const { return false; }
   QualType desugar() const { return QualType(this, 0); }
@@ -6743,6 +6814,7 @@ public:
     ID.AddPointer(Wrapped.getAsOpaquePtr());
     ID.AddPointer(Contained.getAsOpaquePtr());
     ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceClass));
+    ID.AddInteger(static_cast<uint32_t>(Attrs.ResourceDimension));
     ID.AddBoolean(Attrs.IsROV);
     ID.AddBoolean(Attrs.RawBuffer);
     ID.AddBoolean(Attrs.IsCounter);
@@ -6782,9 +6854,8 @@ public:
   SpirvOperand(SpirvOperandKind Kind, QualType ResultType, llvm::APInt Value)
       : Kind(Kind), ResultType(ResultType), Value(std::move(Value)) {}
 
-  SpirvOperand(const SpirvOperand &Other) { *this = Other; }
-  ~SpirvOperand() {}
-
+  SpirvOperand(const SpirvOperand &Other) = default;
+  ~SpirvOperand() = default;
   SpirvOperand &operator=(const SpirvOperand &Other) = default;
 
   bool operator==(const SpirvOperand &Other) const {
@@ -8665,6 +8736,12 @@ inline bool Type::isExtVectorBoolType() const {
   return cast<ExtVectorType>(CanonicalType)->getElementType()->isBooleanType();
 }
 
+inline bool Type::isConstantMatrixBoolType() const {
+  if (auto *CMT = dyn_cast<ConstantMatrixType>(CanonicalType))
+    return CMT->getElementType()->isBooleanType();
+  return false;
+}
+
 inline bool Type::isSubscriptableVectorType() const {
   return isVectorType() || isSveVLSBuiltinType();
 }
@@ -8675,6 +8752,10 @@ inline bool Type::isMatrixType() const {
 
 inline bool Type::isConstantMatrixType() const {
   return isa<ConstantMatrixType>(CanonicalType);
+}
+
+inline bool Type::isOverflowBehaviorType() const {
+  return isa<OverflowBehaviorType>(CanonicalType);
 }
 
 inline bool Type::isDependentAddressSpaceType() const {
@@ -8921,6 +9002,10 @@ inline bool Type::isIntegerType() const {
     return IsEnumDeclComplete(ET->getDecl()) &&
            !IsEnumDeclScoped(ET->getDecl());
   }
+
+  if (const auto *OT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OT->getUnderlyingType()->isIntegerType();
+
   return isBitIntType();
 }
 
@@ -8983,7 +9068,7 @@ inline bool Type::isScalarType() const {
          isa<MemberPointerType>(CanonicalType) ||
          isa<ComplexType>(CanonicalType) ||
          isa<ObjCObjectPointerType>(CanonicalType) ||
-         isBitIntType();
+         isOverflowBehaviorType() || isBitIntType();
 }
 
 inline bool Type::isIntegralOrEnumerationType() const {
@@ -8994,6 +9079,9 @@ inline bool Type::isIntegralOrEnumerationType() const {
   // enumeration type in the sense required here.
   if (const auto *ET = dyn_cast<EnumType>(CanonicalType))
     return IsEnumDeclComplete(ET->getDecl());
+
+  if (const auto *OBT = dyn_cast<OverflowBehaviorType>(CanonicalType))
+    return OBT->getUnderlyingType()->isIntegralOrEnumerationType();
 
   return isBitIntType();
 }
