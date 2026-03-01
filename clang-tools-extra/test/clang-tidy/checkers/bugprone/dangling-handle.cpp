@@ -1,30 +1,17 @@
 // RUN: %check_clang_tidy -std=c++11,c++14 -check-suffix=,CXX14 %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
-// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
+// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}" \
+// RUN:   -- -isystem %clang_tidy_headers
 
 // RUN: %check_clang_tidy -std=c++17-or-later -check-suffix=,CXX17 %s bugprone-dangling-handle %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {bugprone-dangling-handle.HandleClasses: \
-// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}"
+// RUN:               'std::basic_string_view; ::llvm::StringRef;'}}" \
+// RUN:   -- -isystem %clang_tidy_headers
+#include <vector>
 
 namespace std {
-
-template <typename T>
-class vector {
- public:
-  using const_iterator = const T*;
-  using iterator = T*;
-  using size_type = int;
-
-  void assign(size_type count, const T& value);
-  iterator insert(const_iterator pos, const T& value);
-  iterator insert(const_iterator pos, T&& value);
-  iterator insert(const_iterator pos, size_type count, const T& value);
-  void push_back(const T&);
-  void push_back(T&&);
-  void resize(size_type count, const T& value);
-};
 
 template <typename, typename>
 class pair {};
