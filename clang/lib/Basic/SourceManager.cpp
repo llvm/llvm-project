@@ -370,7 +370,7 @@ void SourceManager::invalidateCache(FileID FID) {
     const SrcMgr::SLocEntry &SLocE = getSLocEntry(FID);
     if (SLocE.isFile()) {
       SrcMgr::ContentCache &CC =
-        const_cast<SrcMgr::ContentCache &>(SLocE.getFile().getContentCache());
+          const_cast<SrcMgr::ContentCache &>(SLocE.getFile().getContentCache());
       CC.setBuffer(nullptr);
     }
   }

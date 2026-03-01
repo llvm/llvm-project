@@ -277,8 +277,7 @@ llvm::Expected<FileEntryRef> FileManager::getFileRef(StringRef Filename,
   // count in tests that instrument openFileForRead().
   std::unique_ptr<llvm::vfs::File> F;
   llvm::vfs::Status Status;
-  auto statError =
-      getStatValue(InterndFileName, Status, true, nullptr, IsText);
+  auto statError = getStatValue(InterndFileName, Status, true, nullptr, IsText);
   if (statError) {
     // There's no real file at the given path.
     if (CacheFailure)

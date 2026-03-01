@@ -560,8 +560,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
       if (auto S = BVFS.status(R.second))
         OverriddenByUID[S->getUniqueID()] =
             PrecompiledPreamble::PreambleFileHash::createForFile(
-                S->getSize(),
-                llvm::sys::toTimeT(S->getLastModificationTime()));
+                S->getSize(), llvm::sys::toTimeT(S->getLastModificationTime()));
     }
     for (const auto &RB : PPOpts.RemappedFileBuffers) {
       if (auto MaybeFile = FileMgr.getOptionalFileRef(RB.first))
