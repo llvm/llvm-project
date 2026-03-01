@@ -862,14 +862,6 @@ void VPRegionBlock::dissolveToCFGLoop() {
   if (CanIV->getNumUsers() > 0) {
     VPlan &Plan = *getPlan();
     VPInstruction *CanIVInc = getOrCreateCanonicalIVIncrement();
-    // If the increment doesn't exist yet, create it.
-    if (!CanIVInc) {
-      CanIVInc =
-          VPBuilder(ExitingLatch->getTerminator())
-              .createOverflowingOp(Instruction::Add, {CanIV, &Plan.getVFxUF()},
-                                   {CanIVInfo->hasNUW(), /* HasNSW */ false},
-                                   CanIV->getDebugLoc(), "index.next");
-    }
     auto *ScalarR =
         VPBuilder(Header, Header->begin())
             .createScalarPhi({Plan.getConstantInt(CanIV->getType(), 0),
@@ -892,32 +884,36 @@ void VPRegionBlock::dissolveToCFGLoop() {
 VPInstruction *VPRegionBlock::getOrCreateCanonicalIVIncrement() {
   // TODO: Represent the increment as VPRegionValue as well.
   auto *ExitingLatch = cast<VPBasicBlock>(getExiting());
-  VPValue *CanIV = getCanonicalIV();
+  VPRegionValue *CanIV = getCanonicalIV();
   assert(CanIV && "Expected a canonical IV");
-
-  // Match CanIV + Step or (CanIV + ResumeVal) + Step for epilogue loops.
-  auto m_CanIVIncrement = [CanIV]() {
-    return m_c_Add(
-        m_CombineOr(m_Specific(CanIV), m_c_Add(m_Specific(CanIV), m_LiveIn())),
-        m_VPValue());
-  };
 
   auto *ExitingTerm = ExitingLatch->getTerminator();
   VPInstruction *CanIVInc = nullptr;
   // Try to match BranchOnCount(increment, trip_count) for main loop.
-  if (!match(ExitingTerm,
-             m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
-    // Try to match BranchOnCond(ICmp EQ(increment, trip_count)) for epilogue.
-    VPValue *Cond = nullptr;
-    if (!(match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
-          match(Cond, m_SpecificICmp(CmpInst::ICMP_EQ,
-                                     m_VPInstruction(CanIVInc), m_VPValue())) &&
-          match(CanIVInc, m_CanIVIncrement())))
-      CanIVInc = nullptr;
+  if (match(ExitingTerm,
+            m_BranchOnCount(m_VPInstruction(CanIVInc), m_VPValue()))) {
+    assert(match(CanIVInc, m_c_Add(m_Specific(CanIV), m_LiveIn())) &&
+           "unexpected increment");
+    return CanIVInc;
   }
-  assert(!CanIVInc || match(CanIVInc, m_CanIVIncrement()) &&
-                          "invalid existing IV increment");
-  return CanIVInc;
+
+  // Try to match BranchOnCond(ICmp EQ(increment, trip_count)) for epilogue
+  // loops or transformed loops (like using EVL or narrowing interleave groups).
+  VPValue *Cond = nullptr;
+  if ((match(ExitingTerm, m_BranchOnCond(m_VPValue(Cond))) &&
+       match(Cond,
+             m_SpecificICmp(CmpInst::ICMP_EQ, m_VPInstruction(CanIVInc),
+                            m_Specific(&getPlan()->getVectorTripCount()))) &&
+       match(CanIVInc,
+             m_c_Add(m_CombineOr(m_Specific(CanIV),
+                                 m_c_Add(m_Specific(CanIV), m_LiveIn())),
+                     m_VPValue()))))
+    return CanIVInc;
+
+  return VPBuilder(ExitingLatch->getTerminator())
+      .createOverflowingOp(Instruction::Add, {CanIV, &getPlan()->getVFxUF()},
+                           {CanIVInfo->hasNUW(), /* HasNSW */ false},
+                           CanIV->getDebugLoc(), "index.next");
 }
 
 VPlan::VPlan(Loop *L) {

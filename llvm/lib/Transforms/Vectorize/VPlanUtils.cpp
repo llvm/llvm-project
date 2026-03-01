@@ -153,9 +153,8 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
            "RegionValue must be canonical IV");
     if (!L)
       return SE.getCouldNotCompute();
-    const SCEV *Start = SE.getZero(RV->getDefiningRegion()->getCanonicalIVType());
-    return SE.getAddRecExpr(Start, SE.getOne(Start->getType()), L,
-                            SCEV::FlagAnyWrap);
+    return SE.getAddRecExpr(SE.getZero(RV->getType()), SE.getOne(RV->getType()),
+                            L, SCEV::FlagAnyWrap);
   }
 
   // Helper to create SCEVs for binary and unary operations.
@@ -361,7 +360,7 @@ static bool preservesUniformity(unsigned Opcode) {
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  // A live-in must be uniform across the scope of VPlan.
+  // Live-in, symbolic and region-values must be uniform across the their scope.
   if (isa<VPIRValue, VPSymbolicValue, VPRegionValue>(VPV))
     return true;
 

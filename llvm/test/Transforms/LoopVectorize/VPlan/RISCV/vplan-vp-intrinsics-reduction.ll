@@ -37,7 +37,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-OUTLOOP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
 ; IF-EVL-OUTLOOP-EMPTY:
 ; IF-EVL-OUTLOOP-NEXT:   vector.body:
-; IF-EVL-OUTLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
+; IF-EVL-OUTLOOP-NEXT:    CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-OUTLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, vp<[[RDX_SELECT:%.+]]>
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%n>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-OUTLOOP-NEXT:    EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>
@@ -78,7 +78,7 @@ define i32 @reduction(ptr %a, i64 %n, i32 %start) {
 ; IF-EVL-INLOOP-NEXT:   vp<[[IV:%[0-9]+]]> = CANONICAL-IV
 ; IF-EVL-INLOOP-EMPTY:
 ; IF-EVL-INLOOP-NEXT:   vector.body:
-; IF-EVL-INLOOP-NEXT:    EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
+; IF-EVL-INLOOP-NEXT:    CURRENT-ITERATION-PHI vp<[[EVL_PHI:%[0-9]+]]> = phi ir<0>, vp<[[IV_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    WIDEN-REDUCTION-PHI ir<[[RDX_PHI:%.+]]> = phi vp<[[RDX_START]]>, ir<[[RDX_NEXT:%.+]]>
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[AVL:%.+]]> = phi [ ir<%n>, vector.ph ], [ vp<[[AVL_NEXT:%.+]]>, vector.body ]
 ; IF-EVL-INLOOP-NEXT:    EMIT-SCALAR vp<[[EVL:%.+]]> = EXPLICIT-VECTOR-LENGTH vp<[[AVL]]>

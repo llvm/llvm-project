@@ -433,17 +433,10 @@ static bool canonicalHeaderAndLatch(VPBlockBase *HeaderVPB,
 
 /// Create a new VPRegionBlock for the loop starting at \p HeaderVPB.
 static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
-  VPPhi *ScalarCanIV = nullptr;
-  Type *CanIVTy = nullptr;
-  DebugLoc DL = DebugLoc::getCompilerGenerated();
   // Get type info and debug location from the scalar phi corresponding to the
   // canonical IV for outermost loops.
   auto *OutermostHeaderVPBB = cast<VPBasicBlock>(
       Plan.getEntry()->getSuccessors()[1]->getSingleSuccessor());
-  ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
-  CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
-  DL = ScalarCanIV->getDebugLoc();
-
   auto *PreheaderVPBB = HeaderVPB->getPredecessors()[0];
   auto *LatchVPBB = HeaderVPB->getPredecessors()[1];
 
@@ -451,9 +444,13 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
 
   // Create an empty region first and insert it between PreheaderVPBB and
-  // LatchExitVPB, taking care to preserve the original predecessor & successor
+  // exit blocks, taking care to preserve the original predecessor & successor
   // order of blocks. Set region entry and exiting after both HeaderVPB and
   // LatchVPBB have been disconnected from their predecessors/successors.
+  auto *ScalarCanIV = cast<VPPhi>(&OutermostHeaderVPBB->front());
+  Type *CanIVTy = ScalarCanIV->getOperand(0)->getLiveInIRValue()->getType();
+  DebugLoc DL = ScalarCanIV->getDebugLoc();
+
   auto *R = Plan.createLoopRegion(CanIVTy, DL);
 
   // Transfer latch's successors to the region.
@@ -463,10 +460,12 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
 
+  // Update canonical IV users for the top-level region only.
   if (Plan.getEntry() == PreheaderVPBB->getSinglePredecessor()) {
     ScalarCanIV->replaceAllUsesWith(R->getCanonicalIV());
     ScalarCanIV->eraseFromParent();
   }
+
   // All VPBB's reachable shallowly from HeaderVPB belong to the current region.
   for (VPBlockBase *VPBB : vp_depth_first_shallow(HeaderVPB))
     VPBB->setParent(R);
@@ -477,8 +476,7 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 static void addCanonicalIVRecipes(VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                   VPBasicBlock *LatchVPBB, Type *IdxTy,
                                   DebugLoc DL) {
-  auto *StartV = Plan.getConstantInt(IdxTy, 0);
-  auto *CanonicalIVPHI = new VPPhi(StartV, {}, DL);
+  auto *CanonicalIVPHI = new VPPhi(Plan.getConstantInt(IdxTy, 0), {}, DL);
   HeaderVPBB->insert(CanonicalIVPHI, HeaderVPBB->begin());
 
   // We are about to replace the branch to exit the region. Remove the original

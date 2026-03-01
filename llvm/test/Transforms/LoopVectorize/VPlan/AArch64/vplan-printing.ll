@@ -131,6 +131,7 @@ exit:
 define i32 @print_partial_reduction_predication(ptr %a, ptr %b, i64 %N) "target-features"="+sve" {
 ; CHECK: VPlan 'Initial VPlan for VF={8,16},UF>=1' {
 ; CHECK-NEXT: Live-in vp<[[VF:%[0-9]+]]> = VF
+; CHECK-NEXT: Live-in vp<[[VFxUF:%.+]]> = VF * UF
 ; CHECK-NEXT: Live-in ir<%N> = original trip-count
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<entry>:

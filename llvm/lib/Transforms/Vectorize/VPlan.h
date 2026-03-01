@@ -2222,6 +2222,9 @@ protected:
 ///  * VPReductionPHIRecipe
 ///  * VPActiveLaneMaskPHIRecipe
 ///  * VPEVLBasedIVPHIRecipe
+///
+///  Note that the canonical IV is modeled as a VPRegionValue associated with
+///  lop regions.
 class LLVM_ABI_FOR_TEST VPHeaderPHIRecipe : public VPSingleDefRecipe,
                                             public VPPhiAccessors {
 protected:
@@ -3828,7 +3831,7 @@ public:
   ~VPWidenCanonicalIVRecipe() override = default;
 
   VPWidenCanonicalIVRecipe *clone() override {
-    return new VPWidenCanonicalIVRecipe(cast<VPRegionValue>(getOperand(0)));
+    return new VPWidenCanonicalIVRecipe(getCanonicalIV());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenCanonicalIVSC)
@@ -3843,6 +3846,10 @@ public:
                               VPCostContext &Ctx) const override {
     // TODO: Compute accurate cost after retiring the legacy cost model.
     return 0;
+  }
+
+  VPRegionValue *getCanonicalIV() const {
+    return cast<VPRegionValue>(getOperand(0));
   }
 
 protected:
@@ -4292,9 +4299,11 @@ public:
 
 /// Track information about the canonical IV value of a region.
 class VPCanonicalIVInfo {
-  /// VPRegionValue for the canonical IV. The allocation is managed by
+  /// VPRegionValue for the canonical IV, whose allocation is managed by
   /// VPCanonicalIVInfo.
   std::unique_ptr<VPRegionValue> CanIV;
+
+  /// Whether the increment of the canonical IV may unsigned wrap or not.
   bool HasNUW = true;
 
 public:
@@ -4331,10 +4340,11 @@ class LLVM_ABI_FOR_TEST VPRegionBlock : public VPBlockBase {
   /// Holds the Canonical IV of the loop region along with additional
   /// information. If CanIVInfo is nullptr, the region is a replicating region.
   /// Loop regions retain their canonical IVs until they are dissolved, even if
-  /// they have no users.
+  /// the canonical IV has no users.
   std::unique_ptr<VPCanonicalIVInfo> CanIVInfo;
 
-  /// Use VPlan::createVPRegionBlock to create VPRegionBlocks.
+  /// Use VPlan::createLoopRegion() and VPlan::createReplicateRegion() to create
+  /// VPRegionBlocks.
   VPRegionBlock(VPBlockBase *Entry, VPBlockBase *Exiting,
                 const std::string &Name = "")
       : VPBlockBase(VPRegionBlockSC, Name), Entry(Entry), Exiting(Exiting) {
@@ -4438,9 +4448,10 @@ public:
     return CanIVInfo ? CanIVInfo->getVPValue() : nullptr;
   }
 
-  /// Return the type of the canonical IV for loop regions
+  /// Return the type of the canonical IV for loop regions.
   Type *getCanonicalIVType() const { return CanIVInfo->getVPValue()->getType(); }
 
+  /// Return the debug location of the canonical IV for loop regions.
   DebugLoc getCanonicalIVDebugLoc() const {
     return CanIVInfo->getVPValue()->getDebugLoc();
   }
@@ -4448,9 +4459,6 @@ public:
   bool hasCanonicalIVNUW() const { return CanIVInfo->hasNUW(); }
 
   void clearCanonicalIVNUW() { CanIVInfo->clearNUW(); }
-
-protected:
-  const VPCanonicalIVInfo &getCanonicalIVInfo() const { return *CanIVInfo; }
 };
 
 inline VPRegionBlock *VPRecipeBase::getRegion() {

@@ -275,8 +275,8 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
     return CanonicalIVTy;
   }
 
-  if (isa<VPRegionValue>(V))
-    return CanonicalIVTy;
+  if (auto *RegionV = dyn_cast<VPRegionValue>(V))
+    return RegionV->getType();
 
   Type *ResultTy =
       TypeSwitch<const VPRecipeBase *, Type *>(V->getDefiningRecipe())
@@ -448,13 +448,14 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
       for (VPValue *U : R.operands()) {
         auto *DefR = U->getDefiningRecipe();
 
-        // Ignore non-recipe values such as arguments, constants, etc.
+        // Ignore VPRegionValues and VPSymbolicValues, record invariant
+        // VPIRValues wrapping IR instructions, but skipping other values, like
+        // constants and arguments.
         // FIXME: Might need some motivation why these values are ignored. If
         // for example an argument is used inside the loop it will increase the
         // register pressure (so shouldn't we add it to LoopInvariants).
         if (!DefR) {
           auto *IRV = dyn_cast<VPIRValue>(U);
-          // If this recipe is outside the loop then record it and continue.
           if (IRV && isa<Instruction>(IRV->getValue()))
             LoopInvariants.insert(U);
           continue;
@@ -504,6 +505,7 @@ SmallVector<VPRegisterUsage, 8> llvm::calculateRegisterUsageForPlan(
   };
 
   VPValue *CanIV = LoopRegion->getCanonicalIV();
+  // Note: canonical IV's are retained even if they have no users.
   if (CanIV->getNumUsers() != 0)
     OpenIntervals.insert(CanIV);
 

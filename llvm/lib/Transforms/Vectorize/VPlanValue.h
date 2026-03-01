@@ -40,7 +40,7 @@ class VPSlotTracker;
 class VPUser;
 class VPRecipeBase;
 class VPPhiAccessors;
-struct VPRegionValue;
+class VPRegionValue;
 class VPRegionBlock;
 
 /// This is the base class of the VPlan Def/Use graph, used for modeling the
@@ -48,7 +48,7 @@ class VPRegionBlock;
 /// coming from the input IR, symbolic values and values defined by recipes.
 class LLVM_ABI_FOR_TEST VPValue {
   friend class VPlan;
-  friend struct VPRegionValue;
+  friend class VPRegionValue;
   friend struct VPIRValue;
   friend struct VPSymbolicValue;
   friend class VPRecipeValue;
@@ -83,8 +83,8 @@ public:
     VPVIRValueSC,     /// A live-in VPValue wrapping an IR Value.
     VPVSymbolicSC,    /// A symbolic live-in VPValue without IR backing.
     VPVRecipeValueSC, /// A VPValue defined by a recipe.
-    VPRegionValueSC, /// A VPValue sub-class that is defined by a region, like
-                     /// the canonical IV of a loop region.
+    VPRegionValueSC,  /// A VPValue sub-class that is defined by a region, like
+                      /// the canonical IV of a loop region.
   };
 
   VPValue(const VPValue &) = delete;
@@ -184,11 +184,12 @@ public:
 };
 
 /// VPValues defined by a VPRegionBlock, like the canonical IV.
-struct VPRegionValue : public VPValue {
+class VPRegionValue : public VPValue {
   VPRegionBlock *DefiningRegion;
   Type *Ty;
   DebugLoc DL;
 
+public:
   VPRegionValue(Type *Ty, DebugLoc DL, VPRegionBlock *Region)
       : VPValue(VPValue::VPRegionValueSC), DefiningRegion(Region), Ty(Ty),
         DL(DL) {}

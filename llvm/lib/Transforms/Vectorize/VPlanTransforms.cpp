@@ -3360,9 +3360,7 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   // The canonical IV phi is at the front of the header after dissolution.
   // Replace CanonicalIVInc with CurrentIteration increment.
-  auto *CanonicalIV = dyn_cast<VPPhi>(&HeaderVPBB->front());
-  if (!CanonicalIV)
-    return;
+  auto *CanonicalIV = cast<VPPhi>(&HeaderVPBB->front());
   for (VPUser *U : make_early_inc_range(CanonicalIV->users())) {
     if (match(U, m_c_Add(m_Specific(CanonicalIV), m_Specific(&Plan.getVFxUF())))) {
       auto *R = cast<VPInstruction>(U);
@@ -5428,13 +5426,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
 
   // Adjust induction to reflect that the transformed plan only processes one
   // original iteration.
-  Type *CanIVTy = VectorLoop->getCanonicalIVType();
-  VPInstruction *Inc;
-  [[maybe_unused]] bool SupportedTerminator =
-      match(VectorLoop->getExitingBasicBlock()->getTerminator(),
-            m_BranchOnCount(m_VPInstruction(Inc),
-                            m_Specific(&Plan.getVectorTripCount())));
-  assert(SupportedTerminator && "supported terminator");
+  VPInstruction *Inc = VectorLoop->getOrCreateCanonicalIVIncrement();
   VPBuilder PHBuilder(Plan.getVectorPreheader());
 
   VPValue *UF = &Plan.getUF();
@@ -5447,6 +5439,7 @@ VPlanTransforms::narrowInterleaveGroups(VPlan &Plan,
     Plan.getVF().replaceAllUsesWith(VScale);
   } else {
     Inc->setOperand(1, UF);
+    Type *CanIVTy = VectorLoop->getCanonicalIVType();
     Plan.getVF().replaceAllUsesWith(Plan.getConstantInt(CanIVTy, 1));
   }
   removeDeadRecipes(Plan);
