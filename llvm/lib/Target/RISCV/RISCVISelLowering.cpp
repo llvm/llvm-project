@@ -24515,6 +24515,14 @@ bool RISCVTargetLowering::isEligibleForTailCallOptimization(
   if (Caller.hasFnAttribute("interrupt"))
     return false;
 
+  // Do not tail call optimize if any parameters need to be passed indirectly.
+  // The caller allocates stack space for the indirect argument and passes a
+  // pointer to the callee. A tail call pops the caller's frame before the
+  // callee executes, invalidating the pointer.
+  for (const auto &ArgLoc : ArgLocs)
+    if (ArgLoc.getLocInfo() == CCValAssign::Indirect)
+      return false;
+
   // If the stack arguments for this call do not fit into our own save area then
   // the call cannot be made tail.
   if (CCInfo.getStackSize() > RVFI->getArgumentStackSize())
