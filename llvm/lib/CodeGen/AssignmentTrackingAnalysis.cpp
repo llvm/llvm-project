@@ -15,6 +15,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/UniqueVector.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
@@ -1078,6 +1079,9 @@ public:
                SmallVector<std::pair<VariableID, at::AssignmentInfo>>>;
   using UnknownStoreAssignmentMap =
       DenseMap<const Instruction *, SmallVector<VariableID>>;
+  using EscapingCallVarsMap =
+      DenseMap<const Instruction *,
+               SmallVector<std::pair<VariableID, const AllocaInst *>>>;
 
 private:
   /// The highest numbered VariableID for partially promoted variables plus 1,
@@ -1091,6 +1095,10 @@ private:
   /// Map untagged unknown stores (e.g. strided/masked store intrinsics)
   /// to the variables they may assign to. Used by processUntaggedInstruction.
   UnknownStoreAssignmentMap UnknownStoreVars;
+  /// Map escaping calls (calls that receive a pointer to a tracked alloca as
+  /// an argument) to the variables they may modify. Used by
+  /// processEscapingCall.
+  EscapingCallVarsMap EscapingCallVars;
 
   // Machinery to defer inserting dbg.values.
   using InstInsertMap = MapVector<VarLocInsertPt, SmallVector<VarLocInfo>>;
@@ -1326,6 +1334,7 @@ private:
   void processUntaggedInstruction(Instruction &I, BlockInfo *LiveSet);
   void processUnknownStoreToVariable(Instruction &I, VariableID &Var,
                                      BlockInfo *LiveSet);
+  void processEscapingCall(Instruction &I, BlockInfo *LiveSet);
   void processDbgAssign(DbgVariableRecord *Assign, BlockInfo *LiveSet);
   void processDbgVariableRecord(DbgVariableRecord &DVR, BlockInfo *LiveSet);
   void processDbgValue(DbgVariableRecord *DbgValue, BlockInfo *LiveSet);
@@ -1549,6 +1558,11 @@ void AssignmentTrackingLowering::processNonDbgInstruction(
     processTaggedInstruction(I, LiveSet);
   else
     processUntaggedInstruction(I, LiveSet);
+
+  // Handle calls that pass tracked alloca pointers as arguments.
+  // The callee may modify the pointed-to memory.
+  if (isa<CallBase>(I))
+    processEscapingCall(I, LiveSet);
 }
 
 void AssignmentTrackingLowering::processUnknownStoreToVariable(
@@ -1672,6 +1686,56 @@ void AssignmentTrackingLowering::processUntaggedInstruction(
   }
 }
 
+void AssignmentTrackingLowering::processEscapingCall(
+    Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
+  auto It = EscapingCallVars.find(&I);
+  if (It == EscapingCallVars.end())
+    return;
+
+  LLVM_DEBUG(dbgs() << "processEscapingCall on " << I << "\n");
+
+  for (auto &[Var, Base] : It->second) {
+    // An escaping call is treated like an untagged store, whatever value is
+    // now in memory is the current value of the variable. We set both the
+    // stack and debug assignments to NoneOrPhi (we don't know which source
+    // assignment this corresponds to) and set the location to Mem (memory
+    // is valid).
+    addMemDef(LiveSet, Var, Assignment::makeNoneOrPhi());
+    addDbgDef(LiveSet, Var, Assignment::makeNoneOrPhi());
+    setLocKind(LiveSet, Var, LocKind::Mem);
+
+    LLVM_DEBUG(dbgs() << " escaping call may modify "
+                      << FnVarLocs->getVariable(Var).getVariable()->getName()
+                      << ", setting LocKind to Mem\n");
+
+    // Emit a memory location def, the variable lives at `*Base`
+    DebugVariable V = FnVarLocs->getVariable(Var);
+    DIExpression *DIE = DIExpression::get(I.getContext(), {});
+    if (auto Frag = V.getFragment()) {
+      auto R = DIExpression::createFragmentExpression(DIE, Frag->OffsetInBits,
+                                                      Frag->SizeInBits);
+      assert(R && "unexpected createFragmentExpression failue");
+      DIE = *R;
+    }
+    // Add implicit deref (the alloca address points to the variable's memory)
+    DIE = DIExpression::prepend(DIE, DIExpression::DerefAfter, /*Offset=*/0);
+
+    auto InsertBefore = getNextNode(&I);
+    assert(InsertBefore && "Shouldn't be inserting after a terminator");
+
+    DILocation *InlinedAt = const_cast<DILocation *>(V.getInlinedAt());
+    const DILocation *DILoc = DILocation::get(
+        Fn.getContext(), 0, 0, V.getVariable()->getScope(), InlinedAt);
+
+    VarLocInfo VarLoc;
+    VarLoc.VariableID = Var;
+    VarLoc.Expr = DIE;
+    VarLoc.Values = RawLocationWrapper(
+        ValueAsMetadata::get(const_cast<AllocaInst *>(Base)));
+    VarLoc.DL = DILoc;
+    InsertBeforeMap[InsertBefore].push_back(VarLoc);
+  }
+}
 void AssignmentTrackingLowering::processTaggedInstruction(
     Instruction &I, AssignmentTrackingLowering::BlockInfo *LiveSet) {
   auto LinkedDPAssigns = at::getDVRAssignmentMarkers(&I);
@@ -2116,6 +2180,7 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
     const DenseSet<DebugAggregate> &VarsWithStackSlot,
     AssignmentTrackingLowering::UntaggedStoreAssignmentMap &UntaggedStoreVars,
     AssignmentTrackingLowering::UnknownStoreAssignmentMap &UnknownStoreVars,
+    AssignmentTrackingLowering::EscapingCallVarsMap &EscapingCallVars,
     unsigned &TrackedVariablesVectorSize) {
   DenseSet<DebugVariable> Seen;
   // Map of Variable: [Fragments].
@@ -2200,6 +2265,43 @@ static AssignmentTrackingLowering::OverlapMap buildOverlapMapAndRecordDeclares(
         for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(AI))
           HandleDbgAssignForUnknownStore(DVR);
       }
+
+      // Check for escaping calls
+      if (auto *CB = dyn_cast<CallBase>(&I)) {
+        // Skip intrinsics, their memory effects are modeled individually
+        if (!isa<IntrinsicInst>(CB) && !CB->onlyReadsMemory()) {
+          DenseSet<VariableID> SeenVars;
+          for (unsigned ArgIdx = 0; ArgIdx < CB->arg_size(); ++ArgIdx) {
+            Value *Arg = CB->getArgOperand(ArgIdx);
+            if (!Arg->getType()->isPointerTy())
+              continue;
+            if (CB->paramHasAttr(ArgIdx, Attribute::ReadOnly) ||
+                CB->paramHasAttr(ArgIdx, Attribute::ReadNone))
+              continue;
+            if (CB->paramHasAttr(ArgIdx, Attribute::ByVal))
+              continue;
+
+            auto *AI = dyn_cast<AllocaInst>(getUnderlyingObject(Arg));
+            if (!AI)
+              continue;
+
+            // Find tracked variables on this alloca. Use the whole-variable
+            // (no fragment) because we don't know which part the callee
+            // modifies. addMemDef/addDbgDef/setLocKind will propagate to
+            // contained fragments.
+            for (DbgVariableRecord *DVR : at::getDVRAssignmentMarkers(AI)) {
+              DebugVariable DV(DVR->getVariable(), std::nullopt,
+                               DVR->getDebugLoc().getInlinedAt());
+              DebugAggregate DA = {DV.getVariable(), DV.getInlinedAt()};
+              if (!VarsWithStackSlot.contains(DA))
+                continue;
+              VariableID VarID = FnVarLocs->insertVariable(DV);
+              if (SeenVars.insert(VarID).second)
+                EscapingCallVars[&I].push_back({VarID, AI});
+            }
+          }
+        }
+      }
     }
   }
 
@@ -2271,7 +2373,7 @@ bool AssignmentTrackingLowering::run(FunctionVarLocsBuilder *FnVarLocsBuilder) {
   // appears to be rare occurance.
   VarContains = buildOverlapMapAndRecordDeclares(
       Fn, FnVarLocs, *VarsWithStackSlot, UntaggedStoreVars, UnknownStoreVars,
-      TrackedVariablesVectorSize);
+      EscapingCallVars, TrackedVariablesVectorSize);
 
   // Prepare for traversal.
   ReversePostOrderTraversal<Function *> RPOT(&Fn);
