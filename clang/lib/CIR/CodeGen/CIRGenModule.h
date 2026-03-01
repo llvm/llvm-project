@@ -599,7 +599,7 @@ public:
   cir::FuncOp codegenCXXStructor(clang::GlobalDecl gd);
 
   bool lookupRepresentativeDecl(llvm::StringRef mangledName,
-      clang::GlobalDecl &gd) const;
+                                clang::GlobalDecl &gd) const;
 
   bool supportsCOMDAT() const;
   void maybeSetTrivialComdat(const clang::Decl &d, mlir::Operation *op);
