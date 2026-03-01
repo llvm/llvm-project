@@ -823,13 +823,17 @@ class Dialect(ir.Dialect):
         for op in cls.operations:
             op._attach_traits()
 
+        for type_ in cls.types:
+            typeid = ir.DynamicType.lookup_typeid(type_.type_name)
+            _cext.register_type_caster(typeid)(type_)
+
+        for attr in cls.attributes:
+            typeid = ir.DynamicAttr.lookup_typeid(attr.attr_name)
+            _cext.register_type_caster(typeid)(attr)
+
         if register:
             register_dialect(cls)
 
             register_dialect_operation = register_operation(cls)
             for op in cls.operations:
                 register_dialect_operation(op)
-
-            for type_ in cls.types:
-                typeid = ir.DynamicType.lookup_typeid(type_.type_name)
-                _cext.register_type_caster(typeid)(type_)

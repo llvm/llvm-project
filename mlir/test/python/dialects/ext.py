@@ -3,6 +3,7 @@
 from mlir.ir import *
 from mlir.dialects import arith
 from mlir.dialects.ext import *
+from mlir import ir
 from typing import Any, Optional, Sequence, TypeVar, Union
 import sys
 
@@ -670,6 +671,17 @@ def testExtDialectWithAttr():
         print(ip)
         # CHECK: #ext_attr.str_pair<"hello", "world">
         print(sp)
+
+        # CHECK: "hello"
+        print(sp.first)
+        # CHECK: "world"
+        print(sp.second)
+
+        sp2 = ir.Attribute(sp).maybe_downcast()
+        # CHECK: <locals>.StrPair
+        print(type(sp2))
+        # CHECK: #ext_attr.str_pair<"hello", "world">
+        print(str(sp2))
 
         module = Module.create()
         with InsertionPoint(module.body):
