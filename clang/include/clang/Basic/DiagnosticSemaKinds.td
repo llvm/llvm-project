@@ -3784,17 +3784,20 @@ def warn_redeclaration_without_attribute_prev_attribute_ignored : Warning<
 def warn_redeclaration_without_import_attribute : Warning<
   "%q0 redeclared without 'dllimport' attribute: 'dllexport' attribute added">,
   InGroup<MicrosoftInconsistentDllImport>;
-def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
-  "%0 attribute ignored; %1 takes precedence">,
-  InGroup<IgnoredAttributes>;
-def warn_exclusion_takes_precedence_over_dllattr : Warning<
-  "%0 attribute takes precedence over %1 attribute on the enclosing class">,
-  InGroup<IgnoredAttributes>;
 def warn_dllimport_dropped_from_inline_function : Warning<
   "%q0 redeclared inline; %1 attribute ignored">,
   InGroup<IgnoredAttributes>;
 def warn_nothrow_attribute_ignored : Warning<"'nothrow' attribute conflicts with"
   " exception specification; attribute ignored">,
+  InGroup<IgnoredAttributes>;
+def warn_dllattr_ignored_exclusion_takes_precedence : Warning<
+  "%0 attribute ignored; %1 takes precedence">,
+  InGroup<IgnoredAttributes>;
+def warn_attribute_ignored_on_non_member :
+  Warning<"%0 attribute ignored on a non-member declaration">,
+  InGroup<IgnoredAttributes>;
+def warn_attribute_ignored_in_non_template :
+  Warning<"%0 attribute ignored in a non-template context">,
   InGroup<IgnoredAttributes>;
 def warn_attribute_ignored_on_non_definition :
   Warning<"%0 attribute ignored on a non-definition declaration">,
