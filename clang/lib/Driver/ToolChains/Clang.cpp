@@ -2436,6 +2436,7 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
   const llvm::Triple &Triple = C.getDefaultToolChain().getTriple();
   bool IsELF = Triple.isOSBinFormatELF();
   bool Crel = false, ExperimentalCrel = false;
+  StringRef RelocSectionSym;
   bool SFrame = false, ExperimentalSFrame = false;
   bool ImplicitMapSyms = false;
   bool UseRelaxRelocations = C.getDefaultToolChain().useRelaxRelocations();
@@ -2636,6 +2637,8 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
         Crel = false;
       } else if (Value == "--allow-experimental-crel") {
         ExperimentalCrel = true;
+      } else if (Value.starts_with("--reloc-section-sym=")) {
+        RelocSectionSym = Value.substr(strlen("--reloc-section-sym="));
       } else if (Value.starts_with("-I")) {
         CmdArgs.push_back(Value.data());
         // We need to consume the next argument if the current arg is a plain
@@ -2708,6 +2711,19 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << "-Wa,--crel" << D.getTargetTriple();
     }
+  }
+  if (!RelocSectionSym.empty()) {
+    if (RelocSectionSym != "all" && RelocSectionSym != "internal" &&
+        RelocSectionSym != "none")
+      D.Diag(diag::err_drv_invalid_value)
+          << ("-Wa,--reloc-section-sym=" + RelocSectionSym).str()
+          << RelocSectionSym;
+    else if (Triple.isOSBinFormatELF())
+      CmdArgs.push_back(
+          Args.MakeArgString("--reloc-section-sym=" + RelocSectionSym));
+    else
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << "-Wa,--reloc-section-sym" << D.getTargetTriple();
   }
   if (SFrame) {
     if (Triple.isOSBinFormatELF() && Triple.isX86()) {
@@ -3912,6 +3928,8 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
       Path.insert(Path.begin(), Arg, Arg + strlen(Arg));
       CmdArgs.push_back(Args.MakeArgString(Path));
     }
+
+    Args.AddLastArg(CmdArgs, options::OPT_fimplicit_modules_lock_timeout_EQ);
   }
 
   if (HaveModules) {

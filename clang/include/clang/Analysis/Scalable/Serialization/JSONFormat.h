@@ -54,6 +54,12 @@ public:
   llvm::Error writeTUSummary(const TUSummary &Summary,
                              llvm::StringRef Path) override;
 
+  llvm::Expected<TUSummaryEncoding>
+  readTUSummaryEncoding(llvm::StringRef Path) override;
+
+  llvm::Error writeTUSummaryEncoding(const TUSummaryEncoding &SummaryEncoding,
+                                     llvm::StringRef Path) override;
+
   using SerializerFn = llvm::function_ref<Object(const EntitySummary &,
                                                  const EntityIdConverter &)>;
   using DeserializerFn =
@@ -98,7 +104,7 @@ private:
 
   llvm::Expected<std::map<EntityId, EntityLinkage>>
   linkageTableFromJSON(const Array &LinkageTableArray,
-                       std::set<EntityId> EntityIds) const;
+                       std::set<EntityId> ExpectedIds) const;
   Array linkageTableToJSON(
       const std::map<EntityId, EntityLinkage> &LinkageTable) const;
 
@@ -141,6 +147,35 @@ private:
       const std::map<SummaryName,
                      std::map<EntityId, std::unique_ptr<EntitySummary>>>
           &SummaryDataMap) const;
+
+  llvm::Expected<std::pair<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
+  encodingDataMapEntryFromJSON(const Object &EntityDataMapEntryObject) const;
+  Object encodingDataMapEntryToJSON(
+      EntityId EI,
+      const std::unique_ptr<EntitySummaryEncoding> &Encoding) const;
+
+  llvm::Expected<std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
+  encodingDataMapFromJSON(const Array &EntityDataArray) const;
+  Array encodingDataMapToJSON(
+      const std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>
+          &EncodingDataMap) const;
+
+  llvm::Expected<std::pair<
+      SummaryName, std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>>
+  encodingSummaryDataMapEntryFromJSON(
+      const Object &SummaryDataMapEntryObject) const;
+  Object encodingSummaryDataMapEntryToJSON(
+      const SummaryName &SN,
+      const std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>
+          &EncodingMap) const;
+
+  llvm::Expected<std::map<
+      SummaryName, std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>>
+  encodingSummaryDataMapFromJSON(const Array &SummaryDataArray) const;
+  Array encodingSummaryDataMapToJSON(
+      const std::map<SummaryName,
+                     std::map<EntityId, std::unique_ptr<EntitySummaryEncoding>>>
+          &EncodingSummaryDataMap) const;
 };
 
 } // namespace clang::ssaf

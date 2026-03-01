@@ -473,7 +473,7 @@ void UnrollState::unrollBlock(VPBlockBase *VPB) {
 void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
   assert(UF > 0 && "Unroll factor must be positive");
   Plan.setUF(UF);
-  llvm::scope_exit Cleanup([&Plan]() {
+  llvm::scope_exit Cleanup([&Plan, UF]() {
     auto Iter = vp_depth_first_deep(Plan.getEntry());
     // Remove recipes that are redundant after unrolling.
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -487,6 +487,9 @@ void VPlanTransforms::unrollByUF(VPlan &Plan, unsigned UF) {
         }
       }
     }
+
+    Type *TCTy = VPTypeAnalysis(Plan).inferScalarType(Plan.getTripCount());
+    Plan.getUF().replaceAllUsesWith(Plan.getConstantInt(TCTy, UF));
   });
   if (UF == 1) {
     return;
