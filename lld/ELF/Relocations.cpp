@@ -1596,6 +1596,8 @@ void elf::postScanRelocations(Ctx &ctx) {
     }
   };
 
+  ctx.target->finalizeRelocScan();
+
   GotSection *got = ctx.in.got.get();
   if (ctx.needsTlsLd.load(std::memory_order_relaxed) && got->addTlsIndex()) {
     if (ctx.arg.shared)

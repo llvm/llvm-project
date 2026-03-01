@@ -1916,7 +1916,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // a linker-script-defined symbol is absolute.
     scanRelocations<ELFT>(ctx);
     reportUndefinedSymbols(ctx);
-    ctx.target->postScanRelocations();
     postScanRelocations(ctx);
 
     if (ctx.in.plt && ctx.in.plt->isNeeded())

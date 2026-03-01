@@ -1,6 +1,6 @@
 # REQUIRES: hexagon
 # RUN: llvm-mc -filetype=obj -triple=hexagon-unknown-elf %s -o %t.o
-# RUN: ld.lld -shared %t.o -o %t.so
+# RUN: ld.lld -shared %t.o --gc-sections -o %t.so
 # RUN: llvm-readobj -r %t.so | FileCheck %s
 
 ## This test verifies that lld handles the case where there's a direct GD_PLT

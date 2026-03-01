@@ -44,6 +44,7 @@ public:
   void scanSection(InputSectionBase &sec) override {
     elf::scanSection1<Hexagon, ELF32LE>(*this, sec);
   }
+  void finalizeRelocScan() override;
   bool needsThunk(RelExpr expr, RelType type, const InputFile *file,
                   uint64_t branchAddr, const Symbol &s,
                   int64_t a) const override;
@@ -53,7 +54,6 @@ public:
   void writePltHeader(uint8_t *buf) const override;
   void writePlt(uint8_t *buf, const Symbol &sym,
                 uint64_t pltEntryAddr) const override;
-  void postScanRelocations() override;
 };
 } // namespace
 
@@ -676,29 +676,31 @@ static bool isGDPLT(RelType type) {
   }
 }
 
-static void tlsSymbolUpdate(Ctx &ctx) {
-  Symbol *ta = nullptr;
+void Hexagon::finalizeRelocScan() {
+  Symbol *tga = nullptr;
 
   // Scan for R_HEX_GD_PLT_* relocations (recorded as R_PLT_PC by
   // scanSectionImpl) and rebind them to __tls_get_addr.
-  for (ELFFileBase *f : ctx.objectFiles)
-    for (InputSectionBase *s : f->getSections())
-      if (auto *isec = dyn_cast_or_null<InputSection>(s))
-        if (isec->isLive())
-          for (Relocation &rel : isec->relocs())
-            if (rel.expr == R_PLT_PC && isGDPLT(rel.type)) {
-              if (!ta) {
-                ta = ctx.symtab->addSymbol(
-                    Undefined{ctx.internalFile, "__tls_get_addr", STB_GLOBAL,
-                              STV_DEFAULT, STT_NOTYPE});
-                ta->isPreemptible = true;
-                ta->setFlags(NEEDS_PLT);
-                ctx.partitions[0].dynSymTab->addSymbol(ta);
-              }
-              rel.sym = ta;
-            }
+  for (ELFFileBase *f : ctx.objectFiles) {
+    for (InputSectionBase *s : f->getSections()) {
+      auto *isec = dyn_cast_or_null<InputSection>(s);
+      if (!isec || !isec->isLive())
+        continue;
+      for (Relocation &rel : isec->relocs()) {
+        if (rel.expr != R_PLT_PC || !isGDPLT(rel.type))
+          continue;
+        if (!tga) {
+          tga = ctx.symtab->addSymbol(Undefined{ctx.internalFile,
+                                                "__tls_get_addr", STB_GLOBAL,
+                                                STV_DEFAULT, STT_NOTYPE});
+          tga->isUsedInRegularObj = true;
+          tga->isPreemptible = true;
+          tga->setFlags(NEEDS_PLT);
+        }
+        rel.sym = tga;
+      }
+    }
+  }
 }
-
-void Hexagon::postScanRelocations() { tlsSymbolUpdate(ctx); }
 
 void elf::setHexagonTargetInfo(Ctx &ctx) { ctx.target.reset(new Hexagon(ctx)); }
