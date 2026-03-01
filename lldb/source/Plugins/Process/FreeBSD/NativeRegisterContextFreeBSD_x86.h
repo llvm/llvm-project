@@ -33,9 +33,8 @@ namespace process_freebsd {
 
 class NativeProcessFreeBSD;
 
-class NativeRegisterContextFreeBSD_x86
-    : public NativeRegisterContextFreeBSD,
-      public NativeRegisterContextDBReg_x86 {
+class NativeRegisterContextFreeBSD_x86 : public NativeRegisterContextFreeBSD,
+                                         public NativeRegisterContextDBReg_x86 {
 public:
   NativeRegisterContextFreeBSD_x86(const ArchSpec &target_arch,
                                    NativeThreadFreeBSD &native_thread);
