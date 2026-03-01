@@ -98,6 +98,16 @@ xorl %eax, %eax
 retq
 .Lf4b_end:
 
+## sh_addralign stays at 32, not downgraded by .prefalign.
+# OBJ: .text.f5          PROGBITS        0000000000000000 {{[0-9a-f]+}} 000003 00  AX  0   0 32
+.section .text.f5,"ax",@progbits
+.p2align 5
+.prefalign 16, .Lf5_end, 0
+.rept 3
+clc
+.endr
+.Lf5_end:
+
 ## .prefalign in a BSS section with zero fill.
 # ASM: .bss
 # ASM: .prefalign 16, .Lbss_end, 0
