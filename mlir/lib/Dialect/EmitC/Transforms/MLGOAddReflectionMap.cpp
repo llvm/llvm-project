@@ -30,8 +30,8 @@ constexpr const char *stringLibraryHeader = "string";
 
 IncludeOp addHeader(OpBuilder &builder, ModuleOp module, StringRef headerName) {
   StringAttr includeAttr = builder.getStringAttr(headerName);
-  return builder.create<emitc::IncludeOp>(
-      module.getLoc(), includeAttr,
+  return emitc::IncludeOp::create(
+      builder, module.getLoc(), includeAttr,
       /*is_standard_include=*/builder.getUnitAttr());
 }
 
@@ -121,8 +121,8 @@ public:
       return failure();
     }
 
-    rewriter.create<emitc::FieldOp>(
-        classOp.getLoc(), rewriter.getStringAttr("reflectionMap"),
+    emitc::FieldOp::create(
+        rewriter, classOp.getLoc(), rewriter.getStringAttr("reflectionMap"),
         TypeAttr::get(mapType), emitc::OpaqueAttr::get(context, mapString));
     return success();
   }
