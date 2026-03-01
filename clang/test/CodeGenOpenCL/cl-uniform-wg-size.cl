@@ -3,13 +3,13 @@
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -cl-uniform-work-group-size -o - %s | FileCheck %s --check-prefix=CHECK-UNIFORM
 // RUN: %clang_cc1 -emit-llvm -O0 -cl-std=CL2.0 -foffload-uniform-block -o - %s | FileCheck %s --check-prefix=CHECK-UNIFORM
 
-// CHECK-UNIFORM: define dso_local spir_kernel void @ker(){{.*}}[[ATTR0:#[0-9]+]]
-// CHECK-UNIFORM: define dso_local void @__clang_ocl_kern_imp_ker(){{.*}}[[ATTR1:#[0-9]+]]
-// CHECK-UNIFORM: define dso_local void @foo{{.*}}[[ATTR1]]
+// CHECK-UNIFORM: define{{.*}}spir_kernel void @ker(){{.*}}[[ATTR0:#[0-9]+]]
+// CHECK-UNIFORM: define{{.*}}void @__clang_ocl_kern_imp_ker(){{.*}}[[ATTR1:#[0-9]+]]
+// CHECK-UNIFORM: define{{.*}}void @foo{{.*}}[[ATTR1]]
 
-// CHECK-NONUNIFORM: define dso_local spir_kernel void @ker(){{.*}}[[ATTR0:#[0-9]+]]
-// CHECK-NONUNIFORM: define dso_local void @__clang_ocl_kern_imp_ker(){{.*}}[[ATTR0]]
-// CHECK-NONUNIFORM: define dso_local void @foo{{.*}}[[ATTR0]]
+// CHECK-NONUNIFORM: define{{.*}}spir_kernel void @ker(){{.*}}[[ATTR0:#[0-9]+]]
+// CHECK-NONUNIFORM: define{{.*}}void @__clang_ocl_kern_imp_ker(){{.*}}[[ATTR0]]
+// CHECK-NONUNIFORM: define{{.*}}void @foo{{.*}}[[ATTR0]]
 kernel void ker() {};
 
 void foo() {};
