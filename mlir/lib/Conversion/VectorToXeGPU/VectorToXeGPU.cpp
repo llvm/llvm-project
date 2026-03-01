@@ -845,13 +845,9 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
 struct ConvertVectorToXeGPUPass
     : public impl::ConvertVectorToXeGPUBase<ConvertVectorToXeGPUPass> {
   void runOnOperation() override {
-    RewritePatternSet prep(&getContext());
-    populatePrepareVectorToMMAPatterns(prep);
-    if (failed(applyPatternsGreedily(getOperation(), std::move(prep))))
-      return signalPassFailure();
-
     RewritePatternSet patterns(&getContext());
     populateVectorToXeGPUConversionPatterns(patterns);
+    populatePrepareVectorToMMAPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
